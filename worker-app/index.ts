@@ -30,6 +30,7 @@ import {
   CHECKOUT_REDIRECT_HEADERS,
   checkoutRedirectResponse,
 } from "../src/lib/checkout-email";
+import { isRetryableFulfillment } from "../src/lib/retryable-fulfillment";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
@@ -73,7 +74,9 @@ type Env = {
 };
 
 function generateServiceKey(env?: Env): string | undefined {
-  return env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return (
+    env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
 }
 
 function hydrateProcessEnv(env?: Env) {
@@ -251,9 +254,8 @@ app.get("/api/checkout/dpp", async c => {
   }
   const search = new URL(c.req.url).searchParams;
   const { gatedConfirmUrl } = await import("../src/lib/checkout-gate");
-  const { dppSmokeRequestAuthorized, isDppSmokePromo } = await import(
-    "../src/lib/dpp-loop"
-  );
+  const { dppSmokeRequestAuthorized, isDppSmokePromo } =
+    await import("../src/lib/dpp-loop");
   const smokeAuthorized =
     isDppSmokePromo(search.get("promo")) &&
     dppSmokeRequestAuthorized(
@@ -334,7 +336,8 @@ app.get("/api/checkout", c => {
     methods: ["POST"],
     smoke:
       "GET /api/checkout/dpp?promo=DPP-SMOKE-E2E requires x-dpp-smoke-secret",
-    confirm: "GET https://authichain.com/checkout/<plan> (POST form creates the session)",
+    confirm:
+      "GET https://authichain.com/checkout/<plan> (POST form creates the session)",
     webhook: "POST /api/stripe/webhook",
     thanks: "/dpp/thanks",
     activate: "/dpp/activate",
@@ -342,7 +345,8 @@ app.get("/api/checkout", c => {
 });
 
 app.post("/api/checkout", async c => {
-  const { isAutomatedCheckoutRequest } = await import("../src/lib/checkout-gate");
+  const { isAutomatedCheckoutRequest } =
+    await import("../src/lib/checkout-gate");
   if (isAutomatedCheckoutRequest(c.req.raw)) {
     c.header("Cache-Control", "private, no-store");
     return c.json({ error: "automated_request_blocked" }, 403);
@@ -434,9 +438,8 @@ app.post("/api/generate", async c => {
       supabaseUrl,
       supabaseKey,
     });
-    const { bindQronGenerateAttestation } = await import(
-      "./qron-generate-bind"
-    );
+    const { bindQronGenerateAttestation } =
+      await import("./qron-generate-bind");
     const result = await handleGeneratePost({
       body,
       userId,
@@ -558,8 +561,12 @@ async function stripeWebhookPost(c: {
     return c.json(result);
   } catch (err: any) {
     console.error(`[Stripe Webhook] Error: ${err.message}`);
-    // PM-338: duplicate guard unavailable -> 500 so Stripe retries.
-    if (err?.name === "StripeEventClaimUnavailableError") {
+    // PM-338: a down duplicate guard, or a paid fulfillment failure, must be
+    // 500 so Stripe retries. A bad signature stays 400.
+    if (
+      err?.name === "StripeEventClaimUnavailableError" ||
+      isRetryableFulfillment(err)
+    ) {
       return c.json({ error: "Temporarily unavailable; retry" }, 500);
     }
     return c.json({ error: err.message }, 400);

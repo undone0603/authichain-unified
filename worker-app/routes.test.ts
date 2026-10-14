@@ -145,7 +145,9 @@ describe("GET /api/checkout/plan/:planId", () => {
       "https://authichain.com/checkout/strainchain_passport?email=ops%40brand.com&utm_source=pricing"
     );
     const unknown = await app.request("/api/checkout/plan/nope");
-    expect(unknown.headers.get("location")).toBe("https://authichain.com/checkout");
+    expect(unknown.headers.get("location")).toBe(
+      "https://authichain.com/checkout"
+    );
     expect(dppCreate).not.toHaveBeenCalled();
   });
 });
@@ -882,9 +884,13 @@ describe("tRPC routes are handled by the tRPC middleware, not the * SPA fallback
   });
 });
 
-
 describe("GET /api/generate requires the service role", () => {
-  const keys = ["SUPABASE_URL","SUPABASE_ANON_KEY","NEXT_PUBLIC_SUPABASE_URL","SUPABASE_SERVICE_ROLE_KEY"] as const;
+  const keys = [
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ] as const;
   const saved: Partial<Record<(typeof keys)[number], string | undefined>> = {};
   beforeEach(() => {
     for (const key of keys) saved[key] = process.env[key];
@@ -894,14 +900,27 @@ describe("GET /api/generate requires the service role", () => {
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   });
   afterEach(() => {
-    for (const key of keys) saved[key] === undefined ? delete process.env[key] : process.env[key] = saved[key]!;
+    for (const key of keys)
+      saved[key] === undefined
+        ? delete process.env[key]
+        : (process.env[key] = saved[key]!);
   });
   it("does not report auth from the anon key", async () => {
     const res = await app.request("/api/generate");
     expect((await res.json()).auth).toBe(false);
   });
   it("stays 401 for a bearer token when credit checks cannot run", async () => {
-    const res = await app.request("/api/generate", { method:"POST", headers:{"content-type":"application/json",authorization:"Bearer eyJhbGciOiJub3Q"}, body:JSON.stringify({targetUrl:"https://example.com",prompt:"neon"}) });
+    const res = await app.request("/api/generate", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer eyJhbGciOiJub3Q",
+      },
+      body: JSON.stringify({
+        targetUrl: "https://example.com",
+        prompt: "neon",
+      }),
+    });
     expect(res.status).toBe(401);
   });
 });
@@ -919,6 +938,22 @@ describe("POST /api/stripe/webhook — claim unavailable (PM-338)", () => {
       headers: { "stripe-signature": "t=123,v1=fake" },
     });
     expect(res.status).toBe(500);
+  });
+
+  it("answers 500 when paid fulfillment fails so Stripe retries", async () => {
+    const { handleStripeWebhook } = await import("../server/webhooks/stripe");
+    const err = new Error("continuity_insert_failed");
+    err.name = "RetryableFulfillmentError";
+    (handleStripeWebhook as any).mockRejectedValueOnce(err);
+    const res = await app.request("/api/stripe/webhook", {
+      method: "POST",
+      body: "raw-stripe-payload",
+      headers: { "stripe-signature": "t=123,v1=fake" },
+    });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe("Temporarily unavailable; retry");
+    expect(JSON.stringify(body)).not.toContain("continuity_insert_failed");
   });
 
   it("still answers 400 for other handler errors (bad signature)", async () => {

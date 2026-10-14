@@ -20,6 +20,7 @@ import {
   beginProvisionContinuity,
   finishProvisionContinuity,
 } from "./founder-exit/supabase-log";
+import { markRetryableFulfillment } from "./retryable-fulfillment";
 
 type SupabaseLike = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -97,12 +98,16 @@ export async function fulfillDppPaidSession(
     });
   }
 
-  await beginProvisionContinuity(supabase, {
-    sessionId: session.id,
-    amountCents: session.amount_total ?? null,
-    isDemo: demo,
-    plan,
-  });
+  try {
+    await beginProvisionContinuity(supabase, {
+      sessionId: session.id,
+      amountCents: session.amount_total ?? null,
+      isDemo: demo,
+      plan,
+    });
+  } catch (err) {
+    throw markRetryableFulfillment(err);
+  }
 
   const prov = await provisionPurchase(supabase, {
     email: email || null,
@@ -118,18 +123,24 @@ export async function fulfillDppPaidSession(
   // Recording provisioned here would make a failed grant look done, and
   // Stripe would not retry.
   if (prov.status === "upsert_failed") {
-    throw new Error(
-      `DPP provision failed: ${prov.error || "profiles upsert failed"}`
+    throw markRetryableFulfillment(
+      new Error(
+        `DPP provision failed: ${prov.error || "profiles upsert failed"}`
+      )
     );
   }
 
-  await finishProvisionContinuity(supabase, {
-    sessionId: session.id,
-    amountCents: session.amount_total ?? null,
-    isDemo: demo,
-    plan,
-    grantAlreadyPresent: prov.skippedIdempotent === true,
-  });
+  try {
+    await finishProvisionContinuity(supabase, {
+      sessionId: session.id,
+      amountCents: session.amount_total ?? null,
+      isDemo: demo,
+      plan,
+      grantAlreadyPresent: prov.skippedIdempotent === true,
+    });
+  } catch (err) {
+    throw markRetryableFulfillment(err);
+  }
 
   if (visitId && prov.profileId) {
     await recordDppLoopEventOnce(supabase, {
