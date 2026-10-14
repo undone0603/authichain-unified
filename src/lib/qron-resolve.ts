@@ -36,6 +36,22 @@ export function qronPresentationKvKey(objectId: string): string {
   return `${QRON_KV_PREFIX}${objectId}`;
 }
 
+/** The presentation store cannot be read. This is not an unknown object. */
+export class QronStoreUnavailable extends Error {
+  constructor() {
+    super("qron_store_unavailable");
+    this.name = "QronStoreUnavailable";
+  }
+}
+
+/** A stored record exists and cannot be read as a presentation. */
+export class QronPresentationMalformed extends Error {
+  constructor() {
+    super("presentation_malformed");
+    this.name = "QronPresentationMalformed";
+  }
+}
+
 export function objectIdFromResolvePath(pathname: string): string | null {
   const prefix = "/qron/r/";
   if (!pathname.startsWith(prefix)) return null;
@@ -82,9 +98,14 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function htmlDecision(body: Record<string, unknown>, destination?: string): string {
+function htmlDecision(
+  body: Record<string, unknown>,
+  destination?: string
+): string {
   const decision = escapeHtml(String(body.decision || "indeterminate"));
-  const contract = escapeHtml(String(body.decision_contract || DECISION_CONTRACT));
+  const contract = escapeHtml(
+    String(body.decision_contract || DECISION_CONTRACT)
+  );
   const dest =
     destination && /^https?:\/\//i.test(destination)
       ? `<p><a href="${escapeHtml(destination)}">Open destination</a></p>`
@@ -96,7 +117,10 @@ export async function handleQronResolve(
   request: Request,
   deps: {
     load: (objectId: string) => Promise<StoredQronPresentation | null>;
-    verify?: (jws: string, objectId: string) => Promise<{ status: number; body: Record<string, unknown> }>;
+    verify?: (
+      jws: string,
+      objectId: string
+    ) => Promise<{ status: number; body: Record<string, unknown> }>;
     fetchImpl?: typeof fetch;
     verifyUrl?: string;
   }
@@ -107,14 +131,30 @@ export async function handleQronResolve(
   if (request.method !== "GET" && request.method !== "HEAD") {
     return new Response(JSON.stringify(indeterminate("method_not_allowed")), {
       status: 405,
-      headers: { "content-type": "application/json", "cache-control": "no-store" },
+      headers: {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+      },
     });
   }
 
-  const stored = await deps.load(objectId);
+  let stored: StoredQronPresentation | null = null;
   let status = 404;
   let body = indeterminate("presentation_not_found");
-  if (stored?.jws) {
+  try {
+    stored = await deps.load(objectId);
+  } catch (err) {
+    const name = err instanceof Error ? err.name : "";
+    if (name === "QronPresentationMalformed") {
+      status = 422;
+      body = indeterminate("presentation_malformed");
+    } else {
+      status = 503;
+      body = indeterminate("qron_store_unavailable");
+    }
+    stored = null;
+  }
+  if (stored?.jws && status === 404) {
     if (deps.verify) {
       const verified = await deps.verify(stored.jws, objectId);
       status = verified.status;
@@ -125,7 +165,10 @@ export async function handleQronResolve(
       try {
         const res = await fetchImpl(endpoint, {
           method: "POST",
-          headers: { "content-type": "application/json", accept: "application/json" },
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json",
+          },
           body: JSON.stringify({
             jws: stored.jws,
             expected_object_id: objectId,
@@ -150,7 +193,12 @@ export async function handleQronResolve(
   if (request.method === "HEAD") {
     return new Response(null, {
       status,
-      headers: { ...headers, "content-type": wantsJson(request) ? "application/json" : "text/html; charset=utf-8" },
+      headers: {
+        ...headers,
+        "content-type": wantsJson(request)
+          ? "application/json"
+          : "text/html; charset=utf-8",
+      },
     });
   }
   if (wantsJson(request)) {

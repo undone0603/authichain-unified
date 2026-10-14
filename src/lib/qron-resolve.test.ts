@@ -4,6 +4,8 @@ import { toString as qrToString } from "qrcode";
 import {
   handleQronResolve,
   objectIdFromResolvePath,
+  QronPresentationMalformed,
+  QronStoreUnavailable,
   qronPresentationKvKey,
   qronResolveUrl,
   scannableQrDataUrl,
@@ -13,7 +15,9 @@ import { qronObjectIdForDestination } from "./qron-presentation";
 
 const OBJECT_ID = "qron:url:deadbeef";
 
-function stored(overrides: Partial<StoredQronPresentation> = {}): StoredQronPresentation {
+function stored(
+  overrides: Partial<StoredQronPresentation> = {}
+): StoredQronPresentation {
   return {
     object_id: OBJECT_ID,
     destination_url: "https://example.com/sku?q=<script>",
@@ -35,7 +39,9 @@ describe("qron resolve paths", () => {
     expect(qronResolveUrl(objectId)).toBe(
       `https://authichain.com/qron/r/${encodeURIComponent(objectId)}`
     );
-    expect(qronPresentationKvKey(objectId)).toBe(`qron:presentation:${objectId}`);
+    expect(qronPresentationKvKey(objectId)).toBe(
+      `qron:presentation:${objectId}`
+    );
   });
 });
 
@@ -43,7 +49,9 @@ describe("scannableQrDataUrl", () => {
   it("is the SVG QR for the resolve URL", async () => {
     const resolveUrl = qronResolveUrl(OBJECT_ID);
     const dataUrl = await scannableQrDataUrl(resolveUrl);
-    const svg = Buffer.from(dataUrl.split(",")[1] || "", "base64").toString("utf8");
+    const svg = Buffer.from(dataUrl.split(",")[1] || "", "base64").toString(
+      "utf8"
+    );
     const expected = await qrToString(resolveUrl, {
       type: "svg",
       margin: 1,
@@ -69,11 +77,62 @@ describe("handleQronResolve", () => {
     expect(response).toBeNull();
   });
 
+  it("returns indeterminate when the presentation store cannot be read", async () => {
+    const response = await handleQronResolve(
+      new Request(
+        `https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`,
+        {
+          headers: { accept: "application/json" },
+        }
+      ),
+      {
+        load: async () => {
+          throw new QronStoreUnavailable();
+        },
+      }
+    );
+    expect(response?.status).toBe(503);
+    const body = await response!.json();
+    expect(body).toMatchObject({
+      valid: false,
+      decision: "indeterminate",
+      error: "qron_store_unavailable",
+    });
+    expect(JSON.stringify(body)).not.toContain("counterfeit");
+  });
+
+  it("returns indeterminate when a stored record is malformed", async () => {
+    const response = await handleQronResolve(
+      new Request(
+        `https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`,
+        {
+          headers: { accept: "application/json" },
+        }
+      ),
+      {
+        load: async () => {
+          throw new QronPresentationMalformed();
+        },
+      }
+    );
+    expect(response?.status).toBe(422);
+    const body = await response!.json();
+    expect(body).toMatchObject({
+      valid: false,
+      decision: "indeterminate",
+      error: "presentation_malformed",
+    });
+    expect(body.decision).not.toBe("counterfeit");
+  });
+
   it("returns indeterminate Decision v1 when nothing is stored", async () => {
     const response = await handleQronResolve(
-      new Request(`https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`, {
-        headers: { accept: "application/json" },
-      }),
+      new Request(
+        `https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`,
+        {
+          headers: { accept: "application/json" },
+        }
+      ),
       { load: async () => null }
     );
     expect(response?.status).toBe(404);
@@ -96,9 +155,12 @@ describe("handleQronResolve", () => {
       },
     }));
     const response = await handleQronResolve(
-      new Request(`https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`, {
-        headers: { accept: "application/json" },
-      }),
+      new Request(
+        `https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`,
+        {
+          headers: { accept: "application/json" },
+        }
+      ),
       {
         load: async () => stored(),
         verify,
@@ -127,9 +189,12 @@ describe("handleQronResolve", () => {
       );
     }) as typeof fetch;
     const response = await handleQronResolve(
-      new Request(`https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`, {
-        headers: { accept: "application/json" },
-      }),
+      new Request(
+        `https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`,
+        {
+          headers: { accept: "application/json" },
+        }
+      ),
       { load: async () => stored(), fetchImpl }
     );
     const [url, init] = calls[0];
@@ -144,9 +209,12 @@ describe("handleQronResolve", () => {
 
   it("renders an HTML decision for a phone scan and escapes the destination", async () => {
     const response = await handleQronResolve(
-      new Request(`https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`, {
-        headers: { accept: "text/html" },
-      }),
+      new Request(
+        `https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`,
+        {
+          headers: { accept: "text/html" },
+        }
+      ),
       {
         load: async () => stored(),
         verify: async () => ({
@@ -169,9 +237,12 @@ describe("handleQronResolve", () => {
 
   it("rejects non-GET methods with indeterminate JSON", async () => {
     const response = await handleQronResolve(
-      new Request(`https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`, {
-        method: "POST",
-      }),
+      new Request(
+        `https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`,
+        {
+          method: "POST",
+        }
+      ),
       { load: async () => stored() }
     );
     expect(response?.status).toBe(405);
@@ -180,9 +251,12 @@ describe("handleQronResolve", () => {
 
   it("returns indeterminate when canonical verify cannot be reached", async () => {
     const response = await handleQronResolve(
-      new Request(`https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`, {
-        headers: { accept: "application/json" },
-      }),
+      new Request(
+        `https://authichain.com/qron/r/${encodeURIComponent(OBJECT_ID)}`,
+        {
+          headers: { accept: "application/json" },
+        }
+      ),
       {
         load: async () => stored(),
         fetchImpl: (async () => {

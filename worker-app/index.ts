@@ -485,49 +485,63 @@ app.post("/api/generate", async c => {
 // Living QR scan target. The image encodes https://authichain.com/qron/r/{object_id}.
 // GET loads the stored JWS and returns AuthiChain Verification Decision v1.
 app.all("/qron/r/*", async c => {
-  const { handleQronResolve, qronPresentationKvKey } = await import(
-    "../src/lib/qron-resolve"
-  );
+  const {
+    handleQronResolve,
+    qronPresentationKvKey,
+    QronPresentationMalformed,
+    QronStoreUnavailable,
+  } = await import("../src/lib/qron-resolve");
   const kv = c.env?.SESSIONS;
   const response = await handleQronResolve(c.req.raw, {
     load: async objectId => {
-      if (!kv) return null;
+      if (!kv) throw new QronStoreUnavailable();
       const raw = await kv.get(qronPresentationKvKey(objectId));
       if (!raw) return null;
+      let parsed: {
+        object_id?: string;
+        destination_url?: string;
+        resolve_url?: string;
+        jws?: string;
+        kid?: string;
+        jwks_url?: string;
+      };
       try {
-        const parsed = JSON.parse(raw) as {
-          object_id?: string;
-          destination_url?: string;
-          resolve_url?: string;
-          jws?: string;
-          kid?: string;
-          jwks_url?: string;
-        };
-        if (
-          parsed.object_id !== objectId ||
-          typeof parsed.destination_url !== "string" ||
-          typeof parsed.resolve_url !== "string" ||
-          typeof parsed.jws !== "string" ||
-          !parsed.jws ||
-          typeof parsed.kid !== "string" ||
-          typeof parsed.jwks_url !== "string"
-        ) {
-          return null;
-        }
-        return {
-          object_id: parsed.object_id,
-          destination_url: parsed.destination_url,
-          resolve_url: parsed.resolve_url,
-          jws: parsed.jws,
-          kid: parsed.kid,
-          jwks_url: parsed.jwks_url,
-        };
+        parsed = JSON.parse(raw) as typeof parsed;
       } catch {
-        return null;
+        throw new QronPresentationMalformed();
       }
+      if (
+        parsed.object_id !== objectId ||
+        typeof parsed.destination_url !== "string" ||
+        typeof parsed.resolve_url !== "string" ||
+        typeof parsed.jws !== "string" ||
+        !parsed.jws ||
+        typeof parsed.kid !== "string" ||
+        typeof parsed.jwks_url !== "string"
+      ) {
+        throw new QronPresentationMalformed();
+      }
+      return {
+        object_id: parsed.object_id,
+        destination_url: parsed.destination_url,
+        resolve_url: parsed.resolve_url,
+        jws: parsed.jws,
+        kid: parsed.kid,
+        jwks_url: parsed.jwks_url,
+      };
     },
   });
-  if (!response) return c.json({ error: "Not found" }, 404);
+  if (!response) {
+    return c.json(
+      {
+        valid: false,
+        decision: "indeterminate",
+        decision_contract: "AuthiChain Verification Decision v1",
+        error: "presentation_not_found",
+      },
+      404
+    );
+  }
   return response;
 });
 

@@ -223,25 +223,71 @@ describe("GET /api/generate", () => {
 });
 
 describe("GET /qron/r/:objectId", () => {
-  it("returns Decision v1 indeterminate when the presentation is not stored", async () => {
+  it("returns indeterminate when the presentation store is not bound", async () => {
     const objectId = "qron:url:deadbeef";
     const path = `/qron/r/${encodeURIComponent(objectId)}`;
     const json = await app.request(path, {
       headers: { accept: "application/json" },
     });
+    expect(json.status).toBe(503);
+    const body = await json.json();
+    expect(body.decision).toBe("indeterminate");
+    expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
+    expect(body.error).toBe("qron_store_unavailable");
+    expect(JSON.stringify(body)).not.toContain("counterfeit");
+  });
+
+  it("returns Decision v1 indeterminate when the presentation is not stored", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const env = {
+      SESSIONS: {
+        get: async () => null,
+        put: async () => undefined,
+      },
+    };
+    const json = await app.request(
+      path,
+      { headers: { accept: "application/json" } },
+      env
+    );
     expect(json.status).toBe(404);
     expect(json.headers.get("content-type")).toMatch(/json/);
     const body = await json.json();
     expect(body.decision).toBe("indeterminate");
     expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
     expect(body.error).toBe("presentation_not_found");
+    expect(body.decision).not.toBe("counterfeit");
 
-    const html = await app.request(path, {
-      headers: { accept: "text/html" },
-    });
+    const html = await app.request(
+      path,
+      { headers: { accept: "text/html" } },
+      env
+    );
     expect(html.status).toBe(404);
     expect(html.headers.get("content-type")).toMatch(/html/);
-    expect(await html.text()).toContain("<h1>indeterminate</h1>");
+    const page = await html.text();
+    expect(page).toContain("<h1>indeterminate</h1>");
+    expect(page).not.toContain("counterfeit");
+  });
+
+  it("returns indeterminate when the stored presentation is malformed", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const res = await app.request(
+      path,
+      { headers: { accept: "application/json" } },
+      {
+        SESSIONS: {
+          get: async () => "{",
+          put: async () => undefined,
+        },
+      }
+    );
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.decision).toBe("indeterminate");
+    expect(body.error).toBe("presentation_malformed");
   });
 });
 
