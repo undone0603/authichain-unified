@@ -238,6 +238,9 @@ function isAppHostname(host: string): boolean {
   return h.startsWith("app.");
 }
 
+// Paths the app host links to but only the apex serves; see the catch-all.
+const APEX_ONLY_PATHS = new Set(["/pricing", "/protocol", "/api/verify"]);
+
 // ─── DPP $299 + catalogue plan checkout (GET = click-to-confirm) ────────────
 // A GET never opens a Stripe session: link scanners, email security gateways
 // and chat previews were creating ~28 unpaid sessions/day. Every GET 303s to
@@ -1908,6 +1911,12 @@ app.get("*", async c => {
     c.req.header("x-forwarded-host") ?? c.req.header("host") ?? "";
   if ((rawPathname === "/" || rawPathname === "") && isAppHostname(appHost)) {
     return c.redirect("/dashboard", 302);
+  }
+  // The dashboard SPA links to these with relative hrefs, but they are only
+  // served on the apex (authichain-com worker), so on app.* they 404'd.
+  if (isAppHostname(appHost) && APEX_ONLY_PATHS.has(rawPathname)) {
+    const { search } = new URL(c.req.url);
+    return c.redirect(`https://authichain.com${rawPathname}${search}`, 301);
   }
   // Normalize a trailing slash (except root "/") so /about/ resolves the same
   // as /about; otherwise the exact-match marketing lookup misses and the page
