@@ -129,6 +129,24 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
     expect(result.capabilities).toEqual(["VERIFY_ATTESTATION"]);
   });
 
+  it("inspects a message without using it up", async () => {
+    const { resolver, message, now } = await signedFixtures();
+    const replayStore = {
+      recordMessageNonce: async () => {
+        throw new Error("inspect must not touch the replay store");
+      },
+      purgeExpiredNonces: async () => 0,
+    };
+    const result = await verifyAgentMessage(message, {
+      resolver,
+      replayStore,
+      now,
+      mode: "inspect",
+    });
+    expect(result.valid).toBe(true);
+    expect(result.reasons).toEqual([]);
+  });
+
   it("fails closed when issuer key is missing", async () => {
     const fixture = await signedFixtures();
     const resolver = { ...fixture.resolver, getIssuerPublicKey: async () => null };

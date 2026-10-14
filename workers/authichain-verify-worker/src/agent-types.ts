@@ -4,6 +4,8 @@ export const AGENT_CAPABILITIES = [
   "CREATE_AUDIT_RECORD",
   "PROPOSE_LIFECYCLE_ACTION",
   "RESOLVE_IDENTIFIER",
+  // Show one offer. It does not authorize sending, registering, or certifying.
+  "PRESENT_ONE_OFFER",
 ] as const;
 
 export type AgentCapability = (typeof AGENT_CAPABILITIES)[number];

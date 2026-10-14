@@ -22,6 +22,12 @@ export interface VerifyAgentMessageOptions {
   auditSink?: AgentAuditSink;
   now?: Date;
   clockSkewSeconds?: number;
+  /**
+   * authorize (default) records the message id and rejects a repeat.
+   * inspect checks the signature, issuer, permission, and expiry without
+   * using the message up. A public page must use inspect. An action must not.
+   */
+  mode?: "authorize" | "inspect";
 }
 
 function base64ToUint8Array(base64: string): Uint8Array {
@@ -303,6 +309,31 @@ export async function verifyAgentMessage(
       organization_id: attestation.organization_id,
       attestation_id: attestation.attestation_id,
       reasons: [...new Set(reasons)],
+      message_digest: digest,
+      verified_at: verifiedAt,
+    };
+  }
+
+  if (options.mode === "inspect") {
+    await emitAudit(options.auditSink, {
+      event_type: "VERIFICATION_SUCCESS",
+      timestamp: verifiedAt,
+      agent_id: attestation.agent_id,
+      organization_id: attestation.organization_id,
+      attestation_id: attestation.attestation_id,
+      issuer_id: attestation.issuer_id,
+      message_id: message.message_id,
+      message_digest: digest,
+      reasons: [],
+    });
+    return {
+      valid: true,
+      agent_id: attestation.agent_id,
+      organization_id: attestation.organization_id,
+      attestation_id: attestation.attestation_id,
+      reasons: [],
+      capabilities: normalizedMessageCaps,
+      policy_version: message.policy_version,
       message_digest: digest,
       verified_at: verifiedAt,
     };
