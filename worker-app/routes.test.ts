@@ -342,6 +342,27 @@ describe("app host /", () => {
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/dashboard");
   });
+
+  it.each([
+    ["/pricing", "https://authichain.com/pricing"],
+    ["/protocol", "https://authichain.com/protocol"],
+    ["/api/verify?id=polygon-anchor-1", "https://authichain.com/api/verify?id=polygon-anchor-1"],
+  ])("301s app.authichain.com%s to the apex", async (path, location) => {
+    const res = await app.request(path, {
+      headers: { host: "app.authichain.com" },
+      redirect: "manual",
+    });
+    expect(res.status).toBe(301);
+    expect(res.headers.get("location")).toBe(location);
+  });
+
+  it("leaves /pricing alone on the apex host", async () => {
+    const res = await app.request("/pricing", {
+      headers: { host: "authichain.com" },
+      redirect: "manual",
+    });
+    expect(res.status).not.toBe(301);
+  });
 });
 
 describe("POST /api/stripe/webhook", () => {
