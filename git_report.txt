@@ -1,0 +1,53 @@
+---STATUS---
+ M apps/qron-platform/package.json
+?? .turbo/cache/10db5988144a05a6-manifest.json
+?? .turbo/cache/10db5988144a05a6-meta.json
+?? .turbo/cache/10db5988144a05a6.tar.zst
+?? .turbo/cache/4d13bd76d9e1dd88-manifest.json
+?? .turbo/cache/4d13bd76d9e1dd88-meta.json
+?? .turbo/cache/4d13bd76d9e1dd88.tar.zst
+?? .turbo/cache/4f7957389601e1f4-manifest.json
+?? .turbo/cache/4f7957389601e1f4-meta.json
+?? .turbo/cache/4f7957389601e1f4.tar.zst
+?? .turbo/cache/590ec743ffc710fc-manifest.json
+?? .turbo/cache/590ec743ffc710fc-meta.json
+?? .turbo/cache/590ec743ffc710fc.tar.zst
+?? .turbo/cache/f16e91028b74790f-manifest.json
+?? .turbo/cache/f16e91028b74790f-meta.json
+?? .turbo/cache/f16e91028b74790f.tar.zst
+?? .turbo/cache/fd2541fd7379721e-manifest.json
+?? .turbo/cache/fd2541fd7379721e-meta.json
+?? .turbo/cache/fd2541fd7379721e.tar.zst
+?? FINAL_INSPECTION.json
+?? _inspection_result.txt
+?? agents_skills.txt
+?? details.sh
+?? docs/AUTONOMOUS_ECONOMY_STATUS.md
+?? final.json
+?? final_pretty.txt
+?? generate_report.py
+?? inspect.sh
+?? out.json
+?? output.txt
+?? report.txt
+?? run_summary.py
+?? scan.py
+?? target_dirs.txt
+?? top.txt
+?? top_items.txt
+?? update_all.py
+?? workers/auth/
+---DIFF---
+diff --git a/apps/qron-platform/package.json b/apps/qron-platform/package.json
+index f19df2e5..4ca798ff 100644
+--- a/apps/qron-platform/package.json
++++ b/apps/qron-platform/package.json
+@@ -4,7 +4,7 @@
+   "private": true,
+   "scripts": {
+     "dev": "next dev",
+-    "build": "next build",
++    "build": "next build --webpack",
+     "start": "next start",
+     "lint": "eslint .",
+     "format": "prettier --write .",

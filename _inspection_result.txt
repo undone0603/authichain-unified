@@ -1,0 +1,52 @@
+===CLAUDE_SETTINGS_END===python3 -c 
+import os, glob
+
+files = [
+    ".gemini/settings.json",
+    ".gemini/verify.js",
+    ".cursor/rules/live-money.mdc",
+    ".claude/settings.json"
+]
+
+for f in files:
+    print(f"=== FILE: {f} ===")
+    if os.path.exists(f):
+        print(open(f).read())
+    else:
+        print("NOT FOUND")
+
+print("=== DIRECTORY: agentz/ ===")
+if os.path.exists("agentz"):
+    for root, dirs, fnames in os.walk("agentz"):
+        for fn in fnames:
+            p = os.path.join(root, fn)
+            print(f"--- {p} ---")
+            try:
+                print(open(p).read())
+            except Exception as e:
+                print(e)
+else:
+    print("NOT FOUND")
+
+print("=== DIRECTORY: .grok/ ===")
+if os.path.exists(".grok"):
+    for root, dirs, fnames in os.walk(".grok"):
+        for fn in fnames:
+            p = os.path.join(root, fn)
+            print(f"--- {p} ---")
+            try:
+                print(open(p).read())
+            except Exception as e:
+                print(e)
+else:
+    print("NOT FOUND")
+
+print("=== OTHER SKILL/RULE FILES ===")
+for p in glob.glob("**/*skill*", recursive=True) + glob.glob("**/*rule*", recursive=True):
+    if os.path.isfile(p) and not p.startswith("node_modules") and not ".git/" in p:
+        print(f"--- {p} ---")
+        try:
+            print(open(p).read())
+        except Exception as e:
+            print(e)
+
