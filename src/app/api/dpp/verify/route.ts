@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyDpp } from "@/lib/dpp-verify";
 import {
+  isCanonicalPositive,
   resolveCanonicalVerifyUrl,
   verifyWithCanonicalWorker,
 } from "../../../../../packages/verifier/src/canonical-worker-client";
@@ -78,11 +79,7 @@ async function handle(
     const protocolVerification = verification.response;
     // A published passport is not a positive protocol decision. Never let the
     // DPP adapter return HTTP 200 for a blocked, invalid, or indeterminate JWS.
-    const canonicalPositive =
-      verification.httpStatus >= 200 &&
-      verification.httpStatus < 300 &&
-      protocolVerification.valid === true &&
-      protocolVerification.decision === "verified";
+    const canonicalPositive = isCanonicalPositive(verification);
     const status = canonicalPositive
       ? 200
       : verification.httpStatus >= 400
