@@ -81,7 +81,9 @@ function inline(text: string): string {
   out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_all, label: string, href: string) => {
     const safe = href.startsWith("/") || href.startsWith("https://") || href.startsWith("http://");
     if (!safe) return label;
-    return `<a href="${esc(href)}">${label}</a>`;
+    // `href` is already escaped: esc(text) ran over the whole line above.
+    // Escaping again turned `&` in query strings into `&amp;amp;`.
+    return `<a href="${href}">${label}</a>`;
   });
   return out;
 }
