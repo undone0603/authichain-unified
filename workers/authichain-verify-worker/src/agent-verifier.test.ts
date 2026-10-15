@@ -123,7 +123,12 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
   it("accepts a valid issuer-signed, agent-signed message", async () => {
     const { resolver, message, now } = await signedFixtures();
     const replayStore = new MemoryAgentReplayStore();
-    const result = await verifyAgentMessage(message, { resolver, replayStore, now });
+    const result = await verifyAgentMessage(message, {
+      resolver,
+      replayStore,
+      now,
+      requiredCapability: "VERIFY_ATTESTATION",
+    });
     expect(result.valid).toBe(true);
     expect(result.reasons).toEqual([]);
     expect(result.capabilities).toEqual(["VERIFY_ATTESTATION"]);
@@ -229,11 +234,13 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
       resolver: fixture.resolver,
       replayStore: store,
       now: fixture.now,
+      requiredCapability: "VERIFY_ATTESTATION",
     });
     const second = await verifyAgentMessage(fixture.message, {
       resolver: fixture.resolver,
       replayStore: store,
       now: fixture.now,
+      requiredCapability: "VERIFY_ATTESTATION",
     });
     expect(first.valid).toBe(true);
     expect(second.valid).toBe(false);
@@ -256,6 +263,7 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
       resolver: fixture.resolver,
       replayStore: store,
       now: fixture.now,
+      requiredCapability: "VERIFY_ATTESTATION",
     });
     expect(result.valid).toBe(false);
     expect(result.reasons).toContain("MESSAGE_ID_CONFLICT");
@@ -269,6 +277,7 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
       resolver: fixture.resolver,
       replayStore: store,
       now: fixture.now,
+      requiredCapability: "VERIFY_ATTESTATION",
     });
     expect(result.valid).toBe(false);
     const validBase = { ...fixture.message, message_id: "msg:1002" };
@@ -278,6 +287,7 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
         resolver: fixture.resolver,
         replayStore: store,
         now: fixture.now,
+        requiredCapability: "VERIFY_ATTESTATION",
       },
     );
     expect(valid.valid).toBe(true);
