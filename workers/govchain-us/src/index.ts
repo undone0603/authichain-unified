@@ -2343,7 +2343,8 @@ export default {
           q: url.searchParams.get('q') ?? undefined,
         });
         return jsonResponse({ opportunities });
-      } catch {
+      } catch (err) {
+        console.error('govchain: supabase read failed', err instanceof Error ? err.message : String(err));
         return jsonResponse({ error: 'supabase_unavailable', opportunities: [] }, 502, 'no-store');
       }
     }
@@ -2353,7 +2354,8 @@ export default {
       }
       try {
         return jsonResponse(await fetchStats(env));
-      } catch {
+      } catch (err) {
+        console.error('govchain: supabase read failed', err instanceof Error ? err.message : String(err));
         return jsonResponse({ error: 'supabase_unavailable' }, 502, 'no-store');
       }
     }
