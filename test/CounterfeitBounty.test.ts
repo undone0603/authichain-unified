@@ -6,10 +6,12 @@
  * hardhat.config.ts scopes `paths.sources` to ./contracts/ledger and Hardhat 3
  * accepts only source directories, so the contract (and an inline mock ERC20 built
  * on OpenZeppelin) are compiled here with solc, as scripts/compile-authichain-nft.cjs
- * does. No .sol file in the repo is added or modified.
+ * does.
  *
- * Tests tagged FINDING assert what the contract ACTUALLY does today. They document
- * trust-boundary / correctness weaknesses; a fix will make them fail loudly.
+ * Tests tagged FIXED were FINDING tests against the original contract (claims
+ * with no evidence, owner self-pay, squatting, unchecked ERC20 returns,
+ * fee-on-transfer insolvency, claims after expiry, renounce stranding funds).
+ * Each now asserts the attack fails.
  */
 
 import assert from "node:assert/strict";
@@ -55,21 +57,22 @@ contract MockToken is ERC20 {
 
 // Re-enters CounterfeitBounty when it receives tokens (ERC777-style hook simulation).
 interface IBounty {
-    function releaseBounty(string memory c) external;
-    function claimBounty(string memory c, address claimant) external;
+    function releaseBounty(address brand, string memory c) external;
 }
 contract ReentrantToken is ERC20 {
     IBounty public bounty;
+    address public brand;
     string public target;
     uint256 public reenterCount;
+    uint256 public reenterBlocked;  // re-entries the bounty contract refused
     constructor() ERC20("Re", "RE") {}
     function mint(address to, uint256 a) external { _mint(to, a); }
-    function arm(address b, string memory c) external { bounty = IBounty(b); target = c; }
+    function arm(address b, address br, string memory c) external { bounty = IBounty(b); brand = br; target = c; }
     function _update(address from, address to, uint256 value) internal override {
         super._update(from, to, value);
         if (address(bounty) != address(0) && from == address(bounty)) {
             reenterCount++;
-            try bounty.releaseBounty(target) {} catch {}
+            try bounty.releaseBounty(brand, target) {} catch { reenterBlocked++; }
         }
     }
 }
@@ -112,6 +115,7 @@ const reTokenArt = art(mockOut["ReentrantToken"]);
 const DAY = 86400;
 const CERT = "CERT-0001";
 const AMOUNT = 1_000n * 10n ** 18n;
+const EVIDENCE = "0x" + "ab".repeat(32);
 
 async function deploy() {
   const [owner, brand, consumer, mallory, other] = await ethers.getSigners();
@@ -129,6 +133,11 @@ async function lock(ctx: any, cert = CERT, amount = AMOUNT, days = 30, who = ctx
   return (await ctx.bounty.connect(who).lockBounty(cert, await token.getAddress(), amount, days)).wait();
 }
 
+const get = (ctx: any, cert = CERT, brand = ctx.brand) => ctx.bounty.getBounty(brand.address, cert);
+const claim = (ctx: any, to: string, cert = CERT, brand = ctx.brand, evidence = EVIDENCE) =>
+  ctx.bounty.claimBounty(brand.address, cert, to, evidence);
+const release = (ctx: any, cert = CERT, brand = ctx.brand) => ctx.bounty.releaseBounty(brand.address, cert);
+
 async function timeTravel(seconds: number) {
   await ethers.provider.send("evm_increaseTime", [seconds]);
   await ethers.provider.send("evm_mine", []);
@@ -139,6 +148,8 @@ const errIface = new ethers.Interface([
   "error OwnableInvalidOwner(address owner)",
   "error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed)",
   "error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed)",
+  "error SafeERC20FailedOperation(address token)",
+  "error ReentrancyGuardReentrantCall()",
 ]);
 
 /** Assert revert; `expect` is a custom-error name (selector match) or a require() reason string. */
@@ -174,7 +185,7 @@ function events(c: any, rc: any, name: string) {
 }
 
 describe("CounterfeitBounty: lockBounty", () => {
-  it("escrows tokens, stores the bounty and emits BountyLocked", async () => {
+  it("escrows tokens, stores the bounty under the brand's namespace and emits BountyLocked", async () => {
     const ctx = await deploy();
     const { bounty, token, brand } = ctx;
     const before = await token.balanceOf(brand.address);
@@ -190,7 +201,7 @@ describe("CounterfeitBounty: lockBounty", () => {
     assert.equal(await token.balanceOf(await bounty.getAddress()), AMOUNT);
     assert.equal(await token.balanceOf(brand.address), before - AMOUNT);
 
-    const b = await bounty.productBounties(CERT);
+    const b = await get(ctx);
     assert.equal(b.brand, brand.address);
     assert.equal(b.amount, AMOUNT);
     assert.equal(b.claimed, false);
@@ -198,9 +209,11 @@ describe("CounterfeitBounty: lockBounty", () => {
     assert.ok(b.expiry > t0 + BigInt(30 * DAY) - 5n && b.expiry < t0 + BigInt(30 * DAY) + 60n);
   });
 
-  it("rejects zero amount and duplicate certificate", async () => {
+  it("rejects zero amount, empty certificate, and a duplicate live bounty", async () => {
     const ctx = await deploy();
-    await reverts(ctx.bounty.connect(ctx.brand).lockBounty(CERT, await ctx.token.getAddress(), 0, 30), "Amount must be > 0");
+    const addr = await ctx.token.getAddress();
+    await reverts(ctx.bounty.connect(ctx.brand).lockBounty(CERT, addr, 0, 30), "Amount must be > 0");
+    await reverts(ctx.bounty.connect(ctx.brand).lockBounty("", addr, AMOUNT, 30), "Certificate required");
     await lock(ctx);
     await reverts(lock(ctx), "Bounty already exists");
   });
@@ -211,71 +224,86 @@ describe("CounterfeitBounty: lockBounty", () => {
     await reverts(ctx.bounty.connect(ctx.brand).lockBounty(CERT, addr, AMOUNT, 30), "ERC20InsufficientAllowance");
     await (await ctx.token.connect(ctx.other).approve(await ctx.bounty.getAddress(), AMOUNT)).wait();
     await reverts(ctx.bounty.connect(ctx.other).lockBounty(CERT, addr, AMOUNT, 30), "ERC20InsufficientBalance");
-    assert.equal((await ctx.bounty.productBounties(CERT)).amount, 0n);
+    assert.equal((await get(ctx, CERT, ctx.other)).amount, 0n);
   });
 
-  it("FINDING: anyone can lock a bounty for ANY certificate number (no binding to certificate ownership) and squat the id", async () => {
+  it("FIXED: a stranger cannot squat a brand's certificate (bounties are namespaced by brand)", async () => {
     const ctx = await deploy();
-    // Mallory is not the brand and has no relation to CERT; locks 1 wei with 0 days.
-    await lock(ctx, CERT, 1n, 0, ctx.mallory);
-    const b = await ctx.bounty.productBounties(CERT);
-    assert.equal(b.brand, ctx.mallory.address);
-    // The real brand can no longer lock a bounty for its own certificate.
-    await reverts(lock(ctx, CERT, AMOUNT, 30, ctx.brand), "Bounty already exists");
+    await lock(ctx, CERT, 1n, 7, ctx.mallory);
+    // Mallory's lock lives under Mallory; the brand still locks its own certificate.
+    await lock(ctx, CERT, AMOUNT, 30, ctx.brand);
+    assert.equal((await get(ctx, CERT, ctx.brand)).amount, AMOUNT);
+    assert.equal((await get(ctx, CERT, ctx.mallory)).amount, 1n);
+    assert.notEqual(
+      await ctx.bounty.bountyKey(ctx.brand.address, CERT),
+      await ctx.bounty.bountyKey(ctx.mallory.address, CERT),
+    );
   });
 
-  it("FINDING: a settled certificate id can never be re-used (amount is never cleared)", async () => {
+  it("FIXED: a settled certificate can be locked again", async () => {
     const ctx = await deploy();
-    await lock(ctx, CERT, AMOUNT, 0);
-    await (await ctx.bounty.releaseBounty(CERT)).wait();
-    await reverts(lock(ctx), "Bounty already exists");
+    await lock(ctx, CERT, AMOUNT, 7);
+    await timeTravel(7 * DAY);
+    await (await release(ctx)).wait();
+    await lock(ctx, CERT, AMOUNT, 30);
+    const b = await get(ctx);
+    assert.equal(b.released, false);
+    assert.equal(b.amount, AMOUNT);
   });
 
-  it("FINDING: lockBounty ignores the ERC20 return value - a token returning false records a bounty with no funds", async () => {
+  it("FIXED: a token returning false cannot record an unfunded bounty", async () => {
     const ctx = await deploy();
     await (await ctx.token.setSoftFail(true)).wait();
-    await (await ctx.bounty.connect(ctx.mallory).lockBounty(CERT, await ctx.token.getAddress(), AMOUNT, 30)).wait();
-    const b = await ctx.bounty.productBounties(CERT);
-    assert.equal(b.amount, AMOUNT, "bounty recorded");
-    assert.equal(await ctx.token.balanceOf(await ctx.bounty.getAddress()), 0n, "but nothing was escrowed");
+    await reverts(
+      ctx.bounty.connect(ctx.mallory).lockBounty(CERT, await ctx.token.getAddress(), AMOUNT, 30),
+      "SafeERC20FailedOperation",
+    );
+    assert.equal((await get(ctx, CERT, ctx.mallory)).amount, 0n);
   });
 
-  it("FINDING: fee-on-transfer tokens make the contract insolvent (records nominal amount, receives less)", async () => {
+  it("FIXED: fee-on-transfer tokens record what arrived, so every bounty stays payable", async () => {
     const ctx = await deploy();
-    await (await ctx.token.setFeeBps(1000)).wait(); // 10%
+    await (await ctx.token.setFeeBps(1000)).wait(); // 10% burned per transfer
     await lock(ctx, "A", 1000n, 30);
     await lock(ctx, "B", 1000n, 30);
     assert.equal(await ctx.token.balanceOf(await ctx.bounty.getAddress()), 1800n);
-    // Owner claims A in full (900 of the 1000 recorded cannot be honoured twice over): the second payout reverts.
-    await (await ctx.bounty.claimBounty("A", ctx.consumer.address)).wait();
-    await reverts(ctx.bounty.claimBounty("B", ctx.consumer.address));
+    assert.equal((await get(ctx, "A")).amount, 900n);
+    assert.equal((await get(ctx, "B")).amount, 900n);
+    await (await claim(ctx, ctx.consumer.address, "A")).wait();
+    await (await claim(ctx, ctx.consumer.address, "B")).wait();
+    assert.equal(await ctx.token.balanceOf(await ctx.bounty.getAddress()), 0n, "solvent to the last wei");
   });
 
-  it("an EOA used as the token address reverts (compiler extcodesize check on the high-level call)", async () => {
+  it("FIXED: the window is 7..3650 days, so a bounty is a real commitment", async () => {
+    const ctx = await deploy();
+    const addr = await ctx.token.getAddress();
+    await (await ctx.token.connect(ctx.brand).approve(await ctx.bounty.getAddress(), AMOUNT)).wait();
+    for (const days of [0n, 6n, 3651n, 2n ** 255n]) {
+      await reverts(ctx.bounty.connect(ctx.brand).lockBounty(CERT, addr, AMOUNT, days), "Duration out of range");
+    }
+    await lock(ctx, CERT, AMOUNT, 7);
+    await reverts(release(ctx), "Not expired yet");
+  });
+
+  it("an EOA used as the token address reverts", async () => {
     const ctx = await deploy();
     await reverts(ctx.bounty.connect(ctx.brand).lockBounty(CERT, ctx.other.address, AMOUNT, 30));
-  });
-
-  it("very large duration overflows and reverts (checked arithmetic) rather than wrapping", async () => {
-    const ctx = await deploy();
-    await (await ctx.token.connect(ctx.brand).approve(await ctx.bounty.getAddress(), AMOUNT)).wait();
-    await reverts(
-      ctx.bounty.connect(ctx.brand).lockBounty(CERT, await ctx.token.getAddress(), AMOUNT, 2n ** 255n)
-    );
   });
 });
 
 describe("CounterfeitBounty: claimBounty", () => {
-  it("owner can claim to a claimant: exact amount transferred, flag set, event emitted", async () => {
+  it("arbiter pays a claimant: exact amount, flag set, evidence digest emitted", async () => {
     const ctx = await deploy();
     await lock(ctx);
-    const rc = await (await ctx.bounty.claimBounty(CERT, ctx.consumer.address)).wait();
+    const rc = await (await claim(ctx, ctx.consumer.address)).wait();
     const e = events(ctx.bounty, rc, "BountyClaimed")[0];
     assert.equal(e.args.claimant, ctx.consumer.address);
+    assert.equal(e.args.brand, ctx.brand.address);
     assert.equal(e.args.amount, AMOUNT);
+    assert.equal(e.args.evidenceDigest, EVIDENCE);
     assert.equal(await ctx.token.balanceOf(ctx.consumer.address), AMOUNT);
     assert.equal(await ctx.token.balanceOf(await ctx.bounty.getAddress()), 0n);
-    const b = await ctx.bounty.productBounties(CERT);
+    const b = await get(ctx);
     assert.equal(b.claimed, true);
     assert.equal(b.released, false);
   });
@@ -284,140 +312,119 @@ describe("CounterfeitBounty: claimBounty", () => {
     const ctx = await deploy();
     await lock(ctx);
     for (const s of [ctx.brand, ctx.consumer, ctx.mallory]) {
-      await reverts(ctx.bounty.connect(s).claimBounty(CERT, s.address), "OwnableUnauthorizedAccount");
+      await reverts(
+        ctx.bounty.connect(s).claimBounty(ctx.brand.address, CERT, s.address, EVIDENCE),
+        "OwnableUnauthorizedAccount",
+      );
     }
     assert.equal(await ctx.token.balanceOf(await ctx.bounty.getAddress()), AMOUNT);
   });
 
   it("cannot claim a missing bounty, double-claim, or claim after release", async () => {
     const ctx = await deploy();
-    await reverts(ctx.bounty.claimBounty("nope", ctx.consumer.address), "No bounty");
+    await reverts(claim(ctx, ctx.consumer.address, "nope"), "No bounty");
 
     await lock(ctx);
-    await (await ctx.bounty.claimBounty(CERT, ctx.consumer.address)).wait();
-    await reverts(ctx.bounty.claimBounty(CERT, ctx.consumer.address), "Already settled");
+    await (await claim(ctx, ctx.consumer.address)).wait();
+    await reverts(claim(ctx, ctx.consumer.address), "Already settled");
     assert.equal(await ctx.token.balanceOf(ctx.consumer.address), AMOUNT, "paid exactly once");
 
-    await lock(ctx, "CERT-2", AMOUNT, 1);
-    await timeTravel(2 * DAY);
-    await (await ctx.bounty.releaseBounty("CERT-2")).wait();
-    await reverts(ctx.bounty.claimBounty("CERT-2", ctx.consumer.address), "Already settled");
+    await lock(ctx, "CERT-2", AMOUNT, 7);
+    await timeTravel(8 * DAY);
+    await (await release(ctx, "CERT-2")).wait();
+    await reverts(claim(ctx, ctx.consumer.address, "CERT-2"), "Already settled");
   });
 
-  it("FINDING: claim is purely owner-discretionary - no proof, no consensus, no binding to any AuthiChain verification record", async () => {
+  it("FIXED: a claim must commit to evidence", async () => {
     const ctx = await deploy();
     await lock(ctx);
-    // The owner supplies an arbitrary payee and no evidence argument exists at all.
+    await reverts(claim(ctx, ctx.consumer.address, CERT, ctx.brand, ethers.ZeroHash), "Evidence required");
     const fn = bountyArt.abi.find((x: any) => x.name === "claimBounty");
-    assert.deepEqual(fn.inputs.map((i: any) => i.type), ["string", "address"]);
-    await (await ctx.bounty.claimBounty(CERT, ctx.other.address)).wait();
-    assert.equal(await ctx.token.balanceOf(ctx.other.address), AMOUNT);
+    assert.deepEqual(fn.inputs.map((i: any) => i.type), ["address", "string", "address", "bytes32"]);
   });
 
-  it("FINDING: the owner can drain any brand's escrow to itself - no timelock, no brand consent", async () => {
+  it("FIXED: the arbiter cannot pay itself, the brand, or the zero address", async () => {
     const ctx = await deploy();
     await lock(ctx);
-    const before = await ctx.token.balanceOf(ctx.owner.address);
-    await (await ctx.bounty.claimBounty(CERT, ctx.owner.address)).wait();
-    assert.equal((await ctx.token.balanceOf(ctx.owner.address)) - before, AMOUNT);
+    for (const to of [ctx.owner.address, ctx.brand.address, ethers.ZeroAddress]) {
+      await reverts(claim(ctx, to), "Invalid claimant");
+    }
+    assert.equal(await ctx.token.balanceOf(await ctx.bounty.getAddress()), AMOUNT);
   });
 
-  it("FINDING: claim ignores expiry - owner can claim after the bounty expired, front-running the brand's release", async () => {
+  it("FIXED: claims close with the window; the brand's release cannot be front-run", async () => {
     const ctx = await deploy();
-    await lock(ctx, CERT, AMOUNT, 1);
-    await timeTravel(5 * DAY);
-    await (await ctx.bounty.claimBounty(CERT, ctx.consumer.address)).wait();
-    assert.equal(await ctx.token.balanceOf(ctx.consumer.address), AMOUNT);
-    await reverts(ctx.bounty.releaseBounty(CERT), "Already settled");
+    await lock(ctx, CERT, AMOUNT, 7);
+    await timeTravel(7 * DAY);
+    await reverts(claim(ctx, ctx.consumer.address), "Bounty expired");
+    await (await release(ctx)).wait();
+    assert.equal(await ctx.token.balanceOf(ctx.consumer.address), 0n);
   });
 
-  it("FINDING: ownership transfer moves total control of all escrows; renounceOwnership permanently disables claims", async () => {
-    const ctx = await deploy();
-    await lock(ctx);
-    await (await ctx.bounty.transferOwnership(ctx.mallory.address)).wait();
-    await reverts(ctx.bounty.claimBounty(CERT, ctx.consumer.address), "OwnableUnauthorizedAccount");
-    await (await ctx.bounty.connect(ctx.mallory).claimBounty(CERT, ctx.mallory.address)).wait();
-    assert.equal(await ctx.token.balanceOf(ctx.mallory.address), AMOUNT * 2n);
-
-    await lock(ctx, "C2");
-    await (await ctx.bounty.connect(ctx.mallory).renounceOwnership()).wait();
-    await reverts(ctx.bounty.connect(ctx.mallory).claimBounty("C2", ctx.mallory.address), "OwnableUnauthorizedAccount");
-  });
-
-  it("claiming to the zero address is rejected by the token (funds not burned)", async () => {
+  it("FIXED: ownership moves in two steps and cannot be renounced", async () => {
     const ctx = await deploy();
     await lock(ctx);
-    await reverts(ctx.bounty.claimBounty(CERT, ethers.ZeroAddress));
-    assert.equal((await ctx.bounty.productBounties(CERT)).claimed, false);
+    await (await ctx.bounty.transferOwnership(ctx.other.address)).wait();
+    assert.equal(await ctx.bounty.owner(), ctx.owner.address, "still the owner until accepted");
+    await (await claim(ctx, ctx.consumer.address)).wait();
+    await reverts(ctx.bounty.connect(ctx.mallory).acceptOwnership(), "OwnableUnauthorizedAccount");
+    await (await ctx.bounty.connect(ctx.other).acceptOwnership()).wait();
+    assert.equal(await ctx.bounty.owner(), ctx.other.address);
+    await reverts(ctx.bounty.connect(ctx.other).renounceOwnership(), "Renounce disabled");
+    await reverts(ctx.bounty.connect(ctx.mallory).renounceOwnership(), "OwnableUnauthorizedAccount");
   });
 
-  it("FINDING: claimBounty ignores the transfer return value - with a returns-false token it marks the bounty claimed without paying", async () => {
+  it("FIXED: a token returning false on payout reverts instead of marking the bounty claimed", async () => {
     const ctx = await deploy();
     await lock(ctx);
     await (await ctx.token.setSoftFail(true)).wait();
-    await (await ctx.bounty.claimBounty(CERT, ctx.consumer.address)).wait();
-    assert.equal((await ctx.bounty.productBounties(CERT)).claimed, true);
-    assert.equal(await ctx.token.balanceOf(ctx.consumer.address), 0n);
-    assert.equal(await ctx.token.balanceOf(await ctx.bounty.getAddress()), AMOUNT, "funds stranded forever");
-    await reverts(ctx.bounty.claimBounty(CERT, ctx.consumer.address), "Already settled");
+    await reverts(claim(ctx, ctx.consumer.address), "SafeERC20FailedOperation");
+    assert.equal((await get(ctx)).claimed, false);
+    assert.equal(await ctx.token.balanceOf(await ctx.bounty.getAddress()), AMOUNT, "funds still escrowed");
+    await (await ctx.token.setSoftFail(false)).wait();
+    await (await claim(ctx, ctx.consumer.address)).wait();
+    assert.equal(await ctx.token.balanceOf(ctx.consumer.address), AMOUNT);
   });
 });
 
 describe("CounterfeitBounty: releaseBounty", () => {
   it("cannot release before expiry (anyone), nor a missing bounty", async () => {
     const ctx = await deploy();
-    await reverts(ctx.bounty.releaseBounty("nope"), "No bounty");
+    await reverts(release(ctx, "nope"), "No bounty");
     await lock(ctx, CERT, AMOUNT, 30);
-    await reverts(ctx.bounty.connect(ctx.brand).releaseBounty(CERT), "Not expired yet");
+    await reverts(ctx.bounty.connect(ctx.brand).releaseBounty(ctx.brand.address, CERT), "Not expired yet");
     await timeTravel(29 * DAY);
-    await reverts(ctx.bounty.connect(ctx.mallory).releaseBounty(CERT), "Not expired yet");
+    await reverts(ctx.bounty.connect(ctx.mallory).releaseBounty(ctx.brand.address, CERT), "Not expired yet");
   });
 
-  it("after expiry anyone can trigger release but funds go ONLY to the brand; event + balances correct", async () => {
+  it("after expiry anyone can trigger release but funds go ONLY to the brand", async () => {
     const ctx = await deploy();
     const brandBefore = await ctx.token.balanceOf(ctx.brand.address);
     await lock(ctx, CERT, AMOUNT, 30);
     await timeTravel(30 * DAY + 1);
 
     const mBefore = await ctx.token.balanceOf(ctx.mallory.address);
-    const rc = await (await ctx.bounty.connect(ctx.mallory).releaseBounty(CERT)).wait();
+    const rc = await (await ctx.bounty.connect(ctx.mallory).releaseBounty(ctx.brand.address, CERT)).wait();
     const e = events(ctx.bounty, rc, "BountyReleased")[0];
     assert.equal(e.args.brand, ctx.brand.address);
     assert.equal(e.args.amount, AMOUNT);
     assert.equal(await ctx.token.balanceOf(ctx.brand.address), brandBefore);
     assert.equal(await ctx.token.balanceOf(ctx.mallory.address), mBefore, "caller gains nothing");
     assert.equal(await ctx.token.balanceOf(await ctx.bounty.getAddress()), 0n);
-    assert.equal((await ctx.bounty.productBounties(CERT)).released, true);
+    assert.equal((await get(ctx)).released, true);
   });
 
   it("double release and release-after-claim are prevented", async () => {
     const ctx = await deploy();
-    await lock(ctx, CERT, AMOUNT, 1);
-    await timeTravel(2 * DAY);
-    await (await ctx.bounty.releaseBounty(CERT)).wait();
-    await reverts(ctx.bounty.releaseBounty(CERT), "Already settled");
+    await lock(ctx, CERT, AMOUNT, 7);
+    await timeTravel(8 * DAY);
+    await (await release(ctx)).wait();
+    await reverts(release(ctx), "Already settled");
 
-    await lock(ctx, "C2", AMOUNT, 1);
-    await (await ctx.bounty.claimBounty("C2", ctx.consumer.address)).wait();
-    await timeTravel(2 * DAY);
-    await reverts(ctx.bounty.releaseBounty("C2"), "Already settled");
-  });
-
-  it("zero-day bounty is immediately releasable (expiry == lock time)", async () => {
-    const ctx = await deploy();
-    await lock(ctx, CERT, AMOUNT, 0);
-    await (await ctx.bounty.releaseBounty(CERT)).wait();
-    assert.equal((await ctx.bounty.productBounties(CERT)).released, true);
-  });
-
-  it("FINDING: no consumer-side protection - a brand can lock with 0 days and release immediately, so the 'bounty' is not credibly committed", async () => {
-    const ctx = await deploy();
-    const addr = await ctx.token.getAddress();
-    await (await ctx.token.connect(ctx.brand).approve(await ctx.bounty.getAddress(), AMOUNT)).wait();
-    const before = await ctx.token.balanceOf(ctx.brand.address);
-    await (await ctx.bounty.connect(ctx.brand).lockBounty(CERT, addr, AMOUNT, 0)).wait();
-    await (await ctx.bounty.connect(ctx.brand).releaseBounty(CERT)).wait();
-    assert.equal(await ctx.token.balanceOf(ctx.brand.address), before);
+    await lock(ctx, "C2", AMOUNT, 7);
+    await (await claim(ctx, ctx.consumer.address, "C2")).wait();
+    await timeTravel(8 * DAY);
+    await reverts(release(ctx, "C2"), "Already settled");
   });
 });
 
@@ -431,25 +438,25 @@ describe("CounterfeitBounty: isolation and reentrancy", () => {
     await lock(ctx, "A", 100n, 30);
     await lock(ctx, "B", 500n, 30, ctx.brand, token2);
 
-    await (await ctx.bounty.claimBounty("B", ctx.consumer.address)).wait();
+    await (await claim(ctx, ctx.consumer.address, "B")).wait();
     assert.equal(await token2.balanceOf(ctx.consumer.address), 500n);
     assert.equal(await ctx.token.balanceOf(ctx.consumer.address), 0n);
     assert.equal(await ctx.token.balanceOf(await ctx.bounty.getAddress()), 100n);
-    assert.equal((await ctx.bounty.productBounties("A")).claimed, false);
+    assert.equal((await get(ctx, "A")).claimed, false);
   });
 
-  it("reentrant token cannot double-pay: state is updated before the external transfer (checks-effects-interactions)", async () => {
+  it("a re-entrant token cannot double-pay: every re-entry is refused (state is set before the transfer)", async () => {
     const ctx = await deploy();
     const re: any = await new ethers.ContractFactory(reTokenArt.abi, reTokenArt.bytecode, ctx.owner).deploy();
     await re.waitForDeployment();
     await (await re.mint(ctx.brand.address, AMOUNT)).wait();
-    await (await re.arm(await ctx.bounty.getAddress(), CERT)).wait();
+    await (await re.arm(await ctx.bounty.getAddress(), ctx.brand.address, CERT)).wait();
 
-    await lock(ctx, CERT, AMOUNT, 0, ctx.brand, re);
-    await (await ctx.bounty.claimBounty(CERT, ctx.consumer.address)).wait();
+    await lock(ctx, CERT, AMOUNT, 7, ctx.brand, re);
+    await (await claim(ctx, ctx.consumer.address)).wait();
 
     assert.ok((await re.reenterCount()) >= 1n, "hook did re-enter");
-    // The re-entrant releaseBounty hit 'Already settled'; exactly one payout happened.
+    assert.equal(await re.reenterBlocked(), await re.reenterCount(), "every re-entry was refused");
     assert.equal(await re.balanceOf(ctx.consumer.address), AMOUNT);
     assert.equal(await re.balanceOf(ctx.brand.address), 0n);
     assert.equal(await re.balanceOf(await ctx.bounty.getAddress()), 0n);
