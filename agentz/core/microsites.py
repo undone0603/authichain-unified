@@ -1,7 +1,7 @@
 """
 agentz.core.microsites
 ---------------------
-Microsite Agent: Autonomously manages personalized sales assets on Cloudflare R2 and Vercel.
+Microsite Agent: Autonomously manages personalized sales assets on Cloudflare R2 and Cloudflare Custom Hostnames.
 """
 from __future__ import annotations
 import httpx
@@ -33,7 +33,7 @@ def generate_microsite_html(lead_data: Dict[str, Any]) -> str:
     <h1>LIVING DIGITAL TWIN</h1>
     <h2>{name}</h2>
     <p>Pipeline Value: ${amount}</p>
-    <p>Provisioned autonomously by AgentZ. Blockchain anchored.</p>
+    <p>Provisioned autonomously by AgentZ. Cloudflare Edge anchored.</p>
     <a href="https://authichain.com" style="color:#00ff88;">INITIALIZE PARTNERSHIP</a>
   </div>
 </body>
@@ -42,14 +42,13 @@ def generate_microsite_html(lead_data: Dict[str, Any]) -> str:
 async def deploy_sales_microsite(lead_data: Dict[str, Any]) -> str:
     """
     Deploys a personalized microsite by:
-    1. Uploading HTML to R2.
-    2. Linking Domain Alias in Vercel.
+    1. Uploading HTML to Cloudflare R2.
+    2. Registering Custom Hostname Alias in Cloudflare Zone.
     """
     cf_token = get("cloudflare_api_token", required=False)
     cf_account = get("cloudflare_account", required=False)
-    v_token = get("vercel_session", required=False)
+    cf_zone_id = get("cloudflare_zone_id", required=False)
     
-    project_id = "prj_mIb6SSMtMy8KsXg9gNta0T3tDJg1" # AuthiChain Unified V2
     slug = lead_data.get("slug", "demo")
     safe_slug = "".join(c if c.isalnum() else "-" for c in slug.lower()).strip("-")
     alias_domain = f"{safe_slug}.authichain.com"
@@ -64,43 +63,38 @@ async def deploy_sales_microsite(lead_data: Dict[str, Any]) -> str:
         except Exception as e:
             logger.error(f"R2 Failed: {e}")
 
-    # 2. Vercel Alias
-    if v_token:
-        url = f"https://api.vercel.com/v9/projects/{project_id}/domains"
+    # 2. Cloudflare Custom Hostname Alias
+    if cf_token and cf_zone_id:
+        url = f"https://api.cloudflare.com/client/v4/zones/{cf_zone_id}/custom_hostnames"
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                await client.post(url, headers={"Authorization": f"Bearer {v_token}"}, json={"name": alias_domain})
-                logger.info(f"Vercel Linked: {alias_domain}")
+                payload = {
+                    "hostname": alias_domain,
+                    "ssl": {"method": "http", "type": "dv"}
+                }
+                await client.post(url, headers={"Authorization": f"Bearer {cf_token}"}, json=payload)
+                logger.info(f"Cloudflare Custom Hostname Linked: {alias_domain}")
         except Exception as e:
-            logger.error(f"Vercel Failed: {e}")
+            logger.error(f"Cloudflare Custom Hostname Failed: {e}")
             
     return f"https://{alias_domain}"
 
 async def trigger_redeploy():
     """
-    Triggers a fresh production deployment of the unified protocol.
+    Triggers Cloudflare Worker / Pages edge update via cache purge or deployment hook.
     """
-    token = get("vercel_session")
-    project_id = "prj_mIb6SSMtMy8KsXg9gNta0T3tDJg1"
+    cf_token = get("cloudflare_api_token", required=False)
+    cf_zone_id = get("cloudflare_zone_id", required=False)
     
-    if not token: return False
-    
-    headers = {"Authorization": f"Bearer {token}"}
-    url = f"https://api.vercel.com/v13/deployments"
-    
-    payload = {
-        "name": "authichain-unified-v2",
-        "project": project_id,
-        "gitSource": {
-            "type": "github",
-            "repoId": "859665671",
-            "ref": "main"
-        }
-    }
+    if not cf_token or not cf_zone_id:
+        return False
+        
+    headers = {"Authorization": f"Bearer {cf_token}", "Content-Type": "application/json"}
+    url = f"https://api.cloudflare.com/client/v4/zones/{cf_zone_id}/purge_cache"
     
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            r = await client.post(url, headers=headers, json=payload)
+            r = await client.post(url, headers=headers, json={"purge_everything": True})
             return r.status_code == 200
     except:
         return False

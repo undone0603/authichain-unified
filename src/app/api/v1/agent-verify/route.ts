@@ -18,13 +18,17 @@ import {
   paymentResponseHeaders,
   readPaymentProofHeader,
   verifyPaymentProof,
-  wouldExceedCap,
   usdToAtomic,
   dailyCapUsd,
   settlePayment,
   X402_REGISTRY_NOT_BOUND,
 } from "@/lib/x402";
 import { attestSeal } from "@/lib/seal-attestation";
+import {
+  releaseX402Spend,
+  reserveX402Spend,
+  sealLookupCredentials,
+} from "@/lib/paid-seal-verify";
 // Relative, not "@/lib/…": tsconfig.worker.json maps "@/*" to client/src only.
 import { parseSealRequest, registryAnswer } from "../../../../lib/agent-verify";
 import { onVerificationEvent } from "../../../../../server/revenue-engine/loop";
@@ -36,24 +40,6 @@ const PRICE_USD =
   Number(process.env.X402_PRICE_USD) > 0
     ? Number(process.env.X402_PRICE_USD)
     : 0.05;
-
-async function dailySpentAtomic(
-  payer: string,
-  priceAtomic: bigint,
-  supabaseUrl: string,
-  serviceKey: string,
-): Promise<bigint | null> {
-  const supabase = createAdminClient(supabaseUrl, serviceKey);
-  const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count, error } = await supabase
-    .from("automation_logs")
-    .select("*", { count: "exact", head: true })
-    .eq("workflow_name", "x402_spend")
-    .eq("payload", payer)
-    .gt("created_at", windowStart);
-  if (error) return null;
-  return BigInt(count || 0) * priceAtomic;
-}
 
 export async function POST(request: Request) {
   const resource = new URL(request.url).toString();
@@ -125,17 +111,14 @@ export async function POST(request: Request) {
 
   const priceAtomic = BigInt(usdToAtomic(PRICE_USD));
   const capAtomic = BigInt(usdToAtomic(dailyCapUsd()));
-  const spent = await dailySpentAtomic(proof.payer, priceAtomic, supabaseUrl, serviceKey);
-  if (spent === null) {
+  const credentials = sealLookupCredentials({
+    SUPABASE_URL: supabaseUrl,
+    SUPABASE_SERVICE_ROLE_KEY: serviceKey,
+  });
+  if (!credentials) {
     return NextResponse.json(
-      { error: "spend_ledger_unavailable", settled: false },
+      { ...X402_REGISTRY_NOT_BOUND },
       { status: 503 }
-    );
-  }
-  if (wouldExceedCap(spent, priceAtomic, capAtomic)) {
-    return NextResponse.json(
-      { error: "daily_spend_cap_exceeded", capUsd: dailyCapUsd() },
-      { status: 402 }
     );
   }
   const { data: seal, error: sealError } = await admin
@@ -147,6 +130,25 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "registry_unavailable", settled: false },
       { status: 503 }
+    );
+  }
+  const reservation = await reserveX402Spend(
+    fetch,
+    credentials,
+    proof.payer,
+    priceAtomic,
+    capAtomic
+  );
+  if (!reservation.ok) {
+    return NextResponse.json(
+      { error: "spend_reservation_unavailable", settled: false },
+      { status: 503 }
+    );
+  }
+  if (!reservation.id) {
+    return NextResponse.json(
+      { error: "daily_spend_cap_exceeded", capUsd: dailyCapUsd() },
+      { status: 402 }
     );
   }
 
@@ -161,20 +163,21 @@ export async function POST(request: Request) {
     !settlement.settled ||
     (!settlement.trustless && process.env.NODE_ENV === "production")
   ) {
+    const released = await releaseX402Spend(
+      fetch,
+      credentials,
+      reservation.id
+    );
+    if (!released) {
+      console.error(
+        "[agent-verify] failed payment left its spend reservation in place"
+      );
+    }
     return NextResponse.json(
       { ...required.v2, error: settlement.reason ?? "payment_not_settled" },
       { status: 402, headers: required.headers }
     );
   }
-
-  // 6. Record the spend (one row == one priced call). Use the same privileged
-  // client as the cap read so RLS cannot silently drop the ledger entry.
-  await admin.from("automation_logs").insert({
-    workflow_name: "x402_spend",
-    trigger_type: "event",
-    status: "success",
-    payload: proof.payer,
-  });
 
   const attestation = attestSeal(
     seal ? (seal as Record<string, unknown>) : null

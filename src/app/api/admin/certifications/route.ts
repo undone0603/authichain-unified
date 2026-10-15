@@ -29,11 +29,11 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (certError) throw certError;
+    if (certError) throw new Error(certError.message);
 
     // 2. Create DPP Data if provided
     if (dpp_data && cert) {
-      await supabase
+      const { error: dppError } = await supabase
         .from('dpp_data')
         .insert({
           certification_id: cert.id,
@@ -42,17 +42,19 @@ export async function POST(request: NextRequest) {
           repairability_score: dpp_data.repairability_score,
           supply_chain_provenance: dpp_data.supply_chain_provenance,
         });
+      if (dppError) throw new Error(dppError.message);
     }
 
     // 3. Link NFC Tag if provided
     if (nfc_uid && cert) {
-      await supabase
+      const { error: nfcError } = await supabase
         .from('nfc_tags')
         .insert({
           certification_id: cert.id,
           chip_uid: nfc_uid,
           is_active: true
         });
+      if (nfcError) throw new Error(nfcError.message);
     }
 
     return NextResponse.json(cert);

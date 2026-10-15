@@ -64,7 +64,7 @@ fi
 # or -b "$(cat …)" (secret on the process list).
 GH_TOKEN="$PAT" gh secret set AGENT_SECRET --app actions < "$AGENT_SECRET_OUT"
 echo "minted AGENT_SECRET and stored it as a repo Actions secret (value not logged)"
-echo "download the 1-day artifact to set local uvicorn AGENT_SECRET — the Actions UI cannot show secret values"
+echo "for a local connector, set its AGENT_SECRET directly on the owner box; do not transfer it through workflow artifacts"
 if [ -n "${GITHUB_ENV:-}" ]; then
   echo "minted_agent_secret=true" >> "$GITHUB_ENV"
 fi

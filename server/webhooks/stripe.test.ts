@@ -87,12 +87,26 @@ vi.mock("../../src/lib/provisioning", () => ({
   provisionPurchase,
 }));
 
-const { recordStripeWebhookDelivery } = vi.hoisted(() => ({
+const {
+  claimStripeWebhookEvent,
+  completeStripeWebhookEvent,
+  recordStripeWebhookDelivery,
+  releaseStripeWebhookEvent,
+} = vi.hoisted(() => ({
+  claimStripeWebhookEvent: vi.fn().mockResolvedValue({
+    acquired: true,
+    token: "claim-test-token",
+  }),
+  completeStripeWebhookEvent: vi.fn().mockResolvedValue({ ok: true }),
   recordStripeWebhookDelivery: vi.fn().mockResolvedValue({ ok: true }),
+  releaseStripeWebhookEvent: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
 vi.mock("../../src/lib/stripe-webhook-log", () => ({
+  claimStripeWebhookEvent,
+  completeStripeWebhookEvent,
   recordStripeWebhookDelivery,
+  releaseStripeWebhookEvent,
   checkoutSessionIdFromEvent: (event: {
     type?: string;
     data?: { object?: { id?: string } };
@@ -145,6 +159,13 @@ const SIG = "stripe-sig";
 // The "prerequisites" suite overrides env vars inside its own test body.
 beforeEach(async () => {
   vi.clearAllMocks();
+  claimStripeWebhookEvent.mockResolvedValue({
+    acquired: true,
+    token: "claim-test-token",
+  });
+  completeStripeWebhookEvent.mockResolvedValue({ ok: true });
+  releaseStripeWebhookEvent.mockResolvedValue({ ok: true });
+  recordStripeWebhookDelivery.mockResolvedValue({ ok: true });
   const db = await import("../db.js");
   vi.mocked(db.hasWebhookEventProcessed).mockResolvedValue(false);
   vi.mocked(db.logActivity).mockResolvedValue(undefined);
@@ -213,6 +234,18 @@ describe("handleStripeWebhook — test events", () => {
 });
 
 describe("handleStripeWebhook — idempotency", () => {
+  it("skips a webhook event claimed by another delivery", async () => {
+    claimStripeWebhookEvent.mockResolvedValueOnce({ acquired: false });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("customer.subscription.created", "evt_claim_duplicate", {})
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({ received: true, duplicate: true });
+    expect(completeStripeWebhookEvent).not.toHaveBeenCalled();
+    expect(releaseStripeWebhookEvent).not.toHaveBeenCalled();
+  });
+
   it("marks duplicate events and skips processing", async () => {
     const { hasWebhookEventProcessed } = await import("../db.js");
     vi.mocked(hasWebhookEventProcessed).mockResolvedValueOnce(true);
@@ -310,6 +343,46 @@ describe("handleStripeWebhook — invoice events", () => {
     expect(result.received).toBe(true);
     expect(vi.mocked(recordRevenue)).toHaveBeenCalledWith(
       expect.objectContaining({ source: "stripe", amount: "49.00" })
+    );
+  });
+
+  it("acknowledges invoice payment on the Worker without DATABASE_URL", async () => {
+    const {
+      getSubscriptionByStripeSubscriptionId,
+      recordRevenue,
+      setSubscriptionStatusByStripeId,
+      logAutomationAudit,
+    } = await import("../db.js");
+    vi.mocked(getSubscriptionByStripeSubscriptionId).mockRejectedValueOnce(
+      new Error("DATABASE_URL environment variable is not set")
+    );
+    vi.mocked(recordRevenue).mockRejectedValueOnce(
+      new Error("DATABASE_URL environment variable is not set")
+    );
+    vi.mocked(setSubscriptionStatusByStripeId).mockRejectedValueOnce(
+      new Error("DATABASE_URL environment variable is not set")
+    );
+    vi.mocked(logAutomationAudit).mockRejectedValueOnce(
+      new Error("DATABASE_URL environment variable is not set")
+    );
+    mockConstructEvent.mockReturnValue(
+      makeEvent("invoice.paid", "evt_inv_edge", {
+        id: "in_edge",
+        customer: "cus_abc",
+        subscription: "sub_edge",
+        amount_paid: 4900,
+        currency: "usd",
+        billing_reason: "subscription_cycle",
+        lines: { data: [] },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({ received: true, type: "invoice.paid" });
+    expect(completeStripeWebhookEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      "evt_inv_edge",
+      "claim-test-token"
     );
   });
 

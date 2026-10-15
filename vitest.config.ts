@@ -44,8 +44,32 @@ export default defineConfig({
       // importing them through the catch-all today; the carve-out only fixes
       // resolution for src/ consumers.
       {
-        find: /^@\/lib\/(provisioning|billing-emails|brand-billing|email|dpp-loop|dpp-fulfill-checkout|ledger-service|stripe-construct-event)(\/.*)?$/,
+        find: /^@\/lib\/(provisioning|billing-emails|brand-billing|email|dpp-loop|dpp-fulfill-checkout|ledger-service|stripe-construct-event|rate-limit|x402|seal-attestation|paid-seal-verify)(\/.*)?$/,
         replacement: path.resolve(templateRoot, "src", "lib") + "/$1$2",
+      },
+      {
+        find: /^@\/lib\/require-admin$/,
+        replacement: path.resolve(templateRoot, "src", "lib", "require-admin.ts"),
+      },
+      {
+        find: /^@\/lib\/starmap\/render$/,
+        replacement: path.resolve(
+          templateRoot,
+          "src",
+          "lib",
+          "starmap",
+          "render.ts"
+        ),
+      },
+      {
+        find: /^@\/utils\/supabase\/server$/,
+        replacement: path.resolve(
+          templateRoot,
+          "src",
+          "utils",
+          "supabase",
+          "server.ts"
+        ),
       },
       {
         find: /^@\/db(\/.*)?$/,

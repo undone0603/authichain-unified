@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.pulse import PulseAgent
-from agentz.workflows.handlers import vercel_fix_preset
+from agentz.workflows.handlers import cloudflare_edge_healer
 from agentz.core.llm import lm_manager
 
 logger = logging.getLogger("agentz.sovereign_healer")
@@ -28,17 +28,17 @@ def run(ctx: ExecutionContext) -> str:
         
         # 2. Analyze Anomaly
         if infra_status == "error_framework_preset":
-            ctx.step("‼ CRITICAL ANOMALY DETECTED: Vercel Framework Misconfiguration.")
+            ctx.step("‼ CRITICAL ANOMALY DETECTED: Edge Routing / Framework Misconfiguration.")
             
             if ctx.mode == Mode.DRY_RUN:
-                ctx.step("  [Dry-run] Would trigger vercel_fix_preset self-healing workflow.")
+                ctx.step("  [Dry-run] Would trigger cloudflare_edge_healer self-healing workflow.")
                 return "Sovereign Healer: Anomaly detected (Dry-run)."
             
             # 3. Autonomous Healing
-            ctx.step("Triggering autonomous self-healing: VERCEL_FIX_PRESET...")
+            ctx.step("Triggering autonomous self-healing: CLOUDFLARE_EDGE_HEALER...")
             try:
                 # Dynamically execute the fix preset handler
-                result = vercel_fix_preset.run(ctx)
+                result = cloudflare_edge_healer.run(ctx)
                 ctx.step(f"  ✓ Healing Cycle Result: {result}")
                 return f"Infrastructure Healed: {result}"
             except Exception as e:

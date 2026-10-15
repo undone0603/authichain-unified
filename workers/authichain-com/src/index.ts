@@ -3701,7 +3701,17 @@ async function handleAuthichainCom(request: Request, env: Env) {
     const seoRedirect = tryRedirectSeoRootCanonical(request);
     if (seoRedirect) return seoRedirect;
     if (p !== '/') return notFound(p);
-    return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    const homepageCacheControl =
+      request.method === 'GET' && url.search === ''
+        ? 'public, max-age=300'
+        : 'private, no-store';
+    return new Response(HTML, {
+      headers: {
+        ...HTML_SECURITY_HEADERS,
+        'Cache-Control': homepageCacheControl,
+        'Content-Type': 'text/html; charset=utf-8',
+      },
+    });
 }
 
 export default {

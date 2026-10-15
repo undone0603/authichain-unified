@@ -11,7 +11,6 @@ import {
   settlePayment,
   usdToAtomic,
   verifyPaymentProof,
-  wouldExceedCap,
 } from "./x402";
 
 const SEAL_SELECT = "id,product_id,batch_id,brand,created_at";
@@ -89,29 +88,36 @@ async function readJson(
   }
 }
 
-async function dailySpentAtomic(
+export async function reserveX402Spend(
   fetchImpl: typeof fetch,
   creds: SealLookupCredentials,
   payer: string,
-  priceAtomic: bigint
-): Promise<bigint | null> {
-  const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const query = [
-    "automation_logs?select=id",
-    "workflow_name=eq.x402_spend",
-    `payload=eq.${encodeURIComponent(payer)}`,
-    `created_at=gt.${encodeURIComponent(windowStart)}`,
-    "limit=1000",
-  ].join("&");
-  const read = await readJson(
-    fetchImpl,
-    `${creds.url}/rest/v1/${query}`,
-    creds.key
-  );
-  // A failed ledger read must never look like zero spend: zero would allow a
-  // caller to bypass the daily cap during an outage or RLS/config regression.
-  if (!read.ok || !Array.isArray(read.body)) return null;
-  return BigInt(read.body.length) * priceAtomic;
+  amountAtomic: bigint,
+  capAtomic: bigint
+): Promise<{ ok: true; id: string | null } | { ok: false }> {
+  if (creds.role !== "service") return { ok: false };
+  try {
+    const response = await fetchImpl(
+      `${creds.url}/rest/v1/rpc/reserve_x402_spend`,
+      {
+        method: "POST",
+        headers: restHeaders(creds.key, {
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({
+          p_payer: payer,
+          p_amount_atomic: amountAtomic.toString(),
+          p_cap_atomic: capAtomic.toString(),
+        }),
+        signal: AbortSignal.timeout(8000),
+      }
+    );
+    if (!response.ok) return { ok: false };
+    const id = (await response.json()) as unknown;
+    return { ok: true, id: typeof id === "string" && id ? id : null };
+  } catch {
+    return { ok: false };
+  }
 }
 
 async function readSeal(
@@ -135,30 +141,24 @@ async function readSeal(
   return { ok: true, seal: row as Record<string, unknown> };
 }
 
-async function recordSpend(
+export async function releaseX402Spend(
   fetchImpl: typeof fetch,
   creds: SealLookupCredentials,
-  payer: string
-): Promise<void> {
-  if (creds.role !== "service") return;
+  id: string
+): Promise<boolean> {
+  if (creds.role !== "service") return false;
   try {
-    await fetchImpl(`${creds.url}/rest/v1/automation_logs`, {
-      method: "POST",
-      headers: restHeaders(creds.key, {
-        "Content-Type": "application/json",
-        Prefer: "return=minimal",
-      }),
-      body: JSON.stringify({
-        workflow_name: "x402_spend",
-        trigger_type: "event",
-        status: "success",
-        payload: payer,
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
+    const response = await fetchImpl(
+      `${creds.url}/rest/v1/x402_spend_reservations?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        headers: restHeaders(creds.key),
+        signal: AbortSignal.timeout(8000),
+      }
+    );
+    return response.ok;
   } catch {
-    // The caller already settled. Dropping the ledger row fails the cap
-    // open on the next call; it must not drop the answer.
+    return false;
   }
 }
 
@@ -223,33 +223,34 @@ export async function resolvePaidSealVerify(input: {
 
   const priceAtomic = BigInt(usdToAtomic(input.priceUsd));
   const capAtomic = BigInt(usdToAtomic(dailyCapUsd()));
-  const spent = await dailySpentAtomic(
-    fetchImpl,
-    creds,
-    proof.payer,
-    priceAtomic
-  );
-  if (spent === null) {
-    return {
-      action: "answer",
-      status: 503,
-      body: { error: "spend_ledger_unavailable", settled: false },
-    };
-  }
-  if (wouldExceedCap(spent, priceAtomic, capAtomic)) {
-    return {
-      action: "answer",
-      status: 402,
-      body: { error: "daily_spend_cap_exceeded", capUsd: dailyCapUsd() },
-    };
-  }
-
   const lookup = await readSeal(fetchImpl, creds, parsed.sealId);
   if (!lookup.ok) {
     return {
       action: "answer",
       status: 503,
       body: { error: "registry_unavailable", settled: false },
+    };
+  }
+
+  const reservation = await reserveX402Spend(
+    fetchImpl,
+    creds,
+    proof.payer,
+    priceAtomic,
+    capAtomic
+  );
+  if (!reservation.ok) {
+    return {
+      action: "answer",
+      status: 503,
+      body: { error: "spend_reservation_unavailable", settled: false },
+    };
+  }
+  if (!reservation.id) {
+    return {
+      action: "answer",
+      status: 402,
+      body: { error: "daily_spend_cap_exceeded", capUsd: dailyCapUsd() },
     };
   }
 
@@ -261,6 +262,12 @@ export async function resolvePaidSealVerify(input: {
     !settlement.settled ||
     (!settlement.trustless && !nonTrustlessAllowed())
   ) {
+    const released = await releaseX402Spend(fetchImpl, creds, reservation.id);
+    if (!released) {
+      console.error(
+        "[paid-seal-verify] failed payment left its spend reservation in place"
+      );
+    }
     return {
       action: "answer",
       status: 402,
@@ -271,8 +278,6 @@ export async function resolvePaidSealVerify(input: {
       headers: required.headers,
     };
   }
-
-  await recordSpend(fetchImpl, creds, proof.payer);
   const answer = registryAnswer(lookup.seal);
   return {
     action: "answer",
@@ -300,4 +305,3 @@ export async function resolvePaidSealVerify(input: {
     }),
   };
 }
-

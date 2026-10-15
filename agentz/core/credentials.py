@@ -19,8 +19,6 @@ logger = logging.getLogger("agentz.credentials")
 # Map registry credential keys -> env var names.
 # Add new entries here when introducing new workflows.
 CRED_KEY_TO_ENV = {
-    "vercel_session":       "VERCEL_TOKEN",
-    "vercel_team_id":       "VERCEL_TEAM_ID",
     "google_session":       "GOOGLE_SESSION_COOKIE",
     "cloudflare_api_token": "CLOUDFLARE_API_TOKEN",
     "cloudflare_account":   "CLOUDFLARE_ACCOUNT_ID",
@@ -252,7 +250,7 @@ _PLACEHOLDER_VALUES = frozenset({
     "new_healed_token",
 })
 
-_VERIFIABLE_KEYS = {"hubspot_token", "vercel_session", "stripe_secret"}
+_VERIFIABLE_KEYS = {"hubspot_token", "stripe_secret"}
 
 # Launch-gate production keys. Scoring the full CRED_KEY_TO_ENV map green
 # pressures stuffing unused secrets. Missing Resend must not block these.
@@ -407,7 +405,6 @@ def verify_credential(key: str) -> tuple[bool, str]:
 
     verifiers = {
         "hubspot_token": _verify_hubspot,
-        "vercel_session": _verify_vercel,
         "stripe_secret": _verify_stripe,
     }
 
@@ -427,14 +424,6 @@ def _verify_hubspot(token: str) -> tuple[bool, str]:
     if r.status_code == 200:
         return True, "Valid (HubSpot API ok)"
     return False, f"Invalid (HTTP {r.status_code}: {r.text[:50]})"
-
-
-def _verify_vercel(token: str) -> tuple[bool, str]:
-    r = httpx.get("https://api.vercel.com/v2/user",
-                  headers={"Authorization": f"Bearer {token}"}, timeout=10.0)
-    if r.status_code == 200:
-        return True, "Valid (Vercel API ok)"
-    return False, f"Invalid (HTTP {r.status_code})"
 
 
 def _verify_stripe(key: str) -> tuple[bool, str]:

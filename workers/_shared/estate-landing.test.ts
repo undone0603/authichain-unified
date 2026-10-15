@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   ESTATE_BASE_CSS,
   ESTATE_BRANDS,
+  ESTATE_FONTS_LINK,
   ESTATE_INDEXNOW_KEY,
   ESTATE_INDEXNOW_PATH,
   estateCtaBand,
@@ -28,7 +29,9 @@ test("light tokens stay on white for every estate brand", () => {
   assert.match(ESTATE_BASE_CSS, /:focus-visible/);
   assert.match(ESTATE_BASE_CSS, /\.skip-link/);
   assert.match(estateCssVars("authichain"), /--accent: #4F46E5/);
-  assert.match(estateCssVars("authichain"), /Plus Jakarta Sans/);
+  assert.equal(ESTATE_FONTS_LINK, "");
+  assert.match(estateCssVars("authichain"), /--body: system-ui/);
+  assert.doesNotMatch(estateCssVars("authichain"), /Plus Jakarta Sans/);
   assert.match(estateCssVars("authichain"), /79, 70, 229/);
 });
 

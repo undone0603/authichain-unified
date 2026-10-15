@@ -1,11 +1,40 @@
 import { createClient } from "@supabase/supabase-js";
 
+type CreditDatabase = {
+  public: {
+    Tables: {
+      profiles: {
+        Row: {
+          id: string;
+          tier: string | null;
+          generations_limit: number;
+          generations_used: number;
+        };
+        Insert: {
+          id?: string;
+          tier?: string | null;
+          generations_limit?: number;
+          generations_used?: number;
+        };
+        Update: {
+          generations_used?: number;
+        };
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
+
 /**
  * Check if a user is on the business (unlimited) plan.
  * Business-tier users skip credit deduction for generation and minting.
  */
 export async function hasUnlimitedPlan(userId: string): Promise<boolean> {
-  const admin = createClient(
+  const admin = createClient<CreditDatabase>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
@@ -25,14 +54,14 @@ export async function hasUnlimitedPlan(userId: string): Promise<boolean> {
 type CreditResult = { ok: boolean; remaining?: number; error?: string };
 
 async function loadCreditProfile(userId: string): Promise<{
-  admin: ReturnType<typeof createClient>;
+  admin: ReturnType<typeof createClient<CreditDatabase>>;
   profile: {
     generations_used: number;
     generations_limit: number;
     tier: string | null;
   } | null;
 }> {
-  const admin = createClient(
+  const admin = createClient<CreditDatabase>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
@@ -88,12 +117,21 @@ export async function deductCredit(userId: string): Promise<CreditResult> {
     return { ok: true, remaining: Infinity };
   }
 
-  const { error } = await admin
+  const { data, error } = await admin
     .from("profiles")
     .update({ generations_used: profile.generations_used + 1 })
-    .eq("id", userId);
+    .eq("id", userId)
+    .eq("generations_used", profile.generations_used)
+    .lt("generations_used", profile.generations_limit)
+    .select("generations_used");
 
   if (error) return { ok: false, error: error.message };
+  if (!Array.isArray(data) || data.length === 0) {
+    return {
+      ok: false,
+      error: "Generation credit changed during the request; please retry.",
+    };
+  }
 
   return {
     ok: true,

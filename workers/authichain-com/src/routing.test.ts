@@ -56,7 +56,10 @@ test("unknown 404s still offer catalogue Payment Links", async () => {
 test("the apex still renders the homepage", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
+  assert.equal(res.headers.get("cache-control"), "public, max-age=300");
+  assert.equal(res.headers.get("cdn-cache-control"), "no-store");
   const html = await res.text();
+  assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/);
   assert.match(html, /href="\/dashboard"/);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /name="email"/);
@@ -71,6 +74,13 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/pricing"/);
   assert.match(html, /href="\/x402"/);
   assert.match(html, /href="\/trumark"/);
+  assert.equal((await get("/?campaign=test")).headers.get("cache-control"), "private, no-store");
+  assert.equal((await get("/contact")).headers.get("cache-control"), "private, no-store");
+  const post = await worker.fetch(
+    new Request("https://authichain.govchain.us/", { method: "POST" }),
+    ENV
+  );
+  assert.equal(post.headers.get("cache-control"), "private, no-store");
   assert.match(html, /href="\/made-in-america"/);
   assert.match(html, /href="\/passport"/);
   assert.doesNotMatch(html, /\/m\/mendo|Mendo/);

@@ -65,6 +65,10 @@ describe("resolvePaidSealVerify", () => {
     const { fetchImpl, calls } = callsOf(() => new Response("[]"));
     const decision = await resolvePaidSealVerify({
       ...bound,
+      env: {
+        SUPABASE_URL: CREDS.SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY: "service-test",
+      },
       proofHeader: proof({ signature: "0xdead" }),
       bodyText: JSON.stringify({ sealId: "probe" }),
       fetchImpl,
@@ -77,17 +81,27 @@ describe("resolvePaidSealVerify", () => {
     expect(calls).toEqual([]);
   });
 
-  it("fails closed when the spend ledger cannot be read", async () => {
+  it("fails closed when the spend reservation RPC is unavailable", async () => {
     process.env.X402_FACILITATOR_URL = "https://facilitator.example";
     process.env.X402_NETWORK = "base";
     const { fetchImpl, calls } = callsOf(url => {
-      if (url.includes("automation_logs")) {
-        return new Response("ledger down", { status: 500 });
+      if (url.includes("rpc/reserve_x402_spend")) {
+        return new Response("reservation down", { status: 500 });
       }
-      throw new Error("registry and settlement must not run");
+      if (url.includes("auth_seals")) {
+        return new Response(JSON.stringify([{ id: SEAL }]), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      throw new Error("settlement must not run");
     });
     const decision = await resolvePaidSealVerify({
       ...bound,
+      env: {
+        SUPABASE_URL: CREDS.SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY: "service-test",
+      },
       proofHeader: proof({ signature: "0xdead" }),
       bodyText: JSON.stringify({ sealId: SEAL }),
       fetchImpl,
@@ -95,10 +109,10 @@ describe("resolvePaidSealVerify", () => {
     expect(decision).toMatchObject({
       action: "answer",
       status: 503,
-      body: { error: "spend_ledger_unavailable", settled: false },
+      body: { error: "spend_reservation_unavailable", settled: false },
     });
-    expect(calls.some(call => call.url.includes("automation_logs"))).toBe(true);
-    expect(calls.some(call => call.url.includes("auth_seals"))).toBe(false);
+    expect(calls.some(call => call.url.includes("rpc/reserve_x402_spend"))).toBe(true);
+    expect(calls.some(call => call.url.includes("auth_seals"))).toBe(true);
     expect(calls.some(call => call.url.includes("/settle"))).toBe(false);
   });
 
@@ -113,6 +127,10 @@ describe("resolvePaidSealVerify", () => {
     });
     const decision = await resolvePaidSealVerify({
       ...bound,
+      env: {
+        SUPABASE_URL: CREDS.SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY: "service-test",
+      },
       proofHeader: proof({ signature: "0xdead" }),
       bodyText: JSON.stringify({ sealId: SEAL }),
       fetchImpl,
@@ -137,6 +155,15 @@ describe("resolvePaidSealVerify", () => {
           headers: { "content-type": "application/json" },
         });
       }
+      if (url.includes("rpc/reserve_x402_spend")) {
+        return new Response(JSON.stringify("reservation-test-id"), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (url.includes("x402_spend_reservations")) {
+        return new Response(null, { status: 204 });
+      }
       return new Response("[]", {
         status: 200,
         headers: { "content-type": "application/json" },
@@ -146,6 +173,10 @@ describe("resolvePaidSealVerify", () => {
     try {
       const decision = await resolvePaidSealVerify({
         ...bound,
+        env: {
+          SUPABASE_URL: CREDS.SUPABASE_URL,
+          SUPABASE_SERVICE_ROLE_KEY: "service-test",
+        },
         proofHeader: proof({ signature: "0xdead" }),
         bodyText: JSON.stringify({ sealId: SEAL }),
         fetchImpl,
@@ -188,6 +219,12 @@ describe("resolvePaidSealVerify", () => {
           { status: 200, headers: { "content-type": "application/json" } }
         );
       }
+      if (url.includes("rpc/reserve_x402_spend")) {
+        return new Response(JSON.stringify("reservation-test-id"), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
       return new Response("[]", {
         status: 200,
         headers: { "content-type": "application/json" },
@@ -198,6 +235,10 @@ describe("resolvePaidSealVerify", () => {
       const decision = await resolvePaidSealVerify({
         ...bound,
         hasVerifyApp: false,
+        env: {
+          SUPABASE_URL: CREDS.SUPABASE_URL,
+          SUPABASE_SERVICE_ROLE_KEY: "service-test",
+        },
         proofHeader: proof({ signature: "0xdead" }),
         bodyText: JSON.stringify({ sealId: SEAL }),
         fetchImpl,
@@ -214,12 +255,47 @@ describe("resolvePaidSealVerify", () => {
         details: { brand: "acme", productId: "pack" },
         settlement: { payer: PAYER, trustless: true, txHash: "0xabc" },
       });
-      expect(
-        calls.some(call => call.method === "POST" && call.url.includes("automation_logs"))
-      ).toBe(false);
+      expect(calls.some(call => call.url.includes("rpc/reserve_x402_spend"))).toBe(true);
     } finally {
       globalThis.fetch = original;
     }
+  });
+
+  it("refuses settlement when the atomic spend reservation exceeds the cap", async () => {
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    process.env.X402_NETWORK = "base";
+    const { fetchImpl, calls } = callsOf(url => {
+      if (url.includes("rpc/reserve_x402_spend")) {
+        return new Response("null", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (url.includes("auth_seals")) {
+        return new Response(JSON.stringify([{ id: SEAL }]), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response("[]", { status: 200 });
+    });
+    const decision = await resolvePaidSealVerify({
+      ...bound,
+      env: {
+        SUPABASE_URL: CREDS.SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY: "service-test",
+      },
+      proofHeader: proof({ signature: "0xdead" }),
+      bodyText: JSON.stringify({ sealId: SEAL }),
+      fetchImpl,
+    });
+    expect(decision).toMatchObject({
+      action: "answer",
+      status: 402,
+      body: { error: "daily_spend_cap_exceeded" },
+    });
+    expect(calls.some(call => call.url.includes("rpc/reserve_x402_spend"))).toBe(true);
+    expect(calls.some(call => call.url.includes("/settle"))).toBe(false);
   });
 
   it("refuses dev-mode settlement when NODE_ENV is production", async () => {
@@ -229,9 +305,30 @@ describe("resolvePaidSealVerify", () => {
     vi.stubEnv("NODE_ENV", "production");
     delete process.env.X402_FACILITATOR_URL;
     try {
-      const { fetchImpl, calls } = callsOf(() => new Response("[]"));
+      const { fetchImpl, calls } = callsOf(url => {
+        if (url.includes("auth_seals")) {
+          return new Response(JSON.stringify([{ id: SEAL }]), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }
+        if (url.includes("rpc/reserve_x402_spend")) {
+          return new Response(JSON.stringify("reservation-test-id"), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }
+        if (url.includes("x402_spend_reservations")) {
+          return new Response(null, { status: 204 });
+        }
+        return new Response("[]");
+      });
       const decision = await resolvePaidSealVerify({
         ...bound,
+        env: {
+          SUPABASE_URL: CREDS.SUPABASE_URL,
+          SUPABASE_SERVICE_ROLE_KEY: "service-test",
+        },
         proofHeader: proof({ signature: "0xdead" }),
         bodyText: JSON.stringify({ sealId: SEAL }),
         fetchImpl,
@@ -273,21 +370,25 @@ describe("resolvePaidSealVerify", () => {
 });
 
 
-it("keeps the settled answer when the post-settlement spend log aborts", async () => {
+it("fails closed when service-role reservation is unavailable", async () => {
   process.env.X402_FACILITATOR_URL = "https://facilitator.example";
   process.env.X402_NETWORK = "base";
-  const original = globalThis.fetch;
-  let spendSignal: AbortSignal | undefined;
-  const { fetchImpl } = callsOf((url, init) => {
-    if (url.includes("/settle")) return new Response(JSON.stringify({success:true,txHash:"0xabc"}), {status:200});
-    if (url.includes("automation_logs") && (init?.method ?? "GET").toUpperCase() === "POST") { spendSignal = init?.signal ?? undefined; throw new DOMException("The operation was aborted","AbortError"); }
-    if (url.includes("auth_seals")) return new Response(JSON.stringify([{id:SEAL,product_id:"pack",batch_id:"b1",brand:"acme",created_at:"2026-01-01T00:00:00Z"}]), {status:200});
-    return new Response("[]",{status:200});
+  const { fetchImpl, calls } = callsOf(() => new Response("[]"));
+  const decision = await resolvePaidSealVerify({
+    hasVerifyApp: false,
+    proofHeader: proof({ signature: "0xdead" }),
+    bodyText: JSON.stringify({ sealId: SEAL }),
+    resource: "https://authichain.com/api/x402",
+    priceUsd: 0.05,
+    payTo: PAY_TO,
+    description: "AuthiChain agent verification",
+    env: CREDS,
+    fetchImpl,
   });
-  globalThis.fetch = fetchImpl;
-  try {
-    const decision = await resolvePaidSealVerify({...bound,env:{SUPABASE_URL:"https://example.supabase.co",SUPABASE_SERVICE_ROLE_KEY:"service-test"},proofHeader:proof({signature:"0xdead"}),bodyText:JSON.stringify({sealId:SEAL}),fetchImpl});
-    expect(decision).toMatchObject({action:"answer",status:200});
-    expect(spendSignal).toBeInstanceOf(AbortSignal);
-  } finally { globalThis.fetch = original; }
+  expect(decision).toMatchObject({
+    action: "answer",
+    status: 503,
+    body: { error: "spend_reservation_unavailable", settled: false },
+  });
+  expect(calls.some(call => call.url.includes("/settle"))).toBe(false);
 });

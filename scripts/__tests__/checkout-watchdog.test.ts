@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { renderEstatePricingPage } from "../../workers/_shared/estate-pricing";
+import { renderClaimFilePage } from "../../workers/authichain-com/src/musa-claim-file-page";
 import { listedPlans, planById } from "../../src/lib/plans";
 import {
   PRICING_PAGES,
@@ -9,7 +10,6 @@ import {
   checkLivePages,
   checkPageLinks,
   checkStripe,
-  expectedPlanIds,
   extractCheckoutLinks,
   isLiveStripeKey,
   mdCell,
@@ -36,9 +36,12 @@ function siteFetch(
       });
     const page = PRICING_PAGES.find(p => p.url === url);
     if (page)
-      return new Response(renderEstatePricingPage(page.origin), {
-        status: 200,
-      });
+      return new Response(
+        page.brand === "musa"
+          ? renderClaimFilePage()
+          : renderEstatePricingPage(page.origin),
+        { status: 200 }
+      );
     const m = url.match(/^https:\/\/authichain\.com\/checkout\/([a-z0-9_]+)$/);
     const plan = m && planById(m[1] as never);
     if (plan)
@@ -59,6 +62,9 @@ describe("checkout watchdog: live pages", () => {
       "strainchain_farm",
       "strainchain_passport",
     ]);
+    expect(
+      linked["https://authichain.com/made-in-usa-claim-file"].planIds
+    ).toEqual(["musa_claim_file"]);
     // Read-only: GETs only, and never Stripe or the session-opening API.
     expect(calls.every(c => c.method === "GET")).toBe(true);
     expect(calls.some(c => /stripe\.com|\/api\/checkout/.test(c.url))).toBe(
@@ -68,10 +74,13 @@ describe("checkout watchdog: live pages", () => {
 
   it("expects every listed paid plan on its brand's page", () => {
     for (const page of PRICING_PAGES) {
-      const html = renderEstatePricingPage(page.origin);
-      expect(extractCheckoutLinks(html).planIds.sort()).toEqual(
-        [...expectedPlanIds(page.brand)].sort()
-      );
+      const html =
+        page.brand === "musa"
+          ? renderClaimFilePage()
+          : renderEstatePricingPage(page.origin);
+      expect(
+        checkPageLinks(page, extractCheckoutLinks(html))
+      ).toEqual([]);
     }
   });
 
@@ -130,9 +139,9 @@ function stripeStub(
     amount?: Record<string, number>;
   } = {}
 ) {
-  const paid = [...listedPlans("qron"), ...listedPlans("strainchain")].filter(
-    p => p.price > 0
-  );
+  const paid = (["qron", "strainchain", "musa"] as const)
+    .flatMap(brand => listedPlans(brand))
+    .filter(p => p.price > 0);
   return async (path: string) => {
     if (path.startsWith("payment_links")) {
       return {
@@ -184,6 +193,19 @@ describe("checkout watchdog: Stripe", () => {
       ["price_inactive", "creator", true],
       ["price_mismatch", "dpp_readiness", false],
       ["payment_link_inactive", "starter", true],
+    ]);
+  });
+
+  it("requires a person when a Made-in-USA price is archived", async () => {
+    const findings = await checkStripe(
+      stripeStub({ inactivePrice: ["musa_claim_file"] })
+    );
+    expect(findings).toEqual([
+      expect.objectContaining({
+        kind: "price_inactive",
+        planId: "musa_claim_file",
+        fixable: false,
+      }),
     ]);
   });
 
@@ -252,9 +274,9 @@ describe("checkout watchdog: --fix", () => {
   });
 
   it("refuses to unlist most of the store at once", () => {
-    const paid = [...listedPlans("qron"), ...listedPlans("strainchain")].filter(
-      p => p.price > 0
-    );
+    const paid = (["qron", "strainchain", "musa"] as const)
+      .flatMap(brand => listedPlans(brand))
+      .filter(p => p.price > 0);
     expect(safeToAutoFix([f("price_inactive", paid[0].id)])).toBe(true);
     expect(safeToAutoFix(paid.map(p => f("price_inactive", p.id)))).toBe(false);
   });

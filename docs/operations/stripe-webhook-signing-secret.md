@@ -73,7 +73,13 @@ put` (or run the bind workflow below).
    value.
 4. Stripe Dashboard → that endpoint → **Resend**
    `evt_1UHERPGqTruSqV8TMtUYKAF0`. Expect **2xx**. Replay of
-   `checkout.session.completed` is idempotent on Checkout Session id.
+   `checkout.session.completed` is protected by a durable event claim.
+
+Before deploying webhook code that uses durable claims, apply
+`supabase/migrations/20261004070000_stripe_webhook_claims.sql` and verify the
+Worker has `NEXT_PUBLIC_SUPABASE_URL` (or `SUPABASE_URL`) and
+`SUPABASE_SERVICE_ROLE_KEY` bound. The handler intentionally returns an error
+instead of processing a non-test event if it cannot acquire a claim.
 
 Do **not** roll the Dashboard signing secret from code. Do **not** point the
 endpoint at Vercel or `authichain-revenue-worker`.

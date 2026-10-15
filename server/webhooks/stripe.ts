@@ -28,8 +28,11 @@ import {
   checkoutSessionEmail,
 } from "../../src/lib/checkout-recovery";
 import {
+  claimStripeWebhookEvent,
+  completeStripeWebhookEvent,
   checkoutSessionIdFromEvent,
   recordStripeWebhookDelivery,
+  releaseStripeWebhookEvent,
   type StripeWebhookDeliveryStatus,
 } from "../../src/lib/stripe-webhook-log";
 import { planByStripePriceId } from "../../src/lib/plans";
@@ -153,6 +156,10 @@ async function fulfillCatalogCreditsIfPaid(
     await import("../../src/lib/plans");
   const metaPlan =
     typeof session.metadata?.plan === "string" ? session.metadata.plan : "";
+  const isCatalogPlan = (
+    value: string
+  ): value is keyof typeof PLAN_CREDITS =>
+    Object.prototype.hasOwnProperty.call(PLAN_CREDITS, value);
   // Collision guard: a recurring Session must never resolve a one-time plan
   // by amount. Only an explicit PLANS price ID (or explicit metadata below)
   // may provision a subscription-mode checkout.
@@ -163,11 +170,10 @@ async function fulfillCatalogCreditsIfPaid(
   }
   if (
     !catalog &&
-    metaPlan &&
-    metaPlan in PLAN_CREDITS &&
+    isCatalogPlan(metaPlan) &&
     metaPlan !== "starter"
   ) {
-    catalog = metaPlan as typeof catalog;
+    catalog = metaPlan;
   }
   if (!catalog && metaPlan === "starter" && session.mode === "payment") {
     catalog = "starter";
@@ -494,14 +500,42 @@ export async function handleStripeWebhook(
     });
   };
 
-  // Persist before side effects so a later throw is still queryable.
-  // A stripe_events row is NOT a fulfill lock — DPP replay still runs.
-  await logDelivery("received");
-
-  // Allow test verification events through without idempotency check
+  // Stripe's Dashboard verification event has no customer side effects and
+  // should not leave a durable processing claim behind.
   if (event.id.startsWith("evt_test_")) {
+    await logDelivery("received");
     console.log("[stripe-webhook] Test event, returning verified");
     return { received: true, type: event.type };
+  }
+
+  const claim = await claimStripeWebhookEvent(supabase, {
+    eventId: event.id,
+    eventType: event.type,
+  });
+  if (claim.error) {
+    throw new Error(
+      `[stripe-webhook] Could not claim event ${event.id}: ${claim.error}`
+    );
+  }
+  if (!claim.acquired || !claim.token) {
+    await recordStripeWebhookDelivery(supabase, {
+      eventId: event.id,
+      eventType: event.type,
+      sessionId,
+      status: "duplicate",
+      httpStatus: 200,
+    });
+    return { received: true, type: event.type, duplicate: true };
+  }
+  const claimToken = claim.token;
+
+  // Persist after taking the event-level claim so this row cannot be mistaken
+  // for the lock or have a replay overwrite a completed delivery status.
+  try {
+    await logDelivery("received");
+  } catch (err) {
+    await releaseStripeWebhookEvent(supabase, event.id, claimToken);
+    throw err;
   }
 
   // Drizzle/DATABASE_URL is optional on the apex Worker. Missing it used to
@@ -514,6 +548,15 @@ export async function handleStripeWebhook(
   );
   if (alreadyProcessed && !isReplayableCheckoutEvent(event.type)) {
     console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
+    const completed = await completeStripeWebhookEvent(
+      supabase,
+      event.id,
+      claimToken
+    );
+    if (!completed.ok) {
+      await releaseStripeWebhookEvent(supabase, event.id, claimToken);
+      throw new Error(completed.error || "claim completion failed");
+    }
     await logDelivery("duplicate", { httpStatus: 200 });
     return { received: true, type: event.type, duplicate: true };
   }
@@ -527,6 +570,12 @@ export async function handleStripeWebhook(
     const session = event.data.object as Stripe.Checkout.Session;
     try {
       await fulfillDppCheckoutIfPaid(session);
+      const completed = await completeStripeWebhookEvent(
+        supabase,
+        event.id,
+        claimToken
+      );
+      if (!completed.ok) throw new Error(completed.error || "claim completion failed");
       await logDelivery("success", { httpStatus: 200 });
       return {
         received: true,
@@ -537,6 +586,7 @@ export async function handleStripeWebhook(
     } catch (dppErr) {
       const msg = dppErr instanceof Error ? dppErr.message : String(dppErr);
       console.error("[stripe-webhook] DPP fulfill failed", dppErr);
+      await releaseStripeWebhookEvent(supabase, event.id, claimToken);
       await logDelivery("error", { httpStatus: 400, error: msg });
       throw dppErr;
     }
@@ -721,7 +771,11 @@ export async function handleStripeWebhook(
         let userId: number | undefined;
         if (subscriptionId) {
           const localSub =
-            await db.getSubscriptionByStripeSubscriptionId(subscriptionId);
+            await optionalDb(
+              "invoice subscription lookup",
+              () => db.getSubscriptionByStripeSubscriptionId(subscriptionId),
+              undefined
+            );
           userId = localSub?.userId ?? undefined;
         }
         if (!userId) {
@@ -746,37 +800,51 @@ export async function handleStripeWebhook(
 
         await Promise.all([
           amountUsd > 0
-            ? db.recordRevenue({
-                source: "stripe",
-                amount: amountUsd.toFixed(2),
-                currency,
-                type: "subscription",
-                userId: userId ?? null,
-                metadata: {
+            ? optionalDb(
+                "invoice revenue",
+                () =>
+                  db.recordRevenue({
+                    source: "stripe",
+                    amount: amountUsd.toFixed(2),
+                    currency,
+                    type: "subscription",
+                    userId: userId ?? null,
+                    metadata: {
+                      eventId: event.id,
+                      invoiceId: inv.id,
+                      stripeSubscriptionId: subscriptionId ?? null,
+                      stripeCustomerId: customerId ?? null,
+                      plan,
+                    },
+                  }),
+                undefined
+              )
+            : Promise.resolve(),
+          subscriptionId
+            ? optionalDb(
+                "invoice subscription activation",
+                () => db.setSubscriptionStatusByStripeId(subscriptionId, "active"),
+                undefined
+              )
+            : Promise.resolve(),
+          optionalDb(
+            "invoice audit",
+            () =>
+              db.logAutomationAudit(
+                "billing_invoice_paid",
+                {
                   eventId: event.id,
                   invoiceId: inv.id,
                   stripeSubscriptionId: subscriptionId ?? null,
                   stripeCustomerId: customerId ?? null,
+                  amountUsd,
+                  currency,
                   plan,
+                  userId: userId ?? null,
                 },
-              })
-            : Promise.resolve(),
-          subscriptionId
-            ? db.setSubscriptionStatusByStripeId(subscriptionId, "active")
-            : Promise.resolve(),
-          db.logAutomationAudit(
-            "billing_invoice_paid",
-            {
-              eventId: event.id,
-              invoiceId: inv.id,
-              stripeSubscriptionId: subscriptionId ?? null,
-              stripeCustomerId: customerId ?? null,
-              amountUsd,
-              currency,
-              plan,
-              userId: userId ?? null,
-            },
-            userId
+                userId
+              ),
+            undefined
           ),
         ]);
 
@@ -993,10 +1061,17 @@ export async function handleStripeWebhook(
         handled = false;
     }
 
+    const completed = await completeStripeWebhookEvent(
+      supabase,
+      event.id,
+      claimToken
+    );
+    if (!completed.ok) throw new Error(completed.error || "claim completion failed");
     await logDelivery("success", { httpStatus: 200 });
     return { received: true, type: event.type, handled };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    await releaseStripeWebhookEvent(supabase, event.id, claimToken);
     await logDelivery("error", { httpStatus: 400, error: msg });
     throw err;
   }

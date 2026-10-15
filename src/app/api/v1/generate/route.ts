@@ -4,6 +4,7 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { generateLivingQR } from '@/lib/hf-generation';
 import { logAutomation } from '@/lib/automation';
 import { supabaseAdmin as admin } from '@/lib/supabase-admin';
+import { checkCredit, deductCredit } from '@/lib/business-tier';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -45,6 +46,14 @@ export async function POST(req: NextRequest) {
 
     if (!url || !url.startsWith('http')) {
       return NextResponse.json({ error: 'Valid URL is required' }, { status: 400 });
+    }
+
+    const creditStatus = await checkCredit(userId);
+    if (!creditStatus.ok) {
+      return NextResponse.json(
+        { error: creditStatus.error, code: 'LIMIT_REACHED' },
+        { status: 403 }
+      );
     }
 
     // 3. Trigger Generation (Phase 3: HF)
@@ -90,12 +99,18 @@ export async function POST(req: NextRequest) {
       void logAutomation('v1_generate.persist', 'event', 'failure', { userId, url }, msg);
     });
 
-    // 5. Deduct Credits
-    admin.rpc('increment_generations_used', { user_id: userId }).then(undefined, (err) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('[v1/generate] Failed to increment generations_used:', err);
-      void logAutomation('v1_generate.credit_increment', 'event', 'failure', { userId }, msg);
-    });
+    // 5. Deduct Credits using the shared compare-and-set debit.
+    const creditResult = await deductCredit(userId);
+    if (!creditResult.ok) {
+      console.error('[v1/generate] Generated image but credit debit failed:', creditResult.error);
+      return NextResponse.json(
+        {
+          error: 'Image generated, but the credit could not be recorded. Contact support before retrying.',
+          code: 'CREDIT_DEBIT_FAILED',
+        },
+        { status: 503 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

@@ -12,6 +12,9 @@ compatibility_flags = ["nodejs_compat"]
 # Optional NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to record
 # checkout_started and to fulfill paid DPP sessions on POST /api/stripe/webhook.
 # DATABASE_URL is NOT required for DPP fulfill (Drizzle audit is fail-open).
+# Apply supabase/migrations/20261004070000_stripe_webhook_claims.sql before
+# deploying webhook claim enforcement or paid x402 reservation enforcement.
+# Both require SUPABASE_SERVICE_ROLE_KEY; requests fail closed without them.
 # Optional x402: X402_FACILITATOR_URL + X402_PAY_TO. Unset is the $0 path —
 # GET /api/x402/health returns 200 ready when payTo + facilitator are bound.
 # Optional QRON_WORKER_URL for POST /api/generate (defaults to

@@ -196,6 +196,17 @@ export async function handleGeneratePost(opts: {
       return { status: 502, body: { message: "No image returned" } };
     }
     const deducted = await opts.deductCredit(opts.userId);
+    if (!deducted.ok) {
+      console.error("[generate] image created but credit debit failed:", deducted.error);
+      return {
+        status: 503,
+        body: {
+          message:
+            "Image generation completed, but the credit could not be recorded. Contact support before retrying.",
+          code: "CREDIT_DEBIT_FAILED",
+        },
+      };
+    }
     return {
       status: 200,
       body: {
@@ -206,7 +217,7 @@ export async function handleGeneratePost(opts: {
           prompt,
           mode,
         },
-        remaining_credits: deducted.ok ? deducted.remaining : credit.remaining,
+        remaining_credits: deducted.remaining,
       },
     };
   } catch (err) {

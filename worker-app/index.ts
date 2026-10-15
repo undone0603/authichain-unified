@@ -444,7 +444,7 @@ app.post("/api/generate", async c => {
       reportGrowthEvent(c, { event: "generate_submit_anon", sku: "starter" });
     }
     c.header("Cache-Control", "private, no-store");
-    return c.json(result.body, result.status as 200 | 400 | 401 | 403 | 502);
+    return c.json(result.body, result.status as 200 | 400 | 401 | 403 | 502 | 503);
   } catch (err: any) {
     console.error("[generate] Error:", err?.message || err);
     return c.json({ message: "Generation failed", detail: err?.message }, 500);

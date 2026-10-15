@@ -15,6 +15,34 @@ import { runTask } from "./task-runner";
 import { ucb1Score, betaMean } from "../_core/bayesian";
 import type { MissionType } from "../missions/types";
 
+type PipelineSummary = {
+  status: "completed" | "partial";
+  enabled: true;
+  budgetMonitor: Awaited<ReturnType<typeof runBudgetMonitor>>;
+  dunning: Awaited<ReturnType<typeof runDunningEscalation>>;
+  retention: Awaited<ReturnType<typeof runRetentionAutomation>>;
+  weeklyDigest: Awaited<ReturnType<typeof runWeeklyDigestDispatch>>;
+  quarterlyValue: Awaited<ReturnType<typeof runQuarterlyValueReportDispatch>>;
+  organicTraffic: Awaited<ReturnType<typeof runOrganicTrafficAutomation>>;
+  browserJobs: Awaited<ReturnType<typeof runBrowserAgentJobs>>;
+  missionTasks: {
+    total: number;
+    ran: number;
+    errors: number;
+    failures: { id: string; kind: string; error: string }[];
+  };
+  pmfCreated: string[];
+};
+
+class PipelineTaskFailure extends Error {
+  constructor(readonly summary: PipelineSummary) {
+    super(
+      `${summary.missionTasks.errors} of ${summary.missionTasks.total} mission task(s) failed`
+    );
+    this.name = "PipelineTaskFailure";
+  }
+}
+
 /**
  * Runs one pipeline tick.
  *
@@ -110,13 +138,23 @@ async function executeTick() {
 
   scored.sort((a, b) => b.score - a.score);
 
-  const taskResults = { total: dueTasks.length, ran: 0, errors: 0 };
+  const taskResults: PipelineSummary["missionTasks"] = {
+    total: dueTasks.length,
+    ran: 0,
+    errors: 0,
+    failures: [],
+  };
   for (const { task } of scored) {
     const result = await runTask(task);
     if (result.ok) {
       taskResults.ran++;
     } else {
       taskResults.errors++;
+      taskResults.failures.push({
+        id: task.id,
+        kind: task.kind,
+        error: result.error ?? "Task failed without an error message",
+      });
     }
   }
 
@@ -138,7 +176,8 @@ async function executeTick() {
     }
   }
 
-  const summary = {
+  const summary: PipelineSummary = {
+    status: taskResults.errors > 0 ? "partial" : "completed",
     enabled: true,
     budgetMonitor,
     dunning,
@@ -159,6 +198,10 @@ async function executeTick() {
     details: summary,
   });
 
+  if (taskResults.errors > 0) {
+    throw new PipelineTaskFailure(summary);
+  }
+
   return summary;
 }
 
@@ -173,6 +216,9 @@ if (isMain) {
       process.exit(0);
     })
     .catch(err => {
+      if (err instanceof PipelineTaskFailure) {
+        console.error(JSON.stringify(err.summary, null, 2));
+      }
       console.error("Pipeline tick failed:", err);
       process.exit(1);
     });

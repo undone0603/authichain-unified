@@ -1,20 +1,19 @@
 # Gitleaks configuration for authichain-unified
 # Prevents secrets from being committed to git
 
+[extend]
+useDefault = true
+
 [allowlist]
 description = "Allowlisted paths and patterns"
 paths = [
-  '''\.env\.example$''',
-  '''\.env\.local\.example$''',
   '''docs/archive/misc/.*_envs\.txt$''',
   '''^fixtures/.*\.jws$''',
 ]
 regexes = [
   '''\*\*\*REMOVED\*\*''',
-  '''REPLACE_WITH_.*''',
-  '''your_.*_here''',
   '''sk_live_your_stripe_secret_key''',
-  '''whsec_your_webhook_secret''',
+  '''(?m)^STRIPE_WEBHOOK_SECRET(?:_[23])?=whsec_your_webhook_secret(?:_[123])?$''',
 ]
 
 [[rules]]

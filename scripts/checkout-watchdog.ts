@@ -37,8 +37,11 @@ import {
 export type PricingPage = {
   origin: "authichain" | "qron" | "strainchain";
   url: string;
-  brand: "qron" | "strainchain";
+  brand: CheckoutBrand;
 };
+
+const CHECKOUT_BRANDS = ["qron", "strainchain", "musa"] as const;
+type CheckoutBrand = (typeof CHECKOUT_BRANDS)[number];
 
 export const PRICING_PAGES: PricingPage[] = [
   {
@@ -51,6 +54,11 @@ export const PRICING_PAGES: PricingPage[] = [
     origin: "strainchain",
     url: "https://strainchain.io/pricing",
     brand: "strainchain",
+  },
+  {
+    origin: "authichain",
+    url: "https://authichain.com/made-in-usa-claim-file",
+    brand: "musa",
   },
 ];
 
@@ -79,14 +87,20 @@ export type Finding = {
 const UA =
   "authichain-checkout-watchdog (+https://github.com/undone0603/authichain-unified)";
 
-/** Paid plans a brand's pricing page should carry a checkout link for. */
-export function expectedPlanIds(brand: "qron" | "strainchain"): PlanId[] {
+/** Paid plans a brand's public page should carry a gated checkout or Payment Link. */
+export function expectedPlanIds(brand: CheckoutBrand): PlanId[] {
   return listedPlans(brand)
     .filter(p => p.price > 0)
     .map(p => p.id);
 }
 
 export type PageLinks = { planIds: string[]; paymentLinks: string[] };
+
+function listedPaidPlans(): Plan[] {
+  return CHECKOUT_BRANDS.flatMap(brand => listedPlans(brand)).filter(
+    p => p.price > 0
+  );
+}
 
 /**
  * Checkout targets in a rendered pricing page: /checkout/<plan> and
@@ -125,9 +139,7 @@ export function checkPageLinks(page: PricingPage, links: PageLinks): Finding[] {
   const findings: Finding[] = [];
   const listed = new Map(listedPlans(page.brand).map(p => [p.id as string, p]));
   const anyListed = new Set(
-    [...listedPlans("qron"), ...listedPlans("strainchain")].map(
-      p => p.id as string
-    )
+    listedPaidPlans().map(p => p.id as string)
   );
   for (const id of links.planIds) {
     // /checkout/dpp and friends are aliases the gate canonicalises.
@@ -144,13 +156,20 @@ export function checkPageLinks(page: PricingPage, links: PageLinks): Finding[] {
       fixable: false,
     });
   }
-  const catalogueLinks = new Map(
-    [...listedPlans("qron"), ...listedPlans("strainchain")]
+  const catalogueLinks = new Map<string, PlanId>(
+    listedPaidPlans()
       .filter(p => p.stripe_payment_link)
-      .map(p => [p.stripe_payment_link as string, p.id])
+      .map(p => [p.stripe_payment_link as string, p.id] as const)
+  );
+  const linked = new Set(
+    links.planIds.map(id => (id === "dpp" ? "dpp_readiness" : id))
   );
   for (const link of links.paymentLinks) {
-    if (catalogueLinks.has(link)) continue;
+    const planId = catalogueLinks.get(link);
+    if (planId) {
+      linked.add(planId);
+      continue;
+    }
     findings.push({
       kind: "unknown_checkout_link",
       url: link,
@@ -158,9 +177,6 @@ export function checkPageLinks(page: PricingPage, links: PageLinks): Finding[] {
       fixable: false,
     });
   }
-  const linked = new Set(
-    links.planIds.map(id => (id === "dpp" ? "dpp_readiness" : id))
-  );
   for (const id of expectedPlanIds(page.brand)) {
     if (linked.has(id)) continue;
     const plan = listed.get(id);
@@ -275,9 +291,7 @@ export function isLiveStripeKey(key: string | undefined): key is string {
 
 export async function checkStripe(get: StripeGet): Promise<Finding[]> {
   const findings: Finding[] = [];
-  const plans = [...listedPlans("qron"), ...listedPlans("strainchain")].filter(
-    p => p.price > 0
-  );
+  const plans = listedPaidPlans();
   for (const plan of plans) {
     if (!plan.stripe_price_id) continue;
     const { status, json } = await get(
@@ -297,7 +311,7 @@ export async function checkStripe(get: StripeGet): Promise<Finding[]> {
         kind: "price_inactive",
         planId: plan.id,
         detail: `${plan.name}'s Stripe price ${plan.stripe_price_id} is archived, so its card cannot be paid.`,
-        fixable: true,
+        fixable: (plan.brand ?? "qron") !== "musa",
       });
       continue;
     }
@@ -310,7 +324,7 @@ export async function checkStripe(get: StripeGet): Promise<Finding[]> {
         kind: "product_inactive",
         planId: plan.id,
         detail: `${plan.name}'s Stripe product ${json.product.id} is archived, so its card cannot be paid.`,
-        fixable: true,
+        fixable: (plan.brand ?? "qron") !== "musa",
       });
       continue;
     }
@@ -388,12 +402,14 @@ export async function checkStripe(get: StripeGet): Promise<Finding[]> {
  * catalogue change, and hiding every card would take the store down.
  */
 export function safeToAutoFix(findings: Finding[]): boolean {
-  const paid = [...listedPlans("qron"), ...listedPlans("strainchain")].filter(
-    p => p.price > 0
-  );
+  const paid = listedPaidPlans();
   const hidden = new Set(
     findings
-      .filter(f => f.kind === "price_inactive" || f.kind === "product_inactive")
+      .filter(
+        f =>
+          f.fixable &&
+          (f.kind === "price_inactive" || f.kind === "product_inactive")
+      )
       .map(f => f.planId)
   );
   return hidden.size * 2 < paid.length;

@@ -150,6 +150,23 @@ describe("handleGeneratePost", () => {
       deductCredit.mock.invocationCallOrder[0]
     );
   });
+
+  it("does not report success when the post-generation credit debit fails", async () => {
+    deductCredit.mockResolvedValueOnce({
+      ok: false,
+      error: "Generation credit changed during the request; please retry.",
+    });
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: "user_1",
+      checkCredit,
+      deductCredit,
+      generateImage,
+    });
+    expect(result.status).toBe(503);
+    expect(result.body).toMatchObject({ code: "CREDIT_DEBIT_FAILED" });
+    expect(result.body).not.toHaveProperty("qron");
+  });
 });
 
 describe("extractAccessToken", () => {
