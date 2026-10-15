@@ -1603,11 +1603,13 @@ app.get("/api/internal/analytics", async c => {
 
     return c.json({
       period,
-      verifications: { total: 0, authentic: 0, counterfeit: 0 },
-      qrCodesGenerated: 0,
-      certificatesIssued: 0,
-      activeAgents: 5,
-      message: "Analytics data will be populated once usage metering is active",
+      // Nothing is metered yet. Nulls, not zeros: a zero reads as a
+      // measurement. The old activeAgents: 5 was a constant, not a count.
+      metered: false,
+      verifications: null,
+      qrCodesGenerated: null,
+      certificatesIssued: null,
+      message: "Usage metering is not active, so there are no counts to report.",
     });
   } catch (err: any) {
     console.error("[Internal API] analytics error:", err.message);
