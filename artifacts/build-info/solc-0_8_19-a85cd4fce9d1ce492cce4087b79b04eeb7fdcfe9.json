@@ -1,0 +1,46 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_19-a85cd4fce9d1ce492cce4087b79b04eeb7fdcfe9",
+  "solcVersion": "0.8.19",
+  "solcLongVersion": "0.8.19+commit.7dd6d404",
+  "compilerType": "solc",
+  "userSourceNameMap": {
+    "contracts/ledger/AuthiChainLedger.sol": "project/contracts/ledger/AuthiChainLedger.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "paris",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/ledger/AuthiChainLedger.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.19;\n\n/**\n * AuthiChainLedger\n *\n * Off-chain Stripe money movement (checkout sessions, renewal invoices,\n * refunds) anchored on-chain. Deliberately separate from AuthiChainNFT: no\n * shared storage, no shared ABI, no shared recorder role — this contract\n * exists purely to give every sale a public, tamper-evident anchor.\n *\n * stripeRef is a one-way keccak256 commitment to a Stripe object id, never\n * the id itself, so nothing PII-bearing ever lands on-chain.\n */\ncontract AuthiChainLedger {\n    struct Sale {\n        bytes32 stripeRef;\n        bytes32 sku;\n        uint256 amountCents;\n        uint8 currency;\n        address buyer;\n        uint8 source;\n        uint256 stripeCreated;\n        uint256 anchoredAt;\n        bool reversed;\n    }\n\n    struct SaleInput {\n        bytes32 stripeRef;\n        bytes32 sku;\n        uint256 amountCents;\n        uint8 currency;\n        address buyer;\n        uint8 source;\n        uint256 stripeCreated;\n    }\n\n    address public owner;\n    mapping(address => bool) public isRecorder;\n    mapping(bytes32 => uint256) public saleIdByRef;\n    mapping(uint256 => Sale) private _sales;\n    uint256 public totalSales;\n\n    event SaleRecorded(\n        uint256 indexed saleId,\n        bytes32 indexed stripeRef,\n        bytes32 indexed sku,\n        uint256 amountCents,\n        uint8 source\n    );\n    event SaleReversed(uint256 indexed saleId, bytes32 indexed stripeRef);\n    event DuplicateSaleIgnored(uint256 indexed saleId, bytes32 indexed stripeRef);\n    event RecorderUpdated(address indexed account, bool allowed);\n\n    error NotOwner();\n    error NotRecorder();\n    error UnknownSale();\n\n    modifier onlyOwner() {\n        if (msg.sender != owner) revert NotOwner();\n        _;\n    }\n\n    modifier onlyRecorder() {\n        if (!isRecorder[msg.sender]) revert NotRecorder();\n        _;\n    }\n\n    constructor(address initialOwner) {\n        owner = initialOwner;\n        isRecorder[initialOwner] = true;\n        emit RecorderUpdated(initialOwner, true);\n    }\n\n    /// @notice Grants or revokes write access. Owner-only.\n    function setRecorder(address account, bool allowed) external onlyOwner {\n        isRecorder[account] = allowed;\n        emit RecorderUpdated(account, allowed);\n    }\n\n    /// @notice Anchors a single sale. Replays of an already-anchored\n    /// stripeRef are a no-op that returns the existing saleId.\n    function recordSale(\n        bytes32 stripeRef,\n        bytes32 sku,\n        uint256 amountCents,\n        uint8 currency,\n        address buyer,\n        uint8 source,\n        uint256 stripeCreated\n    ) external onlyRecorder returns (uint256) {\n        return _recordSale(stripeRef, sku, amountCents, currency, buyer, source, stripeCreated);\n    }\n\n    /// @notice Batch form of recordSale, used by the backfill script. Each\n    /// input is resolved independently — a ref already anchored (live or a\n    /// prior backfill pass) is skipped, never overwritten.\n    function recordSaleBatch(SaleInput[] calldata inputs) external onlyRecorder returns (uint256[] memory ids) {\n        ids = new uint256[](inputs.length);\n        for (uint256 i = 0; i < inputs.length; i++) {\n            SaleInput calldata inp = inputs[i];\n            ids[i] = _recordSale(\n                inp.stripeRef,\n                inp.sku,\n                inp.amountCents,\n                inp.currency,\n                inp.buyer,\n                inp.source,\n                inp.stripeCreated\n            );\n        }\n    }\n\n    /// @notice Marks a previously anchored sale reversed (refund/void).\n    /// Idempotent; reverts only if the ref was never anchored.\n    function recordReversal(bytes32 stripeRef) external onlyRecorder {\n        uint256 saleId = saleIdByRef[stripeRef];\n        if (saleId == 0) revert UnknownSale();\n\n        if (_sales[saleId].reversed) return;\n\n        _sales[saleId].reversed = true;\n        emit SaleReversed(saleId, stripeRef);\n    }\n\n    function saleByStripeRef(bytes32 stripeRef) external view returns (Sale memory) {\n        return _sales[saleIdByRef[stripeRef]];\n    }\n\n    function isAnchored(bytes32 stripeRef) external view returns (bool) {\n        return saleIdByRef[stripeRef] != 0;\n    }\n\n    function _recordSale(\n        bytes32 stripeRef,\n        bytes32 sku,\n        uint256 amountCents,\n        uint8 currency,\n        address buyer,\n        uint8 source,\n        uint256 stripeCreated\n    ) private returns (uint256) {\n        uint256 existing = saleIdByRef[stripeRef];\n        if (existing != 0) {\n            emit DuplicateSaleIgnored(existing, stripeRef);\n            return existing;\n        }\n\n        uint256 saleId = ++totalSales;\n\n        _sales[saleId] = Sale({\n            stripeRef: stripeRef,\n            sku: sku,\n            amountCents: amountCents,\n            currency: currency,\n            buyer: buyer,\n            source: source,\n            stripeCreated: stripeCreated,\n            anchoredAt: block.timestamp,\n            reversed: false\n        });\n        saleIdByRef[stripeRef] = saleId;\n\n        emit SaleRecorded(saleId, stripeRef, sku, amountCents, source);\n        return saleId;\n    }\n}\n"
+      }
+    }
+  }
+}

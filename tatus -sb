@@ -1,0 +1,5 @@
+[33ma017ed5e[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat(agentz): publish one signed presentation a stranger can check (#1834)
+[33m81d0a70c[m[33m ([m[1;31morigin/safety/manual-cloudflare-release-gate-20261013[m[33m)[m fix(stripe-webhook): grant 50 generations for dpp_readiness (remove humanHold)
+[33md144c215[m Merge pull request #1830 from undone0603/fix/dpp-grant-persists
+[33m2bd1b624[m fix(billing): persist a DPP grant when the profile update fails
+[33m576c2505[m Merge pull request #1828 from undone0603/feat/agent-browser-ui

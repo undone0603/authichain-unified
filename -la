@@ -1,0 +1,10 @@
+[33m9ceff2e9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeat/agent-browser-ui[m[33m)[m chore: resolve tsconfig deprecation and stage agent ui capabilities
+[33m68930fbb[m[33m ([m[1;31morigin/feat/agent-browser-ui[m[33m)[m Merge branch 'main' into fix/gb17-remove-50-generations
+[33m3b0fb7d2[m feat(sales): wire sales handler to main edge router
+[33m145d599f[m feat(sales): add autonomous sales endpoint for battery passport
+[33m62ca0bcc[m chore: track sync daemon and buffer
+[33m1c2451d0[m style: format agentz-ci.yml with prettier
+[33mb6f5affd[m fix: add missing @modelcontextprotocol/sdk dependency for agentz self-healing
+[33m3dba3973[m chore: add local fallback test mock server
+[33mcd02ea7a[m feat(authichain-com): integrate CIRPASS battery scraper UI and MCP route
+[33m400f8538[m feat(authichain-com): integrate CIRPASS battery scraper UI and MCP route

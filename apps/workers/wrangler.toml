@@ -1,0 +1,49 @@
+
+[durable_objects]
+bindings = [
+  { name = "AGENT_STATE", class_name = "AuthiChainAgent" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["AuthiChainAgent"]
+EOFcat << 'EOF' >> apps/workers/wrangler.toml
+
+[durable_objects]
+bindings = [
+  { name = "AGENT_STATE", class_name = "AuthiChainAgent" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["AuthiChainAgent"]
+EOF~clear
+mkdir -p apps/workers/src/async
+cat << 'EOF' > apps/workers/src/async/queue-handler.ts
+export async function handleQueueMessage(batch: MessageBatch<any>, env: any) {
+  for (const message of batch.messages) {
+    console.log("Processing async task from queue:", message.body);
+    
+    try {
+      // Future: Async agentic heavy lifting (e.g., large compliance reviews or code generation)
+      await new Promise(resolve => setTimeout(resolve, 1000)); 
+      
+      console.log("Async task completed successfully.");
+      message.ack();
+    } catch (error) {
+      console.error("Async task failed, marking for retry:", error);
+      message.retry();
+    }
+  }
+}
+EOFcat << 'EOF' >> apps/workers/wrangler.toml
+
+# Async Handoff Queue configuration
+[[queues.producers]]
+queue = "authichain-agent-queue"
+binding = "AGENT_QUEUE"
+
+[[queues.consumers]]
+queue = "authichain-agent-queue"
+max_batch_size = 10
+max_batch_timeout = 5

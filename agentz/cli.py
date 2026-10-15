@@ -248,6 +248,19 @@ def cmd_openclaw(args: argparse.Namespace) -> int:
     return 2
 
 
+def cmd_browser_layer(args: argparse.Namespace) -> int:
+    """Run the browser-layer orchestration pre-flight (additive, no side effects)."""
+    import json as _json
+    from agentz.workflows.runner import WorkflowRunner
+
+    result = WorkflowRunner().run_browser_layer_workflow(
+        {"target_layer": args.layer, "handle_modals": not args.no_handle_modals}
+    )
+    print("Browser layer orchestration result:")
+    print(_json.dumps(result, indent=2, default=str))
+    return 0 if result.get("status") == "success" else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog="agentz",
@@ -261,6 +274,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     sub = root.add_subparsers(dest="command", required=True)
+
+    from agentz.skills.browser_layer_orchestrator import LayerRole as _LayerRole
+
+    bl_p = sub.add_parser(
+        "browser-layer",
+        help="Browser layer orchestration pre-flight (viewport state contract)",
+    )
+    bl_p.add_argument(
+        "--layer",
+        default="L4_TERMINAL_PANEL",
+        choices=[r.name for r in _LayerRole],
+        help="Layer to focus (default: L4_TERMINAL_PANEL)",
+    )
+    bl_p.add_argument(
+        "--no-handle-modals",
+        action="store_true",
+        help="Do not dismiss blocking modals before focusing",
+    )
+
+    from agentz.core import autonomy_cli as _autonomy_cli
+
+    _autonomy_cli.register(sub)
 
     sub.add_parser("health", help="Check LM Studio connectivity")
     sub.add_parser("list-agents", help="List all registered LM Studio agents")
@@ -372,6 +407,11 @@ def build_parser() -> argparse.ArgumentParser:
     return root
 
 
+def create_parser() -> argparse.ArgumentParser:
+    """Stable public name for the CLI parser factory (alias of build_parser)."""
+    return build_parser()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -390,6 +430,12 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_run(args)
     if args.command == "openclaw":
         return cmd_openclaw(args)
+    if args.command == "browser-layer":
+        return cmd_browser_layer(args)
+    if args.command in ("approvals", "kill", "resume", "ledger", "autoloop"):
+        from agentz.core import autonomy_cli as _autonomy_cli
+
+        return _autonomy_cli.dispatch(args)
 
     parser.print_help()
     return 1
