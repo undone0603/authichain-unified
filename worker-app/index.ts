@@ -9,6 +9,7 @@ import { timingSafeEqual as cryptoTimingSafeEqual } from "node:crypto";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 import { getSessionCookieOptions } from "../server/_core/cookies";
 import { products, certificates } from "../drizzle/schema";
+import { registryLookupDecision } from "../packages/verifier/src/registry-decision";
 import { eq } from "drizzle-orm";
 import { checkRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
@@ -1250,29 +1251,24 @@ app.post("/api/gpt/verify", async c => {
       .from(products)
       .where(eq(products.id, Number(productId)))
       .limit(1);
+    // A registry lookup never verifies (docs/attestation/verification-decision.md):
+    // not found is not counterfeit, and a matching row is not authentic.
     if (!product) {
-      return c.json({
-        verified: false,
-        trustScore: 0,
-        message: "Product not found. This item may be counterfeit.",
-        blockchain: null,
-      });
+      return c.json({ verified: false, trustScore: null, ...registryLookupDecision(null) });
     }
     const [cert] = await db
       .select()
       .from(certificates)
       .where(eq(certificates.productId, product.id))
       .limit(1);
+    const decision = registryLookupDecision(cert ?? { status: "uncertified" });
     return c.json({
-      verified: !!cert,
-      trustScore: cert ? 95 : 20,
+      verified: decision.valid,
+      trustScore: null,
       productName: product.name,
       brand: product.brand ?? null,
       certificateId: cert?.id ?? null,
-      blockchain: cert ? { status: "SECURED", network: "Polygon" } : null,
-      message: cert
-        ? `VERIFIED AUTHENTIC: ${product.name} - Blockchain secured.`
-        : `UNVERIFIED: ${product.name} lacks blockchain certificate.`,
+      ...decision,
     });
   } catch (err) {
     console.error("[GPT /verify]", err);
@@ -1311,14 +1307,11 @@ app.get("/api/gpt/certificates/verify", async c => {
       .from(certificates)
       .where(eq(certificates.certificateNumber, certNumber))
       .limit(1);
-    if (!cert)
-      return c.json({ valid: false, message: "Certificate not found" });
+    if (!cert) return c.json(registryLookupDecision(null));
     return c.json({
-      valid: true,
       certificateId: cert.id,
       issuedAt: cert.issuedAt,
-      blockchain: { status: "SECURED", network: "Polygon" },
-      message: "Certificate is valid and blockchain-secured.",
+      ...registryLookupDecision(cert),
     });
   } catch (err) {
     console.error("[GPT /certificates/verify]", err);
@@ -1342,15 +1335,14 @@ app.post("/api/gpt/cannabis/verify", async c => {
           .where(eq(products.name, strainName))
           .limit(1)
       : [];
+    // A name match is not a lab result and says nothing about METRC.
+    const decision = registryLookupDecision(product ? { status: "name_match" } : null);
     return c.json({
-      verified: !!product,
-      strainName: strainName || "Unknown",
+      verified: decision.valid,
+      strainName: strainName || null,
       batchId: batchId || null,
-      metrcCompliant: !!product,
-      blockchain: product ? { status: "SECURED", network: "Polygon" } : null,
-      message: product
-        ? `VERIFIED: ${product.name} - METRC compliant, blockchain secured.`
-        : "Strain not found in AuthiChain registry.",
+      metrc_compliance: "not_assessed",
+      ...decision,
     });
   } catch (err) {
     console.error("[GPT /cannabis/verify]", err);
@@ -1370,30 +1362,18 @@ app.post("/api/gpt/trust-score", async c => {
       .from(products)
       .where(eq(products.id, Number(productId)))
       .limit(1);
-    if (!product)
-      return c.json({
-        trustScore: 0,
-        verdict: "UNKNOWN",
-        message: "Product not found",
-      });
+    if (!product) return c.json({ trustScore: null, ...registryLookupDecision(null) });
     const [cert] = await db
       .select()
       .from(certificates)
       .where(eq(certificates.productId, product.id))
       .limit(1);
-    const baseScore = cert ? 85 : 15;
-    const trustScore = Math.min(100, baseScore);
-    const verdict =
-      trustScore >= 80
-        ? "TRUSTED"
-        : trustScore >= 50
-          ? "MODERATE"
-          : "SUSPICIOUS";
+    // The old 85/15 score was a constant keyed on "a certificate row exists"
+    // and labelled products without one SUSPICIOUS. No score is computed here.
     return c.json({
-      trustScore,
-      verdict,
-      breakdown: { blockchainCert: cert ? 85 : 0 },
-      message: `Trust score for ${product.name}: ${trustScore}/100 — ${verdict}`,
+      trustScore: null,
+      productName: product.name,
+      ...registryLookupDecision(cert ?? { status: "uncertified" }),
     });
   } catch (err) {
     console.error("[GPT /trust-score]", err);
@@ -1417,7 +1397,7 @@ app.use("/api/internal/*", async (c, next) => {
 app.post("/api/internal/verify", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
-    const { identifier, productId, barcode, imageUrl } = body ?? {};
+    const { identifier, productId, barcode } = body ?? {};
     const lookupId = identifier || productId || barcode;
     if (!lookupId)
       return c.json(
@@ -1425,63 +1405,21 @@ app.post("/api/internal/verify", async c => {
         400
       );
 
+    // This used to ask an LLM whether an unknown identifier was authentic and
+    // return its guess as `verified`, with a fixed trustScore of 95 and five
+    // agents listed for any certificate. A guess is not evidence: an unknown
+    // identifier is not_found, and a known one is a registry record only.
     const db = getHyperdriveDb(c.env);
     const { getCertificateByNumber } =
       await import("../server/content-db-helpers");
-    const cert = await getCertificateByNumber(db, lookupId);
-    if (cert) {
-      return c.json({
-        verified: cert.status === "active",
-        type: "certificate",
-        certificate: cert,
-        trustScore: 95,
-        confidence: 0.98,
-        agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
-      });
-    }
-
-    // Prevent prompt injection — only the sanitized identifier reaches the LLM
-    const safeLookupId = String(lookupId)
-      .replace(/[^a-zA-Z0-9\-_.]/g, "")
-      .slice(0, 128);
-
-    const { invokeLLM, parseLLMContent } = await import("../server/_core/llm");
-    const analysis = await invokeLLM({
-      messages: [
-        {
-          role: "system",
-          content: `You are AuthiChain's product verification engine. Analyze the product identifier and determine authenticity. Return JSON: { "verified": boolean, "confidence": number (0-1), "reasoning": string, "riskFlags": string[] }`,
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            identifier: safeLookupId,
-            hasImage: !!imageUrl,
-          }),
-        },
-      ],
-      responseFormat: { type: "json_object" },
-    });
-
-    let result: {
-      verified: boolean;
-      confidence: number;
-      reasoning: string;
-      riskFlags: string[];
-    };
-    try {
-      result = parseLLMContent(analysis.choices[0].message.content);
-    } catch {
-      return c.json({ error: "Internal server error" }, 500);
-    }
+    const cert = await getCertificateByNumber(db, String(lookupId));
+    const decision = registryLookupDecision(cert ?? null);
     return c.json({
-      verified: result.verified,
-      type: "ai_analysis",
-      trustScore: Math.round(result.confidence * 100),
-      confidence: result.confidence,
-      reasoning: result.reasoning,
-      riskFlags: result.riskFlags || [],
-      agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
+      verified: decision.valid,
+      type: cert ? "certificate" : "not_found",
+      ...(cert ? { certificate: cert } : {}),
+      trustScore: null,
+      ...decision,
     });
   } catch (err: any) {
     console.error("[Internal API] verify error:", err.message);
@@ -1560,34 +1498,47 @@ app.post("/api/internal/cannabis/verify", async c => {
     if (!strain)
       return c.json({ error: "strainName or strainId required" }, 400);
 
-    const metadata = {
-      name: strain,
-      type: "HYBRID" as const,
-      genetics: ["Unknown"],
-      thcContent: thcPercent || 25,
-      cbdContent: cbdPercent || 1,
-      harvestDate: new Date().toISOString(),
-    };
-    const profile = {
-      thc: thcPercent || 25,
-      thca: (thcPercent || 25) * 1.12,
-      cbd: cbdPercent || 1,
-      cbda: (cbdPercent || 1) * 1.2,
-      total: (thcPercent || 25) + (cbdPercent || 1) + 5,
-    };
-
-    const { calculateStrainRarity, formatTruthLayerMetadata } =
-      await import("../server/cannabis-service");
-    const rarity = calculateStrainRarity(metadata, profile);
-    const truthLayer = formatTruthLayerMetadata(metadata, profile);
+    // This returned verified:true for any strain name, filled a missing
+    // panel with THC 25 / CBD 1, and called any request with a dispensaryId
+    // "compliant". Nothing here reads a lab result, so nothing is verified,
+    // and a rarity score is only computed from numbers the caller supplied.
+    const thc = typeof thcPercent === "number" ? thcPercent : null;
+    const cbd = typeof cbdPercent === "number" ? cbdPercent : null;
+    let rarityScore: number | null = null;
+    let truthLayer: unknown = null;
+    if (thc !== null && cbd !== null) {
+      const metadata = {
+        name: strain,
+        type: "HYBRID" as const,
+        genetics: ["Unknown"],
+        thcContent: thc,
+        cbdContent: cbd,
+        harvestDate: new Date().toISOString(),
+      };
+      const profile = {
+        thc,
+        thca: thc * 1.12,
+        cbd,
+        cbda: cbd * 1.2,
+        total: thc + cbd + 5,
+      };
+      const { calculateStrainRarity, formatTruthLayerMetadata } =
+        await import("../server/cannabis-service");
+      rarityScore = calculateStrainRarity(metadata, profile);
+      truthLayer = formatTruthLayerMetadata(metadata, profile);
+    }
 
     return c.json({
-      verified: true,
+      verified: false,
+      decision: "indeterminate",
+      decision_contract: "AuthiChain Verification Decision v1",
+      reasons: ["no_lab_evidence", "no_signed_attestation_presented"],
       strainName: strain,
       batchId: batchId || null,
       dispensaryId: dispensaryId || null,
-      rarityScore: rarity,
-      complianceStatus: dispensaryId ? "compliant" : "unverified",
+      complianceStatus: "not_assessed",
+      rarityScore,
+      rarity_basis: rarityScore === null ? "not_computed" : "caller_supplied_panel",
       truthLayer,
     });
   } catch (err: any) {
@@ -1610,15 +1561,23 @@ app.post("/api/internal/trust-score", async c => {
 
     const { computeTrustScore } = await import("../server/qron-service");
     const score = computeTrustScore({
-      qrDecodePass: qrDecodePass ?? true,
-      blockchainCertExists: blockchainCertExists ?? false,
+      qrDecodePass: qrDecodePass === true,
+      blockchainCertExists: blockchainCertExists === true,
       communityVerified: visualMatch ? Math.round(visualMatch / 20) : 0,
       communityFlagged: 0,
-      openArtRegistered: nfcMatch ?? false,
+      openArtRegistered: nfcMatch === true,
     });
 
+    // Every input here is asserted by the caller, so the score is advisory.
+    // It never becomes an authenticity verdict.
+    const { verdict: _heuristicVerdict, ...advisory } = score;
     return c.json({
-      ...score,
+      ...advisory,
+      advisory: true,
+      verified: false,
+      decision: "indeterminate",
+      decision_contract: "AuthiChain Verification Decision v1",
+      reasons: ["caller_asserted_signals_only"],
       inputs: {
         qrDecodePass,
         blockchainCertExists,
