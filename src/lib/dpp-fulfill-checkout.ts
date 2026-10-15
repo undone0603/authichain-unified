@@ -130,6 +130,20 @@ export async function fulfillDppPaidSession(
     );
   }
 
+  // A real buyer paid and there is nobody to grant to. Acknowledging that as
+  // handled told Stripe to stop retrying, closed the continuity record and
+  // wrote `provisioned`, so the watchdog and the stall report both saw a
+  // fulfilled sale. Fail like any other ungranted payment instead: no
+  // `provisioned`, Stripe keeps the event red, and once the paid stage
+  // outlives its retry budget runDppExceptionsReport escalates it.
+  if (prov.status === "no_identity" && !demo) {
+    throw markRetryableFulfillment(
+      new Error(
+        `DPP provision failed: no_identity (paid session ${session.id} has no buyer email or user id)`
+      )
+    );
+  }
+
   try {
     await finishProvisionContinuity(supabase, {
       sessionId: session.id,

@@ -318,13 +318,29 @@ describe("fulfillDppPaidSession", () => {
     });
   });
 
-  it("writes provisioned with skip_reason when there is no buyer identity", async () => {
+  it("throws for a real paid session with no buyer identity and does not record provisioned", async () => {
+    const { supabase, rows } = fakeSupabase({ profileId: null });
+    await expect(
+      fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        customer_details: null,
+        customer_email: null,
+        metadata: { ...paidSession.metadata, user_id: undefined },
+      })
+    ).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+      message: expect.stringMatching(/^DPP provision failed: no_identity/),
+    });
+    expect(rows.map(r => r.event_type)).toEqual(["dpp_loop:payment_succeeded"]);
+  });
+
+  it("a demo session with no buyer identity still records provisioned with skip_reason", async () => {
     const { supabase, rows } = fakeSupabase({ profileId: null });
     const result = await fulfillDppPaidSession(supabase, {
       ...paidSession,
       customer_details: null,
       customer_email: null,
-      metadata: { ...paidSession.metadata, user_id: undefined },
+      metadata: { ...paidSession.metadata, user_id: undefined, is_demo: "true" },
     });
     expect(result).toEqual({
       handled: true,
