@@ -8,14 +8,3 @@ EOFcat << 'EOF' > src/agents/checkpointing.ts
 import { AgentMemoryManager } from "./memory";
 import { executeWithSelfHealing } from "./self-healing";
 export async function runAgentWorkflow(jobId: string, steps: string[], db: any) { const lastCheckpoint = await db.prepare("SELECT last_step FROM agent_checkpoints WHERE job_id = ?").bind(jobId).first(); const startStepIndex = lastCheckpoint ? lastCheckpoint.last_step + 1 : 0; for (let i = startStepIndex; i < steps.length; i++) { await executeWithSelfHealing(steps[i], async () => { console.log("Processing", steps[i]); }, new AgentMemoryManager(db)); await db.prepare("INSERT OR REPLACE INTO agent_checkpoints (job_id, last_step) VALUES (?, ?)").bind(jobId, i).run(); } }
-EOFmkdir -p migrations && cat << 'EOF' > migrations/0001_agent_state.sql
-CREATE TABLE agent_memories (
-  topic TEXT PRIMARY KEY,
-  content TEXT,
-  created_at INTEGER
-);
-
-CREATE TABLE agent_checkpoints (
-  job_id TEXT PRIMARY KEY,
-  last_step INTEGER
-);

@@ -1,0 +1,12 @@
+=== PR 1856 ===
+{"autoMergeRequest":null,"headRefName":"fix/govchain-invoker-view-grants","mergeStateStatus":"CLEAN","number":1856,"reviewDecision":"","state":"OPEN","title":"fix(supabase): restore govchain.us/opportunities under invoker-mode views (#1854)","url":"https://github.com/undone0603/authichain-unified/pull/1856"}
+=== PR 1857 ===
+{"autoMergeRequest":null,"headRefName":"docs/nsf-sbir-pitch-rewrite","mergeStateStatus":"CLEAN","number":1857,"reviewDecision":"","state":"OPEN","title":"docs(strategy): rewrite NSF SBIR project pitch (target 2027-03-04)","url":"https://github.com/undone0603/authichain-unified/pull/1857"}
+=== PR 1858 ===
+{"autoMergeRequest":{"authorEmail":null,"commitBody":null,"commitHeadline":null,"mergeMethod":"SQUASH","enabledAt":"2026-10-14T21:18:14Z","enabledBy":{"id":"U_kgDODDxewA","is_bot":false,"login":"undone0603","name":""}},"headRefName":"fix/microsites-redirect","mergeStateStatus":"BLOCKED","number":1858,"reviewDecision":"","state":"OPEN","title":"fix(microsites): 301 six dead-domain microsites to AuthiChain industry pages","url":"https://github.com/undone0603/authichain-unified/pull/1858"}
+=== PR 1859 ===
+{"autoMergeRequest":{"authorEmail":null,"commitBody":null,"commitHeadline":null,"mergeMethod":"SQUASH","enabledAt":"2026-10-14T21:18:16Z","enabledBy":{"id":"U_kgDODDxewA","is_bot":false,"login":"undone0603","name":""}},"headRefName":"fix/app-host-broken-links","mergeStateStatus":"BLOCKED","number":1859,"reviewDecision":"","state":"OPEN","title":"fix(edge-router): fix three 404 links on app.authichain.com","url":"https://github.com/undone0603/authichain-unified/pull/1859"}
+=== PR 1860 ===
+{"autoMergeRequest":null,"headRefName":"feat/indexnow-daily","mergeStateStatus":"UNKNOWN","number":1860,"reviewDecision":"","state":"MERGED","title":"feat(seo): daily IndexNow submission of brand sitemap URLs","url":"https://github.com/undone0603/authichain-unified/pull/1860"}
+=== PR 1861 ===
+{"autoMergeRequest":{"authorEmail":null,"commitBody":null,"commitHeadline":null,"mergeMethod":"SQUASH","enabledAt":"2026-10-14T21:18:17Z","enabledBy":{"id":"U_kgDODDxewA","is_bot":false,"login":"undone0603","name":""}},"headRefName":"fix/docs-utm-double-escape","mergeStateStatus":"BLOCKED","number":1861,"reviewDecision":"","state":"OPEN","title":"fix(docs): stop double-escaping & in docs link hrefs (UTM attribution)","url":"https://github.com/undone0603/authichain-unified/pull/1861"}

@@ -1,0 +1,179 @@
+=== TASK 1: PR STATUSES ===
+--- PR 1856 ---
+{"autoMergeRequest":null,"headRefName":"fix/govchain-invoker-view-grants","mergeStateStatus":"CLEAN","number":1856,"reviewDecision":"","state":"OPEN","title":"fix(supabase): restore govchain.us/opportunities under invoker-mode views (#1854)","url":"https://github.com/undone0603/authichain-unified/pull/1856"}
+
+--- PR 1857 ---
+{"autoMergeRequest":null,"headRefName":"docs/nsf-sbir-pitch-rewrite","mergeStateStatus":"CLEAN","number":1857,"reviewDecision":"","state":"OPEN","title":"docs(strategy): rewrite NSF SBIR project pitch (target 2027-03-04)","url":"https://github.com/undone0603/authichain-unified/pull/1857"}
+
+--- PR 1858 ---
+{"autoMergeRequest":{"authorEmail":null,"commitBody":null,"commitHeadline":null,"mergeMethod":"SQUASH","enabledAt":"2026-10-14T21:18:14Z","enabledBy":{"id":"U_kgDODDxewA","is_bot":false,"login":"undone0603","name":""}},"headRefName":"fix/microsites-redirect","mergeStateStatus":"BLOCKED","number":1858,"reviewDecision":"","state":"OPEN","title":"fix(microsites): 301 six dead-domain microsites to AuthiChain industry pages","url":"https://github.com/undone0603/authichain-unified/pull/1858"}
+
+--- PR 1859 ---
+{"autoMergeRequest":{"authorEmail":null,"commitBody":null,"commitHeadline":null,"mergeMethod":"SQUASH","enabledAt":"2026-10-14T21:18:16Z","enabledBy":{"id":"U_kgDODDxewA","is_bot":false,"login":"undone0603","name":""}},"headRefName":"fix/app-host-broken-links","mergeStateStatus":"BLOCKED","number":1859,"reviewDecision":"","state":"OPEN","title":"fix(edge-router): fix three 404 links on app.authichain.com","url":"https://github.com/undone0603/authichain-unified/pull/1859"}
+
+--- PR 1860 ---
+{"autoMergeRequest":null,"headRefName":"feat/indexnow-daily","mergeStateStatus":"UNKNOWN","number":1860,"reviewDecision":"","state":"MERGED","title":"feat(seo): daily IndexNow submission of brand sitemap URLs","url":"https://github.com/undone0603/authichain-unified/pull/1860"}
+
+--- PR 1861 ---
+{"autoMergeRequest":{"authorEmail":null,"commitBody":null,"commitHeadline":null,"mergeMethod":"SQUASH","enabledAt":"2026-10-14T21:18:17Z","enabledBy":{"id":"U_kgDODDxewA","is_bot":false,"login":"undone0603","name":""}},"headRefName":"fix/docs-utm-double-escape","mergeStateStatus":"BLOCKED","number":1861,"reviewDecision":"","state":"OPEN","title":"fix(docs): stop double-escaping & in docs link hrefs (UTM attribution)","url":"https://github.com/undone0603/authichain-unified/pull/1861"}
+
+
+=== TASK 1: ACTIONS ===
+1860 review: failed to create review: GraphQL: Review Can not approve your own pull request (addPullRequestReview)
+
+1860 merge: 
+1858 merge: 
+1859 merge: 
+1861 merge: 
+
+=== TASK 2: GOVCHAIN US SEARCH ===
+grep: workers/govchain-us/: No such file or directory
+
+find: ‘workers/govchain-us/’: No such file or directory
+
+
+=== TASK 3: PR 1856 & MIGRATIONS ===
+{"body":"## What broke\n`govchain.us/opportunities` has served 503 since ~19:19 UTC today (ops alert #1854). Supabase answers `401 / 42501 permission denied for table gov_opportunities`.\n\n`gov_opportunities_public` and `gov_proposals_public` were switched to `security_invoker=true` **out-of-band** between 18:14 and 19:19 UTC (no migration in history does it). That cleared the #1735 advisor error, but `anon` has no base-table grant (revoked in 20260918000002) and both tables have RLS with zero policies — so invoker-mode reads fail.\n\n## Fix\nKeeps invoker mode (does not reintroduce SECURITY DEFINER):\n- column-level `SELECT` for `anon` on exactly the columns each view already exposes\n- `anon` SELECT policies that repeat the view's row filter (`skipped` stays hidden)\n\nNo new rows or columns become readable; no write grants.\n\n## Verification\nDry-run against production in a forced-rollback `DO` block (confirmed 0 policies persisted afterward):\n\n| check | result |\n|---|---|\n| fit ≥ 70 rows via view | 26 |\n| proposal rows countable | 345 |\n| `status='skipped'` visible to anon | 0 |\n| anon `select *` on base table | denied |\n| anon `contact_email` | denied |\n\n## Owner action\nMigrations are applied by hand. After merge, apply `20261014200000_govchain_public_views_invoker_grants.sql` to QRON-v2; #1854 closes on the next green pulse.\n\nRefs #1854, #1735.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01BbeUDXqqVfz7JgF9X11m5H\n","commits":[{"authoredDate":"2026-10-14T20:49:27Z","authors":[{"email":"undone.k@gmail.com","id":"U_kgDODDxewA","login":"undone0603","name":"Z"},{"email":"noreply@anthropic.com","id":"MDQ6VXNlcjgxODQ3","login":"claude","name":"Claude Opus 5.5"}],"committedDate":"2026-10-14T20:49:27Z","messageBody":"… views\n\nThe gov public views were switched to security_invoker out-of-band on\n2026-10-14 (clearing the #1735 advisor error). Under invoker semantics\nanon needs its own access to gov_opportunities / gov_proposals and had\nnone, so PostgREST returns 401 and govchain.us/opportunities serves 503\n(ops alert #1854).\n\nGrant anon column-level SELECT on exactly the columns each view exposes\nand add anon SELECT policies that repeat the views' row filter. Same\nrows and columns as before; no write grants; select=* and contact_email\nremain denied.\n\nDry-run against production in a forced-rollback transaction: 26 fit>=70\nrows visible via the view, 345 proposal rows countable, 0 skipped rows\nvisible to anon, select=* and contact_email both denied.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01BbeUDXqqVfz7JgF9X11m5H","messageHeadline":"fix(supabase): give anon scoped base-table reads for invoker-mode gov…","oid":"5c06e35c87f54b12b90a11df0f959d1ea655eb43"}],"files":[{"path":"supabase/migrations/20261014200000_govchain_public_views_invoker_grants.sql","additions":56,"deletions":0,"changeType":"ADDED"}],"title":"fix(supabase): restore govchain.us/opportunities under invoker-mode views (#1854)"}
+
+./apps/qron-platform/drizzle/0002_messy_strong_guy.sql
+./apps/qron-platform/drizzle/0000_special_lady_ursula.sql
+./migrations/0001_agent_state.sql
+./drizzle/0004_cuddly_corsair.sql
+./drizzle/0000_noisy_machine_man.sql
+./drizzle/0003_mean_mentallo.sql
+./drizzle/migrations/004_proposals.sql
+./drizzle/migrations/005_qron_bridge.sql
+./drizzle/migrations/008_gov_engine_tables.sql
+./drizzle/migrations/019_seo_generated_pages_rename.sql
+./drizzle/migrations/015_ab_testing_infrastructure.sql
+./drizzle/migrations/022_guardrail_layer.sql
+./drizzle/migrations/010_webhook_events.sql
+./drizzle/migrations/003_missions_tasks.sql
+./drizzle/migrations/024_certificates_updated_at_reconcile.sql
+./drizzle/migrations/012_qr_scan_events.sql
+./drizzle/migrations/013_missions_schema_align.sql
+./drizzle/migrations/011_bayesian_priors.sql
+./drizzle/migrations/0000_tranquil_jackpot.sql
+./drizzle/migrations/017_notifications_userid_type_fix.sql
+./drizzle/migrations/020_guardrail_suppression_list_rename.sql
+./drizzle/migrations/0001_consolidate_qron_loyalty.sql
+./drizzle/migrations/006_national_branding_missions.sql
+./drizzle/migrations/009_gov_proposals_nft_columns.sql
+./drizzle/migrations/014_guardrail_layer.sql
+./drizzle/migrations/025_economy_align.sql
+./drizzle/migrations/023_reputation_tables.sql
+./drizzle/migrations/018_seo_pages.sql
+./drizzle/migrations/007_qron_token_architecture.sql
+./drizzle/migrations/021_certificate_nft_columns.sql
+./drizzle/migrations/016_users_missing_columns.sql
+./drizzle/0007_proposals_closer_fields.sql
+./drizzle/0002_motionless_jack_flag.sql
+./drizzle/0004_omniscient_darkstar.sql
+./drizzle/0010_nightstamp.sql
+./drizzle/0006_add_webhook_events.sql
+./drizzle/0001_windy_red_hulk.sql
+./drizzle/0000_special_lady_ursula.sql
+./supabase/migration-templates/new-public-table.sql
+./supabase/migrations/20261001103645_ai_adapt_archive_v1.sql
+./supabase/migrations/20260819000005_populate_ownership.sql
+./supabase/migrations/20260921202149_launchcheck_drop_broken_update_policy.sql
+./supabase/migrations/00008_gov_opportunities_pgvector.sql
+./supabase/migrations/20260924150000_launchcheck_suppression_lookup_and_drafts_scope.sql
+./supabase/migrations/20260930153535_attestation_status_idempotency_index.sql
+./supabase/migrations/20260925203453_authichain_api_self_serve_keys.sql
+./supabase/migrations/20260715000001_create_reputation_tables.sql
+./supabase/migrations/20260918000002_revoke_anon_gov_base_grants.sql
+./supabase/migrations/20260820000001_mission_tasks_defaults.sql
+./supabase/migrations/20260821000003_mission_tasks_kind_not_null.sql
+./supabase/migrations/20260930000001_made_in_usa_compliance.sql
+./supabase/migrations/20261003021902_revoke_anon_self_serve_writes.sql
+./supabase/migrations/20261003021901_drop_email_suppression_public_policies.sql
+./supabase/migrations/20260921215755_launchcheck_email_suppressions.sql
+./supabase/migrations/20261001104022_ai_adapt_archive_v2_queue.sql
+./supabase/migrations/20260819000003_type_alignment.sql
+./supabase/migrations/20260819000001_phantom_tables.sql
+./supabase/migrations/20260929190000_growth_loop_events.sql
+./supabase/migrations/20261002124500_lead_captures_expires_at.sql
+./supabase/migrations/20260921215816_launchcheck_drafts_anon_insert.sql
+./supabase/migrations/20260921194022_gov_opportunities_status_fit_score_idx.sql
+./supabase/migrations/00001_create_webauthn_credentials.sql
+./supabase/migrations/20260920143338_storepilot_billing_tables.sql
+./supabase/migrations/20260919000001_add_api_usage_and_provisioning_state.sql
+./supabase/migrations/20261001194503_ops_bot_log_allow_partial_status.sql
+./supabase/migrations/20261001000121_20260930194500_musa_supplier_evidence_registry.sql
+./supabase/migrations/20260821000004_reclassify_book_page_spam.sql
+./supabase/migrations/20261001000001_payment_integrity_and_checkout_controls.sql
+./supabase/migrations/20261001182456_ai_adapt_archive_v3_pinned_texts.sql
+./supabase/migrations/20260921194040_advisor_hardening_2026_09_21.sql
+./supabase/migrations/20260920000002_profiles_guest_user_id_nullable.sql
+./supabase/migrations/20260821000002_status_check_vocabulary.sql
+./supabase/migrations/20261009000001_gov_proposals_owner_notified_status.sql
+./supabase/migrations/20261002125000_lead_captures_form_fields.sql
+./supabase/migrations/20260821000001_missing_column_defaults.sql
+./supabase/migrations/00006_remove_free_generation_grant.sql
+./supabase/migrations/00009_competitive_snapshots.sql
+./supabase/migrations/20260706000001_revenue_engine_tables.sql
+./supabase/migrations/20260925163907_create_ops_bot_log.sql
+./supabase/migrations/20260920000001_stripe_events_delivery_observability.sql
+./supabase/migrations/20260918000001_govchain_public_opportunities_views.sql
+./supabase/migrations/20261004173000_payment_integrity_service_role_grants.sql
+./supabase/migrations/00003_stripe_payment_tracking.sql
+./supabase/migrations/20260717150000_revenue_engine_missing_tables.sql
+./supabase/migrations/20260819000004_drop_dead_auth_policies.sql
+./supabase/migrations/20260819000002_orphan_columns.sql
+./supabase/migrations/20261004220000_payment_integrity_service_role_grants.sql
+./supabase/migrations/20260807000001_verification_quota.sql
+./supabase/migrations/20261001191414_agent_action_receipts_v1.sql
+./supabase/migrations/20260930152032_attestation_trust_registry_and_status.sql
+./supabase/migrations/00002_revenue_path_columns_and_lead_sequences.sql
+./supabase/migrations/00007_funnel_events.sql
+./supabase/migrations/20260828000001_ledger_receipts.sql
+./supabase/migrations/20260821000005_qron_platform_scan_and_redirect.sql
+./supabase/migrations/20260921201824_launchcheck_anon_mirror_policy.sql
+./supabase/migrations/20260821000006_qron_platform_nullability.sql
+./supabase/migrations/20260919000002_add_qron_platform_lifecycle_tables.sql
+./supabase/migrations/20261002082748_ai_adapt_archive_submit_skip_hf_wayback.sql
+./supabase/migrations/20260930153248_attestation_status_idempotency_and_supersession.sql
+./supabase/migrations/20260711000001_gov_opportunities_qualified_at.sql
+./supabase/migrations/20261003000001_growth_event_idempotency.sql
+./supabase/migrations.archive/20260819000005_populate_ownership.sql
+./supabase/migrations.archive/00008_gov_opportunities_pgvector.sql
+./supabase/migrations.archive/20260715000001_create_reputation_tables.sql
+./supabase/migrations.archive/20260918000002_revoke_anon_gov_base_grants.sql
+./supabase/migrations.archive/20260820000001_mission_tasks_defaults.sql
+./supabase/migrations.archive/20260706000003_affiliate_program.sql
+./supabase/migrations.archive/20260821000003_mission_tasks_kind_not_null.sql
+./supabase/migrations.archive/20260819000003_type_alignment.sql
+./supabase/migrations.archive/20260819000001_phantom_tables.sql
+./supabase/migrations.archive/00001_create_webauthn_credentials.sql
+./supabase/migrations.archive/20260919000001_add_api_usage_and_provisioning_state.sql
+./supabase/migrations.archive/20260821000004_reclassify_book_page_spam.sql
+./supabase/migrations.archive/20260821000002_status_check_vocabulary.sql
+./supabase/migrations.archive/20260821000001_missing_column_defaults.sql
+./supabase/migrations.archive/00006_remove_free_generation_grant.sql
+./supabase/migrations.archive/00009_competitive_snapshots.sql
+./supabase/migrations.archive/20260706000001_revenue_engine_tables.sql
+./supabase/migrations.archive/20260918000001_govchain_public_opportunities_views.sql
+./supabase/migrations.archive/00003_stripe_payment_tracking.sql
+./supabase/migrations.archive/20260717150000_revenue_engine_missing_tables.sql
+./supabase/migrations.archive/20260829_add_tenant_isolation.sql
+./supabase/migrations.archive/20260819000004_drop_dead_auth_policies.sql
+./supabase/migrations.archive/20260819000002_orphan_columns.sql
+./supabase/migrations.archive/20260807000001_verification_quota.sql
+./supabase/migrations.archive/20260829_create_evidence_table.sql
+./supabase/migrations.archive/00002_revenue_path_columns_and_lead_sequences.sql
+./supabase/migrations.archive/00007_funnel_events.sql
+./supabase/migrations.archive/20260828000001_ledger_receipts.sql
+./supabase/migrations.archive/20260821000005_qron_platform_scan_and_redirect.sql
+./supabase/migrations.archive/20260821000006_qron_platform_nullability.sql
+./supabase/migrations.archive/20260919000002_add_qron_platform_lifecycle_tables.sql
+./supabase/migrations.archive/20260711000001_gov_opportunities_qualified_at.sql
+./.open-next/cloudflare/cache-assets-manifest.sql
+./ops/scripts/fix_schema_tables.sql
+./ops/scripts/expedited-schema-sync.sql
+./ops/retention/lead-captures-purge.NOT-APPLIED.sql
+./scripts/fix_schema_tables.sql
+./scripts/expedited-schema-sync.sql
+./agentz/core/schema.sql
+./agentz/core/schema_federal.sql
+
