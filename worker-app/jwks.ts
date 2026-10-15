@@ -5,6 +5,18 @@ export type AttestationEnv = {
   AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64?: string;
   AUTHICHAIN_ATTESTATION_KEY_ID?: string;
   AUTHICHAIN_ATTESTATION_PUBLIC_JWK?: string;
+  /**
+   * JSON array of public Ed25519 JWKs that no longer sign but still verify
+   * what they signed, each with an explicit `kid`. This is what makes key
+   * rotation non-destructive. Removing a key from this list is how a
+   * compromised key is distrusted: everything it signed becomes indeterminate.
+   */
+  AUTHICHAIN_ATTESTATION_RETIRED_PUBLIC_JWKS?: string;
+};
+
+export type VerificationKey = PublicOkp & {
+  kid: string;
+  key_status: "current" | "retired";
 };
 
 export type PublicOkp = {
@@ -141,6 +153,107 @@ export async function resolveAttestationKey(
   }
 }
 
+/**
+ * Retired verification keys. Fail closed per entry: an entry without a kid,
+ * that is not an Ed25519 OKP key, or that carries private material (`d`) is
+ * dropped, and unparsable JSON drops the whole list. Fewer keys only ever
+ * means more attestations come back indeterminate, never fewer.
+ */
+function readRetiredKeys(env?: AttestationEnv): PublicOkp[] {
+  const proc = typeof process !== "undefined" ? process.env : undefined;
+  const raw =
+    env?.AUTHICHAIN_ATTESTATION_RETIRED_PUBLIC_JWKS ||
+    proc?.AUTHICHAIN_ATTESTATION_RETIRED_PUBLIC_JWKS;
+  if (!raw) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  const list = Array.isArray(parsed)
+    ? parsed
+    : Array.isArray((parsed as { keys?: unknown })?.keys)
+      ? (parsed as { keys: unknown[] }).keys
+      : [];
+  const out: PublicOkp[] = [];
+  for (const entry of list) {
+    const jwk = entry as Record<string, unknown> | null;
+    if (!jwk || typeof jwk !== "object") continue;
+    if ("d" in jwk) continue;
+    if (jwk.kty !== "OKP" || jwk.crv !== "Ed25519") continue;
+    if (typeof jwk.x !== "string" || !jwk.x) continue;
+    if (typeof jwk.kid !== "string" || !jwk.kid.trim()) continue;
+    out.push({
+      kty: "OKP",
+      crv: "Ed25519",
+      x: jwk.x,
+      kid: jwk.kid.trim(),
+      use: "sig",
+      alg: "EdDSA",
+    });
+  }
+  return out;
+}
+
+/**
+ * Every key a verifier may accept: the current signing key first, then the
+ * retired ones. A retired entry that reuses the current kid, or repeats an
+ * earlier kid, is dropped, so one kid always names one key.
+ */
+export async function resolveVerificationKeys(
+  env?: AttestationEnv,
+): Promise<
+  | { ok: true; keys: VerificationKey[] }
+  | { ok: false; error: string; reason?: string; via?: string }
+> {
+  const current = await resolveAttestationKey(env);
+  const retired = readRetiredKeys(env);
+  if (!current.ok && retired.length === 0) return current;
+  const keys: VerificationKey[] = [];
+  const seen = new Set<string>();
+  if (current.ok) {
+    keys.push({ ...current.key.publicJwk, kid: current.key.kid, key_status: "current" });
+    seen.add(current.key.kid);
+  }
+  for (const jwk of retired) {
+    const kid = jwk.kid as string;
+    if (seen.has(kid)) continue;
+    seen.add(kid);
+    keys.push({ ...jwk, kid, key_status: "retired" });
+  }
+  return { ok: true, keys };
+}
+
+/** Pick the verification key a compact JWS names in its protected header. */
+export function selectVerificationKey(
+  jws: string,
+  keys: VerificationKey[],
+): { ok: true; key: VerificationKey } | { ok: false; error: string } {
+  const head = jws.split(".")[0] ?? "";
+  let kid: unknown;
+  try {
+    const json = atob(head.replace(/-/g, "+").replace(/_/g, "/"));
+    kid = (JSON.parse(json) as { kid?: unknown }).kid;
+  } catch {
+    return { ok: false, error: "invalid compact JWS header" };
+  }
+  if (typeof kid !== "string" || !kid) {
+    return { ok: false, error: "attestation JWS kid is required" };
+  }
+  const key = keys.find(k => k.kid === kid);
+  if (!key) {
+    return { ok: false, error: "attestation JWS kid is not a known verification key" };
+  }
+  return { ok: true, key };
+}
+
+/** The public form of a verification key, as JWKS publishes it. */
+export function publicJwkOf(key: VerificationKey): PublicOkp {
+  const { key_status: _status, ...jwk } = key;
+  return jwk;
+}
+
 async function jwksResponse(
   env: AttestationEnv,
   headers: Record<string, string>
@@ -161,8 +274,10 @@ async function jwksResponse(
       headers: { "Cache-Control": "private, no-store" },
     };
   }
+  const all = await resolveVerificationKeys(env);
+  const keys = all.ok ? all.keys.map(publicJwkOf) : [resolved.key.publicJwk];
   return {
-    body: { keys: [resolved.key.publicJwk] },
+    body: { keys },
     status: 200,
     headers,
   };

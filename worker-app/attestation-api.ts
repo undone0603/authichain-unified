@@ -8,7 +8,14 @@ import {
   signAttestation,
   validateAttestation,
 } from "../packages/verifier/src/index";
-import { resolveAttestationKey, type AttestationEnv } from "./jwks";
+import {
+  resolveAttestationKey,
+  resolveVerificationKeys,
+  selectVerificationKey,
+  publicJwkOf,
+  type AttestationEnv,
+  type VerificationKey,
+} from "./jwks";
 import { authorizeIssuerRequest, type IssuerEnv } from "./issuer";
 import { getCurrentAttestationStatus, getIssuer, recordStatusEvent, type AttestationRegistryEnv } from "./attestation-registry";
 export type AttestationRegistry = {
@@ -71,9 +78,35 @@ function failClosedVerifyPayload(
   };
 }
 
+/**
+ * Check a JWS against the key its header names, from the current and retired
+ * verification keys. Unknown kid, bad signature or schema are all 400.
+ */
+async function inspectWithKeys(
+  jws: string,
+  keys: VerificationKey[],
+  options: { expectedObjectId?: string } = {},
+): Promise<
+  | { ok: true; attestation: Awaited<ReturnType<typeof inspectAttestationJws>>; key: VerificationKey }
+  | { ok: false; error: string }
+> {
+  const selected = selectVerificationKey(jws, keys);
+  if (!selected.ok) return selected;
+  try {
+    const attestation = await inspectAttestationJws(
+      jws,
+      publicJwkOf(selected.key) as Record<string, unknown>,
+      options,
+    );
+    return { ok: true, attestation, key: selected.key };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "invalid signature" };
+  }
+}
+
 async function verifyResponse(
   body: unknown,
-  publicJwk: Record<string, unknown>,
+  keys: VerificationKey[],
   env: AttestationRegistryEnv,
   registry: AttestationRegistry,
 ): Promise<{ status: 200 | 400 | 404 | 409 | 503; payload: Record<string, unknown> }> {
@@ -88,20 +121,18 @@ async function verifyResponse(
     };
   }
   const expected = input.expected_object_id ?? input.expectedObjectId;
-  let attestation;
-  try {
-    attestation = await inspectAttestationJws(jws.trim(), publicJwk, {
-      expectedObjectId: typeof expected === "string" ? expected : undefined,
-    });
-  } catch (error) {
+  const inspected = await inspectWithKeys(jws.trim(), keys, {
+    expectedObjectId: typeof expected === "string" ? expected : undefined,
+  });
+  if (!inspected.ok) {
     return {
       status: 400,
-      payload: failClosedVerifyPayload(
-        error instanceof Error ? error.message : "invalid signature",
-        { cryptographic_status: "invalid" },
-      ),
+      payload: failClosedVerifyPayload(inspected.error, {
+        cryptographic_status: "invalid",
+      }),
     };
   }
+  const { attestation, key: verificationKey } = inspected;
   const evaluation = evaluateAttestation(attestation);
   const issuer = await registry.getIssuer(env, attestation.issuer.id);
   if (!issuer.ok) {
@@ -185,6 +216,8 @@ async function verifyResponse(
           signature: "valid",
           issuer_id: attestation.issuer.id,
           issuer_status: issuer.issuer.status,
+          kid: verificationKey.kid,
+          key_status: verificationKey.key_status,
           subject_object_id: attestation.subject.object_id,
           evidence_count: Array.isArray(attestation.evidence)
             ? attestation.evidence.length
@@ -252,6 +285,23 @@ export function registerAttestationApi<
     return app.fetch(new Request(url.toString(), c.req.raw), c.env);
   };
 
+  const verifyWithKeySet = async (env: E, body: unknown): Promise<Response> => {
+    const keys = await resolveVerificationKeys(env);
+    if (!keys.ok) {
+      return Response.json(
+        failClosedVerifyPayload(keys.error, { cryptographic_status: "unknown" }),
+        { status: 503, headers: NO_STORE },
+      );
+    }
+    const { status, payload } = await verifyResponse(
+      body,
+      keys.keys,
+      env as AttestationRegistryEnv,
+      registry,
+    );
+    return Response.json(payload, { status, headers: NO_STORE });
+  };
+
   app.get("/api/v1/attestation", c => c.json(ATTESTATION_INDEX, 200, NO_STORE));
   app.get("/api/attest", c => c.json(ATTESTATION_INDEX, 200, NO_STORE));
   app.get("/api/attestations", c => c.json(ATTESTATION_INDEX, 200, NO_STORE));
@@ -284,21 +334,11 @@ export function registerAttestationApi<
     const idempotencyKey = c.req.header("Idempotency-Key")?.trim().slice(0, 200) ||
       (typeof body.idempotency_key === "string" ? body.idempotency_key.trim().slice(0, 200) : undefined);
 
-    let publicJwk: Record<string, unknown>;
-    try {
-      ({ publicJwk } = await loadPrivateKey(c.env));
-    } catch (error) {
-      return c.json({ error: error instanceof Error ? error.message : "key unavailable" }, 503, NO_STORE);
-    }
-
-    let attestation;
-    try {
-      attestation = await inspectAttestationJws(body.jws.trim(), publicJwk);
-    } catch (error) {
-      return c.json({
-        error: error instanceof Error ? error.message : "invalid signature",
-      }, 400, NO_STORE);
-    }
+    const keys = await resolveVerificationKeys(c.env);
+    if (!keys.ok) return c.json({ error: keys.error }, 503, NO_STORE);
+    const inspected = await inspectWithKeys(body.jws.trim(), keys.keys);
+    if (!inspected.ok) return c.json({ error: inspected.error }, 400, NO_STORE);
+    const { attestation } = inspected;
 
     const attestationId = decodeURIComponent(c.req.param("id"));
     if (attestation.attestation_id !== attestationId) {
@@ -367,20 +407,19 @@ export function registerAttestationApi<
       return c.json({ error: "replacement_jws is required" }, 400, NO_STORE);
     }
     const attestationId = decodeURIComponent(c.req.param("id"));
-    let publicJwk: Record<string, unknown>;
-    try {
-      ({ publicJwk } = await loadPrivateKey(c.env));
-    } catch (error) {
-      return c.json({ error: error instanceof Error ? error.message : "key unavailable" }, 503, NO_STORE);
+    const keys = await resolveVerificationKeys(c.env);
+    if (!keys.ok) return c.json({ error: keys.error }, 503, NO_STORE);
+    const originalInspected = await inspectWithKeys(body.jws.trim(), keys.keys);
+    if (!originalInspected.ok) return c.json({ error: originalInspected.error }, 400, NO_STORE);
+    const replacementInspected = await inspectWithKeys(body.replacement_jws.trim(), keys.keys);
+    if (!replacementInspected.ok) return c.json({ error: replacementInspected.error }, 400, NO_STORE);
+    // A replacement must come from the key that signs today: superseding onto
+    // a retired key would mint new trust from a key that no longer issues.
+    if (replacementInspected.key.key_status !== "current") {
+      return c.json({ error: "replacement must be signed by the current key" }, 400, NO_STORE);
     }
-    let original;
-    let replacement;
-    try {
-      original = await inspectAttestationJws(body.jws.trim(), publicJwk);
-      replacement = await inspectAttestationJws(body.replacement_jws.trim(), publicJwk);
-    } catch (error) {
-      return c.json({ error: error instanceof Error ? error.message : "invalid signature" }, 400, NO_STORE);
-    }
+    const original = originalInspected.attestation;
+    const replacement = replacementInspected.attestation;
     if (original.attestation_id !== attestationId) {
       return c.json({ error: "attestation id does not match jws" }, 400, NO_STORE);
     }
@@ -468,21 +507,7 @@ export function registerAttestationApi<
         NO_STORE,
       );
     }
-    let publicJwk: Record<string, unknown>;
-    try {
-      ({ publicJwk } = await loadPrivateKey(c.env));
-    } catch (error) {
-      return c.json(
-        failClosedVerifyPayload(
-          error instanceof Error ? error.message : "key unavailable",
-          { cryptographic_status: "unknown" },
-        ),
-        503,
-        NO_STORE
-      );
-    }
-    const { status, payload } = await verifyResponse(body, publicJwk, c.env as AttestationRegistryEnv, registry);
-    return c.json(payload, status, NO_STORE);
+    return verifyWithKeySet(c.env, body);
   });
 
   app.post("/api/v1/attestation/verify", async c => {
@@ -496,22 +521,6 @@ export function registerAttestationApi<
         NO_STORE,
       );
     }
-    const resolved = await resolveAttestationKey(c.env);
-    if (!resolved.ok) {
-      return c.json(
-        failClosedVerifyPayload(resolved.error, {
-          cryptographic_status: "unknown",
-        }),
-        503,
-        NO_STORE,
-      );
-    }
-    const { status, payload } = await verifyResponse(
-      body,
-      resolved.key.publicJwk,
-      c.env as AttestationRegistryEnv,
-      registry,
-    );
-    return c.json(payload, status, NO_STORE);
+    return verifyWithKeySet(c.env, body);
   });
 }
