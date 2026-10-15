@@ -70,7 +70,7 @@ export const LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0];
  * mcp-routes.test.ts asserts the two match, so the next bump has to touch
  * both or CI fails.
  */
-export const SERVER_VERSION = "1.3.0";
+export const SERVER_VERSION = "1.3.2";
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",

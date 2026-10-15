@@ -1,6 +1,7 @@
 # MCP app roadmap
 
-Status as of 2026-10-06. Written against the code, not against intent —
+Status as of 2026-10-06; G1 data and Phase 5 registry state re-read on
+2026-10-15. Written against the code, not against intent —
 every gap below is quoted from the repo's own comments or return values, so
 this file can be checked rather than believed.
 
@@ -66,6 +67,32 @@ Closing this properly means standing up
 `unknown` answer is correct and must not be dressed up — a confident shape
 over no row is the one thing this surface must never return.
 
+**Neither table can back the registry yet.** Read-only counts taken on
+2026-10-15 from Supabase project `nhdnkzhtadfkkluiulhs`:
+
+- `public.auth_seals` has 0 rows. `src/lib/mcp-tools.ts` queries this
+  table.
+- `public.authichain_certificates` has 1,601 rows, all `valid = true`.
+  They are seed data, not issued certificates:
+  - 20 Michigan cannabis operators by name: 19 with exactly 50 rows each,
+    and one with 51.
+  - 589 rows for `Watchdog`.
+  - One row each for `Rolex`, `Hermès`, `Louis Vuitton`, `Gucci`, `BMW`,
+    `Jack Daniels`, `Patagonia`, `TestBrand` and `AuthiChain`.
+  - Two rows for `QRON`.
+
+Nothing in the payment tables records any of these companies as a customer
+(`docs/AUTONOMOUS_ECONOMY_STATUS.md`). Three Next routes read this table:
+
+- `src/app/api/authichain/certificates/route.ts`
+- `src/app/api/authichain/cert/[cert_id]/route.ts`
+- `src/app/api/qron/stats/route.ts`
+
+On 2026-10-15 all three returned the edge worker's generic 404 on
+`authichain.com`, so none of them publishes these rows. Routing any of them live would state that
+named companies hold AuthiChain certificates. That is the unverifiable
+customer claim `docs/OPERATING_CHARTER.md` reserves for the owner.
+
 ### G2 — five MCP surfaces, three different tool vocabularies
 
 | Surface                                        | Tools                                                     | Auth               |
@@ -117,7 +144,10 @@ Two routes, and the choice is a product decision, not an engineering one:
 - **(a) Stand up the registry.** Make
   `/api/authichain/certificates` answer from the `auth_seals` table that
   `src/lib/mcp-tools.ts` already queries. The query exists; the public
-  endpoint does not.
+  endpoint does not. Do not route the existing Next handler for that
+  path: it reads `authichain_certificates`, which holds seed rows naming
+  real brands (G1). With `auth_seals` empty, (a) gives an honest registry
+  of zero until Phase 3 writes the first real row.
 - **(b) Withdraw the tool** from `TOOLS` until (a) lands. A client that
   never sees the tool is better served than one that calls it and gets
   `unknown`.
@@ -159,6 +189,20 @@ that `server.json` and `serverInfo` agree and the transport is conformant.
 Phase 5 is cheap and safe, and does **not** depend on 1–4 — the free
 verification tools are genuinely useful on their own, which is the honest
 pitch for a directory entry.
+
+**Registry state on 2026-10-15.** The registry marks 1.3.1 as latest,
+published 2026-10-09, with the description _"Look up AuthiChain product
+records. x402 paid verification and on-chain anchoring in development."_
+
+- No commit has ever set `server.json` to 1.3.1, so that entry was
+  published from outside `main`.
+- #1681 rewrote the description on `main` the same day but kept version
+  1.3.0. `mcp-registry-publish.yml` therefore skipped it as already listed.
+- The live `serverInfo` answered 1.3.0, behind the registry's latest.
+
+1.3.2 republishes `main`'s reviewed copy, and `SERVER_VERSION` moves with
+it. Publish only by bumping `server.json` on `main`. A hand publish is the
+only way the registry and the repo drift apart again.
 
 ---
 
