@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
 import { CompactSign, exportJWK, exportPKCS8, generateKeyPair } from "jose";
 import { registerAttestationApi, type AttestationRegistry } from "./attestation-api";
@@ -213,6 +213,43 @@ describe("attestation key rotation", () => {
     for (const k of keys) {
       expect(k.d).toBeUndefined();
       expect(k.key_status).toBeUndefined();
+    }
+  });
+});
+
+describe("verification is observable", () => {
+  it("emits attestation.verified and attestation.rejected trust events without the JWS", async () => {
+    const oldKey = await keypair("kid-2026-01");
+    const newKey = await keypair("kid-2026-10");
+    bindCurrent(newKey);
+    process.env.AUTHICHAIN_ATTESTATION_RETIRED_PUBLIC_JWKS = JSON.stringify([oldKey.publicJwk]);
+    const good = await signWith(oldKey);
+    const unknown = await signWith(await keypair("kid-unknown"));
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const a = app();
+      await a.request("/api/v1/attestation/verify", json({ jws: good }));
+      await a.request("/api/v1/attestation/verify", json({ jws: unknown }));
+      const events = log.mock.calls
+        .map(c => String(c[0]))
+        .filter(l => l.includes("authichain.trust-event/1"))
+        .map(l => JSON.parse(l));
+      expect(events).toEqual([
+        expect.objectContaining({
+          event: "attestation.verified",
+          attestation_id: SAMPLE.attestation_id,
+          kid: "kid-2026-01",
+          key_status: "retired",
+          decision: "verified",
+          http_status: 200,
+        }),
+        expect.objectContaining({ event: "attestation.rejected", decision: "indeterminate", http_status: 400 }),
+      ]);
+      const raw = log.mock.calls.map(c => String(c[0])).join(String.fromCharCode(10));
+      expect(raw).not.toContain(good);
+      expect(raw).not.toContain(unknown);
+    } finally {
+      log.mockRestore();
     }
   });
 });

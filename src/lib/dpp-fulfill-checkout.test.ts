@@ -334,6 +334,43 @@ describe("fulfillDppPaidSession", () => {
     expect(rows.map(r => r.event_type)).toEqual(["dpp_loop:payment_succeeded"]);
   });
 
+  it("emits fulfillment.started then fulfillment.failed, never entitlement.granted, when nothing was granted", async () => {
+    const { supabase } = fakeSupabase({ profileId: null });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      await fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        customer_details: null,
+        customer_email: null,
+        metadata: { ...paidSession.metadata, user_id: undefined },
+      }).catch(() => undefined);
+      const events = log.mock.calls
+        .map(c => String(c[0]))
+        .filter(l => l.includes("authichain.trust-event/1"))
+        .map(l => JSON.parse(l).event);
+      expect(events).toEqual(["fulfillment.started", "fulfillment.failed"]);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("emits entitlement.granted and fulfillment.completed for a granted session, with no buyer address", async () => {
+    const { supabase } = fakeSupabase();
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      await fulfillDppPaidSession(supabase, paidSession);
+      const lines = log.mock.calls.map(c => String(c[0])).filter(l => l.includes("authichain.trust-event/1"));
+      expect(lines.map(l => JSON.parse(l).event)).toEqual([
+        "fulfillment.started",
+        "entitlement.granted",
+        "fulfillment.completed",
+      ]);
+      expect(lines.join(String.fromCharCode(10))).not.toContain("buyer@example.com");
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it("a demo session with no buyer identity still records provisioned with skip_reason", async () => {
     const { supabase, rows } = fakeSupabase({ profileId: null });
     const result = await fulfillDppPaidSession(supabase, {

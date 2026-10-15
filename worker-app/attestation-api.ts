@@ -17,6 +17,7 @@ import {
   type VerificationKey,
 } from "./jwks";
 import { authorizeIssuerRequest, type IssuerEnv } from "./issuer";
+import { emitTrustEvent } from "../shared/trust-events";
 import { getCurrentAttestationStatus, getIssuer, recordStatusEvent, type AttestationRegistryEnv } from "./attestation-registry";
 export type AttestationRegistry = {
   getCurrentStatus: (env: AttestationRegistryEnv, attestationId: string) => ReturnType<typeof getCurrentAttestationStatus>;
@@ -288,6 +289,13 @@ export function registerAttestationApi<
   const verifyWithKeySet = async (env: E, body: unknown): Promise<Response> => {
     const keys = await resolveVerificationKeys(env);
     if (!keys.ok) {
+      emitTrustEvent("attestation.rejected", {
+        route: "/api/v1/attestation/verify",
+        decision: "indeterminate",
+        valid: false,
+        reasons: ["verification_key_unavailable"],
+        http_status: 503,
+      });
       return Response.json(
         failClosedVerifyPayload(keys.error, { cryptographic_status: "unknown" }),
         { status: 503, headers: NO_STORE },
@@ -299,6 +307,22 @@ export function registerAttestationApi<
       env as AttestationRegistryEnv,
       registry,
     );
+    const attestation = payload.attestation as
+      | { attestation_id?: string; issuer?: { id?: string }; subject?: { object_id?: string } }
+      | undefined;
+    const evidence = (payload.trust as { evidence?: { kid?: string; key_status?: string } } | undefined)?.evidence;
+    emitTrustEvent(payload.valid === true ? "attestation.verified" : "attestation.rejected", {
+      route: "/api/v1/attestation/verify",
+      attestation_id: attestation?.attestation_id,
+      issuer_id: attestation?.issuer?.id,
+      subject_object_id: attestation?.subject?.object_id,
+      kid: evidence?.kid,
+      key_status: evidence?.key_status,
+      decision: typeof payload.decision === "string" ? payload.decision : undefined,
+      valid: payload.valid === true,
+      reasons: Array.isArray(payload.reasons) ? (payload.reasons as string[]) : undefined,
+      http_status: status,
+    });
     return Response.json(payload, { status, headers: NO_STORE });
   };
 
@@ -374,6 +398,13 @@ export function registerAttestationApi<
     });
     if (!event.ok) return c.json({ error: event.error }, event.status, NO_STORE);
 
+    emitTrustEvent("attestation.revoked", {
+      attestation_id: attestationId,
+      issuer_id: issuerId,
+      event_id: event.eventId,
+      reason_code: reasonCode,
+      claim_status: "revoked",
+    });
     return c.json({
       attestation_id: attestationId,
       claim_status: "revoked",
@@ -454,6 +485,13 @@ export function registerAttestationApi<
       supersedesAttestationId: replacement.attestation_id,
     });
     if (!event.ok) return c.json({ error: event.error }, event.status, NO_STORE);
+    emitTrustEvent("attestation.superseded", {
+      attestation_id: attestationId,
+      issuer_id: issuerId,
+      event_id: event.eventId,
+      reason_code: reasonCode,
+      claim_status: "superseded",
+    });
     return c.json({
       attestation_id: attestationId,
       claim_status: "superseded",
@@ -477,6 +515,13 @@ export function registerAttestationApi<
       const attestation = validateAttestation(body);
       const { privateKey, kid } = await loadPrivateKey(c.env);
       const jws = await signAttestation(attestation, privateKey, kid);
+      emitTrustEvent("attestation.created", {
+        attestation_id: attestation.attestation_id,
+        issuer_id: attestation.issuer.id,
+        subject_object_id: attestation.subject.object_id,
+        kid,
+        decision: attestation.decision,
+      });
       return c.json(
         {
           contract: "AuthiChain Attestation Contract",
