@@ -17,6 +17,7 @@ import {
   validateLaunchMode,
 } from "../autonomy/launch-mode.mjs";
 import {
+  blindReason,
   decideIssueAction,
   evaluateWorkflows,
   isCallOnly,
@@ -587,6 +588,34 @@ describe("fulfilment watchdog", async () => {
     expect(signature(report)).toBe("pay:cs_x");
     expect(decideIssueAction(null, report).body).toContain(
       "Paid but not fulfilled"
+    );
+  });
+
+  it("a watchdog that could not look is red, not green", () => {
+    const report = {
+      at: "t",
+      probes: [],
+      workflows: [],
+      revenue: [],
+      fulfilmentBlind: blindReason(
+        new Error("Stripe checkout sessions -> 401")
+      ),
+    };
+    expect(report.fulfilmentBlind).toBe(
+      "Stripe checkout sessions answered HTTP 401"
+    );
+    expect(signature(report)).toBe("watchdog:fulfilment");
+    const action = decideIssueAction(null, report);
+    expect(action.action).toBe("create");
+    expect(action.body).toContain("Fulfilment watchdog cannot see");
+  });
+
+  it("never copies an upstream error body into the public alert", () => {
+    expect(
+      blindReason(new Error("Supabase stripe_events -> 500 {\"hint\":\"secret\"}"))
+    ).toBe("Supabase stripe_events answered HTTP 500");
+    expect(blindReason(new Error("fetch failed: getaddrinfo api.stripe.com"))).toBe(
+      "the check failed before it could read Stripe and Supabase"
     );
   });
 });

@@ -184,11 +184,22 @@ export function evaluateWorkflows(
   return problems;
 }
 
+/**
+ * Public-safe reason the fulfilment check could not run. The alert issue is in
+ * a public repo, so only the upstream and HTTP status survive, never a body.
+ */
+export function blindReason(error) {
+  const msg = String(error?.message ?? error ?? "");
+  const m = msg.match(/^(Stripe checkout sessions|Supabase stripe_events) -> (\d{3})/);
+  return m ? `${m[1]} answered HTTP ${m[2]}` : "the check failed before it could read Stripe and Supabase";
+}
+
 export function signature(report) {
   const keys = [
     ...report.probes.filter(p => !p.ok).map(p => `probe:${p.name}`),
     ...report.workflows.map(w => `wf:${w.file}:${w.kind}`),
     ...(report.revenue ?? []).map(r => `pay:${r.session}`),
+    ...(report.fulfilmentBlind ? ["watchdog:fulfilment"] : []),
   ].sort();
   return keys.join("|");
 }
@@ -217,6 +228,13 @@ export function renderReport(report) {
       lines.push(
         `- Checkout \`${r.session}\` paid ${r.paid_at}: ${r.reason}. Check the customer received what they bought, then replay the event from the Stripe dashboard.`
       );
+  }
+  if (report.fulfilmentBlind) {
+    lines.push(
+      "",
+      "#### Fulfilment watchdog cannot see",
+      `- ${report.fulfilmentBlind}. Until this is fixed nobody is checking that paying customers received what they bought.`
+    );
   }
   lines.push(
     "",
@@ -353,11 +371,17 @@ async function main() {
 
   const stripeKey =
     process.env.STRIPE_READ_KEY || process.env.STRIPE_SECRET_KEY;
-  if (
-    stripeKey &&
-    process.env.SUPABASE_URL &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  ) {
+  // A watchdog that could not look is not a green watchdog. Before this, a
+  // missing key or a Stripe 401 logged "skipped" and the pulse stayed green.
+  const missing = [
+    !stripeKey && "STRIPE_READ_KEY/STRIPE_SECRET_KEY",
+    !process.env.SUPABASE_URL && "SUPABASE_URL",
+    !process.env.SUPABASE_SERVICE_ROLE_KEY && "SUPABASE_SERVICE_ROLE_KEY",
+  ].filter(Boolean);
+  if (missing.length) {
+    report.fulfilmentBlind = `not configured: ${missing.join(", ")} unset`;
+    console.log(`fulfilment check blind: ${report.fulfilmentBlind}`);
+  } else {
     try {
       const f = await checkFulfilment({
         stripeKey,
@@ -373,7 +397,8 @@ async function main() {
         `fulfilment: ${f.checked} paid checkouts checked, ${f.problems.length} unfulfilled`
       );
     } catch (e) {
-      console.log(`fulfilment check skipped: ${e.message}`);
+      report.fulfilmentBlind = blindReason(e);
+      console.log(`fulfilment check blind: ${report.fulfilmentBlind}`);
     }
   }
 
