@@ -660,8 +660,8 @@ describe("mcp discovery", () => {
       };
       expect(data.status).toBe("registry_unavailable");
       expect(data.verified).toBe(false);
-      expect(data.registry.state).toBe("unavailable");
-      expect(data.registry.note).toContain("No conclusion about registration");
+      expect(data.registry.state).toBe("signed_record_registry_unavailable");
+      expect(data.registry.note).toContain("No conclusion about signed-record existence");
     } finally {
       globalThis.fetch = orig;
     }
