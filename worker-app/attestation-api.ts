@@ -489,7 +489,11 @@ export function registerAttestationApi<
         attestation.subject as unknown as Parameters<typeof canonicalize>[0],
       );
       const subjectHash = `sha256:${await sha256Hex(canonicalSubject)}`;
-      const evidenceDigest = attestation.evidence[0].digest;
+      const firstEvidence = attestation.evidence[0];
+      if (!firstEvidence?.digest) {
+        return c.json({ error: "the first evidence item must include a digest" }, 400, NO_STORE);
+      }
+      const evidenceDigest = firstEvidence.digest;
 
       if (!registry.publishRecord) {
         return c.json({ error: "signed-record publisher unavailable" }, 503, NO_STORE);
