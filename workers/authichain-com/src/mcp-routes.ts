@@ -104,10 +104,7 @@ export const TOOLS = [
   {
     name: "query_provenance",
     description:
-      "Free public lookup for an assetId / seal / QR token. Never attests. Resolves the published packs (" +
-      PUBLISHED_PACKS.map(p => p.slug).join(", ") +
-      "); any other id returns status unknown, because the certificates registry does not answer yet. " +
-      "For free signature and anchor verification use verify_record.",
+      "Free public lookup for an assetId / seal / QR token. Reads matching rows from the canonical auth_seals registry when public Supabase configuration is available, and also resolves published packs. A registry match means registered only; it does not verify a signature or prove a physical item is genuine. Use verify_record with the signed record and anchor JSON for cryptographic verification.",
     inputSchema: {
       type: "object",
       properties: {
@@ -432,10 +429,11 @@ function queryProvenance(assetIdRaw: unknown) {
    * live public page — the tool was answering "no" to a question the
    * estate could already answer "yes" to.
    *
-   * This resolves against published packs only. It does NOT stand in for
-   * the certificates registry, which still 404s (see
-   * docs/strategy/mcp-app-roadmap.md, G1): an id that is not a published
-   * pack still returns unknown, because there is nothing real to say.
+   * This is the no-network fallback for published packs and explicitly
+   * labeled samples. The async queryProvenanceWithRegistry wrapper below
+   * performs the canonical auth_seals lookup when public Supabase settings
+   * are available. Neither a published pack nor a registry row is by itself
+   * a cryptographic or physical-authenticity verdict.
    */
   const pack = findPublishedPack(assetId);
   return {
@@ -479,13 +477,186 @@ function queryProvenance(assetIdRaw: unknown) {
     },
     registry: {
       certificatesApi: "https://authichain.com/api/authichain/certificates",
-      state: "404",
-      note: "Public count stays — until this endpoint answers.",
+      state: "lookup_required",
+      note: "This is a published-pack/sample fallback, not a live certificate lookup. MCP checks auth_seals when registry credentials are configured.",
     },
     jwks: "https://authichain.com/.well-known/jwks.json",
     paidVerify: "POST /mcp tools/call verify",
     compliance:
       "EU DPP readiness is not a status on this lookup. Use dpp_readiness_check (free).",
+  };
+}
+
+
+type AuthSealRegistryRow = {
+  id?: unknown;
+  product_id?: unknown;
+  batch_id?: unknown;
+  brand?: unknown;
+  polygon_tx?: unknown;
+  created_at?: unknown;
+};
+
+type AuthSealLookup =
+  | { kind: "found"; row: AuthSealRegistryRow }
+  | { kind: "not_found" | "not_configured" | "unavailable" | "invalid_identifier" };
+
+const SAFE_REGISTRY_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,119}$/;
+
+/**
+ * Read the canonical auth_seals registry using only the public Supabase key.
+ * A missing setting, HTTP error, schema error, or timeout is never converted
+ * into "not registered". This lookup is registration evidence only; it does
+ * not fetch or attest a signed record and must never set verified=true.
+ */
+async function lookupAuthSeal(
+  assetId: string,
+  env?: X402Env,
+): Promise<AuthSealLookup> {
+  const baseUrl = (env?.SUPABASE_URL || "").trim().replace(/\\/+$/, "");
+  const anonKey = (env?.SUPABASE_ANON_KEY || "").trim();
+  if (!baseUrl || !/^https:\/\//i.test(baseUrl) || !anonKey) {
+    return { kind: "not_configured" };
+  }
+  if (!SAFE_REGISTRY_IDENTIFIER.test(assetId)) {
+    return { kind: "invalid_identifier" };
+  }
+
+  const query = new URLSearchParams({
+    select: "id,product_id,batch_id,brand,polygon_tx,created_at",
+    limit: "1",
+    or: `(id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId},qr_payload.eq.${assetId})`,
+  });
+  try {
+    const response = await fetch(
+      `${baseUrl}/rest/v1/auth_seals?${query.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!response.ok) return { kind: "unavailable" };
+    const rows: unknown = await response.json();
+    if (!Array.isArray(rows)) return { kind: "unavailable" };
+    if (rows.length === 0) return { kind: "not_found" };
+    const row = rows[0] as AuthSealRegistryRow;
+    if (!row || typeof row !== "object" || typeof row.id !== "string" || !row.id) {
+      return { kind: "unavailable" };
+    }
+    return { kind: "found", row };
+  } catch {
+    return { kind: "unavailable" };
+  }
+}
+
+/** Registry-backed MCP lookup; all answers remain explicitly non-verified. */
+async function queryProvenanceWithRegistry(
+  assetIdRaw: unknown,
+  env?: X402Env,
+) {
+  const assetId = String(assetIdRaw ?? "").trim();
+  const fallback = queryProvenance(assetId);
+  if (!assetId) return fallback;
+
+  const lookup = await lookupAuthSeal(assetId, env);
+  if (lookup.kind === "not_configured") {
+    return {
+      ...fallback,
+      registry: {
+        ...fallback.registry,
+        state: "not_configured",
+        note: "No public Supabase registry configuration was supplied; this result uses only published-pack/sample fallback data.",
+      },
+    };
+  }
+  if (lookup.kind === "invalid_identifier") {
+    return {
+      ...fallback,
+      registry: {
+        ...fallback.registry,
+        state: "invalid_identifier",
+        note: "This identifier contains unsupported characters for an exact registry lookup; no registry query was made.",
+      },
+    };
+  }
+  if (lookup.kind === "unavailable") {
+    return {
+      ...fallback,
+      status: fallback.status === "published_pack" || fallback.status === "desk_sample"
+        ? fallback.status
+        : "registry_unavailable",
+      verified: false,
+      registry: {
+        ...fallback.registry,
+        state: "unavailable",
+        note: "The canonical auth_seals registry could not be read. No conclusion about registration was reached.",
+      },
+    };
+  }
+
+  if (lookup.kind === "found") {
+    const row = lookup.row;
+    const registered = {
+      id: typeof row.product_id === "string" && row.product_id
+        ? row.product_id
+        : String(row.id),
+      sealId: String(row.id),
+      batchId: typeof row.batch_id === "string" ? row.batch_id : null,
+      brand: typeof row.brand === "string" ? row.brand : null,
+      registeredAt: typeof row.created_at === "string" ? row.created_at : null,
+      anchorTransaction: typeof row.polygon_tx === "string" ? row.polygon_tx : null,
+      source: "auth_seals",
+    };
+    return {
+      ...fallback,
+      status: "registered",
+      registered: true,
+      verified: false,
+      authenticityScore: 0,
+      product: registered,
+      registry: {
+        ...fallback.registry,
+        state: "available",
+        source: "auth_seals",
+        semantics: "registered only; no signature or physical-authenticity verdict",
+        note: "A matching auth_seals row proves registration only. Use verify_record with signed record and anchor JSON for cryptographic verification.",
+      },
+      verification: {
+        signature: "not_checked",
+        revocation: "not_checked",
+        physicalBinding: "not_checked",
+      },
+    };
+  }
+
+  if (fallback.status === "published_pack" || fallback.status === "desk_sample") {
+    return {
+      ...fallback,
+      registry: {
+        ...fallback.registry,
+        state: "checked_no_matching_seal",
+        source: "auth_seals",
+        note: "This published pack/sample did not match an auth_seals row. Published status is not a cryptographic attestation.",
+      },
+    };
+  }
+
+  return {
+    ...fallback,
+    status: "not_registered",
+    registered: false,
+    verified: false,
+    registry: {
+      ...fallback.registry,
+      state: "available",
+      source: "auth_seals",
+      note: "No matching auth_seals row was found. This is a registry lookup result, not a cryptographic verification result.",
+    },
   };
 }
 
@@ -684,7 +855,7 @@ async function handleRpc(
         content: [
           {
             type: "text",
-            text: JSON.stringify(queryProvenance(assetId), null, 2),
+            text: JSON.stringify(await queryProvenanceWithRegistry(assetId, env), null, 2),
           },
         ],
       });
