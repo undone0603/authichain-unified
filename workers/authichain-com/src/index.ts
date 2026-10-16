@@ -1,3 +1,4 @@
+import { isIsThisRealPath, renderIsThisRealPage } from "./is-this-real-page.ts";
 import { handleSalesInquiry } from './routes/sales';
 import mcpServer from './mcp-server';
 // The DPP regulatory timeline is shared with the Next.js page rather than
@@ -3512,6 +3513,11 @@ async function handleAuthichainCom(
     }
     if (isSampleAuditPath(p)) {
       return new Response(renderSampleAuditPage(), {
+        headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
+    if (isIsThisRealPath(p)) {
+      return new Response(renderIsThisRealPage(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
     }

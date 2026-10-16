@@ -1,0 +1,94 @@
+/**
+ * /is-this-real — NICKEL-VERIFY-V1 lead magnet (Zac, 2026-10-16).
+ *
+ * The visitor enters a seal ID, an email, and ticks consent. The lead goes to
+ * the existing POST /api/leads/capture (Supabase `lead_captures`, source
+ * "is-this-real"). That source skips the Make/n8n webhooks, so no automated
+ * email goes out. After that the page runs up to 3 free checks against the
+ * public GET /api/verify. The limit is counted in the browser (localStorage)
+ * and is a courtesy cap, not enforcement. Then it shows the paid option:
+ * x402, $0.05 USDC on Base per call at POST /api/v1/agent-verify.
+ * Copy rule: no "live", customer, or accuracy claims.
+ */
+export const IS_THIS_REAL_PATH = "/is-this-real";
+export const IS_THIS_REAL_SOURCE = "is-this-real";
+export const IS_THIS_REAL_FREE_CHECKS = 3;
+
+export function isIsThisRealPath(p: string): boolean {
+  return p === IS_THIS_REAL_PATH || p === `${IS_THIS_REAL_PATH}/`;
+}
+
+export function renderIsThisRealPage(): string {
+  return `<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Is this real? Check an AuthiChain seal | AuthiChain</title>
+<meta name="description" content="Enter an AuthiChain seal ID and get 3 free registry checks. After that, agents can pay 5 cents per check over x402.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://authichain.com${IS_THIS_REAL_PATH}">
+<style>
+body{font-family:system-ui,sans-serif;max-width:640px;margin:2rem auto;padding:0 1rem;color:#111;line-height:1.5}
+label{display:block;margin:.75rem 0 .25rem;font-weight:600}
+input[type=text],input[type=email]{width:100%;padding:.6rem;border:1px solid #bbb;border-radius:6px;box-sizing:border-box}
+button{margin-top:1rem;padding:.7rem 1.2rem;border:0;border-radius:6px;background:#111;color:#fff;font-weight:600;cursor:pointer}
+.small{font-size:.875rem;color:#555}.box{border:1px solid #ddd;border-radius:8px;padding:1rem;margin-top:1rem}
+code{background:#f3f3f3;padding:.1rem .3rem;border-radius:4px}
+</style></head><body>
+<h1>Is this real?</h1>
+<p>Enter the seal ID printed on an AuthiChain-sealed product or document. We check it against the AuthiChain registry. Your first ${IS_THIS_REAL_FREE_CHECKS} checks are free.</p>
+<form id="itr-form" novalidate>
+  <label for="seal">Seal ID</label>
+  <input type="text" id="seal" name="sealId" required maxlength="128" placeholder="e.g. polygon-anchor-1">
+  <label for="email">Email</label>
+  <input type="email" id="email" name="email" required maxlength="254">
+  <label class="small"><input type="checkbox" id="consent" name="consent" required>
+    I agree that AuthiChain may store my email and the seal IDs I check, and may contact me about verification. No automated emails are sent from this form. See the <a href="/privacy">privacy policy</a>.</label>
+  <button type="submit" id="go">Check</button>
+</form>
+<p id="status" class="small" role="status" aria-live="polite"></p>
+<div id="result" class="box" hidden></div>
+<div id="paid" class="box" hidden>
+  <h2>More checks: 5&cent; each</h2>
+  <p>After the free checks, software agents can pay per check with x402: <strong>$0.05 in USDC on Base</strong>, no account needed.</p>
+  <p class="small">Endpoint: <code>POST https://authichain.com/api/v1/agent-verify</code> with <code>{"sealId":"..."}</code>. An unpaid call returns HTTP 402 with the payment details. Current status: <a href="/api/x402/health">/api/x402/health</a>. Docs: <a href="/x402">/x402</a>.</p>
+</div>
+<p class="small">"Verified" means the seal matches a record in the AuthiChain registry. It is not a legal or forensic guarantee.</p>
+<script>
+(function(){
+  var KEY="itr_free_used",MAX=${IS_THIS_REAL_FREE_CHECKS},captured=false;
+  var f=document.getElementById("itr-form"),st=document.getElementById("status"),
+      res=document.getElementById("result"),paid=document.getElementById("paid");
+  function used(){return parseInt(localStorage.getItem(KEY)||"0",10)||0}
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  if(used()>=MAX){paid.hidden=false}
+  f.addEventListener("submit",async function(e){
+    e.preventDefault();
+    var seal=f.sealId.value.trim(),email=f.email.value.trim();
+    if(!seal||!email){st.textContent="Enter a seal ID and an email.";return}
+    if(!f.consent.checked){st.textContent="Please tick the consent box.";return}
+    if(used()>=MAX){paid.hidden=false;st.textContent="You have used your "+MAX+" free checks.";return}
+    st.textContent="Checking...";
+    try{
+      if(!captured){
+        var lr=await fetch("/api/leads/capture",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({email:email,source:"${IS_THIS_REAL_SOURCE}",product_interest:"nickel-verify",
+            message:"consent: yes; first seal: "+seal.slice(0,128),page_url:location.href})});
+        if(!lr.ok){st.textContent="We could not save your details. Please try again.";return}
+        captured=true;
+      }
+      var r=await fetch("/api/verify?id="+encodeURIComponent(seal));
+      var j=await r.json().catch(function(){return {}});
+      localStorage.setItem(KEY,String(used()+1));
+      var v=j.verdict||j.decision||"unknown";
+      res.hidden=false;
+      res.innerHTML="<strong>Seal "+esc(seal)+":</strong> "+esc(v)+
+        (j.unknowns&&j.unknowns.length?"<br><span class=small>Not checked: "+esc(j.unknowns.join(", "))+"</span>":"");
+      var left=MAX-used();
+      st.textContent=left>0?left+" free check"+(left===1?"":"s")+" left.":"That was your last free check.";
+      if(left<=0)paid.hidden=false;
+    }catch(err){st.textContent="Something went wrong. Please try again."}
+  });
+})();
+</script>
+</body></html>`;
+}
