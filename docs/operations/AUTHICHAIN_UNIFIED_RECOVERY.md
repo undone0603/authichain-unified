@@ -46,6 +46,13 @@ The branch contains:
 
 **Do not merge merely because the branch exists or is mergeable.** The PR is intentionally still a draft while required checks and live smoke evidence are unresolved.
 
+## Live public spot-check (2026-10-15 America/Detroit)
+
+- `GET https://authichain.com/mcp` returned discovery JSON with server version `1.3.0`. Its current tool description says arbitrary provenance IDs return `unknown` because registry lookup is not connected. Paid plans are `on_hold`, and the legacy paid verify note says `503 registry_not_bound` before settlement.
+- `GET https://authichain.com/api/authichain/certificates` returned **404 Not Found**.
+- Those observations confirm the recovery branch has not reached production. They do not show the registry is configured or populated.
+- The current public GitHub status page reported Actions operational/no Oct 16 incident, while the relevant PR jobs themselves had no allocated runner and no executed steps. Treat this as a repository/account job-start blocker until an actual job log or a run with executed steps identifies the cause.
+
 ## Definition of “done”
 
 ### Gate 1 — one protocol path
