@@ -95,7 +95,7 @@ describe("mcp discovery", () => {
       result: { tools: Array<{ name: string }> };
     };
     expect(listed.result.tools.map(t => t.name)).toEqual(
-      expect.arrayContaining(["get_pricing", "verify", "query_provenance"])
+      expect.arrayContaining(["get_pricing", "verify", "query_provenance", "verify_attestation"])
     );
 
     const call = await tryHandleMcp(
@@ -454,6 +454,174 @@ describe("mcp discovery", () => {
       });
       expect(calls).toHaveLength(2);
       expect(body.result.content[0].text).not.toContain('"verified": true');
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("query_provenance returns the published JWS but never claims it was verified", async () => {
+    const orig = globalThis.fetch;
+    const row = {
+      attestation_id: "urn:authichain:attestation:v01:SKU-123",
+      seal_id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+      product_id: "SKU-123",
+      batch_id: "LOT-2026-A",
+      brand: "Example Brand",
+      object_id: "SKU-123",
+      issuer_id: "https://authichain.com",
+      issuer_kid: "test-kid",
+      decision: "verified",
+      payload: { version: "0.1", subject: { object_id: "SKU-123" } },
+      jws: "header.payload.signature",
+      record_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      published_at: "2026-10-16T00:00:00.000Z",
+    };
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      expect(url.pathname).toBe("/rest/v1/authichain_attestation_records");
+      expect(url.searchParams.get("published")).toBe("eq.true");
+      return new Response(JSON.stringify([row]), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 31,
+            method: "tools/call",
+            params: { name: "query_provenance", arguments: { assetId: "SKU-123" } },
+          }),
+        }),
+        { SUPABASE_URL: "https://example.supabase.co", SUPABASE_ANON_KEY: "anon-test" },
+      );
+      const body = await res!.json() as { result: { content: Array<{ text: string }> } };
+      const data = JSON.parse(body.result.content[0].text) as {
+        status: string; verified: boolean; signedRecord: { jws: string; record_hash: string };
+        verification: { signature: string; issuerTrust: string; revocation: string; physicalBinding: string };
+      };
+      expect(data.status).toBe("published_attestation");
+      expect(data.verified).toBe(false);
+      expect(data.signedRecord).toMatchObject({ jws: row.jws, record_hash: row.record_hash });
+      expect(data.verification).toEqual({
+        signature: "not_checked",
+        issuerTrust: "not_checked",
+        revocation: "not_checked",
+        physicalBinding: "not_checked",
+      });
+      expect(body.result.content[0].text).not.toContain('"verified": true');
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("verify_attestation calls the canonical verifier and distinguishes signature verification from physical authenticity", async () => {
+    const orig = globalThis.fetch;
+    const row = {
+      attestation_id: "urn:authichain:attestation:v01:SKU-123",
+      seal_id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+      product_id: "SKU-123",
+      batch_id: "LOT-2026-A",
+      brand: "Example Brand",
+      object_id: "SKU-123",
+      issuer_id: "https://authichain.com",
+      issuer_kid: "test-kid",
+      decision: "verified",
+      payload: { version: "0.1", subject: { object_id: "SKU-123" } },
+      jws: "header.payload.signature",
+      record_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      published_at: "2026-10-16T00:00:00.000Z",
+    };
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      expect(url.pathname).toBe("/rest/v1/authichain_attestation_records");
+      return new Response(JSON.stringify([row]), { status: 200 });
+    }) as typeof fetch;
+    const verifyFetch = vi.fn(async (request: Request) => {
+      const url = new URL(request.url);
+      expect(url.pathname).toBe("/api/v1/attestation/verify");
+      const body = await request.json() as { jws: string; expected_object_id?: string };
+      expect(body.jws).toBe(row.jws);
+      expect(body.expected_object_id).toBe("SKU-123");
+      return new Response(JSON.stringify({
+        valid: true,
+        decision: "verified",
+        cryptographic_status: "valid",
+        issuer_status: "trusted",
+        claim_status: "active",
+        reasons: [],
+      }), { status: 200 });
+    });
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 32,
+            method: "tools/call",
+            params: {
+              name: "verify_attestation",
+              arguments: { assetId: "SKU-123", expectedObjectId: "SKU-123" },
+            },
+          }),
+        }),
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+          APP_WORKER: { fetch: verifyFetch },
+        } as unknown as NonNullable<Parameters<typeof tryHandleMcp>[1]>,
+      );
+      const body = await res!.json() as { result: { content: Array<{ text: string }>; isError?: boolean } };
+      const data = JSON.parse(body.result.content[0].text) as {
+        verified: boolean; status: string; physicalBinding: string; physical_authenticity: string;
+      };
+      expect(verifyFetch).toHaveBeenCalledTimes(1);
+      expect(data).toMatchObject({
+        verified: true,
+        status: "verified_signed_claim",
+        physicalBinding: "matched_by_canonical_verifier",
+        physical_authenticity: "not_proven",
+      });
+      expect(body.result.isError).toBeUndefined();
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("verify_attestation remains unverified when the canonical verifier binding is missing", async () => {
+    const orig = globalThis.fetch;
+    const row = {
+      attestation_id: "att-123",
+      seal_id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+      product_id: "SKU-123",
+      issuer_id: "https://authichain.com",
+      payload: { subject: { object_id: "SKU-123" } },
+      jws: "header.payload.signature",
+      record_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    };
+    globalThis.fetch = (async () => new Response(JSON.stringify([row]), { status: 200 })) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 33,
+            method: "tools/call",
+            params: { name: "verify_attestation", arguments: { assetId: "SKU-123" } },
+          }),
+        }),
+        { SUPABASE_URL: "https://example.supabase.co", SUPABASE_ANON_KEY: "anon-test" },
+      );
+      const body = await res!.json() as { result: { content: Array<{ text: string }>; isError?: boolean } };
+      const data = JSON.parse(body.result.content[0].text) as { verified: boolean; status: string };
+      expect(data.verified).toBe(false);
+      expect(data.status).toBe("verifier_not_configured");
+      expect(body.result.isError).toBe(true);
     } finally {
       globalThis.fetch = orig;
     }
