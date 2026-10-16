@@ -104,7 +104,7 @@ export const TOOLS = [
   {
     name: "query_provenance",
     description:
-      "Free public lookup for an assetId / seal / QR token. Reads matching rows from the canonical auth_seals registry when public Supabase configuration is available, and also resolves published packs. A registry match means registered only; it does not verify a signature or prove a physical item is genuine. Use verify_record with the signed record and anchor JSON for cryptographic verification.",
+      "Free public lookup for an assetId / seal / QR token. Reads matching rows from the canonical auth_seals registry when public Supabase configuration is available, and also resolves published packs. A registry match means registered only; it does not verify a signature or prove a physical item is genuine. Use verify_attestation for a published v0.1 JWS; verify_record is the separate reference-protocol verifier.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1118,10 +1118,7 @@ async function handleRpc(
       capabilities: { tools: { listChanged: false } },
       serverInfo: { name: "authichain", version: SERVER_VERSION },
       instructions:
-        "AuthiChain verification is free. verify_record checks an Ed25519 " +
-        "signed provenance record. dpp_readiness_check " +
-        "scores EU Digital Product Passport readiness. Neither inspects a " +
-        "physical product, and neither is legal advice.",
+        "AuthiChain verification is free. verify_attestation fetches a published v0.1 JWS and delegates signature, issuer trust, lifecycle, and expiry checks to the canonical verifier. query_provenance is registration-only; verify_record checks the separate reference protocol. No tool proves physical authenticity. dpp_readiness_check scores EU Digital Product Passport readiness and is not legal advice.",
     });
   }
 
