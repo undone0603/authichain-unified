@@ -25,6 +25,7 @@ type SealRow = {
 };
 
 const REGISTRY_PATH = "/api/authichain/certificates";
+const SIGNED_RECORDS_PATH = "/api/authichain/attestations";
 const NO_STORE = {
   "Cache-Control": "private, no-store",
   "CDN-Cache-Control": "no-store",
@@ -75,6 +76,116 @@ function normalizeRow(row: SealRow) {
   };
 }
 
+type PublishedAttestationRow = {
+  attestation_id?: unknown;
+  seal_id?: unknown;
+  product_id?: unknown;
+  batch_id?: unknown;
+  brand?: unknown;
+  object_id?: unknown;
+  product_class?: unknown;
+  gtin?: unknown;
+  serial?: unknown;
+  lot?: unknown;
+  issuer_id?: unknown;
+  issuer_kid?: unknown;
+  decision?: unknown;
+  payload?: unknown;
+  jws?: unknown;
+  record_hash?: unknown;
+  created_at?: unknown;
+  published_at?: unknown;
+};
+
+const SAFE_ASSET_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,119}$/;
+
+async function handlePublishedAttestationLookup(
+  url: URL,
+  baseUrl: string,
+  anonKey: string,
+  fetchImpl: typeof fetch,
+): Promise<Response> {
+  const assetId = (url.searchParams.get("assetId") || "").trim();
+  if (!assetId) {
+    return json(400, { error: "assetId_required" });
+  }
+  if (!SAFE_ASSET_IDENTIFIER.test(assetId)) {
+    return json(400, { error: "invalid_identifier" });
+  }
+
+  const query = new URLSearchParams({
+    select: "attestation_id,seal_id,product_id,batch_id,brand,object_id,product_class,gtin,serial,lot,issuer_id,issuer_kid,decision,payload,jws,record_hash,created_at,published_at",
+    published: "eq.true",
+    order: "created_at.desc",
+    limit: "2",
+    or: `(attestation_id.eq.${assetId},seal_id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId},object_id.eq.${assetId},gtin.eq.${assetId},serial.eq.${assetId},lot.eq.${assetId})`,
+  });
+
+  let response: Response;
+  try {
+    response = await fetchImpl(`${baseUrl}/rest/v1/authichain_attestation_records?${query.toString()}`, {
+      method: "GET",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+        Accept: "application/json",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch {
+    return json(503, { error: "registry_unavailable" });
+  }
+  if (!response.ok) return json(503, { error: "registry_unavailable" });
+
+  let rows: unknown;
+  try {
+    rows = await response.json();
+  } catch {
+    return json(503, { error: "registry_unavailable" });
+  }
+  if (!Array.isArray(rows)) return json(503, { error: "registry_unavailable" });
+  const records = rows as PublishedAttestationRow[];
+  if (records.length === 0) {
+    return json(404, {
+      error: "attestation_not_found",
+      source: "authichain_attestation_records",
+    });
+  }
+  if (records.length > 1) {
+    return json(409, {
+      error: "ambiguous_identifier",
+      source: "authichain_attestation_records",
+      match_count: records.length,
+      candidates: records.map(row => ({
+        attestation_id: typeof row.attestation_id === "string" ? row.attestation_id : null,
+        seal_id: typeof row.seal_id === "string" ? row.seal_id : null,
+        product_id: typeof row.product_id === "string" ? row.product_id : null,
+        batch_id: typeof row.batch_id === "string" ? row.batch_id : null,
+        brand: typeof row.brand === "string" ? row.brand : null,
+        gtin: typeof row.gtin === "string" ? row.gtin : null,
+        serial: typeof row.serial === "string" ? row.serial : null,
+        lot: typeof row.lot === "string" ? row.lot : null,
+      })),
+    });
+  }
+
+  const record = records[0];
+  if (
+    typeof record.attestation_id !== "string" ||
+    typeof record.jws !== "string" ||
+    typeof record.record_hash !== "string" ||
+    !record.payload ||
+    typeof record.payload !== "object"
+  ) {
+    return json(503, { error: "registry_unavailable" });
+  }
+  return json(200, {
+    source: "authichain_attestation_records",
+    semantics: "published issuer-signed record; retrieval is not cryptographic verification or proof of physical authenticity",
+    record,
+  });
+}
+
 /**
  * Handles GET /api/authichain/certificates at the Worker boundary.
  * fetchImpl is injectable so the routing and failure paths can be tested
@@ -86,7 +197,9 @@ export async function tryHandleCertificateRegistry(
   fetchImpl: typeof fetch = fetch,
 ): Promise<Response | null> {
   const url = new URL(request.url);
-  if (url.pathname.replace(/\/+$/, "") !== REGISTRY_PATH) return null;
+  const path = url.pathname.replace(/\/+$/, "");
+  const isSignedAttestationLookup = path === SIGNED_RECORDS_PATH;
+  if (path !== REGISTRY_PATH && !isSignedAttestationLookup) return null;
 
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: { ...NO_STORE, ...CORS } });
@@ -107,6 +220,10 @@ export async function tryHandleCertificateRegistry(
   const anonKey = (env.SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
   if (!baseUrl || !/^https:\/\//i.test(baseUrl) || !anonKey) {
     return json(503, { error: "registry_not_configured" });
+  }
+
+  if (isSignedAttestationLookup) {
+    return handlePublishedAttestationLookup(url, baseUrl, anonKey, fetchImpl);
   }
 
   const sp = url.searchParams;
