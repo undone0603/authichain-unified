@@ -4,7 +4,8 @@
  *
  * The first N calls (X402_FREE_DAILY_CALLS, default 3) per client per UTC day
  * are answered without payment; call N+1 gets the normal 402. The client is
- * keyed on a salted SHA-256 of CF-Connecting-IP, so rotating claimed wallets
+ * keyed on a SHA-256 of CF-Connecting-IP salted with X402_FREE_IP_SALT (required;
+ * unset or empty means no free calls), so rotating claimed wallets
  * buys nothing. There is no claimed-payer header convention in this codebase,
  * so no wallet key is used before payment.
  *
@@ -20,7 +21,6 @@ import { restHeaders, type SealLookupCredentials } from "./paid-seal-verify";
 
 export const FREE_CALLS_HEADER = "X-Free-Calls-Remaining";
 const DEFAULT_FREE_DAILY_CALLS = 3;
-const DEFAULT_SALT = "authichain-x402-free-v1";
 
 export function freeDailyCalls(raw?: string): number {
   const source = raw ?? process.env.X402_FREE_DAILY_CALLS;
@@ -54,8 +54,8 @@ export interface FreeTierStore {
   ): Promise<{ granted: boolean; used: number } | null>;
 }
 
-export async function hashClientIp(ip: string, salt?: string): Promise<string> {
-  const data = new TextEncoder().encode(`${salt || DEFAULT_SALT}:${ip}`);
+export async function hashClientIp(ip: string, salt: string): Promise<string> {
+  const data = new TextEncoder().encode(`${salt}:${ip}`);
   const digest = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(digest))
     .map(b => b.toString(16).padStart(2, "0"))
@@ -116,10 +116,13 @@ export async function claimFreeCall(input: {
 }): Promise<FreeTierDecision> {
   if (input.limit <= 0) return { free: false, remaining: 0 };
   if (!input.store) return { free: false, remaining: null };
+  // No public fallback salt: without X402_FREE_IP_SALT, fail closed to 402.
+  const salt = (input.salt || "").trim();
+  if (!salt) return { free: false, remaining: null };
   const ip = (input.request.headers.get("CF-Connecting-IP") || "").trim();
   if (!ip) return { free: false, remaining: null };
   try {
-    const key = `ip:${await hashClientIp(ip, input.salt)}`;
+    const key = `ip:${await hashClientIp(ip, salt)}`;
     const r = await input.store.reserve(key, utcDayStart(input.now), input.limit, input.now);
     if (!r) return { free: false, remaining: null };
     if (!r.granted) return { free: false, remaining: 0 };

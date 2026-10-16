@@ -8,6 +8,7 @@ const ENV = {
   X402_PRICE_USD: "0.05",
   SUPABASE_URL: "https://example.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "service-test",
+  X402_FREE_IP_SALT: "test-salt",
 };
 
 /** In-memory store whose reserve() is check+insert with no await between, like the RPC under its lock. */
@@ -123,6 +124,17 @@ describe("x402 free daily calls", () => {
     expect(await supabaseFreeTierStore(creds, mk(500, {}))!.reserve("ip:x", since, 3, since)).toBeNull();
     expect(await supabaseFreeTierStore(creds, mk(200, { granted: "yes" }))!.reserve("ip:x", since, 3, since)).toBeNull();
     expect(supabaseFreeTierStore({ ...creds, role: "anon" as const })).toBeNull();
+  });
+
+  it("missing or empty X402_FREE_IP_SALT fails closed to 402 and writes nothing", async () => {
+    for (const salt of [undefined, "", "   "]) {
+      const store = memStore();
+      const env: Record<string, string | undefined> = { ...ENV, X402_FREE_IP_SALT: salt };
+      if (salt === undefined) delete env.X402_FREE_IP_SALT;
+      const res = (await tryHandleX402(call(), env as typeof ENV, undefined, { freeStore: store, fetchImpl: sealFetch }))!;
+      expect(res.status).toBe(402);
+      expect(store.rows.length).toBe(0);
+    }
   });
 
   it("missing CF-Connecting-IP pays", async () => {

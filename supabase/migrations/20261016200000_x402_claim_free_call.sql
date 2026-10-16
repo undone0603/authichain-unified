@@ -2,6 +2,10 @@
 -- Grants one free slot only while fewer than p_limit x402_free rows exist for
 -- p_key since p_since. Check + insert run under a per-key transaction advisory
 -- lock, so concurrent callers cannot exceed the cap.
+-- NOTE: automation_logs.created_at is timestamp WITHOUT time zone, so the
+-- created_at >= p_since comparison casts p_since using the session TimeZone and
+-- assumes it is UTC (the Supabase default). A non-UTC session would shift the
+-- daily window.
 -- Rollback: DROP FUNCTION IF EXISTS public.x402_claim_free_call(text, timestamptz, integer);
 CREATE OR REPLACE FUNCTION public.x402_claim_free_call(
   p_key text,
