@@ -369,7 +369,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
         <dt>Fan-out</dt><dd class="mono"><a href="${esc(p.fanoutUrl)}">${esc(p.fanoutUrl)}</a></dd>
         <dt>OpenAPI</dt><dd class="mono"><a href="${esc(p.openApiUrl)}">${esc(p.openApiUrl)}</a></dd>
         <dt>Health</dt><dd class="mono"><a href="${esc(p.healthUrl)}">${esc(p.healthUrl)}</a></dd>
-        <dt>Pricing</dt><dd class="mono"><a href="https://authichain.com/pricing">${esc(p.priceUsd)} per verification call</a></dd>
+        <dt>Pricing</dt><dd class="mono"><a href="https://authichain.com/pricing">Pricing</a></dd>
         <dt>Wallets</dt><dd class="mono"><a href="${esc(p.wellKnownUrl)}">.well-known/x402.json</a></dd>
       </dl>
     </section>
