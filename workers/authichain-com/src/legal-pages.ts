@@ -7,8 +7,14 @@
  * or a privacy@ / legal@ mailbox.
  */
 
-/** Shown at the top of both pages. Change it when the text changes. */
-export const LEGAL_EFFECTIVE = "16 October 2026";
+/** Shown at the top of /privacy. Change it when that page's text changes. */
+export const LEGAL_EFFECTIVE = "5 October 2026";
+
+/**
+ * Shown at the top of /terms only.
+ * Set to the authichain-com go-live day just before deploy.
+ */
+export const TERMS_EFFECTIVE = "16 October 2026";
 
 const OPERATOR =
   "Zachary Kietzman, a sole proprietor in Michigan, USA, using the brand AuthiChain. AuthiChain is a brand, not a corporation. The SAM legal entity is ZACHARY KIETZMAN.";
@@ -165,7 +171,7 @@ export function renderTermsPage(): string {
       "The terms for using AuthiChain checkout, the open verifier, and paid agent verification. Zachary Kietzman, sole proprietor.",
     canonical: "https://authichain.com/terms",
     body: `<h1>Terms of Service</h1>
-<p class="meta">Effective ${LEGAL_EFFECTIVE}. This is the current agreement. The date changes when the text changes.</p>
+<p class="meta">Effective ${TERMS_EFFECTIVE}. This is the current agreement. The date changes when the text changes.</p>
 <h2>The agreement</h2>
 <p>These terms are between you and ${OPERATOR} "We" means that person and brand.</p>
 <p>${NONAFFILIATION}</p>
