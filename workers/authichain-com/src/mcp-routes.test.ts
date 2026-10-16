@@ -362,9 +362,10 @@ describe("mcp discovery", () => {
       expect(data.verified).toBe(false);
       // A free provenance lookup may perform a read-only registry lookup, but
       // the payment header must never trigger settlement or spend-ledger writes.
-      expect(calls).toHaveLength(1);
-      const registryUrl = new URL(calls[0]);
-      expect(registryUrl.pathname).toBe("/rest/v1/auth_seals");
+      expect(calls).toHaveLength(2);
+      const paths = calls.map(call => new URL(call).pathname);
+      expect(paths).toContain("/rest/v1/authichain_attestation_records");
+      const registryUrl = new URL(calls.find(call => new URL(call).pathname === "/rest/v1/auth_seals")!);
       expect(registryUrl.searchParams.get("or")).toContain("product_id.eq.NOPE-XYZ");
     } finally {
       globalThis.fetch = orig;
@@ -377,12 +378,16 @@ describe("mcp discovery", () => {
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       calls.push(String(input));
       const url = new URL(String(input));
-      expect(url.pathname).toBe("/rest/v1/auth_seals");
       expect(url.searchParams.get("or")).toContain("product_id.eq.PRODUCT-123");
       expect(init?.method ?? "GET").toBe("GET");
       const headers = new Headers(init?.headers);
       expect(headers.get("apikey")).toBe("anon-test");
       expect(headers.get("authorization")).toBe("Bearer anon-test");
+      if (url.pathname === "/rest/v1/authichain_attestation_records") {
+        expect(url.searchParams.get("published")).toBe("eq.true");
+        return new Response("[]", { status: 200 });
+      }
+      expect(url.pathname).toBe("/rest/v1/auth_seals");
       return new Response(JSON.stringify([{
         id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
         product_id: "PRODUCT-123",
@@ -447,7 +452,7 @@ describe("mcp discovery", () => {
         revocation: "not_checked",
         physicalBinding: "not_checked",
       });
-      expect(calls).toHaveLength(1);
+      expect(calls).toHaveLength(2);
       expect(body.result.content[0].text).not.toContain('"verified": true');
     } finally {
       globalThis.fetch = orig;
