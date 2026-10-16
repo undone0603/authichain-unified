@@ -117,6 +117,25 @@ export const TOOLS = [
     },
   },
   {
+    name: "verify_attestation",
+    description:
+      "Free. Fetch the exact published AuthiChain v0.1 JWS from the signed-record registry and pass it to the canonical edge-router verifier. Checks signature, issuer trust, durable revocation/status, expiry, and signed decision. Supply expectedObjectId to bind the record to a scanned object identifier. A valid signed claim alone does not prove physical authenticity.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        assetId: {
+          type: "string",
+          description: "Unique attestation ID or exact seal/product identifier",
+        },
+        expectedObjectId: {
+          type: "string",
+          description: "Optional independently observed object ID to compare with the signed subject",
+        },
+      },
+      required: ["assetId"],
+    },
+  },
+  {
     name: "verify_record",
     description: `Free. Verify an AuthiChain signed provenance record with the open reference verifier. Pass id "${"polygon-anchor-1"}" for the published demonstration record, or pass your own record and anchor JSON. Returns verified, valid-unanchored, or invalid, plus whether the transaction carries the record hash. It does not inspect a physical product.`,
     inputSchema: {
@@ -835,6 +854,129 @@ async function queryProvenanceWithRegistry(
  * answer with the newest one it does. Per the spec the client then either
  * proceeds on that version or disconnects.
  */
+
+type CanonicalAttestationVerifierBinding = {
+  fetch(request: Request): Promise<Response>;
+};
+
+async function verifyPublishedAttestation(
+  assetIdRaw: unknown,
+  expectedObjectIdRaw: unknown,
+  env?: X402Env,
+): Promise<Record<string, unknown>> {
+  const assetId = String(assetIdRaw ?? "").trim();
+  if (!assetId) {
+    return { verified: false, status: "invalid_identifier", error: "assetId is required" };
+  }
+  const expectedObjectId = typeof expectedObjectIdRaw === "string"
+    ? expectedObjectIdRaw.trim()
+    : "";
+  if (expectedObjectIdRaw !== undefined && (
+    !expectedObjectId || expectedObjectId.length > 240
+  )) {
+    return { verified: false, status: "invalid_identifier", error: "expectedObjectId must contain 1–240 characters" };
+  }
+
+  const lookup = await lookupPublishedAttestation(assetId, env);
+  if (lookup.kind !== "found") {
+    const statusByKind: Record<string, string> = {
+      not_found: "not_found",
+      not_configured: "not_configured",
+      unavailable: "registry_unavailable",
+      invalid_identifier: "invalid_identifier",
+      ambiguous: "ambiguous_identifier",
+    };
+    return {
+      verified: false,
+      status: statusByKind[lookup.kind] ?? "registry_unavailable",
+      registry: "authichain_attestation_records",
+      error: lookup.kind === "ambiguous"
+        ? "Identifier matches multiple published attestations; use a unique attestation ID or seal ID."
+        : lookup.kind === "not_found"
+          ? "No matching published signed attestation was found."
+          : lookup.kind === "not_configured"
+            ? "Public signed-record registry configuration is missing."
+            : lookup.kind === "invalid_identifier"
+              ? "Identifier contains unsupported characters."
+              : "Published signed-record registry is unavailable; no verification conclusion was reached.",
+      candidates: lookup.kind === "ambiguous"
+        ? (lookup.candidates ?? []).map(row => ({
+            attestation_id: typeof row.attestation_id === "string" ? row.attestation_id : null,
+            seal_id: typeof row.seal_id === "string" ? row.seal_id : null,
+            product_id: typeof row.product_id === "string" ? row.product_id : null,
+          }))
+        : undefined,
+      physical_authenticity: "not_proven",
+    };
+  }
+
+  const binding = (env as unknown as { APP_WORKER?: CanonicalAttestationVerifierBinding } | undefined)?.APP_WORKER;
+  if (!binding || typeof binding.fetch !== "function") {
+    return {
+      verified: false,
+      status: "verifier_not_configured",
+      error: "Canonical edge-router APP_WORKER service binding is missing; the retrieved JWS was not verified.",
+      attestation_id: lookup.row.attestation_id,
+      physical_authenticity: "not_proven",
+    };
+  }
+
+  const body: Record<string, unknown> = { jws: lookup.row.jws };
+  if (expectedObjectId) body.expected_object_id = expectedObjectId;
+  try {
+    const response = await binding.fetch(new Request(
+      "https://authichain-edge-router/api/v1/attestation/verify",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    ));
+    const result: unknown = await response.json();
+    if (!result || typeof result !== "object" || Array.isArray(result)) {
+      return {
+        verified: false,
+        status: "verifier_unavailable",
+        error: "Canonical verifier returned an invalid response.",
+        attestation_id: lookup.row.attestation_id,
+        physical_authenticity: "not_proven",
+      };
+    }
+    const decision = result as Record<string, unknown>;
+    const verified = response.status === 200 && decision.valid === true;
+    return {
+      verified,
+      status: verified ? "verified_signed_claim" : "not_verified",
+      attestation_id: lookup.row.attestation_id,
+      product_id: lookup.row.product_id,
+      seal_id: lookup.row.seal_id,
+      record_hash: lookup.row.record_hash,
+      verification: {
+        valid: decision.valid === true,
+        decision: decision.decision ?? null,
+        cryptographic_status: decision.cryptographic_status ?? null,
+        issuer_status: decision.issuer_status ?? null,
+        claim_status: decision.claim_status ?? null,
+        reasons: Array.isArray(decision.reasons) ? decision.reasons : [],
+        expected_object_id_checked: Boolean(expectedObjectId),
+      },
+      physicalBinding: expectedObjectId
+        ? decision.valid === true ? "matched_by_canonical_verifier" : "not_confirmed"
+        : "not_checked",
+      physical_authenticity: "not_proven",
+      semantics: "The canonical verifier evaluated the issuer-signed claim and lifecycle. This does not prove the physical item is genuine or that a label/QR has not been copied.",
+    };
+  } catch {
+    return {
+      verified: false,
+      status: "verifier_unavailable",
+      error: "The canonical edge-router verifier could not be reached; no verification conclusion was reached.",
+      attestation_id: lookup.row.attestation_id,
+      physical_authenticity: "not_proven",
+    };
+  }
+}
+
 export function negotiateProtocolVersion(params: unknown): string {
   const asked = (params as { protocolVersion?: unknown } | undefined)
     ?.protocolVersion;
@@ -1030,6 +1172,18 @@ async function handleRpc(
         ],
       });
     }
+    if (name === "verify_attestation") {
+      const args = params.arguments ?? {};
+      const result = await verifyPublishedAttestation(
+        args.assetId ?? args.sealId ?? args.id,
+        args.expectedObjectId,
+        env,
+      );
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        ...("verified" in result && result.verified !== true ? { isError: true } : {}),
+      });
+    }
     if (name === "verify_record") {
       const result = await verifyRecordTool(params.arguments ?? {}, {
         rpcUrl: (env as { POLYGON_RPC_URL?: string } | undefined)
@@ -1069,7 +1223,7 @@ async function handleRpc(
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use verify_record (free), get_pricing (free), dpp_readiness_check (free), query_provenance (free, not an attestation), or verify (legacy x402 seal verify).",
+          text: "Unknown tool. Use verify_attestation (free, published signed JWS), verify_record (free reference protocol), get_pricing (free), dpp_readiness_check (free), query_provenance (free registration lookup), or verify (legacy x402).",
         },
       ],
       isError: true,
