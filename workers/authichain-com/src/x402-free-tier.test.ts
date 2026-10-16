@@ -10,16 +10,17 @@ const ENV = {
   SUPABASE_SERVICE_ROLE_KEY: "service-test",
 };
 
+/** In-memory store whose reserve() is check+insert with no await between, like the RPC under its lock. */
 function memStore(): FreeTierStore & { rows: Array<{ key: string; at: Date }> } {
   const rows: Array<{ key: string; at: Date }> = [];
   return {
     rows,
-    async count(key, since) {
-      return rows.filter(r => r.key === key && r.at >= since).length;
-    },
-    async record(key, now) {
+    async reserve(key, since, limit, now) {
+      await Promise.resolve();
+      const used = rows.filter(r => r.key === key && r.at >= since).length;
+      if (used >= limit) return { granted: false, used };
       rows.push({ key, at: now });
-      return true;
+      return { granted: true, used: used + 1 };
     },
   };
 }
@@ -86,19 +87,42 @@ describe("x402 free daily calls", () => {
   });
 
   it("a store error fails closed to 402", async () => {
-    const broken: FreeTierStore = {
-      async count() { return null; },
-      async record() { return true; },
-    };
-    const res = (await tryHandleX402(call(), ENV, undefined, { freeStore: broken, fetchImpl: sealFetch }))!;
-    expect(res.status).toBe(402);
-    const throwing: FreeTierStore = {
-      async count() { throw new Error("down"); },
-      async record() { return true; },
-    };
+    const broken: FreeTierStore = { async reserve() { return null; } };
+    expect((await tryHandleX402(call(), ENV, undefined, { freeStore: broken, fetchImpl: sealFetch }))!.status).toBe(402);
+    const throwing: FreeTierStore = { async reserve() { throw new Error("down"); } };
     expect((await tryHandleX402(call(), ENV, undefined, { freeStore: throwing, fetchImpl: sealFetch }))!.status).toBe(402);
-    const noWrite: FreeTierStore = { async count() { return 0; }, async record() { return false; } };
-    expect((await tryHandleX402(call(), ENV, undefined, { freeStore: noWrite, fetchImpl: sealFetch }))!.status).toBe(402);
+    const denied: FreeTierStore = { async reserve() { return { granted: false, used: 0 }; } };
+    expect((await tryHandleX402(call(), ENV, undefined, { freeStore: denied, fetchImpl: sealFetch }))!.status).toBe(402);
+  });
+
+  it("10 parallel calls from one IP grant at most 3 free (atomic reserve)", async () => {
+    const store = memStore();
+    const now = new Date("2026-10-16T15:00:00Z");
+    const res = await Promise.all(
+      Array.from({ length: 10 }, () => tryHandleX402(call(), ENV, undefined, { freeStore: store, now, fetchImpl: sealFetch }))
+    );
+    const statuses = res.map(r => r!.status);
+    expect(statuses.filter(s => s === 200).length).toBe(3);
+    expect(statuses.filter(s => s === 402).length).toBe(7);
+    expect(store.rows.length).toBe(3);
+  });
+
+  it("supabase store calls the RPC and fails closed on bad replies", async () => {
+    const { supabaseFreeTierStore } = await import("../../../src/lib/x402-free-tier");
+    const calls: string[] = [];
+    const mk = (status: number, body: unknown) =>
+      (async (url: string) => {
+        calls.push(String(url));
+        return new Response(JSON.stringify(body), { status });
+      }) as unknown as typeof fetch;
+    const creds = { url: "https://example.supabase.co", key: "service-test", role: "service" as const };
+    const since = new Date("2026-10-16T00:00:00Z");
+    const ok = supabaseFreeTierStore(creds, mk(200, { granted: true, used: 1 }))!;
+    expect(await ok.reserve("ip:x", since, 3, since)).toEqual({ granted: true, used: 1 });
+    expect(calls[0]).toBe("https://example.supabase.co/rest/v1/rpc/x402_claim_free_call");
+    expect(await supabaseFreeTierStore(creds, mk(500, {}))!.reserve("ip:x", since, 3, since)).toBeNull();
+    expect(await supabaseFreeTierStore(creds, mk(200, { granted: "yes" }))!.reserve("ip:x", since, 3, since)).toBeNull();
+    expect(supabaseFreeTierStore({ ...creds, role: "anon" as const })).toBeNull();
   });
 
   it("missing CF-Connecting-IP pays", async () => {

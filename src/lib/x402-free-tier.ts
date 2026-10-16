@@ -16,7 +16,7 @@
  * Any store error, missing client IP or missing service-role key fails closed
  * to the paid 402.
  */
-import { readJson, restHeaders, type SealLookupCredentials } from "./paid-seal-verify";
+import { restHeaders, type SealLookupCredentials } from "./paid-seal-verify";
 
 export const FREE_CALLS_HEADER = "X-Free-Calls-Remaining";
 const DEFAULT_FREE_DAILY_CALLS = 3;
@@ -38,10 +38,20 @@ export function utcDayStart(now: Date): Date {
   );
 }
 
-/** Counter store. count() returns null on error; record() returns false. */
+/**
+ * Counter store. reserve() atomically grants one free slot only while fewer
+ * than `limit` slots exist for `key` since `since`. Returns null on error.
+ * The Supabase store backs this with ONE Postgres RPC (x402_claim_free_call)
+ * that checks and inserts under pg_advisory_xact_lock, so concurrent calls
+ * cannot exceed the cap.
+ */
 export interface FreeTierStore {
-  count(key: string, since: Date): Promise<number | null>;
-  record(key: string, now: Date): Promise<boolean>;
+  reserve(
+    key: string,
+    since: Date,
+    limit: number,
+    now: Date
+  ): Promise<{ granted: boolean; used: number } | null>;
 }
 
 export async function hashClientIp(ip: string, salt?: string): Promise<string> {
@@ -60,37 +70,30 @@ export function supabaseFreeTierStore(
   // Anon cannot write the ledger, so the counter could never advance.
   if (creds.role !== "service") return null;
   return {
-    async count(key, since) {
-      const query = [
-        "automation_logs?select=id",
-        "workflow_name=eq.x402_free",
-        `payload=eq.${encodeURIComponent(key)}`,
-        `created_at=gte.${encodeURIComponent(since.toISOString())}`,
-        "limit=1000",
-      ].join("&");
-      const read = await readJson(fetchImpl, `${creds.url}/rest/v1/${query}`, creds.key);
-      if (!read.ok || !Array.isArray(read.body)) return null;
-      return read.body.length;
-    },
-    async record(key) {
+    async reserve(key, since, limit) {
       try {
-        const res = await fetchImpl(`${creds.url}/rest/v1/automation_logs`, {
+        const res = await fetchImpl(`${creds.url}/rest/v1/rpc/x402_claim_free_call`, {
           method: "POST",
-          headers: restHeaders(creds.key, {
-            "Content-Type": "application/json",
-            Prefer: "return=minimal",
-          }),
+          headers: restHeaders(creds.key, { "Content-Type": "application/json" }),
           body: JSON.stringify({
-            workflow_name: "x402_free",
-            trigger_type: "event",
-            status: "success",
-            payload: key,
+            p_key: key,
+            p_since: since.toISOString(),
+            p_limit: limit,
           }),
           signal: AbortSignal.timeout(8000),
         });
-        return res.ok;
+        if (!res.ok) return null;
+        const body = (await res.json()) as unknown;
+        const row = (Array.isArray(body) ? body[0] : body) as
+          | { granted?: unknown; used?: unknown }
+          | null
+          | undefined;
+        if (!row || typeof row.granted !== "boolean" || typeof row.used !== "number") {
+          return null;
+        }
+        return { granted: row.granted, used: row.used };
       } catch {
-        return false;
+        return null;
       }
     },
   };
@@ -117,12 +120,11 @@ export async function claimFreeCall(input: {
   if (!ip) return { free: false, remaining: null };
   try {
     const key = `ip:${await hashClientIp(ip, input.salt)}`;
-    const used = await input.store.count(key, utcDayStart(input.now));
-    if (used === null) return { free: false, remaining: null };
-    if (used >= input.limit) return { free: false, remaining: 0 };
-    const ok = await input.store.record(key, input.now);
-    if (!ok) return { free: false, remaining: null };
-    return { free: true, remaining: Math.max(0, input.limit - used - 1) };
+    const r = await input.store.reserve(key, utcDayStart(input.now), input.limit, input.now);
+    if (!r) return { free: false, remaining: null };
+    if (!r.granted) return { free: false, remaining: 0 };
+    // r.used counts this call's slot.
+    return { free: true, remaining: Math.max(0, input.limit - r.used) };
   } catch {
     return { free: false, remaining: null };
   }
