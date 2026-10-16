@@ -7,6 +7,7 @@ import { getBrandIdFromMetadata } from "@/lib/brand-billing";
 import { sendEmail } from "@/lib/email";
 import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "@/lib/dpp-loop";
 import { fulfillDppPaidSession } from "@/lib/dpp-fulfill-checkout";
+import { isServiceSku, planById, type PlanId } from "../../../../lib/plans";
 import {
   anchorStripeReversal,
   anchorStripeSale,
@@ -347,9 +348,13 @@ export async function POST(req: NextRequest) {
                     visitId ? String(visitId) : null
                   ),
                 })
-              : renderBillingEmail("subscription_confirmed", brand, {
-                  planName: plan || undefined,
-                });
+              : isServiceSku(plan)
+                ? renderBillingEmail("service_receipt", brand, {
+                    planName: planById(plan as PlanId)?.name || plan || undefined,
+                  })
+                : renderBillingEmail("subscription_confirmed", brand, {
+                    planName: plan || undefined,
+                  });
             await sendEmail({
               to: email,
               from: mail.from,

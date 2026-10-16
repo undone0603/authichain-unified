@@ -198,13 +198,14 @@ vi.mock("@/lib/ledger-service", () => ({
 }));
 
 vi.mock("@/lib/provisioning", () => ({ provisionPurchase: vi.fn() }));
+const mockRenderBillingEmail = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/billing-emails", () => ({
-  renderBillingEmail: () => ({
+  renderBillingEmail: mockRenderBillingEmail.mockImplementation(() => ({
     from: "billing@authichain.com",
     subject: "s",
     html: "<p>x</p>",
     text: "x",
-  }),
+  })),
 }));
 vi.mock("@/lib/brand-billing", () => ({
   getBrandIdFromMetadata: () => "authichain",
@@ -357,5 +358,67 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
         invoiceId: "in_cycle_001",
       })
     );
+  });
+});
+
+describe("POST /api/stripe/webhook checkout.session.completed email choice", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function sessionEvent(plan: string, id: string): any {
+    return {
+      id: `evt_${id}`,
+      type: "checkout.session.completed",
+      livemode: true,
+      data: {
+        object: {
+          id: `cs_${id}`,
+          mode: "payment",
+          customer: "cus_123",
+          subscription: null,
+          customer_email: "buyer@example.com",
+          amount_total: 0,
+          payment_status: "paid",
+          metadata: { plan },
+        },
+      },
+    };
+  }
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mockAfterCalls.length = 0;
+    db.seenEvent = null;
+    db.profile = { id: "prof_1" };
+    process.env.STRIPE_SECRET_KEY = "sk_test_dummy";
+    process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service_role_test";
+    const { provisionPurchase } = await import("@/lib/provisioning");
+    vi.mocked(provisionPurchase).mockResolvedValue({
+      profileId: "prof_1",
+      created: false,
+      status: "provisioned",
+    });
+  });
+
+  for (const plan of [
+    "battery_gap_report",
+    "battery_gap_report_extra",
+    "gov_provenance_pilot",
+    "musa_claim_file",
+    "musa_audit_bundle",
+  ]) {
+    it(`${plan}: sends service_receipt, not subscription_confirmed`, async () => {
+      await postInvoice(sessionEvent(plan, plan));
+      const types = mockRenderBillingEmail.mock.calls.map(c => c[0]);
+      expect(types).toContain("service_receipt");
+      expect(types).not.toContain("subscription_confirmed");
+    });
+  }
+
+  it("starter: still sends subscription_confirmed", async () => {
+    await postInvoice(sessionEvent("starter", "starter"));
+    const types = mockRenderBillingEmail.mock.calls.map(c => c[0]);
+    expect(types).toContain("subscription_confirmed");
+    expect(types).not.toContain("service_receipt");
   });
 });
