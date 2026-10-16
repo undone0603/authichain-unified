@@ -6,8 +6,8 @@
  * No facilitator URL, no private keys, no settle steps.
  *
  * payTo is the owner-authorized treasury / tokenomics EOA
- * (X402_PUBLISHED_PAY_TO = 0xaebf…e437), not the $QRON holder EOA
- * (0x5db5…), not the NFT deployer, and not the Coinbase Smart Wallet.
+ * (X402_PUBLISHED_PAY_TO = 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2), never the $QRON
+ * contract (0xAebf…E437), not the NFT deployer, and not the Coinbase Smart Wallet.
  * Asset is Circle USDC on Base — not $QRON. Map:
  * docs/strategy/WEB3_IDENTITY.md. Do not rebind away from that treasury.
  *

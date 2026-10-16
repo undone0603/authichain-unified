@@ -14,8 +14,8 @@
  *      are set, and settles only after that read. Otherwise it is forwarded
  *      over VERIFY_APP, or refused 503 before settlement when neither is set.
  *
- * Do not rebind X402_PAY_TO away from the owner-authorized treasury
- * 0xaebf…e437. Do not rebind
+ * Do not rebind X402_PAY_TO away from the owner-authorized payTo EOA
+ * 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2. Do not rebind
  * X402_FACILITATOR_URL / X402_USDC_ASSET.
  *
  * Facilitator is optional. Without X402_FACILITATOR_URL the health report is
@@ -38,6 +38,7 @@ import {
 } from "../src/lib/x402";
 import {
   resolvePaidSealVerify,
+  sealLookupCredentials,
   type SealLookupEnv,
 } from "../src/lib/paid-seal-verify";
 import { growthDiscovery, x402ListingPack } from "../src/lib/x402-growth";
@@ -55,6 +56,18 @@ function verifyAppBinding(env: unknown): X402VerifyBinding | undefined {
   const binding = (env as { VERIFY_APP?: X402VerifyBinding } | undefined)
     ?.VERIFY_APP;
   return typeof binding?.fetch === "function" ? binding : undefined;
+}
+
+/**
+ * Which registry path this worker holds for a paid verify, matching the order
+ * agentVerify uses: auth_seals read first, then the VERIFY_APP forward.
+ */
+export function paidVerifyPath(
+  env?: X402Bindings
+): "seal_lookup" | "verify_app" | undefined {
+  if (sealLookupCredentials(env)) return "seal_lookup";
+  if (verifyAppBinding(env)) return "verify_app";
+  return undefined;
 }
 
 function hydrateX402(env?: X402Bindings) {
@@ -85,6 +98,7 @@ function healthEnv(env?: X402Bindings): X402HealthEnv {
     X402_PRICE_USD: env?.X402_PRICE_USD || process.env.X402_PRICE_USD,
     X402_DAILY_CAP_USD:
       env?.X402_DAILY_CAP_USD || process.env.X402_DAILY_CAP_USD,
+    X402_PAID_VERIFY_PATH: paidVerifyPath(env),
   };
 }
 

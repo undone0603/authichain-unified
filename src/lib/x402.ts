@@ -10,9 +10,9 @@
  * `$QRON` and any governance token stay off this rail (see
  * docs/strategy/AGENT_TOKENOMICS_x402.md). Wallets vs rails:
  * docs/strategy/WEB3_IDENTITY.md. Do not rebind X402_PAY_TO away from
- * the owner-authorized treasury 0xaebf…e437.
+ * the owner-authorized treasury 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2.
  * Do not rebind X402_FACILITATOR_URL or X402_USDC_ASSET. payTo is the
- * tokenomics EOA (0xaebf…e437), not the $QRON holder EOA (0x5db5…), not
+ * owner's tokenomics EOA (0x5db511706FB6317cd23A7655F67450c5AC6e6AA2, also the $QRON holder), not
  * the NFT deployer EOA (0xbad4…), and not the Coinbase Smart Wallet.
  *
  * Pure helpers here are fully unit-tested; settlement verification has a single
@@ -169,8 +169,8 @@ export const BASE_USDC_ASSET = BASE_USDC;
 
 /**
  * Live published X402_PAY_TO — owner-authorized treasury / tokenomics EOA
- * 0xaebf…e437. Distinct from the $QRON
- * holder EOA (0x5db5…) and the NFT deployer EOA (0xbad4…). Canonical map:
+ * 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2. Never the $QRON
+ * ERC-20 contract (0xAebf…E437) or the NFT deployer EOA (0xbad4…). Canonical map:
  * docs/strategy/WEB3_IDENTITY.md. Do not rebind away from this address.
  * Runtime health still reads the Worker/env binding; this constant
  * documents the live value. It is NOT a fallback when X402_PAY_TO is
@@ -658,6 +658,11 @@ export const X402_REGISTRY_NOT_BOUND = {
  */
 export const X402_PAID_VERIFY_BOUND: boolean = false;
 
+/** True only for the two registry paths the paid route really implements. */
+export function x402PaidVerifyPathBound(path?: string): boolean {
+  return path === "seal_lookup" || path === "verify_app";
+}
+
 export type X402PaidVerifyStatus = {
   bound: boolean;
   status: "bound" | "registry_not_bound";
@@ -780,6 +785,12 @@ export type X402HealthEnv = {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  /**
+   * Runtime-derived, never a configured secret: the worker sets this per
+   * request to "seal_lookup" or "verify_app" when it actually holds a registry
+   * path for paid verify. Absent = registry_not_bound.
+   */
+  X402_PAID_VERIFY_PATH?: string;
   // Index signature so Node's ProcessEnv (the default arg) stays assignable.
   // Types-only: no runtime behavior change.
   [key: string]: string | undefined;
@@ -892,7 +903,9 @@ export async function x402HealthReport(
   if (facilitator.configured && !facilitator.reachable) {
     warnings.push("Facilitator configured but unreachable.");
   }
-  const paidVerify = x402PaidVerifyStatus();
+  const paidVerify = x402PaidVerifyStatus(
+    X402_PAID_VERIFY_BOUND || x402PaidVerifyPathBound(env.X402_PAID_VERIFY_PATH)
+  );
   if (!paidVerify.bound) warnings.push(paidVerify.detail);
 
   return {
