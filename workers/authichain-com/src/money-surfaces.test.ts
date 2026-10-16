@@ -112,3 +112,13 @@ test("wording sweep 2026-10-16: made-in-america links gov pilot and does not cla
   assert.equal(html.includes("A scan returns the chain of custody"), false);
   assert.ok(html.includes("Public scan verification is in development."));
 });
+
+test("made-in-america: RES-39 verified EO 14392 and TouchTunes wording", () => {
+  const html = renderMadeInAmericaPage();
+  assert.ok(html.includes("Executive Order 14392 (March 13, 2026) directs the FTC to prioritize, where appropriate, enforcement against unlawful Made in America claims."));
+  assert.ok(html.includes("$625,000 stipulated order for consumer redress against TouchTunes Music Company, LLC"));
+  assert.ok(html.includes("Signed March 13, 2026. Directs the FTC to prioritize enforcement against unlawful American-origin claims and to consider marketplace verification rules. It is context for the sweep, not a product certification or a seller standard."));
+  assert.ok(!html.includes("told the FTC to prioritize truthful Made in America advertising"));
+  assert.ok(!html.includes("Directs agencies on Made in America advertising priority"));
+  assert.ok(!/\d+ FR \d+/.test(html));
+});
