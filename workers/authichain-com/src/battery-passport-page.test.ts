@@ -127,7 +127,8 @@ describe("battery passport offer page", () => {
 
   it("answers the legal FAQ without claiming to issue a passport", () => {
     // Wording sweep 2026-10-16: the $299 is a self-serve tool; the $950 report is the readiness assessment.
-    expect(html).not.toContain("Not an assessment");
+    expect(html).toContain("self-serve tool, not an assessment:");
+    expect(html).toContain("You do the work. Not an assessment, not legal advice, not a certification.");
     expect(html).toContain("not a conformity assessment");
     expect(html).toContain("The economic operator placing the battery on the EU market issues the passport.");
     // RESEARCH-GATE fix 13 (PM-331): the $299 is a workspace, not an assessment.
