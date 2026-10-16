@@ -39,6 +39,14 @@ create index if not exists authichain_attestation_records_gtin_idx
 create index if not exists authichain_attestation_records_serial_idx
   on public.authichain_attestation_records (serial) where serial is not null;
 
+-- The existing recordStatusEvent() uses ON CONFLICT (issuer_id,idempotency_key)
+-- without a predicate. PostgreSQL cannot infer a partial unique index for that
+-- conflict target, so use a full unique index; standard UNIQUE allows multiple
+-- NULL idempotency keys and still guarantees issuer-scoped retry idempotency.
+drop index if exists public.attestation_status_events_issuer_idempotency_idx;
+create unique index if not exists attestation_status_events_issuer_idempotency_idx
+  on public.attestation_status_events (issuer_id, idempotency_key);
+
 alter table public.authichain_attestation_records enable row level security;
 grant select on table public.authichain_attestation_records to anon, authenticated;
 revoke insert, update, delete on table public.authichain_attestation_records from anon, authenticated;
