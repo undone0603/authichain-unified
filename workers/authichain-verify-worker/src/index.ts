@@ -56,7 +56,8 @@ function deriveInputIdentifier(input: string): string {
 }
 
 interface SupabaseProduct {
-  id: number;
+  /** products.id is an integer; auth_seals.id is a UUID string. */
+  id: number | string;
   product_identifier: string;
   is_active: boolean;
   name?: string;
@@ -117,6 +118,7 @@ export async function lookupSeal(
 /** A signed AuthiChain seal, shaped like a product row for the kernel. */
 export function sealAsProduct(seal: AuthSealRow): SupabaseProduct {
   return {
+    id: seal.id,
     product_identifier: seal.id,
     is_active: true,
     name: seal.label || seal.product_id,
