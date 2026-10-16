@@ -137,6 +137,21 @@ describe("x402 free daily calls", () => {
     }
   });
 
+  it("daily key: same IP, same UTC day -> same key; different day -> different key", async () => {
+    const { hashClientIp } = await import("../../../src/lib/x402-free-tier");
+    const ip = "203.0.113.7";
+    const a = await hashClientIp(ip, "test-salt", new Date("2026-10-16T00:01:00Z"));
+    const b = await hashClientIp(ip, "test-salt", new Date("2026-10-16T23:59:00Z"));
+    const c = await hashClientIp(ip, "test-salt", new Date("2026-10-17T00:01:00Z"));
+    expect(a).toBe(b);
+    expect(a).not.toBe(c);
+    expect(a).toMatch(/^[0-9a-f]{32}$/);
+    const store = memStore();
+    await tryHandleX402(call(ip), ENV, undefined, { freeStore: store, now: new Date("2026-10-16T12:00:00Z"), fetchImpl: sealFetch });
+    await tryHandleX402(call(ip), ENV, undefined, { freeStore: store, now: new Date("2026-10-17T12:00:00Z"), fetchImpl: sealFetch });
+    expect(store.rows[0].key).not.toBe(store.rows[1].key);
+  });
+
   it("missing CF-Connecting-IP pays", async () => {
     const r = new Request("https://authichain.com/api/x402", { method: "POST", body: JSON.stringify({ sealId: SEAL }) });
     expect((await tryHandleX402(r, ENV, undefined, { freeStore: memStore(), fetchImpl: sealFetch }))!.status).toBe(402);

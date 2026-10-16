@@ -54,8 +54,10 @@ export interface FreeTierStore {
   ): Promise<{ granted: boolean; used: number } | null>;
 }
 
-export async function hashClientIp(ip: string, salt: string): Promise<string> {
-  const data = new TextEncoder().encode(`${salt}:${ip}`);
+/** Daily key: same IP hashes differently each UTC day (YYYY-MM-DD). */
+export async function hashClientIp(ip: string, salt: string, now: Date): Promise<string> {
+  const day = utcDayStart(now).toISOString().slice(0, 10);
+  const data = new TextEncoder().encode(`${salt}:${day}:${ip}`);
   const digest = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(digest))
     .map(b => b.toString(16).padStart(2, "0"))
@@ -122,7 +124,7 @@ export async function claimFreeCall(input: {
   const ip = (input.request.headers.get("CF-Connecting-IP") || "").trim();
   if (!ip) return { free: false, remaining: null };
   try {
-    const key = `ip:${await hashClientIp(ip, salt)}`;
+    const key = `ip:${await hashClientIp(ip, salt, input.now)}`;
     const r = await input.store.reserve(key, utcDayStart(input.now), input.limit, input.now);
     if (!r) return { free: false, remaining: null };
     if (!r.granted) return { free: false, remaining: 0 };
