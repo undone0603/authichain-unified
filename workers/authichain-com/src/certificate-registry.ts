@@ -155,7 +155,8 @@ async function handlePublishedAttestationLookup(
     return json(409, {
       error: "ambiguous_identifier",
       source: "authichain_attestation_records",
-      match_count: records.length,
+      candidate_count: records.length,
+      more_matches_may_exist: true,
       candidates: records.map(row => ({
         attestation_id: typeof row.attestation_id === "string" ? row.attestation_id : null,
         seal_id: typeof row.seal_id === "string" ? row.seal_id : null,
