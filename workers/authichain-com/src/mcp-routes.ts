@@ -554,6 +554,86 @@ async function lookupAuthSeal(
   }
 }
 
+
+type PublishedAttestationRegistryRow = {
+  attestation_id?: unknown;
+  seal_id?: unknown;
+  product_id?: unknown;
+  batch_id?: unknown;
+  brand?: unknown;
+  object_id?: unknown;
+  product_class?: unknown;
+  gtin?: unknown;
+  serial?: unknown;
+  lot?: unknown;
+  issuer_id?: unknown;
+  issuer_kid?: unknown;
+  decision?: unknown;
+  payload?: unknown;
+  jws?: unknown;
+  record_hash?: unknown;
+  published_at?: unknown;
+};
+
+type PublishedAttestationLookup =
+  | { kind: "found"; row: PublishedAttestationRegistryRow }
+  | { kind: "not_found" | "not_configured" | "unavailable" | "invalid_identifier" | "ambiguous"; candidates?: PublishedAttestationRegistryRow[] };
+
+/** Resolve an exact identifier against published signed records only. */
+async function lookupPublishedAttestation(
+  assetId: string,
+  env?: X402Env,
+): Promise<PublishedAttestationLookup> {
+  const baseUrl = (env?.SUPABASE_URL || "").trim().replace(/\\/+$/, "");
+  const anonKey = (env?.SUPABASE_ANON_KEY || "").trim();
+  if (!baseUrl || !/^https:\/\//i.test(baseUrl) || !anonKey) {
+    return { kind: "not_configured" };
+  }
+  if (!SAFE_REGISTRY_IDENTIFIER.test(assetId)) {
+    return { kind: "invalid_identifier" };
+  }
+
+  const query = new URLSearchParams({
+    select: "attestation_id,seal_id,product_id,batch_id,brand,object_id,product_class,gtin,serial,lot,issuer_id,issuer_kid,decision,payload,jws,record_hash,published_at",
+    published: "eq.true",
+    limit: "2",
+    or: `(attestation_id.eq.${assetId},seal_id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId},object_id.eq.${assetId},gtin.eq.${assetId},serial.eq.${assetId},lot.eq.${assetId})`,
+  });
+  try {
+    const response = await fetch(
+      `${baseUrl}/rest/v1/authichain_attestation_records?${query.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!response.ok) return { kind: "unavailable" };
+    const rows: unknown = await response.json();
+    if (!Array.isArray(rows)) return { kind: "unavailable" };
+    if (rows.length === 0) return { kind: "not_found" };
+    if (rows.length > 1) return { kind: "ambiguous", candidates: rows as PublishedAttestationRegistryRow[] };
+    const row = rows[0] as PublishedAttestationRegistryRow;
+    if (
+      !row || typeof row !== "object" ||
+      typeof row.attestation_id !== "string" ||
+      typeof row.jws !== "string" ||
+      typeof row.record_hash !== "string" ||
+      !row.payload || typeof row.payload !== "object" ||
+      row.issuer_id !== "https://authichain.com"
+    ) {
+      return { kind: "unavailable" };
+    }
+    return { kind: "found", row };
+  } catch {
+    return { kind: "unavailable" };
+  }
+}
+
 /** Registry-backed MCP lookup; all answers remain explicitly non-verified. */
 async function queryProvenanceWithRegistry(
   assetIdRaw: unknown,
@@ -563,7 +643,83 @@ async function queryProvenanceWithRegistry(
   const fallback = queryProvenance(assetId);
   if (!assetId) return fallback;
 
+  const signedLookup = await lookupPublishedAttestation(assetId, env);
+  if (signedLookup.kind === "found") {
+    const row = signedLookup.row;
+    return {
+      ...fallback,
+      status: "published_attestation",
+      registered: true,
+      verified: false,
+      authenticityScore: 0,
+      product: {
+        id: typeof row.product_id === "string" ? row.product_id : assetId,
+        sealId: typeof row.seal_id === "string" ? row.seal_id : null,
+        batchId: typeof row.batch_id === "string" ? row.batch_id : null,
+        brand: typeof row.brand === "string" ? row.brand : null,
+        source: "authichain_attestation_records",
+      },
+      signedRecord: {
+        attestation_id: row.attestation_id,
+        issuer_id: row.issuer_id,
+        issuer_kid: row.issuer_kid,
+        decision: row.decision,
+        payload: row.payload,
+        jws: row.jws,
+        record_hash: row.record_hash,
+        published_at: row.published_at,
+        source: "authichain_attestation_records",
+      },
+      registry: {
+        ...fallback.registry,
+        state: "published_record_found",
+        source: "authichain_attestation_records",
+        semantics: "published issuer-signed claim; not proof of physical authenticity",
+        note: "A published JWS is retrieved, not verified by this lookup. Use verify_attestation to check signature, issuer trust, lifecycle, and expiry.",
+      },
+      verification: {
+        signature: "not_checked",
+        issuerTrust: "not_checked",
+        revocation: "not_checked",
+        physicalBinding: "not_checked",
+      },
+    };
+  }
+  if (signedLookup.kind === "ambiguous") {
+    return {
+      ...fallback,
+      status: "ambiguous_identifier",
+      verified: false,
+      registry: {
+        ...fallback.registry,
+        state: "ambiguous",
+        source: "authichain_attestation_records",
+        note: "This identifier matches multiple published attestations; retry with a unique attestation ID or seal ID.",
+      },
+      candidates: (signedLookup.candidates ?? []).map(row => ({
+        attestation_id: typeof row.attestation_id === "string" ? row.attestation_id : null,
+        seal_id: typeof row.seal_id === "string" ? row.seal_id : null,
+        product_id: typeof row.product_id === "string" ? row.product_id : null,
+        batch_id: typeof row.batch_id === "string" ? row.batch_id : null,
+      })),
+    };
+  }
+
   const lookup = await lookupAuthSeal(assetId, env);
+  if (signedLookup.kind === "unavailable") {
+    if (lookup.kind !== "found") {
+      return {
+        ...fallback,
+        status: "registry_unavailable",
+        verified: false,
+        registry: {
+          ...fallback.registry,
+          state: "signed_record_registry_unavailable",
+          note: "The signed-record registry could not be read. No conclusion about signed-record existence or verification was reached.",
+        },
+      };
+    }
+  }
   if (lookup.kind === "not_configured") {
     return {
       ...fallback,
@@ -624,7 +780,7 @@ async function queryProvenanceWithRegistry(
         state: "available",
         source: "auth_seals",
         semantics: "registered only; no signature or physical-authenticity verdict",
-        note: "A matching auth_seals row proves registration only. Use verify_record with signed record and anchor JSON for cryptographic verification.",
+        note: signedLookup.kind === "unavailable" ? "A seal is registered, but the signed-record registry is unavailable. This is not an authenticity verdict." : signedLookup.kind === "not_found" ? "A matching auth_seals row proves registration only; no published signed attestation was found." : "A matching auth_seals row proves registration only; signed-record status remains unverified.",
       },
       verification: {
         signature: "not_checked",
@@ -646,6 +802,19 @@ async function queryProvenanceWithRegistry(
     };
   }
 
+  if (signedLookup.kind === "unavailable") {
+    return {
+      ...fallback,
+      status: "registry_unavailable",
+      registered: false,
+      verified: false,
+      registry: {
+        ...fallback.registry,
+        state: "signed_record_registry_unavailable",
+        note: "The signed-record registry could not be read. No conclusion about the signed record was reached.",
+      },
+    };
+  }
   return {
     ...fallback,
     status: "not_registered",
@@ -655,7 +824,8 @@ async function queryProvenanceWithRegistry(
       ...fallback.registry,
       state: "available",
       source: "auth_seals",
-      note: "No matching auth_seals row was found. This is a registry lookup result, not a cryptographic verification result.",
+      signedRecordState: signedLookup.kind,
+      note: "No matching published signed attestation or auth_seals row was found. This is a registry lookup result, not a cryptographic verification result.",
     },
   };
 }
