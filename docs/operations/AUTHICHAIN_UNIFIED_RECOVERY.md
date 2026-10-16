@@ -31,6 +31,21 @@ The project has substantial existing implementation. It is not production-comple
 - **Deployment gates:** inspect `.github/workflows/deploy-cloudflare.yml`, `deploy-workers.yml`, the current Worker bindings, and workflow variables/secrets in GitHub/Cloudflare. The repository connection used for this audit cannot read secret values; never infer a secret is set from its name appearing in source.
 - **History recovery:** #1869 contains the registry route and MCP recovery changes; #1866 documents MCP registry/version drift and the dangerous legacy seed-data mismatch. Other archived branches and old repos are forensic sources only until a reviewed source/test change is deliberately ported.
 
+## Cross-repository and history inventory
+
+The repository search found these related codebases. They are retained here so future recovery work has one place to start; **the current production stack remains `authichain-unified`**.
+
+- [`undone0603/authichain-unified`](https://github.com/undone0603/authichain-unified) — active canonical monorepo and the only repo changed by PR #1869.
+- [`undone0603/authichain-com`](https://github.com/undone0603/authichain-com) — archived snapshot; its README explicitly says **superseded / do not deploy** and points back to `authichain-unified/workers/authichain-com`.
+- [`undone0603/authichain_premium`](https://github.com/undone0603/authichain_premium) — archived historical NFT marketplace prototype; README says **superseded / not production**.
+- [`undone0603/authichain-os`](https://github.com/undone0603/authichain-os) — archived stub with a two-line README; no missing application implementation was recoverable from its README.
+- [`undone0603/authichain-spec`](https://github.com/undone0603/authichain-spec) — active protocol/reference-verifier repository. Its README explains that the bundled demo record verifies as `valid-unanchored`; use its spec and vectors as protocol reference, not as proof that a customer product has been signed or certified.
+- [`undone0603/authichain-mcp-server`](https://github.com/undone0603/authichain-mcp-server) — separate early-stage MCP wrapper. Its README itself says certificate issuing is still in development and mint-certificate is unavailable. Do not deploy it as a second public MCP server instead of the canonical Worker.
+- [`AuthiChain2026/authichain-mcp-server`](https://github.com/AuthiChain2026/authichain-mcp-server), [`AuthiChain2026/AuthiChain`](https://github.com/AuthiChain2026/AuthiChain), [`AuthiChain2026/authichain-os`](https://github.com/AuthiChain2026/authichain-os), [`undone0603/AuthiChain-1`](https://github.com/undone0603/AuthiChain-1), [`undone0603/undone0603.github.io`](https://github.com/undone0603/undone0603.github.io), and [`Z-kie/authichain-landing`](https://github.com/Z-kie/authichain-landing) were also discoverable in repository search. Some are read-only from this connection; several have duplicate/starter branding or claims that are not production evidence. Their contents/settings are not being merged or deployed without path-by-path review.
+- Search could see the archived [`undone0603/authichain-protocol`](https://github.com/undone0603/authichain-protocol) metadata, but the GitHub contents API returned 404 for its README. The monorepo already contains `protocol/verifier.mjs` and `protocol/examples/`; the accessible `authichain-spec` repo is the alternate reference. No unique production signing/publishing file was proven to be missing from the canonical repo by that 404 alone.
+
+**Recovery decision:** port only source that has a clear authoritative role, known license, tests, correct secret boundary, and deployment path. Keep the old/duplicate repos as forensic references; copying their marketing claims, seed data, mock integrations, demo keys, or independent deploy paths would make the stack less trustworthy, not more complete.
+
 ## Work recovered in PR #1869
 
 Branch: `activate/registry-backed-agent-verification`  
