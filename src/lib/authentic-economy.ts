@@ -8,7 +8,7 @@
  *
  * The 0.05 QRON figure coinciding with x402's $0.05 USDC is not the same rail.
  * Do not add $QRON to x402 accepts[]. Do not rebind X402_PAY_TO away from the
- * owner-authorized treasury 0xaebf…e437.
+ * owner-authorized treasury 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2.
  * Runtime x402 still reads env X402_PAY_TO — published payTo here is identity,
  * not a 503/402 fallback.
  */

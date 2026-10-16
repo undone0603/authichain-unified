@@ -680,3 +680,13 @@ describe("x402OpenApiDocument", () => {
     );
   });
 });
+
+describe("x402PaidVerifyPathBound", () => {
+  it("accepts only the two real registry paths", async () => {
+    const { x402PaidVerifyPathBound } = await import("./x402");
+    expect(x402PaidVerifyPathBound("seal_lookup")).toBe(true);
+    expect(x402PaidVerifyPathBound("verify_app")).toBe(true);
+    expect(x402PaidVerifyPathBound("yes")).toBe(false);
+    expect(x402PaidVerifyPathBound(undefined)).toBe(false);
+  });
+});

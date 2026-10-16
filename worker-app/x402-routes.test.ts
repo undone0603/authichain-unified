@@ -269,3 +269,39 @@ describe("POST /api/x402 with the VERIFY_APP binding", () => {
     }
   });
 });
+
+describe("GET /api/x402/health paidVerify reflects the worker's registry path", () => {
+  type H = { paidVerify: { bound: boolean; status: string } };
+  const get = async (env?: Record<string, unknown>) =>
+    (await (await app().request("/api/x402/health", {}, env)).json()) as H;
+
+  it("is registry_not_bound with no seal lookup and no VERIFY_APP", async () => {
+    const body = await get({});
+    expect(body.paidVerify.bound).toBe(false);
+    expect(body.paidVerify.status).toBe("registry_not_bound");
+  });
+
+  it("is bound when VERIFY_APP is a service binding", async () => {
+    const body = await get({
+      VERIFY_APP: { fetch: async () => new Response("{}") },
+    });
+    expect(body.paidVerify).toMatchObject({ bound: true, status: "bound" });
+  });
+
+  it("is bound when an https SUPABASE_URL and key are set", async () => {
+    const body = await get({
+      SUPABASE_URL: "https://example.supabase.co",
+      SUPABASE_ANON_KEY: "anon-test",
+    });
+    expect(body.paidVerify.bound).toBe(true);
+  });
+
+  it("ignores a non-https URL and a VERIFY_APP without fetch", async () => {
+    const body = await get({
+      SUPABASE_URL: "http://example.supabase.co",
+      SUPABASE_ANON_KEY: "anon-test",
+      VERIFY_APP: {},
+    });
+    expect(body.paidVerify.bound).toBe(false);
+  });
+});

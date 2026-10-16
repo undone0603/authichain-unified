@@ -20,7 +20,7 @@
  *      registry_not_bound before any settlement (X402_REGISTRY_NOT_BOUND).
  *
  * Do not rebind X402_PAY_TO away from the owner-authorized treasury
- * 0xaebf…e437. Do not rebind
+ * 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2. Do not rebind
  * X402_FACILITATOR_URL / X402_USDC_ASSET.
  */
 import {
