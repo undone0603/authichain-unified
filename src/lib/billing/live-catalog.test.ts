@@ -7,6 +7,7 @@ import {
   isFounderEmail,
   isPublicPlanId,
   publicCheckoutHref,
+  resolveCheckoutPlanId,
 } from "./live-catalog";
 import { PUBLIC_PLAN_IDS, planByStripePriceId } from "../plans";
 
@@ -37,6 +38,36 @@ describe("catalog freeze 2026-09-28", () => {
   it("does not grant unlisted $1 or Seal $99", () => {
     expect(grantForPriceId(UNLISTED_SMOKE.first_dollar_human)).toBeNull();
     expect(grantForPriceId(UNLISTED_SMOKE.seal_monthly)).toBeNull();
+  });
+
+  it("resolves a $29 Payment Link with no metadata to starter", () => {
+    expect(
+      resolveCheckoutPlanId({ plan: null, priceId: null, amountTotal: 2900 })
+    ).toBe("starter");
+    expect(
+      resolveCheckoutPlanId({
+        plan: "",
+        priceId: LIVE_PRICE_MAP.starter.priceId,
+        amountTotal: null,
+      })
+    ).toBe("starter");
+    expect(
+      resolveCheckoutPlanId({
+        plan: "starter",
+        priceId: null,
+        amountTotal: null,
+      })
+    ).toBe("starter");
+  });
+
+  it("does not guess a plan when the amount is shared or unlisted", () => {
+    expect(resolveCheckoutPlanId({ amountTotal: 29900 })).toBeNull();
+    expect(
+      resolveCheckoutPlanId({ priceId: UNLISTED_SMOKE.first_dollar_human })
+    ).toBeNull();
+    expect(resolveCheckoutPlanId({ plan: "studio", amountTotal: 2900 })).toBe(
+      "starter"
+    );
   });
 
   it("grants starter 100 and launch 100", () => {
