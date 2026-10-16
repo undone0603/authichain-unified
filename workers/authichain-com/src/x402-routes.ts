@@ -58,6 +58,8 @@ export type X402Env = X402EnvVars &
   SealLookupEnv & {
     X402_FREE_DAILY_CALLS?: string;
     X402_FREE_IP_SALT?: string;
+    /** [vars] in wrangler.toml; edge router derives the same via paidVerifyPath. */
+    X402_PAID_VERIFY_PATH?: string;
   };
 
 /** Test seams: inject the free-tier counter store and clock. */
@@ -169,6 +171,7 @@ function healthEnv(env?: X402Env): X402HealthEnv {
     X402_PRICE_USD: env?.X402_PRICE_USD || process.env.X402_PRICE_USD,
     X402_DAILY_CAP_USD:
       env?.X402_DAILY_CAP_USD || process.env.X402_DAILY_CAP_USD,
+    X402_PAID_VERIFY_PATH: env?.X402_PAID_VERIFY_PATH,
   };
 }
 
