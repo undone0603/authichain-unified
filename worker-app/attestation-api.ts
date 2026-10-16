@@ -473,10 +473,16 @@ export function registerAttestationApi<
       return c.json({ error: issuerState.error }, issuerState.status, NO_STORE);
     }
     const issuerNow = Date.now();
+    const issuerValidFrom = Date.parse(issuerState.issuer.validFrom);
+    const issuerValidUntil = issuerState.issuer.validUntil
+      ? Date.parse(issuerState.issuer.validUntil)
+      : null;
     if (
       issuerState.issuer.status !== "trusted" ||
-      Date.parse(issuerState.issuer.validFrom) > issuerNow ||
-      (issuerState.issuer.validUntil && Date.parse(issuerState.issuer.validUntil) <= issuerNow)
+      !Number.isFinite(issuerValidFrom) ||
+      issuerValidFrom > issuerNow ||
+      (issuerValidUntil !== null &&
+        (!Number.isFinite(issuerValidUntil) || issuerValidUntil <= issuerNow))
     ) {
       return c.json({ error: "issuer is not currently trusted for publication" }, 403, NO_STORE);
     }
