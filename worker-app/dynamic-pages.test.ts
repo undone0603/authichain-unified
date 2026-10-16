@@ -214,6 +214,35 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("Product Not Found");
   });
 
+  it("returns a retryable 503 with Retry-After when the lookup errors", async () => {
+    (getCertificateByNumber as any).mockRejectedValue(new Error("db down"));
+    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+
+    const res = await app.request("/p/CERT-ERR", {}, makeEnv() as any);
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get("retry-after")).toBe("30");
+    expect(createHyperdriveRequestDb).toHaveBeenCalled();
+  });
+
+  it("returns a retryable 503 (not 404) when the connect times out", async () => {
+    vi.useFakeTimers();
+    try {
+      (createHyperdriveRequestDb as any).mockReturnValueOnce({
+        db: {},
+        connect: () => new Promise(() => {}),
+        close: vi.fn().mockResolvedValue(undefined),
+      });
+      const pending = app.request("/p/CERT-SLOW", {}, makeEnv() as any);
+      await vi.advanceTimersByTimeAsync(3000);
+      const res = await pending;
+      expect(res.status).toBe(503);
+      expect(res.headers.get("retry-after")).toBe("30");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {
     const res = await app.request("/p/%zz", {}, makeEnv() as any);
     const body = await res.text();
