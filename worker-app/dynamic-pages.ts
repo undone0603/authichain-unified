@@ -145,7 +145,7 @@ function renderSeoHubHtml(page: SeoPage, pathname: string): string {
 function htmlResponse(
   c: Context,
   body: string,
-  status: 200 | 400 | 404 | 500
+  status: 200 | 400 | 404 | 500 | 503
 ): Response {
   return c.html(body, status);
 }
@@ -267,6 +267,7 @@ function certStatusLabel(cert: { status?: string | null } | null | undefined): {
 
 async function renderProductPassport(c: Context): Promise<Response> {
   const { pathname } = new URL(c.req.url);
+  let dbHandle: ReturnType<typeof createHyperdriveRequestDb> | undefined;
 
   try {
     // Extraction+decode lives inside the try: decodeURIComponent throws
@@ -295,25 +296,14 @@ async function renderProductPassport(c: Context): Promise<Response> {
       return htmlResponse(c, renderSeoHubHtml(seoPage, pathname), 200);
     }
 
-    const db = getHyperdriveDb(c.env as any);
-    const result = await new Promise<
-      Awaited<ReturnType<typeof findPassportBySerial>>
-    >((resolve, reject) => {
-      const timer = setTimeout(
-        () => reject(new Error("passport-lookup-timeout")),
-        2500
-      );
-      findPassportBySerial(db, serial).then(
-        value => {
-          clearTimeout(timer);
-          resolve(value);
-        },
-        err => {
-          clearTimeout(timer);
-          reject(err);
-        }
-      );
-    });
+    // Same per-request pg.Client pattern as /verify: connect + every query
+    // share one 2.5s deadline, and the client is closed in finally.
+    const withLookupTimeout = makeVerifyDeadline();
+    dbHandle = createHyperdriveRequestDb(c.env as any);
+    await withLookupTimeout(dbHandle.connect());
+    const result = await withLookupTimeout(
+      findPassportBySerial(dbHandle.db, serial)
+    );
 
     if (!result) {
       return htmlResponse(
@@ -379,19 +369,36 @@ async function renderProductPassport(c: Context): Promise<Response> {
       200
     );
   } catch (err) {
-    console.error("[dynamic-pages] /p lookup failed", err);
-    if (err instanceof Error && err.message === "passport-lookup-timeout") {
-      return htmlResponse(
-        c,
-        notFoundHtml(
-          "Product Not Found",
-          "The registry lookup timed out. Publish a StrainChain passport from the live Payment Link on /pricing.",
-          pathname
-        ),
-        404
-      );
+    const e = err as { message?: string; cause?: { code?: string } };
+    const detail = {
+      message: e?.message ?? String(err),
+      causeCode: e?.cause?.code ?? null,
+    };
+    const timedOut =
+      err instanceof Error && err.message === "VERIFY_LOOKUP_TIMEOUT";
+    if (timedOut) {
+      console.warn("[dynamic-pages] /p lookup timed out", detail);
+    } else {
+      console.error("[dynamic-pages] /p lookup failed", detail);
     }
-    return serveSpaShell(c);
+    // Malformed percent-encoding is bad input, not a backend failure.
+    if (err instanceof URIError) return serveSpaShell(c);
+    // Timeout or connection/query error: we don't know whether the record
+    // exists, so answer a retryable 503 (404 only when the lookup succeeded
+    // and found nothing).
+    c.header("Retry-After", "30");
+    c.header("Cache-Control", "no-store");
+    return htmlResponse(
+      c,
+      notFoundHtml(
+        "Registry Temporarily Unavailable",
+        "The AuthiChain registry lookup did not complete. Please try again in a moment.",
+        pathname
+      ),
+      503
+    );
+  } finally {
+    if (dbHandle) closeVerifyDb(c, dbHandle);
   }
 }
 
