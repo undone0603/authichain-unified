@@ -308,6 +308,36 @@ describe("tryHandleGatedCheckout — POST", () => {
     expect(success).toContain("session_id={CHECKOUT_SESSION_ID}");
   });
 
+  it("Starter carries plan metadata on the session and the PaymentIntent", () => {
+    const body = buildGatedSessionBody({
+      plan: planById("starter")!,
+      email: "a@b.co",
+      fields: new URLSearchParams({ visit_id: "chk_starter_2" }),
+      successOrigin: "https://authichain.com",
+    });
+    expect(body.get("mode")).toBe("payment");
+    expect(body.get("metadata[plan]")).toBe("starter");
+    expect(body.get("metadata[stripe_price_id]")).toBe(
+      planById("starter")!.stripe_price_id
+    );
+    expect(body.get("payment_intent_data[metadata][plan]")).toBe("starter");
+    expect(body.get("payment_intent_data[metadata][stripe_price_id]")).toBe(
+      planById("starter")!.stripe_price_id
+    );
+    expect(body.get("subscription_data[metadata][plan]")).toBeNull();
+  });
+
+  it("does not add PaymentIntent metadata to non-Starter plans", () => {
+    for (const id of ["creator", "dpp_readiness", "qron_launch"] as const) {
+      const body = buildGatedSessionBody({
+        plan: planById(id)!,
+        email: "a@b.co",
+        fields: new URLSearchParams(),
+      });
+      expect(body.get("payment_intent_data[metadata][plan]")).toBeNull();
+    }
+  });
+
   it("keeps every non-Starter plan on its existing landing", () => {
     const dpp = buildGatedSessionBody({
       plan: planById("dpp_readiness")!,

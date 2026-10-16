@@ -435,6 +435,15 @@ export function buildGatedSessionBody(opts: {
       body.set(`subscription_data[metadata][${k}]`, v);
     }
   }
+  // $29 Starter is one-time: also tag the PaymentIntent so the plan travels
+  // with the payment itself, and the webhook never needs the amount fallback.
+  if (isStarter && mode === "payment") {
+    body.set("payment_intent_data[metadata][plan]", plan.id);
+    body.set(
+      "payment_intent_data[metadata][stripe_price_id]",
+      plan.stripe_price_id as string
+    );
+  }
   applyHostedCheckoutRecovery(body, mode);
   return body;
 }
