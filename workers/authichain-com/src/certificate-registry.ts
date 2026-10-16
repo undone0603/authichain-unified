@@ -97,7 +97,7 @@ type PublishedAttestationRow = {
   published_at?: unknown;
 };
 
-const SAFE_ASSET_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,119}$/;
+const SAFE_ASSET_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,179}$/;
 
 async function handlePublishedAttestationLookup(
   url: URL,
