@@ -148,7 +148,6 @@ export async function tryHandleCertificateRegistry(
         Authorization: `Bearer ${anonKey}`,
         Accept: "application/json",
         Prefer: "count=exact",
-        Range: `${offset}-${offset + limit - 1}`,
       },
       signal: AbortSignal.timeout(8000),
     });
