@@ -17,7 +17,7 @@
  * dunning status. See docs/CREDIT_MODEL_ARCHITECTURE.md for reconciliation.
  */
 
-import { PLAN_CREDITS, type PlanId } from "./plans";
+import { PLAN_CREDITS, isServiceSku, type PlanId } from "./plans";
 import { type BrandId } from "@shared/brands";
 
 // The webhook passes its existing service-role Supabase client (loosely typed).
@@ -46,6 +46,8 @@ export interface ProvisionResult {
   error?: string;
   /** This checkout session already granted. Do not reset usage or resend access. */
   skippedIdempotent?: boolean;
+  /** Plan was a service SKU: payment recorded, entitlements untouched. */
+  service?: boolean;
 }
 
 function grantFor(
@@ -169,6 +171,31 @@ export async function provisionPurchase(
         skippedIdempotent: true,
       };
     }
+  }
+
+  // 2a. Service SKUs (gap report, gov pilot, MUSA claim file/bundle) are
+  // one-off services. Leave the buyer's plan, status, brand and credits alone
+  // so an existing subscriber keeps what they pay for. Record payment only.
+  if (isServiceSku(input.plan)) {
+    const serviceUpdate: Record<string, unknown> = {
+      last_payment_at: new Date().toISOString(),
+    };
+    if (input.stripeCustomerId)
+      serviceUpdate.stripe_customer_id = input.stripeCustomerId;
+    const { error: serviceError } = await supabase
+      .from("profiles")
+      .update(serviceUpdate)
+      .eq("id", profileId);
+    if (serviceError) {
+      console.error("[provisioning] service payment update failed:", serviceError);
+      return {
+        profileId,
+        created,
+        status: "upsert_failed",
+        error: serviceError.message || "profiles update failed",
+      };
+    }
+    return { profileId, created, status: "provisioned", service: true };
   }
 
   // 2. Apply entitlements. Reset usage so the new period starts clean.

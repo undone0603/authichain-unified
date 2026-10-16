@@ -239,4 +239,55 @@ describe("provisionPurchase", () => {
     });
     expect(result.skippedIdempotent).toBeUndefined();
   });
+
+  for (const plan of [
+    "battery_gap_report",
+    "battery_gap_report_extra",
+    "gov_provenance_pilot",
+    "musa_claim_file",
+    "musa_audit_bundle",
+  ]) {
+    it(`existing subscriber buying ${plan} keeps plan, status and credits`, async () => {
+      const { supabase, updates, inserts } = fakeProfiles({
+        existingId: "prof_sub",
+        lastGrantSessionId: "cs_starter",
+      });
+      const result = await provisionPurchase(supabase, {
+        email: "sub@example.com",
+        brand: "authichain",
+        plan,
+        stripeCustomerId: "cus_sub",
+        sessionId: "cs_service",
+      });
+      expect(result).toMatchObject({ status: "provisioned", service: true, profileId: "prof_sub" });
+      expect(inserts).toHaveLength(0);
+      expect(updates).toHaveLength(1);
+      const patch = updates[0].patch;
+      for (const k of [
+        "subscription_plan",
+        "subscription_status",
+        "generations_limit",
+        "generations_used",
+        "last_grant_session_id",
+        "brand",
+      ]) {
+        expect(patch).not.toHaveProperty(k);
+      }
+      expect(patch).toMatchObject({ stripe_customer_id: "cus_sub" });
+      expect(patch).toHaveProperty("last_payment_at");
+    });
+  }
+
+  it("non-service plan still writes plan and credits", async () => {
+    const { supabase, updates } = fakeProfiles({ existingId: "prof_1" });
+    await provisionPurchase(supabase, {
+      email: "a@example.com",
+      brand: "authichain",
+      plan: "starter",
+      sessionId: "cs_x",
+    });
+    expect(updates[0].patch).toMatchObject({ subscription_plan: "starter", subscription_status: "active" });
+    expect(updates[0].patch).toHaveProperty("generations_limit");
+  });
 });
+

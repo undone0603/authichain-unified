@@ -12,6 +12,7 @@ import { getBrandBilling } from "./brand-billing";
 
 export type BillingEmailType =
   | "subscription_confirmed"
+  | "service_receipt"
   | "dpp_audit_provisioned"
   | "payment_failed"
   | "trial_expiring"
@@ -90,6 +91,20 @@ export function renderBillingEmail(
         subject,
         html: shell(brandId, body),
         text: `${hi}\n\nYour ${plan} subscription is active. Open your dashboard: ${appUrl}/dashboard`,
+      };
+    }
+    case "service_receipt": {
+      const item = ctx.planName ?? "your order";
+      const subject = `${brand.displayName} — payment received for ${item}`;
+      const body = `<p>${hi}</p>
+        <p>We received your payment for <strong>${item}</strong>. This is a one-off service, not a subscription, and it does not change your account plan or credits.</p>
+        <p>We'll be in touch to start the work. Reply to this email with any questions.</p>
+        <p style="font-size:13px;color:#9ca3af;">Thanks for choosing ${brand.displayName}.</p>`;
+      return {
+        from: emailFrom,
+        subject,
+        html: shell(brandId, body),
+        text: `${hi}\n\nWe received your payment for ${item}. This is a one-off service, not a subscription, and it does not change your account plan or credits. We'll be in touch to start the work.`,
       };
     }
     case "dpp_audit_provisioned": {

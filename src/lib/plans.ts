@@ -46,6 +46,13 @@ export interface Plan {
   adjustable_quantity?: { minimum: number; maximum: number };
   /** Where the gated checkout returns the buyer (path on GATED_CHECKOUT_ORIGIN). */
   return_path?: string;
+  /**
+   * One-off service SKU (written report, pilot, claim file). Buying one must
+   * not change the buyer's subscription_plan, subscription_status or
+   * generation credits; it gets a service receipt, not a "subscription active"
+   * email. See isServiceSku() and src/lib/provisioning.ts.
+   */
+  service?: boolean;
 }
 
 export const PLANS: Plan[] = [
@@ -235,6 +242,7 @@ export const PLANS: Plan[] = [
     // only /made-in-usa-claim-file. Own "musa" brand since 2026-09-30 (Z's
     // choice): the pricing page shows it in its own section, not under QRON.
     id: "musa_claim_file",
+    service: true,
     brand: "musa",
     name: "Made in USA Claim File",
     price: 299,
@@ -261,6 +269,7 @@ export const PLANS: Plan[] = [
     // count, address and tax ID for the invoice; listed 2026-09-29, so the
     // gated checkout and the pricing grid sell it too.
     id: "musa_audit_bundle",
+    service: true,
     brand: "musa",
     name: "Made in USA Claim File — Audit Bundle",
     price: 2500,
@@ -285,6 +294,7 @@ export const PLANS: Plan[] = [
   // /battery-passport and /made-in-america via /checkout/<id>, not /pricing.
   {
     id: "battery_gap_report",
+    service: true,
     name: "EU Battery Passport written gap report",
     price: 950,
     price_suffix: " first model",
@@ -305,6 +315,7 @@ export const PLANS: Plan[] = [
   },
   {
     id: "battery_gap_report_extra",
+    service: true,
     name: "EU Battery Passport gap report — extra model",
     price: 350,
     price_suffix: " per extra model",
@@ -322,6 +333,7 @@ export const PLANS: Plan[] = [
   },
   {
     id: "gov_provenance_pilot",
+    service: true,
     name: "Federal provenance pilot (60 days)",
     price: 7500,
     price_suffix: " fixed",
@@ -370,6 +382,12 @@ export function listedPlans(
 }
 
 export const DPP_OFFER_KEY = "dpp_readiness_2026";
+
+/** True for one-off service SKUs (Plan.service). Unknown ids are not services. */
+export function isServiceSku(id: string | null | undefined): boolean {
+  if (!id) return false;
+  return PLANS.some(p => p.id === id && p.service === true);
+}
 
 export function planById(id: PlanId): Plan | undefined {
   return PLANS.find(p => p.id === id);
