@@ -343,12 +343,24 @@ export function planByStripePriceId(
   return PLANS.find(p => p.stripe_price_id === priceId);
 }
 
+/**
+ * Amount-only plan lookup, used when a Checkout has no plan metadata or price
+ * id. Allow-listed to Starter ($29) only: an arbitrary amount (discounts,
+ * other currencies, unlisted prices) must never map to a plan.
+ */
+const AMOUNT_FALLBACK_PLAN_IDS: readonly PlanId[] = ["starter"];
+
 export function planByAmountCents(
   amountCents: number | null | undefined
 ): Plan | undefined {
   if (amountCents == null || !Number.isFinite(amountCents)) return undefined;
   const dollars = amountCents / 100;
-  const matches = PLANS.filter(p => p.stripe_price_id && p.price === dollars);
+  const matches = PLANS.filter(
+    p =>
+      AMOUNT_FALLBACK_PLAN_IDS.includes(p.id) &&
+      p.stripe_price_id &&
+      p.price === dollars
+  );
   return matches.length === 1 ? matches[0] : undefined;
 }
 
