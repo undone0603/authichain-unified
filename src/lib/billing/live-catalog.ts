@@ -9,6 +9,7 @@
 import {
   PLAN_CREDITS,
   PUBLIC_PLAN_IDS,
+  planByAmountCents,
   planById,
   planByStripePriceId,
   type PlanId,
@@ -137,6 +138,25 @@ export function grantForPriceId(
   if (!plan) return null;
   if (!isPublicPlanId(plan.id) && plan.id !== "strainchain_farm") return null;
   return { planId: plan.id, grant: PLAN_CREDITS[plan.id] };
+}
+
+/**
+ * Payment Links omit metadata.plan. Prefer an explicit public plan, then a
+ * known price id, then a unique public amount. $299 is shared, so it does
+ * not resolve. Unlisted smoke prices never resolve.
+ */
+export function resolveCheckoutPlanId(input: {
+  plan?: string | null;
+  priceId?: string | null;
+  amountTotal?: number | null;
+}): PlanId | null {
+  if (input.plan && isPublicPlanId(input.plan)) return input.plan;
+  if (input.plan === "strainchain_farm") return "strainchain_farm";
+  const granted = grantForPriceId(input.priceId);
+  if (granted) return granted.planId;
+  const byAmount = planByAmountCents(input.amountTotal);
+  if (byAmount && isPublicPlanId(byAmount.id)) return byAmount.id;
+  return null;
 }
 
 export function liveBypassLink(id: PlanId): string | undefined {

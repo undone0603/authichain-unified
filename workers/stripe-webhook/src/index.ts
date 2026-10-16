@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import {
+  grantForCheckout,
   grantForPrice,
   grantReplayAction,
   isFounderEmail,
@@ -211,7 +212,10 @@ export default {
         typeof session.customer === "string" ? session.customer : null;
       const subscriptionId =
         typeof session.subscription === "string" ? session.subscription : null;
-      const grant = grantForPrice(priceIdFromSession(session));
+      const grant = grantForCheckout({
+        priceId: priceIdFromSession(session),
+        amountTotal: session.amount_total,
+      });
       const plan = grant?.plan || session.metadata?.plan || "starter";
 
       if (email) {
