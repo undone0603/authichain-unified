@@ -520,7 +520,7 @@ type AuthSealLookup =
   | { kind: "found"; row: AuthSealRegistryRow }
   | { kind: "not_found" | "not_configured" | "unavailable" | "invalid_identifier" };
 
-const SAFE_REGISTRY_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,119}$/;
+const SAFE_REGISTRY_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,179}$/;
 
 /**
  * Read the canonical auth_seals registry using only the public Supabase key.
