@@ -360,7 +360,135 @@ describe("mcp discovery", () => {
         verified: boolean;
       };
       expect(data.verified).toBe(false);
-      expect(calls).toEqual([]);
+      // A free provenance lookup may perform a read-only registry lookup, but
+      // the payment header must never trigger settlement or spend-ledger writes.
+      expect(calls).toHaveLength(1);
+      const registryUrl = new URL(calls[0]);
+      expect(registryUrl.pathname).toBe("/rest/v1/auth_seals");
+      expect(registryUrl.searchParams.get("or")).toContain("product_id.eq.NOPE-XYZ");
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("query_provenance reads auth_seals and never labels registration as verified", async () => {
+    const orig = globalThis.fetch;
+    const calls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(String(input));
+      const url = new URL(String(input));
+      expect(url.pathname).toBe("/rest/v1/auth_seals");
+      expect(url.searchParams.get("or")).toContain("product_id.eq.PRODUCT-123");
+      expect(init?.method ?? "GET").toBe("GET");
+      const headers = new Headers(init?.headers);
+      expect(headers.get("apikey")).toBe("anon-test");
+      expect(headers.get("authorization")).toBe("Bearer anon-test");
+      return new Response(JSON.stringify([{
+        id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+        product_id: "PRODUCT-123",
+        batch_id: "batch-2026-A",
+        brand: "Example Brand",
+        polygon_tx: null,
+        created_at: "2026-10-01T12:00:00.000Z",
+      }]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 20,
+            method: "tools/call",
+            params: {
+              name: "query_provenance",
+              arguments: { assetId: "PRODUCT-123" },
+            },
+          }),
+        }),
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
+      );
+      expect(res?.status).toBe(200);
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }> };
+      };
+      const data = JSON.parse(body.result.content[0].text) as {
+        status: string;
+        registered: boolean;
+        verified: boolean;
+        product: { id: string; sealId: string; batchId: string; brand: string; source: string };
+        registry: { state: string; source: string; semantics: string };
+        verification: { signature: string; revocation: string; physicalBinding: string };
+      };
+      expect(data.status).toBe("registered");
+      expect(data.registered).toBe(true);
+      expect(data.verified).toBe(false);
+      expect(data.product).toMatchObject({
+        id: "PRODUCT-123",
+        sealId: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+        batchId: "batch-2026-A",
+        brand: "Example Brand",
+        source: "auth_seals",
+      });
+      expect(data.registry).toMatchObject({
+        state: "available",
+        source: "auth_seals",
+      });
+      expect(data.registry.semantics).toContain("registered only");
+      expect(data.verification).toEqual({
+        signature: "not_checked",
+        revocation: "not_checked",
+        physicalBinding: "not_checked",
+      });
+      expect(calls).toHaveLength(1);
+      expect(body.result.content[0].text).not.toContain('"verified": true');
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("does not turn a registry outage into a false not_registered result", async () => {
+    const orig = globalThis.fetch;
+    globalThis.fetch = (async () => new Response("unavailable", { status: 503 })) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 21,
+            method: "tools/call",
+            params: {
+              name: "query_provenance",
+              arguments: { assetId: "PRODUCT-123" },
+            },
+          }),
+        }),
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
+      );
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }> };
+      };
+      const data = JSON.parse(body.result.content[0].text) as {
+        status: string;
+        verified: boolean;
+        registry: { state: string; note: string };
+      };
+      expect(data.status).toBe("registry_unavailable");
+      expect(data.verified).toBe(false);
+      expect(data.registry.state).toBe("unavailable");
+      expect(data.registry.note).toContain("No conclusion about registration");
     } finally {
       globalThis.fetch = orig;
     }
