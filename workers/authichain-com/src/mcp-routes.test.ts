@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { planPaymentLink } from "../../../src/lib/plans.ts";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
