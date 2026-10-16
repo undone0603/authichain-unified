@@ -85,6 +85,44 @@ async function lookupProduct(identifier: string, env: Env): Promise<SupabaseProd
   return rows.length > 0 ? rows[0] : null;
 }
 
+const SEAL_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export interface AuthSealRow {
+  id: string;
+  product_id: string;
+  brand: string;
+  label?: string | null;
+  signing_kid?: string | null;
+  signature_jws?: string | null;
+}
+
+/** Public auth_seals read (RLS: public SELECT). Only UUID-shaped ids. */
+export async function lookupSeal(
+  identifier: string,
+  env: { SUPABASE_URL?: string; SUPABASE_ANON_KEY?: string },
+  fetcher: typeof fetch = fetch,
+): Promise<AuthSealRow | null> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return null;
+  const id = identifier.trim().toLowerCase();
+  if (!SEAL_UUID.test(id)) return null;
+  const url = `${env.SUPABASE_URL}/rest/v1/auth_seals?id=eq.${id}&select=id,product_id,brand,label,signing_kid,signature_jws&limit=1`;
+  const res = await fetcher(url, {
+    headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` },
+  });
+  if (!res.ok) return null;
+  const rows = (await res.json()) as AuthSealRow[];
+  return rows.length > 0 ? rows[0] : null;
+}
+
+/** A signed AuthiChain seal, shaped like a product row for the kernel. */
+export function sealAsProduct(seal: AuthSealRow): SupabaseProduct {
+  return {
+    product_identifier: seal.id,
+    is_active: true,
+    name: seal.label || seal.product_id,
+  };
+}
+
 async function jwksLive(): Promise<boolean> {
   try {
     const res = await fetch(JWKS_URL, { method: "GET" });
@@ -281,8 +319,13 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
   }
 
   let product: SupabaseProduct | null = null;
+  let seal: AuthSealRow | null = null;
   try {
     product = await lookupProduct(identifier, env);
+    if (!product) {
+      seal = await lookupSeal(identifier, env);
+      if (seal) product = sealAsProduct(seal);
+    }
   } catch (err) {
     console.log(JSON.stringify({ evt: "verify_lookup_error", err: String(err) }));
   }
@@ -304,17 +347,20 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
           attestation: {
             objectId: product.product_identifier,
             status: product.is_active === false ? "inactive" : "registered",
-            issuer: "supabase-products",
+            issuer: seal ? `authichain-seal${seal.signing_kid ? `:${seal.signing_kid}` : ""}` : "supabase-products",
           },
         }
       : {},
   );
 
-  console.log(JSON.stringify({ evt: "verify", identifier, decision: kernel.decision, source: product ? "supabase" : "none" }));
+  console.log(JSON.stringify({ evt: "verify", identifier, decision: kernel.decision, source: seal ? "auth_seals" : product ? "supabase" : "none" }));
 
   return json(
     kernelEnvelope(identifier, rawInput, keysLive, kernel, {
-      source: product ? "supabase" : "none",
+      source: seal ? "auth_seals" : product ? "supabase" : "none",
+      seal: seal
+        ? { id: seal.id, label: seal.label ?? null, kid: seal.signing_kid ?? null, jws: seal.signature_jws ?? null }
+        : null,
       product: product
         ? {
             productIdentifier: product.product_identifier,
