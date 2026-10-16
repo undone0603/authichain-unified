@@ -126,9 +126,10 @@ describe("battery passport offer page", () => {
   });
 
   it("answers the legal FAQ without claiming to issue a passport", () => {
-    expect(html).toContain(
-      "No. It is a workspace for your passport figures. Not an assessment, not legal advice, not a certification. Confirm obligations against Regulation (EU) 2023/1542."
-    );
+    // Wording sweep 2026-10-16: the $299 is a self-serve tool; the $950 report is the readiness assessment.
+    expect(html).not.toContain("Not an assessment");
+    expect(html).toContain("not a conformity assessment");
+    expect(html).toContain("The economic operator placing the battery on the EU market issues the passport.");
     // RESEARCH-GATE fix 13 (PM-331): the $299 is a workspace, not an assessment.
     expect(html).not.toContain("It is a readiness assessment");
     expect(html).not.toContain('"serviceType":"EU Digital Battery Passport readiness assessment"');
@@ -147,5 +148,23 @@ describe("battery passport offer page", () => {
       /gets your first passport published|publish your first passport/i
     );
     expect(html).toContain("Map the public-tier gaps in your browser");
+  });
+});
+
+describe("wording sweep 2026-10-16: tiers and gap report CTAs", () => {
+  const page = renderBatteryPassportPage();
+  it("shows all four tiers", () => {
+    expect(page).toContain("Free self-check");
+    expect(page).toContain("$299 workspace");
+    expect(page).toContain("$950 written gap report");
+    expect(page).toContain("$350 per extra model");
+  });
+  it("links the live gap report Payment Links with nofollow", () => {
+    expect(page).toContain('href="https://buy.stripe.com/8x2eVdafv2l03a23761ND46" rel="nofollow noopener"');
+    expect(page).toContain('href="https://buy.stripe.com/5kQ9ATevLaRw4e66ji1ND47" rel="nofollow noopener"');
+  });
+  it("never presents the report as an issued passport or legal advice", () => {
+    expect(page).toContain("Readiness only: not a conformity assessment, not legal advice, not an issued passport.");
+    expect(page).not.toMatch(/issued passport included|we issue your passport|guaranteed compliance/i);
   });
 });

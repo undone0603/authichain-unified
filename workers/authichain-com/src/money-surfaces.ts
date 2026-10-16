@@ -206,6 +206,9 @@ ${surfaceFooter()}`,
   });
 }
 
+/** Gov provenance pilot Payment Link (Zac approved $7,500, 2026-10-16). Under the $15,000 micro-purchase threshold. */
+export const GOV_PILOT_LINK = "https://buy.stripe.com/9B66oH0EV8JoaCugXW1NE00";
+
 export function renderMadeInAmericaPage(): string {
   return pageShell({
     title: "Made in America origin claims | AuthiChain",
@@ -228,6 +231,7 @@ export function renderMadeInAmericaPage(): string {
       { href: "/made-in-usa-claim-file", label: "What's in the claim file", primary: false },
       { href: "/partners/brief", label: "Partner brief", primary: false },
       { href: "/pricing", label: "View pricing", primary: false },
+      { href: GOV_PILOT_LINK, label: "Federal buyers: 60-day provenance pilot — $7,500 fixed", primary: false },
     ],
   })}
   ${estateSteps(
@@ -240,7 +244,7 @@ export function renderMadeInAmericaPage(): string {
       },
       {
         title: "Show",
-        body: "A scan returns the chain of custody. Consumers, buyers, and regulators see the same evidence.",
+        body: "The record is built so a scan can show the chain of custody to consumers, buyers and regulators. Public scan verification is in development.",
       },
     ]
   )}
