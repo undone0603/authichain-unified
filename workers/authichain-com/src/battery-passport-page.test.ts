@@ -159,9 +159,10 @@ describe("wording sweep 2026-10-16: tiers and gap report CTAs", () => {
     expect(page).toContain("$950 written gap report");
     expect(page).toContain("$350 per extra model");
   });
-  it("links the live gap report Payment Links with nofollow", () => {
-    expect(page).toContain('href="https://buy.stripe.com/8x2eVdafv2l03a23761ND46" rel="nofollow noopener"');
-    expect(page).toContain('href="https://buy.stripe.com/5kQ9ATevLaRw4e66ji1ND47" rel="nofollow noopener"');
+  it("links the gated checkout routes, never a raw Payment Link", () => {
+    expect(page).toContain('href="https://authichain.com/checkout/battery_gap_report" rel="nofollow"');
+    expect(page).toContain('href="https://authichain.com/checkout/battery_gap_report_extra" rel="nofollow"');
+    expect(page).not.toContain("buy.stripe.com");
   });
   it("never presents the report as an issued passport or legal advice", () => {
     expect(page).toContain("Readiness only: not a conformity assessment, not legal advice, not an issued passport.");

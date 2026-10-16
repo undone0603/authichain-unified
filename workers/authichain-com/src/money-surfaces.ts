@@ -206,8 +206,8 @@ ${surfaceFooter()}`,
   });
 }
 
-/** Gov provenance pilot Payment Link (Zac approved $7,500, 2026-10-16). Under the $15,000 micro-purchase threshold. */
-export const GOV_PILOT_LINK = "https://buy.stripe.com/9B66oH0EV8JoaCugXW1NE00";
+/** Gov provenance pilot, gated confirm page (Zac approved $7,500, 2026-10-16). */
+export const GOV_PILOT_LINK = "https://authichain.com/checkout/gov_provenance_pilot";
 
 export function renderMadeInAmericaPage(): string {
   return pageShell({

@@ -23,7 +23,7 @@ import {
   estateNav,
   estateSkipLink,
 } from "../../_shared/estate-landing.ts";
-import { planById } from "../../../src/lib/plans";
+import { gatedCheckoutUrl, planById } from "../../../src/lib/plans";
 import {
   CONSISTENCY_TOLERANCE,
   GAP_MAP_DISCLAIMER,
@@ -143,9 +143,9 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
 ];
 
-/** Live Stripe Payment Links for the written gap report (Zac approved prices, 2026-10-16, RES-34). */
-export const GAP_REPORT_LINK = "https://buy.stripe.com/8x2eVdafv2l03a23761ND46";
-export const GAP_REPORT_EXTRA_LINK = "https://buy.stripe.com/5kQ9ATevLaRw4e66ji1ND47";
+/** Gated confirm pages (GET never opens a Stripe session). Zac approved prices 2026-10-16, RES-34. */
+export const GAP_REPORT_LINK = gatedCheckoutUrl("battery_gap_report");
+export const GAP_REPORT_EXTRA_LINK = gatedCheckoutUrl("battery_gap_report_extra");
 export const GAP_REPORT_PRICE = 950;
 export const GAP_REPORT_EXTRA_PRICE = 350;
 
@@ -157,9 +157,9 @@ function tiersSection(price: number): string {
       <div class="estate-grid">
         <div class="estate-card"><h3>Free self-check</h3><p>The gap map on this page. Runs in your browser. Nothing is sent or stored.</p><p><a class="btn btn-secondary" href="#gap-map">Map my gaps</a></p></div>
         <div class="estate-card"><h3>$${price} workspace</h3><p>Self-serve tool for entering and checking your own passport figures. One-time. You do the work.</p><p><a class="btn btn-secondary" href="#get-started">Get the workspace</a></p></div>
-        <div class="estate-card" id="gap-report"><h3>$${GAP_REPORT_PRICE} written gap report</h3><p>A readiness assessment of one battery model against Annex XIII, written by us, in 10 business days, from a US-based provider. $${GAP_REPORT_EXTRA_PRICE} per extra model. Readiness only: not a conformity assessment, not legal advice, not an issued passport.</p><p><a class="btn btn-primary" href="${GAP_REPORT_LINK}" rel="nofollow noopener">Order the gap report — $${GAP_REPORT_PRICE}</a> <a class="btn btn-secondary" href="${GAP_REPORT_EXTRA_LINK}" rel="nofollow noopener">Add a model — $${GAP_REPORT_EXTRA_PRICE}</a></p></div>
+        <div class="estate-card" id="gap-report"><h3>$${GAP_REPORT_PRICE} written gap report</h3><p>A readiness assessment of one battery model against Annex XIII, written by us, in 10 business days, from a US-based provider. $${GAP_REPORT_EXTRA_PRICE} per extra model. Readiness only: not a conformity assessment, not legal advice, not an issued passport.</p><p><a class="btn btn-primary" href="${GAP_REPORT_LINK}" rel="nofollow">Order the gap report — $${GAP_REPORT_PRICE}</a> <a class="btn btn-secondary" href="${GAP_REPORT_EXTRA_LINK}" rel="nofollow">Add a model — $${GAP_REPORT_EXTRA_PRICE}</a></p></div>
       </div>
-      <p class="bp-note">Payment opens Stripe. Not legal advice; confirm obligations against Regulation (EU) 2023/1542.</p>
+      <p class="bp-note">Ordering opens a confirm page, then Stripe. Pick the number of extra models at checkout. Not legal advice; confirm obligations against Regulation (EU) 2023/1542.</p>
     </div>
   </section>`;
 }

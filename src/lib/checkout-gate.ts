@@ -373,6 +373,11 @@ export function buildGatedSessionBody(opts: {
   body.set("mode", mode);
   body.set("line_items[0][price]", plan.stripe_price_id as string);
   body.set("line_items[0][quantity]", "1");
+  if (plan.adjustable_quantity) {
+    body.set("line_items[0][adjustable_quantity][enabled]", "true");
+    body.set("line_items[0][adjustable_quantity][minimum]", String(plan.adjustable_quantity.minimum));
+    body.set("line_items[0][adjustable_quantity][maximum]", String(plan.adjustable_quantity.maximum));
+  }
   body.set("payment_method_types[0]", "card");
   // Each product lands where its buyer can use what they bought.
   // The claim file has its own landing: /dpp/thanks would tell a Made in USA
@@ -385,9 +390,14 @@ export function buildGatedSessionBody(opts: {
   // both authichain.com and authichain.govchain.us, so ${origin} is safe.
   const isClaimFile = plan.id === "musa_claim_file";
   const isStarter = plan.id === "starter";
+  // Service SKUs (gap report, gov pilot) return to their own offer page:
+  // /dpp/thanks would tell them a DPP workspace was provisioned.
+  const ret = plan.return_path ? `${GATED_CHECKOUT_ORIGIN}${plan.return_path}` : "";
   body.set(
     "success_url",
-    isClaimFile
+    ret
+      ? `${ret}?paid=1&session_id={CHECKOUT_SESSION_ID}&plan=${encodeURIComponent(plan.id)}`
+      : isClaimFile
       ? `${origin}/made-in-usa-claim-file/thanks?session_id={CHECKOUT_SESSION_ID}`
       : isStarter
         ? `${origin}/generate?paid=1&session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
@@ -395,7 +405,9 @@ export function buildGatedSessionBody(opts: {
   );
   body.set(
     "cancel_url",
-    isDpp
+    ret
+      ? `${ret}?cancelled=1&plan=${encodeURIComponent(plan.id)}`
+      : isDpp
       ? `${origin}/dpp?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
       : isClaimFile
         ? `${origin}/made-in-usa-claim-file?cancelled=1`
