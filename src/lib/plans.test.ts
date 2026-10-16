@@ -58,7 +58,8 @@ describe("plan catalogue integrity", () => {
     expect(planByStripePriceId("price_1UJjzPGqTruSqV8TmhFSc8vh")?.id).toBe(
       "qron_launch"
     );
-    expect(planByAmountCents(1900)?.id).toBe("qron_launch");
+    // Amount fallback is Starter-only; $19 never maps by amount.
+    expect(planByAmountCents(1900)).toBeUndefined();
     expect(planPaymentLink("qron_launch")).toBe(
       "https://authichain.com/checkout/qron_launch"
     );
@@ -149,7 +150,9 @@ describe("listedPlans", () => {
     expect(planByStripePriceId("price_1UJjzPGqTruSqV8TmhFSc8vh")?.id).toBe(
       "qron_launch"
     );
-    expect(planByAmountCents(1900)?.id).toBe("qron_launch");
+    expect(planByAmountCents(1900)).toBeUndefined();
+    expect(planByAmountCents(9900)).toBeUndefined();
+    expect(planByAmountCents(29900)).toBeUndefined();
     expect(planByAmountCents(2900)?.id).toBe("starter");
   });
 });
