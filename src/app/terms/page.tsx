@@ -71,9 +71,6 @@ export default function TermsPage() {
             <p className="text-zinc-400 leading-relaxed mb-4">
               Payments are processed securely through Stripe.
             </p>
-            <p className="text-zinc-400 leading-relaxed mb-4">
-              Paid agent verification is charged in USDC on Base at the price quoted in the payment request, to the address in that request, before you pay.
-            </p>
             <ul className="list-disc pl-6 text-zinc-400 space-y-2">
               <li>Subscription plans renew automatically unless cancelled.</li>
               <li>One-time purchases are non-refundable once assets are delivered.</li>

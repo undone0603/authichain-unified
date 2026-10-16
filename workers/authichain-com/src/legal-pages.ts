@@ -8,7 +8,7 @@
  */
 
 /** Shown at the top of both pages. Change it when the text changes. */
-export const LEGAL_EFFECTIVE = "5 October 2026";
+export const LEGAL_EFFECTIVE = "16 October 2026";
 
 const OPERATOR =
   "Zachary Kietzman, a sole proprietor in Michigan, USA, using the brand AuthiChain. AuthiChain is a brand, not a corporation. The SAM legal entity is ZACHARY KIETZMAN.";
@@ -188,7 +188,7 @@ export function renderTermsPage(): string {
 <p>The price is the price shown on the checkout page before you continue to Stripe. <a href="/pricing">/pricing</a> lists the public plans. You review the total on Stripe before a card is charged. Stripe's terms apply to the card payment.</p>
 <p>A plan that the checkout page describes as a one-time charge is charged once. A plan that the checkout page describes as renewing will renew on that schedule until you cancel. Email <a href="mailto:support@authichain.com">support@authichain.com</a> to cancel. Cancellation stops the next renewal. It does not erase a record that was already published.</p>
 <p>Email support@authichain.com if you were charged and did not receive what the checkout page described. We do not refund a digital record that was delivered as described, or a USDC transfer that completed. Nothing in this paragraph limits a right that the law where you live says cannot be waived.</p>
-<p>Paid agent verification costs 0.05 USDC per call on Base, sent to the address published at <a href="/x402">/x402</a>, unless that page or <a href="/.well-known/x402">/.well-known/x402</a> states a different figure. The live description controls. Network fees are yours. A proof that does not match is rejected and is not treated as paid. The $QRON token is not accepted as payment.</p>
+<p>Paid agent verification is charged in USDC on Base at the price quoted in the payment request, to the address in that request, before you pay. Network fees are yours. A proof that does not match is rejected and is not treated as paid. The $QRON token is not accepted as payment.</p>
 <h2>Delivery</h2>
 <p>What you bought is what the pricing page and the checkout page describe: access, a file, a published record, or a paid verification, as that page states. Delivery of a digital good is complete when we send the access email or publish the record you paid for.</p>
 <h2>Disclaimers</h2>
