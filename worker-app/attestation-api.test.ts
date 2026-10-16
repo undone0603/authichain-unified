@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it, afterEach } from "vitest";
+import { describe, expect, it, afterEach, vi } from "vitest";
 import { Hono } from "hono";
 import { exportPKCS8, generateKeyPair } from "jose";
 import {
