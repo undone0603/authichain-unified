@@ -16,6 +16,7 @@ import {
   deliverDppCheckoutStarted,
 } from "./checkout-growth";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
+import { tryHandleCertificateRegistry } from "./certificate-registry";
 import { tryHandleMcp } from "./mcp-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
@@ -3615,6 +3616,10 @@ async function handleAuthichainCom(
     if (checkoutGate) return checkoutGate;
     // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
+    // The public registry has to be intercepted on the landing Worker: /api/*
+    // otherwise proxies to APP_WORKER, whose route table does not own this path.
+    const certificateRegistry = await tryHandleCertificateRegistry(request, env);
+    if (certificateRegistry) return certificateRegistry;
     const x402 = await tryHandleX402(request, env, env.VERIFY_APP);
     if (x402) return x402;
     const mcp = await tryHandleMcp(request, env, env.VERIFY_APP);
