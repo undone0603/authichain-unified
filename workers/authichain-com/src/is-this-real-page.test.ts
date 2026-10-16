@@ -17,9 +17,10 @@ describe("/is-this-real", () => {
     expect(html).toContain("/api/leads/capture");
     expect(html).toContain(`source:"${IS_THIS_REAL_SOURCE}"`);
   });
-  it("offers 3 free checks then the 5 cent x402 option", () => {
+  it("offers 3 free checks then a price-free x402 option", () => {
     expect(html).toContain("MAX=3");
-    expect(html).toContain("$0.05 in USDC on Base");
+    expect(html).toContain("an unpaid call returns HTTP 402 with the price");
+    expect(html).not.toMatch(/\$0\.05|5 cents|5&cent;|¢|USDC/);
     expect(html).toContain("/api/v1/agent-verify");
   });
   it("makes no live, customer or metric claims", () => {
