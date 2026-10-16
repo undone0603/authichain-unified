@@ -8,7 +8,7 @@ jobs:
   verify-and-heal:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Confirm the web-client stub is not sold as an ABI
         run: |

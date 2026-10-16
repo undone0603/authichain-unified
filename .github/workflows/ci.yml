@@ -89,7 +89,7 @@ jobs:
       - name: Cache AgentZ venv
         id: venv-cache
         if: hashFiles('requirements-agentz.txt') != ''
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .venv
           key: agentz-venv-${{ runner.os }}-py3.12-${{ hashFiles('requirements-agentz.txt') }}
