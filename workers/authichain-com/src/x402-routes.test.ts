@@ -142,7 +142,10 @@ describe("tryHandleX402", () => {
       protocol?: string;
     };
     expect(body.version).toBe(1);
-    expect(body.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(body.resources).toEqual([
+      "https://authichain.com/api/v1/agent-verify",
+      "https://authichain.com/api/x402",
+    ]);
     expect(body.protocol).toBeUndefined();
   });
 

@@ -46,4 +46,9 @@ describe("llms.txt", () => {
       tryHandleLlmsTxt(new Request("https://authichain.govchain.us/pricing"))
     ).toBeNull();
   });
+  it("names the canonical paid endpoint and the health status check", () => {
+    const text = renderLlmsTxt();
+    expect(text).toContain("POST https://authichain.com/api/v1/agent-verify");
+    expect(text).toContain("GET https://authichain.com/api/x402/health");
+  });
 });

@@ -633,7 +633,10 @@ describe("x402ScanFanout", () => {
   it("is the x402scan version+resources document, not the catalog", () => {
     const doc = x402ScanFanout();
     expect(doc.version).toBe(1);
-    expect(doc.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(doc.resources).toEqual([
+      "https://authichain.com/api/v1/agent-verify",
+      "https://authichain.com/api/x402",
+    ]);
     expect(JSON.stringify(doc)).not.toContain("/api/checkout");
     // "Not the catalog": exactly the two x402scan fields. (This line used to
     // assert the document never mentions authichain.com, which contradicts
