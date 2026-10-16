@@ -256,7 +256,7 @@ export function renderX402DocsPage(): string {
           legalName: p.legalEntity,
         },
         url: p.canonicalUrl,
-        termsOfService: p.tokenomicsUrl,
+        termsOfService: "https://authichain.com/terms",
         offers: {
           "@type": "Offer",
           name: "x402 verification call",
@@ -369,8 +369,8 @@ ${CHECKOUT_EMAIL_FORM_CSS}
         <dt>Fan-out</dt><dd class="mono"><a href="${esc(p.fanoutUrl)}">${esc(p.fanoutUrl)}</a></dd>
         <dt>OpenAPI</dt><dd class="mono"><a href="${esc(p.openApiUrl)}">${esc(p.openApiUrl)}</a></dd>
         <dt>Health</dt><dd class="mono"><a href="${esc(p.healthUrl)}">${esc(p.healthUrl)}</a></dd>
-        <dt>Tokenomics</dt><dd class="mono"><a href="${esc(p.tokenomicsUrl)}">AGENT_TOKENOMICS_x402.md</a></dd>
-        <dt>Wallets</dt><dd class="mono"><a href="${esc(p.identityUrl)}">WEB3_IDENTITY.md</a></dd>
+        <dt>Pricing</dt><dd class="mono"><a href="https://authichain.com/pricing">${esc(p.priceUsd)} per verification call</a></dd>
+        <dt>Wallets</dt><dd class="mono"><a href="${esc(p.wellKnownUrl)}">.well-known/x402.json</a></dd>
       </dl>
     </section>
     <section class="card" aria-labelledby="human-title">

@@ -74,7 +74,8 @@ describe("x402 public docs page", () => {
     expect(html).toContain(X402_PUBLIC.openApiUrl);
     expect(html).toContain("<dt>Fan-out</dt>");
     expect(html).toContain("<dt>OpenAPI</dt>");
-    expect(html).toContain(X402_PUBLIC.identityUrl);
+    expect(html).not.toContain("github.com/undone0603");
+    expect(html).toContain("<dt>Wallets</dt><dd class=\"mono\"><a href=\"" + X402_PUBLIC.wellKnownUrl);
     expect(html).toContain("$QRON is not this rail");
     expect(html).toContain('rel="alternate"');
     expect(html).toContain("ZACHARY KIETZMAN");
