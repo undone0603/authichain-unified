@@ -513,7 +513,7 @@ async function lookupAuthSeal(
   assetId: string,
   env?: X402Env,
 ): Promise<AuthSealLookup> {
-  const baseUrl = (env?.SUPABASE_URL || "").trim().replace(/\\/+$/, "");
+  const baseUrl = (env?.SUPABASE_URL || "").trim().replace(/\/+$/, "");
   const anonKey = (env?.SUPABASE_ANON_KEY || "").trim();
   if (!baseUrl || !/^https:\/\//i.test(baseUrl) || !anonKey) {
     return { kind: "not_configured" };
