@@ -60,7 +60,7 @@ function nonTrustlessAllowed(): boolean {
   return mode === "test" || mode === "development";
 }
 
-function restHeaders(
+export function restHeaders(
   key: string,
   extra?: Record<string, string>
 ): Record<string, string> {
@@ -72,7 +72,7 @@ function restHeaders(
   };
 }
 
-async function readJson(
+export async function readJson(
   fetchImpl: typeof fetch,
   url: string,
   key: string
@@ -114,7 +114,7 @@ async function dailySpentAtomic(
   return BigInt(read.body.length) * priceAtomic;
 }
 
-async function readSeal(
+export async function readSeal(
   fetchImpl: typeof fetch,
   creds: SealLookupCredentials,
   sealId: string
