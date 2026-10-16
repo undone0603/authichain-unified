@@ -69,7 +69,7 @@ export default function TermsPage() {
               4. Payment Terms
             </h2>
             <p className="text-zinc-400 leading-relaxed mb-4">
-              Card and subscription payments are processed securely through Stripe.
+              Payments are processed securely through Stripe.
             </p>
             <p className="text-zinc-400 leading-relaxed mb-4">
               Paid agent verification is charged in USDC on Base at the price quoted in the payment request, to the address in that request, before you pay.
