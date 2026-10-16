@@ -40,11 +40,32 @@ import {
 } from "../../../src/lib/x402";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
 import {
+  readSeal,
   resolvePaidSealVerify,
+  sealLookupCredentials,
   type SealLookupEnv,
 } from "../../../src/lib/paid-seal-verify";
+import { parseSealRequest, registryAnswer } from "../../../src/lib/agent-verify";
+import {
+  claimFreeCall,
+  FREE_CALLS_HEADER,
+  freeDailyCalls,
+  supabaseFreeTierStore,
+  type FreeTierStore,
+} from "../../../src/lib/x402-free-tier";
 
-export type X402Env = X402EnvVars & SealLookupEnv;
+export type X402Env = X402EnvVars &
+  SealLookupEnv & {
+    X402_FREE_DAILY_CALLS?: string;
+    X402_FREE_IP_SALT?: string;
+  };
+
+/** Test seams: inject the free-tier counter store and clock. */
+export type X402Options = {
+  freeStore?: FreeTierStore | null;
+  now?: Date;
+  fetchImpl?: typeof fetch;
+};
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -182,10 +203,84 @@ async function openApiResponse(env?: X402Env): Promise<Response> {
   return json(200, await x402OpenApiDocument(healthEnv(env)));
 }
 
+function parseJsonObject(text: string): Record<string, unknown> {
+  if (!text.trim()) return {};
+  try {
+    const value = JSON.parse(text) as unknown;
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Free daily allowance (X402_FREE_DAILY_CALLS, default 3 per client IP per
+ * UTC day). Returns null when the caller must pay; never settles anything.
+ */
+async function tryFreeCall(
+  request: Request,
+  env: X402Env | undefined,
+  opts: X402Options | undefined
+): Promise<{ response: Response | null; remaining: number | null }> {
+  const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);
+  const creds = sealLookupCredentials(env);
+  if (!creds || limit <= 0) return { response: null, remaining: limit <= 0 ? 0 : null };
+  const parsed = parseSealRequest(parseJsonObject(await request.clone().text()));
+  if (!parsed.ok) return { response: null, remaining: null };
+  const fetchImpl = opts?.fetchImpl ?? fetch;
+  const store =
+    opts && "freeStore" in opts
+      ? (opts.freeStore ?? null)
+      : supabaseFreeTierStore(creds, fetchImpl);
+  const claim = await claimFreeCall({
+    request,
+    store,
+    limit,
+    now: opts?.now ?? new Date(),
+    salt: env?.X402_FREE_IP_SALT,
+  });
+  if (!claim.free) return { response: null, remaining: claim.remaining };
+  const headers = { [FREE_CALLS_HEADER]: String(claim.remaining) };
+  const lookup = await readSeal(fetchImpl, creds, parsed.sealId);
+  if (!lookup.ok) {
+    return {
+      response: json(
+        503,
+        { error: "registry_unavailable", settled: false, freeCallsRemaining: claim.remaining },
+        headers
+      ),
+      remaining: claim.remaining,
+    };
+  }
+  const answer = registryAnswer(lookup.seal);
+  return {
+    response: json(
+      200,
+      {
+        verified: false,
+        registered: answer.registered,
+        status: answer.status,
+        checks: answer.checks,
+        subject: parsed.sealId,
+        details: answer.details,
+        settlement: null,
+        free: true,
+        freeCallsRemaining: claim.remaining,
+        timestamp: new Date().toISOString(),
+      },
+      headers
+    ),
+    remaining: claim.remaining,
+  };
+}
+
 async function agentVerify(
   request: Request,
   env?: X402Env,
-  verifyApp?: X402VerifyBinding
+  verifyApp?: X402VerifyBinding,
+  opts?: X402Options
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
@@ -208,7 +303,14 @@ async function agentVerify(
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof || !proofHeader) {
-    return json(402, required.v2, required.headers);
+    const free = await tryFreeCall(request, env, opts);
+    if (free.response) return free.response;
+    return json(402, required.v2, {
+      ...required.headers,
+      ...(free.remaining === null
+        ? {}
+        : { [FREE_CALLS_HEADER]: String(free.remaining) }),
+    });
   }
 
   const bodyText = await request.text();
@@ -236,7 +338,8 @@ async function agentVerify(
 export async function tryHandleX402(
   request: Request,
   env: X402Env = {},
-  verifyApp?: X402VerifyBinding
+  verifyApp?: X402VerifyBinding,
+  opts?: X402Options
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isX402Path(url.pathname)) return null;
@@ -276,7 +379,7 @@ export async function tryHandleX402(
   }
 
   if (request.method === "POST" && isPaidPath(url.pathname)) {
-    return agentVerify(request, env, verifyApp);
+    return agentVerify(request, env, verifyApp, opts);
   }
 
   return json(405, { error: "method not allowed" });
