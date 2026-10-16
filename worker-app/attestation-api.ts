@@ -468,6 +468,19 @@ export function registerAttestationApi<
       return c.json({ error: "at least one evidence item is required for publication" }, 400, NO_STORE);
     }
 
+    const issuerState = await registry.getIssuer(c.env as AttestationRegistryEnv, attestation.issuer.id);
+    if (!issuerState.ok) {
+      return c.json({ error: issuerState.error }, issuerState.status, NO_STORE);
+    }
+    const issuerNow = Date.now();
+    if (
+      issuerState.issuer.status !== "trusted" ||
+      Date.parse(issuerState.issuer.validFrom) > issuerNow ||
+      (issuerState.issuer.validUntil && Date.parse(issuerState.issuer.validUntil) <= issuerNow)
+    ) {
+      return c.json({ error: "issuer is not currently trusted for publication" }, 403, NO_STORE);
+    }
+
     let privateKey: Awaited<ReturnType<typeof loadPrivateKey>>["privateKey"];
     let kid: string;
     try {
