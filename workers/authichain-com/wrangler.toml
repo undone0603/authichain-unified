@@ -151,9 +151,3 @@ X402_PAID_VERIFY_PATH = "seal_lookup"
 
 [browser]
 binding = "MYBROWSER"
-
-# x402 replay guard (CFA-343/351). Namespace created 2026-10-16 (PM-approved);
-# delete it if #1900 does not ship.
-[[kv_namespaces]]
-binding = "X402_REPLAY_KV"
-id = "ab391dc529884161bd84707d7627a9f0"
