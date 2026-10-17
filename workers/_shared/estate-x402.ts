@@ -152,10 +152,30 @@ async function catalogResponse(
   return json(200, await sisterX402Catalog(brand, healthEnv(env)));
 }
 
+const CANONICAL_AGENT_VERIFY = "https://authichain.com/api/v1/agent-verify";
+
 function fanoutResponse(request: Request): Response {
   const url = new URL(request.url);
   const origin = `${url.protocol}//${url.host}`;
-  return json(200, x402ScanFanout(origin));
+  const local = x402ScanFanout(origin);
+  // This worker does not serve /api/v1/agent-verify (sisters 404 that path).
+  // The seal registry is bound on authichain.com. List that absolute URL
+  // first, then this origin's /api/x402 so a scanner still sees the host
+  // it probed. Drop an origin-relative agent-verify entry so a shared
+  // fan-out helper cannot advertise the 404.
+  const resources = [CANONICAL_AGENT_VERIFY];
+  for (const resource of local.resources) {
+    if (resource === CANONICAL_AGENT_VERIFY) continue;
+    let pathname = "";
+    try {
+      pathname = new URL(resource).pathname;
+    } catch {
+      continue;
+    }
+    if (pathname === "/api/v1/agent-verify") continue;
+    resources.push(resource);
+  }
+  return json(200, { version: 1 as const, resources });
 }
 
 async function agentVerify(
