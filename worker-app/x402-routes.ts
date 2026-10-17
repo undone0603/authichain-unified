@@ -37,8 +37,11 @@ import {
   type X402VerifyBinding,
 } from "../src/lib/x402";
 import {
+  guardedForward,
   resolvePaidSealVerify,
+  scopedReplayStore,
   sealLookupCredentials,
+  type ReplayStore,
   type SealLookupEnv,
 } from "../src/lib/paid-seal-verify";
 import { growthDiscovery, x402ListingPack } from "../src/lib/x402-growth";
@@ -49,6 +52,8 @@ type X402Bindings = X402HealthEnv &
   SealLookupEnv & {
     X402_PAY_TO?: string;
     NODE_ENV?: string;
+    /** x402 replay guard (CFA-366). Unbound = paid path returns 503. */
+    X402_REPLAY_KV?: ReplayStore;
   };
 
 /** VERIFY_APP is a Fetcher, which X402HealthEnv's string index can't hold. */
@@ -227,6 +232,7 @@ async function agentVerify(c: {
     payTo,
     description: "AuthiChain agent verification",
     env: c.env,
+    replayStore: scopedReplayStore(c.env?.X402_REPLAY_KV, "edge-router"),
   });
   if (decision.action === "answer") {
     return c.json(decision.body, decision.status, {
@@ -235,7 +241,20 @@ async function agentVerify(c: {
     });
   }
   if (decision.action === "forward" && verifyApp) {
-    return forwardPaidVerify(verifyApp, c.req.raw, proofHeader, bodyText);
+    let sealId: string | null = null;
+    try {
+      const b = JSON.parse(bodyText) as { sealId?: unknown };
+      sealId = typeof b?.sealId === "string" ? b.sealId : null;
+    } catch {
+      sealId = null;
+    }
+    return guardedForward({
+      proofHeader,
+      replayStore: scopedReplayStore(c.env?.X402_REPLAY_KV, "edge-router"),
+      sealId,
+      forward: () =>
+        forwardPaidVerify(verifyApp, c.req.raw, proofHeader, bodyText),
+    });
   }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
