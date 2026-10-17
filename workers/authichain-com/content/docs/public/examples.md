@@ -65,7 +65,7 @@ These fixtures contain no production secrets.
 
 Repository demo identifiers are not listed on this page. An unknown resolver id returns `status: "not_found"` with `reason: "unknown_seal"`. That is not a working product scan and is not a counterfeit finding.
 
-Cite the well-known file, JWKS, protocol verifier, the empty-body unpaid x402 402, the Living QR scan, and the repo fixtures. Do not treat a resolver 404 as a live demo. A Living QR id with no stored presentation is HTTP 404 `presentation_not_found`. That is a finished Decision v1 answer, not a counterfeit finding.
+Cite the well-known file, JWKS, protocol verifier, the empty-body unpaid x402 402, the Living QR scan, and the repo fixtures. Do not treat a resolver 404 as a live demo. A Living QR id with no stored presentation is HTTP 404 with `decision: "indeterminate"` and `error: "presentation_not_found"`. That is not a verdict and not a counterfeit finding.
 
 ## Human path
 

@@ -340,7 +340,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
           <pre><code>curl -sS -i -X POST https://authichain.com/api/x402 \\
   -H 'content-type: application/json' \\
   -d '{}'</code></pre>
-          <p>An empty body is the unpaid HTTP 402. The body lists the asset, payTo, and EIP-712 extra. A non-UUID sealId is HTTP 400 before payment. No wallet, key, or <code>X-PAYMENT</code> header is required for this probe.</p>
+          <p>An empty body is the unpaid HTTP 402. The 402 response lists the asset, payTo, and EIP-712 extra. A non-UUID sealId is HTTP 400 before payment. No wallet, key, or <code>X-PAYMENT</code> header is required for this probe.</p>
         </figure>
         <figure>
           <figcaption>curl — catalog</figcaption>
