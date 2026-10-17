@@ -1,3 +1,4 @@
+// workers/manufacturer-status/src/index.ts
 import { Hono } from 'hono';
 import { createPublicClient, http, parseAbiItem, type Address } from 'viem';
 import { polygon } from 'viem/chains';
@@ -32,6 +33,7 @@ app.get('/:address/history', async (c) => {
     transport: http(c.env.POLYGON_RPC),
   });
 
+  // Deploy block from known AuthiChainNFT deployment notes
   const fromBlock = 77_535_676n;
 
   try {
@@ -59,6 +61,7 @@ app.get('/:address/history', async (c) => {
         tx: log.transactionHash,
         role: log.args.role,
         sender: log.args.sender,
+        timestamp: null as string | null,
       })),
       ...revoked.map((log) => ({
         type: 'revoked' as const,
@@ -66,12 +69,13 @@ app.get('/:address/history', async (c) => {
         tx: log.transactionHash,
         role: log.args.role,
         sender: log.args.sender,
+        timestamp: null as string | null,
       })),
     ].sort((a, b) => Number(b.block) - Number(a.block));
 
     const currentBlock = await client.getBlockNumber();
 
-    console.log(JSON.stringify({ event: 'manufacturer_history_query', address, count: history.length, block: currentBlock.toString() }));
+    console.log(JSON.stringify({ event: 'manufacturer_history_query', address, event_count: history.length, block: currentBlock.toString() }));
 
     return c.json({
       address,
@@ -94,7 +98,6 @@ app.get('/:address/history', async (c) => {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(JSON.stringify({ event: 'manufacturer_history_error', address, error: message }));
     return c.json({ error: message, address, contract: CONTRACT }, 500);
   }
 });
