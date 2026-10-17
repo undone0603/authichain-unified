@@ -607,6 +607,34 @@ async function writeReceipt(env, receipt) {
   return ledger;
 }
 __name(writeReceipt, "writeReceipt");
+async function sha256Hex(value) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(value)));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+__name(sha256Hex, "sha256Hex");
+async function publicReceipt(receipt) {
+  const buyerKey = String(receipt.wallet || receipt.email || "").trim().toLowerCase().replace(/^wallet:/, "");
+  return {
+    ref: receipt.id ? (await sha256Hex(receipt.id)).slice(0, 16) : null,
+    rail: receipt.rail ?? null,
+    status: receipt.status ?? null,
+    reason: receipt.reason ?? null,
+    amountCents: receipt.amountCents ?? 0,
+    currency: receipt.currency ?? null,
+    createdAt: receipt.createdAt ?? null,
+    network: receipt.network ?? null,
+    txHash: receipt.txHash ?? null,
+    buyer: buyerKey ? (await sha256Hex(buyerKey)).slice(0, 12) : null
+  };
+}
+__name(publicReceipt, "publicReceipt");
+async function publicLedger(ledger) {
+  return {
+    updatedAt: ledger.updatedAt ?? null,
+    receipts: await Promise.all((ledger.receipts ?? []).map((receipt) => publicReceipt(receipt)))
+  };
+}
+__name(publicLedger, "publicLedger");
 function goalState(ledger) {
   const human = ledger.receipts.find(
     (receipt) => receipt.rail === "human" && receipt.status === "qualified" && receipt.amountCents >= 100
@@ -950,12 +978,9 @@ function htmlThanksPage({ sessionId, recorded, goal, note }) {
           tries += 1;
           try {
             const body = await fetch("/api/ledger").then((r) => r.json());
-            const hit = (body.receipts || []).find(
-              (row) =>
-                row.stripeCheckoutSessionId === sessionId ||
-                row.id === "cs_" + sessionId ||
-                row.id === sessionId,
-            );
+            const refOf = async (v) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v))), (b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+            const refs = [await refOf("cs_" + sessionId), await refOf(sessionId)];
+            const hit = (body.receipts || []).find((row) => refs.includes(row.ref));
             if (hit) {
               el.textContent =
                 "Ledger receipt: " +
@@ -2570,7 +2595,7 @@ ${urls.map((href) => `  <url><loc>${href}</loc></url>`).join("\n")}
       return maybeHead(
         request,
         Response.json({
-          ...ledger,
+          ...await publicLedger(ledger),
           goal: goalState(ledger),
           onchain,
           stripe,
