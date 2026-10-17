@@ -213,6 +213,11 @@ describe("GET /api/generate", () => {
     expect(body.presentation.verify.decision_contract).toBe(
       "AuthiChain Verification Decision v1"
     );
+    expect(body.presentation.scan).toEqual({
+      method: "GET",
+      url_template: "https://authichain.com/qron/r/{object_id}",
+      missing: "presentation_not_found",
+    });
     expect(body.packs.some((p: { price: number }) => p.price === 29)).toBe(
       true
     );
@@ -269,6 +274,33 @@ describe("GET /qron/r/:objectId", () => {
     const page = await html.text();
     expect(page).toContain("<h1>indeterminate</h1>");
     expect(page).not.toContain("counterfeit");
+  });
+
+  it("verifies a stored presentation in-process on a sister host", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const stored = JSON.stringify({
+      object_id: objectId,
+      destination_url: "https://authichain.com/protocol",
+      resolve_url: `https://authichain.govchain.us${path}`,
+      jws: "a.b.c",
+      kid: "kid",
+      jwks_url: "https://authichain.com/protocol/jwks.json",
+    });
+    const res = await app.request(
+      `https://authichain.govchain.us${path}`,
+      { headers: { accept: "application/json" } },
+      {
+        SESSIONS: {
+          get: async () => stored,
+          put: async () => undefined,
+        },
+      }
+    );
+    const body = await res.json();
+    expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
+    expect(body.error).not.toBe("verify_unreachable");
+    expect(res.status).not.toBe(502);
   });
 
   it("returns indeterminate when the stored presentation is malformed", async () => {

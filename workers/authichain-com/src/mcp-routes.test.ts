@@ -17,6 +17,7 @@ import {
   PRODUCTION_ISSUER_DID,
   PRODUCTION_ISSUER_KID,
   isMcpPath,
+  scanLivingQr,
   tryHandleMcp,
   verifyRecordTool,
 } from "./mcp-routes";
@@ -1027,5 +1028,134 @@ describe("mcp streamable http conformance", () => {
       result: { tools: { name: string }[] };
     };
     expect(body.result.tools.map(t => t.name)).toContain("verify_record");
+    expect(body.result.tools.map(t => t.name)).toContain("scan_living_qr");
+  });
+});
+
+describe("scan_living_qr", () => {
+  const originalFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("rejects an id that is not a stored presentation id without fetching", async () => {
+    let called = false;
+    const result = await scanLivingQr(
+      { object_id: "https://evil.example/qron" },
+      async () => {
+        called = true;
+        throw new Error("should not fetch");
+      }
+    );
+    expect(called).toBe(false);
+    expect(result.isError).toBe(true);
+    expect(result.body.error).toBe("object_id_invalid");
+    expect(result.body.decision_contract).toBe(
+      "AuthiChain Verification Decision v1"
+    );
+  });
+
+  it("returns Decision v1 fields and drops the JWS", async () => {
+    globalThis.fetch = (async (url: string) => {
+      expect(url).toBe("https://authichain.com/qron/r/qron%3Aurl%3Adeadbeef");
+      return new Response(
+        JSON.stringify({
+          valid: true,
+          decision: "verified",
+          decision_contract: "AuthiChain Verification Decision v1",
+          cryptographic_status: "valid",
+          status: "active",
+          jws: "header.payload.sig",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    }) as typeof fetch;
+
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 7,
+          method: "tools/call",
+          params: {
+            name: "scan_living_qr",
+            arguments: { object_id: "qron:url:deadbeef" },
+          },
+        }),
+      })
+    );
+    expect(res?.status).toBe(200);
+    const payload = (await res!.json()) as {
+      result: { isError?: boolean; content: Array<{ text: string }> };
+    };
+    expect(payload.result.isError).toBeUndefined();
+    const body = JSON.parse(payload.result.content[0].text) as {
+      decision: string;
+      decision_contract: string;
+      http_status: number;
+      jws?: string;
+    };
+    expect(body.decision).toBe("verified");
+    expect(body.decision_contract).toBe(
+      "AuthiChain Verification Decision v1"
+    );
+    expect(body.http_status).toBe(200);
+    expect(body.jws).toBeUndefined();
+    expect(payload.result.content[0].text).not.toContain("header.payload.sig");
+  });
+
+  it("scans through the edge service binding instead of a public same-zone fetch", async () => {
+    let publicFetch = false;
+    globalThis.fetch = (async () => {
+      publicFetch = true;
+      throw new Error("public fetch");
+    }) as typeof fetch;
+    let seen = "";
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 8,
+          method: "tools/call",
+          params: {
+            name: "scan_living_qr",
+            arguments: { object_id: "qron:url:deadbeef" },
+          },
+        }),
+      }),
+      {
+        APP_WORKER: {
+          fetch: async request => {
+            seen = request.url;
+            return new Response(
+              JSON.stringify({
+                valid: true,
+                decision: "verified",
+                decision_contract: "AuthiChain Verification Decision v1",
+                cryptographic_status: "valid",
+                status: "active",
+                jws: "header.payload.sig",
+              }),
+              { status: 200, headers: { "content-type": "application/json" } }
+            );
+          },
+        },
+      }
+    );
+    expect(publicFetch).toBe(false);
+    expect(seen).toBe("https://authichain.com/qron/r/qron%3Aurl%3Adeadbeef");
+    const payload = (await res!.json()) as {
+      result: { isError?: boolean; content: Array<{ text: string }> };
+    };
+    expect(payload.result.isError).toBeUndefined();
+    const body = JSON.parse(payload.result.content[0].text) as {
+      decision: string;
+    };
+    expect(body.decision).toBe("verified");
+    expect(payload.result.content[0].text).not.toContain("header.payload.sig");
   });
 });

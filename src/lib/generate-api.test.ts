@@ -55,6 +55,11 @@ describe("generateHealthBody", () => {
     );
     expect(body.presentation.verify.jwks_url).toContain("protocol/jwks.json");
     expect(body.presentation.fallback).toBe("image_issued");
+    expect(body.presentation.scan).toEqual({
+      method: "GET",
+      url_template: "https://authichain.com/qron/r/{object_id}",
+      missing: "presentation_not_found",
+    });
   });
 
   it("reports whether a Supabase session can be resolved", () => {
