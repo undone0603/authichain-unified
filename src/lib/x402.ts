@@ -131,11 +131,10 @@ export function x402BazaarDiscovery(): X402BazaarExtension {
                 properties: {
                   sealId: {
                     type: "string",
+                    format: "uuid",
                     description:
                       "Required seal UUID. productId and serial are not registry keys.",
                   },
-                  productId: { type: "string" },
-                  serial: { type: "string" },
                 },
               },
             },
@@ -1121,9 +1120,12 @@ export async function x402OpenApiDocument(
   const jsonBody = {
     type: "object",
     properties: {
-      sealId: { type: "string" },
-      productId: { type: "string" },
-      serial: { type: "string" },
+      sealId: {
+        type: "string",
+        format: "uuid",
+        description:
+          "Required seal UUID. productId and serial are not registry keys.",
+      },
     },
   };
   const paidPost = {
@@ -1135,6 +1137,10 @@ export async function x402OpenApiDocument(
       content: { "application/json": { schema: jsonBody } },
     },
     responses: {
+      "400": {
+        description:
+          "A body that cannot be a seal UUID is refused before payment.",
+      },
       "402": { description: "Payment required (x402)" },
       ...(health.paidVerify.bound
         ? { "200": { description: "Paid verification result" } }
@@ -1152,8 +1158,8 @@ export async function x402OpenApiDocument(
       title: "AuthiChain x402",
       version: "1.0.0",
       description: health.paidVerify.bound
-        ? "Agent verification on Base USDC. Unpaid POST returns HTTP 402. Human SKUs are Stripe Payment Links on /pricing."
-        : `Agent verification on Base USDC. Unpaid POST returns HTTP 402. ${health.paidVerify.detail} Human SKUs are Stripe Payment Links on /pricing.`,
+        ? "Canonical paid verify is POST /api/v1/agent-verify. sealId must be a UUID. An empty body is HTTP 402. A body that cannot be a seal UUID is HTTP 400 before payment. Human SKUs are Stripe Payment Links on /pricing."
+        : `Canonical paid verify is POST /api/v1/agent-verify. sealId must be a UUID. An empty body is HTTP 402. A body that cannot be a seal UUID is HTTP 400 before payment. ${health.paidVerify.detail} Human SKUs are Stripe Payment Links on /pricing.`,
     },
     servers: [{ url: origin.replace(/\/+$/, "") || "https://authichain.com" }],
     paths: {

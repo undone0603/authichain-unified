@@ -100,9 +100,12 @@ export const TOOLS = [
     inputSchema: {
       type: "object",
       properties: {
-        sealId: { type: "string" },
-        productId: { type: "string" },
-        serial: { type: "string" },
+        sealId: {
+          type: "string",
+          format: "uuid",
+          description:
+            "Required seal UUID. productId and serial are not registry keys.",
+        },
       },
     },
   },
