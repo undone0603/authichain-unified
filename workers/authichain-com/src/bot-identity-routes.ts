@@ -8,6 +8,11 @@
  *   /agents/<slug>/agent-card.json  A2A-style agent card (identity only, no task endpoint)
  *   /agents/<slug>/identity.json  the two signed records
  *   /.well-known/did.json         did:web:authichain.com (the agent issuer key)
+ *   /.well-known/agent-card.json  identity-only card for the AuthiChain agent team
+ *   /.well-known/agent.json       same card, at the older path
+ *   /.well-known/http-message-signatures-directory  public Ed25519 keys as a JWKS
+ *     (RFC 9421 key directory format). Publishing keys only: our bots do not
+ *     sign HTTP requests yet, and this response is not itself signed.
  *
  * Public keys only. Records are Ed25519Signature2020 over JCS bytes and pass
  * protocol/verifier.mjs offline, with no call to AuthiChain. Not anchored on a
@@ -88,7 +93,7 @@ export function issuerDidDocument() {
 export function botAgentCard(bot: Bot) {
   return {
     name: `${bot.name} (AuthiChain)`,
-    description: `${bot.role}. An AI agent operated by AuthiChain. Not a person. This card publishes identity only; this agent does not accept A2A tasks at this URL.`,
+    description: `${bot.role}. An AI agent operated by AuthiChain. Not a person. This card publishes identity only; this agent does not accept A2A tasks at this URL. The signatures show the key published at authichain.com signed this agent's records; they do not show who operates it, whether its output is accurate or safe, or any third-party endorsement.`,
     url: `${ORIGIN}/agents/${bot.slug}`,
     version: "1.0.0",
     provider: { organization: "AuthiChain", url: ORIGIN },
@@ -103,6 +108,42 @@ export function botAgentCard(bot: Bot) {
       record: `${ORIGIN}/agents/${bot.slug}/identity.json`,
       verifier: "https://www.npmjs.com/package/authichain-verify",
     },
+  };
+}
+
+export const TEAM_CARD_SCOPE =
+  "The signatures show the key published at authichain.com signed each agent's records; they do not show who operates an agent, whether its output is accurate or safe, or any third-party endorsement.";
+
+export function teamAgentCard() {
+  return {
+    name: "AuthiChain agents",
+    description: `The AI agents that work for AuthiChain. None of them is a person. This card publishes identity only; these agents do not accept A2A tasks at this URL. ${TEAM_CARD_SCOPE}`,
+    url: `${ORIGIN}/agents`,
+    version: "1.0.0",
+    provider: { organization: "AuthiChain", url: ORIGIN },
+    capabilities: { streaming: false, pushNotifications: false },
+    defaultInputModes: ["text/plain"],
+    defaultOutputModes: ["text/plain"],
+    skills: [],
+    identity: {
+      issuer: BOT_IDENTITIES.issuer.did,
+      issuerKey: BOT_IDENTITIES.issuer.didKey,
+      agents: BOT_IDENTITIES.bots.map((b) => ({
+        name: b.name,
+        did: b.did,
+        card: `${ORIGIN}/agents/${b.slug}/agent-card.json`,
+      })),
+    },
+  };
+}
+
+export function keyDirectory() {
+  const jwk = (x: string, kid: string) => ({ kty: "OKP", crv: "Ed25519", x, kid, use: "sig" });
+  return {
+    keys: [
+      jwk(BOT_IDENTITIES.issuer.publicKeyJwkX, BOT_IDENTITIES.issuer.kid),
+      ...BOT_IDENTITIES.bots.map((b) => jwk(b.publicKeyJwkX, b.kid)),
+    ],
   };
 }
 
@@ -151,7 +192,8 @@ export function renderBotPage(bot: Bot): string {
 <dt>Checks</dt><dd>Issuer record: ${esc(c.record)} · Bot key statement: ${esc(c.selfStatement)} · Key matches: ${c.keyMatches ? "yes" : "no"} · Issuer matches: ${c.issuerMatches ? "yes" : "no"}</dd>
 <dt>Valid</dt><dd>${esc(bot.record.validFrom)} to ${esc(bot.record.validUntil)}</dd>
 <dt>Files</dt><dd><a href="/agents/${bot.slug}/did.json">DID document</a> · <a href="/agents/${bot.slug}/agent-card.json">Agent card</a> · <a href="/agents/${bot.slug}/identity.json">Signed records</a></dd></dl>
-<p>Check it yourself, offline: save the <code>record</code> from <code>identity.json</code> as <code>record.json</code>, then run <code>npx authichain-verify record.json</code> (the open-source <a href="https://www.npmjs.com/package/authichain-verify">AuthiChain verifier</a>, spec at <a href="/protocol">/protocol</a>). A pass means AuthiChain's key signed this record. It does not rate the agent's work.</p>
+<p>Check it yourself, offline: save the <code>record</code> from <code>identity.json</code> as <code>record.json</code>, then run <code>npx authichain-verify record.json</code> (the open-source <a href="https://www.npmjs.com/package/authichain-verify">AuthiChain verifier</a>, spec at <a href="/protocol">/protocol</a>). A pass means AuthiChain's key signed this record.</p>
+<p>What this proves: the public key published at authichain.com matches the signatures on this agent's identity records. What it does not prove: who operates the agent, whether its output is accurate or safe, or that any third party endorses it.</p>
 <p><a href="/agents">All AuthiChain agents</a></p>`,
   );
 }
@@ -162,7 +204,7 @@ export function renderIndexPage(): string {
     .join("");
   return page(
     "AuthiChain agents",
-    `<h1>AuthiChain agents</h1><p>These are the AI agents that work for AuthiChain. None of them is a person. Each page checks the agent's Ed25519-signed identity record live.</p><ul>${items}</ul>`,
+    `<h1>AuthiChain agents</h1><p>These are the AI agents that work for AuthiChain. None of them is a person. Each page checks the agent's Ed25519-signed identity record live. A pass shows the key published at authichain.com signed the record; it does not show whether an agent's output is accurate or safe, or any third-party endorsement.</p><ul>${items}</ul>`,
   );
 }
 
@@ -170,6 +212,10 @@ export function tryHandleBotIdentity(request: Request): Response | null {
   if (request.method !== "GET" && request.method !== "HEAD") return null;
   const path = new URL(request.url).pathname.replace(/\/$/, "") || "/";
   if (path === "/.well-known/did.json") return json(issuerDidDocument(), { "Content-Type": "application/did+json" });
+  if (path === "/.well-known/agent-card.json" || path === "/.well-known/agent.json") return json(teamAgentCard());
+  if (path === "/.well-known/http-message-signatures-directory") {
+    return json(keyDirectory(), { "Content-Type": "application/http-message-signatures-directory+json" });
+  }
   if (path === "/agents") return new Response(renderIndexPage(), { headers: HTML_HEADERS });
   if (path === "/agents/index.json") {
     return json({

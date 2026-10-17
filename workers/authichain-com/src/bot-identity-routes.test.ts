@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { verifyRecord } from "../../../protocol/verifier.mjs";
 import { BOT_IDENTITIES } from "./bot-identities";
@@ -33,5 +34,39 @@ describe("bot identities", () => {
     expect((await get("/.well-known/did.json")!.json()).id).toBe("did:web:authichain.com");
     expect(get("/agents/nobody")).toBeNull();
     expect(get("/agent/agentz")).toBeNull();
+  });
+  it("serves all four well-known paths", async () => {
+    const did = get("/.well-known/did.json")!;
+    expect(did.status).toBe(200);
+    expect(did.headers.get("Content-Type")).toBe("application/did+json");
+    for (const p of ["/.well-known/agent-card.json", "/.well-known/agent.json"]) {
+      const r = get(p)!;
+      expect(r.status).toBe(200);
+      const card = await r.json();
+      expect(card.name).toBe("AuthiChain agents");
+      expect(card.description).toContain("None of them is a person");
+      expect(card.description).toContain("do not show who operates an agent");
+      expect(card.identity.agents).toHaveLength(23);
+    }
+    const dir = get("/.well-known/http-message-signatures-directory")!;
+    expect(dir.status).toBe(200);
+    expect(dir.headers.get("Content-Type")).toBe("application/http-message-signatures-directory+json");
+    const { keys } = await dir.json();
+    expect(keys).toHaveLength(24);
+    for (const k of keys) {
+      expect(k).toMatchObject({ kty: "OKP", crv: "Ed25519" });
+      expect(k.d).toBeUndefined();
+      const tp = createHash("sha256").update(`{"crv":"Ed25519","kty":"OKP","x":"${k.x}"}`).digest("base64url");
+      expect(k.kid).toBe(tp);
+    }
+  });
+  it("pages carry the proves / does-not-prove statements", async () => {
+    const html = await get("/agents/grok-bot")!.text();
+    expect(html).toContain("What this proves: the public key published at authichain.com");
+    expect(html).toContain("What it does not prove: who operates the agent");
+    const card = await get("/agents/grok-bot/agent-card.json")!.json();
+    expect(card.description).toContain("they do not show who operates it");
+    expect(await get("/agents")!.text()).toContain("it does not show whether an agent's output is accurate or safe");
+    expect(BOT_IDENTITIES.bots[0].role).toBe("Drafts X posts for review and reports to AuthiChain Marketing");
   });
 });

@@ -7,17 +7,19 @@ export const BOT_IDENTITIES = {
     "did": "did:web:authichain.com",
     "didKey": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
     "publicKeyMultibase": "z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
-    "publicKeyJwkX": "vmARfMDXu66LNVs20fiJfAaaibbloWfA3s4mPpT0ZZo"
+    "publicKeyJwkX": "vmARfMDXu66LNVs20fiJfAaaibbloWfA3s4mPpT0ZZo",
+    "kid": "9XiieCT14nGIC0EKkITG4E-0n1JORhT0JnV6gH6ergs"
   },
   "bots": [
     {
       "name": "Grok Bot",
       "slug": "grok-bot",
-      "role": "Founder's assistant: coordinates the team and drafts work for review",
+      "role": "Drafts X posts for review and reports to AuthiChain Marketing",
       "did": "did:web:authichain.com:agents:grok-bot",
       "didKey": "did:key:z6MkmKuw6Y24PfKcLbKPsSZwqMdz33BCBxQhDHRdu1GhtU6C",
       "publicKeyMultibase": "z6MkmKuw6Y24PfKcLbKPsSZwqMdz33BCBxQhDHRdu1GhtU6C",
       "publicKeyJwkX": "ZiAAi4rJpDsDVwzVKWw5hUstVeJJNTVk6dzc-xSM3tE",
+      "kid": "KJAf3kym5nWiZnMd8ufi3I7wRhHNZ4QsUL8t2aUbR6E",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -33,7 +35,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:grok-bot",
           "name": "Grok Bot",
-          "role": "Founder's assistant: coordinates the team and drafts work for review",
+          "role": "Drafts X posts for review and reports to AuthiChain Marketing",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6MkmKuw6Y24PfKcLbKPsSZwqMdz33BCBxQhDHRdu1GhtU6C",
@@ -44,7 +46,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "zDPmMJUJjdKxCJST4o88E4eAUHYP6vhWC9TdvWgmRibtgUNTA9UUc37rTAPEgy2LkPYHcbK7ABSMKsA7KmRBnePn"
+          "proofValue": "z3WLXPbGfixeQYB1wFVWspCcHKoc5gG1d6S2jRLGQBPJLfjCfUYDjMSx6mDvAyyCq19j5zJEGGwBQgoqNSeMEdxjN"
         }
       },
       "selfStatement": {
@@ -75,11 +77,12 @@ export const BOT_IDENTITIES = {
     {
       "name": "Collective Cloud",
       "slug": "collective-cloud",
-      "role": "Shared team workspace agent",
+      "role": "Makes community maps",
       "did": "did:web:authichain.com:agents:collective-cloud",
       "didKey": "did:key:z6MkgNLmK97m9mzYNXCPMKEbmQqiWGZcQjkZJ3QacTViHiHH",
       "publicKeyMultibase": "z6MkgNLmK97m9mzYNXCPMKEbmQqiWGZcQjkZJ3QacTViHiHH",
       "publicKeyJwkX": "HHTOVZoMLP6r72Kp4BFGwTRUuspuLollulCstIxgDwQ",
+      "kid": "nMMFrI3KCo5j-jbi6g9nrJMP251GtUigTcJtoyQi8Z4",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -95,7 +98,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:collective-cloud",
           "name": "Collective Cloud",
-          "role": "Shared team workspace agent",
+          "role": "Makes community maps",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6MkgNLmK97m9mzYNXCPMKEbmQqiWGZcQjkZJ3QacTViHiHH",
@@ -106,7 +109,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z34K7MA26v6axyMTcmUQixcYoT45HX6GzmxX68xA4f6oCgzjP9p8Gc1jodsPt2X41yJPDTWQrUdgc7aLk2EWkwSaG"
+          "proofValue": "z4NZRA3saEK7Hy1hZrj79AUxbhVczg1MUkowXLpLxDMS4gR5fFXN3mApxhRtStjgNWphV9Y3X84W9nxpUMMGd7UfJ"
         }
       },
       "selfStatement": {
@@ -137,11 +140,12 @@ export const BOT_IDENTITIES = {
     {
       "name": "AuthiChain Admin",
       "slug": "authichain-admin",
-      "role": "Administration and account hygiene",
+      "role": "Handles paperwork, deadlines and records",
       "did": "did:web:authichain.com:agents:authichain-admin",
       "didKey": "did:key:z6Mkgui62VLTfoGGSoMtiBCZ6JJuLSrHWJDpxdaQUTwn2sNE",
       "publicKeyMultibase": "z6Mkgui62VLTfoGGSoMtiBCZ6JJuLSrHWJDpxdaQUTwn2sNE",
       "publicKeyJwkX": "JH3rsClc6GmUGxzQAawHDhx2kC2X80GQSY8i5rUsMo8",
+      "kid": "wHk_j3g-fjEIqoR9C1LcpgJiO60kMMgX0Qg-A4sNkk4",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -157,7 +161,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:authichain-admin",
           "name": "AuthiChain Admin",
-          "role": "Administration and account hygiene",
+          "role": "Handles paperwork, deadlines and records",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6Mkgui62VLTfoGGSoMtiBCZ6JJuLSrHWJDpxdaQUTwn2sNE",
@@ -168,7 +172,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "zZUTGedQdhJjBtQRwz63WahBwXWrzhxQQzxQ8B3E7vGwGfacSUy9FVZKF9rgWZ34ZAxWhY2KePfPfd8mTw1CJA9Q"
+          "proofValue": "z5iBAaDojsUwy5hH1QmeyyKgHQH9J41mRgNnDNs3Rito3jHrC4HZErPgFPQjjqR9Lt4KyqjsNQL3y8y59YL5CM8R7"
         }
       },
       "selfStatement": {
@@ -199,11 +203,12 @@ export const BOT_IDENTITIES = {
     {
       "name": "Revenue Closer",
       "slug": "revenue-closer",
-      "role": "Follows up on sales leads",
+      "role": "Works on StorePilot revenue",
       "did": "did:web:authichain.com:agents:revenue-closer",
       "didKey": "did:key:z6MkmM3zXzwLJNV8B65bEPXwXbqwPPbzeXDeyfRT8DAgxNY1",
       "publicKeyMultibase": "z6MkmM3zXzwLJNV8B65bEPXwXbqwPPbzeXDeyfRT8DAgxNY1",
       "publicKeyJwkX": "ZmqyE4yGMZO_oPFKdu7ovLOuXJo_i5Dkkp6MSaL_QCI",
+      "kid": "510C-S7AeG5L4bHLdmjxWrKQTujgHEW5mSwGkFWy7Ck",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -219,7 +224,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:revenue-closer",
           "name": "Revenue Closer",
-          "role": "Follows up on sales leads",
+          "role": "Works on StorePilot revenue",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6MkmM3zXzwLJNV8B65bEPXwXbqwPPbzeXDeyfRT8DAgxNY1",
@@ -230,7 +235,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z5QXdqWaEjweva6BULgvXKqFrFkwKxt7xFbfyTXBHiPJHu6FFSqDc9wdiKwYpmgw6C8aqkBpow4zevRLYp7BA4ohv"
+          "proofValue": "z5HEaLPfCbtG33CFVSt8ry9V7H5wYSnXF9B7HPW9evfndkwbdqMviFnGMEwppSJUYYhrJ57M38YbVerkoQJqbNTF5"
         }
       },
       "selfStatement": {
@@ -266,6 +271,7 @@ export const BOT_IDENTITIES = {
       "didKey": "did:key:z6MkggJ2Hg4Lv6CAqXYZr5mP9PDEK3pXJWnEGAkVy4YwpMVk",
       "publicKeyMultibase": "z6MkggJ2Hg4Lv6CAqXYZr5mP9PDEK3pXJWnEGAkVy4YwpMVk",
       "publicKeyJwkX": "IQ4pDnFmXVbGd3ojHzNlhtuK2howq_fiUv5BRewbnys",
+      "kid": "CXbPqMWe8CQhVbGL7xMkF0LfHxkM-aSndA_fxH5exhs",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -328,6 +334,7 @@ export const BOT_IDENTITIES = {
       "didKey": "did:key:z6MknT8CUNh5EKYGV8FeXf6ASYh4gcmyR17AnSha1xmFDr4S",
       "publicKeyMultibase": "z6MknT8CUNh5EKYGV8FeXf6ASYh4gcmyR17AnSha1xmFDr4S",
       "publicKeyJwkX": "dtSfeBjUpNWwtaUYPu0_n8pzt9xySMYfx8_nkCBLUas",
+      "kid": "Sp6nN-K1DWC77vmZPAPK3-vpexzux5ZLrUDMVwDW-II",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -385,11 +392,12 @@ export const BOT_IDENTITIES = {
     {
       "name": "AE Creative",
       "slug": "ae-creative",
-      "role": "Marketing creative drafts",
+      "role": "AI agent on the AuthiChain team (role description pending)",
       "did": "did:web:authichain.com:agents:ae-creative",
       "didKey": "did:key:z6Mkhhx8YTBobx32VoViX3TCVCyz8zGz6ydRE4UEiX925kuk",
       "publicKeyMultibase": "z6Mkhhx8YTBobx32VoViX3TCVCyz8zGz6ydRE4UEiX925kuk",
       "publicKeyJwkX": "MFaETA8btkC7N5vNpDgHyqCbSzUyh0hhSAJCuR3kzK8",
+      "kid": "c4yk-ggQ8yXsI2gfDnQZ6nVxqv7oZeKB7p2d2YT178U",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -405,7 +413,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:ae-creative",
           "name": "AE Creative",
-          "role": "Marketing creative drafts",
+          "role": "AI agent on the AuthiChain team (role description pending)",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6Mkhhx8YTBobx32VoViX3TCVCyz8zGz6ydRE4UEiX925kuk",
@@ -416,7 +424,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z4WkhB7PRCgUzkpjHAsqmBRnWbY3DfJihVnisseFjsQzcCiFPe8D3PxD5sbdthmxmMhCVkoePHBzhnKiLwBMzRdxq"
+          "proofValue": "z4QtfTraMtqWWLdbSZyyuHoW95sXEPi1Q7euGuDfPxTxhgupB683gu3VPyx4K2T9vbA5WAnBf7Y5XDzefxK9gmEg8"
         }
       },
       "selfStatement": {
@@ -447,11 +455,12 @@ export const BOT_IDENTITIES = {
     {
       "name": "Overheard",
       "slug": "overheard",
-      "role": "Listens for public mentions and market signals",
+      "role": "Watches public mentions",
       "did": "did:web:authichain.com:agents:overheard",
       "didKey": "did:key:z6Mkjhn46ofdtDpeJKopcPag5No7BrQsm2cvUsyJLEjkjZDD",
       "publicKeyMultibase": "z6Mkjhn46ofdtDpeJKopcPag5No7BrQsm2cvUsyJLEjkjZDD",
       "publicKeyJwkX": "TgJ_O4pOsO4czvN4q93TPVjjSavDmx-dKaIL_9iJOYQ",
+      "kid": "8gb9T53PIBNjwy_X7M2y2SS9OWpw3FxU0-tDU3nVYkc",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -467,7 +476,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:overheard",
           "name": "Overheard",
-          "role": "Listens for public mentions and market signals",
+          "role": "Watches public mentions",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6Mkjhn46ofdtDpeJKopcPag5No7BrQsm2cvUsyJLEjkjZDD",
@@ -478,7 +487,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z3xhhMKf5mqKKMmtn8LkB972JPDXeLPaQFsTPxibNmZdZAqYKkSr6ph7n8EVFYQeQzXHWzCmoeiuQppDutUMa1q7c"
+          "proofValue": "z3Z3ojavTjhsqAE65hfzuG6iLbyVfc5BLvTwrxhfwueuvcGRG6mNtzSToVQdvN9pMY5bnDChDCzpB4Ue4UMk7zKba"
         }
       },
       "selfStatement": {
@@ -509,11 +518,12 @@ export const BOT_IDENTITIES = {
     {
       "name": "Cloudflare Fleet Auditor",
       "slug": "cloudflare-fleet-auditor",
-      "role": "Reviews Cloudflare deploys and code changes",
+      "role": "Read-only health checks and reviews of Cloudflare deploys",
       "did": "did:web:authichain.com:agents:cloudflare-fleet-auditor",
       "didKey": "did:key:z6Mksbpe5PdCWSTTYwfc2mSdRdb5St9zin4uiG3jhUAw8jVB",
       "publicKeyMultibase": "z6Mksbpe5PdCWSTTYwfc2mSdRdb5St9zin4uiG3jhUAw8jVB",
       "publicKeyJwkX": "w1luasSHRbcruTfMgies5eZzhVk4nxuDuBN0xTdBWCI",
+      "kid": "lzHiCd5trloqN-zJRANBNzhy_xfdItXYEY9uRGTNfQg",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -529,7 +539,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:cloudflare-fleet-auditor",
           "name": "Cloudflare Fleet Auditor",
-          "role": "Reviews Cloudflare deploys and code changes",
+          "role": "Read-only health checks and reviews of Cloudflare deploys",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6Mksbpe5PdCWSTTYwfc2mSdRdb5St9zin4uiG3jhUAw8jVB",
@@ -540,7 +550,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z3wvhtCU3jGaZ5QHzeQp4RTRCTwow8CeXfYMzkDunUPtfcRp2KwzFNg3fHBk7nQpKNwiYuB2cCgKCtdFXY7yoaSiy"
+          "proofValue": "z4geXazzJU7Mn1gC8yQAqXGeLnzdMrA3o6Y1mjRvquKcDCJSUvyxirk1KJQviEG1htvxCeWxAyuWckZLn84CxKUkZ"
         }
       },
       "selfStatement": {
@@ -576,6 +586,7 @@ export const BOT_IDENTITIES = {
       "didKey": "did:key:z6MkuyeHzk1nhNfj4QSiofZzMss1MZaoA2iuUQnX97ZqD1yR",
       "publicKeyMultibase": "z6MkuyeHzk1nhNfj4QSiofZzMss1MZaoA2iuUQnX97ZqD1yR",
       "publicKeyJwkX": "5qfibM31TdMFbi60SXz_nG94qREgxIiwLdH7cr_ZCyg",
+      "kid": "N9cgXLW7lZb_Sq8zlMvYfhAi5wCzUfs0W2CNf5IZcDQ",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -633,11 +644,12 @@ export const BOT_IDENTITIES = {
     {
       "name": "dr eggbot",
       "slug": "dr-eggbot",
-      "role": "Diagnostics and troubleshooting",
+      "role": "Designs Grok Bots",
       "did": "did:web:authichain.com:agents:dr-eggbot",
       "didKey": "did:key:z6MkhSqrCrTds1AroU45bT2o4igVFX6cEjPrTnT8avbU7ZFG",
       "publicKeyMultibase": "z6MkhSqrCrTds1AroU45bT2o4igVFX6cEjPrTnT8avbU7ZFG",
       "publicKeyJwkX": "LHezsSo83A_bTvx7sau3dmQ4NMvnZO_7e9zonp5tSVs",
+      "kid": "hd7r_DoGIM8Omn1z3M819LNHN54YUX48yuLSeEIoGJo",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -653,7 +665,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:dr-eggbot",
           "name": "dr eggbot",
-          "role": "Diagnostics and troubleshooting",
+          "role": "Designs Grok Bots",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6MkhSqrCrTds1AroU45bT2o4igVFX6cEjPrTnT8avbU7ZFG",
@@ -664,7 +676,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z7Qi9GfSD24X36cH9BHGhFfToLtC9bBq2WEZCLyNi4urPNmM5jZGzRtK1UzpkGUdP9vBE9cdbuGruZhJTFd3CKaf"
+          "proofValue": "zyRAVMV9xYztooP4teKhvSL1tEdpjXH3UULmvfh7oefEskFEMs9huFVqbkbuCWKBy1VzvWvT86Tsb7pXypmSe7aW"
         }
       },
       "selfStatement": {
@@ -700,6 +712,7 @@ export const BOT_IDENTITIES = {
       "didKey": "did:key:z6Mkja6D8z9aVAwpvDTryBqkzpXK7uxuCx7TQBncyKSHLSuy",
       "publicKeyMultibase": "z6Mkja6D8z9aVAwpvDTryBqkzpXK7uxuCx7TQBncyKSHLSuy",
       "publicKeyJwkX": "TAphHyX5ThkeparHdD40C2VjwUvb0B3iqcQGVtQeBJw",
+      "kid": "6lFmlukq5ENXBk4n6e4YhmBzjV-Ni4X5GvibR4T4trQ",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -757,11 +770,12 @@ export const BOT_IDENTITIES = {
     {
       "name": "Janitor",
       "slug": "janitor",
-      "role": "Cleans up stale files, branches and tasks",
+      "role": "AI agent on the AuthiChain team (role description pending)",
       "did": "did:web:authichain.com:agents:janitor",
       "didKey": "did:key:z6Mkecf8qHCkXMJkNPN2E6naMRXe5dDSx1jxN361kUaYxzu1",
       "publicKeyMultibase": "z6Mkecf8qHCkXMJkNPN2E6naMRXe5dDSx1jxN361kUaYxzu1",
       "publicKeyJwkX": "AmhV7Y2ENQ8X_PGyExYIBXJoIaNmzDwwrYNgY_WnZDQ",
+      "kid": "1OYChoZGIazLczNr_CbhM0VOtBpa7uYPoUwC9vTvMHI",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -777,7 +791,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:janitor",
           "name": "Janitor",
-          "role": "Cleans up stale files, branches and tasks",
+          "role": "AI agent on the AuthiChain team (role description pending)",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6Mkecf8qHCkXMJkNPN2E6naMRXe5dDSx1jxN361kUaYxzu1",
@@ -788,7 +802,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z3Rpi3hXDHFA4sktE9AF7bSyyjKLma9aHu9vrm9iuQQNtH9kWSB8RkzovdJnm9uB9zAdUW5vB2FNQ1MMntiipUZJm"
+          "proofValue": "z51uWwx3jUj5FhJYVGio6Qd2DynyMwUS4xtCotDXp19UnwGUdf17P8XrQCqWaGhrqx2a647i2XDWiH43mNHC97Kjg"
         }
       },
       "selfStatement": {
@@ -824,6 +838,7 @@ export const BOT_IDENTITIES = {
       "didKey": "did:key:z6MkmifpDsd2FBfKuo3h9Gp6o6HMrNWCLEvcDnLDFJVsdxz7",
       "publicKeyMultibase": "z6MkmifpDsd2FBfKuo3h9Gp6o6HMrNWCLEvcDnLDFJVsdxz7",
       "publicKeyJwkX": "a_RlmpBdAenRUSlSTmvhjMThAMM3MFe_H2ODhzeA8yw",
+      "kid": "dz0KyYtBjS_AVok9_5IKfsvLiAN4g-5zASDfliQdgDk",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -881,11 +896,12 @@ export const BOT_IDENTITIES = {
     {
       "name": "Project Ops",
       "slug": "project-ops",
-      "role": "Operations support for projects",
+      "role": "AI agent on the AuthiChain team (role description pending)",
       "did": "did:web:authichain.com:agents:project-ops",
       "didKey": "did:key:z6MkgoG5AmdQuJYbipnFjJNYhBDMQ83tL4gHBZBagfZmdDYA",
       "publicKeyMultibase": "z6MkgoG5AmdQuJYbipnFjJNYhBDMQ83tL4gHBZBagfZmdDYA",
       "publicKeyJwkX": "ItcFUvTcdIqyKw3g7xNeNinSDXafDqlv08Qb9WQRIR8",
+      "kid": "KY8BMEsZy3UZ5IQEYNS5gS-FXcKrjfniwYa_-6x0Eh0",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -901,7 +917,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:project-ops",
           "name": "Project Ops",
-          "role": "Operations support for projects",
+          "role": "AI agent on the AuthiChain team (role description pending)",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6MkgoG5AmdQuJYbipnFjJNYhBDMQ83tL4gHBZBagfZmdDYA",
@@ -912,7 +928,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z4axFs4FeoFzbdd7uJsxVfHProD4r7FbDp6qJ2s5ZhdhtrJAXngAYuTx7GQGtCymqQLUQn71SVEbhRZ8hTrfUZ54Q"
+          "proofValue": "znLuYvPWviZaWAHYcG1HAvARd8neUB5LHfB429B8yLkCyCGETwjgQiYJwHejVcu8RjdsPk1oXzcNYeXAadZ23TRB"
         }
       },
       "selfStatement": {
@@ -943,11 +959,12 @@ export const BOT_IDENTITIES = {
     {
       "name": "AE Ops Watch",
       "slug": "ae-ops-watch",
-      "role": "Watches operations and uptime",
+      "role": "AI agent on the AuthiChain team (role description pending)",
       "did": "did:web:authichain.com:agents:ae-ops-watch",
       "didKey": "did:key:z6MkjsDkWSYHP4btoExdQCXPUe6pGfqAzcKUyxvcVw1qJu8n",
       "publicKeyMultibase": "z6MkjsDkWSYHP4btoExdQCXPUe6pGfqAzcKUyxvcVw1qJu8n",
       "publicKeyJwkX": "UG3HlMmLMng0TE5pOwY4Ze70S-BxPxh6QV4x_w8k5Ts",
+      "kid": "6hju9RM8fxfn4Vefe6IhnRAkj3LKIM3LhGEaFuK9b-s",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -963,7 +980,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:ae-ops-watch",
           "name": "AE Ops Watch",
-          "role": "Watches operations and uptime",
+          "role": "AI agent on the AuthiChain team (role description pending)",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6MkjsDkWSYHP4btoExdQCXPUe6pGfqAzcKUyxvcVw1qJu8n",
@@ -974,7 +991,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z3Taj1Yrc7TnmbAzyJCTQSncd8jQQcjfjmVNLbNdjnE4tQuJSxsLmaUusGt6fX8rP2yr91qKdJAuysoDfCRmBMcsG"
+          "proofValue": "z5yZ49goZdgEkQ3GY9HUdbBPEnqRS5KreWX7qCrDRxfY12kAA9DoxcKpe6TWqw9Z8tofW4DNdq6JiiDhPzpK1ZytY"
         }
       },
       "selfStatement": {
@@ -1005,11 +1022,12 @@ export const BOT_IDENTITIES = {
     {
       "name": "Store Pilot",
       "slug": "store-pilot",
-      "role": "Storefront and checkout operations",
+      "role": "Works on StorePilot revenue",
       "did": "did:web:authichain.com:agents:store-pilot",
       "didKey": "did:key:z6MktwUZrusAJKDJhXGiNgmQWWfCWFuhHiGnz7tdH6UYFLzZ",
       "publicKeyMultibase": "z6MktwUZrusAJKDJhXGiNgmQWWfCWFuhHiGnz7tdH6UYFLzZ",
       "publicKeyJwkX": "1z4JxhHJQHMT6QCu8YARR-jcamdfN-OnC29W541y2vY",
+      "kid": "R8UIcQgLpbo8RHyhKuG7EBz9eZkLifp5IwIUkoR0XpE",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -1025,7 +1043,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:store-pilot",
           "name": "Store Pilot",
-          "role": "Storefront and checkout operations",
+          "role": "Works on StorePilot revenue",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6MktwUZrusAJKDJhXGiNgmQWWfCWFuhHiGnz7tdH6UYFLzZ",
@@ -1036,7 +1054,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z2Ju6HiHSNhSkipuP53mtRA9crjKb4yCLxK9X2gTXzCbnEvCcxXSCbaK5uTQt1P9zJGJ3GK47dzRC69hqBPLGrpsV"
+          "proofValue": "z2twJcc9r74i8gPTeQCNXvrjRxCEtnhgoYDVqbrzUMZLqacDYAkjdSeL66oj1TDpQdvd4ozGHEi3VSZtoexCywkc6"
         }
       },
       "selfStatement": {
@@ -1072,6 +1090,7 @@ export const BOT_IDENTITIES = {
       "didKey": "did:key:z6MkktjbpYFSGVTfmpH32H3kZGXijHWtPnW5g5mP1WgFXyK9",
       "publicKeyMultibase": "z6MkktjbpYFSGVTfmpH32H3kZGXijHWtPnW5g5mP1WgFXyK9",
       "publicKeyJwkX": "X6zMkPS2TnXoXR8KduOxnI7oUFp9J66FNi7hEMzOQiw",
+      "kid": "PzCj68jTvjYZMTzWeMl8vV7GzZVxjo8_fm5WYx-YERI",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -1134,6 +1153,7 @@ export const BOT_IDENTITIES = {
       "didKey": "did:key:z6MkfFoXP2dxgbdYoJTnYckQ9m38UpfizNbRLcCXp67iKsnv",
       "publicKeyMultibase": "z6MkfFoXP2dxgbdYoJTnYckQ9m38UpfizNbRLcCXp67iKsnv",
       "publicKeyJwkX": "C-xPj0B4PIYWfiUcVa9tBhqXmoF6p70WYrRq4dvUOE8",
+      "kid": "__TGLdzYt1UriNNv59BuKyTKid3U4el_ePLe72qj708",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -1196,6 +1216,7 @@ export const BOT_IDENTITIES = {
       "didKey": "did:key:z6Mkqcaen7oej8rHEN6fTJvRdYsCwUkQsjYSs6XmH6U1b51p",
       "publicKeyMultibase": "z6Mkqcaen7oej8rHEN6fTJvRdYsCwUkQsjYSs6XmH6U1b51p",
       "publicKeyJwkX": "pdPSdepEn02qFuUWHEeRk1McEqwh8oZ50fQpu7wu6S8",
+      "kid": "FrLQIfQ_bAxeeS8R9PHMXCJM2yXZ-CiTOeXoTljIbQY",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -1258,6 +1279,7 @@ export const BOT_IDENTITIES = {
       "didKey": "did:key:z6MkqPRkkxXwdXqeiSXo5zyPCPE5adH6SMMbRkGYomcky431",
       "publicKeyMultibase": "z6MkqPRkkxXwdXqeiSXo5zyPCPE5adH6SMMbRkGYomcky431",
       "publicKeyJwkX": "onU2OzMmQlFMT6Jzw0dIOv37Z3vGbsh7xu6ed5uPjjA",
+      "kid": "yEfW6jHvk_Tkw2slmn-4AIzAghWNufyq-8LcG0MshX8",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -1315,11 +1337,12 @@ export const BOT_IDENTITIES = {
     {
       "name": "AE Fleet Watch",
       "slug": "ae-fleet-watch",
-      "role": "Monitors the bot fleet",
+      "role": "Read-only morning check on the bot fleet",
       "did": "did:web:authichain.com:agents:ae-fleet-watch",
       "didKey": "did:key:z6MkmXw9tBhfx5QnqYSFazoPM7d7tNDaBRKGBx4aCTN8u31H",
       "publicKeyMultibase": "z6MkmXw9tBhfx5QnqYSFazoPM7d7tNDaBRKGBx4aCTN8u31H",
       "publicKeyJwkX": "aTRaESXDM6qASE407Sw6vuRVkuDhOsbo4a6Euw_VbQg",
+      "kid": "ZbsnEvnCPPkotddSsKVceeSkWPkCaK3EmV0dRXJAexY",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -1335,7 +1358,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:ae-fleet-watch",
           "name": "AE Fleet Watch",
-          "role": "Monitors the bot fleet",
+          "role": "Read-only morning check on the bot fleet",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6MkmXw9tBhfx5QnqYSFazoPM7d7tNDaBRKGBx4aCTN8u31H",
@@ -1346,7 +1369,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z24B5d4vxbsAmXLody7CaoRdg5mrzj2WY4VcidXNJ4xNuhgG6qqrjsgGvtfreHm12HpYkfca2k5utUEi6msks6syE"
+          "proofValue": "zUncW2L5mPqcduMA1jZHUHhjg376TZR5UddcrwfQKDWCY7k55fNQNTzJPmYffxhpu1SA6PmL72JK2KDrmw62Ea8S"
         }
       },
       "selfStatement": {
@@ -1377,11 +1400,12 @@ export const BOT_IDENTITIES = {
     {
       "name": "Bankz",
       "slug": "bankz",
-      "role": "Finance tracking",
+      "role": "Keeps the evidence bank",
       "did": "did:web:authichain.com:agents:bankz",
       "didKey": "did:key:z6MkuqhgeSum26RzUZeH5Xq4CErYQvWrd5BMmTt4944cZXbr",
       "publicKeyMultibase": "z6MkuqhgeSum26RzUZeH5Xq4CErYQvWrd5BMmTt4944cZXbr",
       "publicKeyJwkX": "5J8SWRcSURMSBnFZeiEM7pFG3BPLg2AN-fBV2s-TIO0",
+      "kid": "WLAVNGTZ-2lXzVjOHdhZz1lwsPA2zDG6l-KSGAJ9jwc",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -1397,7 +1421,7 @@ export const BOT_IDENTITIES = {
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:bankz",
           "name": "Bankz",
-          "role": "Finance tracking",
+          "role": "Keeps the evidence bank",
           "operator": "AuthiChain",
           "isHuman": false,
           "agentKey": "did:key:z6MkuqhgeSum26RzUZeH5Xq4CErYQvWrd5BMmTt4944cZXbr",
@@ -1408,7 +1432,7 @@ export const BOT_IDENTITIES = {
           "created": "2026-10-17T18:00:00Z",
           "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z517hLJ4DjSZQBJaHiv3t832rSPNVeaC9rJEPmzjpf6knCsAqDcBecZqEWAma1RzGTYE2gGg97spqrjNajXc3orBp"
+          "proofValue": "zq4UpwqEJpRsZtcQDdrYxDfZpRHYcrco5gtz9kgzxFsLmDFcL9WjyZSyHziUgFtJMreoMZNDGSE699RTh8UPQ3AX"
         }
       },
       "selfStatement": {
