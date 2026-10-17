@@ -10,7 +10,7 @@ import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 import { getSessionCookieOptions } from "../server/_core/cookies";
 import { products, certificates } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
-import { checkRateLimit, peekRateLimit } from "./rate-limiter";
+import { checkRateLimit, refundRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
 import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
@@ -471,8 +471,8 @@ app.post("/api/generate", async c => {
         const { claimFreeSampleSlot } = await import("../src/lib/generate-api");
         const ipKey = `free-sample:${ip}`;
         return claimFreeSampleSlot({
-          peekIp: () =>
-            peekRateLimit(
+          claimIp: () =>
+            checkRateLimit(
               ns,
               ipKey,
               FREE_SAMPLE_GENERATIONS,
@@ -485,13 +485,7 @@ app.post("/api/generate", async c => {
               FREE_SAMPLE_GLOBAL_DAILY_CAP,
               24 * 60 * 60_000
             ),
-          claimIp: () =>
-            checkRateLimit(
-              ns,
-              ipKey,
-              FREE_SAMPLE_GENERATIONS,
-              FREE_SAMPLE_WINDOW_MS
-            ),
+          refundIp: () => refundRateLimit(ns, ipKey),
         });
       },
       rememberPresentation: async record => {

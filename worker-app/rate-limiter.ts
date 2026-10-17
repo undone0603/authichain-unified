@@ -29,27 +29,36 @@ export class RateLimiter {
   }
 
   async fetch(request: Request): Promise<Response> {
-    const { limit, windowMs, peek } = await request.json<{
+    const { limit, windowMs, refund } = await request.json<{
       limit: number;
       windowMs: number;
-      peek?: boolean;
+      refund?: boolean;
     }>();
-    const allowed = peek
-      ? await this.peek(limit)
+    const allowed = refund
+      ? await this.refund()
       : await this.check(limit, windowMs);
     return new Response(JSON.stringify({ allowed }), {
       headers: { "content-type": "application/json" },
     });
   }
 
-  /** Non-consuming: would one more request be allowed right now? */
-  private async peek(limit: number): Promise<boolean> {
+  /**
+   * Gives back one slot taken in the current window (count - 1, never below
+   * 0). Returns true when a slot was returned. An expired or missing entry has
+   * nothing to give back.
+   */
+  private async refund(): Promise<boolean> {
     const stored = await this.state.storage.get<{
       count: number;
       resetAt: number;
     }>("entry");
-    if (!stored || Date.now() >= stored.resetAt) return limit > 0;
-    return stored.count < limit;
+    if (!stored || Date.now() >= stored.resetAt || stored.count <= 0)
+      return false;
+    await this.state.storage.put("entry", {
+      count: stored.count - 1,
+      resetAt: stored.resetAt,
+    });
+    return true;
   }
 
   /**
@@ -109,17 +118,15 @@ export async function checkRateLimit(
   return allowed;
 }
 
-/** Like checkRateLimit but never increments the counter. */
-export async function peekRateLimit(
+/** Returns one slot taken under `key` in the current window. */
+export async function refundRateLimit(
   namespace: DurableObjectNamespace,
-  key: string,
-  limit: number,
-  windowMs: number
+  key: string
 ): Promise<boolean> {
   const stub = namespace.get(namespace.idFromName(key));
   const res = await stub.fetch("https://rate-limiter/check", {
     method: "POST",
-    body: JSON.stringify({ limit, windowMs, peek: true }),
+    body: JSON.stringify({ limit: 0, windowMs: 0, refund: true }),
   });
   const { allowed } = await res.json<{ allowed: boolean }>();
   return allowed;

@@ -171,26 +171,38 @@ export const FREE_SAMPLE_WINDOW_MS = 30 * 24 * 60 * 60_000;
 export const FREE_SAMPLE_GLOBAL_DAILY_CAP = 100;
 
 export type FreeSampleLimiter = {
-  /** Non-consuming: does this visitor still have per-IP quota? */
-  peekIp: () => Promise<boolean>;
-  /** Consumes one site-wide daily slot. */
-  claimDaily: () => Promise<boolean>;
   /** Consumes one per-IP slot. */
   claimIp: () => Promise<boolean>;
+  /** Consumes one site-wide daily slot. */
+  claimDaily: () => Promise<boolean>;
+  /** Gives back the per-IP slot just claimed. */
+  refundIp: () => Promise<boolean>;
 };
 
 /**
- * Order (CFA-353): peek per-IP, then claim a daily slot, then claim the IP
- * slot. A visitor who used their 5 never touches the daily counter, and a
- * capped day never consumes a visitor's samples. Only a race (the same IP
- * spending its last slot between peek and claim) can cost one daily slot.
+ * Order (CFA-361): claim the per-IP slot, then a daily slot; if the daily
+ * claim fails, give the IP slot back. A visitor who used their 5 is stopped
+ * at the IP claim and never touches the daily counter, so a parallel burst
+ * from one IP can take at most 5 daily slots. A capped day hands the IP slot
+ * back. Fails closed: any thrown error propagates and the caller says paused.
+ * If the refund itself fails, the visitor loses that one sample (never the
+ * reverse), and the result is still paused.
  */
 export async function claimFreeSampleSlot(
   l: FreeSampleLimiter
 ): Promise<{ ok: boolean; reason?: "used" | "paused" }> {
-  if (!(await l.peekIp())) return { ok: false, reason: "used" };
-  if (!(await l.claimDaily())) return { ok: false, reason: "paused" };
   if (!(await l.claimIp())) return { ok: false, reason: "used" };
+  let daily = false;
+  try {
+    daily = await l.claimDaily();
+  } catch (err) {
+    await l.refundIp().catch(() => false);
+    throw err;
+  }
+  if (!daily) {
+    await l.refundIp().catch(() => false);
+    return { ok: false, reason: "paused" };
+  }
   return { ok: true };
 }
 

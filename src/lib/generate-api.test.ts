@@ -63,50 +63,92 @@ describe("generateHealthBody", () => {
   });
 });
 
-describe("claimFreeSampleSlot ordering (CFA-353)", () => {
-  function limiter(opts: {
-    ipLeft: boolean;
-    dailyLeft: boolean;
-    ipClaim?: boolean;
-  }) {
-    const calls: string[] = [];
+describe("claimFreeSampleSlot ordering (CFA-361)", () => {
+  // In-memory fixed-window counters with the same semantics as RateLimiter.
+  function counters(ipLimit: number, dailyLimit: number) {
+    const st = { ip: 0, daily: 0, refunds: 0, calls: [] as string[] };
+    const tick = () => new Promise(r => setTimeout(r, 0));
     return {
-      calls,
+      st,
       l: {
-        peekIp: async () => (calls.push("peekIp"), opts.ipLeft),
-        claimDaily: async () => (calls.push("claimDaily"), opts.dailyLeft),
-        claimIp: async () => (
-          calls.push("claimIp"),
-          opts.ipClaim ?? opts.ipLeft
-        ),
+        claimIp: async () => {
+          st.calls.push("claimIp");
+          await tick();
+          if (st.ip >= ipLimit) return false;
+          st.ip += 1;
+          return true;
+        },
+        claimDaily: async () => {
+          st.calls.push("claimDaily");
+          await tick();
+          if (st.daily >= dailyLimit) return false;
+          st.daily += 1;
+          return true;
+        },
+        refundIp: async () => {
+          st.calls.push("refundIp");
+          st.refunds += 1;
+          if (st.ip > 0) st.ip -= 1;
+          return true;
+        },
       },
     };
   }
 
-  it("peeks IP, claims a daily slot, then claims the IP slot", async () => {
-    const { calls, l } = limiter({ ipLeft: true, dailyLeft: true });
+  it("claims the IP slot, then a daily slot", async () => {
+    const { st, l } = counters(5, 100);
     expect(await claimFreeSampleSlot(l)).toEqual({ ok: true });
-    expect(calls).toEqual(["peekIp", "claimDaily", "claimIp"]);
+    expect(st.calls).toEqual(["claimIp", "claimDaily"]);
+    expect(st).toMatchObject({ ip: 1, daily: 1 });
   });
 
-  it("a visitor who used their samples never consumes a daily slot", async () => {
-    const { calls, l } = limiter({ ipLeft: false, dailyLeft: true });
+  it("a visitor who used their samples never touches the daily counter", async () => {
+    const { st, l } = counters(0, 100);
     expect(await claimFreeSampleSlot(l)).toEqual({ ok: false, reason: "used" });
-    expect(calls).toEqual(["peekIp"]);
+    expect(st.calls).toEqual(["claimIp"]);
+    expect(st.daily).toBe(0);
   });
 
-  it("a capped day never consumes the visitor's samples", async () => {
-    const { calls, l } = limiter({ ipLeft: true, dailyLeft: false });
+  it("a parallel burst from one fresh IP takes at most 5 daily slots", async () => {
+    const { st, l } = counters(5, 100);
+    const results = await Promise.all(
+      Array.from({ length: 50 }, () => claimFreeSampleSlot(l))
+    );
+    expect(results.filter(r => r.ok)).toHaveLength(5);
+    expect(results.filter(r => r.reason === "used")).toHaveLength(45);
+    expect(st.daily).toBe(5);
+    expect(st.ip).toBe(5);
+  });
+
+  it("refunds the IP slot when the daily cap is hit", async () => {
+    const { st, l } = counters(5, 0);
     expect(await claimFreeSampleSlot(l)).toEqual({
       ok: false,
       reason: "paused",
     });
-    expect(calls).toEqual(["peekIp", "claimDaily"]);
+    expect(st.calls).toEqual(["claimIp", "claimDaily", "refundIp"]);
+    expect(st.ip).toBe(0);
   });
 
-  it("reports used if the IP's last slot went in a race after the peek", async () => {
-    const { l } = limiter({ ipLeft: true, dailyLeft: true, ipClaim: false });
-    expect(await claimFreeSampleSlot(l)).toEqual({ ok: false, reason: "used" });
+  it("refunds the IP slot and fails closed when the daily claim throws", async () => {
+    const { st, l } = counters(5, 100);
+    l.claimDaily = async () => {
+      throw new Error("DO down");
+    };
+    await expect(claimFreeSampleSlot(l)).rejects.toThrow("DO down");
+    expect(st.ip).toBe(0);
+    expect(st.refunds).toBe(1);
+  });
+
+  it("still says paused if the refund itself fails", async () => {
+    const { l } = counters(5, 0);
+    l.refundIp = async () => {
+      throw new Error("refund failed");
+    };
+    expect(await claimFreeSampleSlot(l)).toEqual({
+      ok: false,
+      reason: "paused",
+    });
   });
 });
 
