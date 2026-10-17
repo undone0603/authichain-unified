@@ -2,7 +2,9 @@
  * POST /api/v1/agent-verify
  *
  * Pay-per-call verification endpoint for autonomous agents (x402).
- * No payment -> HTTP 402 + requirements. Paid (X-PAYMENT proof) -> verify the
+ * No payment and an empty body -> HTTP 402 + requirements. A body that
+ * names a non-UUID seal, or uses productId/serial as the key, is HTTP 400
+ * before that challenge. Paid (X-PAYMENT proof) -> verify the
  * payment, enforce a per-payer daily spend cap + rate limit and look the seal
  * up, and only then settle and return the verification result. Every refusal
  * happens before settlement. Price is fixed, so daily spend = call-count x price,
@@ -78,6 +80,17 @@ export async function POST(request: Request) {
   );
   const proof = parsePaymentHeader(paymentHeader);
   if (!proof) {
+    const raw = (await request.json().catch(() => ({}))) as unknown;
+    const input =
+      raw && typeof raw === "object" && !Array.isArray(raw)
+        ? (raw as Record<string, unknown>)
+        : {};
+    if (Object.keys(input).length > 0) {
+      const early = parseSealRequest(input);
+      if (!early.ok) {
+        return NextResponse.json(early.body, { status: early.status });
+      }
+    }
     return NextResponse.json(required.v2, {
       status: 402,
       headers: required.headers,
