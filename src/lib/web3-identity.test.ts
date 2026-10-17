@@ -40,9 +40,7 @@ describe("canonical web3 identity lock", () => {
     expect(TOKENOMICS_PAY_TO).toBe(X402_PUBLISHED_PAY_TO);
     // payTo is the owner's keyed EOA, which is also the $QRON holder.
     expect(TOKENOMICS_PAY_TO.toLowerCase()).toBe(QRON_HOLDER_EOA.toLowerCase());
-    expect(QRON_HOLDER_EOA).toBe(
-      "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
-    );
+    expect(QRON_HOLDER_EOA).toBe("0x5db511706FB6317cd23A7655F67450c5AC6e6AA2");
     expect(ECONOMY_NFT_DEPLOYER).toBe(NFT_DEPLOYER_EOA);
     expect(ECONOMY_NFT).toBe(POLYGON_AUTHICHAIN_NFT);
   });
@@ -123,12 +121,8 @@ describe("canonical web3 identity lock", () => {
     expect(d.humanCheckout.source).toBe("src/lib/plans.ts");
     expect(d.humanCheckout.strainchain_passport).toBe("$49 one-time");
     expect(d.humanCheckout.strainchain_farm).toBe("$149/month");
-    expect(d.humanCheckout.checkout.farm).toBe(
-      planPaymentLink("strainchain_farm")
-    );
-    expect(new URL(d.humanCheckout.checkout.farm ?? "").hostname).toBe(
-      "authichain.com"
-    );
+    // Farm A: Farm checkout is closed; discovery no longer links to it.
+    expect("farm" in d.humanCheckout.checkout).toBe(false);
     expect(d.nft.deployer).toBe(NFT_DEPLOYER_EOA);
     expect(d.nft.contract).toBe(POLYGON_AUTHICHAIN_NFT);
   });

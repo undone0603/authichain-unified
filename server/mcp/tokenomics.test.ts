@@ -33,12 +33,8 @@ describe("MCP tokenomics identity", () => {
     expect(d.humanCheckout.checkout.dpp).toBe(
       "https://authichain.com/checkout/dpp_readiness"
     );
-    expect(d.humanCheckout.checkout.farm).toBe(
-      "https://authichain.com/checkout/strainchain_farm"
-    );
-    expect(new URL(d.humanCheckout.checkout.farm ?? "").hostname).toBe(
-      "authichain.com"
-    );
+    // Farm A: Farm checkout is closed; discovery no longer links to it.
+    expect("farm" in d.humanCheckout.checkout).toBe(false);
     expect(JSON.stringify(d)).not.toContain("/api/checkout");
     expect(d.nft.deployer.toLowerCase()).not.toBe(
       X402_PUBLISHED_PAY_TO.toLowerCase()

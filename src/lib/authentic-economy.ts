@@ -146,7 +146,6 @@ export function agentPricingDiscovery() {
       checkout: {
         passport: planPaymentLink("strainchain_passport"),
         dpp: planPaymentLink("dpp_readiness"),
-        farm: planPaymentLink("strainchain_farm"),
         emailCapture: {
           passport: "https://authichain.com/passport",
           dpp: "https://authichain.com/dpp",
