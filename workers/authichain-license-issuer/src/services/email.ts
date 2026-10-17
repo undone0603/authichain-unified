@@ -1,4 +1,4 @@
-import type { Env } from '../index'
+import type { Env } from "../index";
 
 /**
  * Send a transactional email via Resend.
@@ -10,20 +10,20 @@ async function sendEmail(
   subject: string,
   html: string
 ): Promise<boolean> {
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: 'AuthiChain <licenses@authichain.com>',
+      from: "AuthiChain <licenses@authichain.com>",
       to,
       subject,
       html,
     }),
-  })
-  return res.ok
+  });
+  return res.ok;
 }
 
 /**
@@ -35,7 +35,7 @@ export async function deliverKeyViaEmail(
   tier: string,
   key: string
 ): Promise<boolean> {
-  if (!env.RESEND_API_KEY) return false
+  if (!env.RESEND_API_KEY) return false;
 
   const html = `
 <!DOCTYPE html>
@@ -62,17 +62,14 @@ export async function deliverKeyViaEmail(
     Docs: <a href="https://github.com/Z-kie/agent-browser" style="color:#10b981">github.com/Z-kie/agent-browser</a><br>
     Support: <a href="mailto:support@authichain.com" style="color:#10b981">support@authichain.com</a>
   </p>
-  <p style="color:#bbb;font-size:12px;margin-top:8px">
-    💡 Connect Telegram for future key deliveries: start a chat with @AuthiChainBot and send <code>/connect ${email}</code>
-  </p>
 </body>
 </html>
-`.trim()
+`.trim();
 
   return sendEmail(
     env.RESEND_API_KEY,
     email,
     `Your agent-browser ${tier} license key`,
     html
-  )
+  );
 }
