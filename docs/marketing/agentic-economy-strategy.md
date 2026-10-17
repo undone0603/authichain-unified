@@ -14,8 +14,9 @@ Live agent economics: [`docs/strategy/AGENT_TOKENOMICS_x402.md`](../strategy/AGE
 Human SKUs: `src/lib/plans.ts`. Do not invent AuthiChain papers. Cite public
 research as context only (Xu arXiv:2602.14219; Teikari & Fuenmayor SSRN 6068907;
 ERC-8004; Galaxy agentic capital markets). Live estate claims only: signed seals,
-5-agent consensus, MCP tools, x402 at **$0.05 USDC on Base**, EU DPP Readiness
-and Passport on Stripe.
+MCP tools, x402 at **$0.05 USDC on Base**, EU DPP Readiness
+and Passport on Stripe. The public page does not claim 5-agent consensus.
+`workers/authichain-verify-worker/src/score.ts` still marks every agent note simulated.
 
 ## The thesis
 

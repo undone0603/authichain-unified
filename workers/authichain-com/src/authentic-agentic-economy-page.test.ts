@@ -53,6 +53,14 @@ describe("authentic agentic economy page", () => {
     expect(html).toContain('href="/pricing"');
     expect(html).toContain("$0.05");
     expect(html).toContain("HTTP 402");
+    expect(html).toContain("empty JSON body");
+    expect(html).toContain(
+      "A non-UUID sealId is HTTP 400 before payment."
+    );
+    expect(html).toContain("X-PAYMENT and a seal UUID");
+    expect(html).not.toContain("seal or product identifier");
+    expect(html).not.toContain("Polygon · ERC-721");
+    expect(html).toContain("Signed seals · x402 on Base · EU DPP");
     expect(html).toContain("not Polygon $QRON");
     expect(html).not.toContain("GET /api/checkout");
     expect(html).toContain('<main id="main">');
