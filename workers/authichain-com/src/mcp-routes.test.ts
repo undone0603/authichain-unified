@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
 import { x402HealthReport, x402PriceUsd } from "../../../src/lib/x402.ts";
+import { freeDailyCalls } from "../../../src/lib/x402-free-tier.ts";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
   publicKeyFromDidKey,
@@ -142,7 +143,7 @@ describe("mcp discovery", () => {
     const pricing = JSON.parse(priced.result.content[0].text) as {
       verify: { price: string; mcpTool: string; http: string };
       paidPlans: { status: string; plans: Array<{ id: string; priceUsd: number }> };
-      agentPayPerCall: { priceUsd: number };
+      agentPayPerCall: { priceUsd: number; freeChecks: string };
     };
     expect(pricing.verify.price).toBe("free");
     expect(pricing.verify.mcpTool).toBe("verify_record");
@@ -156,6 +157,10 @@ describe("mcp discovery", () => {
       ["dpp_readiness", 299],
     ]);
     expect(pricing.agentPayPerCall.priceUsd).toBe(0.05);
+    // Advisor ruling (RES-74): exact text, and it must match the real cap.
+    expect(pricing.agentPayPerCall.freeChecks).toBe("3 free checks per IP per UTC day");
+    expect(freeDailyCalls(undefined)).toBe(3);
+    expect(priced.result.content[0].text).not.toMatch(/per payer|per wallet/i);
     expect(priced.result.content[0].text).not.toMatch(/on hold|on_hold/i);
     expect(priced.result.content[0].text).not.toContain("buy.stripe.com");
     for (const plan of [

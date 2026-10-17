@@ -413,6 +413,9 @@ function livePayTo(env?: X402Env): string {
  */
 export const MCP_LISTED_PLAN_IDS = ["starter", "creator", "dpp_readiness"] as const satisfies readonly PlanId[];
 
+/** Exact Advisor-ruled wording for the free allowance (RES-74). */
+export const MCP_FREE_CHECKS_TEXT = "3 free checks per IP per UTC day";
+
 function listedPlanPrices() {
   return MCP_LISTED_PLAN_IDS.map(id => {
     const plan = planById(id);
@@ -456,6 +459,9 @@ export function mcpPricingDiscovery(env?: X402Env) {
       endpoint: "POST https://authichain.com/api/x402",
       health: "https://authichain.com/api/x402/health",
       catalog: "https://authichain.com/api/x402/catalog",
+      // Wording ruled by the AE Decision Advisor (RES-74). The cap is keyed on
+      // a salted client-IP hash per UTC day (x402-free-tier.ts), not per payer.
+      freeChecks: MCP_FREE_CHECKS_TEXT,
       note: "Per paid seal-verify call. /api/x402/health is the source of truth for the live price.",
     },
     paidPlans: {
