@@ -17,7 +17,7 @@
  * dunning status. See docs/CREDIT_MODEL_ARCHITECTURE.md for reconciliation.
  */
 
-import { PLAN_CREDITS, type PlanId } from "./plans";
+import { PLAN_CREDITS, planById, type PlanId } from "./plans";
 import { type BrandId } from "@shared/brands";
 
 // The webhook passes its existing service-role Supabase client (loosely typed).
@@ -55,6 +55,47 @@ function grantFor(
   if (typeof explicit === "number" && !Number.isNaN(explicit)) return explicit;
   if (plan && plan in PLAN_CREDITS) return PLAN_CREDITS[plan as PlanId];
   return undefined;
+}
+
+const UNLIMITED_SENTINEL = 999999;
+const LIVE_SUB_STATUSES = new Set(["active", "trialing", "past_due"]);
+
+/** A one-time pack checkout: plan sells in Stripe "payment" mode and no subscription came with it. */
+function isOneTimePack(input: ProvisionInput): boolean {
+  if (input.stripeSubscriptionId) return false;
+  const plan = input.plan ? planById(input.plan as PlanId) : undefined;
+  return plan?.stripe_mode === "payment";
+}
+
+/** The profile carries a live subscription whose plan/status a pack must not overwrite. */
+function hasActiveSubscription(row: Record<string, unknown> | null): boolean {
+  if (!row) return false;
+  if (
+    typeof row.stripe_subscription_id !== "string" ||
+    !row.stripe_subscription_id
+  )
+    return false;
+  return (
+    typeof row.subscription_status === "string" &&
+    LIVE_SUB_STATUSES.has(row.subscription_status)
+  );
+}
+
+/**
+ * Stacked credit write for a one-time pack (credits purchased in packs never
+ * expire): new limit = max(0, limit - used) + pack, used = 0. Unlimited stays.
+ */
+export function stackedPackCredits(
+  row: Record<string, unknown> | null,
+  pack: number
+): { generations_limit: number; generations_used: number } {
+  const limit = Number(row?.generations_limit);
+  const used = Number(row?.generations_used);
+  const l = Number.isFinite(limit) ? limit : 0;
+  const u = Number.isFinite(used) ? used : 0;
+  if (l >= UNLIMITED_SENTINEL)
+    return { generations_limit: l, generations_used: u };
+  return { generations_limit: Math.max(0, l - u) + pack, generations_used: 0 };
 }
 
 /**
@@ -136,10 +177,15 @@ export async function provisionPurchase(
 
   // Session-level idempotency: do not reset generations_used if this session already granted.
   // A failed read must not look like "no prior grant" — that resets usage on retry.
-  if (input.sessionId) {
+  // The same read loads the credit/subscription columns a one-time pack stacks on.
+  const oneTimePack = isOneTimePack(input);
+  let current: Record<string, unknown> | null = null;
+  if (input.sessionId || oneTimePack) {
     const { data: existingGrant, error: grantReadError } = await supabase
       .from("profiles")
-      .select("last_grant_session_id")
+      .select(
+        "last_grant_session_id, generations_limit, generations_used, subscription_plan, subscription_status, stripe_subscription_id"
+      )
       .eq("id", profileId)
       .maybeSingle();
     if (grantReadError) {
@@ -154,7 +200,11 @@ export async function provisionPurchase(
         error: grantReadError.message || "grant lookup failed",
       };
     }
-    if (existingGrant?.last_grant_session_id === input.sessionId) {
+    current = (existingGrant as Record<string, unknown> | null) ?? null;
+    if (
+      input.sessionId &&
+      existingGrant?.last_grant_session_id === input.sessionId
+    ) {
       console.log(
         JSON.stringify({
           evt: "provision_skipped_idempotent",
@@ -171,14 +221,21 @@ export async function provisionPurchase(
     }
   }
 
-  // 2. Apply entitlements. Reset usage so the new period starts clean.
+  // 2. Apply entitlements. Subscriptions reset usage so the new period starts
+  // clean; one-time packs stack onto unused credits instead (never expire).
   const grant = grantFor(input.plan, input.generationsGrant);
+  const keepSubscription = oneTimePack && hasActiveSubscription(current);
   // Live public.profiles has no subscribed_at column. PostgREST rejects the
   // whole update when an unknown column is present, so the grant never lands.
   const update: Record<string, unknown> = {
     brand: input.brand,
-    subscription_plan: input.plan ?? undefined,
-    subscription_status: input.isTrial ? "trialing" : "active",
+    // A pack bought by an active subscriber must not overwrite their plan/status.
+    subscription_plan: keepSubscription ? undefined : (input.plan ?? undefined),
+    subscription_status: keepSubscription
+      ? undefined
+      : input.isTrial
+        ? "trialing"
+        : "active",
     last_payment_at: input.isTrial ? undefined : new Date().toISOString(),
   };
   if (input.stripeCustomerId)
@@ -186,8 +243,15 @@ export async function provisionPurchase(
   if (input.stripeSubscriptionId)
     update.stripe_subscription_id = input.stripeSubscriptionId;
   if (grant !== undefined) {
-    update.generations_limit = grant;
-    update.generations_used = 0;
+    if (oneTimePack) {
+      Object.assign(
+        update,
+        stackedPackCredits(created ? null : current, grant)
+      );
+    } else {
+      update.generations_limit = grant;
+      update.generations_used = 0;
+    }
     if (input.sessionId) update.last_grant_session_id = input.sessionId;
   }
 

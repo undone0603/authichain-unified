@@ -9,6 +9,7 @@ function fakeProfiles(opts?: {
   lookupError?: { message: string } | null;
   grantReadError?: { message: string } | null;
   updateError?: { message: string } | null;
+  row?: Record<string, unknown>;
 }) {
   const inserts: Array<Record<string, unknown>> = [];
   const updates: Array<{ id: string; patch: Record<string, unknown> }> = [];
@@ -30,6 +31,7 @@ function fakeProfiles(opts?: {
             ? {
                 id: opts.existingId,
                 last_grant_session_id: opts.lastGrantSessionId ?? null,
+                ...(opts.row ?? {}),
               }
             : null,
           error: null,
@@ -238,5 +240,109 @@ describe("provisionPurchase", () => {
       error: "profiles update rejected",
     });
     expect(result.skippedIdempotent).toBeUndefined();
+  });
+
+  describe("one-time packs stack onto unused credits", () => {
+    const base = { brand: "qron" as const, email: "buyer@example.com" };
+
+    it("60 left + Starter = 160", async () => {
+      const { supabase, updates } = fakeProfiles({
+        existingId: "prof_1",
+        lastGrantSessionId: "cs_old",
+        row: { generations_limit: 100, generations_used: 40 },
+      });
+      const r = await provisionPurchase(supabase, {
+        ...base,
+        plan: "starter",
+        sessionId: "cs_new",
+      });
+      expect(r.status).toBe("provisioned");
+      expect(updates).toHaveLength(1);
+      expect(updates[0].patch).toMatchObject({
+        generations_limit: 160,
+        generations_used: 0,
+        last_grant_session_id: "cs_new",
+        subscription_plan: "starter",
+      });
+    });
+
+    it("stacks Creator onto leftover credits (60 + 500 = 560)", async () => {
+      const { supabase, updates } = fakeProfiles({
+        existingId: "prof_1",
+        lastGrantSessionId: "cs_old",
+        row: { generations_limit: 100, generations_used: 40 },
+      });
+      await provisionPurchase(supabase, {
+        ...base,
+        plan: "creator",
+        sessionId: "cs_creator",
+      });
+      expect(updates[0].patch).toMatchObject({
+        generations_limit: 560,
+        generations_used: 0,
+        subscription_plan: "creator",
+      });
+    });
+
+    it("keeps an active subscriber's plan and status when they buy a pack", async () => {
+      const { supabase, updates } = fakeProfiles({
+        existingId: "prof_1",
+        lastGrantSessionId: "cs_launch",
+        row: {
+          generations_limit: 100,
+          generations_used: 30,
+          subscription_plan: "qron_launch",
+          subscription_status: "active",
+          stripe_subscription_id: "sub_123",
+        },
+      });
+      await provisionPurchase(supabase, {
+        ...base,
+        plan: "starter",
+        sessionId: "cs_pack",
+      });
+      const patch = updates[0].patch;
+      expect(patch.subscription_plan).toBeUndefined();
+      expect(patch.subscription_status).toBeUndefined();
+      expect(patch.stripe_subscription_id).toBeUndefined();
+      expect(patch).toMatchObject({
+        generations_limit: 170,
+        generations_used: 0,
+      });
+    });
+
+    it("changes nothing for a duplicate checkout session", async () => {
+      const { supabase, updates } = fakeProfiles({
+        existingId: "prof_1",
+        lastGrantSessionId: "cs_dup",
+        row: { generations_limit: 160, generations_used: 0 },
+      });
+      const r = await provisionPurchase(supabase, {
+        ...base,
+        plan: "starter",
+        sessionId: "cs_dup",
+      });
+      expect(r.skippedIdempotent).toBe(true);
+      expect(updates).toEqual([]);
+    });
+
+    it("still SETs the period grant for a subscription (no stacking)", async () => {
+      const { supabase, updates } = fakeProfiles({
+        existingId: "prof_1",
+        lastGrantSessionId: "cs_old",
+        row: { generations_limit: 100, generations_used: 40 },
+      });
+      await provisionPurchase(supabase, {
+        ...base,
+        plan: "qron_launch",
+        stripeSubscriptionId: "sub_9",
+        sessionId: "cs_sub",
+      });
+      expect(updates[0].patch).toMatchObject({
+        generations_limit: 100,
+        generations_used: 0,
+        subscription_plan: "qron_launch",
+      });
+    });
   });
 });
