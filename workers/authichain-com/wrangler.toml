@@ -10,17 +10,19 @@ workers_dev = false
 # The separate per-asset routes were redundant (the /* wildcard already
 # matched them) and only added deploy-time registration overhead.
 # More specific than authichain-edge-router's authichain.com/api/x402*.
-# That route wins over authichain.com/*, and the deployed edge router only
-# implements health and catalog, so /api/x402/listing and /api/x402/growth
-# answered {"error":"Not found"}. These paths, including a trailing slash,
-# are implemented here.
-# Exact /api/x402 and /api/v1/agent-verify (plus trailing slash) also live
-# here so #1882's free tier (x402-routes.ts isPaidPath + free-tier POST) is
-# reachable; the edge router has no free tier. Routes match path, not method,
-# so GET on these two paths (health/status) AND paid POST are served here.
-# /api/x402/health, /api/x402/catalog, settle and every other /api/x402/*
-# path stay on the edge router, as do /api/stripe/webhook and /api/checkout*.
-# Rollback: delete the 4 routes below and redeploy, or
+# That wildcard wins over authichain.com/*. Listing and growth are exact
+# routes because the edge router answered them {"error":"Not found"}.
+# These paths, including a trailing slash, are implemented here.
+# Exact /api/x402, /api/x402/health, and /api/v1/agent-verify (plus trailing
+# slash) live here so #1882's free tier is reachable. llms.txt sends agents to
+# GET /api/x402/health first. The edge wildcard authichain.com/api/x402* is
+# more specific than authichain.com/* and the edge router has no free tier, so
+# that URL used to omit freeCalls. Same split on authichain.govchain.us.
+# Routes match path, not method, so GET and paid POST on the exact /api/x402
+# and /api/v1/agent-verify paths are served here.
+# /api/x402/catalog, settle, and every other /api/x402/* path stay on the edge
+# router, as do /api/stripe/webhook and /api/checkout*.
+# Rollback of the original exact x402 routes:
 # npx wrangler rollback 1ef83048-3e1f-4065-83d2-b098e9fb15af --name authichain-com
 [[routes]]
 pattern = "authichain.com/api/x402"
@@ -36,6 +38,14 @@ zone_name = "authichain.com"
 
 [[routes]]
 pattern = "authichain.com/api/v1/agent-verify/"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/health"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/health/"
 zone_name = "authichain.com"
 
 [[routes]]
@@ -68,6 +78,14 @@ zone_name = "govchain.us"
 
 [[routes]]
 pattern = "authichain.govchain.us/api/x402/growth/"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/x402/health"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/x402/health/"
 zone_name = "govchain.us"
 
 [[routes]]
