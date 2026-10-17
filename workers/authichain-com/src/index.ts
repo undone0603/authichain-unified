@@ -3586,7 +3586,7 @@ async function handleAuthichainCom(
     // /mcp/install is the human install surface. It must be checked before
     // tryHandleMcp, which owns the agent-facing /mcp JSON-RPC endpoint.
     if (isMcpInstallPath(p)) {
-      return new Response(renderMcpInstallPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+      return new Response(renderMcpInstallPage(env), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     const docsDest = docsRedirect(p);
     if (docsDest) return Response.redirect(new URL(docsDest, url.origin).href, 301);
