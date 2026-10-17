@@ -371,7 +371,10 @@ test("GET /.well-known/x402.json is the catalog; /.well-known/x402 is fan-out", 
     protocol?: string;
   };
   assert.equal(fanoutBody.version, 1);
-  assert.deepEqual(fanoutBody.resources, ["https://govchain.us/api/x402"]);
+  assert.deepEqual(fanoutBody.resources, [
+    "https://authichain.com/api/v1/agent-verify",
+    "https://govchain.us/api/x402",
+  ]);
   assert.equal(fanoutBody.protocol, undefined);
 
   const post = await tryHandleSisterX402(
