@@ -2,11 +2,35 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { agentPricingDiscovery } from "../../src/lib/authentic-economy";
+import { parseSealRequest } from "../../src/lib/agent-verify";
 
 /**
  * AuthiChain MCP Server
  * Exposes our trust engine to the global AI agent ecosystem.
  */
+/** Unpaid verify_paid text. A non-UUID is 400 and does not name productId. */
+export function verifyPaidUnpaidReply(subject: string): string {
+  const parsed = parseSealRequest({ sealId: subject });
+  if (!parsed.ok) {
+    return JSON.stringify({ status: parsed.status, ...parsed.body });
+  }
+  return JSON.stringify({
+    status: 402,
+    x402Version: 2,
+    message: "Payment required for metered verification.",
+    pay: {
+      endpoint: "POST /api/v1/agent-verify",
+      network: "base",
+      chainId: "8453",
+      amount: "$0.05 USDC",
+      catalog: "https://authichain.com/api/x402/catalog",
+      identity:
+        "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
+    },
+    then: `Retry POST /api/v1/agent-verify with header X-PAYMENT: <base64 proof> and body { "sealId": "${parsed.sealId}" }.`,
+  });
+}
+
 const server = new McpServer({
   name: "AuthiChain Trust Engine",
   version: "1.0.0",
@@ -95,9 +119,7 @@ server.tool("get_pricing", {}, async () => ({
 server.tool(
   "verify_paid",
   {
-    subject: z
-      .string()
-      .describe("Product ID, serial, or certificate to verify"),
+    subject: z.string().describe("Seal UUID to verify"),
     payment: z
       .string()
       .optional()
@@ -106,38 +128,27 @@ server.tool(
       ),
   },
   async ({ subject, payment }) => {
-    if (!payment) {
+    const parsed = parseSealRequest({ sealId: subject });
+    if (!parsed.ok) {
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify({
-              status: 402,
-              x402Version: 2,
-              message: "Payment required for metered verification.",
-              pay: {
-                endpoint: "POST /api/v1/agent-verify",
-                network: "base",
-                chainId: "8453",
-                amount: "$0.05 USDC",
-                catalog: "https://authichain.com/api/x402/catalog",
-                identity:
-                  "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
-              },
-              then:
-                'Retry POST /api/v1/agent-verify with header X-PAYMENT: <base64 proof> and body { productId: "' +
-                subject +
-                '" }.',
-            }),
+            text: JSON.stringify({ status: parsed.status, ...parsed.body }),
           },
         ],
+      };
+    }
+    if (!payment) {
+      return {
+        content: [{ type: "text", text: verifyPaidUnpaidReply(subject) }],
       };
     }
     return {
       content: [
         {
           type: "text",
-          text: `Payment proof received for "${subject}". Submit POST /api/v1/agent-verify (header X-PAYMENT) for settlement + a 0-100 authenticity score.`,
+          text: `Payment proof received for seal ${parsed.sealId}. Submit POST /api/v1/agent-verify with header X-PAYMENT and body { "sealId": "${parsed.sealId}" }.`,
         },
       ],
     };

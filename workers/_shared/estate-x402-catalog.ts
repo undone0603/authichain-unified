@@ -154,7 +154,7 @@ export async function sisterX402Catalog(
         "/llms.txt",
         "Agent-readable discovery (Payment Links + unpaid POST)"
       ),
-      paid("/api/x402", "AuthiChain agent verification (seal / product)"),
+      paid("/api/x402", "AuthiChain agent verification (seal UUID)"),
     ],
     humanCheckout: humanCheckout(brand),
     discovery: {

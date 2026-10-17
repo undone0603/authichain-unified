@@ -3,7 +3,10 @@ import { NextRequest } from "next/server";
 
 // Fake supabase-js: mirrors the real client's guard (throws on an empty URL)
 // and records which URL the route actually built its client with.
-const state = vi.hoisted(() => ({ urls: [] as string[] }));
+const state = vi.hoisted(() => ({
+  urls: [] as string[],
+  queryError: null as string | null,
+}));
 
 vi.mock("@supabase/supabase-js", () => ({
   createClient: (url: string, key: string) => {
@@ -13,7 +16,7 @@ vi.mock("@supabase/supabase-js", () => ({
     const result = {
       data: [{ id: "g1", program: "SBIR Phase I", agency: "NSF" }],
       count: 1,
-      error: null,
+      error: state.queryError ? new Error(state.queryError) : null,
     };
     const chain: Record<string, unknown> = {};
     for (const m of ["from", "select", "order", "range", "ilike", "gte"]) {
@@ -42,6 +45,7 @@ async function callGet(query = "") {
 describe("/api/govchain/grants env resolution", () => {
   beforeEach(() => {
     state.urls = [];
+    state.queryError = null;
     for (const k of ENV_KEYS) saved[k] = process.env[k];
   });
   afterEach(() => {
@@ -83,5 +87,18 @@ describe("/api/govchain/grants env resolution", () => {
     expect(JSON.parse(text)).toEqual({ error: "service unavailable" });
     expect(text).not.toMatch(/SUPABASE|SERVICE_ROLE|supabaseUrl|process\.env/i);
     expect(state.urls).toEqual([]);
+  });
+
+  it("(3) a query error does not echo the message", async () => {
+    process.env.SUPABASE_URL = "https://example-ref.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role";
+    state.queryError = "https://example-ref.supabase.co relation missing";
+
+    const res = await callGet();
+    expect(res.status).toBe(500);
+    const text = await res.text();
+    expect(JSON.parse(text)).toEqual({ error: "service unavailable" });
+    expect(text).not.toContain("example-ref");
+    expect(text).not.toContain("relation");
   });
 });
