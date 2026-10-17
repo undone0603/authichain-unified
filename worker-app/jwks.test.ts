@@ -216,4 +216,33 @@ describe("registerJwksRoute", () => {
       );
     });
   });
+
+  it("CFA-462 option 1: JWKS has exactly one entry, kid T3AL7c4w, and never mJx2", async () => {
+    process.env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK = JSON.stringify({
+      kty: "OKP",
+      crv: "Ed25519",
+      x: "T36jnq2kRJRxGBhtyGG3PSboG_Vb6f-l8TixLr95vG0",
+    });
+    process.env.AUTHICHAIN_ATTESTATION_KEY_ID =
+      "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const app = new Hono();
+    registerJwksRoute(app);
+    for (const path of ["/protocol/jwks.json", "/.well-known/jwks.json"]) {
+      const body = (await (await app.request(path)).json()) as {
+        keys: Array<Record<string, unknown>>;
+      };
+      expect(body.keys).toHaveLength(1);
+      expect(body.keys[0].kid).toBe(
+        "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ"
+      );
+      expect(body.keys[0].x).toBe(
+        "T36jnq2kRJRxGBhtyGG3PSboG_Vb6f-l8TixLr95vG0"
+      );
+      const text = JSON.stringify(body);
+      expect(text).not.toContain("mJx2TLqUmUnxAJW_L-EQ1f28M8B6t9x-9VJPjJxbj7k");
+      expect(text).not.toContain("lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE");
+    }
+    warn.mockRestore();
+  });
 });

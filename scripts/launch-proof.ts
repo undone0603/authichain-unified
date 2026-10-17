@@ -438,12 +438,12 @@ const storymode = {
     {
       title: "Identity",
       content:
-        "A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation.",
+        "A deterministic QRON reference resolves to an AuthiChain object record. A signed attestation for it is not published yet.",
     },
     {
       title: "Proof",
       content:
-        "Check the attestation yourself against the public JWKS, using its kid.",
+        "This page shows the signing key ID (kid) and links to the public JWKS and issuer record. It does not include a signed attestation yet, so there is nothing on this page to verify.",
     },
     {
       title: "Reveal",
