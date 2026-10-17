@@ -47,4 +47,19 @@ describe("manufacturer-status stays off the public workers.dev host", () => {
     expect(source).not.toContain("Full on-chain");
     expect(source).toContain("latest 10,000 Polygon blocks");
   });
+
+  it("answers the apex history path before the app proxy", () => {
+    const index = read("workers/authichain-com/src/index.ts");
+    const call = index.indexOf("tryHandleManufacturerStatus(request)");
+    const proxy = index.indexOf("APP_PREFIXES.some");
+    expect(call).toBeGreaterThan(-1);
+    expect(proxy).toBeGreaterThan(call);
+    const route = read("workers/authichain-com/src/manufacturer-status-route.ts");
+    expect(route).toContain("/api/manufacturer-status/");
+    expect(route).toContain("/verify/manufacturer");
+    expect(route).toContain('const RPC = "https://polygon.drpc.org"');
+    expect(route).not.toContain("https://polygon-rpc.com");
+    expect(route).not.toContain("$49");
+    expect(route).not.toContain("auto-granted");
+  });
 });
