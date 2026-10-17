@@ -37,5 +37,14 @@ describe("manufacturer-status stays off the public workers.dev host", () => {
     expect(page).not.toContain("auto-granted");
     expect(page).not.toContain("$49");
     expect(page).toContain("does not take payment");
+    expect(page).toContain("latest 10,000 blocks");
+  });
+
+  it("does not call the dead Polygon RPC or claim full history", () => {
+    const source = read("workers/manufacturer-status/src/index.ts");
+    expect(source).not.toContain("polygon-rpc.com");
+    expect(source).toContain("polygon.drpc.org");
+    expect(source).not.toContain("Full on-chain");
+    expect(source).toContain("latest 10,000 Polygon blocks");
   });
 });

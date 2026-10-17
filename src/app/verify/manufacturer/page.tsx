@@ -71,7 +71,7 @@ export default function ManufacturerStatus() {
       <header>
         <h1 className="text-2xl font-semibold">Manufacturer Role History</h1>
         <p className="text-sm text-neutral-500 mt-1">
-          Public on-chain RoleGranted / RoleRevoked trail for AuthiChainProduct (ACPT) on Polygon.
+          RoleGranted / RoleRevoked events for AuthiChainNFT on Polygon, limited to the latest 10,000 blocks the free RPC will return.
         </p>
       </header>
 
