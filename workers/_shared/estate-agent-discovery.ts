@@ -102,6 +102,9 @@ export function renderEstateLlmsTxt(brand: SisterDiscoveryBrand): string {
     `- JWKS: ${ESTATE_BRANDS[brand].url}/protocol/jwks.json`,
     `- Well-known JWKS: ${ESTATE_BRANDS[brand].url}/.well-known/jwks.json`,
     `- Decision v1 verify: POST ${ESTATE_BRANDS[brand].url}/api/verify`,
+    `- Living QR scan: GET ${ESTATE_BRANDS[brand].url}/qron/r/{object_id}`,
+    "- Canonical scan: GET https://authichain.com/qron/r/{object_id}",
+    "- This host proxies the scan and does not verify the signature.",
     "- Canonical issuer: https://authichain.com/protocol/issuer.json",
     "- Canonical verify: POST https://authichain.com/api/v1/attestation/verify",
     "",
@@ -225,6 +228,24 @@ export function renderEstateOpenApi(
             "200": { description: "Decision verified" },
             "400": { description: "Fail-closed indeterminate" },
             "409": { description: "Decision not verified" },
+          },
+        },
+      },
+      "/qron/r/{object_id}": {
+        get: {
+          summary:
+            "Living QR Decision v1. Proxies GET https://authichain.com/qron/r/{object_id}. This host does not verify the signature.",
+          parameters: [
+            {
+              name: "object_id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          responses: {
+            "200": { description: "Decision verified" },
+            "404": { description: "presentation_not_found" },
           },
         },
       },
