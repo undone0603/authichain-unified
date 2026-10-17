@@ -2,8 +2,10 @@
  * Live /mcp and /api/mcp 404 today — landing 404s /mcp, APP_WORKER 404s
  * /api/mcp. Agents that probe those paths never see a pay rail.
  *
- * Verification is free (verify_record, GET /api/verify). Prices are on hold,
- * so get_pricing and GET discovery list no Payment Links and no x402 price.
+ * Verification is free (verify_record, GET /api/verify). get_pricing and GET
+ * discovery also state the live x402 per-call price (the same number as
+ * /api/x402/health) and the one-time plans shown on https://authichain.com/pricing,
+ * read from plans.ts. They list no Payment Links: checkout stays on /pricing.
  * tools/call verify is the legacy unpaid 402 as /api/x402 — not a fake
  * "SECURED" JSON. Do not tell agents to GET /api/checkout.
  *
@@ -26,6 +28,7 @@ import {
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
+import { planById, type PlanId } from "../../../src/lib/plans";
 import { unpaidSealRefusal } from "../../../src/lib/agent-verify";
 import {
   guardedForward,
@@ -75,7 +78,7 @@ export const LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0];
  * mcp-routes.test.ts asserts the two match, so the next bump has to touch
  * both or CI fails.
  */
-export const SERVER_VERSION = "1.3.0";
+export const SERVER_VERSION = "1.3.2";
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -89,7 +92,7 @@ export const TOOLS = [
   {
     name: "get_pricing",
     description:
-      "Free. AuthiChain verification is free: use the verify_record tool, or GET https://authichain.com/api/verify. Paid plans are on hold, so no prices or Payment Links are listed.",
+      "Free. Lists AuthiChain prices. Verification is free with the verify_record tool or GET https://authichain.com/api/verify. Paid: agent seal verify over x402 per call (POST https://authichain.com/api/x402), and the one-time plans on https://authichain.com/pricing. Returns prices only, no Payment Links.",
     inputSchema: { type: "object", properties: {} },
   },
   {
@@ -379,11 +382,33 @@ function livePayTo(env?: X402Env): string {
 }
 
 /**
- * get_pricing and GET discovery. Verification is free; paid plans are on
- * hold, so this lists no Payment Links and no per-call price. Text only:
- * the legacy x402 `verify` path below is unchanged.
+ * One-time plans shown on https://authichain.com/pricing (2026-10-17), read
+ * from plans.ts so the numbers cannot drift from the page. Launch ($19/mo) is
+ * left out while its listing is on hold (PM, CFA-460 / #1905).
  */
-export function mcpPricingDiscovery(_env?: X402Env) {
+export const MCP_LISTED_PLAN_IDS = ["starter", "creator", "dpp_readiness"] as const satisfies readonly PlanId[];
+
+function listedPlanPrices() {
+  return MCP_LISTED_PLAN_IDS.map(id => {
+    const plan = planById(id);
+    if (!plan) throw new Error(`plans.ts has no ${id}`);
+    return {
+      id,
+      name: plan.name,
+      priceUsd: plan.price,
+      billing: plan.stripe_mode === "subscription" ? "monthly" : "one-time",
+      description: plan.description,
+    };
+  });
+}
+
+/**
+ * get_pricing and GET discovery. Verification is free. The x402 per-call
+ * price is the same value /api/x402/health reports; plan prices come from
+ * plans.ts. No Payment Links: humans check out on /pricing. Text only: the
+ * legacy x402 `verify` path below is unchanged.
+ */
+export function mcpPricingDiscovery(env?: X402Env) {
   const legacy = x402PaidVerifyStatus();
   return {
     verify: {
@@ -399,9 +424,20 @@ export function mcpPricingDiscovery(_env?: X402Env) {
       "dpp_readiness_check",
       "get_pricing",
     ],
+    agentPayPerCall: {
+      rail: "x402",
+      priceUsd: x402PriceUsd(env?.X402_PRICE_USD),
+      asset: "USDC on Base (chain id 8453)",
+      endpoint: "POST https://authichain.com/api/x402",
+      health: "https://authichain.com/api/x402/health",
+      catalog: "https://authichain.com/api/x402/catalog",
+      note: "Per paid seal-verify call. /api/x402/health is the source of truth for the live price.",
+    },
     paidPlans: {
-      status: "on_hold",
-      note: "Prices are on hold. No Payment Links or per-call prices are offered here.",
+      status: "listed",
+      page: "https://authichain.com/pricing",
+      plans: listedPlanPrices(),
+      note: "Prices as shown on https://authichain.com/pricing. Checkout is on that page; this tool returns no Payment Links.",
     },
     legacySealVerify: {
       tool: "verify",

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { planPaymentLink } from "../../../src/lib/plans.ts";
+import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
+import { x402PriceUsd } from "../../../src/lib/x402.ts";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
   publicKeyFromDidKey,
@@ -66,7 +67,12 @@ describe("mcp discovery", () => {
         pay: { x402: string };
         pricing: {
           verify: { price: string; mcpTool: string };
-          paidPlans: { status: string };
+          paidPlans: {
+            status: string;
+            page: string;
+            plans: Array<{ id: string; priceUsd: number; billing: string }>;
+          };
+          agentPayPerCall: { priceUsd: number; endpoint: string };
           humanCheckout?: unknown;
         };
       };
@@ -74,12 +80,21 @@ describe("mcp discovery", () => {
       expect(body.pay.x402).toBe("POST https://authichain.com/api/x402");
       expect(body.pricing.verify.price).toBe("free");
       expect(body.pricing.verify.mcpTool).toBe("verify_record");
-      expect(body.pricing.paidPlans.status).toBe("on_hold");
+      expect(body.pricing.paidPlans.status).toBe("listed");
+      expect(body.pricing.paidPlans.page).toBe("https://authichain.com/pricing");
+      expect(body.pricing.paidPlans.plans).toEqual([
+        expect.objectContaining({ id: "starter", priceUsd: planUsd("starter"), billing: "one-time" }),
+        expect.objectContaining({ id: "creator", priceUsd: planUsd("creator"), billing: "one-time" }),
+        expect.objectContaining({ id: "dpp_readiness", priceUsd: planUsd("dpp_readiness"), billing: "one-time" }),
+      ]);
+      expect(body.pricing.agentPayPerCall.priceUsd).toBe(x402PriceUsd());
+      expect(body.pricing.agentPayPerCall.endpoint).toBe("POST https://authichain.com/api/x402");
       expect(body.pricing.humanCheckout).toBeUndefined();
       const text = JSON.stringify(body);
-      expect(text).not.toContain("$0.05");
+      expect(text).not.toMatch(/on hold|on_hold/i);
       expect(text).not.toContain("PaymentLink");
-      expect(text).not.toContain("USDC");
+      expect(text).not.toContain("buy.stripe.com");
+      expect(text).not.toContain("qron_launch");
       for (const plan of [
         "dpp_readiness",
         "strainchain_passport",
@@ -125,16 +140,23 @@ describe("mcp discovery", () => {
     };
     const pricing = JSON.parse(priced.result.content[0].text) as {
       verify: { price: string; mcpTool: string; http: string };
-      paidPlans: { status: string };
+      paidPlans: { status: string; plans: Array<{ id: string; priceUsd: number }> };
+      agentPayPerCall: { priceUsd: number };
     };
     expect(pricing.verify.price).toBe("free");
     expect(pricing.verify.mcpTool).toBe("verify_record");
     expect(pricing.verify.http).toBe(
       "GET https://authichain.com/api/verify?id=polygon-anchor-1"
     );
-    expect(pricing.paidPlans.status).toBe("on_hold");
-    expect(priced.result.content[0].text).not.toContain("$0.05");
-    expect(priced.result.content[0].text).not.toContain("USDC");
+    expect(pricing.paidPlans.status).toBe("listed");
+    expect(pricing.paidPlans.plans.map(p => [p.id, p.priceUsd])).toEqual([
+      ["starter", 29],
+      ["creator", 99],
+      ["dpp_readiness", 299],
+    ]);
+    expect(pricing.agentPayPerCall.priceUsd).toBe(0.05);
+    expect(priced.result.content[0].text).not.toMatch(/on hold|on_hold/i);
+    expect(priced.result.content[0].text).not.toContain("buy.stripe.com");
     for (const plan of [
       "dpp_readiness",
       "strainchain_passport",
@@ -150,7 +172,7 @@ describe("mcp discovery", () => {
       description?: string;
     }>;
     for (const t of tools) {
-      expect(t.description ?? "", t.name).not.toContain("$0.05");
+      expect(t.description ?? "", t.name).not.toMatch(/on hold/i);
     }
     expect(tools.find(t => t.name === "get_pricing")?.description).toMatch(
       /^Free\./
