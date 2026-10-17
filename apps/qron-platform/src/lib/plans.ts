@@ -50,7 +50,6 @@ export const PLANS: Plan[] = [
     tier: 'pro',
     features: [
       '100 generations (one-time)',
-      'All free modes',
     ],
     cta: 'Buy Starter Pack',
   },

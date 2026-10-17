@@ -76,7 +76,6 @@ export const PLANS: Plan[] = [
       "100 generations for $29, paid once",
       "No subscription, no renewal",
       "Pack credits never expire unless you switch to Launch",
-      "All free modes",
     ],
     cta: "Get 100 generations for $29",
     listed: true,
@@ -95,7 +94,6 @@ export const PLANS: Plan[] = [
     listed: true,
     features: [
       "100 generations / month",
-      "All free modes",
       "Designed for AuthiChain signed verification (in development)",
       "Cancel any time",
     ],
