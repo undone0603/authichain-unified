@@ -57,14 +57,21 @@ function fakeProfiles(opts?: {
       update: (patch: Record<string, unknown>) => {
         const target = { id: "", patch };
         updates.push(target);
-        return {
+        const result = {
+          error: opts?.updateError ?? null,
+          data: [{ id: "x" }],
+        };
+        const chain: Record<string, unknown> = {
           eq: (col: string, val: string) => {
             if (col === "id") target.id = val;
-            return Promise.resolve({
-              error: opts?.updateError ?? null,
-            });
+            return chain;
           },
+          is: () => chain,
+          select: () => chain,
+          then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
+            Promise.resolve(result).then(res, rej),
         };
+        return chain;
       },
     };
     return builder;
@@ -343,6 +350,131 @@ describe("provisionPurchase", () => {
         generations_used: 0,
         subscription_plan: "qron_launch",
       });
+    });
+  });
+
+  describe("lost-update guard (CFA-346)", () => {
+    type Row = Record<string, unknown>;
+    function statefulDb(row: Row, opts?: { alwaysConflict?: boolean }) {
+      const state = { row: { ...row }, writes: 0, conflicts: 0 };
+      const tick = () => new Promise(r => setTimeout(r, 0));
+      const from = () => {
+        const b: Record<string, unknown> = {
+          select: () => b,
+          eq: () => b,
+          maybeSingle: async () => {
+            await tick();
+            return { data: { id: "prof_1", ...state.row }, error: null };
+          },
+          update: (patch: Row) => {
+            const filters: Array<[string, unknown]> = [];
+            const chain: Record<string, unknown> = {
+              eq: (col: string, val: unknown) => {
+                if (col !== "id") filters.push([col, val]);
+                return chain;
+              },
+              is: (col: string) => {
+                filters.push([col, null]);
+                return chain;
+              },
+              select: () => chain,
+              then: (res: (v: unknown) => unknown) =>
+                tick().then(() => {
+                  const match =
+                    !opts?.alwaysConflict &&
+                    filters.every(([c, v]) => (state.row[c] ?? null) === v);
+                  if (!match) {
+                    state.conflicts += 1;
+                    return res({ data: [], error: null });
+                  }
+                  for (const [k, v] of Object.entries(patch)) {
+                    if (v !== undefined) state.row[k] = v;
+                  }
+                  state.writes += 1;
+                  return res({ data: [{ id: "prof_1" }], error: null });
+                }),
+            };
+            return chain;
+          },
+        };
+        return b;
+      };
+      return { supabase: { from }, state };
+    }
+    const base = { brand: "qron" as const, email: "buyer@example.com" };
+
+    it("credits two concurrent grants exactly once each (60 + 100 + 500 = 660)", async () => {
+      const { supabase, state } = statefulDb({
+        generations_limit: 100,
+        generations_used: 40,
+        last_grant_session_id: "cs_old",
+      });
+      const [a, b] = await Promise.all([
+        provisionPurchase(supabase, {
+          ...base,
+          userId: "prof_1",
+          plan: "starter",
+          sessionId: "cs_a",
+        }),
+        provisionPurchase(supabase, {
+          ...base,
+          userId: "prof_1",
+          plan: "creator",
+          sessionId: "cs_b",
+        }),
+      ]);
+      expect(a.status).toBe("provisioned");
+      expect(b.status).toBe("provisioned");
+      expect(state.writes).toBe(2);
+      expect(state.conflicts).toBeGreaterThanOrEqual(1);
+      expect(state.row.generations_limit).toBe(660);
+      expect(state.row.generations_used).toBe(0);
+    });
+
+    it("never double-grants the same session delivered twice concurrently", async () => {
+      const { supabase, state } = statefulDb({
+        generations_limit: 100,
+        generations_used: 40,
+        last_grant_session_id: "cs_old",
+      });
+      const input = {
+        ...base,
+        userId: "prof_1",
+        plan: "starter",
+        sessionId: "cs_same",
+      };
+      const [a, b] = await Promise.all([
+        provisionPurchase(supabase, input),
+        provisionPurchase(supabase, input),
+      ]);
+      expect(state.writes).toBe(1);
+      expect(state.row.generations_limit).toBe(160);
+      expect(
+        [a.skippedIdempotent, b.skippedIdempotent].filter(Boolean)
+      ).toHaveLength(1);
+      expect(a.status).toBe("provisioned");
+      expect(b.status).toBe("provisioned");
+    });
+
+    it("fails closed after retries are exhausted so Stripe redelivers", async () => {
+      const { supabase, state } = statefulDb(
+        {
+          generations_limit: 100,
+          generations_used: 40,
+          last_grant_session_id: "cs_old",
+        },
+        { alwaysConflict: true }
+      );
+      const r = await provisionPurchase(supabase, {
+        ...base,
+        userId: "prof_1",
+        plan: "starter",
+        sessionId: "cs_x",
+      });
+      expect(r.status).toBe("upsert_failed");
+      expect(r.error).toMatch(/retry/);
+      expect(state.conflicts).toBe(4); // first try + 3 retries
+      expect(state.row.generations_limit).toBe(100);
     });
   });
 });

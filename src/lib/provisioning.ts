@@ -58,6 +58,13 @@ function grantFor(
 }
 
 const UNLIMITED_SENTINEL = 999999;
+/** Re-read and retry this many times after a conditional write matches 0 rows. */
+export const PROVISION_CAS_RETRIES = 3;
+const CAS_COLUMNS = [
+  "generations_limit",
+  "generations_used",
+  "last_grant_session_id",
+] as const;
 const LIVE_SUB_STATUSES = new Set(["active", "trialing", "past_due"]);
 
 /** A one-time pack checkout: plan sells in Stripe "payment" mode and no subscription came with it. */
@@ -178,96 +185,130 @@ export async function provisionPurchase(
   // Session-level idempotency: do not reset generations_used if this session already granted.
   // A failed read must not look like "no prior grant" — that resets usage on retry.
   // The same read loads the credit/subscription columns a one-time pack stacks on.
+  //
+  // Lost-update guard (CFA-346, no migration): the write is conditional on the
+  // generations_limit / generations_used / last_grant_session_id values read.
+  // If another writer (a concurrent grant or a generation spend) got there
+  // first, the update matches 0 rows; re-read and retry, then fail closed so
+  // Stripe redelivers. A re-read showing this session already granted stops
+  // with success, so a session is never credited twice.
   const oneTimePack = isOneTimePack(input);
-  let current: Record<string, unknown> | null = null;
-  if (input.sessionId || oneTimePack) {
-    const { data: existingGrant, error: grantReadError } = await supabase
-      .from("profiles")
-      .select(
-        "last_grant_session_id, generations_limit, generations_used, subscription_plan, subscription_status, stripe_subscription_id"
-      )
-      .eq("id", profileId)
-      .maybeSingle();
-    if (grantReadError) {
-      console.error(
-        "[provisioning] last_grant_session_id read failed:",
-        grantReadError
-      );
+  const needsRead = Boolean(input.sessionId || oneTimePack);
+  const grant = grantFor(input.plan, input.generationsGrant);
+
+  for (let attempt = 0; attempt <= PROVISION_CAS_RETRIES; attempt++) {
+    let current: Record<string, unknown> | null = null;
+    if (needsRead) {
+      const { data: existingGrant, error: grantReadError } = await supabase
+        .from("profiles")
+        .select(
+          "last_grant_session_id, generations_limit, generations_used, subscription_plan, subscription_status, stripe_subscription_id"
+        )
+        .eq("id", profileId)
+        .maybeSingle();
+      if (grantReadError) {
+        console.error(
+          "[provisioning] last_grant_session_id read failed:",
+          grantReadError
+        );
+        return {
+          profileId,
+          created,
+          status: "upsert_failed",
+          error: grantReadError.message || "grant lookup failed",
+        };
+      }
+      current = (existingGrant as Record<string, unknown> | null) ?? null;
+      if (
+        input.sessionId &&
+        existingGrant?.last_grant_session_id === input.sessionId
+      ) {
+        console.log(
+          JSON.stringify({
+            evt: "provision_skipped_idempotent",
+            session: input.sessionId,
+            profileId,
+            attempt,
+          })
+        );
+        return {
+          profileId,
+          created,
+          status: "provisioned",
+          skippedIdempotent: true,
+        };
+      }
+    }
+
+    // 2. Apply entitlements. Subscriptions reset usage so the new period starts
+    // clean; one-time packs stack onto unused credits instead (never expire).
+    const keepSubscription = oneTimePack && hasActiveSubscription(current);
+    // Live public.profiles has no subscribed_at column. PostgREST rejects the
+    // whole update when an unknown column is present, so the grant never lands.
+    const update: Record<string, unknown> = {
+      brand: input.brand,
+      // A pack bought by an active subscriber must not overwrite their plan/status.
+      subscription_plan: keepSubscription
+        ? undefined
+        : (input.plan ?? undefined),
+      subscription_status: keepSubscription
+        ? undefined
+        : input.isTrial
+          ? "trialing"
+          : "active",
+      last_payment_at: input.isTrial ? undefined : new Date().toISOString(),
+    };
+    if (input.stripeCustomerId)
+      update.stripe_customer_id = input.stripeCustomerId;
+    if (input.stripeSubscriptionId)
+      update.stripe_subscription_id = input.stripeSubscriptionId;
+    if (grant !== undefined) {
+      if (oneTimePack) {
+        Object.assign(update, stackedPackCredits(current, grant));
+      } else {
+        update.generations_limit = grant;
+        update.generations_used = 0;
+      }
+      if (input.sessionId) update.last_grant_session_id = input.sessionId;
+    }
+
+    // biome-ignore lint: loosely typed PostgREST builder
+    let q: any = supabase.from("profiles").update(update).eq("id", profileId);
+    const conditional = needsRead && current !== null;
+    if (conditional) {
+      for (const col of CAS_COLUMNS) {
+        const v = current![col];
+        q = v === null || v === undefined ? q.is(col, null) : q.eq(col, v);
+      }
+      q = q.select("id");
+    }
+    const { data: written, error: updateError } = await q;
+    if (updateError) {
+      console.error("[provisioning] entitlement update failed:", updateError);
       return {
         profileId,
         created,
         status: "upsert_failed",
-        error: grantReadError.message || "grant lookup failed",
+        error: updateError.message || "profiles update failed",
       };
     }
-    current = (existingGrant as Record<string, unknown> | null) ?? null;
-    if (
-      input.sessionId &&
-      existingGrant?.last_grant_session_id === input.sessionId
-    ) {
-      console.log(
-        JSON.stringify({
-          evt: "provision_skipped_idempotent",
-          session: input.sessionId,
-          profileId,
-        })
-      );
-      return {
+    if (!conditional || (Array.isArray(written) && written.length > 0)) {
+      return { profileId, created, status: "provisioned" };
+    }
+    console.warn(
+      JSON.stringify({
+        evt: "provision_cas_conflict",
+        session: input.sessionId ?? null,
         profileId,
-        created,
-        status: "provisioned",
-        skippedIdempotent: true,
-      };
-    }
+        attempt,
+      })
+    );
   }
 
-  // 2. Apply entitlements. Subscriptions reset usage so the new period starts
-  // clean; one-time packs stack onto unused credits instead (never expire).
-  const grant = grantFor(input.plan, input.generationsGrant);
-  const keepSubscription = oneTimePack && hasActiveSubscription(current);
-  // Live public.profiles has no subscribed_at column. PostgREST rejects the
-  // whole update when an unknown column is present, so the grant never lands.
-  const update: Record<string, unknown> = {
-    brand: input.brand,
-    // A pack bought by an active subscriber must not overwrite their plan/status.
-    subscription_plan: keepSubscription ? undefined : (input.plan ?? undefined),
-    subscription_status: keepSubscription
-      ? undefined
-      : input.isTrial
-        ? "trialing"
-        : "active",
-    last_payment_at: input.isTrial ? undefined : new Date().toISOString(),
+  return {
+    profileId,
+    created,
+    status: "upsert_failed",
+    error: "concurrent profile update; retry",
   };
-  if (input.stripeCustomerId)
-    update.stripe_customer_id = input.stripeCustomerId;
-  if (input.stripeSubscriptionId)
-    update.stripe_subscription_id = input.stripeSubscriptionId;
-  if (grant !== undefined) {
-    if (oneTimePack) {
-      Object.assign(
-        update,
-        stackedPackCredits(created ? null : current, grant)
-      );
-    } else {
-      update.generations_limit = grant;
-      update.generations_used = 0;
-    }
-    if (input.sessionId) update.last_grant_session_id = input.sessionId;
-  }
-
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update(update)
-    .eq("id", profileId);
-  if (updateError) {
-    console.error("[provisioning] entitlement update failed:", updateError);
-    return {
-      profileId,
-      created,
-      status: "upsert_failed",
-      error: updateError.message || "profiles update failed",
-    };
-  }
-
-  return { profileId, created, status: "provisioned" };
 }
