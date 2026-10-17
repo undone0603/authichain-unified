@@ -78,9 +78,7 @@ const UNLISTED = new Set([
   "price_1UJbwzGqTruSqV8TJlaINJyW",
 ]);
 
-export function grantForPrice(
-  priceId: string | null | undefined
-): Grant | null {
+export function grantForPrice(priceId: string | null | undefined): Grant | null {
   if (!priceId || UNLISTED.has(priceId)) return null;
   return GRANT_BY_PRICE[priceId] ?? null;
 }
@@ -111,23 +109,15 @@ export function grantForCheckout(input: {
 export type LoopIdentity = { loop: string; purchaseEvent: string };
 
 export const LOOP_BY_PLAN: Record<string, LoopIdentity> = {
-  starter: {
-    loop: "loop_03_qron_starter",
-    purchaseEvent: "purchase_starter_succeeded",
-  },
-  dpp_readiness: {
-    loop: "loop_02_dpp_check",
-    purchaseEvent: "purchase_dpp_succeeded",
-  },
+  starter: { loop: "loop_03_qron_starter", purchaseEvent: "purchase_starter_succeeded" },
+  dpp_readiness: { loop: "loop_02_dpp_check", purchaseEvent: "purchase_dpp_succeeded" },
   strainchain_passport: {
     loop: "loop_01_passport_scan",
     purchaseEvent: "purchase_passport_succeeded",
   },
 };
 
-export function loopForPlan(
-  plan: string | null | undefined
-): LoopIdentity | null {
+export function loopForPlan(plan: string | null | undefined): LoopIdentity | null {
   if (!plan) return null;
   return LOOP_BY_PLAN[plan] ?? null;
 }
@@ -155,7 +145,9 @@ export function alreadyGrantedSession(
  * A failed lookup is a retry, not a fresh grant.
  */
 export function grantReplayAction(
-  lookup: { ok: true; sessionId: string | null | undefined } | { ok: false },
+  lookup:
+    | { ok: true; sessionId: string | null | undefined }
+    | { ok: false },
   sessionId: string
 ): "skip" | "grant" | "retry" {
   if (!lookup.ok) return "retry";
@@ -170,68 +162,4 @@ export function isFounderEmail(email: string | null | undefined): boolean {
   const at = e.lastIndexOf("@");
   if (at < 0) return false;
   return (FOUNDER_EMAILS as readonly string[]).includes(e.slice(at));
-}
-
-/** Profile columns the checkout grant reads before writing. */
-export const GRANT_PROFILE_COLUMNS =
-  "last_grant_session_id,plan,generations_limit,generations_used,stripe_subscription_id,stripe_subscription_status";
-
-const UNLIMITED_SENTINEL = 999999;
-const ENDED_SUB_STATUSES = new Set([
-  "canceled",
-  "incomplete_expired",
-  "unpaid",
-]);
-
-/** True when the profile carries a live subscription whose plan must survive a pack purchase. */
-export function hasActiveSubscription(
-  row: Record<string, unknown> | null
-): boolean {
-  if (!row || typeof row.stripe_subscription_id !== "string") return false;
-  if (!row.stripe_subscription_id) return false;
-  const status = row.stripe_subscription_status;
-  return !(typeof status === "string" && ENDED_SUB_STATUSES.has(status));
-}
-
-/**
- * Credit write for one checkout grant.
- * - One-time packs (refillOnInvoicePaid=false) STACK: unused credits carry
- *   over, so "credits purchased in packs never expire" holds across purchases.
- *   New limit = max(0, limit - used) + pack size, used = 0.
- * - A pack never overwrites an active subscription's plan field.
- * - Subscriptions (refill plans) keep the period SET semantics.
- * `existed` is false for a profile created by this checkout's upsert, so its
- * column defaults are not counted as leftover credits.
- */
-export function grantCreditWrite(
-  grant: { plan: string; generations: number; refillOnInvoicePaid: boolean },
-  row: Record<string, unknown> | null,
-  existed: boolean
-): { plan?: string; generations_limit: number; generations_used: number } {
-  if (grant.refillOnInvoicePaid) {
-    return {
-      plan: grant.plan,
-      generations_limit: grant.generations,
-      generations_used: 0,
-    };
-  }
-  const limit = Number(row?.generations_limit);
-  const used = Number(row?.generations_used);
-  let leftover = 0;
-  if (existed && Number.isFinite(limit)) {
-    if (limit >= UNLIMITED_SENTINEL) {
-      // Unlimited stays unlimited; the pack changes nothing about credits.
-      return {
-        ...(hasActiveSubscription(row) ? {} : { plan: grant.plan }),
-        generations_limit: limit,
-        generations_used: Number.isFinite(used) ? used : 0,
-      };
-    }
-    leftover = Math.max(0, limit - (Number.isFinite(used) ? used : 0));
-  }
-  return {
-    ...(existed && hasActiveSubscription(row) ? {} : { plan: grant.plan }),
-    generations_limit: leftover + grant.generations,
-    generations_used: 0,
-  };
 }
