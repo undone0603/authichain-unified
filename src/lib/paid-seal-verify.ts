@@ -215,6 +215,114 @@ export const REPLAY_REJECTED_BODY = {
   message: "This payment proof was already settled. Sign a new payment.",
 };
 
+/** Pre-settle replay check. null = fresh (or guard unbound); else the refusal. */
+export async function replayRefusal(
+  store: ReplayStore | null | undefined,
+  keys: string[]
+): Promise<{ status: number; body: unknown } | null> {
+  if (!store) {
+    console.warn(JSON.stringify({ evt: "x402_replay_guard_unbound" }));
+    return null;
+  }
+  let seen: Array<string | null>;
+  try {
+    seen = await Promise.all(keys.map(k => store.get(k)));
+  } catch {
+    return {
+      status: 503,
+      body: { error: "replay_store_unavailable", settled: false },
+    };
+  }
+  return seen.some(v => v !== null)
+    ? { status: 409, body: REPLAY_REJECTED_BODY }
+    : null;
+}
+
+/** Post-settle: remember every key (plus the settled tx hash) for 7 days. */
+export async function rememberSettledProof(
+  store: ReplayStore | null | undefined,
+  keys: string[],
+  record: { sealId?: string | null; txHash?: string | null }
+): Promise<void> {
+  if (!store) return;
+  const tx = record.txHash ? record.txHash.toLowerCase() : null;
+  const all = tx ? [...new Set([...keys, `x402:tx:${tx}`])] : keys;
+  const value = JSON.stringify({
+    sealId: record.sealId ?? null,
+    txHash: tx,
+    at: new Date().toISOString(),
+  });
+  try {
+    await Promise.all(
+      all.map(k => store.put(k, value, { expirationTtl: REPLAY_TTL_SECONDS }))
+    );
+  } catch {
+    // Already settled; the on-chain nonce still blocks a second charge.
+  }
+}
+
+/** Settled tx hash from a PAYMENT-RESPONSE header (base64 JSON) or a JSON body. */
+export function settledTxHash(
+  paymentResponse: string | null,
+  body: unknown
+): string | null {
+  if (paymentResponse) {
+    try {
+      const raw = JSON.parse(
+        Buffer.from(paymentResponse, "base64").toString("utf8")
+      ) as Record<string, unknown>;
+      const t = raw.transaction ?? raw.txHash;
+      if (typeof t === "string" && t) return t;
+    } catch {
+      /* fall through */
+    }
+  }
+  const b = body as {
+    settlement?: { txHash?: unknown };
+    transaction?: unknown;
+  } | null;
+  const t = b?.settlement?.txHash ?? b?.transaction;
+  return typeof t === "string" && t ? t : null;
+}
+
+/**
+ * VERIFY_APP fallback: VERIFY_APP settles, so guard at the edge. Refuse a
+ * reused proof before forwarding; remember it after an upstream 2xx.
+ */
+export async function guardedForward(input: {
+  proofHeader: string;
+  replayStore?: ReplayStore | null;
+  sealId?: string | null;
+  forward: () => Promise<Response>;
+}): Promise<Response> {
+  const proof = parsePaymentHeader(input.proofHeader);
+  const keys = replayKeys(input.proofHeader, proof ?? {});
+  const refusal = await replayRefusal(input.replayStore, keys);
+  if (refusal) {
+    return new Response(JSON.stringify(refusal.body), {
+      status: refusal.status,
+      headers: {
+        "Cache-Control": "private, no-store",
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    });
+  }
+  const upstream = await input.forward();
+  if (upstream.ok && input.replayStore) {
+    let body: unknown = null;
+    try {
+      body = await upstream.clone().json();
+    } catch {
+      body = null;
+    }
+    await rememberSettledProof(input.replayStore, keys, {
+      sealId: input.sealId,
+      txHash: settledTxHash(upstream.headers.get("PAYMENT-RESPONSE"), body),
+    });
+  }
+  return upstream;
+}
+
 export async function resolvePaidSealVerify(input: {
   hasVerifyApp: boolean;
   proofHeader: string;
@@ -279,23 +387,8 @@ export async function resolvePaidSealVerify(input: {
   // Replay guard: refuse any reuse of a settled proof, BEFORE settling.
   const keys = replayKeys(input.proofHeader, proof);
   const replayStore = input.replayStore ?? null;
-  if (replayStore) {
-    let seen: Array<string | null>;
-    try {
-      seen = await Promise.all(keys.map(k => replayStore.get(k)));
-    } catch {
-      return {
-        action: "answer",
-        status: 503,
-        body: { error: "replay_store_unavailable", settled: false },
-      };
-    }
-    if (seen.some(v => v !== null)) {
-      return { action: "answer", status: 409, body: REPLAY_REJECTED_BODY };
-    }
-  } else {
-    console.warn(JSON.stringify({ evt: "x402_replay_guard_unbound" }));
-  }
+  const refusal = await replayRefusal(replayStore, keys);
+  if (refusal) return { action: "answer", ...refusal };
 
   const priceAtomic = BigInt(usdToAtomic(input.priceUsd));
   const capAtomic = BigInt(usdToAtomic(dailyCapUsd()));
@@ -348,26 +441,10 @@ export async function resolvePaidSealVerify(input: {
     };
   }
 
-  if (replayStore) {
-    const settledTx = (settlement.txHash ?? proof.txHash)?.toLowerCase();
-    const all = settledTx
-      ? [...new Set([...keys, `x402:tx:${settledTx}`])]
-      : keys;
-    const record = JSON.stringify({
-      sealId: parsed.sealId,
-      txHash: settledTx ?? null,
-      at: new Date().toISOString(),
-    });
-    try {
-      await Promise.all(
-        all.map(k =>
-          replayStore.put(k, record, { expirationTtl: REPLAY_TTL_SECONDS })
-        )
-      );
-    } catch {
-      // Already settled; the on-chain nonce still blocks a second charge.
-    }
-  }
+  await rememberSettledProof(replayStore, keys, {
+    sealId: parsed.sealId,
+    txHash: settlement.txHash ?? proof.txHash ?? null,
+  });
   await recordSpend(fetchImpl, creds, proof.payer);
   const answer = registryAnswer(lookup.seal);
   return {

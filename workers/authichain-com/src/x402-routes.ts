@@ -41,6 +41,7 @@ import {
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
 import {
   readSeal,
+  guardedForward,
   resolvePaidSealVerify,
   type ReplayStore,
   sealLookupCredentials,
@@ -347,7 +348,14 @@ async function agentVerify(
     return json(decision.status, decision.body, decision.headers);
   }
   if (decision.action === "forward" && verifyApp) {
-    return forwardPaidVerify(verifyApp, request, proofHeader, bodyText);
+    const sealReq = parseSealRequest(parseJsonObject(bodyText));
+    return guardedForward({
+      proofHeader,
+      replayStore: opts?.replayStore ?? env?.X402_REPLAY_KV ?? null,
+      sealId: sealReq.ok ? sealReq.sealId : null,
+      forward: () =>
+        forwardPaidVerify(verifyApp, request, proofHeader, bodyText),
+    });
   }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
