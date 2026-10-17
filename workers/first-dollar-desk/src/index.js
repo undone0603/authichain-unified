@@ -607,6 +607,52 @@ async function writeReceipt(env, receipt) {
   return ledger;
 }
 __name(writeReceipt, "writeReceipt");
+async function sha256Hex(value) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(value)));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+__name(sha256Hex, "sha256Hex");
+var LEDGER_PUBLIC_NOTICE = "Paid receipts appear on a public ledger with the amount, time and payment rail. On-chain payments also show the transaction hash, which is already public on Base. Your email and name are not shown on the ledger.";
+var ONCHAIN_TX_HASH = /^0x[0-9a-fA-F]{64}$/;
+// RES-78: built fresh on every read, so receipts stored before this change are
+// redacted too. No buyer field at all (even a hash of an email or wallet can be
+// matched). txHash only for on-chain receipts with a real Base tx hash, so no
+// Stripe session/charge/payment-intent id can ever land in it. ref is a one-way
+// 16-hex SHA-256 prefix of the internal id; the raw id is never published.
+async function publicReceipt(receipt) {
+  const onchain = Boolean(receipt.network) && receipt.rail !== "human" && ONCHAIN_TX_HASH.test(String(receipt.txHash ?? "")) && !receipt.stripeCheckoutSessionId && !String(receipt.id ?? "").startsWith("cs_");
+  return {
+    ref: receipt.id ? (await sha256Hex(receipt.id)).slice(0, 16) : null,
+    rail: receipt.rail ?? null,
+    status: receipt.status ?? null,
+    reason: receipt.reason ?? null,
+    amountCents: receipt.amountCents ?? 0,
+    currency: receipt.currency ?? null,
+    createdAt: receipt.createdAt ?? null,
+    network: onchain ? receipt.network : null,
+    txHash: onchain ? receipt.txHash : null
+  };
+}
+__name(publicReceipt, "publicReceipt");
+async function publicLedger(ledger) {
+  return {
+    updatedAt: ledger.updatedAt ?? null,
+    receipts: await Promise.all((ledger.receipts ?? []).map((receipt) => publicReceipt(receipt)))
+  };
+}
+__name(publicLedger, "publicLedger");
+// C1: never publish raw Stripe sync errors (they carry payment-link ids and
+// Stripe error text). Only the shape below goes out on /api/ledger.
+function publicStripeSync(sync) {
+  const s = sync && typeof sync === "object" ? sync : {};
+  return {
+    skipped: Boolean(s.skipped),
+    webhook: typeof s.webhook === "boolean" ? s.webhook : null,
+    written: typeof s.written === "number" ? s.written : 0,
+    errorCount: Array.isArray(s.errors) ? s.errors.length : 0
+  };
+}
+__name(publicStripeSync, "publicStripeSync");
 function goalState(ledger) {
   const human = ledger.receipts.find(
     (receipt) => receipt.rail === "human" && receipt.status === "qualified" && receipt.amountCents >= 100
@@ -727,6 +773,20 @@ async function goalExtras(env, thanksQueue = null) {
   };
 }
 __name(goalExtras, "goalExtras");
+// RES-78: /api/goal and MCP get_goal never publish Stripe session, receipt or
+// payment-link ids. Queue is a count only (thanksQueueDepth); the last webhook
+// keeps time, type, amount and outcome.
+function publicWebhookSummary(last) {
+  if (!last || typeof last !== "object") return null;
+  return {
+    at: last.at ?? null,
+    type: last.type ?? null,
+    ignored: Boolean(last.ignored),
+    amountCents: typeof last.amountCents === "number" ? last.amountCents : null,
+    receiptStatus: last.receiptStatus ?? null
+  };
+}
+__name(publicWebhookSummary, "publicWebhookSummary");
 function goalPayload(ledger, origin, env = {}, extras = {}) {
   const goal = goalState(ledger);
   const stripeWebhook = Boolean(String(env.STRIPE_WEBHOOK_SECRET ?? "").trim());
@@ -745,9 +805,8 @@ function goalPayload(ledger, origin, env = {}, extras = {}) {
       polling: stripePolling,
       thanksQueue: true,
       thanksQueueDepth: typeof extras.thanksQueueDepth === "number" ? extras.thanksQueueDepth : null,
-      thanksQueueSessionIds: Array.isArray(extras.thanksQueueSessionIds) ? extras.thanksQueueSessionIds : null,
       pushSessionUrl: `${origin}/api/stripe/push-session`,
-      lastWebhook: extras.lastStripeWebhook ?? null,
+      lastWebhook: publicWebhookSummary(extras.lastStripeWebhook),
       onchainSyncAt: extras.onchainSyncAt ?? null
     },
     humanCheckout: HUMAN_PAY,
@@ -915,7 +974,20 @@ function serviceManifest(origin) {
   };
 }
 __name(serviceManifest, "serviceManifest");
-function htmlThanksPage({ sessionId, recorded, goal, note }) {
+// RES-81-XSS: session_id comes from the query string. Only a well-formed Stripe
+// Checkout id is ever rendered, always HTML-escaped, and the inline script gets
+// it via JSON with <, > and & as \u003c/\u003e/\u0026 so it can't close the tag.
+var STRIPE_SESSION_ID_RE = /^cs_(live|test)_[A-Za-z0-9]+$/;
+function escapeHtml(value) {
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+__name(escapeHtml, "escapeHtml");
+function scriptJson(value) {
+  return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+}
+__name(scriptJson, "scriptJson");
+function htmlThanksPage({ sessionId: rawSessionId, recorded, goal, note }) {
+  const sessionId = STRIPE_SESSION_ID_RE.test(String(rawSessionId ?? "")) ? String(rawSessionId) : "";
   const status = goal?.complete ? "Both First Dollar rails are satisfied." : goal?.firstHumanDollar ? "Human dollar recorded. Waiting for a qualifying agent sale." : goal?.firstAgenticSale ? "Agent sale recorded. Waiting for a qualifying human dollar." : "Payment received. Qualifying third-party receipts still pending on the ledger.";
   return `<!doctype html>
 <html lang="en">
@@ -936,26 +1008,23 @@ function htmlThanksPage({ sessionId, recorded, goal, note }) {
     <p class="note">CHECKOUT COMPLETE</p>
     <h1>Thank you.</h1>
     <p>${status}</p>
-    ${sessionId ? `<p class="note">Session <code>${sessionId}</code> ${recorded ? "was written to" : "is queued for"} the public ledger.</p>
+    ${sessionId ? `<p class="note">${recorded ? "Your receipt was written to the public ledger." : "Your receipt is queued for the public ledger."}</p>
     <p class="note" id="ledger-live">Checking ledger for your receipt\u2026</p>` : ""}
-    ${note ? `<p class="note">${note}</p>` : ""}
+    ${note ? `<p class="note">${escapeHtml(note)}</p>` : ""}
     <a class="btn" href="/api/ledger">View ledger JSON</a>
     <p class="note"><a href="/">Back to desk</a></p>
     ${sessionId ? `<script>
       (function () {
-        const sessionId = ${JSON.stringify(sessionId)};
+        const sessionId = ${scriptJson(sessionId)};
         const el = document.getElementById("ledger-live");
         let tries = 0;
         const tick = async () => {
           tries += 1;
           try {
             const body = await fetch("/api/ledger").then((r) => r.json());
-            const hit = (body.receipts || []).find(
-              (row) =>
-                row.stripeCheckoutSessionId === sessionId ||
-                row.id === "cs_" + sessionId ||
-                row.id === sessionId,
-            );
+            const refOf = async (v) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v))), (b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+            const refs = [await refOf("cs_" + sessionId), await refOf(sessionId)];
+            const hit = (body.receipts || []).find((row) => refs.includes(row.ref));
             if (hit) {
               el.textContent =
                 "Ledger receipt: " +
@@ -981,7 +1050,8 @@ function htmlThanksPage({ sessionId, recorded, goal, note }) {
 }
 __name(htmlThanksPage, "htmlThanksPage");
 async function handleThanks(request, env, url) {
-  const sessionId = url.searchParams.get("session_id")?.trim() ?? "";
+  const rawSessionId = url.searchParams.get("session_id")?.trim() ?? "";
+  const sessionId = STRIPE_SESSION_ID_RE.test(rawSessionId) ? rawSessionId : "";
   const secret = (env.STRIPE_SECRET_KEY ?? "").trim();
   let recorded = false;
   let note = "";
@@ -1047,6 +1117,7 @@ function htmlAgentCheckout(origin) {
       <li>Min: $0.05 (50000 atomic) \xB7 payTo <code>${PAY_TO}</code></li>
     </ul>
     <a class="btn" href="${origin}/api/agent/verify">Fetch 402 challenge</a>
+    <p class="note ledger-notice">${LEDGER_PUBLIC_NOTICE}</p>
     <p class="note">Agent402 router pays sellers only after third-party settlement history \u2014 pay x402 directly here until then. Bounty: <a href="${origin}/.well-known/first-dollar-goal.json">first-dollar-goal.json</a></p>
     <p class="note"><button type="button" id="copy-agent" style="margin-top:8px;padding:8px 12px;cursor:pointer;">Copy agent page link</button> <span id="copy-agent-ok" hidden>Copied.</span></p>
     <script>
@@ -1095,6 +1166,7 @@ function htmlHumanCheckout(goal, origin) {
     ${done ? `<p class="done">A qualifying third-party human payment is already on the ledger.</p>` : `<p>One-time Stripe Checkout. After payment you return here automatically; the desk records a receipt via webhook.</p>
     <p class="note">Operator cards, smoke tests, and founder emails are rejected and do not count.</p>
     <a class="btn" href="${HUMAN_PAY}">Continue to Stripe \u2014 pay $1.00</a>
+    <p class="note ledger-notice">${LEDGER_PUBLIC_NOTICE}</p>
     <p class="note"><button type="button" id="copy-human" style="margin-top:12px;padding:8px 12px;cursor:pointer;">Copy share link</button> <span id="copy-human-ok" hidden>Copied.</span></p>
     <script>
       document.getElementById("copy-human")?.addEventListener("click", () => {
@@ -1166,6 +1238,7 @@ function htmlPage(goal, origin = "https://first-dollar-desk.undone-k.workers.dev
         <p class="note"><a href="/mcp">MCP</a> \xB7 <a href="/api/goal">Goal JSON</a> \xB7 Card checkout does not count as agent goal \u2014 use 402.</p>
       </article>
     </div>
+    <p class="note ledger-notice">${LEDGER_PUBLIC_NOTICE}</p>
     <article style="margin-top:16px">
       <p class="note">SHARE \xB7 third parties only (operator self-pay rejected)</p>
       <p class="note">Human $1: <a href="${origin}/human">${origin}/human</a></p>
@@ -2570,10 +2643,10 @@ ${urls.map((href) => `  <url><loc>${href}</loc></url>`).join("\n")}
       return maybeHead(
         request,
         Response.json({
-          ...ledger,
+          ...await publicLedger(ledger),
           goal: goalState(ledger),
           onchain,
-          stripe,
+          stripe: publicStripeSync(stripe),
           rule: "Founder, smoke, owner wallets, and self-pay receipts are recorded then rejected. Unproven on-chain inbound stays pending."
         })
       );
