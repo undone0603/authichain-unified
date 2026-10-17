@@ -42,10 +42,14 @@ import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
 import {
   readSeal,
   resolvePaidSealVerify,
+  type ReplayStore,
   sealLookupCredentials,
   type SealLookupEnv,
 } from "../../../src/lib/paid-seal-verify";
-import { parseSealRequest, registryAnswer } from "../../../src/lib/agent-verify";
+import {
+  parseSealRequest,
+  registryAnswer,
+} from "../../../src/lib/agent-verify";
 import {
   claimFreeCall,
   FREE_CALLS_HEADER,
@@ -60,6 +64,8 @@ export type X402Env = X402EnvVars &
     X402_FREE_IP_SALT?: string;
     /** [vars] in wrangler.toml; edge router derives the same via paidVerifyPath. */
     X402_PAID_VERIFY_PATH?: string;
+    /** KV namespace for the x402 replay guard (CFA-343). */
+    X402_REPLAY_KV?: ReplayStore;
   };
 
 /** Test seams: inject the free-tier counter store and clock. */
@@ -67,6 +73,7 @@ export type X402Options = {
   freeStore?: FreeTierStore | null;
   now?: Date;
   fetchImpl?: typeof fetch;
+  replayStore?: ReplayStore | null;
 };
 
 const JSON_HEADERS = {
@@ -229,8 +236,11 @@ async function tryFreeCall(
 ): Promise<{ response: Response | null; remaining: number | null }> {
   const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);
   const creds = sealLookupCredentials(env);
-  if (!creds || limit <= 0) return { response: null, remaining: limit <= 0 ? 0 : null };
-  const parsed = parseSealRequest(parseJsonObject(await request.clone().text()));
+  if (!creds || limit <= 0)
+    return { response: null, remaining: limit <= 0 ? 0 : null };
+  const parsed = parseSealRequest(
+    parseJsonObject(await request.clone().text())
+  );
   if (!parsed.ok) return { response: null, remaining: null };
   const fetchImpl = opts?.fetchImpl ?? fetch;
   const store =
@@ -251,7 +261,11 @@ async function tryFreeCall(
     return {
       response: json(
         503,
-        { error: "registry_unavailable", settled: false, freeCallsRemaining: claim.remaining },
+        {
+          error: "registry_unavailable",
+          settled: false,
+          freeCallsRemaining: claim.remaining,
+        },
         headers
       ),
       remaining: claim.remaining,
@@ -326,6 +340,8 @@ async function agentVerify(
     payTo,
     description: "AuthiChain agent verification",
     env,
+    fetchImpl: opts?.fetchImpl,
+    replayStore: opts?.replayStore ?? env?.X402_REPLAY_KV ?? null,
   });
   if (decision.action === "answer") {
     return json(decision.status, decision.body, decision.headers);

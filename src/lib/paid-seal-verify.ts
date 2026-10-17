@@ -118,9 +118,7 @@ export async function readSeal(
   fetchImpl: typeof fetch,
   creds: SealLookupCredentials,
   sealId: string
-): Promise<
-  { ok: true; seal: Record<string, unknown> | null } | { ok: false }
-> {
+): Promise<{ ok: true; seal: Record<string, unknown> | null } | { ok: false }> {
   const query = `auth_seals?id=eq.${encodeURIComponent(sealId)}&select=${SEAL_SELECT}`;
   const read = await readJson(
     fetchImpl,
@@ -162,6 +160,61 @@ async function recordSpend(
   }
 }
 
+/** Replay guard (CFA-343): a settled proof is remembered this long. */
+export const REPLAY_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+/** Minimal KV surface (Cloudflare KVNamespace satisfies it). */
+export type ReplayStore = {
+  get(key: string): Promise<string | null>;
+  put(
+    key: string,
+    value: string,
+    opts?: { expirationTtl?: number }
+  ): Promise<void>;
+};
+
+/** EIP-3009 authorization nonce from a base64 x402 payment header, if any. */
+export function authorizationNonce(proofHeader: string): string | null {
+  try {
+    const raw = JSON.parse(
+      Buffer.from(proofHeader, "base64").toString("utf8")
+    ) as Record<string, unknown>;
+    const payload =
+      raw.payload && typeof raw.payload === "object"
+        ? (raw.payload as Record<string, unknown>)
+        : undefined;
+    const auth =
+      payload?.authorization && typeof payload.authorization === "object"
+        ? (payload.authorization as Record<string, unknown>)
+        : undefined;
+    const nonce = auth?.nonce ?? raw.nonce;
+    return typeof nonce === "string" && nonce ? nonce.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** KV keys identifying one payment: nonce (else signature, else header) + tx hash. */
+export function replayKeys(
+  proofHeader: string,
+  proof: { signature?: string; txHash?: string }
+): string[] {
+  const keys: string[] = [];
+  const nonce = authorizationNonce(proofHeader);
+  if (nonce) keys.push(`x402:nonce:${nonce}`);
+  else if (proof.signature)
+    keys.push(`x402:sig:${proof.signature.toLowerCase()}`);
+  else keys.push(`x402:hdr:${proofHeader.slice(0, 400)}`);
+  if (proof.txHash) keys.push(`x402:tx:${proof.txHash.toLowerCase()}`);
+  return keys;
+}
+
+export const REPLAY_REJECTED_BODY = {
+  error: "payment_proof_already_used",
+  settled: false,
+  message: "This payment proof was already settled. Sign a new payment.",
+};
+
 export async function resolvePaidSealVerify(input: {
   hasVerifyApp: boolean;
   proofHeader: string;
@@ -172,6 +225,8 @@ export async function resolvePaidSealVerify(input: {
   description: string;
   env?: SealLookupEnv;
   fetchImpl?: typeof fetch;
+  /** KV for the replay guard. Absent = guard off (logged). */
+  replayStore?: ReplayStore | null;
 }): Promise<PaidSealDecision> {
   const creds = sealLookupCredentials(input.env);
   if (!creds) {
@@ -219,6 +274,27 @@ export async function resolvePaidSealVerify(input: {
   const parsed = parseSealRequest(parsedBody);
   if (!parsed.ok) {
     return { action: "answer", status: parsed.status, body: parsed.body };
+  }
+
+  // Replay guard: refuse any reuse of a settled proof, BEFORE settling.
+  const keys = replayKeys(input.proofHeader, proof);
+  const replayStore = input.replayStore ?? null;
+  if (replayStore) {
+    let seen: Array<string | null>;
+    try {
+      seen = await Promise.all(keys.map(k => replayStore.get(k)));
+    } catch {
+      return {
+        action: "answer",
+        status: 503,
+        body: { error: "replay_store_unavailable", settled: false },
+      };
+    }
+    if (seen.some(v => v !== null)) {
+      return { action: "answer", status: 409, body: REPLAY_REJECTED_BODY };
+    }
+  } else {
+    console.warn(JSON.stringify({ evt: "x402_replay_guard_unbound" }));
   }
 
   const priceAtomic = BigInt(usdToAtomic(input.priceUsd));
@@ -272,6 +348,26 @@ export async function resolvePaidSealVerify(input: {
     };
   }
 
+  if (replayStore) {
+    const settledTx = (settlement.txHash ?? proof.txHash)?.toLowerCase();
+    const all = settledTx
+      ? [...new Set([...keys, `x402:tx:${settledTx}`])]
+      : keys;
+    const record = JSON.stringify({
+      sealId: parsed.sealId,
+      txHash: settledTx ?? null,
+      at: new Date().toISOString(),
+    });
+    try {
+      await Promise.all(
+        all.map(k =>
+          replayStore.put(k, record, { expirationTtl: REPLAY_TTL_SECONDS })
+        )
+      );
+    } catch {
+      // Already settled; the on-chain nonce still blocks a second charge.
+    }
+  }
   await recordSpend(fetchImpl, creds, proof.payer);
   const answer = registryAnswer(lookup.seal);
   return {
@@ -300,4 +396,3 @@ export async function resolvePaidSealVerify(input: {
     }),
   };
 }
-

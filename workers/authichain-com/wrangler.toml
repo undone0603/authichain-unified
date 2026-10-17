@@ -151,3 +151,10 @@ X402_PAID_VERIFY_PATH = "seal_lookup"
 
 [browser]
 binding = "MYBROWSER"
+
+# x402 replay guard (CFA-343). NOT ACTIVE until a KV namespace is created and
+# its id filled in here (needs Zac's yes: `wrangler kv namespace create X402_REPLAY_KV`).
+# Without this binding the guard logs x402_replay_guard_unbound and is a no-op.
+# [[kv_namespaces]]
+# binding = "X402_REPLAY_KV"
+# id = "<namespace id>"
