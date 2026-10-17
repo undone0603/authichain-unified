@@ -1,7 +1,6 @@
 /**
- * /llms.txt for agents. Live apex 404s this path today because the gateway
- * handler never runs — landing 404s first. Point crawlers at Payment Links
- * and unpaid POST /api/x402. Do not tell them to GET /api/checkout.
+ * /llms.txt for agents. Point crawlers at Payment Links, unpaid POST /api/x402,
+ * and the canonical Living QR scan. Do not tell them to GET /api/checkout.
  */
 import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
 import { x402PriceUsd } from "../../../src/lib/x402.ts";
@@ -42,6 +41,14 @@ export function renderLlmsTxt(): string {
     "- Verification: https://authichain.com/docs/verification",
     "- DPP architecture: https://authichain.com/docs/dpp-architecture",
     "- Examples: https://authichain.com/docs/examples",
+    "",
+    "## Protocol (this host verifies)",
+    "- Issuer: https://authichain.com/protocol/issuer.json",
+    "- JWKS: https://authichain.com/protocol/jwks.json",
+    "- Well-known JWKS: https://authichain.com/.well-known/jwks.json",
+    "- Decision v1 verify: POST https://authichain.com/api/v1/attestation/verify",
+    "- Living QR scan: GET https://authichain.com/qron/r/{object_id}",
+    "- This host verifies the signature. A missing id is HTTP 404 presentation_not_found.",
     "",
     "## Free tools",
     "- EU DPP readiness check (score, gaps, dated obligation): https://authichain.com/dpp-check",
