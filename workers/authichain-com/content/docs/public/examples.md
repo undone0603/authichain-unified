@@ -37,18 +37,18 @@ curl -sS -i -H 'Accept: application/json' \
   https://id.authichain.com/v1/passport/UNKNOWN-ID
 ```
 
-JWKS kid in production on 2026-09-27: `lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE`.
+JWKS kid in production (RFC 7638 thumbprint, corrected 2026-10-17): `T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ`.
 
 ## Repo fixtures
 
 In `undone0603/authichain-unified`:
 
-| File | Purpose |
-|---|---|
-| `fixtures/attestation-v0.1-valid.json` | Canonical payload |
-| `fixtures/attestation-v0.1-valid.jws` | Valid Ed25519 compact JWS |
+| File                                     | Purpose                                                |
+| ---------------------------------------- | ------------------------------------------------------ |
+| `fixtures/attestation-v0.1-valid.json`   | Canonical payload                                      |
+| `fixtures/attestation-v0.1-valid.jws`    | Valid Ed25519 compact JWS                              |
 | `fixtures/attestation-v0.1-tampered.jws` | Decision flipped, signature not recomputed — must fail |
-| `fixtures/attestation-v0.1-jwks.json` | Fixture public key only |
+| `fixtures/attestation-v0.1-jwks.json`    | Fixture public key only                                |
 
 These fixtures contain no production secrets.
 
