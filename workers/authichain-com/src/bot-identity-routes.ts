@@ -101,7 +101,7 @@ export function botAgentCard(bot: Bot) {
       didKey: bot.didKey,
       issuer: BOT_IDENTITIES.issuer.did,
       record: `${ORIGIN}/agents/${bot.slug}/identity.json`,
-      verifier: "https://github.com/undone0603/authichain-unified/blob/main/protocol/verifier.mjs",
+      verifier: "https://www.npmjs.com/package/authichain-verify",
     },
   };
 }
@@ -151,7 +151,7 @@ export function renderBotPage(bot: Bot): string {
 <dt>Checks</dt><dd>Issuer record: ${esc(c.record)} · Bot key statement: ${esc(c.selfStatement)} · Key matches: ${c.keyMatches ? "yes" : "no"} · Issuer matches: ${c.issuerMatches ? "yes" : "no"}</dd>
 <dt>Valid</dt><dd>${esc(bot.record.validFrom)} to ${esc(bot.record.validUntil)}</dd>
 <dt>Files</dt><dd><a href="/agents/${bot.slug}/did.json">DID document</a> · <a href="/agents/${bot.slug}/agent-card.json">Agent card</a> · <a href="/agents/${bot.slug}/identity.json">Signed records</a></dd></dl>
-<p>Check it yourself, offline: save <code>identity.json</code>, then run <code>node protocol/verifier.mjs record.json</code> from the open-source <a href="https://github.com/undone0603/authichain-unified/tree/main/protocol">AuthiChain verifier</a>. A pass means AuthiChain's key signed this record. It does not rate the agent's work.</p>
+<p>Check it yourself, offline: save the <code>record</code> from <code>identity.json</code> as <code>record.json</code>, then run <code>npx authichain-verify record.json</code> (the open-source <a href="https://www.npmjs.com/package/authichain-verify">AuthiChain verifier</a>, spec at <a href="/protocol">/protocol</a>). A pass means AuthiChain's key signed this record. It does not rate the agent's work.</p>
 <p><a href="/agents">All AuthiChain agents</a></p>`,
   );
 }
