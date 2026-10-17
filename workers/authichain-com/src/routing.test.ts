@@ -350,6 +350,22 @@ test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
   assert.match(verificationHtml, /does not verify the signature/);
   assert.equal(verificationHtml.includes("freeCalls"), false);
 
+  const examples = await get("/docs/examples");
+  const examplesHtml = await examples.text();
+  assert.match(examplesHtml, /authichain\.com\/qron\/r\//);
+  assert.match(examplesHtml, /presentation_not_found/);
+  assert.match(examplesHtml, /This host verifies the signature/);
+  assert.match(examplesHtml, /does not verify the signature/);
+  assert.match(examplesHtml, /empty body is the unpaid HTTP 402/);
+  assert.equal(examplesHtml.includes('{"sealId":"demo"}'), false);
+  assert.equal(examplesHtml.includes("freeCalls"), false);
+
+  const architecture = await get("/docs/dpp-architecture");
+  const architectureHtml = await architecture.text();
+  assert.match(architectureHtml, /empty body is the unpaid HTTP 402/);
+  assert.match(architectureHtml, /non-UUID sealId is HTTP 400/);
+  assert.equal(architectureHtml.includes('{"sealId":"demo"}'), false);
+
   const alias = await get("/docs/resolver");
   assert.equal(alias.status, 301);
   assert.equal(
