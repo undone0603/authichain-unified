@@ -1477,7 +1477,7 @@ export function QronHome() {
             {[
               {
                 q: 'Do credits expire?',
-                a: "Pack credits don't expire. Buy once and use them whenever you like, and unused credits carry over when you buy another pack.",
+                a: "Pack credits don't expire. Buy once and use them whenever you like, and unused credits carry over when you buy another pack. One exception for now: pack credits bought while on a Launch subscription reset at its monthly renewal.",
               },
               {
                 q: 'Can I scan the QR codes on any phone?',
