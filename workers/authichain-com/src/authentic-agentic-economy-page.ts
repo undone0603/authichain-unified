@@ -32,7 +32,7 @@ export const AUTHENTIC_AGENTIC_ECONOMY = {
   canonicalUrl: "https://authichain.com/authentic-agentic-economy",
   title: "The authentic agentic economy — AuthiChain",
   description:
-    "",
+    "AuthiChain is the authentic agentic economy: signed seals, MCP tools, and x402 pay-per-call so agents can trust physical products.",
 } as const;
 
 export function isAuthenticAgenticEconomyPath(pathname: string): boolean {
