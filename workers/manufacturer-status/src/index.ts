@@ -4,7 +4,7 @@ import { polygon } from 'viem/chains';
 import { DEPLOYED_BLOCK, logFromBlock } from './window';
 
 const CONTRACT = '0x4da4D2675e52374639C9c954f4f653887A9972BE' as const;
-const PUBLIC_RPC = 'https://polygon.drpc.org';
+const PUBLIC_RPC = 'https://polygon-bor-rpc.publicnode.com';
 
 const ROLE_GRANTED = parseAbiItem(
   'event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)'

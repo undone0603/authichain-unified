@@ -2,8 +2,9 @@
 export const DEPLOYED_BLOCK = 77_535_676n;
 
 /**
- * polygon.drpc.org's free plan rejects eth_getLogs ranges over 10,000 blocks.
- * polygon-rpc.com answers 401 without a key.
+ * Recent eth_getLogs of this width succeed on polygon-bor-rpc.publicnode.com.
+ * polygon.drpc.org rejects a distance above 100 blocks. Older ranges on
+ * publicnode return an archive error, so this is not history back to deployment.
  */
 export const FREE_RPC_SPAN = 10_000n;
 

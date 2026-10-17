@@ -43,7 +43,8 @@ describe("manufacturer-status stays off the public workers.dev host", () => {
   it("does not call the dead Polygon RPC or claim full history", () => {
     const source = read("workers/manufacturer-status/src/index.ts");
     expect(source).not.toContain("polygon-rpc.com");
-    expect(source).toContain("polygon.drpc.org");
+    expect(source).not.toContain("polygon.drpc.org");
+    expect(source).toContain("polygon-bor-rpc.publicnode.com");
     expect(source).not.toContain("Full on-chain");
     expect(source).toContain("latest 10,000 Polygon blocks");
   });
@@ -57,8 +58,9 @@ describe("manufacturer-status stays off the public workers.dev host", () => {
     const route = read("workers/authichain-com/src/manufacturer-status-route.ts");
     expect(route).toContain("/api/manufacturer-status/");
     expect(route).toContain("/verify/manufacturer");
-    expect(route).toContain('const RPC = "https://polygon.drpc.org"');
+    expect(route).toContain('const RPC = "https://polygon-bor-rpc.publicnode.com"');
     expect(route).not.toContain("https://polygon-rpc.com");
+    expect(route).not.toContain("https://polygon.drpc.org");
     expect(route).not.toContain("$49");
     expect(route).not.toContain("auto-granted");
   });

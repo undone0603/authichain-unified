@@ -3,14 +3,14 @@
  * /api/manufacturer-status and /verify/manufacturer are not proxied to the
  * edge router, which has no such route.
  *
- * The free Polygon RPC rejects eth_getLogs ranges over 10,000 blocks.
- * polygon-rpc.com returns 401. This handler asks polygon.drpc.org for the
- * latest 10,000 blocks only.
+ * polygon.drpc.org rejects a block distance above 100. This handler asks
+ * polygon-bor-rpc.publicnode.com for the latest 10,000 blocks only. That
+ * host answers that recent window and rejects older archive ranges.
  */
 import { DEPLOYED_BLOCK, logFromBlock } from "../../manufacturer-status/src/window";
 
 const CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
-const RPC = "https://polygon.drpc.org";
+const RPC = "https://polygon-bor-rpc.publicnode.com";
 const ROLE_GRANTED =
   "0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d";
 const ROLE_REVOKED =
