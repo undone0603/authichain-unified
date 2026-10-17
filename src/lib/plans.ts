@@ -76,8 +76,6 @@ export const PLANS: Plan[] = [
       "100 generations for $29, paid once",
       "No subscription, no renewal",
       "Pack credits never expire unless you switch to Launch",
-      "All free modes",
-      "Holographic & Memory modes",
     ],
     cta: "Get 100 generations for $29",
     listed: true,
@@ -96,7 +94,6 @@ export const PLANS: Plan[] = [
     listed: true,
     features: [
       "100 generations / month",
-      "All free modes",
       "Designed for AuthiChain signed verification (in development)",
       "Cancel any time",
     ],
@@ -114,9 +111,8 @@ export const PLANS: Plan[] = [
     tier: "pro",
     features: [
       "500 generations (one-time)",
-      "All Pro modes",
-      "Premium styles",
-      "Priority generation queue",
+      "Lowest one-time price per generation: 500 for $99 (about 20¢ each, vs 29¢ on Starter)",
+      "Every style and preset, the same ones as the free sample",
       "Designed for AuthiChain signed verification (in development)",
     ],
     cta: "Buy Creator Pack",

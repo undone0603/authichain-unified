@@ -50,8 +50,6 @@ export const PLANS: Plan[] = [
     tier: 'pro',
     features: [
       '100 generations (one-time)',
-      'All free modes',
-      'Holographic & Memory modes',
     ],
     cta: 'Buy Starter Pack',
   },
@@ -67,9 +65,8 @@ export const PLANS: Plan[] = [
     tier: 'pro',
     features: [
       '500 generations (one-time)',
-      'All Pro modes',
-      'Premium styles',
-      'Priority generation queue',
+      'Lowest one-time price per generation: 500 for $99 (about 20¢ each, vs 29¢ on Starter)',
+      'Every style and preset, the same ones as the free sample',
     ],
     cta: 'Buy Creator Pack',
     highlighted: true,
