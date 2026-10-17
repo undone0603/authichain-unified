@@ -26,11 +26,7 @@ import {
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
-import {
-  guardedForward,
-  scopedReplayStore,
-  resolvePaidSealVerify,
-} from "../../../src/lib/paid-seal-verify";
+import { resolvePaidSealVerify } from "../../../src/lib/paid-seal-verify";
 import {
   expectedRecordHash,
   readAnchorOnChain,
@@ -559,7 +555,6 @@ async function unpaidOrRefusedVerify(
     payTo,
     description: "AuthiChain MCP verify",
     env,
-    replayStore: scopedReplayStore(env?.X402_REPLAY_KV, "authichain-com"),
   });
   if (decision.action === "answer") {
     if (decision.status !== 200) {
@@ -585,14 +580,7 @@ async function unpaidOrRefusedVerify(
     );
   }
   if (decision.action === "forward" && verifyApp) {
-    // VERIFY_APP settles: guard the replay at this edge (CFA-343/351).
-    return guardedForward({
-      proofHeader,
-      replayStore: scopedReplayStore(env?.X402_REPLAY_KV, "authichain-com"),
-      sealId: typeof args.sealId === "string" ? args.sealId : null,
-      forward: () =>
-        forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id),
-    });
+    return forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id);
   }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
