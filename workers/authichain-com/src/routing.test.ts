@@ -99,15 +99,47 @@ test("/vs/* and /mcp/install make no Polygon contract claim (RES-162)", async ()
   }
 });
 
+test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
+  for (const path of ["/", "/checkout/starter"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    for (const banned of ["$19", "qron_launch", "Launch subscription"]) {
+      assert.ok(
+        !html.includes(banned),
+        `${path} must have 0 hits on ${banned}`
+      );
+    }
+    assert.ok(
+      !html.includes("never expire"),
+      `${path} must not say never expire`
+    );
+  }
+  const starter = await (await get("/checkout/starter")).text();
+  assert.ok(
+    starter.includes(
+      "No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits."
+    )
+  );
+  const home = await (await get("/")).text();
+  assert.ok(
+    home.includes(
+      "No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits."
+    ),
+    "home JSON-LD Starter offer uses the RES-86 sentence"
+  );
+});
+
 test("the apex still renders the homepage", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
   const html = await res.text();
-  // LOOP-03: share/search snippets lead Starter/Launch, not only DPP.
-  assert.match(html, /QRON Starter Pack \$29 or Launch \$19\/mo/);
+  // LOOP-03: share/search snippets lead Starter, not only DPP.
+  // CFA-460: Launch $19/mo is unlisted, so snippets name Starter only.
+  assert.match(html, /QRON Starter Pack \$29 on Stripe/);
   assert.match(
     html,
-    /property="og:description" content="Start with QRON Starter at \$29 or Launch at \$19\/mo/
+    /property="og:description" content="Start with QRON Starter at \$29\. /
   );
   assert.match(html, /href="\/dashboard"/);
   assert.match(html, /href="\/onboard"/);
@@ -132,7 +164,7 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/partners\/brief"/);
   // LOOP-03: hero + bottom email checkout lead Starter $29; DPP stays lower.
   assert.match(html, /Buy Starter Pack/);
-  assert.match(html, /Start Launch \$19\/mo/);
+  assert.doesNotMatch(html, /Start Launch/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Signed QR seals for real products\./);
   assert.doesNotMatch(html, /Agent consensus/);
