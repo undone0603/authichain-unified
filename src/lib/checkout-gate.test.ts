@@ -25,16 +25,14 @@ const protection = {
 };
 
 function stripeOk() {
-  return vi
-    .fn<typeof fetch>()
-    .mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          url: "https://checkout.stripe.com/c/pay/cs_test_gate",
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      )
-    );
+  return vi.fn<typeof fetch>().mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        url: "https://checkout.stripe.com/c/pay/cs_test_gate",
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    )
+  );
 }
 
 function post(
@@ -354,7 +352,9 @@ describe("tryHandleGatedCheckout — POST", () => {
       fields: new URLSearchParams(),
       successOrigin: "https://authichain.com",
     });
-    expect(claim.get("success_url")).toContain("/made-in-usa-claim-file/thanks");
+    expect(claim.get("success_url")).toContain(
+      "/made-in-usa-claim-file/thanks"
+    );
   });
 
   it("refuses bots, prefetch, foreign origins, honeypot and missing email without calling Stripe", async () => {
@@ -469,5 +469,30 @@ describe("tryHandleGatedCheckout — POST", () => {
       {}
     );
     expect(res!.status).toBe(500);
+  });
+});
+
+describe("CFA-460: /checkout/starter confirm copy", () => {
+  it("shows the RES-86 sentence and no Launch $19 copy", async () => {
+    const res = await tryHandleGatedCheckout(
+      new Request("https://authichain.com/checkout/starter"),
+      {}
+    );
+    expect(res).not.toBeNull();
+    expect(res!.status).toBe(200);
+    const html = await res!.text();
+    expect(html).toContain(
+      "100 AI QR generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits."
+    );
+    expect(html).not.toContain("$19");
+    expect(html).not.toContain("qron_launch");
+    expect(html).not.toContain("Launch subscription");
+    expect(html).not.toContain("never expire");
+  });
+
+  it("display override only: plans.ts Starter description is unchanged", () => {
+    expect(planById("starter")?.description).toContain(
+      "Pack credits never expire unless you switch to a Launch subscription."
+    );
   });
 });

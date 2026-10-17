@@ -240,6 +240,22 @@ function pageShell(title: string, body: string): string {
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${esc(title)}</title><link rel="icon" type="image/svg+xml" href="https://authichain.com/favicon.svg"><style>${PAGE_CSS}</style></head><body><main>${body}</main></body></html>`;
 }
 
+/**
+ * CFA-460 / RES-86: displayed copy only. plans.ts is shared (authichain-revenue-worker
+ * bundles it), so its Starter description, Stripe and prices stay unchanged; this
+ * overrides only what the confirm page and the authichain.com home JSON-LD show.
+ */
+const PLAN_DISPLAY_DESCRIPTION: Partial<Record<string, string>> = {
+  starter:
+    "100 AI QR generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits.",
+};
+
+export function displayPlanDescription(
+  plan: Pick<Plan, "id" | "description">
+): string {
+  return PLAN_DISPLAY_DESCRIPTION[plan.id] ?? plan.description;
+}
+
 export function renderCheckoutConfirmPage(opts: {
   plan: Plan;
   params?: URLSearchParams | null;
@@ -264,7 +280,7 @@ export function renderCheckoutConfirmPage(opts: {
     `Confirm ${plan.name} — AuthiChain checkout`,
     `<h1>${esc(plan.name)}</h1>
 <div class="price">${esc(priceLabel(plan))}</div>
-<p class="desc">${esc(plan.description)}</p>
+<p class="desc">${esc(displayPlanDescription(plan))}</p>
 ${err}<form method="post" action="${esc(action)}" id="checkout-confirm">
 <label for="checkout-confirm-email">Work email
 <input id="checkout-confirm-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com" value="${esc(email)}"></label>
