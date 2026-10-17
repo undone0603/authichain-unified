@@ -1,9 +1,9 @@
-// workers/manufacturer-status/src/index.ts
 import { Hono } from 'hono';
 import { createPublicClient, http, parseAbiItem, type Address } from 'viem';
 import { polygon } from 'viem/chains';
 
 const CONTRACT = '0x4da4D2675e52374639C9c954f4f653887A9972BE' as const;
+const PUBLIC_RPC = 'https://polygon-rpc.com';
 
 const ROLE_GRANTED = parseAbiItem(
   'event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)'
@@ -12,11 +12,7 @@ const ROLE_REVOKED = parseAbiItem(
   'event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)'
 );
 
-type Env = {
-  POLYGON_RPC: string;
-};
-
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono();
 
 function isValidAddress(addr: string): addr is Address {
   return /^0x[a-fA-F0-9]{40}$/.test(addr);
@@ -30,10 +26,9 @@ app.get('/:address/history', async (c) => {
 
   const client = createPublicClient({
     chain: polygon,
-    transport: http(c.env.POLYGON_RPC),
+    transport: http(PUBLIC_RPC),
   });
 
-  // Deploy block from known AuthiChainNFT deployment notes
   const fromBlock = 77_535_676n;
 
   try {
@@ -61,7 +56,6 @@ app.get('/:address/history', async (c) => {
         tx: log.transactionHash,
         role: log.args.role,
         sender: log.args.sender,
-        timestamp: null as string | null,
       })),
       ...revoked.map((log) => ({
         type: 'revoked' as const,
@@ -69,13 +63,10 @@ app.get('/:address/history', async (c) => {
         tx: log.transactionHash,
         role: log.args.role,
         sender: log.args.sender,
-        timestamp: null as string | null,
       })),
     ].sort((a, b) => Number(b.block) - Number(a.block));
 
     const currentBlock = await client.getBlockNumber();
-
-    console.log(JSON.stringify({ event: 'manufacturer_history_query', address, event_count: history.length, block: currentBlock.toString() }));
 
     return c.json({
       address,
@@ -94,26 +85,12 @@ app.get('/:address/history', async (c) => {
         'This does not prove physical product authenticity, regulatory status, ' +
         'or that any specific item is genuine. Public product registry remains in development. ' +
         'Verify certificates yourself at https://authichain.com/protocol.',
-      source: 'live eth_getLogs on Polygon (no cache, no off-chain authority)',
+      source: 'live eth_getLogs on Polygon (public RPC, no cache, no off-chain authority)',
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return c.json({ error: message, address, contract: CONTRACT }, 500);
   }
-});
-
-app.get('/:address', async (c) => {
-  const address = c.req.param('address');
-  if (!isValidAddress(address)) {
-    return c.json({ error: 'invalid address' }, 400);
-  }
-
-  return c.json({
-    address,
-    note: 'Use /:address/history for full transparent trail. Current-role view requires confirmed MANUFACTURER_ROLE hash.',
-    historyEndpoint: `/${address}/history`,
-    polygonscan: `https://polygonscan.com/address/${CONTRACT}#readContract`,
-  });
 });
 
 export default app;
