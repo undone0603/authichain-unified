@@ -66,7 +66,7 @@ export const PLANS: Plan[] = [
     name: "Starter Pack",
     price: 29,
     description:
-      "100 AI QR generations for $29, paid once. No subscription. Pack credits never expire unless you switch to a Launch subscription.",
+      "100 AI QR generations for $29, paid once. No subscription. Pack credits never expire.",
     generations: 100,
     stripe_price_id: "price_1UIoEVGqTruSqV8T61lp48wB",
     stripe_payment_link: "https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E",
@@ -91,7 +91,7 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "pro",
     brand: "qron",
-    listed: true,
+    listed: false,
     features: [
       "100 generations / month",
       "Designed for AuthiChain signed verification (in development)",

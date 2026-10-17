@@ -1590,13 +1590,13 @@ function authenticateHtml(): string {
   return htmlDocument({
     title: "Sign in | AuthiChain",
     description:
-      "Start with QRON Starter Pack $29 or Launch $19/mo. Onboard a pilot or open the dashboard — no app.* login host required.",
+      "Start with QRON Starter Pack $29. Onboard a pilot or open the dashboard — no app.* login host required.",
     canonicalPath: "/authenticate",
     extraHead: "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>\n",
     bodyHtml:
       "<main>\n" +
       "<h1>Sign in</h1>\n" +
-      "<p>The public console does not require a separate app host. Start with the Starter Pack at $29 or Launch at $19/mo, or open onboard / dashboard.</p>\n" +
+      "<p>The public console does not require a separate app host. Start with the Starter Pack at $29, or open onboard / dashboard.</p>\n" +
       "<ul>\n" +
       '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
       '<li><a href="/dashboard">Dashboard</a></li>\n' +
@@ -1609,9 +1609,7 @@ function authenticateHtml(): string {
         formId: "auth-starter-checkout",
         inputId: "auth-starter-email",
       }) +
-      "<p><a href=\"" +
-      escapeHtml(planPaymentLink("qron_launch") || "/checkout/qron_launch") +
-      '">Start Launch $19/mo</a> · <a href="/pricing">All pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
+      '<p><a href="/pricing">All pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
       "</main>",
   });
 }
@@ -1661,24 +1659,16 @@ function generatePackLinksHtml(): string {
 }
 
 // The $9.99/$39.99/$99.99 credit packs were archived in the 2026-08-31
-// Stripe cleanup. Live top-ups: Starter $29, Launch $19/mo (LOOP-03 tertiary),
-// Creator $99.
+// Stripe cleanup. Live top-ups: Starter $29, Creator $99. QRON Launch $19/mo
+// is unlisted (plan entry and checkout path kept in src/lib/plans.ts).
 const QRON_CREDIT_LINKS = [
   PAYMENT_LINKS.qron.credits50,
-  {
-    name: "Launch",
-    price: "$19/mo",
-    url: planPaymentLink("qron_launch") || "/checkout/qron_launch",
-  },
   PAYMENT_LINKS.qron.credits250,
 ] as const;
 
 function generateCreditLinksHtml(): string {
   const buttons = QRON_CREDIT_LINKS.map(offer => {
-    const label =
-      offer.name === "Launch"
-        ? "Start Launch — " + offer.price
-        : "Buy " + offer.name + " — " + offer.price;
+    const label = "Buy " + offer.name + " — " + offer.price;
     return (
       '<a class="credit-btn" href="' +
       escapeHtml(offer.url) +
@@ -1689,7 +1679,7 @@ function generateCreditLinksHtml(): string {
   }).join("\n");
   return (
     "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
-    "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and pack credits never expire unless you switch to a Launch subscription. A scannable QR is not an authenticity proof.</p>\n" +
+    "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and pack credits never expire. A scannable QR is not an authenticity proof.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
@@ -1720,7 +1710,7 @@ function generateFormHtml(
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
       statusBlock +
-      "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and pack credits never expire unless you switch to a Launch subscription. A scannable QR is not an authenticity proof.</p>\n" +
+      "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and pack credits never expire. A scannable QR is not an authenticity proof.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
       '<form id="generate-form" action="/generate" method="post">\n' +

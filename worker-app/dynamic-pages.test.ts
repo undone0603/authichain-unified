@@ -964,12 +964,13 @@ describe("renderDynamicPage: /login and /authenticate", () => {
       expect(body).toContain("/dashboard");
       expect(body).toContain("/generate");
       expect(body).toContain('name="email"');
-      // LOOP-03: email checkout leads Starter; Launch + DPP remain as links.
+      // LOOP-03: email checkout leads Starter; DPP remains as a link (Launch unlisted).
       expect(body).toContain(
         'action="https://authichain.com/checkout/starter"'
       );
       expect(body).toContain("Buy Starter Pack — $29");
-      expect(body).toContain("Start Launch $19/mo");
+      expect(body).not.toContain("Start Launch");
+      expect(body).not.toContain("$19/mo");
       expect(body).toContain(
         'href="https://authichain.com/checkout/dpp_readiness"'
       );
@@ -1024,7 +1025,7 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     );
     expect(body).toContain("Try 5 free generations. No account, no card.");
     expect(body).toContain(
-      "100 generations for $29, paid once. No subscription, and pack credits never expire unless you switch to a Launch subscription. A scannable QR is not an authenticity proof."
+      "100 generations for $29, paid once. No subscription, and pack credits never expire. A scannable QR is not an authenticity proof."
     );
     expect(body).not.toContain("Launch at $19/mo");
     expect(body).not.toContain("Five generations are free");
@@ -1053,16 +1054,17 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("if(r.res.status===401)");
     expect(body).toContain("form.submit()");
     expect(body).toContain("$29");
-    expect(body).toContain("$19/mo");
+    expect(body).not.toContain("$19/mo");
     expect(body).toContain("$299");
-    // Top-ups: Starter $29, Launch $19/mo (LOOP-03 tertiary), Creator $99.
+    // Top-ups: Starter $29, Creator $99 (QRON Launch $19/mo unlisted).
     // Retired credit bundles ($9.99/$39.99/$99.99) had no live Stripe account.
     expect(body).toContain('href="https://authichain.com/checkout/starter"');
-    expect(body).toContain(
+    expect(body).not.toContain(
       'href="https://authichain.com/checkout/qron_launch"'
     );
     expect(body).toContain('href="https://authichain.com/checkout/creator"');
-    expect(body).toContain("Start Launch — $19/mo");
+    expect(body).not.toContain("Start Launch — $19/mo");
+    expect(body).not.toContain("unless you switch to a Launch subscription");
     expect(body).not.toContain("$9.99");
     expect(body).not.toContain("$39.99");
     expect(
