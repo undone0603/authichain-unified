@@ -28,13 +28,21 @@ import {
   type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
 import { ESTATE_BRANDS } from "./estate-landing.ts";
+import {
+  guardedForward,
+  scopedReplayStore,
+  type ReplayStore,
+} from "../../src/lib/paid-seal-verify.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
 import {
   sisterBrandFromHost,
   sisterX402Catalog,
 } from "./estate-x402-catalog.ts";
 
-export type SisterX402Env = X402EnvVars;
+export type SisterX402Env = X402EnvVars & {
+  /** Optional KV for the x402 replay guard (CFA-343/356). Unbound = 503 replay_store_unavailable (CFA-363). */
+  X402_REPLAY_KV?: ReplayStore;
+};
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -161,7 +169,8 @@ function fanoutResponse(request: Request): Response {
 async function agentVerify(
   request: Request,
   env?: SisterX402Env,
-  verifyApp?: X402VerifyBinding
+  verifyApp?: X402VerifyBinding,
+  brand?: SisterDiscoveryBrand
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = publishedPayTo(env);
@@ -180,12 +189,24 @@ async function agentVerify(
   }
 
   if (verifyApp) {
-    return forwardPaidVerify(
-      verifyApp,
-      request,
+    const bodyText = await request.text();
+    let sealId: string | null = null;
+    try {
+      const b = JSON.parse(bodyText) as { sealId?: unknown };
+      sealId = typeof b?.sealId === "string" ? b.sealId : null;
+    } catch {
+      sealId = null;
+    }
+    return guardedForward({
       proofHeader,
-      await request.text()
-    );
+      replayStore: scopedReplayStore(
+        env?.X402_REPLAY_KV,
+        brand ?? sisterBrandFromHost(new URL(request.url).hostname) ?? "sister"
+      ),
+      sealId,
+      forward: () =>
+        forwardPaidVerify(verifyApp, request, proofHeader, bodyText),
+    });
   }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
@@ -196,7 +217,9 @@ async function agentVerify(
 export async function tryHandleSisterX402(
   request: Request,
   env: SisterX402Env = {},
-  verifyApp?: X402VerifyBinding
+  verifyApp?: X402VerifyBinding,
+  /** Fixed per worker; scopes replay keys. Falls back to the host's brand. */
+  brand?: SisterDiscoveryBrand
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isSisterX402Path(url.pathname)) return null;
@@ -224,7 +247,7 @@ export async function tryHandleSisterX402(
   }
 
   if (request.method === "POST" && isPaidPath(url.pathname)) {
-    return agentVerify(request, env, verifyApp);
+    return agentVerify(request, env, verifyApp, brand);
   }
 
   return json(405, { error: "method not allowed" });
