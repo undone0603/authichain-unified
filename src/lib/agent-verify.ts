@@ -51,6 +51,20 @@ export function parseSealRequest(input: Record<string, unknown>): SealRequest {
   return { ok: true, sealId };
 }
 
+/**
+ * Unpaid calls with a body that cannot be a registry key are 400.
+ * An empty object stays null so the caller can still return the 402
+ * price challenge. A valid seal UUID also stays null.
+ */
+export function unpaidSealRefusal(
+  raw: Record<string, unknown>
+): { status: number; body: Extract<SealRequest, { ok: false }>["body"] } | null {
+  if (Object.keys(raw).length === 0) return null;
+  const parsed = parseSealRequest(raw);
+  if (parsed.ok) return null;
+  return { status: parsed.status, body: parsed.body };
+}
+
 export type RegistryAnswer = {
   registered: boolean;
   status: "registered" | "not_registered";
