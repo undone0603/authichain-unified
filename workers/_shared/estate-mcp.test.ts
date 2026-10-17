@@ -45,7 +45,10 @@ test("recognizes sister MCP paths and ignores checkout", () => {
   assert.equal(isSisterMcpPath("/api/mcp"), true);
   assert.equal(isSisterMcpPath("/.well-known/mcp.json"), true);
   assert.equal(isSisterMcpPath("/api/x402"), false);
-  assert.equal(isSisterMcpPath("https://authichain.com/checkout/dpp_readiness"), false);
+  assert.equal(
+    isSisterMcpPath("https://authichain.com/checkout/dpp_readiness"),
+    false
+  );
   assert.equal(isSisterMcpPath("/pricing"), false);
 });
 
@@ -276,6 +279,7 @@ test("tools/call verify with a payment proof is 503 and never settles", async ()
         network: "base",
         payer: "0x1234567890abcdef1234567890abcdef12345678",
         amount: "50000",
+        validBefore: String(Math.floor(Date.now() / 1000) + 600),
         signature: "0xdead",
       })
     ).toString("base64");
@@ -318,7 +322,10 @@ test("HEAD /mcp is 204 and other paths are ignored", async () => {
     null
   );
   assert.equal(
-    await tryHandleSisterMcp(req("qron.space", "https://authichain.com/checkout/dpp_readiness"), "qron"),
+    await tryHandleSisterMcp(
+      req("qron.space", "https://authichain.com/checkout/dpp_readiness"),
+      "qron"
+    ),
     null
   );
   assert.equal(
@@ -356,6 +363,7 @@ test("paid MCP verify is forwarded and wrapped as JSON-RPC when VERIFY_APP is bo
       network: "base",
       payer: "0x1234567890abcdef1234567890abcdef12345678",
       amount: "50000",
+      validBefore: String(Math.floor(Date.now() / 1000) + 600),
       signature: "0xdead",
     })
   ).toString("base64");
@@ -372,7 +380,16 @@ test("paid MCP verify is forwarded and wrapped as JSON-RPC when VERIFY_APP is bo
       }),
     }),
     "qron",
-    {},
+    {
+      X402_REPLAY_KV: (() => {
+        const m = new Map<string, string>();
+        return {
+          get: async (k: string) => m.get(k) ?? null,
+          put: async (k: string, v: string) => void m.set(k, v),
+          delete: async (k: string) => void m.delete(k),
+        };
+      })(),
+    },
     {
       fetch: async (r: Request) => {
         seen.push(r);

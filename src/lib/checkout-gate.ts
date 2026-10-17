@@ -316,6 +316,10 @@ function htmlResponse(html: string, status = 200): Response {
 
 // ─── Stripe session (POST only) ─────────────────────────────────────────────
 
+/** Shown when checkout protection (not Stripe) refuses or is unavailable (503). */
+export const CHECKOUT_UNAVAILABLE_MESSAGE =
+  "Checkout is temporarily unavailable. Please try again in a minute or use /contact.";
+
 export type GatedSessionResult =
   | { ok: true; url: string; visitId: string }
   | { ok: false; status: number; error: string; detail?: string };
@@ -712,7 +716,9 @@ export async function tryHandleGatedCheckout(
         plan,
         params: fields,
         error:
-          "Stripe checkout could not start. Please try again in a minute or use /contact.",
+          result.status === 503
+            ? CHECKOUT_UNAVAILABLE_MESSAGE
+            : "Stripe checkout could not start. Please try again in a minute or use /contact.",
       }),
       result.status
     );
