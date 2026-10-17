@@ -7,7 +7,7 @@ const ENDPOINT = '/api/manufacturer-status'; // proxy or full Worker URL
 const CONTRACT = '0x4da4D2675e52374639C9c954f4f653887A9972BE';
 
 type HistoryItem = {
-  type: 'granted' | 'revoked';
+  type: 'granted' | 'revoked' | 'manufacturer_verified' | 'manufacturer_revoked';
   block: string;
   tx: string;
   role: string;
@@ -79,7 +79,7 @@ export default function ManufacturerStatus() {
       <header>
         <h1 className="text-2xl font-semibold">Manufacturer Role History</h1>
         <p className="text-sm text-neutral-500 mt-1">
-          RoleGranted / RoleRevoked events for AuthiChainNFT on Polygon, limited to the latest 10,000 blocks the free RPC will return.
+          Role and manufacturer events for AuthiChainNFT on Polygon, limited to the latest 10,000 blocks the free RPC will return. manufacturerVerified is an admin-set contract flag, not a certificate.
         </p>
       </header>
 
@@ -142,19 +142,24 @@ export default function ManufacturerStatus() {
           <div>
             <h2 className="font-medium mb-2">Role history ({data.history.length})</h2>
             {data.historyError && (
-              <p className="text-neutral-500">The event list for this window was not available ({data.historyError}).</p>
+              <p className="text-neutral-500">The event list for this window was not available ({data.historyError}). Current role flags above still come from the contract.</p>
             )}
-            {data.history.length === 0 ? (
-              <p className="text-neutral-500">No role events in the latest 10,000 blocks. That does not mean the address holds no role.</p>
-            ) : (
+            {!data.historyError && data.history.length === 0 ? (
+              <p className="text-neutral-500">No role or manufacturer events in the latest 10,000 blocks. That does not mean the address holds no role.</p>
+            ) : data.history.length > 0 ? (
               <ul className="space-y-2">
                 {data.history.map((item, i) => (
                   <li key={i} className="border rounded p-3 font-mono text-xs">
-                    <div className={item.type === 'granted' ? 'text-green-700' : 'text-red-700'}>
-                      {item.type.toUpperCase()} · block {item.block}
+                    <div className={item.type === 'granted' || item.type === 'manufacturer_verified' ? 'text-green-700' : 'text-red-700'}>
+                      {item.type === 'manufacturer_verified'
+                        ? 'MANUFACTURER VERIFIED'
+                        : item.type === 'manufacturer_revoked'
+                          ? 'MANUFACTURER REVOKED'
+                          : item.type.toUpperCase()}{' '}
+                      · block {item.block}
                     </div>
-                    <div>Role: {item.role}</div>
-                    <div>Sender: {item.sender}</div>
+                    {item.role ? <div>Role: {item.role}</div> : null}
+                    {item.sender ? <div>Sender: {item.sender}</div> : null}
                     <div>
                       Tx:{' '}
                       <a
@@ -169,7 +174,7 @@ export default function ManufacturerStatus() {
                   </li>
                 ))}
               </ul>
-            )}
+            ) : null}
           </div>
 
           <div className="text-xs text-neutral-500 border-t pt-3">
@@ -184,7 +189,7 @@ export default function ManufacturerStatus() {
       )}
 
       <footer className="text-xs text-neutral-400">
-        Contract: {CONTRACT} · No account required · Results are live eth_getLogs
+        Contract: {CONTRACT} · No account required · Results are live contract reads
       </footer>
     </div>
   );

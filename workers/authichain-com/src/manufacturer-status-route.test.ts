@@ -48,16 +48,23 @@ describe("manufacturer status on the apex", () => {
         return new Response(JSON.stringify({ result: "0x5000000" }));
       }
       const topic = body.params[0].topics[0] as string;
+      const account = "0x" + "00".repeat(12) + ADDRESS.slice(2).toLowerCase();
       const log = {
-        topics: [topic, "0x" + "ab".repeat(32), "0x" + "00".repeat(12) + ADDRESS.slice(2).toLowerCase(), "0x" + "11".repeat(32)],
+        topics: [topic, "0x" + "ab".repeat(32), account, "0x" + "11".repeat(32)],
         transactionHash: "0x" + "aa".repeat(32),
         blockNumber: "0x4fffff0",
       };
-      return new Response(
-        JSON.stringify({
-          result: topic.startsWith("0x2f878811") ? [log] : [],
-        })
-      );
+      const manufacturer = {
+        topics: [topic, account],
+        transactionHash: "0x" + "bb".repeat(32),
+        blockNumber: "0x4ffffe0",
+      };
+      const result = topic.startsWith("0x2f878811")
+        ? [log]
+        : topic.startsWith("0x50d2f63d")
+          ? [manufacturer]
+          : [];
+      return new Response(JSON.stringify({ result }));
     }) as typeof fetch;
     const res = await tryHandleManufacturerStatus(
       req(`/api/manufacturer-status/${ADDRESS}/history`),
@@ -65,15 +72,18 @@ describe("manufacturer status on the apex", () => {
     );
     expect(res?.status).toBe(200);
     const body = await res!.json();
-    expect(body.history).toHaveLength(1);
-    expect(body.history[0].type).toBe("granted");
+    expect(body.history).toHaveLength(2);
+    expect(body.history.map((item: { type: string }) => item.type)).toEqual([
+      "granted",
+      "manufacturer_verified",
+    ]);
     expect(body.current.minter).toBe(true);
     expect(body.current.admin).toBe(false);
     expect(body.current.manufacturerVerified).toBe(false);
     expect(body.disclaimer).toContain("not the full history");
     expect(calls.filter((method) => method === "eth_call")).toHaveLength(5);
     expect(calls).toContain("eth_blockNumber");
-    expect(calls.filter((method) => method === "eth_getLogs")).toHaveLength(2);
+    expect(calls.filter((method) => method === "eth_getLogs")).toHaveLength(4);
     const span = BigInt(body.currentBlock) - BigInt(body.fromBlock);
     expect(span).toBe(10_000n);
   });

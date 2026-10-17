@@ -9,6 +9,7 @@
  */
 import {
   DEPLOYED_BLOCK,
+  EVENT_TOPICS,
   HISTORY_DISCLAIMER,
   ROLE_IDS,
   logFromBlock,
@@ -16,10 +17,6 @@ import {
 
 const CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
 const RPC = "https://polygon-bor-rpc.publicnode.com";
-const ROLE_GRANTED =
-  "0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d";
-const ROLE_REVOKED =
-  "0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b";
 
 const HISTORY =
   /^\/api\/manufacturer-status\/(0x[a-fA-F0-9]{40})\/history$/;
@@ -117,6 +114,19 @@ function mapLogs(logs: RpcLog[], type: "granted" | "revoked") {
   }));
 }
 
+function mapManufacturer(
+  logs: RpcLog[],
+  type: "manufacturer_verified" | "manufacturer_revoked"
+) {
+  return logs.map((log) => ({
+    type,
+    block: log.blockNumber ? BigInt(log.blockNumber).toString() : "unknown",
+    tx: log.transactionHash ?? "",
+    role: "",
+    sender: "",
+  }));
+}
+
 function page(): Response {
   const html = `<!doctype html>
 <html lang="en">
@@ -125,7 +135,7 @@ function page(): Response {
 <title>Manufacturer role history</title>
 <main style="max-width:40rem;margin:2rem auto;font-family:system-ui,sans-serif">
   <h1>Manufacturer role history</h1>
-  <p>Current minter, admin, updater, pauser, and manufacturer-verified flags are read from the contract. RoleGranted and RoleRevoked events are only the latest 10,000 blocks. This page does not take payment, and a role is not a product passport.</p>
+  <p>Current minter, admin, updater, pauser, and manufacturer-verified flags are read from the contract. manufacturerVerified is an admin-set contract flag, not a certificate. Role and manufacturer events are only the latest 10,000 blocks. This page does not take payment, and a role is not a product passport.</p>
   <form id="q">
     <label>Address <input name="address" required pattern="0x[a-fA-F0-9]{40}" placeholder="0x…" style="width:100%"></label>
     <button type="submit">Check history</button>
@@ -192,22 +202,41 @@ export async function tryHandleManufacturerStatus(
     if (typeof currentHex !== "string") throw new Error("log_query_failed");
     const current = BigInt(currentHex);
     const fromBlock = logFromBlock(current, DEPLOYED_BLOCK);
-    const filter = (topic: string) => ({
+    const roleFilter = (topic: string) => ({
       address: CONTRACT,
       fromBlock: "0x" + fromBlock.toString(16),
       toBlock: "0x" + current.toString(16),
       topics: [topic, null, accountTopic(address)],
     });
-    const [granted, revoked] = await Promise.all([
-      rpc(fetchImpl, "eth_getLogs", [filter(ROLE_GRANTED)]),
-      rpc(fetchImpl, "eth_getLogs", [filter(ROLE_REVOKED)]),
+    const manufacturerFilter = (topic: string) => ({
+      address: CONTRACT,
+      fromBlock: "0x" + fromBlock.toString(16),
+      toBlock: "0x" + current.toString(16),
+      topics: [topic, accountTopic(address)],
+    });
+    const [granted, revoked, verified, unverified] = await Promise.all([
+      rpc(fetchImpl, "eth_getLogs", [roleFilter(EVENT_TOPICS.roleGranted)]),
+      rpc(fetchImpl, "eth_getLogs", [roleFilter(EVENT_TOPICS.roleRevoked)]),
+      rpc(fetchImpl, "eth_getLogs", [
+        manufacturerFilter(EVENT_TOPICS.manufacturerVerified),
+      ]),
+      rpc(fetchImpl, "eth_getLogs", [
+        manufacturerFilter(EVENT_TOPICS.manufacturerRevoked),
+      ]),
     ]);
-    if (!Array.isArray(granted) || !Array.isArray(revoked)) {
+    if (
+      !Array.isArray(granted) ||
+      !Array.isArray(revoked) ||
+      !Array.isArray(verified) ||
+      !Array.isArray(unverified)
+    ) {
       throw new Error("log_query_failed");
     }
     const history = [
       ...mapLogs(granted as RpcLog[], "granted"),
       ...mapLogs(revoked as RpcLog[], "revoked"),
+      ...mapManufacturer(verified as RpcLog[], "manufacturer_verified"),
+      ...mapManufacturer(unverified as RpcLog[], "manufacturer_revoked"),
     ].sort((a, b) => {
       const left = /^\d+$/.test(a.block) ? BigInt(a.block) : -1n;
       const right = /^\d+$/.test(b.block) ? BigInt(b.block) : -1n;

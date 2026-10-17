@@ -16,9 +16,23 @@ export const ROLE_IDS = {
   pauser: "0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a",
 } as const;
 
+/** keccak256 of the contract event signatures. Not function selectors. */
+export const EVENT_TOPICS = {
+  roleGranted:
+    "0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d",
+  roleRevoked:
+    "0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b",
+  manufacturerVerified:
+    "0x50d2f63d0768a218414c666031d609d1b298f9801478a36d0bfcfb6abfd63a64",
+  manufacturerRevoked:
+    "0xe8d2a3ac660549a08f637582b6cbe854156af7ef2042247240ffc1fd34db7bcd",
+} as const;
+
 export const HISTORY_DISCLAIMER =
   "Current role flags are hasRole and isManufacturerVerified on the contract. " +
-  "RoleGranted / RoleRevoked events are limited to the latest 10,000 Polygon blocks. " +
+  "manufacturerVerified is an admin-set contract flag, not a certificate. " +
+  "RoleGranted, RoleRevoked, ManufacturerVerified, and ManufacturerRevoked events " +
+  "are limited to the latest 10,000 Polygon blocks. " +
   "That window is not the full history since deployment. " +
   "A current role or an event in that window is not proof of physical product authenticity, " +
   "regulatory status, or that any specific item is genuine. " +

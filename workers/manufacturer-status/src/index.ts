@@ -12,6 +12,12 @@ const ROLE_GRANTED = parseAbiItem(
 const ROLE_REVOKED = parseAbiItem(
   'event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)'
 );
+const MANUFACTURER_VERIFIED = parseAbiItem(
+  'event ManufacturerVerified(address indexed manufacturer, uint256 timestamp)'
+);
+const MANUFACTURER_REVOKED = parseAbiItem(
+  'event ManufacturerRevoked(address indexed manufacturer, uint256 timestamp)'
+);
 
 const ROLE_ABI = [
   {
@@ -86,7 +92,7 @@ app.get('/:address/history', async (c) => {
   try {
     const currentBlock = await client.getBlockNumber();
     const fromBlock = logFromBlock(currentBlock, DEPLOYED_BLOCK);
-    const [granted, revoked] = await Promise.all([
+    const [granted, revoked, verified, unverified] = await Promise.all([
       client.getLogs({
         address: CONTRACT,
         event: ROLE_GRANTED,
@@ -101,24 +107,58 @@ app.get('/:address/history', async (c) => {
         fromBlock,
         toBlock: currentBlock,
       }),
+      client.getLogs({
+        address: CONTRACT,
+        event: MANUFACTURER_VERIFIED,
+        args: { manufacturer: address },
+        fromBlock,
+        toBlock: currentBlock,
+      }),
+      client.getLogs({
+        address: CONTRACT,
+        event: MANUFACTURER_REVOKED,
+        args: { manufacturer: address },
+        fromBlock,
+        toBlock: currentBlock,
+      }),
     ]);
 
+    const blockOf = (value: bigint | null | undefined) => value?.toString() ?? 'unknown';
     const history = [
       ...granted.map((log) => ({
         type: 'granted' as const,
-        block: log.blockNumber?.toString() ?? 'unknown',
-        tx: log.transactionHash,
-        role: log.args.role,
-        sender: log.args.sender,
+        block: blockOf(log.blockNumber),
+        tx: log.transactionHash ?? '',
+        role: log.args.role ?? '',
+        sender: log.args.sender ?? '',
       })),
       ...revoked.map((log) => ({
         type: 'revoked' as const,
-        block: log.blockNumber?.toString() ?? 'unknown',
-        tx: log.transactionHash,
-        role: log.args.role,
-        sender: log.args.sender,
+        block: blockOf(log.blockNumber),
+        tx: log.transactionHash ?? '',
+        role: log.args.role ?? '',
+        sender: log.args.sender ?? '',
       })),
-    ].sort((a, b) => Number(b.block) - Number(a.block));
+      ...verified.map((log) => ({
+        type: 'manufacturer_verified' as const,
+        block: blockOf(log.blockNumber),
+        tx: log.transactionHash ?? '',
+        role: '',
+        sender: '',
+      })),
+      ...unverified.map((log) => ({
+        type: 'manufacturer_revoked' as const,
+        block: blockOf(log.blockNumber),
+        tx: log.transactionHash ?? '',
+        role: '',
+        sender: '',
+      })),
+    ].sort((a, b) => {
+      const left = /^\d+$/.test(a.block) ? BigInt(a.block) : -1n;
+      const right = /^\d+$/.test(b.block) ? BigInt(b.block) : -1n;
+      if (right === left) return 0;
+      return right > left ? 1 : -1;
+    });
 
     return c.json({
       address,
