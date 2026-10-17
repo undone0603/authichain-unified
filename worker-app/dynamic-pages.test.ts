@@ -1025,7 +1025,7 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     );
     expect(body).toContain("Try 5 free generations. No account, no card.");
     expect(body).toContain(
-      "100 generations for $29, paid once. No subscription, and pack credits never expire. A scannable QR is not an authenticity proof."
+      "100 generations for $29, paid once. No subscription, and pack credits never expire unless you start a subscription. A scannable QR is not an authenticity proof."
     );
     expect(body).not.toContain("Launch at $19/mo");
     expect(body).not.toContain("Five generations are free");

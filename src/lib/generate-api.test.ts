@@ -222,7 +222,7 @@ describe("handleGeneratePost", () => {
     expect(result.status).toBe(401);
     expect(result.body.code).toBe("FREE_SAMPLE_USED");
     expect(String(result.body.message)).toMatch(
-      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and pack credits never expire\.$/
+      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and pack credits never expire unless you start a subscription\.$/
     );
     expect(generateImage).not.toHaveBeenCalled();
   });
