@@ -420,7 +420,7 @@ function verifyPromptHtml(): string {
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
       "<p>Enter a registry product ID to look up its record. On-chain verification is in development.</p>\n" +
-      "<p>The open verifier checks the published demonstration record <a href=\"/verify?id=polygon-anchor-1\">polygon-anchor-1</a>. The same check as JSON is <a href=\"/api/verify?id=polygon-anchor-1\">/api/verify</a>.</p>\n" +
+      '<p>The open verifier checks the published demonstration record <a href="/verify?id=polygon-anchor-1">polygon-anchor-1</a>. The same check as JSON is <a href="/api/verify?id=polygon-anchor-1">/api/verify</a>.</p>\n' +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
@@ -442,8 +442,7 @@ function openVerifierHtml(
         .join("") +
       "</ul>\n"
     : "";
-  const jsonHref =
-    "/api/verify?id=" + encodeURIComponent(identifier);
+  const jsonHref = "/api/verify?id=" + encodeURIComponent(identifier);
   return htmlDocument({
     title: "Open verification | AuthiChain",
     description:
@@ -602,11 +601,7 @@ async function renderVerify(c: Context): Promise<Response> {
     if (published) {
       const protocol = verifySubmitted(published.record, published.anchor);
       if (protocol && typeof protocol.verdict === "string") {
-        return htmlResponse(
-          c,
-          openVerifierHtml(identifier, protocol),
-          200
-        );
+        return htmlResponse(c, openVerifierHtml(identifier, protocol), 200);
       }
     }
 
@@ -1609,7 +1604,7 @@ function authenticateHtml(): string {
         formId: "auth-starter-checkout",
         inputId: "auth-starter-email",
       }) +
-      "<p><a href=\"" +
+      '<p><a href="' +
       escapeHtml(planPaymentLink("qron_launch") || "/checkout/qron_launch") +
       '">Start Launch $19/mo</a> · <a href="/pricing">All pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
       "</main>",
@@ -1627,10 +1622,7 @@ function generatePackLinksHtml(): string {
   // CFA-460: QRON Launch $19/mo is not offered on /generate (unlisted).
   // The /checkout/qron_launch route and Stripe price are untouched.
   const packs = listedPlans("qron").filter(
-    p =>
-      p.id === "starter" ||
-      p.id === "creator" ||
-      p.id === "dpp_readiness"
+    p => p.id === "starter" || p.id === "creator" || p.id === "dpp_readiness"
   );
   const order = ["starter", "creator", "dpp_readiness"] as const;
   packs.sort(
@@ -1645,9 +1637,7 @@ function generatePackLinksHtml(): string {
           ? "/pricing"
           : planPaymentLink(p.id) || "/pricing";
       const price =
-        p.price_suffix === "/month"
-          ? `$${p.price}/mo`
-          : `$${p.price}`;
+        p.price_suffix === "/month" ? `$${p.price}/mo` : `$${p.price}`;
       return (
         '<a href="' +
         escapeHtml(href) +
@@ -1682,7 +1672,7 @@ function generateCreditLinksHtml(): string {
   }).join("\n");
   return (
     "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
-    "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and pack credits never expire. A scannable QR is not an authenticity proof.</p>\n" +
+    "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
@@ -1704,7 +1694,8 @@ function generateFormHtml(
     : '<p role="alert" id="generate-error" hidden></p>\n';
   return htmlDocument({
     // LOOP-03 meta (docs/growth/2026-09-28-first-dollar-loops.md).
-    title: "AI QR Art Generator | 5 Free, Then $29 Once, No Subscription | QRON",
+    title:
+      "AI QR Art Generator | 5 Free, Then $29 Once, No Subscription | QRON",
     description:
       "Make scannable AI QR art. 5 free generations, no card (limit 5 per visitor every 30 days, while daily samples last). Then 100 for $29, paid once. A QR is not an authenticity proof.",
     canonicalPath: "/generate",
@@ -1713,7 +1704,7 @@ function generateFormHtml(
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
       statusBlock +
-      "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and pack credits never expire. A scannable QR is not an authenticity proof.</p>\n" +
+      "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
       '<form id="generate-form" action="/generate" method="post">\n' +
