@@ -155,21 +155,9 @@ export default function ManufacturerStatus() {
           </div>
           <div className="text-xs text-neutral-400">{data.source}</div>
 
-          <div className="pt-4 border-t">
-            <p className="text-sm mb-2">
-              Manufacturer role is publicly queryable. Request the role for your brand — $49 one-time, self-serve, auto-granted after payment.
-            </p>
-            <button
-              className="bg-blue-600 text-white px-4 py-2 rounded text-sm"
-              onClick={() => {
-                console.log(JSON.stringify({ event: 'role_request_cta_click' }));
-                // Wire to Stripe Checkout or /onboard
-                window.location.href = '/onboard?intent=manufacturer-role';
-              }}
-            >
-              Request Verified Manufacturer Role — $49
-            </button>
-          </div>
+          <p className="pt-4 border-t text-xs text-neutral-500">
+            A role event is an access-control log for this NFT contract. It is not a product passport, and this page does not take payment.
+          </p>
         </div>
       )}
 
