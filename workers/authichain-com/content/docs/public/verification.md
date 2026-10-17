@@ -113,11 +113,13 @@ Accept: application/json
 
 The object id form is `qron:url:` plus 8 hex characters.
 
-| Result | HTTP | Meaning |
+| HTTP | `decision` | Meaning |
 |---|---|---|
-| `verified` | 200 | The stored presentation signature checks out |
-| `presentation_not_found` | 404 | No stored presentation for that id |
-| `indeterminate` | 400 or 502 | The check did not finish |
+| 200 | `verified` | Signature valid, issuer trusted, presentation active and unexpired |
+| 409 | `warning`, `blocked`, `revoked`, `expired`, `risk`, or `indeterminate` | Signature valid, but the presentation is not verified |
+| 400 | `indeterminate` with `cryptographic_status: "invalid"` | The signature or object id check failed |
+| 404 | `indeterminate` with `error: "presentation_not_found"` | No stored presentation for that id |
+| 422, 502, or 503 | `indeterminate` | The check did not finish |
 
 qron.space, strainchain.io, and govchain.us each proxy that GET. Each host does not verify the signature. Their responses set `x-qron-resolve-origin: https://authichain.com`.
 
