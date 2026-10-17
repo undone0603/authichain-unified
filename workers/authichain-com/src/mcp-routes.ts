@@ -28,6 +28,7 @@ import {
 import type { X402Env } from "./x402-routes";
 import {
   guardedForward,
+  scopedReplayStore,
   resolvePaidSealVerify,
 } from "../../../src/lib/paid-seal-verify";
 import {
@@ -558,7 +559,7 @@ async function unpaidOrRefusedVerify(
     payTo,
     description: "AuthiChain MCP verify",
     env,
-    replayStore: env?.X402_REPLAY_KV ?? null,
+    replayStore: scopedReplayStore(env?.X402_REPLAY_KV, "authichain-com"),
   });
   if (decision.action === "answer") {
     if (decision.status !== 200) {
@@ -587,7 +588,7 @@ async function unpaidOrRefusedVerify(
     // VERIFY_APP settles: guard the replay at this edge (CFA-343/351).
     return guardedForward({
       proofHeader,
-      replayStore: env?.X402_REPLAY_KV ?? null,
+      replayStore: scopedReplayStore(env?.X402_REPLAY_KV, "authichain-com"),
       sealId: typeof args.sealId === "string" ? args.sealId : null,
       forward: () =>
         forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id),

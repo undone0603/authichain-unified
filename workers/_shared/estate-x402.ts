@@ -30,6 +30,7 @@ import {
 import { ESTATE_BRANDS } from "./estate-landing.ts";
 import {
   guardedForward,
+  scopedReplayStore,
   type ReplayStore,
 } from "../../src/lib/paid-seal-verify.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
@@ -39,7 +40,7 @@ import {
 } from "./estate-x402-catalog.ts";
 
 export type SisterX402Env = X402EnvVars & {
-  /** Optional KV for the x402 replay guard (CFA-343/356). Unbound = guard off (logged). */
+  /** Optional KV for the x402 replay guard (CFA-343/356). Unbound = 503 replay_store_unavailable (CFA-363). */
   X402_REPLAY_KV?: ReplayStore;
 };
 
@@ -168,7 +169,8 @@ function fanoutResponse(request: Request): Response {
 async function agentVerify(
   request: Request,
   env?: SisterX402Env,
-  verifyApp?: X402VerifyBinding
+  verifyApp?: X402VerifyBinding,
+  brand?: SisterDiscoveryBrand
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = publishedPayTo(env);
@@ -197,7 +199,10 @@ async function agentVerify(
     }
     return guardedForward({
       proofHeader,
-      replayStore: env?.X402_REPLAY_KV ?? null,
+      replayStore: scopedReplayStore(
+        env?.X402_REPLAY_KV,
+        brand ?? sisterBrandFromHost(new URL(request.url).hostname) ?? "sister"
+      ),
       sealId,
       forward: () =>
         forwardPaidVerify(verifyApp, request, proofHeader, bodyText),
@@ -212,7 +217,9 @@ async function agentVerify(
 export async function tryHandleSisterX402(
   request: Request,
   env: SisterX402Env = {},
-  verifyApp?: X402VerifyBinding
+  verifyApp?: X402VerifyBinding,
+  /** Fixed per worker; scopes replay keys. Falls back to the host's brand. */
+  brand?: SisterDiscoveryBrand
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isSisterX402Path(url.pathname)) return null;
@@ -240,7 +247,7 @@ export async function tryHandleSisterX402(
   }
 
   if (request.method === "POST" && isPaidPath(url.pathname)) {
-    return agentVerify(request, env, verifyApp);
+    return agentVerify(request, env, verifyApp, brand);
   }
 
   return json(405, { error: "method not allowed" });

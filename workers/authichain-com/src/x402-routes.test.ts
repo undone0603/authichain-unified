@@ -1,6 +1,16 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 
+// CFA-363: paid paths need a replay store; an in-memory stub for these tests.
+function kvStub() {
+  const m = new Map<string, string>();
+  return {
+    get: async (k: string) => m.get(k) ?? null,
+    put: async (k: string, v: string) => void m.set(k, v),
+    delete: async (k: string) => void m.delete(k),
+  };
+}
+
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
 
 function req(path: string, init?: RequestInit): Request {
@@ -380,7 +390,10 @@ describe("POST /api/x402 with the VERIFY_APP binding", () => {
         headers: { "x-payment": header, "content-type": "application/json" },
         body: JSON.stringify({ sealId: "seal-1" }),
       }),
-      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_REPLAY_KV: kvStub(),
+      },
       verifyApp
     );
     expect(res!.status).toBe(200);

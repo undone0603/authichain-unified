@@ -1,6 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolvePaidSealVerify } from "./paid-seal-verify";
 
+// CFA-363: paid paths need a replay store; an in-memory stub for these tests.
+function kvStub() {
+  const m = new Map<string, string>();
+  return {
+    get: async (k: string) => m.get(k) ?? null,
+    put: async (k: string, v: string) => void m.set(k, v),
+    delete: async (k: string) => void m.delete(k),
+  };
+}
+
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
 const SEAL = "11111111-1111-4111-8111-111111111111";
 const PAY_TO = "0xabc0000000000000000000000000000000000001";
@@ -53,6 +63,7 @@ describe("resolvePaidSealVerify", () => {
   it("rejects a bad proof before any registry or settle call", async () => {
     const { fetchImpl, calls } = callsOf(() => new Response("[]"));
     const decision = await resolvePaidSealVerify({
+      replayStore: kvStub(),
       ...bound,
       proofHeader: proof({
         network: "not-a-network",
@@ -69,6 +80,7 @@ describe("resolvePaidSealVerify", () => {
   it("rejects a non-uuid seal before lookup and settlement", async () => {
     const { fetchImpl, calls } = callsOf(() => new Response("[]"));
     const decision = await resolvePaidSealVerify({
+      replayStore: kvStub(),
       ...bound,
       proofHeader: proof({ signature: "0xdead" }),
       bodyText: JSON.stringify({ sealId: "probe" }),
@@ -92,6 +104,7 @@ describe("resolvePaidSealVerify", () => {
       throw new Error("registry and settlement must not run");
     });
     const decision = await resolvePaidSealVerify({
+      replayStore: kvStub(),
       ...bound,
       proofHeader: proof({ signature: "0xdead" }),
       bodyText: JSON.stringify({ sealId: SEAL }),
@@ -117,6 +130,7 @@ describe("resolvePaidSealVerify", () => {
       return new Response("down", { status: 500 });
     });
     const decision = await resolvePaidSealVerify({
+      replayStore: kvStub(),
       ...bound,
       proofHeader: proof({ signature: "0xdead" }),
       bodyText: JSON.stringify({ sealId: SEAL }),
@@ -153,6 +167,7 @@ describe("resolvePaidSealVerify", () => {
     globalThis.fetch = fetchImpl;
     try {
       const decision = await resolvePaidSealVerify({
+        replayStore: kvStub(),
         ...bound,
         proofHeader: proof({ signature: "0xdead" }),
         bodyText: JSON.stringify({ sealId: SEAL }),
@@ -207,6 +222,7 @@ describe("resolvePaidSealVerify", () => {
     globalThis.fetch = fetchImpl;
     try {
       const decision = await resolvePaidSealVerify({
+        replayStore: kvStub(),
         ...bound,
         hasVerifyApp: false,
         proofHeader: proof({ signature: "0xdead" }),
@@ -244,6 +260,7 @@ describe("resolvePaidSealVerify", () => {
     try {
       const { fetchImpl, calls } = callsOf(() => new Response("[]"));
       const decision = await resolvePaidSealVerify({
+        replayStore: kvStub(),
         ...bound,
         proofHeader: proof({ signature: "0xdead" }),
         bodyText: JSON.stringify({ sealId: SEAL }),
@@ -262,6 +279,7 @@ describe("resolvePaidSealVerify", () => {
       throw new Error("fetch should not run");
     });
     const decision = await resolvePaidSealVerify({
+      replayStore: kvStub(),
       ...bound,
       hasVerifyApp: false,
       env: {},
@@ -275,6 +293,7 @@ describe("resolvePaidSealVerify", () => {
 
   it("forwards when credentials are absent and VERIFY_APP is set", async () => {
     const decision = await resolvePaidSealVerify({
+      replayStore: kvStub(),
       ...bound,
       hasVerifyApp: true,
       env: {},
@@ -320,6 +339,7 @@ describe("resolvePaidSealVerify", () => {
     globalThis.fetch = fetchImpl;
     try {
       const decision = await resolvePaidSealVerify({
+        replayStore: kvStub(),
         ...bound,
         env: {
           SUPABASE_URL: "https://example.supabase.co",

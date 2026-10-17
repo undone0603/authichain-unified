@@ -252,6 +252,24 @@ export function validityRefusal(
   return null;
 }
 
+/**
+ * Scope a shared replay KV to one site so the four workers that share
+ * X402_REPLAY_KV (authichain-com, qron-space, strainchain-io, govchain-us)
+ * never read or write each other's markers. Null store stays null, which paid paths refuse with 503 (CFA-363).
+ */
+export function scopedReplayStore(
+  store: ReplayStore | null | undefined,
+  site: string
+): ReplayStore | null {
+  if (!store) return null;
+  const p = `site:${site}:`;
+  return {
+    get: k => store.get(p + k),
+    put: (k, v, o) => store.put(p + k, v, o),
+    delete: k => store.delete(p + k),
+  };
+}
+
 /** KV keys for one payment: nonce (else signature, else sha256 of header) + tx hash. */
 export function replayKeys(
   proofHeader: string,
@@ -287,8 +305,9 @@ export async function replayRefusal(
   keys: string[]
 ): Promise<{ status: number; body: unknown } | null> {
   if (!store) {
-    console.warn(JSON.stringify({ evt: "x402_replay_guard_unbound" }));
-    return null;
+    // CFA-363: a paid path without X402_REPLAY_KV fails closed, never open.
+    console.warn(JSON.stringify({ evt: "x402_replay_store_unbound" }));
+    return STORE_DOWN;
   }
   try {
     const seen = await Promise.all(keys.map(k => store.get(k)));
@@ -376,6 +395,14 @@ export function settledTxHash(
   return typeof t === "string" && t ? t : null;
 }
 
+/** True for a JSON-RPC error envelope or an MCP tool result flagged isError. */
+export function isRpcFailure(body: unknown): boolean {
+  if (!body || typeof body !== "object") return false;
+  const b = body as { error?: unknown; result?: { isError?: unknown } };
+  if (b.error !== undefined && b.error !== null && "jsonrpc" in b) return true;
+  return b.result?.isError === true;
+}
+
 function jsonRefusal(r: { status: number; body: unknown }): Response {
   return new Response(JSON.stringify(r.body), {
     status: r.status,
@@ -420,6 +447,12 @@ export async function guardedForward(input: {
     } catch {
       body = null;
     }
+    // CFA-366 P3: a JSON-RPC error (or result.isError) inside HTTP 200 is not
+    // a settled payment. Drop the pending marker so the payer can retry.
+    if (isRpcFailure(body)) {
+      await releaseReplay(input.replayStore, keys);
+      return upstream;
+    }
     await rememberSettledProof(input.replayStore, keys, {
       sealId: input.sealId,
       txHash: settledTxHash(upstream.headers.get("PAYMENT-RESPONSE"), body),
@@ -438,7 +471,7 @@ export async function resolvePaidSealVerify(input: {
   description: string;
   env?: SealLookupEnv;
   fetchImpl?: typeof fetch;
-  /** KV for the replay guard. Absent = guard off (logged). */
+  /** KV for the replay guard. Absent = 503 replay_store_unavailable (CFA-363). */
   replayStore?: ReplayStore | null;
 }): Promise<PaidSealDecision> {
   const creds = sealLookupCredentials(input.env);

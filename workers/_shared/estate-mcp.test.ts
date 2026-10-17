@@ -380,7 +380,16 @@ test("paid MCP verify is forwarded and wrapped as JSON-RPC when VERIFY_APP is bo
       }),
     }),
     "qron",
-    {},
+    {
+      X402_REPLAY_KV: (() => {
+        const m = new Map<string, string>();
+        return {
+          get: async (k: string) => m.get(k) ?? null,
+          put: async (k: string, v: string) => void m.set(k, v),
+          delete: async (k: string) => void m.delete(k),
+        };
+      })(),
+    },
     {
       fetch: async (r: Request) => {
         seen.push(r);

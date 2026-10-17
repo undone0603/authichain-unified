@@ -364,7 +364,16 @@ test("POST with a proof is forwarded to the Next registry route when VERIFY_APP 
       headers: { "x-payment": header, "content-type": "application/json" },
       body: JSON.stringify({ sealId: "seal-1" }),
     }),
-    {},
+    {
+      X402_REPLAY_KV: (() => {
+        const m = new Map<string, string>();
+        return {
+          get: async (k: string) => m.get(k) ?? null,
+          put: async (k: string, v: string) => void m.set(k, v),
+          delete: async (k: string) => void m.delete(k),
+        };
+      })(),
+    },
     {
       fetch: async (r: Request) => {
         seen.push(r);

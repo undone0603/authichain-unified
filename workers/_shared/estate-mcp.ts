@@ -25,7 +25,10 @@ import {
 } from "../../src/lib/x402.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
 import { sisterOrigin, type SisterX402Env } from "./estate-x402.ts";
-import { guardedForward } from "../../src/lib/paid-seal-verify.ts";
+import {
+  guardedForward,
+  scopedReplayStore,
+} from "../../src/lib/paid-seal-verify.ts";
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -206,7 +209,8 @@ async function unpaidOrRefusedVerify(
   env: SisterX402Env | undefined,
   args: Record<string, unknown>,
   id: unknown,
-  verifyApp?: X402VerifyBinding
+  verifyApp: X402VerifyBinding | undefined,
+  brand: SisterDiscoveryBrand
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = publishedPayTo(env);
@@ -227,7 +231,7 @@ async function unpaidOrRefusedVerify(
   if (verifyApp) {
     return guardedForward({
       proofHeader,
-      replayStore: env?.X402_REPLAY_KV ?? null,
+      replayStore: scopedReplayStore(env?.X402_REPLAY_KV, brand),
       sealId: typeof args.sealId === "string" ? args.sealId : null,
       forward: () =>
         forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id),
@@ -293,7 +297,8 @@ async function handleRpc(
         env,
         params.arguments ?? {},
         id,
-        verifyApp
+        verifyApp,
+        brand
       );
     }
     return rpcResult(id, {

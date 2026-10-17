@@ -42,6 +42,7 @@ import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
 import {
   readSeal,
   guardedForward,
+  scopedReplayStore,
   resolvePaidSealVerify,
   type ReplayStore,
   sealLookupCredentials,
@@ -342,7 +343,9 @@ async function agentVerify(
     description: "AuthiChain agent verification",
     env,
     fetchImpl: opts?.fetchImpl,
-    replayStore: opts?.replayStore ?? env?.X402_REPLAY_KV ?? null,
+    replayStore:
+      opts?.replayStore ??
+      scopedReplayStore(env?.X402_REPLAY_KV, "authichain-com"),
   });
   if (decision.action === "answer") {
     return json(decision.status, decision.body, decision.headers);
@@ -351,7 +354,9 @@ async function agentVerify(
     const sealReq = parseSealRequest(parseJsonObject(bodyText));
     return guardedForward({
       proofHeader,
-      replayStore: opts?.replayStore ?? env?.X402_REPLAY_KV ?? null,
+      replayStore:
+        opts?.replayStore ??
+        scopedReplayStore(env?.X402_REPLAY_KV, "authichain-com"),
       sealId: sealReq.ok ? sealReq.sealId : null,
       forward: () =>
         forwardPaidVerify(verifyApp, request, proofHeader, bodyText),

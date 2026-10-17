@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   authorizationNonce,
+  guardedForward,
+  isRpcFailure,
   REPLAY_TTL_SECONDS,
+  scopedReplayStore,
   replayKeys,
   resolvePaidSealVerify,
   type ReplayStore,
@@ -320,5 +323,78 @@ describe("CFA-356", () => {
     });
     expect(net.settles()).toBe(0);
     expect(kv.map.size).toBe(0);
+  });
+});
+
+describe("guardedForward: MCP error in HTTP 200 is not settled (CFA-366 P3)", () => {
+  const ok200 = (body: unknown) => async () =>
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  for (const [label, body] of [
+    [
+      "JSON-RPC error",
+      { jsonrpc: "2.0", id: 1, error: { code: -32000, message: "x" } },
+    ],
+    [
+      "result.isError",
+      { jsonrpc: "2.0", id: 1, result: { isError: true, content: [] } },
+    ],
+  ] as const) {
+    it(`${label}: pending marker dropped, nothing recorded, retry allowed`, async () => {
+      const kv = memKv();
+      const res = await guardedForward({
+        proofHeader: header("0xp301"),
+        replayStore: kv.store,
+        forward: ok200(body),
+      });
+      expect(res.status).toBe(200);
+      expect(kv.map.size).toBe(0);
+      const retry = await guardedForward({
+        proofHeader: header("0xp301"),
+        replayStore: kv.store,
+        forward: ok200({ jsonrpc: "2.0", id: 1, result: { content: [] } }),
+      });
+      expect(retry.status).toBe(200);
+      expect(kv.map.size).toBeGreaterThan(0);
+    });
+  }
+  it("isRpcFailure ignores a plain REST body with an error-free answer", () => {
+    expect(isRpcFailure({ verified: false, settlement: {} })).toBe(false);
+    expect(isRpcFailure(null)).toBe(false);
+  });
+});
+
+describe("missing X402_REPLAY_KV fails closed (CFA-363)", () => {
+  it("guardedForward: 503 replay_store_unavailable and no forward", async () => {
+    let calls = 0;
+    const res = await guardedForward({
+      proofHeader: header("0xp302"),
+      replayStore: null,
+      forward: async () => {
+        calls++;
+        return new Response("{}", { status: 200 });
+      },
+    });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({
+      error: "replay_store_unavailable",
+    });
+    expect(calls).toBe(0);
+  });
+});
+
+describe("scopedReplayStore", () => {
+  it("prefixes every key with the site and keeps null as null", async () => {
+    const kv = memKv();
+    const a = scopedReplayStore(kv.store, "qron")!;
+    const b = scopedReplayStore(kv.store, "govchain")!;
+    await a.put("x402:nonce:0x1", "v");
+    expect(kv.map.has("site:qron:x402:nonce:0x1")).toBe(true);
+    expect(await b.get("x402:nonce:0x1")).toBeNull();
+    await a.delete("x402:nonce:0x1");
+    expect(kv.map.size).toBe(0);
+    expect(scopedReplayStore(null, "qron")).toBeNull();
   });
 });

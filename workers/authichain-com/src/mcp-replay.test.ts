@@ -90,8 +90,10 @@ describe("MCP paid verify replay guard (VERIFY_APP forward)", () => {
     const first = await tryHandleMcp(call(), env, app.binding as never);
     expect(first?.status).toBe(200);
     expect(app.calls()).toBe(1);
-    expect(kv.map.get("x402:nonce:0xmc01")?.ttl).toBe(7 * 24 * 60 * 60);
-    expect(kv.map.has("x402:tx:0xmtx")).toBe(true);
+    expect(kv.map.get("site:authichain-com:x402:nonce:0xmc01")?.ttl).toBe(
+      7 * 24 * 60 * 60
+    );
+    expect(kv.map.has("site:authichain-com:x402:tx:0xmtx")).toBe(true);
     const again = await tryHandleMcp(call(), env, app.binding as never);
     expect(again?.status).toBe(409);
     expect(await again?.json()).toMatchObject({
@@ -115,6 +117,17 @@ describe("MCP paid verify replay guard (VERIFY_APP forward)", () => {
       X402_PRICE_USD: "0.05",
       X402_REPLAY_KV: broken,
     };
+    const res = await tryHandleMcp(call(), env, app.binding as never);
+    expect(res?.status).toBe(503);
+    expect(await res?.json()).toMatchObject({
+      error: "replay_store_unavailable",
+    });
+    expect(app.calls()).toBe(0);
+  });
+
+  it("CFA-363: 503 and no forward when X402_REPLAY_KV is not bound", async () => {
+    const app = verifyApp();
+    const env = { X402_PAY_TO: PAY_TO, X402_PRICE_USD: "0.05" };
     const res = await tryHandleMcp(call(), env, app.binding as never);
     expect(res?.status).toBe(503);
     expect(await res?.json()).toMatchObject({
