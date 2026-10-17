@@ -2254,7 +2254,12 @@ export default {
     if (protocolDiscovery) return protocolDiscovery;
     const canonicalVerify = await tryHandleEstateCanonicalVerify(request, env);
     if (canonicalVerify) return canonicalVerify;
-    const x402 = await tryHandleSisterX402(request, env, env?.VERIFY_APP);
+    const x402 = await tryHandleSisterX402(
+      request,
+      env,
+      env?.VERIFY_APP,
+      "qron"
+    );
     if (x402) return x402;
     const mcp = await tryHandleSisterMcp(
       request,
