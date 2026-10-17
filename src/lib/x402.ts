@@ -1093,7 +1093,7 @@ export function x402ScanFanout(
   const base = origin.replace(/\/+$/, "") || "https://authichain.com";
   return {
     version: 1,
-    resources: [`${base}/api/x402`],
+    resources: [`${base}/api/v1/agent-verify`, `${base}/api/x402`],
   };
 }
 

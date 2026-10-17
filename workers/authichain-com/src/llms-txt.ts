@@ -28,6 +28,8 @@ export function renderLlmsTxt(): string {
     "",
     "## Agent pay (x402)",
     `- Unpaid POST https://authichain.com/api/x402 returns HTTP 402 ($${X402_USD} USDC on Base)`,
+    "- Canonical paid verify: POST https://authichain.com/api/v1/agent-verify",
+    "- Read https://authichain.com/api/x402/health first. paidVerify.bound false means HTTP 503 before settlement and no payment is taken.",
     "- Catalog: https://authichain.com/api/x402/catalog",
     "- Listing pack: https://authichain.com/api/x402/listing",
     "- Growth registry: https://authichain.com/api/x402/growth",
