@@ -112,8 +112,8 @@ function mcpTools(brand: SisterDiscoveryBrand) {
     {
       name: "verify",
       description: x402PaidVerifyStatus().bound
-        ? "Paid AuthiChain verification. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT."
-        : "Paid AuthiChain verification, not answering yet. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base) for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. Use query_provenance for a free lookup.",
+        ? "Paid AuthiChain verification. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT."
+        : "Paid AuthiChain verification, not answering yet. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 ($0.05 USDC on Base) for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. Use query_provenance for a free lookup.",
       inputSchema: {
         type: "object",
         properties: {

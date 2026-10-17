@@ -2,7 +2,7 @@
  * Production route lock. The landing worker already returns freeCalls on
  * GET /api/x402/health. The edge wildcard authichain.com/api/x402* is more
  * specific than authichain.com/*, so without an exact route that URL is the
- * edge router, which has no free tier. Catalog stays on the edge.
+ * edge router, which has no free tier. Catalog is an exact route here too.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -23,8 +23,8 @@ test("apex /api/x402/health is an exact landing route", () => {
   const required = [
     "authichain.com/api/x402/health",
     "authichain.com/api/x402/health/",
-    "authichain.govchain.us/api/x402/health",
-    "authichain.govchain.us/api/x402/health/",
+    "authichain.com/api/x402/catalog",
+    "authichain.com/api/x402/catalog/",
   ];
   for (const pattern of required) {
     assert.ok(list.includes(pattern), pattern);
@@ -32,6 +32,7 @@ test("apex /api/x402/health is an exact landing route", () => {
   const health = list.indexOf("authichain.com/api/x402/health");
   const wildcard = list.indexOf("authichain.com/*");
   assert.ok(health >= 0 && wildcard > health);
-  assert.equal(list.includes("authichain.com/api/x402/catalog"), false);
+  // This host's POST stays on the edge, which does not grant the free tier.
+  assert.equal(list.includes("authichain.govchain.us/api/x402/health"), false);
   assert.equal(list.includes("authichain.com/api/checkout"), false);
 });

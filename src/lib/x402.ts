@@ -46,8 +46,6 @@ export type X402BazaarInfo = {
     bodyType: "json";
     body: {
       sealId: string;
-      productId?: string;
-      serial?: string;
     };
   };
   output: {
@@ -1049,10 +1047,10 @@ export async function x402Catalog(
         "/api/v1/agent-verify",
         "Health alias on GET; POST is the paid skill"
       ),
-      paid("/api/x402", "AuthiChain agent verification (seal / product)"),
+      paid("/api/x402", "AuthiChain agent verification (seal UUID)"),
       paid(
         "/api/v1/agent-verify",
-        "AuthiChain agent verification (seal / product)"
+        "AuthiChain agent verification (seal UUID)"
       ),
       paid("/mcp", "MCP tools/call verify (GET is free discovery)"),
       paid("/api/mcp", "MCP tools/call verify alias"),
