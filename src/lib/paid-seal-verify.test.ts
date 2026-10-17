@@ -1,16 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolvePaidSealVerify } from "./paid-seal-verify";
 
-// CFA-363: paid paths need a replay store; an in-memory stub for these tests.
-function kvStub() {
-  const m = new Map<string, string>();
-  return {
-    get: async (k: string) => m.get(k) ?? null,
-    put: async (k: string, v: string) => void m.set(k, v),
-    delete: async (k: string) => void m.delete(k),
-  };
-}
-
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
 const SEAL = "11111111-1111-4111-8111-111111111111";
 const PAY_TO = "0xabc0000000000000000000000000000000000001";
@@ -26,7 +16,6 @@ function proof(extra: Record<string, unknown> = {}): string {
       network: "base",
       payer: PAYER,
       amount: "50000",
-      validBefore: String(Math.floor(Date.now() / 1000) + 600),
       ...extra,
     })
   ).toString("base64");
@@ -63,13 +52,8 @@ describe("resolvePaidSealVerify", () => {
   it("rejects a bad proof before any registry or settle call", async () => {
     const { fetchImpl, calls } = callsOf(() => new Response("[]"));
     const decision = await resolvePaidSealVerify({
-      replayStore: kvStub(),
       ...bound,
-      proofHeader: proof({
-        network: "not-a-network",
-        payer: "not-an-address",
-        amount: "1",
-      }),
+      proofHeader: proof({ network: "not-a-network", payer: "not-an-address", amount: "1" }),
       bodyText: JSON.stringify({ sealId: SEAL }),
       fetchImpl,
     });
@@ -80,7 +64,6 @@ describe("resolvePaidSealVerify", () => {
   it("rejects a non-uuid seal before lookup and settlement", async () => {
     const { fetchImpl, calls } = callsOf(() => new Response("[]"));
     const decision = await resolvePaidSealVerify({
-      replayStore: kvStub(),
       ...bound,
       proofHeader: proof({ signature: "0xdead" }),
       bodyText: JSON.stringify({ sealId: "probe" }),
@@ -104,7 +87,6 @@ describe("resolvePaidSealVerify", () => {
       throw new Error("registry and settlement must not run");
     });
     const decision = await resolvePaidSealVerify({
-      replayStore: kvStub(),
       ...bound,
       proofHeader: proof({ signature: "0xdead" }),
       bodyText: JSON.stringify({ sealId: SEAL }),
@@ -130,7 +112,6 @@ describe("resolvePaidSealVerify", () => {
       return new Response("down", { status: 500 });
     });
     const decision = await resolvePaidSealVerify({
-      replayStore: kvStub(),
       ...bound,
       proofHeader: proof({ signature: "0xdead" }),
       bodyText: JSON.stringify({ sealId: SEAL }),
@@ -151,13 +132,10 @@ describe("resolvePaidSealVerify", () => {
     const original = globalThis.fetch;
     const { fetchImpl, calls } = callsOf(url => {
       if (url.includes("/settle")) {
-        return new Response(
-          JSON.stringify({ success: false, error: "bad signature" }),
-          {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          }
-        );
+        return new Response(JSON.stringify({ success: false, error: "bad signature" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
       }
       return new Response("[]", {
         status: 200,
@@ -167,7 +145,6 @@ describe("resolvePaidSealVerify", () => {
     globalThis.fetch = fetchImpl;
     try {
       const decision = await resolvePaidSealVerify({
-        replayStore: kvStub(),
         ...bound,
         proofHeader: proof({ signature: "0xdead" }),
         bodyText: JSON.stringify({ sealId: SEAL }),
@@ -192,13 +169,10 @@ describe("resolvePaidSealVerify", () => {
     const original = globalThis.fetch;
     const { fetchImpl, calls } = callsOf(url => {
       if (url.includes("/settle")) {
-        return new Response(
-          JSON.stringify({ success: true, txHash: "0xabc" }),
-          {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          }
-        );
+        return new Response(JSON.stringify({ success: true, txHash: "0xabc" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
       }
       if (url.includes("auth_seals")) {
         return new Response(
@@ -222,7 +196,6 @@ describe("resolvePaidSealVerify", () => {
     globalThis.fetch = fetchImpl;
     try {
       const decision = await resolvePaidSealVerify({
-        replayStore: kvStub(),
         ...bound,
         hasVerifyApp: false,
         proofHeader: proof({ signature: "0xdead" }),
@@ -242,9 +215,7 @@ describe("resolvePaidSealVerify", () => {
         settlement: { payer: PAYER, trustless: true, txHash: "0xabc" },
       });
       expect(
-        calls.some(
-          call => call.method === "POST" && call.url.includes("automation_logs")
-        )
+        calls.some(call => call.method === "POST" && call.url.includes("automation_logs"))
       ).toBe(false);
     } finally {
       globalThis.fetch = original;
@@ -260,7 +231,6 @@ describe("resolvePaidSealVerify", () => {
     try {
       const { fetchImpl, calls } = callsOf(() => new Response("[]"));
       const decision = await resolvePaidSealVerify({
-        replayStore: kvStub(),
         ...bound,
         proofHeader: proof({ signature: "0xdead" }),
         bodyText: JSON.stringify({ sealId: SEAL }),
@@ -279,7 +249,6 @@ describe("resolvePaidSealVerify", () => {
       throw new Error("fetch should not run");
     });
     const decision = await resolvePaidSealVerify({
-      replayStore: kvStub(),
       ...bound,
       hasVerifyApp: false,
       env: {},
@@ -293,7 +262,6 @@ describe("resolvePaidSealVerify", () => {
 
   it("forwards when credentials are absent and VERIFY_APP is set", async () => {
     const decision = await resolvePaidSealVerify({
-      replayStore: kvStub(),
       ...bound,
       hasVerifyApp: true,
       env: {},
@@ -309,50 +277,16 @@ describe("resolvePaidSealVerify", () => {
     const original = globalThis.fetch;
     let spendSignal: AbortSignal | undefined;
     const { fetchImpl } = callsOf((url, init) => {
-      if (url.includes("/settle"))
-        return new Response(
-          JSON.stringify({ success: true, txHash: "0xabc" }),
-          { status: 200 }
-        );
-      if (
-        url.includes("automation_logs") &&
-        (init?.method ?? "GET").toUpperCase() === "POST"
-      ) {
-        spendSignal = init?.signal ?? undefined;
-        throw new DOMException("The operation was aborted", "AbortError");
-      }
-      if (url.includes("auth_seals"))
-        return new Response(
-          JSON.stringify([
-            {
-              id: SEAL,
-              product_id: "pack",
-              batch_id: "b1",
-              brand: "acme",
-              created_at: "2026-01-01T00:00:00Z",
-            },
-          ]),
-          { status: 200 }
-        );
-      return new Response("[]", { status: 200 });
+      if (url.includes("/settle")) return new Response(JSON.stringify({success:true,txHash:"0xabc"}), {status:200});
+      if (url.includes("automation_logs") && (init?.method ?? "GET").toUpperCase() === "POST") { spendSignal = init?.signal ?? undefined; throw new DOMException("The operation was aborted","AbortError"); }
+      if (url.includes("auth_seals")) return new Response(JSON.stringify([{id:SEAL,product_id:"pack",batch_id:"b1",brand:"acme",created_at:"2026-01-01T00:00:00Z"}]), {status:200});
+      return new Response("[]",{status:200});
     });
     globalThis.fetch = fetchImpl;
     try {
-      const decision = await resolvePaidSealVerify({
-        replayStore: kvStub(),
-        ...bound,
-        env: {
-          SUPABASE_URL: "https://example.supabase.co",
-          SUPABASE_SERVICE_ROLE_KEY: "service-test",
-        },
-        proofHeader: proof({ signature: "0xdead" }),
-        bodyText: JSON.stringify({ sealId: SEAL }),
-        fetchImpl,
-      });
-      expect(decision).toMatchObject({ action: "answer", status: 200 });
+      const decision = await resolvePaidSealVerify({...bound,env:{SUPABASE_URL:"https://example.supabase.co",SUPABASE_SERVICE_ROLE_KEY:"service-test"},proofHeader:proof({signature:"0xdead"}),bodyText:JSON.stringify({sealId:SEAL}),fetchImpl});
+      expect(decision).toMatchObject({action:"answer",status:200});
       expect(spendSignal).toBeInstanceOf(AbortSignal);
-    } finally {
-      globalThis.fetch = original;
-    }
+    } finally { globalThis.fetch = original; }
   });
 });
