@@ -8,7 +8,12 @@ function req(path: string, init?: RequestInit): Request {
 }
 
 function proofHeader(p: Record<string, unknown>) {
-  return Buffer.from(JSON.stringify(p)).toString("base64");
+  return Buffer.from(
+    JSON.stringify({
+      validBefore: String(Math.floor(Date.now() / 1000) + 600),
+      ...p,
+    })
+  ).toString("base64");
 }
 
 afterEach(() => {
@@ -19,7 +24,9 @@ afterEach(() => {
 
 describe("tryHandleX402", () => {
   it("returns null for other API paths so APP_WORKER still owns them", async () => {
-    expect(await tryHandleX402(req("https://authichain.com/checkout/dpp_readiness"))).toBeNull();
+    expect(
+      await tryHandleX402(req("https://authichain.com/checkout/dpp_readiness"))
+    ).toBeNull();
     expect(await tryHandleX402(req("/api/stripe/webhook"))).toBeNull();
     expect(await tryHandleX402(req("/dashboard"))).toBeNull();
   });
@@ -89,9 +96,7 @@ describe("tryHandleX402", () => {
     };
     expect(body.name).toBe("AuthiChain Agent Verify");
     expect(body.category).toBe("Verification");
-    expect(body.paidRoute).toBe(
-      "https://authichain.com/api/v1/agent-verify"
-    );
+    expect(body.paidRoute).toBe("https://authichain.com/api/v1/agent-verify");
     expect(body.wallet).toBe("0xabc0000000000000000000000000000000000001");
     expect(body.payapi.form.wallet).toBe(body.wallet);
     expect(body.priceUsd).toBe(0.05);

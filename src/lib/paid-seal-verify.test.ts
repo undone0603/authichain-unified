@@ -16,6 +16,7 @@ function proof(extra: Record<string, unknown> = {}): string {
       network: "base",
       payer: PAYER,
       amount: "50000",
+      validBefore: String(Math.floor(Date.now() / 1000) + 600),
       ...extra,
     })
   ).toString("base64");
@@ -53,7 +54,11 @@ describe("resolvePaidSealVerify", () => {
     const { fetchImpl, calls } = callsOf(() => new Response("[]"));
     const decision = await resolvePaidSealVerify({
       ...bound,
-      proofHeader: proof({ network: "not-a-network", payer: "not-an-address", amount: "1" }),
+      proofHeader: proof({
+        network: "not-a-network",
+        payer: "not-an-address",
+        amount: "1",
+      }),
       bodyText: JSON.stringify({ sealId: SEAL }),
       fetchImpl,
     });
@@ -132,10 +137,13 @@ describe("resolvePaidSealVerify", () => {
     const original = globalThis.fetch;
     const { fetchImpl, calls } = callsOf(url => {
       if (url.includes("/settle")) {
-        return new Response(JSON.stringify({ success: false, error: "bad signature" }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ success: false, error: "bad signature" }),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }
+        );
       }
       return new Response("[]", {
         status: 200,
@@ -169,10 +177,13 @@ describe("resolvePaidSealVerify", () => {
     const original = globalThis.fetch;
     const { fetchImpl, calls } = callsOf(url => {
       if (url.includes("/settle")) {
-        return new Response(JSON.stringify({ success: true, txHash: "0xabc" }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ success: true, txHash: "0xabc" }),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }
+        );
       }
       if (url.includes("auth_seals")) {
         return new Response(
@@ -215,7 +226,9 @@ describe("resolvePaidSealVerify", () => {
         settlement: { payer: PAYER, trustless: true, txHash: "0xabc" },
       });
       expect(
-        calls.some(call => call.method === "POST" && call.url.includes("automation_logs"))
+        calls.some(
+          call => call.method === "POST" && call.url.includes("automation_logs")
+        )
       ).toBe(false);
     } finally {
       globalThis.fetch = original;
@@ -277,16 +290,49 @@ describe("resolvePaidSealVerify", () => {
     const original = globalThis.fetch;
     let spendSignal: AbortSignal | undefined;
     const { fetchImpl } = callsOf((url, init) => {
-      if (url.includes("/settle")) return new Response(JSON.stringify({success:true,txHash:"0xabc"}), {status:200});
-      if (url.includes("automation_logs") && (init?.method ?? "GET").toUpperCase() === "POST") { spendSignal = init?.signal ?? undefined; throw new DOMException("The operation was aborted","AbortError"); }
-      if (url.includes("auth_seals")) return new Response(JSON.stringify([{id:SEAL,product_id:"pack",batch_id:"b1",brand:"acme",created_at:"2026-01-01T00:00:00Z"}]), {status:200});
-      return new Response("[]",{status:200});
+      if (url.includes("/settle"))
+        return new Response(
+          JSON.stringify({ success: true, txHash: "0xabc" }),
+          { status: 200 }
+        );
+      if (
+        url.includes("automation_logs") &&
+        (init?.method ?? "GET").toUpperCase() === "POST"
+      ) {
+        spendSignal = init?.signal ?? undefined;
+        throw new DOMException("The operation was aborted", "AbortError");
+      }
+      if (url.includes("auth_seals"))
+        return new Response(
+          JSON.stringify([
+            {
+              id: SEAL,
+              product_id: "pack",
+              batch_id: "b1",
+              brand: "acme",
+              created_at: "2026-01-01T00:00:00Z",
+            },
+          ]),
+          { status: 200 }
+        );
+      return new Response("[]", { status: 200 });
     });
     globalThis.fetch = fetchImpl;
     try {
-      const decision = await resolvePaidSealVerify({...bound,env:{SUPABASE_URL:"https://example.supabase.co",SUPABASE_SERVICE_ROLE_KEY:"service-test"},proofHeader:proof({signature:"0xdead"}),bodyText:JSON.stringify({sealId:SEAL}),fetchImpl});
-      expect(decision).toMatchObject({action:"answer",status:200});
+      const decision = await resolvePaidSealVerify({
+        ...bound,
+        env: {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_SERVICE_ROLE_KEY: "service-test",
+        },
+        proofHeader: proof({ signature: "0xdead" }),
+        bodyText: JSON.stringify({ sealId: SEAL }),
+        fetchImpl,
+      });
+      expect(decision).toMatchObject({ action: "answer", status: 200 });
       expect(spendSignal).toBeInstanceOf(AbortSignal);
-    } finally { globalThis.fetch = original; }
+    } finally {
+      globalThis.fetch = original;
+    }
   });
 });

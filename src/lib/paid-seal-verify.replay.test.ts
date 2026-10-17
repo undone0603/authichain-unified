@@ -21,7 +21,12 @@ function header(nonce = NONCE): string {
       network: "base",
       payload: {
         signature: "0xsig",
-        authorization: { from: PAYER, value: "50000", nonce },
+        authorization: {
+          from: PAYER,
+          value: "50000",
+          validBefore: String(Math.floor(Date.now() / 1000) + 600),
+          nonce,
+        },
       },
     })
   ).toString("base64");
@@ -274,5 +279,46 @@ describe("CFA-351 hardening", () => {
     const kb = replayKeys(b, {})[0];
     expect(ka).toMatch(/^x402:hdr:[0-9a-f]{64}$/);
     expect(ka).not.toBe(kb);
+  });
+});
+
+describe("CFA-356", () => {
+  it("pending marker TTL is 300s; settled record TTL is 7 days", async () => {
+    const kv = memKv();
+    const ttlAtSettle: Array<number | undefined> = [];
+    const net = mockNet();
+    const inner = net.fetchImpl;
+    const wrapped = (async (i: RequestInfo | URL, init?: RequestInit) => {
+      if (String(i).includes("/settle"))
+        ttlAtSettle.push(kv.map.get(`x402:nonce:${NONCE.toLowerCase()}`)?.ttl);
+      return inner(i, init);
+    }) as typeof fetch;
+    await run(kv.store, { fetchImpl: wrapped, settles: net.settles });
+    expect(ttlAtSettle).toEqual([300]);
+    expect(kv.map.get(`x402:nonce:${NONCE.toLowerCase()}`)?.ttl).toBe(
+      REPLAY_TTL_SECONDS
+    );
+  });
+
+  it("rejects a proof with no validBefore with 402 before settle", async () => {
+    const kv = memKv();
+    const net = mockNet();
+    const noVb = Buffer.from(
+      JSON.stringify({
+        scheme: "exact",
+        network: "base",
+        payload: {
+          signature: "0xsig",
+          authorization: { from: PAYER, value: "50000", nonce: "0x99" },
+        },
+      })
+    ).toString("base64");
+    const d = await run(kv.store, net, SEAL, noVb);
+    expect(d.action === "answer" && d.status).toBe(402);
+    expect(d.action === "answer" && d.body).toMatchObject({
+      error: "authorization_missing_valid_before",
+    });
+    expect(net.settles()).toBe(0);
+    expect(kv.map.size).toBe(0);
   });
 });

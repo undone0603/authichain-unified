@@ -163,6 +163,8 @@ async function recordSpend(
 
 /** Replay guard (CFA-343/351): a proof is remembered this long. */
 export const REPLAY_TTL_SECONDS = 7 * 24 * 60 * 60;
+/** CFA-356: a pending marker outlives a settle attempt, not a week. */
+export const PENDING_TTL_SECONDS = 300;
 const PENDING = "pending";
 
 /** Minimal KV surface (Cloudflare KVNamespace satisfies it). */
@@ -208,7 +210,9 @@ export function authorizationNonce(proofHeader: string): string | null {
 
 /** EIP-3009 validBefore (unix seconds), if present and numeric. */
 export function authorizationValidBefore(proofHeader: string): number | null {
-  const v = authorizationOf(proofHeader)?.validBefore;
+  const v =
+    authorizationOf(proofHeader)?.validBefore ??
+    decodeHeader(proofHeader)?.validBefore;
   const n =
     typeof v === "number"
       ? v
@@ -227,7 +231,14 @@ export function validityRefusal(
   nowMs = Date.now()
 ): { status: number; body: unknown } | null {
   const vb = authorizationValidBefore(proofHeader);
-  if (vb === null) return null;
+  // CFA-356: without validBefore the proof's lifetime is unbounded, so the
+  // 7-day replay record could expire while it is still spendable.
+  if (vb === null) {
+    return {
+      status: 402,
+      body: { error: "authorization_missing_valid_before", settled: false },
+    };
+  }
   if (vb - Math.floor(nowMs / 1000) > REPLAY_TTL_SECONDS) {
     return {
       status: 402,
@@ -302,7 +313,7 @@ export async function claimReplay(
   try {
     await Promise.all(
       keys.map(k =>
-        store.put(k, PENDING, { expirationTtl: REPLAY_TTL_SECONDS })
+        store.put(k, PENDING, { expirationTtl: PENDING_TTL_SECONDS })
       )
     );
   } catch {

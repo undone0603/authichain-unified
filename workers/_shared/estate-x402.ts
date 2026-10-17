@@ -28,13 +28,20 @@ import {
   type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
 import { ESTATE_BRANDS } from "./estate-landing.ts";
+import {
+  guardedForward,
+  type ReplayStore,
+} from "../../src/lib/paid-seal-verify.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
 import {
   sisterBrandFromHost,
   sisterX402Catalog,
 } from "./estate-x402-catalog.ts";
 
-export type SisterX402Env = X402EnvVars;
+export type SisterX402Env = X402EnvVars & {
+  /** Optional KV for the x402 replay guard (CFA-343/356). Unbound = guard off (logged). */
+  X402_REPLAY_KV?: ReplayStore;
+};
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -180,12 +187,21 @@ async function agentVerify(
   }
 
   if (verifyApp) {
-    return forwardPaidVerify(
-      verifyApp,
-      request,
+    const bodyText = await request.text();
+    let sealId: string | null = null;
+    try {
+      const b = JSON.parse(bodyText) as { sealId?: unknown };
+      sealId = typeof b?.sealId === "string" ? b.sealId : null;
+    } catch {
+      sealId = null;
+    }
+    return guardedForward({
       proofHeader,
-      await request.text()
-    );
+      replayStore: env?.X402_REPLAY_KV ?? null,
+      sealId,
+      forward: () =>
+        forwardPaidVerify(verifyApp, request, proofHeader, bodyText),
+    });
   }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.

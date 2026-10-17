@@ -25,6 +25,7 @@ import {
 } from "../../src/lib/x402.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
 import { sisterOrigin, type SisterX402Env } from "./estate-x402.ts";
+import { guardedForward } from "../../src/lib/paid-seal-verify.ts";
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -106,8 +107,7 @@ function mcpTools(brand: SisterDiscoveryBrand) {
     },
     {
       name: "verify",
-      description:
-        x402PaidVerifyStatus().bound
+      description: x402PaidVerifyStatus().bound
         ? "Paid AuthiChain verification. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT."
         : "Paid AuthiChain verification, not answering yet. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base) for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. Use query_provenance for a free lookup.",
       inputSchema: {
@@ -225,7 +225,13 @@ async function unpaidOrRefusedVerify(
   }
 
   if (verifyApp) {
-    return forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id);
+    return guardedForward({
+      proofHeader,
+      replayStore: env?.X402_REPLAY_KV ?? null,
+      sealId: typeof args.sealId === "string" ? args.sealId : null,
+      forward: () =>
+        forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id),
+    });
   }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.

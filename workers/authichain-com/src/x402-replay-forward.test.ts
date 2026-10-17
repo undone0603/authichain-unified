@@ -13,7 +13,12 @@ function header(nonce = "0xAA01"): string {
       network: "base",
       payload: {
         signature: "0xsig",
-        authorization: { from: PAYER, value: "50000", nonce },
+        authorization: {
+          from: PAYER,
+          value: "50000",
+          validBefore: String(Math.floor(Date.now() / 1000) + 600),
+          nonce,
+        },
       },
     })
   ).toString("base64");

@@ -235,6 +235,7 @@ describe("mcp discovery", () => {
           network: "base",
           payer: "0x1234567890abcdef1234567890abcdef12345678",
           amount: "50000",
+          validBefore: String(Math.floor(Date.now() / 1000) + 600),
           signature: "0xdead",
         })
       ).toString("base64");
@@ -328,6 +329,7 @@ describe("mcp discovery", () => {
           network: "base",
           payer: "0x1234567890abcdef1234567890abcdef12345678",
           amount: "50000",
+          validBefore: String(Math.floor(Date.now() / 1000) + 600),
           signature: "0xdead",
         })
       ).toString("base64");
@@ -502,6 +504,7 @@ describe("mcp paid verify with the VERIFY_APP binding", () => {
       network: "base",
       payer: "0x1234567890abcdef1234567890abcdef12345678",
       amount: "50000",
+      validBefore: String(Math.floor(Date.now() / 1000) + 600),
       signature: "0xdead",
     })
   ).toString("base64");
