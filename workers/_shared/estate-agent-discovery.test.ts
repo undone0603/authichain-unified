@@ -128,7 +128,14 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
       get?: { responses: { "200": unknown } };
       post: {
         "x-payment-info": { protocols: string[]; price: { amount: string } };
-        responses: { "402": unknown };
+        responses: { "400": unknown; "402": unknown };
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: { properties: Record<string, { format?: string }> };
+            };
+          };
+        };
       };
     };
     assert.ok(post.get?.responses["200"]);
@@ -137,7 +144,12 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
       post.post["x-payment-info"].price.amount,
       String(x402PriceUsd())
     );
+    assert.ok(post.post.responses["400"]);
     assert.ok(post.post.responses["402"]);
+    const props =
+      post.post.requestBody.content["application/json"].schema.properties;
+    assert.deepEqual(Object.keys(props), ["sealId"]);
+    assert.equal(props.sealId.format, "uuid");
     assert.ok(spec.paths["/protocol/jwks.json"]);
     assert.ok(spec.paths["/protocol/issuer.json"]);
     assert.ok(spec.paths["/.well-known/jwks.json"]);
