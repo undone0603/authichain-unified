@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { verifyRecord } from "../../../protocol/verifier.mjs";
+import { BOT_ANCHORS } from "./bot-anchors";
 import { BOT_IDENTITIES } from "./bot-identities";
-import { checkBot, renderBotPage, tryHandleBotIdentity } from "./bot-identity-routes";
+import { checkBot, polygonTx, renderBotPage, tryHandleBotIdentity } from "./bot-identity-routes";
 
 const get = (p: string) => tryHandleBotIdentity(new Request(`https://authichain.com${p}`));
 
@@ -14,8 +15,10 @@ describe("bot identities", () => {
   it("every record and self statement passes the reference verifier", () => {
     for (const b of BOT_IDENTITIES.bots) {
       expect(verifyRecord(b.record).verdict).toBe("valid-unanchored");
+      expect(verifyRecord(b.record, BOT_ANCHORS[b.slug]).verdict).toBe("verified");
       expect(verifyRecord(b.selfStatement).verdict).toBe("valid-unanchored");
       expect(checkBot(b).ok).toBe(true);
+      expect(checkBot(b).record).toBe("verified");
     }
   });
   it("a tampered record fails", () => {
@@ -29,7 +32,15 @@ describe("bot identities", () => {
     const card = await get("/agents/grok-bot/agent-card.json")!.json();
     expect(card.description).toContain("Not a person");
     const html = await get("/agents/grok-bot")!.text();
-    expect(html).toContain("not anchored on a blockchain");
+    expect(html).toContain("anchored on Polygon");
+    expect(html).toContain(BOT_ANCHORS["grok-bot"].txHash);
+    expect(html).not.toContain("not anchored on a blockchain");
+    const identity = await get("/agents/grok-bot/identity.json")!.json();
+    expect(identity.anchor.txHash).toBe(BOT_ANCHORS["grok-bot"].txHash);
+    expect(identity.check.record).toBe("verified");
+    const swapped = verifyRecord(BOT_IDENTITIES.bots[0].record, BOT_ANCHORS["bankz"]);
+    expect(swapped.verdict).toBe("invalid");
+    expect(polygonTx("grok-bot")).toBe(`https://polygonscan.com/tx/${BOT_ANCHORS["grok-bot"].txHash}`);
     expect(renderBotPage(BOT_IDENTITIES.bots[0])).toContain("It is not a person");
     expect((await get("/.well-known/did.json")!.json()).id).toBe("did:web:authichain.com");
     expect(get("/agents/nobody")).toBeNull();

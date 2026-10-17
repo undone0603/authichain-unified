@@ -15,10 +15,12 @@
  *     sign HTTP requests yet, and this response is not itself signed.
  *
  * Public keys only. Records are Ed25519Signature2020 over JCS bytes and pass
- * protocol/verifier.mjs offline, with no call to AuthiChain. Not anchored on a
- * chain: the verdict is "valid-unanchored" and the page says so.
+ * protocol/verifier.mjs offline. The issuer-signed identity record is anchored
+ * on Polygon; the bot's own key statement is signed and is not in that
+ * transaction. The page links the transaction.
  */
 import { verifySubmitted } from "../../authichain-verify-worker/src/protocol-verify.mjs";
+import { BOT_ANCHORS } from "./bot-anchors";
 import { BOT_IDENTITIES } from "./bot-identities";
 
 type Bot = (typeof BOT_IDENTITIES)["bots"][number];
@@ -107,6 +109,7 @@ export function botAgentCard(bot: Bot) {
       issuer: BOT_IDENTITIES.issuer.did,
       record: `${ORIGIN}/agents/${bot.slug}/identity.json`,
       verifier: "https://www.npmjs.com/package/authichain-verify",
+      anchorTransaction: polygonTx(bot.slug),
     },
   };
 }
@@ -149,8 +152,17 @@ export function keyDirectory() {
 
 export type BotCheck = { ok: boolean; record: string; selfStatement: string; keyMatches: boolean; issuerMatches: boolean };
 
+function anchorFor(slug: string) {
+  return BOT_ANCHORS[slug as keyof typeof BOT_ANCHORS];
+}
+
+export function polygonTx(slug: string): string {
+  return `https://polygonscan.com/tx/${anchorFor(slug).txHash}`;
+}
+
 export function checkBot(bot: Bot): BotCheck {
-  const r = verifySubmitted(bot.record as unknown as Record<string, unknown>);
+  const anchor = anchorFor(bot.slug);
+  const r = verifySubmitted(bot.record as unknown as Record<string, unknown>, anchor);
   const s = verifySubmitted(bot.selfStatement as unknown as Record<string, unknown>);
   const keyMatches =
     bot.record.credentialSubject.agentKey === bot.didKey && bot.selfStatement.issuer === bot.didKey;
@@ -158,7 +170,7 @@ export function checkBot(bot: Bot): BotCheck {
   const record = r?.verdict ?? "invalid";
   const selfStatement = s?.verdict ?? "invalid";
   return {
-    ok: record === "valid-unanchored" && selfStatement === "valid-unanchored" && keyMatches && issuerMatches,
+    ok: record === "verified" && selfStatement === "valid-unanchored" && keyMatches && issuerMatches && Boolean(anchor),
     record,
     selfStatement,
     keyMatches,
@@ -178,8 +190,9 @@ function page(title: string, body: string) {
 
 export function renderBotPage(bot: Bot): string {
   const c = checkBot(bot);
+  const anchor = anchorFor(bot.slug);
   const status = c.ok
-    ? `<p class="ok">Signature check passed just now. Status: valid, not anchored on a blockchain.</p>`
+    ? `<p class="ok">Signature check passed just now. The identity record is anchored on Polygon.</p>`
     : `<p class="bad">Signature check failed just now. Do not trust messages that point here.</p>`;
   return page(
     `${bot.name}: AuthiChain agent identity`,
@@ -191,8 +204,9 @@ export function renderBotPage(bot: Bot): string {
 <dt>Signed by</dt><dd><code>${esc(BOT_IDENTITIES.issuer.didKey)}</code> (AuthiChain agent issuer, <a href="/.well-known/did.json">did:web:authichain.com</a>)</dd>
 <dt>Checks</dt><dd>Issuer record: ${esc(c.record)} · Bot key statement: ${esc(c.selfStatement)} · Key matches: ${c.keyMatches ? "yes" : "no"} · Issuer matches: ${c.issuerMatches ? "yes" : "no"}</dd>
 <dt>Valid</dt><dd>${esc(bot.record.validFrom)} to ${esc(bot.record.validUntil)}</dd>
+<dt>Blockchain record</dt><dd><a href="${esc(polygonTx(bot.slug))}">Polygon transaction ${esc(anchor.txHash)}</a>. Chain ${esc(anchor.chain)}. Record hash <code>${esc(anchor.recordHash)}</code>.</dd>
 <dt>Files</dt><dd><a href="/agents/${bot.slug}/did.json">DID document</a> · <a href="/agents/${bot.slug}/agent-card.json">Agent card</a> · <a href="/agents/${bot.slug}/identity.json">Signed records</a></dd></dl>
-<p>Check it yourself, offline: save the <code>record</code> from <code>identity.json</code> as <code>record.json</code>, then run <code>npx authichain-verify record.json</code> (the open-source <a href="https://www.npmjs.com/package/authichain-verify">AuthiChain verifier</a>, spec at <a href="/protocol">/protocol</a>). A pass means AuthiChain's key signed this record.</p>
+<p>Check it yourself, offline: save <code>record</code> and <code>anchor</code> from <code>identity.json</code>, then run <code>npx authichain-verify record.json anchor.json</code> (the open-source <a href="https://www.npmjs.com/package/authichain-verify">AuthiChain verifier</a>, spec at <a href="/protocol">/protocol</a>). A verified pass means AuthiChain's key signed this record and the anchor names that record's hash.</p>
 <p>What this proves: the public key published at authichain.com matches the signatures on this agent's identity records. What it does not prove: who operates the agent, whether its output is accurate or safe, or that any third party endorses it.</p>
 <p><a href="/agents">All AuthiChain agents</a></p>`,
   );
@@ -204,7 +218,7 @@ export function renderIndexPage(): string {
     .join("");
   return page(
     "AuthiChain agents",
-    `<h1>AuthiChain agents</h1><p>These are the AI agents that work for AuthiChain. None of them is a person. Each page checks the agent's Ed25519-signed identity record live. A pass shows the key published at authichain.com signed the record; it does not show whether an agent's output is accurate or safe, or any third-party endorsement.</p><ul>${items}</ul>`,
+    `<h1>AuthiChain agents</h1><p>These are the AI agents that work for AuthiChain. None of them is a person. Each page checks the agent's Ed25519-signed identity record and links the Polygon transaction that carries that record's hash. A pass shows the key published at authichain.com signed the record; it does not show whether an agent's output is accurate or safe, or any third-party endorsement.</p><ul>${items}</ul>`,
   );
 }
 
@@ -220,7 +234,7 @@ export function tryHandleBotIdentity(request: Request): Response | null {
   if (path === "/agents/index.json") {
     return json({
       issuer: BOT_IDENTITIES.issuer.did,
-      agents: BOT_IDENTITIES.bots.map((b) => ({ name: b.name, role: b.role, did: b.did, didKey: b.didKey, profile: `${ORIGIN}/agents/${b.slug}` })),
+      agents: BOT_IDENTITIES.bots.map((b) => ({ name: b.name, role: b.role, did: b.did, didKey: b.didKey, profile: `${ORIGIN}/agents/${b.slug}`, anchorTransaction: polygonTx(b.slug) })),
     });
   }
   const m = path.match(/^\/agents\/([a-z0-9-]+)(?:\/(did\.json|agent-card\.json|identity\.json))?$/);
@@ -229,6 +243,8 @@ export function tryHandleBotIdentity(request: Request): Response | null {
   if (!bot) return null;
   if (m[2] === "did.json") return json(botDidDocument(bot), { "Content-Type": "application/did+json" });
   if (m[2] === "agent-card.json") return json(botAgentCard(bot));
-  if (m[2] === "identity.json") return json({ record: bot.record, selfStatement: bot.selfStatement, check: checkBot(bot) });
+  if (m[2] === "identity.json") {
+    return json({ record: bot.record, selfStatement: bot.selfStatement, anchor: anchorFor(bot.slug), check: checkBot(bot) });
+  }
   return new Response(renderBotPage(bot), { headers: HTML_HEADERS });
 }
