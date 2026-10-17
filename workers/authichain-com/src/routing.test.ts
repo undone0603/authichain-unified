@@ -103,12 +103,13 @@ test("the apex still renders the homepage", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
   const html = await res.text();
-  // LOOP-03: share/search snippets lead Starter/Launch, not only DPP.
-  assert.match(html, /QRON Starter Pack \$29 or Launch \$19\/mo/);
+  // LOOP-03: share/search snippets lead Starter, not only DPP (Launch unlisted).
+  assert.match(html, /QRON Starter Pack \$29 on Stripe/);
   assert.match(
     html,
-    /property="og:description" content="Start with QRON Starter at \$29 or Launch at \$19\/mo/
+    /property="og:description" content="Start with QRON Starter at \$29\. Signed/
   );
+  assert.doesNotMatch(html, /Launch \$19\/mo|Launch at \$19\/mo/);
   assert.match(html, /href="\/dashboard"/);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /name="email"/);
@@ -132,7 +133,7 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/partners\/brief"/);
   // LOOP-03: hero + bottom email checkout lead Starter $29; DPP stays lower.
   assert.match(html, /Buy Starter Pack/);
-  assert.match(html, /Start Launch \$19\/mo/);
+  assert.doesNotMatch(html, /Start Launch \$19\/mo/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Signed QR seals for real products\./);
   assert.doesNotMatch(html, /Agent consensus/);
@@ -1169,8 +1170,9 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/onboard</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/generate</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
+  // QRON Launch is unlisted: its checkout URL is not in the sitemap.
   assert.ok(
-    xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
+    !xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
   );
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/creator</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));

@@ -157,11 +157,13 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.match(html, /<title>Pricing — AuthiChain<\/title>/);
   assert.doesNotMatch(html, /AuthiChain Starter/);
   assert.equal(hasDeadLink(html), false);
-  for (const id of ["qron_launch", "dpp_readiness", "starter", "creator"] as const) {
+  for (const id of ["dpp_readiness", "starter", "creator"] as const) {
     assert.ok(html.includes(`$${plan(id).price}`), `${id} price`);
   }
   assert.equal(html.includes("/checkout/starter"), true);
-  assert.equal(html.includes("/checkout/qron_launch"), true);
+  // QRON Launch is unlisted: no Launch checkout link on /pricing.
+  assert.equal(html.includes("/checkout/qron_launch"), false);
+  assert.doesNotMatch(html, /\$19\/mo/);
   assert.match(html, /href="\/x402"/);
   assert.ok(html.includes(escHtml(plan("dpp_readiness").cta)));
   assert.match(html, /name="email"/);
@@ -171,9 +173,6 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.doesNotMatch(html, /GET \/api\/checkout/);
   assert.ok(
     html.includes('href="https://authichain.com/checkout/dpp_readiness"')
-  );
-  assert.ok(
-    html.includes('href="https://authichain.com/checkout/qron_launch"')
   );
   const dppPay =
     planPaymentLink("dpp_readiness") ?? "";
@@ -205,10 +204,11 @@ test("qron /pricing HTML cites catalogue prices and generate", () => {
   const html = renderEstatePricingPage("qron");
   assert.match(html, /<title>Pricing — QRON<\/title>/);
   assert.match(html, /href="\/generate"/);
-  // LOOP-03: nav/footer lead Starter/Launch; DPP remains as a secondary link.
+  // LOOP-03: nav/footer lead Starter; DPP remains as a secondary link.
+  // QRON Launch is unlisted.
   assert.match(html, /https:\/\/authichain\.com\/checkout\/starter/);
-  assert.match(html, /https:\/\/authichain\.com\/checkout\/qron_launch/);
-  assert.match(html, /Start Launch \$19\/mo/);
+  assert.doesNotMatch(html, /https:\/\/authichain\.com\/checkout\/qron_launch/);
+  assert.doesNotMatch(html, /Start Launch \$19\/mo/);
   assert.match(html, /https:\/\/authichain\.com\/checkout\/dpp_readiness/);
   assert.doesNotMatch(html, />DPP checkout</);
   assert.doesNotMatch(html, />Start DPP checkout</);
@@ -396,7 +396,8 @@ test("authichain pricing uses buyer copy and QRON titles; held strings unchanged
   assert.doesNotMatch(html, /Theater 3/);
   assert.doesNotMatch(html, /\$499/);
   assert.match(html, />Buy Starter</);
-  assert.match(html, /Start with Launch at \$19\/mo or the Starter Pack at \$29/);
+  assert.match(html, /Start with the Starter Pack at \$29\. The EU DPP Workspace/);
+  assert.doesNotMatch(html, /Launch at \$19\/mo/);
   assert.doesNotMatch(html, /Start with the \$299 EU DPP Workspace/);
   assert.match(html, /AuthiChain, QRON, GovChain and StrainChain\./);
   assert.doesNotMatch(html, /Prices from the published AuthiChain plan catalogue/);
@@ -405,7 +406,8 @@ test("authichain pricing uses buyer copy and QRON titles; held strings unchanged
   // listed.
   assertCardWording(html, plan("free"));
   assertCardWording(html, plan("dpp_readiness"));
-  assertCardWording(html, plan("qron_launch"));
+  // QRON Launch is unlisted (listed:false), so its grid card is gone.
+  assert.ok(!html.includes(escHtml(plan("qron_launch").description)));
   assert.doesNotMatch(html, /Free Trial|Try Free for 7 Days/);
   // No new plan prices.
   assert.doesNotMatch(html, /\$1,499|\$199\/mo/);

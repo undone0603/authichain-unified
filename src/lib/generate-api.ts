@@ -36,7 +36,9 @@ export type CreditPack = {
 };
 
 export function generateCreditPacks(): CreditPack[] {
-  // LOOP-03 order: Starter $29 → Launch $19/mo → Creator; DPP last.
+  // LOOP-03 order: Starter $29 → Creator; DPP last. QRON Launch is unlisted
+  // (listed:false in plans.ts), so listedPlans() drops it; its id stays in
+  // `order` only so the sort is stable if it is ever relisted.
   const order = ["starter", "qron_launch", "creator", "dpp_readiness"] as const;
   return listedPlans("qron")
     .filter(p => (order as readonly string[]).includes(p.id))
@@ -287,8 +289,8 @@ export async function handleGeneratePost(opts: {
         status: 401,
         body: {
           message: used
-            ? "You've used your 5 free generations. Keep going with Starter: 100 more for $29, paid once. No subscription, and pack credits never expire unless you switch to a Launch subscription."
-            : "Free samples are paused for today. Try again later, or get Starter now: 100 generations for $29, paid once. No subscription, and pack credits never expire unless you switch to a Launch subscription.",
+            ? "You've used your 5 free generations. Keep going with Starter: 100 more for $29, paid once. No subscription, and pack credits never expire unless you start a subscription."
+            : "Free samples are paused for today. Try again later, or get Starter now: 100 generations for $29, paid once. No subscription, and pack credits never expire unless you start a subscription.",
           code: used ? "FREE_SAMPLE_USED" : "FREE_SAMPLE_PAUSED",
           packs,
           pricing: "/pricing",

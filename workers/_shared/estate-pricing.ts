@@ -220,7 +220,7 @@ type PricingPage = {
   navLabel?: string;
   footerTagline?: string;
   footerNote?: string;
-  secondary: EstateCta;
+  secondary?: EstateCta;
   plansNote: string;
   ctaTitle: string;
   ctaLede: string;
@@ -323,7 +323,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       brand: "authichain",
       title: "Pricing — AuthiChain",
       description:
-        "Live AuthiChain prices from the published plan catalogue. Start with QRON Launch at $19/mo or Starter Pack at $29.",
+        "Live AuthiChain prices from the published plan catalogue. Start with the Starter Pack at $29.",
       canonical: "https://authichain.com/pricing",
       themeColor: "#4F46E5",
       primary: {
@@ -339,23 +339,17 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       eyebrow: "Pricing",
       heroTitle: "Plans and prices",
       heroLede:
-        "Start with Launch at $19/mo or the Starter Pack at $29. The EU DPP Workspace is $299 when you need the battery passport path. Every paid plan below checks out on Stripe.",
+        "Start with the Starter Pack at $29. The EU DPP Workspace is $299 when you need the battery passport path. Every paid plan below checks out on Stripe.",
       navLabel: "Buy Starter",
-      secondary: {
-        href: "https://authichain.com/checkout/qron_launch",
-        label: "Start Launch $19/mo",
-        primary: false,
-      },
       plansNote:
-        "QRON Launch and generation packs first, then the EU DPP Workspace. E-bike and other LMT batteries need a passport from 18 February 2027.",
+        "Generation packs first, then the EU DPP Workspace. E-bike and other LMT batteries need a passport from 18 February 2027.",
       ctaTitle: "Buy the Starter Pack",
       ctaLede:
-        "$29, one time — 100 AI QR generations. Or Launch at $19/mo. Add a work email first so we can send your receipt.",
+        "$29, one time — 100 AI QR generations. Add a work email first so we can send your receipt.",
       footerTagline: "AuthiChain, QRON, GovChain and StrainChain.",
       footerNote: "",
       footerStart: [
         { href: "/checkout/starter", label: "Starter checkout" },
-        { href: "/checkout/qron_launch", label: "Launch $19/mo" },
         { href: "/pricing", label: "Pricing" },
       ],
       footerMore: [
@@ -370,7 +364,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     brand: "qron",
     title: "Pricing — QRON",
     description:
-      "Live QRON prices from the published plan catalogue. Start with Starter Pack $29 or Launch $19/mo. Creator and EU DPP Readiness stay on the grid.",
+      "Live QRON prices from the published plan catalogue. Start with Starter Pack $29. Creator and EU DPP Readiness stay on the grid.",
     canonical: "https://qron.space/pricing",
     themeColor: "#b45309",
     primary: { href: "/generate", label: "Generate Living QR" },
@@ -384,24 +378,15 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     ],
     heroTitle: "QRON prices that already charge.",
     heroLede:
-      "Start with Starter Pack at $29 or Launch at $19/mo. Generate a Living QR, or buy a pack on the Stripe Payment Link printed on the card. EU DPP Readiness is $299 when you need the passport path.",
-    secondary: {
-      href: "https://authichain.com/checkout/qron_launch",
-      label: "Start Launch $19/mo",
-      primary: false,
-    },
+      "Start with Starter Pack at $29. Generate a Living QR, or buy a pack on the Stripe Payment Link printed on the card. EU DPP Readiness is $299 when you need the passport path.",
     plansNote:
       "Only plans with a Stripe price or Payment Link are listed.",
     ctaTitle: "Generate a Living QR",
     ctaLede:
-      "qron.space/generate is proxied to the AuthiChain app. That is the first-dollar path for this brand — Starter $29 or Launch $19/mo.",
+      "qron.space/generate is proxied to the AuthiChain app. That is the first-dollar path for this brand — Starter $29.",
     footerStart: [
       { href: "/generate", label: "Generate Living QR" },
       { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29" },
-      {
-        href: "https://authichain.com/checkout/qron_launch",
-        label: "Launch $19/mo",
-      },
     ],
     footerMore: [
       { href: "https://authichain.com/x402", label: "x402 agent pay" },
@@ -457,10 +442,10 @@ ${estateHero({
       }
     : undefined,
   actions: checkoutPrimary
-    ? [page.secondary]
+    ? (page.secondary ? [page.secondary] : [])
     : [
         { href: page.primary.href, label: page.primary.label, primary: true },
-        page.secondary,
+        ...(page.secondary ? [page.secondary] : []),
       ],
 })}
 <section class="estate-section" id="pricing">
