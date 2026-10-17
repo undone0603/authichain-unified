@@ -31,7 +31,10 @@ test("recognizes sister x402 paths and ignores marketing paths", () => {
   assert.equal(isSisterX402Path("/.well-known/x402.json"), true);
   assert.equal(isSisterX402Path("/.well-known/x402"), true);
   assert.equal(isSisterX402Path("/openapi.json"), false);
-  assert.equal(isSisterX402Path("https://authichain.com/checkout/dpp_readiness"), false);
+  assert.equal(
+    isSisterX402Path("https://authichain.com/checkout/dpp_readiness"),
+    false
+  );
   assert.equal(isSisterX402Path("/pricing"), false);
 });
 
@@ -137,6 +140,7 @@ test("POST with a structural proof is refused 503 before any settlement", async 
     network: "base",
     payer: PAYER,
     amount: "50000",
+    validBefore: String(Math.floor(Date.now() / 1000) + 600),
   });
   const res = await tryHandleSisterX402(
     req("qron.space", "/api/x402", {
@@ -168,6 +172,7 @@ test("POST with a live facilitator never calls /settle: no registry, no charge",
       network: "base",
       payer: PAYER,
       amount: "50000",
+      validBefore: String(Math.floor(Date.now() / 1000) + 600),
       signature: "0xdead",
     });
     const res = await tryHandleSisterX402(
@@ -214,7 +219,9 @@ test("HEAD /api/x402 is 204 and other paths are ignored", async () => {
     null
   );
   assert.equal(
-    await tryHandleSisterX402(req("qron.space", "https://authichain.com/checkout/dpp_readiness")),
+    await tryHandleSisterX402(
+      req("qron.space", "https://authichain.com/checkout/dpp_readiness")
+    ),
     null
   );
 });
@@ -276,11 +283,7 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
       host
     );
     assert.equal(body.humanCheckout.dppUsd, planUsd("dpp_readiness"), host);
-    assert.equal(
-      body.humanCheckout.farmUsd,
-      planUsd("strainchain_farm"),
-      host
-    );
+    assert.equal(body.humanCheckout.farmUsd, planUsd("strainchain_farm"), host);
     assert.equal(body.humanCheckout.passportPaymentLink, passport, host);
     assert.equal(body.humanCheckout.dppPaymentLink, dpp, host);
     assert.equal(body.humanCheckout.farmPaymentLink, undefined, host);
@@ -352,6 +355,7 @@ test("POST with a proof is forwarded to the Next registry route when VERIFY_APP 
     network: "base",
     payer: PAYER,
     amount: "50000",
+    validBefore: String(Math.floor(Date.now() / 1000) + 600),
   });
   const seen: Request[] = [];
   const res = await tryHandleSisterX402(
@@ -360,7 +364,16 @@ test("POST with a proof is forwarded to the Next registry route when VERIFY_APP 
       headers: { "x-payment": header, "content-type": "application/json" },
       body: JSON.stringify({ sealId: "seal-1" }),
     }),
-    {},
+    {
+      X402_REPLAY_KV: (() => {
+        const m = new Map<string, string>();
+        return {
+          get: async (k: string) => m.get(k) ?? null,
+          put: async (k: string, v: string) => void m.set(k, v),
+          delete: async (k: string) => void m.delete(k),
+        };
+      })(),
+    },
     {
       fetch: async (r: Request) => {
         seen.push(r);
