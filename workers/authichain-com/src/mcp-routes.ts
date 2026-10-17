@@ -26,6 +26,7 @@ import {
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
+import { unpaidSealRefusal } from "../../../src/lib/agent-verify";
 import {
   guardedForward,
   scopedReplayStore,
@@ -547,6 +548,8 @@ async function unpaidOrRefusedVerify(
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof || !proofHeader) {
+    const refusal = unpaidSealRefusal(args);
+    if (refusal) return json(refusal.status, refusal.body);
     return json(402, required.v2, required.headers);
   }
 

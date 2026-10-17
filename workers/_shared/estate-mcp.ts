@@ -23,6 +23,7 @@ import {
   type X402EnvVars,
   type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
+import { unpaidSealRefusal } from "../../src/lib/agent-verify.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
 import { sisterOrigin, type SisterX402Env } from "./estate-x402.ts";
 import {
@@ -225,6 +226,8 @@ async function unpaidOrRefusedVerify(
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof || !proofHeader) {
+    const refusal = unpaidSealRefusal(args);
+    if (refusal) return json(refusal.status, refusal.body);
     return json(402, required.v2, required.headers);
   }
 

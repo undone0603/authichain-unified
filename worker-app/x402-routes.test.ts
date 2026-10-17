@@ -158,6 +158,37 @@ describe("POST /api/x402", () => {
     expect(body.status).toBe("not_configured");
   });
 
+  it("returns 400 for a body that cannot be a seal and does not ask for payment", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    for (const body of [
+      { sealId: "demo" },
+      { probe: "suggestions" },
+      { productId: "p-1" },
+    ]) {
+      const res = await app().request("/api/v1/agent-verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      expect(res.status).toBe(400);
+      expect(res.headers.get("PAYMENT-REQUIRED")).toBeNull();
+      const json = (await res.json()) as { error: string; settled: boolean };
+      expect(json.settled).toBe(false);
+      expect(["seal_id_required", "seal_id_not_uuid"]).toContain(json.error);
+    }
+  });
+
+  it("keeps an empty unpaid POST on the 402 challenge", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    const res = await app().request("/api/v1/agent-verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    expect(res.status).toBe(402);
+    expect(res.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+  });
+
   it("returns HTTP 402 requirements when unpaid", async () => {
     process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
     const res = await app().request("/api/v1/agent-verify", { method: "POST" });

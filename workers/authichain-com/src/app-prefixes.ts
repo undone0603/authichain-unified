@@ -3,6 +3,9 @@ export const APP_PREFIXES = [
   "/dashboard",
   "/dapp",
   "/generate",
+  // Living QR scan target. worker-app answers GET /qron/r/{object_id} with
+  // Decision v1. Without this prefix the apex serves marketing 404 HTML.
+  "/qron",
   "/api",
   "/verify",
   // Public dynamic pages served by worker-app/dynamic-pages.ts. These must

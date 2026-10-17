@@ -5,6 +5,8 @@
  * claimed POST /api/x402; live those hosts 404'd the path. Serve the same
  * unpaid 402 v2 + PAYMENT-REQUIRED + extensions.bazaar that authichain.com
  * does, with this host as resource.url so the listing is the sister origin.
+ * A body that names a non-UUID seal, or uses productId/serial as the key,
+ * is 400 before that challenge. An empty body stays 402.
  *
  * payTo / asset / price come from the published AuthiChain rail
  * (X402_PUBLISHED_PAY_TO = 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2, Base USDC, $0.05). Do not rebind
@@ -27,6 +29,7 @@ import {
   type X402HealthEnv,
   type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
+import { parseSealRequest } from "../../src/lib/agent-verify.ts";
 import { ESTATE_BRANDS } from "./estate-landing.ts";
 import {
   guardedForward,
@@ -160,10 +163,53 @@ async function catalogResponse(
   return json(200, await sisterX402Catalog(brand, healthEnv(env)));
 }
 
+const CANONICAL_AGENT_VERIFY = "https://authichain.com/api/v1/agent-verify";
+
 function fanoutResponse(request: Request): Response {
   const url = new URL(request.url);
   const origin = `${url.protocol}//${url.host}`;
-  return json(200, x402ScanFanout(origin));
+  const local = x402ScanFanout(origin);
+  // This worker does not serve /api/v1/agent-verify (sisters 404 that path).
+  // The seal registry is bound on authichain.com. List that absolute URL
+  // first, then this origin's /api/x402 so a scanner still sees the host
+  // it probed. Drop an origin-relative agent-verify entry so a shared
+  // fan-out helper cannot advertise the 404.
+  const resources = [CANONICAL_AGENT_VERIFY];
+  for (const resource of local.resources) {
+    if (resource === CANONICAL_AGENT_VERIFY) continue;
+    let pathname = "";
+    try {
+      pathname = new URL(resource).pathname;
+    } catch {
+      continue;
+    }
+    if (pathname === "/api/v1/agent-verify") continue;
+    resources.push(resource);
+  }
+  return json(200, { version: 1 as const, resources });
+}
+
+function parseJsonObject(text: string): Record<string, unknown> {
+  if (!text.trim()) return {};
+  try {
+    const value = JSON.parse(text) as unknown;
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+/** 400 when the body cannot be a registry key. Null keeps the 402 challenge. */
+async function unpaidSealRefusal(
+  request: Request
+): Promise<{ status: number; body: unknown } | null> {
+  const raw = parseJsonObject(await request.clone().text());
+  if (Object.keys(raw).length === 0) return null;
+  const parsed = parseSealRequest(raw);
+  if (parsed.ok) return null;
+  return { status: parsed.status, body: parsed.body };
 }
 
 async function agentVerify(
@@ -185,6 +231,8 @@ async function agentVerify(
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof || !proofHeader) {
+    const refusal = await unpaidSealRefusal(request);
+    if (refusal) return json(refusal.status, refusal.body);
     return json(402, required.v2, required.headers);
   }
 

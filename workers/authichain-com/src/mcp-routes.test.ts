@@ -204,7 +204,7 @@ describe("mcp discovery", () => {
           jsonrpc: "2.0",
           id: 3,
           method: "tools/call",
-          params: { name: "verify", arguments: { serial: "AC-1" } },
+          params: { name: "verify", arguments: {} },
         }),
       }),
       { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" }
@@ -229,6 +229,29 @@ describe("mcp discovery", () => {
     expect(body.accepts[0].outputSchema?.input?.method).toBe("POST");
     expect(JSON.stringify(body)).not.toContain("SECURED");
     expect(unpaid!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+  });
+
+  it("tools/call verify with a non-key argument is 400 and does not ask for payment", async () => {
+    for (const args of [{ serial: "AC-1" }, { sealId: "demo" }, { productId: "p-1" }]) {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 31,
+            method: "tools/call",
+            params: { name: "verify", arguments: args },
+          }),
+        }),
+        { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" }
+      );
+      expect(res?.status).toBe(400);
+      expect(res!.headers.get("PAYMENT-REQUIRED")).toBeNull();
+      const body = (await res!.json()) as { error: string; settled: boolean };
+      expect(body.settled).toBe(false);
+      expect(["seal_id_required", "seal_id_not_uuid"]).toContain(body.error);
+    }
   });
 
   it("tools/call verify with a payment proof is 503 and never settles", async () => {
