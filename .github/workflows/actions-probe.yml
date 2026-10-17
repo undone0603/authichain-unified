@@ -1,0 +1,26 @@
+name: Actions probe
+
+# Issue #1871. Proves a GitHub-hosted runner is allocated and one step runs.
+# Delete this file once CI Main jobs execute again.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/actions-probe.yml
+
+concurrency:
+  group: actions-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: Runner allocated
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Confirm a step executed
+        run: |
+          echo "runner=${RUNNER_NAME}"
+          echo "os=${RUNNER_OS}"
+          echo "ok"
