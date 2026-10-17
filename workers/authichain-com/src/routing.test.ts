@@ -801,8 +801,12 @@ test("GET /openapi.json declares x-payment-info for unpaid POST /api/x402", asyn
     "x402",
   ]);
   assert.ok(spec.paths["/api/x402"].post.responses["402"]);
-  assert.equal(JSON.stringify(spec).includes("/api/checkout"), false);
-  assert.match(JSON.stringify(spec), /\/battery-passport/);
+  const raw = JSON.stringify(spec);
+  assert.equal(raw.includes("/api/checkout"), false);
+  assert.match(raw, /\/qron\/r\/\{object_id\}/);
+  assert.match(raw, /This host verifies the signature/);
+  assert.equal(raw.includes("does not verify the signature"), false);
+  assert.match(raw, /\/battery-passport/);
   assert.match(JSON.stringify(spec), /18 February 2027/);
   assert.match(JSON.stringify(spec), /LMT/);
 });

@@ -1104,6 +1104,7 @@ type X402OpenApiDocument = {
 /**
  * OpenAPI-first discovery for x402scan. Price comes from the same health
  * report as the catalog — never a second schedule. Do not list GET checkout.
+ * The Living QR scan is a free Decision v1 GET and has no x-payment-info.
  */
 export async function x402OpenApiDocument(
   env: X402HealthEnv = process.env,
@@ -1182,6 +1183,30 @@ export async function x402OpenApiDocument(
             "E-bike and other light means of transport (LMT) batteries, plus industrial and EV batteries over 2 kWh, need a battery passport from 18 February 2027 under Regulation (EU) 2023/1542. This page is that gap map, with a worked example on a fictional e-bike pack at /battery-passport/sample-audit.",
           responses: {
             "200": { description: "HTML gap map. Not an x402 payment endpoint." },
+          },
+        },
+      },
+      "/qron/r/{object_id}": {
+        get: {
+          operationId: "livingQrScan",
+          summary:
+            "Living QR Decision v1. This host verifies the signature. Not an x402 payment endpoint.",
+          parameters: [
+            {
+              name: "object_id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description:
+                "Stored presentation id. Canonical form is qron:url: plus 8 hex characters.",
+            },
+          ],
+          responses: {
+            "200": {
+              description:
+                "AuthiChain Verification Decision v1 when the presentation verifies.",
+            },
+            "404": { description: "presentation_not_found" },
           },
         },
       },

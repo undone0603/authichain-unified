@@ -698,6 +698,24 @@ describe("x402OpenApiDocument", () => {
     expect(battery.get.description).toContain("18 February 2027");
     expect(battery.get.description).toContain("LMT");
     expect(battery.get.description).toContain("e-bike");
+    const scan = spec.paths["/qron/r/{object_id}"] as {
+      get: {
+        summary: string;
+        parameters: Array<{ name: string; in: string; required: boolean }>;
+        responses: Record<string, unknown>;
+        "x-payment-info"?: unknown;
+      };
+    };
+    expect(scan.get.summary).toContain("This host verifies the signature");
+    expect(scan.get.summary).toContain("Not an x402 payment endpoint");
+    expect(scan.get.parameters[0]).toMatchObject({
+      name: "object_id",
+      in: "path",
+      required: true,
+    });
+    expect(scan.get.responses["200"]).toBeTruthy();
+    expect(scan.get.responses["404"]).toBeTruthy();
+    expect(scan.get["x-payment-info"]).toBeUndefined();
     expect(JSON.stringify(spec)).not.toContain("/api/checkout");
     expect(JSON.stringify(spec).toLowerCase()).not.toContain(
       "facilitator.payai"
