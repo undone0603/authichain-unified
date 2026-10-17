@@ -294,6 +294,7 @@ export default {
                 plan: grant.plan,
                 generations_limit: credit.generations_limit,
                 generations_used: credit.generations_used,
+                pack_credits: credit.pack_credits,
                 refill: grant.refillOnInvoicePaid,
                 stacked: !grant.refillOnInvoicePaid,
               })
@@ -353,6 +354,7 @@ export default {
       const grant = grantForPrice(linePrice);
       // One-time packs (starter/creator/dpp/passport): refillOnInvoicePaid=false — no-op.
       // Launch/Farm subscriptions: SET the period grant, used=0. Never +=.
+      // pack_credits is deliberately NOT written: packs survive renewal.
       if (customerId && grant?.refillOnInvoicePaid) {
         console.log(
           JSON.stringify({
