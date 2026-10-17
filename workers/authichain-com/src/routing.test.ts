@@ -328,6 +328,9 @@ test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
   assert.match(hubHtml, /AuthiChain Docs/);
   assert.match(hubHtml, /not a GS1 Conformant Resolver/);
   assert.doesNotMatch(hubHtml, /Bitcoin L1/);
+  assert.match(hubHtml, /authichain\.com\/qron\/r\//);
+  assert.match(hubHtml, /presentation_not_found/);
+  assert.match(hubHtml, /This host verifies the signature/);
 
   for (const path of [
     "/docs/gs1-digital-link",
