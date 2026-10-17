@@ -74,13 +74,15 @@ describe("authentic-economy identity join", () => {
     expect(d.humanCheckout.checkout.dpp).toBe(
       "https://authichain.com/checkout/dpp_readiness"
     );
-    expect(d.humanCheckout.checkout.farm).toBe(
-      "https://authichain.com/checkout/strainchain_farm"
+    // Farm A: Farm checkout is closed, so no Farm checkout link is published.
+    expect("farm" in d.humanCheckout.checkout).toBe(false);
+    expect(JSON.stringify(d.humanCheckout.checkout)).not.toContain(
+      "strainchain_farm"
     );
-    expect(d.humanCheckout.strainchain_farm).toBe("$149/month");
-    expect(new URL(d.humanCheckout.checkout.farm ?? "").hostname).toBe(
-      "authichain.com"
-    );
+    // Farm A: no Farm price or plan entry anywhere in public discovery.
+    expect("strainchain_farm" in d.humanCheckout).toBe(false);
+    expect(JSON.stringify(d)).not.toMatch(/farm/i);
+    expect(JSON.stringify(d)).not.toContain("$149");
     expect(JSON.stringify(d)).not.toContain("/api/checkout");
     expect(d.qron.isPaymentRail).toBe(false);
     expect(d.qron.totalSupply).toBe(QRON_TOTAL_SUPPLY);

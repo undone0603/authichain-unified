@@ -204,12 +204,14 @@ export function farmRailsSteps(
 ): RailsStep[] {
   const base = origin.replace(/\/+$/, "");
   const steps: RailsStep[] = [];
+  // Farm A: Farm checkout is closed. The gated confirm page must answer 410
+  // (checkout-gate.ts CLOSED_CHECKOUT_PLAN_IDS); a 200 means it reopened.
   if (paymentLink) {
     steps.push({
       id: "farm_payment_link",
       url: paymentLink,
       method: "GET",
-      accept: [200],
+      accept: [410],
     });
   }
   steps.push({
@@ -267,7 +269,7 @@ export async function checkFarmRails(
     ok: failed.length === 0,
     reason:
       failed.length === 0
-        ? "Farm Payment Link 200 and Farm HEAD 204"
+        ? "Farm checkout closed (410) and Farm HEAD 204"
         : failed.map(f => f.detail ?? f.id).join("; "),
     results,
   };

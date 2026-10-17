@@ -40,12 +40,8 @@ export function smokeSteps(origin = DEFAULT_ORIGIN): SmokeStep[] {
       accept: [204],
       method: "HEAD",
     },
-    {
-      id: "farm_head",
-      url: `${base}/api/checkout/plan/strainchain_farm`,
-      accept: [204],
-      method: "HEAD",
-    },
+    // Farm A: farm_head dropped. Farm checkout is closed (checkout-gate.ts
+    // CLOSED_CHECKOUT_PLAN_IDS), so it is no longer a live money path.
     {
       id: "x402_health",
       url: `${base}/api/x402/health`,

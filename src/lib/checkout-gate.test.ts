@@ -6,6 +6,8 @@ import {
   checkoutReturnOrigin,
   isAllowedPostOrigin,
   isAutomatedCheckoutRequest,
+  closedPlanFromGatedPath,
+  isCheckoutClosedPlan,
   planFromGatedPath,
   tryHandleGatedCheckout,
 } from "./checkout-gate";
@@ -200,8 +202,8 @@ describe("tryHandleGatedCheckout — POST", () => {
   it("creates one session with customer_email and catalogue price, then 303s to Stripe", async () => {
     const fetchImpl = stripeOk();
     const res = await tryHandleGatedCheckout(
-      post("/checkout/strainchain_farm", {
-        email: "grower@farm.com",
+      post("/checkout/qron_launch", {
+        email: "buyer@brand.com",
         utm_source: "mail",
         visit_id: "v_1",
         checkout_key: "12345678-1234-4234-8234-123456789abc",
@@ -222,14 +224,12 @@ describe("tryHandleGatedCheckout — POST", () => {
     const body = new URLSearchParams(String(init.body));
     expect(body.get("mode")).toBe("subscription");
     expect(body.get("line_items[0][price]")).toBe(
-      planById("strainchain_farm")!.stripe_price_id
+      planById("qron_launch")!.stripe_price_id
     );
-    expect(body.get("customer_email")).toBe("grower@farm.com");
-    expect(body.get("metadata[plan]")).toBe("strainchain_farm");
+    expect(body.get("customer_email")).toBe("buyer@brand.com");
+    expect(body.get("metadata[plan]")).toBe("qron_launch");
     expect(body.get("metadata[checkout_gate]")).toBe("confirm_post");
-    expect(body.get("subscription_data[metadata][plan]")).toBe(
-      "strainchain_farm"
-    );
+    expect(body.get("subscription_data[metadata][plan]")).toBe("qron_launch");
     expect(body.get("metadata[utm_source]")).toBe("mail");
     expect(body.get("client_reference_id")).toBe("v_1");
     expect(body.get("after_expiration[recovery][enabled]")).toBe("true");
@@ -494,5 +494,100 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
     expect(planById("starter")?.description).toContain(
       "Pack credits never expire unless you switch to a Launch subscription."
     );
+  });
+});
+
+describe("Farm A — Farm checkout route is closed", () => {
+  const env = { STRIPE_SECRET_KEY: "sk_test_x" };
+
+  it("marks only Farm closed and keeps it out of planFromGatedPath", () => {
+    expect(isCheckoutClosedPlan("strainchain_farm")).toBe(true);
+    expect(isCheckoutClosedPlan("starter")).toBe(false);
+    expect(planFromGatedPath("/checkout/strainchain_farm")).toBeUndefined();
+    expect(planFromGatedPath("/checkout/farm")).toBeUndefined();
+    expect(closedPlanFromGatedPath("/checkout/farm")?.id).toBe(
+      "strainchain_farm"
+    );
+    expect(closedPlanFromGatedPath("/checkout/starter")).toBeUndefined();
+    expect(planFromGatedPath("/checkout/starter")?.id).toBe("starter");
+  });
+
+  it("GET /checkout/strainchain_farm and /checkout/farm answer 410 closed, no Stripe link", async () => {
+    for (const path of ["/checkout/strainchain_farm", "/checkout/farm"]) {
+      const res = await tryHandleGatedCheckout(
+        new Request(`https://authichain.com${path}`, {
+          headers: { "user-agent": HUMAN_UA },
+        }),
+        env
+      );
+      expect(res!.status).toBe(410);
+      const html = await res!.text();
+      expect(html).toContain("not open for new checkouts");
+      expect(html).not.toContain("<form");
+      expect(html).not.toContain("buy.stripe.com");
+      expect(html).not.toContain("$149");
+    }
+  });
+
+  it("HEAD /checkout/strainchain_farm answers 410", async () => {
+    const res = await tryHandleGatedCheckout(
+      new Request("https://authichain.com/checkout/strainchain_farm", {
+        method: "HEAD",
+      }),
+      env
+    );
+    expect(res!.status).toBe(410);
+  });
+
+  it("POST /checkout/strainchain_farm answers 410 and never calls Stripe", async () => {
+    const fetchImpl = stripeOk();
+    const claimCheckout = vi.fn(async () => ({ allowed: true as const }));
+    const res = await tryHandleGatedCheckout(
+      post("/checkout/strainchain_farm", {
+        email: "grower@farm.com",
+        checkout_key: "12345678-1234-4234-8234-123456789abc",
+      }),
+      env,
+      { fetchImpl, claimCheckout, recordSession: protection.recordSession }
+    );
+    expect(res!.status).toBe(410);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(claimCheckout).not.toHaveBeenCalled();
+  });
+
+  it("Starter checkout still works: GET 200 confirm form, POST 303 to Stripe", async () => {
+    const get = await tryHandleGatedCheckout(
+      new Request("https://authichain.com/checkout/starter", {
+        headers: { "user-agent": HUMAN_UA },
+      }),
+      env
+    );
+    expect(get!.status).toBe(200);
+    expect(await get!.text()).toContain("<form");
+
+    const fetchImpl = stripeOk();
+    const res = await tryHandleGatedCheckout(
+      post("/checkout/starter", {
+        email: "ops@brand.com",
+        checkout_key: "12345678-1234-4234-8234-123456789abd",
+      }),
+      env,
+      { fetchImpl, ...protection }
+    );
+    expect(res!.status).toBe(303);
+    expect(res!.headers.get("location")).toBe(
+      "https://checkout.stripe.com/c/pay/cs_test_gate"
+    );
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    const body = new URLSearchParams(
+      String(
+        (fetchImpl.mock.calls[0] as unknown as [string, { body: unknown }])[1]
+          .body
+      )
+    );
+    expect(body.get("line_items[0][price]")).toBe(
+      planById("starter")!.stripe_price_id
+    );
+    expect(body.get("metadata[plan]")).toBe("starter");
   });
 });

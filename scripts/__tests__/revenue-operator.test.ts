@@ -359,20 +359,29 @@ describe("farm rails", () => {
     expect(farm?.accept).toEqual([204]);
   });
 
-  it("passes when Payment Link is 200 and Farm HEAD is 204", async () => {
+  it("passes when Farm checkout is closed (410) and Farm HEAD is 204", async () => {
     const fetchImpl = async (url: string, init?: RequestInit) => {
       const method = (init?.method || "GET").toUpperCase();
-      const status = method === "HEAD" ? 204 : 200;
+      const status = method === "HEAD" ? 204 : 410;
       return { status } as Response;
     };
     const report = await checkFarmRails("https://authichain.com", fetchImpl);
     expect(report.ok).toBe(true);
   });
 
+  it("fails when the Farm checkout page reopens (200)", async () => {
+    const fetchImpl = async (_url: string, init?: RequestInit) => {
+      const method = (init?.method || "GET").toUpperCase();
+      return { status: method === "HEAD" ? 204 : 200 } as Response;
+    };
+    const report = await checkFarmRails("https://authichain.com", fetchImpl);
+    expect(report.ok).toBe(false);
+  });
+
   it("fails when Farm HEAD is not 204", async () => {
     const fetchImpl = async (_url: string, init?: RequestInit) => {
       const method = (init?.method || "GET").toUpperCase();
-      return { status: method === "HEAD" ? 405 : 200 } as Response;
+      return { status: method === "HEAD" ? 405 : 410 } as Response;
     };
     const report = await checkFarmRails("https://authichain.com", fetchImpl);
     expect(report.ok).toBe(false);
