@@ -18,6 +18,7 @@ import {
   type QronPresentationAttestation,
 } from "./qron-presentation";
 import {
+  QRON_RESOLVE_ORIGIN,
   qronResolveUrl,
   scannableQrDataUrl,
   type StoredQronPresentation,
@@ -87,6 +88,11 @@ export function generateHealthBody(
       estate_urls: readonly string[];
       jwks_url: string;
     };
+    scan: {
+      method: "GET";
+      url_template: string;
+      missing: "presentation_not_found";
+    };
   };
 } {
   return {
@@ -105,6 +111,11 @@ export function generateHealthBody(
         canonical_url: CANONICAL_VERIFY_URL,
         estate_urls: ESTATE_VERIFY_URLS,
         jwks_url: QRON_ATTESTATION_JWKS_URL,
+      },
+      scan: {
+        method: "GET",
+        url_template: `${QRON_RESOLVE_ORIGIN}/qron/r/{object_id}`,
+        missing: "presentation_not_found",
       },
     },
   };

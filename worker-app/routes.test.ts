@@ -213,6 +213,11 @@ describe("GET /api/generate", () => {
     expect(body.presentation.verify.decision_contract).toBe(
       "AuthiChain Verification Decision v1"
     );
+    expect(body.presentation.scan).toEqual({
+      method: "GET",
+      url_template: "https://authichain.com/qron/r/{object_id}",
+      missing: "presentation_not_found",
+    });
     expect(body.packs.some((p: { price: number }) => p.price === 29)).toBe(
       true
     );
