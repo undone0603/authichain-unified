@@ -11,6 +11,7 @@ import worker from "./index.js";
 
 const HUMAN_EMAIL = "Jane.Buyer@Example-Customer.test";
 const AGENT_WALLET = "0x1111111111111111111111111111111111111111";
+const AGENT_TX = "0x" + "ab".repeat(32);
 
 const seeded = {
   updatedAt: "2026-10-17T15:00:00.000Z",
@@ -31,6 +32,8 @@ const seeded = {
       metadata: { lead_id: "lead_real_person", customer_email: HUMAN_EMAIL },
       status: "qualified",
       reason: "Live Stripe settlement from a third-party payer.",
+      txHash: "pi_test_privacy_leak",
+      network: "stripe",
     },
     {
       id: "base_usdc_0xabc",
@@ -40,7 +43,7 @@ const seeded = {
       email: `wallet:${AGENT_WALLET}`,
       name: AGENT_WALLET,
       wallet: AGENT_WALLET,
-      txHash: "0xabc",
+      txHash: AGENT_TX,
       network: "eip155:8453",
       createdAt: "2026-10-17T14:30:00.000Z",
       metadata: { from: AGENT_WALLET },
@@ -100,6 +103,8 @@ describe("first-dollar-desk /api/ledger privacy (RES-78)", () => {
       "555 0100",
       "1 Test St",
       "wallet:",
+      "pi_test_privacy_leak",
+      AGENT_WALLET,
     ]) {
       expect(text).not.toContain(leak);
     }
@@ -107,7 +112,6 @@ describe("first-dollar-desk /api/ledger privacy (RES-78)", () => {
       expect(Object.keys(row).sort()).toEqual(
         [
           "amountCents",
-          "buyer",
           "createdAt",
           "currency",
           "network",
@@ -121,14 +125,44 @@ describe("first-dollar-desk /api/ledger privacy (RES-78)", () => {
     }
   });
 
-  it("keeps amount and timestamp, and masks the buyer as a 12-hex SHA-256 prefix", async () => {
-    const { body } = await getLedger();
+  it("keeps amount and timestamp and publishes no buyer field at all", async () => {
+    const { text, body } = await getLedger();
     const [human, agent] = body.receipts;
     expect(human.amountCents).toBe(100);
     expect(human.createdAt).toBe("2026-10-17T14:00:00.000Z");
-    expect(human.buyer).toBe(sha(HUMAN_EMAIL.toLowerCase()).slice(0, 12));
-    expect(agent.buyer).toBe(sha(AGENT_WALLET).slice(0, 12));
-    expect(agent.txHash).toBe("0xabc");
+    for (const row of body.receipts) expect(row).not.toHaveProperty("buyer");
+    expect(text).not.toContain(sha(HUMAN_EMAIL.toLowerCase()).slice(0, 12));
+    expect(text).not.toContain(sha(AGENT_WALLET).slice(0, 12));
+    expect(agent.txHash).toBe(AGENT_TX);
+  });
+
+  it("sets txHash (and network) to null on Stripe receipts, even if an old record stored one", async () => {
+    const { body } = await getLedger();
+    const human = body.receipts[0];
+    expect(human.rail).toBe("human");
+    expect(human.txHash).toBeNull();
+    expect(human.network).toBeNull();
+  });
+
+  it("redacts old-format stored receipts at read time (stored records keep their raw fields)", async () => {
+    const kv = fakeKv();
+    const res = await worker.fetch(new Request("https://authichain.com/buy/api/ledger"), { LEDGER: kv });
+    const text = await res.text();
+    expect(text).not.toMatch(/@/);
+    expect(text).not.toContain("Jane Buyer");
+    // The raw stored record still carries email/name: redaction is a read-time view.
+    expect(kv.store.get("ledger")).toContain("Jane Buyer");
+  });
+
+  it("shows the public-ledger notice verbatim next to the pay buttons", async () => {
+    const notice =
+      "Paid receipts appear on a public ledger with the amount, time and payment rail. On-chain payments also show the transaction hash, which is already public on Base. Your email and name are never published.";
+    for (const path of ["https://authichain.com/buy", "https://authichain.com/buy/human", "https://authichain.com/buy/agent"]) {
+      const res = await worker.fetch(new Request(path, { headers: { accept: "text/html" } }), { LEDGER: fakeKv() });
+      const html = await res.text();
+      expect(res.status, path).toBe(200);
+      expect(html, path).toContain(notice);
+    }
   });
 
   it("exposes a hashed ref so the thanks page can still find a session's receipt", async () => {

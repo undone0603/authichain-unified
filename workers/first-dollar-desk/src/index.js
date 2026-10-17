@@ -612,8 +612,15 @@ async function sha256Hex(value) {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 __name(sha256Hex, "sha256Hex");
+var LEDGER_PUBLIC_NOTICE = "Paid receipts appear on a public ledger with the amount, time and payment rail. On-chain payments also show the transaction hash, which is already public on Base. Your email and name are never published.";
+var ONCHAIN_TX_HASH = /^0x[0-9a-fA-F]{64}$/;
+// RES-78: built fresh on every read, so receipts stored before this change are
+// redacted too. No buyer field at all (even a hash of an email or wallet can be
+// matched). txHash only for on-chain receipts with a real Base tx hash, so no
+// Stripe session/charge/payment-intent id can ever land in it. ref is a one-way
+// 16-hex SHA-256 prefix of the internal id; the raw id is never published.
 async function publicReceipt(receipt) {
-  const buyerKey = String(receipt.wallet || receipt.email || "").trim().toLowerCase().replace(/^wallet:/, "");
+  const onchain = Boolean(receipt.network) && receipt.rail !== "human" && ONCHAIN_TX_HASH.test(String(receipt.txHash ?? ""));
   return {
     ref: receipt.id ? (await sha256Hex(receipt.id)).slice(0, 16) : null,
     rail: receipt.rail ?? null,
@@ -622,9 +629,8 @@ async function publicReceipt(receipt) {
     amountCents: receipt.amountCents ?? 0,
     currency: receipt.currency ?? null,
     createdAt: receipt.createdAt ?? null,
-    network: receipt.network ?? null,
-    txHash: receipt.txHash ?? null,
-    buyer: buyerKey ? (await sha256Hex(buyerKey)).slice(0, 12) : null
+    network: onchain ? receipt.network : null,
+    txHash: onchain ? receipt.txHash : null
   };
 }
 __name(publicReceipt, "publicReceipt");
@@ -1072,6 +1078,7 @@ function htmlAgentCheckout(origin) {
       <li>Min: $0.05 (50000 atomic) \xB7 payTo <code>${PAY_TO}</code></li>
     </ul>
     <a class="btn" href="${origin}/api/agent/verify">Fetch 402 challenge</a>
+    <p class="note ledger-notice">${LEDGER_PUBLIC_NOTICE}</p>
     <p class="note">Agent402 router pays sellers only after third-party settlement history \u2014 pay x402 directly here until then. Bounty: <a href="${origin}/.well-known/first-dollar-goal.json">first-dollar-goal.json</a></p>
     <p class="note"><button type="button" id="copy-agent" style="margin-top:8px;padding:8px 12px;cursor:pointer;">Copy agent page link</button> <span id="copy-agent-ok" hidden>Copied.</span></p>
     <script>
@@ -1120,6 +1127,7 @@ function htmlHumanCheckout(goal, origin) {
     ${done ? `<p class="done">A qualifying third-party human payment is already on the ledger.</p>` : `<p>One-time Stripe Checkout. After payment you return here automatically; the desk records a receipt via webhook.</p>
     <p class="note">Operator cards, smoke tests, and founder emails are rejected and do not count.</p>
     <a class="btn" href="${HUMAN_PAY}">Continue to Stripe \u2014 pay $1.00</a>
+    <p class="note ledger-notice">${LEDGER_PUBLIC_NOTICE}</p>
     <p class="note"><button type="button" id="copy-human" style="margin-top:12px;padding:8px 12px;cursor:pointer;">Copy share link</button> <span id="copy-human-ok" hidden>Copied.</span></p>
     <script>
       document.getElementById("copy-human")?.addEventListener("click", () => {
@@ -1191,6 +1199,7 @@ function htmlPage(goal, origin = "https://first-dollar-desk.undone-k.workers.dev
         <p class="note"><a href="/mcp">MCP</a> \xB7 <a href="/api/goal">Goal JSON</a> \xB7 Card checkout does not count as agent goal \u2014 use 402.</p>
       </article>
     </div>
+    <p class="note ledger-notice">${LEDGER_PUBLIC_NOTICE}</p>
     <article style="margin-top:16px">
       <p class="note">SHARE \xB7 third parties only (operator self-pay rejected)</p>
       <p class="note">Human $1: <a href="${origin}/human">${origin}/human</a></p>
