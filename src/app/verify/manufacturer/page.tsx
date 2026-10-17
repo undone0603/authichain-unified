@@ -160,6 +160,7 @@ export default function ManufacturerStatus() {
                     </div>
                     {item.role ? <div>Role: {item.role}</div> : null}
                     {item.sender ? <div>Sender: {item.sender}</div> : null}
+                    {item.timestamp ? <div>Contract timestamp: {item.timestamp}</div> : null}
                     <div>
                       Tx:{' '}
                       <a

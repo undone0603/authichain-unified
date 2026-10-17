@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { createPublicClient, http, parseAbiItem, type Address } from 'viem';
 import { polygon } from 'viem/chains';
-import { DEPLOYED_BLOCK, HISTORY_DISCLAIMER, ROLE_IDS, logFromBlock } from './window';
+import { DEPLOYED_BLOCK, HISTORY_DISCLAIMER, ROLE_IDS, compareHistory, logFromBlock } from './window';
 
 const CONTRACT = '0x4da4D2675e52374639C9c954f4f653887A9972BE' as const;
 const PUBLIC_RPC = 'https://polygon-bor-rpc.publicnode.com';
@@ -124,41 +124,45 @@ app.get('/:address/history', async (c) => {
     ]);
 
     const blockOf = (value: bigint | null | undefined) => value?.toString() ?? 'unknown';
+    const indexOf = (value: bigint | null | undefined) => value?.toString() ?? '';
     const history = [
       ...granted.map((log) => ({
         type: 'granted' as const,
         block: blockOf(log.blockNumber),
+        logIndex: indexOf(log.logIndex),
         tx: log.transactionHash ?? '',
         role: log.args.role ?? '',
         sender: log.args.sender ?? '',
+        timestamp: null as string | null,
       })),
       ...revoked.map((log) => ({
         type: 'revoked' as const,
         block: blockOf(log.blockNumber),
+        logIndex: indexOf(log.logIndex),
         tx: log.transactionHash ?? '',
         role: log.args.role ?? '',
         sender: log.args.sender ?? '',
+        timestamp: null,
       })),
       ...verified.map((log) => ({
         type: 'manufacturer_verified' as const,
         block: blockOf(log.blockNumber),
+        logIndex: indexOf(log.logIndex),
         tx: log.transactionHash ?? '',
         role: '',
         sender: '',
+        timestamp: log.args.timestamp?.toString() ?? null,
       })),
       ...unverified.map((log) => ({
         type: 'manufacturer_revoked' as const,
         block: blockOf(log.blockNumber),
+        logIndex: indexOf(log.logIndex),
         tx: log.transactionHash ?? '',
         role: '',
         sender: '',
+        timestamp: log.args.timestamp?.toString() ?? null,
       })),
-    ].sort((a, b) => {
-      const left = /^\d+$/.test(a.block) ? BigInt(a.block) : -1n;
-      const right = /^\d+$/.test(b.block) ? BigInt(b.block) : -1n;
-      if (right === left) return 0;
-      return right > left ? 1 : -1;
-    });
+    ].sort(compareHistory);
 
     return c.json({
       address,

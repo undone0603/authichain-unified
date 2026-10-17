@@ -58,6 +58,8 @@ describe("manufacturer status on the apex", () => {
         topics: [topic, account],
         transactionHash: "0x" + "bb".repeat(32),
         blockNumber: "0x4ffffe0",
+        logIndex: "0x2",
+        data: "0x" + "0".repeat(62) + "0a",
       };
       const result = topic.startsWith("0x2f878811")
         ? [log]
@@ -77,6 +79,9 @@ describe("manufacturer status on the apex", () => {
       "granted",
       "manufacturer_verified",
     ]);
+    expect(body.history[1].timestamp).toBe("10");
+    expect(body.history[1].logIndex).toBe("2");
+    expect(body.history[0].timestamp).toBeNull();
     expect(body.current.minter).toBe(true);
     expect(body.current.admin).toBe(false);
     expect(body.current.manufacturerVerified).toBe(false);

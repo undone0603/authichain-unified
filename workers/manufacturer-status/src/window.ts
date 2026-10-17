@@ -38,6 +38,26 @@ export const HISTORY_DISCLAIMER =
   "regulatory status, or that any specific item is genuine. " +
   "Verify certificates at https://authichain.com/protocol.";
 
+/** First 32-byte word of event data, as a decimal string. Not a clock we set. */
+export function timestampWord(data: string | undefined): string | null {
+  if (!data || !/^0x[0-9a-fA-F]{64}$/.test(data)) return null;
+  return BigInt(data).toString();
+}
+
+export function compareHistory(
+  a: { block: string; logIndex: string },
+  b: { block: string; logIndex: string }
+): number {
+  const asInt = (value: string) => (/^\d+$/.test(value) ? BigInt(value) : -1n);
+  const leftBlock = asInt(a.block);
+  const rightBlock = asInt(b.block);
+  if (leftBlock !== rightBlock) return rightBlock > leftBlock ? 1 : -1;
+  const leftIndex = asInt(a.logIndex);
+  const rightIndex = asInt(b.logIndex);
+  if (leftIndex === rightIndex) return 0;
+  return rightIndex > leftIndex ? 1 : -1;
+}
+
 export function logFromBlock(
   current: bigint,
   deployed: bigint = DEPLOYED_BLOCK,

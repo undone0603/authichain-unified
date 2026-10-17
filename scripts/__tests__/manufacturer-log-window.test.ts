@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   DEPLOYED_BLOCK,
   FREE_RPC_SPAN,
+  compareHistory,
   logFromBlock,
+  timestampWord,
 } from "../../workers/manufacturer-status/src/window";
 
 describe("manufacturer log window", () => {
@@ -16,5 +18,20 @@ describe("manufacturer log window", () => {
   it("starts at deployment when the contract is still inside the span", () => {
     const current = DEPLOYED_BLOCK + 100n;
     expect(logFromBlock(current)).toBe(DEPLOYED_BLOCK);
+  });
+
+  it("reads one timestamp word and ignores anything else", () => {
+    expect(timestampWord("0x" + "0".repeat(62) + "0a")).toBe("10");
+    expect(timestampWord("0x")).toBeNull();
+    expect(timestampWord("0x" + "ab".repeat(40))).toBeNull();
+  });
+
+  it("orders a later log in the same block first", () => {
+    const older = { block: "100", logIndex: "1" };
+    const newer = { block: "100", logIndex: "4" };
+    const nextBlock = { block: "101", logIndex: "0" };
+    expect(compareHistory(older, newer)).toBe(1);
+    expect(compareHistory(newer, older)).toBe(-1);
+    expect(compareHistory(older, nextBlock)).toBe(1);
   });
 });

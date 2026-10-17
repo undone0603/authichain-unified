@@ -12,7 +12,9 @@ import {
   EVENT_TOPICS,
   HISTORY_DISCLAIMER,
   ROLE_IDS,
+  compareHistory,
   logFromBlock,
+  timestampWord,
 } from "../../manufacturer-status/src/window";
 
 const CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
@@ -76,6 +78,8 @@ type RpcLog = {
   topics?: string[];
   transactionHash?: string;
   blockNumber?: string;
+  logIndex?: string;
+  data?: string;
 };
 
 async function rpc(
@@ -104,13 +108,20 @@ async function rpc(
   return parsed.result;
 }
 
+function logIndexOf(log: RpcLog): string {
+  if (!log.logIndex || !/^0x[0-9a-fA-F]+$/.test(log.logIndex)) return "";
+  return BigInt(log.logIndex).toString();
+}
+
 function mapLogs(logs: RpcLog[], type: "granted" | "revoked") {
   return logs.map((log) => ({
     type,
     block: log.blockNumber ? BigInt(log.blockNumber).toString() : "unknown",
+    logIndex: logIndexOf(log),
     tx: log.transactionHash ?? "",
     role: log.topics?.[1] ?? "",
     sender: topicAddress(log.topics?.[3]),
+    timestamp: null as string | null,
   }));
 }
 
@@ -121,9 +132,11 @@ function mapManufacturer(
   return logs.map((log) => ({
     type,
     block: log.blockNumber ? BigInt(log.blockNumber).toString() : "unknown",
+    logIndex: logIndexOf(log),
     tx: log.transactionHash ?? "",
     role: "",
     sender: "",
+    timestamp: timestampWord(log.data),
   }));
 }
 
@@ -237,12 +250,7 @@ export async function tryHandleManufacturerStatus(
       ...mapLogs(revoked as RpcLog[], "revoked"),
       ...mapManufacturer(verified as RpcLog[], "manufacturer_verified"),
       ...mapManufacturer(unverified as RpcLog[], "manufacturer_revoked"),
-    ].sort((a, b) => {
-      const left = /^\d+$/.test(a.block) ? BigInt(a.block) : -1n;
-      const right = /^\d+$/.test(b.block) ? BigInt(b.block) : -1n;
-      if (right === left) return 0;
-      return right > left ? 1 : -1;
-    });
+    ].sort(compareHistory);
     return json(200, {
       address,
       contract: CONTRACT,
