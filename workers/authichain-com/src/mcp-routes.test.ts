@@ -24,6 +24,16 @@ import anchorJson from "../../../protocol/examples/polygon-anchor-1.anchor.json"
 import recordJson from "../../../protocol/examples/polygon-anchor-1.record.json" with { type: "json" };
 import serverManifest from "../../../server.json" with { type: "json" };
 
+// CFA-363: paid paths need a replay store; an in-memory stub for these tests.
+function kvStub() {
+  const m = new Map<string, string>();
+  return {
+    get: async (k: string) => m.get(k) ?? null,
+    put: async (k: string, v: string) => void m.set(k, v),
+    delete: async (k: string) => void m.delete(k),
+  };
+}
+
 function req(path: string, init?: RequestInit): Request {
   return new Request(`https://authichain.govchain.us${path}`, init);
 }
@@ -235,6 +245,7 @@ describe("mcp discovery", () => {
           network: "base",
           payer: "0x1234567890abcdef1234567890abcdef12345678",
           amount: "50000",
+          validBefore: String(Math.floor(Date.now() / 1000) + 600),
           signature: "0xdead",
         })
       ).toString("base64");
@@ -328,6 +339,7 @@ describe("mcp discovery", () => {
           network: "base",
           payer: "0x1234567890abcdef1234567890abcdef12345678",
           amount: "50000",
+          validBefore: String(Math.floor(Date.now() / 1000) + 600),
           signature: "0xdead",
         })
       ).toString("base64");
@@ -502,6 +514,7 @@ describe("mcp paid verify with the VERIFY_APP binding", () => {
       network: "base",
       payer: "0x1234567890abcdef1234567890abcdef12345678",
       amount: "50000",
+      validBefore: String(Math.floor(Date.now() / 1000) + 600),
       signature: "0xdead",
     })
   ).toString("base64");
@@ -521,7 +534,10 @@ describe("mcp paid verify with the VERIFY_APP binding", () => {
     const seen: Request[] = [];
     const res = await tryHandleMcp(
       call(),
-      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_REPLAY_KV: kvStub(),
+      },
       {
         fetch: async (r: Request) => {
           seen.push(r);
@@ -551,7 +567,10 @@ describe("mcp paid verify with the VERIFY_APP binding", () => {
   it("passes a registry refusal through as HTTP", async () => {
     const res = await tryHandleMcp(
       call(),
-      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_REPLAY_KV: kvStub(),
+      },
       {
         fetch: async () =>
           new Response(JSON.stringify({ error: "seal_id_required" }), {

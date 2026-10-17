@@ -1,6 +1,16 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 
+// CFA-363: paid paths need a replay store; an in-memory stub for these tests.
+function kvStub() {
+  const m = new Map<string, string>();
+  return {
+    get: async (k: string) => m.get(k) ?? null,
+    put: async (k: string, v: string) => void m.set(k, v),
+    delete: async (k: string) => void m.delete(k),
+  };
+}
+
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
 
 function req(path: string, init?: RequestInit): Request {
@@ -8,7 +18,12 @@ function req(path: string, init?: RequestInit): Request {
 }
 
 function proofHeader(p: Record<string, unknown>) {
-  return Buffer.from(JSON.stringify(p)).toString("base64");
+  return Buffer.from(
+    JSON.stringify({
+      validBefore: String(Math.floor(Date.now() / 1000) + 600),
+      ...p,
+    })
+  ).toString("base64");
 }
 
 afterEach(() => {
@@ -19,7 +34,9 @@ afterEach(() => {
 
 describe("tryHandleX402", () => {
   it("returns null for other API paths so APP_WORKER still owns them", async () => {
-    expect(await tryHandleX402(req("https://authichain.com/checkout/dpp_readiness"))).toBeNull();
+    expect(
+      await tryHandleX402(req("https://authichain.com/checkout/dpp_readiness"))
+    ).toBeNull();
     expect(await tryHandleX402(req("/api/stripe/webhook"))).toBeNull();
     expect(await tryHandleX402(req("/dashboard"))).toBeNull();
   });
@@ -89,9 +106,7 @@ describe("tryHandleX402", () => {
     };
     expect(body.name).toBe("AuthiChain Agent Verify");
     expect(body.category).toBe("Verification");
-    expect(body.paidRoute).toBe(
-      "https://authichain.com/api/v1/agent-verify"
-    );
+    expect(body.paidRoute).toBe("https://authichain.com/api/v1/agent-verify");
     expect(body.wallet).toBe("0xabc0000000000000000000000000000000000001");
     expect(body.payapi.form.wallet).toBe(body.wallet);
     expect(body.priceUsd).toBe(0.05);
@@ -375,7 +390,10 @@ describe("POST /api/x402 with the VERIFY_APP binding", () => {
         headers: { "x-payment": header, "content-type": "application/json" },
         body: JSON.stringify({ sealId: "seal-1" }),
       }),
-      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_REPLAY_KV: kvStub(),
+      },
       verifyApp
     );
     expect(res!.status).toBe(200);
