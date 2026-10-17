@@ -619,7 +619,7 @@ var ONCHAIN_TX_HASH = /^0x[0-9a-fA-F]{64}$/;
 // Stripe session/charge/payment-intent id can ever land in it. ref is a one-way
 // 16-hex SHA-256 prefix of the internal id; the raw id is never published.
 async function publicReceipt(receipt) {
-  const onchain = Boolean(receipt.network) && receipt.rail !== "human" && ONCHAIN_TX_HASH.test(String(receipt.txHash ?? ""));
+  const onchain = Boolean(receipt.network) && receipt.rail !== "human" && ONCHAIN_TX_HASH.test(String(receipt.txHash ?? "")) && !receipt.stripeCheckoutSessionId && !String(receipt.id ?? "").startsWith("cs_");
   return {
     ref: receipt.id ? (await sha256Hex(receipt.id)).slice(0, 16) : null,
     rail: receipt.rail ?? null,
@@ -640,6 +640,18 @@ async function publicLedger(ledger) {
   };
 }
 __name(publicLedger, "publicLedger");
+// C1: never publish raw Stripe sync errors (they carry payment-link ids and
+// Stripe error text). Only the shape below goes out on /api/ledger.
+function publicStripeSync(sync) {
+  const s = sync && typeof sync === "object" ? sync : {};
+  return {
+    skipped: Boolean(s.skipped),
+    webhook: typeof s.webhook === "boolean" ? s.webhook : null,
+    written: typeof s.written === "number" ? s.written : 0,
+    errorCount: Array.isArray(s.errors) ? s.errors.length : 0
+  };
+}
+__name(publicStripeSync, "publicStripeSync");
 function goalState(ledger) {
   const human = ledger.receipts.find(
     (receipt) => receipt.rail === "human" && receipt.status === "qualified" && receipt.amountCents >= 100
@@ -995,7 +1007,7 @@ function htmlThanksPage({ sessionId: rawSessionId, recorded, goal, note }) {
     <p class="note">CHECKOUT COMPLETE</p>
     <h1>Thank you.</h1>
     <p>${status}</p>
-    ${sessionId ? `<p class="note">Session <code>${escapeHtml(sessionId)}</code> ${recorded ? "was written to" : "is queued for"} the public ledger.</p>
+    ${sessionId ? `<p class="note">${recorded ? "Your receipt was written to the public ledger." : "Your receipt is queued for the public ledger."}</p>
     <p class="note" id="ledger-live">Checking ledger for your receipt\u2026</p>` : ""}
     ${note ? `<p class="note">${escapeHtml(note)}</p>` : ""}
     <a class="btn" href="/api/ledger">View ledger JSON</a>
@@ -2565,7 +2577,7 @@ ${urls.map((href) => `  <url><loc>${href}</loc></url>`).join("\n")}
           ...await publicLedger(ledger),
           goal: goalState(ledger),
           onchain,
-          stripe,
+          stripe: publicStripeSync(stripe),
           rule: "Founder, smoke, owner wallets, and self-pay receipts are recorded then rejected. Unproven on-chain inbound stays pending."
         })
       );
