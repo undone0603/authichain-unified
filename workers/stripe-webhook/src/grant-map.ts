@@ -174,7 +174,7 @@ export function isFounderEmail(email: string | null | undefined): boolean {
 
 /** Profile columns the checkout grant reads before writing. */
 export const GRANT_PROFILE_COLUMNS =
-  "last_grant_session_id,plan,generations_limit,generations_used,stripe_subscription_id,stripe_subscription_status,pack_credits";
+  "last_grant_session_id,plan,generations_limit,generations_used,stripe_subscription_id,stripe_subscription_status";
 
 const UNLIMITED_SENTINEL = 999999;
 const ENDED_SUB_STATUSES = new Set([
@@ -193,28 +193,13 @@ export function hasActiveSubscription(
   return !(typeof status === "string" && ENDED_SUB_STATUSES.has(status));
 }
 
-export type GrantCreditWrite = {
-  plan?: string;
-  generations_limit?: number;
-  generations_used?: number;
-  pack_credits?: number;
-};
-
-function num(v: unknown): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
-
 /**
  * Credit write for one checkout grant.
- * - Pack bought with NO active subscription: STACK onto the plain balance.
+ * - One-time packs (refillOnInvoicePaid=false) STACK: unused credits carry
+ *   over, so "credits purchased in packs never expire" holds across purchases.
  *   New limit = max(0, limit - used) + pack size, used = 0.
- * - Pack bought WITH an active subscription: add to pack_credits (a separate
- *   balance invoice.paid never touches), leave plan and the monthly allowance
- *   alone. Generation spends the monthly allowance first, then pack_credits.
- * - Subscription checkout: SET the period grant; any leftover plain balance
- *   from earlier packs moves into pack_credits so the SET doesn't wipe it.
- * - Unlimited (999999) profiles are not changed.
+ * - A pack never overwrites an active subscription's plan field.
+ * - Subscriptions (refill plans) keep the period SET semantics.
  * `existed` is false for a profile created by this checkout's upsert, so its
  * column defaults are not counted as leftover credits.
  */
@@ -222,29 +207,30 @@ export function grantCreditWrite(
   grant: { plan: string; generations: number; refillOnInvoicePaid: boolean },
   row: Record<string, unknown> | null,
   existed: boolean
-): GrantCreditWrite {
-  const limit = existed ? num(row?.generations_limit) : 0;
-  const used = existed ? num(row?.generations_used) : 0;
-  const pack = existed ? Math.max(0, num(row?.pack_credits)) : 0;
-  const activeSub = existed && hasActiveSubscription(row);
-  if (limit >= UNLIMITED_SENTINEL) {
-    return activeSub ? {} : { plan: grant.plan };
-  }
-  const leftover = Math.max(0, limit - used);
+): { plan?: string; generations_limit: number; generations_used: number } {
   if (grant.refillOnInvoicePaid) {
     return {
       plan: grant.plan,
       generations_limit: grant.generations,
       generations_used: 0,
-      // A renewal-style SET must not eat credits from earlier packs.
-      ...(activeSub ? {} : { pack_credits: pack + leftover }),
     };
   }
-  if (activeSub) {
-    return { pack_credits: pack + grant.generations };
+  const limit = Number(row?.generations_limit);
+  const used = Number(row?.generations_used);
+  let leftover = 0;
+  if (existed && Number.isFinite(limit)) {
+    if (limit >= UNLIMITED_SENTINEL) {
+      // Unlimited stays unlimited; the pack changes nothing about credits.
+      return {
+        ...(hasActiveSubscription(row) ? {} : { plan: grant.plan }),
+        generations_limit: limit,
+        generations_used: Number.isFinite(used) ? used : 0,
+      };
+    }
+    leftover = Math.max(0, limit - (Number.isFinite(used) ? used : 0));
   }
   return {
-    plan: grant.plan,
+    ...(existed && hasActiveSubscription(row) ? {} : { plan: grant.plan }),
     generations_limit: leftover + grant.generations,
     generations_used: 0,
   };

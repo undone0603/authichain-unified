@@ -28,7 +28,6 @@ const env = {
 const STARTER = "price_1UIoEVGqTruSqV8T61lp48wB";
 const DPP = "price_1TwmD8GqTruSqV8TpAF8dfyA";
 const CREATOR = "price_1UIoEYGqTruSqV8TCXTNipvh";
-const LAUNCH = "price_1UJjzPGqTruSqV8TmhFSc8vh";
 
 async function deliver() {
   return worker.fetch(
@@ -275,7 +274,7 @@ describe("stripe-webhook checkout grant", () => {
       ]);
     });
 
-    it("puts a Launch subscriber's pack into pack_credits and keeps plan + subscription", async () => {
+    it("keeps a Launch subscriber's plan and subscription when they buy a pack", async () => {
       state.event = sessionEvent({ price: STARTER, id: "cs_sub_pack" });
       const calls = installFetch({
         row: {
@@ -285,81 +284,19 @@ describe("stripe-webhook checkout grant", () => {
           generations_used: 30,
           stripe_subscription_id: "sub_123",
           stripe_subscription_status: "active",
-          pack_credits: 0,
         },
       });
       expect((await deliver()).status).toBe(200);
       const [patch] = patches(calls) as Array<Record<string, unknown>>;
       expect(patch).not.toHaveProperty("plan");
-      expect(patch).not.toHaveProperty("generations_limit");
-      expect(patch).not.toHaveProperty("generations_used");
       expect(patch).toMatchObject({
-        pack_credits: 100,
+        generations_limit: 170,
+        generations_used: 0,
         last_grant_session_id: "cs_sub_pack",
       });
       const [up] = upserts(calls);
       expect(up).not.toHaveProperty("plan");
       expect(up).not.toHaveProperty("stripe_subscription_id");
-    });
-
-    it("a Launch subscriber with 100 pack credits renews and keeps them", async () => {
-      state.event = {
-        id: "evt_inv",
-        type: "invoice.paid",
-        data: {
-          object: {
-            customer: "cus_1",
-            lines: { data: [{ price: { id: LAUNCH } }] },
-          },
-        },
-      };
-      const calls = installFetch();
-      expect((await deliver()).status).toBe(200);
-      const [patch] = patches(calls) as Array<Record<string, unknown>>;
-      expect(patch).toMatchObject({
-        plan: "qron_launch",
-        generations_limit: 100,
-        generations_used: 0,
-      });
-      expect(patch).not.toHaveProperty("pack_credits");
-    });
-
-    it("moves a pack buyer's leftover into pack_credits when they subscribe", async () => {
-      state.event = sessionEvent({ price: LAUNCH, id: "cs_subscribe" });
-      const calls = installFetch({
-        row: {
-          last_grant_session_id: "cs_old",
-          plan: "starter",
-          generations_limit: 100,
-          generations_used: 40,
-          pack_credits: 0,
-        },
-      });
-      expect((await deliver()).status).toBe(200);
-      expect(patches(calls)).toEqual([
-        expect.objectContaining({
-          plan: "qron_launch",
-          generations_limit: 100,
-          generations_used: 0,
-          pack_credits: 60,
-        }),
-      ]);
-    });
-
-    it("leaves a pack-only buyer untouched on invoice.paid for a one-time price", async () => {
-      state.event = {
-        id: "evt_inv2",
-        type: "invoice.paid",
-        data: {
-          object: {
-            customer: "cus_1",
-            lines: { data: [{ price: { id: STARTER } }] },
-          },
-        },
-      };
-      const calls = installFetch();
-      expect((await deliver()).status).toBe(200);
-      expect(patches(calls)).toEqual([]);
     });
 
     it("does not add credits twice for a duplicate event", async () => {

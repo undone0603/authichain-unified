@@ -30,7 +30,6 @@ async function loadCreditProfile(userId: string): Promise<{
     generations_used: number;
     generations_limit: number;
     tier: string | null;
-    pack_credits?: number | null;
   } | null;
 }> {
   const admin = createClient(
@@ -40,56 +39,34 @@ async function loadCreditProfile(userId: string): Promise<{
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("generations_used, generations_limit, tier, pack_credits")
+    .select("generations_used, generations_limit, tier")
     .eq("id", userId)
     .single();
 
   return { admin, profile };
 }
 
-type CreditProfile = {
-  generations_used: number;
-  generations_limit: number;
-  tier: string | null;
-  pack_credits?: number | null;
-};
-
-function packBalance(profile: CreditProfile): number {
-  const n = Number(profile.pack_credits ?? 0);
-  return Number.isFinite(n) && n > 0 ? n : 0;
-}
-
-function isUnlimited(profile: CreditProfile): boolean {
-  return profile.tier === "enterprise" || profile.generations_limit >= 999999;
-}
-
-/** Monthly/plain allowance left, then separate pack credits (see migration 20261017023000). */
-export function creditStatus(profile: CreditProfile | null): CreditResult {
+function creditStatus(
+  profile: {
+    generations_used: number;
+    generations_limit: number;
+    tier: string | null;
+  } | null
+): CreditResult {
   if (!profile) return { ok: false, error: "Profile not found" };
-  if (isUnlimited(profile)) return { ok: true, remaining: Infinity };
-  const allowance = Math.max(
-    0,
-    profile.generations_limit - profile.generations_used
-  );
-  const remaining = allowance + packBalance(profile);
-  if (remaining <= 0) return { ok: false, error: "Generation limit reached" };
-  return { ok: true, remaining };
-}
 
-/**
- * Which column one generation spends: the monthly/plain allowance first,
- * then pack credits. Null when nothing is left or the profile is unlimited.
- */
-export function creditSpend(
-  profile: CreditProfile
-): { generations_used: number } | { pack_credits: number } | null {
-  if (isUnlimited(profile)) return null;
-  if (profile.generations_used < profile.generations_limit) {
-    return { generations_used: profile.generations_used + 1 };
+  if (profile.tier === "enterprise" || profile.generations_limit >= 999999) {
+    return { ok: true, remaining: Infinity };
   }
-  const pack = packBalance(profile);
-  if (pack > 0) return { pack_credits: pack - 1 };
-  return null;
+
+  if (profile.generations_used >= profile.generations_limit) {
+    return { ok: false, error: "Generation limit reached" };
+  }
+
+  return {
+    ok: true,
+    remaining: profile.generations_limit - profile.generations_used,
+  };
 }
 
 /** Non-mutating credit check so a failed generate does not spend a pack. */
@@ -99,23 +76,27 @@ export async function checkCredit(userId: string): Promise<CreditResult> {
 }
 
 /**
- * Deduct one generation credit from the user's profile: monthly allowance
- * first, then pack credits. Returns { ok, remaining } or { ok: false, error }.
+ * Deduct one generation credit from the user's profile.
+ * Returns { ok, remaining } or { ok: false, error }.
  */
 export async function deductCredit(userId: string): Promise<CreditResult> {
   const { admin, profile } = await loadCreditProfile(userId);
   const status = creditStatus(profile);
   if (!status.ok || !profile) return status;
-  if (isUnlimited(profile)) return { ok: true, remaining: Infinity };
 
-  const spend = creditSpend(profile);
-  if (!spend) return { ok: false, error: "Generation limit reached" };
+  if (profile.tier === "enterprise" || profile.generations_limit >= 999999) {
+    return { ok: true, remaining: Infinity };
+  }
 
-  const { error } = await (admin.from("profiles") as any)
-    .update(spend)
+  const { error } = await admin
+    .from("profiles")
+    .update({ generations_used: profile.generations_used + 1 })
     .eq("id", userId);
 
   if (error) return { ok: false, error: error.message };
 
-  return { ok: true, remaining: (status.remaining ?? 1) - 1 };
+  return {
+    ok: true,
+    remaining: profile.generations_limit - profile.generations_used - 1,
+  };
 }
