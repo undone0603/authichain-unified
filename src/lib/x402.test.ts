@@ -673,7 +673,25 @@ describe("x402OpenApiDocument", () => {
       currency: "USD",
       amount: "0.1",
     });
+    expect(post.responses["400"]).toBeTruthy();
     expect(post.responses["402"]).toBeTruthy();
+    const schema = (
+      spec.paths["/api/x402"] as {
+        post: {
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: { properties: Record<string, { format?: string }> };
+              };
+            };
+          };
+        };
+      }
+    ).post.requestBody.content["application/json"].schema;
+    expect(Object.keys(schema.properties)).toEqual(["sealId"]);
+    expect(schema.properties.sealId.format).toBe("uuid");
+    expect(spec.info.description).toContain("POST /api/v1/agent-verify");
+    expect(spec.info.description).toContain("HTTP 400 before payment");
     const battery = spec.paths["/battery-passport"] as {
       get: { description: string };
     };
