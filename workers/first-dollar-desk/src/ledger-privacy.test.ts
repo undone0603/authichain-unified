@@ -57,6 +57,11 @@ function fakeKv() {
   const store = new Map<string, string>();
   store.set("ledger", JSON.stringify(seeded));
   store.set("onchain_sync_at", new Date().toISOString());
+  store.set("stripe_session_queue", JSON.stringify(["cs_test_queue_1"]));
+  store.set(
+    "stripe_webhook_last",
+    JSON.stringify({ at: "2026-10-17T14:00:00.000Z", type: "checkout.session.completed", sessionId: "cs_test_privacy_1", amountCents: 100, paymentLink: "plink_test_1", receiptStatus: "qualified", receiptId: "cs_cs_test_privacy_1" })
+  );
   return {
     store,
     get: async (k: string) => store.get(k) ?? null,
@@ -175,5 +180,28 @@ describe("first-dollar-desk /api/ledger privacy (RES-78)", () => {
       "https://first-dollar-desk.example/api/ledger"
     );
     expect(text).not.toMatch(/@/);
+  });
+  it("publishes no cs_ id and no email in /api/goal, MCP get_goal or /buy/api/ledger JSON", async () => {
+    const mcp = new Request("https://authichain.com/buy/mcp", {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_goal", arguments: {} } }),
+    });
+    for (const req of [
+      new Request("https://authichain.com/buy/api/goal"),
+      new Request("https://authichain.com/buy/api/ledger"),
+      mcp,
+    ]) {
+      const res = await worker.fetch(req, { LEDGER: fakeKv() });
+      const text = await res.text();
+      expect(res.status, req.url).toBe(200);
+      expect(text, req.url).not.toContain("cs_");
+      expect(text, req.url).not.toContain("plink_");
+      expect(text, req.url).not.toMatch(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+    }
+    const goal = await (await worker.fetch(new Request("https://authichain.com/buy/api/goal"), { LEDGER: fakeKv() })).json();
+    expect(["number", "object"]).toContain(typeof goal.stripeIngestion.thanksQueueDepth);
+    expect(goal.stripeIngestion).not.toHaveProperty("thanksQueueSessionIds");
+    expect(goal.stripeIngestion.lastWebhook.receiptStatus).toBe("qualified");
   });
 });

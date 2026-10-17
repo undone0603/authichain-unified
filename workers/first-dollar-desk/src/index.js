@@ -761,6 +761,20 @@ async function goalExtras(env, thanksQueue = null) {
   };
 }
 __name(goalExtras, "goalExtras");
+// RES-78: /api/goal and MCP get_goal never publish Stripe session, receipt or
+// payment-link ids. Queue is a count only (thanksQueueDepth); the last webhook
+// keeps time, type, amount and outcome.
+function publicWebhookSummary(last) {
+  if (!last || typeof last !== "object") return null;
+  return {
+    at: last.at ?? null,
+    type: last.type ?? null,
+    ignored: Boolean(last.ignored),
+    amountCents: typeof last.amountCents === "number" ? last.amountCents : null,
+    receiptStatus: last.receiptStatus ?? null
+  };
+}
+__name(publicWebhookSummary, "publicWebhookSummary");
 function goalPayload(ledger, origin, env = {}, extras = {}) {
   const goal = goalState(ledger);
   const stripeWebhook = Boolean(String(env.STRIPE_WEBHOOK_SECRET ?? "").trim());
@@ -779,9 +793,8 @@ function goalPayload(ledger, origin, env = {}, extras = {}) {
       polling: stripePolling,
       thanksQueue: true,
       thanksQueueDepth: typeof extras.thanksQueueDepth === "number" ? extras.thanksQueueDepth : null,
-      thanksQueueSessionIds: Array.isArray(extras.thanksQueueSessionIds) ? extras.thanksQueueSessionIds : null,
       pushSessionUrl: `${origin}/api/stripe/push-session`,
-      lastWebhook: extras.lastStripeWebhook ?? null,
+      lastWebhook: publicWebhookSummary(extras.lastStripeWebhook),
       onchainSyncAt: extras.onchainSyncAt ?? null
     },
     humanCheckout: HUMAN_PAY,
