@@ -202,7 +202,7 @@ export async function handleGeneratePost(opts: {
    * Claims one anonymous free-sample generation. Must fail closed (ok: false)
    * when the limiter is unavailable. Omitted = no anonymous sample.
    */
-  claimFreeSample?: () => Promise<{ ok: boolean }>;
+  claimFreeSample?: () => Promise<{ ok: boolean; reason?: "used" | "paused" }>;
 }): Promise<GeneratePostResult> {
   const packs = generateCreditPacks();
   if (!opts.userId && !opts.claimFreeSample) {
@@ -234,19 +234,26 @@ export async function handleGeneratePost(opts: {
 
   const anonymous = !opts.userId;
   if (anonymous) {
-    let claimed = false;
+    let claim: { ok: boolean; reason?: "used" | "paused" } = {
+      ok: false,
+      reason: "paused",
+    };
     try {
-      claimed = (await opts.claimFreeSample!()).ok;
+      claim = await opts.claimFreeSample!();
     } catch {
-      claimed = false;
+      claim = { ok: false, reason: "paused" };
     }
-    if (!claimed) {
+    if (!claim.ok) {
+      // Only a visitor whose own per-IP quota is spent hears "used up".
+      // Daily cap, limiter down or unknown reason = paused.
+      const used = claim.reason === "used";
       return {
         status: 401,
         body: {
-          message:
-            "Your free sample is used up. Starter is $29 once, no subscription, and its 100 generations never expire.",
-          code: "FREE_SAMPLE_USED",
+          message: used
+            ? "Your free sample is used up. Starter is $29 once, no subscription, and its 100 generations never expire."
+            : "Free samples are paused for today. Starter is $29 once, no subscription, and its 100 generations never expire.",
+          code: used ? "FREE_SAMPLE_USED" : "FREE_SAMPLE_PAUSED",
           packs,
           pricing: "/pricing",
         },

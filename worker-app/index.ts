@@ -462,7 +462,7 @@ app.post("/api/generate", async c => {
         // Fail closed: no limiter binding or no client IP = no free sample.
         const ns = c.env?.RATE_LIMITER;
         const ip = c.req.header("cf-connecting-ip");
-        if (!ns || !ip) return { ok: false };
+        if (!ns || !ip) return { ok: false, reason: "paused" as const };
         const {
           FREE_SAMPLE_GENERATIONS,
           FREE_SAMPLE_WINDOW_MS,
@@ -476,14 +476,14 @@ app.post("/api/generate", async c => {
           FREE_SAMPLE_GLOBAL_DAILY_CAP,
           24 * 60 * 60_000
         );
-        if (!global) return { ok: false };
+        if (!global) return { ok: false, reason: "paused" as const };
         const perIp = await checkRateLimit(
           ns,
           `free-sample:${ip}`,
           FREE_SAMPLE_GENERATIONS,
           FREE_SAMPLE_WINDOW_MS
         );
-        return { ok: perIp };
+        return perIp ? { ok: true } : { ok: false, reason: "used" as const };
       },
       rememberPresentation: async record => {
         if (!sessions) return;

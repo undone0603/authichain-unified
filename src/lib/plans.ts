@@ -47,13 +47,14 @@ export const PLANS: Plan[] = [
     name: "Free",
     price: 0,
     description:
-      "5 free sample generations on /generate. No account, no card. Lookup verify only.",
+      "5 free sample generations on /generate. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Lookup verify only.",
     generations: 5,
     stripe_price_id: null,
     stripe_mode: null,
     tier: "free",
     features: [
       "5 free sample generations",
+      "Limit 5 per visitor every 30 days, while the daily sample limit lasts",
       "No account, no card",
       "Lookup verify only (no GPT-4V)",
       "Then Starter: $29 once, no subscription, never expire",

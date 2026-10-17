@@ -304,8 +304,8 @@ describe("POST /api/generate", () => {
     expect(res.status).toBe(401);
     expect(res.headers.get("content-type")).toMatch(/json/);
     const body = await res.json();
-    // No RATE_LIMITER binding in tests: the free sample fails closed.
-    expect(body.code).toBe("FREE_SAMPLE_USED");
+    // No RATE_LIMITER binding in tests: the free sample fails closed as paused.
+    expect(body.code).toBe("FREE_SAMPLE_PAUSED");
     expect(Array.isArray(body.packs)).toBe(true);
   });
 });
@@ -347,7 +347,10 @@ describe("app host /", () => {
   it.each([
     ["/pricing", "https://authichain.com/pricing"],
     ["/protocol", "https://authichain.com/protocol"],
-    ["/api/verify?id=polygon-anchor-1", "https://authichain.com/api/verify?id=polygon-anchor-1"],
+    [
+      "/api/verify?id=polygon-anchor-1",
+      "https://authichain.com/api/verify?id=polygon-anchor-1",
+    ],
   ])("301s app.authichain.com%s to the apex", async (path, location) => {
     const res = await app.request(path, {
       headers: { host: "app.authichain.com" },

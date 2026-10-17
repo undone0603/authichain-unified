@@ -1689,7 +1689,7 @@ function generateCreditLinksHtml(): string {
   }).join("\n");
   return (
     "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
-    "<p>Try 5 free generations, no account and no card. Then Starter Pack: 100 generations, $29 once, no subscription, never expire. Or Launch at $19/mo. A scannable QR is not an authenticity proof.</p>\n" +
+    "<p>Try 5 free generations, no account and no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations, $29 once, no subscription, never expire. Or Launch at $19/mo. A scannable QR is not an authenticity proof.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
@@ -1713,14 +1713,14 @@ function generateFormHtml(
     // LOOP-03 meta (docs/growth/2026-09-28-first-dollar-loops.md).
     title: "Living QR generator | QRON — 5 free, then $29 Starter Pack",
     description:
-      "Try 5 free AI QR generations, no account and no card. Then Starter Pack: 100 generations, $29 once, no subscription, never expire. A QR is not an authenticity proof.",
+      "5 free AI QR generations, no card (limit 5 per visitor every 30 days, while the daily sample limit lasts). Then Starter: $29 once, no subscription, never expire.",
     canonicalPath: "/generate",
     extraHead: "<style>" + SITE_FORM_CSS + "</style>",
     bodyHtml:
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
       statusBlock +
-      "<p>Try 5 free generations, no account and no card. Then Starter Pack: 100 generations, $29 once, no subscription, never expire. Or Launch at $19/mo. A scannable QR is not an authenticity proof.</p>\n" +
+      "<p>Try 5 free generations, no account and no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations, $29 once, no subscription, never expire. Or Launch at $19/mo. A scannable QR is not an authenticity proof.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
       '<form id="generate-form" action="/generate" method="post">\n' +
@@ -1752,7 +1752,7 @@ function generateFormHtml(
       ".then(function(res){return res.json().then(function(data){return {res:res,data:data};});})\n" +
       ".then(function(r){\n" +
       "if(r.res.status===401){\n" +
-      "if(r.data&&r.data.code==='FREE_SAMPLE_USED'){err.hidden=false;err.textContent=r.data.message;}\n" +
+      "if(r.data&&r.data.code&&r.data.code.indexOf('FREE_SAMPLE_')===0){err.hidden=false;err.textContent=r.data.message;}\n" +
       "form.submit();\n" +
       "return;\n" +
       "}\n" +

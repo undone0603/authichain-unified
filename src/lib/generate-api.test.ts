@@ -123,7 +123,9 @@ describe("handleGeneratePost", () => {
   });
 
   it("walls the anonymous caller once the free sample is used", async () => {
-    const claimFreeSample = vi.fn().mockResolvedValue({ ok: false });
+    const claimFreeSample = vi
+      .fn()
+      .mockResolvedValue({ ok: false, reason: "used" });
     const result = await handleGeneratePost({
       body: { targetUrl: "https://example.com", prompt: "neon" },
       userId: null,
@@ -140,6 +142,7 @@ describe("handleGeneratePost", () => {
 
   it("fails closed when the free-sample limiter throws", async () => {
     const claimFreeSample = vi.fn().mockRejectedValue(new Error("DO down"));
+    // fail closed as PAUSED, never "used up"
     const result = await handleGeneratePost({
       body: { targetUrl: "https://example.com", prompt: "neon" },
       userId: null,
@@ -149,7 +152,28 @@ describe("handleGeneratePost", () => {
       claimFreeSample,
     });
     expect(result.status).toBe(401);
+    expect(result.body.code).toBe("FREE_SAMPLE_PAUSED");
+    expect(String(result.body.message)).toMatch(
+      /^Free samples are paused for today\./
+    );
     expect(generateImage).not.toHaveBeenCalled();
+  });
+
+  it("says paused, not used up, when the daily cap is hit", async () => {
+    const claimFreeSample = vi
+      .fn()
+      .mockResolvedValue({ ok: false, reason: "paused" });
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(401);
+    expect(result.body.code).toBe("FREE_SAMPLE_PAUSED");
+    expect(String(result.body.message)).not.toContain("used up");
   });
 
   it("does not spend a free sample on an invalid request", async () => {
