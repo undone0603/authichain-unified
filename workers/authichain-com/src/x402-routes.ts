@@ -7,7 +7,8 @@
  * and answers an empty 404.
  *
  * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → 200 health
- *      (not_configured is OK — GET must not 404)
+ *      (not_configured is OK — GET must not 404). `freeCalls` says whether
+ *      the daily UUID allowance is armed. It never includes the salt or keys.
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
  * GET  /api/x402/listing → PayAPI-ready pack copied from health
  * GET  /api/x402/growth → directories + skills + sisters
@@ -184,9 +185,35 @@ function healthEnv(env?: X402Env): X402HealthEnv {
   };
 }
 
+export type X402FreeCallsHealth = {
+  armed: boolean;
+  limit: number;
+  window: "utc_day";
+  requires: "sealId UUID";
+};
+
+/**
+ * Public view of the daily free allowance. Armed only when this worker can
+ * actually grant a call: a service-role registry, a non-empty IP salt, and
+ * a positive limit. The salt and keys stay out of the JSON.
+ */
+export function x402FreeCallsHealth(env?: X402Env): X402FreeCallsHealth {
+  const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);
+  const salt = (env?.X402_FREE_IP_SALT || "").trim();
+  const creds = sealLookupCredentials(env);
+  const armed = salt.length > 0 && creds?.role === "service" && limit > 0;
+  return {
+    armed,
+    limit: armed ? limit : 0,
+    window: "utc_day",
+    requires: "sealId UUID",
+  };
+}
+
 async function healthResponse(env?: X402Env): Promise<Response> {
   hydrateX402(env);
-  return json(200, await x402HealthReport(healthEnv(env)));
+  const report = await x402HealthReport(healthEnv(env));
+  return json(200, { ...report, freeCalls: x402FreeCallsHealth(env) });
 }
 
 async function catalogResponse(env?: X402Env): Promise<Response> {
