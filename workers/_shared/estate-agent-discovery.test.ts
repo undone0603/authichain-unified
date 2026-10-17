@@ -64,6 +64,9 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
       hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/api/x402")
     );
     assert.ok(hasHttpsPath(text, "authichain.com", "/api/x402"));
+    assert.ok(text.includes("POST https://authichain.com/api/v1/agent-verify"));
+    assert.ok(hasHttpsPath(text, "authichain.com", "/api/x402/health"));
+    assert.ok(text.includes("paidVerify.bound false"));
     assert.ok(text.includes(`$${x402PriceUsd()} USDC`));
     assert.ok(
       hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/mcp")
@@ -111,6 +114,15 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
   for (const brand of BRANDS) {
     const spec = renderEstateOpenApi(brand);
     assert.equal(spec.openapi, "3.1.0");
+    assert.equal(
+      spec.paths["/api/v1/agent-verify"],
+      undefined,
+      "sisters must not advertise a path they 404"
+    );
+    assert.match(
+      spec.info.description,
+      /POST https:\/\/authichain\.com\/api\/v1\/agent-verify/
+    );
     assert.deepEqual(spec.servers, [{ url: sisterOrigin(brand) }]);
     const post = spec.paths["/api/x402"] as {
       get?: { responses: { "200": unknown } };

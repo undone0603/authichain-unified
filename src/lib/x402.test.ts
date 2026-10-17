@@ -85,6 +85,9 @@ describe("buildPaymentRequired", () => {
     expect(r.body.extensions.bazaar.info.input.method).toBe("POST");
     expect(r.body.extensions.bazaar.info.input.bodyType).toBe("json");
     expect(r.body.extensions.bazaar.schema["required"]).toEqual(["input"]);
+    expect(r.body.extensions.bazaar.info.input.body.sealId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    );
     expect(r.body.accepts[0].outputSchema).toEqual(
       r.body.extensions.bazaar.info
     );
@@ -633,7 +636,10 @@ describe("x402ScanFanout", () => {
   it("is the x402scan version+resources document, not the catalog", () => {
     const doc = x402ScanFanout();
     expect(doc.version).toBe(1);
-    expect(doc.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(doc.resources).toEqual([
+      "https://authichain.com/api/v1/agent-verify",
+      "https://authichain.com/api/x402",
+    ]);
     expect(JSON.stringify(doc)).not.toContain("/api/checkout");
     // "Not the catalog": exactly the two x402scan fields. (This line used to
     // assert the document never mentions authichain.com, which contradicts

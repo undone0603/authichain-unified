@@ -85,14 +85,14 @@ export function x402BazaarDiscovery(): X402BazaarExtension {
       type: "http",
       method: "POST",
       bodyType: "json",
-      body: { sealId: "demo" },
+      body: { sealId: "00000000-0000-4000-8000-000000000000" },
     },
     output: {
       type: "json",
       example: {
         verified: false,
         authenticityScore: 0,
-        subject: "demo",
+        subject: "00000000-0000-4000-8000-000000000000",
         details: {},
         settlement: {
           payer: "0x0000000000000000000000000000000000000000",
@@ -131,7 +131,8 @@ export function x402BazaarDiscovery(): X402BazaarExtension {
                 properties: {
                   sealId: {
                     type: "string",
-                    description: "Optional seal id to verify",
+                    description:
+                      "Required seal UUID. productId and serial are not registry keys.",
                   },
                   productId: { type: "string" },
                   serial: { type: "string" },
@@ -1092,7 +1093,7 @@ export function x402ScanFanout(
   const base = origin.replace(/\/+$/, "") || "https://authichain.com";
   return {
     version: 1,
-    resources: [`${base}/api/x402`],
+    resources: [`${base}/api/v1/agent-verify`, `${base}/api/x402`],
   };
 }
 
