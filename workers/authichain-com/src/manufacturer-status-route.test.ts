@@ -54,7 +54,12 @@ describe("manufacturer status on the apex", () => {
       const topic = body.params[0].topics[0] as string;
       const account = "0x" + "00".repeat(12) + ADDRESS.slice(2).toLowerCase();
       const log = {
-        topics: [topic, "0x" + "ab".repeat(32), account, "0x" + "11".repeat(32)],
+        topics: [
+          topic,
+          "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",
+          account,
+          "0x" + "11".repeat(32),
+        ],
         transactionHash: "0x" + "aa".repeat(32),
         blockNumber: "0x4fffff0",
       };
@@ -86,6 +91,8 @@ describe("manufacturer status on the apex", () => {
     expect(body.history[1].timestamp).toBe("10");
     expect(body.history[1].logIndex).toBe("2");
     expect(body.history[0].timestamp).toBeNull();
+    expect(body.history[0].role).toBe("minter");
+    expect(body.history[1].role).toBe("");
     expect(body.current.minter).toBe(true);
     expect(body.current.admin).toBe(false);
     expect(body.current.manufacturerVerified).toBe(false);

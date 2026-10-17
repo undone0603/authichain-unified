@@ -14,6 +14,7 @@ import {
   ROLE_IDS,
   compareHistory,
   logFromBlock,
+  roleName,
   timestampWord,
 } from "../../manufacturer-status/src/window";
 
@@ -119,7 +120,7 @@ function mapLogs(logs: RpcLog[], type: "granted" | "revoked") {
     block: log.blockNumber ? BigInt(log.blockNumber).toString() : "unknown",
     logIndex: logIndexOf(log),
     tx: log.transactionHash ?? "",
-    role: log.topics?.[1] ?? "",
+    role: roleName(log.topics?.[1] ?? ""),
     sender: topicAddress(log.topics?.[3]),
     timestamp: null as string | null,
   }));
@@ -172,7 +173,7 @@ document.getElementById("q").addEventListener("submit", async (event) => {
     const current = body.current || {};
     const flag = (name, value) => name + ": " + (value ? "yes" : "no");
     const events = Array.isArray(body.history)
-      ? body.history.map((item) => item.type + " block " + item.block).join("; ")
+      ? body.history.map((item) => item.type + (item.role ? " " + item.role : "") + " block " + item.block).join("; ")
       : "";
     out.textContent = [
       flag("Admin", current.admin),

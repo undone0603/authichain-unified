@@ -16,6 +16,15 @@ export const ROLE_IDS = {
   pauser: "0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a",
 } as const;
 
+/** AccessControl topic to a role name. An unrecognized topic stays "unknown". */
+export function roleName(topic: string): string {
+  const normalized = topic.toLowerCase();
+  for (const [name, id] of Object.entries(ROLE_IDS)) {
+    if (id === normalized) return name;
+  }
+  return "unknown";
+}
+
 /** keccak256 of the contract event signatures. Not function selectors. */
 export const EVENT_TOPICS = {
   roleGranted:

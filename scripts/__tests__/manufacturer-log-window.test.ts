@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   DEPLOYED_BLOCK,
   FREE_RPC_SPAN,
+  ROLE_IDS,
   compareHistory,
   logFromBlock,
+  roleName,
   timestampWord,
 } from "../../workers/manufacturer-status/src/window";
 
@@ -24,6 +26,14 @@ describe("manufacturer log window", () => {
     expect(timestampWord("0x" + "0".repeat(62) + "0a")).toBe("10");
     expect(timestampWord("0x")).toBeNull();
     expect(timestampWord("0x" + "ab".repeat(40))).toBeNull();
+  });
+
+  it("names the four contract roles and hides any other topic", () => {
+    expect(roleName(ROLE_IDS.minter)).toBe("minter");
+    expect(roleName(ROLE_IDS.admin.toUpperCase())).toBe("admin");
+    expect(roleName(ROLE_IDS.updater)).toBe("updater");
+    expect(roleName(ROLE_IDS.pauser)).toBe("pauser");
+    expect(roleName("0x" + "ab".repeat(32))).toBe("unknown");
   });
 
   it("orders a later log in the same block first", () => {
