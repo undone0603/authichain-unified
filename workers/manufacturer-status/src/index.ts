@@ -182,13 +182,9 @@ app.get('/:address/history', async (c) => {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    const rangeRejected = /10000|range|archive/i.test(message);
-    if (!rangeRejected) {
-      return c.json(
-        { error: 'log_query_failed', address, contract: CONTRACT },
-        502
-      );
-    }
+    const historyError = /10000|range|archive/i.test(message)
+      ? 'log_range_rejected'
+      : 'log_query_failed';
     return c.json({
       address,
       contract: CONTRACT,
@@ -196,7 +192,7 @@ app.get('/:address/history', async (c) => {
       currentBlock: null,
       fromBlock: null,
       history: [],
-      historyError: 'log_range_rejected',
+      historyError,
       current,
       polygonscan: {
         contract: `https://polygonscan.com/address/${CONTRACT}`,
@@ -204,7 +200,7 @@ app.get('/:address/history', async (c) => {
         logs: `https://polygonscan.com/address/${CONTRACT}#events`,
       },
       disclaimer: HISTORY_DISCLAIMER,
-      source: 'live eth_call on Polygon; eth_getLogs for this window was rejected',
+      source: 'live eth_call on Polygon; eth_getLogs for this window did not return events',
     });
   }
 });

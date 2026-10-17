@@ -270,9 +270,8 @@ export async function tryHandleManufacturerStatus(
     });
   } catch (err) {
     const code = err instanceof Error ? err.message : "log_query_failed";
-    if (code !== "log_range_rejected") {
-      return json(502, { error: "log_query_failed", address, contract: CONTRACT });
-    }
+    const historyError =
+      code === "log_range_rejected" ? "log_range_rejected" : "log_query_failed";
     return json(200, {
       address,
       contract: CONTRACT,
@@ -280,7 +279,7 @@ export async function tryHandleManufacturerStatus(
       currentBlock: null,
       fromBlock: null,
       history: [],
-      historyError: "log_range_rejected",
+      historyError,
       current: roles,
       polygonscan: {
         contract: `https://polygonscan.com/address/${CONTRACT}`,
@@ -288,7 +287,7 @@ export async function tryHandleManufacturerStatus(
         logs: `https://polygonscan.com/address/${CONTRACT}#events`,
       },
       disclaimer: HISTORY_DISCLAIMER,
-      source: "live eth_call on Polygon; eth_getLogs for this window was rejected",
+      source: "live eth_call on Polygon; eth_getLogs for this window did not return events",
     });
   }
 }

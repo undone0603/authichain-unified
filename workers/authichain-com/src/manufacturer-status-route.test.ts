@@ -140,4 +140,30 @@ describe("manufacturer status on the apex", () => {
     expect(JSON.stringify(body)).not.toContain("allnodes");
     expect(JSON.stringify(body)).not.toContain("personal token");
   });
+
+  it("keeps current roles when the log query fails for another reason", async () => {
+    const fetchImpl = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      if (body.method === "eth_call") {
+        return new Response(JSON.stringify({ result: "0x" + "0".repeat(63) + "1" }));
+      }
+      return new Response(
+        JSON.stringify({
+          error: { message: "quota exceeded at secret-host.example" },
+        }),
+        { status: 429 }
+      );
+    }) as typeof fetch;
+    const res = await tryHandleManufacturerStatus(
+      req(`/api/manufacturer-status/${ADDRESS}/history`),
+      fetchImpl
+    );
+    expect(res?.status).toBe(200);
+    const body = await res!.json();
+    expect(body.history).toEqual([]);
+    expect(body.historyError).toBe("log_query_failed");
+    expect(body.current.minter).toBe(true);
+    expect(JSON.stringify(body)).not.toContain("secret-host.example");
+    expect(JSON.stringify(body)).not.toContain("quota");
+  });
 });
