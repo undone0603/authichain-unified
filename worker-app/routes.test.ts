@@ -304,7 +304,8 @@ describe("POST /api/generate", () => {
     expect(res.status).toBe(401);
     expect(res.headers.get("content-type")).toMatch(/json/);
     const body = await res.json();
-    expect(body.message).toMatch(/Authentication required/i);
+    // No RATE_LIMITER binding in tests: the free sample fails closed.
+    expect(body.code).toBe("FREE_SAMPLE_USED");
     expect(Array.isArray(body.packs)).toBe(true);
   });
 });

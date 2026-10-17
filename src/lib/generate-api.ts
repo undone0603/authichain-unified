@@ -160,6 +160,16 @@ export type GeneratePostResult = {
   body: Record<string, unknown>;
 };
 
+/**
+ * Free sample before Starter: about 5 generations with no account and no card
+ * (Zac, 2026-10-16, per Research brief starter-tier-demand-2026-10-16.md).
+ * Counted per client IP in the RATE_LIMITER Durable Object (atomic per key),
+ * with a global daily ceiling so the sample cannot run up image-gen cost.
+ */
+export const FREE_SAMPLE_GENERATIONS = 5;
+export const FREE_SAMPLE_WINDOW_MS = 30 * 24 * 60 * 60_000;
+export const FREE_SAMPLE_GLOBAL_DAILY_CAP = 100;
+
 type CreditFn = (
   userId: string
 ) => Promise<{ ok: boolean; remaining?: number; error?: string }>;
@@ -188,9 +198,14 @@ export async function handleGeneratePost(opts: {
   }) => Promise<QronPresentationAttestation | null>;
   /** Persist the signed presentation so a scan of resolve_url can verify it. */
   rememberPresentation?: (record: StoredQronPresentation) => Promise<void>;
+  /**
+   * Claims one anonymous free-sample generation. Must fail closed (ok: false)
+   * when the limiter is unavailable. Omitted = no anonymous sample.
+   */
+  claimFreeSample?: () => Promise<{ ok: boolean }>;
 }): Promise<GeneratePostResult> {
   const packs = generateCreditPacks();
-  if (!opts.userId) {
+  if (!opts.userId && !opts.claimFreeSample) {
     return {
       status: 401,
       body: {
@@ -217,7 +232,35 @@ export async function handleGeneratePost(opts: {
     };
   }
 
-  const credit = await opts.checkCredit(opts.userId);
+  const anonymous = !opts.userId;
+  if (anonymous) {
+    let claimed = false;
+    try {
+      claimed = (await opts.claimFreeSample!()).ok;
+    } catch {
+      claimed = false;
+    }
+    if (!claimed) {
+      return {
+        status: 401,
+        body: {
+          message:
+            "Your free sample is used up. Starter is $29 once, no subscription, and its 100 generations never expire.",
+          code: "FREE_SAMPLE_USED",
+          packs,
+          pricing: "/pricing",
+        },
+      };
+    }
+  }
+
+  const credit = anonymous
+    ? {
+        ok: true as boolean,
+        remaining: undefined as number | undefined,
+        error: undefined as string | undefined,
+      }
+    : await opts.checkCredit(opts.userId!);
   if (!credit.ok) {
     return {
       status: 403,
@@ -252,9 +295,12 @@ export async function handleGeneratePost(opts: {
     if (!generated.imageUrl) {
       return { status: 502, body: { message: "No image returned" } };
     }
-    const deducted = await opts.deductCredit(opts.userId);
+    const deducted = anonymous
+      ? { ok: false, remaining: undefined }
+      : await opts.deductCredit(opts.userId!);
     let bind: QronPresentationAttestation | null = null;
-    if (opts.bindAttestation) {
+    // Free-sample images are not bound to an issuer attestation.
+    if (opts.bindAttestation && opts.userId) {
       try {
         bind = await opts.bindAttestation({
           destinationUrl: targetUrl,
@@ -305,6 +351,7 @@ export async function handleGeneratePost(opts: {
         },
         presentation,
         remaining_credits: deducted.ok ? deducted.remaining : credit.remaining,
+        ...(anonymous ? { free_sample: true } : {}),
       },
     };
   } catch (err) {

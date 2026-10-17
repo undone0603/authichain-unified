@@ -1485,7 +1485,7 @@ export function QronHome() {
               },
               {
                 q: 'What if I need more generations than my plan includes?',
-                a: 'Buy another pack. Starter adds 100 generations for $29 and Creator adds 500 for $99, both one-time.',
+                a: 'Buy another pack. Starter adds 100 generations for $29 once (no subscription, never expire) and Creator adds 500 for $99, one-time.',
               },
               {
                 q: 'What AI model generates the QR art?',

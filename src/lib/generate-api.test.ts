@@ -97,6 +97,72 @@ describe("handleGeneratePost", () => {
     expect(deductCredit).not.toHaveBeenCalled();
   });
 
+  it("serves an anonymous free sample without touching account credits", async () => {
+    const claimFreeSample = vi.fn().mockResolvedValue({ ok: true });
+    const bindAttestation = vi.fn();
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      bindAttestation,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.free_sample).toBe(true);
+    expect(claimFreeSample).toHaveBeenCalledTimes(1);
+    expect(checkCredit).not.toHaveBeenCalled();
+    expect(deductCredit).not.toHaveBeenCalled();
+    expect(bindAttestation).not.toHaveBeenCalled();
+  });
+
+  it("walls the anonymous caller once the free sample is used", async () => {
+    const claimFreeSample = vi.fn().mockResolvedValue({ ok: false });
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(401);
+    expect(result.body.code).toBe("FREE_SAMPLE_USED");
+    expect(String(result.body.message)).toContain(
+      "$29 once, no subscription"
+    );
+    expect(generateImage).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the free-sample limiter throws", async () => {
+    const claimFreeSample = vi.fn().mockRejectedValue(new Error("DO down"));
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(401);
+    expect(generateImage).not.toHaveBeenCalled();
+  });
+
+  it("does not spend a free sample on an invalid request", async () => {
+    const claimFreeSample = vi.fn().mockResolvedValue({ ok: true });
+    const result = await handleGeneratePost({
+      body: { prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(400);
+    expect(claimFreeSample).not.toHaveBeenCalled();
+  });
+
   it("returns 400 when the destination URL is missing", async () => {
     const result = await handleGeneratePost({
       body: { prompt: "neon" },

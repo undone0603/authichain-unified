@@ -1019,8 +1019,9 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     const body = await res.text();
     expect(body).toContain("min-height:44px");
     expect(body).toContain('<label for="targetUrl">Product URL</label>');
-    expect(body).toContain("Sign in to use account credits.");
-    expect(body).toContain("100 generations for $29, one-time");
+    expect(body).toContain("Try 5 free generations, no account and no card.");
+    expect(body).toContain("Try 5 free generations, no account and no card.");
+    expect(body).toContain("100 generations, $29 once, no subscription, never expire");
     expect(body).toContain("Launch at $19/mo");
     expect(body).not.toContain("Five generations are free");
     expect(body).toContain("not an authenticity proof");
@@ -1036,7 +1037,7 @@ describe("renderDynamicPage: /generate Living QR", () => {
     const body = await res.text();
     expect(res.status).toBe(200);
     expect(body).toContain(
-      "<title>Living QR generator | QRON — account credits and $29 Starter Pack</title>"
+      "<title>Living QR generator | QRON — 5 free, then $29 Starter Pack</title>"
     );
     expect(body).toContain("Generate a Living QR");
     expect(body).not.toContain("$QRON");
@@ -1064,7 +1065,7 @@ describe("renderDynamicPage: /generate Living QR", () => {
         .slice(1)
         .some(rest => rest.slice(0, 40).includes("1Nu"))
     ).toBe(false);
-    expect(body).toContain("Sign in to use account credits.");
+    expect(body).toContain("Try 5 free generations, no account and no card.");
     expect(body).not.toContain("Five generations are free");
     expect(body).not.toContain("buy.stripe.com");
     expect(body).not.toContain("Those 5 are signed");
