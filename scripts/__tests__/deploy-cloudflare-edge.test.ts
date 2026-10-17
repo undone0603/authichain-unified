@@ -46,7 +46,19 @@ describe("manufacturer-status stays off the public workers.dev host", () => {
     expect(source).not.toContain("polygon.drpc.org");
     expect(source).toContain("polygon-bor-rpc.publicnode.com");
     expect(source).not.toContain("Full on-chain");
-    expect(source).toContain("latest 10,000 Polygon blocks");
+    expect(source).toContain("isManufacturerVerified");
+    expect(source).toContain("HISTORY_DISCLAIMER");
+    const windowSrc = read("workers/manufacturer-status/src/window.ts");
+    expect(windowSrc).toContain("latest 10,000 Polygon blocks");
+    expect(windowSrc).toContain("not the full history");
+  });
+
+  it("does not store the dead Polygon RPC as a worker secret", () => {
+    const workflow = read(".github/workflows/deploy-manufacturer-status.yml");
+    expect(workflow).toContain("workflow_dispatch");
+    expect(workflow).toContain("--keep-vars");
+    expect(workflow).not.toContain("polygon-rpc.com");
+    expect(workflow).not.toContain("secret put");
   });
 
   it("answers the apex history path before the app proxy", () => {

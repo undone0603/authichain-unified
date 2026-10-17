@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { createPublicClient, http, parseAbiItem, type Address } from 'viem';
 import { polygon } from 'viem/chains';
-import { DEPLOYED_BLOCK, logFromBlock } from './window';
+import { DEPLOYED_BLOCK, HISTORY_DISCLAIMER, ROLE_IDS, logFromBlock } from './window';
 
 const CONTRACT = '0x4da4D2675e52374639C9c954f4f653887A9972BE' as const;
 const PUBLIC_RPC = 'https://polygon-bor-rpc.publicnode.com';
@@ -13,7 +13,50 @@ const ROLE_REVOKED = parseAbiItem(
   'event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)'
 );
 
+const ROLE_ABI = [
+  {
+    type: 'function',
+    name: 'hasRole',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'role', type: 'bytes32' },
+      { name: 'account', type: 'address' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    type: 'function',
+    name: 'isManufacturerVerified',
+    stateMutability: 'view',
+    inputs: [{ name: 'manufacturer', type: 'address' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+] as const;
+
 const app = new Hono();
+
+async function readCurrent(client: ReturnType<typeof createPublicClient>, address: Address) {
+  const has = (role: string) =>
+    client.readContract({
+      address: CONTRACT,
+      abi: ROLE_ABI,
+      functionName: 'hasRole',
+      args: [role as `0x${string}`, address],
+    });
+  const [admin, minter, updater, pauser, manufacturerVerified] = await Promise.all([
+    has(ROLE_IDS.admin),
+    has(ROLE_IDS.minter),
+    has(ROLE_IDS.updater),
+    has(ROLE_IDS.pauser),
+    client.readContract({
+      address: CONTRACT,
+      abi: ROLE_ABI,
+      functionName: 'isManufacturerVerified',
+      args: [address],
+    }),
+  ]);
+  return { admin, minter, updater, pauser, manufacturerVerified };
+}
 
 function isValidAddress(addr: string): addr is Address {
   return /^0x[a-fA-F0-9]{40}$/.test(addr);
@@ -29,6 +72,16 @@ app.get('/:address/history', async (c) => {
     chain: polygon,
     transport: http(PUBLIC_RPC),
   });
+
+  let current;
+  try {
+    current = await readCurrent(client, address);
+  } catch {
+    return c.json(
+      { error: 'log_query_failed', address, contract: CONTRACT },
+      502
+    );
+  }
 
   try {
     const currentBlock = await client.getBlockNumber();
@@ -74,30 +127,41 @@ app.get('/:address/history', async (c) => {
       currentBlock: currentBlock.toString(),
       fromBlock: fromBlock.toString(),
       history,
+      current,
       polygonscan: {
         contract: `https://polygonscan.com/address/${CONTRACT}`,
         address: `https://polygonscan.com/address/${address}`,
         logs: `https://polygonscan.com/address/${CONTRACT}#events`,
       },
-      disclaimer:
-        'RoleGranted / RoleRevoked events in the latest 10,000 Polygon blocks. ' +
-        'The free public RPC rejects longer ranges, so this is not the full history since deployment. ' +
-        'Latest event of the relevant role inside that window is not proof of physical product authenticity, regulatory status, ' +
-        'or that any specific item is genuine. ' +
-        'Verify certificates yourself at https://authichain.com/protocol.',
-      source: 'live eth_getLogs on Polygon (public RPC, no cache, no off-chain authority)',
+      disclaimer: HISTORY_DISCLAIMER,
+      source: 'live eth_call and eth_getLogs on Polygon (public RPC, no cache, no off-chain authority)',
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const rangeRejected = /10000|range|archive/i.test(message);
-    return c.json(
-      {
-        error: rangeRejected ? "log_range_rejected" : "log_query_failed",
-        address,
-        contract: CONTRACT,
+    if (!rangeRejected) {
+      return c.json(
+        { error: 'log_query_failed', address, contract: CONTRACT },
+        502
+      );
+    }
+    return c.json({
+      address,
+      contract: CONTRACT,
+      chainId: 137,
+      currentBlock: null,
+      fromBlock: null,
+      history: [],
+      historyError: 'log_range_rejected',
+      current,
+      polygonscan: {
+        contract: `https://polygonscan.com/address/${CONTRACT}`,
+        address: `https://polygonscan.com/address/${address}`,
+        logs: `https://polygonscan.com/address/${CONTRACT}#events`,
       },
-      502
-    );
+      disclaimer: HISTORY_DISCLAIMER,
+      source: 'live eth_call on Polygon; eth_getLogs for this window was rejected',
+    });
   }
 });
 

@@ -51,14 +51,5 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Set public RPC secret if needed
-        if: steps.secrets_check.outputs.skip != 'true'
-        working-directory: workers/manufacturer-status
-        run: |
-          echo "https://polygon-rpc.com" | npx wrangler secret put POLYGON_RPC || echo "secret already set or failed (non-fatal)"
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
       - name: Done
         run: echo "manufacturer-status deployed (or skipped)"

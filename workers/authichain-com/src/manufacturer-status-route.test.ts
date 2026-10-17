@@ -36,6 +36,14 @@ describe("manufacturer status on the apex", () => {
     const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body));
       calls.push(body.method);
+      if (body.method === "eth_call") {
+        const data = String(body.params[0].data);
+        const minter = "9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
+        const result = data.includes(minter)
+          ? "0x" + "0".repeat(63) + "1"
+          : "0x" + "0".repeat(64);
+        return new Response(JSON.stringify({ result }));
+      }
       if (body.method === "eth_blockNumber") {
         return new Response(JSON.stringify({ result: "0x5000000" }));
       }
@@ -59,8 +67,13 @@ describe("manufacturer status on the apex", () => {
     const body = await res!.json();
     expect(body.history).toHaveLength(1);
     expect(body.history[0].type).toBe("granted");
+    expect(body.current.minter).toBe(true);
+    expect(body.current.admin).toBe(false);
+    expect(body.current.manufacturerVerified).toBe(false);
     expect(body.disclaimer).toContain("not the full history");
-    expect(calls).toEqual(["eth_blockNumber", "eth_getLogs", "eth_getLogs"]);
+    expect(calls.filter((method) => method === "eth_call")).toHaveLength(5);
+    expect(calls).toContain("eth_blockNumber");
+    expect(calls.filter((method) => method === "eth_getLogs")).toHaveLength(2);
     const span = BigInt(body.currentBlock) - BigInt(body.fromBlock);
     expect(span).toBe(10_000n);
   });
@@ -84,5 +97,32 @@ describe("manufacturer status on the apex", () => {
     const body = await res!.json();
     expect(body.error).toBe("log_range_rejected");
     expect(JSON.stringify(body)).not.toContain("allnodes");
+  });
+
+  it("keeps current roles when the log window is rejected", async () => {
+    const fetchImpl = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      if (body.method === "eth_call") {
+        return new Response(JSON.stringify({ result: "0x" + "0".repeat(63) + "1" }));
+      }
+      return new Response(
+        JSON.stringify({
+          error: { message: "Archive requests require a personal token" },
+        }),
+        { status: 403 }
+      );
+    }) as typeof fetch;
+    const res = await tryHandleManufacturerStatus(
+      req(`/api/manufacturer-status/${ADDRESS}/history`),
+      fetchImpl
+    );
+    expect(res?.status).toBe(200);
+    const body = await res!.json();
+    expect(body.history).toEqual([]);
+    expect(body.historyError).toBe("log_range_rejected");
+    expect(body.current.minter).toBe(true);
+    expect(body.current.manufacturerVerified).toBe(true);
+    expect(JSON.stringify(body)).not.toContain("allnodes");
+    expect(JSON.stringify(body)).not.toContain("personal token");
   });
 });

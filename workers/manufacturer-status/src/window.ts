@@ -8,6 +8,22 @@ export const DEPLOYED_BLOCK = 77_535_676n;
  */
 export const FREE_RPC_SPAN = 10_000n;
 
+/** keccak256 of the AccessControl role name. DEFAULT_ADMIN_ROLE is the zero word. */
+export const ROLE_IDS = {
+  admin: "0x0000000000000000000000000000000000000000000000000000000000000000",
+  minter: "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",
+  updater: "0x73e573f9566d61418a34d5de3ff49360f9c51fec37f7486551670290f6285dab",
+  pauser: "0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a",
+} as const;
+
+export const HISTORY_DISCLAIMER =
+  "Current role flags are hasRole and isManufacturerVerified on the contract. " +
+  "RoleGranted / RoleRevoked events are limited to the latest 10,000 Polygon blocks. " +
+  "That window is not the full history since deployment. " +
+  "A current role or an event in that window is not proof of physical product authenticity, " +
+  "regulatory status, or that any specific item is genuine. " +
+  "Verify certificates at https://authichain.com/protocol.";
+
 export function logFromBlock(
   current: bigint,
   deployed: bigint = DEPLOYED_BLOCK,

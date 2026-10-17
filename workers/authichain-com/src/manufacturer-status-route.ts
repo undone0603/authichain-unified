@@ -7,7 +7,12 @@
  * polygon-bor-rpc.publicnode.com for the latest 10,000 blocks only. That
  * host answers that recent window and rejects older archive ranges.
  */
-import { DEPLOYED_BLOCK, logFromBlock } from "../../manufacturer-status/src/window";
+import {
+  DEPLOYED_BLOCK,
+  HISTORY_DISCLAIMER,
+  ROLE_IDS,
+  logFromBlock,
+} from "../../manufacturer-status/src/window";
 
 const CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
 const RPC = "https://polygon-bor-rpc.publicnode.com";
@@ -18,13 +23,8 @@ const ROLE_REVOKED =
 
 const HISTORY =
   /^\/api\/manufacturer-status\/(0x[a-fA-F0-9]{40})\/history$/;
-
-const DISCLAIMER =
-  "RoleGranted / RoleRevoked events in the latest 10,000 Polygon blocks. " +
-  "The free public RPC rejects longer ranges, so this is not the full history since deployment. " +
-  "An event in that window is not proof of physical product authenticity, regulatory status, " +
-  "or that any specific item is genuine. " +
-  "Verify certificates at https://authichain.com/protocol.";
+const HAS_ROLE = "0x91d14854";
+const IS_MANUFACTURER_VERIFIED = "0xb95ace69";
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -50,6 +50,24 @@ const PAGE_HEADERS: Record<string, string> = {
 
 function accountTopic(address: string): string {
   return "0x" + address.slice(2).toLowerCase().padStart(64, "0");
+}
+
+function hasRoleData(role: string, address: string): string {
+  return HAS_ROLE + role.slice(2) + address.slice(2).toLowerCase().padStart(64, "0");
+}
+
+function verifiedData(address: string): string {
+  return (
+    IS_MANUFACTURER_VERIFIED +
+    address.slice(2).toLowerCase().padStart(64, "0")
+  );
+}
+
+function asBool(value: unknown): boolean {
+  if (typeof value !== "string" || !/^0x[0-9a-fA-F]+$/.test(value)) {
+    throw new Error("log_query_failed");
+  }
+  return BigInt(value) === 1n;
 }
 
 function topicAddress(topic: string | undefined): string {
@@ -107,7 +125,7 @@ function page(): Response {
 <title>Manufacturer role history</title>
 <main style="max-width:40rem;margin:2rem auto;font-family:system-ui,sans-serif">
   <h1>Manufacturer role history</h1>
-  <p>RoleGranted and RoleRevoked events for AuthiChainNFT on Polygon. The free RPC returns only the latest 10,000 blocks. This page does not take payment, and a role event is not a product passport.</p>
+  <p>Current minter, admin, updater, pauser, and manufacturer-verified flags are read from the contract. RoleGranted and RoleRevoked events are only the latest 10,000 blocks. This page does not take payment, and a role is not a product passport.</p>
   <form id="q">
     <label>Address <input name="address" required pattern="0x[a-fA-F0-9]{40}" placeholder="0x…" style="width:100%"></label>
     <button type="submit">Check history</button>
@@ -146,6 +164,29 @@ export async function tryHandleManufacturerStatus(
   const match = HISTORY.exec(path);
   if (!match) return json(400, { error: "invalid address" });
   const address = match[1];
+  let roles;
+  try {
+    const call = (data: string) =>
+      rpc(fetchImpl, "eth_call", [{ to: CONTRACT, data }, "latest"]);
+    const [admin, minter, updater, pauser, manufacturerVerified] = await Promise.all([
+      call(hasRoleData(ROLE_IDS.admin, address)),
+      call(hasRoleData(ROLE_IDS.minter, address)),
+      call(hasRoleData(ROLE_IDS.updater, address)),
+      call(hasRoleData(ROLE_IDS.pauser, address)),
+      call(verifiedData(address)),
+    ]);
+    roles = {
+      admin: asBool(admin),
+      minter: asBool(minter),
+      updater: asBool(updater),
+      pauser: asBool(pauser),
+      manufacturerVerified: asBool(manufacturerVerified),
+    };
+  } catch (err) {
+    const code = err instanceof Error ? err.message : "log_query_failed";
+    const error = code === "log_range_rejected" ? "log_range_rejected" : "log_query_failed";
+    return json(502, { error, address, contract: CONTRACT });
+  }
   try {
     const currentHex = await rpc(fetchImpl, "eth_blockNumber", []);
     if (typeof currentHex !== "string") throw new Error("log_query_failed");
@@ -180,19 +221,37 @@ export async function tryHandleManufacturerStatus(
       currentBlock: current.toString(),
       fromBlock: fromBlock.toString(),
       history,
+      current: roles,
       polygonscan: {
         contract: `https://polygonscan.com/address/${CONTRACT}`,
         address: `https://polygonscan.com/address/${address}`,
         logs: `https://polygonscan.com/address/${CONTRACT}#events`,
       },
-      disclaimer: DISCLAIMER,
+      disclaimer: HISTORY_DISCLAIMER,
       source:
-        "live eth_getLogs on Polygon (public RPC, no cache, no off-chain authority)",
+        "live eth_call and eth_getLogs on Polygon (public RPC, no cache, no off-chain authority)",
     });
   } catch (err) {
     const code = err instanceof Error ? err.message : "log_query_failed";
-    const error =
-      code === "log_range_rejected" ? "log_range_rejected" : "log_query_failed";
-    return json(502, { error, address, contract: CONTRACT });
+    if (code !== "log_range_rejected") {
+      return json(502, { error: "log_query_failed", address, contract: CONTRACT });
+    }
+    return json(200, {
+      address,
+      contract: CONTRACT,
+      chainId: 137,
+      currentBlock: null,
+      fromBlock: null,
+      history: [],
+      historyError: "log_range_rejected",
+      current: roles,
+      polygonscan: {
+        contract: `https://polygonscan.com/address/${CONTRACT}`,
+        address: `https://polygonscan.com/address/${address}`,
+        logs: `https://polygonscan.com/address/${CONTRACT}#events`,
+      },
+      disclaimer: HISTORY_DISCLAIMER,
+      source: "live eth_call on Polygon; eth_getLogs for this window was rejected",
+    });
   }
 }
