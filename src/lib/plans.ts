@@ -75,7 +75,7 @@ export const PLANS: Plan[] = [
     features: [
       "100 generations for $29, paid once",
       "No subscription, no renewal",
-      "Pack credits never expire unless you switch to Launch",
+      "Pack credits never expire unless you start a subscription",
     ],
     cta: "Get 100 generations for $29",
     listed: true,
