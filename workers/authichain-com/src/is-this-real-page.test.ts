@@ -20,6 +20,9 @@ describe("/is-this-real", () => {
   it("offers 3 free checks then a price-free x402 option", () => {
     expect(html).toContain("MAX=3");
     expect(html).toContain("an unpaid call returns HTTP 402 with the price");
+    expect(html).toContain("A non-UUID sealId is HTTP 400 before payment");
+    expect(html).not.toContain('{"sealId":"..."}');
+    expect(html).not.toContain('{"sealId":"demo"}');
     expect(html).not.toMatch(/\$0\.05|5 cents|5&cent;|¢|USDC/);
     expect(html).toContain("/api/v1/agent-verify");
   });

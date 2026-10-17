@@ -328,6 +328,9 @@ test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
   assert.match(hubHtml, /AuthiChain Docs/);
   assert.match(hubHtml, /not a GS1 Conformant Resolver/);
   assert.doesNotMatch(hubHtml, /Bitcoin L1/);
+  assert.match(hubHtml, /authichain\.com\/qron\/r\//);
+  assert.match(hubHtml, /presentation_not_found/);
+  assert.match(hubHtml, /This host verifies the signature/);
 
   for (const path of [
     "/docs/gs1-digital-link",
@@ -339,6 +342,29 @@ test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
     assert.equal(res.status, 200, path);
     assert.match(res.headers.get("content-type") ?? "", /text\/html/, path);
   }
+
+  const verification = await get("/docs/verification");
+  const verificationHtml = await verification.text();
+  assert.match(verificationHtml, /authichain\.com\/qron\/r\//);
+  assert.match(verificationHtml, /presentation_not_found/);
+  assert.match(verificationHtml, /does not verify the signature/);
+  assert.equal(verificationHtml.includes("freeCalls"), false);
+
+  const examples = await get("/docs/examples");
+  const examplesHtml = await examples.text();
+  assert.match(examplesHtml, /authichain\.com\/qron\/r\//);
+  assert.match(examplesHtml, /presentation_not_found/);
+  assert.match(examplesHtml, /This host verifies the signature/);
+  assert.match(examplesHtml, /does not verify the signature/);
+  assert.match(examplesHtml, /empty body is the unpaid HTTP 402/);
+  assert.equal(examplesHtml.includes('{"sealId":"demo"}'), false);
+  assert.equal(examplesHtml.includes("freeCalls"), false);
+
+  const architecture = await get("/docs/dpp-architecture");
+  const architectureHtml = await architecture.text();
+  assert.match(architectureHtml, /empty body is the unpaid HTTP 402/);
+  assert.match(architectureHtml, /non-UUID sealId is HTTP 400/);
+  assert.equal(architectureHtml.includes('{"sealId":"demo"}'), false);
 
   const alias = await get("/docs/resolver");
   assert.equal(alias.status, 301);

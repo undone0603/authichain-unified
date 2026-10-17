@@ -102,6 +102,29 @@ Interoperability rules from that contract:
 4. `warning` and `blocked` are explicit trust decisions, not signature failures.
 5. A valid signature proves integrity and issuer control of the key. It does not prove the physical item matches the subject.
 
+## Living QR scan (live)
+
+A stored Living QR encodes this URL. The apex verifies the signature and returns AuthiChain Verification Decision v1. The v0.1 table above is a different contract. This scan is free.
+
+```
+GET https://authichain.com/qron/r/{object_id}
+Accept: application/json
+```
+
+The object id form is `qron:url:` plus 8 hex characters.
+
+| Result | HTTP | Meaning |
+|---|---|---|
+| `verified` | 200 | The stored presentation signature checks out |
+| `presentation_not_found` | 404 | No stored presentation for that id |
+| `indeterminate` | 400 or 502 | The check did not finish |
+
+qron.space, strainchain.io, and govchain.us each proxy that GET. Each host does not verify the signature. Their responses set `x-qron-resolve-origin: https://authichain.com`.
+
+A direct signature check is `POST https://authichain.com/api/v1/attestation/verify` with a JSON body `{ "jws": "...", "expected_object_id": "..." }`. An empty body is HTTP 400, `jws is required`.
+
+MCP: `scan_living_qr` on `https://authichain.com/mcp` verifies. The same tool on the three sister hosts reads the apex scan and reports `verifies_signature: false`.
+
 ## GS1 seal lifecycle (repo worker only)
 
 `workers/gs1-resolver`, intended host `id.authichain.com`. That host returned HTTP 522 on 2026-09-27. Do not treat the following as a live public API until health is 200:
@@ -128,10 +151,15 @@ node verifier.mjs record.json anchor.json
 # Published key
 curl -sS https://authichain.com/.well-known/jwks.json
 
-# Agent rail — unpaid challenge. Expect HTTP 402.
+# Agent rail. A non-UUID sealId is HTTP 400 before payment.
+# An empty body is the unpaid HTTP 402 challenge.
 curl -sS -i -X POST https://authichain.com/api/x402 \
   -H 'content-type: application/json' \
-  -d '{"sealId":"demo"}'
+  -d '{}'
+
+# Living QR scan. A missing id is HTTP 404 presentation_not_found.
+curl -sS -H 'accept: application/json' \
+  "https://authichain.com/qron/r/{object_id}"
 ```
 
 Human lookup: [/verify](/verify).
@@ -154,6 +182,7 @@ See [examples](/docs/examples).
 | Expired `expires_at` | trust `expired` or attestation `valid=false` with status `expired` |
 | Revoked status in payload | `valid=false`, cryptographically inspectable |
 | Unknown object | `not_found` |
+| Living QR id with no stored presentation | HTTP 404 `presentation_not_found` |
 | Scan graph burst | `anomaly` (kernel) or `clone_suspected` (resolver, when live) |
 
 ## Security considerations
@@ -184,4 +213,7 @@ The statement was signed by that key and the hash matches the anchor. A false st
 A scan-graph anomaly (repo resolver). Investigate. Do not treat it as a counterfeit conviction.
 
 **Can an agent verify without an API key?**
-Yes. `POST https://authichain.com/api/x402` without payment returns HTTP 402 with the Base USDC requirement. Health: `GET /api/x402/health`.
+Yes. `POST https://authichain.com/api/x402` with an empty body returns HTTP 402 with the Base USDC requirement. A body that is not a seal UUID is HTTP 400 before payment. Health: `GET /api/x402/health`.
+
+**How does an agent scan a Living QR?**
+`GET https://authichain.com/qron/r/{object_id}` with `Accept: application/json`. The apex verifies the signature. qron.space, strainchain.io, and govchain.us proxy that GET and do not verify it.
