@@ -1024,9 +1024,13 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     );
     expect(body).toContain("Try 5 free generations. No account, no card.");
     expect(body).toContain(
-      "100 generations for $29, paid once. No subscription, and pack credits never expire unless you switch to a Launch subscription. A scannable QR is not an authenticity proof."
+      "100 generations for $29, paid once. No subscription, and pack credits never expire. A scannable QR is not an authenticity proof."
     );
     expect(body).not.toContain("Launch at $19/mo");
+    // CFA-460 release check: GET /generate has 0 hits for these.
+    expect(body).not.toContain("$19");
+    expect(body).not.toContain("qron_launch");
+    expect(body).not.toContain("Launch subscription");
     expect(body).not.toContain("Five generations are free");
     expect(body).toContain("not an authenticity proof");
     expect(body).not.toContain("<code>POST /api/generate</code>");
@@ -1053,16 +1057,17 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("if(r.res.status===401)");
     expect(body).toContain("form.submit()");
     expect(body).toContain("$29");
-    expect(body).toContain("$19/mo");
+    expect(body).not.toContain("$19/mo");
     expect(body).toContain("$299");
-    // Top-ups: Starter $29, Launch $19/mo (LOOP-03 tertiary), Creator $99.
+    // Top-ups: Starter $29, Creator $99. Launch $19/mo is unlisted (CFA-460).
     // Retired credit bundles ($9.99/$39.99/$99.99) had no live Stripe account.
     expect(body).toContain('href="https://authichain.com/checkout/starter"');
-    expect(body).toContain(
+    expect(body).not.toContain(
       'href="https://authichain.com/checkout/qron_launch"'
     );
     expect(body).toContain('href="https://authichain.com/checkout/creator"');
-    expect(body).toContain("Start Launch — $19/mo");
+    expect(body).not.toContain("Start Launch — $19/mo");
+    expect(body).toContain("Starter Pack — $29");
     expect(body).not.toContain("$9.99");
     expect(body).not.toContain("$39.99");
     expect(
