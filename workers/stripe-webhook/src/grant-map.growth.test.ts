@@ -27,18 +27,20 @@ describe("checkout grant replay", () => {
 
   it("retries when the prior-session lookup fails", () => {
     expect(grantReplayAction({ ok: false }, "cs_123")).toBe("retry");
-    expect(
-      grantReplayAction({ ok: true, sessionId: "cs_123" }, "cs_123")
-    ).toBe("skip");
-    expect(
-      grantReplayAction({ ok: true, sessionId: null }, "cs_123")
-    ).toBe("grant");
+    expect(grantReplayAction({ ok: true, sessionId: "cs_123" }, "cs_123")).toBe(
+      "skip"
+    );
+    expect(grantReplayAction({ ok: true, sessionId: null }, "cs_123")).toBe(
+      "grant"
+    );
   });
 });
 
 describe("loop identity stays in lockstep with src/lib/growth/loops.ts", () => {
   it("covers exactly the skus that have a loop", () => {
-    expect(Object.keys(LOOP_BY_PLAN).sort()).toEqual(GROWTH_LOOPS.map(l => l.sku).sort());
+    expect(Object.keys(LOOP_BY_PLAN).sort()).toEqual(
+      GROWTH_LOOPS.map(l => l.sku).sort()
+    );
   });
 
   it("maps each sku to the right loop id", () => {
@@ -56,7 +58,13 @@ describe("loop identity stays in lockstep with src/lib/growth/loops.ts", () => {
   });
 
   it("returns null for plans with no loop", () => {
-    for (const plan of ["creator", "qron_launch", "strainchain_farm", "free", ""]) {
+    for (const plan of [
+      "creator",
+      "qron_launch",
+      "strainchain_farm",
+      "free",
+      "",
+    ]) {
       expect(loopForPlan(plan)).toBeNull();
     }
     expect(loopForPlan(null)).toBeNull();
@@ -116,7 +124,9 @@ describe("an unmapped price must never look like a starter purchase", () => {
 
 describe("grantForCheckout", () => {
   it("maps a $29 session with no price id to starter", () => {
-    expect(grantForCheckout({ priceId: null, amountTotal: 2900 })).toMatchObject({
+    expect(
+      grantForCheckout({ priceId: null, amountTotal: 2900 })
+    ).toMatchObject({
       plan: "starter",
       generations: 100,
     });

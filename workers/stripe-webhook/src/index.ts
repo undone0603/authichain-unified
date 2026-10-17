@@ -3,6 +3,9 @@ import {
   grantForCheckout,
   grantForPrice,
   grantReplayAction,
+  grantCreditWrite,
+  GRANT_PROFILE_COLUMNS,
+  hasActiveSubscription,
   isFounderEmail,
   loopForPlan,
 } from "./grant-map";
@@ -45,9 +48,7 @@ async function supabaseSelectOne(
   table: string,
   match: Record<string, string>,
   columns: string
-): Promise<
-  { ok: true; row: Record<string, unknown> | null } | { ok: false }
-> {
+): Promise<{ ok: true; row: Record<string, unknown> | null } | { ok: false }> {
   const params = Object.entries(match)
     .map(([k, v]) => `${k}=eq.${encodeURIComponent(v)}`)
     .join("&");
@@ -138,15 +139,18 @@ async function recordPurchaseEvent(
     };
     if (email) body.p_email_hash = await sha256Hex(email);
 
-    const res = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/growth_record_event`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-      body: JSON.stringify(body),
-    });
+    const res = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/rpc/growth_record_event`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify(body),
+      }
+    );
     if (!res.ok) {
       console.error(
         JSON.stringify({
@@ -219,6 +223,22 @@ export default {
       const plan = grant?.plan || session.metadata?.plan || "starter";
 
       if (email) {
+        // Read the profile BEFORE the upsert so a pack purchase can keep an
+        // active subscription's plan and stack onto unused credits.
+        const needsRow = Boolean(grant && !grant.humanHold);
+        const existing = needsRow
+          ? await supabaseSelectOne(
+              env,
+              "profiles",
+              { email },
+              GRANT_PROFILE_COLUMNS
+            )
+          : ({ ok: true, row: null } as const);
+        if (!existing.ok) return grantRetry("grant lookup failed");
+        const row = existing.row;
+        const packOnSub = Boolean(
+          grant && !grant.refillOnInvoicePaid && hasActiveSubscription(row)
+        );
         const upserted = await supabaseUpsert(
           env,
           "profiles",
@@ -226,8 +246,11 @@ export default {
             email,
             full_name: name,
             stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId,
-            plan,
+            // A one-time checkout has no subscription; never null out a live one.
+            ...(subscriptionId
+              ? { stripe_subscription_id: subscriptionId }
+              : {}),
+            ...(packOnSub ? {} : { plan }),
             updated_at: new Date().toISOString(),
           },
           "email"
@@ -247,22 +270,14 @@ export default {
             })
           );
         } else if (grant) {
-          const existing = await supabaseSelectOne(
-            env,
-            "profiles",
-            { email },
-            "last_grant_session_id"
-          );
           const prior =
-            existing.ok &&
-            typeof existing.row?.last_grant_session_id === "string"
-              ? existing.row.last_grant_session_id
+            typeof row?.last_grant_session_id === "string"
+              ? row.last_grant_session_id
               : null;
           const action = grantReplayAction(
-            existing.ok ? { ok: true, sessionId: prior } : { ok: false },
+            { ok: true, sessionId: prior },
             session.id
           );
-          if (action === "retry") return grantRetry("grant lookup failed");
           if (action === "skip") {
             console.log(
               JSON.stringify({
@@ -272,13 +287,15 @@ export default {
               })
             );
           } else {
+            const credit = grantCreditWrite(grant, row, row !== null);
             console.log(
               JSON.stringify({
                 evt: "stripe_grant_set",
                 plan: grant.plan,
-                generations_limit: grant.generations,
-                generations_used: 0,
+                generations_limit: credit.generations_limit,
+                generations_used: credit.generations_used,
                 refill: grant.refillOnInvoicePaid,
+                stacked: !grant.refillOnInvoicePaid,
               })
             );
             const wrote = await supabaseUpdate(
@@ -286,9 +303,7 @@ export default {
               "profiles",
               { email },
               {
-                plan: grant.plan,
-                generations_limit: grant.generations,
-                generations_used: 0,
+                ...credit,
                 last_grant_session_id: session.id,
                 updated_at: new Date().toISOString(),
               }
@@ -331,8 +346,7 @@ export default {
       const customerId =
         typeof invoice.customer === "string" ? invoice.customer : null;
       const line = invoice.lines?.data?.[0] as
-        | { price?: { id?: string } | string | null }
-        | undefined;
+        { price?: { id?: string } | string | null } | undefined;
       const price = line?.price;
       const linePrice =
         price && typeof price === "object" ? (price.id ?? null) : null;
