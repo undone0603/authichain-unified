@@ -44,12 +44,32 @@ export function extractProtocolRecord(
   return recordFrom(payload);
 }
 
+function anchorFrom(value: unknown): Record<string, unknown> | null {
+  const anchor = asRecord(value);
+  if (anchor?.recordHash && anchor.chain && anchor.txHash) return anchor;
+  return null;
+}
+
+function parsedPayload(seal: Record<string, unknown>): unknown {
+  const payload = seal.qr_payload ?? seal.qrPayload;
+  if (typeof payload !== "string") return payload;
+  const trimmed = payload.trim();
+  if (!trimmed.startsWith("{")) return null;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+}
+
 export function extractProtocolAnchor(
   seal: Record<string, unknown>
 ): Record<string, unknown> | null {
-  const anchor = asRecord(seal.anchor);
-  if (anchor?.recordHash && anchor.chain && anchor.txHash) return anchor;
-  return null;
+  const direct = anchorFrom(seal.anchor);
+  if (direct) return direct;
+  const parsed = asRecord(parsedPayload(seal));
+  if (!parsed) return null;
+  return anchorFrom(parsed.anchor);
 }
 
 export function attestSeal(

@@ -1,9 +1,11 @@
 /**
  * Worker-local auth_seals read for paid verify. Settle only after that read
- * succeeds. verified stays false: a registry row is not an attestation.
+ * succeeds. verified is true only when attestSeal says the stored protocol
+ * record is verified. A registry row with no Ed25519 proof stays unverified.
  */
 import { createHash } from "node:crypto";
-import { parseSealRequest, registryAnswer } from "./agent-verify";
+import { parseSealRequest, registryAnswer, type RegistryAnswer } from "./agent-verify";
+import { attestSeal, type SealAttestation } from "./seal-attestation";
 import {
   buildPaymentRequired,
   dailyCapUsd,
@@ -15,7 +17,20 @@ import {
   wouldExceedCap,
 } from "./x402";
 
-const SEAL_SELECT = "id,product_id,batch_id,brand,created_at";
+const SEAL_SELECT =
+  "id,product_id,batch_id,brand,created_at,qr_payload,polygon_tx";
+
+function withAttestation(
+  answer: RegistryAnswer,
+  attestation: SealAttestation
+): { verified: boolean; answer: RegistryAnswer } {
+  answer.details.verdict = attestation.verdict;
+  answer.details.reasons = attestation.reasons;
+  if (attestation.verdict !== "unsigned") {
+    answer.checks.signature = "checked";
+  }
+  return { verified: attestation.verified, answer };
+}
 
 export type SealLookupEnv = {
   SUPABASE_URL?: string;
@@ -596,12 +611,16 @@ export async function resolvePaidSealVerify(input: {
     txHash: settlement.txHash ?? proof.txHash ?? null,
   });
   await recordSpend(fetchImpl, creds, proof.payer);
-  const answer = registryAnswer(lookup.seal);
+  const attested = withAttestation(
+    registryAnswer(lookup.seal),
+    attestSeal(lookup.seal)
+  );
+  const answer = attested.answer;
   return {
     action: "answer",
     status: 200,
     body: {
-      verified: false,
+      verified: attested.verified,
       registered: answer.registered,
       status: answer.status,
       checks: answer.checks,
