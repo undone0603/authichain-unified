@@ -204,4 +204,41 @@ describe("first-dollar-desk /api/ledger privacy (RES-78)", () => {
     expect(goal.stripeIngestion).not.toHaveProperty("thanksQueueSessionIds");
     expect(goal.stripeIngestion.lastWebhook.receiptStatus).toBe("qualified");
   });
+  it("C1: publishes only {skipped, webhook, written, errorCount} for Stripe sync, no plink_ or Stripe error text", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: unknown) => {
+        const u = String((input as { url?: string })?.url ?? input);
+        if (u.includes("api.stripe.com")) {
+          return new Response(JSON.stringify({ error: { type: "invalid_request_error", message: "Invalid API Key provided: sk_test_****" } }), { status: 401 });
+        }
+        throw new Error("network disabled in test");
+      })
+    );
+    const kv = fakeKv();
+    const res = await worker.fetch(new Request("https://authichain.com/buy/api/ledger"), { LEDGER: kv, STRIPE_SECRET_KEY: "sk_test_dummy_value" });
+    const text = await res.text();
+    const body = JSON.parse(text);
+    expect(res.status).toBe(200);
+    expect(Object.keys(body.stripe).sort()).toEqual(["errorCount", "skipped", "webhook", "written"]);
+    expect(body.stripe.errorCount).toBeGreaterThan(0);
+    expect(text).not.toContain("plink_");
+    expect(text).not.toContain("Invalid API Key");
+    expect(text).not.toContain("sk_test");
+  });
+
+  it("H1: a cs_ / Stripe-session receipt never publishes txHash, even with a valid-looking 0x hash", async () => {
+    const kv = fakeKv();
+    const led = JSON.parse(kv.store.get("ledger")!);
+    led.receipts.push({ id: "cs_cs_test_h1", rail: "agent", amountCents: 100, currency: "usd", txHash: AGENT_TX, network: "eip155:8453", createdAt: "2026-10-17T14:40:00.000Z", status: "pending" });
+    led.receipts.push({ id: "x402_h1", rail: "agent", amountCents: 100, currency: "usdc", stripeCheckoutSessionId: "cs_test_h1b", txHash: AGENT_TX, network: "eip155:8453", createdAt: "2026-10-17T14:41:00.000Z", status: "pending" });
+    kv.store.set("ledger", JSON.stringify(led));
+    const body = await (await worker.fetch(new Request("https://authichain.com/buy/api/ledger"), { LEDGER: kv })).json();
+    const rows = body.receipts.filter((r: { createdAt: string }) => r.createdAt.startsWith("2026-10-17T14:4"));
+    expect(rows).toHaveLength(2);
+    for (const r of rows) {
+      expect(r.txHash).toBeNull();
+      expect(r.network).toBeNull();
+    }
+  });
 });

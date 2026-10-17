@@ -43,7 +43,8 @@ describe("/buy/thanks XSS (RES-81)", () => {
     const id = "cs_test_a1B2c3D4";
     const { res, html } = await thanks(id);
     expect(res.status).toBe(200);
-    expect(html).toContain(`<code>${id}</code>`);
+    expect(html).toContain("Your receipt is queued for the public ledger.");
+    expect(html).not.toContain("Session <code>");
     expect(html).toContain(`const sessionId = "${id}";`);
     expect(html).toContain('id="ledger-live"');
   });
