@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  claimFreeSampleSlot,
   extractAccessToken,
   generateCreditPacks,
   generateHealthBody,
@@ -59,6 +60,53 @@ describe("generateHealthBody", () => {
   it("reports whether a Supabase session can be resolved", () => {
     const body = generateHealthBody(undefined, { authConfigured: true });
     expect(body.auth).toBe(true);
+  });
+});
+
+describe("claimFreeSampleSlot ordering (CFA-353)", () => {
+  function limiter(opts: {
+    ipLeft: boolean;
+    dailyLeft: boolean;
+    ipClaim?: boolean;
+  }) {
+    const calls: string[] = [];
+    return {
+      calls,
+      l: {
+        peekIp: async () => (calls.push("peekIp"), opts.ipLeft),
+        claimDaily: async () => (calls.push("claimDaily"), opts.dailyLeft),
+        claimIp: async () => (
+          calls.push("claimIp"),
+          opts.ipClaim ?? opts.ipLeft
+        ),
+      },
+    };
+  }
+
+  it("peeks IP, claims a daily slot, then claims the IP slot", async () => {
+    const { calls, l } = limiter({ ipLeft: true, dailyLeft: true });
+    expect(await claimFreeSampleSlot(l)).toEqual({ ok: true });
+    expect(calls).toEqual(["peekIp", "claimDaily", "claimIp"]);
+  });
+
+  it("a visitor who used their samples never consumes a daily slot", async () => {
+    const { calls, l } = limiter({ ipLeft: false, dailyLeft: true });
+    expect(await claimFreeSampleSlot(l)).toEqual({ ok: false, reason: "used" });
+    expect(calls).toEqual(["peekIp"]);
+  });
+
+  it("a capped day never consumes the visitor's samples", async () => {
+    const { calls, l } = limiter({ ipLeft: true, dailyLeft: false });
+    expect(await claimFreeSampleSlot(l)).toEqual({
+      ok: false,
+      reason: "paused",
+    });
+    expect(calls).toEqual(["peekIp", "claimDaily"]);
+  });
+
+  it("reports used if the IP's last slot went in a race after the peek", async () => {
+    const { l } = limiter({ ipLeft: true, dailyLeft: true, ipClaim: false });
+    expect(await claimFreeSampleSlot(l)).toEqual({ ok: false, reason: "used" });
   });
 });
 
@@ -137,7 +185,7 @@ describe("handleGeneratePost", () => {
     expect(result.status).toBe(401);
     expect(result.body.code).toBe("FREE_SAMPLE_USED");
     expect(String(result.body.message)).toMatch(
-      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and pack credits never expire\.$/
+      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and pack credits never expire \(starting a Launch subscription replaces unused pack credits\)\.$/
     );
     expect(generateImage).not.toHaveBeenCalled();
   });

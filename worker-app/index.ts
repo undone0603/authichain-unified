@@ -10,7 +10,7 @@ import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 import { getSessionCookieOptions } from "../server/_core/cookies";
 import { products, certificates } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
-import { checkRateLimit } from "./rate-limiter";
+import { checkRateLimit, peekRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
 import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
@@ -468,22 +468,31 @@ app.post("/api/generate", async c => {
           FREE_SAMPLE_WINDOW_MS,
           FREE_SAMPLE_GLOBAL_DAILY_CAP,
         } = await import("../src/lib/generate-api");
-        // Global ceiling first so a capped day doesn't burn the visitor's
-        // per-IP samples.
-        const global = await checkRateLimit(
-          ns,
-          "free-sample:global",
-          FREE_SAMPLE_GLOBAL_DAILY_CAP,
-          24 * 60 * 60_000
-        );
-        if (!global) return { ok: false, reason: "paused" as const };
-        const perIp = await checkRateLimit(
-          ns,
-          `free-sample:${ip}`,
-          FREE_SAMPLE_GENERATIONS,
-          FREE_SAMPLE_WINDOW_MS
-        );
-        return perIp ? { ok: true } : { ok: false, reason: "used" as const };
+        const { claimFreeSampleSlot } = await import("../src/lib/generate-api");
+        const ipKey = `free-sample:${ip}`;
+        return claimFreeSampleSlot({
+          peekIp: () =>
+            peekRateLimit(
+              ns,
+              ipKey,
+              FREE_SAMPLE_GENERATIONS,
+              FREE_SAMPLE_WINDOW_MS
+            ),
+          claimDaily: () =>
+            checkRateLimit(
+              ns,
+              "free-sample:global",
+              FREE_SAMPLE_GLOBAL_DAILY_CAP,
+              24 * 60 * 60_000
+            ),
+          claimIp: () =>
+            checkRateLimit(
+              ns,
+              ipKey,
+              FREE_SAMPLE_GENERATIONS,
+              FREE_SAMPLE_WINDOW_MS
+            ),
+        });
       },
       rememberPresentation: async record => {
         if (!sessions) return;

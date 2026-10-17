@@ -29,11 +29,27 @@ export class RateLimiter {
   }
 
   async fetch(request: Request): Promise<Response> {
-    const { limit, windowMs } = await request.json<{ limit: number; windowMs: number }>();
-    const allowed = await this.check(limit, windowMs);
+    const { limit, windowMs, peek } = await request.json<{
+      limit: number;
+      windowMs: number;
+      peek?: boolean;
+    }>();
+    const allowed = peek
+      ? await this.peek(limit)
+      : await this.check(limit, windowMs);
     return new Response(JSON.stringify({ allowed }), {
       headers: { "content-type": "application/json" },
     });
+  }
+
+  /** Non-consuming: would one more request be allowed right now? */
+  private async peek(limit: number): Promise<boolean> {
+    const stored = await this.state.storage.get<{
+      count: number;
+      resetAt: number;
+    }>("entry");
+    if (!stored || Date.now() >= stored.resetAt) return limit > 0;
+    return stored.count < limit;
   }
 
   /**
@@ -46,10 +62,16 @@ export class RateLimiter {
    */
   private async check(limit: number, windowMs: number): Promise<boolean> {
     const now = Date.now();
-    const stored = await this.state.storage.get<{ count: number; resetAt: number }>("entry");
+    const stored = await this.state.storage.get<{
+      count: number;
+      resetAt: number;
+    }>("entry");
 
     if (!stored || now >= stored.resetAt) {
-      await this.state.storage.put("entry", { count: 1, resetAt: now + windowMs });
+      await this.state.storage.put("entry", {
+        count: 1,
+        resetAt: now + windowMs,
+      });
       return true;
     }
 
@@ -57,7 +79,10 @@ export class RateLimiter {
       return false;
     }
 
-    await this.state.storage.put("entry", { count: stored.count + 1, resetAt: stored.resetAt });
+    await this.state.storage.put("entry", {
+      count: stored.count + 1,
+      resetAt: stored.resetAt,
+    });
     return true;
   }
 }
@@ -79,6 +104,22 @@ export async function checkRateLimit(
   const res = await stub.fetch("https://rate-limiter/check", {
     method: "POST",
     body: JSON.stringify({ limit, windowMs }),
+  });
+  const { allowed } = await res.json<{ allowed: boolean }>();
+  return allowed;
+}
+
+/** Like checkRateLimit but never increments the counter. */
+export async function peekRateLimit(
+  namespace: DurableObjectNamespace,
+  key: string,
+  limit: number,
+  windowMs: number
+): Promise<boolean> {
+  const stub = namespace.get(namespace.idFromName(key));
+  const res = await stub.fetch("https://rate-limiter/check", {
+    method: "POST",
+    body: JSON.stringify({ limit, windowMs, peek: true }),
   });
   const { allowed } = await res.json<{ allowed: boolean }>();
   return allowed;

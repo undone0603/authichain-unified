@@ -170,6 +170,30 @@ export const FREE_SAMPLE_GENERATIONS = 5;
 export const FREE_SAMPLE_WINDOW_MS = 30 * 24 * 60 * 60_000;
 export const FREE_SAMPLE_GLOBAL_DAILY_CAP = 100;
 
+export type FreeSampleLimiter = {
+  /** Non-consuming: does this visitor still have per-IP quota? */
+  peekIp: () => Promise<boolean>;
+  /** Consumes one site-wide daily slot. */
+  claimDaily: () => Promise<boolean>;
+  /** Consumes one per-IP slot. */
+  claimIp: () => Promise<boolean>;
+};
+
+/**
+ * Order (CFA-353): peek per-IP, then claim a daily slot, then claim the IP
+ * slot. A visitor who used their 5 never touches the daily counter, and a
+ * capped day never consumes a visitor's samples. Only a race (the same IP
+ * spending its last slot between peek and claim) can cost one daily slot.
+ */
+export async function claimFreeSampleSlot(
+  l: FreeSampleLimiter
+): Promise<{ ok: boolean; reason?: "used" | "paused" }> {
+  if (!(await l.peekIp())) return { ok: false, reason: "used" };
+  if (!(await l.claimDaily())) return { ok: false, reason: "paused" };
+  if (!(await l.claimIp())) return { ok: false, reason: "used" };
+  return { ok: true };
+}
+
 type CreditFn = (
   userId: string
 ) => Promise<{ ok: boolean; remaining?: number; error?: string }>;
@@ -251,8 +275,8 @@ export async function handleGeneratePost(opts: {
         status: 401,
         body: {
           message: used
-            ? "You've used your 5 free generations. Keep going with Starter: 100 more for $29, paid once. No subscription, and pack credits never expire."
-            : "Free samples are paused for today. Try again later, or get Starter now: 100 generations for $29, paid once. No subscription, and pack credits never expire.",
+            ? "You've used your 5 free generations. Keep going with Starter: 100 more for $29, paid once. No subscription, and pack credits never expire (starting a Launch subscription replaces unused pack credits)."
+            : "Free samples are paused for today. Try again later, or get Starter now: 100 generations for $29, paid once. No subscription, and pack credits never expire (starting a Launch subscription replaces unused pack credits).",
           code: used ? "FREE_SAMPLE_USED" : "FREE_SAMPLE_PAUSED",
           packs,
           pricing: "/pricing",
