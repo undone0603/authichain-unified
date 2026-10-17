@@ -1105,4 +1105,57 @@ describe("scan_living_qr", () => {
     expect(body.jws).toBeUndefined();
     expect(payload.result.content[0].text).not.toContain("header.payload.sig");
   });
+
+  it("scans through the edge service binding instead of a public same-zone fetch", async () => {
+    let publicFetch = false;
+    globalThis.fetch = (async () => {
+      publicFetch = true;
+      throw new Error("public fetch");
+    }) as typeof fetch;
+    let seen = "";
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 8,
+          method: "tools/call",
+          params: {
+            name: "scan_living_qr",
+            arguments: { object_id: "qron:url:deadbeef" },
+          },
+        }),
+      }),
+      {
+        APP_WORKER: {
+          fetch: async request => {
+            seen = request.url;
+            return new Response(
+              JSON.stringify({
+                valid: true,
+                decision: "verified",
+                decision_contract: "AuthiChain Verification Decision v1",
+                cryptographic_status: "valid",
+                status: "active",
+                jws: "header.payload.sig",
+              }),
+              { status: 200, headers: { "content-type": "application/json" } }
+            );
+          },
+        },
+      }
+    );
+    expect(publicFetch).toBe(false);
+    expect(seen).toBe("https://authichain.com/qron/r/qron%3Aurl%3Adeadbeef");
+    const payload = (await res!.json()) as {
+      result: { isError?: boolean; content: Array<{ text: string }> };
+    };
+    expect(payload.result.isError).toBeUndefined();
+    const body = JSON.parse(payload.result.content[0].text) as {
+      decision: string;
+    };
+    expect(body.decision).toBe("verified");
+    expect(payload.result.content[0].text).not.toContain("header.payload.sig");
+  });
 });

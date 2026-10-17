@@ -26,6 +26,11 @@ import {
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
+
+type McpEnv = X402Env & {
+  /** Service binding to authichain-edge-router. Public fetch of this zone returns 522. */
+  APP_WORKER?: { fetch: (request: Request) => Promise<Response> };
+};
 import { unpaidSealRefusal } from "../../../src/lib/agent-verify";
 import {
   guardedForward,
@@ -624,7 +629,7 @@ async function unpaidOrRefusedVerify(
 
 async function handleRpc(
   request: Request,
-  env?: X402Env,
+  env?: McpEnv,
   verifyApp?: X402VerifyBinding
 ): Promise<Response> {
   let body: {
@@ -736,7 +741,11 @@ async function handleRpc(
       });
     }
     if (name === "scan_living_qr") {
-      const result = await scanLivingQr(params.arguments ?? {});
+      const binding = env?.APP_WORKER;
+      const fetchImpl: typeof fetch = binding
+        ? (input, init) => binding.fetch(new Request(input, init))
+        : globalThis.fetch;
+      const result = await scanLivingQr(params.arguments ?? {}, fetchImpl);
       return rpcResult(id, {
         content: [{ type: "text", text: JSON.stringify(result.body) }],
         ...(result.isError ? { isError: true } : {}),
@@ -863,7 +872,7 @@ export async function scanLivingQr(
 
 export async function tryHandleMcp(
   request: Request,
-  env: X402Env = {},
+  env: McpEnv = {},
   verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
   if (!isMcpPath(new URL(request.url).pathname)) return null;
