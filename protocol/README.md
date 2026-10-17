@@ -13,24 +13,14 @@ Works today with the published package (`authichain-verify` 0.1.1 on npm). Nothi
 ```bash
 npm install authichain-verify
 npx authichain-verify node_modules/authichain-verify/examples/record.json
-# {"verdict": "valid-unanchored", "reasons": [], "checks": {"signature": true}}
+# prints (pretty-printed) verdict "valid-unanchored", reasons [], checks.signature true
 ```
 
 The record carries its signer as a `did:key`; the verifier checks the Ed25519 signature over the RFC 8785 canonical form of the record. Edit any field in the JSON and run it again: the verdict becomes `invalid` with `signature_invalid`.
 
-### Check a seal against the published key (next release, not on npm yet)
+### Check a seal against a JWKS (next release, not on npm yet)
 
-AuthiChain publishes its attestation signing key as a JWKS at <https://authichain.com/protocol/jwks.json> (also at `/.well-known/jwks.json`). It holds Ed25519 keys in the standard JWK form `{"kty":"OKP","crv":"Ed25519","x":"<base64url>","kid":"…","use":"sig","alg":"EdDSA"}`. Download it once; every check after that is offline.
-
-```bash
-curl -sO https://authichain.com/protocol/jwks.json
-
-# A compact-JWS attestation seal (header typ "AC-ATTESTATION+JWS"):
-npx authichain-verify --jwks jwks.json seal.jws
-
-# A JSON record, additionally requiring its did:key signer to be a key in the JWKS:
-npx authichain-verify --jwks jwks.json record.json
-```
+Pass any JWKS you hold with `--jwks`. It accepts Ed25519 keys in the standard JWK form `{"kty":"OKP","crv":"Ed25519","x":"<base64url>","kid":"…"}`, and every check is offline. AuthiChain's production key will be listed here once a production-signed sample seal verifies against https://authichain.com/protocol/jwks.json.
 
 To see it work without a real seal, the package ships the repo's public test fixture and its test key:
 
@@ -48,7 +38,7 @@ Library: `verifyAttestationJws(jws, jwks, { now? })` and `verifyRecord(record, a
 
 ### Python
 
-A Python port with the same checks and CLI lives in [`python/`](python/) (`authichain_verify`, depends only on `cryptography`). It passes the same 28 conformance fixtures under `--strict` and ports the JS unit tests. It is not on PyPI yet.
+A Python port (`authichain_verify`, depends only on `cryptography`) lives in the source repository under `protocol/python`. It passes the same 28 conformance fixtures under `--strict` and ports the JS unit tests. It is not on PyPI yet.
 
 ## Install
 

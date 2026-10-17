@@ -10,21 +10,23 @@ authichain-verify protocol/examples/record.json
 # {"verdict": "valid-unanchored", ...}
 ```
 
-## Check a seal against the published key
+## Check a seal against a JWKS
+
+Pass any JWKS you hold with `--jwks`. The repo's public test fixture shows it:
 
 ```bash
-curl -sO https://authichain.com/protocol/jwks.json
-authichain-verify --jwks jwks.json seal.jws          # compact-JWS attestation seal
-authichain-verify --jwks jwks.json record.json       # record, signer pinned to the JWKS
+authichain-verify --jwks protocol/examples/attestation-fixture.jwks.json protocol/examples/attestation-fixture.jws
+# verdict "valid-offline"; attestation-fixture-tampered.jws gives "invalid" / "signature_invalid"
+authichain-verify --jwks your-jwks.json record.json   # record, signer pinned to the JWKS
 ```
 
 ```python
 import json
 from authichain_verify import verify_attestation_jws, verify_record
 
-jwks = json.load(open("jwks.json"))
-print(verify_attestation_jws(open("seal.jws").read(), jwks)["verdict"])   # valid-offline | invalid
-print(verify_record(json.load(open("record.json")))["verdict"])          # verified | valid-unanchored | invalid
+jwks = json.load(open("protocol/examples/attestation-fixture.jwks.json"))
+print(verify_attestation_jws(open("protocol/examples/attestation-fixture.jws").read(), jwks)["verdict"])   # valid-offline | invalid
+print(verify_record(json.load(open("protocol/examples/record.json")))["verdict"])          # verified | valid-unanchored | invalid
 ```
 
 Same checks, verdicts, reason strings and exit codes as the JS CLI (exit 0 for `verified` / `valid-unanchored` / `valid-offline`, 1 for `invalid`, 2 for usage; `ALLOW_TESTNET=1` accepts testnet anchors). A seal check does not cover live revocation, and a valid signature does not by itself prove the physical item in hand is the one the seal names.
