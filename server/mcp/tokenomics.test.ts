@@ -35,6 +35,10 @@ describe("MCP tokenomics identity", () => {
     );
     // Farm A: Farm checkout is closed; discovery no longer links to it.
     expect("farm" in d.humanCheckout.checkout).toBe(false);
+    // Farm A: no Farm price or plan entry anywhere in public discovery.
+    expect("strainchain_farm" in d.humanCheckout).toBe(false);
+    expect(JSON.stringify(d)).not.toMatch(/farm/i);
+    expect(JSON.stringify(d)).not.toContain("$149");
     expect(JSON.stringify(d)).not.toContain("/api/checkout");
     expect(d.nft.deployer.toLowerCase()).not.toBe(
       X402_PUBLISHED_PAY_TO.toLowerCase()

@@ -79,7 +79,10 @@ describe("authentic-economy identity join", () => {
     expect(JSON.stringify(d.humanCheckout.checkout)).not.toContain(
       "strainchain_farm"
     );
-    expect(d.humanCheckout.strainchain_farm).toBe("$149/month");
+    // Farm A: no Farm price or plan entry anywhere in public discovery.
+    expect("strainchain_farm" in d.humanCheckout).toBe(false);
+    expect(JSON.stringify(d)).not.toMatch(/farm/i);
+    expect(JSON.stringify(d)).not.toContain("$149");
     expect(JSON.stringify(d)).not.toContain("/api/checkout");
     expect(d.qron.isPaymentRail).toBe(false);
     expect(d.qron.totalSupply).toBe(QRON_TOTAL_SUPPLY);

@@ -113,14 +113,14 @@ describe("canonical web3 identity lock", () => {
       planUsd("strainchain_passport")
     );
     expect(MONEY_RAILS.stripe.skus.dppUsd).toBe(planUsd("dpp_readiness"));
-    expect(MONEY_RAILS.stripe.skus.farmUsd).toBe(planUsd("strainchain_farm"));
+    expect("farmUsd" in MONEY_RAILS.stripe.skus).toBe(false);
     expect(PLANS.find(p => p.id === "strainchain_passport")?.price).toBe(49);
     expect(PLANS.find(p => p.id === "dpp_readiness")?.price).toBe(299);
     expect(PLANS.find(p => p.id === "strainchain_farm")?.price).toBe(149);
     const d = agentPricingDiscovery();
     expect(d.humanCheckout.source).toBe("src/lib/plans.ts");
     expect(d.humanCheckout.strainchain_passport).toBe("$49 one-time");
-    expect(d.humanCheckout.strainchain_farm).toBe("$149/month");
+    expect("strainchain_farm" in d.humanCheckout).toBe(false);
     // Farm A: Farm checkout is closed; discovery no longer links to it.
     expect("farm" in d.humanCheckout.checkout).toBe(false);
     expect(d.nft.deployer).toBe(NFT_DEPLOYER_EOA);
