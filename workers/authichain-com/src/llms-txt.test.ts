@@ -46,9 +46,14 @@ describe("llms.txt", () => {
       tryHandleLlmsTxt(new Request("https://authichain.govchain.us/pricing"))
     ).toBeNull();
   });
-  it("names the canonical paid endpoint and the health status check", () => {
+  it("names the canonical paid verify endpoint and the health check", () => {
     const text = renderLlmsTxt();
-    expect(text).toContain("POST https://authichain.com/api/v1/agent-verify");
-    expect(text).toContain("GET https://authichain.com/api/x402/health");
+    expect(text).toContain(
+      "Canonical paid verify: POST https://authichain.com/api/v1/agent-verify"
+    );
+    expect(text).toContain("https://authichain.com/api/x402/health");
+    expect(text).toContain(
+      "paidVerify.bound false means HTTP 503 before settlement"
+    );
   });
 });
