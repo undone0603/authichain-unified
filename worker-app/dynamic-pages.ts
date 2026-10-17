@@ -420,7 +420,7 @@ function verifyPromptHtml(): string {
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
       "<p>Enter a registry product ID to look up its record. On-chain verification is in development.</p>\n" +
-      "<p>The open verifier checks the published demonstration record <a href=\"/verify?id=polygon-anchor-1\">polygon-anchor-1</a>. The same check as JSON is <a href=\"/api/verify?id=polygon-anchor-1\">/api/verify</a>.</p>\n" +
+      '<p>The open verifier checks the published demonstration record <a href="/verify?id=polygon-anchor-1">polygon-anchor-1</a>. The same check as JSON is <a href="/api/verify?id=polygon-anchor-1">/api/verify</a>.</p>\n' +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
@@ -442,8 +442,7 @@ function openVerifierHtml(
         .join("") +
       "</ul>\n"
     : "";
-  const jsonHref =
-    "/api/verify?id=" + encodeURIComponent(identifier);
+  const jsonHref = "/api/verify?id=" + encodeURIComponent(identifier);
   return htmlDocument({
     title: "Open verification | AuthiChain",
     description:
@@ -602,11 +601,7 @@ async function renderVerify(c: Context): Promise<Response> {
     if (published) {
       const protocol = verifySubmitted(published.record, published.anchor);
       if (protocol && typeof protocol.verdict === "string") {
-        return htmlResponse(
-          c,
-          openVerifierHtml(identifier, protocol),
-          200
-        );
+        return htmlResponse(c, openVerifierHtml(identifier, protocol), 200);
       }
     }
 
@@ -1449,13 +1444,13 @@ async function renderOnboard(c: Context): Promise<Response> {
 // deterministic reference object. That page must exist. Unknown ids 404.
 
 const LAUNCH_PROOF_PRODUCT_ID = "00000000-0000-4000-8000-000000000001";
-const LAUNCH_PROOF_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+const LAUNCH_PROOF_KID = "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ";
 
 function launchProofStoryHtml(): string {
   return htmlDocument({
     title: "AuthiChain Launch Proof — QRON / StoryMode",
     description:
-      "Deterministic production reference object. The compact JWS verifies against live JWKS.",
+      "Deterministic production reference object and its published signing key id.",
     canonicalPath: "/story/" + LAUNCH_PROOF_PRODUCT_ID,
     bodyHtml:
       "<main>\n" +
@@ -1472,7 +1467,7 @@ function launchProofStoryHtml(): string {
       "<h2>Identity</h2>\n" +
       "<p>A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation.</p>\n" +
       "<h2>Proof</h2>\n" +
-      "<p>The production attestation is independently verified against the live public JWKS using its kid. A valid signature is signed evidence — not physical authenticity.</p>\n" +
+      "<p>Check the attestation yourself against the public JWKS linked above, using its kid. A valid signature is signed evidence — not physical authenticity.</p>\n" +
       "<h2>Reveal</h2>\n" +
       "<p>Scanning the QRON launch code opens StoryMode. Tamper tests (altered payload, altered signature, wrong subject, revoked, stale) must reject.</p>\n" +
       '<p><a href="/verify?id=polygon-anchor-1">Open the published verification example</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
@@ -1609,7 +1604,7 @@ function authenticateHtml(): string {
         formId: "auth-starter-checkout",
         inputId: "auth-starter-email",
       }) +
-      "<p><a href=\"" +
+      '<p><a href="' +
       escapeHtml(planPaymentLink("qron_launch") || "/checkout/qron_launch") +
       '">Start Launch $19/mo</a> · <a href="/pricing">All pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
       "</main>",
@@ -1644,9 +1639,7 @@ function generatePackLinksHtml(): string {
           ? "/pricing"
           : planPaymentLink(p.id) || "/pricing";
       const price =
-        p.price_suffix === "/month"
-          ? `$${p.price}/mo`
-          : `$${p.price}`;
+        p.price_suffix === "/month" ? `$${p.price}/mo` : `$${p.price}`;
       return (
         '<a href="' +
         escapeHtml(href) +
@@ -1711,7 +1704,8 @@ function generateFormHtml(
     : '<p role="alert" id="generate-error" hidden></p>\n';
   return htmlDocument({
     // LOOP-03 meta (docs/growth/2026-09-28-first-dollar-loops.md).
-    title: "AI QR Art Generator | 5 Free, Then $29 Once, No Subscription | QRON",
+    title:
+      "AI QR Art Generator | 5 Free, Then $29 Once, No Subscription | QRON",
     description:
       "Make scannable AI QR art. 5 free generations, no card (limit 5 per visitor every 30 days, while daily samples last). Then 100 for $29, paid once. A QR is not an authenticity proof.",
     canonicalPath: "/generate",
