@@ -170,7 +170,29 @@ export function renderEstateOpenApi(
               amount: String(X402_USD),
             },
           },
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    sealId: {
+                      type: "string",
+                      format: "uuid",
+                      description:
+                        "Required seal UUID. productId and serial are not registry keys.",
+                    },
+                  },
+                },
+              },
+            },
+          },
           responses: {
+            "400": {
+              description:
+                "A body that cannot be a seal UUID is refused before payment.",
+            },
             "402": { description: "Payment required (x402)" },
             "200": { description: "Paid verification result" },
           },

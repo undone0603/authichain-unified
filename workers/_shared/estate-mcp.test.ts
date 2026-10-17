@@ -198,6 +198,13 @@ test("JSON-RPC tools/list and get_pricing are public", async () => {
     listed.result.tools.map(t => t.name).sort(),
     ["get_pricing", "verify"].sort()
   );
+  const verify = listed.result.tools.find(t => t.name === "verify") as {
+    inputSchema?: { properties?: Record<string, { format?: string }> };
+  };
+  assert.deepEqual(Object.keys(verify.inputSchema?.properties ?? {}), [
+    "sealId",
+  ]);
+  assert.equal(verify.inputSchema?.properties?.sealId.format, "uuid");
 
   const call = await tryHandleSisterMcp(
     req("strainchain.io", "/api/mcp", {
