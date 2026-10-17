@@ -611,7 +611,7 @@ async function sha256Hex(value) {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 __name(sha256Hex, "sha256Hex");
-var LEDGER_PUBLIC_NOTICE = "Paid receipts appear on a public ledger with the amount, time and payment rail. On-chain payments also show the transaction hash, which is already public on Base. Your email and name are never published.";
+var LEDGER_PUBLIC_NOTICE = "Paid receipts appear on a public ledger with the amount, time and payment rail. On-chain payments also show the transaction hash, which is already public on Base. Your email and name are not shown on the ledger.";
 var ONCHAIN_TX_HASH = /^0x[0-9a-fA-F]{64}$/;
 // RES-78: built fresh on every read, so receipts stored before this change are
 // redacted too. No buyer field at all (even a hash of an email or wallet can be
