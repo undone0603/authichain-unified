@@ -263,14 +263,21 @@ async function tryFreeCall(
   env: X402Env | undefined,
   opts: X402Options | undefined
 ): Promise<{ response: Response | null; remaining: number | null }> {
+  const raw = parseJsonObject(await request.clone().text());
+  const parsed = parseSealRequest(raw);
+  if (!parsed.ok) {
+    // No body: 402 so a scanner can read the price. A named seal that cannot
+    // exist, or productId/serial used as the key, is refused here. The paid
+    // path does the same before settlement. This runs before the registry
+    // credential check so a bad id is not a payment challenge.
+    if (Object.keys(raw).length > 0) {
+      return { response: json(parsed.status, parsed.body), remaining: null };
+    }
+    return { response: null, remaining: null };
+  }
   const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);
   const creds = sealLookupCredentials(env);
-  if (!creds || limit <= 0)
-    return { response: null, remaining: limit <= 0 ? 0 : null };
-  const parsed = parseSealRequest(
-    parseJsonObject(await request.clone().text())
-  );
-  if (!parsed.ok) return { response: null, remaining: null };
+  if (!creds || limit <= 0) return { response: null, remaining: limit <= 0 ? 0 : null };
   const fetchImpl = opts?.fetchImpl ?? fetch;
   const store =
     opts && "freeStore" in opts
