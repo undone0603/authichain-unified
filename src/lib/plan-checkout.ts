@@ -136,6 +136,18 @@ export async function createPlanCheckoutSession(opts: {
             },
           }
         : {}),
+      // #1890 parity: tag the $29 Starter PaymentIntent with the plan so the
+      // webhook never has to guess Starter from the amount.
+      ...(plan.id === "starter" && plan.stripe_mode === "payment"
+        ? {
+            payment_intent_data: {
+              metadata: {
+                plan: plan.id,
+                stripe_price_id: plan.stripe_price_id,
+              },
+            },
+          }
+        : {}),
     });
     if (!session.url) {
       return {

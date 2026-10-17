@@ -8,6 +8,7 @@ import {
   FOUNDER_EMAILS,
   LOOP_BY_PLAN,
   alreadyGrantedSession,
+  grantForCheckout,
   grantForPrice,
   grantReplayAction,
   isFounderEmail,
@@ -110,5 +111,18 @@ describe("an unmapped price must never look like a starter purchase", () => {
       const g = grantForPrice(priceId);
       expect(loopForPlan(g?.plan ?? null)).toBeNull();
     }
+  });
+});
+
+describe("grantForCheckout", () => {
+  it("maps a $29 session with no price id to starter", () => {
+    expect(grantForCheckout({ priceId: null, amountTotal: 2900 })).toMatchObject({
+      plan: "starter",
+      generations: 100,
+    });
+  });
+
+  it("does not guess a shared $299 amount", () => {
+    expect(grantForCheckout({ priceId: null, amountTotal: 29900 })).toBeNull();
   });
 });

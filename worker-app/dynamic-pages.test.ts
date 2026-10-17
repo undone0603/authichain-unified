@@ -1019,9 +1019,14 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     const body = await res.text();
     expect(body).toContain("min-height:44px");
     expect(body).toContain('<label for="targetUrl">Product URL</label>');
-    expect(body).toContain("Sign in to use account credits.");
-    expect(body).toContain("100 generations for $29, one-time");
-    expect(body).toContain("Launch at $19/mo");
+    expect(body).toContain(
+      "Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts."
+    );
+    expect(body).toContain("Try 5 free generations. No account, no card.");
+    expect(body).toContain(
+      "100 generations for $29, paid once. No subscription, and pack credits never expire unless you switch to a Launch subscription. A scannable QR is not an authenticity proof."
+    );
+    expect(body).not.toContain("Launch at $19/mo");
     expect(body).not.toContain("Five generations are free");
     expect(body).toContain("not an authenticity proof");
     expect(body).not.toContain("<code>POST /api/generate</code>");
@@ -1036,7 +1041,7 @@ describe("renderDynamicPage: /generate Living QR", () => {
     const body = await res.text();
     expect(res.status).toBe(200);
     expect(body).toContain(
-      "<title>Living QR generator | QRON — account credits and $29 Starter Pack</title>"
+      "<title>AI QR Art Generator | 5 Free, Then $29 Once, No Subscription | QRON</title>"
     );
     expect(body).toContain("Generate a Living QR");
     expect(body).not.toContain("$QRON");
@@ -1053,7 +1058,9 @@ describe("renderDynamicPage: /generate Living QR", () => {
     // Top-ups: Starter $29, Launch $19/mo (LOOP-03 tertiary), Creator $99.
     // Retired credit bundles ($9.99/$39.99/$99.99) had no live Stripe account.
     expect(body).toContain('href="https://authichain.com/checkout/starter"');
-    expect(body).toContain('href="https://authichain.com/checkout/qron_launch"');
+    expect(body).toContain(
+      'href="https://authichain.com/checkout/qron_launch"'
+    );
     expect(body).toContain('href="https://authichain.com/checkout/creator"');
     expect(body).toContain("Start Launch — $19/mo");
     expect(body).not.toContain("$9.99");
@@ -1064,7 +1071,7 @@ describe("renderDynamicPage: /generate Living QR", () => {
         .slice(1)
         .some(rest => rest.slice(0, 40).includes("1Nu"))
     ).toBe(false);
-    expect(body).toContain("Sign in to use account credits.");
+    expect(body).toContain("Try 5 free generations. No account, no card.");
     expect(body).not.toContain("Five generations are free");
     expect(body).not.toContain("buy.stripe.com");
     expect(body).not.toContain("Those 5 are signed");

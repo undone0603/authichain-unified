@@ -23,8 +23,13 @@ import {
   type X402EnvVars,
   type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
+import { unpaidSealRefusal } from "../../src/lib/agent-verify.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
 import { sisterOrigin, type SisterX402Env } from "./estate-x402.ts";
+import {
+  guardedForward,
+  scopedReplayStore,
+} from "../../src/lib/paid-seal-verify.ts";
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -106,8 +111,7 @@ function mcpTools(brand: SisterDiscoveryBrand) {
     },
     {
       name: "verify",
-      description:
-        x402PaidVerifyStatus().bound
+      description: x402PaidVerifyStatus().bound
         ? "Paid AuthiChain verification. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT."
         : "Paid AuthiChain verification, not answering yet. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base) for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. Use query_provenance for a free lookup.",
       inputSchema: {
@@ -206,7 +210,8 @@ async function unpaidOrRefusedVerify(
   env: SisterX402Env | undefined,
   args: Record<string, unknown>,
   id: unknown,
-  verifyApp?: X402VerifyBinding
+  verifyApp: X402VerifyBinding | undefined,
+  brand: SisterDiscoveryBrand
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = publishedPayTo(env);
@@ -221,11 +226,19 @@ async function unpaidOrRefusedVerify(
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof || !proofHeader) {
+    const refusal = unpaidSealRefusal(args);
+    if (refusal) return json(refusal.status, refusal.body);
     return json(402, required.v2, required.headers);
   }
 
   if (verifyApp) {
-    return forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id);
+    return guardedForward({
+      proofHeader,
+      replayStore: scopedReplayStore(env?.X402_REPLAY_KV, brand),
+      sealId: typeof args.sealId === "string" ? args.sealId : null,
+      forward: () =>
+        forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id),
+    });
   }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
@@ -287,7 +300,8 @@ async function handleRpc(
         env,
         params.arguments ?? {},
         id,
-        verifyApp
+        verifyApp,
+        brand
       );
     }
     return rpcResult(id, {

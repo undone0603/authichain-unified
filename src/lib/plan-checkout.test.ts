@@ -217,4 +217,33 @@ describe("createPlanCheckoutSession", () => {
       "AFF-EXPLICIT"
     );
   });
+
+  it("tags the $29 Starter PaymentIntent with plan + stripe_price_id (#1890 parity)", async () => {
+    const { planById } = await import("./plans");
+    create.mockResolvedValue({ url: "https://checkout.stripe.com/c/pay/cs_test_starter" });
+    const result = await createPlanCheckoutSession({
+      request: new Request("https://authichain.com/api/checkout", { method: "POST" }),
+      body: { planId: "starter", email: "ops@brand.com" },
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(result.ok).toBe(true);
+    const arg = create.mock.calls[0][0];
+    expect(arg.metadata.plan).toBe("starter");
+    expect(arg.payment_intent_data).toEqual({
+      metadata: {
+        plan: "starter",
+        stripe_price_id: planById("starter")?.stripe_price_id,
+      },
+    });
+  });
+
+  it("does not add Starter PaymentIntent metadata to other plans", async () => {
+    create.mockResolvedValue({ url: "https://checkout.stripe.com/c/pay/cs_test_p" });
+    await createPlanCheckoutSession({
+      request: new Request("https://authichain.com/api/checkout", { method: "POST" }),
+      body: { planId: "strainchain_passport", email: "ops@brand.com" },
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(create.mock.calls[0][0].payment_intent_data).toBeUndefined();
+  });
 });

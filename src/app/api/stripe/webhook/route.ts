@@ -15,6 +15,10 @@ import {
 } from "@/lib/ledger-service";
 import { constructStripeEventAsync } from "@/lib/stripe-construct-event";
 import { accrueAffiliateCommission } from "../../../../lib/affiliate-accrual";
+import {
+  resolveCheckoutPlanId,
+  starterAmountFallbackRefusals,
+} from "../../../../lib/billing/live-catalog";
 
 // Never anchor test-mode objects from a production deployment.
 function isAnchorable(event: Stripe.Event): boolean {
@@ -298,10 +302,29 @@ export async function POST(req: NextRequest) {
         // Hands-off provisioning for BOTH authenticated and guest checkouts.
         // Guests get a profile created/resolved by email so the purchase is
         // never lost.
+        // Amount-only Starter fallback: paid + livemode + USD + exactly
+        // $29.00 undiscounted. Anything else grants nothing from the amount.
+        const fallbackRefusals = starterAmountFallbackRefusals(
+          session,
+          event.livemode
+        );
+        const resolvedPlan = resolveCheckoutPlanId({
+          plan,
+          priceId: linePriceId,
+          amountTotal: session.amount_total,
+          allowAmountFallback: fallbackRefusals.length === 0,
+        });
+        if (!resolvedPlan && fallbackRefusals.length > 0) {
+          console.warn("[webhook] starter amount fallback refused", {
+            sessionId: session.id,
+            eventId: event.id,
+            reasons: fallbackRefusals,
+          });
+        }
         const prov = await provisionPurchase(getSupabase(), {
           email,
           userId,
-          plan: plan || (dppOffer ? "dpp_readiness" : plan),
+          plan: resolvedPlan ?? undefined,
           brand,
           stripeCustomerId: customerId,
           stripeSubscriptionId: subscriptionId,
@@ -405,7 +428,9 @@ export async function POST(req: NextRequest) {
             eventId: event.id,
           });
           if (!accrual.credited) {
-            throw new Error(`Affiliate commission not recorded: ${accrual.reason}`);
+            throw new Error(
+              `Affiliate commission not recorded: ${accrual.reason}`
+            );
           }
         }
 
@@ -487,7 +512,9 @@ export async function POST(req: NextRequest) {
               eventId: event.id,
             });
             if (!accrual.credited) {
-              throw new Error(`Affiliate commission not recorded: ${accrual.reason}`);
+              throw new Error(
+                `Affiliate commission not recorded: ${accrual.reason}`
+              );
             }
           }
         }

@@ -47,36 +47,37 @@ export const PLANS: Plan[] = [
     name: "Free",
     price: 0,
     description:
-      "5 account-based generations. Sign-in required. Lookup verify only.",
+      "5 free sample generations on /generate. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Lookup verify only.",
     generations: 5,
     stripe_price_id: null,
     stripe_mode: null,
     tier: "free",
     features: [
-      "5 generations per account",
-      "Sign-in required",
+      "5 free sample generations",
+      "Limit 5 per visitor every 30 days, while the daily sample limit lasts",
+      "No account, no card",
       "Lookup verify only (no GPT-4V)",
-      "Then Starter $29 or DPP workspace $299",
+      "Then Starter: $29 once, no subscription",
     ],
-    cta: "Sign in for 5 credits",
+    cta: "Start free, no card",
   },
   {
     id: "starter",
     name: "Starter Pack",
     price: 29,
-    description: "100 AI QR generations, never expire",
+    description:
+      "100 AI QR generations for $29, paid once. No subscription. Pack credits never expire unless you switch to a Launch subscription.",
     generations: 100,
     stripe_price_id: "price_1UIoEVGqTruSqV8T61lp48wB",
     stripe_payment_link: "https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E",
     stripe_mode: "payment",
     tier: "pro",
     features: [
-      "100 generations (one-time)",
-      "All free modes",
-      "Holographic & Memory modes",
-      "Designed for AuthiChain signed verification (in development)",
+      "100 generations for $29, paid once",
+      "No subscription, no renewal",
+      "Pack credits never expire unless you switch to Launch",
     ],
-    cta: "Buy Starter Pack",
+    cta: "Get 100 generations for $29",
     listed: true,
   },
   {
@@ -93,7 +94,6 @@ export const PLANS: Plan[] = [
     listed: true,
     features: [
       "100 generations / month",
-      "All free modes",
       "Designed for AuthiChain signed verification (in development)",
       "Cancel any time",
     ],
@@ -111,9 +111,8 @@ export const PLANS: Plan[] = [
     tier: "pro",
     features: [
       "500 generations (one-time)",
-      "All Pro modes",
-      "Premium styles",
-      "Priority generation queue",
+      "Lowest one-time price per generation: 500 for $99 (about 20¢ each, vs 29¢ on Starter)",
+      "Every style and preset, the same ones as the free sample",
       "Designed for AuthiChain signed verification (in development)",
     ],
     cta: "Buy Creator Pack",
@@ -343,12 +342,24 @@ export function planByStripePriceId(
   return PLANS.find(p => p.stripe_price_id === priceId);
 }
 
+/**
+ * Amount-only plan lookup, used when a Checkout has no plan metadata or price
+ * id. Allow-listed to Starter ($29) only: an arbitrary amount (discounts,
+ * other currencies, unlisted prices) must never map to a plan.
+ */
+const AMOUNT_FALLBACK_PLAN_IDS: readonly PlanId[] = ["starter"];
+
 export function planByAmountCents(
   amountCents: number | null | undefined
 ): Plan | undefined {
   if (amountCents == null || !Number.isFinite(amountCents)) return undefined;
   const dollars = amountCents / 100;
-  const matches = PLANS.filter(p => p.stripe_price_id && p.price === dollars);
+  const matches = PLANS.filter(
+    p =>
+      AMOUNT_FALLBACK_PLAN_IDS.includes(p.id) &&
+      p.stripe_price_id &&
+      p.price === dollars
+  );
   return matches.length === 1 ? matches[0] : undefined;
 }
 

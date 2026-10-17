@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  claimFreeSampleSlot,
   extractAccessToken,
   generateCreditPacks,
   generateHealthBody,
@@ -62,6 +63,95 @@ describe("generateHealthBody", () => {
   });
 });
 
+describe("claimFreeSampleSlot ordering (CFA-361)", () => {
+  // In-memory fixed-window counters with the same semantics as RateLimiter.
+  function counters(ipLimit: number, dailyLimit: number) {
+    const st = { ip: 0, daily: 0, refunds: 0, calls: [] as string[] };
+    const tick = () => new Promise(r => setTimeout(r, 0));
+    return {
+      st,
+      l: {
+        claimIp: async () => {
+          st.calls.push("claimIp");
+          await tick();
+          if (st.ip >= ipLimit) return false;
+          st.ip += 1;
+          return true;
+        },
+        claimDaily: async () => {
+          st.calls.push("claimDaily");
+          await tick();
+          if (st.daily >= dailyLimit) return false;
+          st.daily += 1;
+          return true;
+        },
+        refundIp: async () => {
+          st.calls.push("refundIp");
+          st.refunds += 1;
+          if (st.ip > 0) st.ip -= 1;
+          return true;
+        },
+      },
+    };
+  }
+
+  it("claims the IP slot, then a daily slot", async () => {
+    const { st, l } = counters(5, 100);
+    expect(await claimFreeSampleSlot(l)).toEqual({ ok: true });
+    expect(st.calls).toEqual(["claimIp", "claimDaily"]);
+    expect(st).toMatchObject({ ip: 1, daily: 1 });
+  });
+
+  it("a visitor who used their samples never touches the daily counter", async () => {
+    const { st, l } = counters(0, 100);
+    expect(await claimFreeSampleSlot(l)).toEqual({ ok: false, reason: "used" });
+    expect(st.calls).toEqual(["claimIp"]);
+    expect(st.daily).toBe(0);
+  });
+
+  it("a parallel burst from one fresh IP takes at most 5 daily slots", async () => {
+    const { st, l } = counters(5, 100);
+    const results = await Promise.all(
+      Array.from({ length: 50 }, () => claimFreeSampleSlot(l))
+    );
+    expect(results.filter(r => r.ok)).toHaveLength(5);
+    expect(results.filter(r => r.reason === "used")).toHaveLength(45);
+    expect(st.daily).toBe(5);
+    expect(st.ip).toBe(5);
+  });
+
+  it("refunds the IP slot when the daily cap is hit", async () => {
+    const { st, l } = counters(5, 0);
+    expect(await claimFreeSampleSlot(l)).toEqual({
+      ok: false,
+      reason: "paused",
+    });
+    expect(st.calls).toEqual(["claimIp", "claimDaily", "refundIp"]);
+    expect(st.ip).toBe(0);
+  });
+
+  it("refunds the IP slot and fails closed when the daily claim throws", async () => {
+    const { st, l } = counters(5, 100);
+    l.claimDaily = async () => {
+      throw new Error("DO down");
+    };
+    await expect(claimFreeSampleSlot(l)).rejects.toThrow("DO down");
+    expect(st.ip).toBe(0);
+    expect(st.refunds).toBe(1);
+  });
+
+  it("still says paused if the refund itself fails", async () => {
+    const { l } = counters(5, 0);
+    l.refundIp = async () => {
+      throw new Error("refund failed");
+    };
+    expect(await claimFreeSampleSlot(l)).toEqual({
+      ok: false,
+      reason: "paused",
+    });
+  });
+});
+
 describe("handleGeneratePost", () => {
   const generateImage = vi.fn().mockResolvedValue({
     imageUrl: "data:image/png;base64,abc",
@@ -95,6 +185,101 @@ describe("handleGeneratePost", () => {
     expect(generateImage).not.toHaveBeenCalled();
     expect(checkCredit).not.toHaveBeenCalled();
     expect(deductCredit).not.toHaveBeenCalled();
+  });
+
+  it("serves an anonymous free sample without touching account credits", async () => {
+    const claimFreeSample = vi.fn().mockResolvedValue({ ok: true });
+    const bindAttestation = vi.fn();
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      bindAttestation,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.free_sample).toBe(true);
+    expect(claimFreeSample).toHaveBeenCalledTimes(1);
+    expect(checkCredit).not.toHaveBeenCalled();
+    expect(deductCredit).not.toHaveBeenCalled();
+    expect(bindAttestation).not.toHaveBeenCalled();
+    expect(generateImage.mock.calls[0][0].targetUrl).toBe(
+      "https://example.com"
+    );
+    expect((result.body.qron as { resolveUrl: unknown }).resolveUrl).toBeNull();
+    expect(result.body.presentation).toBeUndefined();
+  });
+
+  it("walls the anonymous caller once the free sample is used", async () => {
+    const claimFreeSample = vi
+      .fn()
+      .mockResolvedValue({ ok: false, reason: "used" });
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(401);
+    expect(result.body.code).toBe("FREE_SAMPLE_USED");
+    expect(String(result.body.message)).toMatch(
+      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and pack credits never expire unless you switch to a Launch subscription\.$/
+    );
+    expect(generateImage).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the free-sample limiter throws", async () => {
+    const claimFreeSample = vi.fn().mockRejectedValue(new Error("DO down"));
+    // fail closed as PAUSED, never "used up"
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(401);
+    expect(result.body.code).toBe("FREE_SAMPLE_PAUSED");
+    expect(String(result.body.message)).toMatch(
+      /^Free samples are paused for today\./
+    );
+    expect(generateImage).not.toHaveBeenCalled();
+  });
+
+  it("says paused, not used up, when the daily cap is hit", async () => {
+    const claimFreeSample = vi
+      .fn()
+      .mockResolvedValue({ ok: false, reason: "paused" });
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(401);
+    expect(result.body.code).toBe("FREE_SAMPLE_PAUSED");
+    expect(String(result.body.message)).not.toContain("used up");
+  });
+
+  it("does not spend a free sample on an invalid request", async () => {
+    const claimFreeSample = vi.fn().mockResolvedValue({ ok: true });
+    const result = await handleGeneratePost({
+      body: { prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(400);
+    expect(claimFreeSample).not.toHaveBeenCalled();
   });
 
   it("returns 400 when the destination URL is missing", async () => {
@@ -171,9 +356,9 @@ describe("handleGeneratePost", () => {
     expect(presentation.verify.decision_contract).toBe(
       "AuthiChain Verification Decision v1"
     );
-    expect(
-      (result.body.qron as { objectId: string }).objectId
-    ).toBe(presentation.object_id);
+    expect((result.body.qron as { objectId: string }).objectId).toBe(
+      presentation.object_id
+    );
     expect(result.body.remaining_credits).toBe(9);
     expect(checkCredit).toHaveBeenCalledWith("user_1");
     expect(deductCredit).toHaveBeenCalledWith("user_1");
@@ -281,9 +466,9 @@ describe("handleGeneratePost", () => {
       },
     });
     expect(result.status).toBe(200);
-    expect(
-      (result.body.presentation as { status: string }).status
-    ).toBe("attestation_bound");
+    expect((result.body.presentation as { status: string }).status).toBe(
+      "attestation_bound"
+    );
   });
 
   it("stays image_issued when bindAttestation throws", async () => {
@@ -301,9 +486,9 @@ describe("handleGeneratePost", () => {
       },
     });
     expect(result.status).toBe(200);
-    expect(
-      (result.body.presentation as { status: string }).status
-    ).toBe("image_issued");
+    expect((result.body.presentation as { status: string }).status).toBe(
+      "image_issued"
+    );
   });
 });
 

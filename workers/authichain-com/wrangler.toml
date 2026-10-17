@@ -13,7 +13,31 @@ workers_dev = false
 # That route wins over authichain.com/*, and the deployed edge router only
 # implements health and catalog, so /api/x402/listing and /api/x402/growth
 # answered {"error":"Not found"}. These paths, including a trailing slash,
-# are implemented here. Health, catalog, and paid POST stay on the edge.
+# are implemented here.
+# Exact /api/x402 and /api/v1/agent-verify (plus trailing slash) also live
+# here so #1882's free tier (x402-routes.ts isPaidPath + free-tier POST) is
+# reachable; the edge router has no free tier. Routes match path, not method,
+# so GET on these two paths (health/status) AND paid POST are served here.
+# /api/x402/health, /api/x402/catalog, settle and every other /api/x402/*
+# path stay on the edge router, as do /api/stripe/webhook and /api/checkout*.
+# Rollback: delete the 4 routes below and redeploy, or
+# npx wrangler rollback 1ef83048-3e1f-4065-83d2-b098e9fb15af --name authichain-com
+[[routes]]
+pattern = "authichain.com/api/x402"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/v1/agent-verify"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/v1/agent-verify/"
+zone_name = "authichain.com"
+
 [[routes]]
 pattern = "authichain.com/api/x402/listing"
 zone_name = "authichain.com"
@@ -121,6 +145,15 @@ service = "authichain-app"
 [vars]
 SUPABASE_URL = "https://nhdnkzhtadfkkluiulhs.supabase.co"
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oZG5remh0YWRma2tsdWl1bGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MzgyNTUsImV4cCI6MjA4OTUxNDI1NX0.akaWgxRilnjavzpsLqU149nBJqxDjbYOnRdAqrwz4J8"
+# Paid verify reads auth_seals here (SUPABASE_URL + key above, VERIFY_APP
+# fallback), so discovery reports paidVerify bound. Rollback: delete this line.
+X402_PAID_VERIFY_PATH = "seal_lookup"
 
 [browser]
 binding = "MYBROWSER"
+
+# x402 replay guard (CFA-343/351). Namespace created 2026-10-16 (PM-approved);
+# delete it if #1900 does not ship.
+[[kv_namespaces]]
+binding = "X402_REPLAY_KV"
+id = "ab391dc529884161bd84707d7627a9f0"

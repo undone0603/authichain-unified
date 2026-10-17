@@ -13,6 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { NextRequest } from "next/server";
 import { POST } from "./route";
+import { provisionPurchase } from "@/lib/provisioning";
 
 // ─── Hoisted fakes ────────────────────────────────────────────────────────────
 
@@ -225,7 +226,6 @@ vi.mock("@/lib/dpp-fulfill-checkout", () => ({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function invoiceEvent(
   billingReason: string,
   ids: { event: string; invoice: string }
@@ -357,5 +357,147 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
         invoiceId: "in_cycle_001",
       })
     );
+  });
+
+  it("checkout.session.completed: $29 with no plan metadata provisions starter", async () => {
+    vi.mocked(provisionPurchase).mockResolvedValue({
+      profileId: "prof_1",
+      created: false,
+      status: "provisioned",
+    });
+    const res = await postInvoice({
+      id: "evt_cs_starter_001",
+      object: "event",
+      type: "checkout.session.completed",
+      livemode: true,
+      data: {
+        object: {
+          id: "cs_starter_001",
+          object: "checkout.session",
+          amount_total: 2900,
+          currency: "usd",
+          customer_email: "buyer@example.com",
+          customer_details: { email: "buyer@example.com" },
+          metadata: {},
+          payment_status: "paid",
+        },
+      },
+    });
+    await flushAfter();
+
+    expect(res.body).toMatchObject({ received: true });
+    expect(provisionPurchase).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        email: "buyer@example.com",
+        plan: "starter",
+      })
+    );
+  });
+
+  function starterSession(
+    overrides: Record<string, unknown> = {},
+    livemode = true
+  ) {
+    return {
+      id: `evt_cs_${Math.random().toString(36).slice(2)}`,
+      object: "event",
+      type: "checkout.session.completed",
+      livemode,
+      data: {
+        object: {
+          id: "cs_starter_neg",
+          object: "checkout.session",
+          amount_total: 2900,
+          amount_subtotal: 2900,
+          total_details: { amount_discount: 0 },
+          currency: "usd",
+          customer_email: "buyer@example.com",
+          customer_details: { email: "buyer@example.com" },
+          metadata: {},
+          payment_status: "paid",
+          ...overrides,
+        },
+      },
+    };
+  }
+
+  async function grantedPlan(event: unknown) {
+    vi.mocked(provisionPurchase).mockResolvedValue({
+      profileId: "prof_1",
+      created: false,
+      status: "provisioned",
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const res = await postInvoice(event);
+    await flushAfter();
+    expect(res.body).toMatchObject({ received: true });
+    const call = vi.mocked(provisionPurchase).mock.calls[0]?.[1] as
+      | { plan?: string }
+      | undefined;
+    const warned = warn.mock.calls.some(
+      c => c[0] === "[webhook] starter amount fallback refused"
+    );
+    warn.mockRestore();
+    return { plan: call?.plan, warned };
+  }
+
+  it("positive: paid, live, USD, $29.00 undiscounted grants starter", async () => {
+    const r = await grantedPlan(starterSession());
+    expect(r.plan).toBe("starter");
+    expect(r.warned).toBe(false);
+  });
+
+  it("negative: unpaid session grants nothing and logs", async () => {
+    const r = await grantedPlan(starterSession({ payment_status: "unpaid" }));
+    expect(r.plan).toBeUndefined();
+    expect(r.warned).toBe(true);
+  });
+
+  it("negative: non-USD 2900 grants nothing and logs", async () => {
+    const r = await grantedPlan(starterSession({ currency: "eur" }));
+    expect(r.plan).toBeUndefined();
+    expect(r.warned).toBe(true);
+  });
+
+  it("negative: test mode grants nothing and logs", async () => {
+    const r = await grantedPlan(starterSession({}, false));
+    expect(r.plan).toBeUndefined();
+    expect(r.warned).toBe(true);
+  });
+
+  it("negative: another amount grants nothing", async () => {
+    const r = await grantedPlan(
+      starterSession({ amount_total: 9900, amount_subtotal: 9900 })
+    );
+    expect(r.plan).toBeUndefined();
+    expect(r.warned).toBe(true);
+  });
+
+  it("negative: a discounted higher plan totalling $29 grants nothing", async () => {
+    const r = await grantedPlan(
+      starterSession({
+        amount_subtotal: 9900,
+        total_details: { amount_discount: 7000 },
+      })
+    );
+    expect(r.plan).toBeUndefined();
+    expect(r.warned).toBe(true);
+  });
+
+  it("the refusal log carries no email or secrets", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(provisionPurchase).mockResolvedValue({
+      profileId: "prof_1",
+      created: false,
+      status: "provisioned",
+    });
+    await postInvoice(starterSession({ payment_status: "unpaid" }));
+    await flushAfter();
+    const logged = JSON.stringify(warn.mock.calls);
+    warn.mockRestore();
+    expect(logged).not.toContain("buyer@example.com");
+    expect(logged).not.toContain("sk_");
+    expect(logged).not.toContain("whsec_");
   });
 });

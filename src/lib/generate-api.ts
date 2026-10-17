@@ -160,6 +160,52 @@ export type GeneratePostResult = {
   body: Record<string, unknown>;
 };
 
+/**
+ * Free sample before Starter: about 5 generations with no account and no card
+ * (Zac, 2026-10-16, per Research brief starter-tier-demand-2026-10-16.md).
+ * Counted per client IP in the RATE_LIMITER Durable Object (atomic per key),
+ * with a global daily ceiling so the sample cannot run up image-gen cost.
+ */
+export const FREE_SAMPLE_GENERATIONS = 5;
+export const FREE_SAMPLE_WINDOW_MS = 30 * 24 * 60 * 60_000;
+export const FREE_SAMPLE_GLOBAL_DAILY_CAP = 100;
+
+export type FreeSampleLimiter = {
+  /** Consumes one per-IP slot. */
+  claimIp: () => Promise<boolean>;
+  /** Consumes one site-wide daily slot. */
+  claimDaily: () => Promise<boolean>;
+  /** Gives back the per-IP slot just claimed. */
+  refundIp: () => Promise<boolean>;
+};
+
+/**
+ * Order (CFA-361): claim the per-IP slot, then a daily slot; if the daily
+ * claim fails, give the IP slot back. A visitor who used their 5 is stopped
+ * at the IP claim and never touches the daily counter, so a parallel burst
+ * from one IP can take at most 5 daily slots. A capped day hands the IP slot
+ * back. Fails closed: any thrown error propagates and the caller says paused.
+ * If the refund itself fails, the visitor loses that one sample (never the
+ * reverse), and the result is still paused.
+ */
+export async function claimFreeSampleSlot(
+  l: FreeSampleLimiter
+): Promise<{ ok: boolean; reason?: "used" | "paused" }> {
+  if (!(await l.claimIp())) return { ok: false, reason: "used" };
+  let daily = false;
+  try {
+    daily = await l.claimDaily();
+  } catch (err) {
+    await l.refundIp().catch(() => false);
+    throw err;
+  }
+  if (!daily) {
+    await l.refundIp().catch(() => false);
+    return { ok: false, reason: "paused" };
+  }
+  return { ok: true };
+}
+
 type CreditFn = (
   userId: string
 ) => Promise<{ ok: boolean; remaining?: number; error?: string }>;
@@ -188,9 +234,14 @@ export async function handleGeneratePost(opts: {
   }) => Promise<QronPresentationAttestation | null>;
   /** Persist the signed presentation so a scan of resolve_url can verify it. */
   rememberPresentation?: (record: StoredQronPresentation) => Promise<void>;
+  /**
+   * Claims one anonymous free-sample generation. Must fail closed (ok: false)
+   * when the limiter is unavailable. Omitted = no anonymous sample.
+   */
+  claimFreeSample?: () => Promise<{ ok: boolean; reason?: "used" | "paused" }>;
 }): Promise<GeneratePostResult> {
   const packs = generateCreditPacks();
-  if (!opts.userId) {
+  if (!opts.userId && !opts.claimFreeSample) {
     return {
       status: 401,
       body: {
@@ -217,7 +268,42 @@ export async function handleGeneratePost(opts: {
     };
   }
 
-  const credit = await opts.checkCredit(opts.userId);
+  const anonymous = !opts.userId;
+  if (anonymous) {
+    let claim: { ok: boolean; reason?: "used" | "paused" } = {
+      ok: false,
+      reason: "paused",
+    };
+    try {
+      claim = await opts.claimFreeSample!();
+    } catch {
+      claim = { ok: false, reason: "paused" };
+    }
+    if (!claim.ok) {
+      // Only a visitor whose own per-IP quota is spent hears "used up".
+      // Daily cap, limiter down or unknown reason = paused.
+      const used = claim.reason === "used";
+      return {
+        status: 401,
+        body: {
+          message: used
+            ? "You've used your 5 free generations. Keep going with Starter: 100 more for $29, paid once. No subscription, and pack credits never expire unless you switch to a Launch subscription."
+            : "Free samples are paused for today. Try again later, or get Starter now: 100 generations for $29, paid once. No subscription, and pack credits never expire unless you switch to a Launch subscription.",
+          code: used ? "FREE_SAMPLE_USED" : "FREE_SAMPLE_PAUSED",
+          packs,
+          pricing: "/pricing",
+        },
+      };
+    }
+  }
+
+  const credit = anonymous
+    ? {
+        ok: true as boolean,
+        remaining: undefined as number | undefined,
+        error: undefined as string | undefined,
+      }
+    : await opts.checkCredit(opts.userId!);
   if (!credit.ok) {
     return {
       status: 403,
@@ -243,7 +329,9 @@ export async function handleGeneratePost(opts: {
 
   try {
     const generated = await opts.generateImage({
-      targetUrl: resolveUrl,
+      // Free samples are never attested, so encode the destination directly
+      // (a resolve_url would scan to presentation_not_found).
+      targetUrl: anonymous ? targetUrl : resolveUrl,
       prompt,
       mode,
       ...(presetId ? { presetId } : {}),
@@ -252,9 +340,12 @@ export async function handleGeneratePost(opts: {
     if (!generated.imageUrl) {
       return { status: 502, body: { message: "No image returned" } };
     }
-    const deducted = await opts.deductCredit(opts.userId);
+    const deducted = anonymous
+      ? { ok: false, remaining: undefined }
+      : await opts.deductCredit(opts.userId!);
     let bind: QronPresentationAttestation | null = null;
-    if (opts.bindAttestation) {
+    // Free-sample images are not bound to an issuer attestation.
+    if (opts.bindAttestation && opts.userId) {
       try {
         bind = await opts.bindAttestation({
           destinationUrl: targetUrl,
@@ -276,7 +367,9 @@ export async function handleGeneratePost(opts: {
       kid: bind?.kid,
       jwksUrl: bind?.jwks_url,
     });
-    const qrDataUrl = await scannableQrDataUrl(presentation.resolve_url);
+    const qrDataUrl = await scannableQrDataUrl(
+      anonymous ? targetUrl : presentation.resolve_url
+    );
     if (bind && opts.rememberPresentation) {
       try {
         await opts.rememberPresentation({
@@ -298,13 +391,14 @@ export async function handleGeneratePost(opts: {
           imageUrl: generated.imageUrl,
           destinationUrl: targetUrl,
           qrDataUrl,
-          resolveUrl: presentation.resolve_url,
+          resolveUrl: anonymous ? null : presentation.resolve_url,
           prompt,
           mode,
           objectId: presentation.object_id,
         },
-        presentation,
+        ...(anonymous ? {} : { presentation }),
         remaining_credits: deducted.ok ? deducted.remaining : credit.remaining,
+        ...(anonymous ? { free_sample: true } : {}),
       },
     };
   } catch (err) {

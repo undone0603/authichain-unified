@@ -316,6 +316,10 @@ function htmlResponse(html: string, status = 200): Response {
 
 // ─── Stripe session (POST only) ─────────────────────────────────────────────
 
+/** Shown when checkout protection (not Stripe) refuses or is unavailable (503). */
+export const CHECKOUT_UNAVAILABLE_MESSAGE =
+  "Checkout is temporarily unavailable. Please try again in a minute or use /contact.";
+
 export type GatedSessionResult =
   | { ok: true; url: string; visitId: string }
   | { ok: false; status: number; error: string; detail?: string };
@@ -434,6 +438,15 @@ export function buildGatedSessionBody(opts: {
     for (const [k, v] of Object.entries(meta)) {
       body.set(`subscription_data[metadata][${k}]`, v);
     }
+  }
+  // $29 Starter is one-time: also tag the PaymentIntent so the plan travels
+  // with the payment itself, and the webhook never needs the amount fallback.
+  if (isStarter && mode === "payment") {
+    body.set("payment_intent_data[metadata][plan]", plan.id);
+    body.set(
+      "payment_intent_data[metadata][stripe_price_id]",
+      plan.stripe_price_id as string
+    );
   }
   applyHostedCheckoutRecovery(body, mode);
   return body;
@@ -703,7 +716,9 @@ export async function tryHandleGatedCheckout(
         plan,
         params: fields,
         error:
-          "Stripe checkout could not start. Please try again in a minute or use /contact.",
+          result.status === 503
+            ? CHECKOUT_UNAVAILABLE_MESSAGE
+            : "Stripe checkout could not start. Please try again in a minute or use /contact.",
       }),
       result.status
     );
