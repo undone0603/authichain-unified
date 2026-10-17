@@ -19,8 +19,12 @@ describe("manufacturer status on the apex", () => {
     const html = await res!.text();
     expect(html).toContain("latest 10,000 blocks");
     expect(html).toContain("does not take payment");
+    expect(html).toContain("encodeURIComponent");
+    expect(html).toContain("could not be read");
+    expect(html).toContain("admin-set contract flag");
     expect(html).not.toContain("$49");
     expect(html).not.toContain("auto-granted");
+    expect(html).not.toContain("JSON.stringify");
   });
 
   it("rejects an address that cannot be a topic", async () => {

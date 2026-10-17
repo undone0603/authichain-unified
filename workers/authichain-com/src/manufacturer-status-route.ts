@@ -158,11 +158,35 @@ function page(): Response {
 <script>
 document.getElementById("q").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const address = new FormData(event.target).get("address");
   const out = document.getElementById("out");
   out.textContent = "Checking…";
-  const res = await fetch("/api/manufacturer-status/" + address + "/history");
-  out.textContent = JSON.stringify(await res.json(), null, 2);
+  try {
+    const address = String(new FormData(event.target).get("address") || "");
+    const res = await fetch("/api/manufacturer-status/" + encodeURIComponent(address) + "/history");
+    const body = await res.json();
+    const known = ["invalid address", "method_not_allowed", "log_query_failed"];
+    if (!res.ok || body.error) {
+      out.textContent = known.includes(body.error) ? body.error : "could not be read";
+      return;
+    }
+    const current = body.current || {};
+    const flag = (name, value) => name + ": " + (value ? "yes" : "no");
+    const events = Array.isArray(body.history)
+      ? body.history.map((item) => item.type + " block " + item.block).join("; ")
+      : "";
+    out.textContent = [
+      flag("Admin", current.admin),
+      flag("Minter", current.minter),
+      flag("Updater", current.updater),
+      flag("Pauser", current.pauser),
+      "Manufacturer verified (admin-set contract flag): " + (current.manufacturerVerified ? "yes" : "no"),
+      body.historyError
+        ? "Event list unavailable: " + body.historyError
+        : "Events: " + (events || "none in this window"),
+    ].join(" | ");
+  } catch {
+    out.textContent = "could not be read";
+  }
 });
 </script>`;
   return new Response(html, { headers: PAGE_HEADERS });
