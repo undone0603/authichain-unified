@@ -275,8 +275,8 @@ export async function handleGeneratePost(opts: {
         status: 401,
         body: {
           message: used
-            ? "You've used your 5 free generations. Keep going with Starter: 100 more for $29, paid once. No subscription, and pack credits never expire (starting a Launch subscription replaces unused pack credits)."
-            : "Free samples are paused for today. Try again later, or get Starter now: 100 generations for $29, paid once. No subscription, and pack credits never expire (starting a Launch subscription replaces unused pack credits).",
+            ? "You've used your 5 free generations. Keep going with Starter: 100 more for $29, paid once. No subscription, and pack credits never expire unless you switch to a Launch subscription."
+            : "Free samples are paused for today. Try again later, or get Starter now: 100 generations for $29, paid once. No subscription, and pack credits never expire unless you switch to a Launch subscription.",
           code: used ? "FREE_SAMPLE_USED" : "FREE_SAMPLE_PAUSED",
           packs,
           pricing: "/pricing",
