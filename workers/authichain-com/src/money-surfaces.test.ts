@@ -103,3 +103,12 @@ test("tryHandleMoneySurface serves aliases and ignores unknown paths", async () 
 
   assert.equal(await tryHandleMoneySurface(req("/pricing")), null);
 });
+
+test("wording sweep 2026-10-16: made-in-america links gov pilot and does not claim live scan verification", () => {
+  const html = renderMadeInAmericaPage();
+  assert.ok(html.includes('href="https://authichain.com/checkout/gov_provenance_pilot"'));
+  assert.equal(html.includes("buy.stripe.com"), false);
+  assert.ok(html.includes("$7,500 fixed"));
+  assert.equal(html.includes("A scan returns the chain of custody"), false);
+  assert.ok(html.includes("Public scan verification is in development."));
+});

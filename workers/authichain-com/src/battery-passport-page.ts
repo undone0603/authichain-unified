@@ -9,7 +9,9 @@
  *
  * Truth rules: the $299 list on this page is the workspace, self-serve
  * activation, and 50 generations. src/lib/plans.ts also names a written
- * assessment and a Basic credit; those stay off this page until they exist.
+ * assessment and a Basic credit. The written gap report ($950 + $350/model,
+ * gated /checkout/ routes, Zac 2026-10-16) is the assessment tier and is sold
+ * in tiersSection(), labelled readiness only.
  * Regulatory facts are dated and hedged (not legal advice). No customer
  * logos, testimonials, or counts.
  */
@@ -21,7 +23,7 @@ import {
   estateNav,
   estateSkipLink,
 } from "../../_shared/estate-landing.ts";
-import { planById } from "../../../src/lib/plans";
+import { gatedCheckoutUrl, planById } from "../../../src/lib/plans";
 import {
   CONSISTENCY_TOLERANCE,
   GAP_MAP_DISCLAIMER,
@@ -129,13 +131,38 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "Is this legal advice or a certification?",
-    a: "No. It is a workspace for your passport figures. Not an assessment, not legal advice, not a certification. Confirm obligations against Regulation (EU) 2023/1542.",
+    a: "No. Nothing on this page is legal advice, a certification, a conformity assessment, or an issued passport. The economic operator placing the battery on the EU market issues the passport. Confirm obligations against Regulation (EU) 2023/1542.",
+  },
+  {
+    q: "What is the difference between the $299 workspace and the $950 gap report?",
+    a: "The $299 workspace is a self-serve tool, not an assessment: you enter and check your own passport figures. The $950 written gap report is a readiness assessment we write for one battery model: which Annex XIII data you have, which is missing, and who in your supply chain should supply it. Delivered in 10 business days. Each extra model is $350. It assesses readiness only. It is not a conformity assessment, not legal advice, and not an issued passport.",
   },
   {
     q: "Do I have to book a call?",
     a: "No. The $299 checkout is self-serve. The scoping form on this page is optional. We may email you at the work address in that form to set up a scoping call.",
   },
 ];
+
+/** Gated confirm pages (GET never opens a Stripe session). Zac approved prices 2026-10-16, RES-34. */
+export const GAP_REPORT_LINK = gatedCheckoutUrl("battery_gap_report");
+export const GAP_REPORT_EXTRA_LINK = gatedCheckoutUrl("battery_gap_report_extra");
+export const GAP_REPORT_PRICE = 950;
+export const GAP_REPORT_EXTRA_PRICE = 350;
+
+/** Three tiers on one table so the free tool, the tool and the report never read as the same thing. */
+function tiersSection(price: number): string {
+  return `<section class="estate-section" id="tiers">
+    <div class="wrap">
+      <h2>Three ways to get ready</h2>
+      <div class="estate-grid">
+        <div class="estate-card"><h3>Free self-check</h3><p>The gap map on this page. Runs in your browser. Nothing is sent or stored.</p><p><a class="btn btn-secondary" href="#gap-map">Map my gaps</a></p></div>
+        <div class="estate-card"><h3>$${price} workspace</h3><p>Self-serve tool for entering and checking your own passport figures. One-time. You do the work. Not an assessment, not legal advice, not a certification.</p><p><a class="btn btn-secondary" href="#get-started">Get the workspace</a></p></div>
+        <div class="estate-card" id="gap-report"><h3>$${GAP_REPORT_PRICE} written gap report</h3><p>A readiness assessment of one battery model against Annex XIII, written by us, in 10 business days, from a US-based provider. $${GAP_REPORT_EXTRA_PRICE} per extra model. Readiness only: not a conformity assessment, not legal advice, not an issued passport.</p><p><a class="btn btn-primary" href="${GAP_REPORT_LINK}" rel="nofollow">Order the gap report — $${GAP_REPORT_PRICE}</a> <a class="btn btn-secondary" href="${GAP_REPORT_EXTRA_LINK}" rel="nofollow">Add a model — $${GAP_REPORT_EXTRA_PRICE}</a></p></div>
+      </div>
+      <p class="bp-note">Ordering opens a confirm page, then Stripe. Pick the number of extra models at checkout. Not legal advice; confirm obligations against Regulation (EU) 2023/1542.</p>
+    </div>
+  </section>`;
+}
 
 const GAP_PLACINGS: Placing[] = ["self", "cell_maker", "unknown"];
 
@@ -379,6 +406,8 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
   </section>
 
 ${gapMapSection()}
+
+${tiersSection(price)}
 
   <section class="estate-section" id="what-you-get">
     <div class="wrap">

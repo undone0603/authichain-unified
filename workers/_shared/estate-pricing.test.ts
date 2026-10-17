@@ -419,3 +419,9 @@ test("qron pricing does not list Theater", () => {
   assert.doesNotMatch(html, /Contact for Theater 3/);
   assert.doesNotMatch(html, /theater_1/);
 });
+
+test("wording sweep 2026-10-16: pricing points to the gap report without a raw Payment Link", () => {
+  const html = renderEstatePricingPage("authichain");
+  assert.ok(html.includes('/battery-passport#gap-report">Written gap report, $950 first model, $350 each extra</a>'));
+  assert.equal(html.includes("buy.stripe.com"), false);
+});
