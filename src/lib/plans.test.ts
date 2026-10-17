@@ -51,10 +51,10 @@ describe("plan catalogue integrity", () => {
     expect(planById("theater_3")?.listed).toBe(false);
   });
 
-  it("wires QRON Launch $19/mo to the live Stripe price", () => {
+  it("keeps unlisted QRON Launch $19/mo wired to the live Stripe price", () => {
     expect(planById("qron_launch")?.price).toBe(19);
     expect(planById("qron_launch")?.stripe_mode).toBe("subscription");
-    expect(planById("qron_launch")?.listed).not.toBe(false);
+    expect(planById("qron_launch")?.listed).toBe(false);
     expect(planByStripePriceId("price_1UJjzPGqTruSqV8TmhFSc8vh")?.id).toBe(
       "qron_launch"
     );
@@ -122,10 +122,10 @@ describe("listedPlans", () => {
     expect(strainchain).toEqual(["strainchain_passport"]);
   });
 
-  it("lists public QRON plans including Launch and hides Theater", () => {
+  it("lists public QRON plans, hides unlisted Launch and Theater", () => {
     const qron = listedPlans("qron").map(p => p.id);
     expect(qron).toContain("free");
-    expect(qron).toContain("qron_launch");
+    expect(qron).not.toContain("qron_launch");
     expect(qron).toContain("starter");
     expect(qron).toContain("creator");
     expect(qron).toContain("dpp_readiness");
@@ -141,9 +141,9 @@ describe("listedPlans", () => {
     expect(planUsd("qron_launch")).toBe(19);
   });
 
-  it("keeps the live self-serve money path at $19 / $99 / $299", () => {
+  it("keeps the live self-serve money path at $29 / $99 / $299", () => {
     const byId = Object.fromEntries(listedPlans("qron").map(p => [p.id, p]));
-    expect(byId.qron_launch.price).toBe(19);
+    expect(byId.qron_launch).toBeUndefined();
     expect(byId.starter?.price).toBe(29);
     expect(byId.creator.price).toBe(99);
     expect(byId.dpp_readiness.price).toBe(299);

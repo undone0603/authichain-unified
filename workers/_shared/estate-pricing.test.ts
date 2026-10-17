@@ -405,7 +405,8 @@ test("authichain pricing uses buyer copy and QRON titles; held strings unchanged
   // listed.
   assertCardWording(html, plan("free"));
   assertCardWording(html, plan("dpp_readiness"));
-  assertCardWording(html, plan("qron_launch"));
+  // QRON Launch is unlisted (listed:false), so its grid card is gone.
+  assert.ok(!html.includes(escHtml(plan("qron_launch").description)));
   assert.doesNotMatch(html, /Free Trial|Try Free for 7 Days/);
   // No new plan prices.
   assert.doesNotMatch(html, /\$1,499|\$199\/mo/);
