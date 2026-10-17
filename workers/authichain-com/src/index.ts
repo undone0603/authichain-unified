@@ -162,21 +162,21 @@ const FONTS_LINK = ESTATE_FONTS_LINK;
 // structured-data blocks (Organization, WebSite, FAQPage).
 const SEO = {
   description:
-    'AuthiChain: QRON Starter Pack $29 or Launch $19/mo on Stripe, Living QR generation, and x402 pay-per-call for agents. EU DPP Readiness is $299 when you need the battery passport path.',
+    'AuthiChain: QRON Starter Pack $29 on Stripe, Living QR generation, and x402 pay-per-call for agents. EU DPP Readiness is $299 when you need the battery passport path.',
   keywords:
     'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain, Starter Pack, QRON Launch',
   ogTitle: 'AuthiChain — The authentic agentic economy',
   ogDescription:
-    'Start with QRON Starter at $29 or Launch at $19/mo. Signed seals, MCP tools, x402 at $0.05 USDC. EU DPP Readiness is $299 on live Stripe checkout when you need it.',
+    'Start with QRON Starter at $29. Signed seals, MCP tools, x402 at $0.05 USDC. EU DPP Readiness is $299 on live Stripe checkout when you need it.',
   twitterTitle: 'AuthiChain — The authentic agentic economy',
   twitterDescription:
-    'Starter Pack $29 or Launch $19/mo. Issue → Bind → Verify. x402 for agents. EU DPP Readiness $299 when you need the passport path.',
+    'Starter Pack $29. Issue → Bind → Verify. x402 for agents. EU DPP Readiness $299 when you need the passport path.',
   ogImage: 'https://authichain.com/og-image.png',
   themeColor: '#4F46E5',
   faqs: [
     {
       q: 'How much does AuthiChain cost?',
-      a: `The first checkout is QRON Starter at $29 at ${planPaymentLink("starter") ?? ""} or Launch at $19/mo at ${planPaymentLink("qron_launch") ?? ""}. StrainChain Passport is $49 at ${planPaymentLink("strainchain_passport") ?? ""}. EU DPP Readiness stays $299 at ${planPaymentLink("dpp_readiness") ?? ""} (or enter a work email so Stripe can recover that cart). Creator is $99 at ${planPaymentLink("creator") ?? ""}. See /pricing.`,
+      a: `The first checkout is QRON Starter at $29 at ${planPaymentLink("starter") ?? ""}. StrainChain Passport is $49 at ${planPaymentLink("strainchain_passport") ?? ""}. EU DPP Readiness stays $299 at ${planPaymentLink("dpp_readiness") ?? ""} (or enter a work email so Stripe can recover that cart). Creator is $99 at ${planPaymentLink("creator") ?? ""}. See /pricing.`,
     },
     {
       q: 'What is EU DPP Readiness?',
@@ -2521,7 +2521,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   ${estateSkipLink()}
-  <div class="banner">The first checkout is the $29 Starter Pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy Starter — $29</a>. Or <a href="${escHtml(planPaymentLink("qron_launch") ?? "/checkout/qron_launch")}">Launch at $19/mo</a>. EU DPP Readiness stays $299 further down.</div>
+  <div class="banner">The first checkout is the $29 Starter Pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy Starter — $29</a>. EU DPP Readiness stays $299 further down.</div>
   ${estateNav(
     "authichain",
     [
@@ -2539,7 +2539,7 @@ const HTML = `<!DOCTYPE html>
   ${estateHero({
     eyebrow: "The authentic agentic economy",
     title: "Signed QR seals for real products.",
-    lede: "Start with the Starter Pack at $29 or Launch at $19/mo. EU DPP Readiness is $299 when you need the battery passport path. Add a work email so Stripe can recover the cart.",
+    lede: "Start with the Starter Pack at $29. EU DPP Readiness is $299 when you need the battery passport path. Add a work email so Stripe can recover the cart.",
     lead: {
       href: planPaymentLink("starter") ?? "#hero",
       label: "Buy a QRON Starter Pack — $29",
@@ -2549,18 +2549,12 @@ const HTML = `<!DOCTYPE html>
       label: "Buy Starter Pack — $29",
     },
     actions: [
-      {
-        href: planPaymentLink("qron_launch") ?? "/checkout/qron_launch",
-        label: "Start Launch $19/mo",
-        primary: false,
-      },
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/generate", label: "Generate Living QR", primary: false },
     ],
   })}
   ${estateTrust([
     { value: "$29", label: "Starter Pack" },
-    { value: "$19/mo", label: "QRON Launch" },
     { value: "x402", label: "Agent micropayments" },
   ])}
 
@@ -2609,7 +2603,7 @@ const HTML = `<!DOCTYPE html>
     "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
-      { title: "Settlement", body: "Humans start with Starter $29 or Launch $19/mo on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
+      { title: "Settlement", body: "Humans start with Starter $29 on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
   )}
@@ -2621,17 +2615,12 @@ const HTML = `<!DOCTYPE html>
   ${marketReality()}
   ${estateCtaBand({
     title: "Buy the Starter Pack",
-    lede: "$29, one time — 100 AI QR generations. Or Launch at $19/mo. Enter a work email so abandoned-checkout recovery can reach you.",
+    lede: "$29, one time — 100 AI QR generations. Enter a work email so abandoned-checkout recovery can reach you.",
     emailCheckout: {
       action: "https://authichain.com/checkout/starter",
       label: "Buy Starter Pack",
     },
     actions: [
-      {
-        href: planPaymentLink("qron_launch") ?? "/checkout/qron_launch",
-        label: "Start Launch $19/mo",
-        primary: false,
-      },
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/x402", label: "x402 agent pay", primary: false },
     ],

@@ -48,7 +48,6 @@ export function renderLlmsTxt(): string {
     "- Fictional e-bike battery walkthrough (not a document the $299 checkout sends): https://authichain.com/battery-passport/sample-audit",
     "",
     "## Human checkout (Stripe Payment Links)",
-    `- QRON Launch $${planUsd("qron_launch")}/mo: ${planPaymentLink("qron_launch")}`,
     `- QRON Starter $${planUsd("starter")}: ${planPaymentLink("starter")}`,
     `- QRON Creator $${planUsd("creator")}: ${planPaymentLink("creator")}`,
     "- Generate (redirects to Starter): https://authichain.com/generate",
