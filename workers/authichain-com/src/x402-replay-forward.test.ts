@@ -28,6 +28,9 @@ function memKv() {
     async put(k, v, o) {
       map.set(k, { v, ttl: o?.expirationTtl });
     },
+    async delete(k) {
+      map.delete(k);
+    },
   };
   return { store, map };
 }
@@ -115,6 +118,7 @@ describe("x402 replay guard on the VERIFY_APP forward path", () => {
         throw new Error("down");
       },
       put: async () => {},
+      delete: async () => {},
     };
     const res = await tryHandleX402(post(header()), ENV, app.binding as never, {
       replayStore: broken,
@@ -123,6 +127,61 @@ describe("x402 replay guard on the VERIFY_APP forward path", () => {
     expect(await res?.json()).toMatchObject({
       error: "replay_store_unavailable",
     });
+    expect(app.calls()).toBe(0);
+  });
+});
+
+describe("VERIFY_APP path, CFA-351", () => {
+  it("pending marker exists while VERIFY_APP settles; 409 for a concurrent reuse", async () => {
+    const kv = memKv();
+    let markerDuringForward: string | undefined;
+    const binding = {
+      fetch: async () => {
+        markerDuringForward = kv.map.get("x402:nonce:0xaa01")?.v;
+        const second = await tryHandleX402(
+          post(header()),
+          ENV,
+          { fetch: async () => new Response("{}") } as never,
+          { replayStore: kv.store }
+        );
+        expect(second?.status).toBe(409);
+        return new Response(
+          JSON.stringify({ settlement: { txHash: "0xTX1" } }),
+          { status: 200 }
+        );
+      },
+    };
+    const res = await tryHandleX402(post(header()), ENV, binding as never, {
+      replayStore: kv.store,
+    });
+    expect(res?.status).toBe(200);
+    expect(markerDuringForward).toBe("pending");
+    expect(JSON.parse(kv.map.get("x402:nonce:0xaa01")!.v)).toMatchObject({
+      txHash: "0xtx1",
+    });
+  });
+
+  it("rejects >7-day validBefore at the edge without forwarding", async () => {
+    const app = verifyApp();
+    const far = Math.floor(Date.now() / 1000) + 8 * 24 * 3600;
+    const h = Buffer.from(
+      JSON.stringify({
+        scheme: "exact",
+        network: "base",
+        payload: {
+          authorization: {
+            from: PAYER,
+            value: "50000",
+            nonce: "0xBB",
+            validBefore: String(far),
+          },
+        },
+      })
+    ).toString("base64");
+    const res = await tryHandleX402(post(h), ENV, app.binding as never, {
+      replayStore: memKv().store,
+    });
+    expect(res?.status).toBe(402);
     expect(app.calls()).toBe(0);
   });
 });

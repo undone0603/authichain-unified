@@ -2,6 +2,7 @@
  * Worker-local auth_seals read for paid verify. Settle only after that read
  * succeeds. verified stays false: a registry row is not an attestation.
  */
+import { createHash } from "node:crypto";
 import { parseSealRequest, registryAnswer } from "./agent-verify";
 import {
   buildPaymentRequired,
@@ -160,8 +161,9 @@ async function recordSpend(
   }
 }
 
-/** Replay guard (CFA-343): a settled proof is remembered this long. */
+/** Replay guard (CFA-343/351): a proof is remembered this long. */
 export const REPLAY_TTL_SECONDS = 7 * 24 * 60 * 60;
+const PENDING = "pending";
 
 /** Minimal KV surface (Cloudflare KVNamespace satisfies it). */
 export type ReplayStore = {
@@ -171,30 +173,75 @@ export type ReplayStore = {
     value: string,
     opts?: { expirationTtl?: number }
   ): Promise<void>;
+  delete(key: string): Promise<void>;
 };
 
-/** EIP-3009 authorization nonce from a base64 x402 payment header, if any. */
-export function authorizationNonce(proofHeader: string): string | null {
+function decodeHeader(proofHeader: string): Record<string, unknown> | null {
   try {
-    const raw = JSON.parse(
+    return JSON.parse(
       Buffer.from(proofHeader, "base64").toString("utf8")
     ) as Record<string, unknown>;
-    const payload =
-      raw.payload && typeof raw.payload === "object"
-        ? (raw.payload as Record<string, unknown>)
-        : undefined;
-    const auth =
-      payload?.authorization && typeof payload.authorization === "object"
-        ? (payload.authorization as Record<string, unknown>)
-        : undefined;
-    const nonce = auth?.nonce ?? raw.nonce;
-    return typeof nonce === "string" && nonce ? nonce.toLowerCase() : null;
   } catch {
     return null;
   }
 }
 
-/** KV keys identifying one payment: nonce (else signature, else header) + tx hash. */
+function authorizationOf(
+  proofHeader: string
+): Record<string, unknown> | undefined {
+  const raw = decodeHeader(proofHeader);
+  const payload =
+    raw?.payload && typeof raw.payload === "object"
+      ? (raw.payload as Record<string, unknown>)
+      : undefined;
+  return payload?.authorization && typeof payload.authorization === "object"
+    ? (payload.authorization as Record<string, unknown>)
+    : undefined;
+}
+
+/** EIP-3009 authorization nonce from a base64 x402 payment header, if any. */
+export function authorizationNonce(proofHeader: string): string | null {
+  const nonce =
+    authorizationOf(proofHeader)?.nonce ?? decodeHeader(proofHeader)?.nonce;
+  return typeof nonce === "string" && nonce ? nonce.toLowerCase() : null;
+}
+
+/** EIP-3009 validBefore (unix seconds), if present and numeric. */
+export function authorizationValidBefore(proofHeader: string): number | null {
+  const v = authorizationOf(proofHeader)?.validBefore;
+  const n =
+    typeof v === "number"
+      ? v
+      : typeof v === "string" && /^\d+$/.test(v)
+        ? Number(v)
+        : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * CFA-351: a proof valid for longer than the replay TTL could outlive its KV
+ * record and be replayed later, so refuse it. Returns the refusal or null.
+ */
+export function validityRefusal(
+  proofHeader: string,
+  nowMs = Date.now()
+): { status: number; body: unknown } | null {
+  const vb = authorizationValidBefore(proofHeader);
+  if (vb === null) return null;
+  if (vb - Math.floor(nowMs / 1000) > REPLAY_TTL_SECONDS) {
+    return {
+      status: 402,
+      body: {
+        error: "authorization_validity_too_long",
+        settled: false,
+        maxValiditySeconds: REPLAY_TTL_SECONDS,
+      },
+    };
+  }
+  return null;
+}
+
+/** KV keys for one payment: nonce (else signature, else sha256 of header) + tx hash. */
 export function replayKeys(
   proofHeader: string,
   proof: { signature?: string; txHash?: string }
@@ -204,7 +251,10 @@ export function replayKeys(
   if (nonce) keys.push(`x402:nonce:${nonce}`);
   else if (proof.signature)
     keys.push(`x402:sig:${proof.signature.toLowerCase()}`);
-  else keys.push(`x402:hdr:${proofHeader.slice(0, 400)}`);
+  else
+    keys.push(
+      `x402:hdr:${createHash("sha256").update(proofHeader).digest("hex")}`
+    );
   if (proof.txHash) keys.push(`x402:tx:${proof.txHash.toLowerCase()}`);
   return keys;
 }
@@ -212,10 +262,15 @@ export function replayKeys(
 export const REPLAY_REJECTED_BODY = {
   error: "payment_proof_already_used",
   settled: false,
-  message: "This payment proof was already settled. Sign a new payment.",
+  message: "This payment proof was already used. Sign a new payment.",
 };
 
-/** Pre-settle replay check. null = fresh (or guard unbound); else the refusal. */
+const STORE_DOWN = {
+  status: 503,
+  body: { error: "replay_store_unavailable", settled: false },
+};
+
+/** Read-only check: 409 if any marker (pending or settled) exists. */
 export async function replayRefusal(
   store: ReplayStore | null | undefined,
   keys: string[]
@@ -224,21 +279,52 @@ export async function replayRefusal(
     console.warn(JSON.stringify({ evt: "x402_replay_guard_unbound" }));
     return null;
   }
-  let seen: Array<string | null>;
   try {
-    seen = await Promise.all(keys.map(k => store.get(k)));
+    const seen = await Promise.all(keys.map(k => store.get(k)));
+    return seen.some(v => v !== null)
+      ? { status: 409, body: REPLAY_REJECTED_BODY }
+      : null;
   } catch {
-    return {
-      status: 503,
-      body: { error: "replay_store_unavailable", settled: false },
-    };
+    return STORE_DOWN;
   }
-  return seen.some(v => v !== null)
-    ? { status: 409, body: REPLAY_REJECTED_BODY }
-    : null;
 }
 
-/** Post-settle: remember every key (plus the settled tx hash) for 7 days. */
+/**
+ * Check, then write a "pending" marker BEFORE settle (CFA-351). KV is
+ * eventually consistent (~60s), so this narrows but does not close the race.
+ */
+export async function claimReplay(
+  store: ReplayStore | null | undefined,
+  keys: string[]
+): Promise<{ status: number; body: unknown } | null> {
+  const refusal = await replayRefusal(store, keys);
+  if (refusal || !store) return refusal;
+  try {
+    await Promise.all(
+      keys.map(k =>
+        store.put(k, PENDING, { expirationTtl: REPLAY_TTL_SECONDS })
+      )
+    );
+  } catch {
+    return STORE_DOWN;
+  }
+  return null;
+}
+
+/** Settle failed: drop the pending markers so the payer can retry. */
+export async function releaseReplay(
+  store: ReplayStore | null | undefined,
+  keys: string[]
+): Promise<void> {
+  if (!store) return;
+  try {
+    await Promise.all(keys.map(k => store.delete(k)));
+  } catch {
+    // Worst case the payer re-signs; never a second charge.
+  }
+}
+
+/** Settle succeeded: overwrite markers with the settled record (+ tx hash). */
 export async function rememberSettledProof(
   store: ReplayStore | null | undefined,
   keys: string[],
@@ -257,7 +343,7 @@ export async function rememberSettledProof(
       all.map(k => store.put(k, value, { expirationTtl: REPLAY_TTL_SECONDS }))
     );
   } catch {
-    // Already settled; the on-chain nonce still blocks a second charge.
+    // Pending markers stay (still block reuse); the on-chain nonce blocks a second charge.
   }
 }
 
@@ -267,15 +353,9 @@ export function settledTxHash(
   body: unknown
 ): string | null {
   if (paymentResponse) {
-    try {
-      const raw = JSON.parse(
-        Buffer.from(paymentResponse, "base64").toString("utf8")
-      ) as Record<string, unknown>;
-      const t = raw.transaction ?? raw.txHash;
-      if (typeof t === "string" && t) return t;
-    } catch {
-      /* fall through */
-    }
+    const raw = decodeHeader(paymentResponse);
+    const t = raw?.transaction ?? raw?.txHash;
+    if (typeof t === "string" && t) return t;
   }
   const b = body as {
     settlement?: { txHash?: unknown };
@@ -285,9 +365,19 @@ export function settledTxHash(
   return typeof t === "string" && t ? t : null;
 }
 
+function jsonRefusal(r: { status: number; body: unknown }): Response {
+  return new Response(JSON.stringify(r.body), {
+    status: r.status,
+    headers: {
+      "Cache-Control": "private, no-store",
+      "Content-Type": "application/json; charset=utf-8",
+    },
+  });
+}
+
 /**
- * VERIFY_APP fallback: VERIFY_APP settles, so guard at the edge. Refuse a
- * reused proof before forwarding; remember it after an upstream 2xx.
+ * VERIFY_APP fallback: VERIFY_APP settles, so guard at the edge. Claim the
+ * proof before forwarding; record it on upstream 2xx, release it otherwise.
  */
 export async function guardedForward(input: {
   proofHeader: string;
@@ -295,20 +385,24 @@ export async function guardedForward(input: {
   sealId?: string | null;
   forward: () => Promise<Response>;
 }): Promise<Response> {
+  const tooLong = validityRefusal(input.proofHeader);
+  if (tooLong) return jsonRefusal(tooLong);
   const proof = parsePaymentHeader(input.proofHeader);
   const keys = replayKeys(input.proofHeader, proof ?? {});
-  const refusal = await replayRefusal(input.replayStore, keys);
-  if (refusal) {
-    return new Response(JSON.stringify(refusal.body), {
-      status: refusal.status,
-      headers: {
-        "Cache-Control": "private, no-store",
-        "Content-Type": "application/json; charset=utf-8",
-      },
-    });
+  const refusal = await claimReplay(input.replayStore, keys);
+  if (refusal) return jsonRefusal(refusal);
+  let upstream: Response;
+  try {
+    upstream = await input.forward();
+  } catch (err) {
+    await releaseReplay(input.replayStore, keys);
+    throw err;
   }
-  const upstream = await input.forward();
-  if (upstream.ok && input.replayStore) {
+  if (!upstream.ok) {
+    await releaseReplay(input.replayStore, keys);
+    return upstream;
+  }
+  if (input.replayStore) {
     let body: unknown = null;
     try {
       body = await upstream.clone().json();
@@ -387,6 +481,8 @@ export async function resolvePaidSealVerify(input: {
   // Replay guard: refuse any reuse of a settled proof, BEFORE settling.
   const keys = replayKeys(input.proofHeader, proof);
   const replayStore = input.replayStore ?? null;
+  const tooLong = validityRefusal(input.proofHeader);
+  if (tooLong) return { action: "answer", ...tooLong };
   const refusal = await replayRefusal(replayStore, keys);
   if (refusal) return { action: "answer", ...refusal };
 
@@ -422,14 +518,24 @@ export async function resolvePaidSealVerify(input: {
     };
   }
 
-  const settlement = await settlePayment(
-    input.proofHeader,
-    required.body.accepts[0]
-  );
+  // Pending marker BEFORE settle (CFA-351); released if settle fails.
+  const claim = await claimReplay(replayStore, keys);
+  if (claim) return { action: "answer", ...claim };
+  let settlement: Awaited<ReturnType<typeof settlePayment>>;
+  try {
+    settlement = await settlePayment(
+      input.proofHeader,
+      required.body.accepts[0]
+    );
+  } catch (err) {
+    await releaseReplay(replayStore, keys);
+    throw err;
+  }
   if (
     !settlement.settled ||
     (!settlement.trustless && !nonTrustlessAllowed())
   ) {
+    await releaseReplay(replayStore, keys);
     return {
       action: "answer",
       status: 402,

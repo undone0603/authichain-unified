@@ -36,6 +36,9 @@ function memKv() {
     async put(k, v, o) {
       map.set(k, { v, ttl: o?.expirationTtl });
     },
+    async delete(k) {
+      map.delete(k);
+    },
   };
   return { store, map };
 }
@@ -163,9 +166,113 @@ describe("x402 replay guard (CFA-343)", () => {
         throw new Error("kv down");
       },
       put: async () => {},
+      delete: async () => {},
     };
     const d = await run(broken, net);
     expect(d.action === "answer" && d.status).toBe(503);
     expect(net.settles()).toBe(0);
+  });
+});
+
+describe("CFA-351 hardening", () => {
+  function headerWith(
+    auth: Record<string, unknown>,
+    extra: Record<string, unknown> = {}
+  ): string {
+    return Buffer.from(
+      JSON.stringify({
+        scheme: "exact",
+        network: "base",
+        payload: {
+          signature: "0xsig",
+          authorization: { from: PAYER, value: "50000", ...auth },
+        },
+        ...extra,
+      })
+    ).toString("base64");
+  }
+
+  it("a pending marker blocks a concurrent second use (409, no settle)", async () => {
+    const kv = memKv();
+    kv.map.set(`x402:nonce:${NONCE.toLowerCase()}`, { v: "pending" });
+    const net = mockNet();
+    const d = await run(kv.store, net);
+    expect(d.action === "answer" && d.status).toBe(409);
+    expect(net.settles()).toBe(0);
+  });
+
+  it("writes pending before settle and overwrites it with the settled record", async () => {
+    const kv = memKv();
+    const seenAtSettle: Array<string | undefined> = [];
+    const net = mockNet();
+    const inner = net.fetchImpl;
+    const wrapped = (async (i: RequestInfo | URL, init?: RequestInit) => {
+      if (String(i).includes("/settle"))
+        seenAtSettle.push(kv.map.get(`x402:nonce:${NONCE.toLowerCase()}`)?.v);
+      return inner(i, init);
+    }) as typeof fetch;
+    const d = await run(kv.store, { fetchImpl: wrapped, settles: net.settles });
+    expect(d.action === "answer" && d.status).toBe(200);
+    expect(seenAtSettle).toEqual(["pending"]);
+    expect(
+      JSON.parse(kv.map.get(`x402:nonce:${NONCE.toLowerCase()}`)!.v)
+    ).toMatchObject({ sealId: SEAL, txHash: "0xabc" });
+  });
+
+  it("deletes the pending marker when settle fails so the payer can retry", async () => {
+    const kv = memKv();
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/settle"))
+        return Response.json(
+          { success: false, errorReason: "nope" },
+          { status: 400 }
+        );
+      if (url.includes("auth_seals")) return Response.json([{ id: SEAL }]);
+      return Response.json([]);
+    }) as typeof fetch;
+    const d = await run(kv.store, { fetchImpl, settles: () => 0 });
+    expect(d.action === "answer" && d.status).toBe(402);
+    expect(kv.map.size).toBe(0);
+  });
+
+  it("rejects an authorization valid for more than 7 days, before settle", async () => {
+    const kv = memKv();
+    const net = mockNet();
+    const far = Math.floor(Date.now() / 1000) + REPLAY_TTL_SECONDS + 3600;
+    const d = await run(
+      kv.store,
+      net,
+      SEAL,
+      headerWith({ nonce: "0x77", validBefore: String(far) })
+    );
+    expect(d.action === "answer" && d.status).toBe(402);
+    expect(d.action === "answer" && d.body).toMatchObject({
+      error: "authorization_validity_too_long",
+    });
+    expect(net.settles()).toBe(0);
+    expect(kv.map.size).toBe(0);
+  });
+
+  it("accepts an authorization valid for under 7 days", async () => {
+    const net = mockNet();
+    const soon = Math.floor(Date.now() / 1000) + 600;
+    const d = await run(
+      memKv().store,
+      net,
+      SEAL,
+      headerWith({ nonce: "0x78", validBefore: soon })
+    );
+    expect(d.action === "answer" && d.status).toBe(200);
+  });
+
+  it("hdr key is sha256 of the full header (headers differing past 400 chars get distinct keys)", () => {
+    const pad = "x".repeat(600);
+    const a = headerWith({}, { pad: pad + "a" });
+    const b = headerWith({}, { pad: pad + "b" });
+    const ka = replayKeys(a, {})[0];
+    const kb = replayKeys(b, {})[0];
+    expect(ka).toMatch(/^x402:hdr:[0-9a-f]{64}$/);
+    expect(ka).not.toBe(kb);
   });
 });
