@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "authichain-verify"
+version = "0.1.0"
+description = "Offline verifier for AuthiChain provenance records and Ed25519 attestation seals (Python port of the npm authichain-verify package)."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Zachary Kietzman (AuthiChain)" }]
+dependencies = ["cryptography>=3.4"]
+keywords = [
+  "authichain", "verifier", "provenance", "verifiable-credentials", "did-key",
+  "ed25519", "jws", "jwks", "digital-product-passport", "gs1", "anti-counterfeiting",
+]
+classifiers = [
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Security :: Cryptography",
+  "Development Status :: 3 - Alpha",
+]
+
+[project.urls]
+Homepage = "https://github.com/undone0603/authichain-unified/tree/main/protocol/python"
+Source = "https://github.com/undone0603/authichain-unified"
+Issues = "https://github.com/undone0603/authichain-unified/issues"
+Specification = "https://github.com/undone0603/authichain-unified/blob/main/protocol/SPEC.md"
+
+[project.scripts]
+authichain-verify = "authichain_verify.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
