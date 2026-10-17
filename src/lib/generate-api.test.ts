@@ -136,7 +136,9 @@ describe("handleGeneratePost", () => {
     });
     expect(result.status).toBe(401);
     expect(result.body.code).toBe("FREE_SAMPLE_USED");
-    expect(String(result.body.message)).toContain("$29 once, no subscription");
+    expect(String(result.body.message)).toMatch(
+      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and pack credits never expire\.$/
+    );
     expect(generateImage).not.toHaveBeenCalled();
   });
 

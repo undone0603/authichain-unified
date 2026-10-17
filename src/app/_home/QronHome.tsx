@@ -1477,7 +1477,7 @@ export function QronHome() {
             {[
               {
                 q: 'Do credits expire?',
-                a: 'Never. Pack credits are yours indefinitely — buy once, use whenever you need.',
+                a: "Pack credits don't expire. Buy once and use them whenever you like, and unused credits carry over when you buy another pack.",
               },
               {
                 q: 'Can I scan the QR codes on any phone?',
@@ -1485,7 +1485,7 @@ export function QronHome() {
               },
               {
                 q: 'What if I need more generations than my plan includes?',
-                a: 'Buy another pack. Starter adds 100 generations for $29 once (no subscription, never expire) and Creator adds 500 for $99, one-time.',
+                a: 'Buy another pack. Starter adds 100 generations for $29 and Creator adds 500 for $99, both paid once. Unused credits carry over.',
               },
               {
                 q: 'What AI model generates the QR art?',
