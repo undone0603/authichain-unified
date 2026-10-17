@@ -102,6 +102,38 @@ test("unpaid POST /api/x402 is 402 v2 with published payTo and sister resource",
   }
 });
 
+test("a body that cannot be a seal is 400 and does not ask for payment", async () => {
+  for (const body of [
+    { sealId: "demo" },
+    { probe: "suggestions" },
+    { productId: "p-1" },
+  ]) {
+    const res = await tryHandleSisterX402(
+      req("qron.space", "/api/x402", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      })
+    );
+    assert.ok(res);
+    assert.equal(res.status, 400);
+    assert.equal(res.headers.get("PAYMENT-REQUIRED"), null);
+    const json = (await res.json()) as { error: string; settled: boolean };
+    assert.equal(json.settled, false);
+    assert.ok(json.error === "seal_id_required" || json.error === "seal_id_not_uuid");
+  }
+  const empty = await tryHandleSisterX402(
+    req("qron.space", "/api/x402", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    })
+  );
+  assert.ok(empty);
+  assert.equal(empty.status, 402);
+  assert.ok(empty.headers.get("PAYMENT-REQUIRED"));
+});
+
 test("GET /api/x402 and /api/x402/health are 200 health", async () => {
   for (const { host } of BRANDS) {
     for (const path of ["/api/x402", "/api/x402/health"]) {

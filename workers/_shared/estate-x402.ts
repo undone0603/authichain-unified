@@ -5,6 +5,8 @@
  * claimed POST /api/x402; live those hosts 404'd the path. Serve the same
  * unpaid 402 v2 + PAYMENT-REQUIRED + extensions.bazaar that authichain.com
  * does, with this host as resource.url so the listing is the sister origin.
+ * A body that names a non-UUID seal, or uses productId/serial as the key,
+ * is 400 before that challenge. An empty body stays 402.
  *
  * payTo / asset / price come from the published AuthiChain rail
  * (X402_PUBLISHED_PAY_TO = 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2, Base USDC, $0.05). Do not rebind
@@ -27,6 +29,7 @@ import {
   type X402HealthEnv,
   type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
+import { parseSealRequest } from "../../src/lib/agent-verify.ts";
 import { ESTATE_BRANDS } from "./estate-landing.ts";
 import {
   guardedForward,
@@ -166,6 +169,29 @@ function fanoutResponse(request: Request): Response {
   return json(200, x402ScanFanout(origin));
 }
 
+function parseJsonObject(text: string): Record<string, unknown> {
+  if (!text.trim()) return {};
+  try {
+    const value = JSON.parse(text) as unknown;
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+/** 400 when the body cannot be a registry key. Null keeps the 402 challenge. */
+async function unpaidSealRefusal(
+  request: Request
+): Promise<{ status: number; body: unknown } | null> {
+  const raw = parseJsonObject(await request.clone().text());
+  if (Object.keys(raw).length === 0) return null;
+  const parsed = parseSealRequest(raw);
+  if (parsed.ok) return null;
+  return { status: parsed.status, body: parsed.body };
+}
+
 async function agentVerify(
   request: Request,
   env?: SisterX402Env,
@@ -185,6 +211,8 @@ async function agentVerify(
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof || !proofHeader) {
+    const refusal = await unpaidSealRefusal(request);
+    if (refusal) return json(refusal.status, refusal.body);
     return json(402, required.v2, required.headers);
   }
 
