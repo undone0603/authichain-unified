@@ -94,6 +94,25 @@ describe("resolvePaidSealVerify", () => {
     expect(calls).toEqual([]);
   });
 
+  it("rejects the all-zero discovery example before lookup and settlement", async () => {
+    const { fetchImpl, calls } = callsOf(() => new Response("[]"));
+    const decision = await resolvePaidSealVerify({
+      replayStore: kvStub(),
+      ...bound,
+      proofHeader: proof({ signature: "0xdead" }),
+      bodyText: JSON.stringify({
+        sealId: "00000000-0000-4000-8000-000000000000",
+      }),
+      fetchImpl,
+    });
+    expect(decision).toMatchObject({
+      action: "answer",
+      status: 400,
+      body: { error: "seal_id_nil", settled: false },
+    });
+    expect(calls).toEqual([]);
+  });
+
   it("fails closed when the spend ledger cannot be read", async () => {
     process.env.X402_FACILITATOR_URL = "https://facilitator.example";
     process.env.X402_NETWORK = "base";
