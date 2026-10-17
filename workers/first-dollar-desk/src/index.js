@@ -961,7 +961,20 @@ function serviceManifest(origin) {
   };
 }
 __name(serviceManifest, "serviceManifest");
-function htmlThanksPage({ sessionId, recorded, goal, note }) {
+// RES-81-XSS: session_id comes from the query string. Only a well-formed Stripe
+// Checkout id is ever rendered, always HTML-escaped, and the inline script gets
+// it via JSON with <, > and & as \u003c/\u003e/\u0026 so it can't close the tag.
+var STRIPE_SESSION_ID_RE = /^cs_(live|test)_[A-Za-z0-9]+$/;
+function escapeHtml(value) {
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+__name(escapeHtml, "escapeHtml");
+function scriptJson(value) {
+  return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+}
+__name(scriptJson, "scriptJson");
+function htmlThanksPage({ sessionId: rawSessionId, recorded, goal, note }) {
+  const sessionId = STRIPE_SESSION_ID_RE.test(String(rawSessionId ?? "")) ? String(rawSessionId) : "";
   const status = goal?.complete ? "Both First Dollar rails are satisfied." : goal?.firstHumanDollar ? "Human dollar recorded. Waiting for a qualifying agent sale." : goal?.firstAgenticSale ? "Agent sale recorded. Waiting for a qualifying human dollar." : "Payment received. Qualifying third-party receipts still pending on the ledger.";
   return `<!doctype html>
 <html lang="en">
@@ -982,14 +995,14 @@ function htmlThanksPage({ sessionId, recorded, goal, note }) {
     <p class="note">CHECKOUT COMPLETE</p>
     <h1>Thank you.</h1>
     <p>${status}</p>
-    ${sessionId ? `<p class="note">Session <code>${sessionId}</code> ${recorded ? "was written to" : "is queued for"} the public ledger.</p>
+    ${sessionId ? `<p class="note">Session <code>${escapeHtml(sessionId)}</code> ${recorded ? "was written to" : "is queued for"} the public ledger.</p>
     <p class="note" id="ledger-live">Checking ledger for your receipt\u2026</p>` : ""}
-    ${note ? `<p class="note">${note}</p>` : ""}
+    ${note ? `<p class="note">${escapeHtml(note)}</p>` : ""}
     <a class="btn" href="/api/ledger">View ledger JSON</a>
     <p class="note"><a href="/">Back to desk</a></p>
     ${sessionId ? `<script>
       (function () {
-        const sessionId = ${JSON.stringify(sessionId)};
+        const sessionId = ${scriptJson(sessionId)};
         const el = document.getElementById("ledger-live");
         let tries = 0;
         const tick = async () => {
@@ -1024,7 +1037,8 @@ function htmlThanksPage({ sessionId, recorded, goal, note }) {
 }
 __name(htmlThanksPage, "htmlThanksPage");
 async function handleThanks(request, env, url) {
-  const sessionId = url.searchParams.get("session_id")?.trim() ?? "";
+  const rawSessionId = url.searchParams.get("session_id")?.trim() ?? "";
+  const sessionId = STRIPE_SESSION_ID_RE.test(rawSessionId) ? rawSessionId : "";
   const secret = (env.STRIPE_SECRET_KEY ?? "").trim();
   let recorded = false;
   let note = "";
