@@ -286,7 +286,9 @@ export async function handleGeneratePost(opts: {
 
   try {
     const generated = await opts.generateImage({
-      targetUrl: resolveUrl,
+      // Free samples are never attested, so encode the destination directly
+      // (a resolve_url would scan to presentation_not_found).
+      targetUrl: anonymous ? targetUrl : resolveUrl,
       prompt,
       mode,
       ...(presetId ? { presetId } : {}),
@@ -322,7 +324,9 @@ export async function handleGeneratePost(opts: {
       kid: bind?.kid,
       jwksUrl: bind?.jwks_url,
     });
-    const qrDataUrl = await scannableQrDataUrl(presentation.resolve_url);
+    const qrDataUrl = await scannableQrDataUrl(
+      anonymous ? targetUrl : presentation.resolve_url
+    );
     if (bind && opts.rememberPresentation) {
       try {
         await opts.rememberPresentation({
@@ -344,12 +348,12 @@ export async function handleGeneratePost(opts: {
           imageUrl: generated.imageUrl,
           destinationUrl: targetUrl,
           qrDataUrl,
-          resolveUrl: presentation.resolve_url,
+          resolveUrl: anonymous ? null : presentation.resolve_url,
           prompt,
           mode,
           objectId: presentation.object_id,
         },
-        presentation,
+        ...(anonymous ? {} : { presentation }),
         remaining_credits: deducted.ok ? deducted.remaining : credit.remaining,
         ...(anonymous ? { free_sample: true } : {}),
       },

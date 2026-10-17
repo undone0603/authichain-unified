@@ -115,6 +115,11 @@ describe("handleGeneratePost", () => {
     expect(checkCredit).not.toHaveBeenCalled();
     expect(deductCredit).not.toHaveBeenCalled();
     expect(bindAttestation).not.toHaveBeenCalled();
+    expect(generateImage.mock.calls[0][0].targetUrl).toBe(
+      "https://example.com"
+    );
+    expect((result.body.qron as { resolveUrl: unknown }).resolveUrl).toBeNull();
+    expect(result.body.presentation).toBeUndefined();
   });
 
   it("walls the anonymous caller once the free sample is used", async () => {
@@ -129,9 +134,7 @@ describe("handleGeneratePost", () => {
     });
     expect(result.status).toBe(401);
     expect(result.body.code).toBe("FREE_SAMPLE_USED");
-    expect(String(result.body.message)).toContain(
-      "$29 once, no subscription"
-    );
+    expect(String(result.body.message)).toContain("$29 once, no subscription");
     expect(generateImage).not.toHaveBeenCalled();
   });
 
@@ -237,9 +240,9 @@ describe("handleGeneratePost", () => {
     expect(presentation.verify.decision_contract).toBe(
       "AuthiChain Verification Decision v1"
     );
-    expect(
-      (result.body.qron as { objectId: string }).objectId
-    ).toBe(presentation.object_id);
+    expect((result.body.qron as { objectId: string }).objectId).toBe(
+      presentation.object_id
+    );
     expect(result.body.remaining_credits).toBe(9);
     expect(checkCredit).toHaveBeenCalledWith("user_1");
     expect(deductCredit).toHaveBeenCalledWith("user_1");
@@ -347,9 +350,9 @@ describe("handleGeneratePost", () => {
       },
     });
     expect(result.status).toBe(200);
-    expect(
-      (result.body.presentation as { status: string }).status
-    ).toBe("attestation_bound");
+    expect((result.body.presentation as { status: string }).status).toBe(
+      "attestation_bound"
+    );
   });
 
   it("stays image_issued when bindAttestation throws", async () => {
@@ -367,9 +370,9 @@ describe("handleGeneratePost", () => {
       },
     });
     expect(result.status).toBe(200);
-    expect(
-      (result.body.presentation as { status: string }).status
-    ).toBe("image_issued");
+    expect((result.body.presentation as { status: string }).status).toBe(
+      "image_issued"
+    );
   });
 });
 

@@ -468,20 +468,22 @@ app.post("/api/generate", async c => {
           FREE_SAMPLE_WINDOW_MS,
           FREE_SAMPLE_GLOBAL_DAILY_CAP,
         } = await import("../src/lib/generate-api");
-        const perIp = await checkRateLimit(
-          ns,
-          `free-sample:${ip}`,
-          FREE_SAMPLE_GENERATIONS,
-          FREE_SAMPLE_WINDOW_MS
-        );
-        if (!perIp) return { ok: false };
+        // Global ceiling first so a capped day doesn't burn the visitor's
+        // per-IP samples.
         const global = await checkRateLimit(
           ns,
           "free-sample:global",
           FREE_SAMPLE_GLOBAL_DAILY_CAP,
           24 * 60 * 60_000
         );
-        return { ok: global };
+        if (!global) return { ok: false };
+        const perIp = await checkRateLimit(
+          ns,
+          `free-sample:${ip}`,
+          FREE_SAMPLE_GENERATIONS,
+          FREE_SAMPLE_WINDOW_MS
+        );
+        return { ok: perIp };
       },
       rememberPresentation: async record => {
         if (!sessions) return;
