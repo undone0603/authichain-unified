@@ -340,6 +340,13 @@ test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
     assert.match(res.headers.get("content-type") ?? "", /text\/html/, path);
   }
 
+  const verification = await get("/docs/verification");
+  const verificationHtml = await verification.text();
+  assert.match(verificationHtml, /authichain\.com\/qron\/r\//);
+  assert.match(verificationHtml, /presentation_not_found/);
+  assert.match(verificationHtml, /does not verify the signature/);
+  assert.equal(verificationHtml.includes("freeCalls"), false);
+
   const alias = await get("/docs/resolver");
   assert.equal(alias.status, 301);
   assert.equal(
