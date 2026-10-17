@@ -229,7 +229,7 @@ test("tools/call verify is unpaid HTTP 402 with published payTo", async () => {
           jsonrpc: "2.0",
           id: 3,
           method: "tools/call",
-          params: { name: "verify", arguments: { serial: "AC-1" } },
+          params: { name: "verify", arguments: {} },
         }),
       }),
       brand
@@ -259,6 +259,30 @@ test("tools/call verify is unpaid HTTP 402 with published payTo", async () => {
       host
     );
     assert.ok(unpaid.headers.get("PAYMENT-REQUIRED"), host);
+  }
+});
+
+test("tools/call verify with a non-key argument is 400 and does not ask for payment", async () => {
+  for (const args of [{ serial: "AC-1" }, { sealId: "demo" }, { productId: "p-1" }]) {
+    const res = await tryHandleSisterMcp(
+      req("qron.space", "/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 31,
+          method: "tools/call",
+          params: { name: "verify", arguments: args },
+        }),
+      }),
+      "qron"
+    );
+    assert.ok(res);
+    assert.equal(res.status, 400);
+    assert.equal(res.headers.get("PAYMENT-REQUIRED"), null);
+    const body = (await res.json()) as { error: string; settled: boolean };
+    assert.equal(body.settled, false);
+    assert.ok(body.error === "seal_id_required" || body.error === "seal_id_not_uuid");
   }
 });
 
