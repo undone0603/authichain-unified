@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
-import { x402PriceUsd } from "../../../src/lib/x402.ts";
+import { x402HealthReport, x402PriceUsd } from "../../../src/lib/x402.ts";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
   publicKeyFromDidKey,
@@ -18,6 +18,7 @@ import {
   PRODUCTION_ISSUER_DID,
   PRODUCTION_ISSUER_KID,
   isMcpPath,
+  mcpPaidVerifyStatus,
   tryHandleMcp,
   verifyRecordTool,
 } from "./mcp-routes";
@@ -177,6 +178,61 @@ describe("mcp discovery", () => {
     expect(tools.find(t => t.name === "get_pricing")?.description).toMatch(
       /^Free\./
     );
+  });
+
+  it("get_pricing and tools/list report paid-verify binding the way /api/x402/health does (G1)", async () => {
+    const pricingWith = async (env: Record<string, string>) => {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "tools/call",
+            params: { name: "get_pricing" },
+          }),
+        }),
+        env
+      );
+      const body = (await res!.json()) as { result: { content: Array<{ text: string }> } };
+      return JSON.parse(body.result.content[0].text) as {
+        legacySealVerify: { status: string; note: string };
+      };
+    };
+    const verifyDescWith = async (env: Record<string, string>) => {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" }),
+        }),
+        env
+      );
+      const body = (await res!.json()) as {
+        result: { tools: Array<{ name: string; description: string }> };
+      };
+      return body.result.tools.find(t => t.name === "verify")!.description;
+    };
+
+    // authichain-com wrangler.toml sets X402_PAID_VERIFY_PATH = "seal_lookup".
+    const bound = { X402_PAID_VERIFY_PATH: "seal_lookup" };
+    expect(mcpPaidVerifyStatus(bound)).toEqual(
+      (await x402HealthReport(bound)).paidVerify
+    );
+    const live = await pricingWith(bound);
+    expect(live.legacySealVerify.status).toBe("bound");
+    expect(JSON.stringify(live)).not.toContain("registry_not_bound");
+    expect(await verifyDescWith(bound)).not.toContain("registry_not_bound");
+
+    const verifyApp = await pricingWith({ X402_PAID_VERIFY_PATH: "verify_app" });
+    expect(verifyApp.legacySealVerify.status).toBe("bound");
+
+    // No registry path: still refuses before settlement, and says so.
+    const unbound = await pricingWith({});
+    expect(unbound.legacySealVerify.status).toBe("registry_not_bound");
+    expect(await verifyDescWith({})).toContain("registry_not_bound");
+    expect(mcpPaidVerifyStatus({})).toEqual((await x402HealthReport({})).paidVerify);
   });
 
   it("tools/call dpp_readiness_check is free and scores the answers", async () => {

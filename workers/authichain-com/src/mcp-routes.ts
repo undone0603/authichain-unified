@@ -22,6 +22,8 @@ import {
   X402_REGISTRY_NOT_BOUND,
   x402PriceUsd,
   x402PaidVerifyStatus,
+  X402_PAID_VERIFY_BOUND,
+  x402PaidVerifyPathBound,
   type X402EnvVars,
   type X402VerifyBinding,
   // Extensionless on purpose: tsconfig.workers.json counts each ".ts"
@@ -88,6 +90,25 @@ const JSON_HEADERS = {
   "MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
 };
 
+/**
+ * Paid-verify binding as this worker really has it: the same expression
+ * /api/x402/health uses (src/lib/x402.ts x402Health), so get_pricing, the
+ * verify tool text and the health JSON cannot disagree. wrangler.toml sets
+ * X402_PAID_VERIFY_PATH = "seal_lookup" on authichain-com.
+ */
+export function mcpPaidVerifyStatus(env?: X402Env) {
+  return x402PaidVerifyStatus(
+    X402_PAID_VERIFY_BOUND ||
+      x402PaidVerifyPathBound(env?.X402_PAID_VERIFY_PATH)
+  );
+}
+
+function verifyToolDescription(bound: boolean): string {
+  return bound
+    ? "Legacy x402 seal verify. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. For free verification use verify_record."
+    : "Legacy x402 seal verify, not answering. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.";
+}
+
 export const TOOLS = [
   {
     name: "get_pricing",
@@ -97,9 +118,7 @@ export const TOOLS = [
   },
   {
     name: "verify",
-    description: x402PaidVerifyStatus().bound
-      ? "Legacy x402 seal verify. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. For free verification use verify_record."
-      : "Legacy x402 seal verify, not answering. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
+    description: verifyToolDescription(mcpPaidVerifyStatus().bound),
     inputSchema: {
       type: "object",
       properties: {
@@ -373,6 +392,12 @@ function hydrateX402(env?: X402Env) {
   }
 }
 
+/** TOOLS with the verify description resolved against this worker's env. */
+export function toolsFor(env?: X402Env) {
+  const desc = verifyToolDescription(mcpPaidVerifyStatus(env).bound);
+  return TOOLS.map(t => (t.name === "verify" ? { ...t, description: desc } : t));
+}
+
 function livePayTo(env?: X402Env): string {
   return (
     env?.X402_PAY_TO?.trim() ||
@@ -409,7 +434,7 @@ function listedPlanPrices() {
  * legacy x402 `verify` path below is unchanged.
  */
 export function mcpPricingDiscovery(env?: X402Env) {
-  const legacy = x402PaidVerifyStatus();
+  const legacy = mcpPaidVerifyStatus(env);
   return {
     verify: {
       price: "free",
@@ -449,13 +474,13 @@ export function mcpPricingDiscovery(env?: X402Env) {
   };
 }
 
-function discoveryBody() {
+function discoveryBody(env?: X402Env) {
   return {
     protocol: "mcp",
     jsonrpc: "2.0",
     serverInfo: { name: "authichain", version: SERVER_VERSION },
-    tools: TOOLS,
-    pricing: mcpPricingDiscovery(),
+    tools: toolsFor(env),
+    pricing: mcpPricingDiscovery(env),
     pay: {
       x402: "POST https://authichain.com/api/x402",
       mcpVerify: "POST https://authichain.com/mcp tools/call verify",
@@ -702,7 +727,7 @@ async function handleRpc(
   }
 
   if (method === "tools/list") {
-    return rpcResult(id, { tools: TOOLS });
+    return rpcResult(id, { tools: toolsFor(env) });
   }
 
   if (method === "tools/call") {
@@ -843,7 +868,7 @@ export async function tryHandleMcp(
       });
     }
     hydrateX402(env);
-    return json(200, discoveryBody());
+    return json(200, discoveryBody(env));
   }
 
   if (request.method === "POST") {
