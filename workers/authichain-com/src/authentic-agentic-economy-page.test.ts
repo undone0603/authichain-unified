@@ -55,6 +55,27 @@ describe("authentic agentic economy page", () => {
     expect(html).toContain("A non-UUID sealId is HTTP 400 before payment.");
     expect(html).toContain("not a paid receipt");
     expect(html).toContain("not a physical inspection");
+    expect(html).toContain(
+      "Our goal: an agent checks a signed seal and is told the seal is not a physical inspection."
+    );
+    expect(html).toContain(
+      "Our goal: a reader can tell a free seal answer from a settled receipt on the live x402 rail."
+    );
+    expect(html).toContain(
+      "Our goal: cite ERC-8004 as an external description of agent registries, not as an AuthiChain implementation."
+    );
+    expect(html).not.toContain(
+      "Our goal: a reader can tell the unpaid empty body from a free seal answer and from a settled receipt."
+    );
+    expect(html).not.toContain(
+      "Our goal: the seed names polygon-anchor-1 as the published demonstration record and never as a customer product."
+    );
+    const meta = html.match(/<meta name="description" content="([^"]*)"/);
+    const og = html.match(/<meta property="og:description" content="([^"]*)"/);
+    expect(meta?.[1]).toBe(AUTHENTIC_AGENTIC_ECONOMY.description);
+    expect(og?.[1]).toBe(AUTHENTIC_AGENTIC_ECONOMY.description);
+    expect(meta?.[1]).not.toContain("Our goal");
+    expect(og?.[1]).not.toContain("Our goal");
     expect(html).toContain("X-PAYMENT and a seal UUID");
     expect(html).not.toContain("seal or product identifier");
     expect(html).not.toContain("Polygon · ERC-721");
@@ -78,6 +99,9 @@ describe("authentic agentic economy page", () => {
     expect(html).toContain("ERC8004SPEC.md");
     expect(html).toContain("not AuthiChain whitepapers");
     expect(html).toContain("not an ERC-8004 implementation claim");
+    expect(html).toContain(
+      "Our goal: cite ERC-8004 as an external description of agent registries, not as an AuthiChain implementation."
+    );
     expect(html).not.toContain("FedRAMP");
     expect(html).not.toContain("NSF award");
     expect(html.toLowerCase()).not.toContain("facilitator.payai");
@@ -94,6 +118,7 @@ describe("authentic agentic economy page", () => {
     }>;
     const seed = pages.find(page => page.slug === "authentic-agentic-economy");
     expect(seed?.metaDescription).toBe(AUTHENTIC_AGENTIC_ECONOMY.description);
+    expect(seed?.metaDescription).not.toContain("Our goal");
   });
 
   it("emits Organization slogan JSON-LD", () => {

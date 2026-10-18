@@ -538,6 +538,60 @@ describe("claim goal ledger", () => {
     expect(x402).not.toContain("in development");
   });
 
+  it("publishes the agentic-economy goals beside their limits and not in the meta", () => {
+    const page = fs.readFileSync(
+      path.join(root, "workers/authichain-com/src/authentic-agentic-economy-page.ts"),
+      "utf8"
+    );
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const seed = pages.find(
+      (entry: { slug: string }) => entry.slug === "authentic-agentic-economy"
+    );
+    const published = [
+      "agentic-seed-not-inspection",
+      "agentic-page-not-inspection",
+      "agentic-pay-faq-free-not-receipt",
+      "agentic-not-erc-8004",
+    ];
+    for (const id of published) {
+      const record = claims.find((entry: { id: string }) => entry.id === id);
+      expect(record.status, id).toBe("goal-published");
+      expect(record.publicGoal, id).toBe(true);
+      expect(record.limitPermanent, id).toBe(true);
+      const text = id === "agentic-seed-not-inspection" ? JSON.stringify(seed) : page;
+      expect(text, id).toContain(record.goalSentence);
+      expect(text, id).toContain(record.currentSentence);
+    }
+    expect(seed.metaDescription).not.toContain("Our goal");
+    expect(seed.title).not.toContain("Our goal");
+    expect(seed.h1).not.toContain("Our goal");
+    expect(JSON.stringify(seed.jsonLd)).not.toContain("Our goal");
+    expect(seed.metaDescription).toBe(
+      "The authentic agentic economy: signed seals, MCP, and x402. A signed record is not a physical inspection."
+    );
+    const receipt = claims.find(
+      (entry: { id: string }) => entry.id === "agentic-seed-body-not-receipt"
+    );
+    const demonstration = claims.find(
+      (entry: { id: string }) => entry.id === "agentic-seed-demonstration"
+    );
+    expect(receipt.publicGoal).toBe(false);
+    expect(receipt.status).toBe("open");
+    expect(demonstration.publicGoal).toBe(false);
+    expect(demonstration.status).toBe("open");
+    const seedText = JSON.stringify(seed);
+    expect(seedText).toContain(receipt.currentSentence);
+    expect(seedText).toContain(demonstration.currentSentence);
+    expect(seedText).not.toContain(receipt.goalSentence);
+    expect(seedText).not.toContain(demonstration.goalSentence);
+    expect(page).not.toContain(receipt.goalSentence);
+    expect(page).not.toContain(demonstration.goalSentence);
+    expect(page).toContain("$0.05 USDC");
+    expect(page).not.toContain("in development");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");

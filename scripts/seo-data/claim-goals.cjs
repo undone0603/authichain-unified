@@ -9,6 +9,7 @@
  * PR 4 sets the five hub owners and two protected-seed owners to goal-published.
  * PR 5 sets the scan, seal, and battery public goals to goal-published.
  * PR 6 sets the llms.txt and x402 body goals to goal-published. The x402 meta goal stays unpublished.
+ * PR 7 sets the agentic-economy page and seed goals to goal-published. The meta stays limit-only. The seed receipt and demonstration goals stay unpublished.
  * seed-cannabis-not-another-compliance-tool stays limitPermanent false.
  */
 const PERM = {
@@ -818,6 +819,7 @@ const claims = [
     files: ['content/seo/pages.json', 'workers/authichain-com/src/authentic-agentic-economy-page.ts'],
     regen: 'protected-seed',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'The authentic agentic economy: signed seals, MCP, and x402. A signed record is not a physical inspection.',
     goalSentence: 'Our goal: an agent checks a signed seal and is told the seal is not a physical inspection.',
     task: GENUINE_PR,
@@ -873,6 +875,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'A signed record is not a physical inspection.',
     goalSentence: 'Our goal: an agent checks a signed seal and is told the seal is not a physical inspection.',
     task: GENUINE_PR,
@@ -887,6 +890,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'A free seal answer is not a paid receipt.',
     goalSentence: 'Our goal: a reader can tell a free seal answer from a settled receipt on the live x402 rail.',
     task: X402_WORDS,
@@ -898,6 +902,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'this page is not an ERC-8004 implementation claim.',
     goalSentence: 'Our goal: cite ERC-8004 as an external description of agent registries, not as an AuthiChain implementation.',
     task: LIMIT_ONLY,

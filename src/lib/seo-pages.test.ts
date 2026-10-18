@@ -53,6 +53,15 @@ describe("seo-pages loader", () => {
     expect(page?.metaDescription).not.toContain("trust physical products");
     expect(page?.bodyHtml).toContain("authentic agentic economy");
     expect(page?.bodyHtml).toContain("not a physical inspection");
+    expect(page?.bodyHtml).toContain(
+      "Our goal: an agent checks a signed seal and is told the seal is not a physical inspection."
+    );
+    expect(page?.bodyHtml).not.toContain(
+      "Our goal: a reader can tell the unpaid empty body from a free seal answer and from a settled receipt."
+    );
+    expect(page?.metaDescription).not.toContain("Our goal");
+    expect(page?.title).not.toContain("Our goal");
+    expect(page?.h1).not.toContain("Our goal");
     expect(page?.bodyHtml).toContain("empty JSON body is the unpaid HTTP 402");
     expect(page?.bodyHtml).toContain("not a paid receipt");
     expect(page?.bodyHtml).toContain("/api/verify?id=polygon-anchor-1");
