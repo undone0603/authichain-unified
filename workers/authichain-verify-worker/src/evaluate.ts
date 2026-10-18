@@ -183,14 +183,6 @@ export function evaluate(input: TrustInput = {}) {
   }
   if (att?.decision === "blocked") reasons.push("attestation_blocked");
 
-  const inspected = realEvidence.some((e) => e.type === "inspection");
-  if (inspected) {
-    vector.physical_binding = "partial";
-    const idx = unknowns.indexOf("physical_binding_not_inspected");
-    if (idx >= 0) unknowns.splice(idx, 1);
-    unknowns.push("physical_condition_not_fully_inspected");
-  }
-
   if (depthUsed === "history") {
     const scanReasons = scanAnomalies(input.scans || []);
     if (scanReasons.length) {
