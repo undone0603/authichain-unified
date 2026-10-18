@@ -1,5 +1,8 @@
+import { createHash, generateKeyPairSync } from "node:crypto";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Hono } from "hono";
+import { signPassport } from "../protocol/passport.mjs";
+import { signingBytes } from "../protocol/verifier.mjs";
 
 // Node-safe mocking (mirrors worker-app/routes.test.ts's pattern): mock
 // getHyperdriveDb + the specific db helpers dynamic-pages.ts calls, so this
@@ -93,6 +96,43 @@ function sqlParamValues(query: { queryChunks?: unknown[] }): unknown[] {
     }
   }
   return values;
+}
+
+const PASSPORT_B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+function passportBase58(buf: Buffer): string {
+  let num = BigInt("0x" + (buf.toString("hex") || "0"));
+  let out = "";
+  while (num > 0n) {
+    out = PASSPORT_B58[Number(num % 58n)] + out;
+    num /= 58n;
+  }
+  for (const byte of buf) {
+    if (byte !== 0) break;
+    out = "1" + out;
+  }
+  return out;
+}
+
+function storedPassportFixture() {
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const raw = publicKey.export({ format: "der", type: "spki" }).subarray(-32);
+  const issuer =
+    "did:key:z" +
+    passportBase58(Buffer.concat([Buffer.from([0xed, 0x01]), raw]));
+  const record = signPassport({
+    digitalIdentity: "urn:authichain:item:example-1",
+    privateKey,
+    issuer,
+  });
+  const anchor = {
+    recordHash:
+      "sha256:" + createHash("sha256").update(signingBytes(record)).digest("hex"),
+    chain: "polygon:137",
+    txHash: "0x" + "ab".repeat(32),
+    anchoredAt: "2026-01-01T00:05:00Z",
+  };
+  return { record, anchor };
 }
 
 function mockLeadInsert(execute = vi.fn().mockResolvedValue({})) {
@@ -191,6 +231,59 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("Golden Widget");
     expect(body).toContain("<title>");
     expect(body).toContain('rel="canonical"');
+    expect(body).not.toContain("data-genuine");
+    expect(body).not.toContain("data-verified");
+  });
+
+  it("a stored passport is genuine for its digital identity", async () => {
+    const { record, anchor } = storedPassportFixture();
+    (getCertificateByNumber as any).mockResolvedValue({
+      id: 1,
+      productId: 42,
+      certificateNumber: "CERT-001",
+      status: "active",
+    });
+    (getProductById as any).mockResolvedValue({
+      id: 42,
+      name: "Golden Widget",
+      metadata: { passport: { record, anchor } },
+    });
+    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+
+    const res = await app.request("/p/CERT-001", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain(
+      'data-genuine="true">Genuine product passport for urn:authichain:item:example-1'
+    );
+    expect(body).not.toContain("data-verified");
+    expect(record.credentialSubject.gtin).toBeUndefined();
+  });
+
+  it("an unanchored stored passport is not genuine", async () => {
+    const { record } = storedPassportFixture();
+    (getCertificateByNumber as any).mockResolvedValue({
+      id: 1,
+      productId: 42,
+      certificateNumber: "CERT-001",
+      status: "active",
+    });
+    (getProductById as any).mockResolvedValue({
+      id: 42,
+      name: "Golden Widget",
+      metadata: { passport: { record } },
+    });
+    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+
+    const res = await app.request("/p/CERT-001", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain('data-genuine="false"');
+    expect(body).toContain("did not verify as genuine");
+    expect(body).not.toContain('data-genuine="true"');
+    expect(body).not.toContain("data-verified");
   });
 
   it("bare /p is a clear 404, not a redirect and not a silent hub", async () => {
@@ -497,6 +590,37 @@ describe("renderDynamicPage: /verify verification landing", () => {
     expect(body).toContain(
       '<p data-certificate-state="on-record">Certificate on record</p>'
     );
+    expect(body).not.toContain("data-verified");
+    expect(body).not.toContain("data-genuine");
+  });
+
+  it("an active certificate with a stored passport is genuine without a data-verified attribute", async () => {
+    const { record, anchor } = storedPassportFixture();
+    (getProductById as any).mockResolvedValue({
+      id: 10,
+      name: "Active Item",
+      metadata: { passport: { record, anchor } },
+    });
+    (getHyperdriveDb as any).mockReturnValue(
+      makeDbSelectStub([
+        {
+          id: 102,
+          productId: 10,
+          status: "active",
+          certificateNumber: "C-102",
+        },
+      ])
+    );
+
+    const res = await app.request("/verify?id=10", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain(
+      '<p data-certificate-state="on-record">Certificate on record</p>'
+    );
+    expect(body).toContain('data-genuine="true"');
+    expect(body).toContain("urn:authichain:item:example-1");
     expect(body).not.toContain("data-verified");
   });
 

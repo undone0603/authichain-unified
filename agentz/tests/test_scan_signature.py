@@ -54,6 +54,63 @@ def check(record, subject=SUBJECT, anchor=None):
     return asyncio.run(sig.check_scan_signature(record, anchor, subject))
 
 
+def test_passport_scan_script_is_genuine_only_when_anchored():
+    script = r"""
+import { generateKeyPairSync, createHash } from 'node:crypto';
+import { signPassport } from './protocol/passport.mjs';
+import { signingBytes } from './protocol/verifier.mjs';
+import { scanRecord } from './agentz/core/verify_record.mjs';
+const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+const b58 = (buf) => { let n = BigInt('0x' + buf.toString('hex')), o = '';
+  while (n > 0n) { o = B58[Number(n % 58n)] + o; n /= 58n; }
+  for (const b of buf) { if (b !== 0) break; o = '1' + o; } return o; };
+const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+const raw = publicKey.export({ format: 'der', type: 'spki' }).subarray(-32);
+const issuer = 'did:key:z' + b58(Buffer.concat([Buffer.from([0xed, 0x01]), raw]));
+const record = signPassport({ digitalIdentity: 'urn:authichain:item:example-1', privateKey, issuer });
+const anchor = {
+  recordHash: 'sha256:' + createHash('sha256').update(signingBytes(record)).digest('hex'),
+  chain: 'polygon:137', txHash: '0x' + 'ab'.repeat(32), anchoredAt: '2026-01-01T00:05:00Z',
+};
+process.stdout.write(JSON.stringify({
+  proved: scanRecord(record, anchor).genuine,
+  open: scanRecord(record, null).genuine,
+  gtin: record.credentialSubject.gtin ?? null,
+}));
+"""
+    out = subprocess.run(
+        ["node", "--input-type=module", "-e", script],
+        cwd=REPO, capture_output=True, text=True, check=True,
+    )
+    assert json.loads(out.stdout) == {"proved": True, "open": False, "gtin": None}
+
+
+def test_unanchored_passport_is_not_a_genuine_scan(trusted, monkeypatch):
+    rec = copy.deepcopy(VALID)
+    rec["type"] = ["VerifiableCredential", "DigitalProductPassport"]
+
+    async def fake(record, anchor):
+        return {"genuine": False, "verdict": "valid-unanchored", "reasons": [], "digitalIdentity": SUBJECT}
+
+    monkeypatch.setattr(sig, "run_verifier", fake)
+    res = check(rec)
+    assert res["signature_valid"] is False
+    assert res["verdict"] == "valid-unanchored"
+
+
+def test_genuine_passport_for_this_product_is_valid(trusted, monkeypatch):
+    rec = copy.deepcopy(VALID)
+    rec["type"] = ["VerifiableCredential", "DigitalProductPassport"]
+
+    async def fake(record, anchor):
+        return {"genuine": True, "verdict": "verified", "reasons": [], "digitalIdentity": SUBJECT}
+
+    monkeypatch.setattr(sig, "run_verifier", fake)
+    res = check(rec)
+    assert res["signature_valid"] is True
+    assert res["verdict"] == "verified"
+
+
 def test_valid_record_from_trusted_issuer_about_this_product(trusted):
     res = check(VALID)
     assert res["signature_valid"] is True

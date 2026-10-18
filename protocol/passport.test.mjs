@@ -100,4 +100,15 @@ describe('scanProvesGenuine', () => {
     expect(result.genuine).toBe(false);
     expect(result.reasons).toContain('not_a_product_passport');
   });
+
+  it('does not treat a short gtin as genuine and does not assign one', () => {
+    const keys = issuer();
+    const record = signPassport({ digitalIdentity: IDENTITY, ...keys });
+    expect(record.credentialSubject.gtin).toBeUndefined();
+    record.credentialSubject.gtin = '123';
+    const result = scanProvesGenuine(record, anchorFor(record), { now: NOW });
+    expect(result.genuine).toBe(false);
+    expect(result.reasons).toEqual(['gtin_not_14_digits']);
+    expect(result.digitalIdentity).toBe(IDENTITY);
+  });
 });

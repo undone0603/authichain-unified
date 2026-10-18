@@ -221,6 +221,12 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
         input: submitted.raw,
         source,
         demonstration: source === "published_example",
+        ...(typeof protocol.genuine === "boolean"
+          ? {
+              genuine: protocol.genuine,
+              digitalIdentity: protocol.digitalIdentity ?? null,
+            }
+          : {}),
         subject: subject
           ? { id: subject.id ?? null, name: subject.name ?? null }
           : null,

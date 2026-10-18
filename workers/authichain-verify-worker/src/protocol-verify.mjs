@@ -1,9 +1,38 @@
 /**
  * Run the reference verifier, then optionally read the anchor transaction.
- * The verdict stays verifyRecord's. A missing or hash-less transaction does
- * not change it. anchorOnChain is a separate fact.
+ * A DigitalProductPassport is genuine only when scanProvesGenuine says so.
+ * Any other record keeps verifyRecord's verdict. A missing or hash-less
+ * transaction does not change the verdict. anchorOnChain is a separate fact.
  */
 import { verifyRecord, sha256Hex, signingBytes } from "../../../protocol/verifier.mjs";
+import { scanProvesGenuine } from "../../../protocol/passport.mjs";
+
+function isPlainObject(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function passportCarrier(value) {
+  if (!isPlainObject(value)) return null;
+  const types = Array.isArray(value.type) ? value.type : [];
+  if (types.includes("DigitalProductPassport")) {
+    return { record: value, anchor: null };
+  }
+  if (!isPlainObject(value.record)) return null;
+  const inner = Array.isArray(value.record.type) ? value.record.type : [];
+  if (!inner.includes("DigitalProductPassport")) return null;
+  return {
+    record: value.record,
+    anchor: isPlainObject(value.anchor) ? value.anchor : null,
+  };
+}
+
+/** A stored passport already on the record. This does not assign a GTIN. */
+export function readStoredPassport(metadata) {
+  const direct = passportCarrier(metadata);
+  if (direct) return direct;
+  if (!isPlainObject(metadata)) return null;
+  return passportCarrier(metadata.passport);
+}
 
 const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
 
@@ -14,7 +43,22 @@ export const PUBLIC_RPC = {
 };
 
 export function verifySubmitted(record, anchor = null) {
-  if (!record || typeof record !== "object" || Array.isArray(record)) return null;
+  if (!isPlainObject(record)) return null;
+  const types = Array.isArray(record.type) ? record.type : [];
+  if (types.includes("DigitalProductPassport")) {
+    const scan = scanProvesGenuine(record, anchor ?? null);
+    const result = verifyRecord(record, anchor ?? null);
+    return {
+      verdict: scan.verdict,
+      reasons: scan.reasons,
+      checks: result.checks,
+      decision: scan.verdict,
+      anchored: scan.genuine === true,
+      anchorTransactionQueried: false,
+      genuine: scan.genuine,
+      digitalIdentity: scan.digitalIdentity,
+    };
+  }
   const result = verifyRecord(record, anchor ?? null);
   return {
     verdict: result.verdict,

@@ -3,7 +3,15 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { assessChainRead, expectedRecordHash, verifySubmitted } from "./protocol-verify.mjs";
+import { createHash, generateKeyPairSync } from "node:crypto";
+import { signPassport } from "../../../protocol/passport.mjs";
+import { signingBytes } from "../../../protocol/verifier.mjs";
+import {
+  assessChainRead,
+  expectedRecordHash,
+  readStoredPassport,
+  verifySubmitted,
+} from "./protocol-verify.mjs";
 
 const fixtures = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -31,6 +39,57 @@ test("a signed record and a mainnet-shaped anchor is verified, without querying 
   assert.equal(out.decision, out.verdict);
   assert.equal(out.anchored, true);
   assert.equal(out.anchorTransactionQueried, false);
+  assert.equal(Object.hasOwn(out, "genuine"), false);
+});
+
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+function base58Encode(buf) {
+  let num = BigInt("0x" + (buf.toString("hex") || "0"));
+  let out = "";
+  while (num > 0n) {
+    out = B58[Number(num % 58n)] + out;
+    num /= 58n;
+  }
+  for (const b of buf) {
+    if (b !== 0) break;
+    out = "1" + out;
+  }
+  return out;
+}
+
+function signedPassport() {
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const raw = publicKey.export({ format: "der", type: "spki" }).subarray(-32);
+  const issuer = "did:key:z" + base58Encode(Buffer.concat([Buffer.from([0xed, 0x01]), raw]));
+  const record = signPassport({
+    digitalIdentity: "urn:authichain:item:example-1",
+    privateKey,
+    issuer,
+  });
+  const anchor = {
+    recordHash: "sha256:" + createHash("sha256").update(signingBytes(record)).digest("hex"),
+    chain: "polygon:137",
+    txHash: "0x" + "ab".repeat(32),
+    anchoredAt: "2026-01-01T00:05:00Z",
+  };
+  return { record, anchor };
+}
+
+test("a stored product passport is genuine only when the scan passes", () => {
+  const { record, anchor } = signedPassport();
+  assert.equal(record.credentialSubject.gtin, undefined);
+  const stored = readStoredPassport({ passport: { record, anchor } });
+  assert.equal(stored.record, record);
+  assert.equal(stored.anchor, anchor);
+  const proved = verifySubmitted(stored.record, stored.anchor);
+  assert.equal(proved.genuine, true);
+  assert.equal(proved.digitalIdentity, "urn:authichain:item:example-1");
+  assert.equal(proved.verdict, "verified");
+  const open = verifySubmitted(record, null);
+  assert.equal(open.genuine, false);
+  assert.equal(open.verdict, "valid-unanchored");
+  assert.equal(readStoredPassport({ status: "active" }), null);
+  assert.equal(readStoredPassport(null), null);
 });
 
 test("a tampered subject is invalid", () => {

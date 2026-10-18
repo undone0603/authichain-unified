@@ -103,6 +103,15 @@ export function scanProvesGenuine(record, anchor = null, opts = {}) {
       reasons: [err.message],
     };
   }
+  const gtin = record?.credentialSubject?.gtin;
+  if (gtin !== undefined && gtin !== null && (typeof gtin !== 'string' || !/^\d{14}$/.test(gtin))) {
+    return {
+      genuine: false,
+      digitalIdentity,
+      verdict: 'invalid',
+      reasons: ['gtin_not_14_digits'],
+    };
+  }
   const result = verifyRecord(record, anchor, opts);
   return {
     genuine: result.verdict === 'verified',

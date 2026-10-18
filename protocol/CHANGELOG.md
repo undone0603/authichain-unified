@@ -2,9 +2,11 @@
 
 ## Unreleased
 
-No version bump in this change; the release that ships it is a separate PR. `verifier.mjs` verdicts, the CLI, types, and example records are unchanged.
+No version bump in this change; the release that ships it is a separate PR. `verifier.mjs` verdicts, types, and example records are unchanged.
 
-- `passport.mjs`: a product passport is a `DigitalProductPassport` whose digital identity is `credentialSubject.id`. `scanProvesGenuine` is true only when the reference verifier returns `verified`.
+- `passport.mjs`: a product passport is a `DigitalProductPassport` whose digital identity is `credentialSubject.id`. `scanProvesGenuine` is true only when the reference verifier returns `verified`. A `gtin`, when present, must be 14 digits. This package does not assign one.
+- `authichain-verify` prints that passport scan and exits 0 only when it is genuine.
+- The verify worker and the product pages call the same scan when a stored passport is present. A registry status is not that proof.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 

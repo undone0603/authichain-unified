@@ -1,13 +1,14 @@
 """
 agentz.core.signature
 ---------------------
-Signature check for /scan, done by the JavaScript reference verifier
-(protocol/verifier.mjs) rather than a second Python implementation that
-could drift from it.
+Signature check for /scan, done by the JavaScript passport scan rather than
+a second Python implementation that could drift from it.
 
 `signature_valid` is True only when all of these hold:
-  - the verifier accepts the record's Ed25519 signature and validity window
-    (verdict `verified` or `valid-unanchored`);
+  - for a DigitalProductPassport, the passport scan is genuine (verdict
+    `verified`). `valid-unanchored` is not that proof;
+  - for any other record, the verifier accepts the Ed25519 signature and
+    validity window (verdict `verified` or `valid-unanchored`);
   - the signing key is the issuer and is in AGENTZ_TRUSTED_ISSUERS: anyone
     can sign a record with their own did:key, so a valid signature from an
     unknown key proves nothing;
@@ -41,7 +42,7 @@ def _result(valid: Optional[bool], reason: str, verdict: Optional[str] = None) -
 
 
 async def run_verifier(record: Dict[str, Any], anchor: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """verifyRecord() output, or None when the verifier could not run."""
+    """Passport scan or verifyRecord() output, or None when the verifier could not run."""
     node = os.environ.get("AGENTZ_NODE_BIN") or shutil.which("node")
     if not node or not VERIFIER.is_file():
         return None
@@ -84,7 +85,12 @@ async def check_scan_signature(
         return _result(None, "verifier_unavailable")
 
     name = verdict.get("verdict")
-    if name == "invalid" or verdict.get("checks", {}).get("signature") is not True:
+    types = record.get("type") if isinstance(record.get("type"), list) else []
+    if "DigitalProductPassport" in types:
+        if verdict.get("genuine") is not True:
+            reasons = ",".join(verdict.get("reasons") or []) or "not_genuine"
+            return _result(False, reasons, name)
+    elif name == "invalid" or verdict.get("checks", {}).get("signature") is not True:
         reasons = ",".join(verdict.get("reasons") or []) or "invalid"
         return _result(False, reasons, name)
     # The verifier checks the signature against proof.verificationMethod when

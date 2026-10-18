@@ -1,3 +1,8 @@
+export function readStoredPassport(metadata: unknown): {
+  record: Record<string, unknown>;
+  anchor: Record<string, unknown> | null;
+} | null;
+
 export function verifySubmitted(
   record: unknown,
   anchor?: unknown,
@@ -8,6 +13,8 @@ export function verifySubmitted(
   decision: "verified" | "valid-unanchored" | "invalid";
   anchored: boolean;
   anchorTransactionQueried: false;
+  genuine?: boolean;
+  digitalIdentity?: string | null;
 } | null;
 
 export function expectedRecordHash(record: unknown): string;
