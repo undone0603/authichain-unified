@@ -230,7 +230,7 @@ export function renderX402DocsPage(): string {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>x402 agent pay — AuthiChain</title>
-<meta name="description" content="AuthiChain x402 agent verification micropayments: ${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}. Health at /api/x402/health. Unpaid POST returns HTTP 402.">
+<meta name="description" content="AuthiChain x402 agent verification micropayments: ${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}. An empty body is the unpaid HTTP 402. A free answer is not a paid receipt.">
 <link rel="canonical" href="${esc(p.canonicalUrl)}">
 <link rel="alternate" type="application/json" href="${esc(p.catalogUrl)}" title="x402 catalog">
 <link rel="describedby" href="${esc(p.wellKnownUrl)}">
@@ -238,7 +238,7 @@ export function renderX402DocsPage(): string {
 <meta name="theme-color" content="#4F46E5">
 <meta property="og:type" content="website">
 <meta property="og:title" content="x402 agent pay — AuthiChain">
-<meta property="og:description" content="${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)} per agent verification. Discover the live rail, then POST unpaid for a 402 challenge.">
+<meta property="og:description" content="${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}. An empty body is the unpaid HTTP 402. A free answer is not a paid receipt.">
 <meta property="og:url" content="${esc(p.canonicalUrl)}">
 <meta property="og:image" content="https://authichain.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">

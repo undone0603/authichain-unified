@@ -65,6 +65,8 @@ describe("x402 public docs page", () => {
     );
     expect(html).toContain("HTTP 402");
     expect(html).toContain("An empty body is the unpaid HTTP 402");
+    expect(html).toContain("A free answer is not a paid receipt.");
+    expect(html).not.toContain("Unpaid POST returns HTTP 402.");
     expect(html).toContain("An empty body is always the 402 challenge");
     expect(html).toContain("It is not a paid receipt");
     expect(html).toContain("free: true");

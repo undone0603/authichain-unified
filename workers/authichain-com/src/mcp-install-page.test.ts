@@ -43,6 +43,13 @@ describe("mcp install page", () => {
     expect(html).toContain('<link rel="canonical"');
     expect(html).toContain("width=device-width");
     expect(html).toContain("</html>");
+    expect(html).toContain("Give your agent the published checks.");
+    expect(html).toContain("A signed record is not a physical inspection.");
+    expect(html).toContain("Legacy x402 verify answers HTTP 402.");
+    expect(html).not.toContain("check what's real");
+    expect(html).not.toContain(
+      "x402 paid verification and on-chain anchoring in development"
+    );
   });
 
   it("offers every install path a reader needs", () => {
