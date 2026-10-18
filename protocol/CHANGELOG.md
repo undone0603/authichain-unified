@@ -8,6 +8,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - `authichain-verify` prints that passport scan and exits 0 only when it is genuine. Types for the passport export ship in `passport.d.ts`.
 - The verify worker and the product pages call the same scan when a stored passport is present. A registry status is not that proof.
 - `storePassport` places an already-signed passport on a metadata object. The digital identity stays `credentialSubject.id`. It does not assign a GTIN and it does not write a database.
+- A product scan that omits its own record uses that stored passport and its anchor. The expected digital identity is the product subject id, or `credentialSubject.id` on the stored passport. A registry status is not that identity. No GTIN is assigned.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 

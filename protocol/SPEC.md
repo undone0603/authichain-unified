@@ -104,10 +104,14 @@ passport scan.
 `credentialSubject.gtin`, when present, MUST be 14 digits. This specification
 does not assign a GTIN. A holder may store that same record, with its anchor
 when one exists. Storing it does not assign a GTIN and does not by itself
-prove the passport genuine. Section 8 still applies: the verdict does not
-prove a copied identifier is attached to a different object. The proof the
-scan gives is that this digital identity's passport was signed by the issuer
-and the anchor hash matches.
+prove the passport genuine. A scan that does not carry its own record uses
+the passport stored on that product, and its anchor when one was stored. The
+expected digital identity is the product's subject id when one is recorded,
+and otherwise `credentialSubject.id` on that stored passport. A registry
+status, including `active`, is not a passport and is not that identity.
+Section 8 still applies: the verdict does not prove a copied identifier is
+attached to a different object. The proof the scan gives is that this digital
+identity's passport was signed by the issuer and the anchor hash matches.
 
 ## 4. Anchoring
 
