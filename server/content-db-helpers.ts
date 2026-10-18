@@ -143,6 +143,11 @@ export async function getProductById(db: Db, id: string) {
   return result[0];
 }
 
+export async function getProductBySerial(db: Db, serial: string) {
+  const result = await db.select().from(products).where(eq(products.serialNumber, serial)).limit(1);
+  return result[0];
+}
+
 export async function createProduct(db: Db, data: Omit<InsertProduct, "id" | "createdAt" | "updatedAt">) {
   const [result] = await db.insert(products).values(data).returning();
   return { id: result.id };

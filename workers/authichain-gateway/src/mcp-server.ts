@@ -2,6 +2,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
 import type { Env } from "./index";
+import {
+  REGISTER_PRODUCT_DESCRIPTION,
+  VERIFY_PRODUCT_DESCRIPTION,
+  registerProductBody,
+} from "./product-tools";
 
 /**
  * MCP Server for ChatGPT Apps SDK integration.
@@ -28,7 +33,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: verify_product ───────────────────────────────────────────────────
   server.tool(
     "verify_product",
-    "Returns trust score, verification status, and provenance data.",
+    VERIFY_PRODUCT_DESCRIPTION,
     {
       productId: z.string().optional().describe("Product ID or serial number"),
       imageUrl: z
@@ -261,7 +266,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: register_product ─────────────────────────────────────────────────
   server.tool(
     "register_product",
-    "Register a new product in the AuthiChain verification network. Creates a blockchain-anchored record with provenance metadata.",
+    REGISTER_PRODUCT_DESCRIPTION,
     {
       name: z.string().describe("Product name"),
       manufacturer: z.string().describe("Manufacturer or brand name"),
@@ -270,9 +275,19 @@ function createMcpServer(env: Env): McpServer {
       metadata: z
         .record(z.string())
         .optional()
-        .describe("Additional product metadata"),
+        .describe("String metadata kept beside the passport"),
+      passport: z
+        .unknown()
+        .optional()
+        .describe(
+          "Already-signed DigitalProductPassport, or { record, anchor }"
+        ),
+      userId: z
+        .string()
+        .optional()
+        .describe("Registry user id required by the register handler"),
     },
-    async ({ name, manufacturer, serialNumber, category, metadata }) => {
+    async ({ name, manufacturer, serialNumber, category, metadata, passport, userId }) => {
       try {
         const res = await fetch(
           `${env.BACKEND_URL}/api/internal/products/register`,
@@ -282,13 +297,17 @@ function createMcpServer(env: Env): McpServer {
               "Content-Type": "application/json",
               "X-Internal-Secret": env.INTERNAL_SECRET,
             },
-            body: JSON.stringify({
-              name,
-              manufacturer,
-              serialNumber,
-              category,
-              metadata,
-            }),
+            body: JSON.stringify(
+              registerProductBody({
+                name,
+                manufacturer,
+                serialNumber,
+                category,
+                metadata,
+                passport,
+                userId,
+              })
+            ),
           }
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

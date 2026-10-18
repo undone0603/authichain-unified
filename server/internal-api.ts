@@ -1,9 +1,9 @@
 import { timingSafeEqual } from "crypto";
 import { Router, type Request, type Response } from "express";
 import { ENV } from "./_core/env";
-import { invokeLLM, parseLLMContent } from "./_core/llm";
 import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-service";
-import { createProduct, getCertificateByNumber, getDb, getWhiteLabelByApiKey } from "./db";
+import { createProduct, getCertificateByNumber, getDb, getProductById, getProductByName, getProductBySerial, getWhiteLabelByApiKey } from "./db";
+import { passportVerdict } from "./passport-verdict";
 import { computeTrustScore, generateProductQRON } from "./qron-service";
 import { reportUsageToStripe } from "./tenant-billing";
 
@@ -38,55 +38,20 @@ export function createInternalRouter(): Router {
   // ─── POST /api/internal/verify ──────────────────────────────────────────────
   router.post("/verify", async (req: Request, res: Response) => {
     try {
-      const { identifier, productId, barcode, imageUrl } = req.body;
+      const { identifier, productId, barcode } = req.body;
       const lookupId = identifier || productId || barcode;
       if (!lookupId) return res.status(400).json({ error: "identifier, productId, or barcode required" });
 
       // Check if it's a certificate number
-      const cert = await getCertificateByNumber(lookupId);
-      if (cert) {
-        return res.json({
-          verified: cert.status === "active",
-          type: "certificate",
-          certificate: cert,
-          trustScore: 95,
-          confidence: 0.98,
-          agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
-        });
-      }
-
-      // Prevent prompt injection — only the sanitized identifier reaches the LLM
-      const safeLookupId = String(lookupId).replace(/[^a-zA-Z0-9\-_.]/g, "").slice(0, 128);
-
-      // AI-based verification
-      const analysis = await invokeLLM({
-        messages: [
-          {
-            role: "system",
-            content: `You are AuthiChain's product verification engine. Analyze the product identifier and determine authenticity. Return JSON: { "verified": boolean, "confidence": number (0-1), "reasoning": string, "riskFlags": string[] }`,
-          },
-          {
-            role: "user",
-            content: JSON.stringify({ identifier: safeLookupId, hasImage: !!imageUrl }),
-          },
-        ],
-        responseFormat: { type: "json_object" },
-      });
-
-      let result: { verified: boolean; confidence: number; reasoning: string; riskFlags: string[] };
-      try {
-        result = parseLLMContent(analysis.choices[0].message.content);
-      } catch {
-        return res.status(500).json({ error: "Internal server error" });
-      }
+      const cert = await getCertificateByNumber(String(lookupId));
+      const product =
+        (cert?.productId ? await getProductById(String(cert.productId)) : undefined) ??
+        (await getProductBySerial(String(lookupId))) ??
+        (await getProductById(String(lookupId)));
       res.json({
-        verified: result.verified,
-        type: "ai_analysis",
-        trustScore: Math.round(result.confidence * 100),
-        confidence: result.confidence,
-        reasoning: result.reasoning,
-        riskFlags: result.riskFlags || [],
-        agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
+        type: "product_passport",
+        ...passportVerdict(product, cert),
+        ...(cert ? { certificate: cert } : {}),
       });
     } catch (err: unknown) {
       console.error("[Internal API] verify error:", getErrorMessage(err));
@@ -127,12 +92,14 @@ export function createInternalRouter(): Router {
       const cert = await getCertificateByNumber(number);
       if (!cert) return res.status(404).json({ error: "Certificate not found", valid: false });
 
+      const product = cert.productId ? await getProductById(String(cert.productId)) : undefined;
+      const verdict = passportVerdict(product, cert);
       res.json({
-        valid: cert.status === "active",
+        ...verdict,
+        valid: verdict.verified,
         certificate: cert,
         issuedAt: cert.issuedAt,
         expiresAt: cert.expiresAt,
-        blockchainVerified: !!cert.blockchainTxHash,
       });
     } catch (err: unknown) {
       console.error("[Internal API] certificates/verify error:", getErrorMessage(err));
@@ -159,14 +126,14 @@ export function createInternalRouter(): Router {
 
       const rarity = calculateStrainRarity(metadata, profile);
       const truthLayer = formatTruthLayerMetadata(metadata, profile);
+      const product = await getProductByName(String(strain));
 
       res.json({
-        verified: true,
+        ...passportVerdict(product, null),
         strainName: strain,
         batchId: batchId || null,
         dispensaryId: dispensaryId || null,
         rarityScore: rarity,
-        complianceStatus: dispensaryId ? "compliant" : "unverified",
         truthLayer,
       });
     } catch (err: unknown) {
@@ -223,7 +190,7 @@ export function createInternalRouter(): Router {
   // ─── POST /api/internal/products/register ──────────────────────────────────
   router.post("/products/register", async (req: Request, res: Response) => {
     try {
-      const { name, brand, category, serialNumber, description, userId } = req.body;
+      const { name, brand, manufacturer, category, serialNumber, description, userId } = req.body;
       if (!name) return res.status(400).json({ error: "name required" });
       const parsedUserId = parseInt(userId, 10);
       if (!userId || !Number.isFinite(parsedUserId) || parsedUserId <= 0) {
@@ -243,9 +210,11 @@ export function createInternalRouter(): Router {
         }
       }
 
+      const resolvedBrand = brand || manufacturer;
       const product = await createProduct({
         name,
-        brand,
+        brand: resolvedBrand,
+        manufacturer: manufacturer || brand,
         category,
         serialNumber,
         description,

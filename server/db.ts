@@ -1032,6 +1032,28 @@ export async function getProductById(id: string) {
   return result[0];
 }
 
+export async function getProductBySerial(serial: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(products)
+    .where(eq(products.serialNumber, serial))
+    .limit(1);
+  return result[0];
+}
+
+export async function getProductByName(name: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(products)
+    .where(eq(products.name, name))
+    .limit(1);
+  return result[0];
+}
+
 export async function updateProduct(
   id: string,
   data: FlexibleUpdate<ProductInsert>

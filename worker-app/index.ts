@@ -1310,34 +1310,24 @@ app.post("/api/gpt/verify", async c => {
     const productId = body?.productId;
     if (!productId) return c.json({ error: "productId required" }, 400);
     const db = getHyperdriveDb(c.env);
-    const [product] = await db
-      .select()
-      .from(products)
-      .where(eq(products.id, Number(productId)))
-      .limit(1);
-    if (!product) {
-      return c.json({
-        verified: false,
-        trustScore: 0,
-        message: "Product not found. This item may be counterfeit.",
-        blockchain: null,
-      });
-    }
+    const id = String(productId);
+    const { getProductById, getProductBySerial } = await import(
+      "../server/content-db-helpers"
+    );
+    const { passportVerdict } = await import("../server/passport-verdict");
+    const product =
+      (await getProductById(db, id)) ?? (await getProductBySerial(db, id));
+    if (!product) return c.json(passportVerdict(null, null));
     const [cert] = await db
       .select()
       .from(certificates)
       .where(eq(certificates.productId, product.id))
       .limit(1);
     return c.json({
-      verified: !!cert,
-      trustScore: cert ? 95 : 20,
+      ...passportVerdict(product, cert ?? null),
       productName: product.name,
       brand: product.brand ?? null,
       certificateId: cert?.id ?? null,
-      blockchain: cert ? { status: "SECURED", network: "Polygon" } : null,
-      message: cert
-        ? `VERIFIED AUTHENTIC: ${product.name} - Blockchain secured.`
-        : `UNVERIFIED: ${product.name} lacks blockchain certificate.`,
     });
   } catch (err) {
     console.error("[GPT /verify]", err);
@@ -1378,12 +1368,17 @@ app.get("/api/gpt/certificates/verify", async c => {
       .limit(1);
     if (!cert)
       return c.json({ valid: false, message: "Certificate not found" });
+    const { getProductById } = await import("../server/content-db-helpers");
+    const { passportVerdict } = await import("../server/passport-verdict");
+    const product = cert.productId
+      ? await getProductById(db, String(cert.productId))
+      : undefined;
+    const verdict = passportVerdict(product, cert);
     return c.json({
-      valid: true,
+      ...verdict,
+      valid: verdict.verified,
       certificateId: cert.id,
       issuedAt: cert.issuedAt,
-      blockchain: { status: "SECURED", network: "Polygon" },
-      message: "Certificate is valid and blockchain-secured.",
     });
   } catch (err) {
     console.error("[GPT /certificates/verify]", err);
@@ -1407,15 +1402,11 @@ app.post("/api/gpt/cannabis/verify", async c => {
           .where(eq(products.name, strainName))
           .limit(1)
       : [];
+    const { passportVerdict } = await import("../server/passport-verdict");
     return c.json({
-      verified: !!product,
+      ...passportVerdict(product, null),
       strainName: strainName || "Unknown",
       batchId: batchId || null,
-      metrcCompliant: !!product,
-      blockchain: product ? { status: "SECURED", network: "Polygon" } : null,
-      message: product
-        ? `VERIFIED: ${product.name} - METRC compliant, blockchain secured.`
-        : "Strain not found in AuthiChain registry.",
     });
   } catch (err) {
     console.error("[GPT /cannabis/verify]", err);
@@ -1430,35 +1421,26 @@ app.post("/api/gpt/trust-score", async c => {
     const productId = body?.productId;
     if (!productId) return c.json({ error: "productId required" }, 400);
     const db = getHyperdriveDb(c.env);
-    const [product] = await db
-      .select()
-      .from(products)
-      .where(eq(products.id, Number(productId)))
-      .limit(1);
-    if (!product)
-      return c.json({
-        trustScore: 0,
-        verdict: "UNKNOWN",
-        message: "Product not found",
-      });
+    const id = String(productId);
+    const { getProductById, getProductBySerial } = await import(
+      "../server/content-db-helpers"
+    );
+    const { passportVerdict } = await import("../server/passport-verdict");
+    const product =
+      (await getProductById(db, id)) ?? (await getProductBySerial(db, id));
+    if (!product) {
+      return c.json({ verdict: "UNKNOWN", ...passportVerdict(null, null) });
+    }
     const [cert] = await db
       .select()
       .from(certificates)
       .where(eq(certificates.productId, product.id))
       .limit(1);
-    const baseScore = cert ? 85 : 15;
-    const trustScore = Math.min(100, baseScore);
-    const verdict =
-      trustScore >= 80
-        ? "TRUSTED"
-        : trustScore >= 50
-          ? "MODERATE"
-          : "SUSPICIOUS";
+    const scan = passportVerdict(product, cert ?? null);
     return c.json({
-      trustScore,
-      verdict,
-      breakdown: { blockchainCert: cert ? 85 : 0 },
-      message: `Trust score for ${product.name}: ${trustScore}/100 — ${verdict}`,
+      ...scan,
+      verdict: scan.verified ? "GENUINE" : "UNVERIFIED",
+      productName: product.name,
     });
   } catch (err) {
     console.error("[GPT /trust-score]", err);
@@ -1482,7 +1464,7 @@ app.use("/api/internal/*", async (c, next) => {
 app.post("/api/internal/verify", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
-    const { identifier, productId, barcode, imageUrl } = body ?? {};
+    const { identifier, productId, barcode } = body ?? {};
     const lookupId = identifier || productId || barcode;
     if (!lookupId)
       return c.json(
@@ -1491,62 +1473,23 @@ app.post("/api/internal/verify", async c => {
       );
 
     const db = getHyperdriveDb(c.env);
-    const { getCertificateByNumber } =
-      await import("../server/content-db-helpers");
-    const cert = await getCertificateByNumber(db, lookupId);
-    if (cert) {
-      return c.json({
-        verified: cert.status === "active",
-        type: "certificate",
-        certificate: cert,
-        trustScore: 95,
-        confidence: 0.98,
-        agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
-      });
-    }
-
-    // Prevent prompt injection — only the sanitized identifier reaches the LLM
-    const safeLookupId = String(lookupId)
-      .replace(/[^a-zA-Z0-9\-_.]/g, "")
-      .slice(0, 128);
-
-    const { invokeLLM, parseLLMContent } = await import("../server/_core/llm");
-    const analysis = await invokeLLM({
-      messages: [
-        {
-          role: "system",
-          content: `You are AuthiChain's product verification engine. Analyze the product identifier and determine authenticity. Return JSON: { "verified": boolean, "confidence": number (0-1), "reasoning": string, "riskFlags": string[] }`,
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            identifier: safeLookupId,
-            hasImage: !!imageUrl,
-          }),
-        },
-      ],
-      responseFormat: { type: "json_object" },
-    });
-
-    let result: {
-      verified: boolean;
-      confidence: number;
-      reasoning: string;
-      riskFlags: string[];
-    };
-    try {
-      result = parseLLMContent(analysis.choices[0].message.content);
-    } catch {
-      return c.json({ error: "Internal server error" }, 500);
-    }
+    const {
+      getCertificateByNumber,
+      getProductById,
+      getProductBySerial,
+    } = await import("../server/content-db-helpers");
+    const { passportVerdict } = await import("../server/passport-verdict");
+    const cert = await getCertificateByNumber(db, String(lookupId));
+    const product =
+      (cert?.productId
+        ? await getProductById(db, String(cert.productId))
+        : undefined) ??
+      (await getProductBySerial(db, String(lookupId))) ??
+      (await getProductById(db, String(lookupId)));
     return c.json({
-      verified: result.verified,
-      type: "ai_analysis",
-      trustScore: Math.round(result.confidence * 100),
-      confidence: result.confidence,
-      reasoning: result.reasoning,
-      riskFlags: result.riskFlags || [],
-      agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
+      type: "product_passport",
+      ...passportVerdict(product, cert),
+      ...(cert ? { certificate: cert } : {}),
     });
   } catch (err: any) {
     console.error("[Internal API] verify error:", err.message);
@@ -1596,12 +1539,18 @@ app.post("/api/internal/certificates/verify", async c => {
     if (!cert)
       return c.json({ error: "Certificate not found", valid: false }, 404);
 
+    const { getProductById } = await import("../server/content-db-helpers");
+    const { passportVerdict } = await import("../server/passport-verdict");
+    const product = cert.productId
+      ? await getProductById(db, String(cert.productId))
+      : undefined;
+    const verdict = passportVerdict(product, cert);
     return c.json({
-      valid: cert.status === "active",
+      ...verdict,
+      valid: verdict.verified,
       certificate: cert,
       issuedAt: cert.issuedAt,
       expiresAt: cert.expiresAt,
-      blockchainVerified: !!cert.blockchainTxHash,
     });
   } catch (err: any) {
     console.error("[Internal API] certificates/verify error:", err.message);
@@ -1645,14 +1594,20 @@ app.post("/api/internal/cannabis/verify", async c => {
       await import("../server/cannabis-service");
     const rarity = calculateStrainRarity(metadata, profile);
     const truthLayer = formatTruthLayerMetadata(metadata, profile);
+    const db = getHyperdriveDb(c.env);
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(eq(products.name, strain))
+      .limit(1);
+    const { passportVerdict } = await import("../server/passport-verdict");
 
     return c.json({
-      verified: true,
+      ...passportVerdict(product, null),
       strainName: strain,
       batchId: batchId || null,
       dispensaryId: dispensaryId || null,
       rarityScore: rarity,
-      complianceStatus: dispensaryId ? "compliant" : "unverified",
       truthLayer,
     });
   } catch (err: any) {
@@ -1725,8 +1680,15 @@ app.get("/api/internal/analytics", async c => {
 app.post("/api/internal/products/register", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
-    const { name, brand, category, serialNumber, description, userId } =
-      body ?? {};
+    const {
+      name,
+      brand,
+      manufacturer,
+      category,
+      serialNumber,
+      description,
+      userId,
+    } = body ?? {};
     if (!name) return c.json({ error: "name required" }, 400);
     const parsedUserId = parseInt(userId, 10);
     if (!userId || !Number.isFinite(parsedUserId) || parsedUserId <= 0) {
@@ -1748,9 +1710,11 @@ app.post("/api/internal/products/register", async c => {
 
     const db = getHyperdriveDb(c.env);
     const { createProduct } = await import("../server/content-db-helpers");
+    const resolvedBrand = brand || manufacturer;
     const product = await createProduct(db, {
       name,
-      brand,
+      brand: resolvedBrand,
+      manufacturer: manufacturer || brand,
       category,
       serialNumber,
       description,
