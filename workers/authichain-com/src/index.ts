@@ -3120,7 +3120,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Mandatory 2028–29</div></div>
         <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">Not a DSCSA certification</div></div>
         <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">Mandatory 2027</div></div>
-        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Product authenticity + DPP</div><div class="industry-deadline">Goal: counterfeit detection for luxury goods</div></div>
+        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Not a product inspection</div><div class="industry-deadline">Goal: counterfeit detection for luxury goods</div></div>
         <div class="industry-card"><div class="industry-name">🌿 Cannabis</div><div class="industry-deadline">Not a METRC or BioTrack connection</div></div>
       </div>
     </div>
@@ -3128,7 +3128,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
 
   <section class="section cta-section" style="background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); text-align:center">
     <div class="container" style="max-width:700px">
-      <h2 class="section-title">Start DPP Compliance Today</h2>
+      <h2 class="section-title">Start DPP readiness checkout</h2>
       <p class="section-sub">Checkout opens an AuthiChain workspace for your product line. It is self-serve.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
         ${catalogPaymentLinkHtml({

@@ -554,6 +554,10 @@ test("/dpp does not claim DSCSA, METRC, or BioTrack compliance", async () => {
     assert.doesNotMatch(html, /One-click compliance exports/, path);
     assert.doesNotMatch(html, /FDA DSCSA \+ DPP/, path);
     assert.doesNotMatch(html, /INDUSTRIES SERVED/, path);
+    assert.match(html, /Not a product inspection/, path);
+    assert.match(html, /Start DPP readiness checkout/, path);
+    assert.doesNotMatch(html, /Product authenticity \+ DPP/, path);
+    assert.doesNotMatch(html, /Start DPP Compliance Today/, path);
   }
 });
 

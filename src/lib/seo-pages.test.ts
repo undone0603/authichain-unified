@@ -308,6 +308,59 @@ describe("generated SEO money-path CTAs", () => {
     expect(pharma?.bodyHtml).toContain("This page does not establish DSCSA compliance.");
   });
 
+  it("does not title a hub as a METRC, BioTrack, COA, DSCSA, or recall connection", () => {
+    const cases: Array<[string, string, string]> = [
+      [
+        "metrc-compliance-blockchain",
+        "This page does not connect to METRC",
+        "strainchain_passport",
+      ],
+      [
+        "biotrack-integration-blockchain-provenance",
+        "This page does not connect to BioTrack",
+        "strainchain_passport",
+      ],
+      [
+        "cannabis-coa-verification-blockchain",
+        "Lab certificates are not linked here",
+        "strainchain_passport",
+      ],
+      [
+        "dscsa-compliance-blockchain-serialization",
+        "This page does not establish DSCSA compliance",
+        "dpp_readiness",
+      ],
+      [
+        "cannabis-product-recall-traceability",
+        "This page does not connect to METRC or BioTrack",
+        "strainchain_passport",
+      ],
+    ];
+    const banned = [
+      "Turn METRC Compliance Into Consumer Trust",
+      "METRC Compliance on the Blockchain",
+      "DSCSA-Ready",
+      "A QR scan returns an authenticity result",
+      "Blockchain-Verified Cannabis",
+      "BioTrack + Blockchain",
+      "BioTrack Integration",
+      "ties each unit to its METRC",
+      "shows recall status",
+    ];
+    for (const [slug, sentence, plan] of cases) {
+      const page = getSeoPageBySlug(slug);
+      expect(page, slug).not.toBeNull();
+      const blob = `${page?.title}\n${page?.h1}\n${page?.metaDescription}\n${page?.bodyHtml}\n${JSON.stringify(page?.jsonLd)}`;
+      expect(blob, slug).toContain(sentence);
+      expect(blob, slug).toContain(
+        `action="https://authichain.com/checkout/${plan}"`
+      );
+      for (const phrase of banned) {
+        expect(blob, `${slug} ${phrase}`).not.toContain(phrase);
+      }
+    }
+  });
+
   it("links Made in USA / origin-claim hubs to DPP checkout and the Made in America brief", () => {
     const musa = getSeoPageBySlug("ftc-made-in-usa-labeling-verification");
     const origin = getSeoPageBySlug(

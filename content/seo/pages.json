@@ -89,14 +89,14 @@
     "keyword": "metrc compliance blockchain",
     "brand": "StrainChain",
     "domain": "strainchain.io",
-    "title": "METRC Compliance on the Blockchain | StrainChain",
+    "title": "Not a METRC connection | StrainChain",
     "metaDescription": "A scan is not, by itself, proof a cannabis product is genuine. On-chain strain records are in development.",
-    "h1": "Turn METRC Compliance Into Consumer Trust",
+    "h1": "This page does not connect to METRC",
     "bodyHtml": "<p>A scan is not, by itself, proof a cannabis product is genuine. On-chain strain records are in development. This page does not connect to METRC or BioTrack.</p><h2>Why operators choose StrainChain</h2><ul><li>This page does not connect to METRC or BioTrack.</li><li>Lab certificates are not verified on this page</li><li>A scan is not proof a cannabis product is genuine</li></ul><p>This page does not list a monthly plan.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
-      "name": "StrainChain — METRC Compliance Blockchain",
+      "name": "StrainChain — not a METRC connection",
       "brand": {
         "@type": "Brand",
         "name": "StrainChain"
@@ -173,15 +173,15 @@
     "keyword": "dscsa compliance blockchain",
     "brand": "AuthiChain",
     "domain": "authichain.com",
-    "title": "DSCSA Compliance on Blockchain | AuthiChain",
-    "metaDescription": "Serialized, tamper-evident drug tracing for DSCSA.",
-    "h1": "DSCSA-Ready Blockchain Serialization for Pharma",
-    "bodyHtml": "<p>The U.S. Drug Supply Chain Security Act (DSCSA) requires interoperable, electronic, unit-level tracing of prescription drugs across the supply chain. AuthiChain gives pharma manufacturers and distributors a verification layer that records each check.</p><h2>How it works</h2><ul><li>Credentials follow the W3C Verifiable Credentials standard for interoperability.</li><li>A QR scan returns an authenticity result.</li></ul><h2>Built for regulated pharma</h2><p>AuthiChain serves pharma alongside luxury, electronics, agriculture and other regulated verticals.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p>",
+    "title": "Not a DSCSA certification | AuthiChain",
+    "metaDescription": "This page does not establish DSCSA compliance. Confirm obligations against the statute.",
+    "h1": "This page does not establish DSCSA compliance",
+    "bodyHtml": "<p>The U.S. Drug Supply Chain Security Act (DSCSA) requires interoperable, electronic, unit-level tracing of prescription drugs across the supply chain. This page does not establish DSCSA compliance. Confirm obligations against the statute.</p><h2>How it works</h2><ul><li>Credentials follow the W3C Verifiable Credentials standard for interoperability.</li><li>A QR scan on this page is not an authenticity result.</li></ul><h2>Built for regulated pharma</h2><p>AuthiChain serves pharma alongside luxury, electronics, agriculture and other regulated verticals.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
-      "name": "AuthiChain — DSCSA Blockchain Serialization",
-      "description": "Blockchain product authentication for DSCSA-regulated pharmaceutical serialization and tracing.",
+      "name": "AuthiChain — not a DSCSA certification",
+      "description": "This page does not establish DSCSA compliance.",
       "url": "https://authichain.com/p/dscsa-compliance-blockchain-serialization",
       "brand": {
         "@type": "Brand",
@@ -270,14 +270,14 @@
     "keyword": "cannabis coa verification",
     "brand": "StrainChain",
     "domain": "strainchain.io",
-    "title": "Cannabis COA Verification on Blockchain | StrainChain",
+    "title": "Not a cannabis COA check | StrainChain",
     "metaDescription": "A scan is not, by itself, proof a cannabis product is genuine. On-chain strain records are in development.",
-    "h1": "Blockchain-Verified Cannabis Certificates of Analysis",
+    "h1": "Lab certificates are not linked here",
     "bodyHtml": "<p>A scan is not, by itself, proof a cannabis product is genuine. On-chain strain records are in development. This page does not connect to METRC or BioTrack.</p><h2>What a scan shows</h2><ul><li>A scan is not a chain-of-custody check.</li><li>Lab certificates are not linked on this page.</li><li>This page does not connect to METRC or BioTrack.</li></ul><p>This page does not list a monthly plan.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
-      "name": "StrainChain — Cannabis COA Verification",
+      "name": "StrainChain — not a COA check",
       "description": "A scan is not, by itself, proof a cannabis product is genuine. On-chain strain records are in development.",
       "url": "https://strainchain.io/cannabis-coa-verification-blockchain",
       "brand": {
@@ -291,14 +291,14 @@
     "keyword": "biotrack blockchain integration",
     "brand": "StrainChain",
     "domain": "strainchain.io",
-    "title": "BioTrack Blockchain Provenance | StrainChain",
+    "title": "Not a BioTrack connection | StrainChain",
     "metaDescription": "A scan is not, by itself, proof a cannabis product is genuine. On-chain strain records are in development.",
-    "h1": "BioTrack + Blockchain Provenance for Cannabis",
+    "h1": "This page does not connect to BioTrack",
     "bodyHtml": "<p>A scan is not, by itself, proof a cannabis product is genuine. On-chain strain records are in development. This page does not connect to METRC or BioTrack.</p><h2>Fits your existing stack</h2><ul><li>This page does not connect to METRC or BioTrack.</li><li>Lab certificates are not linked on this page.</li><li>A scan is not a chain-of-custody check.</li></ul><p>This page does not list a monthly plan.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
-      "name": "StrainChain — BioTrack Integration",
+      "name": "StrainChain — not a BioTrack connection",
       "description": "A scan is not, by itself, proof a cannabis product is genuine. On-chain strain records are in development.",
       "url": "https://strainchain.io/biotrack-integration-blockchain-provenance",
       "brand": {
@@ -1464,9 +1464,9 @@
     "brand": "StrainChain",
     "domain": "strainchain.io",
     "title": "Cannabis Product Recall Traceability | StrainChain",
-    "metaDescription": "When a cannabis batch fails a pesticide or mold retest, the question is how fast you can isolate every package it touched — StrainChain ties each unit to its.",
+    "metaDescription": "This page does not connect to METRC or BioTrack. A scan is not a recall check.",
     "h1": "Cannabis Product Recall Traceability",
-    "bodyHtml": "<p>When a cannabis batch fails a pesticide or mold retest, the question is how fast you can isolate every package it touched — StrainChain ties each unit to its METRC/BioTrack batch record so a recall targets units, not an entire product line.</p><h2>Why StrainChain</h2><ul><li>Unit-level recall targeting instead of a blanket pull across every dispensary carrying the SKU</li><li>Lab retest results attach to the same on-chain record consumers already scan for COAs</li><li>Chain-of-custody events are tamper-evident, so a recall trace does not depend on trusting one dispensary’s paperwork</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Does this replace our METRC recall workflow?</h3><p>No — it runs alongside METRC/BioTrack and narrows a recall to the specific units and batches affected, using the compliance data you already report.</p><h3>Can dispensaries check recall status by scan?</h3><p>Yes — the same QR code customers use for lab results shows recall status if a batch has been flagged.</p>",
+    "bodyHtml": "<p>A scan is not, by itself, proof a cannabis product is genuine. On-chain strain records are in development. This page does not connect to METRC or BioTrack. It does not isolate packages in a recall.</p><h2>Why StrainChain</h2><ul><li>This page does not target units in a live recall.</li><li>Lab retest results are not attached on this page.</li><li>This page does not connect to METRC or BioTrack.</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Does this replace our METRC recall workflow?</h3><p>No. This page does not connect to METRC or BioTrack.</p><h3>Can dispensaries check recall status by scan?</h3><p>No. A scan on this page is not a recall check, and lab results are not shown here.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -1478,7 +1478,7 @@
             "name": "StrainChain",
             "url": "https://strainchain.io"
           },
-          "description": "When a cannabis batch fails a pesticide or mold retest, the question is how fast you can isolate every package it touched — StrainChain ties each unit to its METRC/BioTrack batch record so a recall targets units, not an entire product line.",
+          "description": "A scan is not, by itself, proof a cannabis product is genuine. On-chain strain records are in development. This page does not connect to METRC or BioTrack. It does not isolate packages in a recall.",
           "url": "https://strainchain.io/p/cannabis-product-recall-traceability"
         },
         {
@@ -1506,7 +1506,7 @@
               "name": "Does this replace our METRC recall workflow?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "No — it runs alongside METRC/BioTrack and narrows a recall to the specific units and batches affected, using the compliance data you already report."
+                "text": "No. This page does not connect to METRC or BioTrack."
               }
             },
             {
@@ -1514,7 +1514,7 @@
               "name": "Can dispensaries check recall status by scan?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Yes — the same QR code customers use for lab results shows recall status if a batch has been flagged."
+                "text": "No. A scan on this page is not a recall check, and lab results are not shown here."
               }
             }
           ]
