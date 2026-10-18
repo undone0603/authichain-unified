@@ -38,6 +38,9 @@
  *   CERT_SIGNING_KEY_ID         (optional) kid override; default RFC 7638 thumbprint
  *   POLYGON_RPC_URL             (optional) JSON-RPC used to confirm stored anchor tx
  *   ANCHOR_CONTRACT_ADDRESSES   (optional) comma list; default the AuthiChain contract
+ *   VERIFY_WORKER_URL           (optional) POST { record, anchor } for a stored
+ *                               DigitalProductPassport. The answer is
+ *                               passportScan. It does not set verified.
  *   ALLOW_UNREGISTERED_SELF_SERVE_KEYS ("true" to keep accepting unsaved
  *                               ac_live_ keys issued before key persistence)
  *   RAPIDAPI_PROXY_SECRET       (secret, optional) the RapidAPI provider proxy
@@ -336,7 +339,9 @@ function b64urlFromString(str) {
 }
 
 function bytesFromB64(b64) {
-  const bin = atob(b64.replace(/-/g, "+").replace(/_/g, "/").replace(/\s+/g, ""));
+  const bin = atob(
+    b64.replace(/-/g, "+").replace(/_/g, "/").replace(/\s+/g, "")
+  );
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
@@ -475,7 +480,7 @@ async function signCertificate(payload, origin) {
 // Only facts present on the product row (plus an optional on-chain receipt
 // lookup) count. The stored `authenticity_score` / `confidence` values are
 // self-reported and are NOT used. Those facts stay on `checks`. They do not
-// set verified. This route does not scan a product passport.
+// set verified. passportScan is a separate field and is not copied here.
 const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
 const CONTENT_HASH_RE = /^(0x)?[0-9a-fA-F]{64}$/;
 const UUID_RE =
@@ -606,6 +611,79 @@ function assessEvidence(product, matchType, anchor) {
   return { verified: false, trust_score: score, checks: checks };
 }
 
+// A stored DigitalProductPassport is posted to the verify worker. The receipt
+// is not that scan. This script does not load the reference verifier.
+const PASSPORT_SCAN_ANSWERED =
+  "passportScan is the verify worker's reading of a stored DigitalProductPassport. verified on this object stays false. A registry row and an anchor receipt are not that scan.";
+const PASSPORT_SCAN_UNREACHABLE =
+  "The verify worker was not reached. The anchor receipt was not used as the scan. verified stays false.";
+const PASSPORT_SCAN_ABSENT =
+  "Registered product found. This check does not scan a product passport. A registry row and an anchor receipt are not that scan.";
+
+function plainObject(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function typeIncludes(types, name) {
+  return Array.isArray(types) && types.indexOf(name) !== -1;
+}
+
+function storedDigitalPassport(metadata) {
+  if (!plainObject(metadata) || !plainObject(metadata.passport)) return null;
+  const passport = metadata.passport;
+  if (typeIncludes(passport.type, "DigitalProductPassport")) {
+    return { record: passport, anchor: null };
+  }
+  if (!plainObject(passport.record)) return null;
+  if (!typeIncludes(passport.record.type, "DigitalProductPassport"))
+    return null;
+  return {
+    record: passport.record,
+    anchor: plainObject(passport.anchor) ? passport.anchor : null,
+  };
+}
+
+function verifierFetch(url, init) {
+  const impl = globalThis.fetchImpl;
+  if (typeof impl === "function") return impl(url, init);
+  return fetch(url, init);
+}
+
+async function readPassportScan(product) {
+  const stored = storedDigitalPassport(product && product.metadata);
+  if (!stored) return null;
+  const endpoint = envVar("VERIFY_WORKER_URL");
+  if (!endpoint) return { genuine: false, reason: "verifier_unreachable" };
+  try {
+    const res = await verifierFetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ record: stored.record, anchor: stored.anchor }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res || !res.ok)
+      return { genuine: false, reason: "verifier_unreachable" };
+    const body = await res.json();
+    if (!plainObject(body))
+      return { genuine: false, reason: "verifier_unreachable" };
+    const scan = { genuine: body.genuine === true };
+    if (typeof body.verdict === "string") scan.verdict = body.verdict;
+    if (typeof body.digitalIdentity === "string")
+      scan.digitalIdentity = body.digitalIdentity;
+    return scan;
+  } catch (e) {
+    return { genuine: false, reason: "verifier_unreachable" };
+  }
+}
+
+function passportPublicMessage(passportScan) {
+  if (passportScan && passportScan.reason === "verifier_unreachable") {
+    return PASSPORT_SCAN_UNREACHABLE;
+  }
+  if (passportScan) return PASSPORT_SCAN_ANSWERED;
+  return PASSPORT_SCAN_ABSENT;
+}
+
 function pickMatch(rows, candidates) {
   if (!Array.isArray(rows) || rows.length === 0) return null;
   const order = ["id", "truemark_id", "serial_number", "sku"];
@@ -615,8 +693,9 @@ function pickMatch(rows, candidates) {
       const v = r[col];
       return (
         v != null &&
-        candidates.indexOf(col === "id" ? String(v).toLowerCase() : String(v)) !==
-          -1
+        candidates.indexOf(
+          col === "id" ? String(v).toLowerCase() : String(v)
+        ) !== -1
       );
     });
     if (hits.length === 1) return { product: hits[0], matchType: col };
@@ -985,7 +1064,7 @@ async function handleRequest(req) {
           encodeURIComponent("(" + ors.join(",") + ")") +
           "&is_registered=eq.true" +
           scope +
-          "&limit=10&select=id,name,description,brand,category,image_url,truemark_id,sku,serial_number,blockchain_tx_hash,blockchain_hash,nft_token_id,nft_contract_address,counterfeit_reports,data_origin,status,is_registered,industry_id,created_at,story"
+          "&limit=10&select=id,name,description,brand,category,image_url,truemark_id,sku,serial_number,blockchain_tx_hash,blockchain_hash,nft_token_id,nft_contract_address,counterfeit_reports,data_origin,status,is_registered,industry_id,created_at,story,metadata"
       );
       if (!Array.isArray(rows))
         return j(
@@ -1001,6 +1080,8 @@ async function handleRequest(req) {
       var assessment = product
         ? assessEvidence(product, match.matchType, anchor)
         : { verified: false, trust_score: 0, checks: [] };
+      // passportScan is not a verified bit. status stays on assessment.verified.
+      var passportScan = product ? await readPassportScan(product) : null;
       var status = product
         ? assessment.verified
           ? "verified"
@@ -1070,10 +1151,11 @@ async function handleRequest(req) {
         status: status,
         trust_score: assessment.trust_score,
         message: product
-          ? "Registered product found. This check does not scan a product passport. A registry row and an anchor receipt are not that scan."
+          ? passportPublicMessage(passportScan)
           : status === "ambiguous"
             ? "Identifier matches several registered products (e.g. a SKU). Use the TrueMark id or serial number."
             : "No registered product found for this identifier.",
+        passportScan: passportScan,
         evidence: assessment.checks,
         certificate: signed.certificate,
         plan: kd.plan,
