@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { generateKeyPairSync, createHash } from 'node:crypto';
 import { signingBytes } from './verifier.mjs';
-import { assertDigitalIdentity, signPassport, scanProvesGenuine } from './passport.mjs';
+import { assertDigitalIdentity, signPassport, scanProvesGenuine, verifyScan } from './passport.mjs';
 
 const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 function base58Encode(buf) {
@@ -79,6 +79,17 @@ describe('scanProvesGenuine', () => {
     const result = scanProvesGenuine(record, anchorFor(record), { now: NOW });
     expect(result.genuine).toBe(false);
     expect(result.verdict).toBe('invalid');
+  });
+
+  it('the scan command accepts only a genuine passport', () => {
+    const keys = issuer();
+    const record = signPassport({ digitalIdentity: IDENTITY, ...keys });
+    const anchored = verifyScan(record, anchorFor(record), { now: NOW });
+    expect(anchored.exitCode).toBe(0);
+    expect(anchored.body.genuine).toBe(true);
+    const open = verifyScan(record, null, { now: NOW });
+    expect(open.exitCode).toBe(1);
+    expect(open.body.genuine).toBe(false);
   });
 
   it('a provenance record is not a product passport', () => {

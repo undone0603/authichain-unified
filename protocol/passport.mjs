@@ -111,3 +111,17 @@ export function scanProvesGenuine(record, anchor = null, opts = {}) {
     reasons: result.reasons,
   };
 }
+
+/**
+ * Scan entry used by the CLI. A product passport exits 0 only when genuine.
+ * Any other record keeps the reference verifier's exit rule.
+ */
+export function verifyScan(record, anchor = null, opts = {}) {
+  const types = Array.isArray(record?.type) ? record.type : [];
+  if (types.includes('DigitalProductPassport')) {
+    const body = scanProvesGenuine(record, anchor, opts);
+    return { exitCode: body.genuine ? 0 : 1, body };
+  }
+  const body = verifyRecord(record, anchor, opts);
+  return { exitCode: body.verdict === 'invalid' ? 1 : 0, body };
+}
