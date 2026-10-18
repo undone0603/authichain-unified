@@ -48,6 +48,21 @@ export function passportVerdict(
   };
 }
 
+/**
+ * A certification row, including status "approved", is not a passport.
+ * decision follows the stored scan. This does not sign a new attestation.
+ */
+export function certificationScanDecision(
+  product: { metadata?: unknown } | null | undefined,
+  cert: { metadata?: unknown } | null | undefined
+): PassportVerdict & { decision: "verified" | "blocked" } {
+  const verdict = passportVerdict(product, cert);
+  return {
+    decision: verdict.verified ? "verified" : "blocked",
+    ...verdict,
+  };
+}
+
 export type CallerSignals = {
   source: "caller_supplied";
   qrDecodePass: boolean;

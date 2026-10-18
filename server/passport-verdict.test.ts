@@ -4,6 +4,7 @@ import { signPassport } from "../protocol/passport.mjs";
 import { signingBytes } from "../protocol/verifier.mjs";
 import {
   callerSignalReport,
+  certificationScanDecision,
   passportVerdict,
   trustScoreReply,
 } from "./passport-verdict";
@@ -85,6 +86,32 @@ describe("passportVerdict", () => {
     expect(verdict.verified).toBe(false);
     expect(verdict.genuine).toBe(false);
     expect(verdict.digitalIdentity).toBe("urn:authichain:item:example-1");
+  });
+});
+
+describe("certificationScanDecision", () => {
+  it("does not sign an approved certification as verified", () => {
+    const reply = certificationScanDecision(
+      { metadata: { status: "active" } },
+      { metadata: { status: "approved" } }
+    );
+    expect(reply.decision).toBe("blocked");
+    expect(reply.verified).toBe(false);
+    expect(reply.onRecord).toBe(true);
+    expect(reply.message).toBe("No product passport is stored for this record.");
+    expect(JSON.stringify(reply)).not.toMatch(/signature|DSCSA|METRC|GTIN/i);
+  });
+
+  it("follows an anchored stored passport", () => {
+    const { record, anchor } = signedPassport();
+    const reply = certificationScanDecision(
+      { metadata: { passport: { record, anchor } } },
+      { metadata: { status: "approved" } }
+    );
+    expect(reply.decision).toBe("verified");
+    expect(reply.verified).toBe(true);
+    expect(reply.digitalIdentity).toBe("urn:authichain:item:example-1");
+    expect(JSON.stringify(reply)).not.toMatch(/"signature"/);
   });
 });
 

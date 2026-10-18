@@ -12,6 +12,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - Product verify routes report that scan. An active certificate, a model reply, or a row is not a genuine passport.
 - The internal trust-score route records caller-supplied flags beside that scan. An omitted flag is false. `verified` follows the stored passport when a product id is present. A flag tally is not a genuine passport.
 - The public product verify API records registry and anchor evidence. `verified` stays false. This route does not scan a product passport. A confirmed anchor receipt is not that scan.
+- `GET /api/v1/verify` reports the passport stored on the certification. An approved row is not signed as verified.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 
