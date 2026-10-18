@@ -190,6 +190,16 @@ describe("mapDbToIdentity", () => {
     expect(JSON.stringify(identity)).not.toMatch(/dscsa/i);
     expect(identity.gtin14).toBeUndefined();
   });
+
+  it("does not label a medical category as a device profile", () => {
+    const identity = mapDbToIdentity(
+      { category: "medical", metadata: {} },
+      { serial_number: "lot-1" }
+    );
+    expect(identity.profile).toBe("generic-provenance");
+    expect(identity.udiDi).toBeUndefined();
+    expect(JSON.stringify(identity)).not.toMatch(/medical-device-udi|dscsa/i);
+  });
 });
 
 describe("compositionHeading", () => {

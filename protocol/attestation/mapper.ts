@@ -11,10 +11,7 @@ function digestOrOmit(bytes: string | undefined): string | null {
 
 export function mapDbToIdentity(product: any, cert: any): Identity {
   return {
-    profile:
-      product.category === "medical"
-        ? "medical-device-udi"
-        : "generic-provenance",
+    profile: "generic-provenance",
     gtin14: product.metadata?.gtin14,
     udiDi: product.metadata?.udiDi,
     udiPi: product.metadata?.udiPi,
