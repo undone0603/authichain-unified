@@ -26,6 +26,9 @@ describe("battery passport lead form (AE-20261002-CFD-04)", () => {
     expect(section).toContain(
       "Certificate issuance for a battery passport is in development."
     );
+    expect(section).toContain(
+      "Our goal: issue a battery certificate for one synthetic unit. That certificate is not a physical inspection."
+    );
     expect(section).toContain("not a physical inspection");
     expect(section).toContain("This page is not a battery passport");
     expect(section).not.toContain("public verification are in development");

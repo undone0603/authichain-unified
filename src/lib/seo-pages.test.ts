@@ -308,6 +308,43 @@ describe("generated SEO money-path CTAs", () => {
     expect(pharma?.bodyHtml).toContain("This page does not establish DSCSA compliance.");
   });
 
+  it("puts one scan, seal, or battery goal in the body and not the title", () => {
+    const cases: Array<[string, string]> = [
+      [
+        "blockchain-qr-code-for-pharma",
+        "Our goal: a pharmacist checks one unit's signed record.",
+      ],
+      [
+        "product-authentication-for-electronics",
+        "Our goal: a scan checks a signed record for that unit.",
+      ],
+      [
+        "blockchain-qr-code-for-cannabis",
+        "Our goal: a scan checks a signed record for that unit.",
+      ],
+      [
+        "blockchain-qr-code-for-defense",
+        "Our goal: one signed record a contracting officer can read offline.",
+      ],
+      [
+        "supply-chain-traceability-aerospace",
+        "Our goal: a signed record lists a part identifier an airworthiness file could cite.",
+      ],
+      [
+        "eu-digital-product-passport-batteries",
+        "Our goal: issue one battery passport record for a single pack, with carbon-footprint, state-of-health, and material-recovery fields.",
+      ],
+    ];
+    for (const [slug, goal] of cases) {
+      const page = getSeoPageBySlug(slug);
+      expect(page, slug).not.toBeNull();
+      expect(page!.bodyHtml, slug).toContain(goal);
+      expect(page!.title, slug).not.toContain("Our goal");
+      expect(page!.h1, slug).not.toContain("Our goal");
+      expect(page!.metaDescription, slug).not.toContain("Our goal");
+    }
+  });
+
   it("does not title a hub as a METRC, BioTrack, COA, DSCSA, or recall connection", () => {
     const cases: Array<[string, string, string]> = [
       [

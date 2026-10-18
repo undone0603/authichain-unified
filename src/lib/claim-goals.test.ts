@@ -431,6 +431,86 @@ describe("claim goal ledger", () => {
     );
   });
 
+  it("publishes one goal on each scan, seal, and battery page", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const owners = [
+      "scan-not-proof-medicine",
+      "scan-not-proof-product",
+      "scan-not-proof-cannabis-generated",
+      "government-records-in-development",
+      "aerospace-not-airworthiness",
+      "seo-battery-issuance-in-development",
+      "battery-lead-form-not-passport",
+    ];
+    const pageBy = (slug: string) =>
+      pages.find((entry: { slug: string }) => entry.slug === slug);
+    for (const id of owners) {
+      const record = claims.find((entry: { id: string }) => entry.id === id);
+      expect(record.status, id).toBe("goal-published");
+      expect(record.publicGoal, id).toBe(true);
+      expect(record.limitPermanent, id).toBe(true);
+      if (record.checkFile) {
+        const text = fs.readFileSync(path.join(root, record.checkFile), "utf8");
+        expect(text, id).toContain(record.goalSentence);
+        expect(text, id).toContain(record.currentSentence);
+        continue;
+      }
+      for (const slug of record.slugs) {
+        const page = pageBy(slug);
+        expect(page, `${id} ${slug}`).toBeTruthy();
+        const blob = `${page.title}\n${page.h1}\n${page.metaDescription}\n${page.bodyHtml}`;
+        expect(blob, `${id} ${slug}`).toContain(record.goalSentence);
+        expect(blob, `${id} ${slug}`).toContain(record.currentSentence);
+        expect(page.title, `${id} ${slug}`).not.toContain("Our goal");
+        expect(page.h1, `${id} ${slug}`).not.toContain("Our goal");
+        expect(page.metaDescription, `${id} ${slug}`).not.toContain("Our goal");
+      }
+    }
+    const product = pageBy("product-authentication-for-electronics");
+    expect(product.bodyHtml).toContain(
+      "Issuing a customer product certificate is in development."
+    );
+    expect(product.bodyHtml).not.toContain(
+      "Our goal: issue a customer product certificate for one unit."
+    );
+    expect(product.bodyHtml).not.toContain(
+      "Our goal: verify issues a customer product certificate for one unit."
+    );
+    expect(pageBy("blockchain-qr-code-for-pharma").bodyHtml).not.toContain(
+      "Our goal: a scan checks a signed record for that unit."
+    );
+    expect(pageBy("blockchain-qr-code-for-cannabis").bodyHtml).not.toContain(
+      "Our goal: a package scan a dispensary can compare to its own track-and-trace export."
+    );
+    const battery = pageBy("eu-digital-product-passport-batteries");
+    expect(battery.bodyHtml).toContain("Battery passport issuance is in development.");
+    expect(battery.bodyHtml).not.toContain(
+      "Our goal: a scan checks a signed record for that pack."
+    );
+    expect(battery.bodyHtml).not.toContain("Issue a unique identifier per unit");
+    expect(pageBy("blockchain-qr-code-for-defense").bodyHtml).not.toContain("FAR-aligned");
+    const regulatory = fs.readFileSync(
+      path.join(root, "scripts/seo-data/regulatory.cjs"),
+      "utf8"
+    );
+    const batteries = regulatory.slice(
+      regulatory.indexOf("keyword: 'eu digital product passport batteries'"),
+      regulatory.indexOf("keyword: 'eu digital product passport electronics'")
+    );
+    expect(batteries).toContain(
+      "Our goal: issue one battery passport record for a single pack, with carbon-footprint, state-of-health, and material-recovery fields."
+    );
+    expect(batteries).not.toContain("anchored on-chain");
+    const industry = fs.readFileSync(
+      path.join(root, "scripts/seo-data/industry.cjs"),
+      "utf8"
+    );
+    expect(industry).not.toContain("medicine is genuine and unexpired");
+    expect(industry).not.toContain("METRC and BioTrack sync");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");

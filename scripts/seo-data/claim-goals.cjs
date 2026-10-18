@@ -7,6 +7,7 @@
  * The history goal stays in the ledger.
  * PR 3 sets the six /dpp public goals to goal-published.
  * PR 4 sets the five hub owners and two protected-seed owners to goal-published.
+ * PR 5 sets the scan, seal, and battery public goals to goal-published.
  * seed-cannabis-not-another-compliance-tool stays limitPermanent false.
  */
 const PERM = {
@@ -437,7 +438,8 @@ const claims = [
   r('scan-not-proof-medicine', {
     slugs: MEDICINE_3,
     files: ['scripts/seo-data/industry.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
+    status: 'goal-published',
     jsonAlreadyLimited: true,
     publicGoal: true,
     currentSentence: 'A scan is not, by itself, proof a medicine is genuine.',
@@ -447,12 +449,14 @@ const claims = [
     acceptance: GENUINE_ACCEPT,
     blockedBy: 'No genuine-part fixture is in the repo yet, so PR 17 fails closed until it is.',
     bannedRestorations: leadsFor(MEDICINE_3).concat(['blockchain-verified', 'DSCSA-aligned', 'medicine is genuine and unexpired']),
+    slots: { lead: 'Our goal: a pharmacist checks one unit\'s signed record. A scan is not, by itself, proof a medicine is genuine. Product certification through verify is in development.' },
     group: 'scan-seal-battery',
   }),
   r('scan-not-proof-product', {
     slugs: PRODUCT_17,
     files: ['scripts/seo-data/industry.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
+    status: 'goal-published',
     jsonAlreadyLimited: true,
     publicGoal: true,
     currentSentence: 'A scan is not, by itself, proof the product is genuine.',
@@ -461,12 +465,13 @@ const claims = [
     acceptance: GENUINE_ACCEPT,
     blockedBy: 'No genuine-part fixture is in the repo yet, so PR 17 fails closed until it is.',
     bannedRestorations: leadsFor(PRODUCT_17),
+    slots: { lead: 'Our goal: a scan checks a signed record for that unit. A scan is not, by itself, proof the product is genuine. Product certification through verify is in development.', howItWorks: 'Issuing a customer product certificate is in development.' },
     group: 'scan-seal-battery',
   }),
   r('product-certification-verify-in-development', {
     slugs: PRODUCT_17.concat(MEDICINE_3, AEROSPACE_2),
     files: ['scripts/seo-data/industry.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'Product certification through verify is in development.',
     goalSentence: 'Our goal: verify issues a customer product certificate for one unit.',
     task: ISSUANCE_FIXTURE,
@@ -476,7 +481,7 @@ const claims = [
   r('customer-certificate-issuance-in-development', {
     slugs: PRODUCT_17,
     files: ['scripts/seo-data/industry.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'Issuing a customer product certificate is in development.',
     goalSentence: 'Our goal: issue a customer product certificate for one unit.',
     task: ISSUANCE_FIXTURE,
@@ -486,7 +491,8 @@ const claims = [
   r('scan-not-proof-cannabis-generated', {
     slugs: CANNABIS_GENERATED,
     files: ['scripts/seo-data/industry.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
+    status: 'goal-published',
     jsonAlreadyLimited: true,
     publicGoal: true,
     currentSentence: 'A scan is not, by itself, proof a cannabis product is genuine.',
@@ -495,12 +501,13 @@ const claims = [
     acceptance: GENUINE_ACCEPT,
     blockedBy: 'No genuine-part fixture is in the repo yet, so PR 17 fails closed until it is.',
     bannedRestorations: leadsFor(CANNABIS_GENERATED),
+    slots: { lead: 'Our goal: a scan checks a signed record for that unit. A scan is not, by itself, proof a cannabis product is genuine. On-chain strain records are in development. This page does not connect to METRC or BioTrack.', meta: 'A scan is not, by itself, proof a cannabis product is genuine. On-chain strain records are in development.' },
     group: 'scan-seal-battery',
   }),
   r('generated-cannabis-not-metrc', {
     slugs: CANNABIS_GENERATED,
     files: ['scripts/seo-data/industry.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'This page does not connect to METRC or BioTrack.',
     goalSentence: 'Our goal: a package scan a dispensary can compare to its own track-and-trace export.',
     task: METRC_PR,
@@ -511,31 +518,35 @@ const claims = [
   r('government-records-in-development', {
     slugs: GOVERNMENT_3,
     files: ['scripts/seo-data/industry.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
+    status: 'goal-published',
     jsonAlreadyLimited: true,
     publicGoal: true,
     currentSentence: 'On-chain government records are in development.',
     goalSentence: 'Our goal: one signed record a contracting officer can read offline.',
     task: LIMIT_ONLY,
     bannedRestorations: leadsFor(GOVERNMENT_3).concat(['FAR-aligned']),
+    slots: { lead: 'Our goal: one signed record a contracting officer can read offline. On-chain government records are in development. This page is not a federal compliance filing.' },
     group: 'scan-seal-battery',
   }),
   r('aerospace-not-airworthiness', {
     slugs: AEROSPACE_2,
     files: ['scripts/seo-data/industry.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
+    status: 'goal-published',
     jsonAlreadyLimited: true,
     publicGoal: true,
     currentSentence: 'This page does not establish airworthiness.',
     goalSentence: 'Our goal: a signed record lists a part identifier an airworthiness file could cite.',
     task: LIMIT_ONLY,
     bannedRestorations: leadsFor(AEROSPACE_2),
+    slots: { lead: 'Our goal: a signed record lists a part identifier an airworthiness file could cite. This page does not establish airworthiness. Product certification through verify is in development.' },
     group: 'scan-seal-battery',
   }),
   r('pharma-traceability-not-dscsa', {
     slugs: ['supply-chain-traceability-pharmaceutical'],
     files: ['scripts/seo-data/industry.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'This page does not establish DSCSA compliance.',
     goalSentence: "Our goal: a reader compares one unit's record to the statute's tracing duty.",
     task: DSCSA_PR,
@@ -546,7 +557,7 @@ const claims = [
   r('pharma-trace-lot-not-dscsa', {
     slugs: ['supply-chain-traceability-pharmaceutical'],
     files: ['content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'Lot tracking on this page is not a DSCSA compliance claim',
     goalSentence: 'Our goal: lot tracking a DSCSA filing could cite.',
     task: DSCSA_PR,
@@ -557,7 +568,7 @@ const claims = [
   r('pharma-trace-custody-not-dscsa', {
     slugs: ['supply-chain-traceability-pharmaceutical'],
     files: ['content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'Chain of custody on this page is not a DSCSA compliance claim',
     goalSentence: 'Our goal: a chain-of-custody export a DSCSA filing could cite.',
     task: DSCSA_PR,
@@ -568,7 +579,7 @@ const claims = [
   r('pharma-trace-unit-recall-not-delivered', {
     slugs: ['supply-chain-traceability-pharmaceutical'],
     files: ['content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'Unit-level recall on this page is not delivered',
     goalSentence: 'Our goal: name units in a recall a licensee already runs.',
     task: DSCSA_PR,
@@ -579,7 +590,7 @@ const claims = [
   r('pharma-qr-lot-not-dscsa', {
     slugs: ['blockchain-qr-code-for-pharma'],
     files: ['content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'Lot-level tracking on this page is not a DSCSA compliance claim',
     goalSentence: 'Our goal: lot-level tracking a DSCSA filing could cite.',
     task: DSCSA_PR,
@@ -590,7 +601,7 @@ const claims = [
   r('pharma-qr-unit-recall-not-delivered', {
     slugs: ['blockchain-qr-code-for-pharma'],
     files: ['content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'Unit-level recall targeting is not delivered on this page',
     goalSentence: 'Our goal: target one unit in a recall.',
     task: DSCSA_PR,
@@ -601,7 +612,7 @@ const claims = [
   r('seo-battery-scan-not-genuine', {
     slugs: ['eu-digital-product-passport-batteries'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'A scan is not, by itself, proof a battery is genuine.',
     goalSentence: 'Our goal: a scan checks a signed record for that pack.',
     task: BATTERY_FIXTURE,
@@ -611,7 +622,8 @@ const claims = [
   r('seo-battery-issuance-in-development', {
     slugs: ['eu-digital-product-passport-batteries'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
+    status: 'goal-published',
     jsonAlreadyLimited: true,
     publicGoal: true,
     statuteSentence: 'From 18 February 2027 for every EV battery, every light means of transport (LMT) battery such as e-bike and e-scooter packs, and every industrial battery over 2 kWh placed on the EU market.',
@@ -644,7 +656,7 @@ const claims = [
   r('seo-battery-not-a-passport', {
     slugs: ['eu-digital-product-passport-batteries'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'This page is not a battery passport and not a physical inspection.',
     goalSentence: 'Our goal: issue that certificate without calling the page a physical inspection.',
     task: BATTERY_FIXTURE,
@@ -654,7 +666,7 @@ const claims = [
   r('seo-battery-carbon-not-issued', {
     slugs: ['eu-digital-product-passport-batteries'],
     files: ['content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'Carbon-footprint data is not issued on this page',
     goalSentence: 'Our goal: issue a carbon-footprint field on one pack record.',
     task: BATTERY_FIXTURE,
@@ -664,7 +676,7 @@ const claims = [
   r('seo-battery-soh-not-issued', {
     slugs: ['eu-digital-product-passport-batteries'],
     files: ['content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'State-of-health tracking is not issued on this page',
     goalSentence: 'Our goal: issue a state-of-health field on one pack record.',
     task: BATTERY_FIXTURE,
@@ -674,7 +686,7 @@ const claims = [
   r('seo-battery-statute-date-not-passport', {
     slugs: ['eu-digital-product-passport-batteries'],
     files: ['content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     currentSentence: 'The 18 February 2027 date is not a passport this page issues.',
     goalSentence: 'Our goal: the statute date stays a date, not a passport this page issues.',
     task: BATTERY_FIXTURE,
@@ -687,6 +699,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     statuteSentence: 'Battery passports are required from 18 February 2027.',
     currentSentence: 'Certificate issuance for a battery passport is in development. This page is not a battery passport and not a physical inspection.',
     goalSentence: 'Our goal: issue a battery certificate for one synthetic unit. That certificate is not a physical inspection.',
@@ -1317,7 +1330,7 @@ const claims = [
   r('eu-dpp-batteries-source-drift', {
     slugs: ['eu-digital-product-passport-batteries'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     limitPermanent: false,
     jsonAlreadyLimited: true,
     currentSentence: GROUP_D_LEADS['eu-digital-product-passport-batteries'],
@@ -1331,7 +1344,7 @@ const claims = [
   r('pharma-qr-source-drift', {
     slugs: ['blockchain-qr-code-for-pharma'],
     files: ['scripts/seo-data/industry.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     limitPermanent: false,
     jsonAlreadyLimited: true,
     currentSentence: GROUP_D_LEADS['blockchain-qr-code-for-pharma'],
@@ -1346,7 +1359,7 @@ const claims = [
   r('cannabis-qr-source-drift', {
     slugs: ['blockchain-qr-code-for-cannabis'],
     files: ['scripts/seo-data/industry.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     limitPermanent: false,
     jsonAlreadyLimited: true,
     currentSentence: GROUP_D_LEADS['blockchain-qr-code-for-cannabis'],
@@ -1361,7 +1374,7 @@ const claims = [
   r('cannabis-metrc-sync-bullet', {
     slugs: ['blockchain-qr-code-for-cannabis'],
     files: ['scripts/seo-data/industry.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     limitPermanent: false,
     currentSentence: 'METRC and BioTrack sync \u2014 no duplicate data entry',
     goalSentence: 'Our goal: a package scan a dispensary can compare to its own track-and-trace export.',
@@ -1374,7 +1387,7 @@ const claims = [
   r('metrc-biotrack-synced-provenance', {
     slugs: ['blockchain-qr-code-for-cannabis'],
     files: ['scripts/seo-data/industry.cjs'],
-    emit: 'hold',
+    emit: 'goal',
     limitPermanent: false,
     currentSentence: 'METRC/BioTrack-synced provenance',
     goalSentence: 'Our goal: a package scan a dispensary can compare to its own track-and-trace export.',
@@ -1387,7 +1400,7 @@ const claims = [
   r('auto-oem-source-drift', {
     slugs: ['blockchain-qr-code-for-automotive'],
     files: ['scripts/seo-data/industry.cjs', 'content/seo/pages.json'],
-    emit: 'hold',
+    emit: 'goal',
     limitPermanent: false,
     jsonAlreadyLimited: true,
     currentSentence: 'Any dealer or technician can confirm a part is genuine OEM by scanning it.',
@@ -1639,7 +1652,7 @@ const claims = [
   r('yes-dscsa-serialization-map', {
     slugs: ['supply-chain-traceability-pharmaceutical'],
     files: ['scripts/seo-data/industry.cjs'],
-    emit: 'hold',
+    emit: 'goal',
     limitPermanent: false,
     currentSentence: 'Yes \u2014 serialization and data exchange map to DSCSA requirements',
     goalSentence: "Our goal: a pharmacist checks one unit's signed record.",
