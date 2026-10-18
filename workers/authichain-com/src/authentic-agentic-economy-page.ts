@@ -32,7 +32,7 @@ export const AUTHENTIC_AGENTIC_ECONOMY = {
   canonicalUrl: "https://authichain.com/authentic-agentic-economy",
   title: "The authentic agentic economy — AuthiChain",
   description:
-    "",
+    "The authentic agentic economy: signed seals, MCP, and x402. A signed record is not a physical inspection.",
 } as const;
 
 export function isAuthenticAgenticEconomyPath(pathname: string): boolean {
@@ -95,7 +95,7 @@ const JSON_LD = {
           name: "What is the authentic agentic economy?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Agents can already pay and call tools. They still need a machine-verifiable check that a physical product, passport, or claim is real.",
+            text: "Agents can already pay and call tools. A signed record is not a physical inspection.",
           },
         },
         {
@@ -103,7 +103,7 @@ const JSON_LD = {
           name: "How do agents pay AuthiChain?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Funded agents verify a product for $0.05 USDC on Base via the live x402 rail — not Polygon $QRON. Unpaid POST /api/x402 returns HTTP 402. Public docs are at /x402. The human money path remains EU DPP Readiness on Stripe.",
+            text: "Funded agents check a signed record for $0.05 USDC on Base via the live x402 rail — not Polygon $QRON. An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment. A free seal answer is not a paid receipt. Public docs are at /x402. The human money path remains EU DPP Readiness on Stripe.",
           },
         },
         {
@@ -135,17 +135,17 @@ function sources(): string {
     {
       href: "https://github.com/erc-8004/erc-8004-contracts/blob/master/ERC8004SPEC.md",
       title: "ERC-8004: Trustless Agents",
-      cite: "On-chain identity, reputation, and validation registries for agents. AuthiChain's product certificates are the physical-world authenticity counterpart, not an ERC-8004 implementation claim.",
+      cite: "On-chain identity, reputation, and validation registries for agents. A signed record is not a physical inspection, and this page is not an ERC-8004 implementation claim.",
     },
     {
       href: "https://www.galaxy.com/insights/research/zero-human-companies-ai-agents-defi-crypto",
       title: "Agentic Capital Markets / zero-human companies",
-      cite: "Galaxy (2026). Agents as economic actors still need a fact layer before they spend. AuthiChain is that layer for physical goods.",
+      cite: "Galaxy (2026). Agents as economic actors still need a fact layer before they spend. A signed AuthiChain record is not a physical inspection.",
     },
     {
       href: "https://authichain.govchain.us/x402",
       title: "AuthiChain x402 agent pay (live)",
-      cite: "Estate capability: $0.05 USDC on Base per verification. Health at GET /api/x402/health. Unpaid POST returns HTTP 402.",
+      cite: "Estate capability: $0.05 USDC on Base per verification. Health at GET /api/x402/health. An empty JSON body is the unpaid HTTP 402.",
     },
   ];
   const lis = items
@@ -158,7 +158,7 @@ function sources(): string {
   <div class="wrap">
     <p class="section-tag">Sources</p>
     <h2>Public research this category sits in</h2>
-    <p class="section-sub">These are not AuthiChain whitepapers. They describe the gap: agents need identity, settlement, and a way to check physical-world claims. AuthiChain ships the authenticity check.</p>
+    <p class="section-sub">These are not AuthiChain whitepapers. They describe the gap: agents need identity, settlement, and a way to check a signed record. A signed record is not a physical inspection.</p>
     <ul>${lis}</ul>
   </div>
 </section>`;
@@ -227,11 +227,11 @@ ${estateFeatures(
   [
     {
       title: "MCP tools",
-      body: "The in-repo AuthiChain MCP server lets an agent verify authenticity, classify a product, and request a paid verification. Distribution is the MCP surface, not a new product.",
+      body: "The in-repo AuthiChain MCP server lets an agent check a signed record and request a paid verification. A signed record is not a physical inspection. Distribution is the MCP surface, not a new product.",
     },
     {
       title: "x402 agent pay",
-      body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Unpaid POST /api/x402 returns HTTP 402. Public docs at /x402.",
+      body: "Secondary money path. Funded agents check a signed record for $0.05 USDC on Base. An empty JSON body is the unpaid HTTP 402. A free seal answer is not a paid receipt. Public docs at /x402.",
     },
     {
       title: "EU DPP Readiness",
@@ -250,15 +250,15 @@ ${estateSteps(
   [
     {
       title: "Call",
-      body: "The agent hits MCP verify tools or POST /api/x402 with a seal or product identifier. No API key is required for the unpaid 402 challenge.",
+      body: "The unpaid challenge is POST /api/x402 with an empty JSON body. That returns HTTP 402. A non-UUID sealId is HTTP 400 before payment. No API key is required for the 402.",
     },
     {
       title: "Pay",
-      body: "If the call is metered, the edge returns HTTP 402 with the Base USDC requirement. The agent settles $0.05 and retries with X-PAYMENT.",
+      body: "The edge returns HTTP 402 with the Base USDC requirement. The agent settles $0.05 and retries the same POST with X-PAYMENT and a seal UUID.",
     },
     {
       title: "Act",
-      body: "A signed authenticity result is the input to the agent's next action — accept the goods, refuse the listing, or escalate to a human.",
+      body: "A signed record is not a physical inspection. The agent can record the result, refuse the listing, or escalate to a human.",
     },
   ],
   "how"
@@ -266,7 +266,7 @@ ${estateSteps(
 ${sources()}
 ${estateCtaBand({
   title: "Start on a live path",
-  lede: "Humans enroll DPP Readiness. Agents pay per verification on x402. Same authenticity layer. Enter a work email so Stripe can recover the cart.",
+  lede: "Humans enroll DPP Readiness. Agents pay per verification on x402. A signed record is not a physical inspection. Enter a work email so Stripe can recover the cart.",
   emailCheckout: {
     action: "https://authichain.com/checkout/dpp_readiness",
     label: "Start DPP checkout",
@@ -308,7 +308,7 @@ ${estateFooter(
       ],
     },
   ],
-  "Polygon · ERC-721 · x402 · EU DPP"
+  "Signed seals · x402 on Base · EU DPP"
 )}
 </body>
 </html>`;
