@@ -169,6 +169,15 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /Signed QR seals for real products\./);
   assert.doesNotMatch(html, /Agent consensus/);
   assert.match(html, /Public certificate registry: in development\./);
+  assert.match(
+    html,
+    /The manufacturer role history and the published demonstration record are live/
+  );
+  assert.match(html, /A signed record is not a physical inspection\./);
+  assert.doesNotMatch(html, /Public verification is in development/);
+  assert.doesNotMatch(html, /Authentic product/);
+  assert.doesNotMatch(html, /acVerify\(/);
+  assert.doesNotMatch(html, /confirm authenticity/);
   const starterFirst = planPaymentLink("starter") ?? "";
   const auditLater = planPaymentLink("dpp_readiness") ?? "";
   assert.ok(starterFirst.length > 0 && auditLater.length > 0);

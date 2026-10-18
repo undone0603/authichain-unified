@@ -2330,7 +2330,7 @@ function foundersVision() {
   <div class="wrap" style="max-width:760px">
     <p class="section-tag">What is live</p>
     <h2>Realized capability, not a pitch deck</h2>
-    <p class="section-sub">One founder. Agents draft and check. Money, mail, and deploy wait for the founder. AuthiChain is building seals that bind to products and log every scan against the serial. Public verification is in development. The money path is EU DPP Readiness.</p>
+    <p class="section-sub">One founder. Agents draft and check. Money, mail, and deploy wait for the founder. The public certificate registry is in development. The manufacturer role history and the published demonstration record are live, and neither is a physical inspection. The money path is EU DPP Readiness.</p>
   </div>
 </section>`;
 }
@@ -2342,7 +2342,7 @@ function howItWorks() {
     [
       { title: "Issue", body: "Issue a seal for the product. In development: Ed25519-signed certificates." },
       { title: "Bind", body: "Bind the seal to the physical item — a Living QR, a passport, or a package label that can change destination without a reprint." },
-      { title: "Verify", body: "Our goal: log every scan against the serial. Our goal: anyone with a camera can confirm authenticity against the public on-chain record. Goal: flag duplicate scans, cloned or copied seals, and unexpected scan locations for a serial." },
+      { title: "Verify", body: "Our goal: log every scan against the serial. That camera scan is not live on this page. A signed record is not a physical inspection. Goal: flag duplicate scans, cloned or copied seals, and unexpected scan locations for a serial." },
     ],
     "how",
   );
@@ -2567,42 +2567,13 @@ const HTML = `<!DOCTYPE html>
       <div class="estate-verify-actions">
         <a class="btn btn-primary" href="https://authichain.com/contact">Talk to us</a>
       </div>
-      <div id="ac-verify-result" style="margin-top:1rem;display:none"></div>
     </div>
   </section>
-  <style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}</style>
-
-  <script>
-  function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-  function acVerify(){
-    var id=(document.getElementById('ac-cert-input').value||'').trim();
-    var el=document.getElementById('ac-verify-result');
-    if(!id){el.style.display='none';return;}
-    el.style.display='block';
-    el.innerHTML='<p style="color:var(--text-dim)">Verifying…</p>';
-    fetch('/api/authichain/cert/'+encodeURIComponent(id))
-      .then(r=>r.json()).then(function(d){
-        if(d.is_authentic){
-          el.innerHTML='<div class="estate-card" style="border-color:#15803d">'
-            +'<div style="font-size:1.1rem;font-weight:700;color:#15803d;margin-bottom:.5rem">Authentic product</div>'
-            +'<div style="color:var(--text-dim);font-size:.9rem"><b style="color:var(--text)">'+esc(d.certificate.brand)+'</b> — '+esc(d.certificate.product_name)+'</div>'
-            +'<div style="color:var(--text-dim);font-size:.85rem;margin-top:.4rem">SKU: '+esc(d.certificate.sku||'—')+' · Issued: '+esc((d.certificate.issued_at||'').slice(0,10))+' · Scans: '+esc(String(d.certificate.scan_count))+'</div>'
-            +'</div>';
-        } else {
-          el.innerHTML='<div class="estate-card" style="border-color:#b91c1c">'
-            +'<div style="font-size:1.1rem;font-weight:700;color:#b91c1c">'+(d.error||'Certificate not verified')+'</div>'
-            +'</div>';
-        }
-      }).catch(function(){
-        el.innerHTML='<div style="color:#b91c1c">Verification failed — please try again</div>';
-      });
-  }
-  </script>
 
   ${howItWorks()}
   ${estateFeatures(
     "The authentic agentic economy",
-    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
+    "Agents can pay. A signed record is not a physical inspection. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
       { title: "Settlement", body: "Humans start with Starter $29 on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
