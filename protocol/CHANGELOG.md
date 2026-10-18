@@ -21,6 +21,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - A seal serial is stored only as `credentialSubject.sealSerialSha256`. `checkSealSerial` reports that commitment as `productBinding` and does not change `genuine`. A second presentation is the same passport. Evidence beside the passport is outside the signature. This check is not a verifier verdict, and the 28 conformance fixtures are unchanged.
 - A medical category is not a device profile. `mapDbToIdentity` stays `generic-provenance` and does not assign a UDI.
 - An inspection evidence row does not set `physical_binding`. A missing manufacturing date is not the harvest word Recent, and a missing rarity is not filled with 50. The asset story does not say the product is verified or on a Bitcoin truth layer.
+- A server-side image compare can be stored as `visual_similarity` evidence beside a stored passport. The row is a similarity and a threshold. It does not set `genuine`. With no stored passport, the sentence stays "A visual compare is not a product passport scan."
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 
