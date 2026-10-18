@@ -15,6 +15,9 @@ describe("llms.txt", () => {
     const text = renderLlmsTxt();
     expect(text).toContain("# AuthiChain");
     expect(text).toContain("POST https://authichain.com/api/x402");
+    expect(text).toContain(
+      "An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment."
+    );
     expect(text).toContain("https://authichain.com/api/x402/catalog");
     expect(text).toContain("https://authichain.com/.well-known/x402.json");
     expect(text).toContain("https://authichain.com/.well-known/x402");
