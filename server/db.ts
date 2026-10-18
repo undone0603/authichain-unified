@@ -1138,6 +1138,17 @@ export async function getCertificateByNumber(certNumber: string) {
   return result[0];
 }
 
+export async function getCertificateForProduct(productId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(certificates)
+    .where(eq(certificates.productId, productId))
+    .limit(1);
+  return result[0];
+}
+
 export async function getUserCertificates(userId: number) {
   const db = await getDb();
   if (!db) return [];

@@ -2,7 +2,11 @@ import { createHash, generateKeyPairSync } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { signPassport } from "../protocol/passport.mjs";
 import { signingBytes } from "../protocol/verifier.mjs";
-import { passportVerdict } from "./passport-verdict";
+import {
+  callerSignalReport,
+  passportVerdict,
+  trustScoreReply,
+} from "./passport-verdict";
 
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -81,5 +85,72 @@ describe("passportVerdict", () => {
     expect(verdict.verified).toBe(false);
     expect(verdict.genuine).toBe(false);
     expect(verdict.digitalIdentity).toBe("urn:authichain:item:example-1");
+  });
+});
+
+describe("callerSignalReport", () => {
+  it("records an omitted flag as false", () => {
+    expect(callerSignalReport({})).toEqual({
+      source: "caller_supplied",
+      qrDecodePass: false,
+      blockchainCertExists: false,
+      nfcMatch: false,
+      visualMatch: null,
+      geoFenceOk: false,
+    });
+    expect(callerSignalReport(null)).toEqual(callerSignalReport({}));
+  });
+
+  it("keeps a flag the caller set", () => {
+    const report = callerSignalReport({
+      qrDecodePass: true,
+      blockchainCertExists: false,
+      nfcMatch: true,
+      visualMatch: 140,
+      geoFenceOk: true,
+    });
+    expect(report.qrDecodePass).toBe(true);
+    expect(report.blockchainCertExists).toBe(false);
+    expect(report.nfcMatch).toBe(true);
+    expect(report.visualMatch).toBe(100);
+    expect(report.geoFenceOk).toBe(true);
+    expect(JSON.stringify(report)).not.toMatch(/authentic|genuine|verified/i);
+  });
+});
+
+describe("trustScoreReply", () => {
+  it("does not treat a full set of caller flags as a passport", () => {
+    const signals = callerSignalReport({
+      qrDecodePass: true,
+      blockchainCertExists: true,
+      nfcMatch: true,
+      visualMatch: 100,
+      geoFenceOk: true,
+    });
+    const reply = trustScoreReply(null, signals);
+    expect(reply.verified).toBe(false);
+    expect(reply.onRecord).toBe(false);
+    expect(reply.message).toMatch(/product id/);
+    expect(reply.callerSignals).toEqual(signals);
+    expect(JSON.stringify(reply)).not.toMatch(/authentic/i);
+  });
+
+  it("keeps verified on the stored passport when every flag is true", () => {
+    const scan = passportVerdict({ metadata: { status: "active" } }, null);
+    const reply = trustScoreReply(
+      scan,
+      callerSignalReport({
+        qrDecodePass: true,
+        blockchainCertExists: true,
+        nfcMatch: true,
+        visualMatch: 100,
+        geoFenceOk: true,
+      })
+    );
+    expect(reply.verified).toBe(false);
+    expect(reply.genuine).toBeUndefined();
+    expect(reply.onRecord).toBe(true);
+    expect(reply.callerSignals.qrDecodePass).toBe(true);
+    expect(reply.callerSignals.source).toBe("caller_supplied");
   });
 });

@@ -1617,36 +1617,35 @@ app.post("/api/internal/cannabis/verify", async c => {
 });
 
 // POST /api/internal/trust-score
+// Caller flags are recorded. verified follows a stored passport when a product id is present.
 app.post("/api/internal/trust-score", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
-    const {
-      qrDecodePass,
-      blockchainCertExists,
-      nfcMatch,
-      visualMatch,
-      geoFenceOk,
-    } = body ?? {};
+    const { callerSignalReport, passportVerdict, trustScoreReply } =
+      await import("../server/passport-verdict");
+    const callerSignals = callerSignalReport(body);
+    const rawId = body?.productId ?? body?.identifier;
+    const id = typeof rawId === "string" ? rawId.trim() : "";
+    if (!id) return c.json(trustScoreReply(null, callerSignals));
 
-    const { computeTrustScore } = await import("../server/qron-service");
-    const score = computeTrustScore({
-      qrDecodePass: qrDecodePass ?? true,
-      blockchainCertExists: blockchainCertExists ?? false,
-      communityVerified: visualMatch ? Math.round(visualMatch / 20) : 0,
-      communityFlagged: 0,
-      openArtRegistered: nfcMatch ?? false,
-    });
-
-    return c.json({
-      ...score,
-      inputs: {
-        qrDecodePass,
-        blockchainCertExists,
-        nfcMatch,
-        visualMatch,
-        geoFenceOk,
-      },
-    });
+    const db = getHyperdriveDb(c.env);
+    const { getProductById, getProductBySerial } = await import(
+      "../server/content-db-helpers"
+    );
+    const product =
+      (await getProductById(db, id)) ?? (await getProductBySerial(db, id));
+    const cert = product
+      ? (
+          await db
+            .select()
+            .from(certificates)
+            .where(eq(certificates.productId, product.id))
+            .limit(1)
+        )[0]
+      : undefined;
+    return c.json(
+      trustScoreReply(passportVerdict(product, cert ?? null), callerSignals)
+    );
   } catch (err: any) {
     console.error("[Internal API] trust-score error:", err.message);
     return c.json({ error: "Internal server error" }, 500);

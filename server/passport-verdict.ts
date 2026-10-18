@@ -47,3 +47,57 @@ export function passportVerdict(
       : `Stored passport${who} did not verify as genuine.`,
   };
 }
+
+export type CallerSignals = {
+  source: "caller_supplied";
+  qrDecodePass: boolean;
+  blockchainCertExists: boolean;
+  nfcMatch: boolean;
+  visualMatch: number | null;
+  geoFenceOk: boolean;
+};
+
+/** Flags the caller sent. A missing flag is false. This is not a passport scan. */
+export function callerSignalReport(input: {
+  qrDecodePass?: unknown;
+  blockchainCertExists?: unknown;
+  nfcMatch?: unknown;
+  visualMatch?: unknown;
+  geoFenceOk?: unknown;
+} | null | undefined): CallerSignals {
+  const body = input ?? {};
+  const visual = body.visualMatch;
+  return {
+    source: "caller_supplied",
+    qrDecodePass: body.qrDecodePass === true,
+    blockchainCertExists: body.blockchainCertExists === true,
+    nfcMatch: body.nfcMatch === true,
+    visualMatch:
+      typeof visual === "number" && Number.isFinite(visual)
+        ? Math.min(100, Math.max(0, visual))
+        : null,
+    geoFenceOk: body.geoFenceOk === true,
+  };
+}
+
+const CALLER_FLAGS_NEED_PRODUCT =
+  "These flags were supplied by the caller. A product passport scan needs a product id.";
+
+/**
+ * Caller flags are recorded beside the scan. They do not set verified.
+ * Pass null when the request has no product id.
+ */
+export function trustScoreReply(
+  scan: PassportVerdict | null,
+  signals: CallerSignals
+): PassportVerdict & { callerSignals: CallerSignals } {
+  if (!scan) {
+    return {
+      verified: false,
+      onRecord: false,
+      message: CALLER_FLAGS_NEED_PRODUCT,
+      callerSignals: signals,
+    };
+  }
+  return { ...scan, callerSignals: signals };
+}

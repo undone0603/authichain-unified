@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   REGISTER_PRODUCT_DESCRIPTION,
+  TRUST_SCORE_DESCRIPTION,
   VERIFY_PRODUCT_DESCRIPTION,
   registerProductBody,
+  trustScoreBody,
 } from "./product-tools";
 
 describe("gateway product tools", () => {
@@ -28,5 +30,13 @@ describe("gateway product tools", () => {
       record: { credentialSubject: { id: "urn:authichain:item:example-1" } },
     });
     expect(JSON.stringify(body)).not.toMatch(/txHash|09506000134352/);
+  });
+
+  it("omits a trust-score flag the caller did not send", () => {
+    expect(TRUST_SCORE_DESCRIPTION).toMatch(/DigitalProductPassport/);
+    expect(TRUST_SCORE_DESCRIPTION).not.toMatch(/authentic/i);
+    const body = trustScoreBody({ productId: "prod-1", nfcMatch: true });
+    expect(body).toEqual({ productId: "prod-1", nfcMatch: true });
+    expect(body).not.toHaveProperty("qrDecodePass");
   });
 });

@@ -10,6 +10,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - `storePassport` places an already-signed passport on a metadata object. The digital identity stays `credentialSubject.id`. It does not assign a GTIN and it does not write a database.
 - A product scan that omits its own record uses that stored passport and its anchor. The expected digital identity is the product subject id, or `credentialSubject.id` on the stored passport. A registry status is not that identity. No GTIN is assigned.
 - Product verify routes report that scan. An active certificate, a model reply, or a row is not a genuine passport.
+- The internal trust-score route records caller-supplied flags beside that scan. An omitted flag is false. `verified` follows the stored passport when a product id is present. A flag tally is not a genuine passport.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 

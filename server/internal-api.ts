@@ -2,9 +2,9 @@ import { timingSafeEqual } from "crypto";
 import { Router, type Request, type Response } from "express";
 import { ENV } from "./_core/env";
 import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-service";
-import { createProduct, getCertificateByNumber, getDb, getProductById, getProductByName, getProductBySerial, getWhiteLabelByApiKey } from "./db";
-import { passportVerdict } from "./passport-verdict";
-import { computeTrustScore, generateProductQRON } from "./qron-service";
+import { createProduct, getCertificateByNumber, getCertificateForProduct, getDb, getProductById, getProductByName, getProductBySerial, getWhiteLabelByApiKey } from "./db";
+import { callerSignalReport, passportVerdict, trustScoreReply } from "./passport-verdict";
+import { generateProductQRON } from "./qron-service";
 import { reportUsageToStripe } from "./tenant-billing";
 
 function getErrorMessage(err: unknown): string {
@@ -143,22 +143,19 @@ export function createInternalRouter(): Router {
   });
 
   // ─── POST /api/internal/trust-score ────────────────────────────────────────
+  // Caller flags are recorded. verified follows a stored passport when a product id is present.
   router.post("/trust-score", async (req: Request, res: Response) => {
     try {
-      const { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk } = req.body;
-
-      const score = computeTrustScore({
-        qrDecodePass: qrDecodePass ?? true,
-        blockchainCertExists: blockchainCertExists ?? false,
-        communityVerified: visualMatch ? Math.round(visualMatch / 20) : 0,
-        communityFlagged: 0,
-        openArtRegistered: nfcMatch ?? false,
-      });
-
-      res.json({
-        ...score,
-        inputs: { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk },
-      });
+      const body = req.body ?? {};
+      const callerSignals = callerSignalReport(body);
+      const rawId = body.productId ?? body.identifier;
+      const id = typeof rawId === "string" ? rawId.trim() : "";
+      if (!id) {
+        return res.json(trustScoreReply(null, callerSignals));
+      }
+      const product = (await getProductById(id)) ?? (await getProductBySerial(id));
+      const cert = product ? await getCertificateForProduct(String(product.id)) : undefined;
+      res.json(trustScoreReply(passportVerdict(product, cert ?? null), callerSignals));
     } catch (err: unknown) {
       console.error("[Internal API] trust-score error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });

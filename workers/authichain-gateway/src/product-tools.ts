@@ -4,6 +4,33 @@ export const VERIFY_PRODUCT_DESCRIPTION =
 export const REGISTER_PRODUCT_DESCRIPTION =
   "Register a product. A supplied DigitalProductPassport is stored under its digital identity.";
 
+export const TRUST_SCORE_DESCRIPTION =
+  "Record caller-supplied check flags. When a product id is included, verified follows the DigitalProductPassport stored on that product.";
+
+export function trustScoreBody(input: {
+  productId?: string;
+  qrDecodePass?: boolean;
+  blockchainCertExists?: boolean;
+  nfcMatch?: boolean;
+  visualMatch?: number;
+  geoFenceOk?: boolean;
+}) {
+  return {
+    ...(input.productId ? { productId: input.productId } : {}),
+    ...(input.qrDecodePass !== undefined
+      ? { qrDecodePass: input.qrDecodePass }
+      : {}),
+    ...(input.blockchainCertExists !== undefined
+      ? { blockchainCertExists: input.blockchainCertExists }
+      : {}),
+    ...(input.nfcMatch !== undefined ? { nfcMatch: input.nfcMatch } : {}),
+    ...(input.visualMatch !== undefined
+      ? { visualMatch: input.visualMatch }
+      : {}),
+    ...(input.geoFenceOk !== undefined ? { geoFenceOk: input.geoFenceOk } : {}),
+  };
+}
+
 export function registerProductBody(input: {
   name: string;
   manufacturer: string;

@@ -4,8 +4,10 @@ import { z } from "zod";
 import type { Env } from "./index";
 import {
   REGISTER_PRODUCT_DESCRIPTION,
+  TRUST_SCORE_DESCRIPTION,
   VERIFY_PRODUCT_DESCRIPTION,
   registerProductBody,
+  trustScoreBody,
 } from "./product-tools";
 
 /**
@@ -205,30 +207,41 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: compute_trust_score ──────────────────────────────────────────────
   server.tool(
     "compute_trust_score",
-    "Compute a composite trust score for a product based on multiple verification signals (QR decode, blockchain cert, NFC, visual match, geo-fence).",
+    TRUST_SCORE_DESCRIPTION,
     {
+      productId: z
+        .string()
+        .optional()
+        .describe(
+          "Product id. When present, verified follows the stored passport."
+        ),
       qrDecodePass: z
         .boolean()
-        .describe("Whether QR code decoded successfully"),
+        .optional()
+        .describe("Whether the caller says the QR decoded"),
       blockchainCertExists: z
         .boolean()
-        .describe("Whether blockchain certificate exists"),
+        .optional()
+        .describe("Whether the caller says a blockchain certificate exists"),
       nfcMatch: z
         .boolean()
         .optional()
-        .describe("Whether NFC chip data matches"),
+        .describe("Whether the caller says NFC chip data matches"),
       visualMatch: z
         .number()
         .min(0)
         .max(100)
         .optional()
-        .describe("Visual similarity score (0-100)"),
+        .describe("Caller visual similarity score (0-100)"),
       geoFenceOk: z
         .boolean()
         .optional()
-        .describe("Whether scan location is within expected geo-fence"),
+        .describe(
+          "Whether the caller says the scan location is inside the expected geo-fence"
+        ),
     },
     async ({
+      productId,
       qrDecodePass,
       blockchainCertExists,
       nfcMatch,
@@ -242,13 +255,16 @@ function createMcpServer(env: Env): McpServer {
             "Content-Type": "application/json",
             "X-Internal-Secret": env.INTERNAL_SECRET,
           },
-          body: JSON.stringify({
-            qrDecodePass,
-            blockchainCertExists,
-            nfcMatch,
-            visualMatch,
-            geoFenceOk,
-          }),
+          body: JSON.stringify(
+            trustScoreBody({
+              productId,
+              qrDecodePass,
+              blockchainCertExists,
+              nfcMatch,
+              visualMatch,
+              geoFenceOk,
+            })
+          ),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
