@@ -113,6 +113,22 @@ Section 8 still applies: the verdict does not prove a copied identifier is
 attached to a different object. The proof the scan gives is that this digital
 identity's passport was signed by the issuer and the anchor hash matches.
 
+### 3.4 Seal serial
+
+A seal serial is a string of 16 to 128 characters printed on the unit. The QR carries the digital identity. It does not carry the seal serial. `credentialSubject.serial` is a different identifier. The signed passport stores only `credentialSubject.sealSerialSha256`: `sha256:` plus 64 lowercase hex characters of the UTF-8 seal serial. Signing MUST refuse to store that serial in cleartext.
+
+A scan presents the seal serial to the server. The server hashes it and compares it to the commitment with a constant-time compare. The result is `productBinding`. `method` `seal_serial_sha256` and `pass` true means the presented serial matches the commitment. A missing serial is `seal_serial_missing`. A wrong serial is `seal_commitment_mismatch`. A passport with no commitment is `seal_commitment_missing` and `method` `none`. A serial outside 16 to 128 characters is `seal_serial_invalid`.
+
+`samePassport` is true. A second presentation of the same serial is the same `credentialSubject.id`. It does not allocate a new product, a new GTIN, or a new passport. `genuine` stays the §3.3 passport bit. This check does not change it. A caller flag such as `nfcMatch` or `visualMatch` is not a method and MUST NOT set `pass` true.
+
+This check is above the verifier. It is not a §5.1 verdict and it does not add a conformance fixture. The verifier's fixture count is unchanged.
+
+The following sentence is allowed only when `genuine` is true, `method` is `seal_serial_sha256`, and `pass` is true. When the chain transaction was not read, the sentence says so. It does not say the anchor verified.
+
+> This scan presented the seal serial committed in the signed passport for {digitalIdentity}. The passport signature verified. The chain transaction was not read, so publication of the hash is not confirmed. The seal serial is not in the QR. A copy of the QR alone does not pass this check. The commitment match does not prove the issuer attached that seal to the named object.
+
+Section 8 still applies. A signature proves who asserted the commitment, never that the assertion is true. An anchor does not prove the physical item exists or matches the record. Evidence stored beside the passport is outside the signature. Appending it does not re-sign the record, does not change `genuine`, and does not set `productBinding.pass`. An evidence object MUST NOT contain a `genuine` key. The array holds at most 32 entries.
+
 ## 4. Anchoring
 
 An anchor commits `SHA-256(canonical record bytes)` to a public ledger.

@@ -5,7 +5,7 @@
  * transaction does not change the verdict. anchorOnChain is a separate fact.
  */
 import { verifyRecord, sha256Hex, signingBytes } from "../../../protocol/verifier.mjs";
-import { scanProvesGenuine } from "../../../protocol/passport.mjs";
+import { scanPassport, productBindingSentence } from "../../../protocol/passport.mjs";
 
 function isPlainObject(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -42,12 +42,18 @@ export const PUBLIC_RPC = {
   "eip155:1": "https://cloudflare-eth.com",
 };
 
-export function verifySubmitted(record, anchor = null) {
+export function verifySubmitted(record, anchor = null, observation = null) {
   if (!isPlainObject(record)) return null;
   const types = Array.isArray(record.type) ? record.type : [];
   if (types.includes("DigitalProductPassport")) {
-    const scan = scanProvesGenuine(record, anchor ?? null);
+    const scan = scanPassport(record, anchor ?? null, observation);
     const result = verifyRecord(record, anchor ?? null);
+    const sentence = productBindingSentence({
+      genuine: scan.genuine,
+      digitalIdentity: scan.digitalIdentity,
+      productBinding: scan.productBinding,
+      anchorTransactionQueried: false,
+    });
     return {
       verdict: scan.verdict,
       reasons: scan.reasons,
@@ -57,6 +63,8 @@ export function verifySubmitted(record, anchor = null) {
       anchorTransactionQueried: false,
       genuine: scan.genuine,
       digitalIdentity: scan.digitalIdentity,
+      productBinding: scan.productBinding,
+      ...(sentence ? { productSentence: sentence } : {}),
     };
   }
   const result = verifyRecord(record, anchor ?? null);

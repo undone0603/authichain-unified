@@ -129,10 +129,20 @@ type Submission = {
   raw: string;
   record: Record<string, unknown> | null;
   anchor: Record<string, unknown> | null;
+  observation: { sealSerial?: string; nfcMatch?: unknown; visualMatch?: unknown } | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function sealObservation(body: Record<string, unknown>) {
+  const observation: { sealSerial?: string; nfcMatch?: unknown; visualMatch?: unknown } = {};
+  if (typeof body.sealSerial === "string") observation.sealSerial = body.sealSerial;
+  if (Object.prototype.hasOwnProperty.call(body, "nfcMatch")) observation.nfcMatch = body.nfcMatch;
+  if (Object.prototype.hasOwnProperty.call(body, "visualMatch")) observation.visualMatch = body.visualMatch;
+  if (Object.keys(observation).length === 0) return null;
+  return observation;
 }
 
 async function parseSubmission(request: Request, url: URL): Promise<Submission> {
@@ -142,22 +152,24 @@ async function parseSubmission(request: Request, url: URL): Promise<Submission> 
       raw: url.searchParams.get("input") || url.searchParams.get("id") || "",
       record: null,
       anchor: null,
+      observation: null,
     };
   }
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return { invalid: true, raw: "", record: null, anchor: null };
+    return { invalid: true, raw: "", record: null, anchor: null, observation: null };
   }
   if (!isRecord(body)) {
-    return { invalid: false, raw: "", record: null, anchor: null };
+    return { invalid: false, raw: "", record: null, anchor: null, observation: null };
   }
   return {
     invalid: false,
     raw: String(body.input || body.id || body.qrCode || ""),
     record: isRecord(body.record) ? body.record : null,
     anchor: isRecord(body.anchor) ? body.anchor : null,
+    observation: sealObservation(body),
   };
 }
 
@@ -170,7 +182,7 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
   const anchor = submitted.anchor ?? published?.anchor ?? null;
   const source = published ? published.source : "submitted_record";
 
-  const protocol = verifySubmitted(record, anchor);
+  const protocol = verifySubmitted(record, anchor, submitted.observation);
   if (protocol) {
     const identifier = submitted.raw.trim()
       ? deriveInputIdentifier(submitted.raw)
@@ -193,17 +205,32 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
       rpcUrl: polygonChain ? env.POLYGON_RPC_URL : undefined,
     });
     const subject = isRecord(record?.credentialSubject) ? record.credentialSubject : null;
-    console.log(JSON.stringify({ evt: "verify", identifier, decision: protocol.decision, source, chain: chain.status }));
+    const binding = protocol.productBinding;
+    const sealPass = binding?.method === "seal_serial_sha256" && binding?.pass === true;
+    console.log(JSON.stringify({
+      evt: "verify",
+      identifier,
+      decision: protocol.decision,
+      source,
+      chain: chain.status,
+      anchored: protocol.anchored,
+      ...(typeof protocol.genuine === "boolean" ? { genuine: protocol.genuine } : {}),
+      ...(binding ? { bindingMethod: binding.method, bindingPass: binding.pass } : {}),
+    }));
     return json(
       {
         verdict: protocol.verdict,
         reasons: protocol.reasons,
         checks: protocol.checks,
         decision: protocol.decision,
-        vector,
-        unknowns: chain.onChain
-          ? ["physical_binding_not_inspected"]
-          : ["physical_binding_not_inspected", "anchor_transaction_not_on_chain"],
+        vector: {
+          ...vector,
+          physical_binding: sealPass ? "seal_serial_sha256" : "unknown",
+        },
+        unknowns: [
+          ...(sealPass ? [] : ["physical_binding_not_inspected"]),
+          ...(chain.onChain ? [] : ["anchor_transaction_not_on_chain"]),
+        ],
         depthUsed: "protocol",
         qron_id: identifier || null,
         anchored: protocol.anchored,
@@ -226,6 +253,13 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
               genuine: protocol.genuine,
               digitalIdentity: protocol.digitalIdentity ?? null,
             }
+          : {}),
+        ...(binding ? { productBinding: binding } : {}),
+        ...(sealPass &&
+        protocol.genuine === true &&
+        chain.queried !== true &&
+        typeof protocol.productSentence === "string"
+          ? { message: protocol.productSentence }
           : {}),
         subject: subject
           ? { id: subject.id ?? null, name: subject.name ?? null }

@@ -27,7 +27,7 @@ function b58(buf: Buffer): string {
   return out;
 }
 
-function signedPassport() {
+function signedPassport(sealSerial?: string) {
   const { publicKey, privateKey } = generateKeyPairSync("ed25519");
   const raw = publicKey.export({ format: "der", type: "spki" }).subarray(-32);
   const issuer =
@@ -36,6 +36,7 @@ function signedPassport() {
     digitalIdentity: "urn:authichain:item:example-1",
     privateKey,
     issuer,
+    ...(sealSerial ? { sealSerial } : {}),
   });
   const anchor = {
     recordHash:
@@ -56,6 +57,7 @@ describe("passportVerdict", () => {
     expect(verdict.verified).toBe(false);
     expect(verdict.onRecord).toBe(true);
     expect(verdict.genuine).toBeUndefined();
+    expect(verdict.productBinding).toBeUndefined();
     expect(verdict.message).toBe("No product passport is stored for this record.");
     expect(JSON.stringify(verdict)).not.toMatch(/Polygon|counterfeit|METRC|GTIN/i);
   });
@@ -75,9 +77,70 @@ describe("passportVerdict", () => {
       null
     );
     expect(verdict.verified).toBe(true);
+    expect(verdict.verified).toBe(verdict.genuine);
     expect(verdict.genuine).toBe(true);
     expect(verdict.digitalIdentity).toBe("urn:authichain:item:example-1");
+    expect(verdict.message).toBe(
+      "Genuine product passport for urn:authichain:item:example-1. This is the passport for that digital identity."
+    );
+    expect(verdict.productBinding).toEqual({
+      method: "none",
+      pass: false,
+      reason: "seal_commitment_missing",
+      samePassport: true,
+    });
     expect(record.credentialSubject.gtin).toBeUndefined();
+  });
+
+  it("a matching seal does not change verified, and a missing seal keeps the passport sentence", () => {
+    const seal = "SEAL-UNIT-0001-ABCD";
+    const { record, anchor } = signedPassport(seal);
+    const matched = passportVerdict(
+      { metadata: { passport: { record, anchor } } },
+      null,
+      { sealSerial: seal, nfcMatch: true }
+    );
+    expect(matched.verified).toBe(true);
+    expect(matched.genuine).toBe(true);
+    expect(matched.verified).toBe(matched.genuine);
+    expect(matched.digitalIdentity).toBe("urn:authichain:item:example-1");
+    expect(matched.productBinding).toEqual({
+      method: "seal_serial_sha256",
+      pass: true,
+      reason: null,
+      samePassport: true,
+    });
+    expect(matched.message).toBe(
+      "This scan presented the seal serial committed in the signed passport for urn:authichain:item:example-1. The passport signature verified. The chain transaction was not read, so publication of the hash is not confirmed. The seal serial is not in the QR. A copy of the QR alone does not pass this check. The commitment match does not prove the issuer attached that seal to the named object."
+    );
+    expect(matched.message).not.toContain(seal);
+    const copied = passportVerdict({ metadata: { passport: { record, anchor } } }, null);
+    expect(copied.verified).toBe(true);
+    expect(copied.genuine).toBe(true);
+    expect(copied.digitalIdentity).toBe(matched.digitalIdentity);
+    expect(copied.productBinding?.reason).toBe("seal_serial_missing");
+    expect(copied.message).toBe(
+      "Genuine product passport for urn:authichain:item:example-1. This is the passport for that digital identity."
+    );
+    const flagged = passportVerdict(
+      { metadata: { passport: { record, anchor } } },
+      null,
+      { nfcMatch: true, visualMatch: 100 }
+    );
+    expect(flagged.verified).toBe(true);
+    expect(flagged.genuine).toBe(true);
+    expect(flagged.productBinding).toEqual({
+      method: "none",
+      pass: false,
+      reason: "caller_flag_not_a_binding",
+      samePassport: true,
+    });
+    expect(flagged.message).toBe(copied.message);
+    expect(passportVerdict(null, null, { sealSerial: seal })).toEqual({
+      verified: false,
+      onRecord: false,
+      message: "No product is on record for this id.",
+    });
   });
 
   it("keeps an unanchored stored passport unverified", () => {

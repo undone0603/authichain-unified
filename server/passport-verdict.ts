@@ -1,15 +1,30 @@
+import { productBindingSentence } from "../protocol/passport.mjs";
 import {
   readStoredPassport,
   verifySubmitted,
 } from "../workers/authichain-verify-worker/src/protocol-verify.mjs";
+
+export type ProductBinding = {
+  method: "seal_serial_sha256" | "brand_domain_digital_link" | "none";
+  pass: boolean;
+  reason: string | null;
+  samePassport: true;
+};
 
 export type PassportVerdict = {
   verified: boolean;
   onRecord: boolean;
   genuine?: boolean;
   digitalIdentity?: string;
+  productBinding?: ProductBinding;
   message: string;
 };
+
+type SealObservation = {
+  sealSerial?: string;
+  nfcMatch?: unknown;
+  visualMatch?: unknown;
+} | null;
 
 /**
  * A product scan is genuine only when a stored DigitalProductPassport
@@ -18,7 +33,8 @@ export type PassportVerdict = {
  */
 export function passportVerdict(
   product: { metadata?: unknown } | null | undefined,
-  cert: { metadata?: unknown } | null | undefined
+  cert: { metadata?: unknown } | null | undefined,
+  observation?: SealObservation,
 ): PassportVerdict {
   const onRecord = !!(product || cert);
   const stored =
@@ -32,19 +48,29 @@ export function passportVerdict(
         : "No product is on record for this id.",
     };
   }
-  const scan = verifySubmitted(stored.record, stored.anchor);
+  const scan = verifySubmitted(stored.record, stored.anchor, observation ?? null);
   const genuine = scan?.genuine === true;
   const digitalIdentity =
     typeof scan?.digitalIdentity === "string" ? scan.digitalIdentity : undefined;
   const who = digitalIdentity ? ` for ${digitalIdentity}` : "";
+  const binding = scan?.productBinding as ProductBinding | undefined;
+  const sentence = productBindingSentence({
+    genuine,
+    digitalIdentity: digitalIdentity ?? null,
+    productBinding: binding,
+    anchorTransactionQueried: scan?.anchorTransactionQueried === true,
+  });
   return {
     verified: genuine,
     onRecord: true,
     genuine,
     ...(digitalIdentity ? { digitalIdentity } : {}),
-    message: genuine
-      ? `Genuine product passport${who}. This is the passport for that digital identity.`
-      : `Stored passport${who} did not verify as genuine.`,
+    ...(binding ? { productBinding: binding } : {}),
+    message:
+      sentence ??
+      (genuine
+        ? `Genuine product passport${who}. This is the passport for that digital identity.`
+        : `Stored passport${who} did not verify as genuine.`),
   };
 }
 
