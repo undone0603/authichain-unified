@@ -337,6 +337,41 @@ describe("claim goal ledger", () => {
     expect(route).toContain("Role and manufacturer events are only the latest 10,000 blocks.");
   });
 
+  it("publishes the DPP goals beside their limits", () => {
+    const index = fs.readFileSync(
+      path.join(root, "workers/authichain-com/src/index.ts"),
+      "utf8"
+    );
+    const published = [
+      "dpp-exports-not-live",
+      "dpp-pharma-not-dscsa",
+      "dpp-cannabis-not-metrc",
+      "dpp-luxury-not-inspection",
+      "dpp-readiness-checkout-cta",
+      "dpp-h2-passport-tooling",
+    ];
+    for (const id of published) {
+      const record = claims.find((entry: { id: string }) => entry.id === id);
+      expect(record.status, id).toBe("goal-published");
+      expect(record.publicGoal, id).toBe(true);
+      expect(record.limitPermanent, id).toBe(true);
+      expect(index, id).toContain(record.goalSentence);
+      expect(index, id).toContain(record.currentSentence);
+    }
+    const pharma = index.slice(index.indexOf("Pharmaceuticals"), index.indexOf("Electronics"));
+    expect(pharma).toContain("Not a DSCSA certification");
+    expect(pharma).not.toContain("Our goal: a licensee compares a local record");
+    const luxury = index.slice(index.indexOf("💎 Luxury Goods"), index.indexOf("🌿 Cannabis"));
+    expect(luxury).toContain("Goal: counterfeit detection for luxury goods.");
+    expect(luxury).not.toContain("Our goal:");
+    const cannabisAt = index.indexOf("🌿 Cannabis");
+    const cannabis = index.slice(cannabisAt, index.indexOf("</section>", cannabisAt));
+    expect(cannabis).toContain("Not a METRC or BioTrack connection");
+    expect(cannabis).not.toContain("Our goal: a pharmacist compares");
+    expect(index).toContain('action: "/protocol/checkout/dpp"');
+    expect(index).toContain("/checkout/dpp_readiness");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");

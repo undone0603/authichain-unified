@@ -3074,6 +3074,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="container">
       <div class="section-label">THE AUTHICHAIN SOLUTION</div>
       <h2 class="section-title">Passport tooling, not a certification.</h2>
+      <p class="section-sub">Our goal: the heading stays passport tooling, and the page does not call that tooling a certification.</p>
       <p class="section-sub">AuthiChain is building passport tooling. Our goal: the certificate NFT serves as the passport, with no retrofitting or middleware.</p>
 
       <div class="feature-row">
@@ -3090,7 +3091,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         <div class="feature-item">
           <div class="feature-icon">📊</div>
           <div class="feature-title">Exports are not live</div>
-          <div class="feature-desc">One-click exports for EU CSRD, EUDR, FDA DSCSA, USMCA, and ISO 22005 are not live. This page does not establish DSCSA compliance.</div>
+          <div class="feature-desc">Our goal: export one unit in a form a CSRD, EUDR, DSCSA, USMCA, or ISO 22005 filing could attach. One-click exports for EU CSRD, EUDR, FDA DSCSA, USMCA, and ISO 22005 are not live. This page does not establish DSCSA compliance.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">⛓️</div>
@@ -3118,10 +3119,10 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <div class="industries">
         <div class="industry-card"><div class="industry-name">⚡ EV Batteries</div><div class="industry-deadline">Mandatory ${escHtml(formatMilestoneDate(listMilestones().find((m) => m.id === 'batteries') ?? listMilestones()[0]))}</div></div>
         <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Mandatory 2028–29</div></div>
-        <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">Not a DSCSA certification</div></div>
+        <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">Our goal: a pharmacist compares one unit's signed record to shipment history.</div><div class="industry-deadline">Not a DSCSA certification</div></div>
         <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">Mandatory 2027</div></div>
-        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Not a product inspection</div><div class="industry-deadline">Goal: counterfeit detection for luxury goods</div></div>
-        <div class="industry-card"><div class="industry-name">🌿 Cannabis</div><div class="industry-deadline">Not a METRC or BioTrack connection</div></div>
+        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Not a product inspection</div><div class="industry-deadline">Goal: counterfeit detection for luxury goods.</div></div>
+        <div class="industry-card"><div class="industry-name">🌿 Cannabis</div><div class="industry-deadline">Our goal: a licensee compares a local record to a package identifier they already hold.</div><div class="industry-deadline">Not a METRC or BioTrack connection</div></div>
       </div>
     </div>
   </section>
@@ -3129,7 +3130,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <section class="section cta-section" style="background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); text-align:center">
     <div class="container" style="max-width:700px">
       <h2 class="section-title">Start DPP readiness checkout</h2>
-      <p class="section-sub">Checkout opens an AuthiChain workspace for your product line. It is self-serve.</p>
+      <p class="section-sub">Our goal: checkout stays a DPP readiness workspace for the product line. Checkout opens an AuthiChain workspace for your product line. It is self-serve.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
         ${catalogPaymentLinkHtml({
           planId: "dpp_readiness",

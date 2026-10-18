@@ -572,6 +572,38 @@ test("/dpp does not claim DSCSA, METRC, or BioTrack compliance", async () => {
     assert.doesNotMatch(html, /INDUSTRIES SERVED/, path);
     assert.match(html, /Not a product inspection/, path);
     assert.match(html, /Start DPP readiness checkout/, path);
+    assert.match(html, /Passport tooling, not a certification\./, path);
+    assert.match(
+      html,
+      /Our goal: export one unit in a form a CSRD, EUDR, DSCSA, USMCA, or ISO 22005 filing could attach\./,
+      path
+    );
+    assert.match(
+      html,
+      /Our goal: a pharmacist compares one unit's signed record to shipment history\./,
+      path
+    );
+    assert.match(
+      html,
+      /Our goal: a licensee compares a local record to a package identifier they already hold\./,
+      path
+    );
+    assert.match(html, /Goal: counterfeit detection for luxury goods\./, path);
+    assert.match(
+      html,
+      /Our goal: checkout stays a DPP readiness workspace for the product line\./,
+      path
+    );
+    assert.match(
+      html,
+      /Our goal: the heading stays passport tooling, and the page does not call that tooling a certification\./,
+      path
+    );
+    const pharma = html.slice(html.indexOf("Pharmaceuticals"), html.indexOf("Electronics"));
+    assert.equal(pharma.includes("Our goal: a licensee compares a local record"), false, path);
+    const cannabisAt = html.indexOf("🌿 Cannabis");
+    const cannabis = html.slice(cannabisAt, html.indexOf("</section>", cannabisAt));
+    assert.equal(cannabis.includes("Our goal: a pharmacist compares"), false, path);
     assert.doesNotMatch(html, /Product authenticity \+ DPP/, path);
     assert.doesNotMatch(html, /Start DPP Compliance Today/, path);
   }

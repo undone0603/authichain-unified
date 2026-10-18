@@ -5,6 +5,7 @@
  * PR 1 does not change public sentences. Drift slugs use emit "hold".
  * PR 2 sets the four homepage public goals to goal-published.
  * The history goal stays in the ledger.
+ * PR 3 sets the six /dpp public goals to goal-published.
  * seed-cannabis-not-another-compliance-tool stays limitPermanent false.
  */
 const PERM = {
@@ -225,6 +226,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'One-click exports for EU CSRD, EUDR, FDA DSCSA, USMCA, and ISO 22005 are not live. This page does not establish DSCSA compliance.',
     goalSentence: 'Our goal: export one unit in a form a CSRD, EUDR, DSCSA, USMCA, or ISO 22005 filing could attach.',
     task: EPCIS_PR,
@@ -239,6 +241,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'Not a DSCSA certification',
     goalSentence: "Our goal: a pharmacist compares one unit's signed record to shipment history.",
     task: DSCSA_PR,
@@ -252,6 +255,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'Not a METRC or BioTrack connection',
     goalSentence: 'Our goal: a licensee compares a local record to a package identifier they already hold.',
     task: METRC_PR,
@@ -265,6 +269,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'Not a product inspection',
     goalSentence: 'Goal: counterfeit detection for luxury goods.',
     task: GENUINE_PR,
@@ -278,6 +283,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'Start DPP readiness checkout',
     goalSentence: 'Our goal: checkout stays a DPP readiness workspace for the product line.',
     task: LIMIT_ONLY,
@@ -290,6 +296,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'Passport tooling, not a certification.',
     goalSentence: 'Our goal: the heading stays passport tooling, and the page does not call that tooling a certification.',
     task: LIMIT_ONLY,
