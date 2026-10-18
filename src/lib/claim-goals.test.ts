@@ -732,6 +732,48 @@ describe("claim goal ledger", () => {
     expect(howItWorks.status).toBe("open");
   });
 
+  it("publishes the right-to-repair goal beside its limit", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content", "seo", "pages.json"), "utf8")
+    );
+    const record = claims.find(
+      (entry: { id: string }) => entry.id === "right-to-repair-genuine-part"
+    );
+    expect(record.status).toBe("goal-published");
+    expect(record.publicGoal).toBe(true);
+    expect(record.emit).toBe("goal");
+    expect(record.class).toBe("copy-only");
+    expect(record.limitPermanent).toBe(false);
+    const page = pages.find(
+      (entry: { slug: string }) => entry.slug === record.slugs[0]
+    );
+    const text = JSON.stringify(page);
+    expect(text).toContain(record.goalSentence);
+    expect(text).toContain(record.limitSentence);
+    expect(text).toContain(record.statuteSentence);
+    expect(text).not.toContain(record.currentSentence);
+    expect(text).toContain("That issuance is not live on this page.");
+    expect(text).not.toContain("Issuing a customer product certificate is in development.");
+    expect(page.title).not.toMatch(/Our goal/i);
+    expect(page.h1).not.toMatch(/Our goal/i);
+    expect(page.metaDescription).not.toMatch(/Our goal/i);
+    expect(page.metaDescription.length).toBeLessThanOrEqual(160);
+    expect(page.bodyHtml).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(page.bodyHtml.match(/Our goal/g)).toHaveLength(1);
+    const how = page.bodyHtml.indexOf("<h2>How it works</h2>");
+    const cta = page.bodyHtml.indexOf("<h2>Get started</h2>");
+    const faq = page.bodyHtml.indexOf("<h2>FAQ</h2>");
+    expect(cta).toBeGreaterThan(how);
+    expect(faq).toBeGreaterThan(cta);
+    expect(page.bodyHtml.slice(how, cta)).not.toContain("Our goal");
+    for (const sibling of recordsForSlug(claims, record.slugs[0])) {
+      if (sibling.publicGoal === true) continue;
+      expect(sibling.publicGoal, sibling.id).toBe(false);
+      if (sibling.goalSentence) expect(text, sibling.id).not.toContain(sibling.goalSentence);
+      if (sibling.currentSentence) expect(text, sibling.id).not.toContain(sibling.currentSentence);
+    }
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");

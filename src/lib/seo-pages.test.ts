@@ -628,12 +628,13 @@ describe("generated SEO money-path CTAs", () => {
     expect(p?.metaDescription.endsWith("by the end of 2027.")).toBe(true);
   });
 
-  it("keeps heading order when DSCSA and EPCIS pages drop the default how-it-works sentence", () => {
+  it("keeps heading order when goal pages drop the default how-it-works sentence", () => {
     for (const slug of [
       "dscsa-unit-level-traceability-2026",
       "dscsa-saleable-returns-verification-requirement",
       "dscsa-epcis-interoperable-data-exchange-requirement",
       "epcis-2-0-blockchain-anchoring",
+      "right-to-repair-spare-parts-verification",
     ]) {
       const page = getSeoPageBySlug(slug);
       expect(page, slug).not.toBeNull();

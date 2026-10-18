@@ -13,6 +13,7 @@
  * PR 8 sets the MCP install lede goal to goal-published. The MCP meta and the x402 meta stay limit-only.
  * PR 9 sets the free-check and demonstration goals to goal-published. The /is-this-real meta stays limit-only.
  * PR 10 sets the four DSCSA and EPCIS owners to goal-published. Sibling goals stay off the page.
+ * PR 11 sets the right-to-repair owner to goal-published. Sibling goals stay off the page.
  * seed-cannabis-not-another-compliance-tool stays limitPermanent false.
  */
 const PERM = {
@@ -1064,6 +1065,8 @@ const claims = [
     slugs: ['right-to-repair-spare-parts-verification'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     statuteSentence: 'The EU Right to Repair Directive, in force from July 31, 2026, requires manufacturers to give repairers unambiguous model and serial identification',
     currentSentence: 'a scan should confirm a part is genuine, not decide whether a repair is allowed to proceed',
