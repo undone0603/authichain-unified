@@ -3,6 +3,8 @@
  * One record per false claim and per docs(landing) limit already on the page.
  * The public page does not read this module. Tasks and acceptance checks stay here.
  * PR 1 does not change public sentences. Drift slugs use emit "hold".
+ * PR 2 sets the four homepage public goals to goal-published.
+ * The history goal stays in the ledger.
  * seed-cannabis-not-another-compliance-tool stays limitPermanent false.
  */
 const PERM = {
@@ -157,6 +159,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'The public certificate registry is in development.',
     goalSentence: 'Our goal: anyone can check an AuthiChain certificate with its ID.',
     task: ISSUANCE_FIXTURE,
@@ -181,6 +184,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     statuteSentence: 'Role and manufacturer events are only the latest 10,000 blocks.',
     currentSentence: 'manufacturerVerified is an admin-set contract flag, not a certificate.',
     goalSentence: 'Our goal: a reader sees manufacturerVerified as an admin-set contract flag, not as a certificate and not as a physical inspection.',
@@ -193,6 +197,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'That camera scan is not live on this page. A signed record is not a physical inspection.',
     goalSentence: 'Our goal: log every scan against the serial.',
     task: GENUINE_PR,
@@ -206,6 +211,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'A signed record is not a physical inspection.',
     goalSentence: 'Our goal: a reader can check a signed record and is told, in the same breath, that the check is not a physical inspection.',
     task: GENUINE_PR,

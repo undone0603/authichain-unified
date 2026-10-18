@@ -169,11 +169,27 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /Signed QR seals for real products\./);
   assert.doesNotMatch(html, /Agent consensus/);
   assert.match(html, /Public certificate registry: in development\./);
+  assert.match(html, /Our goal: anyone can check an AuthiChain certificate with its ID\./);
+  assert.match(html, /The public certificate registry is in development\./);
   assert.match(
     html,
     /The manufacturer role history and the published demonstration record are live/
   );
+  assert.doesNotMatch(
+    html,
+    /Our goal: show the admin-set manufacturerVerified flag/
+  );
+  assert.match(html, /Our goal: log every scan against the serial\./);
+  assert.match(html, /That camera scan is not live on this page\./);
+  assert.match(
+    html,
+    /Our goal: a reader can check a signed record and is told, in the same breath, that the check is not a physical inspection\./
+  );
   assert.match(html, /A signed record is not a physical inspection\./);
+  assert.match(
+    html,
+    /Public certificate lookup for people and agents is in development\./
+  );
   assert.doesNotMatch(html, /Public verification is in development/);
   assert.doesNotMatch(html, /Authentic product/);
   assert.doesNotMatch(html, /acVerify\(/);

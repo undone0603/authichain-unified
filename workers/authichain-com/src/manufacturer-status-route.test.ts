@@ -22,6 +22,12 @@ describe("manufacturer status on the apex", () => {
     expect(html).toContain("encodeURIComponent");
     expect(html).toContain("could not be read");
     expect(html).toContain("admin-set contract flag");
+    expect(html).toContain(
+      "Our goal: a reader sees manufacturerVerified as an admin-set contract flag, not as a certificate and not as a physical inspection."
+    );
+    expect(html).toContain(
+      "manufacturerVerified is an admin-set contract flag, not a certificate."
+    );
     expect(html).not.toContain("$49");
     expect(html).not.toContain("auto-granted");
     expect(html).not.toContain("JSON.stringify");

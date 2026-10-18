@@ -147,7 +147,7 @@ function page(): Response {
 <title>Manufacturer role history</title>
 <main style="max-width:40rem;margin:2rem auto;font-family:system-ui,sans-serif">
   <h1>Manufacturer role history</h1>
-  <p>Current minter, admin, updater, pauser, and manufacturer-verified flags are read from the contract. manufacturerVerified is an admin-set contract flag, not a certificate. Role and manufacturer events are only the latest 10,000 blocks. This page does not take payment, and a role is not a product passport.</p>
+  <p>Current minter, admin, updater, pauser, and manufacturer-verified flags are read from the contract. Our goal: a reader sees manufacturerVerified as an admin-set contract flag, not as a certificate and not as a physical inspection. manufacturerVerified is an admin-set contract flag, not a certificate. Role and manufacturer events are only the latest 10,000 blocks. This page does not take payment, and a role is not a product passport.</p>
   <form id="q">
     <label>Address <input name="address" required pattern="0x[a-fA-F0-9]{40}" placeholder="0x…" style="width:100%"></label>
     <button type="submit">Check history</button>

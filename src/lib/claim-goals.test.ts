@@ -300,6 +300,43 @@ describe("claim goal ledger", () => {
     ]);
   });
 
+  it("publishes the homepage goals beside their limits", () => {
+    const index = fs.readFileSync(
+      path.join(root, "workers/authichain-com/src/index.ts"),
+      "utf8"
+    );
+    const route = fs.readFileSync(
+      path.join(root, "workers/authichain-com/src/manufacturer-status-route.ts"),
+      "utf8"
+    );
+    const published = [
+      "homepage-registry-in-development",
+      "homepage-camera-scan-not-live",
+      "homepage-signed-record-not-inspection",
+      "manufacturer-flag-admin-set",
+    ];
+    for (const id of published) {
+      const record = claims.find((entry: { id: string }) => entry.id === id);
+      expect(record.status, id).toBe("goal-published");
+      expect(record.publicGoal, id).toBe(true);
+      expect(record.limitPermanent, id).toBe(true);
+      const text = record.checkFile.endsWith("manufacturer-status-route.ts") ? route : index;
+      expect(text, id).toContain(record.goalSentence);
+      expect(text, id).toContain(record.currentSentence);
+    }
+    const history = claims.find(
+      (entry: { id: string }) => entry.id === "homepage-history-demo-not-inspection"
+    );
+    expect(history.publicGoal).toBe(false);
+    expect(history.status).toBe("open");
+    expect(index).toContain(history.currentSentence);
+    expect(index).not.toContain(history.goalSentence);
+    expect(index).toContain(
+      'body: "Every product gets a seal. Public certificate lookup for people and agents is in development."'
+    );
+    expect(route).toContain("Role and manufacturer events are only the latest 10,000 blocks.");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");

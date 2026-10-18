@@ -2330,7 +2330,7 @@ function foundersVision() {
   <div class="wrap" style="max-width:760px">
     <p class="section-tag">What is live</p>
     <h2>Realized capability, not a pitch deck</h2>
-    <p class="section-sub">One founder. Agents draft and check. Money, mail, and deploy wait for the founder. The public certificate registry is in development. The manufacturer role history and the published demonstration record are live, and neither is a physical inspection. The money path is EU DPP Readiness.</p>
+    <p class="section-sub">One founder. Agents draft and check. Money, mail, and deploy wait for the founder. Our goal: anyone can check an AuthiChain certificate with its ID. The public certificate registry is in development. The manufacturer role history and the published demonstration record are live, and neither is a physical inspection. The money path is EU DPP Readiness.</p>
   </div>
 </section>`;
 }
@@ -2573,7 +2573,7 @@ const HTML = `<!DOCTYPE html>
   ${howItWorks()}
   ${estateFeatures(
     "The authentic agentic economy",
-    "Agents can pay. A signed record is not a physical inspection. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
+    "Agents can pay. Our goal: a reader can check a signed record and is told, in the same breath, that the check is not a physical inspection. A signed record is not a physical inspection. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
       { title: "Settlement", body: "Humans start with Starter $29 on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
