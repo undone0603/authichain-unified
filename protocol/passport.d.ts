@@ -87,6 +87,19 @@ export function productBindingSentence(scan: {
 
 export function appendPassportEvidence(metadata: unknown, entry: unknown): Record<string, unknown>;
 
+export const UDI_PRESENT_SENTENCE: string;
+export const UDI_ABSENT_SENTENCE: string;
+
+export function udiEvidence(
+  metadata: unknown,
+  input?: { udiDi?: unknown; udiPi?: unknown; category?: unknown } | null,
+): {
+  stored: boolean;
+  entry: { type: 'manufacturer_udi'; udiDi: string; udiPi?: string } | null;
+  metadata: unknown;
+  message: string;
+};
+
 export function verifyScan(
   record: unknown,
   anchor?: unknown | null,
