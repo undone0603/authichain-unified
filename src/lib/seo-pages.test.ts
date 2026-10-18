@@ -171,6 +171,26 @@ describe("generated SEO money-path CTAs", () => {
     );
   });
 
+  it("does not say a scan proves a medicine is genuine", () => {
+    for (const slug of [
+      "blockchain-qr-code-for-pharma",
+      "anti-counterfeit-pharmaceutical",
+    ]) {
+      const page = getSeoPageBySlug(slug);
+      expect(page).not.toBeNull();
+      const blob = `${page?.metaDescription}\n${page?.bodyHtml}\n${JSON.stringify(page?.jsonLd)}`;
+      expect(blob).toContain(
+        "A scan is not, by itself, proof a medicine is genuine."
+      );
+      expect(blob).toContain("Confirm obligations against the statute.");
+      expect(blob).not.toContain("blockchain-verified");
+      expect(blob).not.toContain("DSCSA-aligned");
+      expect(blob).not.toContain("verify authenticity by scan");
+      expect(blob).not.toContain("medicine is genuine and unexpired");
+      expect(page!.metaDescription.length).toBeLessThanOrEqual(160);
+    }
+  });
+
   it("links Made in USA / origin-claim hubs to DPP checkout and the Made in America brief", () => {
     const musa = getSeoPageBySlug("ftc-made-in-usa-labeling-verification");
     const origin = getSeoPageBySlug(

@@ -6034,9 +6034,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "Blockchain QR Code For Pharma | AuthiChain",
-    "metaDescription": "Meet DSCSA serialization and give patients, pharmacists, and inspectors a blockchain-verified check by scan that a medicine is genuine and unexpired.",
+    "metaDescription": "A scan is not, by itself, proof a medicine is genuine. Product certification through verify is in development.",
     "h1": "Blockchain QR Code For Pharma",
-    "bodyHtml": "<p>Meet DSCSA serialization and give patients, pharmacists, and inspectors a blockchain-verified check by scan that a medicine is genuine and unexpired.</p><h2>Why AuthiChain</h2><ul><li>DSCSA-aligned serialization and lot-level tracking</li><li>Tamper-evident QR</li><li>Recall targeting down to the individual unit</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is this DSCSA compliant?</h3><p>The data model maps to DSCSA serialization and interoperable data-exchange requirements.</p>",
+    "bodyHtml": "<p>A scan is not, by itself, proof a medicine is genuine. Product certification through verify is in development.</p><h2>Why AuthiChain</h2><ul><li>Lot-level tracking on this page is not a DSCSA compliance claim</li><li>Tamper-evident QR</li><li>Unit-level recall targeting is not delivered on this page</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is this DSCSA compliant?</h3><p>This page does not establish DSCSA compliance. Confirm obligations against the statute.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -6047,7 +6047,7 @@
             "@type": "Brand",
             "name": "AuthiChain"
           },
-          "description": "Meet DSCSA serialization and give patients, pharmacists, and inspectors a blockchain-verified check by scan that a medicine is genuine and unexpired.",
+          "description": "A scan is not, by itself, proof a medicine is genuine. Product certification through verify is in development.",
           "url": "https://authichain.com/p/blockchain-qr-code-for-pharma"
         },
         {
@@ -6075,7 +6075,7 @@
               "name": "Is this DSCSA compliant?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "The data model maps to DSCSA serialization and interoperable data-exchange requirements."
+                "text": "This page does not establish DSCSA compliance. Confirm obligations against the statute."
               }
             }
           ]
@@ -7004,9 +7004,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "Anti-Counterfeit Pharmaceutical | AuthiChain",
-    "metaDescription": "Help pharmacists and patients check medicines by scan, with DSCSA-aligned serialization and blockchain verification. AuthiChain — EU DPP Readiness is $299.",
+    "metaDescription": "A scan is not, by itself, proof a medicine is genuine. Product certification through verify is in development. AuthiChain — EU DPP Readiness is $299.",
     "h1": "Anti-Counterfeit Pharmaceutical",
-    "bodyHtml": "<p>Help pharmacists and patients check medicines by scan, with DSCSA-aligned serialization and blockchain verification.</p><h2>Why AuthiChain</h2><ul><li>DSCSA-aligned unit serialization</li><li>Tamper-evident, blockchain-verified packaging</li><li>Unit-level recall and expiry checks</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is it DSCSA aligned?</h3><p>Yes — serialization and data exchange map to DSCSA requirements.</p><h3>Who can verify a pack?</h3><p>Patients, pharmacists, and inspectors can all verify authenticity by scan.</p>",
+    "bodyHtml": "<p>A scan is not, by itself, proof a medicine is genuine. Product certification through verify is in development.</p><h2>Why AuthiChain</h2><ul><li>Unit serialization on this page is not a DSCSA compliance claim</li><li>Packaging art on this page is not a verification of the medicine</li><li>Recall and expiry checks are not delivered on this page</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is it DSCSA aligned?</h3><p>This page does not establish DSCSA alignment. Confirm obligations against the statute.</p><h3>Who can verify a pack?</h3><p>A scan is not, by itself, proof a medicine is genuine.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -7017,7 +7017,7 @@
             "@type": "Brand",
             "name": "AuthiChain"
           },
-          "description": "Help pharmacists and patients check medicines by scan, with DSCSA-aligned serialization and blockchain verification.",
+          "description": "A scan is not, by itself, proof a medicine is genuine. Product certification through verify is in development.",
           "url": "https://authichain.com/p/anti-counterfeit-pharmaceutical"
         },
         {
@@ -7045,7 +7045,7 @@
               "name": "Is it DSCSA aligned?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Yes — serialization and data exchange map to DSCSA requirements."
+                "text": "This page does not establish DSCSA alignment. Confirm obligations against the statute."
               }
             },
             {
@@ -7053,7 +7053,7 @@
               "name": "Who can verify a pack?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Patients, pharmacists, and inspectors can all verify authenticity by scan."
+                "text": "A scan is not, by itself, proof a medicine is genuine."
               }
             }
           ]
