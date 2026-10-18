@@ -21,6 +21,12 @@ describe("/is-this-real", () => {
     expect(html).toContain("MAX=3");
     expect(html).toContain("an unpaid call returns HTTP 402 with the price");
     expect(html).toContain("not a paid receipt");
+    expect(html).toContain("free: true");
+    expect(html).toContain("verified: false");
+    expect(html).toContain("settlement: null");
+    expect(html).toContain(
+      "Our goal: a reader can tell that free answer from a paid receipt."
+    );
     expect(html).toContain("daily free allowance");
     expect(html).toContain("A non-UUID sealId is HTTP 400 before payment");
     expect(html).not.toContain('{"sealId":"..."}');
@@ -33,6 +39,20 @@ describe("/is-this-real", () => {
     expect(html).toContain("published demonstration record, not a product");
     expect(html).toContain("not a physical inspection");
     expect(html).toContain("does not itself read the anchor transaction");
+    expect(html).toContain(
+      "Our goal: the page names polygon-anchor-1 as the published demonstration record and never as a customer product."
+    );
+    expect(html).toContain(
+      "Our goal: a verdict on this page stays the public check for that id, and the page keeps the forensic and physical limits."
+    );
+    expect(html).toContain("A verdict on this page is the public check for that id.");
+    expect(html).toContain("not a legal or forensic guarantee");
+    const meta = html.match(/<meta name="description" content="([^"]*)"/);
+    expect(meta?.[1]).toContain("not a product");
+    expect(meta?.[1]).toContain("After 3 free checks, agents can pay per check over x402.");
+    expect(meta?.[1]).not.toContain("Our goal");
+    expect((meta?.[1] ?? "").length).toBeLessThanOrEqual(160);
+    expect(html.match(/Our goal/g)).toHaveLength(3);
     expect(html).not.toContain("printed on an AuthiChain-sealed product");
     expect(html).not.toContain("polygonscan.com");
     expect(html).not.toContain('{"sealId":"demo"}');

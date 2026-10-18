@@ -11,6 +11,7 @@
  * PR 6 sets the llms.txt and x402 body goals to goal-published. The x402 meta goal stays unpublished.
  * PR 7 sets the agentic-economy page and seed goals to goal-published. The meta stays limit-only. The seed receipt and demonstration goals stay unpublished.
  * PR 8 sets the MCP install lede goal to goal-published. The MCP meta and the x402 meta stay limit-only.
+ * PR 9 sets the free-check and demonstration goals to goal-published. The /is-this-real meta stays limit-only.
  * seed-cannabis-not-another-compliance-tool stays limitPermanent false.
  */
 const PERM = {
@@ -949,6 +950,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'That answer is not a paid receipt.',
     goalSentence: 'Our goal: a reader of this architecture page can tell the free seal answer from a paid receipt.',
     task: X402_WORDS,
@@ -960,6 +962,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'That record is not a customer product and not a physical inspection.',
     goalSentence: 'Our goal: an agent can run the published free check on the demonstration record, and the page keeps saying that record is not a customer product.',
     task: X402_WORDS,
@@ -971,6 +974,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'is a published demonstration record, not a product and not a physical inspection.',
     goalSentence: 'Our goal: the page names polygon-anchor-1 as the published demonstration record and never as a customer product.',
     task: LIMIT_ONLY,
@@ -982,6 +986,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'That answer is not a paid receipt.',
     goalSentence: 'Our goal: a reader can tell that free answer from a paid receipt.',
     task: X402_WORDS,
@@ -993,6 +998,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'A verdict on this page is the public check for that id.',
     goalSentence: 'Our goal: a verdict on this page stays the public check for that id, and the page keeps the forensic and physical limits.',
     task: GENUINE_PR,

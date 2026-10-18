@@ -36,6 +36,10 @@ test("dpp architecture separates a free seal answer from the unpaid 402", () => 
   assert.match(html, /verified: false/);
   assert.match(html, /settlement: null/);
   assert.match(html, /not a paid receipt/);
+  assert.match(
+    html,
+    /Our goal: a reader of this architecture page can tell the free seal answer from a paid receipt\./,
+  );
   assert.match(html, /non-UUID seal id is HTTP 400 before payment/);
   assert.equal(html.includes("Unpaid POST /api/x402 returns HTTP 402"), false);
   assert.equal(html.includes('{"sealId":"demo"}'), false);
@@ -64,6 +68,10 @@ test("verification FAQ names the free demonstration check", () => {
   const html = renderDocsPage("/docs/verification");
   assert.match(html, /\/api\/verify\?id=polygon-anchor-1/);
   assert.match(html, /not a customer product/);
+  assert.match(
+    html,
+    /Our goal: an agent can run the published free check on the demonstration record, and the page keeps saying that record is not a customer product\./,
+  );
   assert.match(html, /not a physical inspection/);
   assert.match(html, /does not itself read the anchor transaction/);
   assert.match(html, /empty body returns HTTP 402/);

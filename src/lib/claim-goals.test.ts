@@ -634,6 +634,50 @@ describe("claim goal ledger", () => {
     expect(x402.match(/Our goal/g)).toHaveLength(1);
   });
 
+  it("publishes the free-check goals beside their limits", () => {
+    const architecture = fs.readFileSync(
+      path.join(root, "workers/authichain-com/content/docs/public/dpp-architecture.md"),
+      "utf8"
+    );
+    const verification = fs.readFileSync(
+      path.join(root, "workers/authichain-com/content/docs/public/verification.md"),
+      "utf8"
+    );
+    const page = fs.readFileSync(
+      path.join(root, "workers/authichain-com/src/is-this-real-page.ts"),
+      "utf8"
+    );
+    const published = [
+      "dpp-architecture-free-seal",
+      "verification-faq-free-check",
+      "is-this-real-demonstration",
+      "is-this-real-free-not-receipt",
+      "is-this-real-verdict-not-inspection",
+    ];
+    const files: Record<string, string> = {
+      "dpp-architecture-free-seal": architecture,
+      "verification-faq-free-check": verification,
+      "is-this-real-demonstration": page,
+      "is-this-real-free-not-receipt": page,
+      "is-this-real-verdict-not-inspection": page,
+    };
+    for (const id of published) {
+      const record = claims.find((entry: { id: string }) => entry.id === id);
+      expect(record.status, id).toBe("goal-published");
+      expect(record.publicGoal, id).toBe(true);
+      expect(record.limitPermanent, id).toBe(true);
+      expect(files[id], id).toContain(record.goalSentence);
+      expect(files[id], id).toContain(record.currentSentence);
+    }
+    expect(architecture).not.toContain("polygon-anchor-1");
+    expect(architecture).not.toContain("polygonscan.com");
+    expect(verification).not.toContain("polygonscan.com");
+    const meta = page.match(/<meta name="description" content="([^"]*)"/);
+    expect(meta?.[1]).not.toContain("Our goal");
+    expect((meta?.[1] ?? "").length).toBeLessThanOrEqual(160);
+    expect(page).not.toContain("protocol-example-route");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
