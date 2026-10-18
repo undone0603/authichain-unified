@@ -16,6 +16,12 @@ export const ROLE_IDS = {
   pauser: "0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a",
 } as const;
 
+/** A 20-byte account, lowercased. A topic or any other string is not an account. */
+export function senderAddress(value: string | undefined): string {
+  if (!value || !/^0x[0-9a-fA-F]{40}$/.test(value)) return "";
+  return value.toLowerCase();
+}
+
 /** Last 20 bytes of an indexed address topic. Anything else is not an address. */
 export function addressFromTopic(topic: string | undefined): string {
   if (!topic || !/^0x[0-9a-fA-F]{64}$/.test(topic)) return "";

@@ -142,7 +142,7 @@ export default function ManufacturerStatus() {
           <div>
             <h2 className="font-medium mb-2">Role history ({data.history.length})</h2>
             {data.historyError && (
-              <p className="text-neutral-500">The event list for this window was not available ({data.historyError}). Current role flags above still come from the contract.</p>
+              <p className="text-neutral-500">The event list for this window was not available{data.historyError === 'log_range_rejected' || data.historyError === 'log_query_failed' ? ` (${data.historyError})` : ''}. Current role flags above still come from the contract.</p>
             )}
             {!data.historyError && data.history.length === 0 ? (
               <p className="text-neutral-500">No role or manufacturer events in the latest 10,000 blocks. That does not mean the address holds no role.</p>

@@ -5,6 +5,7 @@ import {
   ROLE_IDS,
   addressFromTopic,
   compareHistory,
+  senderAddress,
   logFromBlock,
   roleName,
   timestampWord,
@@ -34,6 +35,8 @@ describe("manufacturer log window", () => {
     expect(addressFromTopic("0x" + "0".repeat(24) + account)).toBe("0x" + account);
     expect(addressFromTopic("0x" + "ab".repeat(20))).toBe("");
     expect(addressFromTopic("0x1234")).toBe("");
+    expect(senderAddress("0x" + account.toUpperCase())).toBe("0x" + account);
+    expect(senderAddress("0x" + "0".repeat(24) + account)).toBe("");
   });
 
   it("names the four contract roles and hides any other topic", () => {

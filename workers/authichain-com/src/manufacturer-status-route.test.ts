@@ -37,9 +37,13 @@ describe("manufacturer status on the apex", () => {
 
   it("returns role events from the bounded log query", async () => {
     const calls: string[] = [];
+    const filters: string[][] = [];
     const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body));
       calls.push(body.method);
+      if (body.method === "eth_getLogs") {
+        filters.push(body.params[0].topics);
+      }
       if (body.method === "eth_call") {
         const data = String(body.params[0].data);
         const minter = "9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
@@ -93,6 +97,13 @@ describe("manufacturer status on the apex", () => {
     expect(body.history[0].timestamp).toBeNull();
     expect(body.history[0].role).toBe("minter");
     expect(body.history[1].role).toBe("");
+    const account = "0x" + "00".repeat(12) + ADDRESS.slice(2).toLowerCase();
+    const granted = filters.find((topics) => topics[0].startsWith("0x2f878811"));
+    expect(granted?.[1]).toBeNull();
+    expect(granted?.[2]).toBe(account);
+    const verified = filters.find((topics) => topics[0].startsWith("0x50d2f63d"));
+    expect(verified).toEqual([verified?.[0], account]);
+    expect(body.history[0].sender).toBe("0x" + "11".repeat(20));
     expect(body.current.minter).toBe(true);
     expect(body.current.admin).toBe(false);
     expect(body.current.manufacturerVerified).toBe(false);

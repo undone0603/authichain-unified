@@ -171,7 +171,22 @@ document.getElementById("q").addEventListener("submit", async (event) => {
     const current = body.current || {};
     const flag = (name, value) => name + ": " + (value ? "yes" : "no");
     const events = Array.isArray(body.history)
-      ? body.history.map((item) => item.type + (item.role ? " " + item.role : "") + " block " + item.block).join("; ")
+      ? body.history.map((item) => {
+          const parts = [item.type];
+          if (item.role) parts.push(item.role);
+          parts.push("block " + item.block);
+          if (item.sender) parts.push("sender " + item.sender);
+          if (item.timestamp) parts.push("time " + item.timestamp);
+          return parts.join(" ");
+        }).join("; ")
+      : "";
+    const historyLine = body.historyError === "log_range_rejected" || body.historyError === "log_query_failed"
+      ? "Event list unavailable: " + body.historyError
+      : body.historyError
+        ? "Event list unavailable"
+        : "Events: " + (events || "none in this window");
+    const scan = body.polygonscan && typeof body.polygonscan.address === "string"
+      ? body.polygonscan.address
       : "";
     out.textContent = [
       flag("Admin", current.admin),
@@ -179,10 +194,9 @@ document.getElementById("q").addEventListener("submit", async (event) => {
       flag("Updater", current.updater),
       flag("Pauser", current.pauser),
       "Manufacturer verified (admin-set contract flag): " + (current.manufacturerVerified ? "yes" : "no"),
-      body.historyError
-        ? "Event list unavailable: " + body.historyError
-        : "Events: " + (events || "none in this window"),
-    ].join(" | ");
+      historyLine,
+      scan ? "PolygonScan: " + scan : "",
+    ].filter(Boolean).join(" | ");
   } catch {
     out.textContent = "could not be read";
   }

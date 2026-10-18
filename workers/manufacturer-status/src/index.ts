@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { createPublicClient, http, parseAbiItem, type Address } from 'viem';
 import { polygon } from 'viem/chains';
-import { DEPLOYED_BLOCK, HISTORY_DISCLAIMER, ROLE_IDS, compareHistory, logFromBlock, roleName } from './window';
+import { DEPLOYED_BLOCK, HISTORY_DISCLAIMER, ROLE_IDS, compareHistory, logFromBlock, roleName, senderAddress } from './window';
 
 const CONTRACT = '0x4da4D2675e52374639C9c954f4f653887A9972BE' as const;
 const PUBLIC_RPC = 'https://polygon-bor-rpc.publicnode.com';
@@ -132,7 +132,7 @@ app.get('/:address/history', async (c) => {
         logIndex: indexOf(log.logIndex),
         tx: log.transactionHash ?? '',
         role: roleName(log.args.role ?? ''),
-        sender: log.args.sender ?? '',
+        sender: senderAddress(log.args.sender),
         timestamp: null as string | null,
       })),
       ...revoked.map((log) => ({
@@ -141,7 +141,7 @@ app.get('/:address/history', async (c) => {
         logIndex: indexOf(log.logIndex),
         tx: log.transactionHash ?? '',
         role: roleName(log.args.role ?? ''),
-        sender: log.args.sender ?? '',
+        sender: senderAddress(log.args.sender),
         timestamp: null,
       })),
       ...verified.map((log) => ({
