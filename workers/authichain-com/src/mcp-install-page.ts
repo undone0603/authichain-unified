@@ -344,7 +344,7 @@ ${ESTATE_FONTS_LINK}
   <span class="pill">Model Context Protocol</span>
   <h1>Give your agent the published checks.</h1>
   <p class="lede">AuthiChain scores EU Digital Product Passport readiness against the dated
-  obligations. Free over MCP — no key, no account, no payment header. A signed record is not a physical inspection.</p>
+  obligations. Free over MCP — no key, no account, no payment header. Our goal: an agent runs the published checks and is told a signed record is not a physical inspection. A signed record is not a physical inspection.</p>
   <div class="btns">
     <a class="btn primary" href="${esc(CURSOR_DEEPLINK)}">Add to Cursor</a>
     <a class="btn" href="#install">Claude, VS Code &amp; everything else</a>

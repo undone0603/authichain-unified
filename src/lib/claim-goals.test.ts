@@ -592,6 +592,48 @@ describe("claim goal ledger", () => {
     expect(page).not.toContain("in development");
   });
 
+  it("publishes the MCP install goal in the lede and not the meta", () => {
+    const mcp = fs.readFileSync(
+      path.join(root, "workers/authichain-com/src/mcp-install-page.ts"),
+      "utf8"
+    );
+    const x402 = fs.readFileSync(
+      path.join(root, "workers/authichain-com/src/x402-docs-page.ts"),
+      "utf8"
+    );
+    const install = claims.find(
+      (entry: { id: string }) => entry.id === "mcp-install-not-inspection"
+    );
+    expect(install.status).toBe("goal-published");
+    expect(install.publicGoal).toBe(true);
+    expect(install.limitPermanent).toBe(true);
+    expect(mcp).toContain(install.goalSentence);
+    expect(mcp).toContain(install.currentSentence);
+    const meta = mcp.match(/<meta name="description" content="([^"]*)"/);
+    expect(meta?.[1]).toContain(install.currentSentence);
+    expect(meta?.[1]).not.toContain("Our goal");
+    expect((meta?.[1] ?? "").length).toBeLessThanOrEqual(160);
+    const legacy = claims.find(
+      (entry: { id: string }) => entry.id === "mcp-legacy-x402-402"
+    );
+    expect(legacy.publicGoal).toBe(false);
+    expect(legacy.status).toBe("open");
+    expect(mcp).toContain(legacy.currentSentence);
+    expect(mcp).not.toContain(legacy.goalSentence);
+    const xmeta = claims.find(
+      (entry: { id: string }) => entry.id === "x402-meta-free-not-receipt"
+    );
+    const body = claims.find(
+      (entry: { id: string }) => entry.id === "x402-free-answer-not-receipt"
+    );
+    expect(xmeta.publicGoal).toBe(false);
+    expect(xmeta.status).toBe("open");
+    expect(x402).toContain(xmeta.currentSentence);
+    expect(x402).not.toContain(xmeta.goalSentence);
+    expect(x402).toContain(body.goalSentence);
+    expect(x402.match(/Our goal/g)).toHaveLength(1);
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");

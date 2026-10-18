@@ -74,8 +74,23 @@ describe("x402 public docs page", () => {
     );
     const meta = html.match(/<meta name="description" content="([^"]*)"/);
     const og = html.match(/<meta property="og:description" content="([^"]*)"/);
+    expect(meta?.[1]).toContain(X402_PUBLIC.priceUsd);
+    expect(meta?.[1]).toContain(X402_PUBLIC.assetName);
+    expect(meta?.[1]).toContain(X402_PUBLIC.network);
+    expect(meta?.[1]).toContain(
+      "An empty body is the unpaid HTTP 402. A free answer is not a paid receipt."
+    );
+    expect(og?.[1]).toContain(X402_PUBLIC.priceUsd);
+    expect(og?.[1]).toContain(X402_PUBLIC.assetName);
+    expect(og?.[1]).toContain(X402_PUBLIC.network);
+    expect(og?.[1]).toContain(
+      "An empty body is the unpaid HTTP 402. A free answer is not a paid receipt."
+    );
+    expect((meta?.[1] ?? "").length).toBeLessThanOrEqual(160);
+    expect((og?.[1] ?? "").length).toBeLessThanOrEqual(160);
     expect(meta?.[1]).not.toContain("Our goal");
     expect(og?.[1]).not.toContain("Our goal");
+    expect(html.match(/Our goal/g)).toHaveLength(1);
     expect(html).not.toContain("in development");
     expect(html).not.toContain("Unpaid POST returns HTTP 402.");
     expect(html).toContain("An empty body is always the 402 challenge");

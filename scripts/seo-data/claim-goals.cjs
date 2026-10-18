@@ -10,6 +10,7 @@
  * PR 5 sets the scan, seal, and battery public goals to goal-published.
  * PR 6 sets the llms.txt and x402 body goals to goal-published. The x402 meta goal stays unpublished.
  * PR 7 sets the agentic-economy page and seed goals to goal-published. The meta stays limit-only. The seed receipt and demonstration goals stay unpublished.
+ * PR 8 sets the MCP install lede goal to goal-published. The MCP meta and the x402 meta stay limit-only.
  * seed-cannabis-not-another-compliance-tool stays limitPermanent false.
  */
 const PERM = {
@@ -914,6 +915,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'A signed record is not a physical inspection.',
     goalSentence: 'Our goal: an agent runs the published checks and is told a signed record is not a physical inspection.',
     task: GENUINE_PR,
