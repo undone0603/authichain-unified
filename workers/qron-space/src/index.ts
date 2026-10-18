@@ -2283,11 +2283,11 @@ export default {
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>QRON — Living QR codes that scan</title>
-<meta name="description" content="Generate a Living QR for packaging and labels, scannable from any camera. In development: Ed25519-signed codes.">
+<meta name="description" content="Generate a Living QR for packaging and labels, scannable from any camera. One stored scan is at /qron/r/qron%3Aurl%3A71cead6b. This host forwards the scan and does not verify the signature.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="QRON">
 <meta property="og:title" content="QRON — Living QR codes that scan">
-<meta property="og:description" content="Generate a Living QR for packaging and labels, scannable from any camera. In development: Ed25519-signed codes.">
+<meta property="og:description" content="Generate a Living QR for packaging and labels, scannable from any camera. One stored scan is at /qron/r/qron%3Aurl%3A71cead6b. This host forwards the scan and does not verify the signature.">
 <meta property="og:url" content="https://qron.space/">
 <meta property="og:image" content="https://qron.space/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -2297,7 +2297,7 @@ export default {
 <meta name="theme-color" content="#b45309">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 ${ESTATE_FONTS_LINK}
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"QRON","url":"https://qron.space","logo":"https://qron.space/favicon.svg","description":"Generate signed Living QR codes for packaging and labels.","sameAs":["https://authichain.com","https://twitter.com/authichain"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"QRON","url":"https://qron.space","logo":"https://qron.space/favicon.svg","description":"Generate Living QR codes for packaging and labels. One stored scan can be checked. This host forwards the scan and does not verify the signature.","sameAs":["https://authichain.com","https://twitter.com/authichain"]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"QRON","url":"https://qron.space","description":"Living QR generation for the AuthiChain estate."}</script>
 <style>
 ${estateCssVars("qron")}
@@ -2320,14 +2320,14 @@ ${estateNav(
 ${estateHero({
   eyebrow: "QRON · Living QR",
   title: "AI QR art that still scans.",
-  lede: "Turn a URL into a signed Living QR for packaging and labels. Generation is the first-dollar path — open /generate, no token theater required.",
+  lede: "Turn a URL into a Living QR for packaging and labels. Opening /generate does not store a signed scan. Generation is the first-dollar path — no token theater required.",
   actions: [
     { href: "/generate", label: "Generate Living QR", primary: true },
     { href: "/pricing", label: "View pricing", primary: false },
   ],
 })}
 ${estateTrust([
-  { value: "Ed25519", label: "Signed payload (in development)" },
+  { value: "Ed25519", label: "One stored scan is signed" },
   { value: "Scannable", label: "Any camera app" },
   { value: "Editable", label: "Redirects, no reprint" },
 ])}
@@ -2335,9 +2335,9 @@ ${estateFeatures(
   "What QRON is for",
   "Product claims from the existing QRON studio — art that remains a working code.",
   [
-    { title: "Living QR generation", body: "Create a signed QR that can change its destination later, so packaging does not need a reprint when a campaign URL changes." },
+    { title: "Living QR generation", body: "Create a QR that can change its destination later, so packaging does not need a reprint when a campaign URL changes. An anonymous generate is not a stored signed scan." },
     { title: "Scannable AI art", body: "Illusion-diffusion styles that remain readable by a standard phone camera. Art is the surface; the payload is the product." },
-    { title: "Estate verification (in development)", body: "Scan-to-verify is in development." },
+    { title: "Stored scan", body: "One stored code is at /qron/r/qron%3Aurl%3A71cead6b. This host forwards that scan to authichain.com and does not verify the signature. This page does not itself read that scan. A missing id is presentation_not_found. The scan is not a physical inspection." },
     { title: "Packaging and labels", body: "Export print-ready art for jars, cards, and cartons. The generate path is the same one production already proxies." },
   ],
   "features",
