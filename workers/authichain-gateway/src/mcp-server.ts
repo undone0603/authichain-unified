@@ -3,8 +3,10 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { z } from "zod";
 import type { Env } from "./index";
 import {
+  ANALYTICS_DESCRIPTION,
   REGISTER_PRODUCT_DESCRIPTION,
   TRUST_SCORE_DESCRIPTION,
+  VERIFY_CANNABIS_DESCRIPTION,
   VERIFY_PRODUCT_DESCRIPTION,
   registerProductBody,
   trustScoreBody,
@@ -158,7 +160,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: verify_cannabis_strain ───────────────────────────────────────────
   server.tool(
     "verify_cannabis_strain",
-    "Verify a cannabis strain's authenticity using StrainChain. Checks genetics, terpene profile, lab results, and METRC compliance.",
+    VERIFY_CANNABIS_DESCRIPTION,
     {
       strainName: z.string().describe("Name of the cannabis strain"),
       batchId: z
@@ -342,7 +344,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: get_verification_analytics ───────────────────────────────────────
   server.tool(
     "get_verification_analytics",
-    "Get verification analytics and usage statistics. Shows scan counts, authenticity rates, top products, and geographic distribution.",
+    ANALYTICS_DESCRIPTION,
     {
       period: z
         .enum(["today", "week", "month", "quarter"])

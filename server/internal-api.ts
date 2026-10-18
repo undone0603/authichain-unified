@@ -1,7 +1,8 @@
 import { timingSafeEqual } from "crypto";
 import { Router, type Request, type Response } from "express";
 import { ENV } from "./_core/env";
-import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-service";
+import { analyticsStub } from "./analytics-stub";
+import { cannabisCallerNumbers } from "./cannabis-verify";
 import { createProduct, getCertificateByNumber, getCertificateForProduct, getDb, getProductById, getProductByName, getProductBySerial, getWhiteLabelByApiKey } from "./db";
 import { callerSignalReport, passportVerdict, trustScoreReply } from "./passport-verdict";
 import { generateProductQRON } from "./qron-service";
@@ -114,27 +115,17 @@ export function createInternalRouter(): Router {
       const strain = strainName || strainId;
       if (!strain) return res.status(400).json({ error: "strainName or strainId required" });
 
-      const metadata = {
-        name: strain,
-        type: "HYBRID" as const,
-        genetics: ["Unknown"],
-        thcContent: thcPercent || 25,
-        cbdContent: cbdPercent || 1,
-        harvestDate: new Date().toISOString(),
-      };
-      const profile = { thc: thcPercent || 25, thca: (thcPercent || 25) * 1.12, cbd: cbdPercent || 1, cbda: (cbdPercent || 1) * 1.2, total: (thcPercent || 25) + (cbdPercent || 1) + 5 };
-
-      const rarity = calculateStrainRarity(metadata, profile);
-      const truthLayer = formatTruthLayerMetadata(metadata, profile);
       const product = await getProductByName(String(strain));
 
       res.json({
         ...passportVerdict(product, null),
         strainName: strain,
-        batchId: batchId || null,
-        dispensaryId: dispensaryId || null,
-        rarityScore: rarity,
-        truthLayer,
+        ...cannabisCallerNumbers({
+          thcPercent,
+          cbdPercent,
+          batchId,
+          dispensaryId,
+        }),
       });
     } catch (err: unknown) {
       console.error("[Internal API] cannabis/verify error:", getErrorMessage(err));
@@ -169,15 +160,7 @@ export function createInternalRouter(): Router {
       const db = await getDb();
       if (!db) return res.status(503).json({ error: "Database unavailable" });
 
-      // Return aggregated metrics
-      res.json({
-        period,
-        verifications: { total: 0, authentic: 0, counterfeit: 0 },
-        qrCodesGenerated: 0,
-        certificatesIssued: 0,
-        activeAgents: 5,
-        message: "Analytics data will be populated once usage metering is active",
-      });
+      res.json(analyticsStub(period));
     } catch (err: unknown) {
       console.error("[Internal API] analytics error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  ANALYTICS_DESCRIPTION,
   REGISTER_PRODUCT_DESCRIPTION,
   TRUST_SCORE_DESCRIPTION,
+  VERIFY_CANNABIS_DESCRIPTION,
   VERIFY_PRODUCT_DESCRIPTION,
   registerProductBody,
   trustScoreBody,
@@ -38,5 +40,12 @@ describe("gateway product tools", () => {
     const body = trustScoreBody({ productId: "prod-1", nfcMatch: true });
     expect(body).toEqual({ productId: "prod-1", nfcMatch: true });
     expect(body).not.toHaveProperty("qrDecodePass");
+  });
+
+  it("describes the cannabis lookup as a stored passport scan", () => {
+    expect(VERIFY_CANNABIS_DESCRIPTION).toMatch(/DigitalProductPassport/);
+    expect(VERIFY_CANNABIS_DESCRIPTION).not.toMatch(/METRC|BioTrack|DSCSA/i);
+    expect(ANALYTICS_DESCRIPTION).toMatch(/metering stub/);
+    expect(ANALYTICS_DESCRIPTION).not.toMatch(/authenticity/i);
   });
 });

@@ -1574,26 +1574,6 @@ app.post("/api/internal/cannabis/verify", async c => {
     if (!strain)
       return c.json({ error: "strainName or strainId required" }, 400);
 
-    const metadata = {
-      name: strain,
-      type: "HYBRID" as const,
-      genetics: ["Unknown"],
-      thcContent: thcPercent || 25,
-      cbdContent: cbdPercent || 1,
-      harvestDate: new Date().toISOString(),
-    };
-    const profile = {
-      thc: thcPercent || 25,
-      thca: (thcPercent || 25) * 1.12,
-      cbd: cbdPercent || 1,
-      cbda: (cbdPercent || 1) * 1.2,
-      total: (thcPercent || 25) + (cbdPercent || 1) + 5,
-    };
-
-    const { calculateStrainRarity, formatTruthLayerMetadata } =
-      await import("../server/cannabis-service");
-    const rarity = calculateStrainRarity(metadata, profile);
-    const truthLayer = formatTruthLayerMetadata(metadata, profile);
     const db = getHyperdriveDb(c.env);
     const [product] = await db
       .select()
@@ -1601,14 +1581,17 @@ app.post("/api/internal/cannabis/verify", async c => {
       .where(eq(products.name, strain))
       .limit(1);
     const { passportVerdict } = await import("../server/passport-verdict");
+    const { cannabisCallerNumbers } = await import("../server/cannabis-verify");
 
     return c.json({
       ...passportVerdict(product, null),
       strainName: strain,
-      batchId: batchId || null,
-      dispensaryId: dispensaryId || null,
-      rarityScore: rarity,
-      truthLayer,
+      ...cannabisCallerNumbers({
+        thcPercent,
+        cbdPercent,
+        batchId,
+        dispensaryId,
+      }),
     });
   } catch (err: any) {
     console.error("[Internal API] cannabis/verify error:", err.message);
@@ -1661,14 +1644,8 @@ app.get("/api/internal/analytics", async c => {
     // surfaces here as a 500 rather than silently returning stub data.
     getHyperdriveDb(c.env);
 
-    return c.json({
-      period,
-      verifications: { total: 0, authentic: 0, counterfeit: 0 },
-      qrCodesGenerated: 0,
-      certificatesIssued: 0,
-      activeAgents: 5,
-      message: "Analytics data will be populated once usage metering is active",
-    });
+    const { analyticsStub } = await import("../server/analytics-stub");
+    return c.json(analyticsStub(period));
   } catch (err: any) {
     console.error("[Internal API] analytics error:", err.message);
     return c.json({ error: "Internal server error" }, 500);

@@ -17,6 +17,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - Telemetry anchoring stays off. The StrainChain description does not claim a METRC or BioTrack connection. A pharma category is not a DSCSA profile.
 - A HubSpot anchor-proof label does not write a chain transaction. A visual image compare is not a passport scan. The StrainChain home states the $49 cultivar passport and does not claim a METRC or BioTrack connection.
 - The Next StrainChain home and the supply-chain page state that same $49 passport. A recorded supply-chain event does not scan a passport. The shadow brand catalog does not describe a METRC, BioTrack, or DSCSA connection.
+- A cannabis strain lookup scans the stored passport. Omitted cannabinoid numbers stay empty. The metering stub stays at zero and is not a passport scan.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 

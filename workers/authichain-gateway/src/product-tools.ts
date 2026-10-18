@@ -7,6 +7,12 @@ export const REGISTER_PRODUCT_DESCRIPTION =
 export const TRUST_SCORE_DESCRIPTION =
   "Record caller-supplied check flags. When a product id is included, verified follows the DigitalProductPassport stored on that product.";
 
+export const VERIFY_CANNABIS_DESCRIPTION =
+  "Look up a strain name and scan the DigitalProductPassport stored on that product. verified is true only when that scan is genuine. Cannabinoid numbers are recorded only when the caller sends them.";
+
+export const ANALYTICS_DESCRIPTION =
+  "Return the metering stub. Counts stay at zero until usage metering is active. These counts are not a passport scan.";
+
 export function trustScoreBody(input: {
   productId?: string;
   qrDecodePass?: boolean;
