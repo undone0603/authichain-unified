@@ -391,6 +391,39 @@ test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
   assert.match(examplesHtml, /empty body is the unpaid HTTP 402/);
   assert.equal(examplesHtml.includes('{"sealId":"demo"}'), false);
   assert.equal(examplesHtml.includes("freeCalls"), false);
+  assert.match(examplesHtml, /not a customer product/);
+  assert.match(examplesHtml, /not a physical inspection/);
+  assert.match(examplesHtml, /not a battery passport/);
+  assert.match(examplesHtml, /does not itself read the anchor transaction/);
+  assert.match(examplesHtml, /not a counterfeit finding/);
+  const exampleLinks = [...examplesHtml.matchAll(/href="([^"]+)"/g)].map(
+    (m) => new URL(m[1], "https://authichain.com")
+  );
+  assert.ok(!exampleLinks.some((u) => u.hostname === "polygonscan.com"));
+  assert.ok(
+    exampleLinks.some(
+      (u) =>
+        u.pathname === "/api/verify" &&
+        u.searchParams.get("id") === "polygon-anchor-1"
+    )
+  );
+  assert.ok(
+    exampleLinks.some(
+      (u) =>
+        u.pathname === "/verify" &&
+        u.searchParams.get("id") === "polygon-anchor-1"
+    )
+  );
+  assert.ok(
+    exampleLinks.some(
+      (u) => u.pathname === "/protocol/examples/polygon-anchor-1.record.json"
+    )
+  );
+  assert.ok(
+    exampleLinks.some(
+      (u) => u.pathname === "/protocol/examples/polygon-anchor-1.anchor.json"
+    )
+  );
 
   const architecture = await get("/docs/dpp-architecture");
   const architectureHtml = await architecture.text();
@@ -766,6 +799,19 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
     assert.match(text, /POST https:\/\/authichain\.com\/api\/x402/);
     assert.match(text, /18 February 2027/);
     assert.match(text, /battery-passport/);
+    assert.match(
+      text,
+      /GET https:\/\/authichain\.com\/api\/verify\?id=polygon-anchor-1/
+    );
+    assert.match(
+      text,
+      /https:\/\/authichain\.com\/protocol\/examples\/polygon-anchor-1\.record\.json/
+    );
+    assert.match(
+      text,
+      /https:\/\/authichain\.com\/protocol\/examples\/polygon-anchor-1\.anchor\.json/
+    );
+    assert.equal(text.includes("polygonscan.com"), false);
     assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
     assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
     assert.doesNotMatch(text, /GET \/api\/checkout/);
