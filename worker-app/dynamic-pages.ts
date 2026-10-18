@@ -413,13 +413,13 @@ function verifyPromptHtml(): string {
   return htmlDocument({
     title: "Verify a Product | AuthiChain",
     description:
-      "Look up an AuthiChain record. On-chain verification is in development.",
+      "Look up an AuthiChain certificate. A product certificate is not an on-chain check. The published demonstration record is linked on this page.",
     canonicalPath: "/verify",
     extraHead: '<link rel="manifest" href="/manifest.webmanifest">\n',
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      "<p>Enter a registry product ID to look up its record. On-chain verification is in development.</p>\n" +
+      "<p>Enter a registry product ID to look up its certificate. That certificate is not an on-chain check.</p>\n" +
       '<p>The open verifier checks the published demonstration record <a href="/verify?id=polygon-anchor-1">polygon-anchor-1</a>. The same check as JSON is <a href="/api/verify?id=polygon-anchor-1">/api/verify</a>.</p>\n' +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
