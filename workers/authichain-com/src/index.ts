@@ -3073,7 +3073,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <section class="section" id="solution" style="background:var(--bg2)">
     <div class="container">
       <div class="section-label">THE AUTHICHAIN SOLUTION</div>
-      <h2 class="section-title">One Integration. Every Standard.</h2>
+      <h2 class="section-title">Passport tooling, not a certification.</h2>
       <p class="section-sub">AuthiChain is building passport tooling. Our goal: the certificate NFT serves as the passport, with no retrofitting or middleware.</p>
 
       <div class="feature-row">
@@ -3089,8 +3089,8 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         </div>
         <div class="feature-item">
           <div class="feature-icon">📊</div>
-          <div class="feature-title">Audit-Ready Exports</div>
-          <div class="feature-desc">One-click compliance exports for EU CSRD, EUDR, FDA DSCSA, USMCA, and ISO 22005. Formatted for EU customs authorities and DPP registry submission.</div>
+          <div class="feature-title">Exports are not live</div>
+          <div class="feature-desc">One-click exports for EU CSRD, EUDR, FDA DSCSA, USMCA, and ISO 22005 are not live. This page does not establish DSCSA compliance.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">⛓️</div>
@@ -3113,15 +3113,15 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
 
   <section class="section" id="industries">
     <div class="container">
-      <div class="section-label">INDUSTRIES SERVED</div>
+      <div class="section-label">INDUSTRIES IN VIEW</div>
       <h2 class="section-title">Industries we're building for</h2>
       <div class="industries">
         <div class="industry-card"><div class="industry-name">⚡ EV Batteries</div><div class="industry-deadline">Mandatory ${escHtml(formatMilestoneDate(listMilestones().find((m) => m.id === 'batteries') ?? listMilestones()[0]))}</div></div>
         <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Mandatory 2028–29</div></div>
-        <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">FDA DSCSA + DPP</div></div>
+        <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">Not a DSCSA certification</div></div>
         <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">Mandatory 2027</div></div>
         <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Product authenticity + DPP</div><div class="industry-deadline">Goal: counterfeit detection for luxury goods</div></div>
-        <div class="industry-card"><div class="industry-name">🌿 Cannabis</div><div class="industry-deadline">State + EU compliance</div></div>
+        <div class="industry-card"><div class="industry-name">🌿 Cannabis</div><div class="industry-deadline">Not a METRC or BioTrack connection</div></div>
       </div>
     </div>
   </section>

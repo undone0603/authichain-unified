@@ -543,6 +543,20 @@ test("homepage and /dpp link to /docs and /x402", async () => {
   assert.match(dpp, /id="dpp-cancelled-banner"/);
 });
 
+test("/dpp does not claim DSCSA, METRC, or BioTrack compliance", async () => {
+  for (const path of ["/dpp", "/digital-product-passport"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.match(html, /This page does not establish DSCSA compliance/, path);
+    assert.match(html, /Not a DSCSA certification/, path);
+    assert.match(html, /Not a METRC or BioTrack connection/, path);
+    assert.doesNotMatch(html, /One-click compliance exports/, path);
+    assert.doesNotMatch(html, /FDA DSCSA \+ DPP/, path);
+    assert.doesNotMatch(html, /INDUSTRIES SERVED/, path);
+  }
+});
+
 test("/authentic-agentic-economy is a real positioning page", async () => {
   for (const path of [
     "/authentic-agentic-economy",
