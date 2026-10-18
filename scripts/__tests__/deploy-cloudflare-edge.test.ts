@@ -38,6 +38,8 @@ describe("manufacturer-status stays off the public workers.dev host", () => {
     expect(page).not.toContain("$49");
     expect(page).toContain("does not take payment");
     expect(page).toContain("latest 10,000 blocks");
+    expect(page).toContain("unavailable");
+    expect(page).not.toContain("item.tx.slice");
   });
 
   it("does not call the dead Polygon RPC or claim full history", () => {

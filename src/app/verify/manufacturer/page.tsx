@@ -19,7 +19,7 @@ type Response = {
   address: string;
   contract: string;
   chainId: number;
-  currentBlock: string;
+  currentBlock: string | null;
   history: HistoryItem[];
   polygonscan: {
     contract: string;
@@ -112,7 +112,7 @@ export default function ManufacturerStatus() {
           <div className="border rounded p-4 space-y-1 font-mono">
             <div>Address: {data.address}</div>
             <div>Contract: {data.contract}</div>
-            <div>Current block: {data.currentBlock}</div>
+            <div>Current block: {data.currentBlock ?? 'unavailable'}</div>
             <div>
               <a href={data.polygonscan.contract} target="_blank" rel="noreferrer" className="underline">
                 PolygonScan contract
@@ -148,7 +148,9 @@ export default function ManufacturerStatus() {
               <p className="text-neutral-500">No role or manufacturer events in the latest 10,000 blocks. That does not mean the address holds no role.</p>
             ) : data.history.length > 0 ? (
               <ul className="space-y-2">
-                {data.history.map((item, i) => (
+                {data.history.map((item, i) => {
+                  const tx = /^0x[a-fA-F0-9]{64}$/.test(item.tx) ? item.tx : '';
+                  return (
                   <li key={i} className="border rounded p-3 font-mono text-xs">
                     <div className={item.type === 'granted' || item.type === 'manufacturer_verified' ? 'text-green-700' : 'text-red-700'}>
                       {item.type === 'manufacturer_verified'
@@ -161,19 +163,22 @@ export default function ManufacturerStatus() {
                     {item.role ? <div>Role: {item.role}</div> : null}
                     {item.sender ? <div>Sender: {item.sender}</div> : null}
                     {item.timestamp ? <div>Contract timestamp: {item.timestamp}</div> : null}
+                    {tx ? (
                     <div>
                       Tx:{' '}
                       <a
-                        href={`https://polygonscan.com/tx/${item.tx}`}
+                        href={`https://polygonscan.com/tx/${tx}`}
                         target="_blank"
                         rel="noreferrer"
                         className="underline"
                       >
-                        {item.tx.slice(0, 10)}…{item.tx.slice(-8)}
+                        {tx.slice(0, 10)}…{tx.slice(-8)}
                       </a>
                     </div>
+                    ) : null}
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             ) : null}
           </div>

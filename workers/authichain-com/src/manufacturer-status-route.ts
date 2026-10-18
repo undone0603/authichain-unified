@@ -12,6 +12,7 @@ import {
   EVENT_TOPICS,
   HISTORY_DISCLAIMER,
   ROLE_IDS,
+  addressFromTopic,
   compareHistory,
   logFromBlock,
   roleName,
@@ -70,10 +71,7 @@ function asBool(value: unknown): boolean {
   return BigInt(value) === 1n;
 }
 
-function topicAddress(topic: string | undefined): string {
-  if (!topic || topic.length < 42) return "";
-  return "0x" + topic.slice(-40);
-}
+
 
 type RpcLog = {
   topics?: string[];
@@ -121,7 +119,7 @@ function mapLogs(logs: RpcLog[], type: "granted" | "revoked") {
     logIndex: logIndexOf(log),
     tx: log.transactionHash ?? "",
     role: roleName(log.topics?.[1] ?? ""),
-    sender: topicAddress(log.topics?.[3]),
+    sender: addressFromTopic(log.topics?.[3]),
     timestamp: null as string | null,
   }));
 }

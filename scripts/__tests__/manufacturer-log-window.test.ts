@@ -3,6 +3,7 @@ import {
   DEPLOYED_BLOCK,
   FREE_RPC_SPAN,
   ROLE_IDS,
+  addressFromTopic,
   compareHistory,
   logFromBlock,
   roleName,
@@ -26,6 +27,13 @@ describe("manufacturer log window", () => {
     expect(timestampWord("0x" + "0".repeat(62) + "0a")).toBe("10");
     expect(timestampWord("0x")).toBeNull();
     expect(timestampWord("0x" + "ab".repeat(40))).toBeNull();
+  });
+
+  it("reads a sender only from a 32-byte address topic", () => {
+    const account = "5db511706fb6317cd23a7655f67450c5ac6e6aa2";
+    expect(addressFromTopic("0x" + "0".repeat(24) + account)).toBe("0x" + account);
+    expect(addressFromTopic("0x" + "ab".repeat(20))).toBe("");
+    expect(addressFromTopic("0x1234")).toBe("");
   });
 
   it("names the four contract roles and hides any other topic", () => {
