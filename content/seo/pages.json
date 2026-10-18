@@ -6089,9 +6089,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "Blockchain QR Code For Electronics | AuthiChain",
-    "metaDescription": "Protect electronics and components against grey-market and counterfeit parts with a blockchain QR code that proves origin, warranty, and firmware integrity.",
+    "metaDescription": "A scan is not, by itself, proof the product is genuine. Product certification through verify is in development.",
     "h1": "Blockchain QR Code For Electronics",
-    "bodyHtml": "<p>Protect electronics and components against grey-market and counterfeit parts with a blockchain QR code that proves origin, warranty, and firmware integrity.</p><h2>Why AuthiChain</h2><ul><li>Component-level provenance for BOM integrity</li><li>Warranty and firmware attestation tied to each serial</li><li>EU DPP-ready material and repairability data</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can it cover components, not just finished goods?</h3><p>Yes — provenance can be issued at component, module, and finished-product level.</p><h3>Does it help with EU DPP?</h3><p>Electronics fall under upcoming EU DPP scope; AuthiChain exports the required data out of the box.</p>",
+    "bodyHtml": "<p>A scan is not, by itself, proof the product is genuine. Product certification through verify is in development.</p><h2>Why AuthiChain</h2><ul><li>Component-level checks are not delivered on this page</li><li>Warranty and firmware checks are not delivered on this page</li><li>EU DPP Readiness on this page is a $299 checkout, not a finished passport</li></ul><h2>How it works</h2><p>Issuing a customer product certificate is in development. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can it cover components, not just finished goods?</h3><p>Component, module, and finished-product certificates are not delivered on this page.</p><h3>Does it help with EU DPP?</h3><p>This page does not export a finished EU Digital Product Passport.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -6102,7 +6102,7 @@
             "@type": "Brand",
             "name": "AuthiChain"
           },
-          "description": "Protect electronics and components against grey-market and counterfeit parts with a blockchain QR code that proves origin, warranty, and firmware integrity.",
+          "description": "A scan is not, by itself, proof the product is genuine. Product certification through verify is in development.",
           "url": "https://authichain.com/p/blockchain-qr-code-for-electronics"
         },
         {
@@ -6130,7 +6130,7 @@
               "name": "Can it cover components, not just finished goods?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Yes — provenance can be issued at component, module, and finished-product level."
+                "text": "Component, module, and finished-product certificates are not delivered on this page."
               }
             },
             {
@@ -6138,7 +6138,7 @@
               "name": "Does it help with EU DPP?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Electronics fall under upcoming EU DPP scope; AuthiChain exports the required data out of the box."
+                "text": "This page does not export a finished EU Digital Product Passport."
               }
             }
           ]
@@ -6381,9 +6381,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "Blockchain QR Code For Cosmetics | AuthiChain",
-    "metaDescription": "Protect cosmetics and skincare brands from counterfeits with blockchain QR codes that prove batch authenticity and ingredient provenance. AuthiChain — EU DPP.",
+    "metaDescription": "A scan is not, by itself, proof the product is genuine. Product certification through verify is in development. AuthiChain — EU DPP.",
     "h1": "Blockchain QR Code For Cosmetics",
-    "bodyHtml": "<p>Protect cosmetics and skincare brands from counterfeits with blockchain QR codes that prove batch authenticity and ingredient provenance.</p><h2>Why AuthiChain</h2><ul><li>Batch-level authenticity and expiry verification</li><li>Consumer engagement through verified product stories</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can I prove ingredient claims?</h3><p>Yes — sourcing and certification data are anchored and verifiable by consumers.</p><h3>Does it help against fakes?</h3><p>A code that points to an altered or unknown record fails signature verification by scan.</p>",
+    "bodyHtml": "<p>A scan is not, by itself, proof the product is genuine. Product certification through verify is in development.</p><h2>Why AuthiChain</h2><ul><li>Batch and expiry checks are not delivered on this page</li><li>Product stories on this page are not a verification of the cosmetic</li></ul><h2>How it works</h2><p>Issuing a customer product certificate is in development. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does a scan prove an ingredient claim?</h3><p>Ingredient and certification claims are not verified on this page.</p><h3>Does it help against fakes?</h3><p>This page does not verify a cosmetic by scan.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -6394,7 +6394,7 @@
             "@type": "Brand",
             "name": "AuthiChain"
           },
-          "description": "Protect cosmetics and skincare brands from counterfeits with blockchain QR codes that prove batch authenticity and ingredient provenance.",
+          "description": "A scan is not, by itself, proof the product is genuine. Product certification through verify is in development.",
           "url": "https://authichain.com/p/blockchain-qr-code-for-cosmetics"
         },
         {
@@ -6419,10 +6419,10 @@
           "mainEntity": [
             {
               "@type": "Question",
-              "name": "Can I prove ingredient claims?",
+              "name": "Does a scan prove an ingredient claim?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Yes — sourcing and certification data are anchored and verifiable by consumers."
+                "text": "Ingredient and certification claims are not verified on this page."
               }
             },
             {
@@ -6430,7 +6430,7 @@
               "name": "Does it help against fakes?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "A code that points to an altered or unknown record fails signature verification by scan."
+                "text": "This page does not verify a cosmetic by scan."
               }
             }
           ]
@@ -6823,9 +6823,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "Product Authentication For Electronics | AuthiChain",
-    "metaDescription": "Authenticate consumer and industrial electronics with blockchain-verified origin and warranty. AuthiChain — EU DPP Readiness is $299 one-time.",
+    "metaDescription": "A scan is not, by itself, proof the product is genuine. Product certification through verify is in development. AuthiChain — EU DPP Readiness is $299 one-time.",
     "h1": "Product Authentication For Electronics",
-    "bodyHtml": "<p>Authenticate consumer and industrial electronics with blockchain-verified origin and warranty.</p><h2>Why AuthiChain</h2><ul><li>Genuine-vs-grey-market verification</li><li>Warranty and firmware attestation</li><li>EU DPP-ready product data</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can customers check warranty?</h3><p>Yes — warranty status is tied to the authenticated serial and visible on scan.</p>",
+    "bodyHtml": "<p>A scan is not, by itself, proof the product is genuine. Product certification through verify is in development.</p><h2>Why AuthiChain</h2><ul><li>Grey-market checks are not delivered on this page</li><li>Warranty and firmware checks are not delivered on this page</li><li>EU DPP Readiness on this page is a $299 checkout, not a finished passport</li></ul><h2>How it works</h2><p>Issuing a customer product certificate is in development. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can a scan show warranty?</h3><p>Warranty status on scan is not delivered on this page.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -6836,7 +6836,7 @@
             "@type": "Brand",
             "name": "AuthiChain"
           },
-          "description": "Authenticate consumer and industrial electronics with blockchain-verified origin and warranty.",
+          "description": "A scan is not, by itself, proof the product is genuine. Product certification through verify is in development.",
           "url": "https://authichain.com/p/product-authentication-for-electronics"
         },
         {
@@ -6861,10 +6861,10 @@
           "mainEntity": [
             {
               "@type": "Question",
-              "name": "Can customers check warranty?",
+              "name": "Can a scan show warranty?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Yes — warranty status is tied to the authenticated serial and visible on scan."
+                "text": "Warranty status on scan is not delivered on this page."
               }
             }
           ]
@@ -7122,9 +7122,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "Anti-Counterfeit Sneakers | AuthiChain",
-    "metaDescription": "Beat sneaker counterfeits with blockchain-verified authentication that proves a pair is genuine and tracks ownership across the resale market. AuthiChain —.",
+    "metaDescription": "A scan is not, by itself, proof the product is genuine. Product certification through verify is in development. AuthiChain —.",
     "h1": "Anti-Counterfeit Sneakers",
-    "bodyHtml": "<p>Beat sneaker counterfeits with blockchain-verified authentication that proves a pair is genuine and tracks ownership across the resale market.</p><h2>Why AuthiChain</h2><ul><li>Pair-level authenticity verification</li><li>Resale ownership transfer on-chain</li><li>Limited-edition drop protection</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does it support resale markets?</h3><p>Yes — provenance and ownership move with the pair through every sale.</p><h3>Can it protect drops?</h3><p>Limited editions can be authenticated and tracked from the first sale.</p>",
+    "bodyHtml": "<p>A scan is not, by itself, proof the product is genuine. Product certification through verify is in development.</p><h2>Why AuthiChain</h2><ul><li>Pair-level checks on this page are not proof a pair is genuine</li><li>Resale ownership transfer is not delivered on this page</li><li>Drop protection is not delivered on this page</li></ul><h2>How it works</h2><p>Issuing a customer product certificate is in development. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does it support resale markets?</h3><p>Ownership transfer across resale is not delivered on this page.</p><h3>Can it protect drops?</h3><p>Drop tracking is not delivered on this page.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -7135,7 +7135,7 @@
             "@type": "Brand",
             "name": "AuthiChain"
           },
-          "description": "Beat sneaker counterfeits with blockchain-verified authentication that proves a pair is genuine and tracks ownership across the resale market.",
+          "description": "A scan is not, by itself, proof the product is genuine. Product certification through verify is in development.",
           "url": "https://authichain.com/p/anti-counterfeit-sneakers"
         },
         {
@@ -7163,7 +7163,7 @@
               "name": "Does it support resale markets?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Yes — provenance and ownership move with the pair through every sale."
+                "text": "Ownership transfer across resale is not delivered on this page."
               }
             },
             {
@@ -7171,7 +7171,7 @@
               "name": "Can it protect drops?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Limited editions can be authenticated and tracked from the first sale."
+                "text": "Drop tracking is not delivered on this page."
               }
             }
           ]
@@ -7185,9 +7185,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "Anti-Counterfeit Cosmetics | AuthiChain",
-    "metaDescription": "Protect cosmetics brands and consumers from counterfeits with blockchain-verified batch authenticity and tamper-evident packaging. AuthiChain — EU DPP.",
+    "metaDescription": "A scan is not, by itself, proof the product is genuine. Product certification through verify is in development. AuthiChain — EU DPP.",
     "h1": "Anti-Counterfeit Cosmetics",
-    "bodyHtml": "<p>Protect cosmetics brands and consumers from counterfeits with blockchain-verified batch authenticity and tamper-evident packaging.</p><h2>Why AuthiChain</h2><ul><li>Batch authenticity and expiry verification</li><li>Tamper-evident, scan-to-verify packaging</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can consumers verify safety?</h3><p>Yes — batch, expiry, and safety data are verifiable by scanning the product.</p><h3>Does it stop counterfeit packaging?</h3><p>A code that points to an altered or unknown record fails signature verification by scan.</p>",
+    "bodyHtml": "<p>A scan is not, by itself, proof the product is genuine. Product certification through verify is in development.</p><h2>Why AuthiChain</h2><ul><li>Batch and expiry checks are not delivered on this page</li><li>Packaging art on this page is not a verification of the product</li></ul><h2>How it works</h2><p>Issuing a customer product certificate is in development. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does a scan show cosmetic safety data?</h3><p>Safety, batch, and expiry data are not delivered on this page.</p><h3>Does it stop counterfeit packaging?</h3><p>This page does not verify a cosmetic by scan.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -7198,7 +7198,7 @@
             "@type": "Brand",
             "name": "AuthiChain"
           },
-          "description": "Protect cosmetics brands and consumers from counterfeits with blockchain-verified batch authenticity and tamper-evident packaging.",
+          "description": "A scan is not, by itself, proof the product is genuine. Product certification through verify is in development.",
           "url": "https://authichain.com/p/anti-counterfeit-cosmetics"
         },
         {
@@ -7223,10 +7223,10 @@
           "mainEntity": [
             {
               "@type": "Question",
-              "name": "Can consumers verify safety?",
+              "name": "Does a scan show cosmetic safety data?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Yes — batch, expiry, and safety data are verifiable by scanning the product."
+                "text": "Safety, batch, and expiry data are not delivered on this page."
               }
             },
             {
@@ -7234,7 +7234,7 @@
               "name": "Does it stop counterfeit packaging?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "A code that points to an altered or unknown record fails signature verification by scan."
+                "text": "This page does not verify a cosmetic by scan."
               }
             }
           ]

@@ -191,6 +191,36 @@ describe("generated SEO money-path CTAs", () => {
     }
   });
 
+  it("does not say a scan proves an electronics, sneaker, or cosmetic product is genuine", () => {
+    for (const slug of [
+      "product-authentication-for-electronics",
+      "anti-counterfeit-sneakers",
+      "anti-counterfeit-cosmetics",
+      "blockchain-qr-code-for-electronics",
+      "blockchain-qr-code-for-cosmetics",
+    ]) {
+      const page = getSeoPageBySlug(slug);
+      expect(page).not.toBeNull();
+      const blob = `${page?.metaDescription}\n${page?.bodyHtml}\n${JSON.stringify(page?.jsonLd)}`;
+      expect(blob).toContain(
+        "A scan is not, by itself, proof the product is genuine."
+      );
+      expect(blob).toContain(
+        "Product certification through verify is in development."
+      );
+      expect(blob).toContain(
+        "Issuing a customer product certificate is in development."
+      );
+      expect(blob).not.toContain("blockchain-verified");
+      expect(blob).not.toContain("that proves");
+      expect(blob).not.toContain("Yes —");
+      expect(blob).not.toContain("on-chain");
+      expect(blob).not.toContain("polygon-anchor-1");
+      expect(blob).not.toContain("polygonscan.com");
+      expect(page!.metaDescription.length).toBeLessThanOrEqual(160);
+    }
+  });
+
   it("links Made in USA / origin-claim hubs to DPP checkout and the Made in America brief", () => {
     const musa = getSeoPageBySlug("ftc-made-in-usa-labeling-verification");
     const origin = getSeoPageBySlug(
