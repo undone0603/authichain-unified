@@ -327,7 +327,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
         <li>The agent settles through a compatible x402 client, then retries the same POST with <code>X-PAYMENT</code> (v1) or <code>PAYMENT-SIGNATURE</code> (v2).</li>
         <li>A valid settlement returns <code>200</code> JSON. A missing or invalid proof returns another <code>402</code>.</li>
       </ol>
-      <p>An empty body is always the 402 challenge. A seal UUID uses the health <code>freeCalls</code> allowance first. The free answer is not a paid receipt. Do not send private keys to AuthiChain. Settlement happens in the agent’s wallet.</p>
+      <p>An empty body is always the 402 challenge. A seal UUID uses the health <code>freeCalls</code> allowance first. Our goal: a reader can tell a free seal answer (free: true, verified: false, settlement: null) from a settled receipt. The free answer is not a paid receipt. Do not send private keys to AuthiChain. Settlement happens in the agent’s wallet.</p>
     </section>
   </div>
 

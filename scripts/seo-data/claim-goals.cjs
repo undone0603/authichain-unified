@@ -8,6 +8,7 @@
  * PR 3 sets the six /dpp public goals to goal-published.
  * PR 4 sets the five hub owners and two protected-seed owners to goal-published.
  * PR 5 sets the scan, seal, and battery public goals to goal-published.
+ * PR 6 sets the llms.txt and x402 body goals to goal-published. The x402 meta goal stays unpublished.
  * seed-cannabis-not-another-compliance-tool stays limitPermanent false.
  */
 const PERM = {
@@ -848,6 +849,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment.',
     goalSentence: 'Our goal: a reader can tell an unpaid empty body from a free seal answer and from a settled receipt.',
     task: X402_WORDS,
@@ -859,6 +861,7 @@ const claims = [
     handAuthored: true,
     regen: 'hand',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'The free answer is not a paid receipt.',
     goalSentence: 'Our goal: a reader can tell a free seal answer (free: true, verified: false, settlement: null) from a settled receipt.',
     task: X402_WORDS,

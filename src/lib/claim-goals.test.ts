@@ -511,6 +511,33 @@ describe("claim goal ledger", () => {
     expect(industry).not.toContain("METRC and BioTrack sync");
   });
 
+  it("publishes the free x402 goals in the body and not the meta", () => {
+    const llms = fs.readFileSync(
+      path.join(root, "workers/authichain-com/src/llms-txt.ts"),
+      "utf8"
+    );
+    const x402 = fs.readFileSync(
+      path.join(root, "workers/authichain-com/src/x402-docs-page.ts"),
+      "utf8"
+    );
+    const published = ["llms-empty-body-unpaid-402", "x402-free-answer-not-receipt"];
+    for (const id of published) {
+      const record = claims.find((entry: { id: string }) => entry.id === id);
+      expect(record.status, id).toBe("goal-published");
+      expect(record.publicGoal, id).toBe(true);
+      const text = id.startsWith("llms") ? llms : x402;
+      expect(text, id).toContain(record.goalSentence);
+      expect(text, id).toContain(record.currentSentence);
+    }
+    const meta = claims.find((entry: { id: string }) => entry.id === "x402-meta-free-not-receipt");
+    expect(meta.publicGoal).toBe(false);
+    expect(meta.status).toBe("open");
+    expect(x402).toContain(meta.currentSentence);
+    expect(x402).not.toContain(meta.goalSentence);
+    expect(llms).not.toContain("freeCalls");
+    expect(x402).not.toContain("in development");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
