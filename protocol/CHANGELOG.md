@@ -15,6 +15,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - `GET /api/v1/verify` reports the passport stored on the certification. An approved row is not signed as verified.
 - The industrial telemetry dashboard does not invent a verified scan, and that ingest does not anchor. A materials table is titled a product passport only when the stored passport scans genuine. A flag tally is not a passport.
 - Telemetry anchoring stays off. The StrainChain description does not claim a METRC or BioTrack connection. A pharma category is not a DSCSA profile.
+- A HubSpot anchor-proof label does not write a chain transaction. A visual image compare is not a passport scan. The StrainChain home states the $49 cultivar passport and does not claim a METRC or BioTrack connection.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 

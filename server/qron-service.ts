@@ -58,7 +58,7 @@ export interface QRONRecord {
 export interface FingerprintResult {
   pass: boolean;
   similarity: number;         // 0-1 cosine similarity
-  verdict: "authentic" | "suspicious" | "fake";
+  verdict: "not_a_passport";
   details: string;
 }
 
@@ -172,11 +172,28 @@ export async function generateProductQRON(params: QRONGenerateParams): Promise<Q
 // ─── Visual Fingerprint Verification ─────────────────────────────────────────
 
 /**
- * Verify a scanned QRON image against the registered template.
+ * Compare two images. The number is a similarity. It is not a passport scan.
+ */
+export function visualCompareResult(
+  similarity: number,
+  source: "phash" | "clip"
+): FingerprintResult {
+  const pct = (similarity * 100).toFixed(1);
+  const pass =
+    source === "phash"
+      ? similarity >= 0.9
+      : similarity >= FINGERPRINT_MATCH_THRESHOLD;
+  const details =
+    source === "phash"
+      ? `pHash similarity: ${pct}%. A visual compare is not a product passport scan.`
+      : `CLIP similarity: ${pct}% (threshold: ${FINGERPRINT_MATCH_THRESHOLD * 100}%). A visual compare is not a product passport scan.`;
+  return { pass, similarity, verdict: "not_a_passport", details };
+}
+
+/**
+ * Compare a scanned QRON image with the registered template.
  * Uses CLIP image embeddings for robustness to print/photo distortions.
- *
- * A perfect copy of the QR data on a plain label will fail this check
- * because the AI art pattern differs from the registered seed-generated image.
+ * The result is a similarity. It does not scan a product passport.
  */
 export async function verifyVisualFingerprint(params: {
   scannedImageUrl: string;
@@ -189,39 +206,15 @@ export async function verifyVisualFingerprint(params: {
     const hammingDist = hammingDistance(params.registeredFingerprintHash, scannedHash);
     const hashSim = 1 - hammingDist / 64; // normalize to 0-1
 
-    // If hashes are very close, skip CLIP (save API cost)
-    if (hashSim >= 0.90) {
-      return {
-        pass: true,
-        similarity: hashSim,
-        verdict: "authentic",
-        details: `pHash similarity: ${(hashSim * 100).toFixed(1)}% — pattern matches registered QRON`,
-      };
-    }
-    if (hashSim < 0.40) {
-      return {
-        pass: false,
-        similarity: hashSim,
-        verdict: "fake",
-        details: `pHash similarity: ${(hashSim * 100).toFixed(1)}% — visual pattern does not match registered QRON`,
-      };
+    // If hashes are very close, or clearly apart, skip CLIP.
+    if (hashSim >= 0.90 || hashSim < 0.40) {
+      return visualCompareResult(hashSim, "phash");
     }
   }
 
   // Deep path: CLIP embedding similarity via Fal.ai
   const sim = await getCLIPSimilarity(params.scannedImageUrl, params.registeredImageUrl);
-
-  const pass = sim >= FINGERPRINT_MATCH_THRESHOLD;
-  const verdict = sim >= FINGERPRINT_MATCH_THRESHOLD ? "authentic"
-    : sim >= 0.65 ? "suspicious"
-    : "fake";
-
-  return {
-    pass,
-    similarity: sim,
-    verdict,
-    details: `CLIP similarity: ${(sim * 100).toFixed(1)}% (threshold: ${FINGERPRINT_MATCH_THRESHOLD * 100}%)`,
-  };
+  return visualCompareResult(sim, "clip");
 }
 
 // ─── Composite Trust Score ────────────────────────────────────────────────────

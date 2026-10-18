@@ -67,7 +67,7 @@ const stack = [
 const ecosystem = [
   { name: "AuthiChain", href: "https://authichain.com", desc: "The truth layer. Blockchain-verified product authentication with AI-powered analysis.", live: true },
   { name: "QRON", href: "https://qron.space", desc: "AI-generated QR art studio. Create scannable, cryptographically signed visual codes.", live: true },
-  { name: "StrainChain", href: "https://strainchain.io", desc: "Cannabis provenance on the blockchain. Seed-to-sale tracking with METRC compliance.", live: true },
+  { name: "StrainChain", href: "https://strainchain.io", desc: "A published genetics passport for one cultivar, built from certificates you already have.", live: true },
 ];
 
 const pricing = [
