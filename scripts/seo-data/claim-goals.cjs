@@ -6,6 +6,7 @@
  * PR 2 sets the four homepage public goals to goal-published.
  * The history goal stays in the ledger.
  * PR 3 sets the six /dpp public goals to goal-published.
+ * PR 4 sets the five hub owners and two protected-seed owners to goal-published.
  * seed-cannabis-not-another-compliance-tool stays limitPermanent false.
  */
 const PERM = {
@@ -307,6 +308,7 @@ const claims = [
     files: ['content/seo/pages.json'],
     regen: 'protected-seed',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'This page does not connect to METRC',
     goalSentence: 'Our goal: a licensee compares a local record to a package identifier they already hold.',
     task: METRC_PR,
@@ -320,6 +322,7 @@ const claims = [
     files: ['content/seo/pages.json'],
     regen: 'protected-seed',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'This page does not connect to BioTrack',
     goalSentence: 'Our goal: a licensee compares a local record to a package identifier they already hold.',
     task: METRC_PR,
@@ -333,6 +336,7 @@ const claims = [
     files: ['content/seo/pages.json'],
     regen: 'protected-seed',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'Lab certificates are not linked here',
     goalSentence: 'Our goal: a reader can see a lab certificate linked from a unit record.',
     task: METRC_PR,
@@ -355,6 +359,7 @@ const claims = [
     files: ['content/seo/pages.json'],
     regen: 'protected-seed',
     publicGoal: true,
+    status: 'goal-published',
     statuteSentence: 'The U.S. Drug Supply Chain Security Act (DSCSA) requires interoperable, electronic, unit-level tracing of prescription drugs across the supply chain.',
     currentSentence: 'This page does not establish DSCSA compliance',
     goalSentence: "Our goal: a reader compares one unit's record to the statute's tracing duty.",
@@ -380,6 +385,7 @@ const claims = [
     slugs: ['cannabis-product-recall-traceability'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'This page does not connect to METRC or BioTrack.',
     goalSentence: 'Our goal: a scan names the units a licensee would isolate in a recall they already run.',
     task: METRC_PR,
@@ -694,6 +700,7 @@ const claims = [
     files: ['content/seo/pages.json'],
     regen: 'protected-seed',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'A scan is not, by itself, proof a cannabis product is genuine.',
     goalSentence: 'Our goal: a scan checks a signed record for that unit.',
     task: GENUINE_PR,
@@ -706,6 +713,7 @@ const claims = [
     files: ['content/seo/pages.json'],
     regen: 'protected-seed',
     publicGoal: true,
+    status: 'goal-published',
     currentSentence: 'A scan is not, by itself, proof a cannabis product is genuine.',
     goalSentence: 'Our goal: a scan checks a signed record for that unit.',
     task: GENUINE_PR,
@@ -748,12 +756,12 @@ const claims = [
     slugs: ['cannabis-blockchain-provenance'],
     files: ['content/seo/pages.json'],
     regen: 'protected-seed',
-    limitPermanent: false,
+    limitPermanent: true,
     currentSentence: 'This page is not another compliance tool.',
     goalSentence: 'Our goal: describe the page as a brand surface without calling it a compliance tool.',
     task: METRC_PR,
     acceptance: METRC_ACCEPT,
-    blockedBy: 'No METRC or BioTrack fixture is in the repo yet, so PR 18 fails closed until it is. The sentence is absent at 7c949bba, so PR 1 does not treat it as a published limit.',
+    blockedBy: 'No METRC or BioTrack fixture is in the repo yet, so PR 18 fails closed until it is.',
     group: 'cannabis-seeds',
   }),
   r('seed-cannabis-alongside-banned', {

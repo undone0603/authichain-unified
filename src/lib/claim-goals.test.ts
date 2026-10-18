@@ -262,11 +262,11 @@ describe("claim goal ledger", () => {
     const notAnother = claims.find(
       (record: { id: string }) => record.id === "seed-cannabis-not-another-compliance-tool"
     );
-    expect(notAnother.limitPermanent).toBe(false);
+    expect(notAnother.limitPermanent).toBe(true);
     const permanentSentences = claims
       .filter((record: { limitPermanent?: boolean }) => record.limitPermanent === true)
       .map((record: { currentSentence?: string }) => record.currentSentence || "");
-    expect(permanentSentences.join("\n")).not.toContain(
+    expect(permanentSentences.join("\n")).toContain(
       "This page is not another compliance tool."
     );
     for (const record of claims) {
@@ -370,6 +370,65 @@ describe("claim goal ledger", () => {
     expect(cannabis).not.toContain("Our goal: a pharmacist compares");
     expect(index).toContain('action: "/protocol/checkout/dpp"');
     expect(index).toContain("/checkout/dpp_readiness");
+  });
+
+  it("publishes one goal on each retitled hub and protected seed", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const owners = [
+      "hub-metrc-not-connection",
+      "hub-biotrack-not-connection",
+      "hub-coa-certs-not-linked",
+      "hub-dscsa-not-compliance",
+      "hub-recall-not-connection",
+      "seed-cannabis-blockchain-provenance",
+      "seed-dispensary-qr-provenance",
+    ];
+    for (const id of owners) {
+      const record = claims.find((entry: { id: string }) => entry.id === id);
+      expect(record.status, id).toBe("goal-published");
+      expect(record.publicGoal, id).toBe(true);
+      const page = pages.find((entry: { slug: string }) => entry.slug === record.slugs[0]);
+      const blob = `${page.title}\n${page.h1}\n${page.metaDescription}\n${page.bodyHtml}`;
+      expect(blob, id).toContain(record.goalSentence);
+      expect(blob, id).toContain(record.currentSentence);
+      expect(page.metaDescription, id).not.toContain("Our goal");
+      expect(page.title, id).not.toContain("Our goal");
+      expect(page.h1, id).not.toContain("Our goal");
+    }
+    const pageBy = (slug: string) =>
+      pages.find((entry: { slug: string }) => entry.slug === slug).bodyHtml as string;
+    expect(pageBy("metrc-compliance-blockchain")).not.toContain(
+      "Our goal: a scan checks a signed record for that unit."
+    );
+    expect(pageBy("cannabis-coa-verification-blockchain")).not.toContain(
+      "Our goal: a licensee compares a local record to a package identifier they already hold."
+    );
+    expect(pageBy("dscsa-compliance-blockchain-serialization")).not.toContain(
+      "Our goal: a scan checks a signed record for that unit."
+    );
+    const recall = pageBy("cannabis-product-recall-traceability");
+    expect(recall).toContain("Issue a unique identifier per unit and link it to a signed record.");
+    expect(recall).not.toContain("Our goal: a scan checks a signed record for that unit.");
+    expect(recall).not.toContain("Our goal: attach a lab retest to a unit record.");
+    expect(recall).not.toContain("Our goal: show a lab result on the recall page.");
+    const seed = pageBy("cannabis-blockchain-provenance");
+    expect(seed).toContain("This page is not another compliance tool.");
+    expect(seed).not.toContain("alongside your existing compliance");
+    expect(seed).not.toContain("Our goal: describe the page as a brand surface without calling it a compliance tool.");
+    expect(seed).not.toContain("Our goal: show a lab result on this page.");
+    expect(seed).not.toContain("Our goal: show provenance across jurisdictions.");
+    expect(pageBy("dispensary-qr-provenance-scanning")).not.toContain(
+      "Our goal: verify a lab certificate on this page."
+    );
+    const recallSource = fs.readFileSync(
+      path.join(root, "scripts/seo-data/regulatory.cjs"),
+      "utf8"
+    );
+    expect(recallSource).toContain(
+      "Our goal: a scan names the units a licensee would isolate in a recall they already run."
+    );
   });
 
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
