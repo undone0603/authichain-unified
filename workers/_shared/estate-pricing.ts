@@ -138,36 +138,58 @@ function sampleAuditLink(origin: PricingOrigin): string {
 const QRON_TITLED_PLANS = new Set(["starter", "creator", "theater_1", "theater_3"]);
 /** Plain-language Theater 1 button; the price matches the card. */
 const THEATER_1_BUTTON = "Subscribe — $499/mo";
+/** Display-only. Same sentence as / and /checkout/starter. plans.ts is unchanged. */
+const PACK_CREDIT =
+  "No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits.";
+
+function authichainCardPlan(
+  plan: Plan,
+  origin: Exclude<PricingOrigin, "strainchain">
+): Plan {
+  if (origin !== "authichain" || plan.id !== "starter") return plan;
+  return {
+    ...plan,
+    description: PACK_CREDIT,
+    features: plan.features.map(feature =>
+      /Launch|never expire/i.test(feature)
+        ? "Starting a monthly plan replaces unused pack credits."
+        : feature
+    ),
+  };
+}
 
 function cataloguePricingGrid(
   origin: Exclude<PricingOrigin, "strainchain">
 ): string {
-  const plans = listedPlans("qron");
+  const plans = listedPlans("qron").filter(
+    plan => !(origin === "authichain" && plan.id === "qron_launch")
+  );
   const cards = plans
     .map(plan => {
-      const cta = planCheckoutCta(plan, origin);
+      const shown = authichainCardPlan(plan, origin);
+      const cta = planCheckoutCta(shown, origin);
       // AuthiChain hero leads LOOP-03 first-dollar (Starter $29); QRON keeps
       // the catalogue `highlighted` flag (Creator).
       const featured = Boolean(
         origin === "authichain" ? plan.id === "starter" : plan.highlighted
       );
-      const suffix = plan.price_suffix ?? (plan.price === 0 ? "" : " one-time");
-      const amount = plan.price === 0 ? "Free" : `$${plan.price}`;
-      const features = plan.features.map(f => `<li>${esc(f)}</li>`).join("");
+      const suffix = shown.price_suffix ?? (shown.price === 0 ? "" : " one-time");
+      const amount = shown.price === 0 ? "Free" : `$${shown.price}`;
+      const features = shown.features.map(f => `<li>${esc(f)}</li>`).join("");
       // On the AuthiChain page, QRON products carry the QRON name Stripe shows.
       const title =
-        origin === "authichain" && QRON_TITLED_PLANS.has(plan.id)
-          ? `QRON ${plan.name}`
-          : plan.name;
+        origin === "authichain" && QRON_TITLED_PLANS.has(shown.id)
+          ? `QRON ${shown.name}`
+          : shown.name;
       const cardCta =
-        plan.id === "theater_1" ? { ...cta, label: THEATER_1_BUTTON } : cta;
+        shown.id === "theater_1" ? { ...cta, label: THEATER_1_BUTTON } : cta;
       return `<article class="price-card${featured ? " featured" : ""}">
   <h3>${esc(title)}</h3>
   <div class="price-amount">${esc(amount)}</div>
   <div class="price-period">${esc(suffix || "trial")}</div>
-  <p class="section-sub" style="margin-bottom:16px">${esc(plan.description)}</p>
+  <p class="section-sub" style="margin-bottom:16px">${esc(shown.description)}</p>
   <ul class="price-features">${features}</ul>
-  ${attributedCheckoutCta(plan, cardCta, featured)}${plan.id === "dpp_readiness" ? sampleAuditLink(origin) : ""}
+  ${attributedCheckoutCta(shown, cardCta, featured)}${shown.id === "dpp_readiness" ? sampleAuditLink(origin) : ""}
 </article>`;
     })
     .join("");
@@ -323,7 +345,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       brand: "authichain",
       title: "Pricing — AuthiChain",
       description:
-        "Live AuthiChain prices from the published plan catalogue. Start with QRON Launch at $19/mo or Starter Pack at $29.",
+        "Live AuthiChain prices from the published plan catalogue. Start with the Starter Pack at $29.",
       canonical: "https://authichain.com/pricing",
       themeColor: "#4F46E5",
       primary: {
@@ -339,30 +361,36 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       eyebrow: "Pricing",
       heroTitle: "Plans and prices",
       heroLede:
-        "Start with Launch at $19/mo or the Starter Pack at $29. The EU DPP Workspace is $299 when you need the battery passport path. Every paid plan below checks out on Stripe.",
+        "Start with the Starter Pack at $29. The EU DPP Workspace is $299 when you need the battery passport path. Every paid plan below checks out on Stripe.",
       navLabel: "Buy Starter",
       secondary: {
-        href: "https://authichain.com/checkout/qron_launch",
-        label: "Start Launch $19/mo",
+        href: "/generate",
+        label: "Generate a Living QR",
         primary: false,
       },
       plansNote:
-        "QRON Launch and generation packs first, then the EU DPP Workspace. E-bike and other LMT batteries need a passport from 18 February 2027.",
+        "Generation packs first, then the EU DPP Workspace. E-bike and other LMT batteries need a passport from 18 February 2027.",
       ctaTitle: "Buy the Starter Pack",
       ctaLede:
-        "$29, one time — 100 AI QR generations. Or Launch at $19/mo. Add a work email first so we can send your receipt.",
+        "$29, one time — 100 AI QR generations. Add a work email first so we can send your receipt.",
       footerTagline: "AuthiChain, QRON, GovChain and StrainChain.",
       footerNote: "",
       footerStart: [
         { href: "/checkout/starter", label: "Starter checkout" },
-        { href: "/checkout/qron_launch", label: "Launch $19/mo" },
+        { href: "/generate", label: "Generate a Living QR" },
         { href: "/pricing", label: "Pricing" },
       ],
       footerMore: [
         { href: "/x402", label: "x402 agent pay" },
         { href: "/contact", label: "Contact" },
       ],
-      offers,
+      offers: catalogueOffers
+        .filter(offer => offer.name !== "QRON Launch")
+        .map(offer =>
+          offer.name === "Starter Pack"
+            ? { ...offer, description: PACK_CREDIT }
+            : offer
+        ),
     };
   }
 
