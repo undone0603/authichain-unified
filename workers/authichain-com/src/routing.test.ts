@@ -1120,7 +1120,8 @@ test("hung APP_WORKER /verify lookup 404s with HTML instead of throwing (1101)",
     assert.equal(res.status, 404);
     assert.match(res.headers.get("content-type") ?? "", /text\/html/);
     const html = await res.text();
-    assert.match(html, /No record found/);
+    assert.match(html, /Lookup did not finish/);
+    assert.doesNotMatch(html, /No record found/);
     assert.match(html, /name="robots" content="noindex"/);
     assert.equal(/on-chain|blockchain|polygon/i.test(html), false);
   }
