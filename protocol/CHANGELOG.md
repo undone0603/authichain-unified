@@ -21,6 +21,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - A seal serial is stored only as `credentialSubject.sealSerialSha256`. `checkSealSerial` reports that commitment as `productBinding` and does not change `genuine`. A second presentation is the same passport. Evidence beside the passport is outside the signature. This check is not a verifier verdict, and the 28 conformance fixtures are unchanged.
 - A medical category is not a device profile. `mapDbToIdentity` stays `generic-provenance` and does not assign a UDI.
 - An inspection evidence row does not set `physical_binding`. A missing manufacturing date is not the harvest word Recent, and a missing rarity is not filled with 50. The asset story does not say the product is verified or on a Bitcoin truth layer.
+- Recorded passport scans are counted only when `PASSPORT_SCAN_METERING` is on, and only from `POST /api/internal/verify`. The counts are genuine, not genuine, and no passport. They are not a market counterfeit rate. While the flag is off, the metering stub stays the analytics response.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 
