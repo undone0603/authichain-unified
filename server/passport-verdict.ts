@@ -63,6 +63,11 @@ export function certificationScanDecision(
   };
 }
 
+/** A materials table is a passport heading only when the scan is genuine. */
+export function compositionHeading(verified: boolean): string {
+  return verified ? "Genuine product passport" : "Recorded composition";
+}
+
 export type CallerSignals = {
   source: "caller_supplied";
   qrDecodePass: boolean;

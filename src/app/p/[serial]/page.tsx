@@ -5,6 +5,10 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { CHECKOUT_EMAIL_FORM_CSS } from "@/lib/checkout-email";
+import {
+  certificationScanDecision,
+  compositionHeading,
+} from "../../../../server/passport-verdict";
 import { getSeoPageBySlug, listSeoSlugs } from "@/lib/seo-pages";
 import {
   ShieldAlert,
@@ -100,6 +104,9 @@ export default async function CertificationPage({ params }: PageProps) {
 
   const isRevoked = cert.status === "revoked";
   const isPending = cert.status === "pending";
+  const products = cert.products;
+  const product = Array.isArray(products) ? products[0] : products;
+  const scan = certificationScanDecision(product ?? null, cert);
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-gold selection:text-black">
@@ -118,6 +125,7 @@ export default async function CertificationPage({ params }: PageProps) {
               Pending Verification
             </div>
           )}
+          <p className="mt-6 text-sm text-zinc-400">{scan.message}</p>
         </div>
 
         {/* Seal / QR Display */}
@@ -270,7 +278,7 @@ export default async function CertificationPage({ params }: PageProps) {
                 <div className="flex items-center gap-3 mb-8">
                   <FileText className="w-5 h-5 text-gold" />
                   <h2 className="text-sm font-black uppercase tracking-widest text-white">
-                    Digital Product Passport
+                    {compositionHeading(scan.verified)}
                   </h2>
                 </div>
 

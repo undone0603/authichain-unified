@@ -72,7 +72,7 @@ export interface TrustScore {
     community:       { pass: boolean; verified: number; flagged: number; weight: number };
     openArt:         { pass: boolean; weight: number };
   };
-  verdict: "authentic" | "suspicious" | "unregistered";
+  verdict: "not_a_passport";
 }
 
 // ─── Seed generation ─────────────────────────────────────────────────────────
@@ -225,6 +225,7 @@ export async function verifyVisualFingerprint(params: {
 }
 
 // ─── Composite Trust Score ────────────────────────────────────────────────────
+// The number is a tally of the flags passed in. It is not a passport scan.
 
 export function computeTrustScore(params: {
   qrDecodePass: boolean;
@@ -251,9 +252,8 @@ export function computeTrustScore(params: {
   );
 
   const grade: TrustScore["grade"] = score >= 90 ? "A" : score >= 70 ? "B" : score >= 50 ? "C" : "F";
-  const verdict: TrustScore["verdict"] = score >= 70 ? "authentic" : score >= 40 ? "suspicious" : "unregistered";
 
-  return { score, grade, layers, verdict };
+  return { score, grade, layers, verdict: "not_a_passport" };
 }
 
 // ─── openART Registry ─────────────────────────────────────────────────────────

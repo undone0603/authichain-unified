@@ -5,6 +5,7 @@ import { signingBytes } from "../protocol/verifier.mjs";
 import {
   callerSignalReport,
   certificationScanDecision,
+  compositionHeading,
   passportVerdict,
   trustScoreReply,
 } from "./passport-verdict";
@@ -112,6 +113,13 @@ describe("certificationScanDecision", () => {
     expect(reply.verified).toBe(true);
     expect(reply.digitalIdentity).toBe("urn:authichain:item:example-1");
     expect(JSON.stringify(reply)).not.toMatch(/"signature"/);
+  });
+});
+
+describe("compositionHeading", () => {
+  it("names a materials table a passport only when the scan is genuine", () => {
+    expect(compositionHeading(false)).toBe("Recorded composition");
+    expect(compositionHeading(true)).toBe("Genuine product passport");
   });
 });
 
