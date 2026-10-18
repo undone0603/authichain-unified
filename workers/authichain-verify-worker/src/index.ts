@@ -6,7 +6,13 @@
 
 import { evaluate } from "./evaluate";
 import { libraryPageFor, lookupFixture } from "./fixtures";
-import { verifySubmitted, readAnchorOnChain } from "./protocol-verify.mjs";
+import {
+  verifySubmitted,
+  readAnchorOnChain,
+  anchoredAfterChainRead,
+  publicationSentence,
+  anchorUnreadSentence,
+} from "./protocol-verify.mjs";
 import { publishedRecord } from "./published-record.mjs";
 
 export interface Env {
@@ -207,13 +213,24 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
     const subject = isRecord(record?.credentialSubject) ? record.credentialSubject : null;
     const binding = protocol.productBinding;
     const sealPass = binding?.method === "seal_serial_sha256" && binding?.pass === true;
+    const anchored = anchoredAfterChainRead(protocol, chain);
+    const publication = publicationSentence(protocol, chain);
+    const sealMessage =
+      !publication &&
+      sealPass &&
+      protocol.genuine === true &&
+      chain.queried !== true &&
+      typeof protocol.productSentence === "string"
+        ? protocol.productSentence
+        : null;
+    const message = publication ?? sealMessage ?? anchorUnreadSentence(protocol, chain);
     console.log(JSON.stringify({
       evt: "verify",
       identifier,
       decision: protocol.decision,
       source,
       chain: chain.status,
-      anchored: protocol.anchored,
+      anchored,
       ...(typeof protocol.genuine === "boolean" ? { genuine: protocol.genuine } : {}),
       ...(binding ? { bindingMethod: binding.method, bindingPass: binding.pass } : {}),
     }));
@@ -233,7 +250,7 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
         ],
         depthUsed: "protocol",
         qron_id: identifier || null,
-        anchored: protocol.anchored,
+        anchored,
         anchorTransactionQueried: chain.queried,
         anchorOnChain: chain.onChain,
         anchorChainStatus: chain.status,
@@ -255,12 +272,7 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
             }
           : {}),
         ...(binding ? { productBinding: binding } : {}),
-        ...(sealPass &&
-        protocol.genuine === true &&
-        chain.queried !== true &&
-        typeof protocol.productSentence === "string"
-          ? { message: protocol.productSentence }
-          : {}),
+        ...(message ? { message } : {}),
         subject: subject
           ? { id: subject.id ?? null, name: subject.name ?? null }
           : null,

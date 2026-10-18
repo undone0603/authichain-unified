@@ -19,6 +19,30 @@ export function verifySubmitted(
 
 export function expectedRecordHash(record: unknown): string;
 
+export const HASH_PUBLICATION_SENTENCE: string;
+
+export const ANCHOR_UNREAD_SENTENCE: string;
+
+export function passportHashPublished(input?: {
+  genuine?: boolean;
+  chain?: { queried?: boolean; onChain?: boolean; status?: string } | null;
+}): boolean;
+
+export function anchoredAfterChainRead(
+  submitted: { genuine?: boolean; anchored?: boolean } | null | undefined,
+  chain?: { queried?: boolean; onChain?: boolean; status?: string } | null,
+): boolean;
+
+export function publicationSentence(
+  submitted: { genuine?: boolean } | null | undefined,
+  chain?: { queried?: boolean; onChain?: boolean; status?: string } | null,
+): string | null;
+
+export function anchorUnreadSentence(
+  submitted: { genuine?: boolean } | null | undefined,
+  chain?: { queried?: boolean } | null,
+): string | null;
+
 export function readAnchorOnChain(
   record: unknown,
   anchor: unknown,
