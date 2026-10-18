@@ -12,11 +12,9 @@ function digestOrOmit(bytes: string | undefined): string | null {
 export function mapDbToIdentity(product: any, cert: any): Identity {
   return {
     profile:
-      product.category === "pharma"
-        ? "pharma-dscsa"
-        : product.category === "medical"
-          ? "medical-device-udi"
-          : "generic-provenance",
+      product.category === "medical"
+        ? "medical-device-udi"
+        : "generic-provenance",
     gtin14: product.metadata?.gtin14,
     udiDi: product.metadata?.udiDi,
     udiPi: product.metadata?.udiPi,

@@ -1,5 +1,6 @@
 import { createHash, generateKeyPairSync } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import { mapDbToIdentity } from "../protocol/attestation/mapper";
 import { signPassport } from "../protocol/passport.mjs";
 import { signingBytes } from "../protocol/verifier.mjs";
 import {
@@ -113,6 +114,18 @@ describe("certificationScanDecision", () => {
     expect(reply.verified).toBe(true);
     expect(reply.digitalIdentity).toBe("urn:authichain:item:example-1");
     expect(JSON.stringify(reply)).not.toMatch(/"signature"/);
+  });
+});
+
+describe("mapDbToIdentity", () => {
+  it("does not label a pharma category as a DSCSA profile", () => {
+    const identity = mapDbToIdentity(
+      { category: "pharma", metadata: {} },
+      { serial_number: "lot-1" }
+    );
+    expect(identity.profile).toBe("generic-provenance");
+    expect(JSON.stringify(identity)).not.toMatch(/dscsa/i);
+    expect(identity.gtin14).toBeUndefined();
   });
 });
 

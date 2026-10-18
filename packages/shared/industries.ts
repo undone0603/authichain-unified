@@ -18,7 +18,7 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[] 
   cannabis: {
     keywords: ["cannabis", "marijuana", "thc", "cbd", "hemp", "strain", "dispensary", "metrc", "weed"],
     workflow: [
-      { name: "METRC Sync", action: "sync_metrc_manifest" },
+      { name: "Stored passport", action: "sync_metrc_manifest" },
       { name: "COA Verification", action: "verify_coa" },
       { name: "Seed-to-Sale Log", action: "log_provenance" },
     ],
@@ -34,7 +34,7 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[] 
   pharma: {
     keywords: ["pharma", "pharmaceutical", "drug", "medicine", "fda", "dscsa", "prescription"],
     workflow: [
-      { name: "DSCSA Compliance", action: "verify_dscsa" },
+      { name: "Published record", action: "verify_dscsa" },
       { name: "Lot Tracking", action: "track_lot" },
       { name: "Temperature Log", action: "log_cold_chain" },
     ],

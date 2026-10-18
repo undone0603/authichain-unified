@@ -14,6 +14,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - The public product verify API records registry and anchor evidence. `verified` stays false. This route does not scan a product passport. A confirmed anchor receipt is not that scan.
 - `GET /api/v1/verify` reports the passport stored on the certification. An approved row is not signed as verified.
 - The industrial telemetry dashboard does not invent a verified scan, and that ingest does not anchor. A materials table is titled a product passport only when the stored passport scans genuine. A flag tally is not a passport.
+- Telemetry anchoring stays off. The StrainChain description does not claim a METRC or BioTrack connection. A pharma category is not a DSCSA profile.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 
