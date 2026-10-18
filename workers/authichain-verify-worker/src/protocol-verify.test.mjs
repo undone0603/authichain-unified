@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, generateKeyPairSync } from "node:crypto";
-import { signPassport } from "../../../protocol/passport.mjs";
+import { productPassportMetadata, signPassport } from "../../../protocol/passport.mjs";
 import { signingBytes } from "../../../protocol/verifier.mjs";
 import {
   assessChainRead,
@@ -78,7 +78,7 @@ function signedPassport() {
 test("a stored product passport is genuine only when the scan passes", () => {
   const { record, anchor } = signedPassport();
   assert.equal(record.credentialSubject.gtin, undefined);
-  const stored = readStoredPassport({ passport: { record, anchor } });
+  const stored = readStoredPassport(productPassportMetadata({ passport: { record, anchor } }));
   assert.equal(stored.record, record);
   assert.equal(stored.anchor, anchor);
   const proved = verifySubmitted(stored.record, stored.anchor);

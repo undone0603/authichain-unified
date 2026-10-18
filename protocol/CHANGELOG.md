@@ -7,6 +7,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - `passport.mjs`: a product passport is a `DigitalProductPassport` whose digital identity is `credentialSubject.id`. `scanProvesGenuine` is true only when the reference verifier returns `verified`. A `gtin`, when present, must be 14 digits. This package does not assign one.
 - `authichain-verify` prints that passport scan and exits 0 only when it is genuine. Types for the passport export ship in `passport.d.ts`.
 - The verify worker and the product pages call the same scan when a stored passport is present. A registry status is not that proof.
+- `storePassport` places an already-signed passport on a metadata object. The digital identity stays `credentialSubject.id`. It does not assign a GTIN and it does not write a database.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 

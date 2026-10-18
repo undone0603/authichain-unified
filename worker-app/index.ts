@@ -1733,6 +1733,19 @@ app.post("/api/internal/products/register", async c => {
       return c.json({ error: "valid userId required" }, 400);
     }
 
+    const { productPassportMetadata, digitalIdentityOf } = await import(
+      "../protocol/passport.mjs"
+    );
+    let metadata: Record<string, unknown> | null = null;
+    if (body?.passport != null || body?.metadata?.passport != null) {
+      try {
+        metadata = productPassportMetadata(body);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "passport_invalid";
+        return c.json({ error: message }, 400);
+      }
+    }
+
     const db = getHyperdriveDb(c.env);
     const { createProduct } = await import("../server/content-db-helpers");
     const product = await createProduct(db, {
@@ -1743,9 +1756,15 @@ app.post("/api/internal/products/register", async c => {
       description,
       userId: parsedUserId,
       status: "active",
+      ...(metadata ? { metadata } : {}),
     });
+    const digitalIdentity = digitalIdentityOf(metadata);
 
-    return c.json({ success: true, product });
+    return c.json({
+      success: true,
+      product,
+      ...(digitalIdentity ? { digitalIdentity } : {}),
+    });
   } catch (err: any) {
     console.error("[Internal API] products/register error:", err.message);
     return c.json({ error: "Internal server error" }, 500);

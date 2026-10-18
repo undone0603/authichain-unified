@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { generateKeyPairSync, createHash } from 'node:crypto';
 import { signingBytes } from './verifier.mjs';
-import { assertDigitalIdentity, signPassport, scanProvesGenuine, verifyScan } from './passport.mjs';
+import {
+  assertDigitalIdentity,
+  signPassport,
+  scanProvesGenuine,
+  storePassport,
+  productPassportMetadata,
+  digitalIdentityOf,
+  verifyScan,
+} from './passport.mjs';
 
 const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 function base58Encode(buf) {
@@ -99,6 +107,32 @@ describe('scanProvesGenuine', () => {
     const result = scanProvesGenuine(record, anchorFor(record), { now: NOW });
     expect(result.genuine).toBe(false);
     expect(result.reasons).toContain('not_a_product_passport');
+  });
+
+  it('stores an already-signed passport under its digital identity', () => {
+    const keys = issuer();
+    const record = signPassport({ digitalIdentity: IDENTITY, ...keys, serial: 'SN-1' });
+    const anchor = anchorFor(record);
+    const metadata = storePassport({ story: 'kept' }, { record, anchor });
+    expect(metadata.story).toBe('kept');
+    expect(metadata.passport.record).toBe(record);
+    expect(metadata.passport.anchor).toBe(anchor);
+    expect(metadata.passport.record.credentialSubject.gtin).toBeUndefined();
+    expect(digitalIdentityOf(metadata)).toBe(IDENTITY);
+    const saved = productPassportMetadata({ metadata: { story: 'kept' }, passport: { record, anchor } });
+    expect(saved.passport.record.credentialSubject.id).toBe(IDENTITY);
+    expect(scanProvesGenuine(saved.passport.record, saved.passport.anchor, { now: NOW }).genuine).toBe(true);
+    const open = productPassportMetadata({ passport: record });
+    expect(open.passport.anchor).toBeUndefined();
+    expect(scanProvesGenuine(open.passport.record, null, { now: NOW }).genuine).toBe(false);
+    expect(productPassportMetadata({ name: 'Widget' })).toBeNull();
+    expect(() => storePassport({}, { type: ['VerifiableCredential', 'ProvenanceRecord'] })).toThrow(/not_a_product_passport/);
+    const badGtin = signPassport({ digitalIdentity: IDENTITY, ...keys });
+    badGtin.credentialSubject.gtin = '123';
+    expect(() => storePassport({}, badGtin)).toThrow(/gtin_not_14_digits/);
+    badGtin.credentialSubject.gtin = undefined;
+    badGtin.credentialSubject.id = 'not a uri';
+    expect(() => storePassport({}, badGtin)).toThrow(/digital_identity_not_uri/);
   });
 
   it('does not treat a short gtin as genuine and does not assign one', () => {

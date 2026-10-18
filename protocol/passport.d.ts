@@ -39,6 +39,16 @@ export function scanProvesGenuine(
   opts?: PassportVerifyOptions,
 ): PassportScan;
 
+export function storePassport(
+  metadata: unknown,
+  passport: unknown,
+  anchor?: unknown,
+): Record<string, unknown>;
+
+export function productPassportMetadata(input: unknown): Record<string, unknown> | null;
+
+export function digitalIdentityOf(metadata: unknown): string | null;
+
 export function verifyScan(
   record: unknown,
   anchor?: unknown | null,

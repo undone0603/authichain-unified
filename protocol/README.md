@@ -24,7 +24,7 @@ That reports `verified`: the signature checks and the anchor carries the record'
 
 - CLI: `authichain-verify <record.json> [anchor.json]`. A `DigitalProductPassport` prints `{ genuine, digitalIdentity, verdict, reasons }` and exits 0 only when that scan is genuine. Any other record prints `{ verdict, reasons, checks }` and exits 0 for `verified` / `valid-unanchored`, 1 for `invalid`. Exit 2 is a usage error. Set `ALLOW_TESTNET=1` to accept testnet anchors.
 - Library: `verifyRecord(record, anchor?, { allowTestnet?, now? })`, plus `canonicalize`, `signingBytes`, `sha256Hex`, `base58Decode` and `publicKeyFromDidKey`. Types ship in `verifier.d.ts`.
-- Product passport: `import { scanProvesGenuine } from 'authichain-verify/passport'`. It is true only when the record is a `DigitalProductPassport` and `verifyRecord` returns `verified`. It does not assign a GTIN. Types ship in `passport.d.ts`.
+- Product passport: `import { scanProvesGenuine, storePassport } from 'authichain-verify/passport'`. The scan is true only when the record is a `DigitalProductPassport` and `verifyRecord` returns `verified`. `storePassport` keeps that signed record on a metadata object. Neither call assigns a GTIN. Types ship in `passport.d.ts`.
 - Zero dependencies, Node ≥ 18, ESM only.
 - The package contains `verifier.mjs`, its types, `passport.mjs`, its types, the CLI, the example records, `SPEC.md`, this README, `CHANGELOG.md` and `LICENSE`. The conformance suite stays in the repo: `npm run conformance`.
 

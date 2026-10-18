@@ -14,6 +14,10 @@ import { verifyRecord, signingBytes } from './verifier.mjs';
 
 const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
+function plainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
 function base58Encode(buf) {
   let num = BigInt('0x' + (buf.toString('hex') || '0'));
   let out = '';
@@ -119,6 +123,53 @@ export function scanProvesGenuine(record, anchor = null, opts = {}) {
     verdict: result.verdict,
     reasons: result.reasons,
   };
+}
+
+/**
+ * Place an already-signed passport on a metadata object.
+ * `passport` is the record, or `{ record, anchor }`. This does not assign a
+ * GTIN and does not write a database. The digital identity stays
+ * `credentialSubject.id`.
+ */
+export function storePassport(metadata, passport, anchor) {
+  if (!plainObject(passport)) throw new Error('passport_required');
+  const types = Array.isArray(passport.type) ? passport.type : [];
+  let record = passport;
+  let resolved = anchor;
+  if (!types.includes('DigitalProductPassport')) {
+    if (types.length > 0) throw new Error('not_a_product_passport');
+    if (!plainObject(passport.record)) throw new Error('passport_record_required');
+    record = passport.record;
+    if (resolved === undefined) resolved = passport.anchor ?? null;
+  }
+  const recordTypes = Array.isArray(record.type) ? record.type : [];
+  if (!recordTypes.includes('VerifiableCredential') || !recordTypes.includes('DigitalProductPassport')) {
+    throw new Error('not_a_product_passport');
+  }
+  assertDigitalIdentity(record?.credentialSubject?.id);
+  const gtin = record?.credentialSubject?.gtin;
+  if (gtin !== undefined && gtin !== null && (typeof gtin !== 'string' || !/^\d{14}$/.test(gtin))) {
+    throw new Error('gtin_not_14_digits');
+  }
+  if (resolved != null && !plainObject(resolved)) throw new Error('passport_anchor_invalid');
+  const base = plainObject(metadata) ? { ...metadata } : {};
+  const stored = { record };
+  if (resolved) stored.anchor = resolved;
+  return { ...base, passport: stored };
+}
+
+/** Metadata for a product save when the caller already supplied a passport. */
+export function productPassportMetadata(input) {
+  if (!plainObject(input)) return null;
+  const bag = plainObject(input.metadata) ? input.metadata : {};
+  if (input.passport != null) return storePassport(bag, input.passport);
+  if (bag.passport != null) return storePassport(bag, bag.passport);
+  return null;
+}
+
+export function digitalIdentityOf(metadata) {
+  const id = metadata?.passport?.record?.credentialSubject?.id;
+  return typeof id === 'string' ? id : null;
 }
 
 /**

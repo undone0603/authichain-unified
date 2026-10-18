@@ -102,10 +102,12 @@ for that record and its anchor. `valid-unanchored` is not that proof. A
 passport scan.
 
 `credentialSubject.gtin`, when present, MUST be 14 digits. This specification
-does not assign a GTIN. Section 8 still applies: the verdict does not prove a
-copied identifier is attached to a different object. The proof the scan gives
-is that this digital identity's passport was signed by the issuer and the
-anchor hash matches.
+does not assign a GTIN. A holder may store that same record, with its anchor
+when one exists. Storing it does not assign a GTIN and does not by itself
+prove the passport genuine. Section 8 still applies: the verdict does not
+prove a copied identifier is attached to a different object. The proof the
+scan gives is that this digital identity's passport was signed by the issuer
+and the anchor hash matches.
 
 ## 4. Anchoring
 

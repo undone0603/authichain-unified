@@ -230,6 +230,19 @@ export function createInternalRouter(): Router {
         return res.status(400).json({ error: "valid userId required" });
       }
 
+      const { productPassportMetadata, digitalIdentityOf } = await import(
+        "../protocol/passport.mjs"
+      );
+      let metadata: Record<string, unknown> | null = null;
+      if (req.body?.passport != null || req.body?.metadata?.passport != null) {
+        try {
+          metadata = productPassportMetadata(req.body);
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : "passport_invalid";
+          return res.status(400).json({ error: message });
+        }
+      }
+
       const product = await createProduct({
         name,
         brand,
@@ -238,9 +251,15 @@ export function createInternalRouter(): Router {
         description,
         userId: parsedUserId,
         status: "active",
+        ...(metadata ? { metadata } : {}),
       });
+      const digitalIdentity = digitalIdentityOf(metadata);
 
-      res.json({ success: true, product });
+      res.json({
+        success: true,
+        product,
+        ...(digitalIdentity ? { digitalIdentity } : {}),
+      });
     } catch (err: unknown) {
       console.error("[Internal API] products/register error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
