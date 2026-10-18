@@ -13,6 +13,8 @@ import {
   scanPassport,
   productBindingSentence,
   appendPassportEvidence,
+  buildGeneticsPassportSubject,
+  GENETICS_PASSPORT_SENTENCE,
 } from './passport.mjs';
 
 const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -322,5 +324,67 @@ describe('seal serial', () => {
     expect(bag.passport.evidence).toHaveLength(32);
     expect(bag.passport.record.proof.proofValue).toBe(proof);
     expect(() => appendPassportEvidence(bag, { type: 'note', n: 32 })).toThrow(/evidence_cap/);
+  });
+});
+
+describe('genetics passport subject', () => {
+  const coaSha256 = 'sha256:' + createHash('sha256').update('pdf-bytes').digest('hex');
+
+  it('signs a cultivar id and a customer CoA hash without minting an identity', () => {
+    const built = buildGeneticsPassportSubject({
+      digitalIdentity: IDENTITY,
+      cultivarId: 'Blue Dream',
+      coaSha256,
+      labName: 'Example Lab',
+    });
+    expect(built.digitalIdentity).toBe(IDENTITY);
+    expect(built.digitalIdentity.includes('Blue')).toBe(false);
+    expect(built.subject.gtin).toBeUndefined();
+    const record = signPassport({ digitalIdentity: built.digitalIdentity, ...issuer(), subject: built.subject });
+    expect(record.credentialSubject.id).toBe(IDENTITY);
+    expect(record.credentialSubject.cultivarId).toBe('Blue Dream');
+    expect(record.credentialSubject.coaSha256).toBe(coaSha256);
+    expect(record.credentialSubject.labName).toBe('Example Lab');
+    expect(record.credentialSubject.thcPercent).toBeUndefined();
+    expect(record.credentialSubject.cbdPercent).toBeUndefined();
+    expect(GENETICS_PASSPORT_SENTENCE).toBe(
+      'A genetics passport can be signed from a cultivar id and the SHA-256 of a certificate of analysis the customer supplied. Issue #1553 is open. This is not a delivered service.',
+    );
+    const bare = buildGeneticsPassportSubject({
+      digitalIdentity: IDENTITY,
+      cultivarId: 'Cultivar',
+      coaSha256,
+    });
+    expect(bare.subject.labName).toBeUndefined();
+  });
+
+  it('rejects cannabinoid fields, a file, and a missing hash', () => {
+    expect(() => buildGeneticsPassportSubject({
+      digitalIdentity: IDENTITY,
+      cultivarId: 'Blue Dream',
+      coaSha256,
+      thcPercent: '18',
+    })).toThrow(/subject_field_rejected/);
+    expect(() => buildGeneticsPassportSubject({
+      digitalIdentity: IDENTITY,
+      cultivarId: 'Blue Dream',
+      coaSha256,
+      cbdPercent: '1',
+    })).toThrow(/subject_field_rejected/);
+    expect(() => buildGeneticsPassportSubject({
+      digitalIdentity: IDENTITY,
+      cultivarId: 'Blue Dream',
+      coaSha256: Buffer.from('pdf-bytes'),
+    })).toThrow(/subject_field_rejected/);
+    expect(() => buildGeneticsPassportSubject({
+      digitalIdentity: 'Blue Dream',
+      cultivarId: 'Blue Dream',
+      coaSha256,
+    })).toThrow(/digital_identity_not_uri/);
+    expect(() => buildGeneticsPassportSubject({
+      digitalIdentity: IDENTITY,
+      cultivarId: '   ',
+      coaSha256,
+    })).toThrow(/subject_field_rejected/);
   });
 });
