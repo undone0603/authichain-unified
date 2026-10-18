@@ -20,6 +20,7 @@ import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
 import { tryHandleManufacturerStatus } from "./manufacturer-status-route";
+import { tryHandleProtocolExample } from "./protocol-example-route";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import { isMcpInstallPath, renderMcpInstallPage } from "./mcp-install-page";
 import { docsRedirect, isDocsHub, isDocsPage } from "./docs-pages";
@@ -2859,7 +2860,7 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   <p>It is a demonstration, not a product.</p>
   <ul>
     <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
-    <li>Files: record and anchor JSON ship in the npm package (<code>examples/polygon-anchor-1.*.json</code>), to run with the verifier above</li>
+    <li>Files: <a href="/protocol/examples/polygon-anchor-1.record.json">record JSON</a> and <a href="/protocol/examples/polygon-anchor-1.anchor.json">anchor JSON</a>. The same files ship in the npm package (<code>examples/polygon-anchor-1.*.json</code>).</li>
     <li>For agents: MCP tool <code>verify_record</code> at <code>https://authichain.com/mcp</code>, free</li>
   </ul>
 
@@ -3619,6 +3620,10 @@ async function handleAuthichainCom(
     if (apiV1) return apiV1;
     const manufacturer = await tryHandleManufacturerStatus(request);
     if (manufacturer) return manufacturer;
+    // Before APP_PREFIXES. /protocol/* otherwise proxies, and the credential
+    // subject URL 404s on the edge router.
+    const publishedExample = tryHandleProtocolExample(request);
+    if (publishedExample) return publishedExample;
     if (p === '/api/sales') {
       return handleSalesInquiry(request, env);
     }

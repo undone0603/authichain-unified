@@ -70,5 +70,15 @@ describe("llms.txt", () => {
     expect(text).toContain("This host verifies the signature");
     expect(text).not.toContain("does not verify the signature");
     expect(text).not.toContain("freeCalls");
+    expect(text).toContain(
+      "Published demonstration record, not a customer product: GET https://authichain.com/api/verify?id=polygon-anchor-1"
+    );
+    expect(text).toContain(
+      "https://authichain.com/protocol/examples/polygon-anchor-1.record.json"
+    );
+    expect(text).toContain(
+      "https://authichain.com/protocol/examples/polygon-anchor-1.anchor.json"
+    );
+    expect(text).not.toContain("polygonscan.com");
   });
 });
