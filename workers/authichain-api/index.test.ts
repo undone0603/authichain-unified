@@ -216,7 +216,7 @@ describe("authichain-api verify", () => {
     expect(JSON.parse(b64urlDecode(h).toString("utf8")).kid).toBe(jwks.keys[0].kid);
   });
 
-  it("verifies only with a confirmed receipt to the anchor contract", async () => {
+  it("a confirmed receipt does not make the registry row a product passport", async () => {
     const w = loadWorker(
       {
         SUPABASE_ANON_KEY: "anon",
@@ -229,10 +229,13 @@ describe("authichain-api verify", () => {
       })
     );
     const body = await (await verify(w.request, "TM-TEST-0001")).json();
-    expect(body.verified).toBe(true);
-    expect(body.status).toBe("verified");
+    expect(body.verified).toBe(false);
+    expect(body.status).toBe("unverified");
     expect(body.trust_score).toBe(95);
+    expect(body.message).toMatch(/product passport/);
+    expect(body.message).not.toMatch(/Verified:/);
     expect(body.blockchain.anchor_status).toBe("confirmed");
+    expect(body.blockchain.verified_at).toBeNull();
     const log = w.calls.find((c) => c.url.includes("/rest/v1/verifications"));
     expect(log?.headers.get("Prefer")).toBe("return=minimal");
   });
