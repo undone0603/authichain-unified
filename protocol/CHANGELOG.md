@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-Documentation only. No version bump in this change; the release that ships it is a separate PR. Verifier logic, CLI, types and example records are unchanged.
+No version bump in this change; the release that ships it is a separate PR. `verifier.mjs` verdicts, the CLI, types, and example records are unchanged.
+
+- `passport.mjs`: a product passport is a `DigitalProductPassport` whose digital identity is `credentialSubject.id`. `scanProvesGenuine` is true only when the reference verifier returns `verified`.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 

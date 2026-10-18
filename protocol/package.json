@@ -35,7 +35,8 @@
       "import": "./verifier.mjs",
       "default": "./verifier.mjs"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./passport": "./passport.mjs"
   },
   "bin": {
     "authichain-verify": "./bin/authichain-verify.mjs"
@@ -43,6 +44,7 @@
   "files": [
     "verifier.mjs",
     "verifier.d.ts",
+    "passport.mjs",
     "bin/authichain-verify.mjs",
     "examples/record.json",
     "examples/polygon-anchor-1.record.json",

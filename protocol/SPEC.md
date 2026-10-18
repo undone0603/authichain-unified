@@ -90,6 +90,23 @@ per RFC 8785 (JCS), encoded UTF-8. Implementations MUST NOT sign a
 pretty-printed or key-reordered form; two verifiers must derive byte-identical
 input from the same record.
 
+### 3.3 Product passport and digital identity
+
+The product's digital identity is `credentialSubject.id`. It MUST be a URI.
+A product passport is a record whose `type` includes both `VerifiableCredential`
+and `DigitalProductPassport`.
+
+A scan proves that passport genuine only when the verifier returns `verified`
+for that record and its anchor. `valid-unanchored` is not that proof. A
+`ProvenanceRecord` that is not a `DigitalProductPassport` is not a product
+passport scan.
+
+`credentialSubject.gtin`, when present, MUST be 14 digits. This specification
+does not assign a GTIN. Section 8 still applies: the verdict does not prove a
+copied identifier is attached to a different object. The proof the scan gives
+is that this digital identity's passport was signed by the issuer and the
+anchor hash matches.
+
 ## 4. Anchoring
 
 An anchor commits `SHA-256(canonical record bytes)` to a public ledger.
