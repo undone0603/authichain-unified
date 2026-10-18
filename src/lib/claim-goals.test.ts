@@ -678,6 +678,60 @@ describe("claim goal ledger", () => {
     expect(page).not.toContain("protocol-example-route");
   });
 
+  it("publishes the DSCSA and EPCIS goals beside their limits", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content", "seo", "pages.json"), "utf8")
+    );
+    const owners = [
+      "dscsa-unit-level-partner-verify",
+      "dscsa-saleable-returns-offline-check",
+      "dscsa-epcis-dispenser-genuine",
+      "epcis-2-0-export-bullet",
+    ];
+    for (const id of owners) {
+      const record = claims.find((entry: { id: string }) => entry.id === id);
+      expect(record.status, id).toBe("goal-published");
+      expect(record.publicGoal, id).toBe(true);
+      expect(record.emit, id).toBe("goal");
+      expect(record.class, id).toBe("copy-only");
+      expect(record.limitPermanent, id).toBe(false);
+      const slug = record.slugs[0];
+      const page = pages.find((entry: { slug: string }) => entry.slug === slug);
+      const text = JSON.stringify(page);
+      expect(text, id).toContain(record.goalSentence);
+      expect(text, id).toContain(record.limitSentence);
+      expect(text, id).toContain(record.statuteSentence);
+      expect(text, id).not.toContain(record.currentSentence);
+      expect(text, id).toContain("That issuance is not live on this page.");
+      expect(text, id).not.toContain("Issuing a customer product certificate is in development.");
+      expect(text, id).not.toContain("Issue a unique identifier per unit and link it to a signed record");
+      expect(page.title, id).not.toMatch(/Our goal/i);
+      expect(page.h1, id).not.toMatch(/Our goal/i);
+      expect(page.metaDescription, id).not.toMatch(/Our goal/i);
+      expect(page.metaDescription.length, id).toBeLessThanOrEqual(160);
+      expect(page.bodyHtml, id).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+      expect(page.bodyHtml, id).not.toContain("/protocol/checkout");
+      const how = page.bodyHtml.indexOf("<h2>How it works</h2>");
+      const cta = page.bodyHtml.indexOf("<h2>Get started</h2>");
+      const faq = page.bodyHtml.indexOf("<h2>FAQ</h2>");
+      expect(cta, id).toBeGreaterThan(how);
+      expect(faq, id).toBeGreaterThan(cta);
+      const howChunk = page.bodyHtml.slice(how, cta);
+      expect(howChunk, id).toContain("That issuance is not live on this page.");
+      expect(howChunk, id).not.toContain("Our goal");
+      expect(page.bodyHtml.match(/Our goal/g), id).toHaveLength(1);
+      for (const sibling of recordsForSlug(claims, slug)) {
+        if (sibling.publicGoal === true) continue;
+        expect(sibling.publicGoal, sibling.id).toBe(false);
+        if (sibling.goalSentence) expect(text, sibling.id).not.toContain(sibling.goalSentence);
+        if (sibling.currentSentence) expect(text, sibling.id).not.toContain(sibling.currentSentence);
+      }
+    }
+    const howItWorks = claims.find((entry: { id: string }) => entry.id === "generated-how-it-works");
+    expect(howItWorks.publicGoal).toBe(false);
+    expect(howItWorks.status).toBe("open");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");

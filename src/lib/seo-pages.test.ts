@@ -628,6 +628,38 @@ describe("generated SEO money-path CTAs", () => {
     expect(p?.metaDescription.endsWith("by the end of 2027.")).toBe(true);
   });
 
+  it("keeps heading order when DSCSA and EPCIS pages drop the default how-it-works sentence", () => {
+    for (const slug of [
+      "dscsa-unit-level-traceability-2026",
+      "dscsa-saleable-returns-verification-requirement",
+      "dscsa-epcis-interoperable-data-exchange-requirement",
+      "epcis-2-0-blockchain-anchoring",
+    ]) {
+      const page = getSeoPageBySlug(slug);
+      expect(page, slug).not.toBeNull();
+      const how = page!.bodyHtml.indexOf("<h2>How it works</h2>");
+      const cta = page!.bodyHtml.indexOf("<h2>Get started</h2>");
+      const faq = page!.bodyHtml.indexOf("<h2>FAQ</h2>");
+      expect(how, slug).toBeGreaterThan(-1);
+      expect(cta, slug).toBeGreaterThan(how);
+      expect(faq, slug).toBeGreaterThan(cta);
+      const howChunk = page!.bodyHtml.slice(how, cta);
+      expect(howChunk, slug).toBe(
+        "<h2>How it works</h2><p>That issuance is not live on this page. EU DPP Readiness is $299 one-time.</p>"
+      );
+      expect(page!.bodyHtml, slug).not.toContain(
+        "Issuing a customer product certificate is in development."
+      );
+      expect(page!.bodyHtml, slug).not.toContain(
+        "Issue a unique identifier per unit and link it to a signed record"
+      );
+      expect(page!.title, slug).not.toContain("Our goal");
+      expect(page!.h1, slug).not.toContain("Our goal");
+      expect(page!.metaDescription, slug).not.toContain("Our goal");
+      expect(page!.metaDescription.length, slug).toBeLessThanOrEqual(160);
+    }
+  });
+
   it("RES-103: no page claims records are already issuing or offers proof of origin", () => {
     for (const p of listSeoPages()) {
       const text = JSON.stringify(p);

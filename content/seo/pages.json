@@ -1080,9 +1080,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "DSCSA Unit Level Traceability 2026 | AuthiChain",
-    "metaDescription": "DSCSA enforcement moves to unit-level, electronic interoperable data exchange in November 2026 — replacing PDFs and manual reconciliation with records a.",
+    "metaDescription": "DSCSA enforcement moves to unit-level, electronic interoperable data exchange in November 2026.",
     "h1": "DSCSA Unit Level Traceability 2026",
-    "bodyHtml": "<p>DSCSA enforcement moves to unit-level, electronic interoperable data exchange in November 2026 — replacing PDFs and manual reconciliation with records a trading partner can verify without calling you.</p><h2>Why AuthiChain</h2><ul><li>EPCIS-compatible event data at the unit level, not just the case or lot</li><li>Every required field check runs before a record is accepted — partial or malformed data is rejected, not downgraded to a warning</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>What changes in November 2026?</h3><p>Trading partners must exchange product tracing data electronically at the unit level using interoperable systems; manual and PDF-based processes no longer satisfy the requirement.</p><h3>Does this replace our EPCIS system?</h3><p>No — it signs and anchors the records your EPCIS system already produces so a partner can verify them independently.</p>",
+    "bodyHtml": "<p>DSCSA enforcement moves to unit-level, electronic interoperable data exchange in November 2026. Our goal: a trading partner can check one unit's record without calling the issuer. That check is not live on this page. This page does not establish DSCSA compliance.</p><h2>Why AuthiChain</h2><ul><li>That export is not live.</li><li>That check is not live on this page.</li></ul><h2>How it works</h2><p>That issuance is not live on this page. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>What changes in November 2026?</h3><p>Trading partners must exchange product tracing data electronically at the unit level using interoperable systems; manual and PDF-based processes no longer satisfy the requirement.</p><h3>Does this replace our EPCIS system?</h3><p>That signing path is not live on this page.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -1094,7 +1094,7 @@
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "DSCSA enforcement moves to unit-level, electronic interoperable data exchange in November 2026 — replacing PDFs and manual reconciliation with records a trading partner can verify without calling you.",
+          "description": "DSCSA enforcement moves to unit-level, electronic interoperable data exchange in November 2026. Our goal: a trading partner can check one unit's record without calling the issuer. That check is not live on this page. This page does not establish DSCSA compliance.",
           "url": "https://authichain.com/p/dscsa-unit-level-traceability-2026"
         },
         {
@@ -1130,7 +1130,7 @@
               "name": "Does this replace our EPCIS system?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "No — it signs and anchors the records your EPCIS system already produces so a partner can verify them independently."
+                "text": "That signing path is not live on this page."
               }
             }
           ]
@@ -1904,9 +1904,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "DSCSA Saleable Returns Verification Requirement | AuthiChain",
-    "metaDescription": "DSCSA’s saleable-returns requirement took effect 27 August 2025 — a distributor must verify a returned drug package against its transaction history before it.",
+    "metaDescription": "DSCSA saleable-returns requirement took effect 27 August 2025.",
     "h1": "DSCSA Saleable Returns Verification Requirement",
-    "bodyHtml": "<p>DSCSA’s saleable-returns requirement took effect 27 August 2025 — a distributor must verify a returned drug package against its transaction history before it goes back into sellable inventory, not just confirm a serial number is present — and the FDA has already issued warning letters over exactly that gap.</p><h2>Why AuthiChain</h2><ul><li>Verification happens at receiving, checking the returned package’s history against what the distributor originally shipped — a signed record a scanner checks offline does that without a portal lookup</li><li>A verified record confirms the package matches what was issued; it does not replace the physical inspection a saleable-returns program still requires</li><li>The same unit-level serialization this protocol issues for DSCSA traceability is what a returns-verification check runs against — no separate data model for returns</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>When did the saleable-returns requirement take effect?</h3><p>27 August 2025. Verification at the point a returned package is determined saleable is an active FDA enforcement focus, with warning letters issued over failures to verify transaction history before accepting returns.</p><h3>Does electronic verification replace physical inspection of returns?</h3><p>No — electronic verification confirms the package’s data matches what was shipped. Physical inspection for damage, tampering, or expiry stays a separate step.</p>",
+    "bodyHtml": "<p>DSCSA’s saleable-returns requirement took effect 27 August 2025 — a distributor must verify a returned drug package against its transaction history before it goes back into sellable inventory, not just confirm a serial number is present — and the FDA has already issued warning letters over exactly that gap. Our goal: a scanner checks a signed record offline, with no portal lookup. That check is not the saleable-returns history check, and it is not live on this page. This page does not establish DSCSA compliance.</p><h2>Why AuthiChain</h2><ul><li>Verification happens at receiving, checking the returned package’s history against what the distributor originally shipped.</li><li>It does not replace the physical inspection a saleable-returns program still requires.</li><li>This protocol does not issue DSCSA unit-level serialization. That issuance is not live.</li></ul><h2>How it works</h2><p>That issuance is not live on this page. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>When did the saleable-returns requirement take effect?</h3><p>27 August 2025. Verification at the point a returned package is determined saleable is an active FDA enforcement focus, with warning letters issued over failures to verify transaction history before accepting returns.</p><h3>Does electronic verification replace physical inspection of returns?</h3><p>Electronic verification does not, on this page, confirm the package matches what was shipped. Physical inspection for damage, tampering, or expiry stays a separate step.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -1918,7 +1918,7 @@
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "DSCSA’s saleable-returns requirement took effect 27 August 2025 — a distributor must verify a returned drug package against its transaction history before it goes back into sellable inventory, not just confirm a serial number is present — and the FDA has already issued warning letters over exactly that gap.",
+          "description": "DSCSA’s saleable-returns requirement took effect 27 August 2025 — a distributor must verify a returned drug package against its transaction history before it goes back into sellable inventory, not just confirm a serial number is present — and the FDA has already issued warning letters over exactly that gap. Our goal: a scanner checks a signed record offline, with no portal lookup. That check is not the saleable-returns history check, and it is not live on this page. This page does not establish DSCSA compliance.",
           "url": "https://authichain.com/p/dscsa-saleable-returns-verification-requirement"
         },
         {
@@ -1954,7 +1954,7 @@
               "name": "Does electronic verification replace physical inspection of returns?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "No — electronic verification confirms the package’s data matches what was shipped. Physical inspection for damage, tampering, or expiry stays a separate step."
+                "text": "Electronic verification does not, on this page, confirm the package matches what was shipped. Physical inspection for damage, tampering, or expiry stays a separate step."
               }
             }
           ]
@@ -5396,9 +5396,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "DSCSA EPCIS Interoperable Data Exchange | AuthiChain",
-    "metaDescription": "DSCSA requires wholesale distributors and manufacturers to exchange serialized Transaction Information and Transaction Statements as EPCIS 2.0 events, not.",
+    "metaDescription": "DSCSA requires serialized Transaction Information and Transaction Statements as EPCIS 2.0 events, not PDFs or spreadsheets.",
     "h1": "DSCSA EPCIS Interoperable Data Exchange Requirement",
-    "bodyHtml": "<p>DSCSA requires wholesale distributors and manufacturers to exchange serialized Transaction Information and Transaction Statements as EPCIS 2.0 events, not PDFs or spreadsheets, and trading partners are increasingly quarantining shipments that arrive without a valid file — a data-interoperability problem the compliance deadline alone does not solve.</p><h2>Why AuthiChain</h2><ul><li>A verifier checks the record offline; a dispenser deciding whether to quarantine a shipment does not need an AuthiChain account to confirm what they received is genuine</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does DSCSA require blockchain?</h3><p>No. DSCSA requires electronic, interoperable data exchange between trading partners using the EPCIS standard. Anchoring the event hash on-chain is an optional tamper-evidence layer on top of a compliant EPCIS file, not a substitute for one.</p><h3>What happens if a dispenser can’t verify a shipment’s data?</h3><p>DSCSA lets a dispenser quarantine and investigate suspect product rather than accept it. A signed, independently checkable record narrows that investigation instead of requiring a phone call to the shipper.</p>",
+    "bodyHtml": "<p>DSCSA requires wholesale distributors and manufacturers to exchange serialized Transaction Information and Transaction Statements as EPCIS 2.0 events, not PDFs or spreadsheets, and trading partners are increasingly quarantining shipments that arrive without a valid file — a data-interoperability problem the compliance deadline alone does not solve. Our goal: a dispenser checks a signed record offline, with no AuthiChain account. That check does not confirm the shipment is genuine. Offline signature check is not a DSCSA exchange, and DSCSA exchange is not live on this page.</p><h2>Why AuthiChain</h2><ul><li>That check does not confirm the shipment is genuine. Offline signature check is not a DSCSA exchange, and DSCSA exchange is not live on this page.</li></ul><h2>How it works</h2><p>That issuance is not live on this page. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does DSCSA require blockchain?</h3><p>No. DSCSA requires electronic, interoperable data exchange between trading partners using the EPCIS standard. That anchor is not live on this page and is not a substitute for the file.</p><h3>What happens if a dispenser can’t verify a shipment’s data?</h3><p>DSCSA lets a dispenser quarantine and investigate suspect product rather than accept it. That path is not live on this page.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -5410,7 +5410,7 @@
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "DSCSA requires wholesale distributors and manufacturers to exchange serialized Transaction Information and Transaction Statements as EPCIS 2.0 events, not PDFs or spreadsheets, and trading partners are increasingly quarantining shipments that arrive without a valid file — a data-interoperability problem the compliance deadline alone does not solve.",
+          "description": "DSCSA requires wholesale distributors and manufacturers to exchange serialized Transaction Information and Transaction Statements as EPCIS 2.0 events, not PDFs or spreadsheets, and trading partners are increasingly quarantining shipments that arrive without a valid file — a data-interoperability problem the compliance deadline alone does not solve. Our goal: a dispenser checks a signed record offline, with no AuthiChain account. That check does not confirm the shipment is genuine. Offline signature check is not a DSCSA exchange, and DSCSA exchange is not live on this page.",
           "url": "https://authichain.com/p/dscsa-epcis-interoperable-data-exchange-requirement"
         },
         {
@@ -5438,7 +5438,7 @@
               "name": "Does DSCSA require blockchain?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "No. DSCSA requires electronic, interoperable data exchange between trading partners using the EPCIS standard. Anchoring the event hash on-chain is an optional tamper-evidence layer on top of a compliant EPCIS file, not a substitute for one."
+                "text": "No. DSCSA requires electronic, interoperable data exchange between trading partners using the EPCIS standard. That anchor is not live on this page and is not a substitute for the file."
               }
             },
             {
@@ -5446,7 +5446,7 @@
               "name": "What happens if a dispenser can’t verify a shipment’s data?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "DSCSA lets a dispenser quarantine and investigate suspect product rather than accept it. A signed, independently checkable record narrows that investigation instead of requiring a phone call to the shipper."
+                "text": "DSCSA lets a dispenser quarantine and investigate suspect product rather than accept it. That path is not live on this page."
               }
             }
           ]
@@ -7794,7 +7794,7 @@
     "title": "EPCIS 2.0 Blockchain Anchoring | AuthiChain",
     "metaDescription": "EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require.",
     "h1": "EPCIS 2.0 Blockchain Anchoring",
-    "bodyHtml": "<p>EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require.</p><h2>Why AuthiChain</h2><ul><li>A verifier rejects a malformed or testnet anchor instead of displaying it as proof</li><li>EPCIS events export into a W3C Verifiable Credential without a schema rewrite</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Do we need to change our EPCIS implementation?</h3><p>No — anchoring wraps the events your EPCIS repository already emits; the event schema stays yours.</p><h3>What does anchoring add over EPCIS alone?</h3><p>EPCIS proves what was recorded; anchoring proves it has not changed since — a partner checks the hash independently instead of trusting your database.</p>",
+    "bodyHtml": "<p>EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require. Our goal: export one EPCIS event into a W3C Verifiable Credential without a schema rewrite. That export is not live.</p><h2>Why AuthiChain</h2><ul><li>A verifier rejects a malformed or testnet anchor instead of displaying it as proof</li><li>That export is not live.</li></ul><h2>How it works</h2><p>That issuance is not live on this page. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Do we need to change our EPCIS implementation?</h3><p>That export is not live.</p><h3>What does anchoring add over EPCIS alone?</h3><p>EPCIS proves what was recorded; anchoring proves it has not changed since — a partner checks the hash independently instead of trusting your database.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -7806,7 +7806,7 @@
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require.",
+          "description": "EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require. Our goal: export one EPCIS event into a W3C Verifiable Credential without a schema rewrite. That export is not live.",
           "url": "https://authichain.com/p/epcis-2-0-blockchain-anchoring"
         },
         {
@@ -7834,7 +7834,7 @@
               "name": "Do we need to change our EPCIS implementation?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "No — anchoring wraps the events your EPCIS repository already emits; the event schema stays yours."
+                "text": "That export is not live."
               }
             },
             {

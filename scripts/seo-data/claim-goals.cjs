@@ -12,6 +12,7 @@
  * PR 7 sets the agentic-economy page and seed goals to goal-published. The meta stays limit-only. The seed receipt and demonstration goals stay unpublished.
  * PR 8 sets the MCP install lede goal to goal-published. The MCP meta and the x402 meta stay limit-only.
  * PR 9 sets the free-check and demonstration goals to goal-published. The /is-this-real meta stays limit-only.
+ * PR 10 sets the four DSCSA and EPCIS owners to goal-published. Sibling goals stay off the page.
  * seed-cannabis-not-another-compliance-tool stays limitPermanent false.
  */
 const PERM = {
@@ -1010,6 +1011,8 @@ const claims = [
     slugs: ['dscsa-unit-level-traceability-2026'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     jsonAlreadyLimited: false,
     statuteSentence: 'DSCSA enforcement moves to unit-level, electronic interoperable data exchange in November 2026',
@@ -1111,6 +1114,8 @@ const claims = [
     slugs: ['dscsa-saleable-returns-verification-requirement'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     statuteSentence: 'DSCSA\u2019s saleable-returns requirement took effect 27 August 2025',
     currentSentence: 'a signed record a scanner checks offline does that',
@@ -1149,6 +1154,8 @@ const claims = [
     slugs: ['dscsa-epcis-interoperable-data-exchange-requirement'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     statuteSentence: 'DSCSA requires wholesale distributors and manufacturers to exchange serialized Transaction Information and Transaction Statements as EPCIS 2.0 events, not PDFs or spreadsheets',
     currentSentence: 'confirm what they received is genuine',
@@ -1248,6 +1255,8 @@ const claims = [
     slugs: ['epcis-2-0-blockchain-anchoring'],
     files: ['scripts/seo-data/standards.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     statuteSentence: 'EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require.',
     currentSentence: 'EPCIS events export into a W3C Verifiable Credential without a schema rewrite',
