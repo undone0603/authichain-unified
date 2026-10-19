@@ -14,6 +14,7 @@
  * PR 9 sets the free-check and demonstration goals to goal-published. The /is-this-real meta stays limit-only.
  * PR 10 sets the four DSCSA and EPCIS owners to goal-published. Sibling goals stay off the page.
  * PR 11 sets the right-to-repair owner to goal-published. Sibling goals stay off the page.
+ * PR 12 sets the textile, registry, and ESPR owners to goal-published. Sibling goals stay off the page.
  * seed-cannabis-not-another-compliance-tool stays limitPermanent false.
  */
 const PERM = {
@@ -1197,6 +1198,8 @@ const claims = [
     slugs: ['eu-digital-product-passport-textiles'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     statuteSentence: 'Textiles are a priority category, with delegated regulations expected from 2028.',
     currentSentence: 'Issue EU Digital Product Passports for textiles and apparel',
@@ -1222,6 +1225,8 @@ const claims = [
     slugs: ['eu-digital-product-passport-registry'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     statuteSentence: 'Every EU Digital Product Passport must resolve from a permanent, unauthenticated URL into the EU registry',
     currentSentence: 'AuthiChain issues that record as a signed Verifiable Credential',
@@ -1246,6 +1251,8 @@ const claims = [
     slugs: ['espr-priority-product-list-timeline'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     currentSentence: 'AuthiChain already issues DPP records for six of these categories',
     goalSentence: 'Our goal: issue one DPP record shape that six of these categories could reuse. The compliance deadline still comes from the delegated act, not from this page.',

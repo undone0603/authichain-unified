@@ -774,6 +774,59 @@ describe("claim goal ledger", () => {
     }
   });
 
+  it("publishes the textile, registry, and ESPR goals beside their limits", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content", "seo", "pages.json"), "utf8")
+    );
+    const owners = [
+      "eu-dpp-textiles-issue",
+      "eu-dpp-registry-issues-vc",
+      "espr-priority-already-issues-six",
+    ];
+    for (const id of owners) {
+      const record = claims.find((entry: { id: string }) => entry.id === id);
+      expect(record.status, id).toBe("goal-published");
+      expect(record.publicGoal, id).toBe(true);
+      expect(record.emit, id).toBe("goal");
+      expect(record.class, id).toBe("copy-only");
+      expect(record.limitPermanent, id).toBe(false);
+      const page = pages.find(
+        (entry: { slug: string }) => entry.slug === record.slugs[0]
+      );
+      const text = JSON.stringify(page);
+      expect(text, id).toContain(record.goalSentence);
+      expect(text, id).toContain(record.limitSentence);
+      expect(text, id).not.toContain(record.currentSentence);
+      if (record.statuteSentence) expect(text, id).toContain(record.statuteSentence);
+      expect(page.title, id).not.toMatch(/Our goal/i);
+      expect(page.h1, id).not.toMatch(/Our goal/i);
+      expect(page.metaDescription, id).not.toMatch(/Our goal/i);
+      expect(page.metaDescription.length, id).toBeLessThanOrEqual(160);
+      expect(page.bodyHtml, id).toContain(
+        'action="https://authichain.com/checkout/dpp_readiness"'
+      );
+      expect(page.bodyHtml.match(/Our goal/g), id).toHaveLength(1);
+      const how = page.bodyHtml.indexOf("<h2>How it works</h2>");
+      const cta = page.bodyHtml.indexOf("<h2>Get started</h2>");
+      expect(page.bodyHtml.slice(how, cta), id).toContain(
+        "That issuance is not live on this page."
+      );
+      expect(page.bodyHtml.slice(how, cta), id).not.toContain("Our goal");
+      for (const sibling of recordsForSlug(claims, record.slugs[0])) {
+        if (sibling.publicGoal === true) continue;
+        if (sibling.goalSentence) expect(text, sibling.id).not.toContain(sibling.goalSentence);
+        if (sibling.currentSentence) expect(text, sibling.id).not.toContain(sibling.currentSentence);
+      }
+    }
+    const batteries = pages.find(
+      (entry: { slug: string }) => entry.slug === "eu-digital-product-passport-batteries"
+    );
+    expect(batteries.bodyHtml).toContain(
+      "Our goal: issue one battery passport record for a single pack, with carbon-footprint, state-of-health, and material-recovery fields."
+    );
+    expect(batteries.bodyHtml).toContain("Battery passport issuance is in development.");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");

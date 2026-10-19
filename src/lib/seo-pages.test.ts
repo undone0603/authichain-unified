@@ -635,6 +635,9 @@ describe("generated SEO money-path CTAs", () => {
       "dscsa-epcis-interoperable-data-exchange-requirement",
       "epcis-2-0-blockchain-anchoring",
       "right-to-repair-spare-parts-verification",
+      "eu-digital-product-passport-textiles",
+      "eu-digital-product-passport-registry",
+      "espr-priority-product-list-timeline",
     ]) {
       const page = getSeoPageBySlug(slug);
       expect(page, slug).not.toBeNull();
