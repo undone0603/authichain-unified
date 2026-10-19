@@ -11,7 +11,7 @@
 
 import { ethers } from "ethers";
 import { isEmptyBytecode } from "./lib/authichain-nft-artifact.js";
-import { rpcUrl } from "./lib/evm-chains.js";
+import { CHAINS, rpcUrl } from "./lib/evm-chains.js";
 
 const CHAIN_ID = 137;
 const CONTRACT_ADDRESS =
@@ -21,7 +21,7 @@ const DEFAULT_APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://authichain.c
 const DRY_RUN = process.env.DRY_RUN !== "false";
 const RECIPIENT = process.env.AGENTZ_RECIPIENT || "";
 const PRIVATE_KEY = process.env.POLYGON_PRIVATE_KEY || process.env.WALLET_PRIVATE_KEY || "";
-const RPC = process.env.POLYGON_RPC_URL || rpcUrl({ key: "polygon", name: "Polygon", chainId: 137, explorer: "https://polygonscan.com", rpcEnv: "POLYGON_RPC_URL" });
+const RPC = process.env.POLYGON_RPC_URL || rpcUrl(CHAINS.polygon);
 
 const ABI = [
   "function mintProduct(address to, string productIdentifier, string manufacturer, string model, string serialNumber, string additionalDetails, string uri) external returns (uint256)",
