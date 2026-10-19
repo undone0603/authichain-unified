@@ -37,8 +37,8 @@ export type CreditPack = {
 };
 
 export function generateCreditPacks(): CreditPack[] {
-  // LOOP-03 order: Starter $29 → Launch $19/mo → Creator; DPP last.
-  const order = ["starter", "qron_launch", "creator", "dpp_readiness"] as const;
+  // LOOP-03 order: Starter $29 → Launch $19/mo → Launch $190/yr → Creator; DPP last.
+  const order = ["starter", "qron_launch", "qron_launch_annual", "creator", "dpp_readiness"] as const;
   return listedPlans("qron")
     .filter(p => (order as readonly string[]).includes(p.id))
     .sort(

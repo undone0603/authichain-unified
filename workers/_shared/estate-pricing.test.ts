@@ -157,7 +157,7 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.match(html, /<title>Pricing — AuthiChain<\/title>/);
   assert.doesNotMatch(html, /AuthiChain Starter/);
   assert.equal(hasDeadLink(html), false);
-  for (const id of ["qron_launch", "dpp_readiness", "starter", "creator"] as const) {
+  for (const id of ["qron_launch", "qron_launch_annual", "dpp_readiness", "starter", "creator"] as const) {
     assert.ok(html.includes(`$${plan(id).price}`), `${id} price`);
   }
   assert.equal(html.includes("/checkout/starter"), true);

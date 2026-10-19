@@ -19,7 +19,7 @@ function toBase64Url(value: string): string {
 }
 
 describe("generateCreditPacks", () => {
-  it("exposes Starter → Launch → Creator → DPP in LOOP-03 order", () => {
+  it("exposes Starter, Launch monthly, Launch annual, Creator, then DPP", () => {
     const packs = generateCreditPacks();
     const byId = Object.fromEntries(packs.map(p => [p.id, p]));
     expect(byId.starter.price).toBe(29);
@@ -29,11 +29,16 @@ describe("generateCreditPacks", () => {
     expect(packs.map(p => p.id)).toEqual([
       "starter",
       "qron_launch",
+      "qron_launch_annual",
       "creator",
       "dpp_readiness",
     ]);
     expect(byId.qron_launch.checkout).toBe(
       "https://authichain.com/checkout/qron_launch"
+    );
+    expect(byId.qron_launch_annual.price).toBe(190);
+    expect(byId.qron_launch_annual.checkout).toBe(
+      "https://authichain.com/checkout/qron_launch_annual"
     );
     expect(byId.qron_launch.cta).toMatch(/Launch/i);
   });
