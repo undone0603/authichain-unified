@@ -138,6 +138,18 @@ test("GET discovery lists Payment Links and unpaid POST x402, not GET checkout",
         X402_PUBLISHED_PAY_TO,
         `${host} ${path}`
       );
+      assert.ok(
+        String(body.pricing.agentRail.note).includes(
+          "An empty JSON body is the unpaid HTTP 402."
+        ),
+        `${host} ${path}`
+      );
+      assert.ok(
+        String(body.pricing.agentRail.note).includes(
+          "A non-UUID sealId is HTTP 400 before payment."
+        ),
+        `${host} ${path}`
+      );
       const blob = JSON.stringify(body);
       assert.equal(blob.includes("/api/checkout"), false, `${host} ${path}`);
       assert.equal(
