@@ -1644,7 +1644,11 @@ function authenticateHtml(): string {
       }) +
       '<p><a href="' +
       escapeHtml(planPaymentLink("qron_launch") || "/checkout/qron_launch") +
-      '">Start Launch $19/mo</a> · <a href="/pricing">All pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
+      '">Start Launch $19/mo</a> · <a href="' +
+      escapeHtml(
+        planPaymentLink("qron_launch_annual") || "/checkout/qron_launch_annual"
+      ) +
+      '">Launch $190/yr</a> · <a href="/pricing">All pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
       "</main>",
   });
 }
