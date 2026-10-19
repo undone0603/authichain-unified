@@ -1598,6 +1598,127 @@ describe("claim goal ledger", () => {
     expect(tyre.bodyHtml).toContain("June 24, 2026");
   });
 
+  it("limits record-check claims on twenty generated pages", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const dpp = [
+      "eudr-deforestation-traceability-blockchain",
+      "ppwr-packaging-qr-code-labeling-requirements",
+      "critical-raw-materials-act-traceability-requirement",
+      "ecodesign-smartphones-tablets-reparability-information-requirements",
+      "weee-directive-revision-2026-electronics-traceability",
+      "battery-passport-data-access-rights-governance",
+      "eu-digital-product-passport-footwear",
+      "eu-circular-economy-act-digital-product-passport",
+      "iso-18975-gs1-digital-link-resolver-standard",
+      "c2pa-content-credentials-vs-product-provenance",
+      "nft-certificate-of-authenticity-vs-verifiable-credential",
+      "eudi-wallet-digital-product-passport-verifiable-credential",
+      "w3c-digital-credentials-api-verifiable-credentials",
+      "iso-iec-jtc-5-digital-product-passport-standard",
+      "oid4vci-credential-issuance-vs-did-key-offline-verification",
+      "right-to-repair-spare-parts-verification",
+      "verifiable-credential-confidence-method-identity-binding",
+      "quantum-financial-system-real-or-myth",
+    ];
+    const slugs = dpp.concat([
+      "cannabis-schedule-3-rescheduling-interstate-commerce-compliance",
+      "verifiable-credential-lifecycle-api-vs-offline-verification",
+    ]);
+    const banned = [
+      "buyer can check it without asking you",
+      "hashed per batch for tamper-evidence",
+      "Anchoring makes the supporting documentation",
+      "can carry both PPWR",
+      "make that map checkable",
+      "make it tamper-evident",
+      "resolves offline",
+      "can carry data useful",
+      "anchored today",
+      "publishing footwear provenance today",
+      "record of origin",
+      "answers a question rescheduling",
+      "one linkType",
+      "both resolve",
+      "establishes who issued",
+      "alone proves authenticity",
+      "verification runs offline",
+      "entire point of offline verification",
+      "verification runs against the record",
+      "shipping a passport now",
+      "verifies a record",
+      "served directly by AuthiChain",
+      "built to avoid",
+      "QRON scan needs no VCALM",
+      "reference verifier checks a signed record directly",
+      "any repairer",
+      "committed to a mainnet chain",
+      "reaches its verdict",
+      "already issuing",
+      "proof of origin",
+      "works offline",
+    ];
+    for (const slug of slugs) {
+      const page = pages.find((entry: { slug: string }) => entry.slug === slug);
+      const text = JSON.stringify(page);
+      const goals = page.bodyHtml.match(/Our goal/g) || [];
+      expect(goals, slug).toHaveLength(slug === "eu-digital-product-passport-footwear" ? 0 : 1);
+      expect(page.title, slug).not.toMatch(/Our goal/i);
+      expect(page.h1, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription.length, slug).toBeLessThanOrEqual(160);
+      for (const phrase of banned) {
+        expect(text, `${slug} ${phrase}`).not.toContain(phrase);
+        expect(page.metaDescription, `${slug} ${phrase}`).not.toContain(phrase);
+      }
+      if (slug === "cannabis-schedule-3-rescheduling-interstate-commerce-compliance") {
+        expect(page.bodyHtml).toContain("https://authichain.com/checkout/strainchain_passport");
+      } else if (slug === "verifiable-credential-lifecycle-api-vs-offline-verification") {
+        expect(page.bodyHtml).toContain("https://qron.space/pricing");
+        expect(page.bodyHtml).not.toContain("/checkout/");
+        expect(page.bodyHtml).not.toContain("/api/checkout/");
+      } else {
+        expect(page.bodyHtml, slug).toContain(
+          'action="https://authichain.com/checkout/dpp_readiness"'
+        );
+        expect(page.bodyHtml, slug).toContain("EU DPP Readiness is $299 one-time.");
+      }
+    }
+    const eudr = pages.find(
+      (entry: { slug: string }) => entry.slug === "eudr-deforestation-traceability-blockchain"
+    );
+    expect(eudr.bodyHtml).toContain("December 30, 2026");
+    expect(eudr.bodyHtml).toContain("requires proof that");
+    const footwear = pages.find(
+      (entry: { slug: string }) => entry.slug === "eu-digital-product-passport-footwear"
+    );
+    expect(footwear.bodyHtml).toContain("Signed records are in development.");
+    expect(footwear.bodyHtml).toContain("by the end of 2027.");
+    expect(footwear.bodyHtml).not.toContain("link it to a signed record");
+    const c2pa = pages.find(
+      (entry: { slug: string }) => entry.slug === "c2pa-content-credentials-vs-product-provenance"
+    );
+    expect(c2pa.bodyHtml).toContain("signatures prove authorship, not truth");
+    const dc = pages.find(
+      (entry: { slug: string }) => entry.slug === "w3c-digital-credentials-api-verifiable-credentials"
+    );
+    expect(dc.bodyHtml).toContain("The reference verifier implements Ed25519 only");
+    const confidence = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "verifiable-credential-confidence-method-identity-binding"
+    );
+    expect(confidence.bodyHtml).toContain("a signature proves authorship, not truth");
+    const repair = pages.find(
+      (entry: { slug: string }) => entry.slug === "right-to-repair-spare-parts-verification"
+    );
+    expect(repair.bodyHtml).toContain("July 31, 2026");
+    const battery = pages.find(
+      (entry: { slug: string }) => entry.slug === "battery-passport-data-access-rights-governance"
+    );
+    expect(battery.bodyHtml).toContain("18 February 2027");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
