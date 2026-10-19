@@ -227,11 +227,17 @@ function esc(value: unknown): string {
 }
 
 function priceLabel(plan: Plan): string {
-  const suffix =
-    plan.price_suffix === "/month" || plan.stripe_mode === "subscription"
-      ? "/mo"
-      : "";
-  return `$${plan.price.toLocaleString("en-US")}${suffix}`;
+  const amount = `$${plan.price.toLocaleString("en-US")}`;
+  const suffix = plan.price_suffix;
+  if (suffix === "/yr" || suffix === "/year") return `${amount}/yr`;
+  if (
+    suffix === "/mo" ||
+    suffix === "/month" ||
+    plan.stripe_mode === "subscription"
+  ) {
+    return `${amount}/mo`;
+  }
+  return amount;
 }
 
 const PAGE_CSS = `*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#0b0b10;color:#f4f4f5;line-height:1.55;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}main{width:100%;max-width:30rem;background:#111118;border:1px solid #27272a;border-radius:16px;padding:28px}h1{font-size:1.35rem;margin-bottom:.25rem}.price{font-size:1.9rem;font-weight:800;color:#00ffd1;margin:.5rem 0}.desc{color:#a1a1aa;font-size:.95rem;margin-bottom:1rem}label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:600;color:#d4d4d8}input[type=email]{padding:11px 12px;border:1px solid #3f3f46;border-radius:8px;background:#09090b;color:#fff;font:inherit}button{margin-top:14px;width:100%;padding:13px 18px;border:0;border-radius:10px;background:#00ffd1;color:#000;font:inherit;font-weight:800;cursor:pointer}.hint{font-size:.8rem;color:#a1a1aa;margin-top:8px}.err{background:#3f1d1d;border:1px solid #7f1d1d;color:#fecaca;padding:8px 10px;border-radius:8px;font-size:.85rem;margin-bottom:10px}.hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}ul.plans{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:1rem}ul.plans a{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #27272a;border-radius:10px;color:#fff;text-decoration:none}ul.plans a:hover{border-color:#00ffd1}.links{margin-top:18px;font-size:.85rem}.links a{color:#a1a1aa;margin-right:12px}.hint a{color:#00ffd1}`;
