@@ -2361,6 +2361,7 @@ ${estateCtaBand({
     { href: "/generate", label: "Generate Living QR", primary: true },
     { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29", primary: false },
     { href: "https://authichain.com/checkout/qron_launch", label: "Start Launch $19/mo", primary: false },
+    { href: "https://authichain.com/checkout/qron_launch_annual", label: "Launch $190/yr", primary: false },
   ],
 })}
 </main>
@@ -2374,6 +2375,7 @@ ${estateFooter(
         { href: "/pricing", label: "Pricing" },
         { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29" },
         { href: "https://authichain.com/checkout/qron_launch", label: "Launch $19/mo" },
+        { href: "https://authichain.com/checkout/qron_launch_annual", label: "Launch $190/yr" },
       ],
     },
     {

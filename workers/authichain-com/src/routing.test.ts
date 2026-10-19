@@ -1110,6 +1110,45 @@ test("hung APP_WORKER /p lookup 404s with Payment Links instead of hanging", asy
   assert.match(html, /name="robots" content="noindex"/);
 });
 
+test("/verify/live is the founder seal, not an app lookup for the id live", async () => {
+  const seen: string[] = [];
+  const env = {
+    APP_WORKER: {
+      fetch: async (r: Request) => {
+        seen.push(new URL(r.url).pathname);
+        return new Response("app", { status: 200 });
+      },
+    },
+  } as unknown as Env;
+  for (const path of ["/verify/live", "/verify/live/", "/verify/LIVE"]) {
+    const res = await get(path, env);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.match(html, /This seal is already on Base\./);
+    assert.match(html, /authichain\.base\.eth/);
+    assert.match(html, /0x34370EDA96e0C7e47f46F18e2D3a7298C241E16F/);
+    assert.match(
+      html,
+      /basescan\.org\/tx\/0xa07d0bbadcc958b3f6fc8d81acda16a54c4bcfdb5e86bd2ce186e27f5752ab3b/
+    );
+    assert.match(html, /What this does not prove/);
+    assert.doesNotMatch(html, /No record found/);
+    assert.notEqual(html, "app");
+  }
+  assert.deepEqual(seen, []);
+  const other = await get("/verify/not-a-real-record", env);
+  assert.equal(await other.text(), "app");
+  const withId = await get("/verify/live?id=polygon-anchor-1", env);
+  assert.equal(await withId.text(), "app");
+  const posted = await worker.fetch(
+    new Request("https://authichain.govchain.us/verify/live", {
+      method: "POST",
+    }),
+    env
+  );
+  assert.equal(posted.status, 405);
+});
+
 test("hung APP_WORKER /verify lookup 404s with HTML instead of throwing (1101)", async () => {
   const env = {
     APP_WORKER_TIMEOUT_MS: "40",
@@ -1247,6 +1286,7 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/m/bat-2026-001</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/partners/brief</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/verify</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/verify/live</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/x402</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/.well-known/x402</loc>"));
   assert.ok(

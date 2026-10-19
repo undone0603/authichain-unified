@@ -356,6 +356,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       footerStart: [
         { href: "/checkout/starter", label: "Starter checkout" },
         { href: "/checkout/qron_launch", label: "Launch $19/mo" },
+        { href: "/checkout/qron_launch_annual", label: "Launch $190/yr" },
         { href: "/pricing", label: "Pricing" },
       ],
       footerMore: [
@@ -401,6 +402,10 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       {
         href: "https://authichain.com/checkout/qron_launch",
         label: "Launch $19/mo",
+      },
+      {
+        href: "https://authichain.com/checkout/qron_launch_annual",
+        label: "Launch $190/yr",
       },
     ],
     footerMore: [

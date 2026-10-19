@@ -7,6 +7,8 @@ import {
   isAllowedPostOrigin,
   isAutomatedCheckoutRequest,
   planFromGatedPath,
+  renderCheckoutChooserPage,
+  renderCheckoutConfirmPage,
   tryHandleGatedCheckout,
 } from "./checkout-gate";
 import { planById, planPaymentLink } from "./plans";
@@ -494,5 +496,47 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
     expect(planById("starter")?.description).toContain(
       "Pack credits never expire unless you switch to a Launch subscription."
     );
+  });
+});
+
+describe("Launch Annual cadence", () => {
+  it("shows $190/yr on the confirm page and the plan chooser", () => {
+    const annual = planById("qron_launch_annual");
+    const monthly = planById("qron_launch");
+    expect(annual).toBeTruthy();
+    expect(monthly).toBeTruthy();
+    const confirm = renderCheckoutConfirmPage({ plan: annual! });
+    expect(confirm).toContain("$190/yr");
+    expect(confirm).not.toContain("$190/mo");
+    expect(renderCheckoutConfirmPage({ plan: monthly! })).toContain("$19/mo");
+    const chooser = renderCheckoutChooserPage();
+    expect(chooser).toContain("$190/yr");
+    expect(chooser).not.toContain("$190/mo");
+    expect(chooser).toContain("$19/mo");
+  });
+
+  it("opens a subscription session for the annual price", () => {
+    const plan = planById("qron_launch_annual")!;
+    const body = buildGatedSessionBody({
+      plan,
+      email: "a@b.co",
+      fields: new URLSearchParams(),
+    });
+    expect(body.get("mode")).toBe("subscription");
+    expect(body.get("line_items[0][price]")).toBe(plan.stripe_price_id);
+  });
+
+  it("lands generation buyers on /generate, not the DPP thanks page", () => {
+    for (const id of ["qron_launch", "qron_launch_annual", "creator"] as const) {
+      const body = buildGatedSessionBody({
+        plan: planById(id)!,
+        email: "a@b.co",
+        fields: new URLSearchParams({ visit_id: "v1" }),
+        successOrigin: "https://authichain.com",
+      });
+      const success = body.get("success_url") || "";
+      expect(success, id).toContain("https://authichain.com/generate?paid=1");
+      expect(success, id).not.toContain("/dpp/thanks");
+    }
   });
 });

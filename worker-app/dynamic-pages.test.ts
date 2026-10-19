@@ -524,6 +524,23 @@ describe("renderDynamicPage: /verify verification landing", () => {
     expect(getProductById).not.toHaveBeenCalled();
   });
 
+  it("serves /verify/live as the founder seal page, not a record lookup", async () => {
+    const res = await app.request("/verify/live", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("This seal is already on Base.");
+    expect(body).toContain("authichain.base.eth");
+    expect(body).toContain("0x34370EDA96e0C7e47f46F18e2D3a7298C241E16F");
+    expect(body).toContain(
+      "basescan.org/tx/0xa07d0bbadcc958b3f6fc8d81acda16a54c4bcfdb5e86bd2ce186e27f5752ab3b"
+    );
+    expect(body).toContain("What this does not prove");
+    expect(body).not.toContain("No record found");
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
+    expect(getProductById).not.toHaveBeenCalled();
+  });
+
   it("returns a clean 404 'No record found' page for an unknown id", async () => {
     (getCertificateByNumber as any).mockResolvedValue(undefined);
     (getHyperdriveDb as any).mockReturnValue({});
@@ -970,6 +987,10 @@ describe("renderDynamicPage: /login and /authenticate", () => {
       );
       expect(body).toContain("Buy Starter Pack — $29");
       expect(body).toContain("Start Launch $19/mo");
+      expect(body).toContain("Launch $190/yr");
+      expect(body).toContain(
+        'href="https://authichain.com/checkout/qron_launch_annual"'
+      );
       expect(body).toContain(
         'href="https://authichain.com/checkout/dpp_readiness"'
       );
