@@ -1073,6 +1073,62 @@ describe("claim goal ledger", () => {
     expect(recall.bodyHtml.match(/Our goal/g)).toHaveLength(1);
   });
 
+  it("limits already-issued claims on the four protected seeds", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const record = claims.find(
+      (entry: { id: string }) => entry.id === "generated-how-it-works"
+    );
+    const slugs = [
+      "ppwr-digital-labelling-qr-code",
+      "untp-digital-product-passport",
+      "battery-passport-due-diligence-requirement",
+      "digital-product-passport-access-rights",
+    ];
+    for (const slug of slugs) {
+      const page = pages.find((entry: { slug: string }) => entry.slug === slug);
+      const text = JSON.stringify(page);
+      const howAt = page.bodyHtml.indexOf("<h2>How it works</h2>");
+      const cta = page.bodyHtml.indexOf("<h2>Get started</h2>");
+      const howChunk = page.bodyHtml.slice(howAt, cta);
+      expect(howChunk, slug).toContain(record.goalSentence);
+      expect(howChunk, slug).toContain(record.limitSentence);
+      expect(page.bodyHtml.match(/Our goal/g), slug).toHaveLength(1);
+      expect(text, slug).not.toContain(
+        "Issue a unique identifier per unit and link it to a signed record"
+      );
+      expect(text, slug).not.toContain("this protocol already issues");
+      expect(text, slug).not.toContain("already implements");
+      expect(text, slug).not.toContain("records already use");
+      expect(text, slug).not.toContain("hashed to an anchor");
+      expect(page.title, slug).not.toMatch(/Our goal/i);
+      expect(page.h1, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription.length, slug).toBeLessThanOrEqual(160);
+      expect(page.bodyHtml, slug).toContain(
+        'action="https://authichain.com/checkout/dpp_readiness"'
+      );
+      expect(page.bodyHtml, slug).toContain("EU DPP Readiness is $299 one-time.");
+    }
+    const untp = pages.find(
+      (entry: { slug: string }) => entry.slug === "untp-digital-product-passport"
+    );
+    expect(untp.metaDescription).not.toContain("built on the same");
+    expect(untp.bodyHtml).toContain("1 September 2026");
+    const access = pages.find(
+      (entry: { slug: string }) => entry.slug === "digital-product-passport-access-rights"
+    );
+    expect(access.metaDescription).toBe(
+      "ESPR splits Digital Product Passport access into public, professional, and authority tiers."
+    );
+    const battery = pages.find(
+      (entry: { slug: string }) => entry.slug === "battery-passport-due-diligence-requirement"
+    );
+    expect(battery.bodyHtml).toContain("18 August 2027");
+    expect(battery.bodyHtml).toContain("hashing it to an anchor is not live on this page.");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
