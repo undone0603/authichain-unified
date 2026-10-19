@@ -574,6 +574,40 @@ function verifyNoRecordResponse(
   );
 }
 
+/** Reserved path. Not a certificate number. Matches src/app/verify/live/page.tsx. */
+function verifyLiveSealHtml(): string {
+  const mintTx = "0xa07d0bbadcc958b3f6fc8d81acda16a54c4bcfdb5e86bd2ce186e27f5752ab3b";
+  const holder = "authichain.base.eth";
+  const contract = "0x34370EDA96e0C7e47f46F18e2D3a7298C241E16F";
+  return htmlDocument({
+    title: "This seal is already on Base. | AuthiChain",
+    description:
+      "Founder example. Signature check plus an on-chain anchor. This does not prove a physical object is genuine.",
+    canonicalPath: "/verify/live",
+    bodyHtml:
+      "<main>\n" +
+      "<h1>This seal is already on Base.</h1>\n" +
+      "<p>Founder example. Signature check + on-chain anchor. You can verify it without trusting us.</p>\n" +
+      "<h2>Public proof</h2>\n" +
+      "<dl>\n" +
+      "<dt>Holder</dt><dd>" + escapeHtml(holder) + "</dd>\n" +
+      "<dt>Contract</dt><dd>" + escapeHtml(contract) + "</dd>\n" +
+      "<dt>Mint tx</dt><dd><a href=\"https://basescan.org/tx/" + mintTx + "\">view on BaseScan</a></dd>\n" +
+      "<dt>Open protocol</dt><dd><a href=\"/protocol\">run the verifier yourself</a></dd>\n" +
+      "</dl>\n" +
+      "<p>What this does not prove: that any physical object is genuine. A signed record is not an inspection.</p>\n" +
+      "<p><a href=\"/generate\">Generate your own Living QR</a> · <a href=\"/pricing\">Buy Starter — $29</a></p>\n" +
+      "<h2>FAQ</h2>\n" +
+      "<h3>Does this prove the product is authentic?</h3>\n" +
+      "<p>No. It proves the claim was signed and the anchor hash matches what is on Base. Physical genuineness is a separate inspection.</p>\n" +
+      "<h3>Can I do this for my products?</h3>\n" +
+      "<p>Yes. Self-serve generation and the $29 Starter Pack. No call required.</p>\n" +
+      "<h3>Is the public certificate registry live?</h3>\n" +
+      "<p>In development. This page shows the live path that already exists.</p>\n" +
+      "</main>",
+  });
+}
+
 async function renderVerify(c: Context): Promise<Response> {
   const url = new URL(c.req.url);
   const idParam = url.searchParams.get("id");
@@ -592,6 +626,10 @@ async function renderVerify(c: Context): Promise<Response> {
     // /verify/CERT-001/) so it resolves the same as the non-slash form.
     const pathSegment = decodeURIComponent(rawPathSegment);
     identifier = idParam || pathSegment || null;
+
+    if (!idParam && pathSegment.toLowerCase() === "live") {
+      return htmlResponse(c, verifyLiveSealHtml(), 200);
+    }
 
     if (!identifier) {
       return htmlResponse(c, verifyPromptHtml(), 200);
