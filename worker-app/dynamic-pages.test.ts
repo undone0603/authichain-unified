@@ -199,6 +199,18 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("Product Not Found");
   });
 
+  it("handles passport lookup timeout gracefully with 404 guidance", async () => {
+    (getCertificateByNumber as any).mockRejectedValue(
+      new Error("passport-lookup-timeout")
+    );
+
+    const res = await app.request("/p/timeout-serial", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("The registry lookup timed out");
+  });
+
   it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {
     const res = await app.request("/p/%zz", {}, makeEnv() as any);
     const body = await res.text();

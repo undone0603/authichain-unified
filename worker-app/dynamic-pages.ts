@@ -313,7 +313,7 @@ async function renderProductPassport(c: Context): Promise<Response> {
     >((resolve, reject) => {
       const timer = setTimeout(
         () => reject(new Error("passport-lookup-timeout")),
-        2500
+        4000
       );
       findPassportBySerial(db, serial).then(
         value => {
