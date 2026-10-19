@@ -2,6 +2,7 @@
  * AuthiChain Cloudflare Worker — Edge Revenue Engine
  * Routes: /seal /verify /certificate /provenance /stripe/checkout /stripe/webhook
  *         /sales/inbound (api/sales-inbound.ts)
+ *         /outbound/draft (api/revenue-drafts.ts; drafts only, never sends)
  *
  * Deploy: .github/workflows/deploy-edge-worker.yml
  *   (wrangler deploy --minify --config api/wrangler.toml). This is the only
@@ -11,6 +12,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { handleSalesInbound, type RateLimiter } from "./sales-inbound";
+import { handleOutboundDraft } from "./revenue-drafts";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -24,7 +26,6 @@ export interface Env {
   NEXT_PUBLIC_APP_URL: string;
   CRM_BASE_URL: string;
   CRM_API_KEY: string;
-  ANTHROPIC_API_KEY: string;
   SALES_INBOUND_SECRET: string;
   SALES_RATE_LIMITER?: RateLimiter;
 }
@@ -448,6 +449,12 @@ export default {
       });
     }
 
+    // /api/verify and /api/scan: not implemented. Answer 501 before any auth
+    // or Stripe code runs (replaces 40516a11's unauthenticated checkout path).
+    if (path.startsWith("/api/verify") || path.startsWith("/api/scan")) {
+      return jsonResponse({ error: "Not implemented" }, 501);
+    }
+
     // API key guard. /verify is public, /stripe/webhook checks the Stripe
     // signature, and /sales/inbound checks its own SALES_INBOUND_SECRET.
     const unguarded = ["/verify", "/stripe/webhook", "/sales/inbound"];
@@ -470,6 +477,8 @@ export default {
           return await handleStripeWebhook(req, env);
         if (path === "/sales/inbound")
           return await handleSalesInbound(req, env);
+        if (path === "/outbound/draft")
+          return await handleOutboundDraft(req, env);
       }
 
       if (method === "GET" && path === "/health") {
