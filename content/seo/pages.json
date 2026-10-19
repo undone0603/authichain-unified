@@ -824,9 +824,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "EU Digital Product Passport Electronics | AuthiChain",
-    "metaDescription": "Create EU Digital Product Passports for electronics with repairability scores, hazardous-substance declarations, and spare-parts availability built in.",
+    "metaDescription": "ICT and consumer electronics are priority categories under the ESPR.",
     "h1": "EU Digital Product Passport Electronics",
-    "bodyHtml": "<p>Create EU Digital Product Passports for electronics with repairability scores, hazardous-substance declarations, and spare-parts availability built in.</p><h2>Why AuthiChain</h2><ul><li>Repairability and spare-parts data</li><li>Hazardous-substance (RoHS/REACH) declarations</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Which electronics are covered?</h3><p>ICT and consumer electronics are priority categories under the ESPR.</p><h3>Can I include repair data?</h3><p>Yes — repairability scores and spare-part availability are part of the passport.</p>",
+    "bodyHtml": "<p>Our goal: issue one electronics passport record with repairability, hazardous-substance, and spare-parts fields. That passport is not live on this page.</p><h2>Why AuthiChain</h2><ul><li>Repairability and spare-parts data</li><li>Hazardous-substance (RoHS/REACH) declarations</li></ul><h2>How it works</h2><p>That issuance is not live on this page. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Which electronics are covered?</h3><p>ICT and consumer electronics are priority categories under the ESPR.</p><h3>Can I include repair data?</h3><p>Repairability scores and spare-part availability are expected fields for this category. This page does not issue the passport.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -838,7 +838,7 @@
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "Create EU Digital Product Passports for electronics with repairability scores, hazardous-substance declarations, and spare-parts availability built in.",
+          "description": "Our goal: issue one electronics passport record with repairability, hazardous-substance, and spare-parts fields. That passport is not live on this page.",
           "url": "https://authichain.com/p/eu-digital-product-passport-electronics"
         },
         {
@@ -874,7 +874,7 @@
               "name": "Can I include repair data?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Yes — repairability scores and spare-part availability are part of the passport."
+                "text": "Repairability scores and spare-part availability are expected fields for this category. This page does not issue the passport."
               }
             }
           ]
@@ -888,9 +888,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "EU Digital Product Passport Furniture | AuthiChain",
-    "metaDescription": "Issue EU Digital Product Passports for furniture with material sourcing, durability, and end-of-life recycling data anchored for registry submission.",
+    "metaDescription": "Furniture is among the priority product groups under the ESPR framework.",
     "h1": "EU Digital Product Passport Furniture",
-    "bodyHtml": "<p>Issue EU Digital Product Passports for furniture with material sourcing, durability, and end-of-life recycling data anchored for registry submission.</p><h2>Why AuthiChain</h2><ul><li>Material sourcing and FSC/PEFC claims</li><li>Durability and disassembly guidance</li><li>End-of-life and recyclability data</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is furniture in scope?</h3><p>Furniture is among the priority product groups under the ESPR framework.</p><h3>Can I prove sustainable sourcing?</h3><p>Yes — certification and sourcing claims are anchored and verifiable.</p>",
+    "bodyHtml": "<p>Our goal: issue one furniture passport record with material, durability, and end-of-life fields. That passport is not live on this page and is not a registry submission.</p><h2>Why AuthiChain</h2><ul><li>Material sourcing and FSC/PEFC claims</li><li>Durability and disassembly guidance</li><li>End-of-life and recyclability data</li></ul><h2>How it works</h2><p>That issuance is not live on this page. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is furniture in scope?</h3><p>Furniture is among the priority product groups under the ESPR framework.</p><h3>Can I prove sustainable sourcing?</h3><p>No. That anchor is not live on this page. A signature does not prove the claim is true.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -902,7 +902,7 @@
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "Issue EU Digital Product Passports for furniture with material sourcing, durability, and end-of-life recycling data anchored for registry submission.",
+          "description": "Our goal: issue one furniture passport record with material, durability, and end-of-life fields. That passport is not live on this page and is not a registry submission.",
           "url": "https://authichain.com/p/eu-digital-product-passport-furniture"
         },
         {
@@ -938,7 +938,7 @@
               "name": "Can I prove sustainable sourcing?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Yes — certification and sourcing claims are anchored and verifiable."
+                "text": "No. That anchor is not live on this page. A signature does not prove the claim is true."
               }
             }
           ]
@@ -952,9 +952,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "EU Digital Product Passport Steel | AuthiChain",
-    "metaDescription": "Provide EU Digital Product Passports for iron and steel products with embodied-carbon, recycled-content, and grade data. AuthiChain — EU DPP Readiness is.",
+    "metaDescription": "Iron and steel are high-impact priority categories for carbon and circularity reporting.",
     "h1": "EU Digital Product Passport Steel",
-    "bodyHtml": "<p>Provide EU Digital Product Passports for iron and steel products with embodied-carbon, recycled-content, and grade data.</p><h2>Why AuthiChain</h2><ul><li>Embodied-carbon and scope 1–3 data</li><li>Recycled content and grade certification</li><li>Auditable at batch level</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Why steel first?</h3><p>Iron and steel are high-impact priority categories for carbon and circularity reporting.</p><h3>Can I attach mill certificates?</h3><p>Yes — mill test certificates can be hashed per batch.</p>",
+    "bodyHtml": "<p>Our goal: issue one steel passport record with embodied-carbon, recycled-content, and grade fields. That passport is not live on this page.</p><h2>Why AuthiChain</h2><ul><li>Embodied-carbon and scope 1–3 data</li><li>Recycled content and grade certification</li><li>Auditable at batch level</li></ul><h2>How it works</h2><p>That issuance is not live on this page. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Why steel first?</h3><p>Iron and steel are high-impact priority categories for carbon and circularity reporting.</p><h3>Can I attach mill certificates?</h3><p>That hash is not live on this page.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -966,7 +966,7 @@
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "Provide EU Digital Product Passports for iron and steel products with embodied-carbon, recycled-content, and grade data.",
+          "description": "Our goal: issue one steel passport record with embodied-carbon, recycled-content, and grade fields. That passport is not live on this page.",
           "url": "https://authichain.com/p/eu-digital-product-passport-steel"
         },
         {
@@ -1002,7 +1002,7 @@
               "name": "Can I attach mill certificates?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Yes — mill test certificates can be hashed per batch."
+                "text": "That hash is not live on this page."
               }
             }
           ]
@@ -1016,9 +1016,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "EU Digital Product Passport Tyres | AuthiChain",
-    "metaDescription": "Generate EU Digital Product Passports for tyres with rolling-resistance, material, and retread data anchored. AuthiChain — EU DPP Readiness is $299 one-time.",
+    "metaDescription": "Tyres are among the priority product categories under the ESPR.",
     "h1": "EU Digital Product Passport Tyres",
-    "bodyHtml": "<p>Generate EU Digital Product Passports for tyres with rolling-resistance, material, and retread data anchored.</p><h2>Why AuthiChain</h2><ul><li>Material composition and recycled content</li><li>Performance and rolling-resistance data</li><li>Retread and end-of-life tracking</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Are tyres in DPP scope?</h3><p>Tyres are among the priority product categories under the ESPR.</p><h3>Can I track retreads?</h3><p>Yes — lifecycle events including retreading can be appended to the passport.</p>",
+    "bodyHtml": "<p>Our goal: issue one tyre passport record with rolling-resistance, material, and retread fields. That passport is not live on this page.</p><h2>Why AuthiChain</h2><ul><li>Material composition and recycled content</li><li>Performance and rolling-resistance data</li><li>Retread and end-of-life tracking</li></ul><h2>How it works</h2><p>That issuance is not live on this page. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Are tyres in DPP scope?</h3><p>Tyres are among the priority product categories under the ESPR.</p><h3>Can I track retreads?</h3><p>That append is not live on this page.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -1030,7 +1030,7 @@
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "Generate EU Digital Product Passports for tyres with rolling-resistance, material, and retread data anchored.",
+          "description": "Our goal: issue one tyre passport record with rolling-resistance, material, and retread fields. That passport is not live on this page.",
           "url": "https://authichain.com/p/eu-digital-product-passport-tyres"
         },
         {
@@ -1066,7 +1066,7 @@
               "name": "Can I track retreads?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Yes — lifecycle events including retreading can be appended to the passport."
+                "text": "That append is not live on this page."
               }
             }
           ]
@@ -2032,9 +2032,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "EU Digital Product Passport Aluminium | AuthiChain",
-    "metaDescription": "Aluminium is scheduled for its own ESPR delegated act in 2027, one year behind iron and steel — AuthiChain issues the same Digital Product Passport record.",
+    "metaDescription": "Aluminium is scheduled for its own ESPR delegated act in 2027, one year behind iron and steel.",
     "h1": "EU Digital Product Passport Aluminium",
-    "bodyHtml": "<p>Aluminium is scheduled for its own ESPR delegated act in 2027, one year behind iron and steel — AuthiChain issues the same Digital Product Passport record model already built for steel, batteries, and textiles, structured for embodied-carbon and recycled-content reporting.</p><h2>Why AuthiChain</h2><ul><li>Embodied-carbon and scope 1–3 data captured per batch, matching the reporting shape already used for the steel passport</li><li>Recycled-content and alloy-grade declarations anchored on-chain for tamper-evidence</li><li>The record format does not change when the delegated act adopts — only the compliance deadline does, per the ESPR Working Plan’s roughly 18-month runway after adoption</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>When is the aluminium DPP mandatory?</h3><p>No date yet — the ESPR Working Plan 2025–2030 targets a 2027 delegated act for aluminium, one year after iron and steel’s 2026 act. Mandatory compliance typically follows about 18 months after adoption.</p>",
+    "bodyHtml": "<p>Aluminium is scheduled for its own ESPR delegated act in 2027, one year behind iron and steel. Our goal: reuse one passport record shape for an aluminium embodied-carbon field. That record is not already issued.</p><h2>Why AuthiChain</h2><ul><li>Embodied-carbon and scope 1–3 data captured per batch, matching the reporting shape already used for the steel passport</li><li>Recycled-content and alloy-grade declarations anchored on-chain for tamper-evidence</li><li>The record format does not change when the delegated act adopts — only the compliance deadline does, per the ESPR Working Plan’s roughly 18-month runway after adoption</li></ul><h2>How it works</h2><p>That issuance is not live on this page. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>When is the aluminium DPP mandatory?</h3><p>No date yet — the ESPR Working Plan 2025–2030 targets a 2027 delegated act for aluminium, one year after iron and steel’s 2026 act. Mandatory compliance typically follows about 18 months after adoption.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -2046,7 +2046,7 @@
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "Aluminium is scheduled for its own ESPR delegated act in 2027, one year behind iron and steel — AuthiChain issues the same Digital Product Passport record model already built for steel, batteries, and textiles, structured for embodied-carbon and recycled-content reporting.",
+          "description": "Aluminium is scheduled for its own ESPR delegated act in 2027, one year behind iron and steel. Our goal: reuse one passport record shape for an aluminium embodied-carbon field. That record is not already issued.",
           "url": "https://authichain.com/p/eu-digital-product-passport-aluminium"
         },
         {
@@ -2152,9 +2152,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "EU Digital Product Passport Toys | AuthiChain",
-    "metaDescription": "Regulation (EU) 2025/2509 requires a Digital Product Passport for every toy sold in the EU, replacing the paper Declaration of Conformity, mandatory from 1.",
+    "metaDescription": "Regulation (EU) 2025/2509 requires a Digital Product Passport for every toy sold in the EU, mandatory from 1 August 2030.",
     "h1": "EU Digital Product Passport Toys",
-    "bodyHtml": "<p>Regulation (EU) 2025/2509 requires a Digital Product Passport for every toy sold in the EU, replacing the paper Declaration of Conformity, mandatory from 1 August 2030.</p><h2>Why AuthiChain</h2><ul><li>The toy DPP’s technical format is not published yet — the Commission still owes implementing acts defining the QR code and required fields, so the record structure AuthiChain issues for other categories carries over directly once those specifics land</li><li>The regulation entered into force in December 2025 with the DPP mandate not landing until 1 August 2030 — years of runway to pilot a passport before it is required across a catalogue, not a deadline due tomorrow</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can I generate a toy DPP QR code today?</h3><p>No — the Commission has not yet published the implementing acts defining the toy DPP’s technical format, and the mandate itself does not take effect until 1 August 2030.</p><h3>What does the toy DPP replace?</h3><p>The paper EU Declaration of Conformity — the DPP becomes the digital record customs and market-surveillance authorities check instead.</p>",
+    "bodyHtml": "<p>Regulation (EU) 2025/2509 requires a Digital Product Passport for every toy sold in the EU, replacing the paper Declaration of Conformity, mandatory from 1 August 2030. Our goal: reuse one record shape when a toy DPP format exists. This page does not issue a toy DPP.</p><h2>Why AuthiChain</h2><ul><li>The toy DPP’s technical format is not published yet — the Commission still owes implementing acts defining the QR code and required fields. This page does not issue a toy DPP.</li><li>The regulation entered into force in December 2025 with the DPP mandate not landing until 1 August 2030 — years of runway to pilot a passport before it is required across a catalogue, not a deadline due tomorrow</li></ul><h2>How it works</h2><p>That issuance is not live on this page. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can I generate a toy DPP QR code today?</h3><p>No — the Commission has not yet published the implementing acts defining the toy DPP’s technical format, and the mandate itself does not take effect until 1 August 2030.</p><h3>What does the toy DPP replace?</h3><p>The paper EU Declaration of Conformity — the DPP becomes the digital record customs and market-surveillance authorities check instead.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -2166,7 +2166,7 @@
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "Regulation (EU) 2025/2509 requires a Digital Product Passport for every toy sold in the EU, replacing the paper Declaration of Conformity, mandatory from 1 August 2030.",
+          "description": "Regulation (EU) 2025/2509 requires a Digital Product Passport for every toy sold in the EU, replacing the paper Declaration of Conformity, mandatory from 1 August 2030. Our goal: reuse one record shape when a toy DPP format exists. This page does not issue a toy DPP.",
           "url": "https://authichain.com/p/eu-digital-product-passport-toys"
         },
         {
@@ -2602,7 +2602,7 @@
     "title": "EU Digital Product Passport Detergents | AuthiChain",
     "metaDescription": "Regulation (EU) 2026/405 makes a Digital Product Passport mandatory for every detergent and end-user surfactant sold in the EU from 23 September 2029.",
     "h1": "EU Digital Product Passport Detergents",
-    "bodyHtml": "<p>Regulation (EU) 2026/405 makes a Digital Product Passport mandatory for every detergent and end-user surfactant sold in the EU from 23 September 2029, replacing the 22-year-old Detergents Regulation with a record AuthiChain issues the same way it does for batteries and steel.</p><h2>Why AuthiChain</h2><ul><li>The passport has to be registered — under Regulation (EU) 2024/1781 — before the product goes on the market, and stay available for 10 years, a longer retention window than most DPP categories decided so far</li><li>A data carrier, typically a QR code, links the physical bottle to the registered passport — the same identifier-to-record pattern this protocol already uses for GS1 Digital Link resolution</li><li>Stock placed on the market before 23 September 2029 under the old Regulation (EC) 648/2004 keeps selling with no time limit if unchanged after that date; a one-year sell-through window applies to stock made in the following year</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>When is the detergent passport mandatory?</h3><p>23 September 2029, under Regulation (EU) 2026/405, which entered into force 22 March 2026.</p><h3>Does the passport replace the ingredient label on the bottle?</h3><p>No — the regulation keeps existing labelling obligations and adds the passport as a separate, resolvable digital record; nothing currently printed on the bottle goes away.</p>",
+    "bodyHtml": "<p>Regulation (EU) 2026/405 makes a Digital Product Passport mandatory for every detergent and end-user surfactant sold in the EU from 23 September 2029, replacing the 22-year-old Detergents Regulation. Our goal: issue a detergent passport record in the same shape as a battery or steel record. That issuance is not live, and it is not live for batteries or steel either.</p><h2>Why AuthiChain</h2><ul><li>The passport has to be registered — under Regulation (EU) 2024/1781 — before the product goes on the market, and stay available for 10 years, a longer retention window than most DPP categories decided so far</li><li>A data carrier, typically a QR code, links the physical bottle to the registered passport — the same identifier-to-record pattern this protocol already uses for GS1 Digital Link resolution</li><li>Stock placed on the market before 23 September 2029 under the old Regulation (EC) 648/2004 keeps selling with no time limit if unchanged after that date; a one-year sell-through window applies to stock made in the following year</li></ul><h2>How it works</h2><p>That issuance is not live on this page. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>When is the detergent passport mandatory?</h3><p>23 September 2029, under Regulation (EU) 2026/405, which entered into force 22 March 2026.</p><h3>Does the passport replace the ingredient label on the bottle?</h3><p>No — the regulation keeps existing labelling obligations and adds the passport as a separate, resolvable digital record; nothing currently printed on the bottle goes away.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -2614,7 +2614,7 @@
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "Regulation (EU) 2026/405 makes a Digital Product Passport mandatory for every detergent and end-user surfactant sold in the EU from 23 September 2029, replacing the 22-year-old Detergents Regulation with a record AuthiChain issues the same way it does for batteries and steel.",
+          "description": "Regulation (EU) 2026/405 makes a Digital Product Passport mandatory for every detergent and end-user surfactant sold in the EU from 23 September 2029, replacing the 22-year-old Detergents Regulation. Our goal: issue a detergent passport record in the same shape as a battery or steel record. That issuance is not live, and it is not live for batteries or steel either.",
           "url": "https://authichain.com/p/eu-digital-product-passport-detergents"
         },
         {

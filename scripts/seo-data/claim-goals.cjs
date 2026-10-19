@@ -15,6 +15,7 @@
  * PR 10 sets the four DSCSA and EPCIS owners to goal-published. Sibling goals stay off the page.
  * PR 11 sets the right-to-repair owner to goal-published. Sibling goals stay off the page.
  * PR 12 sets the textile, registry, and ESPR owners to goal-published. Sibling goals stay off the page.
+ * PR 13 sets the furniture, electronics, steel, tyres, aluminium, toys, and detergents owners to goal-published. Sibling goals stay off the page.
  * seed-cannabis-not-another-compliance-tool stays limitPermanent false.
  */
 const PERM = {
@@ -1281,6 +1282,8 @@ const claims = [
     slugs: ['eu-digital-product-passport-furniture'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     statuteSentence: 'Furniture is among the priority product groups under the ESPR framework.',
     currentSentence: 'Issue EU Digital Product Passports for furniture',
@@ -1305,6 +1308,8 @@ const claims = [
     slugs: ['eu-digital-product-passport-electronics'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     statuteSentence: 'ICT and consumer electronics are priority categories under the ESPR.',
     currentSentence: 'Create EU Digital Product Passports for electronics',
@@ -1318,6 +1323,8 @@ const claims = [
     slugs: ['eu-digital-product-passport-steel'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     statuteSentence: 'Iron and steel are high-impact priority categories for carbon and circularity reporting.',
     currentSentence: 'Provide EU Digital Product Passports for iron and steel',
@@ -1342,6 +1349,8 @@ const claims = [
     slugs: ['eu-digital-product-passport-tyres'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     statuteSentence: 'Tyres are among the priority product categories under the ESPR.',
     currentSentence: 'Generate EU Digital Product Passports for tyres',
@@ -1505,6 +1514,8 @@ const claims = [
     slugs: ['eu-digital-product-passport-aluminium'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     currentSentence: 'AuthiChain issues the same Digital Product Passport record model already built for steel, batteries, and textiles',
     goalSentence: 'Our goal: reuse one passport record shape for an aluminium embodied-carbon field.',
@@ -1517,6 +1528,8 @@ const claims = [
     slugs: ['eu-digital-product-passport-toys'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     currentSentence: 'the record structure AuthiChain issues for other categories carries over directly',
     goalSentence: 'Our goal: reuse one record shape when a toy DPP format exists.',
@@ -1529,6 +1542,8 @@ const claims = [
     slugs: ['eu-digital-product-passport-detergents'],
     files: ['scripts/seo-data/regulatory.cjs', 'content/seo/pages.json'],
     publicGoal: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     currentSentence: 'a record AuthiChain issues the same way it does for batteries and steel',
     goalSentence: 'Our goal: issue a detergent passport record in the same shape as a battery or steel record.',

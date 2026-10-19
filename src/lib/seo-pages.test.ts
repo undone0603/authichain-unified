@@ -638,6 +638,13 @@ describe("generated SEO money-path CTAs", () => {
       "eu-digital-product-passport-textiles",
       "eu-digital-product-passport-registry",
       "espr-priority-product-list-timeline",
+      "eu-digital-product-passport-furniture",
+      "eu-digital-product-passport-electronics",
+      "eu-digital-product-passport-steel",
+      "eu-digital-product-passport-tyres",
+      "eu-digital-product-passport-aluminium",
+      "eu-digital-product-passport-toys",
+      "eu-digital-product-passport-detergents",
     ]) {
       const page = getSeoPageBySlug(slug);
       expect(page, slug).not.toBeNull();
