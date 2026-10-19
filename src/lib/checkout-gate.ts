@@ -411,11 +411,17 @@ export function buildGatedSessionBody(opts: {
   // both authichain.com and authichain.govchain.us, so ${origin} is safe.
   const isClaimFile = plan.id === "musa_claim_file";
   const isStarter = plan.id === "starter";
+  // Generation packs are used on /generate. /dpp/thanks names a DPP workspace.
+  const isGenerationPack =
+    isStarter ||
+    plan.id === "creator" ||
+    plan.id === "qron_launch" ||
+    plan.id === "qron_launch_annual";
   body.set(
     "success_url",
     isClaimFile
       ? `${origin}/made-in-usa-claim-file/thanks?session_id={CHECKOUT_SESSION_ID}`
-      : isStarter
+      : isGenerationPack
         ? `${origin}/generate?paid=1&session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
         : `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}&plan=${encodeURIComponent(plan.id)}`
   );

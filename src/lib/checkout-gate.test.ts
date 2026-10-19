@@ -525,4 +525,18 @@ describe("Launch Annual cadence", () => {
     expect(body.get("mode")).toBe("subscription");
     expect(body.get("line_items[0][price]")).toBe(plan.stripe_price_id);
   });
+
+  it("lands generation buyers on /generate, not the DPP thanks page", () => {
+    for (const id of ["qron_launch", "qron_launch_annual", "creator"] as const) {
+      const body = buildGatedSessionBody({
+        plan: planById(id)!,
+        email: "a@b.co",
+        fields: new URLSearchParams({ visit_id: "v1" }),
+        successOrigin: "https://authichain.com",
+      });
+      const success = body.get("success_url") || "";
+      expect(success, id).toContain("https://authichain.com/generate?paid=1");
+      expect(success, id).not.toContain("/dpp/thanks");
+    }
+  });
 });

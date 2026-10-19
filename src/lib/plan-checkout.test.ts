@@ -140,9 +140,31 @@ describe("createPlanCheckoutSession", () => {
     expect(result.ok).toBe(true);
     const arg = create.mock.calls[0][0];
     expect(arg.mode).toBe("subscription");
+    expect(arg.success_url).toContain("/dpp/thanks?session_id=");
     expect(arg.after_expiration.recovery.enabled).toBe(true);
     expect(arg.allow_promotion_codes).toBeUndefined();
     expect(arg.customer_creation).toBeUndefined();
+  });
+
+  it("lands Launch monthly and annual on /generate", async () => {
+    for (const planId of ["qron_launch", "qron_launch_annual"] as const) {
+      create.mockResolvedValue({
+        url: "https://checkout.stripe.com/c/pay/cs_test_launch",
+      });
+      const result = await createPlanCheckoutSession({
+        request: new Request(
+          `https://authichain.govchain.us/api/checkout/plan/${planId}`,
+          { method: "GET" }
+        ),
+        body: { planId },
+        stripeSecretKey: "sk_test_x",
+      });
+      expect(result.ok).toBe(true);
+      const success = create.mock.calls[0][0].success_url as string;
+      expect(success, planId).toContain("/generate?paid=1&session_id=");
+      expect(success, planId).not.toContain("/dpp/thanks");
+      expect(success.split("?").length, planId).toBe(2);
+    }
   });
 
   it("carries aff_ref + ref_code cookies into session and subscription metadata", async () => {

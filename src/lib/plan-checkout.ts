@@ -109,7 +109,14 @@ export async function createPlanCheckoutSession(opts: {
       ...hostedCheckoutRecoveryParams(plan.stripe_mode),
       payment_method_types: ["card"],
       line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
-      success_url: `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}${
+      success_url: `${origin}${
+        plan.id === "starter" ||
+        plan.id === "creator" ||
+        plan.id === "qron_launch" ||
+        plan.id === "qron_launch_annual"
+          ? "/generate?paid=1&"
+          : "/dpp/thanks?"
+      }session_id={CHECKOUT_SESSION_ID}${
         prospectId ? `&prospect_id=${encodeURIComponent(prospectId)}` : ""
       }${source ? `&utm_source=${encodeURIComponent(source)}` : ""}&plan=${encodeURIComponent(plan.id)}`,
       cancel_url: `${origin}/#pricing`,
