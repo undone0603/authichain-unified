@@ -111,9 +111,9 @@
     "brand": "GovChain",
     "domain": "govchain.us",
     "title": "Blockchain Government Document Verification | GovChain",
-    "metaDescription": "Hash-based verification for permits, certificates, and RFP awards. QR-checked, no central authority.",
+    "metaDescription": "This page does not check a permit, certificate, or RFP award from a QR scan.",
     "h1": "Verify Government Documents",
-    "bodyHtml": "<p>GovChain replaces paper-stamp verification with a signed hash for any government document — a permit, certificate, or RFP award. The document itself never changes.</p><h2>How verification works</h2><ul><li>Scan the document QR — no login, no database call, no phone call to the agency</li><li>Hash validation checks the document against its signed record</li></ul><p>GovChain is built for the propose → pilot → statewide-contract path.</p><h2>Get started</h2><p><a href=\"https://govchain.us/onboard\">Request GovChain access</a>. No enterprise contract — public-sector pricing.</p>",
+    "bodyHtml": "<p>This page does not check a government document from a QR scan.</p><h2>How verification works</h2><ul><li>This page does not check a document from a scan.</li><li>This page does not validate a document against a record.</li></ul><p>GovChain is built for the propose → pilot → statewide-contract path.</p><h2>Get started</h2><p><a href=\"https://govchain.us/onboard\">Request GovChain access</a>. No enterprise contract — public-sector pricing.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -122,7 +122,7 @@
         "@type": "Brand",
         "name": "GovChain"
       },
-      "description": "Hash-based government document verification, QR-checked.",
+      "description": "This page does not check a permit, certificate, or RFP award from a QR scan.",
       "url": "https://govchain.us/government-document-verification-blockchain"
     }
   },
@@ -334,14 +334,14 @@
     "brand": "GovChain",
     "domain": "govchain.us",
     "title": "RFP Award Verification on Blockchain | GovChain",
-    "metaDescription": "Verify government RFP awards, permits and certificates from a QR scan. Signed hashes, no central authority.",
+    "metaDescription": "This page does not record an RFP award, permit, or certificate, and it does not check one from a QR scan.",
     "h1": "Blockchain Verification for Government RFP Awards",
-    "bodyHtml": "<p>GovChain provides on-chain verification of government documents. RFP awards, permits and certificates are recorded as signed hashes, so their authenticity can be checked from a QR scan.</p><h2>Designed for public-sector trust</h2><ul><li>Signed hashes for permits, certificates and RFP awards.</li></ul><h2>Get started</h2><p><a href=\"https://govchain.us/onboard\">Request GovChain access</a>. No enterprise contract — public-sector pricing.</p>",
+    "bodyHtml": "<p>This page does not record RFP awards, permits, or certificates, and it does not check them from a QR scan.</p><h2>Designed for public-sector trust</h2><ul><li>This page does not record a permit, a certificate, or an RFP award.</li></ul><h2>Get started</h2><p><a href=\"https://govchain.us/onboard\">Request GovChain access</a>. No enterprise contract — public-sector pricing.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "GovChain — RFP Award Verification",
-      "description": "On-chain verification of government RFP awards, permits and certificates.",
+      "description": "This page does not record government RFP awards, permits, or certificates.",
       "url": "https://govchain.us/government-rfp-award-verification-blockchain",
       "brand": {
         "@type": "Brand",
@@ -355,14 +355,14 @@
     "brand": "GovChain",
     "domain": "govchain.us",
     "title": "Government Document Verification for SBIR Pilots | GovChain",
-    "metaDescription": "GovChain offers hash-based verification of government documents, with no central authority.",
+    "metaDescription": "This page does not verify a government document from a QR scan.",
     "h1": "Blockchain Document Verification for Government Pilots",
-    "bodyHtml": "<p>GovChain delivers verification of government documents. Permits, certificates and RFP awards are recorded as signed hashes and verified from a QR scan.</p><h2>What GovChain provides</h2><ul><li>No central authority — verification is trustless.</li><li>Signed hashes for tamper-evident records.</li></ul><h2>Get started</h2><p><a href=\"https://govchain.us/onboard\">Request GovChain access</a>. No enterprise contract — public-sector pricing.</p>",
+    "bodyHtml": "<p>This page does not record permits, certificates, or RFP awards, and it does not verify them from a QR scan.</p><h2>What GovChain provides</h2><ul><li>This page does not provide that verification.</li><li>This page does not provide those records.</li></ul><h2>Get started</h2><p><a href=\"https://govchain.us/onboard\">Request GovChain access</a>. No enterprise contract — public-sector pricing.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "GovChain — Government Document Verification",
-      "description": "Hash-based verification of government documents.",
+      "description": "This page does not verify government documents.",
       "url": "https://govchain.us/sbir-svip-blockchain-document-verification",
       "brand": {
         "@type": "Brand",
@@ -377,14 +377,14 @@
     "brand": "GovChain",
     "domain": "govchain.us",
     "title": "Permit & Certificate QR Verification | GovChain",
-    "metaDescription": "Verify permits and certificates from a QR scan. Signed hashes, no central authority.",
+    "metaDescription": "This page does not verify a permit or a certificate from a QR scan.",
     "h1": "QR Verification for Permits & Certificates",
-    "bodyHtml": "<p>GovChain verifies permits and certificates from a QR scan. Each document is recorded as a signed hash, so verification needs no central authority.</p><h2>Field-ready verification</h2><ul><li>Signed hashes for permits, certificates and RFP awards.</li></ul><h2>Get started</h2><p><a href=\"https://govchain.us/onboard\">Request GovChain access</a>. No enterprise contract — public-sector pricing.</p>",
+    "bodyHtml": "<p>This page does not verify permits and certificates from a QR scan.</p><h2>Field-ready verification</h2><ul><li>This page does not record a permit, a certificate, or an RFP award.</li></ul><h2>Get started</h2><p><a href=\"https://govchain.us/onboard\">Request GovChain access</a>. No enterprise contract — public-sector pricing.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "GovChain — Permit Verification",
-      "description": "Blockchain verification of government permits and certificates.",
+      "description": "This page does not verify government permits and certificates.",
       "url": "https://govchain.us/offline-permit-certificate-qr-verification",
       "brand": {
         "@type": "Brand",

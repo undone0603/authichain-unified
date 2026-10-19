@@ -1719,6 +1719,56 @@ describe("claim goal ledger", () => {
     expect(battery.bodyHtml).toContain("18 February 2027");
   });
 
+  it("limits hash-verification claims on four GovChain seeds", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const slugs = [
+      "government-document-verification-blockchain",
+      "government-rfp-award-verification-blockchain",
+      "sbir-svip-blockchain-document-verification",
+      "offline-permit-certificate-qr-verification",
+    ];
+    const banned = [
+      "signed hash",
+      "Signed hashes",
+      "on-chain",
+      "trustless",
+      "paper-stamp",
+      "Hash validation",
+      "Hash-based",
+      "authenticity can be checked",
+      "verified from a QR",
+      "verifies permits",
+      "provides on-chain",
+      "replaces paper-stamp",
+      "delivers verification",
+      "offers hash-based",
+      "works offline",
+      "already issuing",
+      "proof of origin",
+      "no central authority",
+    ];
+    for (const slug of slugs) {
+      const page = pages.find((entry: { slug: string }) => entry.slug === slug);
+      const text = JSON.stringify(page);
+      expect(page.bodyHtml.match(/Our goal/g) || [], slug).toHaveLength(0);
+      expect(page.title, slug).not.toMatch(/Our goal/i);
+      expect(page.h1, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription.length, slug).toBeLessThanOrEqual(160);
+      expect(page.bodyHtml, slug).toContain("https://govchain.us/onboard");
+      expect(page.bodyHtml, slug).toContain("No enterprise contract");
+      expect(page.bodyHtml, slug).not.toContain("/checkout/");
+      expect(page.bodyHtml, slug).not.toContain("/api/checkout/");
+      expect(text, slug).not.toMatch(/works? offline|offline-capable|without connectivity|low-connectivity/i);
+      for (const phrase of banned) {
+        expect(text, `${slug} ${phrase}`).not.toContain(phrase);
+        expect(page.metaDescription, `${slug} ${phrase}`).not.toContain(phrase);
+      }
+    }
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
