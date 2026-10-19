@@ -1505,6 +1505,99 @@ describe("claim goal ledger", () => {
     expect(csddd.bodyHtml).toContain("18 March 2026");
   });
 
+  it("limits product-verification claims on eleven generated pages", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const dpp = [
+      "kimberley-process-diamond-certification-blockchain-2026",
+      "ai-shopping-agent-product-authenticity-verification",
+      "ai-agent-payment-mandate-product-authenticity-verification",
+      "counterfeit-small-parcel-ecommerce-verification",
+      "dscsa-authorized-trading-partner-verification-requirement",
+      "shop-safe-act-marketplace-seller-verification",
+    ];
+    const qron = [
+      "verified-by-gs1-vs-blockchain-provenance-record",
+      "eu-green-transition-directive-environmental-claims",
+      "eu-tyre-label-digital-qr-code-proposal",
+    ];
+    const slugs = dpp.concat(
+      ["trumark-product-authentication-seal", "federal-contractor-semiconductor-supply-chain-disclosure"],
+      qron
+    );
+    const banned = [
+      "closes that separate gap",
+      "ties one cut and polished stone",
+      "verifies what is being sold",
+      "same offline verification",
+      "verifier checks a signed provenance record",
+      "already frames a scan as a TruMark scan",
+      "can check a product",
+      "what a QRON scan checks",
+      "proves the specific item",
+      "Scan-to-verify works",
+      "Offline verification with no account",
+      "gives the end recipient a way to check",
+      "verifying that a specific drug unit is genuine",
+      "signature verification closes",
+      "verification here runs offline",
+      "meets that bar more directly",
+      "item-level verification is what catches",
+      "model already supports",
+      "answers that query in the time the rule",
+      "builds the part-level traceability layer now",
+      "could add on top",
+      "already issuing",
+      "proof of origin",
+      "works offline",
+    ];
+    for (const slug of slugs) {
+      const page = pages.find((entry: { slug: string }) => entry.slug === slug);
+      const text = JSON.stringify(page);
+      expect(page.bodyHtml.match(/Our goal/g), slug).toHaveLength(1);
+      expect(page.title, slug).not.toMatch(/Our goal/i);
+      expect(page.h1, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription.length, slug).toBeLessThanOrEqual(160);
+      for (const phrase of banned) {
+        expect(text, `${slug} ${phrase}`).not.toContain(phrase);
+      }
+      if (slug === "trumark-product-authentication-seal") {
+        expect(page.bodyHtml).toContain("https://authichain.com/checkout/strainchain_passport");
+        expect(page.bodyHtml).toContain("$49");
+      } else if (slug === "federal-contractor-semiconductor-supply-chain-disclosure") {
+        expect(page.bodyHtml).toContain("https://govchain.us/onboard");
+        expect(page.bodyHtml).not.toContain("/checkout/");
+        expect(page.bodyHtml).not.toContain("/api/checkout/");
+        expect(page.bodyHtml).not.toMatch(/offline/i);
+      } else if (qron.includes(slug)) {
+        expect(page.bodyHtml, slug).toContain("https://qron.space/pricing");
+        expect(page.bodyHtml, slug).not.toContain("/checkout/");
+        expect(page.bodyHtml, slug).not.toContain("/api/checkout/");
+      } else {
+        expect(page.bodyHtml, slug).toContain(
+          'action="https://authichain.com/checkout/dpp_readiness"'
+        );
+        expect(page.bodyHtml, slug).toContain("EU DPP Readiness is $299 one-time.");
+      }
+    }
+    const kimberley = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "kimberley-process-diamond-certification-blockchain-2026"
+    );
+    expect(kimberley.bodyHtml).toContain("That check is not live.");
+    const shop = pages.find(
+      (entry: { slug: string }) => entry.slug === "shop-safe-act-marketplace-seller-verification"
+    );
+    expect(shop.bodyHtml).toContain("It does not prove the physical unit is genuine.");
+    const tyre = pages.find(
+      (entry: { slug: string }) => entry.slug === "eu-tyre-label-digital-qr-code-proposal"
+    );
+    expect(tyre.bodyHtml).toContain("This page does not mean QRON already issues a tyre label.");
+    expect(tyre.bodyHtml).toContain("June 24, 2026");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
