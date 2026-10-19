@@ -1,0 +1,24 @@
+# Seed AuthiChain-owned Ed25519-signed seals (NICKEL-VERIFY). Manual only.
+# The worker signs with its own key; this job only presents a GitHub OIDC
+# token (audience https://authichain.com) to POST /protocol/seal-sign.
+# Run ONCE after the worker-app deploy and the auth_seals migration.
+name: Seed AuthiChain seals
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Mint OIDC token and seed
+        run: |
+          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://authichain.com" | jq -r .value)
+          echo "::add-mask::$TOKEN"
+          SEAL_SIGN_BEARER="$TOKEN" node scripts/seed-authichain-seals.mjs
