@@ -448,6 +448,12 @@ export default {
       });
     }
 
+    // /api/verify and /api/scan: not implemented. Answer 501 before any auth
+    // or Stripe code runs (replaces 40516a11's unauthenticated checkout path).
+    if (path.startsWith("/api/verify") || path.startsWith("/api/scan")) {
+      return jsonResponse({ error: "Not implemented" }, 501);
+    }
+
     // API key guard. /verify is public, /stripe/webhook checks the Stripe
     // signature, and /sales/inbound checks its own SALES_INBOUND_SECRET.
     const unguarded = ["/verify", "/stripe/webhook", "/sales/inbound"];
