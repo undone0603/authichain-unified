@@ -9,7 +9,8 @@
  * and is a courtesy cap, not enforcement. Then it shows the paid option:
  * x402 per call at POST /api/v1/agent-verify. No public price on this
  * page (price undecided, ADM-212); the 402 response carries it.
- * Copy rule: no "live", customer, or accuracy claims.
+ * Copy rule: no "live", customers, price, or accuracy claims.
+ * The example id is the published demonstration record, not a product seal.
  */
 export const IS_THIS_REAL_PATH = "/is-this-real";
 export const IS_THIS_REAL_SOURCE = "is-this-real";
@@ -24,7 +25,7 @@ export function renderIsThisRealPage(): string {
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Is this real? Check an AuthiChain seal | AuthiChain</title>
-<meta name="description" content="Enter an AuthiChain seal ID and get 3 free registry checks. After that, agents can pay per check over x402.">
+<meta name="description" content="Enter a seal ID. The example polygon-anchor-1 is a published demonstration record, not a product. After 3 free checks, agents can pay per check over x402.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://authichain.com${IS_THIS_REAL_PATH}">
 <style>
@@ -36,7 +37,7 @@ button{margin-top:1rem;padding:.7rem 1.2rem;border:0;border-radius:6px;backgroun
 code{background:#f3f3f3;padding:.1rem .3rem;border-radius:4px}
 </style></head><body>
 <h1>Is this real?</h1>
-<p>Enter the seal ID printed on an AuthiChain-sealed product or document. We check it against the AuthiChain registry. Your first ${IS_THIS_REAL_FREE_CHECKS} checks are free.</p>
+<p>Enter a seal ID. The example <code>polygon-anchor-1</code> is a published demonstration record, not a product and not a physical inspection. This page does not itself read the anchor transaction. Your first ${IS_THIS_REAL_FREE_CHECKS} checks are free.</p>
 <form id="itr-form" novalidate>
   <label for="seal">Seal ID</label>
   <input type="text" id="seal" name="sealId" required maxlength="128" placeholder="e.g. polygon-anchor-1">
@@ -51,9 +52,9 @@ code{background:#f3f3f3;padding:.1rem .3rem;border-radius:4px}
 <div id="paid" class="box" hidden>
   <h2>More checks</h2>
   <p>After the free checks, agents can pay per check over x402; an unpaid call returns HTTP 402 with the price. No account needed.</p>
-  <p class="small">Endpoint: <code>POST https://authichain.com/api/v1/agent-verify</code>. An empty JSON body <code>{}</code> is the unpaid HTTP 402 with the payment details. A non-UUID sealId is HTTP 400 before payment. Current status: <a href="/api/x402/health">/api/x402/health</a>. Docs: <a href="/x402">/x402</a>.</p>
+  <p class="small">Endpoint: <code>POST https://authichain.com/api/v1/agent-verify</code>. An empty JSON body <code>{}</code> is the unpaid HTTP 402 with the payment details. A seal UUID inside the daily free allowance is HTTP 200 with <code>free: true</code>, <code>verified: false</code>, and <code>settlement: null</code>. That answer is not a paid receipt. A non-UUID sealId is HTTP 400 before payment. Current status: <a href="/api/x402/health">/api/x402/health</a>. Docs: <a href="/x402">/x402</a>.</p>
 </div>
-<p class="small">"Verified" means the seal matches a record in the AuthiChain registry. It is not a legal or forensic guarantee.</p>
+<p class="small">A verdict on this page is the public check for that id. It is not a legal or forensic guarantee and not a physical inspection.</p>
 <script>
 (function(){
   var KEY="itr_free_used",MAX=${IS_THIS_REAL_FREE_CHECKS},captured=false;
