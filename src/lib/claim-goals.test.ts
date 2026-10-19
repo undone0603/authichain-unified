@@ -1376,6 +1376,54 @@ describe("claim goal ledger", () => {
     );
   });
 
+  it("limits SIMP offline-verification claims", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const page = pages.find(
+      (entry: { slug: string }) => entry.slug === "seafood-import-monitoring-program-traceability"
+    );
+    const text = JSON.stringify(page);
+    const banned = [
+      "can be signed",
+      "verify offline",
+      "re-keyed paper",
+      "does not need portal access",
+      "Anchoring makes the supporting",
+      "already issuing",
+      "works offline",
+      "proof of origin",
+    ];
+    expect(page.bodyHtml.match(/Our goal/g)).toHaveLength(1);
+    expect(page.title).not.toMatch(/Our goal/i);
+    expect(page.h1).not.toMatch(/Our goal/i);
+    expect(page.metaDescription).not.toMatch(/Our goal/i);
+    expect(page.metaDescription.length).toBeLessThanOrEqual(160);
+    expect(page.metaDescription).toBe(
+      "SIMP requires point-of-harvest-to-entry chain-of-custody data for more than 1,100 seafood species entering the US."
+    );
+    expect(page.bodyHtml).toContain("Our goal: reuse one record shape for a catch event.");
+    expect(page.bodyHtml).toContain("This page does not do DSCSA lot tracking or EUDR geolocation.");
+    expect(page.bodyHtml).toContain("FY2026");
+    expect(page.bodyHtml).toContain("Does this replace SIMP reporting to NOAA?");
+    expect(page.bodyHtml).toContain(
+      'action="https://authichain.com/checkout/dpp_readiness"'
+    );
+    expect(page.bodyHtml).toContain("EU DPP Readiness is $299 one-time.");
+    expect(page.bodyHtml).toContain(
+      "This page does not sign catch, landing, or custody events, and it does not carry a SIMP record across a processor transfer."
+    );
+    expect(page.bodyHtml).toContain(
+      "This page does not verify a SIMP record against the shipment\u2019s identifier, and it does not give a customs or NOAA reviewer that check."
+    );
+    expect(page.bodyHtml).toContain(
+      "This page does not make that chain-of-custody documentation tamper-evident, and it does not change where or how the SIMP report itself gets filed."
+    );
+    for (const phrase of banned) {
+      expect(text, phrase).not.toContain(phrase);
+    }
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
