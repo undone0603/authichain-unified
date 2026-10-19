@@ -22,6 +22,18 @@ describe("battery passport lead form (AE-20261002-CFD-04)", () => {
   const html = renderBatteryPassportPage(new Date("2026-09-23T12:00:00Z"));
   const section = batteryLeadFormSection();
 
+  it("limits the in-development line to battery certificate issuance", () => {
+    expect(section).toContain(
+      "Certificate issuance for a battery passport is in development."
+    );
+    expect(section).toContain("not a physical inspection");
+    expect(section).toContain("This page is not a battery passport");
+    expect(section).not.toContain("public verification are in development");
+    expect(section).not.toContain("polygon-anchor-1");
+    expect(section).not.toContain("only published demonstration record");
+    expect(section).not.toContain("polygonscan.com");
+  });
+
   it("is on the page between the FAQ and the checkout section", () => {
     const faq = html.indexOf('id="faq"');
     const lead = html.indexOf('id="scope-pilot"');
