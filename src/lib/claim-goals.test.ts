@@ -1928,6 +1928,24 @@ describe("claim goal ledger", () => {
     expect(destroy.bodyHtml).toContain("19 July 2026");
   });
 
+  it("clears the missing-fixture blocker after the four named checks", () => {
+    const fixtures = [
+      "protocol/epcis/fixtures/one-unit-object-event.json",
+      "protocol/parts/genuine-part-fixture.json",
+      "protocol/cannabis/metrc-or-biotrack-package.json",
+      "protocol/dscsa/shipped-history.json",
+      "protocol/dscsa/returned-package.json",
+    ];
+    for (const fixture of fixtures) {
+      expect(fs.existsSync(path.join(root, fixture)), fixture).toBe(true);
+    }
+    for (const record of claims) {
+      expect(String(record.blockedBy), record.id).not.toMatch(/in the repo yet/);
+      expect(record.class, record.id).toBe("copy-only");
+      expect(record.status, record.id).not.toBe("done");
+    }
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
