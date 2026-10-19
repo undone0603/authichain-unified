@@ -212,6 +212,29 @@ async function unpaidSealRefusal(
   return { status: parsed.status, body: parsed.body };
 }
 
+function parseJsonObject(text: string): Record<string, unknown> {
+  if (!text.trim()) return {};
+  try {
+    const value = JSON.parse(text) as unknown;
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+/** 400 when the body cannot be a registry key. Null keeps the 402 challenge. */
+async function unpaidSealRefusal(
+  request: Request
+): Promise<{ status: number; body: unknown } | null> {
+  const raw = parseJsonObject(await request.clone().text());
+  if (Object.keys(raw).length === 0) return null;
+  const parsed = parseSealRequest(raw);
+  if (parsed.ok) return null;
+  return { status: parsed.status, body: parsed.body };
+}
+
 async function agentVerify(
   request: Request,
   env?: SisterX402Env,
