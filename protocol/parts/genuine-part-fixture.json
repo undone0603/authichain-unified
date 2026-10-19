@@ -1,0 +1,8 @@
+{
+  "synthetic": true,
+  "source": "local-fixture",
+  "partIdentifier": "fixture-part-0001",
+  "signature": "fixture-signature",
+  "assertion": "fixture part record",
+  "note": "Local part record for a later signature-match check. No OEM catalogue credential. A signature match does not prove the physical part is genuine."
+}

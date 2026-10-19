@@ -1,0 +1,7 @@
+{
+  "synthetic": true,
+  "source": "local-fixture",
+  "program": "METRC",
+  "packageId": "FIXTURE-PACKAGE-0001",
+  "note": "Local package id for a later read test. No agency response, no license, and no credential."
+}
