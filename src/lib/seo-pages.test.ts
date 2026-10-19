@@ -99,7 +99,7 @@ describe("seo-pages loader", () => {
   });
 });
 
-const GENERATED_HOW_IT_WORKS =
+const OLD_HOW_IT_WORKS =
   "Issue a unique identifier per unit and link it to a signed record";
 
 // Mirrors scripts/gen-seo-pages.cjs PROTECTED_SEED_SLUGS — hand-authored pages
@@ -141,9 +141,7 @@ const PROTECTED_SEED_MARKERS: Record<string, string> = {
 describe("generated SEO money-path CTAs", () => {
   it("places a live checkout or pricing CTA after How it works and before FAQ", () => {
     const generated = listSeoPages().filter(
-      p =>
-        p.bodyHtml.includes(GENERATED_HOW_IT_WORKS) &&
-        !PROTECTED_SEED_SLUGS.has(p.slug)
+      (p) => !PROTECTED_SEED_SLUGS.has(p.slug)
     );
     expect(generated.length).toBeGreaterThan(0);
 
@@ -151,10 +149,11 @@ describe("generated SEO money-path CTAs", () => {
       const how = p.bodyHtml.indexOf("<h2>How it works</h2>");
       const cta = p.bodyHtml.indexOf("<h2>Get started</h2>");
       const faq = p.bodyHtml.indexOf("<h2>FAQ</h2>");
-      expect(how).toBeGreaterThan(-1);
-      expect(cta).toBeGreaterThan(how);
+      expect(how, p.slug).toBeGreaterThan(-1);
+      expect(cta, p.slug).toBeGreaterThan(how);
       // A page with no FAQs (e.g. the noindex QFS explainer) omits the section.
-      if (faq !== -1) expect(faq).toBeGreaterThan(cta);
+      if (faq !== -1) expect(faq, p.slug).toBeGreaterThan(cta);
+      expect(p.bodyHtml, p.slug).not.toContain(OLD_HOW_IT_WORKS);
     }
   });
 

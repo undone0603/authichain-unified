@@ -17,6 +17,7 @@
  * PR 12 sets the textile, registry, and ESPR owners to goal-published. Sibling goals stay off the page.
  * PR 13 sets the furniture, electronics, steel, tyres, aluminium, toys, and detergents owners to goal-published. Sibling goals stay off the page.
  * PR 14 sets the already-issues owners to goal-published. A slug keeps one goal in the lead.
+ * PR 15 replaces the default how-it-works line. An owned slug gets the limit only. A slug with no other owner gets that one goal beside the limit.
  * seed-cannabis-not-another-compliance-tool stays limitPermanent false.
  */
 const PERM = {
@@ -1494,6 +1495,8 @@ const claims = [
   r('generated-how-it-works', {
     files: ['scripts/seo-data/build-entry.cjs', 'content/seo/pages.json'],
     publicGoalIfNoOtherOwner: true,
+    emit: 'goal',
+    status: 'goal-published',
     limitPermanent: false,
     currentSentence: 'Issue a unique identifier per unit and link it to a signed record',
     goalSentence: 'Our goal: issue a unique identifier per unit and link it to a signed record.',

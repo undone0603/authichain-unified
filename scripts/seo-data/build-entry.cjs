@@ -207,6 +207,16 @@ function clampTitle(kwTitle, brand, max = 60) {
   return `${kw}${suffix}`;
 }
 
+const HOW_IT_WORKS_LIMIT = 'That issuance is not live on this page.';
+const HOW_IT_WORKS_WHEN_ONLY_GOAL =
+  'Our goal: issue a unique identifier per unit and link it to a signed record. That issuance is not live on this page.';
+
+function howItWorksForEntry(entry, claims) {
+  if (entry.howItWorks) return entry.howItWorks;
+  const explicit = explicitOwners(recordsForSlug(claims, slugify(entry.keyword)));
+  return explicit.length ? HOW_IT_WORKS_LIMIT : HOW_IT_WORKS_WHEN_ONLY_GOAL;
+}
+
 function buildEntry(d) {
   const b = BRANDS[d.brand];
   const kwTitle = titleCase(d.keyword);
@@ -235,7 +245,7 @@ function buildEntry(d) {
       : '') +
     `<h2>How it works</h2>` +
     // d.howItWorks (optional) overrides the How-it-works line for one entry (RES-100 F5).
-    `<p>${d.howItWorks ? esc(d.howItWorks) : 'Issue a unique identifier per unit and link it to a signed record.'} ${esc(b.price)}</p>` +
+    `<p>${esc(d.howItWorks || HOW_IT_WORKS_WHEN_ONLY_GOAL)} ${esc(b.price)}</p>` +
     moneyCtaHtml(d.brand, d.keyword, b) +
     (d.faqs.length ? `<h2>FAQ</h2>` + d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('') : '');
   const jsonLd = {
@@ -410,8 +420,17 @@ function assembleCatalogue({ data, existing, claims, protectedSeedSlugs, outLabe
   const label = outLabel || 'content/seo/pages.json';
   const generated = [];
   for (const entry of data) {
-    const built = buildEntry(entry);
-    const slug = built.slug;
+    const slug = slugify(entry.keyword);
+    const records = recordsForSlug(claims, slug);
+    ownerForSlug(claims, slug);
+    const emit = emitFor(records);
+    const rendered = entry.howItWorks
+      ? entry
+      : Object.assign({}, entry, { howItWorks: howItWorksForEntry(entry, claims) });
+    const built = buildEntry(rendered);
+    if (built.slug !== slug) {
+      throw new Error(`${entry.keyword}: built slug ${built.slug} does not match ${slug}`);
+    }
     if (protectedSeedSlugs && protectedSeedSlugs.has(slug)) {
       throw new Error(
         `A DATA keyword slugifies to a protected hand-authored seed slug, which would ` +
@@ -420,9 +439,6 @@ function assembleCatalogue({ data, existing, claims, protectedSeedSlugs, outLabe
           `slug from PROTECTED_SEED_SLUGS in this file first.`
       );
     }
-    const records = recordsForSlug(claims, slug);
-    ownerForSlug(claims, slug);
-    const emit = emitFor(records);
     const committed = existing.find((p) => p.slug === slug) || null;
     if (emit === 'hold') {
       if (!committed) throw new Error(`${slug}: emit hold but the committed page is missing`);

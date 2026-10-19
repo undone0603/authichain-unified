@@ -228,7 +228,10 @@ describe("claim goal ledger", () => {
       expect(owner, phrase).toBeTruthy();
     }
     const how = claims.find((record: { id: string }) => record.id === "generated-how-it-works");
-    expect(how.status).toBe("open");
+    expect(how.status).toBe("goal-published");
+    expect(how.emit).toBe("goal");
+    expect(how.publicGoal).toBe(false);
+    expect(how.publicGoalIfNoOtherOwner).toBe(true);
     expect(how.limitPermanent).toBe(false);
   });
 
@@ -409,7 +412,9 @@ describe("claim goal ledger", () => {
       "Our goal: a scan checks a signed record for that unit."
     );
     const recall = pageBy("cannabis-product-recall-traceability");
-    expect(recall).toContain("Issue a unique identifier per unit and link it to a signed record.");
+    expect(recall).toContain("That issuance is not live on this page.");
+    expect(recall).not.toContain("Issue a unique identifier per unit and link it to a signed record");
+    expect(recall).not.toContain("Our goal: issue a unique identifier per unit and link it to a signed record.");
     expect(recall).not.toContain("Our goal: a scan checks a signed record for that unit.");
     expect(recall).not.toContain("Our goal: attach a lab retest to a unit record.");
     expect(recall).not.toContain("Our goal: show a lab result on the recall page.");
@@ -729,7 +734,9 @@ describe("claim goal ledger", () => {
     }
     const howItWorks = claims.find((entry: { id: string }) => entry.id === "generated-how-it-works");
     expect(howItWorks.publicGoal).toBe(false);
-    expect(howItWorks.status).toBe("open");
+    expect(howItWorks.publicGoalIfNoOtherOwner).toBe(true);
+    expect(howItWorks.status).toBe("goal-published");
+    expect(howItWorks.emit).toBe("goal");
   });
 
   it("publishes the right-to-repair goal beside its limit", () => {
@@ -992,6 +999,78 @@ describe("claim goal ledger", () => {
     expect(furniture.bodyHtml).toContain(
       "Our goal: issue one furniture passport record with material, durability, and end-of-life fields."
     );
+  });
+
+  it("replaces the default how-it-works line without a second goal", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const record = claims.find(
+      (entry: { id: string }) => entry.id === "generated-how-it-works"
+    );
+    expect(record.status).toBe("goal-published");
+    expect(record.emit).toBe("goal");
+    expect(record.publicGoal).toBe(false);
+    expect(record.publicGoalIfNoOtherOwner).toBe(true);
+    expect(record.class).toBe("copy-only");
+    expect(record.limitPermanent).toBe(false);
+    const oldSentence = "Issue a unique identifier per unit and link it to a signed record";
+    let onlyGoal = 0;
+    for (const page of pages) {
+      if (generator.PROTECTED_SEED_SLUGS.has(page.slug)) continue;
+      const text = JSON.stringify(page);
+      expect(text, page.slug).not.toContain(oldSentence);
+      const owner = ownerForSlug(claims, page.slug);
+      const howAt = page.bodyHtml.indexOf("<h2>How it works</h2>");
+      const cta = page.bodyHtml.indexOf("<h2>Get started</h2>");
+      expect(howAt, page.slug).toBeGreaterThan(-1);
+      expect(cta, page.slug).toBeGreaterThan(howAt);
+      const howChunk = page.bodyHtml.slice(howAt, cta);
+      if (owner.id === "generated-how-it-works" && howChunk.includes(record.goalSentence)) {
+        onlyGoal += 1;
+        expect(howChunk, page.slug).toContain(record.limitSentence);
+        expect(howChunk.match(/Our goal/g), page.slug).toHaveLength(1);
+        expect(page.bodyHtml.match(/Our goal/g), page.slug).toHaveLength(1);
+        expect(page.title, page.slug).not.toMatch(/Our goal/i);
+        expect(page.h1, page.slug).not.toMatch(/Our goal/i);
+        expect(page.metaDescription, page.slug).not.toMatch(/Our goal/i);
+        expect(page.metaDescription.length, page.slug).toBeLessThanOrEqual(160);
+        expect(page.title.length, page.slug).toBeLessThanOrEqual(60);
+        expect(howChunk, page.slug).toMatch(/\$|public-sector pricing/);
+      } else if (owner.id === "generated-how-it-works") {
+        expect(text, page.slug).not.toContain(record.goalSentence);
+        expect(howChunk, page.slug).not.toContain("Our goal");
+        expect(howChunk, page.slug).not.toContain(record.limitSentence);
+      } else {
+        expect(text, page.slug).not.toContain(record.goalSentence);
+        expect(howChunk, page.slug).not.toContain("Our goal");
+      }
+    }
+    expect(onlyGoal).toBeGreaterThan(100);
+    for (const slug of claims.PRODUCT_17) {
+      const page = pages.find((entry: { slug: string }) => entry.slug === slug);
+      expect(page.bodyHtml, slug).toContain(
+        "Issuing a customer product certificate is in development."
+      );
+      const howAt = page.bodyHtml.indexOf("<h2>How it works</h2>");
+      const cta = page.bodyHtml.indexOf("<h2>Get started</h2>");
+      expect(page.bodyHtml.slice(howAt, cta), slug).not.toContain("Our goal");
+    }
+    const battery = pages.find(
+      (entry: { slug: string }) => entry.slug === "eu-digital-product-passport-batteries"
+    );
+    expect(battery.bodyHtml).toContain("Battery passport issuance is in development.");
+    const recall = pages.find(
+      (entry: { slug: string }) => entry.slug === "cannabis-product-recall-traceability"
+    );
+    const recallHow = recall.bodyHtml.slice(
+      recall.bodyHtml.indexOf("<h2>How it works</h2>"),
+      recall.bodyHtml.indexOf("<h2>Get started</h2>")
+    );
+    expect(recallHow).toContain("That issuance is not live on this page.");
+    expect(recallHow).toContain("Genetics passport is $49 one-time.");
+    expect(recallHow).not.toContain("Our goal");
+    expect(recall.bodyHtml.match(/Our goal/g)).toHaveLength(1);
   });
 
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
