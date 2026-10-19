@@ -66,6 +66,7 @@ describe("x402 public docs page", () => {
     expect(html).toContain("HTTP 402");
     expect(html).toContain("An empty body is the unpaid HTTP 402");
     expect(html).toContain("A non-UUID sealId is HTTP 400 before payment");
+    expect(html).toContain("The all-zero discovery example is HTTP 400 before payment");
     expect(html).not.toContain('{"sealId":"demo"}');
     expect(html).toContain("extensions.bazaar");
     expect(html).toContain("accepts[0].outputSchema.input");
