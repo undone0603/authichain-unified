@@ -1769,6 +1769,165 @@ describe("claim goal ledger", () => {
     }
   });
 
+  it("limits available-now claims on nineteen generated pages", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const dpp = [
+      "battery-passport-qr-code-requirements",
+      "eu-dpp-qr-code-data-carrier-requirements",
+      "battery-passport-carbon-footprint-declaration-delayed",
+      "scip-database-digital-product-passport-substances-of-concern",
+      "eu-textile-labelling-regulation-digital-label-revision",
+      "france-agec-digital-product-passport-overlap",
+      "new-york-fashion-act-supply-chain-traceability",
+      "california-sb-707-textile-epr-traceability",
+      "qr-code-phishing-product-packaging-security",
+      "construction-products-digital-product-passport",
+      "eu-digital-product-passport-mattresses",
+      "eu-green-claims-directive-product-data",
+      "forced-labor-supply-chain-traceability-verification",
+      "eu-ban-on-destroying-unsold-clothes-and-shoes-records",
+      "espr-dpp-independent-service-provider-backup-copy",
+      "espr-dpp-model-batch-or-item-level-granularity",
+      "gs1-digital-link-uri-gtin-lot-serial-structure",
+    ];
+    const slugs = dpp.concat([
+      "dfars-counterfeit-electronic-parts-detection-avoidance",
+      "federal-hemp-redefinition-2026-interstate-traceability",
+    ]);
+    const banned = [
+      "anchored to the signed record",
+      "rejects a testnet",
+      "distinguishes anchored",
+      "resolves to a real record",
+      "structured into the signed record now",
+      "does not need re-architecting",
+      "Structure the passport record now",
+      "is built to carry",
+      "structured to carry",
+      "can carry the same substance",
+      "both resolve",
+      "built for AGEC today",
+      "built for AGEC compliance",
+      "gives a company evidence",
+      "gives a producer checkable",
+      "gives a producer accurate",
+      "Offline verification means",
+      "data structured for",
+      "structure the record now",
+      "built to hold",
+      "one way to make that traceability checkable",
+      "evidence toward compliance",
+      "one way to satisfy",
+      "evidence an importer can submit",
+      "a buyer or carrier can check",
+      "answers the compliance question",
+      "auditor can check without asking you",
+      "Anchoring commits the hash",
+      "any copy, held anywhere, verifies",
+      "Item records resolve",
+      "A record can carry a GS1",
+      "verifier work at every level",
+      "avoids a rebuild",
+      "uses that URI as its credentialSubject.id",
+      "already issuing",
+      "proof of origin",
+      "works offline",
+    ];
+    for (const slug of slugs) {
+      const page = pages.find((entry: { slug: string }) => entry.slug === slug);
+      const text = JSON.stringify(page);
+      expect(page.bodyHtml.match(/Our goal/g), slug).toHaveLength(1);
+      expect(page.title, slug).not.toMatch(/Our goal/i);
+      expect(page.h1, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription.length, slug).toBeLessThanOrEqual(160);
+      for (const phrase of banned) {
+        expect(text, `${slug} ${phrase}`).not.toContain(phrase);
+        expect(page.metaDescription, `${slug} ${phrase}`).not.toContain(phrase);
+      }
+      if (slug === "dfars-counterfeit-electronic-parts-detection-avoidance") {
+        expect(page.bodyHtml).toContain("https://govchain.us/onboard");
+        expect(page.bodyHtml).not.toContain("/checkout/");
+        expect(page.bodyHtml).not.toContain("/api/checkout/");
+        expect(text).not.toMatch(/works? offline|offline-capable|without connectivity|low-connectivity/i);
+      } else if (slug === "federal-hemp-redefinition-2026-interstate-traceability") {
+        expect(page.bodyHtml).toContain("https://strainchain.io/pricing");
+        expect(page.bodyHtml).toContain("$49");
+        expect(page.bodyHtml).not.toContain("/checkout/");
+        expect(page.bodyHtml).not.toContain("/api/checkout/");
+      } else {
+        expect(page.bodyHtml, slug).toContain(
+          'action="https://authichain.com/checkout/dpp_readiness"'
+        );
+        expect(page.bodyHtml, slug).toContain("EU DPP Readiness is $299 one-time.");
+      }
+    }
+    const battery = pages.find(
+      (entry: { slug: string }) => entry.slug === "battery-passport-qr-code-requirements"
+    );
+    expect(battery.bodyHtml).toContain("February 18, 2027");
+    const carbon = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "battery-passport-carbon-footprint-declaration-delayed"
+    );
+    expect(carbon.bodyHtml).toContain("18 February 2027");
+    const scip = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "scip-database-digital-product-passport-substances-of-concern"
+    );
+    expect(scip.bodyHtml).toContain("5 January 2021");
+    const textile = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "eu-textile-labelling-regulation-digital-label-revision"
+    );
+    expect(textile.bodyHtml).toContain("That format is not already issued");
+    const agec = pages.find(
+      (entry: { slug: string }) => entry.slug === "france-agec-digital-product-passport-overlap"
+    );
+    expect(agec.bodyHtml).toContain("France\u2019s AGEC law already requires");
+    const sb707 = pages.find(
+      (entry: { slug: string }) => entry.slug === "california-sb-707-textile-epr-traceability"
+    );
+    expect(sb707.bodyHtml).toContain("July 1, 2026");
+    expect(sb707.bodyHtml).toContain("February 27, 2026");
+    expect(sb707.bodyHtml).toContain("Landbell USA");
+    const quish = pages.find(
+      (entry: { slug: string }) => entry.slug === "qr-code-phishing-product-packaging-security"
+    );
+    expect(quish.bodyHtml).toContain("protocol/SPEC.md \u00a78");
+    const mattress = pages.find(
+      (entry: { slug: string }) => entry.slug === "eu-digital-product-passport-mattresses"
+    );
+    expect(mattress.bodyHtml).toContain("2029");
+    const green = pages.find(
+      (entry: { slug: string }) => entry.slug === "eu-green-claims-directive-product-data"
+    );
+    expect(green.bodyHtml).toContain("September 27, 2026");
+    expect(green.bodyHtml).toContain("not one AuthiChain issues");
+    const dfars = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "dfars-counterfeit-electronic-parts-detection-avoidance"
+    );
+    expect(dfars.bodyHtml).toContain("252.246-7007");
+    const uflpa = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "forced-labor-supply-chain-traceability-verification"
+    );
+    expect(uflpa.bodyHtml).toContain("June 9, 2026");
+    const hemp = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "federal-hemp-redefinition-2026-interstate-traceability"
+    );
+    expect(hemp.bodyHtml).toContain("November 2026");
+    const destroy = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "eu-ban-on-destroying-unsold-clothes-and-shoes-records"
+    );
+    expect(destroy.bodyHtml).toContain("19 July 2026");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
