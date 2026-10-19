@@ -1129,6 +1129,75 @@ describe("claim goal ledger", () => {
     expect(battery.bodyHtml).toContain("hashing it to an anchor is not live on this page.");
   });
 
+  it("limits already-uses claims on nine generated pages", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const slugs = [
+      "eu-dpp-qr-code-data-carrier-requirements",
+      "cen-cenelec-digital-product-passport-standards",
+      "eu-digital-product-passport-detergents",
+      "eu-wine-ingredient-nutrition-qr-code-label",
+      "eu-dpp-data-authentication-integrity-standard-en-18246",
+      "eu-dpp-access-rights-management-standard-en-18239",
+      "federal-sbom-minimum-elements-government-contractor-requirement",
+      "un-transparency-protocol-vs-w3c-verifiable-credentials",
+      "w3c-verifiable-credentials-data-model-2-1-changes",
+    ];
+    const banned = [
+      "already uses",
+      "already implements",
+      "already requires",
+      "already matches",
+      "already makes",
+      "already targets",
+      "this spec already uses",
+      "building blocks match",
+      "built on the same",
+    ];
+    for (const slug of slugs) {
+      const page = pages.find((entry: { slug: string }) => entry.slug === slug);
+      const text = JSON.stringify(page);
+      expect(page.bodyHtml.match(/Our goal/g), slug).toHaveLength(1);
+      expect(page.title, slug).not.toMatch(/Our goal/i);
+      expect(page.h1, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription.length, slug).toBeLessThanOrEqual(160);
+      expect(page.title.length, slug).toBeLessThanOrEqual(60);
+      for (const phrase of banned) {
+        expect(text, `${slug} ${phrase}`).not.toContain(phrase);
+      }
+    }
+    const gov = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "federal-sbom-minimum-elements-government-contractor-requirement"
+    );
+    expect(gov.bodyHtml).toContain("https://govchain.us/onboard");
+    expect(gov.bodyHtml).not.toContain("/checkout/");
+    expect(gov.bodyHtml).toContain(
+      "GovChain does not issue that chain-of-custody record on this page."
+    );
+    const detergents = pages.find(
+      (entry: { slug: string }) => entry.slug === "eu-digital-product-passport-detergents"
+    );
+    expect(detergents.bodyHtml).toContain("23 September 2029");
+    expect(detergents.bodyHtml).toContain(
+      'action="https://authichain.com/checkout/dpp_readiness"'
+    );
+    const untpPage = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "un-transparency-protocol-vs-w3c-verifiable-credentials"
+    );
+    expect(untpPage.metaDescription).toBe(
+      "UN/CEFACT\u2019s UN Transparency Protocol targets version 1.0 by 1 September 2026."
+    );
+    expect(untpPage.bodyHtml).toContain("1 September 2026");
+    const aluminium = pages.find(
+      (entry: { slug: string }) => entry.slug === "eu-digital-product-passport-aluminium"
+    );
+    expect(JSON.stringify(aluminium)).toContain("already used for the steel passport");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
