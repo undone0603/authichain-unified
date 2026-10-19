@@ -71,6 +71,10 @@ next-env.d.ts
 /coverage
 /.nyc_output
 
+# Hardhat build output (paths in hardhat.config.ts)
+/artifacts/hardhat/
+/cache/
+
 # Temporary
 tmp/
 temp/
