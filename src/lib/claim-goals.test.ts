@@ -1424,6 +1424,87 @@ describe("claim goal ledger", () => {
     }
   });
 
+  it("limits filing-evidence claims on ten generated pages", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const slugs = [
+      "cbam-embedded-carbon-emissions-verification",
+      "eu-conflict-minerals-regulation-3tg-due-diligence",
+      "cyber-resilience-act-vulnerability-reporting-deadline-2026",
+      "csddd-omnibus-supply-chain-due-diligence-2026",
+      "eu-digital-product-passport-chemicals-scope-study",
+      "usda-product-of-usa-label-traceability-documentation",
+      "ftc-made-in-usa-labeling-verification",
+      "made-in-america-origin-claim-substantiation",
+      "made-in-usa-origin-claims-documentation",
+      "buy-american-made-in-usa-provenance",
+    ];
+    const banned = [
+      "can support the embedded-carbon",
+      "can carry the batch-level",
+      "kind of evidence the Responsible Minerals",
+      "is evidence an auditor or downstream",
+      "evidence you can produce fast",
+      "inventory to report from quickly",
+      "documents what a tier-1 partner asserted",
+      "can carry REACH-required data today",
+      "plant can hand over",
+      "per-unit record can carry",
+      "supply-chain record can trace",
+      "evidence a company can point to",
+      "evidence that outlasts a label",
+      "one way to carry that evidence",
+      "checkable evidence a buyer",
+      "The record is competent-and-reliable-evidence material",
+      "compliance team can hand over",
+      "answers for that serial",
+      "documentation those officers can read",
+      "is evidence toward a domestic-origin",
+      "and a signed.",
+      "already issuing",
+      "works offline",
+      "proof of origin",
+    ];
+    for (const slug of slugs) {
+      const page = pages.find((entry: { slug: string }) => entry.slug === slug);
+      const text = JSON.stringify(page);
+      expect(page.bodyHtml.match(/Our goal/g), slug).toHaveLength(1);
+      expect(page.title, slug).not.toMatch(/Our goal/i);
+      expect(page.h1, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription.length, slug).toBeLessThanOrEqual(160);
+      expect(page.bodyHtml, slug).toContain(
+        'action="https://authichain.com/checkout/dpp_readiness"'
+      );
+      expect(page.bodyHtml, slug).toContain("EU DPP Readiness is $299 one-time.");
+      for (const phrase of banned) {
+        expect(text, `${slug} ${phrase}`).not.toContain(phrase);
+        expect(page.metaDescription, `${slug} ${phrase}`).not.toContain(phrase);
+      }
+    }
+    const cbam = pages.find(
+      (entry: { slug: string }) => entry.slug === "cbam-embedded-carbon-emissions-verification"
+    );
+    expect(cbam.bodyHtml).toContain("Does a signed AuthiChain record satisfy CBAM reporting on its own?");
+    expect(cbam.bodyHtml).toContain("definitive phase in 2026");
+    const chemicals = pages.find(
+      (entry: { slug: string }) => entry.slug === "eu-digital-product-passport-chemicals-scope-study"
+    );
+    expect(chemicals.bodyHtml).toContain("not already used as a live passport");
+    const buy = pages.find(
+      (entry: { slug: string }) => entry.slug === "buy-american-made-in-usa-provenance"
+    );
+    expect(buy.metaDescription).toBe(
+      "Buy American and Made in USA questions in federal procurement are still origin questions: a contracting officer can ask where a unit was made."
+    );
+    expect(buy.bodyHtml).toContain("ZACHARY KIETZMAN");
+    const csddd = pages.find(
+      (entry: { slug: string }) => entry.slug === "csddd-omnibus-supply-chain-due-diligence-2026"
+    );
+    expect(csddd.bodyHtml).toContain("18 March 2026");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
