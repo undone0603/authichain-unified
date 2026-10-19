@@ -1195,7 +1195,16 @@ describe("claim goal ledger", () => {
     const aluminium = pages.find(
       (entry: { slug: string }) => entry.slug === "eu-digital-product-passport-aluminium"
     );
-    expect(JSON.stringify(aluminium)).toContain("already used for the steel passport");
+    expect(JSON.stringify(aluminium)).not.toContain("already used for the steel passport");
+    expect(JSON.stringify(aluminium)).not.toContain("anchored on-chain");
+    expect(aluminium.bodyHtml).toContain(
+      "Embodied-carbon and scope 1\u20133 data are not already captured on this page."
+    );
+    expect(aluminium.bodyHtml).toContain(
+      "Recycled-content and alloy-grade declarations are not anchored on this page."
+    );
+    expect(aluminium.bodyHtml).toContain("delegated act in 2027");
+    expect(aluminium.bodyHtml.match(/Our goal/g)).toHaveLength(1);
   });
 
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
