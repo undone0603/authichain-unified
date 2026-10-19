@@ -1,5 +1,17 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolvePaidSealVerify } from "./paid-seal-verify";
+
+const anchoredFixture = JSON.parse(
+  readFileSync(
+    resolve(
+      process.cwd(),
+      "protocol/conformance/fixtures/valid-anchored-polygon.json"
+    ),
+    "utf8"
+  )
+) as { record: Record<string, unknown>; anchor: Record<string, unknown> };
 
 // CFA-363: paid paths need a replay store; an in-memory stub for these tests.
 function kvStub() {
@@ -246,6 +258,67 @@ describe("resolvePaidSealVerify", () => {
           call => call.method === "POST" && call.url.includes("automation_logs")
         )
       ).toBe(false);
+      expect(decision.body).toMatchObject({
+        details: { verdict: "unsigned", reasons: ["no_ed25519_proof"] },
+      });
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it("returns verified only when the stored record and anchor pass the protocol verifier", async () => {
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    process.env.X402_NETWORK = "base";
+    const original = globalThis.fetch;
+    const { fetchImpl } = callsOf(url => {
+      if (url.includes("/settle")) {
+        return new Response(
+          JSON.stringify({ success: true, txHash: "0xabc" }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        );
+      }
+      if (url.includes("auth_seals")) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: SEAL,
+              product_id: "protocol-demonstration",
+              batch_id: "b1",
+              brand: "authichain.com",
+              created_at: "2026-09-01T00:00:00Z",
+              qr_payload: JSON.stringify({
+                record: anchoredFixture.record,
+                anchor: anchoredFixture.anchor,
+              }),
+            },
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } }
+        );
+      }
+      return new Response("[]", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    globalThis.fetch = fetchImpl;
+    try {
+      const decision = await resolvePaidSealVerify({
+        replayStore: kvStub(),
+        ...bound,
+        hasVerifyApp: false,
+        proofHeader: proof({ signature: "0xdead" }),
+        bodyText: JSON.stringify({ sealId: SEAL }),
+        fetchImpl,
+      });
+      expect(decision.action).toBe("answer");
+      if (decision.action !== "answer") return;
+      expect(decision.status).toBe(200);
+      expect(decision.body).toMatchObject({
+        verified: true,
+        registered: true,
+        checks: { registry: "found", signature: "checked" },
+        details: { verdict: "verified" },
+      });
     } finally {
       globalThis.fetch = original;
     }
