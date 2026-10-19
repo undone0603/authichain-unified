@@ -645,6 +645,17 @@ describe("generated SEO money-path CTAs", () => {
       "eu-digital-product-passport-aluminium",
       "eu-digital-product-passport-toys",
       "eu-digital-product-passport-detergents",
+      "kimberley-process-diamond-certification-blockchain-2026",
+      "qr-code-phishing-product-packaging-security",
+      "ppwr-packaging-qr-code-labeling-requirements",
+      "eu-digital-product-passport-chemicals-scope-study",
+      "uk-product-regulation-metrology-act-digital-labelling",
+      "espr-recycled-content-recyclability-electronics-2029",
+      "eu-textile-labelling-regulation-digital-label-revision",
+      "seafood-import-monitoring-program-traceability",
+      "shop-safe-act-marketplace-seller-verification",
+      "eudamed-udi-medical-device-registration-2026",
+      "forced-labor-supply-chain-traceability-verification",
     ]) {
       const page = getSeoPageBySlug(slug);
       expect(page, slug).not.toBeNull();

@@ -904,6 +904,96 @@ describe("claim goal ledger", () => {
     );
   });
 
+  it("publishes the already-issues goals beside their limits", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content", "seo", "pages.json"), "utf8")
+    );
+    const owners = [
+      "kimberley-already-solves",
+      "quishing-signed-record-does",
+      "metrc-consumer-qr-strainchain-signs",
+      "ppwr-already-issues",
+      "chemicals-already-used",
+      "uk-labelling-already-issues",
+      "eee-2029-already-issues",
+      "textile-labelling-already-issues",
+      "qron-already-issues-tyre",
+      "qron-sunrise-every-code",
+      "govchain-issues-sbom",
+      "simp-already-used-dscsa",
+      "shop-safe-record-does",
+      "eudamed-clinician-signs",
+      "uflpa-already-addresses",
+    ];
+    for (const id of owners) {
+      const record = claims.find((entry: { id: string }) => entry.id === id);
+      expect(record.status, id).toBe("goal-published");
+      expect(record.publicGoal, id).toBe(true);
+      expect(record.emit, id).toBe("goal");
+      expect(record.class, id).toBe("copy-only");
+      expect(record.limitPermanent, id).toBe(false);
+      const page = pages.find(
+        (entry: { slug: string }) => entry.slug === record.slugs[0]
+      );
+      const text = JSON.stringify(page);
+      expect(text, id).toContain(record.goalSentence);
+      expect(text, id).toContain(record.limitSentence);
+      expect(text, id).not.toContain(record.currentSentence);
+      for (const phrase of record.bannedRestorations || []) {
+        expect(text, id).not.toContain(phrase);
+      }
+      expect(page.title, id).not.toMatch(/Our goal/i);
+      expect(page.h1, id).not.toMatch(/Our goal/i);
+      expect(page.metaDescription, id).not.toMatch(/Our goal/i);
+      expect(page.metaDescription.length, id).toBeLessThanOrEqual(160);
+      expect(page.title.length, id).toBeLessThanOrEqual(60);
+      expect(page.bodyHtml.match(/Our goal/g), id).toHaveLength(1);
+      const how = page.bodyHtml.indexOf("<h2>How it works</h2>");
+      const cta = page.bodyHtml.indexOf("<h2>Get started</h2>");
+      const howChunk = page.bodyHtml.slice(how, cta);
+      expect(howChunk, id).toContain("That issuance is not live on this page.");
+      expect(howChunk, id).not.toContain("Our goal");
+      expect(howChunk, id).not.toContain(
+        "Issue a unique identifier per unit and link it to a signed record"
+      );
+      if (page.brand === "AuthiChain") {
+        expect(howChunk, id).toContain("EU DPP Readiness is $299 one-time.");
+        expect(page.bodyHtml, id).toContain(
+          'action="https://authichain.com/checkout/dpp_readiness"'
+        );
+      }
+      if (page.brand === "QRON") {
+        expect(howChunk, id).toContain("QRON packs from $29 one-time.");
+        expect(page.bodyHtml, id).toContain('href="https://qron.space/pricing"');
+        expect(page.bodyHtml, id).not.toContain("/checkout/");
+      }
+      if (page.brand === "GovChain") {
+        expect(howChunk, id).toContain("public-sector pricing");
+        expect(page.bodyHtml, id).toContain('href="https://govchain.us/onboard"');
+        expect(page.bodyHtml, id).not.toContain("/checkout/");
+        expect(text, id).not.toMatch(
+          /works? offline|offline-capable|without connectivity|low-connectivity/i
+        );
+      }
+      if (page.brand === "StrainChain") {
+        expect(howChunk, id).toContain("Genetics passport is $49 one-time.");
+        expect(page.bodyHtml, id).toContain(
+          'action="https://authichain.com/checkout/strainchain_passport"'
+        );
+      }
+    }
+    const sunrise = pages.find(
+      (entry: { slug: string }) => entry.slug === "gs1-digital-link-sunrise-2027"
+    );
+    expect(sunrise.bodyHtml).toContain("GS1 Sunrise 2027");
+    const furniture = pages.find(
+      (entry: { slug: string }) => entry.slug === "eu-digital-product-passport-furniture"
+    );
+    expect(furniture.bodyHtml).toContain(
+      "Our goal: issue one furniture passport record with material, durability, and end-of-life fields."
+    );
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
