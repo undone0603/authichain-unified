@@ -23,6 +23,7 @@ import {
   type DppReadinessInput,
   type DppReadinessResult,
 } from "../../../src/lib/dpp-readiness";
+import { emitGrowthEvent } from "../../../src/lib/growth/emit";
 
 export const DPP_CHECK_PATH = "/dpp-check";
 export const DPP_CHECK_CANONICAL = `https://authichain.com${DPP_CHECK_PATH}`;
@@ -43,7 +44,7 @@ const esc = (s: string) =>
   s.replace(
     /[&<>"']/g,
     c =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+      ({ "&": "&", "<": "<", ">": ">", '"': """, "'": "&#39;" })[
         c
       ]!
   );
@@ -130,6 +131,15 @@ export function renderDppCheckPage(url: URL, now: Date = new Date()): string {
   const result = input
     ? scoreDppReadiness(input, { now, auditPrice: price })
     : null;
+
+  // Fire-and-forget growth event for completed checks (never block HTML)
+  if (result) {
+    emitGrowthEvent({
+      event: "dpp_check_completed",
+      sku: "dpp_readiness",
+    }).catch(() => {});
+  }
+
   const title = "Free EU Digital Product Passport readiness check | AuthiChain";
   const description =
     "Score DPP gaps for free. An AuthiChain workspace, self-serve activation, and 50 workspace generations are $299. AuthiChain does not operate the EU registry.";
@@ -256,7 +266,7 @@ export function tryHandleDppCheck(request: Request): Response | null {
   );
 }
 
-// ── Funnel events ────────────────────────────────────────────────────────────
+// ── Funnel events ────────────────────────────────────────────────────────────────────────────────
 // One structured log line per completed check and per $299 checkout POST.
 // authichain-com has [observability] on, so these are countable in Workers
 // Logs at no cost (query in docs/growth/DPP_CHECK_FUNNEL.md). Stripe sessions
