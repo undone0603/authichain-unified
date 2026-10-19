@@ -65,6 +65,23 @@ describe("plan catalogue integrity", () => {
     );
     expect(PLAN_CREDITS.qron_launch).toBe(100);
   });
+
+  it("wires QRON Launch Annual $190/yr to the live Stripe price", () => {
+    expect(planById("qron_launch_annual")?.price).toBe(190);
+    expect(planById("qron_launch_annual")?.stripe_mode).toBe("subscription");
+    expect(planById("qron_launch_annual")?.generations).toBe(1200);
+    expect(planById("qron_launch_annual")?.listed).not.toBe(false);
+    expect(planByStripePriceId("price_1USNoSGqTruSqV8ThTIW7Ej8")?.id).toBe(
+      "qron_launch_annual"
+    );
+    expect(planByAmountCents(19000)).toBeUndefined();
+    expect(planPaymentLink("qron_launch_annual")).toBe(
+      "https://authichain.com/checkout/qron_launch_annual"
+    );
+    expect(PLAN_CREDITS.qron_launch_annual).toBe(1200);
+    expect(planUsd("dpp_readiness")).toBe(299);
+    expect(planById("dpp_readiness")?.name).toBe("EU DPP Workspace");
+  });
 });
 
 describe("isPurchasable", () => {
