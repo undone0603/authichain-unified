@@ -7,6 +7,7 @@ import mcpServer from './mcp-server';
 // inlines it at build time, so the worker stays self-contained at runtime.
 import { tryHandleDppRoute } from "./dpp-routes";
 import { tryHandleAgentPresentation } from "./agent-present-page";
+import { tryHandleBotIdentity } from "./bot-identity-routes";
 import {
   tryHandleApiCheckoutEmailGate,
   tryHandleProtocolCheckout,
@@ -3601,6 +3602,8 @@ async function handleAuthichainCom(
     if (dppPage) return dppPage;
     const agentPage = await tryHandleAgentPresentation(request);
     if (agentPage) return agentPage;
+    const botIdentity = tryHandleBotIdentity(request);
+    if (botIdentity) return botIdentity;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
     // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the
