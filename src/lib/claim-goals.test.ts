@@ -1270,6 +1270,112 @@ describe("claim goal ledger", () => {
     expect(csddd.bodyHtml).toContain("18 March 2026");
   });
 
+  it("limits signed-record claims on seven generated pages", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const slugs = [
+      "eu-general-product-safety-regulation-traceability-requirements",
+      "eu-falsified-medicines-directive-verification",
+      "eu-digital-product-passport-registry-test-environment",
+      "cmmc-2-0-supply-chain-subcontractor-flow-down-requirement",
+      "gs1-datamatrix-point-of-care-scanning-requirements",
+      "un-transparency-protocol-vs-w3c-verifiable-credentials",
+      "vechain-alternative-without-tokens-or-gas-fees",
+    ];
+    const banned = [
+      "can verify offline",
+      "signed, anchored record is one way",
+      "is built to give a downstream party",
+      "verifies offline against the record",
+      "buyer can verify offline",
+      "can carry the same product code",
+      "resolves at a permanent GS1",
+      "anchored record of a subcontractor",
+      "resolves from the same GS1",
+      "can serve as one of those",
+      "thing you buy",
+      "before it can issue a record",
+      "already issuing",
+      "works offline",
+    ];
+    for (const slug of slugs) {
+      const page = pages.find((entry: { slug: string }) => entry.slug === slug);
+      const text = JSON.stringify(page);
+      expect(page.bodyHtml.match(/Our goal/g), slug).toHaveLength(1);
+      expect(page.title, slug).not.toMatch(/Our goal/i);
+      expect(page.h1, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription.length, slug).toBeLessThanOrEqual(160);
+      for (const phrase of banned) {
+        expect(text, `${slug} ${phrase}`).not.toContain(phrase);
+      }
+      if (slug === "cmmc-2-0-supply-chain-subcontractor-flow-down-requirement") {
+        expect(page.bodyHtml, slug).toContain("https://govchain.us/onboard");
+        expect(page.bodyHtml, slug).not.toContain("/checkout/");
+        expect(page.bodyHtml, slug).not.toContain("/api/checkout/");
+      } else {
+        expect(page.bodyHtml, slug).toContain(
+          'action="https://authichain.com/checkout/dpp_readiness"'
+        );
+        expect(page.bodyHtml, slug).toContain("EU DPP Readiness is $299 one-time.");
+      }
+    }
+    const gpsr = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "eu-general-product-safety-regulation-traceability-requirements"
+    );
+    expect(gpsr.bodyHtml).toContain("13 December 2024");
+    expect(gpsr.bodyHtml).toContain(
+      "This page does not give those operators a shared record to check."
+    );
+    const fmd = pages.find(
+      (entry: { slug: string }) => entry.slug === "eu-falsified-medicines-directive-verification"
+    );
+    expect(fmd.bodyHtml).toContain("9 February 2019");
+    expect(fmd.bodyHtml).toContain("Does a signed AuthiChain record replace the FMD unique identifier?");
+    const registry = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "eu-digital-product-passport-registry-test-environment"
+    );
+    expect(registry.bodyHtml).toContain("20 July 2026");
+    const cmmc = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "cmmc-2-0-supply-chain-subcontractor-flow-down-requirement"
+    );
+    expect(cmmc.bodyHtml).toContain("July 2026");
+    expect(cmmc.bodyHtml).toContain(
+      "This page does not keep a signed record of a subcontractor\u2019s attested level."
+    );
+    const matrix = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "gs1-datamatrix-point-of-care-scanning-requirements"
+    );
+    expect(matrix.bodyHtml).toContain("GS1 DataMatrix is already the required data carrier");
+    const untp = pages.find(
+      (entry: { slug: string }) =>
+        entry.slug === "un-transparency-protocol-vs-w3c-verifiable-credentials"
+    );
+    expect(untp.metaDescription).toBe(
+      "UN/CEFACT\u2019s UN Transparency Protocol targets version 1.0 by 1 September 2026."
+    );
+    const vechain = pages.find(
+      (entry: { slug: string }) => entry.slug === "vechain-alternative-without-tokens-or-gas-fees"
+    );
+    expect(vechain.metaDescription).toBe(
+      "VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing."
+    );
+    expect(vechain.bodyHtml).toContain("VeChain is a separate L1 blockchain");
+    const comparison = fs.readFileSync(
+      path.join(root, "scripts/seo-data/comparison.cjs"),
+      "utf8"
+    );
+    expect(comparison).toContain("Product certification through verify is in development.");
+    expect(comparison).toContain(
+      "Self-serve issuance and EU DPP export are still in development."
+    );
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
