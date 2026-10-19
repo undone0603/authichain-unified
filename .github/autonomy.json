@@ -189,6 +189,7 @@
         "d1-license-migrate.yml": "manual",
         "deploy-qron-ai-api.yml": "manual",
         "deploy-govchain-nft-base.yml": "manual",
+        "dpp-followup.yml": "manual",
         "dpp-outreach-trigger.yml": "manual",
         "guardrail-digest.yml": "manual",
         "outreach-trigger.yml": "manual",

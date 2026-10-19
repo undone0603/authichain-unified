@@ -16,6 +16,11 @@ import {
 } from "../../_shared/estate-landing.ts";
 import { planById } from "../../../src/lib/plans";
 import {
+  DPP_OPTIN_INTEREST,
+  DPP_OPTIN_SOURCE,
+  dppOptInMessage,
+} from "../../../src/lib/dpp-followup";
+import {
   DPP_CATEGORIES,
   DPP_QUESTIONS,
   parseDppReadinessInput,
@@ -88,6 +93,65 @@ function formHtml(input: DppReadinessInput | null): string {
 </form>`;
 }
 
+/**
+ * Optional "email me this result" form on the result page.
+ *
+ * Posts JSON to the existing POST /api/leads/capture (worker-app). The form
+ * starts hidden and the inline script reveals it, because that endpoint only
+ * reads JSON: without JavaScript a visible form would end on a raw JSON
+ * response. The consent box is required and unchecked, and a row with
+ * product_interest=dpp_check_followup is only ever created when it is ticked,
+ * so that row is the opt-in (see src/lib/dpp-followup.ts). The stored message
+ * is the shape of the result (category, score, band) and nothing typed.
+ */
+function optInForm(r: DppReadinessResult, price: number): string {
+  const message = dppOptInMessage({
+    category: r.category.id,
+    score: r.score,
+    band: r.band,
+  });
+  const fields = {
+    source: DPP_OPTIN_SOURCE,
+    product_interest: DPP_OPTIN_INTEREST,
+    message,
+    categories: r.category.id,
+    ...UTM,
+    utm_content: r.category.id,
+  };
+  const hidden = Object.entries(fields)
+    .map(
+      ([k, v]) => `<input type="hidden" name="${k}" value="${esc(String(v))}">`
+    )
+    .join("");
+  return `<form class="checkout-email-form dc-optin" id="result-optin" hidden>
+  <h3>Want this result by email?</h3>
+  <label class="checkout-email-label" for="result-optin-email">Email
+    <input id="result-optin-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@yourbrand.com">
+  </label>
+  <label class="dc-q"><input type="checkbox" name="consent" value="yes" required>
+    <span>Email me this result, plus one follow-up about the $${price} workspace. Nothing else after that, and every email has an unsubscribe link.</span></label>
+  ${hidden}
+  <button class="btn btn-primary" type="submit">Email me this result</button>
+  <p class="bp-note" id="result-optin-status" role="status"></p>
+</form>
+<script>
+(function(){
+  var f=document.getElementById('result-optin'); if(!f) return;
+  f.hidden=false;
+  f.addEventListener('submit',function(e){
+    e.preventDefault();
+    var s=document.getElementById('result-optin-status'), b=f.querySelector('button');
+    var d={}; new FormData(f).forEach(function(v,k){d[k]=v;});
+    delete d.consent; d.page_url=location.origin+location.pathname;
+    b.disabled=true; s.textContent='Sending...';
+    fetch('/api/leads/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)})
+      .then(function(r){ if(!r.ok) throw new Error(String(r.status)); s.textContent='Saved. We will email you this result once.'; })
+      .catch(function(){ s.textContent='That did not save. Please try again, or write to hello@authichain.com.'; b.disabled=false; });
+  });
+})();
+</script>`;
+}
+
 function resultHtml(r: DppReadinessResult, price: number): string {
   const gaps = r.gaps.length
     ? `<ol class="dc-gaps">${r.gaps.map(g => `<li>${esc(g)}</li>`).join("")}</ol>`
@@ -116,6 +180,7 @@ function resultHtml(r: DppReadinessResult, price: number): string {
     <h3>Next step</h3>
     <p>${esc(r.nextStep)}</p>
     ${cta}
+    ${r.inScope ? optInForm(r, price) : ""}
     <p class="bp-note">${esc(r.disclaimer)}</p>
   </div>
 </section>`;
@@ -203,7 +268,7 @@ export function renderDppCheckPage(url: URL, now: Date = new Date()): string {
     <div class="wrap hero-content">
       <p class="estate-badge hero-badge">Free tool · EU Digital Product Passport</p>
       <h1>Map your EU DPP gaps. Free.</h1>
-      <p class="estate-lede hero-sub">Eight quick questions. You get a score, the gaps to close, and the dated obligation for your category. Free, nothing stored. AuthiChain does not operate the EU DPP registry. This is a readiness map, not a filing, not a notified-body opinion, and not legal advice.</p>
+      <p class="estate-lede hero-sub">Eight quick questions. You get a score, the gaps to close, and the dated obligation for your category. Free. Nothing is stored unless you ask for your result by email. AuthiChain does not operate the EU DPP registry. This is a readiness map, not a filing, not a notified-body opinion, and not legal advice.</p>
       <p class="bp-note">The $299 checkout opens a workspace. <a href="/battery-passport/sample-audit">See a fictional e-bike walkthrough</a>.</p>
       ${formHtml(input)}
     </div>
