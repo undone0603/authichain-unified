@@ -1207,6 +1207,69 @@ describe("claim goal ledger", () => {
     expect(aluminium.bodyHtml.match(/Our goal/g)).toHaveLength(1);
   });
 
+  it("limits present-tense signing claims on eight generated pages", () => {
+    const pages = JSON.parse(
+      fs.readFileSync(path.join(root, "content/seo/pages.json"), "utf8")
+    );
+    const slugs = [
+      "eu-general-product-safety-regulation-traceability-requirements",
+      "csddd-omnibus-supply-chain-due-diligence-2026",
+      "california-sb-253-scope-3-supplier-emissions-verification",
+      "digital-product-passport-paints-lubricants-detergents-timeline",
+      "eu-dpp-access-rights-management-standard-en-18239",
+      "iso-22095-chain-of-custody-blockchain",
+      "scantrust-alternative-with-a-public-verifier",
+      "w3c-verifiable-credential-render-method-physical-label",
+    ];
+    const banned = [
+      "already carries",
+      "already covers",
+      "signs and anchors whatever",
+      "AuthiChain runs for batteries",
+      "v0.1.0 issues one record",
+      "AuthiChain signs a record tied",
+      "AuthiChain signs the record behind",
+      "printed carrier today",
+      "natural fit",
+      "Issuing it early",
+      "a record anyone can check",
+    ];
+    for (const slug of slugs) {
+      const page = pages.find((entry: { slug: string }) => entry.slug === slug);
+      const text = JSON.stringify(page);
+      expect(page.bodyHtml.match(/Our goal/g), slug).toHaveLength(1);
+      expect(page.title, slug).not.toMatch(/Our goal/i);
+      expect(page.h1, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription, slug).not.toMatch(/Our goal/i);
+      expect(page.metaDescription.length, slug).toBeLessThanOrEqual(160);
+      expect(page.bodyHtml, slug).toContain(
+        'action="https://authichain.com/checkout/dpp_readiness"'
+      );
+      expect(page.bodyHtml, slug).toContain("EU DPP Readiness is $299 one-time.");
+      for (const phrase of banned) {
+        expect(text, `${slug} ${phrase}`).not.toContain(phrase);
+      }
+    }
+    const iso = pages.find(
+      (entry: { slug: string }) => entry.slug === "iso-22095-chain-of-custody-blockchain"
+    );
+    expect(iso.metaDescription).toBe(
+      "ISO 22095 defines five chain-of-custody models: identity preserved, segregated, controlled blending, mass balance, and book and claim."
+    );
+    expect(iso.bodyHtml).toContain("ISO 22095");
+    expect(iso.bodyHtml).toContain("not already issued on this page");
+    const scan = pages.find(
+      (entry: { slug: string }) => entry.slug === "scantrust-alternative-with-a-public-verifier"
+    );
+    expect(scan.metaDescription).toBe(
+      "Scantrust is an established secure-QR and brand-protection platform with self-serve plans."
+    );
+    const csddd = pages.find(
+      (entry: { slug: string }) => entry.slug === "csddd-omnibus-supply-chain-due-diligence-2026"
+    );
+    expect(csddd.bodyHtml).toContain("18 March 2026");
+  });
+
   it("does not name ops/scripts/gen-seo-pages.cjs as the catalogue writer", () => {
     const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
     expect(pkg).not.toContain("ops/scripts/gen-seo-pages.cjs");
