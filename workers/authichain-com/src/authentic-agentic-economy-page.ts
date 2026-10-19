@@ -32,7 +32,7 @@ export const AUTHENTIC_AGENTIC_ECONOMY = {
   canonicalUrl: "https://authichain.com/authentic-agentic-economy",
   title: "The authentic agentic economy — AuthiChain",
   description:
-    "",
+    "AuthiChain is the authentic agentic economy: signed seals, MCP tools, and x402 pay-per-call so agents can trust physical products.",
 } as const;
 
 export function isAuthenticAgenticEconomyPath(pathname: string): boolean {
@@ -250,11 +250,11 @@ ${estateSteps(
   [
     {
       title: "Call",
-      body: "The agent hits MCP verify tools or POST /api/x402 with a seal or product identifier. No API key is required for the unpaid 402 challenge.",
+      body: "The unpaid challenge is POST /api/x402 with an empty JSON body. That returns HTTP 402. A non-UUID sealId is HTTP 400 before payment. No API key is required for the 402.",
     },
     {
       title: "Pay",
-      body: "If the call is metered, the edge returns HTTP 402 with the Base USDC requirement. The agent settles $0.05 and retries with X-PAYMENT.",
+      body: "The edge returns HTTP 402 with the Base USDC requirement. The agent settles $0.05 and retries the same POST with X-PAYMENT and a seal UUID.",
     },
     {
       title: "Act",
@@ -308,7 +308,7 @@ ${estateFooter(
       ],
     },
   ],
-  "Polygon · ERC-721 · x402 · EU DPP"
+  "Signed seals · x402 on Base · EU DPP"
 )}
 </body>
 </html>`;
