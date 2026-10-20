@@ -24,6 +24,8 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - A DigitalProductPassport stays unanchored in `verifySubmitted` until `passportHashPublished` sees a genuine scan and a successful transaction input that contains the signing-bytes hash. `polygon-anchor-1` keeps its verifier verdict and gains no `genuine` key. The anchor script does not broadcast.
 - `hashPublicationEvidence` stores a `hash_publication` row only when that publication was read for this passport. An anchor object does not become the row. The row does not set genuine. This does not broadcast.
 - `POST /api/verify` returns that row as `hashPublication` when the chain read qualifies. The response does not write a database.
+- A DSCSA package record is transaction information for one package id. It is not an FDA compliance determination, and it does not set `genuine`. A missing expiration is not the current time.
+- `storeDscsaPackageEvidence` appends that package row only when the five fields are supplied. A category, an inspection row, or a missing passport does not create it. The row does not set `genuine`.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 

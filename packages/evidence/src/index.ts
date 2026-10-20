@@ -3,6 +3,12 @@ import { EvidenceSchema as BaseEvidenceSchema } from "./base";
 
 export * from "./base";
 export { mapEpcisToDsCsa } from "./mapping";
+export {
+  checkDscsaPackageTi,
+  DSCSA_PACKAGE_ABSENT_SENTENCE,
+  DSCSA_PACKAGE_SENTENCE,
+  storeDscsaPackageEvidence,
+} from "./dscsa-package-ti";
 
 export const DsCsaEvidenceSchema = BaseEvidenceSchema.extend({
   metadata: z.object({
