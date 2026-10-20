@@ -107,7 +107,6 @@ export async function createPlanCheckoutSession(opts: {
     const session = await stripe.checkout.sessions.create({
       mode: plan.stripe_mode,
       ...hostedCheckoutRecoveryParams(plan.stripe_mode),
-      payment_method_types: ["card"],
       line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
       success_url: `${origin}${
         plan.id === "starter" ||

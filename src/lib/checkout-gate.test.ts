@@ -276,6 +276,21 @@ describe("tryHandleGatedCheckout — POST", () => {
     }
   });
 
+  it("lets Checkout choose payment methods for Launch Annual", () => {
+    const body = buildGatedSessionBody({
+      plan: planById("qron_launch_annual")!,
+      email: "a@b.co",
+      fields: new URLSearchParams(),
+    });
+    expect(body.get("mode")).toBe("subscription");
+    expect(body.get("line_items[0][price]")).toBe(
+      planById("qron_launch_annual")!.stripe_price_id
+    );
+    expect(
+      [...body.keys()].some(key => key.startsWith("payment_method_types"))
+    ).toBe(false);
+  });
+
   it("DPP POST carries the DPP offer metadata", () => {
     const body = buildGatedSessionBody({
       plan: planById("dpp_readiness")!,

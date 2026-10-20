@@ -399,7 +399,8 @@ export function buildGatedSessionBody(opts: {
   body.set("mode", mode);
   body.set("line_items[0][price]", plan.stripe_price_id as string);
   body.set("line_items[0][quantity]", "1");
-  body.set("payment_method_types[0]", "card");
+  // Omit payment_method_types. Checkout then offers the methods enabled in
+  // the Stripe Dashboard. A hardcoded card list blocks those methods.
   // Each product lands where its buyer can use what they bought.
   // The claim file has its own landing: /dpp/thanks would tell a Made in USA
   // buyer their "DPP audit" was provisioned.
