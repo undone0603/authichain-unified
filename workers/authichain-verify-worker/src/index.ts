@@ -12,6 +12,7 @@ import {
   anchoredAfterChainRead,
   publicationSentence,
   anchorUnreadSentence,
+  hashPublicationEvidence,
 } from "./protocol-verify.mjs";
 import { publishedRecord } from "./published-record.mjs";
 
@@ -215,6 +216,11 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
     const sealPass = binding?.method === "seal_serial_sha256" && binding?.pass === true;
     const anchored = anchoredAfterChainRead(protocol, chain);
     const publication = publicationSentence(protocol, chain);
+    const txHash = typeof anchor?.txHash === "string" ? anchor.txHash : "";
+    const publicationEvidence = hashPublicationEvidence(
+      { passport: anchor ? { record, anchor } : { record } },
+      { chain, txHash },
+    );
     const sealMessage =
       !publication &&
       sealPass &&
@@ -273,6 +279,9 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
           : {}),
         ...(binding ? { productBinding: binding } : {}),
         ...(message ? { message } : {}),
+        ...(publicationEvidence.stored
+          ? { hashPublication: publicationEvidence.entry }
+          : {}),
         subject: subject
           ? { id: subject.id ?? null, name: subject.name ?? null }
           : null,

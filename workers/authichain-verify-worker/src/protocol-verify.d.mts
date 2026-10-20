@@ -43,6 +43,22 @@ export function anchorUnreadSentence(
   chain?: { queried?: boolean } | null,
 ): string | null;
 
+export const HASH_PUBLICATION_EVIDENCE_ABSENT: string;
+
+export function hashPublicationEvidence(
+  metadata: unknown,
+  input?: {
+    chain?: { queried?: boolean; onChain?: boolean; status?: string } | null;
+    txHash?: unknown;
+    signingBytesSha256?: unknown;
+  } | null,
+): {
+  stored: boolean;
+  entry: { type: "hash_publication"; signingBytesSha256: string; txHash: string } | null;
+  metadata: unknown;
+  message: string;
+};
+
 export function readAnchorOnChain(
   record: unknown,
   anchor: unknown,

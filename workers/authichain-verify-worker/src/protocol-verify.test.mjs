@@ -4,14 +4,21 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, generateKeyPairSync } from "node:crypto";
-import { productPassportMetadata, signPassport } from "../../../protocol/passport.mjs";
+import {
+  appendPassportEvidence,
+  productPassportMetadata,
+  signPassport,
+  storePassport,
+} from "../../../protocol/passport.mjs";
 import { signingBytes } from "../../../protocol/verifier.mjs";
 import {
   assessChainRead,
   anchoredAfterChainRead,
   anchorUnreadSentence,
   expectedRecordHash,
+  HASH_PUBLICATION_EVIDENCE_ABSENT,
   HASH_PUBLICATION_SENTENCE,
+  hashPublicationEvidence,
   passportHashPublished,
   publicationSentence,
   readStoredPassport,
@@ -236,4 +243,77 @@ test("a DPP is anchored only when the receipt contains the signing-bytes hash", 
   assert.equal(Object.hasOwn(provenance, "genuine"), false);
   assert.equal(anchoredAfterChainRead(provenance, published), true);
   assert.equal(publicationSentence(provenance, published), null);
+});
+
+test("a hash publication row is stored only after the chain read", () => {
+  const { record, anchor } = signedPassport();
+  const metadata = storePassport({ story: "kept" }, { record, anchor });
+  const proof = record.proof.proofValue;
+  const signingBytesSha256 = "sha256:" + expectedRecordHash(record);
+  const published = assessChainRead({
+    tx: { input: "0x" + expectedRecordHash(record), from: "0xabc", to: "0xabc" },
+    receipt: { status: "0x1", blockNumber: "0x10" },
+    recordHash: signingBytesSha256,
+  });
+  const txHash = "0x" + "cd".repeat(32);
+  const stored = hashPublicationEvidence(metadata, {
+    chain: published,
+    txHash,
+    genuine: true,
+    signingBytesSha256,
+  });
+  assert.equal(stored.stored, true);
+  assert.deepEqual(stored.entry, { type: "hash_publication", signingBytesSha256, txHash });
+  assert.equal(stored.message, HASH_PUBLICATION_SENTENCE);
+  assert.equal(Object.hasOwn(stored, "genuine"), false);
+  assert.equal(Object.hasOwn(stored.entry, "genuine"), false);
+  assert.equal(JSON.stringify(stored.entry).includes("genuine"), false);
+  assert.equal(stored.metadata.story, "kept");
+  assert.equal(stored.metadata.passport.record, record);
+  assert.equal(stored.metadata.passport.record.proof.proofValue, proof);
+  assert.deepEqual(stored.metadata.passport.evidence, [stored.entry]);
+  assert.equal(metadata.passport.evidence, undefined);
+  assert.equal(verifySubmitted(record, anchor).genuine, true);
+
+  const fromAnchor = hashPublicationEvidence(metadata, anchor);
+  assert.equal(fromAnchor.stored, false);
+  assert.equal(fromAnchor.metadata, metadata);
+  assert.equal(fromAnchor.message, HASH_PUBLICATION_EVIDENCE_ABSENT);
+
+  const flagOnly = hashPublicationEvidence(metadata, { genuine: true, txHash });
+  assert.equal(flagOnly.stored, false);
+  assert.equal(flagOnly.message, HASH_PUBLICATION_EVIDENCE_ABSENT);
+
+  const unread = hashPublicationEvidence(metadata, {
+    chain: { queried: false, onChain: false, status: "not_queried", txHash },
+    txHash,
+  });
+  assert.equal(unread.stored, false);
+
+  const wrongHash = hashPublicationEvidence(metadata, {
+    chain: published,
+    txHash,
+    signingBytesSha256: "sha256:" + "11".repeat(32),
+  });
+  assert.equal(wrongHash.stored, false);
+  assert.equal(wrongHash.metadata, metadata);
+
+  const noTx = hashPublicationEvidence(metadata, { chain: published });
+  assert.equal(noTx.stored, false);
+
+  const open = storePassport({}, { record });
+  assert.equal(hashPublicationEvidence(open, { chain: published, txHash }).stored, false);
+
+  const missing = hashPublicationEvidence({}, { chain: published, txHash });
+  assert.deepEqual(missing, {
+    stored: false,
+    entry: null,
+    metadata: {},
+    message: HASH_PUBLICATION_EVIDENCE_ABSENT,
+  });
+
+  let bag = metadata;
+  for (let i = 0; i < 32; i += 1) bag = appendPassportEvidence(bag, { type: "note", n: i });
+  assert.throws(() => hashPublicationEvidence(bag, { chain: published, txHash }), /evidence_cap/);
+  assert.equal(bag.passport.record.proof.proofValue, proof);
 });
