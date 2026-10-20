@@ -26,6 +26,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - `POST /api/verify` returns that row as `hashPublication` when the chain read qualifies. The response does not write a database.
 - A DSCSA package record is transaction information for one package id. It is not an FDA compliance determination, and it does not set `genuine`. A missing expiration is not the current time.
 - `storeDscsaPackageEvidence` appends that package row only when the five fields are supplied. A category, an inspection row, or a missing passport does not create it. The row does not set `genuine`.
+- A server-side image compare can be stored as `visual_similarity` evidence beside a stored passport. The row is a similarity and a threshold. It does not set `genuine`. With no stored passport, the sentence stays "A visual compare is not a product passport scan."
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 
