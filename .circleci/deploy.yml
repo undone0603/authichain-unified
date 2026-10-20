@@ -1,0 +1,68 @@
+version: 2.1
+
+jobs:
+  deploy-workers:
+    docker:
+      - image: cimg/node:22.15
+    environment:
+      COMPONENT_NAME: "<< pipeline.deploy.component_name >>"
+      ENVIRONMENT_NAME: "<< pipeline.deploy.environment_name >>"
+      TARGET_VERSION: "<< pipeline.deploy.target_version >>"
+    steps:
+      - checkout
+      - run:
+          name: Plan deployment
+          command: |
+            circleci run release plan workers-production \
+              --environment-name="${ENVIRONMENT_NAME}" \
+              --component-name="${COMPONENT_NAME}" \
+              --target-version="${TARGET_VERSION}"
+      - run:
+          name: Check out the selected version
+          command: |
+            set -euo pipefail
+            if [ -z "${TARGET_VERSION}" ]; then
+              echo "TARGET_VERSION is empty. Choose the git commit to deploy."
+              exit 1
+            fi
+            git fetch --force origin "${TARGET_VERSION}"
+            git checkout --detach FETCH_HEAD
+      - run:
+          name: Deploy workers
+          command: bash scripts/circleci/deploy-workers.sh
+      - run:
+          name: Update deployment status to running
+          command: circleci run release update workers-production --status=RUNNING
+      - run:
+          name: Update deployment status to failed
+          command: circleci run release update workers-production --status=FAILED
+          when: on_fail
+
+  release-workers:
+    type: release
+    plan_name: workers-production
+    validation:
+      enabled: true
+      auto_rollback_on_failure: true
+
+  cancel-deploy-workers:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - run:
+          name: Update planned release to CANCELED
+          command: |
+            circleci run release update workers-production \
+              --status=CANCELED
+
+workflows:
+  deploy:
+    jobs:
+      - deploy-workers
+      - release-workers:
+          requires:
+            - deploy-workers
+      - cancel-deploy-workers:
+          requires:
+            - deploy-workers:
+                - canceled

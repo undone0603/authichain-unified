@@ -1,0 +1,74 @@
+version: 2.1
+
+# Push pipelines do not deploy. Production deploys stay on GitHub Actions
+# until this pipeline is started with deploy_workers=true. The Deploys UI
+# uses .circleci/deploy.yml and .circleci/rollback.yml instead.
+parameters:
+  deploy_workers:
+    type: boolean
+    default: false
+
+jobs:
+  ci-status:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - run:
+          name: CircleCI is connected
+          command: echo "Push pipelines do not deploy. Smart Deployments use .circleci/deploy.yml."
+
+  deploy-workers:
+    docker:
+      - image: cimg/node:22.15
+    steps:
+      - checkout
+      - run:
+          name: Plan deployment
+          command: |
+            circleci run release plan workers-production \
+              --environment-name="production" \
+              --component-name="authichain-workers" \
+              --target-version="${CIRCLE_SHA1}"
+      - run:
+          name: Deploy workers
+          command: bash scripts/circleci/deploy-workers.sh
+      - run:
+          name: Update deployment status to running
+          command: circleci run release update workers-production --status=RUNNING
+      - run:
+          name: Update deployment status to failed
+          command: circleci run release update workers-production --status=FAILED
+          when: on_fail
+
+  release-workers:
+    type: release
+    plan_name: workers-production
+    validation:
+      enabled: true
+      auto_rollback_on_failure: true
+
+  cancel-deploy-workers:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - run:
+          name: Update planned release to CANCELED
+          command: |
+            circleci run release update workers-production \
+              --status=CANCELED
+
+workflows:
+  status:
+    jobs:
+      - ci-status
+  deploy-workers:
+    when: << pipeline.parameters.deploy_workers >>
+    jobs:
+      - deploy-workers
+      - release-workers:
+          requires:
+            - deploy-workers
+      - cancel-deploy-workers:
+          requires:
+            - deploy-workers:
+                - canceled
