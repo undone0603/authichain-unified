@@ -4,75 +4,46 @@ import { getLoginUrl } from "@/const";
 import { EcosystemNav } from "@/components/EcosystemNav";
 import { Reveal, GlowCard, ANIMATION_STYLES } from "@/lib/animations";
 import {
-  Leaf, ArrowRight, CheckCircle2, FileCheck2, Boxes,
-  Truck, Gem, Package, Scan, Shield, Zap, Globe,
-  Lock, BarChart3, FlaskConical, ChevronDown,
+  Leaf, ArrowRight, CheckCircle2, FileCheck2,
+  Truck, Gem, Package, Scan, Shield,
+  BarChart3, FlaskConical, ChevronDown,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useEffect, useRef, useState, useCallback } from "react";
-
-/* ─── Animated counter ─── */
-function useAnimCounter(target: number, suffix = "", prefix = "") {
-  const [display, setDisplay] = useState(prefix + "0" + suffix);
-  const ref = useRef<HTMLDivElement>(null);
-  const ran = useRef(false);
-  const go = useCallback(() => {
-    if (ran.current) return;
-    ran.current = true;
-    const start = performance.now();
-    const step = (now: number) => {
-      const p = Math.min((now - start) / 2000, 1);
-      const e = 1 - Math.pow(1 - p, 3);
-      setDisplay(prefix + Math.round(e * target) + suffix);
-      if (p < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }, [target, suffix, prefix]);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { go(); io.unobserve(el); } }, { threshold: 0.3 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [go]);
-  return { display, ref };
-}
+import { useEffect } from "react";
 
 /* ─── Data ─── */
 const stats = [
-  { value: "Seed\u2192Sale", label: "Full Provenance" },
-  { value: "METRC", label: "Compliance Ready" },
+  { value: "$49", label: "Passport per cultivar" },
+  { value: "CoA", label: "Certificates you already have" },
 ];
 
 const features = [
-  { icon: FileCheck2, title: "Seed-to-Sale Compliance", desc: "METRC and BioTrack integration for cultivators, processors, and dispensaries. Every gram hashed on-chain with tamper-proof provenance." },
-  { icon: Leaf, title: "Strain NFTs", desc: "ERC-721 strain identities with THC/CBD basis points, terpene profiles, and lab-cert hashes. Own the genetics, not just the jar." },
-  { icon: Package, title: "Bagiez Package Art", desc: "Vintage packaging art NFTs with territory licensing." },
-  { icon: Truck, title: "Dispensary SaaS", desc: "POS-grade inventory management, lab-result QR codes at every SKU, and tamper-evident chain-of-custody for buyers." },
-  { icon: Gem, title: "Royalties That Route", desc: "Secondary-sale royalties split automatically via Solidity splitter contracts." },
-  { icon: FlaskConical, title: "Lab Verification", desc: "Cryptographically signed lab results anchored to the blockchain. Consumers scan once and see the full COA instantly." },
-  { icon: Scan, title: "QRON Authentication", desc: "Every product gets a unique AI-generated QRON code \u2014 beautiful enough for shelf display, powerful enough for forensic verification." },
-  { icon: Shield, title: "Anti-Counterfeit", desc: "Provenance eliminates gray-market diversion. Each scan event is logged immutably for compliance auditing." },
-  { icon: BarChart3, title: "Analytics Dashboard", desc: "Real-time scan analytics, geographic heatmaps, consumer engagement metrics, and compliance reporting in one pane." },
+  { icon: FileCheck2, title: "Published passport", desc: "A published genetics passport for one cultivar, built from certificates you already have." },
+  { icon: Leaf, title: "Cultivar record", desc: "The digital identity is the passport subject for that cultivar." },
+  { icon: Package, title: "Package art", desc: "Art you already use can sit beside the cultivar passport." },
+  { icon: Truck, title: "Dispensary record", desc: "A scan reads the passport stored for that identity." },
+  { icon: Gem, title: "One price", desc: "Passport — Per Cultivar is $49 once." },
+  { icon: FlaskConical, title: "Lab results you already have", desc: "The passport is built from those certificates. A scan reads that passport." },
+  { icon: Scan, title: "Scan the passport", desc: "A scan proves the passport for the identity that was scanned. A copied identifier carries the same passport." },
+  { icon: Shield, title: "The published record", desc: "The scan reads the stored passport. It does not inspect the physical product." },
+  { icon: BarChart3, title: "Scan counts", desc: "Counts of scans of the published passport. A count is not a second verification." },
 ];
 
 const stack = [
-  { num: "01", title: "METRC Integration", desc: "Direct API integration with state-mandated track-and-trace systems. Automatic manifest sync, transfer reconciliation, and compliance reporting." },
-  { num: "02", title: "Strain Identity Protocol", desc: "ERC-721 standard with custom metadata schema for cannabinoid profiles, terpene arrays, and cultivation provenance hashing." },
-  { num: "03", title: "QRON Smart Labels", desc: "AuthiChain-verified QR codes generated per-batch with embedded lab results, chain-of-custody data, and consumer verification portal." },
-  { num: "04", title: "Royalty Splitter", desc: "Solidity smart contract that automatically routes secondary-sale royalties." },
+  { num: "01", title: "Existing certificates", desc: "The passport is built from CoAs you already have." },
+  { num: "02", title: "Cultivar identity", desc: "The digital identity is the passport subject. A category label is not a compliance profile." },
+  { num: "03", title: "Scan", desc: "A scan reads the stored passport for the identity that was scanned." },
+  { num: "04", title: "One price", desc: "Passport — Per Cultivar is $49 once." },
 ];
 
 const ecosystem = [
-  { name: "AuthiChain", href: "https://authichain.com", desc: "The truth layer. Blockchain-verified product authentication with AI-powered analysis.", live: true },
+  { name: "AuthiChain", href: "https://authichain.com", desc: "Product passports. A scan reads the stored passport for the identity that was scanned.", live: true },
   { name: "QRON", href: "https://qron.space", desc: "AI-generated QR art studio. Create scannable, cryptographically signed visual codes.", live: true },
   { name: "GovChain", href: "https://govchain.us", desc: "Sovereign verification for government procurement and Made in USA authentication.", live: true },
 ];
 
 const pricing = [
-  { name: "Cultivator", price: "$199", period: "/mo", features: ["Up to 500 plants tracked", "METRC sync", "Lab result hashing", "Basic analytics", "QR verification labels"] },
-  { name: "Dispensary", price: "$499", period: "/mo", features: ["Unlimited SKU tracking", "POS integration", "Consumer verification portal", "QRON smart labels", "Compliance reporting", "Priority support"], highlighted: true },
-  { name: "Enterprise", price: "$999", period: "/mo", features: ["Multi-location management", "White-label portal", "API access", "Strain NFT minting", "Bagiez marketplace", "Dedicated CSM"] },
+  { name: "Passport — Per Cultivar", price: "$49", period: "once", features: ["One published genetics passport", "Built from certificates you already have", "A scan reads that passport"], highlighted: true },
 ];
 
 /* ─── Component ─── */
@@ -81,7 +52,7 @@ export default function StrainChainHome() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    document.title = "StrainChain \u2014 Cannabis Provenance on the Blockchain";
+    document.title = "StrainChain \u2014 A published genetics passport";
   }, []);
 
   const go = (path: string) => {
@@ -145,21 +116,21 @@ export default function StrainChainHome() {
           <div className="max-w-3xl mx-auto text-center">
             <div className="hero-enter inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[hsl(142,71%,45%)]/30 bg-[hsl(142,71%,45%)]/5 text-[hsl(142,71%,45%)] text-xs font-medium tracking-wide uppercase mb-8">
               <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[hsl(142,71%,45%)] opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-[hsl(142,71%,45%)]" /></span>
-              Blockchain-Verified Cannabis
+              Published genetics passport
             </div>
             <h1 className="hero-enter hero-enter-delay-1 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6">
               From Seed to Sale,{" "}
-              <span className="strain-gradient animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(142 71% 45%), hsl(40 60% 55%), hsl(160 60% 40%), hsl(142 71% 45%))", backgroundSize: "200% 200%" }}>On-Chain</span>
+              <span className="strain-gradient animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(142 71% 45%), hsl(40 60% 55%), hsl(160 60% 40%), hsl(142 71% 45%))", backgroundSize: "200% 200%" }}>A Passport</span>
             </h1>
             <p className="hero-enter hero-enter-delay-2 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-              Provenance for every gram. METRC-compliant tracking, strain NFTs, and cryptographic lab verification \u2014 built for the legal cannabis industry.
+              A published genetics passport for one cultivar, built from certificates you already have.
             </p>
             <div className="hero-enter hero-enter-delay-3 flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="text-base px-8 h-12 bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-black strain-pulse" onClick={() => go("/supply-chain")}>
                 Start Tracking <Leaf className="ml-2 h-5 w-5" />
               </Button>
-              <Button variant="outline" size="lg" className="text-base px-8 h-12 bg-transparent" onClick={() => go("/nft")}>
-                Explore NFTs &rarr;
+              <Button variant="outline" size="lg" className="text-base px-8 h-12 bg-transparent" asChild>
+                <a href="#pricing">See the $49 passport</a>
               </Button>
             </div>
             <div className="hero-enter hero-enter-delay-4 mt-12">
@@ -193,8 +164,8 @@ export default function StrainChainHome() {
           <Reveal>
             <div className="text-center mb-16">
               <p className="text-xs uppercase tracking-[.2em] text-[hsl(142,71%,45%)] font-semibold mb-3">Platform</p>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Full-Stack Cannabis Infrastructure</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">Everything from METRC compliance to NFT marketplaces \u2014 built on blockchain-verified truth.</p>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">A passport for one cultivar</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">Built from certificates you already have. A scan reads that passport.</p>
             </div>
           </Reveal>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -222,7 +193,7 @@ export default function StrainChainHome() {
             <div className="mb-16">
               <p className="text-xs uppercase tracking-[.2em] text-[hsl(142,71%,45%)] font-semibold mb-3">Protocol Stack</p>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">How StrainChain Works</h2>
-              <p className="text-muted-foreground max-w-lg text-lg">Four interlocking systems that make cannabis provenance trustworthy.</p>
+              <p className="text-muted-foreground max-w-lg text-lg">A published genetics passport for one cultivar, built from certificates you already have.</p>
             </div>
           </Reveal>
           <div className="grid md:grid-cols-2 gap-5">
@@ -279,8 +250,8 @@ export default function StrainChainHome() {
           <Reveal>
             <div className="text-center mb-16">
               <p className="text-xs uppercase tracking-[.2em] text-[hsl(142,71%,45%)] font-semibold mb-3">Pricing</p>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Built for Every License Type</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">From single cultivators to multi-state operators. Every plan includes blockchain verification.</p>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Passport — Per Cultivar</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">One published genetics passport. $49 once.</p>
             </div>
           </Reveal>
           <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
@@ -315,10 +286,10 @@ export default function StrainChainHome() {
         <div className="container">
           <Reveal direction="scale" className="text-center">
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">
-              Every Gram,{" "}
-              <span className="strain-gradient animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(142 71% 45%), hsl(40 60% 55%), hsl(160 60% 40%), hsl(142 71% 45%))", backgroundSize: "200% 200%" }}>Verified.</span>
+              One cultivar,{" "}
+              <span className="strain-gradient animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(142 71% 45%), hsl(40 60% 55%), hsl(160 60% 40%), hsl(142 71% 45%))", backgroundSize: "200% 200%" }}>one passport.</span>
             </h2>
-            <p className="text-muted-foreground text-lg mb-8 max-w-lg mx-auto">Provenance for the legal cannabis industry. Start verifying today.</p>
+            <p className="text-muted-foreground text-lg mb-8 max-w-lg mx-auto">A scan reads the passport for the identity that was scanned.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="text-base px-8 h-12 bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-black strain-pulse" onClick={() => go("/supply-chain")}>
                 Launch StrainChain <Leaf className="ml-2 h-5 w-5" />

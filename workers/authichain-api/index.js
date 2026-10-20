@@ -474,7 +474,8 @@ async function signCertificate(payload, origin) {
 // ── Evidence-based trust assessment ──────────────────────────────────────────
 // Only facts present on the product row (plus an optional on-chain receipt
 // lookup) count. The stored `authenticity_score` / `confidence` values are
-// self-reported and are NOT used. No confirmed evidence => verified:false.
+// self-reported and are NOT used. Those facts stay on `checks`. They do not
+// set verified. This route does not scan a product passport.
 const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
 const CONTENT_HASH_RE = /^(0x)?[0-9a-fA-F]{64}$/;
 const UUID_RE =
@@ -602,17 +603,7 @@ function assessEvidence(product, matchType, anchor) {
   }, 0);
   score -= Math.min(60, reports * 30);
   score = Math.max(0, Math.min(100, score));
-  const byId = {};
-  checks.forEach(function (c) {
-    byId[c.id] = c.passed;
-  });
-  const verified =
-    byId.registered &&
-    byId.unit_identifier &&
-    byId.onchain_anchor &&
-    byId.no_counterfeit_reports &&
-    byId.status_active;
-  return { verified: !!verified, trust_score: score, checks: checks };
+  return { verified: false, trust_score: score, checks: checks };
 }
 
 function pickMatch(rows, candidates) {
@@ -1079,9 +1070,7 @@ async function handleRequest(req) {
         status: status,
         trust_score: assessment.trust_score,
         message: product
-          ? assessment.verified
-            ? "Verified: registered unit with a confirmed on-chain anchor."
-            : "Registered product found, but the evidence on record is not sufficient to verify it."
+          ? "Registered product found. This check does not scan a product passport. A registry row and an anchor receipt are not that scan."
           : status === "ambiguous"
             ? "Identifier matches several registered products (e.g. a SKU). Use the TrueMark id or serial number."
             : "No registered product found for this identifier.",
@@ -1113,7 +1102,7 @@ async function handleRequest(req) {
           contract: DEFAULT_ANCHOR_CONTRACT,
           tx_hash: product.blockchain_tx_hash,
           anchor_status: anchor.status,
-          verified_at: anchor.status === "confirmed" ? new Date().toISOString() : null,
+          verified_at: null,
         };
       }
       return j(out, 200, rateHeaders);

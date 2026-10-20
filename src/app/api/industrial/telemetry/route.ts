@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyApiKey } from '@/lib/auth-api';
 import { processIndustrialEvent, IndustrialTheater } from '@/lib/industrial/telemetry';
-import { anchorEdgeHash } from '@/lib/blockchain';
 import { logAutomation } from '@/lib/automation';
 import { supabaseAdmin as admin } from '@/lib/supabase-admin';
 
@@ -10,51 +9,31 @@ export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/industrial/telemetry
- * Returns live telemetry dashboard and sensor status
+ * This dashboard does not scan a product passport and does not invent readings.
  */
-export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const deviceId = url.searchParams.get('deviceId');
-  const theater = url.searchParams.get('theater') || 'all';
-
+export async function GET() {
   return NextResponse.json({
     success: true,
     platform: 'QRON Industrial',
+    verified: false,
+    message:
+      'This dashboard does not scan a product passport. Device readings are not invented here.',
     telemetry: {
-      totalDevices: 24,
-      activeDevices: 21,
-      offlineDevices: 3,
-      theaters: ['Theater 1 (METRC)', 'Theater 2 (BMW)', 'Theater 3 (Pharma)'],
-      lastSync: new Date(Date.now() - 30000).toISOString(),
-      blockchainAnchored: true,
-      polygonTxCount: 1842
+      totalDevices: 0,
+      activeDevices: 0,
+      offlineDevices: 0,
+      theaters: [],
+      blockchainAnchored: false,
     },
-    devices: deviceId ? [{
-      id: deviceId,
-      name: `Industrial Node ${deviceId}`,
-      theater,
-      status: 'active',
-      temperature: 72.4,
-      humidity: 45.2,
-      pressure: 1013.25,
-      lastReading: new Date(Date.now() - 5000).toISOString(),
-      stateHash: '0x' + Math.random().toString(16).slice(2, 66),
-      verified: true
-    }] : [],
-    recentEvents: [
-      { id: 'TEL-001', type: 'scan', deviceId: 'DEV-001', theater: 'Theater 1', timestamp: new Date(Date.now() - 60000).toISOString(), verified: true },
-      { id: 'TEL-002', type: 'anchor', deviceId: 'DEV-003', theater: 'Theater 2', timestamp: new Date(Date.now() - 120000).toISOString(), verified: true },
-      { id: 'TEL-003', type: 'alert', deviceId: 'DEV-007', theater: 'Theater 3', timestamp: new Date(Date.now() - 180000).toISOString(), verified: false }
-    ],
-    timestamp: new Date().toISOString()
+    devices: [],
+    recentEvents: [],
+    timestamp: new Date().toISOString(),
   });
 }
 
 /**
  * POST /api/industrial/telemetry
- * 
- * Secure ingestor for Metrc (Theater 1) and BMW (Theater 3) data.
- * Automates State Hash generation and Polygon anchoring.
+ * Records an industrial event. It does not anchor and it does not verify a passport.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -83,20 +62,6 @@ export async function POST(req: NextRequest) {
       payload
     );
 
-    // 4. Trigger Blockchain Anchoring (Async)
-    // We don't block the ingestion for anchoring success
-    let anchoredTxHash: string | undefined;
-    try {
-      const anchorResult = await anchorEdgeHash(stateHash, `${theater}:${parsedState.identity}`);
-      anchoredTxHash = anchorResult.txHash;
-      console.log(`[Industrial] Anchored ${theater} state: ${anchoredTxHash}`);
-    } catch (anchorErr) {
-      const msg = anchorErr instanceof Error ? anchorErr.message : String(anchorErr);
-      console.error(`[Industrial] Anchoring failed for ${theater}:`, anchorErr);
-      await logAutomation('industrial_telemetry.anchor', 'event', 'failure', { theater, userId, productId, stateHash }, msg);
-    }
-
-    // 5. Store Telemetry Event
     const { data: event, error: dbError } = await admin
       .from('telemetry_events')
       .insert({
@@ -106,7 +71,7 @@ export async function POST(req: NextRequest) {
         raw_payload: payload,
         parsed_state: parsedState,
         state_hash: stateHash,
-        anchored_tx_hash: anchoredTxHash || null,
+        anchored_tx_hash: null,
         timestamp: timestamp
       })
       .select()
@@ -118,8 +83,9 @@ export async function POST(req: NextRequest) {
       success: true,
       eventId: event.id,
       stateHash,
-      anchored: !!anchoredTxHash,
-      txHash: anchoredTxHash
+      anchored: false,
+      verified: false,
+      message: 'This ingest does not anchor a passport and does not verify one.',
     });
 
   } catch (err: unknown) {

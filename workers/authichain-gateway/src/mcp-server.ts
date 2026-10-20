@@ -2,6 +2,15 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
 import type { Env } from "./index";
+import {
+  ANALYTICS_DESCRIPTION,
+  REGISTER_PRODUCT_DESCRIPTION,
+  TRUST_SCORE_DESCRIPTION,
+  VERIFY_CANNABIS_DESCRIPTION,
+  VERIFY_PRODUCT_DESCRIPTION,
+  registerProductBody,
+  trustScoreBody,
+} from "./product-tools";
 
 /**
  * MCP Server for ChatGPT Apps SDK integration.
@@ -28,7 +37,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: verify_product ───────────────────────────────────────────────────
   server.tool(
     "verify_product",
-    "Returns trust score, verification status, and provenance data.",
+    VERIFY_PRODUCT_DESCRIPTION,
     {
       productId: z.string().optional().describe("Product ID or serial number"),
       imageUrl: z
@@ -151,7 +160,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: verify_cannabis_strain ───────────────────────────────────────────
   server.tool(
     "verify_cannabis_strain",
-    "Verify a cannabis strain's authenticity using StrainChain. Checks genetics, terpene profile, lab results, and METRC compliance.",
+    VERIFY_CANNABIS_DESCRIPTION,
     {
       strainName: z.string().describe("Name of the cannabis strain"),
       batchId: z
@@ -200,30 +209,41 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: compute_trust_score ──────────────────────────────────────────────
   server.tool(
     "compute_trust_score",
-    "Compute a composite trust score for a product based on multiple verification signals (QR decode, blockchain cert, NFC, visual match, geo-fence).",
+    TRUST_SCORE_DESCRIPTION,
     {
+      productId: z
+        .string()
+        .optional()
+        .describe(
+          "Product id. When present, verified follows the stored passport."
+        ),
       qrDecodePass: z
         .boolean()
-        .describe("Whether QR code decoded successfully"),
+        .optional()
+        .describe("Whether the caller says the QR decoded"),
       blockchainCertExists: z
         .boolean()
-        .describe("Whether blockchain certificate exists"),
+        .optional()
+        .describe("Whether the caller says a blockchain certificate exists"),
       nfcMatch: z
         .boolean()
         .optional()
-        .describe("Whether NFC chip data matches"),
+        .describe("Whether the caller says NFC chip data matches"),
       visualMatch: z
         .number()
         .min(0)
         .max(100)
         .optional()
-        .describe("Visual similarity score (0-100)"),
+        .describe("Caller visual similarity score (0-100)"),
       geoFenceOk: z
         .boolean()
         .optional()
-        .describe("Whether scan location is within expected geo-fence"),
+        .describe(
+          "Whether the caller says the scan location is inside the expected geo-fence"
+        ),
     },
     async ({
+      productId,
       qrDecodePass,
       blockchainCertExists,
       nfcMatch,
@@ -237,13 +257,16 @@ function createMcpServer(env: Env): McpServer {
             "Content-Type": "application/json",
             "X-Internal-Secret": env.INTERNAL_SECRET,
           },
-          body: JSON.stringify({
-            qrDecodePass,
-            blockchainCertExists,
-            nfcMatch,
-            visualMatch,
-            geoFenceOk,
-          }),
+          body: JSON.stringify(
+            trustScoreBody({
+              productId,
+              qrDecodePass,
+              blockchainCertExists,
+              nfcMatch,
+              visualMatch,
+              geoFenceOk,
+            })
+          ),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -261,7 +284,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: register_product ─────────────────────────────────────────────────
   server.tool(
     "register_product",
-    "Register a new product in the AuthiChain verification network. Creates a blockchain-anchored record with provenance metadata.",
+    REGISTER_PRODUCT_DESCRIPTION,
     {
       name: z.string().describe("Product name"),
       manufacturer: z.string().describe("Manufacturer or brand name"),
@@ -270,9 +293,19 @@ function createMcpServer(env: Env): McpServer {
       metadata: z
         .record(z.string())
         .optional()
-        .describe("Additional product metadata"),
+        .describe("String metadata kept beside the passport"),
+      passport: z
+        .unknown()
+        .optional()
+        .describe(
+          "Already-signed DigitalProductPassport, or { record, anchor }"
+        ),
+      userId: z
+        .string()
+        .optional()
+        .describe("Registry user id required by the register handler"),
     },
-    async ({ name, manufacturer, serialNumber, category, metadata }) => {
+    async ({ name, manufacturer, serialNumber, category, metadata, passport, userId }) => {
       try {
         const res = await fetch(
           `${env.BACKEND_URL}/api/internal/products/register`,
@@ -282,13 +315,17 @@ function createMcpServer(env: Env): McpServer {
               "Content-Type": "application/json",
               "X-Internal-Secret": env.INTERNAL_SECRET,
             },
-            body: JSON.stringify({
-              name,
-              manufacturer,
-              serialNumber,
-              category,
-              metadata,
-            }),
+            body: JSON.stringify(
+              registerProductBody({
+                name,
+                manufacturer,
+                serialNumber,
+                category,
+                metadata,
+                passport,
+                userId,
+              })
+            ),
           }
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -307,7 +344,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: get_verification_analytics ───────────────────────────────────────
   server.tool(
     "get_verification_analytics",
-    "Get verification analytics and usage statistics. Shows scan counts, authenticity rates, top products, and geographic distribution.",
+    ANALYTICS_DESCRIPTION,
     {
       period: z
         .enum(["today", "week", "month", "quarter"])

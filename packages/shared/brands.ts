@@ -85,7 +85,7 @@ export const BRANDS: Record<BrandId, Brand> = {
     aliases: ["www.strainchain.io"],
     tagline: "Seed-to-Sale Provenance for Cannabis.",
     description:
-      "Compliance-grade blockchain tracking for cultivators, processors, and dispensaries. METRC/BioTrack integration, strain NFTs, lab-cert hashing.",
+      "A published genetics passport for one cultivar, built from certificates you already have.",
     accentToken: "strain",
     accentHex: "#22C55E",
     ctaLabel: "Explore StrainChain",

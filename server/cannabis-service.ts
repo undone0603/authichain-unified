@@ -51,26 +51,20 @@ export function calculateStrainRarity(metadata: StrainMetadata, profile: Cannabi
 }
 
 /**
- * Formats metadata for a Bitcoin L1 Inscription.
- * This is the "Truth Layer" payload.
+ * A rarity tally of the numbers passed in. It is not a passport scan
+ * and it does not record a chain anchor.
  */
 export function formatTruthLayerMetadata(metadata: StrainMetadata, profile: CannabinoidProfile) {
   const rarity = calculateStrainRarity(metadata, profile);
-  
+
   return {
-    incription_type: "AuthiChain_StrainChain_v1",
     product: metadata.name,
     type: metadata.type,
     metrics: {
       thc: `${profile.thc}%`,
       cbd: `${profile.cbd}%`,
-      rarity_score: `${rarity}/100`
+      rarity_score: `${rarity}/100`,
     },
-    blockchain_proof: {
-      l1: "Bitcoin (Ordinals)",
-      l2: "Polygon (NFT)",
-      timestamp: new Date().toISOString()
-    }
   };
 }
 

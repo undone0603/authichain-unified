@@ -345,6 +345,12 @@ export async function verifyRecordTool(
         : null,
     source: published ? "published_example" : "submitted",
     demonstration: Boolean(published),
+    ...(typeof protocol.genuine === "boolean"
+      ? {
+          genuine: protocol.genuine,
+          digitalIdentity: protocol.digitalIdentity ?? null,
+        }
+      : {}),
     limits:
       "Checks the Ed25519 signature and that the anchor transaction carries the record hash. It does not inspect a physical product.",
     verifier: "https://authichain.com/protocol",

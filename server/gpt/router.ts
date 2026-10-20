@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "../db";
 import { products, certificates } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { passportVerdict } from "../passport-verdict";
 
 const router = Router();
 
@@ -17,26 +18,16 @@ router.post("/verify", async (req, res) => {
     if (!productId) {
       return res.status(400).json({ error: "productId required" });
     }
-    const [product] = await db.select().from(products).where(eq(products.id, productId)).limit(1);
-    if (!product) {
-      return res.json({
-        verified: false,
-        trustScore: 0,
-        message: "Product not found. This item may be counterfeit.",
-        blockchain: null,
-      });
-    }
+    const id = String(productId);
+    const [byId] = await db.select().from(products).where(eq(products.id, id)).limit(1);
+    const product = byId ?? (await db.select().from(products).where(eq(products.serialNumber, id)).limit(1))[0];
+    if (!product) return res.json(passportVerdict(null, null));
     const [cert] = await db.select().from(certificates).where(eq(certificates.productId, product.id)).limit(1);
     return res.json({
-      verified: !!cert,
-      trustScore: cert ? 95 : 20,
+      ...passportVerdict(product, cert ?? null),
       productName: product.name,
       brand: product.brand ?? null,
       certificateId: cert?.id ?? null,
-      blockchain: cert ? { status: "SECURED", network: "Polygon" } : null,
-      message: cert
-        ? `VERIFIED AUTHENTIC: ${product.name} - Blockchain secured.`
-        : `UNVERIFIED: ${product.name} lacks blockchain certificate.`,
     });
   } catch (err) {
     console.error("[GPT /verify]", err);
@@ -69,12 +60,15 @@ router.get("/certificates/verify", async (req, res) => {
     if (String(certNumber).length > 64) return res.status(400).json({ error: "certNumber too long" });
     const [cert] = await db.select().from(certificates).where(eq(certificates.certificateNumber, String(certNumber))).limit(1);
     if (!cert) return res.json({ valid: false, message: "Certificate not found" });
+    const [product] = cert.productId
+      ? await db.select().from(products).where(eq(products.id, cert.productId)).limit(1)
+      : [];
+    const verdict = passportVerdict(product, cert);
     return res.json({
-      valid: true,
+      ...verdict,
+      valid: verdict.verified,
       certificateId: cert.id,
       issuedAt: cert.issuedAt,
-      blockchain: { status: "SECURED", network: "Polygon" },
-      message: "Certificate is valid and blockchain-secured.",
     });
   } catch (err) {
     console.error("[GPT /certificates/verify]", err);
@@ -93,14 +87,9 @@ router.post("/cannabis/verify", async (req, res) => {
       ? await db.select().from(products).where(eq(products.name, strainName)).limit(1)
       : [];
     return res.json({
-      verified: !!product,
+      ...passportVerdict(product, null),
       strainName: strainName || "Unknown",
       batchId: batchId || null,
-      metrcCompliant: !!product,
-      blockchain: product ? { status: "SECURED", network: "Polygon" } : null,
-      message: product
-        ? `VERIFIED: ${product.name} - METRC compliant, blockchain secured.`
-        : "Strain not found in AuthiChain registry.",
     });
   } catch (err) {
     console.error("[GPT /cannabis/verify]", err);
@@ -113,17 +102,16 @@ router.post("/trust-score", async (req, res) => {
   try {
     const { productId } = req.body;
     if (!productId) return res.status(400).json({ error: "productId required" });
-    const [product] = await db.select().from(products).where(eq(products.id, productId)).limit(1);
-    if (!product) return res.json({ trustScore: 0, verdict: "UNKNOWN", message: "Product not found" });
+    const id = String(productId);
+    const [byId] = await db.select().from(products).where(eq(products.id, id)).limit(1);
+    const product = byId ?? (await db.select().from(products).where(eq(products.serialNumber, id)).limit(1))[0];
+    if (!product) return res.json({ verdict: "UNKNOWN", ...passportVerdict(null, null) });
     const [cert] = await db.select().from(certificates).where(eq(certificates.productId, product.id)).limit(1);
-    const baseScore = cert ? 85 : 15;
-    const trustScore = Math.min(100, baseScore);
-    const verdict = trustScore >= 80 ? "TRUSTED" : trustScore >= 50 ? "MODERATE" : "SUSPICIOUS";
+    const scan = passportVerdict(product, cert ?? null);
     return res.json({
-      trustScore,
-      verdict,
-      breakdown: { blockchainCert: cert ? 85 : 0 },
-      message: `Trust score for ${product.name}: ${trustScore}/100 — ${verdict}`,
+      ...scan,
+      verdict: scan.verified ? "GENUINE" : "UNVERIFIED",
+      productName: product.name,
     });
   } catch (err) {
     console.error("[GPT /trust-score]", err);

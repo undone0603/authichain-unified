@@ -1032,6 +1032,28 @@ export async function getProductById(id: string) {
   return result[0];
 }
 
+export async function getProductBySerial(serial: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(products)
+    .where(eq(products.serialNumber, serial))
+    .limit(1);
+  return result[0];
+}
+
+export async function getProductByName(name: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(products)
+    .where(eq(products.name, name))
+    .limit(1);
+  return result[0];
+}
+
 export async function updateProduct(
   id: string,
   data: FlexibleUpdate<ProductInsert>
@@ -1112,6 +1134,17 @@ export async function getCertificateByNumber(certNumber: string) {
     .select()
     .from(certificates)
     .where(eq(certificates.certificateNumber, certNumber))
+    .limit(1);
+  return result[0];
+}
+
+export async function getCertificateForProduct(productId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(certificates)
+    .where(eq(certificates.productId, productId))
     .limit(1);
   return result[0];
 }

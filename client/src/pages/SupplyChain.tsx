@@ -42,7 +42,7 @@ export default function SupplyChain() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Supply Chain</h1>
-          <p className="text-muted-foreground text-sm mt-1">Track products through the supply chain with blockchain verification</p>
+          <p className="text-muted-foreground text-sm mt-1">Record a hand-off. A recorded event does not scan a product passport.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button size="sm"><Plus className="mr-1 h-4 w-4" /> Add Event</Button></DialogTrigger>

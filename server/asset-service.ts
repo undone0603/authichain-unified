@@ -28,11 +28,14 @@ export async function generateProductAssets(productId: string) {
     }
 
     // 2. Generate BrandVoice (Audio)
+    const metadata = product.metadata as { thc?: unknown; rarity?: unknown } | null;
+    const thc = metadata?.thc;
+    const rarity = metadata?.rarity;
     const audioUrl = await generateProductAudioStory({
       brandName: product.brand || "AuthiChain Partner",
       strainName: product.name,
-      thcContent: (product.metadata as any)?.thc || "N/A",
-      harvestDate: product.manufacturingDate ? product.manufacturingDate.toISOString() : "Recent"
+      ...(typeof thc === "string" || typeof thc === "number" ? { thcContent: String(thc) } : {}),
+      ...(product.manufacturingDate ? { harvestDate: product.manufacturingDate.toISOString() } : {}),
     });
 
     // 3. Persist to Database
@@ -40,7 +43,7 @@ export async function generateProductAssets(productId: string) {
       .set({
         audioUrl,
         visionMarkers: visionResult?.markers || [],
-        rarityScore: (product.metadata as any)?.rarity || 50, // Default rarity
+        ...(typeof rarity === "number" && Number.isFinite(rarity) ? { rarityScore: rarity } : {}),
         updatedAt: new Date()
       })
       .where(eq(products.id, productId));

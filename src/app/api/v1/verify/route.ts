@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { attestationEngine, mapDbToIdentity, mapDbToEvidence } from '@/protocol/attestation';
+import { certificationScanDecision } from '../../../../../server/passport-verdict';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,36 +32,14 @@ export async function GET(req: NextRequest) {
       }, { status: 404 });
     }
 
-    const { data: dpp } = await supabase
-      .from('dpp_data')
-      .select('*')
-      .eq('certification_id', cert.id)
-      .single();
+    const products = cert.products;
+    const product = Array.isArray(products) ? products[0] : products;
+    // An approved row is not signed as verified. The scan reads a stored passport.
+    const verdict = certificationScanDecision(product ?? null, cert);
 
-    // 1. Map database state to Attestation Protocol
-    const identity = mapDbToIdentity(cert.products, cert);
-    const evidence = mapDbToEvidence(cert.products, cert, dpp);
-    
-    // 2. Generate a cryptographic attestation on-the-fly
-    // In a full prod env, this might be retrieved from a cache or a ledger
-    const attestation = await attestationEngine.createAttestation(
-      cert.id,
-      identity,
-      evidence,
-      cert.status === 'approved' ? 'verified' : 'blocked'
-    );
-
-    // 3. Return the Interoperable Verification Protocol response
     return NextResponse.json({
       object_id: `authi:${cert.id}`,
-      decision: attestation.decision,
-      issuer: attestation.issuer,
-      subject: attestation.subject,
-      attestation: attestation.signature.value,
-      signature: attestation.signature,
-      evidence: attestation.evidence,
-      status: attestation.status,
-      verified_at: attestation.verifiedAt
+      ...verdict,
     });
 
   } catch (err: unknown) {

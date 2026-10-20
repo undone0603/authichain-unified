@@ -1,10 +1,11 @@
 import { timingSafeEqual } from "crypto";
 import { Router, type Request, type Response } from "express";
 import { ENV } from "./_core/env";
-import { invokeLLM, parseLLMContent } from "./_core/llm";
-import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-service";
-import { createProduct, getCertificateByNumber, getDb, getWhiteLabelByApiKey } from "./db";
-import { computeTrustScore, generateProductQRON } from "./qron-service";
+import { analyticsStub } from "./analytics-stub";
+import { cannabisCallerNumbers } from "./cannabis-verify";
+import { createProduct, getCertificateByNumber, getCertificateForProduct, getDb, getProductById, getProductByName, getProductBySerial, getWhiteLabelByApiKey } from "./db";
+import { callerSignalReport, passportVerdict, trustScoreReply } from "./passport-verdict";
+import { generateProductQRON } from "./qron-service";
 import { reportUsageToStripe } from "./tenant-billing";
 
 function getErrorMessage(err: unknown): string {
@@ -38,55 +39,20 @@ export function createInternalRouter(): Router {
   // ─── POST /api/internal/verify ──────────────────────────────────────────────
   router.post("/verify", async (req: Request, res: Response) => {
     try {
-      const { identifier, productId, barcode, imageUrl } = req.body;
+      const { identifier, productId, barcode } = req.body;
       const lookupId = identifier || productId || barcode;
       if (!lookupId) return res.status(400).json({ error: "identifier, productId, or barcode required" });
 
       // Check if it's a certificate number
-      const cert = await getCertificateByNumber(lookupId);
-      if (cert) {
-        return res.json({
-          verified: cert.status === "active",
-          type: "certificate",
-          certificate: cert,
-          trustScore: 95,
-          confidence: 0.98,
-          agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
-        });
-      }
-
-      // Prevent prompt injection — only the sanitized identifier reaches the LLM
-      const safeLookupId = String(lookupId).replace(/[^a-zA-Z0-9\-_.]/g, "").slice(0, 128);
-
-      // AI-based verification
-      const analysis = await invokeLLM({
-        messages: [
-          {
-            role: "system",
-            content: `You are AuthiChain's product verification engine. Analyze the product identifier and determine authenticity. Return JSON: { "verified": boolean, "confidence": number (0-1), "reasoning": string, "riskFlags": string[] }`,
-          },
-          {
-            role: "user",
-            content: JSON.stringify({ identifier: safeLookupId, hasImage: !!imageUrl }),
-          },
-        ],
-        responseFormat: { type: "json_object" },
-      });
-
-      let result: { verified: boolean; confidence: number; reasoning: string; riskFlags: string[] };
-      try {
-        result = parseLLMContent(analysis.choices[0].message.content);
-      } catch {
-        return res.status(500).json({ error: "Internal server error" });
-      }
+      const cert = await getCertificateByNumber(String(lookupId));
+      const product =
+        (cert?.productId ? await getProductById(String(cert.productId)) : undefined) ??
+        (await getProductBySerial(String(lookupId))) ??
+        (await getProductById(String(lookupId)));
       res.json({
-        verified: result.verified,
-        type: "ai_analysis",
-        trustScore: Math.round(result.confidence * 100),
-        confidence: result.confidence,
-        reasoning: result.reasoning,
-        riskFlags: result.riskFlags || [],
-        agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
+        type: "product_passport",
+        ...passportVerdict(product, cert),
+        ...(cert ? { certificate: cert } : {}),
       });
     } catch (err: unknown) {
       console.error("[Internal API] verify error:", getErrorMessage(err));
@@ -127,12 +93,14 @@ export function createInternalRouter(): Router {
       const cert = await getCertificateByNumber(number);
       if (!cert) return res.status(404).json({ error: "Certificate not found", valid: false });
 
+      const product = cert.productId ? await getProductById(String(cert.productId)) : undefined;
+      const verdict = passportVerdict(product, cert);
       res.json({
-        valid: cert.status === "active",
+        ...verdict,
+        valid: verdict.verified,
         certificate: cert,
         issuedAt: cert.issuedAt,
         expiresAt: cert.expiresAt,
-        blockchainVerified: !!cert.blockchainTxHash,
       });
     } catch (err: unknown) {
       console.error("[Internal API] certificates/verify error:", getErrorMessage(err));
@@ -147,27 +115,17 @@ export function createInternalRouter(): Router {
       const strain = strainName || strainId;
       if (!strain) return res.status(400).json({ error: "strainName or strainId required" });
 
-      const metadata = {
-        name: strain,
-        type: "HYBRID" as const,
-        genetics: ["Unknown"],
-        thcContent: thcPercent || 25,
-        cbdContent: cbdPercent || 1,
-        harvestDate: new Date().toISOString(),
-      };
-      const profile = { thc: thcPercent || 25, thca: (thcPercent || 25) * 1.12, cbd: cbdPercent || 1, cbda: (cbdPercent || 1) * 1.2, total: (thcPercent || 25) + (cbdPercent || 1) + 5 };
-
-      const rarity = calculateStrainRarity(metadata, profile);
-      const truthLayer = formatTruthLayerMetadata(metadata, profile);
+      const product = await getProductByName(String(strain));
 
       res.json({
-        verified: true,
+        ...passportVerdict(product, null),
         strainName: strain,
-        batchId: batchId || null,
-        dispensaryId: dispensaryId || null,
-        rarityScore: rarity,
-        complianceStatus: dispensaryId ? "compliant" : "unverified",
-        truthLayer,
+        ...cannabisCallerNumbers({
+          thcPercent,
+          cbdPercent,
+          batchId,
+          dispensaryId,
+        }),
       });
     } catch (err: unknown) {
       console.error("[Internal API] cannabis/verify error:", getErrorMessage(err));
@@ -176,22 +134,19 @@ export function createInternalRouter(): Router {
   });
 
   // ─── POST /api/internal/trust-score ────────────────────────────────────────
+  // Caller flags are recorded. verified follows a stored passport when a product id is present.
   router.post("/trust-score", async (req: Request, res: Response) => {
     try {
-      const { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk } = req.body;
-
-      const score = computeTrustScore({
-        qrDecodePass: qrDecodePass ?? true,
-        blockchainCertExists: blockchainCertExists ?? false,
-        communityVerified: visualMatch ? Math.round(visualMatch / 20) : 0,
-        communityFlagged: 0,
-        openArtRegistered: nfcMatch ?? false,
-      });
-
-      res.json({
-        ...score,
-        inputs: { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk },
-      });
+      const body = req.body ?? {};
+      const callerSignals = callerSignalReport(body);
+      const rawId = body.productId ?? body.identifier;
+      const id = typeof rawId === "string" ? rawId.trim() : "";
+      if (!id) {
+        return res.json(trustScoreReply(null, callerSignals));
+      }
+      const product = (await getProductById(id)) ?? (await getProductBySerial(id));
+      const cert = product ? await getCertificateForProduct(String(product.id)) : undefined;
+      res.json(trustScoreReply(passportVerdict(product, cert ?? null), callerSignals));
     } catch (err: unknown) {
       console.error("[Internal API] trust-score error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
@@ -205,15 +160,7 @@ export function createInternalRouter(): Router {
       const db = await getDb();
       if (!db) return res.status(503).json({ error: "Database unavailable" });
 
-      // Return aggregated metrics
-      res.json({
-        period,
-        verifications: { total: 0, authentic: 0, counterfeit: 0 },
-        qrCodesGenerated: 0,
-        certificatesIssued: 0,
-        activeAgents: 5,
-        message: "Analytics data will be populated once usage metering is active",
-      });
+      res.json(analyticsStub(period));
     } catch (err: unknown) {
       console.error("[Internal API] analytics error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
@@ -223,24 +170,45 @@ export function createInternalRouter(): Router {
   // ─── POST /api/internal/products/register ──────────────────────────────────
   router.post("/products/register", async (req: Request, res: Response) => {
     try {
-      const { name, brand, category, serialNumber, description, userId } = req.body;
+      const { name, brand, manufacturer, category, serialNumber, description, userId } = req.body;
       if (!name) return res.status(400).json({ error: "name required" });
       const parsedUserId = parseInt(userId, 10);
       if (!userId || !Number.isFinite(parsedUserId) || parsedUserId <= 0) {
         return res.status(400).json({ error: "valid userId required" });
       }
 
+      const { productPassportMetadata, digitalIdentityOf } = await import(
+        "../protocol/passport.mjs"
+      );
+      let metadata: Record<string, unknown> | null = null;
+      if (req.body?.passport != null || req.body?.metadata?.passport != null) {
+        try {
+          metadata = productPassportMetadata(req.body);
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : "passport_invalid";
+          return res.status(400).json({ error: message });
+        }
+      }
+
+      const resolvedBrand = brand || manufacturer;
       const product = await createProduct({
         name,
-        brand,
+        brand: resolvedBrand,
+        manufacturer: manufacturer || brand,
         category,
         serialNumber,
         description,
         userId: parsedUserId,
         status: "active",
+        ...(metadata ? { metadata } : {}),
       });
+      const digitalIdentity = digitalIdentityOf(metadata);
 
-      res.json({ success: true, product });
+      res.json({
+        success: true,
+        product,
+        ...(digitalIdentity ? { digitalIdentity } : {}),
+      });
     } catch (err: unknown) {
       console.error("[Internal API] products/register error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });

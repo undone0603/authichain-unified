@@ -29,10 +29,30 @@ export const productsRouter = router({
     batchNumber: z.string().optional(),
     manufacturer: z.string().optional(),
     modelNumber: z.string().optional(),
+    passport: z.unknown().optional(),
   })).mutation(async ({ ctx, input }) => {
-    const result = await db.createProduct({ ...input, userId: ctx.user.id });
+    const { passport, ...fields } = input;
+    let metadata: Record<string, unknown> | null = null;
+    let digitalIdentity: string | null = null;
+    if (passport !== undefined) {
+      try {
+        const { productPassportMetadata, digitalIdentityOf } = await import(
+          "../../protocol/passport.mjs"
+        );
+        metadata = productPassportMetadata({ passport });
+        digitalIdentity = digitalIdentityOf(metadata);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "passport_invalid";
+        throw new TRPCError({ code: "BAD_REQUEST", message });
+      }
+    }
+    const result = await db.createProduct({
+      ...fields,
+      userId: ctx.user.id,
+      ...(metadata ? { metadata } : {}),
+    });
     await db.logActivity({ userId: ctx.user.id, action: "product_created", entityType: "product", entityId: result.id });
-    return result;
+    return digitalIdentity ? { ...result, digitalIdentity } : result;
   }),
 
   generateAssets: protectedProcedure

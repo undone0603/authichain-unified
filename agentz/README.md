@@ -34,12 +34,15 @@ See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and 
 - `AGENT_SECRET` must be set in that shell, to the same value claw holds as
   `AGENTZ_API_KEY`. Without it every token-protected route (including
   `/architect/cycle`) returns 503 on purpose: it fails closed.
-- `/scan` verifies a scan only when the request carries a signed `record`
-  (optional `anchor`) per `protocol/SPEC.md`. `agentz/core/signature.py` runs it
-  through `protocol/verifier.mjs`, so `node` must be on `PATH` (or set
-  `AGENTZ_NODE_BIN`). The signing key must be listed in
-  `AGENTZ_TRUSTED_ISSUERS` (comma-separated `did:key`s), and the record's
-  `credentialSubject.id` must equal the product's `metadata.subject_id`.
-  Anything missing leaves the signature `not_checked` and the scan unverified.
+- `/scan` checks a signed `record` (optional `anchor`) per `protocol/SPEC.md`.
+  When the request omits the record, it checks the passport stored on the
+  product (`metadata.passport` as the record or as `{ record, anchor }`).
+  `agentz/core/signature.py` runs a `DigitalProductPassport` through the
+  passport scan, so `node` must be on `PATH` (or set `AGENTZ_NODE_BIN`). The
+  signing key must be listed in `AGENTZ_TRUSTED_ISSUERS` (comma-separated
+  `did:key`s). The record's `credentialSubject.id` must equal the product's
+  `metadata.subject_id`, or, when that is absent, the digital identity on the
+  stored passport. A product status is not that identity. Anything missing
+  leaves the signature `not_checked` and the scan unverified.
 - `$QRON` rewards on `/scan` and redemptions on `/redeem` are simulated and say
   so (`simulated: true`); nothing is minted or burned on-chain.
