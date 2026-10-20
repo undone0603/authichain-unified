@@ -203,7 +203,7 @@ describe("stripe-webhook checkout grant", () => {
       env
     );
     expect(res.status).toBe(200);
-    expect(patches(calls)).toEqual([]);
+    expect(patches(calls)).toEqual([expect.objectContaining({ plan: "dpp_readiness", generations_limit: 50, generations_used: 0, last_grant_session_id: "cs_dpp" })]);
     expect(calls.some(c => c.method === "GET")).toBe(false);
     expect(
       calls.filter(c => c.method === "POST" && c.url.includes("/profiles"))
