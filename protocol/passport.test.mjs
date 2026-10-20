@@ -13,6 +13,9 @@ import {
   scanPassport,
   productBindingSentence,
   appendPassportEvidence,
+  udiEvidence,
+  UDI_PRESENT_SENTENCE,
+  UDI_ABSENT_SENTENCE,
 } from './passport.mjs';
 
 const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -322,5 +325,84 @@ describe('seal serial', () => {
     expect(bag.passport.evidence).toHaveLength(32);
     expect(bag.passport.record.proof.proofValue).toBe(proof);
     expect(() => appendPassportEvidence(bag, { type: 'note', n: 32 })).toThrow(/evidence_cap/);
+  });
+});
+
+describe('udiEvidence', () => {
+  function passport() {
+    const record = signPassport({ digitalIdentity: IDENTITY, ...issuer(), sealSerial: SEAL });
+    const metadata = storePassport({ story: 'kept' }, { record, anchor: anchorFor(record) });
+    return { record, metadata, proof: record.proof.proofValue };
+  }
+
+  it('stores a supplied UDI-DI and leaves the signature alone', () => {
+    const { record, metadata, proof } = passport();
+    const withInspection = appendPassportEvidence(metadata, {
+      type: 'inspection',
+      digest: 'sha256:' + 'ab'.repeat(32),
+    });
+    const stored = udiEvidence(withInspection, {
+      udiDi: '  udi-supplied-1  ',
+      udiPi: '  lot-9  ',
+      category: 'medical',
+      genuine: true,
+    });
+    expect(stored.stored).toBe(true);
+    expect(stored.entry).toEqual({
+      type: 'manufacturer_udi',
+      udiDi: 'udi-supplied-1',
+      udiPi: 'lot-9',
+    });
+    expect(stored.message).toBe(
+      'The manufacturer supplied UDI-DI udi-supplied-1 as evidence on this passport. The category name did not assign it. It is not a certification.',
+    );
+    expect(stored.message).toBe(UDI_PRESENT_SENTENCE.replace('{udiDi}', () => 'udi-supplied-1'));
+    expect(stored.metadata.passport.evidence).toEqual([
+      { type: 'inspection', digest: 'sha256:' + 'ab'.repeat(32) },
+      stored.entry,
+    ]);
+    expect(stored.metadata.passport.record.proof.proofValue).toBe(proof);
+    expect(scanProvesGenuine(record, stored.metadata.passport.anchor, { now: NOW }).genuine).toBe(true);
+    expect(JSON.stringify(stored.entry)).not.toMatch(/genuine|medical-device-udi/);
+    expect(Object.hasOwn(stored, 'genuine')).toBe(false);
+  });
+
+  it('does not invent a UDI from a category or an inspection row', () => {
+    const { metadata } = passport();
+    const withInspection = appendPassportEvidence(metadata, { type: 'inspection', note: 'looked' });
+    const fromCategory = udiEvidence(withInspection, { category: 'medical', name: 'Pump', udiPi: 'lot-9' });
+    expect(fromCategory).toEqual({
+      stored: false,
+      entry: null,
+      metadata: withInspection,
+      message: UDI_ABSENT_SENTENCE,
+    });
+    expect(fromCategory.metadata.passport.evidence).toEqual([{ type: 'inspection', note: 'looked' }]);
+    expect(udiEvidence(metadata, { udiDi: '   ' }).stored).toBe(false);
+    expect(udiEvidence(metadata, null).message).toBe(UDI_ABSENT_SENTENCE);
+    expect(udiEvidence({}, { udiDi: 'udi-supplied-1' })).toEqual({
+      stored: false,
+      entry: null,
+      metadata: {},
+      message: UDI_ABSENT_SENTENCE,
+    });
+  });
+
+  it('omits an empty production identifier', () => {
+    const { metadata } = passport();
+    const stored = udiEvidence(metadata, { udiDi: 'udi-supplied-1', udiPi: '  ' });
+    expect(stored.entry).toEqual({ type: 'manufacturer_udi', udiDi: 'udi-supplied-1' });
+    expect(stored.entry.udiPi).toBeUndefined();
+    const dollars = udiEvidence(metadata, { udiDi: 'DI$&1' });
+    expect(dollars.message).toBe(
+      'The manufacturer supplied UDI-DI DI$&1 as evidence on this passport. The category name did not assign it. It is not a certification.',
+    );
+  });
+
+  it('rethrows when the evidence list is full', () => {
+    const { metadata } = passport();
+    let bag = metadata;
+    for (let i = 0; i < 32; i += 1) bag = appendPassportEvidence(bag, { type: 'note', n: i });
+    expect(() => udiEvidence(bag, { udiDi: 'udi-supplied-1' })).toThrow(/evidence_cap/);
   });
 });
