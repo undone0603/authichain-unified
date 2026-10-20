@@ -836,7 +836,10 @@ test("GET /.well-known/x402 is the x402scan fan-out, not the catalog", async () 
     protocol?: string;
   };
   assert.equal(body.version, 1);
-  assert.deepEqual(body.resources, ["https://authichain.com/api/x402"]);
+  assert.deepEqual(body.resources, [
+    "https://authichain.com/api/v1/agent-verify",
+    "https://authichain.com/api/x402",
+  ]);
   assert.equal(body.protocol, undefined);
 });
 
