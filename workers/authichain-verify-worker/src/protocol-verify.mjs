@@ -8,7 +8,7 @@
  * anchorOnChain is a separate fact.
  */
 import { verifyRecord, sha256Hex, signingBytes } from "../../../protocol/verifier.mjs";
-import { scanPassport, productBindingSentence } from "../../../protocol/passport.mjs";
+import { appendPassportEvidence, scanPassport, productBindingSentence } from "../../../protocol/passport.mjs";
 
 function isPlainObject(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -122,6 +122,55 @@ export function publicationSentence(submitted, chain) {
 export function anchorUnreadSentence(submitted, chain) {
   if (submitted?.genuine === true && chain?.queried !== true) return ANCHOR_UNREAD_SENTENCE;
   return null;
+}
+
+export const HASH_PUBLICATION_EVIDENCE_ABSENT =
+  "No published signing-bytes hash is stored on this passport.";
+
+/**
+ * Store one hash_publication row only when this passport's signing-bytes hash
+ * was read in a successful transaction. The transaction hash has to be passed
+ * in from that read. An anchor object is not the row. The row does not set
+ * genuine. This function does not broadcast and it does not read the network.
+ */
+export function hashPublicationEvidence(metadata, input) {
+  const absent = {
+    stored: false,
+    entry: null,
+    metadata,
+    message: HASH_PUBLICATION_EVIDENCE_ABSENT,
+  };
+  const stored = readStoredPassport(metadata);
+  if (!stored || !isPlainObject(metadata) || !isPlainObject(metadata.passport)) return absent;
+  const supplied = isPlainObject(input) ? input : {};
+  const scan = scanPassport(stored.record, stored.anchor);
+  const chain = isPlainObject(supplied.chain) ? supplied.chain : null;
+  if (!passportHashPublished({ genuine: scan.genuine, chain })) return absent;
+  const hex = expectedRecordHash(stored.record);
+  if (typeof hex !== "string" || !/^[0-9a-f]{64}$/.test(hex)) return absent;
+  const signingBytesSha256 = "sha256:" + hex;
+  if (
+    supplied.signingBytesSha256 !== undefined &&
+    supplied.signingBytesSha256 !== null &&
+    supplied.signingBytesSha256 !== signingBytesSha256
+  ) {
+    return absent;
+  }
+  const txHash = typeof supplied.txHash === "string" ? supplied.txHash : "";
+  if (!TX_HASH_RE.test(txHash)) return absent;
+  const entry = { type: "hash_publication", signingBytesSha256, txHash };
+  try {
+    const next = appendPassportEvidence(metadata, entry);
+    return {
+      stored: true,
+      entry,
+      metadata: next,
+      message: HASH_PUBLICATION_SENTENCE,
+    };
+  } catch (err) {
+    if (err && err.message === "passport_required") return absent;
+    throw err;
+  }
 }
 
 export function assessChainRead({ tx, receipt, recordHash }) {
