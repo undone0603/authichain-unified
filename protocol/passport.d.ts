@@ -37,6 +37,15 @@ export interface ReferenceVerifyResult {
 
 export function assertDigitalIdentity(id: string): string;
 
+export const GENETICS_PASSPORT_SENTENCE: string;
+
+export function buildGeneticsPassportSubject(input: {
+  digitalIdentity: string;
+  cultivarId: string;
+  coaSha256: string;
+  labName?: string | null;
+}): { digitalIdentity: string; subject: { cultivarId: string; coaSha256: string; labName?: string } };
+
 export function signPassport(input: {
   digitalIdentity: string;
   privateKey: KeyObject;
@@ -86,6 +95,19 @@ export function productBindingSentence(scan: {
 } | null): string | null;
 
 export function appendPassportEvidence(metadata: unknown, entry: unknown): Record<string, unknown>;
+
+export const UDI_PRESENT_SENTENCE: string;
+export const UDI_ABSENT_SENTENCE: string;
+
+export function udiEvidence(
+  metadata: unknown,
+  input?: { udiDi?: unknown; udiPi?: unknown; category?: unknown } | null,
+): {
+  stored: boolean;
+  entry: { type: 'manufacturer_udi'; udiDi: string; udiPi?: string } | null;
+  metadata: unknown;
+  message: string;
+};
 
 export function verifyScan(
   record: unknown,

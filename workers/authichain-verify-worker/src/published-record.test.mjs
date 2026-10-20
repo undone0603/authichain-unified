@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { publishedRecord } from "./published-record.mjs";
-import { verifySubmitted } from "./protocol-verify.mjs";
+import { passportHashPublished, verifySubmitted } from "./protocol-verify.mjs";
 
 test("the demonstration id resolves to the mined record", () => {
   const hit = publishedRecord("polygon-anchor-1");
@@ -10,8 +10,17 @@ test("the demonstration id resolves to the mined record", () => {
   assert.equal(out.verdict, "verified");
   assert.equal(out.checks.signature, true);
   assert.equal(out.checks.anchorHash, true);
+  assert.equal(out.anchored, true);
   assert.equal(Object.hasOwn(out, "genuine"), false);
   assert.equal(Object.hasOwn(out, "productBinding"), false);
+  assert.equal(Object.hasOwn(out, "productSentence"), false);
+  assert.equal(
+    passportHashPublished({
+      genuine: out.genuine === true,
+      chain: { queried: true, onChain: true, status: "tx_contains_record_hash" },
+    }),
+    false,
+  );
 });
 
 test("the public URL resolves to the same record", () => {

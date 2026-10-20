@@ -33,6 +33,11 @@ const OPTIONAL_SUBJECT_KEYS = new Set([
   'batteryCategory',
   'packageId',
 ]);
+export const GENETICS_PASSPORT_SENTENCE =
+  'A genetics passport can be signed from a cultivar id and the SHA-256 of a certificate of analysis the customer supplied. Issue #1553 is open. This is not a delivered service.';
+
+const GENETICS_INPUT_KEYS = new Set(['digitalIdentity', 'cultivarId', 'coaSha256', 'labName']);
+
 const SEAL_SENTENCE =
   'This scan presented the seal serial committed in the signed passport for {digitalIdentity}. The passport signature verified. The chain transaction was not read, so publication of the hash is not confirmed. The seal serial is not in the QR. A copy of the QR alone does not pass this check. The commitment match does not prove the issuer attached that seal to the named object.';
 
@@ -97,6 +102,32 @@ function rejectGenuineKey(value) {
     if (key === 'genuine') throw new Error('evidence_genuine_forbidden');
     rejectGenuineKey(value[key]);
   }
+}
+
+/**
+ * Fields for a genetics passport. The caller supplies the identity URI and
+ * the CoA hash. This does not hash a file, mint a GTIN, or mark the
+ * passport delivered. Issue #1553 stays open.
+ */
+export function buildGeneticsPassportSubject(input) {
+  if (!plainObject(input)) throw new Error('subject_field_rejected');
+  for (const key of Object.keys(input)) {
+    if (!GENETICS_INPUT_KEYS.has(key)) throw new Error('subject_field_rejected');
+  }
+  const digitalIdentity = assertDigitalIdentity(input.digitalIdentity);
+  const cultivarId = typeof input.cultivarId === 'string' ? input.cultivarId.trim() : '';
+  if (cultivarId.length < 1 || cultivarId.length > 512) throw new Error('subject_field_rejected');
+  if (typeof input.coaSha256 !== 'string' || !SHA256_FIELD.test(input.coaSha256)) {
+    throw new Error('subject_field_rejected');
+  }
+  const subject = { cultivarId, coaSha256: input.coaSha256 };
+  if (input.labName !== undefined && input.labName !== null) {
+    if (typeof input.labName !== 'string') throw new Error('subject_field_rejected');
+    const labName = input.labName.trim();
+    if (labName.length < 1 || labName.length > 512) throw new Error('subject_field_rejected');
+    subject.labName = labName;
+  }
+  return { digitalIdentity, subject };
 }
 
 /**
@@ -373,6 +404,45 @@ export function appendPassportEvidence(metadata, entry) {
       evidence: [...list, entry],
     },
   };
+}
+
+export const UDI_PRESENT_SENTENCE =
+  'The manufacturer supplied UDI-DI {udiDi} as evidence on this passport. The category name did not assign it. It is not a certification.';
+export const UDI_ABSENT_SENTENCE =
+  'No manufacturer-supplied UDI is stored on this passport.';
+
+function suppliedText(value) {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+}
+
+/**
+ * Store a UDI only when the manufacturer supplies udiDi.
+ * The category word does not assign one. The row does not set genuine.
+ */
+export function udiEvidence(metadata, input) {
+  const supplied = plainObject(input) ? input : {};
+  const udiDi = suppliedText(supplied.udiDi);
+  const udiPi = suppliedText(supplied.udiPi);
+  if (!udiDi) {
+    return { stored: false, entry: null, metadata, message: UDI_ABSENT_SENTENCE };
+  }
+  const entry = { type: 'manufacturer_udi', udiDi };
+  if (udiPi) entry.udiPi = udiPi;
+  try {
+    const next = appendPassportEvidence(metadata, entry);
+    return {
+      stored: true,
+      entry,
+      metadata: next,
+      message: UDI_PRESENT_SENTENCE.replace('{udiDi}', () => udiDi),
+    };
+  } catch (err) {
+    if (err && err.message === 'passport_required') {
+      return { stored: false, entry: null, metadata, message: UDI_ABSENT_SENTENCE };
+    }
+    throw err;
+  }
 }
 
 /**

@@ -4,11 +4,23 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, generateKeyPairSync } from "node:crypto";
-import { productPassportMetadata, signPassport } from "../../../protocol/passport.mjs";
+import {
+  appendPassportEvidence,
+  productPassportMetadata,
+  signPassport,
+  storePassport,
+} from "../../../protocol/passport.mjs";
 import { signingBytes } from "../../../protocol/verifier.mjs";
 import {
   assessChainRead,
+  anchoredAfterChainRead,
+  anchorUnreadSentence,
   expectedRecordHash,
+  HASH_PUBLICATION_EVIDENCE_ABSENT,
+  HASH_PUBLICATION_SENTENCE,
+  hashPublicationEvidence,
+  passportHashPublished,
+  publicationSentence,
   readStoredPassport,
   verifySubmitted,
 } from "./protocol-verify.mjs";
@@ -92,7 +104,8 @@ test("a stored product passport is genuine only when the scan passes", () => {
   assert.equal(open.verdict, "valid-unanchored");
   assert.equal(readStoredPassport({ status: "active" }), null);
   assert.equal(readStoredPassport(null), null);
-  assert.equal(proved.anchored, true);
+  assert.equal(proved.anchored, false);
+  assert.equal(proved.genuine, true);
   assert.equal(proved.productBinding.method, "none");
   assert.equal(proved.productBinding.pass, false);
   assert.equal(proved.productBinding.reason, "seal_commitment_missing");
@@ -119,7 +132,7 @@ test("a seal match does not change anchored or genuine", () => {
   };
   const matched = verifySubmitted(record, anchor, { sealSerial: seal });
   assert.equal(matched.genuine, true);
-  assert.equal(matched.anchored, true);
+  assert.equal(matched.anchored, false);
   assert.equal(matched.anchorTransactionQueried, false);
   assert.equal(matched.productBinding.pass, true);
   assert.equal(matched.productBinding.method, "seal_serial_sha256");
@@ -129,7 +142,7 @@ test("a seal match does not change anchored or genuine", () => {
   assert.equal(matched.productSentence.includes(seal), false);
   const copied = verifySubmitted(record, anchor, null);
   assert.equal(copied.genuine, true);
-  assert.equal(copied.anchored, true);
+  assert.equal(copied.anchored, false);
   assert.equal(copied.digitalIdentity, matched.digitalIdentity);
   assert.equal(copied.productBinding.pass, false);
   assert.equal(copied.productBinding.reason, "seal_serial_missing");
@@ -180,4 +193,127 @@ test("the chain read is separate from the verdict", () => {
   });
   assert.equal(other.onChain, false);
   assert.equal(other.status, "hash_not_in_tx");
+});
+
+test("a DPP is anchored only when the receipt contains the signing-bytes hash", () => {
+  const { record, anchor } = signedPassport();
+  const submitted = verifySubmitted(record, anchor);
+  assert.equal(submitted.genuine, true);
+  assert.equal(submitted.anchored, false);
+  const hash = expectedRecordHash(record).replace(/^sha256:/i, "");
+  const published = assessChainRead({
+    tx: { input: "0x" + hash, from: "0xabc", to: "0xabc" },
+    receipt: { status: "0x1", blockNumber: "0x10" },
+    recordHash: "sha256:" + hash,
+  });
+  assert.equal(passportHashPublished({ genuine: true, chain: published }), true);
+  assert.equal(anchoredAfterChainRead(submitted, published), true);
+  assert.equal(publicationSentence(submitted, published), HASH_PUBLICATION_SENTENCE);
+  assert.equal(/polygon|explorer|0x4da4/i.test(HASH_PUBLICATION_SENTENCE), false);
+  assert.equal(
+    HASH_PUBLICATION_SENTENCE,
+    "The SHA-256 of this passport's signing bytes was published in a successful transaction input. That publication is a hash commitment. It does not make the product blockchain-authentic.",
+  );
+  assert.equal(passportHashPublished({ genuine: false, chain: published }), false);
+  assert.equal(passportHashPublished({ genuine: true, chain: null }), false);
+  const unread = { queried: false, onChain: false, status: "not_queried" };
+  assert.equal(passportHashPublished({ genuine: true, chain: unread }), false);
+  assert.equal(anchoredAfterChainRead(submitted, unread), false);
+  assert.equal(
+    anchorUnreadSentence(submitted, unread),
+    "The anchor object is well formed. The transaction was not read, so publication of the hash is not confirmed.",
+  );
+  assert.equal(publicationSentence(submitted, unread), null);
+  const reverted = assessChainRead({
+    tx: { input: "0x" + hash },
+    receipt: { status: "0x0", blockNumber: "0x10" },
+    recordHash: hash,
+  });
+  assert.equal(reverted.status, "reverted");
+  assert.equal(passportHashPublished({ genuine: true, chain: reverted }), false);
+  const missing = assessChainRead({
+    tx: { input: "0x" + "cd".repeat(32) },
+    receipt: { status: "0x1", blockNumber: "0x11" },
+    recordHash: hash,
+  });
+  assert.equal(missing.status, "hash_not_in_tx");
+  assert.equal(passportHashPublished({ genuine: true, chain: missing }), false);
+  assert.equal(anchorUnreadSentence(submitted, published), null);
+  const provenance = verifySubmitted(load("valid-anchored-polygon.json").record, load("valid-anchored-polygon.json").anchor);
+  assert.equal(Object.hasOwn(provenance, "genuine"), false);
+  assert.equal(anchoredAfterChainRead(provenance, published), true);
+  assert.equal(publicationSentence(provenance, published), null);
+});
+
+test("a hash publication row is stored only after the chain read", () => {
+  const { record, anchor } = signedPassport();
+  const metadata = storePassport({ story: "kept" }, { record, anchor });
+  const proof = record.proof.proofValue;
+  const signingBytesSha256 = "sha256:" + expectedRecordHash(record);
+  const published = assessChainRead({
+    tx: { input: "0x" + expectedRecordHash(record), from: "0xabc", to: "0xabc" },
+    receipt: { status: "0x1", blockNumber: "0x10" },
+    recordHash: signingBytesSha256,
+  });
+  const txHash = "0x" + "cd".repeat(32);
+  const stored = hashPublicationEvidence(metadata, {
+    chain: published,
+    txHash,
+    genuine: true,
+    signingBytesSha256,
+  });
+  assert.equal(stored.stored, true);
+  assert.deepEqual(stored.entry, { type: "hash_publication", signingBytesSha256, txHash });
+  assert.equal(stored.message, HASH_PUBLICATION_SENTENCE);
+  assert.equal(Object.hasOwn(stored, "genuine"), false);
+  assert.equal(Object.hasOwn(stored.entry, "genuine"), false);
+  assert.equal(JSON.stringify(stored.entry).includes("genuine"), false);
+  assert.equal(stored.metadata.story, "kept");
+  assert.equal(stored.metadata.passport.record, record);
+  assert.equal(stored.metadata.passport.record.proof.proofValue, proof);
+  assert.deepEqual(stored.metadata.passport.evidence, [stored.entry]);
+  assert.equal(metadata.passport.evidence, undefined);
+  assert.equal(verifySubmitted(record, anchor).genuine, true);
+
+  const fromAnchor = hashPublicationEvidence(metadata, anchor);
+  assert.equal(fromAnchor.stored, false);
+  assert.equal(fromAnchor.metadata, metadata);
+  assert.equal(fromAnchor.message, HASH_PUBLICATION_EVIDENCE_ABSENT);
+
+  const flagOnly = hashPublicationEvidence(metadata, { genuine: true, txHash });
+  assert.equal(flagOnly.stored, false);
+  assert.equal(flagOnly.message, HASH_PUBLICATION_EVIDENCE_ABSENT);
+
+  const unread = hashPublicationEvidence(metadata, {
+    chain: { queried: false, onChain: false, status: "not_queried", txHash },
+    txHash,
+  });
+  assert.equal(unread.stored, false);
+
+  const wrongHash = hashPublicationEvidence(metadata, {
+    chain: published,
+    txHash,
+    signingBytesSha256: "sha256:" + "11".repeat(32),
+  });
+  assert.equal(wrongHash.stored, false);
+  assert.equal(wrongHash.metadata, metadata);
+
+  const noTx = hashPublicationEvidence(metadata, { chain: published });
+  assert.equal(noTx.stored, false);
+
+  const open = storePassport({}, { record });
+  assert.equal(hashPublicationEvidence(open, { chain: published, txHash }).stored, false);
+
+  const missing = hashPublicationEvidence({}, { chain: published, txHash });
+  assert.deepEqual(missing, {
+    stored: false,
+    entry: null,
+    metadata: {},
+    message: HASH_PUBLICATION_EVIDENCE_ABSENT,
+  });
+
+  let bag = metadata;
+  for (let i = 0; i < 32; i += 1) bag = appendPassportEvidence(bag, { type: "note", n: i });
+  assert.throws(() => hashPublicationEvidence(bag, { chain: published, txHash }), /evidence_cap/);
+  assert.equal(bag.passport.record.proof.proofValue, proof);
 });
