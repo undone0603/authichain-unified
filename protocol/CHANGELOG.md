@@ -31,6 +31,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - `udiEvidence` stores a manufacturer-supplied UDI-DI on the passport. A category name does not assign one. The row does not set genuine.
 - A genetics passport subject is a customer-supplied identity, a cultivar id, and the SHA-256 of a certificate of analysis the customer uploaded. Cannabinoid fields are rejected. Issue #1553 stays open. This is not a delivered service.
 - A signed attestation uses the passport verdict. An approved certification is not signed as verified. `GET /api/v1/verify` does not sign.
+- A stored DigitalProductPassport can be posted to the verify worker as passportScan. verified on the API object stays false. A registry row and an anchor receipt are not that scan. A ProvenanceRecord is not posted.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 
