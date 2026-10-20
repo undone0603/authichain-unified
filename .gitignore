@@ -129,3 +129,6 @@ gov_pursue_list.csv
 .claude/.skipper-*
 .skipper/*
 !.skipper/receipts/
+
+# chunk local pool state
+.chunk/*-pool.json
