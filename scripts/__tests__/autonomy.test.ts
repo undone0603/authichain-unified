@@ -985,6 +985,7 @@ describe("stripe webhook reconcile", async () => {
       url: "https://authichain.com/api/stripe/webhook",
       ensure_events: [
         "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
         "checkout.session.expired",
         "invoice.paid",
         "invoice.payment_failed",

@@ -124,6 +124,9 @@ export async function createPlanCheckoutSession(opts: {
       metadata: {
         plan: plan.id,
         brand,
+        ...(plan.stripe_price_id
+          ? { stripe_price_id: plan.stripe_price_id }
+          : {}),
         ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
         ...(refCode ? { ref_code: refCode } : {}),
         ...(prospectId ? { prospect_id: prospectId } : {}),
@@ -135,6 +138,7 @@ export async function createPlanCheckoutSession(opts: {
               metadata: {
                 plan: plan.id,
                 brand,
+                stripe_price_id: plan.stripe_price_id,
                 ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
                 ...(refCode ? { ref_code: refCode } : {}),
                 ...(prospectId ? { prospect_id: prospectId } : {}),
@@ -162,6 +166,20 @@ export async function createPlanCheckoutSession(opts: {
         status: 500,
         error: "Stripe did not return a checkout URL",
       };
+    }
+    // Instrument QRON Launch Annual checkout start
+    if (plan.id === "qron_launch_annual") {
+      console.log(
+        JSON.stringify({
+          evt: "checkout_start_qron_annual",
+          plan_id: "qron_launch_annual",
+          session_id: session.id,
+          amount_usd: 190,
+          generations: 1200,
+          brand,
+          ts: Date.now(),
+        })
+      );
     }
     return { ok: true, url: session.url, planId: plan.id };
   } catch (error: unknown) {
