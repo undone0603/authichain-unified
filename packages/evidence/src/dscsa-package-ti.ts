@@ -1,4 +1,7 @@
 import { createHash } from "node:crypto";
+// passport.d.ts types this file for the protocol package. A path import does not use that declaration.
+// @ts-expect-error TS7016
+import { appendPassportEvidence } from "../../../protocol/passport.mjs";
 import { canonicalize } from "./base";
 
 const EMPTY_DIGEST =
@@ -85,4 +88,72 @@ export function checkDscsaPackageTi(input: unknown): DscsaPackageTiResult {
     reason: null,
     sentence: DSCSA_PACKAGE_SENTENCE.replace("{packageId}", packageId),
   };
+}
+
+export type DscsaPackageEvidenceEntry = {
+  type: "dscsa_package_ti";
+  packageId: string;
+  event: { epcList: [string] };
+  transactionInformation: {
+    productName: string;
+    lotNumber: string;
+    expirationDate: string;
+    shipmentDate: string;
+    transactionId: string;
+  };
+  digest: string;
+};
+
+export type DscsaPackageEvidenceResult = {
+  stored: boolean;
+  entry: DscsaPackageEvidenceEntry | null;
+  metadata: unknown;
+  message: string;
+};
+
+/**
+ * Store one package row only when checkDscsaPackageTi accepts the supplied
+ * fields. Extra keys, including genuine, are dropped. A missing passport
+ * stores nothing. This does not call FDA.
+ */
+export function storeDscsaPackageEvidence(
+  metadata: unknown,
+  input: unknown,
+): DscsaPackageEvidenceResult {
+  const absent: DscsaPackageEvidenceResult = {
+    stored: false,
+    entry: null,
+    metadata,
+    message: DSCSA_PACKAGE_ABSENT_SENTENCE,
+  };
+  const checked = checkDscsaPackageTi(input);
+  if (!checked.pass || !plain(input) || !plain(input.transactionInformation)) return absent;
+  const info = input.transactionInformation;
+  const canonical = {
+    productName: String(info.productName),
+    lotNumber: String(info.lotNumber),
+    expirationDate: String(info.expirationDate),
+    shipmentDate: String(info.shipmentDate),
+    transactionId: String(info.transactionId),
+  };
+  const packageId = String(input.packageId);
+  const entry: DscsaPackageEvidenceEntry = {
+    type: "dscsa_package_ti",
+    packageId,
+    event: { epcList: [packageId] },
+    transactionInformation: canonical,
+    digest: tiDigest(canonical),
+  };
+  try {
+    const next = appendPassportEvidence(metadata, entry);
+    return {
+      stored: true,
+      entry,
+      metadata: next,
+      message: checked.sentence,
+    };
+  } catch (err) {
+    if (err instanceof Error && err.message === "passport_required") return absent;
+    throw err;
+  }
 }
