@@ -2522,7 +2522,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   ${estateSkipLink()}
-  <div class="banner">The first checkout is the $29 Starter Pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy Starter — $29</a>. EU DPP Readiness stays $299 further down.</div>
+  <div class="banner">The first checkout is the $29 Starter Pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy Starter — $29</a>. EU DPP Workspace stays $299 further down.</div>
   ${estateNav(
     "authichain",
     [
@@ -2540,7 +2540,7 @@ const HTML = `<!DOCTYPE html>
   ${estateHero({
     eyebrow: "The authentic agentic economy",
     title: "Signed QR seals for real products.",
-    lede: "Start with the Starter Pack at $29. EU DPP Readiness is $299 when you need the battery passport path. Add a work email so Stripe can recover the cart.",
+    lede: "Start with the Starter Pack at $29. EU DPP Workspace is $299 when you need the battery passport path. Add a work email so Stripe can recover the cart.",
     lead: {
       href: planPaymentLink("starter") ?? "#hero",
       label: "Buy a QRON Starter Pack — $29",
@@ -2954,7 +2954,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <a class="nav-link" href="/battery-passport">Battery example</a>
       <a class="nav-link" href="/docs">Docs</a>
       <a class="nav-link" href="/x402">Agent pay</a>
-      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Start DPP Audit — $299</a>
+      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Open EU DPP Workspace — $299</a>
     </div>
   </nav>
 
