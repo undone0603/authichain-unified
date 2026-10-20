@@ -30,6 +30,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - `evidenceTally` counts stored visual similarity, METRC manifest match, DSCSA package transaction information, and hash publication entries. The verdict stays `not_a_passport`. Caller flags are not inputs. The number does not set genuine. METRC matching stays off.
 - `udiEvidence` stores a manufacturer-supplied UDI-DI on the passport. A category name does not assign one. The row does not set genuine.
 - A genetics passport subject is a customer-supplied identity, a cultivar id, and the SHA-256 of a certificate of analysis the customer uploaded. Cannabinoid fields are rejected. Issue #1553 stays open. This is not a delivered service.
+- A signed attestation uses the passport verdict. An approved certification is not signed as verified. `GET /api/v1/verify` does not sign.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 
