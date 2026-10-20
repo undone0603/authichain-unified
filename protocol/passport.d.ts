@@ -37,6 +37,15 @@ export interface ReferenceVerifyResult {
 
 export function assertDigitalIdentity(id: string): string;
 
+export const GENETICS_PASSPORT_SENTENCE: string;
+
+export function buildGeneticsPassportSubject(input: {
+  digitalIdentity: string;
+  cultivarId: string;
+  coaSha256: string;
+  labName?: string | null;
+}): { digitalIdentity: string; subject: { cultivarId: string; coaSha256: string; labName?: string } };
+
 export function signPassport(input: {
   digitalIdentity: string;
   privateKey: KeyObject;
