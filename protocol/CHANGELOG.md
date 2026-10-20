@@ -22,6 +22,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - A medical category is not a device profile. `mapDbToIdentity` stays `generic-provenance` and does not assign a UDI.
 - An inspection evidence row does not set `physical_binding`. A missing manufacturing date is not the harvest word Recent, and a missing rarity is not filled with 50. The asset story does not say the product is verified or on a Bitcoin truth layer.
 - A DSCSA package record is transaction information for one package id. It is not an FDA compliance determination, and it does not set `genuine`. A missing expiration is not the current time.
+- `storeDscsaPackageEvidence` appends that package row only when the five fields are supplied. A category, an inspection row, or a missing passport does not create it. The row does not set `genuine`.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 

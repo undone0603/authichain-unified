@@ -1,9 +1,18 @@
-import { createHash } from "node:crypto";
+import { createHash, generateKeyPairSync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
+// passport.d.ts types this file for the protocol package. A path import does not use that declaration.
+// @ts-expect-error TS7016
+import { appendPassportEvidence, signPassport, storePassport } from "../../../protocol/passport.mjs";
 import { canonicalize } from "./base";
-import { DsCsaEvidenceSchema, checkDscsaPackageTi, DSCSA_PACKAGE_SENTENCE } from "./index";
+import {
+  DsCsaEvidenceSchema,
+  DSCSA_PACKAGE_ABSENT_SENTENCE,
+  checkDscsaPackageTi,
+  DSCSA_PACKAGE_SENTENCE,
+  storeDscsaPackageEvidence,
+} from "./index";
 import { mapEpcisToDsCsa } from "./mapping";
 
 describe("DsCsaEvidenceSchema", () => {
@@ -165,3 +174,117 @@ describe("mapEpcisToDsCsa", () => {
     expect(src).not.toMatch(/new Date\(|\|\| "UNKNOWN"|\|\| "Unknown Partner"|\|\| "unsigned"/);
   });
 });
+
+describe("storeDscsaPackageEvidence", () => {
+  function passport() {
+    const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+    const raw = publicKey.export({ format: "der", type: "spki" }).subarray(-32);
+    const issuer = "did:key:z" + base58Encode(Buffer.concat([Buffer.from([0xed, 0x01]), raw]));
+    const record = signPassport({
+      digitalIdentity: "urn:authichain:item:example-1",
+      privateKey,
+      issuer,
+    });
+    const metadata = storePassport({ story: "kept" }, { record });
+    return { record, metadata, proof: record.proof.proofValue };
+  }
+
+  it("stores the supplied package fields and leaves the signature alone", () => {
+    const { record, metadata, proof } = passport();
+    const withInspection = appendPassportEvidence(metadata, { type: "inspection", note: "looked" });
+    const stored = storeDscsaPackageEvidence(withInspection, {
+      ...packageTi(),
+      genuine: true,
+      category: "pharma",
+    });
+    const info = {
+      productName: "Example",
+      lotNumber: "LOT1",
+      expirationDate: "2027-08-30",
+      shipmentDate: "2026-10-18",
+      transactionId: "TX1",
+    };
+    expect(stored.stored).toBe(true);
+    expect(stored.entry).toEqual({
+      type: "dscsa_package_ti",
+      packageId: "pkg-1",
+      event: { epcList: ["pkg-1"] },
+      transactionInformation: info,
+      digest: "sha256:" + createHash("sha256").update(canonicalize(info)).digest("hex"),
+    });
+    expect(stored.message).toBe(DSCSA_PACKAGE_SENTENCE.replace("{packageId}", "pkg-1"));
+    const next = stored.metadata as {
+      story: string;
+      passport: {
+        record: typeof record;
+        evidence: unknown[];
+      };
+    };
+    expect(next.story).toBe("kept");
+    expect(next.passport.record).toBe(record);
+    expect(next.passport.record.proof.proofValue).toBe(proof);
+    expect(next.passport.evidence).toEqual([
+      { type: "inspection", note: "looked" },
+      stored.entry,
+    ]);
+    expect(stored.entry).not.toBeNull();
+    expect(JSON.stringify(stored.entry)).not.toMatch(/genuine|pharma/);
+    expect(Object.hasOwn(stored, "genuine")).toBe(false);
+    expect(stored.entry && Object.hasOwn(stored.entry, "genuine")).toBe(false);
+  });
+
+  it("does not invent a package row from a category or a missing passport", () => {
+    const { metadata } = passport();
+    const fromCategory = storeDscsaPackageEvidence(metadata, {
+      type: "inspection",
+      category: "pharma",
+      packageId: "pkg-1",
+    });
+    expect(fromCategory).toEqual({
+      stored: false,
+      entry: null,
+      metadata,
+      message: DSCSA_PACKAGE_ABSENT_SENTENCE,
+    });
+    expect(
+      (fromCategory.metadata as { passport: { evidence?: unknown } }).passport.evidence,
+    ).toBeUndefined();
+    const missing = storeDscsaPackageEvidence({}, packageTi());
+    expect(missing).toEqual({
+      stored: false,
+      entry: null,
+      metadata: {},
+      message: DSCSA_PACKAGE_ABSENT_SENTENCE,
+    });
+    const unknown = packageTi();
+    (unknown.transactionInformation as { lotNumber: string }).lotNumber = "UNKNOWN";
+    expect(storeDscsaPackageEvidence(metadata, unknown).stored).toBe(false);
+  });
+
+  it("rethrows when the evidence list is full", () => {
+    const { metadata, proof } = passport();
+    let bag = metadata;
+    for (let i = 0; i < 32; i += 1) bag = appendPassportEvidence(bag, { type: "note", n: i });
+    expect(() => storeDscsaPackageEvidence(bag, packageTi())).toThrow(/evidence_cap/);
+    expect(
+      (bag as { passport: { record: { proof: { proofValue: string } } } }).passport.record.proof
+        .proofValue,
+    ).toBe(proof);
+  });
+});
+
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+function base58Encode(buf: Buffer): string {
+  let num = BigInt("0x" + (buf.toString("hex") || "0"));
+  let out = "";
+  while (num > 0n) {
+    out = B58[Number(num % 58n)] + out;
+    num /= 58n;
+  }
+  for (const b of buf) {
+    if (b !== 0) break;
+    out = "1" + out;
+  }
+  return out;
+}
