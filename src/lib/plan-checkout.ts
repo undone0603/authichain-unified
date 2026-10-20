@@ -163,6 +163,20 @@ export async function createPlanCheckoutSession(opts: {
         error: "Stripe did not return a checkout URL",
       };
     }
+    // Instrument QRON Launch Annual checkout start
+    if (plan.id === "qron_launch_annual") {
+      console.log(
+        JSON.stringify({
+          evt: "checkout_start_qron_annual",
+          plan_id: "qron_launch_annual",
+          session_id: session.id,
+          amount_usd: 190,
+          generations: 1200,
+          brand,
+          ts: Date.now(),
+        })
+      );
+    }
     return { ok: true, url: session.url, planId: plan.id };
   } catch (error: unknown) {
     const err = error as { message?: string };
