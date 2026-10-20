@@ -4,8 +4,8 @@ name: Revenue Cycle
 
 on:
   schedule:
-    # Weekly dry-run report only (Mondays 15:00 UTC)
-    - cron: "0 15 * * 1"
+    # Weekly dry-run report only (Mondays 15:20 UTC). The opportunity digest stays at 15:00.
+    - cron: "20 15 * * 1"
   workflow_dispatch:
     inputs:
       dry_run:
