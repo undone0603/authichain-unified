@@ -352,6 +352,58 @@ export function computeTrustScore(params: {
   return { score, grade, layers, verdict: "not_a_passport" };
 }
 
+// Server-observed passport evidence. Caller flags are not in this set.
+export const EVIDENCE_TALLY_TYPES = [
+  "visual_similarity",
+  "metrc_manifest_match",
+  "dscsa_package_ti",
+  "hash_publication",
+] as const;
+
+export const EVIDENCE_TALLY_SENTENCE =
+  "This number tallies evidence entries stored on the passport. It is not a genuineness verdict.";
+
+export const EVIDENCE_TALLY_ABSENT_SENTENCE =
+  "A visual compare is not a product passport scan.";
+
+const EVIDENCE_TALLY_TYPE_SET = new Set<string>(EVIDENCE_TALLY_TYPES);
+
+export interface EvidenceTally {
+  count: number;
+  verdict: "not_a_passport";
+  message: string;
+}
+
+function evidenceList(stored: unknown): unknown[] {
+  if (Array.isArray(stored)) return stored;
+  if (!stored || typeof stored !== "object") return [];
+  const passport = (stored as { passport?: unknown }).passport;
+  if (!passport || typeof passport !== "object" || Array.isArray(passport))
+    return [];
+  const evidence = (passport as { evidence?: unknown }).evidence;
+  return Array.isArray(evidence) ? evidence : [];
+}
+
+/**
+ * Count stored server-observed evidence entries. The number is not a verdict
+ * and it does not set genuine. Caller booleans are not inputs.
+ */
+export function evidenceTally(stored: unknown): EvidenceTally {
+  let count = 0;
+  for (const entry of evidenceList(stored)) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const type = (entry as { type?: unknown }).type;
+    if (typeof type === "string" && EVIDENCE_TALLY_TYPE_SET.has(type))
+      count += 1;
+  }
+  return {
+    count,
+    verdict: "not_a_passport",
+    message:
+      count > 0 ? EVIDENCE_TALLY_SENTENCE : EVIDENCE_TALLY_ABSENT_SENTENCE,
+  };
+}
+
 // ─── openART Registry ─────────────────────────────────────────────────────────
 
 async function registerToOpenART(params: {
