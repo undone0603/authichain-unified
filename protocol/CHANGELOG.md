@@ -32,6 +32,7 @@ No version bump in this change; the release that ships it is a separate PR. `ver
 - A genetics passport subject is a customer-supplied identity, a cultivar id, and the SHA-256 of a certificate of analysis the customer uploaded. Cannabinoid fields are rejected. Issue #1553 stays open. This is not a delivered service.
 - A signed attestation uses the passport verdict. An approved certification is not signed as verified. `GET /api/v1/verify` does not sign.
 - A stored DigitalProductPassport can be posted to the verify worker as passportScan. verified on the API object stays false. A registry row and an anchor receipt are not that scan. A ProvenanceRecord is not posted.
+- `GET /api/industrial/telemetry` counts stored `telemetry_events` rows as `distinctSources` and `readingsInWindow`. `blockchainAnchored` is true only when a stored `anchored_tx_hash` receipt succeeded and the transaction input contains that row's `state_hash`. Empty means zero. POST does not anchor.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 
