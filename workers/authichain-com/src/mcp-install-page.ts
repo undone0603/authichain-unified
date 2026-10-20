@@ -334,7 +334,7 @@ export function renderMcpInstallPage(): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Install the AuthiChain MCP server | AuthiChain</title>
-<meta name="description" content="Connect AuthiChain to Claude, Cursor or VS Code in one step. Look up AuthiChain product records. x402 paid verification and on-chain anchoring in development.">
+<meta name="description" content="Connect AuthiChain to Claude, Cursor, or VS Code. A signed record is not a physical inspection. Legacy x402 verify answers HTTP 402.">
 <link rel="canonical" href="${MCP_INSTALL_CANONICAL}">
 ${ESTATE_FONTS_LINK}
 <style>${CSS}</style>
@@ -342,9 +342,9 @@ ${ESTATE_FONTS_LINK}
 
 <header class="hero"><div class="wrap">
   <span class="pill">Model Context Protocol</span>
-  <h1>Give your agent a way to check what's real.</h1>
+  <h1>Give your agent the published checks.</h1>
   <p class="lede">AuthiChain scores EU Digital Product Passport readiness against the dated
-  obligations. Free over MCP — no key, no account, no payment header.</p>
+  obligations. Free over MCP — no key, no account, no payment header. Our goal: an agent runs the published checks and is told a signed record is not a physical inspection. A signed record is not a physical inspection.</p>
   <div class="btns">
     <a class="btn primary" href="${esc(CURSOR_DEEPLINK)}">Add to Cursor</a>
     <a class="btn" href="#install">Claude, VS Code &amp; everything else</a>

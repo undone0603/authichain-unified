@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "source": "local-fixture",
+  "packageIdentifier": "fixture-package-0001",
+  "returnedPackage": "returned-package.json",
+  "transactions": [
+    {
+      "event": "shipped",
+      "packageIdentifier": "fixture-package-0001"
+    }
+  ],
+  "note": "Local shipped history for a later comparison. No FDA response and no trading-partner credential."
+}

@@ -1,0 +1,22 @@
+{
+  "synthetic": true,
+  "source": "local-fixture",
+  "type": "ObjectEvent",
+  "eventTime": "2026-01-15T12:00:00.000Z",
+  "recordTime": "2026-01-15T12:00:01.000Z",
+  "eventTimeZoneOffset": "+00:00",
+  "action": "OBSERVING",
+  "bizStep": "urn:epcglobal:cbv:bizstep:shipping",
+  "disposition": "urn:epcglobal:cbv:disp:in_transit",
+  "readPoint": "urn:epc:id:sgln:0000000.00000.0",
+  "bizLocation": "urn:epc:id:sgln:0000000.00000.0",
+  "bizTransaction": "urn:epcglobal:cbv:btt:po:fixture-po-0001",
+  "quantityList": [
+    {
+      "epcList": ["urn:epc:id:sgtin:0000000.000000.1"],
+      "epsList": [],
+      "quantity": 1
+    }
+  ],
+  "note": "One local unit for a later export test. No trading-partner capture and no credential."
+}

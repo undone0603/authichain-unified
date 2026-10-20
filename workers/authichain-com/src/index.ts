@@ -20,6 +20,8 @@ import {
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
+import { tryHandleManufacturerStatus } from "./manufacturer-status-route";
+import { tryHandleProtocolExample } from "./protocol-example-route";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import { isMcpInstallPath, renderMcpInstallPage } from "./mcp-install-page";
 import { docsRedirect, isDocsHub, isDocsPage } from "./docs-pages";
@@ -2329,7 +2331,7 @@ function foundersVision() {
   <div class="wrap" style="max-width:760px">
     <p class="section-tag">What is live</p>
     <h2>Realized capability, not a pitch deck</h2>
-    <p class="section-sub">One founder. Agents draft and check. Money, mail, and deploy wait for the founder. AuthiChain is building seals that bind to products and log every scan against the serial. Public verification is in development. The money path is EU DPP Readiness.</p>
+    <p class="section-sub">One founder. Agents draft and check. Money, mail, and deploy wait for the founder. Our goal: anyone can check an AuthiChain certificate with its ID. The public certificate registry is in development. The manufacturer role history and the published demonstration record are live, and neither is a physical inspection. The money path is EU DPP Readiness.</p>
   </div>
 </section>`;
 }
@@ -2341,7 +2343,7 @@ function howItWorks() {
     [
       { title: "Issue", body: "Issue a seal for the product. In development: Ed25519-signed certificates." },
       { title: "Bind", body: "Bind the seal to the physical item — a Living QR, a passport, or a package label that can change destination without a reprint." },
-      { title: "Verify", body: "Our goal: log every scan against the serial. Our goal: anyone with a camera can confirm authenticity against the public on-chain record. Goal: flag duplicate scans, cloned or copied seals, and unexpected scan locations for a serial." },
+      { title: "Verify", body: "Our goal: log every scan against the serial. That camera scan is not live on this page. A signed record is not a physical inspection. Goal: flag duplicate scans, cloned or copied seals, and unexpected scan locations for a serial." },
     ],
     "how",
   );
@@ -2566,42 +2568,13 @@ const HTML = `<!DOCTYPE html>
       <div class="estate-verify-actions">
         <a class="btn btn-primary" href="https://authichain.com/contact">Talk to us</a>
       </div>
-      <div id="ac-verify-result" style="margin-top:1rem;display:none"></div>
     </div>
   </section>
-  <style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}</style>
-
-  <script>
-  function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-  function acVerify(){
-    var id=(document.getElementById('ac-cert-input').value||'').trim();
-    var el=document.getElementById('ac-verify-result');
-    if(!id){el.style.display='none';return;}
-    el.style.display='block';
-    el.innerHTML='<p style="color:var(--text-dim)">Verifying…</p>';
-    fetch('/api/authichain/cert/'+encodeURIComponent(id))
-      .then(r=>r.json()).then(function(d){
-        if(d.is_authentic){
-          el.innerHTML='<div class="estate-card" style="border-color:#15803d">'
-            +'<div style="font-size:1.1rem;font-weight:700;color:#15803d;margin-bottom:.5rem">Authentic product</div>'
-            +'<div style="color:var(--text-dim);font-size:.9rem"><b style="color:var(--text)">'+esc(d.certificate.brand)+'</b> — '+esc(d.certificate.product_name)+'</div>'
-            +'<div style="color:var(--text-dim);font-size:.85rem;margin-top:.4rem">SKU: '+esc(d.certificate.sku||'—')+' · Issued: '+esc((d.certificate.issued_at||'').slice(0,10))+' · Scans: '+esc(String(d.certificate.scan_count))+'</div>'
-            +'</div>';
-        } else {
-          el.innerHTML='<div class="estate-card" style="border-color:#b91c1c">'
-            +'<div style="font-size:1.1rem;font-weight:700;color:#b91c1c">'+(d.error||'Certificate not verified')+'</div>'
-            +'</div>';
-        }
-      }).catch(function(){
-        el.innerHTML='<div style="color:#b91c1c">Verification failed — please try again</div>';
-      });
-  }
-  </script>
 
   ${howItWorks()}
   ${estateFeatures(
     "The authentic agentic economy",
-    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
+    "Agents can pay. Our goal: a reader can check a signed record and is told, in the same breath, that the check is not a physical inspection. A signed record is not a physical inspection. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
       { title: "Settlement", body: "Humans start with Starter $29 on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
@@ -2859,7 +2832,7 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   <p>It is a demonstration, not a product.</p>
   <ul>
     <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
-    <li>Files: record and anchor JSON ship in the npm package (<code>examples/polygon-anchor-1.*.json</code>), to run with the verifier above</li>
+    <li>Files: <a href="/protocol/examples/polygon-anchor-1.record.json">record JSON</a> and <a href="/protocol/examples/polygon-anchor-1.anchor.json">anchor JSON</a>. The same files ship in the npm package (<code>examples/polygon-anchor-1.*.json</code>).</li>
     <li>For agents: MCP tool <code>verify_record</code> at <code>https://authichain.com/mcp</code>, free</li>
   </ul>
 
@@ -3101,7 +3074,8 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <section class="section" id="solution" style="background:var(--bg2)">
     <div class="container">
       <div class="section-label">THE AUTHICHAIN SOLUTION</div>
-      <h2 class="section-title">One Integration. Every Standard.</h2>
+      <h2 class="section-title">Passport tooling, not a certification.</h2>
+      <p class="section-sub">Our goal: the heading stays passport tooling, and the page does not call that tooling a certification.</p>
       <p class="section-sub">AuthiChain is building passport tooling. Our goal: the certificate NFT serves as the passport, with no retrofitting or middleware.</p>
 
       <div class="feature-row">
@@ -3117,8 +3091,8 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         </div>
         <div class="feature-item">
           <div class="feature-icon">📊</div>
-          <div class="feature-title">Audit-Ready Exports</div>
-          <div class="feature-desc">One-click compliance exports for EU CSRD, EUDR, FDA DSCSA, USMCA, and ISO 22005. Formatted for EU customs authorities and DPP registry submission.</div>
+          <div class="feature-title">Exports are not live</div>
+          <div class="feature-desc">Our goal: export one unit in a form a CSRD, EUDR, DSCSA, USMCA, or ISO 22005 filing could attach. One-click exports for EU CSRD, EUDR, FDA DSCSA, USMCA, and ISO 22005 are not live. This page does not establish DSCSA compliance.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">⛓️</div>
@@ -3141,23 +3115,23 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
 
   <section class="section" id="industries">
     <div class="container">
-      <div class="section-label">INDUSTRIES SERVED</div>
+      <div class="section-label">INDUSTRIES IN VIEW</div>
       <h2 class="section-title">Industries we're building for</h2>
       <div class="industries">
         <div class="industry-card"><div class="industry-name">⚡ EV Batteries</div><div class="industry-deadline">Mandatory ${escHtml(formatMilestoneDate(listMilestones().find((m) => m.id === 'batteries') ?? listMilestones()[0]))}</div></div>
         <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Mandatory 2028–29</div></div>
-        <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">FDA DSCSA + DPP</div></div>
+        <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">Our goal: a pharmacist compares one unit's signed record to shipment history.</div><div class="industry-deadline">Not a DSCSA certification</div></div>
         <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">Mandatory 2027</div></div>
-        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Product authenticity + DPP</div><div class="industry-deadline">Goal: counterfeit detection for luxury goods</div></div>
-        <div class="industry-card"><div class="industry-name">🌿 Cannabis</div><div class="industry-deadline">State + EU compliance</div></div>
+        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Not a product inspection</div><div class="industry-deadline">Goal: counterfeit detection for luxury goods.</div></div>
+        <div class="industry-card"><div class="industry-name">🌿 Cannabis</div><div class="industry-deadline">Our goal: a licensee compares a local record to a package identifier they already hold.</div><div class="industry-deadline">Not a METRC or BioTrack connection</div></div>
       </div>
     </div>
   </section>
 
   <section class="section cta-section" style="background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); text-align:center">
     <div class="container" style="max-width:700px">
-      <h2 class="section-title">Start DPP Compliance Today</h2>
-      <p class="section-sub">Checkout opens an AuthiChain workspace for your product line. It is self-serve.</p>
+      <h2 class="section-title">Start DPP readiness checkout</h2>
+      <p class="section-sub">Our goal: checkout stays a DPP readiness workspace for the product line. Checkout opens an AuthiChain workspace for your product line. It is self-serve.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
         ${catalogPaymentLinkHtml({
           planId: "dpp_readiness",
@@ -3269,13 +3243,14 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
 /**
  * /verify lookups that outlive the APP_WORKER budget used to rethrow, which
  * surfaced as Cloudflare error 1101 (2026-10-09, /verify?id=test123). Answer
- * a plain 404 "No record found" page instead; it never implies a record exists.
+ * a plain 404 page instead. The title says the lookup did not finish.
+ * It does not say the record is missing.
  */
 function verifyLookupTimeoutResponse(): Response {
   const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>No record found · AuthiChain</title>
+<title>Lookup did not finish · AuthiChain</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -3284,7 +3259,7 @@ h1{font-size:1.25rem;font-weight:800;text-transform:uppercase;letter-spacing:-.0
 p{color:#a1a1aa;margin-bottom:1rem}
 a.btn{display:inline-block;padding:.75rem 1.75rem;border-radius:.75rem;font-size:.7rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;background:transparent;border:1px solid #27272a;color:#fff;text-decoration:none}
 </style></head><body><main>
-<h1>No record found</h1>
+<h1>Lookup did not finish</h1>
 <p>We could not complete this lookup just now, so no record can be shown. Please try again in a minute.</p>
 <a class="btn" href="/verify">Look up another ID</a>
 </main></body></html>`;
@@ -3618,6 +3593,12 @@ async function handleAuthichainCom(
     if (mcp) return mcp;
     const apiV1 = await tryHandleApiV1(request, env);
     if (apiV1) return apiV1;
+    const manufacturer = await tryHandleManufacturerStatus(request);
+    if (manufacturer) return manufacturer;
+    // Before APP_PREFIXES. /protocol/* otherwise proxies, and the credential
+    // subject URL 404s on the edge router.
+    const publishedExample = tryHandleProtocolExample(request);
+    if (publishedExample) return publishedExample;
     if (p === '/api/sales') {
       return handleSalesInquiry(request, env);
     }

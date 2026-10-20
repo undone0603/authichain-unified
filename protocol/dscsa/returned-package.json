@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "source": "local-fixture",
+  "packageIdentifier": "fixture-package-0001",
+  "note": "Local returned package identifier. Compare it with protocol/dscsa/shipped-history.json. No FDA response and no credential."
+}

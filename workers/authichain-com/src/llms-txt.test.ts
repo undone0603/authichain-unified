@@ -15,6 +15,12 @@ describe("llms.txt", () => {
     const text = renderLlmsTxt();
     expect(text).toContain("# AuthiChain");
     expect(text).toContain("POST https://authichain.com/api/x402");
+    expect(text).toContain(
+      "An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment."
+    );
+    expect(text).toContain(
+      "Our goal: a reader can tell an unpaid empty body from a free seal answer and from a settled receipt."
+    );
     expect(text).toContain("https://authichain.com/api/x402/catalog");
     expect(text).toContain("https://authichain.com/.well-known/x402.json");
     expect(text).toContain("https://authichain.com/.well-known/x402");
@@ -71,5 +77,15 @@ describe("llms.txt", () => {
     expect(text).toContain("This host verifies the signature");
     expect(text).not.toContain("does not verify the signature");
     expect(text).not.toContain("freeCalls");
+    expect(text).toContain(
+      "Published demonstration record, not a customer product: GET https://authichain.com/api/verify?id=polygon-anchor-1"
+    );
+    expect(text).toContain(
+      "https://authichain.com/protocol/examples/polygon-anchor-1.record.json"
+    );
+    expect(text).toContain(
+      "https://authichain.com/protocol/examples/polygon-anchor-1.anchor.json"
+    );
+    expect(text).not.toContain("polygonscan.com");
   });
 });
