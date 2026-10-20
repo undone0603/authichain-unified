@@ -78,6 +78,7 @@ describe("createPlanCheckoutSession", () => {
     });
     const arg = create.mock.calls[0][0];
     expect(arg.mode).toBe("payment");
+    expect(arg.payment_method_types).toBeUndefined();
     expect(arg.line_items[0].price).toBe("price_1UHjCZGqTruSqV8T35M6AmoJ");
     expect(arg.after_expiration.recovery).toEqual({
       enabled: true,
