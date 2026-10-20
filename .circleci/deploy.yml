@@ -1,7 +1,7 @@
 version: 2.1
 
 jobs:
-  deploy-workers:
+  deploy-authichain-com:
     docker:
       - image: cimg/node:22.15
     environment:
@@ -13,9 +13,16 @@ jobs:
       - run:
           name: Plan deployment
           command: |
-            circleci run release plan workers-production \
-              --environment-name="${ENVIRONMENT_NAME}" \
-              --component-name="${COMPONENT_NAME}" \
+            set -euo pipefail
+            component="${COMPONENT_NAME:-authichain-com}"
+            environment="${ENVIRONMENT_NAME:-production}"
+            if [ "$component" != "authichain-com" ] || [ "$environment" != "production" ]; then
+              echo "Refusing ${component} / ${environment}. First release is authichain-com in production."
+              exit 1
+            fi
+            circleci run release plan authichain-com-production \
+              --environment-name="${environment}" \
+              --component-name="${component}" \
               --target-version="${TARGET_VERSION}"
       - run:
           name: Check out the selected version
@@ -28,41 +35,42 @@ jobs:
             git fetch --force origin "${TARGET_VERSION}"
             git checkout --detach FETCH_HEAD
       - run:
-          name: Deploy workers
-          command: bash scripts/circleci/deploy-workers.sh
+          name: Deploy authichain-com
+          command: bash scripts/circleci/deploy-authichain-com.sh
       - run:
           name: Update deployment status to running
-          command: circleci run release update workers-production --status=RUNNING
+          command: circleci run release update authichain-com-production --status=RUNNING
       - run:
           name: Update deployment status to failed
-          command: circleci run release update workers-production --status=FAILED
+          command: circleci run release update authichain-com-production --status=FAILED
           when: on_fail
 
-  release-workers:
+  release-authichain-com:
     type: release
-    plan_name: workers-production
+    plan_name: authichain-com-production
     validation:
       enabled: true
-      auto_rollback_on_failure: true
+      # Off until a monitor tags component_name=authichain-com and env=production.
+      auto_rollback_on_failure: false
 
-  cancel-deploy-workers:
+  cancel-deploy-authichain-com:
     docker:
       - image: cimg/base:stable
     steps:
       - run:
           name: Update planned release to CANCELED
           command: |
-            circleci run release update workers-production \
+            circleci run release update authichain-com-production \
               --status=CANCELED
 
 workflows:
   deploy:
     jobs:
-      - deploy-workers
-      - release-workers:
+      - deploy-authichain-com
+      - release-authichain-com:
           requires:
-            - deploy-workers
-      - cancel-deploy-workers:
+            - deploy-authichain-com
+      - cancel-deploy-authichain-com:
           requires:
-            - deploy-workers:
+            - deploy-authichain-com:
                 - canceled

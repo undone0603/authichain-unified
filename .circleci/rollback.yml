@@ -1,7 +1,7 @@
 version: 2.1
 
 jobs:
-  deploy-workers-rollback:
+  deploy-authichain-com-rollback:
     docker:
       - image: cimg/node:22.15
     environment:
@@ -15,11 +15,18 @@ jobs:
       - run:
           name: Plan rollback
           command: |
+            set -euo pipefail
+            component="${COMPONENT_NAME:-authichain-com}"
+            environment="${ENVIRONMENT_NAME:-production}"
+            if [ "$component" != "authichain-com" ] || [ "$environment" != "production" ]; then
+              echo "Refusing ${component} / ${environment}. Rollback is authichain-com in production only."
+              exit 1
+            fi
             echo "rollback reason: ${ROLLBACK_REASON}"
             echo "rolling back from: ${CURRENT_VERSION}"
-            circleci run release plan deploy-workers-rollback \
-              --environment-name="${ENVIRONMENT_NAME}" \
-              --component-name="${COMPONENT_NAME}" \
+            circleci run release plan deploy-authichain-com-rollback \
+              --environment-name="${environment}" \
+              --component-name="${component}" \
               --target-version="${TARGET_VERSION}" \
               --rollback
       - run:
@@ -34,34 +41,34 @@ jobs:
             git checkout --detach FETCH_HEAD
       - run:
           name: Perform rollback
-          command: bash scripts/circleci/deploy-workers.sh
+          command: bash scripts/circleci/deploy-authichain-com.sh
       - run:
           name: Update deployment status to running
-          command: circleci run release update deploy-workers-rollback --status=RUNNING
+          command: circleci run release update deploy-authichain-com-rollback --status=RUNNING
       - run:
           name: Update deployment status to success
-          command: circleci run release update deploy-workers-rollback --status=SUCCESS
+          command: circleci run release update deploy-authichain-com-rollback --status=SUCCESS
           when: on_success
       - run:
           name: Update deployment status to failed
-          command: circleci run release update deploy-workers-rollback --status=FAILED
+          command: circleci run release update deploy-authichain-com-rollback --status=FAILED
           when: on_fail
 
-  cancel-deploy-workers-rollback:
+  cancel-deploy-authichain-com-rollback:
     docker:
       - image: cimg/base:stable
     steps:
       - run:
           name: Update planned release to CANCELED
           command: |
-            circleci run release update deploy-workers-rollback \
+            circleci run release update deploy-authichain-com-rollback \
               --status=CANCELED
 
 workflows:
   rollback:
     jobs:
-      - deploy-workers-rollback
-      - cancel-deploy-workers-rollback:
+      - deploy-authichain-com-rollback
+      - cancel-deploy-authichain-com-rollback:
           requires:
-            - deploy-workers-rollback:
+            - deploy-authichain-com-rollback:
                 - canceled
