@@ -204,107 +204,138 @@ export default {
       return new Response(`Error: ${msg}`, { status: 400 });
     }
 
-    if (event.type === "checkout.session.completed") {
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.async_payment_succeeded"
+    ) {
       const session = event.data.object as Stripe.Checkout.Session;
-      const email = session.customer_details?.email;
-      const name = session.customer_details?.name || "QRON User";
-      const customerId =
-        typeof session.customer === "string" ? session.customer : null;
-      const subscriptionId =
-        typeof session.subscription === "string" ? session.subscription : null;
-      const grant = grantForCheckout({
-        priceId: priceIdFromSession(session),
-        amountTotal: session.amount_total,
-      });
-      const plan = grant?.plan || session.metadata?.plan || "starter";
-
-      if (email) {
-        const upserted = await supabaseUpsert(
-          env,
-          "profiles",
-          {
-            email,
-            full_name: name,
-            stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId,
-            plan,
-            updated_at: new Date().toISOString(),
-          },
-          "email"
+      // Delayed methods emit completed while payment_status is still unpaid.
+      // Granting there would provision Launch before the money arrives.
+      // async_payment_succeeded is the paid event for those methods.
+      // A missing status still grants: card sessions and the existing tests
+      // are paid, and a trial session is no_payment_required, not unpaid.
+      if (session.payment_status === "unpaid") {
+        console.log(
+          JSON.stringify({
+            evt: "stripe_grant_held_unpaid",
+            session: session.id,
+            type: event.type,
+          })
         );
-        if (!upserted) return grantRetry("profile upsert failed");
-        // humanHold prices (DPP workspace, passport, MUSA) record the plan
-        // here and nothing else. generations_limit 50 is applied by
-        // provisionPurchase on POST /api/stripe/webhook. Stamping
-        // last_grant_session_id, or writing generations_used 0, would make
-        // that grant look finished or wipe it.
-        if (grant?.humanHold) {
-          console.log(
-            JSON.stringify({
-              evt: "stripe_grant_human_hold",
-              plan: grant.plan,
-              session: session.id,
-            })
-          );
-        } else if (grant) {
-          const existing = await supabaseSelectOne(
+      } else {
+        const email = session.customer_details?.email;
+        const name = session.customer_details?.name || "QRON User";
+        const customerId =
+          typeof session.customer === "string" ? session.customer : null;
+        const subscriptionId =
+          typeof session.subscription === "string" ? session.subscription : null;
+        const grant = grantForCheckout({
+          priceId: priceIdFromSession(session),
+          amountTotal: session.amount_total,
+        });
+        const plan = grant?.plan || session.metadata?.plan || "starter";
+
+        if (email) {
+          const upserted = await supabaseUpsert(
             env,
             "profiles",
-            { email },
-            "last_grant_session_id"
+            {
+              email,
+              full_name: name,
+              stripe_customer_id: customerId,
+              stripe_subscription_id: subscriptionId,
+              plan,
+              updated_at: new Date().toISOString(),
+            },
+            "email"
           );
-          const prior =
-            existing.ok &&
-            typeof existing.row?.last_grant_session_id === "string"
-              ? existing.row.last_grant_session_id
-              : null;
-          const action = grantReplayAction(
-            existing.ok ? { ok: true, sessionId: prior } : { ok: false },
-            session.id
-          );
-          if (action === "retry") return grantRetry("grant lookup failed");
-          if (action === "skip") {
+          if (!upserted) return grantRetry("profile upsert failed");
+          // humanHold prices (DPP workspace, passport, MUSA) record the plan
+          // here and nothing else. generations_limit 50 is applied by
+          // provisionPurchase on POST /api/stripe/webhook. Stamping
+          // last_grant_session_id, or writing generations_used 0, would make
+          // that grant look finished or wipe it.
+          if (grant?.humanHold) {
             console.log(
               JSON.stringify({
-                evt: "stripe_grant_skipped_idempotent",
+                evt: "stripe_grant_human_hold",
+                plan: grant.plan,
                 session: session.id,
-                plan: grant.plan,
               })
             );
-          } else {
-            console.log(
-              JSON.stringify({
-                evt: "stripe_grant_set",
-                plan: grant.plan,
-                generations_limit: grant.generations,
-                generations_used: 0,
-                refill: grant.refillOnInvoicePaid,
-              })
-            );
-            const wrote = await supabaseUpdate(
+          } else if (grant) {
+            const existing = await supabaseSelectOne(
               env,
               "profiles",
               { email },
-              {
-                plan: grant.plan,
-                generations_limit: grant.generations,
-                generations_used: 0,
-                last_grant_session_id: session.id,
-                updated_at: new Date().toISOString(),
-              }
+              "last_grant_session_id"
             );
-            if (!wrote) return grantRetry("grant write failed");
+            const prior =
+              existing.ok &&
+              typeof existing.row?.last_grant_session_id === "string"
+                ? existing.row.last_grant_session_id
+                : null;
+            const action = grantReplayAction(
+              existing.ok ? { ok: true, sessionId: prior } : { ok: false },
+              session.id
+            );
+            if (action === "retry") return grantRetry("grant lookup failed");
+            if (action === "skip") {
+              console.log(
+                JSON.stringify({
+                  evt: "stripe_grant_skipped_idempotent",
+                  session: session.id,
+                  plan: grant.plan,
+                })
+              );
+            } else {
+              console.log(
+                JSON.stringify({
+                  evt: "stripe_grant_set",
+                  plan: grant.plan,
+                  generations_limit: grant.generations,
+                  generations_used: 0,
+                  refill: grant.refillOnInvoicePaid,
+                })
+              );
+              const wrote = await supabaseUpdate(
+                env,
+                "profiles",
+                { email },
+                {
+                  plan: grant.plan,
+                  generations_limit: grant.generations,
+                  generations_used: 0,
+                  last_grant_session_id: session.id,
+                  updated_at: new Date().toISOString(),
+                }
+              );
+              if (!wrote) return grantRetry("grant write failed");
+              if (grant.plan === "qron_launch_annual") {
+                console.log(
+                  JSON.stringify({
+                    evt: "checkout_paid_qron_annual",
+                    plan_id: "qron_launch_annual",
+                    session_id: session.id,
+                    amount_usd: 190,
+                    generations: grant.generations,
+                    brand: grant.brand,
+                    ts: Date.now(),
+                  })
+                );
+              }
+            }
           }
         }
-      }
 
-      // After the grant, so a failed analytics write can never cost credits.
-      //
-      // Pass grant?.plan, NOT the `plan` above: that falls back to "starter"
-      // when the price is unmapped, which is harmless for the profiles upsert
-      // but would record a false purchase_starter_succeeded — the single metric
-      // the first-dollar kill decision reads. An unmapped price gets no event.
-      await recordPurchaseEvent(env, grant?.plan ?? null, email);
+        // After the grant, so a failed analytics write can never cost credits.
+        //
+        // Pass grant?.plan, NOT the `plan` above: that falls back to "starter"
+        // when the price is unmapped, which is harmless for the profiles upsert
+        // but would record a false purchase_starter_succeeded — the single metric
+        // the first-dollar kill decision reads. An unmapped price gets no event.
+        await recordPurchaseEvent(env, grant?.plan ?? null, email);
+      }
     }
 
     if (

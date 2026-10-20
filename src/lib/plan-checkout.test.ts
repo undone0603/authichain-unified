@@ -164,6 +164,12 @@ describe("createPlanCheckoutSession", () => {
       expect(success, planId).toContain("/generate?paid=1&session_id=");
       expect(success, planId).not.toContain("/dpp/thanks");
       expect(success.split("?").length, planId).toBe(2);
+      const session = create.mock.calls.at(-1)?.[0];
+      expect(session.metadata.plan, planId).toBe(planId);
+      expect(session.metadata.stripe_price_id, planId).toBeTruthy();
+      expect(session.subscription_data.metadata.stripe_price_id, planId).toBe(
+        session.metadata.stripe_price_id
+      );
     }
   });
 

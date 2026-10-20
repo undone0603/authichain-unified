@@ -124,6 +124,9 @@ export async function createPlanCheckoutSession(opts: {
       metadata: {
         plan: plan.id,
         brand,
+        ...(plan.stripe_price_id
+          ? { stripe_price_id: plan.stripe_price_id }
+          : {}),
         ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
         ...(refCode ? { ref_code: refCode } : {}),
         ...(prospectId ? { prospect_id: prospectId } : {}),
@@ -135,6 +138,7 @@ export async function createPlanCheckoutSession(opts: {
               metadata: {
                 plan: plan.id,
                 brand,
+                stripe_price_id: plan.stripe_price_id,
                 ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
                 ...(refCode ? { ref_code: refCode } : {}),
                 ...(prospectId ? { prospect_id: prospectId } : {}),
