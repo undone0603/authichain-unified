@@ -136,6 +136,9 @@ export function evaluateGithubCiEvidence(entries, { allowSkippedJobs = false } =
     if (jobs.length === 0) reasons.push(`${wf}: run has no jobs`);
     for (const job of jobs) {
       const name = `${wf} / ${job?.name ?? "(job)"}`;
+      // GitHub reports a job skipped by `if:` as conclusion "skipped" with
+      // steps: []. Decide the skip allowance before the empty-steps check.
+      if (job?.conclusion === "skipped" && allowSkippedJobs) continue;
       const steps = Array.isArray(job?.steps) ? job.steps : [];
       if (steps.length === 0) {
         reasons.push(`${name}: empty steps (job never executed)`);
@@ -148,7 +151,6 @@ export function evaluateGithubCiEvidence(entries, { allowSkippedJobs = false } =
         reasons.push(`${name}: no step executed`);
         continue;
       }
-      if (job.conclusion === "skipped" && allowSkippedJobs) continue;
       if (job.conclusion !== "success")
         reasons.push(`${name}: job concluded ${String(job.conclusion)}`);
     }

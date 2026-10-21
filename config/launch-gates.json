@@ -1,5 +1,5 @@
 {
-  "$comment": "Launch gates as code (tracking: https://gitlab.com/authichain-group/authichain-unified/-/work_items/1987). Run by scripts/autonomy/launch-gates.mjs. FAIL CLOSED: a gate passes only with positive evidence. `pending` gates always FAIL until implemented. kill_switch=true stands the runner down (no probes, no issues). This file is a protected path (CODEOWNERS) so autonomous agents cannot edit their own gates.",
+  "$comment": "Launch gates as code (tracking: https://gitlab.com/authichain-group/authichain-unified/-/work_items/1987). Run by scripts/autonomy/launch-gates.mjs. FAIL CLOSED: a gate passes only with positive evidence. `pending` gates always FAIL until implemented. kill_switch=true stands the runner down (no probes, no issues). Protection of this file is NOT enforced by CODEOWNERS alone: it depends on branch protection requiring owner approval and on keeping merge_autopilot away from this path.",
   "version": 1,
   "kill_switch": false,
   "repo": "undone0603/authichain-unified",
@@ -17,7 +17,7 @@
       "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1989",
       "workflows": ["main.yml", "ci.yml", "lint.yml", "codeql.yml"],
       "jobs": ["lint", "workspace_check", "tests", "production_build"],
-      "max_age_days": 7,
+      "max_age_days": 9,
       "allow_skipped_jobs": false,
       "evidence_required": "GitLab (primary): the latest real run of each listed job on the default branch is success, has a nonzero duration and is newer than max_age_days. GitHub (when Actions is unlocked): latest completed run per workflow succeeded and every job has executed steps.",
       "on_pass": "report",

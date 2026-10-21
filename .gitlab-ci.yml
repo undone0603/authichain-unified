@@ -9,6 +9,7 @@ stages:
   - test
   - build
   - verify
+  - deploy
 
 variables:
   PNPM_VERSION: "10.28.2"
@@ -81,6 +82,23 @@ production_build:
       when: manual
       allow_failure: true
 
+# Autonomous launch gates (tracking: work item #1987). Decides every gate from
+# evidence with no human approval. FAIL CLOSED. Opens/closes one issue per
+# failing gate when CI/CD variable GITLAB_API_TOKEN (masked, project access
+# token, scope api) exists; otherwise it only writes the report artifact.
+# Stop everything with kill_switch in config/launch-gates.json.
+launch_gates:
+  extends: .launch_check
+  script:
+    # Gates first, so the report and gate issues exist even if a unit test fails.
+    - node scripts/autonomy/launch-gates.mjs
+    - node --test scripts/autonomy/launch-gates.test.mjs scripts/autonomy/protocol-gates.test.mjs scripts/autonomy/estate-gate.test.mjs
+  artifacts:
+    when: always
+    paths:
+      - launch-gates-report.json
+    expire_in: 14 days
+
 launch_gate:
   extends: .launch_check
   script:
@@ -91,18 +109,59 @@ production_health:
   script:
     - AUTHICHAIN_ORIGIN=https://authichain.com node scripts/cloudflare-production-health.mjs --run
 
-# Autonomous launch gates (tracking: work item #1987). Decides every gate from
-# evidence with no human approval. FAIL CLOSED. Opens/closes one issue per
-# failing gate when CI/CD variable GITLAB_API_TOKEN (masked, project access
-# token, scope api) exists; otherwise it only writes the report artifact.
-# Stop everything with kill_switch in config/launch-gates.json.
-launch_gates:
-  extends: .launch_check
+# -----------------------------------------------------------------------------
+# Cloudflare Workers deploy (GitLab-side launch).
+# INERT until CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID exist as masked,
+# protected CI/CD variables. Ports only the code-deploy steps of the GitHub
+# workflows deploy-cloudflare.yml and deploy-authichain-com.yml. The secret-
+# binding steps (Stripe, x402 pay-to) are intentionally NOT ported: they stay
+# owner-controlled. Runbook: docs/operations/GITLAB_LAUNCH.md
+# -----------------------------------------------------------------------------
+secret_scan:
+  stage: validate
+  image: node:22-alpine
+  needs: []
+  interruptible: false
+  before_script: []
+  cache: []
+  variables:
+    GIT_DEPTH: "1"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE =~ /^(push|web)$/ && $CLOUDFLARE_API_TOKEN && $CLOUDFLARE_ACCOUNT_ID'
   script:
-    - node --test scripts/autonomy/launch-gates.test.mjs scripts/autonomy/protocol-gates.test.mjs scripts/autonomy/estate-gate.test.mjs
-    - node scripts/autonomy/launch-gates.mjs
-  artifacts:
-    when: always
-    paths:
-      - launch-gates-report.json
-    expire_in: 14 days
+    - apk add --no-cache curl tar
+    - curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz -o gitleaks.tgz
+    - tar --no-same-owner -xzf gitleaks.tgz gitleaks
+    - ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
+
+.deploy_worker:
+  stage: deploy
+  image: node:22-alpine
+  needs: ["secret_scan"]
+  interruptible: false
+  resource_group: cloudflare-deploy
+  timeout: 20m
+
+deploy_manufacturer_status:
+  extends: .deploy_worker
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE =~ /^(push|web)$/ && $CLOUDFLARE_API_TOKEN && $CLOUDFLARE_ACCOUNT_ID'
+  script:
+    - cd workers/manufacturer-status
+    - npx wrangler deploy --minify
+
+deploy_authichain_com:
+  extends: .deploy_worker
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "web" && $CLOUDFLARE_API_TOKEN && $CLOUDFLARE_ACCOUNT_ID'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push" && $CLOUDFLARE_API_TOKEN && $CLOUDFLARE_ACCOUNT_ID'
+      changes:
+        - workers/authichain-com/**/*
+        - src/lib/plans.ts
+        - src/lib/checkout-gate.ts
+        - content/microsites/**/*
+        - scripts/sync-microsite-packs.mjs
+  script:
+    - node scripts/sync-microsite-packs.mjs
+    - cd workers/authichain-com
+    - npx wrangler deploy --minify --keep-vars --config wrangler.toml

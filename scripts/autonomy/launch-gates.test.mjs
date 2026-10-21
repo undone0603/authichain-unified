@@ -82,7 +82,7 @@ test("GitHub CI: no run, no jobs, failed run, empty evidence all FAIL", () => {
 test("GitHub CI: skipped job fails unless allowed", () => {
   const skipped = {
     ...okEntry,
-    jobs: [{ name: "s", conclusion: "skipped", steps: [{ conclusion: "success" }] }],
+    jobs: [{ name: "s", conclusion: "skipped", steps: [] }],
   };
   assert.equal(evaluateGithubCiEvidence([skipped]).status, "fail");
   assert.equal(evaluateGithubCiEvidence([skipped], { allowSkippedJobs: true }).status, "pass");

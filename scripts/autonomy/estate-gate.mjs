@@ -53,7 +53,9 @@ export function evaluateEstateEvidence(evidence) {
       reasons.push(`${name}: disposition is 'unknown' (owner must decide: snapshot or retire)`);
     else if (!ALLOWED_DISPOSITIONS.includes(e.disposition))
       reasons.push(`${name}: invalid disposition ${String(e.disposition)}`);
-    if (e.archive && e.archive_exists !== true)
+    if (e.disposition === "archive" && !e.archive)
+      reasons.push(`${name}: disposition is 'archive' but no archive path is recorded`);
+    else if (e.archive && e.archive_exists !== true)
       reasons.push(`${name}: archive file ${e.archive} is missing`);
   }
   const out = { entries: entries.length, snapshot_taken: evidence.snapshot_taken ?? null };

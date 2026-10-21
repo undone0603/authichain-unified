@@ -36,6 +36,14 @@ test("invalid disposition and missing archive FAIL", () => {
   assert.match(bad.reasons.join(" "), /archive file docs\/gone\.js is missing/);
 });
 
+test("'archive' with no archive path FAILS", () => {
+  const r = evaluateEstateEvidence({
+    entries: [{ name: "ghost", disposition: "archive", archive: null, archive_exists: null }],
+  });
+  assert.equal(r.status, "fail");
+  assert.match(r.reasons.join(" "), /ghost: disposition is 'archive' but no archive path/);
+});
+
 test("missing or empty inventory FAILS", () => {
   assert.equal(evaluateEstateEvidence(undefined).status, "fail");
   assert.equal(evaluateEstateEvidence({ entries: [] }).status, "fail");
