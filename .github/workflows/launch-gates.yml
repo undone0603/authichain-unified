@@ -1,0 +1,54 @@
+# Launch gates (tracking: #1987 on the GitLab mirror). Read-only probes plus a
+# CI-evidence check, decided by config/launch-gates.json with no human approval.
+# FAIL CLOSED: missing or empty evidence fails the gate. Keeps ONE issue
+# labelled `launch-gate` per failing gate and closes it when the gate passes.
+# Stop everything with `kill_switch` in config/launch-gates.json.
+# See scripts/autonomy/launch-gates.mjs and docs/OPERATING_CHARTER.md.
+name: Launch gates
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_run:
+    workflows: ["Deploy authichain-com"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print only; do not open or close issues
+        type: boolean
+        default: true
+
+concurrency:
+  group: launch-gates
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+jobs:
+  gates:
+    if: github.repository == 'undone0603/authichain-unified'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Unit tests
+        run: node --test scripts/autonomy/launch-gates.test.mjs
+      - name: Evaluate gates
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          LAUNCH_GATES_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+        run: node scripts/autonomy/launch-gates.mjs
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: launch-gates-report
+          path: launch-gates-report.json
+          if-no-files-found: warn

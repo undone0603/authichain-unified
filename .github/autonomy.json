@@ -124,7 +124,8 @@
         "genesis-cron.yml": "on",
         "gs1-conformance-pulse.yml": "on",
         "trust-lab.yml": "on",
-        "estate-drift.yml": "on"
+        "estate-drift.yml": "on",
+        "launch-gates.yml": "on"
       }
     },
     "revenue": {

@@ -38,3 +38,8 @@ workers/**/*billing*             @undone0603
 .github/workflows/*stripe*       @undone0603
 .github/workflows/revenue*       @undone0603
 .github/workflows/checkout*      @undone0603
+
+# Launch gates: autonomous agents must not edit their own gates or kill switch
+config/launch-gates.json         @undone0603
+scripts/autonomy/launch-gates*   @undone0603
+.github/workflows/launch-gates.yml @undone0603
