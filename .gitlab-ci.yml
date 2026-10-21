@@ -89,6 +89,7 @@ production_build:
 # Stop everything with kill_switch in config/launch-gates.json.
 launch_gates:
   extends: .launch_check
+  resource_group: launch-gates
   script:
     # Gates first, so the report and gate issues exist even if a unit test fails.
     - node scripts/autonomy/launch-gates.mjs
