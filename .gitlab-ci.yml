@@ -1,86 +1,66 @@
-image: node:20-alpine
+# GitLab CI for authichain-unified (runs while GitHub Actions is billing-locked).
+# Budget rule: GitLab Free = 400 shared-runner minutes/month, so the monorepo-wide
+# suites (lint, workspace check, tests, build) are opt-in (manual, non-blocking).
+# Automatic: scheduled launch checks (seconds each). See docs/operations/GITLAB_LAUNCH.md.
+image: node:22-alpine
+
 stages:
-  - setup
   - validate
   - test
   - build
   - verify
+
 variables:
-  PNPM_VERSION: 9.0.0
+  PNPM_VERSION: "10.28.2"
+
 cache:
   key:
     files:
       - pnpm-lock.yaml
   paths:
     - .pnpm-store
+
 before_script:
   - corepack enable
   - corepack prepare pnpm@${PNPM_VERSION} --activate
   - pnpm config set store-dir .pnpm-store
-install_dependencies:
+  - pnpm install --frozen-lockfile --prefer-offline
+
+# Heavy monorepo suites: one click in the pipeline view, never block the pipeline.
+.heavy:
   interruptible: true
   rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
-  stage: setup
-  script:
-    - pnpm install --frozen-lockfile
-  artifacts:
-    paths:
-      - node_modules/
-    expire_in: 1 hour
-typecheck_and_lint:
-  interruptible: true
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    - when: manual
+      allow_failure: true
+
+lint:
+  extends: .heavy
   stage: validate
-  needs: ["install_dependencies"]
   script:
     - pnpm run lint
-    - pnpm run typecheck
-tests_shard_1:
-  interruptible: true
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
-  stage: test
-  needs: ["install_dependencies"]
+
+workspace_check:
+  extends: .heavy
+  stage: validate
   script:
-    - pnpm run test --shard=1/2
-tests_shard_2:
-  interruptible: true
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
+    - pnpm run check
+
+tests:
+  extends: .heavy
   stage: test
-  needs: ["install_dependencies"]
+  needs: []
   script:
-    - pnpm run test --shard=2/2
+    - pnpm run test
+
 production_build:
-  interruptible: true
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
+  extends: .heavy
   stage: build
-  needs: ["typecheck_and_lint", "tests_shard_1", "tests_shard_2"]
+  needs: []
   script:
     - pnpm run build
-  artifacts:
-    paths:
-      - .next/
-      - dist/
-    expire_in: 1 day
-main_quality_gate:
-  interruptible: true
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
-  stage: verify
-  needs: ["production_build"]
-  script:
-    - echo "Running quality gate checks..."
-    - pnpm run quality-gate
 
-# Scheduled launch checks: read-only, no secrets, Node built-ins only.
-# Ported from the GitHub honest-launch-gate and cloudflare-production-health
-# workflows. They run on pipeline schedules; the heavy jobs above are skipped
-# on schedule runs to protect the free-tier compute-minute budget. On other
-# pipelines they appear as optional manual jobs (play button, never blocking).
 .launch_check:
   stage: verify
   image: node:22-alpine
