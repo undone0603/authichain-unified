@@ -1,0 +1,59 @@
+image: node:20-alpine
+stages:
+  - setup
+  - validate
+  - test
+  - build
+  - verify
+variables:
+  PNPM_VERSION: 9.0.0
+cache:
+  key:
+    files:
+      - pnpm-lock.yaml
+  paths:
+    - .pnpm-store
+before_script:
+  - corepack enable
+  - corepack prepare pnpm@${PNPM_VERSION} --activate
+  - pnpm config set store-dir .pnpm-store
+install_dependencies:
+  stage: setup
+  script:
+    - pnpm install --frozen-lockfile
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 hour
+typecheck_and_lint:
+  stage: validate
+  needs: ["install_dependencies"]
+  script:
+    - pnpm run lint
+    - pnpm run typecheck
+tests_shard_1:
+  stage: test
+  needs: ["install_dependencies"]
+  script:
+    - pnpm run test --shard=1/2
+tests_shard_2:
+  stage: test
+  needs: ["install_dependencies"]
+  script:
+    - pnpm run test --shard=2/2
+production_build:
+  stage: build
+  needs: ["typecheck_and_lint", "tests_shard_1", "tests_shard_2"]
+  script:
+    - pnpm run build
+  artifacts:
+    paths:
+      - .next/
+      - dist/
+    expire_in: 1 day
+main_quality_gate:
+  stage: verify
+  needs: ["production_build"]
+  script:
+    - echo "Running quality gate checks..."
+    - pnpm run quality-gate
