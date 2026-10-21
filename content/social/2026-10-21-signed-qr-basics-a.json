@@ -1,0 +1,18 @@
+{
+  "linkedin": "A plain QR code is just a URL. Anyone with a printer can make one that looks identical to yours and points somewhere else.\n\nQRON signs the payload instead. The data in the code carries an Ed25519 signature, so a verifier can check that the content wasn't altered and which key signed it, rather than trusting whatever the code happens to point at.\n\nThe honest boundary: a valid signature proves integrity and issuer-key control. It does not prove that the label on the box in front of you is the one the signature was issued for, because a genuine code can still be copied onto another item. That is why signed codes work best alongside registry and scan-pattern checks, and QRON treats the signature as one layer, not a verdict.\n\nA code can also be printed with a higher error-correction level (L, M, Q or H) so it stays readable when a label is scuffed or partly covered.\n\nIf you print codes on products, packaging or documents, what do you check when someone scans one?\n\nhttps://qron.space/?utm_source=linkedin&utm_medium=social&utm_campaign=signed-qr-basics&utm_content=a",
+  "reddit": {
+    "subreddit": "QRCodes",
+    "title": "A QR code is just a URL anyone can reprint. We sign the payload (Ed25519) so a scanner can check it. What are we missing?",
+    "body": "QRON generates QR codes whose payload carries an Ed25519 signature, so a verifier can check that the content wasn't altered and which key signed it, instead of trusting wherever the code points.\n\nThe limits, stated plainly: a valid signature proves payload integrity and issuer-key control. It does not prove the physical label is the one the signature was issued for. A genuine signed code can be copied onto another item, so we treat the signature as one layer next to registry and scan-pattern checks. Ed25519 is also not quantum-safe.\n\nQuestion for people who deal with QR codes in production: what do you actually verify when a code is scanned, and where do signed payloads get in your way (scanner support, payload size, key rotation)?\n\nhttps://qron.space/?utm_source=reddit&utm_medium=social&utm_campaign=signed-qr-basics&utm_content=a\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "A plain QR code is just a URL. Anyone with a printer can make one that looks identical to yours and points somewhere else.",
+    "QRON signs the payload with Ed25519, so a verifier can check the content wasn't altered and which key signed it, instead of trusting wherever the code points.",
+    "Boundary: a valid signature doesn't prove the label is on the right item. A genuine code can be copied, so it's one layer, not a verdict. https://qron.space/?utm_source=twitter&utm_medium=social&utm_campaign=signed-qr-basics&utm_content=a"
+  ],
+  "experiment": {
+    "campaign": "signed-qr-basics",
+    "variant": "a",
+    "hypothesis": "a threat-led hook (a plain QR code is just a reprintable URL) drives more click-through to qron.space than a capability-led hook (what QRON signs and how)"
+  }
+}
