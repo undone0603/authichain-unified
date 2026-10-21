@@ -1,0 +1,134 @@
+{
+  "$comment": "Launch gates as code (tracking: https://gitlab.com/authichain-group/authichain-unified/-/work_items/1987). Run by scripts/autonomy/launch-gates.mjs. FAIL CLOSED: a gate passes only with positive evidence. `pending` gates always FAIL until implemented. kill_switch=true stands the runner down (no probes, no issues). Protection of this file is NOT enforced by CODEOWNERS alone: it depends on branch protection requiring owner approval and on keeping merge_autopilot away from this path.",
+  "version": 1,
+  "kill_switch": false,
+  "repo": "undone0603/authichain-unified",
+  "default_branch": "main",
+  "promotion": {
+    "$comment": "Consumed by Gate 5 (not yet implemented). Order in which hosts go public; the next host is promoted when gates 1-4 stay green for green_window_hours.",
+    "order": ["authichain.com", "qron.space", "strainchain.io", "govchain.us"],
+    "green_window_hours": 24
+  },
+  "gates": [
+    {
+      "id": "ci-executes-and-green",
+      "title": "CI executes and is green (steps ran, not just 'no failures')",
+      "type": "ci",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1989",
+      "workflows": ["main.yml", "ci.yml", "lint.yml", "codeql.yml"],
+      "jobs": ["lint", "workspace_check", "tests", "production_build"],
+      "max_age_days": 9,
+      "allow_skipped_jobs": false,
+      "evidence_required": "GitLab (primary): the latest real run of each listed job on the default branch is success, has a nonzero duration and is newer than max_age_days. GitHub (when Actions is unlocked): latest completed run per workflow succeeded and every job has executed steps.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "public-hosts-reachable",
+      "title": "Public hosts reachable (no Cloudflare Access redirect)",
+      "type": "http_probe",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1990",
+      "forbid_redirect_host": "cloudflareaccess.com",
+      "probes": [
+        { "url": "https://authichain.com/", "expect_status": 200, "max_ms": 4000 },
+        { "url": "https://authichain.com/api/health", "expect_status": 200, "max_ms": 4000 },
+        { "url": "https://qron.space/", "expect_status": 200, "max_ms": 4000 },
+        { "url": "https://strainchain.io/", "expect_status": 200, "max_ms": 4000 },
+        { "url": "https://govchain.us/", "expect_status": 200, "max_ms": 4000 }
+      ],
+      "evidence_required": "Every probe returned the expected status within budget with no redirect to the forbidden host.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "signed-verification-round-trip",
+      "title": "Protocol round trip: sign, verify, tamper (shipped verifier, Ed25519 did:key + JCS)",
+      "type": "verify_roundtrip",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1991",
+      "evidence_required": "An independent signer issues fresh records; protocol/verifier.mjs verifies valid and anchored records, rejects tampering, wrong issuer key, altered anchor hash, expiry and testnet anchors, ignores key order, and verifies the published example records.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "protocol-conformance",
+      "title": "Protocol conformance suite passes against the reference verifier",
+      "type": "protocol_conformance",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1996",
+      "evidence_required": "protocol/conformance/run.mjs --strict exits 0 with output.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "live-verify-endpoint",
+      "title": "Public verify/resolver endpoint serves a known-good record within budget",
+      "type": "pending",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1930",
+      "evidence_required": "A published known-good record URL returns 200 and verifies with protocol/verifier.mjs; the /p lookup stays under its latency budget (see #1930).",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "checkout-and-stripe-webhook",
+      "title": "Checkout and Stripe webhook health (DPP Readiness)",
+      "type": "pending",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1992",
+      "evidence_required": "Test-mode checkout completes; webhook enabled with required events.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "auto-promotion-rollback-breakers",
+      "title": "Auto-promotion by host, auto-rollback, circuit breakers",
+      "type": "pending",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1993",
+      "evidence_required": "Rollback drill executed; breakers trip and re-arm.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "estate-inventory-decided",
+      "title": "Estate inventory: every off-repo Worker has an explicit decision (repo-side, no token)",
+      "type": "estate_inventory",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1994",
+      "evidence_required": "config/estate.json has no 'unknown' dispositions, only archive/retire/unrelated, and every archive path exists.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "estate-live-drift",
+      "title": "Estate live drift: no live Worker without source or inventory entry",
+      "type": "pending",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1331",
+      "evidence_required": "Needs the live Worker list from Cloudflare (read-only API token, intentionally not stored in GitLab). scripts/autonomy/estate-drift.mjs implements the comparison; run it where a read-only token is available.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "outreach-compliance",
+      "title": "Outreach compliance guardrails",
+      "type": "pending",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1995",
+      "evidence_required": "Suppression list, regional rules and breaker tested; gate decides whether cold_outreach may be enabled.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "public-trust-artifacts",
+      "title": "Public trust artifacts (spec, open verifier, key registry, status page)",
+      "type": "pending",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1996",
+      "evidence_required": "Spec, verifier version, registry and status page published and reachable.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "docs-consolidated",
+      "title": "Docs and backlog consolidation",
+      "type": "pending",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1997",
+      "evidence_required": "docs/operations consolidated, LAUNCH.md matches this manifest, link check green.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    }
+  ]
+}
