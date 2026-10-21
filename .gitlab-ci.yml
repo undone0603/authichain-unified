@@ -18,6 +18,9 @@ before_script:
   - corepack prepare pnpm@${PNPM_VERSION} --activate
   - pnpm config set store-dir .pnpm-store
 install_dependencies:
+  interruptible: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
   stage: setup
   script:
     - pnpm install --frozen-lockfile
@@ -26,22 +29,34 @@ install_dependencies:
       - node_modules/
     expire_in: 1 hour
 typecheck_and_lint:
+  interruptible: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
   stage: validate
   needs: ["install_dependencies"]
   script:
     - pnpm run lint
     - pnpm run typecheck
 tests_shard_1:
+  interruptible: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
   stage: test
   needs: ["install_dependencies"]
   script:
     - pnpm run test --shard=1/2
 tests_shard_2:
+  interruptible: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
   stage: test
   needs: ["install_dependencies"]
   script:
     - pnpm run test --shard=2/2
 production_build:
+  interruptible: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
   stage: build
   needs: ["typecheck_and_lint", "tests_shard_1", "tests_shard_2"]
   script:
@@ -52,8 +67,41 @@ production_build:
       - dist/
     expire_in: 1 day
 main_quality_gate:
+  interruptible: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
   stage: verify
   needs: ["production_build"]
   script:
     - echo "Running quality gate checks..."
     - pnpm run quality-gate
+
+# Scheduled launch checks: read-only, no secrets, Node built-ins only.
+# Ported from the GitHub honest-launch-gate and cloudflare-production-health
+# workflows. They run on pipeline schedules; the heavy jobs above are skipped
+# on schedule runs to protect the free-tier compute-minute budget. On other
+# pipelines they appear as optional manual jobs (play button, never blocking).
+.launch_check:
+  stage: verify
+  image: node:22-alpine
+  needs: []
+  interruptible: false
+  before_script: []
+  cache: []
+  variables:
+    GIT_DEPTH: "1"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+      when: manual
+      allow_failure: true
+
+launch_gate:
+  extends: .launch_check
+  script:
+    - node scripts/launch/honest-launch-gate.mjs
+
+production_health:
+  extends: .launch_check
+  script:
+    - AUTHICHAIN_ORIGIN=https://authichain.com node scripts/cloudflare-production-health.mjs --run
