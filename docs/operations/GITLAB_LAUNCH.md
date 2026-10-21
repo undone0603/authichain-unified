@@ -5,8 +5,9 @@ Deploy jobs are INERT until the two CI/CD variables below exist.
 
 ## What runs today (no credentials needed)
 
-- Push pipelines on branches and `main`: install, lint/typecheck, tests (2 shards), build, quality gate.
-- Scheduled pipelines: `launch_gate` and `production_health` (read-only checks against the public site).
+- Scheduled pipelines: `launch_gate` and `production_health` (read-only checks against the public site, seconds each).
+- Push pipelines: nothing heavy runs automatically. GitLab Free gives 400 shared-runner minutes/month and the monorepo-wide lint alone ran past 6 minutes, so `lint`, `workspace_check` (`pnpm run check`), `tests` (`pnpm run test`) and `production_build` are manual, non-blocking jobs: open the pipeline and press play.
+- Install uses the cached pnpm store (`pnpm install --frozen-lockfile --prefer-offline`); no `node_modules` artifact is uploaded (it exceeded the artifact size limit, 413).
 
 ## One owner step to enable deploys
 
