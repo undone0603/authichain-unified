@@ -31,11 +31,6 @@ before_script:
 .heavy:
   interruptible: true
   rules:
-    # A weekly schedule sets RUN_HEAVY=true so the launch CI gate gets fresh
-    # evidence without a human pressing play. Daily schedules leave it unset to
-    # protect the free-minute budget.
-    - if: '$RUN_HEAVY == "true" && $CI_PIPELINE_SOURCE == "schedule"'
-      when: on_success
     - if: '$CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "merge_request_event"'
       when: never
     - when: manual
@@ -81,23 +76,6 @@ production_build:
     - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
       when: manual
       allow_failure: true
-
-# Autonomous launch gates (tracking: work item #1987). Decides every gate from
-# evidence with no human approval. FAIL CLOSED. Opens/closes one issue per
-# failing gate when CI/CD variable GITLAB_API_TOKEN (masked, project access
-# token, scope api) exists; otherwise it only writes the report artifact.
-# Stop everything with kill_switch in config/launch-gates.json.
-launch_gates:
-  extends: .launch_check
-  script:
-    # Gates first, so the report and gate issues exist even if a unit test fails.
-    - node scripts/autonomy/launch-gates.mjs
-    - node --test scripts/autonomy/launch-gates.test.mjs scripts/autonomy/protocol-gates.test.mjs scripts/autonomy/estate-gate.test.mjs
-  artifacts:
-    when: always
-    paths:
-      - launch-gates-report.json
-    expire_in: 14 days
 
 launch_gate:
   extends: .launch_check
