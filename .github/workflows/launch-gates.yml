@@ -39,7 +39,7 @@ jobs:
         with:
           node-version: 22
       - name: Unit tests
-        run: node --test scripts/autonomy/launch-gates.test.mjs
+        run: node --test scripts/autonomy/launch-gates.test.mjs scripts/autonomy/protocol-gates.test.mjs
       - name: Evaluate gates
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

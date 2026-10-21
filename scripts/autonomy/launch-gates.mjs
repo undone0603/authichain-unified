@@ -28,11 +28,23 @@
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  evaluateConformanceEvidence,
+  evaluateRoundtripEvidence,
+  runConformance,
+  runRoundtrip,
+} from "./protocol-gates.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const MANIFEST_PATH = join(ROOT, "config", "launch-gates.json");
 export const ISSUE_LABEL = "launch-gate";
-export const GATE_TYPES = ["ci", "http_probe", "pending"];
+export const GATE_TYPES = [
+  "ci",
+  "http_probe",
+  "verify_roundtrip",
+  "protocol_conformance",
+  "pending",
+];
 const DAY = 86_400_000;
 
 const PASS = "pass";
@@ -231,6 +243,10 @@ export function evaluateGate(gate, evidence, now = new Date()) {
         });
       return failed("unknown CI platform in evidence");
     }
+    if (gate.type === "verify_roundtrip")
+      return evaluateRoundtripEvidence(evidence);
+    if (gate.type === "protocol_conformance")
+      return evaluateConformanceEvidence(evidence);
     if (gate.type === "http_probe")
       return evaluateProbes(
         evidence.results,
@@ -393,6 +409,13 @@ async function collect(gate, manifest, env) {
     return platformOf(env) === "gitlab"
       ? collectGitlabCi(gate, manifest, env)
       : collectGithubCi(gate, manifest, env);
+  if (gate.type === "verify_roundtrip") {
+    const verifier = await import(
+      pathToFileURL(join(ROOT, "protocol", "verifier.mjs")).href
+    );
+    return runRoundtrip({ verifier });
+  }
+  if (gate.type === "protocol_conformance") return runConformance();
   if (gate.type === "http_probe")
     return { results: await Promise.all(gate.probes.map(probeOne)) };
   return undefined;

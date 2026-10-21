@@ -42,10 +42,28 @@
     },
     {
       "id": "signed-verification-round-trip",
-      "title": "Signed verification round trip (issue, scan, verify) + /p timeout fix",
-      "type": "pending",
+      "title": "Protocol round trip: sign, verify, tamper (shipped verifier, Ed25519 did:key + JCS)",
+      "type": "verify_roundtrip",
       "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1991",
-      "evidence_required": "Test record issued, ES256 payload verified by authichain-verify and the public endpoint, tampered payload rejected.",
+      "evidence_required": "An independent signer issues fresh records; protocol/verifier.mjs verifies valid and anchored records, rejects tampering, wrong issuer key, altered anchor hash, expiry and testnet anchors, ignores key order, and verifies the published example records.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "protocol-conformance",
+      "title": "Protocol conformance suite passes against the reference verifier",
+      "type": "protocol_conformance",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1996",
+      "evidence_required": "protocol/conformance/run.mjs --strict exits 0 with output.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "live-verify-endpoint",
+      "title": "Public verify/resolver endpoint serves a known-good record within budget",
+      "type": "pending",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1930",
+      "evidence_required": "A published known-good record URL returns 200 and verifies with protocol/verifier.mjs; the /p lookup stays under its latency budget (see #1930).",
       "on_pass": "report",
       "on_fail": "open_issue"
     },
