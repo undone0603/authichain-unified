@@ -34,6 +34,10 @@ import {
   runConformance,
   runRoundtrip,
 } from "./protocol-gates.mjs";
+import {
+  collectEstateEvidence,
+  evaluateEstateEvidence,
+} from "./estate-gate.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const MANIFEST_PATH = join(ROOT, "config", "launch-gates.json");
@@ -43,6 +47,7 @@ export const GATE_TYPES = [
   "http_probe",
   "verify_roundtrip",
   "protocol_conformance",
+  "estate_inventory",
   "pending",
 ];
 const DAY = 86_400_000;
@@ -247,6 +252,8 @@ export function evaluateGate(gate, evidence, now = new Date()) {
       return evaluateRoundtripEvidence(evidence);
     if (gate.type === "protocol_conformance")
       return evaluateConformanceEvidence(evidence);
+    if (gate.type === "estate_inventory")
+      return evaluateEstateEvidence(evidence);
     if (gate.type === "http_probe")
       return evaluateProbes(
         evidence.results,
@@ -416,6 +423,7 @@ async function collect(gate, manifest, env) {
     return runRoundtrip({ verifier });
   }
   if (gate.type === "protocol_conformance") return runConformance();
+  if (gate.type === "estate_inventory") return collectEstateEvidence();
   if (gate.type === "http_probe")
     return { results: await Promise.all(gate.probes.map(probeOne)) };
   return undefined;

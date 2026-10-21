@@ -86,11 +86,20 @@
       "on_fail": "open_issue"
     },
     {
-      "id": "estate-reconciled",
-      "title": "Estate reconciliation (KEEP/REPAIR/RETIRE for every Worker)",
-      "type": "pending",
+      "id": "estate-inventory-decided",
+      "title": "Estate inventory: every off-repo Worker has an explicit decision (repo-side, no token)",
+      "type": "estate_inventory",
       "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1994",
-      "evidence_required": "Every live Worker has source or a classified inventory entry.",
+      "evidence_required": "config/estate.json has no 'unknown' dispositions, only archive/retire/unrelated, and every archive path exists.",
+      "on_pass": "report",
+      "on_fail": "open_issue"
+    },
+    {
+      "id": "estate-live-drift",
+      "title": "Estate live drift: no live Worker without source or inventory entry",
+      "type": "pending",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1331",
+      "evidence_required": "Needs the live Worker list from Cloudflare (read-only API token, intentionally not stored in GitLab). scripts/autonomy/estate-drift.mjs implements the comparison; run it where a read-only token is available.",
       "on_pass": "report",
       "on_fail": "open_issue"
     },

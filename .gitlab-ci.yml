@@ -99,7 +99,7 @@ production_health:
 launch_gates:
   extends: .launch_check
   script:
-    - node --test scripts/autonomy/launch-gates.test.mjs scripts/autonomy/protocol-gates.test.mjs
+    - node --test scripts/autonomy/launch-gates.test.mjs scripts/autonomy/protocol-gates.test.mjs scripts/autonomy/estate-gate.test.mjs
     - node scripts/autonomy/launch-gates.mjs
   artifacts:
     when: always
