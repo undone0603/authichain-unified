@@ -1,23 +1,28 @@
 #!/usr/bin/env node
 // scripts/autonomy/launch-gates.mjs
 //
-// Launch gates as code (tracking issue #1987 on the GitLab mirror).
+// Launch gates as code (tracking issue #1987).
 // Reads config/launch-gates.json, collects evidence, and decides every gate
 // without a human approval. The founder is the override (kill_switch), not
 // the approver.
 //
+// Platforms: runs on GitLab CI (primary while GitHub Actions is billing
+// locked) and on GitHub Actions. Platform is detected from $GITLAB_CI.
+//
 // FAIL CLOSED: a gate passes only with positive evidence. Missing, empty or
-// malformed evidence, a skipped job, a job with no executed steps, a
-// collector error, or an unimplemented (`pending`) gate all FAIL. This is the
-// regression for the "empty steps" CI failure mode (jobs reporting no steps
-// must never count as a pass).
+// malformed evidence, a skipped job, a job with no executed steps or zero
+// duration, a stale run, a collector error, or an unimplemented (`pending`)
+// gate all FAIL.
 //
 // CLI: node scripts/autonomy/launch-gates.mjs
-//   env: GITHUB_TOKEN, GITHUB_REPOSITORY (optional, falls back to manifest)
+//   env (GitLab): CI_PROJECT_ID, CI_JOB_TOKEN (read pipelines),
+//        GITLAB_API_TOKEN (project access token, scope api; needed only to
+//        open/close issues. Without it the report is still produced.)
+//   env (GitHub): GITHUB_TOKEN, GITHUB_REPOSITORY
 //        LAUNCH_GATES_DRY_RUN=true   print only; do not open/close issues
 //        LAUNCH_GATES_STRICT=true    exit 1 if any gate fails
-//   writes launch-gates-report.json and a Markdown digest to
-//   $GITHUB_STEP_SUMMARY. Opens ONE issue per failing gate (label
+//   writes launch-gates-report.json and a Markdown digest (stdout and, on
+//   GitHub, $GITHUB_STEP_SUMMARY). Opens ONE issue per failing gate (label
 //   `launch-gate`) and closes it when the gate passes again.
 
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
@@ -27,7 +32,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const MANIFEST_PATH = join(ROOT, "config", "launch-gates.json");
 export const ISSUE_LABEL = "launch-gate";
-export const GATE_TYPES = ["github_ci", "http_probe", "pending"];
+export const GATE_TYPES = ["ci", "http_probe", "pending"];
+const DAY = 86_400_000;
 
 const PASS = "pass";
 const FAIL = "fail";
@@ -37,6 +43,9 @@ const failed = (reasons, evidence = {}) => ({
   evidence,
 });
 const passed = (evidence = {}) => ({ status: PASS, reasons: [], evidence });
+
+export const platformOf = (env) =>
+  env.GITLAB_CI === "true" ? "gitlab" : "github";
 
 /** Pure. Manifest errors (empty array when valid). */
 export function validateManifest(m) {
@@ -62,9 +71,16 @@ export function validateManifest(m) {
       errors.push(`${id}: title required`);
     if (!GATE_TYPES.includes(g.type))
       errors.push(`${id}: unknown type ${String(g.type)}`);
-    if (g.type === "github_ci") {
+    if (g.type === "ci") {
+      if (!Array.isArray(g.jobs) || g.jobs.length === 0)
+        errors.push(`${id}: jobs must be a non-empty array (GitLab job names)`);
       if (!Array.isArray(g.workflows) || g.workflows.length === 0)
-        errors.push(`${id}: workflows must be a non-empty array`);
+        errors.push(`${id}: workflows must be a non-empty array (GitHub files)`);
+      if (
+        g.max_age_days !== undefined &&
+        !(Number.isInteger(g.max_age_days) && g.max_age_days > 0)
+      )
+        errors.push(`${id}: max_age_days must be a positive integer`);
     }
     if (g.type === "http_probe") {
       if (!Array.isArray(g.probes) || g.probes.length === 0)
@@ -82,10 +98,10 @@ export function validateManifest(m) {
 }
 
 /**
- * Pure. `entries` = [{ workflow, run, jobs }] where run is the latest completed
- * run (or null) and jobs the GitHub jobs payload entries.
+ * Pure (GitHub). `entries` = [{ workflow, run, jobs }] where run is the latest
+ * completed run (or null) and jobs the GitHub jobs payload entries.
  */
-export function evaluateCiEvidence(entries, { allowSkippedJobs = false } = {}) {
+export function evaluateGithubCiEvidence(entries, { allowSkippedJobs = false } = {}) {
   if (!Array.isArray(entries) || entries.length === 0)
     return failed("no CI evidence collected");
   const reasons = [];
@@ -124,6 +140,46 @@ export function evaluateCiEvidence(entries, { allowSkippedJobs = false } = {}) {
   return reasons.length ? failed(reasons, { runs: summary }) : passed({ runs: summary });
 }
 
+/**
+ * Pure (GitLab). `entries` = [{ job, found }] where found is the latest real
+ * run of that job on the default branch (status success/failed/canceled) or
+ * null when none exists (never run, or only manual/skipped).
+ */
+export function evaluateGitlabCiEvidence(
+  entries,
+  { now = new Date(), maxAgeDays = 7 } = {}
+) {
+  if (!Array.isArray(entries) || entries.length === 0)
+    return failed("no CI evidence collected");
+  const reasons = [];
+  const summary = [];
+  for (const e of entries) {
+    const name = e?.job ?? "(unknown job)";
+    const f = e?.found;
+    if (!f) {
+      reasons.push(`${name}: no run found on the default branch (never run or only manual/skipped)`);
+      continue;
+    }
+    if (f.status !== "success")
+      reasons.push(`${name}: latest run is ${String(f.status)}`);
+    if (!(f.duration > 0))
+      reasons.push(`${name}: no recorded duration (job never executed)`);
+    const finished = Date.parse(f.finished_at ?? "");
+    if (!Number.isFinite(finished))
+      reasons.push(`${name}: no finish time recorded`);
+    else if (now.getTime() - finished > maxAgeDays * DAY)
+      reasons.push(`${name}: latest run is older than ${maxAgeDays} days`);
+    summary.push({
+      job: name,
+      job_id: f.id ?? null,
+      pipeline_id: f.pipeline_id ?? null,
+      sha: f.sha ?? null,
+      finished_at: f.finished_at ?? null,
+    });
+  }
+  return reasons.length ? failed(reasons, { jobs: summary }) : passed({ jobs: summary });
+}
+
 /** Pure. `results` = [{ url, status, location, ms, error }] aligned to `probes`. */
 export function evaluateProbes(results, probes, forbidRedirectHost) {
   if (!Array.isArray(results) || results.length === 0)
@@ -156,17 +212,25 @@ export function evaluateProbes(results, probes, forbidRedirectHost) {
 }
 
 /** Pure. Decide one gate from its evidence. Anything unexpected FAILS. */
-export function evaluateGate(gate, evidence) {
+export function evaluateGate(gate, evidence, now = new Date()) {
   try {
     if (gate.type === "pending")
       return failed(`not implemented yet (${gate.ref ?? "no ref"})`);
     if (evidence === undefined || evidence === null)
       return failed("no evidence collected");
     if (evidence.error) return failed(`collector error: ${evidence.error}`);
-    if (gate.type === "github_ci")
-      return evaluateCiEvidence(evidence.entries, {
-        allowSkippedJobs: gate.allow_skipped_jobs === true,
-      });
+    if (gate.type === "ci") {
+      if (evidence.platform === "gitlab")
+        return evaluateGitlabCiEvidence(evidence.entries, {
+          now,
+          maxAgeDays: gate.max_age_days ?? 7,
+        });
+      if (evidence.platform === "github")
+        return evaluateGithubCiEvidence(evidence.entries, {
+          allowSkippedJobs: gate.allow_skipped_jobs === true,
+        });
+      return failed("unknown CI platform in evidence");
+    }
     if (gate.type === "http_probe")
       return evaluateProbes(
         evidence.results,
@@ -190,7 +254,7 @@ export function evaluateAll(manifest, evidenceById = {}, now = new Date()) {
     id: g.id,
     title: g.title,
     ref: g.ref ?? null,
-    ...evaluateGate(g, evidenceById[g.id]),
+    ...evaluateGate(g, evidenceById[g.id], now),
   }));
   const allPass = gates.every((g) => g.status === PASS);
   return {
@@ -200,7 +264,7 @@ export function evaluateAll(manifest, evidenceById = {}, now = new Date()) {
   };
 }
 
-/** Pure. Markdown digest for the step summary. */
+/** Pure. Markdown digest. */
 export function renderSummary(report) {
   const lines = [`### Launch gates: ${report.state}`, ""];
   if (report.state === "stood_down") {
@@ -220,7 +284,7 @@ export function renderSummary(report) {
   return lines.join("\n");
 }
 
-// ---------------------------------------------------------------- collectors
+// ---------------------------------------------------------------- API clients
 
 async function gh(path, env, init = {}) {
   const res = await fetch(`https://api.github.com${path}`, {
@@ -238,7 +302,21 @@ async function gh(path, env, init = {}) {
   return res.status === 204 ? {} : res.json();
 }
 
-async function collectCi(gate, manifest, env) {
+async function gl(path, env, init = {}) {
+  const base = env.CI_API_V4_URL || "https://gitlab.com/api/v4";
+  const headers = { "user-agent": "authichain-launch-gates", ...(init.headers ?? {}) };
+  if (env.GITLAB_API_TOKEN) headers["PRIVATE-TOKEN"] = env.GITLAB_API_TOKEN;
+  else if (env.CI_JOB_TOKEN) headers["JOB-TOKEN"] = env.CI_JOB_TOKEN;
+  if (init.body) headers["content-type"] = "application/json";
+  const res = await fetch(`${base}${path}`, { ...init, headers });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`GitLab ${res.status} for ${path}`);
+  return res.status === 204 ? {} : res.json();
+}
+
+// ---------------------------------------------------------------- collectors
+
+async function collectGithubCi(gate, manifest, env) {
   const repo = env.GITHUB_REPOSITORY || manifest.repo;
   const branch = manifest.default_branch || "main";
   const entries = [];
@@ -253,7 +331,41 @@ async function collectCi(gate, manifest, env) {
       : [];
     entries.push({ workflow: wf, run, jobs });
   }
-  return { entries };
+  return { platform: "github", entries };
+}
+
+const REAL_RUN = new Set(["success", "failed", "canceled"]);
+
+async function collectGitlabCi(gate, manifest, env) {
+  const pid = env.CI_PROJECT_ID;
+  if (!pid) throw new Error("CI_PROJECT_ID is not set");
+  const ref = manifest.default_branch || "main";
+  const pipelines =
+    (await gl(
+      `/projects/${pid}/pipelines?ref=${encodeURIComponent(ref)}&per_page=20&order_by=id&sort=desc`,
+      env
+    )) ?? [];
+  const found = new Map();
+  for (const p of pipelines) {
+    if (found.size === gate.jobs.length) break;
+    const jobs = (await gl(`/projects/${pid}/pipelines/${p.id}/jobs?per_page=100`, env)) ?? [];
+    for (const job of jobs) {
+      if (!gate.jobs.includes(job.name) || found.has(job.name)) continue;
+      if (!REAL_RUN.has(job.status)) continue; // manual, skipped, created: not a run
+      found.set(job.name, {
+        id: job.id,
+        status: job.status,
+        duration: job.duration,
+        finished_at: job.finished_at,
+        pipeline_id: p.id,
+        sha: p.sha,
+      });
+    }
+  }
+  return {
+    platform: "gitlab",
+    entries: gate.jobs.map((name) => ({ job: name, found: found.get(name) ?? null })),
+  };
 }
 
 async function probeOne(p) {
@@ -277,7 +389,10 @@ async function probeOne(p) {
 }
 
 async function collect(gate, manifest, env) {
-  if (gate.type === "github_ci") return collectCi(gate, manifest, env);
+  if (gate.type === "ci")
+    return platformOf(env) === "gitlab"
+      ? collectGitlabCi(gate, manifest, env)
+      : collectGithubCi(gate, manifest, env);
   if (gate.type === "http_probe")
     return { results: await Promise.all(gate.probes.map(probeOne)) };
   return undefined;
@@ -286,14 +401,72 @@ async function collect(gate, manifest, env) {
 // --------------------------------------------------------------- issue sync
 
 const issueTitle = (id) => `Launch gate failing: ${id}`;
+const CLOSE_NOTE = "Gate passing again. Closing.";
+
+function issueClient(manifest, env) {
+  if (platformOf(env) === "gitlab") {
+    const pid = env.CI_PROJECT_ID;
+    return {
+      enabled: Boolean(env.GITLAB_API_TOKEN && pid),
+      missing: "GITLAB_API_TOKEN (project access token, scope api) not set",
+      async listOpen() {
+        const items =
+          (await gl(`/projects/${pid}/issues?labels=${ISSUE_LABEL}&state=opened&per_page=100`, env)) ?? [];
+        return items.map((i) => ({ title: i.title, id: i.iid }));
+      },
+      async create(title, body) {
+        await gl(`/projects/${pid}/issues`, env, {
+          method: "POST",
+          body: JSON.stringify({ title, description: body, labels: ISSUE_LABEL }),
+        });
+      },
+      async close(id) {
+        await gl(`/projects/${pid}/issues/${id}/notes`, env, {
+          method: "POST",
+          body: JSON.stringify({ body: CLOSE_NOTE }),
+        });
+        await gl(`/projects/${pid}/issues/${id}`, env, {
+          method: "PUT",
+          body: JSON.stringify({ state_event: "close" }),
+        });
+      },
+    };
+  }
+  const repo = env.GITHUB_REPOSITORY || manifest.repo;
+  return {
+    enabled: Boolean(env.GITHUB_TOKEN),
+    missing: "GITHUB_TOKEN not set",
+    async listOpen() {
+      const items =
+        (await gh(`/repos/${repo}/issues?labels=${ISSUE_LABEL}&state=open&per_page=100`, env)) ?? [];
+      return items.map((i) => ({ title: i.title, id: i.number }));
+    },
+    async create(title, body) {
+      await gh(`/repos/${repo}/issues`, env, {
+        method: "POST",
+        body: JSON.stringify({ title, body, labels: [ISSUE_LABEL] }),
+      });
+    },
+    async close(id) {
+      await gh(`/repos/${repo}/issues/${id}/comments`, env, {
+        method: "POST",
+        body: JSON.stringify({ body: CLOSE_NOTE }),
+      });
+      await gh(`/repos/${repo}/issues/${id}`, env, {
+        method: "PATCH",
+        body: JSON.stringify({ state: "closed", state_reason: "completed" }),
+      });
+    },
+  };
+}
 
 async function syncIssues(report, manifest, env, dryRun) {
-  const repo = env.GITHUB_REPOSITORY || manifest.repo;
-  const open = (await gh(
-    `/repos/${repo}/issues?labels=${ISSUE_LABEL}&state=open&per_page=100`,
-    env
-  )) ?? [];
-  const byTitle = new Map(open.map((i) => [i.title, i]));
+  const client = issueClient(manifest, env);
+  if (!client.enabled) {
+    console.log(`issue sync skipped: ${client.missing}`);
+    return;
+  }
+  const byTitle = new Map((await client.listOpen()).map((i) => [i.title, i]));
   for (const g of report.gates) {
     const existing = byTitle.get(issueTitle(g.id));
     if (g.status === FAIL && !existing) {
@@ -307,23 +480,10 @@ async function syncIssues(report, manifest, env, dryRun) {
         "This issue closes itself when the gate passes. Stop all gates with `kill_switch` in config/launch-gates.json.",
       ].join("\n");
       console.log(`open issue: ${issueTitle(g.id)}`);
-      if (!dryRun)
-        await gh(`/repos/${repo}/issues`, env, {
-          method: "POST",
-          body: JSON.stringify({ title: issueTitle(g.id), body, labels: [ISSUE_LABEL] }),
-        });
+      if (!dryRun) await client.create(issueTitle(g.id), body);
     } else if (g.status === PASS && existing) {
       console.log(`close issue: ${issueTitle(g.id)}`);
-      if (!dryRun) {
-        await gh(`/repos/${repo}/issues/${existing.number}/comments`, env, {
-          method: "POST",
-          body: JSON.stringify({ body: "Gate passing again. Closing." }),
-        });
-        await gh(`/repos/${repo}/issues/${existing.number}`, env, {
-          method: "PATCH",
-          body: JSON.stringify({ state: "closed", state_reason: "completed" }),
-        });
-      }
+      if (!dryRun) await client.close(existing.id);
     }
   }
 }
@@ -353,7 +513,7 @@ export async function main(env = process.env) {
   console.log(summary);
   writeFileSync("launch-gates-report.json", JSON.stringify(report, null, 2));
   if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, `${summary}\n`);
-  if (report.state !== "stood_down" && report.state !== "invalid_manifest" && env.GITHUB_TOKEN)
+  if (report.state !== "stood_down" && report.state !== "invalid_manifest")
     await syncIssues(report, manifest, env, dryRun);
   if (report.state === "invalid_manifest") return 1;
   return strict && report.state === "fail" ? 1 : 0;
