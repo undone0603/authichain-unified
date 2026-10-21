@@ -11397,5 +11397,261 @@
         }
       ]
     }
+  },
+  {
+    "slug": "ed25519signature2020-vs-eddsa-jcs-2022-proof-type",
+    "keyword": "ed25519signature2020 vs eddsa-jcs-2022 proof type",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Ed25519signature2020 Vs Eddsa-JCS-2022 Proof | AuthiChain",
+    "metaDescription": "Ed25519Signature2020 and eddsa-jcs-2022 both use Ed25519, but they are different proof types with different procedures, so a verifier built for one will not.",
+    "h1": "Ed25519signature2020 Vs Eddsa-JCS-2022 Proof Type",
+    "bodyHtml": "<p>Ed25519Signature2020 and eddsa-jcs-2022 both use Ed25519, but they are different proof types with different procedures, so a verifier built for one will not accept a proof labelled with the other.</p><h2>Why AuthiChain</h2><ul><li>The AuthiChain v0.1 specification names Ed25519Signature2020 and signs the JCS-canonicalised record (RFC 8785) with the proof value removed, which is short enough to read in full</li><li>W3C published the Data Integrity EdDSA Cryptosuites as a Recommendation in May 2025 alongside Verifiable Credentials 2.0, and eddsa-jcs-2022 is one of its suites</li><li>The spec states that records follow the VC Data Model 2.0 structure and have not been tested with third-party VC verifiers, so run the reference verifier rather than assuming interoperability</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Will a generic VC library verify an AuthiChain record?</h3><p>Do not assume it. The specification says records have not been tested with third-party verifiers. The reference verifier is Apache-2.0 with no dependencies, and the 28 conformance fixtures define the expected verdicts.</p><h3>Does the proof type change the signature algorithm?</h3><p>No. Both use Ed25519 as specified in RFC 8032. They differ in what bytes are signed and how the proof options are bound, which is why the labels are not interchangeable.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Ed25519signature2020 Vs Eddsa-JCS-2022 Proof Type",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Ed25519Signature2020 and eddsa-jcs-2022 both use Ed25519, but they are different proof types with different procedures, so a verifier built for one will not accept a proof labelled with the other.",
+          "url": "https://authichain.com/p/ed25519signature2020-vs-eddsa-jcs-2022-proof-type"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Ed25519signature2020 Vs Eddsa-JCS-2022 Proof Type",
+              "item": "https://authichain.com/p/ed25519signature2020-vs-eddsa-jcs-2022-proof-type"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Will a generic VC library verify an AuthiChain record?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Do not assume it. The specification says records have not been tested with third-party verifiers. The reference verifier is Apache-2.0 with no dependencies, and the 28 conformance fixtures define the expected verdicts."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the proof type change the signature algorithm?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Both use Ed25519 as specified in RFC 8032. They differ in what bytes are signed and how the proof options are bound, which is why the labels are not interchangeable."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "did-key-z6mk-prefix-how-to-read-an-issuer-key",
+    "keyword": "did:key z6mk prefix how to read an issuer key",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DID:Key Z6mk Prefix How To Read An Issuer Key | AuthiChain",
+    "metaDescription": "A did:key identifier beginning z6Mk is a base58btc-encoded Ed25519 public key with a two-byte multicodec prefix, so the issuer key is inside the identifier.",
+    "h1": "DID:Key Z6mk Prefix How To Read An Issuer Key",
+    "bodyHtml": "<p>A did:key identifier beginning z6Mk is a base58btc-encoded Ed25519 public key with a two-byte multicodec prefix, so the issuer key is inside the identifier itself and nothing has to be looked up.</p><h2>Why AuthiChain</h2><ul><li>The z at the start marks base58btc multibase; decoding the rest gives the Ed25519 multicodec prefix followed by the 32-byte public key</li><li>In an AuthiChain record the issuer field and proof.verificationMethod carry that identifier, and the verifier reads the key from it with no network access</li><li>The reference verifier is a single zero-dependency file, so you can read the decoding step and compare it with the did:key method text</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does a did:key tell me who the issuer is?</h3><p>No. It names a key, not a legal entity. Linking a key to a manufacturer is done outside the record, for example by the manufacturer publishing the identifier on its own site.</p><h3>Can a did:key be rotated?</h3><p>Not within the identifier: changing the key changes the identifier. The v0.1 specification has no revocation; credentialStatus is planned for v0.2.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DID:Key Z6mk Prefix How To Read An Issuer Key",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "A did:key identifier beginning z6Mk is a base58btc-encoded Ed25519 public key with a two-byte multicodec prefix, so the issuer key is inside the identifier itself and nothing has to be looked up.",
+          "url": "https://authichain.com/p/did-key-z6mk-prefix-how-to-read-an-issuer-key"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DID:Key Z6mk Prefix How To Read An Issuer Key",
+              "item": "https://authichain.com/p/did-key-z6mk-prefix-how-to-read-an-issuer-key"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a did:key tell me who the issuer is?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It names a key, not a legal entity. Linking a key to a manufacturer is done outside the record, for example by the manufacturer publishing the identifier on its own site."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can a did:key be rotated?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not within the identifier: changing the key changes the identifier. The v0.1 specification has no revocation; credentialStatus is planned for v0.2."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "json-canonicalization-signature-mismatch-rfc-8785-debugging",
+    "keyword": "json canonicalization signature mismatch rfc 8785 debugging",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Json Canonicalization Signature Mismatch RFC | AuthiChain",
+    "metaDescription": "A signature that fails after the record was copied, pretty-printed or re-serialised usually fails because the verifier canonicalised different bytes than the.",
+    "h1": "Json Canonicalization Signature Mismatch RFC 8785 Debugging",
+    "bodyHtml": "<p>A signature that fails after the record was copied, pretty-printed or re-serialised usually fails because the verifier canonicalised different bytes than the signer did; RFC 8785 (JCS) exists to make those bytes identical.</p><h2>Why AuthiChain</h2><ul><li>The AuthiChain spec signs the record with proof.proofValue removed, canonicalised per RFC 8785 and encoded as UTF-8</li><li>The spec forbids signing a pretty-printed or key-reordered form, so two conforming verifiers canonicalise to the same bytes</li><li>Run the reference verifier on the record: an invalid verdict with a valid-looking proof usually points to a changed field, not a broken key</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Why does editing whitespace not break the signature?</h3><p>Because the verifier canonicalises first. Whitespace and key order are normalised away; changing a value, adding a field or altering a number format changes the canonical bytes and the check fails.</p><h3>Can I hash the file as it sits on disk instead?</h3><p>The anchor hash is SHA-256 of the canonical record bytes, not of the file on disk, so hashing the stored file will not match the recordHash.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Json Canonicalization Signature Mismatch RFC 8785 Debugging",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "A signature that fails after the record was copied, pretty-printed or re-serialised usually fails because the verifier canonicalised different bytes than the signer did; RFC 8785 (JCS) exists to make those bytes identical.",
+          "url": "https://authichain.com/p/json-canonicalization-signature-mismatch-rfc-8785-debugging"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Json Canonicalization Signature Mismatch RFC 8785 Debugging",
+              "item": "https://authichain.com/p/json-canonicalization-signature-mismatch-rfc-8785-debugging"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Why does editing whitespace not break the signature?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Because the verifier canonicalises first. Whitespace and key order are normalised away; changing a value, adding a field or altering a number format changes the canonical bytes and the check fails."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I hash the file as it sits on disk instead?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The anchor hash is SHA-256 of the canonical record bytes, not of the file on disk, so hashing the stored file will not match the recordHash."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "does-a-blockchain-anchor-prove-a-physical-item-exists",
+    "keyword": "does a blockchain anchor prove a physical item exists",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Does A Blockchain Anchor Prove A Physical Item | AuthiChain",
+    "metaDescription": "No: an anchor proves that a particular hash was committed to a public ledger at a point in time, and says nothing about whether the physical item exists or.",
+    "h1": "Does A Blockchain Anchor Prove A Physical Item Exists",
+    "bodyHtml": "<p>No: an anchor proves that a particular hash was committed to a public ledger at a point in time, and says nothing about whether the physical item exists or matches the record.</p><h2>Why AuthiChain</h2><ul><li>The AuthiChain spec states this directly in its security considerations: an anchor does not prove the item exists or matches the record</li><li>What an anchor does add is a checkable time: the record, as canonicalised, existed no later than the transaction</li><li>Anchor and signature answer different questions: the signature shows who made the statement, the anchor shows when the exact bytes were committed</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>What ties a record to a physical item?</h3><p>Nothing in the record does by itself. A label carrying the item identifier, issued by a manufacturer you can identify, links item to record; checking that link on the item is a physical step the verifier cannot perform.</p><h3>Is an anchor required for a record to be valid?</h3><p>No. A record without an anchor can return valid-unanchored: authentic as to its signer, with no checkable time. Verified requires a well-formed mainnet anchor with a matching hash.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Does A Blockchain Anchor Prove A Physical Item Exists",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "No: an anchor proves that a particular hash was committed to a public ledger at a point in time, and says nothing about whether the physical item exists or matches the record.",
+          "url": "https://authichain.com/p/does-a-blockchain-anchor-prove-a-physical-item-exists"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Does A Blockchain Anchor Prove A Physical Item Exists",
+              "item": "https://authichain.com/p/does-a-blockchain-anchor-prove-a-physical-item-exists"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What ties a record to a physical item?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Nothing in the record does by itself. A label carrying the item identifier, issued by a manufacturer you can identify, links item to record; checking that link on the item is a physical step the verifier cannot perform."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is an anchor required for a record to be valid?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. A record without an anchor can return valid-unanchored: authentic as to its signer, with no checkable time. Verified requires a well-formed mainnet anchor with a matching hash."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
