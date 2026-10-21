@@ -20,7 +20,7 @@ before_script:
 install_dependencies:
   interruptible: true
   rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule" && $RUN_LAUNCH_CHECKS != "true"'
+    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
   stage: setup
   script:
     - pnpm install --frozen-lockfile
@@ -31,7 +31,7 @@ install_dependencies:
 typecheck_and_lint:
   interruptible: true
   rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule" && $RUN_LAUNCH_CHECKS != "true"'
+    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
   stage: validate
   needs: ["install_dependencies"]
   script:
@@ -40,7 +40,7 @@ typecheck_and_lint:
 tests_shard_1:
   interruptible: true
   rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule" && $RUN_LAUNCH_CHECKS != "true"'
+    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
   stage: test
   needs: ["install_dependencies"]
   script:
@@ -48,7 +48,7 @@ tests_shard_1:
 tests_shard_2:
   interruptible: true
   rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule" && $RUN_LAUNCH_CHECKS != "true"'
+    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
   stage: test
   needs: ["install_dependencies"]
   script:
@@ -56,7 +56,7 @@ tests_shard_2:
 production_build:
   interruptible: true
   rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule" && $RUN_LAUNCH_CHECKS != "true"'
+    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
   stage: build
   needs: ["typecheck_and_lint", "tests_shard_1", "tests_shard_2"]
   script:
@@ -69,20 +69,18 @@ production_build:
 main_quality_gate:
   interruptible: true
   rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule" && $RUN_LAUNCH_CHECKS != "true"'
+    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_PIPELINE_SOURCE != "merge_request_event"'
   stage: verify
   needs: ["production_build"]
   script:
     - echo "Running quality gate checks..."
     - pnpm run quality-gate
 
-# ---------------------------------------------------------------------------
-# Scheduled launch checks. Read-only, no secrets, Node built-ins only.
+# Scheduled launch checks: read-only, no secrets, Node built-ins only.
 # Ported from the GitHub honest-launch-gate and cloudflare-production-health
-# workflows. Pipeline schedules select a job with the SCHEDULE_JOB variable.
-# The heavy build/test jobs above are skipped on schedule runs to protect the
-# free-tier compute-minute budget.
-# ---------------------------------------------------------------------------
+# workflows. They run on pipeline schedules; the heavy jobs above are skipped
+# on schedule runs to protect the free-tier compute-minute budget. On other
+# pipelines they appear as optional manual jobs (play button, never blocking).
 .launch_check:
   stage: verify
   image: node:22-alpine
@@ -92,19 +90,18 @@ main_quality_gate:
   cache: []
   variables:
     GIT_DEPTH: "1"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+      when: manual
+      allow_failure: true
 
 launch_gate:
   extends: .launch_check
   script:
     - node scripts/launch/honest-launch-gate.mjs
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_JOB == "launch_gate"'
-    - if: '$CI_PIPELINE_SOURCE == "web" && $RUN_LAUNCH_CHECKS == "true"'
 
 production_health:
   extends: .launch_check
   script:
     - AUTHICHAIN_ORIGIN=https://authichain.com node scripts/cloudflare-production-health.mjs --run
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_JOB == "production_health"'
-    - if: '$CI_PIPELINE_SOURCE == "web" && $RUN_LAUNCH_CHECKS == "true"'
