@@ -149,4 +149,12 @@ deploy_authichain_com:
   script:
     - node scripts/sync-microsite-packs.mjs
     - cd workers/authichain-com
-    - npx wrangler deploy --minify --keep-vars --config wrangler.toml
+    - npx wrangler deploy 
+
+dogfood_record:
+  stage: verify
+  script:
+    - node scripts/generate-dogfood.mjs
+  artifacts:
+    paths:
+      - docs/execution/AUTHICHAIN_DOGFOOD_RECORD.json--minify --keep-vars --config wrangler.toml
