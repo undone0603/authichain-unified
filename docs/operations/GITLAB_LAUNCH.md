@@ -1,7 +1,8 @@
 # GitLab launch runbook
 
 Status: GitLab CI is the live pipeline for this repository while GitHub Actions is billing-locked.
-Deploy jobs are INERT until the two CI/CD variables below exist.
+Production deploys run through Cloudflare Workers Builds (see "Live: Cloudflare Workers Builds" below).
+The GitLab CI deploy jobs are INERT until the two CI/CD variables below exist.
 
 ## What runs today (no credentials needed)
 
@@ -28,9 +29,33 @@ Add these in GitLab: Settings > CI/CD > Variables (masked, protected):
 - Outreach, revenue, autopilot, telegram and payout workers, and every flow gated by `OWNER_LIVE_SEND`, `PAYOUTS_ENABLED`, `DUNNING_ENABLED` or `CONTENT_PUBLISH_MANUAL_LIVE_OK`.
 - No GitHub secret values are copied to GitLab. Only the two Cloudflare variables above are needed.
 
-## Alternative with no token stored in GitLab
+## Live: Cloudflare Workers Builds (no token stored in GitLab)
 
-Cloudflare Workers Builds can connect a GitLab repository directly (Free plan: 3,000 build minutes/month, versus 400 shared-runner minutes/month on GitLab Free).
+Since 2026-10-21, Cloudflare Workers Builds deploys from this repository's GitLab `main`. Merge on either side:
+GitHub merges reach GitLab through the pull mirror, and GitLab merges reach GitHub through the push mirror.
+A failed build never replaces the live version.
+
+- `authichain-app`, `govchain-us`, `qron-space`: build on pushes to `main` (Markdown and `docs/*` skipped for app and qron-space).
+- `authichain-com`: when `workers/authichain-com/**`, `workers/_shared/**`, `content/microsites/**`, `scripts/sync-microsite-packs.mjs`, `src/lib/plans.ts` or `src/lib/checkout-gate.ts` change.
+- `gs1-resolver`, `authichain-dashboard`: when their own folder or `workers/_shared/**` changes. `verifier-web`: when `apps/verifier-web/**` changes.
+- 28 more workers build only when `workers/<name>/**` changes (Markdown-only changes skipped):
+  `authichain-api`, `authichain-api-gateway`, `authichain-gateway`, `authichain-bridge`, `authichain-infra`,
+  `authichain-chain-data`, `authichain-license-issuer`, `authichain-qron-provenance`, `authichain-scan-validate`,
+  `authichain-verify-worker`, `auth`, `analytics`, `ai-classification`, `bitcoin-auth`, `blockchain`,
+  `dpp-fulfillment`, `qron-image-gen`, `strainchain-io`, `chipchain-io`, `fanchain-io`, `glowchain-io`,
+  `harvestchain-io`, `luxechain-io`, `partchain-io`, `provenchain-io`, `rxchain-io`, `threadchain-io`,
+  `watchchain-io` (deploys the `watchchain-io-vertical` script).
+- A change only under `workers/_shared/**` does not redeploy those 28; touch the worker's own folder.
+
+Not connected on purpose:
+
+- `qfs-adapter` (its wrangler.toml forbids it, see #952).
+- `manufacturer-status` (never deployed; use the `deploy_manufacturer_status` CI job above for its first deploy).
+- Outreach, revenue, autopilot, telegram, agent and payout workers. `authichain-automation` still builds from GitHub.
+- If the two CI/CD variables are added later, `deploy_authichain_com` would deploy authichain-com a second time on the same push; disable one of the two.
+
+GitLab trial: the Ultimate trial ends 2026-11-20. Pull mirroring is a paid GitLab feature, so after that GitHub merges stop reaching GitLab.
+Before then, upgrade GitLab or reconnect the Workers Builds triggers to GitHub.
 
 ## Rollback
 
