@@ -63,6 +63,7 @@ export const CHECKOUT_CARRY_KEYS = [
   "referrer",
   "ref",
   "affiliate_code",
+  "qron_attestation",
 ] as const;
 
 export const CHECKOUT_SUCCESS_ORIGIN = "https://authichain.govchain.us";
@@ -240,7 +241,7 @@ function priceLabel(plan: Plan): string {
   return amount;
 }
 
-const PAGE_CSS = `*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#0b0b10;color:#f4f4f5;line-height:1.55;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}main{width:100%;max-width:30rem;background:#111118;border:1px solid #27272a;border-radius:16px;padding:28px}h1{font-size:1.35rem;margin-bottom:.25rem}.price{font-size:1.9rem;font-weight:800;color:#00ffd1;margin:.5rem 0}.desc{color:#a1a1aa;font-size:.95rem;margin-bottom:1rem}label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:600;color:#d4d4d8}input[type=email]{padding:11px 12px;border:1px solid #3f3f46;border-radius:8px;background:#09090b;color:#fff;font:inherit}button{margin-top:14px;width:100%;padding:13px 18px;border:0;border-radius:10px;background:#00ffd1;color:#000;font:inherit;font-weight:800;cursor:pointer}.hint{font-size:.8rem;color:#a1a1aa;margin-top:8px}.err{background:#3f1d1d;border:1px solid #7f1d1d;color:#fecaca;padding:8px 10px;border-radius:8px;font-size:.85rem;margin-bottom:10px}.hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}ul.plans{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:1rem}ul.plans a{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #27272a;border-radius:10px;color:#fff;text-decoration:none}ul.plans a:hover{border-color:#00ffd1}.links{margin-top:18px;font-size:.85rem}.links a{color:#a1a1aa;margin-right:12px}.hint a{color:#00ffd1}`;
+const PAGE_CSS = `*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#0b0b10;color:#f4f4f5;line-height:1.55;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}main{width:100%;max-width:30rem;background:#111118;border:1px solid #27272a;border-radius:16px;padding:28px}h1{font-size:1.35rem;margin-bottom:.25rem}.price{font-size:1.9rem;font-weight:800;color:#00ffd1;margin:.5rem 0}.desc{color:#a1a1aa;font-size:.95rem;margin-bottom:1rem}label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:600;color:#d4d4d8}input[type=email],input[type=text]{padding:11px 12px;border:1px solid #3f3f46;border-radius:8px;background:#09090b;color:#fff;font:inherit}button{margin-top:14px;width:100%;padding:13px 18px;border:0;border-radius:10px;background:#00ffd1;color:#000;font:inherit;font-weight:800;cursor:pointer}.hint{font-size:.8rem;color:#a1a1aa;margin-top:8px}.err{background:#3f1d1d;border:1px solid #7f1d1d;color:#fecaca;padding:8px 10px;border-radius:8px;font-size:.85rem;margin-bottom:10px}.hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}ul.plans{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:1rem}ul.plans a{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #27272a;border-radius:10px;color:#fff;text-decoration:none}ul.plans a:hover{border-color:#00ffd1}.links{margin-top:18px;font-size:.85rem}.links a{color:#a1a1aa;margin-right:12px}.hint a{color:#00ffd1}`;
 
 function pageShell(title: string, body: string): string {
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${esc(title)}</title><link rel="icon" type="image/svg+xml" href="https://authichain.com/favicon.svg"><style>${PAGE_CSS}</style></head><body><main>${body}</main></body></html>`;
@@ -270,14 +271,24 @@ export function renderCheckoutConfirmPage(opts: {
   const { plan } = opts;
   const params = opts.params ?? new URLSearchParams();
   const email = pickCheckoutEmail(params.get("email"));
+  const isQronGated = isQronGatedPlan(plan.id);
+  const attestation = (params.get("qron_attestation") || "").trim().slice(0, 256);
   const submittedCheckoutKey = params.get("checkout_key") || "";
   const checkoutKey = /^[\w-]{36}$/.test(submittedCheckoutKey)
     ? submittedCheckoutKey
     : crypto.randomUUID();
-  const hidden = CHECKOUT_CARRY_KEYS.map(key => {
-    const v = (params.get(key) || "").trim().slice(0, 256);
-    return v ? `<input type="hidden" name="${key}" value="${esc(v)}">` : "";
-  }).join("");
+  const hidden = CHECKOUT_CARRY_KEYS.filter(
+    key => !(isQronGated && key === "qron_attestation")
+  )
+    .map(key => {
+      const v = (params.get(key) || "").trim().slice(0, 256);
+      return v ? `<input type="hidden" name="${key}" value="${esc(v)}">` : "";
+    })
+    .join("");
+  const attestationField = isQronGated
+    ? `<label for="checkout-confirm-attestation" style="margin-top:12px">QRON attestation token
+<input id="checkout-confirm-attestation" name="qron_attestation" type="text" required maxlength="256" autocomplete="off" spellcheck="false" placeholder="QRON-<nonce>.<expiry>.<signature>" value="${esc(attestation)}"></label>`
+    : "";
   const action = `/checkout/${plan.id}`;
   const err = opts.error
     ? `<div class="err" role="alert">${esc(opts.error)}</div>`
@@ -290,6 +301,7 @@ export function renderCheckoutConfirmPage(opts: {
 ${err}<form method="post" action="${esc(action)}" id="checkout-confirm">
 <label for="checkout-confirm-email">Work email
 <input id="checkout-confirm-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com" value="${esc(email)}"></label>
+${attestationField}
 <div class="hp" aria-hidden="true"><label>Leave empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
 ${hidden}<input type="hidden" name="checkout_key" value="${esc(checkoutKey)}"><button type="submit">Continue to secure Stripe checkout</button>
 <p class="hint">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter. You will review the total on Stripe before paying.</p>
@@ -462,6 +474,8 @@ export function buildGatedSessionBody(opts: {
   if (referrer) meta.referrer = referrer;
   if (affiliateCode) meta.affiliate_code = affiliateCode;
   if (refCode) meta.ref_code = refCode;
+  const qronAttestation = f("qron_attestation", 256);
+  if (qronAttestation) meta.qron_attestation = qronAttestation;
   for (const [k, v] of Object.entries(meta)) body.set(`metadata[${k}]`, v);
   if (mode === "subscription") {
     for (const [k, v] of Object.entries(meta)) {
@@ -567,7 +581,73 @@ export async function createGatedCheckoutSession(opts: {
 
 // ─── Request handler ────────────────────────────────────────────────────────
 
-export type GatedCheckoutEnv = { STRIPE_SECRET_KEY?: string };
+export type GatedCheckoutEnv = {
+  STRIPE_SECRET_KEY?: string;
+  QRON_INTERDICTION_SECRET?: string;
+};
+
+/**
+ * Plans that provision QRON generation credits. Every one of them sits behind
+ * the interdiction gate, so the cheaper-looking sibling cannot be used to
+ * bypass it.
+ */
+export const QRON_GATED_PLAN_IDS: readonly PlanId[] = [
+  "qron_launch",
+  "qron_launch_annual",
+];
+
+export function isQronGatedPlan(planId: string): boolean {
+  return (QRON_GATED_PLAN_IDS as readonly string[]).includes(planId);
+}
+
+const QRON_TOKEN_RE =
+  /^QRON-([A-Za-z0-9_-]{8,64})\.(\d{10})\.([0-9a-fA-F]{64})$/;
+
+/**
+ * Verifies a signed QRON attestation token of the form:
+ *   QRON-<nonce>.<expiresAtUnixSeconds>.<hex(HMAC_SHA256(secret, "QRON-<nonce>.<expiresAt>"))>
+ *
+ * The expiry is covered by the signature, so it cannot be extended by the
+ * holder. Tokens are stateless: within their validity window a token is
+ * reusable. Strict single-use would need a server-side nonce store (consumed
+ * alongside claimCheckout), which this gate deliberately does not add. Issue
+ * short-lived tokens to bound replay.
+ */
+export async function verifyQronAttestationToken(
+  token: string | null | undefined,
+  secret: string | undefined,
+  nowMs: number = Date.now()
+): Promise<boolean> {
+  const raw = (token || "").trim();
+  const keyMaterial = (secret || "").trim();
+  if (!raw || !keyMaterial) return false;
+  const match = raw.match(QRON_TOKEN_RE);
+  if (!match) return false;
+  const [, nonce, expiry, sigHex] = match;
+  const payload = `QRON-${nonce}.${expiry}`;
+
+  const enc = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(keyMaterial),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"]
+  );
+
+  const sigBytes = new Uint8Array(32);
+  for (let i = 0; i < 32; i++) {
+    sigBytes[i] = parseInt(sigHex.slice(i * 2, i * 2 + 2), 16);
+  }
+
+  const signatureOk = await crypto.subtle.verify(
+    "HMAC",
+    cryptoKey,
+    sigBytes,
+    enc.encode(payload)
+  );
+  return signatureOk && Number(expiry) * 1000 > nowMs;
+}
 
 /**
  * A growth-loop event observed on the checkout path. The gate only reports;
@@ -729,15 +809,20 @@ export async function tryHandleGatedCheckout(
   report("checkout_email_captured", email);
 
   // --- QRON Interdiction Gate ---
-  if (plan.id === "qron_launch") {
+  if (isQronGatedPlan(plan.id)) {
     const attestationToken = fields.get("qron_attestation");
-    // Verify token presence and basic cryptographic prefix before hitting Stripe
-    if (!attestationToken || !attestationToken.startsWith("QRON-")) {
+    const secret = env.QRON_INTERDICTION_SECRET;
+    const validAttestation = await verifyQronAttestationToken(
+      attestationToken,
+      secret
+    );
+    if (!validAttestation) {
       return htmlResponse(
         renderCheckoutConfirmPage({
           plan,
           params: fields,
-          error: "QRON Interdiction: Valid physical attestation token required for provisioning.",
+          error:
+            "QRON Interdiction: Valid signed attestation token required for provisioning.",
         }),
         403
       );
