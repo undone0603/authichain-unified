@@ -12,14 +12,14 @@ COMPLETED:             Audit of GitHub and GitLab; secret-pattern scan; baseline
 IN PROGRESS:           Draft MR for the branch
 FAILED:                git push (403 from session proxy) and GitHub connector write (403); see BLOCKERS B-3
 BLOCKED:               B-1 token issuer, B-2 mirror direction, B-5 main pipeline failure reason
-NEXT ACTION:           N-1
+NEXT ACTION:           N-8, then N-4 (N-1 waits for the B-1 decision)
 ```
 
 Ordered by the P0-P5 scale in the brief.
 
 | ID | Priority | Task | Done when |
 | -- | -------- | ---- | --------- |
-| N-1 | P0 | QRON gate, no-regret part on its own branch: shared gated-plan predicate used by the gate, the confirm page and `buildGatedSessionBody`; cover `qron_launch_annual`; honest comment and error text; tests for missing, lowercase, malformed, well-formed-unknown, valid (303) and the rendered input | Tests pass; PR lists the B-1 owner decision |
+| N-1 | P1 | Owner decision on the QRON gate (BLOCKERS B-1). Until then only tests that pin current behaviour and honest wording; no change to which SKUs are gated and no gating of `qron_launch_annual` | Decision recorded, then implement and test |
 | N-2 | P3 | GitLab job running the root vitest suite on MRs touching `src`, `protocol`, `workers`, plus schedule; secret scan that does not depend on Cloudflare variables | A real pipeline runs it and the pipeline id is recorded in `CI_STATUS.md` |
 | N-3 | P3 | Bind the dogfood record to `CI_COMMIT_SHA`, version, timestamp and a build-artifact SHA-256; verify with the repo verifier; keep negative cases as a vitest test | `VERIFICATION_EVIDENCE.md` shows commit and artifact fields |
 | N-4 | P1 | Stripe sandbox end-to-end: checkout, signed webhook, duplicate webhook, unauthorized request, entitlement row; no live money | Test-mode transcript recorded |
