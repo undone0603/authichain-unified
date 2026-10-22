@@ -31,10 +31,19 @@ export async function GET() {
           : null,
     }));
 
+    // Founder smoke traffic is not revenue. Unset means no founder exclusion;
+    // the page then shows founder: 0 instead of hiding the gap.
+    const founderEmails = (process.env.FOUNDER_EMAILS ?? "")
+      .split(",")
+      .map(e => e.trim())
+      .filter(Boolean);
+
     const proof = buildRevenueProof(
       (events ?? []) as LoopEventRow[],
       logs ?? [],
-      decisions
+      decisions,
+      new Date(),
+      { founderEmails }
     );
     return NextResponse.json(proof);
   } catch (err) {
