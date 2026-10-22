@@ -42,6 +42,12 @@ Observed pipelines (latest 30): 9 `duo_workflow` success, 11 `push` skipped, 6 `
 `phase-f-dogfood`. `main` pipeline `2974628977` is red only because of the external commit status `Workers Builds: govchain-us` (Cloudflare); its 8 CI
 jobs are all manual and did not run. The `phase-f-dogfood` failures were not examined (BLOCKERS B-5).
 
+## GitHub checks on PRs #1995 and #1996 (2026-10-22)
+
+All 11 checks on each PR (Typecheck and lint, Tests shards 1 and 2, Production build, lint, Typecheck ratchet, Schema and AgentZ checks, Main
+quality gate) failed within 2 to 4 seconds. The job annotation reads "The job was not started because your account is locked due to a billing
+issue." These are not test results (BLOCKERS B-4). Local runs in this document remain the only test evidence for both PRs.
+
 ## Gaps found
 
 1. **The GitLab `tests` job does not run the main suite.** It runs `pnpm run test`, which is `turbo test --filter=!.`.

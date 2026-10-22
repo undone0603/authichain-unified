@@ -2,21 +2,27 @@
 
 Updated 2026-10-22. Each entry: what is stuck, why, evidence, what continues without it, the exact dependency, next action.
 
-## B-1. QRON Launch checkout gate (decided 2026-10-22, fix pending merge)
+## B-1. QRON Launch monthly: closed by an unreviewed gate while public pages still sell it (owner decision needed)
 
-- **Finding:** `src/lib/checkout-gate.ts` required a `qron_attestation` form field to buy `qron_launch`, but the confirm page never rendered it and
-  nothing in the codebase issues `QRON-XXXXXXXX` tokens, so the $19/mo plan (`listed: true`, live Stripe price) returned 403 for every buyer.
-  `qron_launch_annual` ($190/yr, same tier and fulfilment) was never gated, so the check was bypassable and only blocked the monthly SKU.
-  (An earlier suggestion in this session to gate the annual plan was wrong: it would have blocked the one Launch SKU that worked.)
-- **Evidence:** `src/lib/checkout-gate.ts` (gate block on `main`), `src/lib/plans.ts` (both Launch rows), `workers/stripe-webhook/src/grant-map.ts`
-  (both Launch prices map to grants, so fulfilment is wired for the monthly plan), `git grep` over `src workers server scripts protocol apps`.
-- **Decision (Zac, 2026-10-22):** use the recommended option, which is to remove the unissuable check.
-- **Done:** draft MR !1999 removes it and adds a regression test that fails on `main` (`expected 403 to be 303`). `src` + `protocol` with !1998 and !1999:
-  159 files, 1,288 passed, 1 skipped, 0 failed. Issue #2005 records the finding and resolves the !1997 thread. Webhook verification,
-  `provisionPurchase`, `humanHold` and `production_send=false` are untouched.
-- **Still needed:** merge on GitHub (B-2, B-3), deploy through the owner-approved path (B-6), then verify with a Stripe test-mode checkout on
-  `/checkout/qron_launch`. If a real physical-attestation requirement is wanted later, use a JWS attestation checked by the canonical verifier
-  and bound to the object id, with an issuer; the prefix and regex approach in !1997 does not authorize anything.
+- **Finding:** `src/lib/checkout-gate.ts` returns 403 for `qron_launch` unless a `qron_attestation` form field is posted. The gate arrived in
+  commit `cb3f7d2f` on 2026-10-22 01:15 UTC ("feat: inject QRON interdiction gate in checkout POST handler", no description). The confirm page
+  renders no such field and nothing issues `QRON-` tokens, so no ordinary buyer can complete monthly Launch. `qron_launch_annual` ($190/yr, added
+  2026-10-19) is not gated and is the only Launch SKU a buyer can finish.
+- **Owner intent found on review:** PR #1905 ("HOLD: Unlist QRON Launch $19/mo", label `hold`, unmerged) records that the owner took the $19/mo
+  plan off the site on 2026-10-17 and carries the `listed: false` change plus the copy removals. `main` still has `listed: true` and still links
+  "Start Launch $19/mo" to `/checkout/qron_launch` from `workers/_shared/estate-pricing.ts`, `workers/qron-space/src/index.ts` and
+  `worker-app/dynamic-pages.ts`, so buyers who click get the 403. Related open PRs: #1965 (unlist Launch on /pricing, draft), #1941 (restore the
+  confirm-page gate, draft, written before `cb3f7d2f`).
+- **Corrections to earlier advice in this session:** (1) gating the annual plan was wrong, it would block the one working SKU; (2) removing the
+  monthly gate (PR #1996) was also wrong, it re-opens a plan the owner took off sale. PR #1996 is on hold and should not be merged as it stands.
+- **Recommended:** keep monthly Launch closed. Finish the unlist from #1905 (`listed: false`, remove the "Start Launch $19/mo" links), and replace the
+  misleading "valid physical attestation token required" message with an honest "QRON Launch monthly is no longer offered; choose Launch Annual or
+  Starter" response, so the closure is deliberate and visible. No plan or price changes without the owner's go-ahead.
+- **Evidence:** `git log -S"QRON Interdiction"` (`cb3f7d2f`); `src/lib/checkout-gate.ts`; `src/lib/plans.ts`; PRs #1905, #1941, #1965;
+  `grep "Start Launch"` over the three files above; `workers/stripe-webhook/src/grant-map.ts` (both Launch prices still map to grants, so existing
+  subscribers are unaffected either way).
+- **Decision needed from Zac:** confirm monthly Launch stays closed (and whether the #1905 merge gates still apply), or reopen it on purpose, in
+  which case #1996 is the change. Until then no code change to the gate.
 
 ## B-2. Mirror direction: GitHub stays the source of truth (decided 2026-10-22)
 
@@ -24,24 +30,26 @@ Updated 2026-10-22. Each entry: what is stuck, why, evidence, what continues wit
 - **Evidence:** `GITLAB_MIGRATION.md`.
 - **Decision (Zac, 2026-10-22):** use the recommended option: keep GitHub primary and GitLab as the pull mirror that feeds Cloudflare Workers Builds and
   CI. No settings were changed. Native GitLab mirroring is one-way, so merging on either host needs a deliberate bridge that is not configured.
-- **Consequence:** merges happen on GitHub. GitLab-only branches and MRs (!1997, !1998, !1999) have to be carried to GitHub as PRs; see B-3.
+- **Consequence:** merges happen on GitHub. GitLab-only branches and MRs have to be carried to GitHub as PRs (!1998 and !1999 became #1995 and #1996; !1997 was not carried over); see B-3.
 - **Revisit when:** a GitHub write path exists and GitHub Actions billing (B-4) is resolved, or GitLab is made primary on purpose.
 
 ## B-3. Push and write credentials in this session
 
 - **Why:** `git push` returns 403 from the session proxy ("repository not in this session's authorized repository set"); `GH_TOKEN` is
-  reported invalid; the GitHub connector (authenticated as `undone0603`) is read-only for this repo (branch creation returns 403
-  "Resource not accessible by integration"); there is no GitLab token in the sandbox.
-- **Write path actually used:** the logged-in GitLab browser session, through the GitLab commits API, to new branches plus draft MRs and one
-  confidential issue. The first commit (`b8154509`) was made before asking you; a later write was refused by the session's permission check,
-  and you approved this path explicitly on 2026-10-22. Each file's blob hash was compared with the local copy. `main` was not touched.
-- **Without it:** all edits, tests and docs run locally; commits reach GitLab branches through the browser session.
-- **Dependency:** authorize the repo for the session git proxy, or grant the GitHub connector write scope, or provide a scoped GitLab
-  token through the approved mechanism. No credentials were requested or entered.
+  reported invalid; the GitHub connector (authenticated as `undone0603`) is read-only for this repo; there is no GitLab token in the sandbox.
+- **How work reached GitHub:** the owner applied the exported patches locally and opened draft PRs #1995 (tests and docs) and #1996 (gate) on
+  2026-10-22. The `docs/execution/*` blob hashes on the #1995 branch match this session's copies.
+- **Write path used on GitLab:** the logged-in GitLab browser session through the commits API, to new branches, draft MRs and one confidential
+  issue, approved by the owner on 2026-10-22. The first commit (`b8154509`) was made before asking; a later write was refused by the session's
+  permission check. `main` was not touched.
+- **Without it:** all edits, tests and docs run locally; changes reach GitHub as patches the owner applies.
+- **Dependency:** add the repo to the session's sources in the app (not possible from inside the session), or approve a GitHub write path explicitly.
 
 ## B-4. GitHub Actions is billing-locked
 
 - **Evidence:** `.gitlab-ci.yml` header; GitHub issue #1871. The autonomy loops in `.github/workflows/` (106 files) therefore cannot run there.
+- **Confirmed 2026-10-22:** all 11 checks on PRs #1995 and #1996 failed within 2 to 4 seconds with the annotation "The job was not started because
+  your account is locked due to a billing issue." None of those failures is a test result.
 - **Without it:** run checks locally; move the highest-value lanes to GitLab schedules within the 400-minute budget.
 - **Dependency:** restore GitHub billing, or approve moving lanes to GitLab.
 

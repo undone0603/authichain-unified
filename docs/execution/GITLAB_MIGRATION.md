@@ -32,6 +32,8 @@ Other projects in the group: `Authichain-project`, `agent-browser`, `authichain-
   GitHub.
 - Direction decided 2026-10-22: GitHub stays primary and GitLab stays the pull mirror (BLOCKERS B-2). Making GitLab primary later means
   disabling or reversing the mirror on purpose.
+- The two branches also exist on GitHub as draft PRs #1995 and #1996, opened by the owner from exported patches. The commit ids differ from
+  the GitLab ones; the file contents match.
 
 ## Verification still owed
 
