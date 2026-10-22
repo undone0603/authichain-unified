@@ -9,15 +9,15 @@ This is a new file on purpose. GitHub PR #1995 carries newer versions of BLOCKER
 | Field | Value |
 | ----- | ----- |
 | CURRENT BRANCH | main (GitLab and GitHub both at 1b40ceb4) |
-| CURRENT COMMIT | work branch fix/checkout-closed-plan-hold at 22936e2c (MR !2001, not merged); adds the opt-in stripe-mock contract test on top of dc10d43b |
-| LAST SUCCESSFUL PIPELINE | 2977807218 on dc10d43b, all 5 jobs success; 2977904507 on 22936e2c was still running when this was written |
+| CURRENT COMMIT | main at 1740258613 (the founder merged !2003 at 18:33Z). Open work: fix/checkout-closed-plan-hold at 22936e2c (MR !2001), feat/recover-verify-family-sql at 6cc5f27a (MR !2006), ci/stripe-mock-contract at f1b6edba (MR !2007, stacked on !2001) |
+| LAST SUCCESSFUL PIPELINE | 2977904507 on 22936e2c (!2001, all jobs success); 2977941811 on f1b6edba (!2007) had stripe_mock_contract success with 22 of 22 tests, quality_gate still running when this was written |
 | CURRENT TASK | P0 review of the production database (issue #1735), then ledger sync |
-| COMPLETED | !2001 red-to-green fix; read-only Supabase security review; edge function inventory; stripe-webhook signature check (static); MR !2003 review |
-| IN PROGRESS | recovering unversioned production SQL and edge function source into the repo |
+| COMPLETED | !2001 red-to-green fix plus stripe-mock contract test; read-only Supabase security review; edge function inventory; stripe-webhook signature check (static); MR !2003 review; Cloudflare worker audit; verify-family SQL recovered (!2006); stripe-mock check wired into CI (!2007) |
+| IN PROGRESS | edge function source recovery (CP-N2): needs an exact export, see 8.6 |
 | FAILED | none this checkpoint; pipeline 2977607114 on 5c00c46e failed before the fix and is explained below |
-| BLOCKED | founder-override actions CP-B1 (DB revoke) and CP-B5 (humanHold, production_send), each a single prepared action; CP-B3 and CP-B4 are decisions; merges of !2001, !2003, !2005 were refused by the session permission check (see 8.3); real Stripe sandbox E2E (N-4) needs sandbox keys through an approved channel |
+| BLOCKED | founder-override actions CP-B1 (DB revoke) and CP-B5 (humanHold, production_send), each a single prepared action; CP-B3 and CP-B4 are decisions; this session's two merge attempts on !2003 were refused by the session permission check and the founder then merged it (8.3); real Stripe sandbox E2E (N-4) needs sandbox keys through an approved channel |
 | DIRECTION | founder direction 2026-10-22: autonomous company, founder override and kill switch are the only gates. This record adds no review gates; it only makes each founder action one step |
-| NEXT ACTION | founder runs the section 4 SQL (evidence in 8.1) and merges the green MRs; session continues with the DB-function recovery migration |
+| NEXT ACTION | founder runs the section 4 SQL (evidence in 8.1) and merges !2001, !2006, !2007, !2005 as their pipelines finish green |
 
 ## 1. MR !2001 (close monthly Launch deterministically)
 
@@ -118,9 +118,9 @@ NEXT ACTION: founder edits when ready.
 
 ## 6. Next actions
 
-1. Founder: merge !2001 when its pipeline on 22936e2c finishes green (a merge to main can deploy), then !2003, then !2005.
+1. Founder: merge !2001 (green on 22936e2c; a merge to main can deploy), then !2007 and !2006 when green, then !2005. !2003 is already merged.
 2. Founder: paste the section 4 SQL (CP-B1); decide CP-B3 and CP-B4; toggle leaked password protection if wanted.
-3. CP-N1 Recover verify_asset, resolve_asset, score_asset, get_asset_provenance, get_public_verification, increment_portal_scan into a migration. Verify by comparing md5 of the live pg_get_functiondef output with the file; no apply.
+3. CP-N1 DONE in MR !2006: the six functions plus normalize_asset_ref recorded as a migration, md5 of each matches the live pg_get_functiondef output, no apply, no grants.
 4. CP-N2 Export the 59 unversioned edge functions into supabase/functions, starting with stripe-webhook, qron-checkout, storefront-checkout, validate-api-key and authichain-verify. Needs a supabase CLI download or per-function reads; stripe-webhook is a 1 MB bundle, so export it as the deployed artifact and note the upstream template.
 5. CP-N3 Local reproduction of the authichain-verify path-segment issue against a stub.
 6. MR !2003 (dogfood release attestation binding, N-3) is reviewed in section 7: sound, with four low-severity follow-ups, pipeline green and mergeable. Merge is a one-click founder action (8.3); fold the evidence into VERIFICATION_EVIDENCE.
@@ -166,9 +166,11 @@ The first two have no source under workers/ in the repository. Do not recreate t
 
 | MR | Head | Pipeline | State |
 | -- | ---- | -------- | ----- |
-| !2001 | 22936e2c | 2977904507 running at the time of writing | open; previous head dc10d43b was green |
-| !2003 | faafca4e | 2977671914 success | open, mergeable. Two merge attempts by this session were refused by the session permission check (reason: merge without review), once before and once after a blanket approval in chat. This session did not route around it. One click merges it. |
-| !2005 | 3126d6fe then this update | 2977862719 success on the first head | open, draft |
+| !2001 | 22936e2c | 2977904507 success | open, mergeable |
+| !2003 | faafca4e | 2977671914 success | MERGED by the founder at 2026-10-22T18:33:44Z, main now 1740258613. This session tried twice, was refused by the session permission check both times (reason: merge without review, once before and once after a blanket approval in chat), and did not route around it. |
+| !2005 | this record | green on earlier heads | open, draft |
+| !2006 | 6cc5f27a | 2977933098 | open, recovery migration plus md5 test. No privileges changed, not applied. |
+| !2007 | f1b6edba | 2977941811 | open, stacked on !2001. Adds the stripe_mock_contract CI job (8.5). |
 
 ### 8.4 Founder-override map
 
@@ -180,4 +182,10 @@ These are the switches that matter. None was changed by this session.
 
 ### 8.5 Opt-in Stripe mock contract test
 
-src/lib/checkout-gate.stripe-mock.test.ts (on the !2001 branch). With STRIPE_MOCK_URL set to a running stripe-mock it posts the gate's real checkout request for qron_launch_annual and starter and expects Stripe's published schema to accept it (22 tests pass locally). It also proves the check has teeth: an injected unknown parameter makes the same call fail with 400. Without the variable the 22 tests are skipped, so CI is unaffected. This is a schema check, not a Stripe sandbox. It does not cover price ids that exist in an account, webhook delivery or fulfillment. The real sandbox end-to-end run still needs test-mode keys through an approved channel (N-4).
+src/lib/checkout-gate.stripe-mock.test.ts (on the !2001 branch). With STRIPE_MOCK_URL set to a running stripe-mock it posts the gate's real checkout request for qron_launch_annual and starter and expects Stripe's published schema to accept it (22 tests pass locally). It also proves the check has teeth: an injected unknown parameter makes the same call fail with 400. Without the variable the 22 tests are skipped, so the normal suite is unaffected. This is a schema check, not a Stripe sandbox. It does not cover price ids that exist in an account, webhook delivery or fulfillment. The real sandbox end-to-end run still needs test-mode keys through an approved channel (N-4).
+
+MR !2007 runs it automatically: the CI job stripe_mock_contract starts stripe/stripe-mock v0.206.0 as a service and runs the file, only when src/lib/checkout-gate*.ts, src/lib/plans.ts or .gitlab-ci.yml change. The job fails if any test is skipped, so an unset URL cannot pass silently (checked locally both ways). First CI run, pipeline 2977941811: 22 passed in a 125 second job.
+
+### 8.6 Edge function source (CP-N2), why it is not done here
+
+The deployed source can be read through the connector, but anything small comes back inline and would have to be retyped into a file, which cannot be proven exact. Large results are saved by the tool and are exact (stripe-webhook, about 1 MB, is one), but a bundled 1 MB file is not reviewable in a repository. So no edge function source was committed. The exact route is one command by anyone holding a Supabase access token: supabase functions download for each slug, committed as is. A scheduled CI job could do that with a token stored as a protected CI variable; it is not built because it cannot be tested here without the token.
