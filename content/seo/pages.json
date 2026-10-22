@@ -29,7 +29,7 @@
     "title": "Blockchain Product Authentication | AuthiChain",
     "metaDescription": "Blockchain product authentication with signed records.",
     "h1": "Blockchain Product Authentication",
-    "bodyHtml": "<p>Product certification through verify is in development.</p><h2>Why AuthiChain</h2><ul><li>W3C Verifiable Credentials — the manufacturer holds the keys, not us</li></ul><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Workspace is $299 one-time.</p>",
+    "bodyHtml": "<p>Product certification through verify is in development.</p><h2>Why AuthiChain</h2><ul><li>W3C Verifiable Credentials — the manufacturer holds the keys, not us</li></ul><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -252,7 +252,7 @@
     "title": "AI Counterfeit Detection | AuthiChain",
     "metaDescription": "Check products against signed records. Verification starts from a single QR scan.",
     "h1": "AI-Powered Counterfeit Detection",
-    "bodyHtml": "<p>Product certification through verify is in development.</p><h2>Why AI plus blockchain</h2><ul><li>W3C Verifiable Credentials keep proofs portable and interoperable.</li></ul><p>Used across luxury, pharma (DSCSA), electronics, agriculture, art and cannabis.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Workspace is $299 one-time.</p>",
+    "bodyHtml": "<p>Product certification through verify is in development.</p><h2>Why AI plus blockchain</h2><ul><li>W3C Verifiable Credentials keep proofs portable and interoperable.</li></ul><p>Used across luxury, pharma (DSCSA), electronics, agriculture, art and cannabis.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -5973,7 +5973,7 @@
     "title": "Blockchain QR Code For Luxury | AuthiChain",
     "metaDescription": "Attach a cryptographically-signed QR code to each luxury item so buyers can check its signed record on the shelf, in resale, or at customs. AuthiChain — EU.",
     "h1": "Blockchain QR Code For Luxury",
-    "bodyHtml": "<p>Attach a cryptographically-signed QR code to each luxury item so buyers can check its signed record on the shelf, in resale, or at customs.</p><h2>Why AuthiChain</h2><ul><li>Product certification through verify is in development</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Workspace is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Workspace is $299 one-time.</p><h2>FAQ</h2><h3>Does the QR work after resale?</h3><p>Yes — ownership and provenance transfer with the item, protecting secondary-market value.</p><h3>Can counterfeiters copy the QR?</h3><p>Copying the image is useless: verification is cryptographic and checked against the blockchain record.</p>",
+    "bodyHtml": "<p>Attach a cryptographically-signed QR code to each luxury item so buyers can check its signed record on the shelf, in resale, or at customs.</p><h2>Why AuthiChain</h2><ul><li>Product certification through verify is in development</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does the QR work after resale?</h3><p>Yes — ownership and provenance transfer with the item, protecting secondary-market value.</p><h3>Can counterfeiters copy the QR?</h3><p>Copying the image is useless: verification is cryptographic and checked against the blockchain record.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -10193,7 +10193,7 @@
     "title": "Vechain Alternative Without Tokens Or Gas Fees | AuthiChain",
     "metaDescription": "VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing.",
     "h1": "Vechain Alternative Without Tokens Or Gas Fees",
-    "bodyHtml": "<p>VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing product instead, where the seal, the certificate and the public verifier are the thing you buy, and you pay in USD by card rather than holding a token.</p><h2>Why AuthiChain</h2><ul><li>No token and no gas to manage: AuthiChain plans are billed in US dollars through Stripe, so a brand never has to fund a wallet before it can issue a record</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is AuthiChain built on VeChain?</h3><p>No. VeChain is a separate L1 blockchain that other authentication vendors build on.</p><h3>What does it cost to start?</h3><p>The live self-serve entry point is the EU DPP Readiness checkout at $299. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations.</p>",
+    "bodyHtml": "<p>VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing product instead, where the seal, the certificate and the public verifier are the thing you buy, and you pay in USD by card rather than holding a token.</p><h2>Why AuthiChain</h2><ul><li>No token and no gas to manage: AuthiChain plans are billed in US dollars through Stripe, so a brand never has to fund a wallet before it can issue a record</li><li>Signing keys are published at /.well-known/jwks.json. Product certification through verify is in development.</li><li>Self-serve issuance and EU DPP export are still in development. The $299 checkout opens a workspace; it is not a readiness audit.</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is AuthiChain built on VeChain?</h3><p>No. VeChain is a separate L1 blockchain that other authentication vendors build on.</p><h3>What does it cost to start?</h3><p>The live self-serve entry point is the EU DPP Workspace checkout at $299. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -10241,7 +10241,7 @@
               "name": "What does it cost to start?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "The live self-serve entry point is the EU DPP Readiness checkout at $299. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations."
+                "text": "The live self-serve entry point is the EU DPP Workspace checkout at $299. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations."
               }
             }
           ]
@@ -11391,6 +11391,262 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "No. It identifies an item, and anyone can print one on a label. The signature on the linked record shows who made the statements about it."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "rfc-8785-json-canonicalization-scheme-signing-json",
+    "keyword": "rfc 8785 json canonicalization scheme signing json",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "RFC 8785 Json Canonicalization Scheme Signing | AuthiChain",
+    "metaDescription": "RFC 8785, the JSON Canonicalization Scheme (JCS), gives a JSON document one deterministic byte sequence by sorting object keys and fixing number and string.",
+    "h1": "RFC 8785 Json Canonicalization Scheme Signing Json",
+    "bodyHtml": "<p>RFC 8785, the JSON Canonicalization Scheme (JCS), gives a JSON document one deterministic byte sequence by sorting object keys and fixing number and string serialisation, so a signature made over those bytes can be rechecked by any other implementation.</p><h2>Why AuthiChain</h2><ul><li>The AuthiChain spec signs the record with proof.proofValue removed, canonicalised per RFC 8785 and encoded as UTF-8</li><li>The spec forbids signing a pretty-printed or key-reordered form, so two verifiers derive byte-identical input from the same record</li><li>The anchor hash is SHA-256 of the same canonical bytes, so one canonical form serves both the signature and the ledger entry</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Why not sign the JSON text as stored?</h3><p>Whitespace and key order change the bytes without changing the meaning, so a signature over stored text breaks when a record is re-serialised. Canonicalising first makes the signed bytes a function of the content alone.</p><h3>Can I check a canonicalisation against the spec?</h3><p>Yes. The conformance suite has fixtures for it, and the reference verifier is zero-dependency, so you can read the canonicalisation step and compare its output with another RFC 8785 library.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — RFC 8785 Json Canonicalization Scheme Signing Json",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "RFC 8785, the JSON Canonicalization Scheme (JCS), gives a JSON document one deterministic byte sequence by sorting object keys and fixing number and string serialisation, so a signature made over those bytes can be rechecked by any other implementation.",
+          "url": "https://authichain.com/p/rfc-8785-json-canonicalization-scheme-signing-json"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "RFC 8785 Json Canonicalization Scheme Signing Json",
+              "item": "https://authichain.com/p/rfc-8785-json-canonicalization-scheme-signing-json"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Why not sign the JSON text as stored?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Whitespace and key order change the bytes without changing the meaning, so a signature over stored text breaks when a record is re-serialised. Canonicalising first makes the signed bytes a function of the content alone."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I check a canonicalisation against the spec?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. The conformance suite has fixtures for it, and the reference verifier is zero-dependency, so you can read the canonicalisation step and compare its output with another RFC 8785 library."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "caip-2-chain-identifier-polygon-137-blockchain-anchor-format",
+    "keyword": "caip-2 chain identifier polygon:137 blockchain anchor format",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Caip-2 Chain Identifier Polygon:137 Blockchain | AuthiChain",
+    "metaDescription": "CAIP-2 names a blockchain as namespace:reference, such as polygon:137 or eip155:1, so an anchor states which network it sits on instead of leaving the reader.",
+    "h1": "Caip-2 Chain Identifier Polygon:137 Blockchain Anchor Format",
+    "bodyHtml": "<p>CAIP-2 names a blockchain as namespace:reference, such as polygon:137 or eip155:1, so an anchor states which network it sits on instead of leaving the reader to assume one.</p><h2>Why AuthiChain</h2><ul><li>The anchor object carries recordHash, chain, txHash and anchoredAt, and chain MUST be in CAIP-2 form</li><li>A verifier treats a testnet anchor as unanchored unless the caller opts in to testnets</li><li>For an EVM chain, txHash must be 64 hex characters; a shorter or longer value is rejected, not displayed</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does a CAIP-2 identifier prove the transaction exists?</h3><p>No. It names the network. To confirm the transaction, look up txHash on a block explorer for that chain. The signature and hash checks run offline and do not need it.</p><h3>What if an anchor names no chain?</h3><p>The spec requires chain to identify the network unambiguously. A verifier cannot report such an anchor as verified.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Caip-2 Chain Identifier Polygon:137 Blockchain Anchor Format",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "CAIP-2 names a blockchain as namespace:reference, such as polygon:137 or eip155:1, so an anchor states which network it sits on instead of leaving the reader to assume one.",
+          "url": "https://authichain.com/p/caip-2-chain-identifier-polygon-137-blockchain-anchor-format"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Caip-2 Chain Identifier Polygon:137 Blockchain Anchor Format",
+              "item": "https://authichain.com/p/caip-2-chain-identifier-polygon-137-blockchain-anchor-format"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a CAIP-2 identifier prove the transaction exists?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It names the network. To confirm the transaction, look up txHash on a block explorer for that chain. The signature and hash checks run offline and do not need it."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What if an anchor names no chain?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The spec requires chain to identify the network unambiguously. A verifier cannot report such an anchor as verified."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "w3c-verifiable-credentials-2-0-recommendation-validfrom-context",
+    "keyword": "w3c verifiable credentials 2.0 recommendation validfrom context",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "W3C Verifiable Credentials 2.0 Recommendation | AuthiChain",
+    "metaDescription": "Verifiable Credentials Data Model 2.0 became a W3C Recommendation in May 2025; it uses the context https://www.w3.org/ns/credentials/v2 and the validFrom and.",
+    "h1": "W3C Verifiable Credentials 2.0 Recommendation Validfrom Context",
+    "bodyHtml": "<p>Verifiable Credentials Data Model 2.0 became a W3C Recommendation in May 2025; it uses the context https://www.w3.org/ns/credentials/v2 and the validFrom and validUntil properties in place of the 1.1 issuanceDate and expirationDate.</p><h2>Why AuthiChain</h2><ul><li>An AuthiChain record declares the credentials/v2 context and requires validFrom, issuer, credentialSubject.id and proof</li><li>The v0.1 spec signs with Ed25519 over RFC 8785 canonical JSON, and records carry the proof type Ed25519Signature2020</li><li>The verifier checks validFrom is not in the future and validUntil, if present, is not in the past</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is every AuthiChain record a conforming VC 2.0 credential?</h3><p>Records use the VC 2.0 context and core properties. The proof format is the one defined in the AuthiChain specification; read its section 3 to compare it with the Data Integrity cryptosuites you use.</p><h3>Do I need an AuthiChain account to read the credential?</h3><p>No. It is JSON, and the Apache-2.0 reference verifier runs offline against the file.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — W3C Verifiable Credentials 2.0 Recommendation Validfrom Context",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Verifiable Credentials Data Model 2.0 became a W3C Recommendation in May 2025; it uses the context https://www.w3.org/ns/credentials/v2 and the validFrom and validUntil properties in place of the 1.1 issuanceDate and expirationDate.",
+          "url": "https://authichain.com/p/w3c-verifiable-credentials-2-0-recommendation-validfrom-context"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "W3C Verifiable Credentials 2.0 Recommendation Validfrom Context",
+              "item": "https://authichain.com/p/w3c-verifiable-credentials-2-0-recommendation-validfrom-context"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is every AuthiChain record a conforming VC 2.0 credential?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Records use the VC 2.0 context and core properties. The proof format is the one defined in the AuthiChain specification; read its section 3 to compare it with the Data Integrity cryptosuites you use."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Do I need an AuthiChain account to read the credential?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It is JSON, and the Apache-2.0 reference verifier runs offline against the file."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "iso-iec-15459-unique-identifier-battery-passport",
+    "keyword": "iso iec 15459 unique identifier battery passport",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "ISO IEC 15459 Unique Identifier Battery | AuthiChain",
+    "metaDescription": "The EU Battery Regulation, (EU) 2023/1542, requires each battery passport to carry a unique identifier that complies with the ISO/IEC 15459 series or an.",
+    "h1": "ISO IEC 15459 Unique Identifier Battery Passport",
+    "bodyHtml": "<p>The EU Battery Regulation, (EU) 2023/1542, requires each battery passport to carry a unique identifier that complies with the ISO/IEC 15459 series or an equivalent standard; confirm the exact wording in Article 77 and Annex XIII.</p><h2>Why AuthiChain</h2><ul><li>A record can use a GS1 Digital Link URI with a GTIN and serial as the credentialSubject.id, and also carries gtin, serial and batch as readable fields</li><li>Whether your identifier scheme satisfies ISO/IEC 15459 depends on your issuing agency, so confirm it with them before you print labels</li><li>The signed record verifies the same wherever it is hosted, because the issuer key is embedded in a did:key identifier</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><p>Want to see a fictional walkthrough first? <a href=\"https://authichain.com/battery-passport/sample-audit\">Read the fictional e-bike walkthrough</a>.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does an AuthiChain record make an identifier ISO/IEC 15459 compliant?</h3><p>No. Compliance comes from the identifier scheme and its issuing agency. A record attaches signed statements to an identifier you already hold.</p><h3>Which batteries need a passport?</h3><p>The regulation applies the passport to electric vehicle, light means of transport and industrial batteries above 2 kWh from 18 February 2027. Check the regulation text for your battery category.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — ISO IEC 15459 Unique Identifier Battery Passport",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU Battery Regulation, (EU) 2023/1542, requires each battery passport to carry a unique identifier that complies with the ISO/IEC 15459 series or an equivalent standard; confirm the exact wording in Article 77 and Annex XIII.",
+          "url": "https://authichain.com/p/iso-iec-15459-unique-identifier-battery-passport"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "ISO IEC 15459 Unique Identifier Battery Passport",
+              "item": "https://authichain.com/p/iso-iec-15459-unique-identifier-battery-passport"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does an AuthiChain record make an identifier ISO/IEC 15459 compliant?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Compliance comes from the identifier scheme and its issuing agency. A record attaches signed statements to an identifier you already hold."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Which batteries need a passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The regulation applies the passport to electric vehicle, light means of transport and industrial batteries above 2 kWh from 18 February 2027. Check the regulation text for your battery category."
               }
             }
           ]
