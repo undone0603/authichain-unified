@@ -728,6 +728,23 @@ export async function tryHandleGatedCheckout(
   }
   report("checkout_email_captured", email);
 
+  // --- QRON Interdiction Gate ---
+  if (plan.id === "qron_launch") {
+    const attestationToken = fields.get("qron_attestation");
+    // Verify token presence and basic cryptographic prefix before hitting Stripe
+    if (!attestationToken || !attestationToken.startsWith("QRON-")) {
+      return htmlResponse(
+        renderCheckoutConfirmPage({
+          plan,
+          params: fields,
+          error: "QRON Interdiction: Valid physical attestation token required for provisioning.",
+        }),
+        403
+      );
+    }
+  }
+  // ------------------------------
+
   const result = await createGatedCheckoutSession({
     plan,
     email,
