@@ -25,7 +25,7 @@ Ordered by the P0-P5 scale in the brief.
 | N-3 | P3 | Bind the dogfood record to `CI_COMMIT_SHA`, version, timestamp and a build-artifact SHA-256; verify with the repo verifier; keep negative cases as a vitest test | `VERIFICATION_EVIDENCE.md` shows commit and artifact fields |
 | N-4 | P1 | Stripe sandbox end-to-end: checkout, signed webhook, duplicate webhook, unauthorized request, entitlement row; no live money | Test-mode transcript recorded |
 | N-5 | P3 | Triage the 45 non-Dependabot open PRs (mostly drafts #1954-#1990) into `RECOVERED_WORK.md` | Each PR classified merge, rework or close |
-| N-6 | P3 | Baseline `agentz` Python tests, `pnpm test`, `pnpm lint`, `pnpm build`, `workers/gs1-resolver` tests | Results added to `CI_STATUS.md` |
+| N-6 | P3 | `agentz` Python tests done (284 passed, 1 skipped). Still to baseline: `pnpm test`, `pnpm lint`, `pnpm build`, `workers/gs1-resolver` tests | Results added to `CI_STATUS.md` |
 | N-7 | P3 | Itemise the 4-branch GitHub/GitLab delta; compare the 15 sibling GitLab projects with the monorepo | `GITLAB_MIGRATION.md` updated |
 | N-8 | P1 | Owner reads the Cloudflare build log for `Workers Builds: govchain-us` (BLOCKERS B-5); fix the cause | `main` pipeline passes |
 | N-9 | P2 | Document the customer loop from `src/lib/plans.ts` and live checkout routes (`REVENUE_LOOP.md`) without inventing metrics | Doc cites real routes and prices |
