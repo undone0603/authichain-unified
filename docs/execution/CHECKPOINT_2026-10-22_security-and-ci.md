@@ -12,7 +12,7 @@ This is a new file on purpose. GitHub PR #1995 carries newer versions of BLOCKER
 | CURRENT COMMIT | work branch fix/checkout-closed-plan-hold at dc10d43b (MR !2001, not merged) |
 | LAST SUCCESSFUL PIPELINE | 2977807218 on dc10d43b, all 5 jobs success |
 | CURRENT TASK | P0 review of the production database (issue #1735), then ledger sync |
-| COMPLETED | !2001 red-to-green fix; read-only Supabase security review; edge function inventory; stripe-webhook signature check (static) |
+| COMPLETED | !2001 red-to-green fix; read-only Supabase security review; edge function inventory; stripe-webhook signature check (static); MR !2003 review |
 | IN PROGRESS | recovering unversioned production SQL and edge function source into the repo |
 | FAILED | none this checkpoint; pipeline 2977607114 on 5c00c46e failed before the fix and is explained below |
 | BLOCKED | owner decisions CP-B1 to CP-B3; Stripe sandbox E2E (N-4) needs sandbox keys through an approved channel; Cloudflare MCP 410 |
@@ -113,6 +113,24 @@ NEXT ACTION: owner answers; I narrow the view in a migration if asked.
 3. CP-N1 Recover verify_asset, resolve_asset, score_asset, get_asset_provenance, get_public_verification, increment_portal_scan into a migration. Verify by comparing md5 of the live pg_get_functiondef output with the file; no apply.
 4. CP-N2 Export the 59 unversioned edge functions into supabase/functions, starting with stripe-webhook, qron-checkout, storefront-checkout, validate-api-key and authichain-verify. Needs a supabase CLI download or per-function reads; stripe-webhook is a 1 MB bundle, so export it as the deployed artifact and note the upstream template.
 5. CP-N3 Local reproduction of the authichain-verify path-segment issue against a stub.
-6. Review MR !2003 (dogfood release attestation binding, N-3): run its tests locally and its negative cases, record in VERIFICATION_EVIDENCE.
+6. MR !2003 (dogfood release attestation binding, N-3) is reviewed in section 7: sound, with four low-severity follow-ups. The owner decides the merge; fold the evidence into VERIFICATION_EVIDENCE.
 7. Stripe sandbox E2E (N-4) once sandbox keys are provided through an approved channel. Sandbox only.
 8. Fold this checkpoint into the numbered ledger files after PR #1995 lands.
+
+## 7. MR !2003 review (dogfood release attestation binding)
+
+Reviewed at head faafca4e, pipeline 2977671914 success. Three files: scripts/lib/dogfood-release.mjs (new), scripts/lib/dogfood-release.test.js (new), scripts/generate-dogfood.mjs (modified). Method: read all three from the branch; confirmed the tests sit inside the root vitest include (scripts/**/*.test.js), so quality_gate runs them; read the dogfood_record job in .gitlab-ci.yml (it runs generate-dogfood.mjs and publishes the record as an artifact). I did not run the tests locally; the CI result is the evidence.
+
+Verdict: sound for the claim it makes. The record binds commit, version, time and the SHA-256 of package.json, pnpm-lock.yaml, protocol/verifier.mjs and .gitlab-ci.yml. The protocol verdict is valid-unanchored, never verified. The record states its own limits, and no-record is a separate verdict from every failure, so not found is never reported as counterfeit.
+
+Negative cases present in the tests: a changed artifact under a still-valid signature (mismatch); a one-byte change in each default artifact; wrong commit; wrong version; missing file; artifact left out of the record; artifact the record adds; absent binding blocks; overclaimed trust scope; stale; five tampered fields (invalid); signature from the wrong key; future-dated; missing fields; missing file versus unparseable file; and fail-closed generation for an unknown commit, a malformed commit, an unreadable artifact, a file that changes during generation, a missing version and path traversal.
+
+What a bound verdict does and does not show: the signing key is a one-off key, so anyone can produce a bound record for a tree they control. Bound means the record matches this tree and was not edited after signing. It does not show who made it. The module says this itself.
+
+Low-severity follow-ups, none blocking:
+1. verifyRecordFile reports every read error as no-record, not only a missing file. A permission error or a directory path then reads as 'nothing to check'. Treat only ENOENT as no-record.
+2. generate-dogfood.mjs --verify builds the path with join(process.cwd(), arg). An absolute path becomes the working directory plus that path, the file is not found, and the result is no-record (exit 3). It fails closed but misdiagnoses. Use path.resolve.
+3. generatedAt is checked for age but not for lying in the future. A hand-signed record with validFrom in the past and generatedAt far ahead never goes stale. Reject a generatedAt later than now plus CLOCK_SKEW_MS.
+4. isSafeRelativePath does not resolve symlinks, so a tracked symlink named in a record could be hashed outside the repository (digest only, no content). Contrived; resolve real paths if the verifier ever runs on untrusted trees.
+
+Not covered by the suite: the CLI exit codes (0 bound, 1 failure, 2 usage, 3 no-record). A small spawn test would cover them. No comment was posted on the MR; this section is the record.
