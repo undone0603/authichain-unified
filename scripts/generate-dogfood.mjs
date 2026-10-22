@@ -47,12 +47,7 @@ async function main() {
       id: `https://id.gs1.org/01/09506000134352/21/${tag}`,
       gtin: "09506000134352",
       serial: tag,
-      name: "AuthiChain Reference Demonstration",
-      economicOperator: "GLN:09506000134352",
-      circularityProfile: {
-        materialComposition: "100% Recycled PLA",
-        repairabilityScore: "8.5/10"
-      }
+      name: "AuthiChain Reference Demonstration"
     },
     proof: {
       type: "Ed25519Signature2020",
@@ -61,6 +56,7 @@ async function main() {
       proofPurpose: "assertionMethod",
     },
   };
+  
   rec.proof.proofValue = "z" + b58encode(edSign(null, signingBytes(rec), key.privateKey));
   
   const verifierUrl = pathToFileURL(join(ROOT, "protocol", "verifier.mjs")).href;
@@ -75,4 +71,7 @@ async function main() {
   console.log("Wrote dogfood record to", outFile);
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
