@@ -8,6 +8,7 @@ Evidence date: 2026-10-22. Commit under test: `main` `caf0f083` plus branch `fix
 | ----- | --------------------- | -------------------- |
 | `src` + `protocol` (`npx vitest run src protocol`) | 4 files failed; 11 tests failed, 1,271 passed, 1 skipped | 159 files passed; 1,286 passed, 1 skipped, 0 failed |
 | Checkout gate and attestation (4 files) | 48 passed | 48 passed |
+| `src` + `protocol` with !1998 and !1999 (Launch gate removed, 2 new tests) | n/a | 159 files passed; 1,288 passed, 1 skipped, 0 failed |
 | Stripe webhook, verify-worker, dpp-fulfillment (7 files) | 68 passed | 68 passed |
 
 All 11 failures were **pre-existing on `main`** (stale tests, not regressions from this work) and none
@@ -37,16 +38,16 @@ Type check: the four touched files produce no `tsc` diagnostics. A full-project 
 
 Observed pipelines (latest 30): 9 `duo_workflow` success, 11 `push` skipped, 6 `push` failed, 2 `push` success,
 1 canceled, 1 `web` success. The newest failures are `main` @ `caf0f083` (pipeline `2974628977`) and five on
-`phase-f-dogfood`. They report `failed` with **no failed jobs and no YAML errors** through the API, so the cause is not yet
-known (BLOCKERS B-5).
+`phase-f-dogfood`. `main` pipeline `2974628977` is red only because of the external commit status `Workers Builds: govchain-us` (Cloudflare); its 8 CI
+jobs are all manual and did not run. The `phase-f-dogfood` failures were not examined (BLOCKERS B-5).
 
 ## Gaps found
 
 1. **The GitLab `tests` job does not run the main suite.** It runs `pnpm run test`, which is `turbo test --filter=!.`.
    That reaches only the 9 workspace packages that define a `test` script, not the root vitest suite
    (159 files under `src` and `protocol` alone). GitHub's `lint.yml` line 75 runs `pnpm exec vitest run`; GitLab has no equivalent.
-   The three failure groups above were therefore invisible to both CI systems, which matches GitHub Actions being billing-locked
-   (issue #1871).
+   The three failure groups above were therefore not caught by GitLab CI, and GitHub's full-suite run cannot execute while
+   Actions is billing-locked (issue #1871).
 2. **No security stage in normal pipelines** (see `secret_scan` condition above) and no dependency-audit job.
 3. **Docs disagree with config.** `AUTHICHAIN_EXECUTION_PLAN.md` says `launch_gate`, `production_health` and `dogfood_record`
    are Manual jobs under `humanHold=true`. The file shows them scheduled-automatic. `humanHold` is a Stripe grant flag

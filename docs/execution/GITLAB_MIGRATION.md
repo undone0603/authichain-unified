@@ -1,6 +1,8 @@
 # GitLab migration status
 
-Evidence date: 2026-10-22, read through the authenticated GitLab session (GET requests only).
+Evidence date: 2026-10-22, read through the authenticated GitLab browser session (read-only GET requests).
+The only writes were commits and draft MRs on two new branches (`fix/p1-dpp-fulfill-test-cas-mock`, `fix/p1-qron-launch-checkout-gate`)
+and confidential issue #2005, made through the same session; the owner approved this write path on 2026-10-22.
 
 ## Finding
 
@@ -28,11 +30,12 @@ Other projects in the group: `Authichain-project`, `agent-browser`, `authichain-
   the next mirror pull.
 - Branches that exist only on GitLab (for example `fix-qron-interdiction-gate`, MR !1997) are not on
   GitHub.
-- Making GitLab primary means disabling or reversing the mirror. That is an owner decision (BLOCKERS B-2).
+- Direction decided 2026-10-22: GitHub stays primary and GitLab stays the pull mirror (BLOCKERS B-2). Making GitLab primary later means
+  disabling or reversing the mirror on purpose.
 
 ## Verification still owed
 
 1. Itemise the 4 branches present on GitHub and absent on GitLab (and any GitLab-only branches).
 2. Confirm tags and the `v1.0.0-launch` tag exist on GitLab.
 3. Compare the 15 sibling projects against their monorepo directories before treating any as redundant.
-4. Decide mirror direction, then record the decision here.
+4. Direction is decided (GitHub primary). Revisit when a GitHub write path exists.
