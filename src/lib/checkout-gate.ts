@@ -783,7 +783,7 @@ export async function tryHandleGatedCheckout(
   // --- QRON Interdiction Gate ---
   if (plan.id === "qron_launch") {
     const attestationToken = fields.get("qron_attestation");
-    const secret = env.QRON_INTERDICTION_SECRET || env.STRIPE_SECRET_KEY;
+    const secret = env.QRON_INTERDICTION_SECRET;
     const validAttestation = await verifyQronAttestationToken(
       attestationToken,
       secret
