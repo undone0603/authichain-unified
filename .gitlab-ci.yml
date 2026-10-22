@@ -110,6 +110,14 @@ production_health:
   script:
     - AUTHICHAIN_ORIGIN=https://authichain.com node scripts/cloudflare-production-health.mjs --run
 
+dogfood_record:
+  extends: .launch_check
+  script:
+    - node scripts/generate-dogfood.mjs
+  artifacts:
+    paths:
+      - docs/execution/AUTHICHAIN_DOGFOOD_RECORD.json
+
 # -----------------------------------------------------------------------------
 # Cloudflare Workers deploy (GitLab-side launch).
 # INERT until CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID exist as masked,
