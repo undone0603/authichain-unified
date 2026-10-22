@@ -79,7 +79,7 @@ Add these in GitLab: Settings > CI/CD > Variables (masked, protected):
 
 Since 2026-10-21, Cloudflare Workers Builds deploys from this repository's GitLab `main`. Merge on either side:
 GitHub merges reach GitLab through the pull mirror, and GitLab merges reach GitHub through the push mirror.
-(Unverified: the 2026-10-22 audit, `docs/execution/BLOCKERS.md` B-2 in PR #1995, found only the pull mirror (`mirror: true`) and no bridge back to GitHub, and decided that GitHub stays primary. Check Settings > Repository > Mirroring repositories before relying on a GitLab merge reaching GitHub.)
+(Checked 2026-10-22, see `docs/execution/GITLAB_MIGRATION.md`: the project has a pull mirror and a push mirror, and the merge commits of !2003 and !2008, made on GitLab, are on GitHub `main`. The earlier audit that found only the pull mirror was wrong, and GitLab is now the working source of truth, `docs/execution/BLOCKERS.md` B-2.)
 A failed build never replaces the live version.
 
 - `authichain-app`, `govchain-us`, `qron-space`: build on pushes to `main` (Markdown and `docs/*` skipped for app and qron-space).
@@ -101,8 +101,9 @@ Not connected on purpose:
 - Outreach, revenue, autopilot, telegram, agent and payout workers. `authichain-automation` still builds from GitHub.
 - If the two CI/CD variables are added later, `deploy_authichain_com` would deploy authichain-com a second time on the same push; disable one of the two.
 
-GitLab trial: the Ultimate trial ends 2026-11-20. Pull mirroring is a paid GitLab feature, so after that GitHub merges stop reaching GitLab.
-Before then, upgrade GitLab or reconnect the Workers Builds triggers to GitHub.
+GitLab trial: the Ultimate trial ends 2026-11-20. Pull mirroring is a paid GitLab feature (Premium and Ultimate), so after that GitHub merges stop reaching GitLab.
+GitLab's mirroring page labels push mirroring as available in Free, Premium and Ultimate, so merges made on GitLab should keep reaching GitHub; check the push mirror's last run after the trial ends.
+Because GitLab is now the working source of truth, losing the pull mirror stops only the GitHub-to-GitLab direction. It does not affect Workers Builds, which deploy from GitLab `main`. Merge on GitLab, not on GitHub.
 
 ## Rollback
 
