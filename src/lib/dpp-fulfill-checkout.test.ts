@@ -103,9 +103,27 @@ function fakeSupabase(opts?: {
           Object.assign(profile, patch);
           profileUpdates.push(patch);
         }
-        return {
-          eq: async () => result,
+        // provisioning.ts writes the entitlement as a compare-and-set update
+        // (ef4d083e, CFA-346): update().eq("id").is()/eq()...select("id").
+        // The chain must stay awaitable at every step, and the conditional
+        // form must report one matched row, or provisioning treats it as a
+        // concurrent-update conflict.
+        const settled = opts?.updateError
+          ? { ...result, data: null }
+          : { ...result, data: [{ id: profileId }] };
+        const chain: {
+          eq: () => typeof chain;
+          is: () => typeof chain;
+          select: () => typeof chain;
+          then: Promise<typeof settled>["then"];
+        } = {
+          eq: () => chain,
+          is: () => chain,
+          select: () => chain,
+          then: (onFulfilled, onRejected) =>
+            Promise.resolve(settled).then(onFulfilled, onRejected),
         };
+        return chain;
       },
       select: () => builder,
       eq: (col: string, val: unknown) => {
