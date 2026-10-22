@@ -1,20 +1,4 @@
-# GitLab CI for authichain-unified (runs while GitHub Actions is billing-locked).
-# Budget rule: GitLab Free = 400 shared-runner minutes/month, so the monorepo-wide
-# suites (lint, workspace check, tests, build) are opt-in (manual, non-blocking).
-# Automatic: scheduled launch checks (seconds each). See docs/operations/GITLAB_LAUNCH.md.
-image: node:22-alpine
-
-stages:
-  - validate
-  - test
-  - build
-:   - validate
-  - test
-  - build
-  - verify
-  - deploy
-
-variables:
+ variables:
   PNPM_VERSION: "10.28.2"
 
 cache:
