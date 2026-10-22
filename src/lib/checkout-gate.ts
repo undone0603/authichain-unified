@@ -728,22 +728,12 @@ export async function tryHandleGatedCheckout(
   }
   report("checkout_email_captured", email);
 
-  // --- QRON Interdiction Gate ---
-  if (plan.id === "qron_launch") {
-    const attestationToken = fields.get("qron_attestation");
-    // Verify token presence and basic cryptographic prefix before hitting Stripe
-    if (!attestationToken || !attestationToken.startsWith("QRON-")) {
-      return htmlResponse(
-        renderCheckoutConfirmPage({
-          plan,
-          params: fields,
-          error: "QRON Interdiction: Valid physical attestation token required for provisioning.",
-        }),
-        403
-      );
-    }
-  }
-  // ------------------------------
+  // No attestation token is required to buy QRON Launch. A previous
+  // "QRON Interdiction" check demanded a `qron_attestation` form field for the
+  // monthly plan only, but the confirm page never rendered that field and
+  // nothing issues QRON- tokens, so every monthly purchase returned 403 while
+  // `qron_launch_annual` (same product, same tier) was never gated. Entitlement
+  // still depends on the verified Stripe webhook and provisionPurchase.
 
   const result = await createGatedCheckoutSession({
     plan,
