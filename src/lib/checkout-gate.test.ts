@@ -622,7 +622,7 @@ describe("QRON Interdiction Gate (qron_launch)", () => {
   });
 
   it("proceeds to Stripe 303 redirect on POST /checkout/qron_launch with a valid signed token and forwards metadata", async () => {
-    let capturedStripeBody: URLSearchParams | null = null;
+    let capturedStripeBody = null as URLSearchParams | null;
     const body = new URLSearchParams({
       email: "founder@authichain.com",
       qron_attestation: validToken,
