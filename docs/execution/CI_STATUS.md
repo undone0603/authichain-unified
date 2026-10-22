@@ -10,6 +10,7 @@ Evidence date: 2026-10-22. Commit under test: `main` `caf0f083` plus branch `fix
 | Checkout gate and attestation (4 files) | 48 passed | 48 passed |
 | `src` + `protocol` with !1998 and !1999 (Launch gate removed, 2 new tests) | n/a | 159 files passed; 1,288 passed, 1 skipped, 0 failed |
 | Stripe webhook, verify-worker, dpp-fulfillment (7 files) | 68 passed | 68 passed |
+| `agentz/tests` (Python venv from `requirements-agentz.txt` plus pytest and pytest-asyncio) | not run | 284 passed, 1 skipped, 0 failed |
 
 All 11 failures were **pre-existing on `main`** (stale tests, not regressions from this work) and none
 was a production defect:
@@ -22,7 +23,7 @@ was a production defect:
 
 Type check: the four touched files produce no `tsc` diagnostics. A full-project `tsc` result was not assessed.
 
-**Not run yet:** `pnpm test` (turbo), `pnpm lint`, `pnpm build`, `agentz/tests` (Python), `pnpm test:contracts`,
+**Not run yet:** `pnpm test` (turbo), `pnpm lint`, `pnpm build`, `pnpm test:contracts`,
 `workers/gs1-resolver` node tests, `*.node-test.mjs` files.
 
 ## GitLab CI as configured on `main`
