@@ -3,8 +3,9 @@
 Updated 2026-10-22. Each entry covers: what is stuck, why, evidence, what continues without it, and the next action.
 
 **Critical Path to Unblock Shipping:**
-1. **B-3 & B-2 (Code Sync):** Fetch GitLab branches (`!1998`, `!1999`) locally, push to GitHub, and merge PRs on GitHub (`main` mirrors back to GitLab).
-2. **B-4 & B-6 (Deploy Path):** Restore GitHub Actions billing *or* set `CLOUDFLARE_*` CI variables in GitLab (or deploy locally via `wrangler`).
+
+1. **B-2 (Code Sync), resolved 2026-10-22:** GitLab is the working source of truth. Merges on GitLab `main` reach GitHub through the push mirror, so nothing has to be carried to GitHub by hand. B-3 no longer blocks shipping.
+2. **B-4 & B-6 (Deploy Path):** Restore GitHub Actions billing _or_ set `CLOUDFLARE_*` CI variables in GitLab (or deploy locally via `wrangler`).
 3. **B-1 (Checkout Verification):** Run a Stripe test-mode checkout on `/checkout/qron_launch` once deployed.
 4. **B-5 (Worker Build):** Inspect the `govchain-us` build log in the Cloudflare dashboard.
 
@@ -17,20 +18,22 @@ Updated 2026-10-22. Each entry covers: what is stuck, why, evidence, what contin
 - **Without it:** `qron_launch_annual` ($190/yr, same tier and fulfilment) is ungated and functional.
 - **Decision & Done (2026-10-22):** Remove the unissuable check. Draft MR !1999 removes the gate and adds a regression test (`expected 403 to be 303` on `main`). `src` + `protocol` test suite with !1998 and !1999: 159 files, 1,288 passed, 1 skipped, 0 failed. Recorded in Issue #2005 (resolving !1997 thread).
 - **Next action (Depends on B-2, B-3, B-6):** Carry !1998 and !1999 to GitHub and merge, deploy to production, and verify with a Stripe test-mode checkout on `/checkout/qron_launch`.
+- **Update (2026-10-22, later):** !1999 was closed and the hold is now handled by !2001 (open, pipeline green). Read !2001 before acting on the next action above; merging to `main` can deploy checkout changes.
 - **Architecture note:** If physical attestation is required later, enforce a JWS attestation checked by the canonical verifier and bound to the object ID with an issuer (the prefix/regex check in !1997 does not provide authorization).
 
-## B-2. Mirror direction: GitHub stays the source of truth (Decided 2026-10-22)
+## B-2. Mirror direction: GitLab is the working source of truth (Decided 2026-10-22, supersedes the earlier GitHub-primary decision)
 
-- **What & Why:** The GitLab project is a one-way pull mirror of GitHub (`mirror: true`). Direct merges or pushes to GitLab `main` will be overwritten by GitHub.
-- **Evidence:** `GITLAB_MIGRATION.md`.
-- **Decision (2026-10-22):** Keep GitHub as the primary source of truth and GitLab as the pull mirror feeding Cloudflare Workers Builds and CI.
-- **Without it:** Branching and CI testing on GitLab branches work normally, but merges must happen on GitHub.
-- **Next action (Depends on B-3):** Carry GitLab-only branches/MRs (!1997, !1998, !1999) to GitHub as PRs and merge there. Revisit only if GitHub Actions billing (B-4) remains locked long-term and GitLab is intentionally promoted to primary.
+- **What & Why:** The GitLab project has a pull mirror from GitHub and a push mirror to GitHub, both on protected branches only. The earlier entry said a merge on GitLab `main` would be overwritten by GitHub. That was wrong: !1997, !1998, !2000, !2002, !2003, !2004 and !2008 were merged on GitLab today, and the merge commits of !2003 and !2008 are on GitHub `main`.
+- **Evidence:** `GITLAB_MIGRATION.md` (mirror settings, last run times, `main` heads equal at `5308335b8f`).
+- **Decision (2026-10-22):** On the owner's instruction, GitLab is the working source of truth and GitHub is a downstream mirror.
+- **Without it:** Not applicable; nothing is blocked.
+- **Next action (Owner):** Disable the pull mirror (GitLab: Settings, Repository, Mirroring repositories) so GitHub is no longer an input to GitLab `main`. It is a project setting and no session changed it.
 
 ## B-3. Agent session push and write credentials
 
-- **What & Why:** Automated sessions cannot push directly to GitHub (`git push` returns 403 from the session proxy: *"repository not in this session's authorized repository set"*; `GH_TOKEN` is invalid; the `undone0603` GitHub connector is read-only and returns 403 on branch creation; no sandbox GitLab token is present).
+- **What & Why:** Automated sessions cannot push directly to GitHub (`git push` returns 403 from the session proxy: _"repository not in this session's authorized repository set"_; `GH_TOKEN` is invalid; the `undone0603` GitHub connector is read-only and returns 403 on branch creation; no sandbox GitLab token is present).
 - **Without it:** All edits, tests, and docs run locally; commits are written to GitLab feature branches via the logged-in GitLab browser session API (approved 2026-10-22; blob hashes verified against local copies; `main` untouched).
+- **Update (2026-10-22, later):** No longer a shipping blocker. Merged `main` reaches GitHub through the push mirror (B-2). It still means a session cannot push feature branches to GitHub.
 - **Next action (Owner):** Either carry the GitLab branches to GitHub from a local terminal:
   `git fetch gitlab && git push github gitlab/fix/p1-dpp-fulfill-test-cas-mock:fix/p1-dpp-fulfill-test-cas-mock`
   or authorize the repo for the session git proxy / grant the GitHub connector write scope.
