@@ -9,14 +9,15 @@ This is a new file on purpose. GitHub PR #1995 carries newer versions of BLOCKER
 | Field | Value |
 | ----- | ----- |
 | CURRENT BRANCH | main (GitLab and GitHub both at 1b40ceb4) |
-| CURRENT COMMIT | work branch fix/checkout-closed-plan-hold at dc10d43b (MR !2001, not merged) |
-| LAST SUCCESSFUL PIPELINE | 2977807218 on dc10d43b, all 5 jobs success |
+| CURRENT COMMIT | work branch fix/checkout-closed-plan-hold at 22936e2c (MR !2001, not merged); adds the opt-in stripe-mock contract test on top of dc10d43b |
+| LAST SUCCESSFUL PIPELINE | 2977807218 on dc10d43b, all 5 jobs success; 2977904507 on 22936e2c was still running when this was written |
 | CURRENT TASK | P0 review of the production database (issue #1735), then ledger sync |
 | COMPLETED | !2001 red-to-green fix; read-only Supabase security review; edge function inventory; stripe-webhook signature check (static); MR !2003 review |
 | IN PROGRESS | recovering unversioned production SQL and edge function source into the repo |
 | FAILED | none this checkpoint; pipeline 2977607114 on 5c00c46e failed before the fix and is explained below |
-| BLOCKED | owner decisions CP-B1 to CP-B3; Stripe sandbox E2E (N-4) needs sandbox keys through an approved channel; Cloudflare MCP 410 |
-| NEXT ACTION | owner reviews CP-B1; then recover verify-family SQL as a migration whose body is compared by md5 to the live definition |
+| BLOCKED | founder-override actions CP-B1 (DB revoke) and CP-B5 (humanHold, production_send), each a single prepared action; CP-B3 and CP-B4 are decisions; merges of !2001, !2003, !2005 were refused by the session permission check (see 8.3); real Stripe sandbox E2E (N-4) needs sandbox keys through an approved channel |
+| DIRECTION | founder direction 2026-10-22: autonomous company, founder override and kill switch are the only gates. This record adds no review gates; it only makes each founder action one step |
+| NEXT ACTION | founder runs the section 4 SQL (evidence in 8.1) and merges the green MRs; session continues with the DB-function recovery migration |
 
 ## 1. MR !2001 (close monthly Launch deterministically)
 
@@ -87,17 +88,12 @@ verify_asset calls resolve_asset, get_asset_provenance and score_asset inside it
 
 BLOCKER: CP-B1 verify_asset is anonymously callable and writes data.
 WHY: PUBLIC execute on a SECURITY DEFINER writer with a caller-chosen api_key_id.
-EVIDENCE: section 2; has_function_privilege check; function body; 24h logs show no calls; table counts 7 and 0.
-WHAT I CAN DO WITHOUT IT: recover the function SQL into a reviewed migration file and a regression test of the grant; nothing that changes privileges.
-EXACT EXTERNAL DEPENDENCY: owner confirms no external caller (authichain-verify GitLab project, RapidAPI, partners) uses verify_asset with the anon key, then approves the SQL in section 4.
-NEXT ACTION: owner answers; I prepare the migration PR.
+EVIDENCE: section 2; has_function_privilege check; function body; edge logs show zero REST calls naming verify_asset in three consecutive 24h windows (2026-10-19 to 2026-10-22) while the latest window holds 38 other /rpc/ calls, so the search does see RPC traffic; no caller anywhere in the repo; table counts 7 and 0. Limit: a caller that runs less often than every three days, or that reaches Postgres without REST, would not show.
+WHAT I CAN DO WITHOUT IT: recover the function SQL into a migration file with an md5 check; nothing that changes privileges.
+EXACT EXTERNAL DEPENDENCY: the founder runs the section 4 SQL. It is one paste with a one-line rollback. This session does not change production access controls.
+NEXT ACTION: founder pastes section 4; session re-reads has_function_privilege afterwards if asked.
 
-BLOCKER: CP-B2 Cloudflare MCP failed to connect (410) this session.
-WHY: Workers Builds and deploy status for main (B-5, B-6) cannot be read from here.
-EVIDENCE: connection error reported by the tool host.
-WHAT I CAN DO WITHOUT IT: everything repo-side; GitLab deploy jobs stay inert without CLOUDFLARE_* variables.
-EXACT EXTERNAL DEPENDENCY: reconnect the Cloudflare connector, or the owner reads the build status.
-NEXT ACTION: retry the connection next session.
+RESOLVED: CP-B2 Cloudflare MCP failed to connect (410) early in this session. It connected later and the deployed Stripe-related workers were read (section 8.2). The connector dropped with a 410 again at the end, so Workers Builds status for main (B-5, B-6) is still unread.
 
 BLOCKER: CP-B3 confirm the public columns on gov_opportunities_public.
 WHY: status, fit_score and estimated_value show which opportunities are being pursued.
@@ -106,14 +102,28 @@ WHAT I CAN DO WITHOUT IT: nothing safe; this is a product decision.
 EXACT EXTERNAL DEPENDENCY: owner decision.
 NEXT ACTION: owner answers; I narrow the view in a migration if asked.
 
+BLOCKER: CP-B4 two deployed Stripe workers do not verify signatures.
+WHY: stripe-webhook-worker has a verifier that always returns true; stripe-dunning only checks that a stripe-signature header exists, then parses the body. Anyone who can reach them can post a forged event.
+EVIDENCE: deployed code read through the Cloudflare connector (section 8.2). Not tested over the network.
+WHAT I CAN DO WITHOUT IT: nothing safe to deploy; neither worker has source in the repo.
+EXACT EXTERNAL DEPENDENCY: founder decides fix or delete for each, and checks the Stripe dashboard endpoint list (Q-1) to see whether either is registered and what it can do if reached.
+NEXT ACTION: founder decision; I write the verified version into the repo once the target is chosen.
+
+BLOCKER: CP-B5 humanHold and production_send are founder-override switches.
+WHY: they gate real payments being fulfilled and real outbound email. Founder direction is that these are the only gates; flipping them is the founder action, not the session.
+EVIDENCE: section 8.4 locates each switch and what else must be true before it has any effect.
+WHAT I CAN DO WITHOUT IT: everything around the gates, which is built and tested.
+EXACT EXTERNAL DEPENDENCY: founder edit, one per switch.
+NEXT ACTION: founder edits when ready.
+
 ## 6. Next actions
 
-1. Owner: review MR !2001 and decide the merge and its timing (a merge to main can deploy).
-2. Owner: answer CP-B1, CP-B3; toggle leaked password protection if wanted.
+1. Founder: merge !2001 when its pipeline on 22936e2c finishes green (a merge to main can deploy), then !2003, then !2005.
+2. Founder: paste the section 4 SQL (CP-B1); decide CP-B3 and CP-B4; toggle leaked password protection if wanted.
 3. CP-N1 Recover verify_asset, resolve_asset, score_asset, get_asset_provenance, get_public_verification, increment_portal_scan into a migration. Verify by comparing md5 of the live pg_get_functiondef output with the file; no apply.
 4. CP-N2 Export the 59 unversioned edge functions into supabase/functions, starting with stripe-webhook, qron-checkout, storefront-checkout, validate-api-key and authichain-verify. Needs a supabase CLI download or per-function reads; stripe-webhook is a 1 MB bundle, so export it as the deployed artifact and note the upstream template.
 5. CP-N3 Local reproduction of the authichain-verify path-segment issue against a stub.
-6. MR !2003 (dogfood release attestation binding, N-3) is reviewed in section 7: sound, with four low-severity follow-ups. The owner decides the merge; fold the evidence into VERIFICATION_EVIDENCE.
+6. MR !2003 (dogfood release attestation binding, N-3) is reviewed in section 7: sound, with four low-severity follow-ups, pipeline green and mergeable. Merge is a one-click founder action (8.3); fold the evidence into VERIFICATION_EVIDENCE.
 7. Stripe sandbox E2E (N-4) once sandbox keys are provided through an approved channel. Sandbox only.
 8. Fold this checkpoint into the numbered ledger files after PR #1995 lands.
 
@@ -134,3 +144,40 @@ Low-severity follow-ups, none blocking:
 4. isSafeRelativePath does not resolve symlinks, so a tracked symlink named in a record could be hashed outside the repository (digest only, no content). Contrived; resolve real paths if the verifier ever runs on untrusted trees.
 
 Not covered by the suite: the CLI exit codes (0 bound, 1 failure, 2 usage, 3 no-record). A small spawn test would cover them. No comment was posted on the MR; this section is the record.
+
+## 8. Work after the first push of this checkpoint
+
+### 8.1 Evidence for CP-B1 (who calls verify_asset)
+
+Edge logs were searched for the text verify_asset in three consecutive 24 hour windows ending 2026-10-22 14:30Z: zero hits in each. The same search method on the string /rpc/ finds 38 REST function calls in the latest window, so REST RPC traffic is visible to it. The repository has no caller (the only match is docs/ESTATE-RECOVERY-2026-10-06.md). verifications holds 7 rows and verification_usage 0. Conclusion: nothing observable depends on the anonymous grant. The limit is the window: a caller that runs less often than every three days would not appear.
+
+### 8.2 Cloudflare worker audit (read-only, through the connector while it was up)
+
+| Worker | Finding | Reachability and registration |
+| ------ | ------- | ----------------------------- |
+| stripe-webhook-worker | The signature verifier always returns true. Any POST is accepted as a Stripe event. | Unknown. Not probed over the network. |
+| stripe-dunning | Rejects a request with no stripe-signature header, then parses the body with no HMAC check. A header with any value passes. | Unknown. Not probed over the network. |
+| dpp-fulfillment (R5) | Signature verification present. | Unknown whether Stripe calls it (Q-1). |
+| authichain-license-issuer | Signature verification present. Two weaker points: the compare uses a plain === rather than a constant-time compare, and STRIPE_WEBHOOK_SECRET is also used as the bearer token for the revoke route, so one secret serves two purposes. | Unknown. |
+
+The first two have no source under workers/ in the repository. Do not recreate them as deployable directories until the founder chooses fix or delete (CP-B4), because a repo copy of a broken verifier would be redeployed by the next deploy job. Stripe dashboard webhook endpoint list is the quickest way to learn whether either broken worker can receive real events.
+
+### 8.3 Merge status
+
+| MR | Head | Pipeline | State |
+| -- | ---- | -------- | ----- |
+| !2001 | 22936e2c | 2977904507 running at the time of writing | open; previous head dc10d43b was green |
+| !2003 | faafca4e | 2977671914 success | open, mergeable. Two merge attempts by this session were refused by the session permission check (reason: merge without review), once before and once after a blanket approval in chat. This session did not route around it. One click merges it. |
+| !2005 | 3126d6fe then this update | 2977862719 success on the first head | open, draft |
+
+### 8.4 Founder-override map
+
+These are the switches that matter. None was changed by this session.
+
+1. Database: section 4 SQL. Evidence in 8.1. One paste, one-line rollback.
+2. humanHold: workers/stripe-webhook/src/grant-map.ts marks five price entries with humanHold: true (DPP workspace, passport, MUSA). The payment is recorded and no generations or certificate are issued until the founder releases the price: remove the flag for that entry and deploy. It is per price, so each product can be released independently.
+3. production_send: workers/authichain-verify-worker/src/outbound-types.ts defaults it to false. Email also needs human_send_approved on a campaign and an injected sender function. No Resend client is wired (docs/AGENT_OUTBOUND.md), so flipping production_send alone sends nothing; the sender and the campaign approval are the other two steps. The kill switch and attestation revocation block the next send once mail is live.
+
+### 8.5 Opt-in Stripe mock contract test
+
+src/lib/checkout-gate.stripe-mock.test.ts (on the !2001 branch). With STRIPE_MOCK_URL set to a running stripe-mock it posts the gate's real checkout request for qron_launch_annual and starter and expects Stripe's published schema to accept it (22 tests pass locally). It also proves the check has teeth: an injected unknown parameter makes the same call fail with 400. Without the variable the 22 tests are skipped, so CI is unaffected. This is a schema check, not a Stripe sandbox. It does not cover price ids that exist in an account, webhook delivery or fulfillment. The real sandbox end-to-end run still needs test-mode keys through an approved channel (N-4).
