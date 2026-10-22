@@ -53,7 +53,25 @@ export function stripAnsi(text) {
   return String(text ?? "").replace(ANSI, "");
 }
 
-/** The first line that reads like an error, else the last line, else "". */
+// Lines that match ERROR_LINE but say nothing about why a job failed. A dry run
+// against the live API picked "# fail 0" (the node:test summary of a run with no
+// failures) and "Uploading artifacts for failed job" (runner boilerplate) as the
+// "first error", which made the fingerprint, and so the task, meaningless.
+const NOISE = [
+  /^[#\s]*(fail(ed|ures?)?|errors?)\s*[:=]?\s*0\b/i,
+  /\b0 (failed|failures?|errors?)\b/i,
+  /^uploading artifacts/i,
+  /^cleaning up/i,
+  /^running after_script/i,
+];
+// The runner's own closing line. True, but it names no cause, so it is only a
+// fallback when nothing better is in the tail.
+const GENERIC = /^error: job failed: /i;
+
+/**
+ * The first line that names a cause. Otherwise the runner's generic failure
+ * line, otherwise the last line that is not noise, otherwise the last line.
+ */
 export function extractFirstError(log) {
   const lines = stripAnsi(log)
     .split(/\r?\n/)
@@ -61,8 +79,18 @@ export function extractFirstError(log) {
       l.replace(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z\s+\d+[A-Z]*\s?/, "").trim()
     )
     .filter(Boolean);
-  const hit = lines.find(l => ERROR_LINE.test(l) && !l.startsWith("$ "));
-  return hit ?? lines.at(-1) ?? "";
+  const isNoise = l => NOISE.some(re => re.test(l.replace(/^\+/, "")));
+  const hit = lines.find(
+    l =>
+      ERROR_LINE.test(l) &&
+      !l.startsWith("$ ") &&
+      !isNoise(l) &&
+      !GENERIC.test(l)
+  );
+  if (hit) return hit;
+  const generic = lines.find(l => GENERIC.test(l));
+  if (generic) return generic;
+  return lines.findLast(l => !isNoise(l)) ?? lines.at(-1) ?? "";
 }
 
 /** Removes what changes between runs of the same failure. */
@@ -275,6 +303,7 @@ const ALLOWED = [
   ["GET", /^\/projects\/[^/]+\/pipelines\/\d+\/jobs(\?.*)?$/],
   ["GET", /^\/projects\/[^/]+\/jobs\/\d+\/trace$/],
   ["GET", /^\/projects\/[^/]+\/issues(\?.*)?$/],
+  ["GET", /^\/projects\/[^/]+\/merge_requests\?state=opened(&.*)?$/],
   ["POST", /^\/projects\/[^/]+\/issues$/],
   ["POST", /^\/projects\/[^/]+\/issues\/\d+\/notes$/],
   ["PUT", /^\/projects\/[^/]+\/issues\/\d+$/],
@@ -315,14 +344,60 @@ export function makeClient({ baseUrl, token, fetchImpl = fetch }) {
 
 // ------------------------------------------------------------------------ run
 
-export async function collectFailures({ client, projectId, now, opts }) {
+/**
+ * A failure is worth a task only while it still describes the present: the ref
+ * is the default branch or belongs to an open merge request, and no later
+ * pipeline on that ref has passed. A dry run showed the ledger would otherwise
+ * file tasks for pipelines already fixed and for a closed merge request.
+ */
+export function isLiveRef(ref, { defaultBranch, openIids, openBranches }) {
+  if (ref === defaultBranch) return true;
+  const mr = /^refs\/merge-requests\/(\d+)\/(?:head|merge)$/.exec(ref ?? "");
+  if (mr) return openIids.has(Number(mr[1]));
+  return openBranches.has(ref);
+}
+
+export function isSuperseded(pipeline, recent) {
+  return recent.some(
+    q => q.id > pipeline.id && q.ref === pipeline.ref && q.status === "success"
+  );
+}
+
+export async function collectFailures({
+  client,
+  projectId,
+  now,
+  opts,
+  defaultBranch = "main",
+}) {
   const o = { ...DEFAULTS, ...opts };
   const since = new Date(now - o.lookbackHours * 3_600_000).toISOString();
+  const updatedAfter = encodeURIComponent(since);
   const pipelines = await client.get(
-    `/projects/${projectId}/pipelines?status=failed&updated_after=${encodeURIComponent(since)}&order_by=id&sort=desc&per_page=${o.maxPipelines}`
+    `/projects/${projectId}/pipelines?status=failed&updated_after=${updatedAfter}&order_by=id&sort=desc&per_page=${o.maxPipelines}`
   );
+  const recent = await client.get(
+    `/projects/${projectId}/pipelines?updated_after=${updatedAfter}&order_by=id&sort=desc&per_page=100`
+  );
+  const mrs = await client.get(
+    `/projects/${projectId}/merge_requests?state=opened&per_page=100`
+  );
+  const live = {
+    defaultBranch,
+    openIids: new Set(mrs.map(m => m.iid)),
+    openBranches: new Set(mrs.map(m => m.source_branch)),
+  };
+  const filtered = { inactive: 0, superseded: 0 };
   const failures = [];
   for (const p of pipelines.slice(0, o.maxPipelines)) {
+    if (!isLiveRef(p.ref, live)) {
+      filtered.inactive += 1;
+      continue;
+    }
+    if (isSuperseded(p, recent)) {
+      filtered.superseded += 1;
+      continue;
+    }
     const jobs = await client.get(
       `/projects/${projectId}/pipelines/${p.id}/jobs?scope[]=failed&per_page=${o.maxJobsPerPipeline}`
     );
@@ -348,7 +423,7 @@ export async function collectFailures({ client, projectId, now, opts }) {
       });
     }
   }
-  return failures;
+  return { failures, filtered };
 }
 
 export async function runLedger({
@@ -359,12 +434,18 @@ export async function runLedger({
   opts = {},
   defaultBranch = "main",
 }) {
-  const failures = await collectFailures({ client, projectId, now, opts });
+  const { failures, filtered } = await collectFailures({
+    client,
+    projectId,
+    now,
+    opts,
+    defaultBranch,
+  });
   const issues = await client.get(
     `/projects/${projectId}/issues?labels=${LABEL}&state=all&per_page=100`
   );
   const actions = planActions({ failures, issues, now, opts });
-  if (dryRun) return { dryRun, failures: failures.length, actions };
+  if (dryRun) return { dryRun, failures: failures.length, filtered, actions };
 
   for (const a of actions) {
     if (a.type === "create") {
@@ -398,13 +479,18 @@ export async function runLedger({
       });
     }
   }
-  return { dryRun, failures: failures.length, actions };
+  return { dryRun, failures: failures.length, filtered, actions };
 }
 
 export function summarize(report) {
   const counts = {};
   for (const a of report.actions) counts[a.type] = (counts[a.type] ?? 0) + 1;
-  const head = `agent task ledger${report.dryRun ? " (dry run)" : ""}: ${report.failures} failed job(s), ${report.actions.length} action(s)`;
+  const f = report.filtered ?? { inactive: 0, superseded: 0 };
+  const left =
+    f.inactive || f.superseded
+      ? ` (left out: ${f.superseded} superseded by a passing run, ${f.inactive} on a closed or unknown ref)`
+      : "";
+  const head = `agent task ledger${report.dryRun ? " (dry run)" : ""}: ${report.failures} failed job(s)${left}, ${report.actions.length} action(s)`;
   const lines = report.actions.map(
     a =>
       `- ${a.type} ${a.fp}${a.issue ? ` #${a.issue}` : ""}${a.reason ? ` (${a.reason})` : ""}`
