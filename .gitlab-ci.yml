@@ -62,11 +62,16 @@ before_script:
     - when: manual
       allow_failure: true
 
+# `pnpm run lint` never ends: the root `lint` script runs `_lint`, which runs
+# `turbo lint --single-package`, and that task's command is the root `lint`
+# script again. It forks until the runner kills it (an 8 GB box was out of memory
+# after about 100 s), which is where "lint ran past 6 minutes" came from. lint:ci
+# is what the GitHub workflow runs and takes about 50 s.
 lint:
   extends: .heavy
   stage: validate
   script:
-    - pnpm run lint
+    - pnpm run lint:ci
 
 workspace_check:
   extends: .heavy

@@ -18,7 +18,7 @@ The GitLab CI deploy jobs are INERT until the two CI/CD variables below exist.
   | `build_gate` | `next build --webpack` | merge requests that touch `src`, `protocol`, `workers`, `shared`, `public`, `content` or the build config | yes |
 
   `next.config.js` sets `typescript.ignoreBuildErrors`, so `build_gate` proves the app compiles and bundles; it does not type-check it. The type-check gate covers `worker/` only, because that is the only workspace with a `check` script.
-- Still manual and non-blocking (press play in the pipeline): `lint` (`turbo lint`), `workspace_check`, `tests` (`turbo test`: it builds `apps/qron-platform` and ran past 15 minutes), `production_build` (superseded by `build_gate` for merge requests; kept for branches with no merge request).
+- Still manual and non-blocking (press play in the pipeline): `lint` (now `pnpm run lint:ci`; the old `pnpm run lint` recursed forever, see below), `workspace_check`, `tests` (`turbo test`: it builds `apps/qron-platform` and ran past 15 minutes), `production_build` (superseded by `build_gate` for merge requests; kept for branches with no merge request).
 - Install uses the cached pnpm store (`pnpm install --frozen-lockfile --prefer-offline`); no `node_modules` artifact is uploaded (it exceeded the artifact size limit, 413). The gates add `--ignore-scripts` (no husky, no agent-browser native-binary download); the manual jobs keep the plain install.
 
 ### Spending the 400 minutes
@@ -47,6 +47,10 @@ Controls, none of which needs a commit:
 - `scripts/__tests__/autonomy.test.ts` (2 tests) fails because `.github/workflows/deploy-manufacturer-status.yml` is not classified in `.github/autonomy.json`. The file is the autonomy switchboard, so the lane is the owner's decision (a `workflow_dispatch`-only deploy like it sits next to `deploy-qron-ai-api.yml` and `deploy-govchain-nft-base.yml` in the `manual` lane). `quality_gate` runs that file last and exits 77, which `allow_failure.exit_codes` turns into a warning. Once the workflow is classified, delete `KNOWN_RED_TEST` and the last step.
 - `check-node-test-runners` fails because `workers/_shared/estate-qron-resolve.test.ts` and `workers/authichain-com/src/x402-health-route.test.ts` are node:test files that nothing in CI runs. The check reads `.github/workflows` and package `test` scripts, so the fix is there (add them to the `lint.yml` node:test step or to a workspace `test` script). Delete `allow_failure` on `node_test_runner_coverage` when that lands.
 - Until the test-only PR that repairs 11 stale tests merges, `quality_gate` is red on `main` itself (4 files, 11 tests: `dpp-fulfill-checkout`, the Stripe webhook route, `app-prefixes`, `x402-get-terms`). With that PR applied the only failures are the two autonomy tests above.
+
+### `pnpm run lint` recurses (found 2026-10-22)
+
+The root `lint` script runs `_lint` (`turbo lint --single-package`), and turbo's `lint` task for the root package runs the root `lint` script again (`turbo lint --single-package --dry=json` prints `lint -> pnpm run _lint`). Each pass forks the next, so it never finishes: in an 8 GB sandbox it was killed (exit 137) after about 100 s with over a hundred processes running. The earlier note that the monorepo-wide lint "ran past 6 minutes" is probably this. The `lint` job here now runs `lint:ci`. The scripts in `package.json` are not changed; making `_lint` call `eslint` directly (or dropping the turbo hop) is the real fix and is the owner's call.
 
 ### Not gated here
 
