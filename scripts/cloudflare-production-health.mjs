@@ -16,6 +16,12 @@ export const PUBLIC_PROBES = [
     accept: [204],
     method: "HEAD",
   },
+  {
+    id: "checkout_launch_head",
+    url: `${ORIGIN}/api/checkout/launch`,
+    accept: [204],
+    method: "HEAD",
+  },
 ];
 
 export async function probePublic(fetchImpl = fetch) {
