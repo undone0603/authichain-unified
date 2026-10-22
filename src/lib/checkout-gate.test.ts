@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createHmac } from "node:crypto";
 import {
   buildGatedSessionBody,
   gatedCheckoutPlanIds,
@@ -10,6 +11,7 @@ import {
   renderCheckoutChooserPage,
   renderCheckoutConfirmPage,
   tryHandleGatedCheckout,
+  verifyQronAttestationToken,
 } from "./checkout-gate";
 import { planById, planPaymentLink } from "./plans";
 
@@ -553,5 +555,112 @@ describe("Launch Annual cadence", () => {
       expect(success, id).toContain("https://authichain.com/generate?paid=1");
       expect(success, id).not.toContain("/dpp/thanks");
     }
+  });
+});
+
+function mintTestQronToken(secret: string, nonce = "testnonce01"): string {
+  const payload = `QRON-${nonce}`;
+  const sig = createHmac("sha256", secret).update(payload).digest("hex");
+  return `${payload}.${sig}`;
+}
+
+describe("QRON Interdiction Gate (qron_launch)", () => {
+  const secret = "test_qron_interdiction_secret_key_2026";
+  const validToken = mintTestQronToken(secret, "unit_00012345");
+
+  it("verifies a valid HMAC-SHA256 QRON attestation token and rejects tampered tokens", async () => {
+    expect(await verifyQronAttestationToken(validToken, secret)).toBe(true);
+    expect(await verifyQronAttestationToken("QRON-spoofed", secret)).toBe(false);
+    expect(
+      await verifyQronAttestationToken(
+        validToken.slice(0, -2) + (validToken.endsWith("00") ? "ff" : "00"),
+        secret
+      )
+    ).toBe(false);
+    expect(await verifyQronAttestationToken("", secret)).toBe(false);
+    expect(await verifyQronAttestationToken(validToken, "")).toBe(false);
+  });
+
+  it("renders a visible qron_attestation input on the qron_launch confirm page without duplicating it as hidden", () => {
+    const plan = planById("qron_launch")!;
+    const params = new URLSearchParams({
+      email: "buyer@example.com",
+      qron_attestation: validToken,
+    });
+    const html = renderCheckoutConfirmPage({ plan, params });
+
+    expect(html).toContain('id="checkout-confirm-attestation"');
+    expect(html).toContain(`value="${validToken}"`);
+    expect(html).not.toContain('<input type="hidden" name="qron_attestation"');
+  });
+
+  it("returns 403 on POST /checkout/qron_launch when qron_attestation is missing or unsigned", async () => {
+    const body = new URLSearchParams({
+      email: "founder@authichain.com",
+      qron_attestation: "QRON-spoofed",
+    });
+    const req = new Request("https://authichain.com/checkout/qron_launch", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": HUMAN_UA,
+        Origin: "https://authichain.com",
+      },
+      body: body.toString(),
+    });
+
+    const res = await tryHandleGatedCheckout(req, {
+      STRIPE_SECRET_KEY: "sk_test_mock",
+      QRON_INTERDICTION_SECRET: secret,
+    });
+
+    expect(res?.status).toBe(403);
+    const html = await res!.text();
+    expect(html).toContain(
+      "QRON Interdiction: Valid signed attestation token required for provisioning."
+    );
+  });
+
+  it("proceeds to Stripe 303 redirect on POST /checkout/qron_launch with a valid signed token and forwards metadata", async () => {
+    let capturedStripeBody: URLSearchParams | null = null;
+    const body = new URLSearchParams({
+      email: "founder@authichain.com",
+      qron_attestation: validToken,
+      checkout_key: "11111111-2222-3333-4444-555555555555",
+    });
+    const req = new Request("https://authichain.com/checkout/qron_launch", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": HUMAN_UA,
+        Origin: "https://authichain.com",
+      },
+      body: body.toString(),
+    });
+
+    const res = await tryHandleGatedCheckout(
+      req,
+      {
+        STRIPE_SECRET_KEY: "sk_test_mock",
+        QRON_INTERDICTION_SECRET: secret,
+      },
+      {
+        claimCheckout: async () => ({ allowed: true }),
+        recordSession: async () => true,
+        fetchImpl: async (_url, init) => {
+          capturedStripeBody = new URLSearchParams(String(init?.body ?? ""));
+          return new Response(
+            JSON.stringify({ url: "https://checkout.stripe.com/c/pay/cs_test_qron" }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        },
+      }
+    );
+
+    expect(res?.status).toBe(303);
+    expect(res?.headers.get("Location")).toBe(
+      "https://checkout.stripe.com/c/pay/cs_test_qron"
+    );
+    expect(capturedStripeBody?.get("metadata[qron_attestation]")).toBe(validToken);
   });
 });
