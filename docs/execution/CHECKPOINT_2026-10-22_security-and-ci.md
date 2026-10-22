@@ -9,15 +9,15 @@ This is a new file on purpose. GitHub PR #1995 carries newer versions of BLOCKER
 | Field | Value |
 | ----- | ----- |
 | CURRENT BRANCH | main (GitLab and GitHub both at 1b40ceb4) |
-| CURRENT COMMIT | main at 1740258613 (the founder merged !2003 at 18:33Z). Open work: fix/checkout-closed-plan-hold at 22936e2c (MR !2001), feat/recover-verify-family-sql at 6cc5f27a (MR !2006), ci/stripe-mock-contract at f1b6edba (MR !2007, stacked on !2001) |
+| CURRENT COMMIT | main at 1740258613 on GitLab and GitHub (the founder merged !2003 at 18:33Z). Open work: fix/checkout-closed-plan-hold at 22936e2c (MR !2001), feat/recover-verify-family-sql at 6cc5f27a (MR !2006), ci/stripe-mock-contract at f1b6edba (MR !2007, stacked on !2001), feat/gitlab-task-ledger at 4df3b920 (MR !2008) |
 | LAST SUCCESSFUL PIPELINE | 2977904507 on 22936e2c (!2001, all jobs success); 2977941811 on f1b6edba (!2007) had stripe_mock_contract success with 22 of 22 tests, quality_gate still running when this was written |
 | CURRENT TASK | P0 review of the production database (issue #1735), then ledger sync |
-| COMPLETED | !2001 red-to-green fix plus stripe-mock contract test; read-only Supabase security review; edge function inventory; stripe-webhook signature check (static); MR !2003 review; Cloudflare worker audit; verify-family SQL recovered (!2006); stripe-mock check wired into CI (!2007) |
+| COMPLETED | !2001 red-to-green fix plus stripe-mock contract test; read-only Supabase security review; edge function inventory; stripe-webhook signature check (static); MR !2003 review; Cloudflare worker audit; verify-family SQL recovered (!2006); stripe-mock check wired into CI (!2007); GitLab task ledger for the autonomous loop (!2008) |
 | IN PROGRESS | edge function source recovery (CP-N2): needs an exact export, see 8.6 |
 | FAILED | none this checkpoint; pipeline 2977607114 on 5c00c46e failed before the fix and is explained below |
 | BLOCKED | founder-override actions CP-B1 (DB revoke) and CP-B5 (humanHold, production_send), each a single prepared action; CP-B3 and CP-B4 are decisions; this session's two merge attempts on !2003 were refused by the session permission check and the founder then merged it (8.3); real Stripe sandbox E2E (N-4) needs sandbox keys through an approved channel |
 | DIRECTION | founder direction 2026-10-22: autonomous company, founder override and kill switch are the only gates. This record adds no review gates; it only makes each founder action one step |
-| NEXT ACTION | founder runs the section 4 SQL (evidence in 8.1) and merges !2001, !2006, !2007, !2005 as their pipelines finish green |
+| NEXT ACTION | founder runs the section 4 SQL (evidence in 8.1) and merges !2001, !2006, !2007, !2008, !2005 as their pipelines finish green; to switch the task ledger on, add the token and schedule in section 9 |
 
 ## 1. MR !2001 (close monthly Launch deterministically)
 
@@ -104,9 +104,9 @@ NEXT ACTION: owner answers; I narrow the view in a migration if asked.
 
 BLOCKER: CP-B4 two deployed Stripe workers do not verify signatures.
 WHY: stripe-webhook-worker has a verifier that always returns true; stripe-dunning only checks that a stripe-signature header exists, then parses the body. Anyone who can reach them can post a forged event.
-EVIDENCE: deployed code read through the Cloudflare connector (section 8.2). Not tested over the network.
+EVIDENCE: deployed code read through the Cloudflare connector (section 8.2). Not tested over the network. Repo-side registry evidence in 8.2 says neither worker is the registered Stripe endpoint.
 WHAT I CAN DO WITHOUT IT: nothing safe to deploy; neither worker has source in the repo.
-EXACT EXTERNAL DEPENDENCY: founder decides fix or delete for each, and checks the Stripe dashboard endpoint list (Q-1) to see whether either is registered and what it can do if reached.
+EXACT EXTERNAL DEPENDENCY: founder decides fix or delete for each. The Stripe dashboard endpoint list would settle Q-1 for certain; this session was blocked from reading it (permission check on production reads).
 NEXT ACTION: founder decision; I write the verified version into the repo once the target is chosen.
 
 BLOCKER: CP-B5 humanHold and production_send are founder-override switches.
@@ -160,7 +160,7 @@ Edge logs were searched for the text verify_asset in three consecutive 24 hour w
 | dpp-fulfillment (R5) | Signature verification present. | Unknown whether Stripe calls it (Q-1). |
 | authichain-license-issuer | Signature verification present. Two weaker points: the compare uses a plain === rather than a constant-time compare, and STRIPE_WEBHOOK_SECRET is also used as the bearer token for the revoke route, so one secret serves two purposes. | Unknown. |
 
-The first two have no source under workers/ in the repository. Do not recreate them as deployable directories until the founder chooses fix or delete (CP-B4), because a repo copy of a broken verifier would be redeployed by the next deploy job. Stripe dashboard webhook endpoint list is the quickest way to learn whether either broken worker can receive real events.
+The first two have no source under workers/ in the repository. Do not recreate them as deployable directories until the founder chooses fix or delete (CP-B4), because a repo copy of a broken verifier would be redeployed by the next deploy job. Registry evidence for the question of which endpoint Stripe really calls: the owner-approved switchboard .github/autonomy.json lists one Stripe webhook endpoint under stripe_webhooks, id we_1UGTCSGqTruSqV8ThM9bXVWp, URL https://authichain.com/api/stripe/webhook. worker-app/wrangler.toml routes that pattern to worker-app, whose handler calls handleStripeWebhook in server/webhooks/stripe.ts. That function verifies with constructEventAsync over every configured brand secret, claims each event id once in stripe_events, answers 500 so Stripe retries when the claim store is down, and has tests for bad signatures, duplicates, fail-closed and unpaid sessions (server/webhooks/stripe.test.ts, src/lib/stripe-construct-event.test.ts, route tests using generateTestHeaderString). So the endpoint the owner registered is verified and tested, and neither broken worker sits at that URL. The reconciler scripts/autonomy/stripe-webhooks.mjs states that it never touches other endpoints, so the repo cannot rule out an extra endpoint in the dashboard. This session could not read the dashboard or the live site: the permission check refused production reads.
 
 ### 8.3 Merge status
 
@@ -170,7 +170,8 @@ The first two have no source under workers/ in the repository. Do not recreate t
 | !2003 | faafca4e | 2977671914 success | MERGED by the founder at 2026-10-22T18:33:44Z, main now 1740258613. This session tried twice, was refused by the session permission check both times (reason: merge without review, once before and once after a blanket approval in chat), and did not route around it. |
 | !2005 | this record | green on earlier heads | open, draft |
 | !2006 | 6cc5f27a | 2977933098 | open, recovery migration plus md5 test. No privileges changed, not applied. |
-| !2007 | f1b6edba | 2977941811 | open, stacked on !2001. Adds the stripe_mock_contract CI job (8.5). |
+| !2007 | f1b6edba | 2977941811 success | open, stacked on !2001. Adds the stripe_mock_contract CI job (8.5). |
+| !2008 | 4df3b920 | see section 9 | open. GitLab task ledger and the inert agent_task_ledger CI job. |
 
 ### 8.4 Founder-override map
 
@@ -189,3 +190,13 @@ MR !2007 runs it automatically: the CI job stripe_mock_contract starts stripe/st
 ### 8.6 Edge function source (CP-N2), why it is not done here
 
 The deployed source can be read through the connector, but anything small comes back inline and would have to be retyped into a file, which cannot be proven exact. Large results are saved by the tool and are exact (stripe-webhook, about 1 MB, is one), but a bundled 1 MB file is not reviewable in a repository. So no edge function source was committed. The exact route is one command by anyone holding a Supabase access token: supabase functions download for each slug, committed as is. A scheduled CI job could do that with a token stored as a protected CI variable; it is not built because it cannot be tested here without the token.
+
+## 9. Autonomous loop: task ledger (MR !2008)
+
+What exists now: scripts/autonomy/gitlab-task-ledger.mjs and 22 node:test cases that run in quality_gate. It fingerprints failed CI jobs, files one GitLab issue per fingerprint with priority, owner, branch, commit, pipeline, first error, attempt count and next action, adds one attempt per new failing pipeline, labels the task needs-founder at 3 attempts and then leaves it alone. Bounds: 3 new issues and 10 pipelines per run; allow_failure jobs and its own job ignored; the client cannot close, reopen or delete issues, cannot touch repository files or merge requests; AGENT_LOOP_OFF=1 stops it. It records and escalates only.
+
+What has been shown: the rules, the permission whitelist and the create, rerun, attempt, escalate and dry-run cycles against an in-memory fake GitLab, and that three deliberate breakages each fail the tests. What has not: a run against the real GitLab API. Use --dry-run first.
+
+To switch it on (one time, founder): create a project access token with the Reporter role and the api scope, store it as the masked CI/CD variable GITLAB_AGENT_TOKEN, and add a pipeline schedule (for example every 30 minutes) that sets AGENT_LOOP=1. Reporter cannot push or merge, so the platform enforces the same bound as the script. Until both exist the agent_task_ledger job never runs and costs nothing.
+
+Where this stands against the autonomy criteria in the brief: tasks with durable state, bounded retries and CI failures turned into actionable tasks now exist in code and tests but are not running. The manual cycle this session ran (red pipeline, root cause, fix, regression test, push, green pipeline, recorded evidence: section 1) is the one genuine improvement cycle on record. An unattended cycle needs the token and schedule above.
