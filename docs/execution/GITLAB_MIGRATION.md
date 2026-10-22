@@ -8,16 +8,16 @@ and confidential issue #2005, made through the same session; the owner approved 
 
 The migration is already in place as a **pull mirror**. It is not a one-off copy.
 
-| Check | Result |
-| ----- | ------ |
-| Namespace | `authichain-group` (16 projects, no subgroups listed) |
-| Project | `authichain-group/authichain-unified`, id `87889112`, private |
-| Import | `mirror: true`, `import_status: finished` |
-| `main` head | GitLab `caf0f08356cd82ba8867f65f1a00c59d06150ef7` = GitHub `main` (identical) |
-| Branches | GitLab 360, GitHub 364 (4-branch delta not yet itemised) |
-| Protected branch | `main`: push by Maintainers and Developers + Maintainers, force-push off |
-| Shared runners | enabled |
-| Schedules | `AE launch checks 06:20 UTC` and `18:20 UTC`, active |
+| Check            | Result                                                                        |
+| ---------------- | ----------------------------------------------------------------------------- |
+| Namespace        | `authichain-group` (16 projects, no subgroups listed)                         |
+| Project          | `authichain-group/authichain-unified`, id `87889112`, private                 |
+| Import           | `mirror: true`, `import_status: finished`                                     |
+| `main` head      | GitLab `caf0f08356cd82ba8867f65f1a00c59d06150ef7` = GitHub `main` (identical) |
+| Branches         | GitLab 360, GitHub 364 (4-branch delta not yet itemised)                      |
+| Protected branch | `main`: push by Maintainers and Developers + Maintainers, force-push off      |
+| Shared runners   | enabled                                                                       |
+| Schedules        | `AE launch checks 06:20 UTC` and `18:20 UTC`, active                          |
 
 Other projects in the group: `Authichain-project`, `agent-browser`, `authichain-blog`,
 `authichain-com`, `authichain-mcp-server`, `authichain-protocol`, `authichain-spec`,
@@ -32,8 +32,8 @@ Other projects in the group: `Authichain-project`, `agent-browser`, `authichain-
   GitHub.
 - Direction decided 2026-10-22: GitHub stays primary and GitLab stays the pull mirror (BLOCKERS B-2). Making GitLab primary later means
   disabling or reversing the mirror on purpose.
-- The two branches also exist on GitHub as draft PRs #1995 and #1996, opened by the owner from exported patches. The commit ids differ from
-  the GitLab ones; the file contents match.
+- The two branches also exist on GitHub as draft PRs #1995 and #1996, opened from this session by re-applying the exported patches. The commit ids
+  differ from the GitLab ones; the file contents match.
 
 ## Verification still owed
 

@@ -21,8 +21,13 @@ Updated 2026-10-22. Each entry: what is stuck, why, evidence, what continues wit
 - **Evidence:** `git log -S"QRON Interdiction"` (`cb3f7d2f`); `src/lib/checkout-gate.ts`; `src/lib/plans.ts`; PRs #1905, #1941, #1965;
   `grep "Start Launch"` over the three files above; `workers/stripe-webhook/src/grant-map.ts` (both Launch prices still map to grants, so existing
   subscribers are unaffected either way).
-- **Decision needed from Zac:** confirm monthly Launch stays closed (and whether the #1905 merge gates still apply), or reopen it on purpose, in
-  which case #1996 is the change. Until then no code change to the gate.
+- **Decision (2026-10-22):** the owner asked for a decision, and it is that **monthly Launch stays closed**. Basis: PR #1905 quotes the
+  owner's own go-ahead to take it off the site on 2026-10-16/17, and `cb3f7d2f` (the gate) was committed by the owner's account on 2026-10-21 21:15 ET,
+  after that. This replaces the 2026-10-22 decision to remove the check, which was made before #1905 was found. PR #1996 stays a draft on hold; the
+  gate is not touched. The owner can reverse this by merging #1996.
+- **Still open:** public pages on `main` still link "Start Launch $19/mo" to a 403 until #1905 (or an equivalent) merges, and #1905's own merge gates
+  (#1900 live, Research PASS at the head SHA, Fleet Auditor review, Advisor MERGE) are the owner's. An honest "no longer offered" response in place of the
+  attestation message is not written. Nothing is deployed; no price or plan changed.
 
 ## B-2. Mirror direction: GitHub stays the source of truth (decided 2026-10-22)
 
@@ -37,13 +42,15 @@ Updated 2026-10-22. Each entry: what is stuck, why, evidence, what continues wit
 
 - **Why:** `git push` returns 403 from the session proxy ("repository not in this session's authorized repository set"); `GH_TOKEN` is
   reported invalid; the GitHub connector (authenticated as `undone0603`) is read-only for this repo; there is no GitLab token in the sandbox.
-- **How work reached GitHub:** the owner applied the exported patches locally and opened draft PRs #1995 (tests and docs) and #1996 (gate) on
-  2026-10-22. The `docs/execution/*` blob hashes on the #1995 branch match this session's copies.
+- **How work reached GitHub:** a cloud session applied the exported patches with `git am --3way --keep-cr` (needed because
+  `REPOSITORY_INVENTORY.md` is CRLF on `main`), compared every resulting blob with the hash in the patch, pushed both branches through the session git proxy
+  once the repository was attached to the session, and opened draft PRs #1995 (tests and docs) and #1996 (gate) with the GitHub REST API, because the
+  connector's create-pull-request returns 403. Patch 0007 and PR #1997 (`ci/gitlab-quality-gates`) went the same way. All PRs are drafts.
 - **Write path used on GitLab:** the logged-in GitLab browser session through the commits API, to new branches, draft MRs and one confidential
   issue, approved by the owner on 2026-10-22. The first commit (`b8154509`) was made before asking; a later write was refused by the session's
   permission check. `main` was not touched.
 - **Without it:** all edits, tests and docs run locally; changes reach GitHub as patches the owner applies.
-- **Dependency:** add the repo to the session's sources in the app (not possible from inside the session), or approve a GitHub write path explicitly.
+- **Dependency:** none for branches and draft PRs while the repository stays attached to the session. The connector stays read-only, so merges, labels on the connector and deploys remain the owner's.
 
 ## B-4. GitHub Actions is billing-locked
 
