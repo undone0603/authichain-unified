@@ -240,7 +240,7 @@ function priceLabel(plan: Plan): string {
   return amount;
 }
 
-const PAGE_CSS = `*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#0b0b10;color:#f4f4f5;line-height:1.55;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}main{width:100%;max-width:30rem;background:#111118;border:1px solid #27272a;border-radius:16px;padding:28px}h1{font-size:1.35rem;margin-bottom:.25rem}.price{font-size:1.9rem;font-weight:800;color:#00ffd1;margin:.5rem 0}.desc{color:#a1a1aa;font-size:.95rem;margin-bottom:1rem}label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:600;color:#d4d4d8}input[type=email]{padding:11px 12px;border:1px solid #3f3f46;border-radius:8px;background:#09090b;color:#fff;font:inherit}button{margin-top:14px;width:100%;padding:13px 18px;border:0;border-radius:10px;background:#00ffd1;color:#000;font:inherit;font-weight:800;cursor:pointer}.hint{font-size:.8rem;color:#a1a1aa;margin-top:8px}.err{background:#3f1d1d;border:1px solid #7f1d1d;color:#fecaca;padding:8px 10px;border-radius:8px;font-size:.85rem;margin-bottom:10px}.hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}ul.plans{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:1rem}ul.plans a{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #27272a;border-radius:10px;color:#fff;text-decoration:none}ul.plans a:hover{border-color:#00ffd1}.links{margin-top:18px;font-size:.85rem}.links a{color:#a1a1aa;margin-right:12px}.hint a{color:#00ffd1}`;
+const PAGE_CSS = `*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#0b0b10;color:#f4f4f5;line-height:1.55;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}main{width:100%;max-width:30rem;background:#111118;border:1px solid #27272a;border-radius:16px;padding:28px}h1{font-size:1.35rem;margin-bottom:.25rem}.price{font-size:1.9rem;font-weight:800;color:#00ffd1;margin:.5rem 0}.desc{color:#a1a1aa;font-size:.95rem;margin-bottom:1rem}label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:600;color:#d4d4d8;margin-bottom:10px}input[type=email],input[type=text]{padding:11px 12px;border:1px solid #3f3f46;border-radius:8px;background:#09090b;color:#fff;font:inherit}button{margin-top:14px;width:100%;padding:13px 18px;border:0;border-radius:10px;background:#00ffd1;color:#000;font:inherit;font-weight:800;cursor:pointer}.hint{font-size:.8rem;color:#a1a1aa;margin-top:8px}.err{background:#3f1d1d;border:1px solid #7f1d1d;color:#fecaca;padding:8px 10px;border-radius:8px;font-size:.85rem;margin-bottom:10px}.hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}ul.plans{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:1rem}ul.plans a{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #27272a;border-radius:10px;color:#fff;text-decoration:none}ul.plans a:hover{border-color:#00ffd1}.links{margin-top:18px;font-size:.85rem}.links a{color:#a1a1aa;margin-right:12px}.hint a{color:#00ffd1}`;
 
 function pageShell(title: string, body: string): string {
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${esc(title)}</title><link rel="icon" type="image/svg+xml" href="https://authichain.com/favicon.svg"><style>${PAGE_CSS}</style></head><body><main>${body}</main></body></html>`;
@@ -282,6 +282,13 @@ export function renderCheckoutConfirmPage(opts: {
   const err = opts.error
     ? `<div class="err" role="alert">${esc(opts.error)}</div>`
     : "";
+  const isQronLaunch = plan.id === "qron_launch";
+  const qronValue = (params.get("qron_attestation") || "").trim().slice(0, 64);
+  const qronInput = isQronLaunch
+    ? `<label for="qron-attestation">Physical Attestation Token
+<input id="qron-attestation" name="qron_attestation" type="text" required pattern="QRON-[A-F0-9]{8}" maxlength="13" placeholder="QRON-XXXXXXXX" value="${esc(qronValue)}"></label>`
+    : "";
+
   return pageShell(
     `Confirm ${plan.name} — AuthiChain checkout`,
     `<h1>${esc(plan.name)}</h1>
@@ -290,6 +297,7 @@ export function renderCheckoutConfirmPage(opts: {
 ${err}<form method="post" action="${esc(action)}" id="checkout-confirm">
 <label for="checkout-confirm-email">Work email
 <input id="checkout-confirm-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com" value="${esc(email)}"></label>
+${qronInput}
 <div class="hp" aria-hidden="true"><label>Leave empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
 ${hidden}<input type="hidden" name="checkout_key" value="${esc(checkoutKey)}"><button type="submit">Continue to secure Stripe checkout</button>
 <p class="hint">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter. You will review the total on Stripe before paying.</p>
@@ -730,14 +738,16 @@ export async function tryHandleGatedCheckout(
 
   // --- QRON Interdiction Gate ---
   if (plan.id === "qron_launch") {
-    const attestationToken = fields.get("qron_attestation");
-    // Verify token presence and basic cryptographic prefix before hitting Stripe
-    if (!attestationToken || !attestationToken.startsWith("QRON-")) {
+    const attestationToken = (fields.get("qron_attestation") || "").trim();
+    // Enforce strict cryptographic token format (QRON- followed by 8 uppercase hex chars)
+    const isValidFormat = /^QRON-[A-F0-9]{8}$/.test(attestationToken);
+    if (!attestationToken || !isValidFormat) {
       return htmlResponse(
         renderCheckoutConfirmPage({
           plan,
           params: fields,
-          error: "QRON Interdiction: Valid physical attestation token required for provisioning.",
+          error:
+            "QRON Interdiction: Valid physical attestation token (format QRON-XXXXXXXX) required for provisioning.",
         }),
         403
       );
