@@ -11,6 +11,7 @@ import {
   renderCheckoutChooserPage,
   renderCheckoutConfirmPage,
   tryHandleGatedCheckout,
+  isQronGatedPlan,
   verifyQronAttestationToken,
 } from "./checkout-gate";
 import { planById, planPaymentLink } from "./plans";
@@ -558,8 +559,12 @@ describe("Launch Annual cadence", () => {
   });
 });
 
-function mintTestQronToken(secret: string, nonce = "testnonce01"): string {
-  const payload = `QRON-${nonce}`;
+function mintTestQronToken(
+  secret: string,
+  nonce = "testnonce01",
+  expiresAt = Math.floor(Date.now() / 1000) + 3600
+): string {
+  const payload = `QRON-${nonce}.${expiresAt}`;
   const sig = createHmac("sha256", secret).update(payload).digest("hex");
   return `${payload}.${sig}`;
 }
@@ -662,5 +667,92 @@ describe("QRON Interdiction Gate (qron_launch)", () => {
       "https://checkout.stripe.com/c/pay/cs_test_qron"
     );
     expect(capturedStripeBody?.get("metadata[qron_attestation]")).toBe(validToken);
+  });
+});
+
+describe("QRON Interdiction Gate hardening", () => {
+  const secret = "test_qron_interdiction_secret_key_2026";
+
+  function postCheckout(planId: string, attestation?: string) {
+    const body = new URLSearchParams({
+      email: "founder@authichain.com",
+      checkout_key: "11111111-2222-3333-4444-555555555555",
+    });
+    if (attestation) body.set("qron_attestation", attestation);
+    return new Request(`https://authichain.com/checkout/${planId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": HUMAN_UA,
+        Origin: "https://authichain.com",
+      },
+      body: body.toString(),
+    });
+  }
+
+  it("rejects an expired token and accepts it only before its signed expiry", async () => {
+    const expiresAt = Math.floor(Date.now() / 1000) + 60;
+    const token = mintTestQronToken(secret, "expiry_test_01", expiresAt);
+    expect(await verifyQronAttestationToken(token, secret)).toBe(true);
+    expect(
+      await verifyQronAttestationToken(token, secret, (expiresAt + 1) * 1000)
+    ).toBe(false);
+    const past = mintTestQronToken(
+      secret,
+      "expiry_test_02",
+      Math.floor(Date.now() / 1000) - 10
+    );
+    expect(await verifyQronAttestationToken(past, secret)).toBe(false);
+  });
+
+  it("rejects a token whose expiry was edited after signing", async () => {
+    const expiresAt = Math.floor(Date.now() / 1000) - 10;
+    const token = mintTestQronToken(secret, "expiry_test_03", expiresAt);
+    const extended = token.replace(
+      `.${expiresAt}.`,
+      `.${expiresAt + 86400}.`
+    );
+    expect(await verifyQronAttestationToken(extended, secret)).toBe(false);
+  });
+
+  it("gates qron_launch_annual the same way as qron_launch", async () => {
+    expect(isQronGatedPlan("qron_launch")).toBe(true);
+    expect(isQronGatedPlan("qron_launch_annual")).toBe(true);
+    expect(isQronGatedPlan("starter")).toBe(false);
+
+    const denied = await tryHandleGatedCheckout(
+      postCheckout("qron_launch_annual"),
+      { STRIPE_SECRET_KEY: "sk_test_mock", QRON_INTERDICTION_SECRET: secret }
+    );
+    expect(denied?.status).toBe(403);
+
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({ url: "https://checkout.stripe.com/c/pay/cs_test_annual" }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    );
+    const allowed = await tryHandleGatedCheckout(
+      postCheckout(
+        "qron_launch_annual",
+        mintTestQronToken(secret, "annual_test_01")
+      ),
+      { STRIPE_SECRET_KEY: "sk_test_mock", QRON_INTERDICTION_SECRET: secret },
+      {
+        claimCheckout: async () => ({ allowed: true }),
+        recordSession: async () => true,
+        fetchImpl,
+      }
+    );
+    expect(allowed?.status).toBe(303);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the attestation input on the qron_launch_annual confirm page", () => {
+    const html = renderCheckoutConfirmPage({
+      plan: planById("qron_launch_annual")!,
+      params: new URLSearchParams(),
+    });
+    expect(html).toContain('id="checkout-confirm-attestation"');
   });
 });

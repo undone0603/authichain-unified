@@ -271,23 +271,23 @@ export function renderCheckoutConfirmPage(opts: {
   const { plan } = opts;
   const params = opts.params ?? new URLSearchParams();
   const email = pickCheckoutEmail(params.get("email"));
-  const isQronLaunch = plan.id === "qron_launch";
+  const isQronGated = isQronGatedPlan(plan.id);
   const attestation = (params.get("qron_attestation") || "").trim().slice(0, 256);
   const submittedCheckoutKey = params.get("checkout_key") || "";
   const checkoutKey = /^[\w-]{36}$/.test(submittedCheckoutKey)
     ? submittedCheckoutKey
     : crypto.randomUUID();
   const hidden = CHECKOUT_CARRY_KEYS.filter(
-    key => !(isQronLaunch && key === "qron_attestation")
+    key => !(isQronGated && key === "qron_attestation")
   )
     .map(key => {
       const v = (params.get(key) || "").trim().slice(0, 256);
       return v ? `<input type="hidden" name="${key}" value="${esc(v)}">` : "";
     })
     .join("");
-  const attestationField = isQronLaunch
+  const attestationField = isQronGated
     ? `<label for="checkout-confirm-attestation" style="margin-top:12px">QRON attestation token
-<input id="checkout-confirm-attestation" name="qron_attestation" type="text" required maxlength="256" autocomplete="off" spellcheck="false" placeholder="QRON-<nonce>.<signature>" value="${esc(attestation)}"></label>`
+<input id="checkout-confirm-attestation" name="qron_attestation" type="text" required maxlength="256" autocomplete="off" spellcheck="false" placeholder="QRON-<nonce>.<expiry>.<signature>" value="${esc(attestation)}"></label>`
     : "";
   const action = `/checkout/${plan.id}`;
   const err = opts.error
@@ -586,23 +586,45 @@ export type GatedCheckoutEnv = {
   QRON_INTERDICTION_SECRET?: string;
 };
 
-const QRON_TOKEN_RE = /^QRON-([A-Za-z0-9_-]{8,64})\.([0-9a-fA-F]{64})$/;
+/**
+ * Plans that provision QRON generation credits. Every one of them sits behind
+ * the interdiction gate, so the cheaper-looking sibling cannot be used to
+ * bypass it.
+ */
+export const QRON_GATED_PLAN_IDS: readonly PlanId[] = [
+  "qron_launch",
+  "qron_launch_annual",
+];
+
+export function isQronGatedPlan(planId: string): boolean {
+  return (QRON_GATED_PLAN_IDS as readonly string[]).includes(planId);
+}
+
+const QRON_TOKEN_RE =
+  /^QRON-([A-Za-z0-9_-]{8,64})\.(\d{10})\.([0-9a-fA-F]{64})$/;
 
 /**
  * Verifies a signed QRON attestation token of the form:
- *   QRON-<nonce>.<hex(HMAC_SHA256(secret, "QRON-<nonce>"))>
+ *   QRON-<nonce>.<expiresAtUnixSeconds>.<hex(HMAC_SHA256(secret, "QRON-<nonce>.<expiresAt>"))>
+ *
+ * The expiry is covered by the signature, so it cannot be extended by the
+ * holder. Tokens are stateless: within their validity window a token is
+ * reusable. Strict single-use would need a server-side nonce store (consumed
+ * alongside claimCheckout), which this gate deliberately does not add. Issue
+ * short-lived tokens to bound replay.
  */
 export async function verifyQronAttestationToken(
   token: string | null | undefined,
-  secret: string | undefined
+  secret: string | undefined,
+  nowMs: number = Date.now()
 ): Promise<boolean> {
   const raw = (token || "").trim();
   const keyMaterial = (secret || "").trim();
   if (!raw || !keyMaterial) return false;
   const match = raw.match(QRON_TOKEN_RE);
   if (!match) return false;
-  const [, nonce, sigHex] = match;
-  const payload = `QRON-${nonce}`;
+  const [, nonce, expiry, sigHex] = match;
+  const payload = `QRON-${nonce}.${expiry}`;
 
   const enc = new TextEncoder();
   const cryptoKey = await crypto.subtle.importKey(
@@ -618,7 +640,13 @@ export async function verifyQronAttestationToken(
     sigBytes[i] = parseInt(sigHex.slice(i * 2, i * 2 + 2), 16);
   }
 
-  return crypto.subtle.verify("HMAC", cryptoKey, sigBytes, enc.encode(payload));
+  const signatureOk = await crypto.subtle.verify(
+    "HMAC",
+    cryptoKey,
+    sigBytes,
+    enc.encode(payload)
+  );
+  return signatureOk && Number(expiry) * 1000 > nowMs;
 }
 
 /**
@@ -781,7 +809,7 @@ export async function tryHandleGatedCheckout(
   report("checkout_email_captured", email);
 
   // --- QRON Interdiction Gate ---
-  if (plan.id === "qron_launch") {
+  if (isQronGatedPlan(plan.id)) {
     const attestationToken = fields.get("qron_attestation");
     const secret = env.QRON_INTERDICTION_SECRET;
     const validAttestation = await verifyQronAttestationToken(
