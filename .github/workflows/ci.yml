@@ -27,7 +27,10 @@ concurrency:
 jobs:
   extras:
     name: Schema and AgentZ checks
-    runs-on: ubuntu-latest
+    # Hosted runners are billing-locked; run on the laptop runner, but never for
+    # fork PRs (public repo: untrusted code must not reach a personal machine).
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 30
 
     steps:
