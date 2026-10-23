@@ -1,0 +1,75 @@
+version: 2.1
+
+# Push pipelines do not deploy. Production deploys stay on GitHub Actions
+# until this pipeline is started with deploy_authichain_com=true. The Deploys
+# UI uses .circleci/deploy.yml and .circleci/rollback.yml instead.
+parameters:
+  deploy_authichain_com:
+    type: boolean
+    default: false
+
+jobs:
+  ci-status:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - run:
+          name: CircleCI is connected
+          command: echo "Push pipelines do not deploy. Smart Deployments use .circleci/deploy.yml."
+
+  deploy-authichain-com:
+    docker:
+      - image: cimg/node:22.15
+    steps:
+      - checkout
+      - run:
+          name: Plan deployment
+          command: |
+            circleci run release plan authichain-com-production \
+              --environment-name="production" \
+              --component-name="authichain-com" \
+              --target-version="${CIRCLE_SHA1}"
+      - run:
+          name: Deploy authichain-com
+          command: bash scripts/circleci/deploy-authichain-com.sh
+      - run:
+          name: Update deployment status to running
+          command: circleci run release update authichain-com-production --status=RUNNING
+      - run:
+          name: Update deployment status to failed
+          command: circleci run release update authichain-com-production --status=FAILED
+          when: on_fail
+
+  release-authichain-com:
+    type: release
+    plan_name: authichain-com-production
+    validation:
+      enabled: true
+      # Off until a monitor tags component_name=authichain-com and env=production.
+      auto_rollback_on_failure: false
+
+  cancel-deploy-authichain-com:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - run:
+          name: Update planned release to CANCELED
+          command: |
+            circleci run release update authichain-com-production \
+              --status=CANCELED
+
+workflows:
+  status:
+    jobs:
+      - ci-status
+  deploy-authichain-com:
+    when: << pipeline.parameters.deploy_authichain_com >>
+    jobs:
+      - deploy-authichain-com
+      - release-authichain-com:
+          requires:
+            - deploy-authichain-com
+      - cancel-deploy-authichain-com:
+          requires:
+            - deploy-authichain-com:
+                - canceled
