@@ -3,9 +3,10 @@
  * /api/manufacturer-status and /verify/manufacturer are not proxied to the
  * edge router, which has no such route.
  *
- * polygon.drpc.org rejects a block distance above 100. This handler asks
- * polygon-bor-rpc.publicnode.com for the latest 10,000 blocks only. That
- * host answers that recent window and rejects older archive ranges.
+ * Free RPCs are flaky: publicnode often returns "invalid block range
+ * params"; drpc caps free plan distance; 1rpc caps at 50. Prefer
+ * polygon.gateway.tenderly.co/public for the latest 10,000 blocks, then
+ * fall back to publicnode with shrinking spans.
  */
 import {
   DEPLOYED_BLOCK,
@@ -21,7 +22,11 @@ import {
 } from "../../manufacturer-status/src/window";
 
 const CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
-const RPC = "https://polygon-bor-rpc.publicnode.com";
+const RPCS = [
+  "https://polygon.gateway.tenderly.co/public",
+  "https://polygon-bor-rpc.publicnode.com",
+] as const;
+
 
 const HISTORY =
   /^\/api\/manufacturer-status\/(0x[a-fA-F0-9]{40})\/history$/;
@@ -85,9 +90,10 @@ type RpcLog = {
 async function rpc(
   fetchImpl: typeof fetch,
   method: string,
-  params: unknown[]
+  params: unknown[],
+  rpcUrl: string = RPCS[0]
 ): Promise<unknown> {
-  const res = await fetchImpl(RPC, {
+  const res = await fetchImpl(rpcUrl, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
@@ -100,12 +106,28 @@ async function rpc(
   }
   if (!res.ok || parsed.error) {
     const message = String(parsed.error?.message ?? "");
-    if (/10000|range|archive/i.test(message)) {
+    if (/10000|range|archive|params/i.test(message)) {
       throw new Error("log_range_rejected");
     }
     throw new Error("log_query_failed");
   }
   return parsed.result;
+}
+
+async function rpcFirst(
+  fetchImpl: typeof fetch,
+  method: string,
+  params: unknown[]
+): Promise<unknown> {
+  let lastErr: unknown;
+  for (const url of RPCS) {
+    try {
+      return await rpc(fetchImpl, method, params, url);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("log_query_failed");
 }
 
 function logIndexOf(log: RpcLog): string {
@@ -228,7 +250,7 @@ export async function tryHandleManufacturerStatus(
   let roles;
   try {
     const call = (data: string) =>
-      rpc(fetchImpl, "eth_call", [{ to: CONTRACT, data }, "latest"]);
+      rpcFirst(fetchImpl, "eth_call", [{ to: CONTRACT, data }, "latest"]);
     const [admin, minter, updater, pauser, manufacturerVerified] = await Promise.all([
       call(hasRoleData(ROLE_IDS.admin, address)),
       call(hasRoleData(ROLE_IDS.minter, address)),
@@ -249,7 +271,7 @@ export async function tryHandleManufacturerStatus(
     return json(502, { error, address, contract: CONTRACT });
   }
   try {
-    const currentHex = await rpc(fetchImpl, "eth_blockNumber", []);
+    const currentHex = await rpcFirst(fetchImpl, "eth_blockNumber", []);
     if (typeof currentHex !== "string") throw new Error("log_query_failed");
     const current = BigInt(currentHex);
     // publicnode intermittently rejects even valid windows with
@@ -277,16 +299,16 @@ export async function tryHandleManufacturerStatus(
       });
       try {
         // Serialize: parallel bursts trip flaky free RPCs.
-        granted = await rpc(fetchImpl, "eth_getLogs", [
+        granted = await rpcFirst(fetchImpl, "eth_getLogs", [
           roleFilter(EVENT_TOPICS.roleGranted),
         ]);
-        revoked = await rpc(fetchImpl, "eth_getLogs", [
+        revoked = await rpcFirst(fetchImpl, "eth_getLogs", [
           roleFilter(EVENT_TOPICS.roleRevoked),
         ]);
-        verified = await rpc(fetchImpl, "eth_getLogs", [
+        verified = await rpcFirst(fetchImpl, "eth_getLogs", [
           manufacturerFilter(EVENT_TOPICS.manufacturerVerified),
         ]);
-        unverified = await rpc(fetchImpl, "eth_getLogs", [
+        unverified = await rpcFirst(fetchImpl, "eth_getLogs", [
           manufacturerFilter(EVENT_TOPICS.manufacturerRevoked),
         ]);
         lastErr = null;
