@@ -27,6 +27,8 @@ jobs:
         with:
           node-version: "22"
           cache: "pnpm"
+      - name: Install node-gyp (native builds)
+        run: npm i -g node-gyp@11
       - name: Install
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Embed microsite HTML
