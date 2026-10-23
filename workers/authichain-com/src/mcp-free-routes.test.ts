@@ -86,6 +86,36 @@ describe("/mcp/free", () => {
   });
 });
 
+describe("/mcp/free verify_record is fully free", () => {
+  it("touches no x402 env, KV quota, or payment binding", async () => {
+    const touched: string[] = [];
+    const env = new Proxy({} as Record<string, unknown>, {
+      get(_t, k) { touched.push(String(k)); return undefined; },
+      has(_t, k) { touched.push(String(k)); return false; },
+    });
+    const urls: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      urls.push(String(input instanceof Request ? input.url : input));
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: null }), { headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+    try {
+      const res = await tryHandleMcpFree(
+        post("/mcp/free", { jsonrpc: "2.0", id: 9, method: "tools/call", params: { name: "verify_record", arguments: { id: "polygon-anchor-1" } } }),
+        env as never
+      );
+      const body = JSON.parse(await res!.text());
+      expect(body.result).toBeDefined();
+      expect(res!.status).toBe(200);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    // Only the optional Polygon RPC override is read; no X402_*, KV, VERIFY_APP.
+    expect(touched.filter(k => k !== "POLYGON_RPC_URL" && typeof k === "string" && !k.startsWith("Symbol"))).toEqual([]);
+    for (const u of urls) expect(u).not.toMatch(/x402|facilitator|pay/i);
+  });
+});
+
 describe("/mcp unchanged", () => {
   it("tools/list matches the pre-change snapshot", async () => {
     const res = await tryHandleMcp(post("/mcp", { jsonrpc: "2.0", id: 1, method: "tools/list" }));
