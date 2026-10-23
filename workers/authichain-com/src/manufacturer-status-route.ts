@@ -10,6 +10,7 @@
 import {
   DEPLOYED_BLOCK,
   EVENT_TOPICS,
+  FREE_RPC_SPAN,
   HISTORY_DISCLAIMER,
   ROLE_IDS,
   addressFromTopic,
@@ -251,29 +252,50 @@ export async function tryHandleManufacturerStatus(
     const currentHex = await rpc(fetchImpl, "eth_blockNumber", []);
     if (typeof currentHex !== "string") throw new Error("log_query_failed");
     const current = BigInt(currentHex);
-    const fromBlock = logFromBlock(current, DEPLOYED_BLOCK);
-    const roleFilter = (topic: string) => ({
-      address: CONTRACT,
-      fromBlock: "0x" + fromBlock.toString(16),
-      toBlock: "0x" + current.toString(16),
-      topics: [topic, null, accountTopic(address)],
-    });
-    const manufacturerFilter = (topic: string) => ({
-      address: CONTRACT,
-      fromBlock: "0x" + fromBlock.toString(16),
-      toBlock: "0x" + current.toString(16),
-      topics: [topic, accountTopic(address)],
-    });
-    const [granted, revoked, verified, unverified] = await Promise.all([
-      rpc(fetchImpl, "eth_getLogs", [roleFilter(EVENT_TOPICS.roleGranted)]),
-      rpc(fetchImpl, "eth_getLogs", [roleFilter(EVENT_TOPICS.roleRevoked)]),
-      rpc(fetchImpl, "eth_getLogs", [
-        manufacturerFilter(EVENT_TOPICS.manufacturerVerified),
-      ]),
-      rpc(fetchImpl, "eth_getLogs", [
-        manufacturerFilter(EVENT_TOPICS.manufacturerRevoked),
-      ]),
-    ]);
+    // publicnode intermittently rejects even valid windows with
+    // "invalid block range params". Retry, then shrink the span.
+    const spans = [FREE_RPC_SPAN, 1_000n, 100n] as const;
+    let fromBlock = logFromBlock(current, DEPLOYED_BLOCK, spans[0]);
+    let granted: unknown;
+    let revoked: unknown;
+    let verified: unknown;
+    let unverified: unknown;
+    let lastErr: unknown;
+    for (const span of spans) {
+      fromBlock = logFromBlock(current, DEPLOYED_BLOCK, span);
+      const roleFilter = (topic: string) => ({
+        address: CONTRACT,
+        fromBlock: "0x" + fromBlock.toString(16),
+        toBlock: "0x" + current.toString(16),
+        topics: [topic, null, accountTopic(address)],
+      });
+      const manufacturerFilter = (topic: string) => ({
+        address: CONTRACT,
+        fromBlock: "0x" + fromBlock.toString(16),
+        toBlock: "0x" + current.toString(16),
+        topics: [topic, accountTopic(address)],
+      });
+      try {
+        // Serialize: parallel bursts trip flaky free RPCs.
+        granted = await rpc(fetchImpl, "eth_getLogs", [
+          roleFilter(EVENT_TOPICS.roleGranted),
+        ]);
+        revoked = await rpc(fetchImpl, "eth_getLogs", [
+          roleFilter(EVENT_TOPICS.roleRevoked),
+        ]);
+        verified = await rpc(fetchImpl, "eth_getLogs", [
+          manufacturerFilter(EVENT_TOPICS.manufacturerVerified),
+        ]);
+        unverified = await rpc(fetchImpl, "eth_getLogs", [
+          manufacturerFilter(EVENT_TOPICS.manufacturerRevoked),
+        ]);
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    if (lastErr) throw lastErr;
     if (
       !Array.isArray(granted) ||
       !Array.isArray(revoked) ||
