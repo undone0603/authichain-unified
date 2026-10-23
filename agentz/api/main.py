@@ -402,6 +402,14 @@ async def api_launch_specialists():
     return {"specialists": statuses}
 
 
+# --- Deployment Control Plane ---
+@app.get("/control-plane/state", dependencies=[Depends(verify_token)], tags=["Control Plane"])
+async def api_control_plane_state():
+    """Return normalized GitHub/GitLab/Vercel/Cloudflare deployment state."""
+    from agentz.control_plane import collect_state
+    return collect_state()
+
+
 # --- GPT Schema Export ---
 @app.get("/openapi.json", include_in_schema=False)
 async def get_openapi_json():
