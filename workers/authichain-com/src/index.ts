@@ -19,6 +19,7 @@ import {
 } from "./checkout-growth";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
+import { tryHandleMcpFree } from "./mcp-free-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import { isMcpInstallPath, renderMcpInstallPage } from "./mcp-install-page";
@@ -3614,6 +3615,9 @@ async function handleAuthichainCom(
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
     const x402 = await tryHandleX402(request, env, env.VERIFY_APP);
     if (x402) return x402;
+    // /mcp/free: free-only sibling for the marketplace plugin (Advisor ruling B).
+    const mcpFree = await tryHandleMcpFree(request, env);
+    if (mcpFree) return mcpFree;
     const mcp = await tryHandleMcp(request, env, env.VERIFY_APP);
     if (mcp) return mcp;
     const apiV1 = await tryHandleApiV1(request, env);
