@@ -28,11 +28,16 @@ describe('data integrity', () => {
     const milestones = listMilestones();
     expect(milestones.length).toBeGreaterThan(0);
     for (const m of milestones) {
-      expect(m.date, m.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      if (m.precision === 'tbd') {
+        expect(m.date, m.id).toBeNull();
+        expect(m.endDate, m.id).toBeUndefined();
+      } else {
+        expect(m.date, m.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      }
       expect(m.label, m.id).toBeTruthy();
       expect(m.detail, m.id).toBeTruthy();
       expect(m.source, m.id).toMatch(/^https:\/\//);
-      if (m.endDate) expect(m.endDate.localeCompare(m.date)).toBeGreaterThan(0);
+      if (m.endDate) expect(m.endDate.localeCompare(m.date!)).toBeGreaterThan(0);
     }
   });
 
@@ -105,14 +110,12 @@ describe('formatMilestoneDate', () => {
     expect(formatMilestoneDate(registry())).toBe('Jul 2026');
   });
 
-  it('renders a quarter range', () => {
-    const electronics = listMilestones().find((m) => m.id === 'electronics')!;
-    expect(formatMilestoneDate(electronics)).toBe('Q3–Q4 2027');
-  });
-
-  it('renders a year range', () => {
-    const textiles = listMilestones().find((m) => m.id === 'textiles')!;
-    expect(formatMilestoneDate(textiles)).toBe('2028–2029');
+  it('renders no date for undated (tbd) milestones', () => {
+    for (const id of ['electronics', 'textiles', 'construction']) {
+      const m = listMilestones().find((x) => x.id === id)!;
+      expect(m.date).toBeNull();
+      expect(formatMilestoneDate(m)).toBe('');
+    }
   });
 });
 
@@ -134,9 +137,17 @@ describe('countdownLabel', () => {
     expect(countdownLabel(battery(), new Date(Date.UTC(2027, 1, 17)))).toBe('1 day to comply');
   });
 
-  it('summarises distant milestones in years', () => {
+  it('gives no countdown for undated milestones', () => {
     const construction = listMilestones().find((m) => m.id === 'construction')!;
-    expect(countdownLabel(construction, AUG_2026)).toMatch(/years out/);
+    expect(countdownLabel(construction, AUG_2026)).toBe('Date not set');
+  });
+});
+
+describe('undated milestones', () => {
+  it('sort after every dated milestone', () => {
+    const ids = listMilestones().map((m) => m.id);
+    expect(ids.slice(0, 2)).toEqual(['central-registry', 'batteries']);
+    expect(ids.slice(2).sort()).toEqual(['construction', 'electronics', 'textiles']);
   });
 });
 
@@ -146,7 +157,7 @@ describe('nextDeadline / mostRecentInForce', () => {
   });
 
   it('moves on once the battery mandate lands', () => {
-    expect(nextDeadline(MAR_2027)?.id).toBe('electronics');
+    expect(nextDeadline(MAR_2027)).toBeNull();
     expect(mostRecentInForce(MAR_2027)?.id).toBe('batteries');
   });
 
