@@ -3,7 +3,7 @@ name: Deploy authichain-app
 # root Next.js app; config: wrangler.app.jsonc). Modeled on
 # deploy-first-dollar-desk.yml (#2044). Start it by hand after a merge.
 # Rollback: dispatch on main with rollback_version=9aedb978 (runs only
-# `pnpm exec wrangler rollback 9aedb978 --name authichain-app`, then the same post-checks).
+# `pnpm exec wrangler rollback 9aedb978 --name authichain-app --message "CI rollback via deploy-authichain-app" --yes`, then the same post-checks).
 on:
   workflow_dispatch:
     inputs:
