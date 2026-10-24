@@ -272,7 +272,9 @@ export function renderCheckoutConfirmPage(opts: {
   const params = opts.params ?? new URLSearchParams();
   const email = pickCheckoutEmail(params.get("email"));
   const isQronGated = isQronGatedPlan(plan.id);
-  const attestation = (params.get("qron_attestation") || "").trim().slice(0, 256);
+  const attestation = (params.get("qron_attestation") || "")
+    .trim()
+    .slice(0, 256);
   const submittedCheckoutKey = params.get("checkout_key") || "";
   const checkoutKey = /^[\w-]{36}$/.test(submittedCheckoutKey)
     ? submittedCheckoutKey
@@ -705,7 +707,11 @@ async function readFormFields(request: Request): Promise<URLSearchParams> {
  *   POST     → validate (email, honeypot, origin, bot/prefetch) → 303 Stripe.
  */
 /** Plans whose /checkout/<plan> page is closed to new buyers. */
-export const RETIRED_GATED_PLAN_IDS: readonly PlanId[] = ["qron_launch"];
+// TODO: inject gated/retired plan lists so the 403 + Stripe hand-off stay unit-testable with every QRON plan retired.
+export const RETIRED_GATED_PLAN_IDS: readonly PlanId[] = [
+  "qron_launch",
+  "qron_launch_annual",
+];
 
 export async function tryHandleGatedCheckout(
   request: Request,

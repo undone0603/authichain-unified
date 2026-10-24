@@ -19,28 +19,19 @@ function toBase64Url(value: string): string {
 }
 
 describe("generateCreditPacks", () => {
-  it("exposes Starter, Launch monthly, Launch annual, Creator, then DPP", () => {
+  it("exposes Starter, Creator, then DPP (Launch unlisted)", () => {
     const packs = generateCreditPacks();
     const byId = Object.fromEntries(packs.map(p => [p.id, p]));
     expect(byId.starter.price).toBe(29);
-    expect(byId.qron_launch.price).toBe(19);
     expect(byId.creator.price).toBe(99);
     expect(byId.dpp_readiness.price).toBe(299);
     expect(packs.map(p => p.id)).toEqual([
       "starter",
-      "qron_launch",
-      "qron_launch_annual",
       "creator",
       "dpp_readiness",
     ]);
-    expect(byId.qron_launch.checkout).toBe(
-      "https://authichain.com/checkout/qron_launch"
-    );
-    expect(byId.qron_launch_annual.price).toBe(190);
-    expect(byId.qron_launch_annual.checkout).toBe(
-      "https://authichain.com/checkout/qron_launch_annual"
-    );
-    expect(byId.qron_launch.cta).toMatch(/Launch/i);
+    expect(byId.qron_launch).toBeUndefined();
+    expect(byId.qron_launch_annual).toBeUndefined();
   });
 });
 
@@ -190,7 +181,7 @@ describe("handleGeneratePost", () => {
     expect(result.body.message).toMatch(/Authentication required/i);
     expect(Array.isArray(result.body.packs)).toBe(true);
     const packs = result.body.packs as Array<{ id: string }>;
-    expect(packs.map(p => p.id)).toContain("qron_launch");
+    expect(packs.map(p => p.id)).not.toContain("qron_launch");
     expect(packs.map(p => p.id)).toContain("starter");
     expect(generateImage).not.toHaveBeenCalled();
     expect(checkCredit).not.toHaveBeenCalled();

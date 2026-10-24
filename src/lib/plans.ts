@@ -94,13 +94,13 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "pro",
     brand: "qron",
-    listed: true,
+    listed: false,
     features: [
       "100 generations / month",
       "Designed for AuthiChain signed verification (in development)",
       "Cancel any time",
     ],
-    cta: "Start Launch $19/mo",
+    cta: "See pricing",
   },
   {
     id: "qron_launch_annual",
@@ -114,14 +114,14 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "pro",
     brand: "qron",
-    listed: true,
+    listed: false,
     features: [
       "1,200 generations per year",
       "Two months free vs $19/mo",
       "Designed for AuthiChain signed verification (in development)",
       "Cancel any time",
     ],
-    cta: "Start Annual Launch — $190/yr",
+    cta: "See pricing",
   },
   {
     id: "creator",

@@ -1282,6 +1282,7 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/onboard</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/generate</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
+  // Retired plans 303 to /pricing, so they are no longer sitemap pages.
   assert.ok(
     !xml.includes("/checkout/qron_launch"),
     "/checkout/qron_launch is closed to new buyers (#2020); sitemap must not list it"

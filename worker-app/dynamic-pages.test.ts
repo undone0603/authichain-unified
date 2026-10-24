@@ -986,11 +986,10 @@ describe("renderDynamicPage: /login and /authenticate", () => {
         'action="https://authichain.com/checkout/starter"'
       );
       expect(body).toContain("Buy Starter Pack — $29");
-      expect(body).toContain("Start Launch $19/mo");
-      expect(body).toContain("Launch $190/yr");
-      expect(body).toContain(
-        'href="https://authichain.com/checkout/qron_launch_annual"'
-      );
+      expect(body).toContain('<a href="/pricing">See pricing</a>');
+      expect(body).not.toContain("$19/mo");
+      expect(body).not.toContain("$190/yr");
+      expect(body).not.toContain("qron_launch");
       expect(body).toContain(
         'href="https://authichain.com/checkout/dpp_readiness"'
       );
