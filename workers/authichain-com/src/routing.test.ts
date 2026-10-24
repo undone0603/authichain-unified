@@ -1538,3 +1538,15 @@ test("vs pages and the scantrust page carry no unbacked 'Tamper-Proof by Design'
   );
   assert.doesNotMatch(scantrust, banned, "src/app/vs/scantrust/page.tsx");
 });
+
+// CFA-629: the dpp-check sub-routes must be reachable through the Worker's fetch.
+test("GET /dpp-check/product returns 200 through the Worker fetch", async () => {
+  const res = await worker.fetch(new Request("https://authichain.com/dpp-check/product"), ENV);
+  assert.equal(res.status, 200);
+});
+
+test("GET /dpp/scan returns 301 to /dpp-check through the Worker fetch", async () => {
+  const res = await worker.fetch(new Request("https://authichain.com/dpp/scan"), ENV);
+  assert.equal(res.status, 301);
+  assert.match(res.headers.get("Location") ?? "", /\/dpp-check$/);
+});
