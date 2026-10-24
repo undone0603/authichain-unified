@@ -322,7 +322,12 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   assert.match(privacy, /on the basis of your consent \(GDPR Art\. 6\(1\)\(a\)\)/);
   assert.match(privacy, /withdraw consent at any time through the unsubscribe link/);
   assert.match(privacy, /Legal basis: legitimate interest \(GDPR Art\. 6\(1\)\(f\)\)/);
-  assert.match(privacy, /Where we got your data \(1-to-1 business emails only\)/);
+  assert.match(privacy, /Where we got your data\.<\/strong> Opt-in sequence: from you\. 1-to-1 business emails: public sources \(such as your company's website\) or Apollo\.io/);
+  assert.match(privacy, /Resend, which sends the opt-in sequence; Google \(Gmail\), which Zachary uses to send and receive 1-to-1 emails;/);
+  assert.match(privacy, /Resend and Google process data in the United States; we have not yet confirmed their transfer safeguards on this page\./);
+  assert.match(privacy, /Reply 'stop' \(or tell us in any words\) and we won't email you again/);
+  assert.match(privacy, /reply 'stop' \(or tell us in any words\) to our email/);
+  assert.doesNotMatch(privacy, /If we start emailing businesses|Any future outreach/);
   assert.match(privacy, /and the DPP readiness email sequence to people who opted in/);
   assert.match(privacy, /12 months after our last contact/);
   assert.match(privacy, /do not claim one is in place/);
