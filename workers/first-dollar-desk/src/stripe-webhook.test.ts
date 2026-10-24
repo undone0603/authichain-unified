@@ -151,21 +151,30 @@ describe("first-dollar-desk /api/stripe/webhook (PM-330)", () => {
 });
 
 describe("first-dollar-desk DPP report skip (only authichain.com unlocks it)", () => {
-  it("a signed DPP checkout (product_line=dpp_report or DPP_REPORT_PRICE_ID) returns 200 with no write", async () => {
-    for (const object of [
-      { id: "cs_dpp1", payment_status: "paid", amount_total: 2900, metadata: { product_line: "dpp_report" } },
-      { id: "cs_dpp2", payment_status: "paid", amount_total: 2900, metadata: {}, line_items: { data: [{ price: { id: "price_dppfixture" } }] } },
-    ]) {
-      const payload = JSON.stringify({ id: "evt_" + object.id, object: "event", type: "checkout.session.completed", data: { object } });
-      const LEDGER = fakeKv();
-      const res = await worker.fetch(post(payload, { "stripe-signature": sign(payload) }), {
-        LEDGER,
-        STRIPE_WEBHOOK_SECRET: SECRET,
-        DPP_REPORT_PRICE_ID: "price_dppfixture",
-      });
-      expect(res.status).toBe(200);
-      expect(await res.json()).toMatchObject({ skipped: "dpp_report" });
-      expect(LEDGER.store.size).toBe(0);
-    }
+  const run = async (object: Record<string, unknown>, id: string) => {
+    const payload = JSON.stringify({ id, object: "event", type: "checkout.session.completed", livemode: true, data: { object } });
+    const LEDGER = fakeKv();
+    const res = await worker.fetch(post(payload, { "stripe-signature": sign(payload) }), {
+      LEDGER,
+      STRIPE_WEBHOOK_SECRET: SECRET,
+      DPP_REPORT_PRICE_ID: "price_dppfixture",
+    });
+    return { res, LEDGER };
+  };
+
+  it("a live-shaped DPP checkout.session.completed with no line_items and metadata.product_line=dpp_report returns 200 with no write", async () => {
+    const object = { id: "cs_live_dpp", object: "checkout.session", mode: "payment", payment_status: "paid", status: "complete", amount_total: 2900, currency: "usd", metadata: { product_line: "dpp_report" } };
+    expect(object).not.toHaveProperty("line_items");
+    const { res, LEDGER } = await run(object, "evt_live_dpp");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ skipped: "dpp_report" });
+    expect(LEDGER.store.size).toBe(0);
+  });
+
+  it("a desk checkout without product_line=dpp_report is still claimed, even if line_items name the DPP price", async () => {
+    const object = { id: "cs_live_desk", object: "checkout.session", mode: "payment", payment_status: "paid", status: "complete", amount_total: 2900, currency: "usd", metadata: {}, line_items: { data: [{ price: { id: "price_dppfixture" } }] } };
+    const { res, LEDGER } = await run(object, "evt_live_desk");
+    expect((await res.clone().json().catch(() => ({}))).skipped).toBeUndefined();
+    expect(LEDGER.store.has("stripe_evt:evt_live_desk")).toBe(true);
   });
 });

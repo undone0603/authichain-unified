@@ -2083,19 +2083,11 @@ async function releaseStripeEvent(env, eventId) {
 }
 __name(releaseStripeEvent, "releaseStripeEvent");
 function isDppReportCheckout(env, event) {
+  // CFA-633: checkout.session.completed carries no line_items unless the
+  // session is fetched with expand, so detect DPP by session metadata only.
   if (!String(event?.type ?? "").startsWith("checkout.session.")) return false;
   const s = event.data?.object ?? {};
-  const marks = (m) => m?.product_line === "dpp_report";
-  const dppPrice = String(env.DPP_REPORT_PRICE_ID ?? "").trim();
-  if (marks(s.metadata)) return true;
-  if (dppPrice && s.metadata?.stripe_price_id === dppPrice) return true;
-  for (const li of s.line_items?.data ?? []) {
-    const p = li?.price;
-    if (!p) continue;
-    if (dppPrice && p.id === dppPrice) return true;
-    if (marks(p.metadata) || (p.product && typeof p.product === "object" && marks(p.product.metadata))) return true;
-  }
-  return false;
+  return s.metadata?.product_line === "dpp_report";
 }
 __name(isDppReportCheckout, "isDppReportCheckout");
 async function handleStripeWebhook(request, env) {
