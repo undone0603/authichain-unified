@@ -365,7 +365,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         primary: false,
       },
       plansNote:
-        "QRON Launch and generation packs first, then the EU DPP Workspace. E-bike and other LMT batteries need a passport from 18 February 2027.",
+        "Generation packs first, then the EU DPP Workspace. E-bike and other LMT batteries need a passport from 18 February 2027.",
       ctaTitle: "Buy the Starter Pack",
       ctaLede:
         "$29, one time — 100 AI QR generations. Add a work email first so we can send your receipt.",

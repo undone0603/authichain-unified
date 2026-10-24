@@ -529,9 +529,9 @@ describe("Launch Annual cadence", () => {
     expect(confirm).not.toContain("$190/mo");
     expect(renderCheckoutConfirmPage({ plan: monthly! })).toContain("$19/mo");
     const chooser = renderCheckoutChooserPage();
-    expect(chooser).toContain("$190/yr");
-    expect(chooser).not.toContain("$190/mo");
-    expect(chooser).toContain("$19/mo");
+    // Launch plans are unlisted, so the chooser no longer offers them.
+    expect(chooser).not.toContain("$190/yr");
+    expect(chooser).not.toContain("$19/mo");
   });
 
   it("opens a subscription session for the annual price", () => {

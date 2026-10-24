@@ -54,7 +54,7 @@ describe("plan catalogue integrity", () => {
   it("wires QRON Launch $19/mo to the live Stripe price", () => {
     expect(planById("qron_launch")?.price).toBe(19);
     expect(planById("qron_launch")?.stripe_mode).toBe("subscription");
-    expect(planById("qron_launch")?.listed).not.toBe(false);
+    expect(planById("qron_launch")?.listed).toBe(false);
     expect(planByStripePriceId("price_1UJjzPGqTruSqV8TmhFSc8vh")?.id).toBe(
       "qron_launch"
     );
@@ -70,7 +70,7 @@ describe("plan catalogue integrity", () => {
     expect(planById("qron_launch_annual")?.price).toBe(190);
     expect(planById("qron_launch_annual")?.stripe_mode).toBe("subscription");
     expect(planById("qron_launch_annual")?.generations).toBe(1200);
-    expect(planById("qron_launch_annual")?.listed).not.toBe(false);
+    expect(planById("qron_launch_annual")?.listed).toBe(false);
     expect(planByStripePriceId("price_1USNoSGqTruSqV8ThTIW7Ej8")?.id).toBe(
       "qron_launch_annual"
     );
@@ -139,10 +139,11 @@ describe("listedPlans", () => {
     expect(strainchain).toEqual(["strainchain_passport"]);
   });
 
-  it("lists public QRON plans including Launch and hides Theater", () => {
+  it("lists public QRON plans without Launch and hides Theater", () => {
     const qron = listedPlans("qron").map(p => p.id);
     expect(qron).toContain("free");
-    expect(qron).toContain("qron_launch");
+    expect(qron).not.toContain("qron_launch");
+    expect(qron).not.toContain("qron_launch_annual");
     expect(qron).toContain("starter");
     expect(qron).toContain("creator");
     expect(qron).toContain("dpp_readiness");
@@ -160,7 +161,7 @@ describe("listedPlans", () => {
 
   it("keeps the live self-serve money path at $19 / $99 / $299", () => {
     const byId = Object.fromEntries(listedPlans("qron").map(p => [p.id, p]));
-    expect(byId.qron_launch.price).toBe(19);
+    expect(byId.qron_launch).toBeUndefined();
     expect(byId.starter?.price).toBe(29);
     expect(byId.creator.price).toBe(99);
     expect(byId.dpp_readiness.price).toBe(299);
