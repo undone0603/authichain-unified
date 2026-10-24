@@ -8,14 +8,24 @@ describe("/is-this-real", () => {
     expect(isIsThisRealPath("/is-this-real/")).toBe(true);
     expect(isIsThisRealPath("/is-this")).toBe(false);
   });
-  it("has seal, email and a required consent box", () => {
+  it("has seal, an optional email and an unchecked, optional consent box", () => {
     expect(html).toContain('name="sealId"');
-    expect(html).toContain('type="email"');
-    expect(html).toMatch(/id="consent"[^>]*required/);
+    expect(html).toMatch(/<input type="email" id="email"(?![^>]*required)[^>]*>/);
+    expect(html).toMatch(/<input type="checkbox" id="consent"(?![^>]*(required|checked))[^>]*>/);
+    expect(html).toContain('href="/privacy"');
   });
-  it("stores via existing lead capture with its own source", () => {
-    expect(html).toContain("/api/leads/capture");
-    expect(html).toContain(`source:"${IS_THIS_REAL_SOURCE}"`);
+  it("runs the check without an email and only opts in with email + consent", () => {
+    expect(html).toContain('if(!seal){st.textContent="Enter a seal ID.";return}');
+    expect(html).toContain("if(!captured&&email&&f.consent.checked)");
+    expect(html).toContain("/api/email-optin");
+  });
+  it("keeps the existing lead capture POST, unchanged, when email + consent are given", () => {
+    expect(html).toContain('fetch("/api/leads/capture"');
+    expect(html).toContain(`source:"${IS_THIS_REAL_SOURCE}",product_interest:"nickel-verify"`);
+    expect(IS_THIS_REAL_SOURCE).toBe("is-this-real");
+    expect(html).toContain('source:"is-this-real",product_interest:"nickel-verify"');
+    expect(html).toContain('message:"consent: yes; first seal: "+seal.slice(0,128),page_url:location.href');
+    expect(html.indexOf("/api/leads/capture")).toBeGreaterThan(html.indexOf("if(!captured&&email&&f.consent.checked)"));
   });
   it("offers 3 free checks then a price-free x402 option", () => {
     expect(html).toContain("MAX=3");

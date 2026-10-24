@@ -1,16 +1,19 @@
 /**
  * /is-this-real — NICKEL-VERIFY-V1 lead magnet (Zac, 2026-10-16).
  *
- * The visitor enters a seal ID, an email, and ticks consent. The lead goes to
- * the existing POST /api/leads/capture (Supabase `lead_captures`, source
- * "is-this-real"). That source skips the Make/n8n webhooks, so no automated
- * email goes out. After that the page runs up to 3 free checks against the
+ * The visitor enters a seal ID. Email is optional (2026-10-23): only if they
+ * give one AND tick the unchecked consent box does the page POST it to the
+ * existing /api/leads/capture (QRON-v2 lead_captures, source "is-this-real",
+ * unchanged payload) and to /api/email-optin (AuthiChain D1, see email-optin.ts). The check never waits
+ * on it. After that the page runs up to 3 free checks against the
  * public GET /api/verify. The limit is counted in the browser (localStorage)
  * and is a courtesy cap, not enforcement. Then it shows the paid option:
  * x402 per call at POST /api/v1/agent-verify. No public price on this
  * page (price undecided, ADM-212); the 402 response carries it.
  * Copy rule: no "live", customer, or accuracy claims.
  */
+import { EMAIL_OPTIN_CONSENT_TEXT, EMAIL_OPTIN_PATH, EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL } from "./email-optin.ts";
+
 export const IS_THIS_REAL_PATH = "/is-this-real";
 export const IS_THIS_REAL_SOURCE = "is-this-real";
 export const IS_THIS_REAL_FREE_CHECKS = 3;
@@ -40,10 +43,10 @@ code{background:#f3f3f3;padding:.1rem .3rem;border-radius:4px}
 <form id="itr-form" novalidate>
   <label for="seal">Seal ID</label>
   <input type="text" id="seal" name="sealId" required maxlength="128" placeholder="e.g. polygon-anchor-1">
-  <label for="email">Email</label>
-  <input type="email" id="email" name="email" required maxlength="254">
-  <label class="small"><input type="checkbox" id="consent" name="consent" required>
-    I agree that AuthiChain may store my email and the seal IDs I check, and may contact me about verification. No automated emails are sent from this form. See the <a href="/privacy">privacy policy</a>.</label>
+  <label for="email">Email (optional)</label>
+  <input type="email" id="email" name="email" maxlength="254" autocomplete="email">
+  <label class="small"><input type="checkbox" id="consent" name="consent" value="yes"> ${EMAIL_OPTIN_CONSENT_TEXT}</label>
+  <p class="small">${EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL}</p>
   <button type="submit" id="go">Check</button>
 </form>
 <p id="status" class="small" role="status" aria-live="polite"></p>
@@ -65,17 +68,19 @@ code{background:#f3f3f3;padding:.1rem .3rem;border-radius:4px}
   f.addEventListener("submit",async function(e){
     e.preventDefault();
     var seal=f.sealId.value.trim(),email=f.email.value.trim();
-    if(!seal||!email){st.textContent="Enter a seal ID and an email.";return}
-    if(!f.consent.checked){st.textContent="Please tick the consent box.";return}
+    if(!seal){st.textContent="Enter a seal ID.";return}
+    if(email&&!f.consent.checked){st.textContent="To save your email, tick the box. Or clear the email to just check.";return}
     if(used()>=MAX){paid.hidden=false;st.textContent="You have used your "+MAX+" free checks.";return}
     st.textContent="Checking...";
     try{
-      if(!captured){
+      if(!captured&&email&&f.consent.checked){
         var lr=await fetch("/api/leads/capture",{method:"POST",headers:{"Content-Type":"application/json"},
           body:JSON.stringify({email:email,source:"${IS_THIS_REAL_SOURCE}",product_interest:"nickel-verify",
             message:"consent: yes; first seal: "+seal.slice(0,128),page_url:location.href})});
         if(!lr.ok){st.textContent="We could not save your details. Please try again.";return}
         captured=true;
+        fetch("${EMAIL_OPTIN_PATH}",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({email:email,consent:"yes"})}).catch(function(){});
       }
       var r=await fetch("/api/verify?id="+encodeURIComponent(seal));
       var j=await r.json().catch(function(){return {}});
