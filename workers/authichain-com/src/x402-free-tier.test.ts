@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { tryHandleX402, x402FreeCallsHealth } from "./x402-routes";
-import type { FreeTierStore } from "../../../src/lib/x402-free-tier";
+import { freeTierClientKey, type FreeTierStore } from "../../../src/lib/x402-free-tier";
 
 const SEAL = "11111111-2222-4333-8444-555555555555";
 const ENV = {
@@ -247,5 +247,52 @@ describe("x402 free daily calls", () => {
   it("anon-only credentials never grant free calls (ledger not writable)", async () => {
     const env = { X402_PAY_TO: ENV.X402_PAY_TO, SUPABASE_URL: ENV.SUPABASE_URL, SUPABASE_ANON_KEY: "anon" };
     expect((await tryHandleX402(call(), env, undefined, { fetchImpl: sealFetch }))!.status).toBe(402);
+  });
+});
+
+describe("x402 free tier IPv6 /64 keying", () => {
+  const now = new Date("2026-10-16T15:00:00Z");
+  const run = (store: FreeTierStore, ip: string) =>
+    tryHandleX402(call(ip), ENV, undefined, { freeStore: store, now, fetchImpl: sealFetch });
+
+  it("normalizes keys: IPv4 unchanged, IPv6 to /64", () => {
+    expect(freeTierClientKey("203.0.113.7")).toBe("203.0.113.7");
+    expect(freeTierClientKey("2001:db8:abcd:12:1:2:3:4")).toBe("2001:db8:abcd:12::/64");
+    expect(freeTierClientKey("2001:DB8:ABCD:0012::ffff")).toBe("2001:db8:abcd:12::/64");
+    expect(freeTierClientKey("2001:db8::1")).toBe("2001:db8:0:0::/64");
+    expect(freeTierClientKey("::ffff:203.0.113.7")).toBe("203.0.113.7");
+    expect(freeTierClientKey("2001:db8:abcd:13::1")).not.toBe(freeTierClientKey("2001:db8:abcd:12::1"));
+  });
+
+  it("IPv4: same address shares one allowance", async () => {
+    const store = memStore();
+    const s = [] as number[];
+    for (let i = 0; i < 4; i++) s.push((await run(store, "198.51.100.9"))!.status);
+    expect(s).toEqual([200, 200, 200, 402]);
+    expect(new Set(store.rows.map(r => r.key)).size).toBe(1);
+  });
+
+  it("IPv6: rotating suffix inside one /64 shares one allowance and decrements", async () => {
+    const store = memStore();
+    const remaining: Array<string | null> = [];
+    const statuses: number[] = [];
+    for (const sfx of ["1", "dead:beef:0:1", "a:b:c:d", "ffff:ffff:ffff:fffe"]) {
+      const res = (await run(store, `2001:db8:abcd:12:${sfx.includes(":") ? sfx : "0:0:0:" + sfx}`))!;
+      statuses.push(res.status);
+      remaining.push(res.headers.get("X-Free-Calls-Remaining"));
+    }
+    expect(statuses).toEqual([200, 200, 200, 402]);
+    expect(remaining).toEqual(["2", "1", "0", "0"]);
+    expect(new Set(store.rows.map(r => r.key)).size).toBe(1);
+  });
+
+  it("IPv6: a different /64 gets its own allowance", async () => {
+    const store = memStore();
+    for (let i = 0; i < 3; i++) await run(store, `2001:db8:abcd:12::${i + 1}`);
+    expect((await run(store, "2001:db8:abcd:12::99"))!.status).toBe(402);
+    const other = (await run(store, "2001:db8:abcd:13::1"))!;
+    expect(other.status).toBe(200);
+    expect(other.headers.get("X-Free-Calls-Remaining")).toBe("2");
+    expect(new Set(store.rows.map(r => r.key)).size).toBe(2);
   });
 });
