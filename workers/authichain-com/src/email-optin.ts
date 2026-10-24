@@ -15,7 +15,7 @@
 
 export const EMAIL_OPTIN_PATH = "/api/email-optin";
 export const EMAIL_OPTIN_CONFIRM_PATH = "/api/email-optin/confirm";
-/** One-click unsubscribe (GET from the email link, POST from List-Unsubscribe-Post). */
+/** Unsubscribe: GET shows a confirm button; POST (button or RFC 8058 List-Unsubscribe-Post) unsubscribes. */
 export const EMAIL_UNSUBSCRIBE_PATH = "/email/unsubscribe";
 export const EMAIL_UNSUBSCRIBE_BASE = "https://authichain.com/email/unsubscribe?token=";
 export const EMAIL_UNSUBSCRIBE_MAILTO = "authichain@mail.grokbot.com";
@@ -25,10 +25,10 @@ export const EMAIL_OPTIN_CONSENT_TEXT =
   "Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@mail.grokbot.com.";
 /** /is-this-real (also POSTs /api/leads/capture). Research FIX 2 Option B, verbatim. */
 export const EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL =
-  'If you tick the box, we store your email, the first seal ID you check, the page address, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep a copy of the sign-up until you ask us to delete it at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
+  'If you tick the box, we store your email, the first seal ID you check, the page address, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep a copy of the sign-up until you ask us to delete it at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
 /** /dpp-check (email-optin only). Research: keep the current line here. */
 export const EMAIL_OPTIN_PRIVACY_LINE =
-  'We store only your email, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be deleted after 30 days, and you can ask us to delete yours at any time at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
+  'We store only your email, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be deleted after 30 days, and you can ask us to delete yours at any time at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
 
 /*
  * MARKETING RULE (Research gate, PR #2013): only email_optins rows with
@@ -202,8 +202,23 @@ export async function tryHandleEmailOptin(
     return html("<p>Thanks. If this link was valid, your email is confirmed.</p>");
   }
   if (url.pathname === EMAIL_UNSUBSCRIBE_PATH) {
-    if (request.method !== "GET" && request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-    const token = url.searchParams.get("token") || "";
+    if (request.method !== "GET" && request.method !== "HEAD" && request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+    if (request.method !== "POST") {
+      // GET never unsubscribes (link scanners prefetch). It shows a button that POSTs.
+      // Same page for known and unknown tokens: no DB read or write here.
+      const token = url.searchParams.get("token") || "";
+      if (!/^[a-f0-9]{64}$/.test(token)) return html("<p>This unsubscribe link is not valid.</p>", 400);
+      return html(`<h1>Unsubscribe</h1><p>Click the button to stop emails to this address.</p><form method="post" action="${EMAIL_UNSUBSCRIBE_PATH}"><input type="hidden" name="token" value="${token}"><button type="submit">Unsubscribe</button></form>`);
+    }
+    // POST: from the confirm button (form token) or RFC 8058 one-click (query token,
+    // body "List-Unsubscribe=One-Click").
+    let token = url.searchParams.get("token") || "";
+    if (!token) {
+      try {
+        const t = new URLSearchParams(await request.text()).get("token");
+        if (t) token = t;
+      } catch { /* fall through to 400 */ }
+    }
     if (!/^[a-f0-9]{64}$/.test(token)) return html("<p>This unsubscribe link is not valid.</p>", 400);
     if (!db) return html("<p>This page is unavailable right now. Please try again later.</p>", 503);
     let n = 0;

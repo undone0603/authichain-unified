@@ -154,7 +154,7 @@ describe("email opt-in", () => {
   });
   it("Research wording is byte-identical to gate PR2013-b2dbd98d", () => {
     expect(EMAIL_OPTIN_CONSENT_TEXT).toBe("Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@mail.grokbot.com.");
-    expect(EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL).toBe('If you tick the box, we store your email, the first seal ID you check, the page address, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep a copy of the sign-up until you ask us to delete it at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.');
+    expect(EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL).toBe('If you tick the box, we store your email, the first seal ID you check, the page address, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep a copy of the sign-up until you ask us to delete it at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.');
     expect(confirmEmailText("TOK")).toBe("Someone entered this email address on authichain.com and asked for AuthiChain product updates (at most once a month).\n\nTo confirm, open this link (valid for 30 days):\n\nhttps://authichain.com/api/email-optin/confirm?token=TOK\n\nIf you did not ask for this, ignore this email. Unless you confirm, we will not send you anything else.");
   });
   it("served consent text never contains PLACEHOLDER (both pages)", () => {
@@ -166,7 +166,7 @@ describe("email opt-in", () => {
     }
     expect(itr).toContain(EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL);
     expect(dpp).toContain(EMAIL_OPTIN_PRIVACY_LINE);
-    expect(EMAIL_OPTIN_PRIVACY_LINE).toBe('We store only your email, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be deleted after 30 days, and you can ask us to delete yours at any time at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.');
+    expect(EMAIL_OPTIN_PRIVACY_LINE).toBe('We store only your email, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be deleted after 30 days, and you can ask us to delete yours at any time at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.');
     expect(dpp).not.toContain("first seal ID");
   });
   it("UI block: optional email, unchecked consent, privacy link", () => {
@@ -201,16 +201,50 @@ describe("email opt-in", () => {
       expect(h).toContain("country:");
     }
   });
-  it("unsubscribe: GET with a valid token flips status to unsubscribed", async () => {
+  it("unsubscribe: GET shows a confirm button and never changes the DB", async () => {
     const { db, calls } = fakeDb();
     const tok = "b".repeat(64);
     const r = await tryHandleEmailOptin(new Request("https://authichain.com/email/unsubscribe?token=" + tok), { DB: db });
     expect(r!.status).toBe(200);
+    const h = await r!.text();
+    expect(h).toContain("<h1>Unsubscribe</h1>");
+    expect(h).toContain("Click the button to stop emails to this address.");
+    expect(h).toContain(`<form method="post" action="/email/unsubscribe"><input type="hidden" name="token" value="${tok}"><button type="submit">Unsubscribe</button></form>`);
+    expect(h).not.toContain("You are unsubscribed.");
+    expect(calls).toHaveLength(0);
+    // Unknown token on GET: same page, still no DB call (no existence leak).
+    const miss = fakeDb({ unsubChanges: 0 });
+    const u = await tryHandleEmailOptin(new Request("https://authichain.com/email/unsubscribe?token=" + "c".repeat(64)), { DB: miss.db });
+    expect(u!.status).toBe(200);
+    expect(miss.calls).toHaveLength(0);
+  });
+  it("unsubscribe: POST from the button (form token) flips status to unsubscribed", async () => {
+    const { db, calls } = fakeDb();
+    const tok = "b".repeat(64);
+    const r = await tryHandleEmailOptin(new Request("https://authichain.com/email/unsubscribe", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "token=" + tok }), { DB: db });
+    expect(r!.status).toBe(200);
     expect(await r!.text()).toContain("You are unsubscribed.");
     expect(calls).toEqual([{ sql: UNSUBSCRIBE_SQL, args: [tok] }]);
     expect(UNSUBSCRIBE_SQL).toContain("status = 'unsubscribed'");
-    const p = await tryHandleEmailOptin(new Request("https://authichain.com/email/unsubscribe?token=" + tok, { method: "POST", body: "List-Unsubscribe=One-Click" }), { DB: db });
+  });
+  it("unsubscribe: RFC 8058 one-click POST (query token, List-Unsubscribe=One-Click body) works", async () => {
+    const { db, calls } = fakeDb();
+    const tok = "d".repeat(64);
+    const p = await tryHandleEmailOptin(new Request("https://authichain.com/email/unsubscribe?token=" + tok, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "List-Unsubscribe=One-Click" }), { DB: db });
     expect(p!.status).toBe(200);
+    expect(await p!.text()).toContain("You are unsubscribed.");
+    expect(calls).toEqual([{ sql: UNSUBSCRIBE_SQL, args: [tok] }]);
+  });
+  it("unsubscribe: POST with malformed token is 400 (no DB call); unknown token is 404", async () => {
+    const { db, calls } = fakeDb();
+    for (const body of ["", "token=", "token=xyz", "List-Unsubscribe=One-Click"]) {
+      expect((await tryHandleEmailOptin(new Request("https://authichain.com/email/unsubscribe", { method: "POST", body }), { DB: db }))!.status).toBe(400);
+    }
+    expect(calls).toHaveLength(0);
+    const miss = fakeDb({ unsubChanges: 0 });
+    const r = await tryHandleEmailOptin(new Request("https://authichain.com/email/unsubscribe", { method: "POST", body: "token=" + "c".repeat(64) }), { DB: miss.db });
+    expect(r!.status).toBe(404);
+    expect(miss.calls.every(c => c.sql === UNSUBSCRIBE_SQL)).toBe(true);
   });
   it("unsubscribe: malformed token is 400 with no DB call; unknown token is 404 with no change", async () => {
     const { db, calls } = fakeDb();
@@ -219,7 +253,7 @@ describe("email opt-in", () => {
     }
     expect(calls).toHaveLength(0);
     const miss = fakeDb({ unsubChanges: 0 });
-    const r = await tryHandleEmailOptin(new Request("https://authichain.com/email/unsubscribe?token=" + "c".repeat(64)), { DB: miss.db });
+    const r = await tryHandleEmailOptin(new Request("https://authichain.com/email/unsubscribe?token=" + "c".repeat(64), { method: "POST" }), { DB: miss.db });
     expect(r!.status).toBe(404);
     expect(miss.calls.every(c => c.sql === UNSUBSCRIBE_SQL)).toBe(true);
   });
