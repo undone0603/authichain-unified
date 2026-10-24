@@ -36,14 +36,23 @@ function table(name: string) {
 function builder(name: string): any {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const b: any = {
+    _eq: undefined as string | undefined,
     select: () => b,
-    eq: () => b,
+    limit: () => b,
+    eq: (_c: string, v: unknown) => {
+      b._eq = String(v);
+      return b;
+    },
     update: () => b,
     insert: (row: Record<string, unknown>) => {
       if (name === "stripe_events") {
         if (db.eventSeen)
           return Promise.resolve({ error: { code: "23505", message: "dup" } });
         db.eventSeen = true;
+      } else if (name === "payments") {
+        db.writes += 1;
+        const key = String(row.session_id);
+        if (!table(name).has(key)) table(name).set(key, row);
       }
       return Promise.resolve({ error: null });
     },
@@ -59,7 +68,9 @@ function builder(name: string): any {
     maybeSingle: async () =>
       name === "stripe_events"
         ? { data: { status: "success", processed_at: null }, error: null }
-        : { data: null, error: null },
+        : name === "payments" && b._eq && table(name).has(b._eq)
+          ? { data: { id: "pay_existing" }, error: null }
+          : { data: null, error: null },
     single: async () => ({ data: null, error: null }),
     then: (res: (v: { error: null }) => unknown) =>
       Promise.resolve({ error: null }).then(res),
@@ -201,7 +212,7 @@ describe("DPP report $29 one-time", () => {
     const pay = [...table("payments").values()];
     const ent = [...table("dpp_report_entitlements").values()];
     expect(pay).toHaveLength(1);
-    expect(pay[0]).toMatchObject({ session_id: "cs_live_pro_1", amount_cents: 2900, status: "paid" });
+    expect(pay[0]).toMatchObject({ session_id: "cs_live_pro_1", amount: 29, status: "paid" });
     expect(ent).toHaveLength(1);
     expect(ent[0]).toMatchObject({ tier: "dpp_report", sku: "dpp_report", catalog_limit: 200 });
     await mockAfter[0]();

@@ -48,19 +48,33 @@ export async function fulfillDppReport(
   const now = new Date().toISOString();
   const catalogLimit = dppReportCatalogLimit(session.metadata);
 
-  const { error: payErr } = await supabase.from("payments").upsert(
-    {
+  // Live public.payments (checked 2026-10-24): PK is a uuid `id`, `amount`
+  // numeric NOT NULL (no amount_cents), and session_id has NO unique index,
+  // so ON CONFLICT (session_id) is impossible there. Look up by session_id,
+  // insert only if absent; the UNIQUE entitlement row below is the real
+  // idempotency anchor. payments schema is left untouched.
+  const amountCents = session.amount_total ?? DPP_REPORT_OFFER.amountCents;
+  const { data: existingPay, error: payReadErr } = await supabase
+    .from("payments")
+    .select("id")
+    .eq("session_id", session.id)
+    .limit(1)
+    .maybeSingle();
+  if (payReadErr) throw new Error(`dpp_report payments read failed: ${payReadErr.message}`);
+  if (!existingPay) {
+    const { error: payErr } = await supabase.from("payments").insert({
       session_id: session.id,
       customer_email: email,
-      amount_cents: session.amount_total ?? DPP_REPORT_OFFER.amountCents,
+      amount: amountCents / 100,
       currency: (session.currency || "usd").toLowerCase(),
       status: "paid",
+      description: "DPP readiness report",
+      metadata: { sku: DPP_REPORT_OFFER.sku, amount_cents: amountCents },
       created_at: now,
       updated_at: now,
-    },
-    { onConflict: "session_id", ignoreDuplicates: true }
-  );
-  if (payErr) throw new Error(`dpp_report payments write failed: ${payErr.message}`);
+    });
+    if (payErr) throw new Error(`dpp_report payments write failed: ${payErr.message}`);
+  }
 
   const customerId =
     typeof session.customer === "string"

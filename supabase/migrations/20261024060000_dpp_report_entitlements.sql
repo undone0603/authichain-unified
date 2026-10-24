@@ -2,17 +2,10 @@
 -- NOT APPLIED. Zac applies to live Supabase before the webhook deploy.
 -- Idempotency: one row per Stripe checkout session (UNIQUE), written with
 -- ON CONFLICT DO NOTHING, so duplicate deliveries add no second row.
-CREATE TABLE IF NOT EXISTS public.payments (
-  session_id     TEXT        PRIMARY KEY,
-  customer_email TEXT        NOT NULL,
-  amount_cents   INTEGER     NOT NULL,
-  currency       TEXT        NOT NULL DEFAULT 'usd',
-  status         TEXT        NOT NULL DEFAULT 'paid'
-                 CHECK (status IN ('pending', 'paid', 'failed', 'refunded')),
-  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+-- public.payments is NOT touched: the live table (uuid id PK, amount numeric,
+-- session_id without a unique index) is written by lookup-then-insert.
+--
+-- Down: DROP TABLE IF EXISTS public.dpp_report_entitlements;
 
 CREATE TABLE IF NOT EXISTS public.dpp_report_entitlements (
   id                 BIGSERIAL   PRIMARY KEY,
