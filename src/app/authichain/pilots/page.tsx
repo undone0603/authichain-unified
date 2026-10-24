@@ -84,7 +84,7 @@ export default function AuthichainPilots() {
                         <span className="px-2 py-1 rounded bg-gold/15 border border-gold/30 text-gold text-[10px] font-black uppercase tracking-widest">Proposed · Pilot Open</span>
                     </div>
                     <p className="text-zinc-400 text-sm leading-relaxed font-medium mb-3">
-                        Heart of Michigan testbed: a QRON-stamped postcard that opens a 3D landmark tour, an AI-narrated town history, and a local-business coupon book — turning every piece of mail into a micro-tourism billboard with a possible local-sponsorship revenue stream.
+                        Heart of Michigan testbed: a QRON-coded postcard that opens a 3D landmark tour, an AI-narrated town history, and a local-business coupon book — turning each postcard into a small tourism billboard with a possible local-sponsorship revenue stream.
                     </p>
                     <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gold group-hover:translate-x-1 transition-transform">
                         View pilot prospectus <ArrowRight className="w-3 h-3" />

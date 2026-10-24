@@ -37,7 +37,7 @@ const stampSheet = [
 export const metadata: Metadata = {
   title: 'Roscommon Phygital Postcard Concept | AuthiChain Protocol',
   description:
-    'A Heart-of-Michigan pilot proposal: QRON-stamped postcards that open a 3D landmark tour, AI-narrated town history, and a local-business coupon book — a concept for local sponsorship revenue.',
+    'A Heart-of-Michigan pilot proposal: QRON-coded postcards that open a 3D landmark tour, AI-narrated town history, and a local-business coupon book — a concept for local sponsorship revenue.',
 };
 
 const experiences = [
