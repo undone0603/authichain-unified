@@ -189,6 +189,7 @@ export default defineConfig({
       "client/**/*.test.ts",
       "client/**/*.test.tsx",
       "workers/**/*.test.ts",
+      "supabase/functions/stripe-webhook/**/*.test.ts",
       "protocol/**/*.test.mjs",
       "protocol/**/*.test.ts",
       "ops/**/*.test.ts",

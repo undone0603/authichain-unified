@@ -22,6 +22,7 @@ __export(npm_stripe_exports, {
   default: () => default2
 });
 __reExport(npm_stripe_exports, npm_stripe_star);
+import { isDppReportEvent } from "./dpp-skip.ts";
 import * as npm_stripe_star from "npm:stripe";
 import { default as default2 } from "npm:stripe";
 
@@ -46065,6 +46066,10 @@ var StripeSyncWebhook = class _StripeSyncWebhook {
     }
     const stripeWebhooks = this.deps.stripe.webhooks;
     const event = await stripeWebhooks.constructEventAsync(payload, signature, webhookSecret);
+    // DPP skip: verified, before any write or claim.
+    if (isDppReportEvent(event, Deno.env.get("DPP_REPORT_PRICE_ID"))) {
+      return { skipped: "dpp_report" };
+    }
     return this.processEvent(event);
   }
   async processEvent(event) {
@@ -47107,7 +47112,13 @@ Deno.serve(async (req) => {
   });
   try {
     const rawBody = new Uint8Array(await req.arrayBuffer());
-    await stripeSync.webhook.processWebhook(rawBody, sig);
+    const outcome = await stripeSync.webhook.processWebhook(rawBody, sig);
+    if (outcome?.skipped === "dpp_report") {
+      return new Response(JSON.stringify({ skipped: "dpp_report" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
