@@ -2320,7 +2320,7 @@ ${estateNav(
 ${estateHero({
   eyebrow: "QRON · Living QR",
   title: "AI QR art that still scans.",
-  lede: "Turn a URL into a signed Living QR for packaging and labels. Generation is the first-dollar path — open /generate, no token theater required.",
+  lede: "Turn a URL into a scannable Living QR for packaging and labels. Generation is the first-dollar path — open /generate, no token theater required.",
   actions: [
     { href: "/generate", label: "Generate Living QR", primary: true },
     { href: "/pricing", label: "View pricing", primary: false },

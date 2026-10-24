@@ -5,6 +5,7 @@ import {
   QRON_MODES,
   applyMode,
   modeGenerateUrl,
+  modesForPlan,
   parseSelectableMode,
 } from "./qron-modes";
 import { QRON_MODE_FOOTER_TEXT, handleQronResolve, qronModeFooterHtml } from "./qron-resolve";
@@ -42,7 +43,7 @@ describe("qron modes: display names", () => {
     expect(parseSelectableMode("batch_verify")).toBe("batch_verify");
     expect(parseSelectableMode("LIMITED-DROP")).toBe("limited_drop");
     expect(parseSelectableMode("static")).toBeNull();
-    expect(parseSelectableMode("living_portal")).toBeNull();
+    expect(parseSelectableMode("compliance_log")).toBeNull();
     expect(parseSelectableMode(undefined)).toBeNull();
   });
 });
@@ -136,5 +137,11 @@ describe("resolve page footer", () => {
     expect(await withMode!.text()).toContain("mode=stellar-art");
     const without = await handleQronResolve(req(), { load: async () => base });
     expect(await without!.text()).not.toContain(QRON_MODE_FOOTER_TEXT);
+  });
+});
+
+describe("modesForPlan", () => {
+  it("free visitors get all three modes", () => {
+    expect(modesForPlan("free").map(m => m.id)).toEqual(["stellar_seal", "batch_verify", "limited_drop"]);
   });
 });
