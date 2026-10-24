@@ -2082,6 +2082,22 @@ async function releaseStripeEvent(env, eventId) {
   }
 }
 __name(releaseStripeEvent, "releaseStripeEvent");
+function isDppReportCheckout(env, event) {
+  if (!String(event?.type ?? "").startsWith("checkout.session.")) return false;
+  const s = event.data?.object ?? {};
+  const marks = (m) => m?.product_line === "dpp_report";
+  const dppPrice = String(env.DPP_REPORT_PRICE_ID ?? "").trim();
+  if (marks(s.metadata)) return true;
+  if (dppPrice && s.metadata?.stripe_price_id === dppPrice) return true;
+  for (const li of s.line_items?.data ?? []) {
+    const p = li?.price;
+    if (!p) continue;
+    if (dppPrice && p.id === dppPrice) return true;
+    if (marks(p.metadata) || (p.product && typeof p.product === "object" && marks(p.product.metadata))) return true;
+  }
+  return false;
+}
+__name(isDppReportCheckout, "isDppReportCheckout");
 async function handleStripeWebhook(request, env) {
   const header = request.headers.get("stripe-signature");
   if (!header) {
@@ -2093,6 +2109,11 @@ async function handleStripeWebhook(request, env) {
     event = await constructStripeEvent(payload, header, env.STRIPE_WEBHOOK_SECRET);
   } catch {
     return Response.json({ error: "invalid_signature" }, { status: 400 });
+  }
+  // Advisor ruling 2026-10-24: only authichain.com/api/stripe/webhook unlocks
+  // the DPP report. Ack a DPP session with 200: no claim, no receipt, no write.
+  if (isDppReportCheckout(env, event)) {
+    return Response.json({ received: true, skipped: "dpp_report" });
   }
   if (!await claimStripeEvent(env, event.id)) {
     return Response.json({ received: true, duplicate: true });

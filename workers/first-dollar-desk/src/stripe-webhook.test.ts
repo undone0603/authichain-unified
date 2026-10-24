@@ -149,3 +149,23 @@ describe("first-dollar-desk /api/stripe/webhook (PM-330)", () => {
     expect(LEDGER.store.has("stripe_webhook_last")).toBe(true);
   });
 });
+
+describe("first-dollar-desk DPP report skip (only authichain.com unlocks it)", () => {
+  it("a signed DPP checkout (product_line=dpp_report or DPP_REPORT_PRICE_ID) returns 200 with no write", async () => {
+    for (const object of [
+      { id: "cs_dpp1", payment_status: "paid", amount_total: 2900, metadata: { product_line: "dpp_report" } },
+      { id: "cs_dpp2", payment_status: "paid", amount_total: 2900, metadata: {}, line_items: { data: [{ price: { id: "price_dppfixture" } }] } },
+    ]) {
+      const payload = JSON.stringify({ id: "evt_" + object.id, object: "event", type: "checkout.session.completed", data: { object } });
+      const LEDGER = fakeKv();
+      const res = await worker.fetch(post(payload, { "stripe-signature": sign(payload) }), {
+        LEDGER,
+        STRIPE_WEBHOOK_SECRET: SECRET,
+        DPP_REPORT_PRICE_ID: "price_dppfixture",
+      });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ skipped: "dpp_report" });
+      expect(LEDGER.store.size).toBe(0);
+    }
+  });
+});
