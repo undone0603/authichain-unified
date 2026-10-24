@@ -24,6 +24,7 @@ import {
   type DppReadinessResult,
 } from "../../../src/lib/dpp-readiness";
 
+import { emailOptinBlock } from "./email-optin.ts";
 export const DPP_CHECK_PATH = "/dpp-check";
 export const DPP_CHECK_CANONICAL = `https://authichain.com${DPP_CHECK_PATH}`;
 const CHECKOUT_ACTION = "https://authichain.com/checkout/dpp_readiness";
@@ -117,6 +118,7 @@ function resultHtml(r: DppReadinessResult, price: number): string {
     <p>${esc(r.nextStep)}</p>
     ${cta}
     <p class="bp-note">${esc(r.disclaimer)}</p>
+    ${emailOptinBlock("dpp-email-optin")}
   </div>
 </section>`;
 }

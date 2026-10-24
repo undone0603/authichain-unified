@@ -178,3 +178,11 @@ binding = "MYBROWSER"
 [[kv_namespaces]]
 binding = "X402_REPLAY_KV"
 id = "ab391dc529884161bd84707d7627a9f0"
+
+# Optional email opt-in from the free checks (email_optins, migrations/0001).
+# Existing AuthiChain-owned D1, $0. Rollback: delete this block.
+[[d1_databases]]
+binding = "DB"
+database_name = "authichain-db"
+database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
+migrations_dir = "migrations"
