@@ -2602,7 +2602,7 @@ const HTML = `<!DOCTYPE html>
   ${howItWorks()}
   ${estateFeatures(
     "The authentic agentic economy",
-    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
+    "Agents get 3 free verification calls per day on POST /api/v1/agent-verify. After that, each call returns an x402 payment request for $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
       { title: "Settlement", body: "Humans start with Starter $29 on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
