@@ -1,4 +1,4 @@
-> Redacted copy; the filed original is held offline
+> Redacted copy; the original with contact details is kept offline.
 
 # DHS SVIP Grant Application: AuthiChain Autonomous Launch Infrastructure
 ## Preventing Forgery and Counterfeiting of Federal Credentials
