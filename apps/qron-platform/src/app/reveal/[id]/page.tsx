@@ -62,7 +62,7 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
         <div className="space-y-4 mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-[0.3em]">
             <Sparkles className="w-3 h-3" />
-            Decrypting Digital Narrative
+            Loading story
           </div>
           <h1 className="text-3xl font-black uppercase tracking-tighter italic">
             Authentic <span className="gold-text">Reveal</span>
@@ -89,7 +89,7 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               )}
               <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">
-                {!isReady ? `Syncing ${Math.floor(progress)}%` : 'Ready for Navigation'}
+                {!isReady ? `Loading ${Math.floor(progress)}%` : 'Ready for Navigation'}
               </span>
             </div>
             <span className="text-[10px] font-mono text-zinc-800">

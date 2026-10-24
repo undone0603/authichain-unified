@@ -113,7 +113,7 @@ export default function DemoGalleryPage() {
                 />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <div className="px-6 py-3 rounded-full bg-gold text-black font-black uppercase text-[10px] tracking-widest shadow-gold">
-                        Scan to Verify
+                        Scan to try
                     </div>
                 </div>
               </div>
