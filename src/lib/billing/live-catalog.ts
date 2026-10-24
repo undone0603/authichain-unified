@@ -217,3 +217,46 @@ export function publicCheckoutHref(id: PublicPlanId): string {
   if (id === "free") return "https://qron.space/generate";
   return `https://authichain.com/checkout/${id}`;
 }
+
+/**
+ * StorePilot Pro: $29 one-time (Phase 3, 2026-10-24). Not a PlanId and not on
+ * /pricing; the webhook unlocks it as an entitlement (tier=pro,
+ * catalog_limit=200) instead of profile credits. Payment Link sessions do not
+ * carry line_items in the webhook payload, so the link id is matched too.
+ * This MUST be checked before the $29.00 Starter amount fallback, or a Pro
+ * purchase would be granted Starter.
+ */
+export const STOREPILOT_PRO_OFFER = {
+  sku: "storepilot_pro",
+  tier: "pro",
+  priceId: "price_1UTxvpGqTruSqV8TQu5gkqyc",
+  paymentLinkId: "plink_1UTxvvGqTruSqV8TRFCqFU5B",
+  amountCents: 2900,
+  catalogLimit: 200,
+} as const;
+
+export type StorePilotProSessionLike = {
+  payment_link?: string | { id: string } | null;
+  metadata?: Record<string, string> | null;
+};
+
+export function isStorePilotProSession(
+  session: StorePilotProSessionLike,
+  linePriceId: string | null | undefined
+): boolean {
+  if (linePriceId === STOREPILOT_PRO_OFFER.priceId) return true;
+  const link =
+    typeof session.payment_link === "string"
+      ? session.payment_link
+      : session.payment_link?.id ?? null;
+  if (link === STOREPILOT_PRO_OFFER.paymentLinkId) return true;
+  return session.metadata?.stripe_price_id === STOREPILOT_PRO_OFFER.priceId;
+}
+
+/** catalog_limit from price/session metadata, else the 200 default. */
+export function storePilotCatalogLimit(
+  metadata?: Record<string, string> | null
+): number {
+  const n = Number.parseInt(metadata?.catalog_limit ?? "", 10);
+  return Number.isInteger(n) && n > 0 ? n : STOREPILOT_PRO_OFFER.catalogLimit;
+}

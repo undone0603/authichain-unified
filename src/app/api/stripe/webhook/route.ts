@@ -16,9 +16,12 @@ import {
 import { constructStripeEventAsync } from "@/lib/stripe-construct-event";
 import { accrueAffiliateCommission } from "../../../../lib/affiliate-accrual";
 import {
+  STOREPILOT_PRO_OFFER,
+  isStorePilotProSession,
   resolveCheckoutPlanId,
   starterAmountFallbackRefusals,
 } from "../../../../lib/billing/live-catalog";
+import { fulfillStorePilotPro } from "../../../../lib/storepilot-pro-fulfill";
 
 // Never anchor test-mode objects from a production deployment.
 function isAnchorable(event: Stripe.Event): boolean {
@@ -221,10 +224,30 @@ export async function POST(req: NextRequest) {
     process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET,
   ].filter((s): s is string => !!s);
 
+  // Fail closed BEFORE reading the body: 503 so Stripe retries, and nothing
+  // is verified or written. Logs name the condition, never a value.
   if (!process.env.STRIPE_SECRET_KEY || secrets.length === 0) {
+    console.error(
+      JSON.stringify({ evt: "stripe_webhook_not_configured", missing: "stripe" })
+    );
     return NextResponse.json(
       { error: "Stripe not configured" },
-      { status: 500 }
+      { status: 503 }
+    );
+  }
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.SUPABASE_SERVICE_ROLE_KEY
+  ) {
+    console.error(
+      JSON.stringify({
+        evt: "stripe_webhook_not_configured",
+        missing: "supabase",
+      })
+    );
+    return NextResponse.json(
+      { error: "Supabase not configured" },
+      { status: 503 }
     );
   }
 
@@ -311,6 +334,36 @@ export async function POST(req: NextRequest) {
 
         if (dppOffer) {
           await fulfillDppPaidSession(getSupabase(), session, linePriceId);
+          break;
+        }
+
+        // StorePilot Pro $29 one-time. Must run before the $29.00 Starter
+        // amount fallback below, which would otherwise grant Starter.
+        if (isStorePilotProSession(session, linePriceId)) {
+          const pro = await fulfillStorePilotPro(getSupabase(), session);
+          if (
+            pro.unlocked &&
+            isAnchorable(event) &&
+            (session.amount_total ?? 0) > 0
+          ) {
+            after(() =>
+              anchorStripeSale({
+                eventId: event.id,
+                objectId: session.id,
+                sku: STOREPILOT_PRO_OFFER.sku,
+                amountCents: session.amount_total!,
+                currency: session.currency ?? "usd",
+                buyerWallet: resolveBuyerWallet(md),
+                stripeCreated: session.created,
+                source: "live",
+                paymentIntentId:
+                  typeof session.payment_intent === "string"
+                    ? session.payment_intent
+                    : null,
+                checkoutSessionId: session.id,
+              })
+            );
+          }
           break;
         }
 
