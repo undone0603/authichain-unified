@@ -124,3 +124,14 @@ def test_microsite_has_no_unbuilt_claims(claim):
     page = microsites.generate_microsite_html({"name": "Acme", "amount": "50000"})
     assert claim not in page
     assert "50000" not in page
+
+
+def test_microsite_identifies_seller_without_implying_affiliation():
+    page = microsites.generate_microsite_html({"name": "Acme & Co"})
+    assert "From QRON, the AI QR studio by AuthiChain." in page
+    assert "<title>Acme &amp; Co</title>" not in page
+    assert "<h1>Acme &amp; Co</h1>" not in page
+    assert "<title>QRON AI QR studio, made for Acme &amp; Co</title>" in page
+    assert "<h1>AI QR codes, made for Acme &amp; Co</h1>" in page
+    assert "Try 5 free AI QR generations." in page
+    assert "utm_source=agentz&amp;utm_medium=microsite" in page

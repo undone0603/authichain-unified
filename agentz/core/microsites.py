@@ -60,7 +60,7 @@ def generate_microsite_html(lead_data: Dict[str, Any]) -> str:
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{name}</title>
+<title>QRON AI QR studio, made for {name}</title>
 <style>
   body {{ background: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }}
   .card {{ border: 1px solid #00ff88; padding: 40px; border-radius: 20px; text-align: center; max-width: 500px; }}
@@ -68,8 +68,9 @@ def generate_microsite_html(lead_data: Dict[str, Any]) -> str:
 </head>
 <body>
   <div class="card">
-    <h2>{name}</h2>
-    <p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts.</p>
+    <h1>AI QR codes, made for {name}</h1>
+    <p>From QRON, the AI QR studio by AuthiChain.</p>
+    <p>Try 5 free AI QR generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts.</p>
     <p><a href="{html.escape(FREE_SAMPLE_URL)}" style="color:#00ff88;">Try 5 free generations</a></p>
     <p><a href="{html.escape(STARTER_URL)}" style="color:#00ff88;">Starter Pack: 100 generations for $29, paid once.</a></p>
   </div>
