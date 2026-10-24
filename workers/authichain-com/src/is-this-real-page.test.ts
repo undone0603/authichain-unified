@@ -8,14 +8,18 @@ describe("/is-this-real", () => {
     expect(isIsThisRealPath("/is-this-real/")).toBe(true);
     expect(isIsThisRealPath("/is-this")).toBe(false);
   });
-  it("has seal, email and a required consent box", () => {
+  it("has seal, an optional email and an unchecked, optional consent box", () => {
     expect(html).toContain('name="sealId"');
-    expect(html).toContain('type="email"');
-    expect(html).toMatch(/id="consent"[^>]*required/);
+    expect(html).toMatch(/<input type="email" id="email"(?![^>]*required)[^>]*>/);
+    expect(html).toMatch(/<input type="checkbox" id="consent"(?![^>]*(required|checked))[^>]*>/);
+    expect(html).toContain('href="/privacy"');
   });
-  it("stores via existing lead capture with its own source", () => {
-    expect(html).toContain("/api/leads/capture");
-    expect(html).toContain(`source:"${IS_THIS_REAL_SOURCE}"`);
+  it("runs the check without an email and only opts in with email + consent", () => {
+    expect(html).toContain('if(!seal){st.textContent="Enter a seal ID.";return}');
+    expect(html).toContain("if(!captured&&email&&f.consent.checked)");
+    expect(html).toContain("/api/email-optin");
+    expect(html).not.toContain("/api/leads/capture");
+    expect(IS_THIS_REAL_SOURCE).toBe("is-this-real");
   });
   it("offers 3 free checks then a price-free x402 option", () => {
     expect(html).toContain("MAX=3");
