@@ -319,7 +319,10 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   assert.match(privacy, /id="outbound"/);
   assert.match(privacy, /Zachary J Kietzman d\/b\/a AuthiChain \(sole proprietor\)/);
   assert.match(privacy, /authichain@mail\.grokbot\.com/);
-  assert.match(privacy, /balancing test/);
+  assert.match(privacy, /Legal basis: consent \(GDPR Art\. 6\(1\)\(a\)\)/);
+  assert.match(privacy, /opted in through our double opt-in/);
+  assert.match(privacy, /withdraw your consent at any time through the unsubscribe link/);
+  assert.doesNotMatch(privacy, /legitimate interest|6\(1\)\(f\)|balancing test/i);
   assert.match(privacy, /12 months after our last contact/);
   assert.match(privacy, /do not claim one is in place/);
   assert.match(privacy, /AgentMail/);
