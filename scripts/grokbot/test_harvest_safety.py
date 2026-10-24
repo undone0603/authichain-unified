@@ -9,8 +9,10 @@ from pathlib import Path
 
 from grokbot import (
     SCAN_ALLOWLIST,
+    SKIP_DIRS,
     discover,
     is_denied_path,
+    iter_files,
     main,
     redact,
     resolve_scan_roots,
@@ -107,3 +109,40 @@ def test_main_without_root_scans_nothing(monkeypatch, capsys) -> None:
     assert main() == 0
     assert seen["roots"] == []
     assert "Downloads" not in capsys.readouterr().out
+
+
+def test_symlink_outside_root_is_skipped(tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    outside = tmp_path / "outside"
+    root.mkdir()
+    outside.mkdir()
+    (root / "inside.md").write_text("qron.space\n", encoding="utf-8")
+    (outside / "secret.md").write_text("outside content\n", encoding="utf-8")
+    (root / "link.md").symlink_to(outside / "secret.md")
+    (root / "linkdir").symlink_to(outside, target_is_directory=True)
+    names = sorted(p.name for p in iter_files([root]))
+    assert names == ["inside.md"]
+
+
+def test_wrangler_dir_and_dev_vars_are_skipped(tmp_path: Path) -> None:
+    assert ".wrangler" in SKIP_DIRS
+    assert is_denied_path(Path(".dev.vars"))
+    assert is_denied_path(Path("app/.dev.vars.staging"))
+    (tmp_path / ".wrangler").mkdir()
+    (tmp_path / ".wrangler" / "state.md").write_text("x\n", encoding="utf-8")
+    (tmp_path / ".dev.vars").write_text("FAKE=1\n", encoding="utf-8")
+    (tmp_path / ".dev.vars.prod").write_text("FAKE=1\n", encoding="utf-8")
+    (tmp_path / "ok.md").write_text("ok\n", encoding="utf-8")
+    assert sorted(p.name for p in iter_files([tmp_path])) == ["ok.md"]
+
+
+def test_grokbot_evidence_is_gitignored() -> None:
+    import subprocess
+
+    repo = Path(__file__).resolve().parents[2]
+    result = subprocess.run(
+        ["git", "check-ignore", "-q", ".grokbot/evidence/manifest.json"],
+        cwd=repo,
+        check=False,
+    )
+    assert result.returncode == 0

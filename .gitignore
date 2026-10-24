@@ -133,3 +133,5 @@ gov_pursue_list.csv
 # Grokbot local PII/address blocklist — never commit real addresses
 .grokbot/pii-blocklist
 .grokbot/pii-blocklist.txt
+# Grokbot local output (evidence previews, manifest) — never commit
+.grokbot/

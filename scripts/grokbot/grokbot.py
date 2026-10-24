@@ -40,7 +40,7 @@ TEXT_EXTENSIONS = {
 }
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"}
 ARCHIVE_EXTENSIONS = {".zip", ".tar", ".gz", ".tgz", ".7z"}
-SKIP_DIRS = {".git", "node_modules", ".next", "dist", "build", "coverage", ".venv", "venv"}
+SKIP_DIRS = {".git", "node_modules", ".next", "dist", "build", "coverage", ".venv", "venv", ".wrangler"}
 MAX_TEXT_BYTES = 2_000_000
 
 # Empty by default. Never includes Downloads, Desktop or Documents.
@@ -515,6 +515,8 @@ def is_denied_path(path: Path) -> bool:
     lower = name.lower()
     if lower.startswith(".env") or lower.startswith("id_rsa"):
         return True
+    if lower == ".dev.vars" or lower.startswith(".dev.vars."):
+        return True
     if lower.endswith(DENIED_SUFFIXES):
         return True
     if lower in DENIED_EXACT or "cookie" in lower:
@@ -564,8 +566,19 @@ def iter_files(roots: Iterable[Path]) -> Iterable[Path]:
             if not is_denied_path(root):
                 yield root
             continue
+        try:
+            resolved_root = root.resolve(strict=True)
+        except OSError:
+            continue
         for path in root.rglob("*"):
-            if not path.is_file():
+            # Never follow symlinks, and never leave the scan root.
+            if path.is_symlink() or not path.is_file():
+                continue
+            try:
+                resolved = path.resolve(strict=True)
+            except OSError:
+                continue
+            if not resolved.is_relative_to(resolved_root):
                 continue
             if any(part in SKIP_DIRS for part in path.parts):
                 continue
