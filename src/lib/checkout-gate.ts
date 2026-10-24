@@ -704,6 +704,9 @@ async function readFormFields(request: Request): Promise<URLSearchParams> {
  *   GET/HEAD → confirm page (200) or chooser; unknown plan 404. Never Stripe.
  *   POST     → validate (email, honeypot, origin, bot/prefetch) → 303 Stripe.
  */
+/** Plans whose /checkout/<plan> page is closed to new buyers. */
+export const RETIRED_GATED_PLAN_IDS: readonly PlanId[] = ["qron_launch"];
+
 export async function tryHandleGatedCheckout(
   request: Request,
   env: GatedCheckoutEnv,
@@ -733,6 +736,15 @@ export async function tryHandleGatedCheckout(
     return method === "HEAD"
       ? new Response(null, { status: 404, headers: HTML_HEADERS })
       : htmlResponse(html, 404);
+  }
+  // Retired for new buyers (Advisor RES-86c, Oct 17 2026): no confirm form
+  // and no session for any method. Existing subscribers are unaffected;
+  // billing, webhooks and plan lookups do not use this route.
+  if (RETIRED_GATED_PLAN_IDS.includes(plan.id)) {
+    return new Response(null, {
+      status: 303,
+      headers: { ...CHECKOUT_REDIRECT_HEADERS, Location: "/pricing" },
+    });
   }
   // Canonicalise aliases (/checkout/dpp → /checkout/dpp_readiness).
   if (p !== `/checkout/${plan.id}` && (method === "GET" || method === "HEAD")) {
