@@ -1,6 +1,6 @@
 {
-  "updated": "2026-10-07",
-  "note": "Regulatory milestones for the EU Digital Product Passport. Dates drive the live countdowns on /digital-product-passport, so every entry needs a real ISO date and a source anyone can check. Maintained by the 'DPP regulatory watch' Routine; see docs/strategy/persuasion-doctrine.md for the copy rules.",
+  "updated": "2026-10-24",
+  "note": "Regulatory milestones for the EU Digital Product Passport. Dates drive the live countdowns on /digital-product-passport, so every entry needs a real ISO date and a source anyone can check. Entries marked indicative use the European Commission's indicative dates and are estimates, not adopted law. Maintained by the 'DPP regulatory watch' Routine; see docs/strategy/persuasion-doctrine.md for the copy rules.",
   "milestones": [
     {
       "id": "central-registry",
@@ -10,46 +10,59 @@
       "detail": "The Commission adopted Implementing Regulation (EU) 2026/1778 on the DPP registry on 16 July 2026.",
       "badge": "EU DPP registry rules adopted: Implementing Regulation (EU) 2026/1778",
       "hideStatus": true,
-      "source": "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ%3AL_202601778",
+      "source": "https://eur-lex.europa.eu/eli/reg_impl/2026/1778/oj",
       "urgent": false
     },
     {
       "id": "batteries",
       "date": "2027-02-18",
       "precision": "day",
-      "label": "Industrial & EV Batteries (≥2 kWh)",
+      "label": "Industrial & EV Batteries (>2 kWh)",
       "detail": "Mandatory DPP for EV, industrial storage and LMT batteries. Carbon footprint, material declaration and recycled content required.",
       "source": "https://eur-lex.europa.eu/eli/reg/2023/1542/oj",
       "urgent": true
     },
     {
-      "id": "electronics",
-      "date": "2027-07-01",
-      "endDate": "2027-12-31",
+      "id": "construction",
+      "date": "2027-04-01",
+      "endDate": "2027-06-30",
       "precision": "quarter",
-      "label": "Electronics & ICT Products",
-      "detail": "Smartphones, tablets and laptops. Repairability scores, spare parts availability and recycled material content.",
-      "source": "https://eur-lex.europa.eu/eli/reg/2024/1781/oj",
+      "label": "Construction Products (CPR 2024/3110)",
+      "detail": "Indicative: Commission delegated act for construction materials under the Construction Products Regulation (EU) 2024/3110 expected Q2 2027. Estimate, not adopted law.",
+      "source": "https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en",
+      "indicative": true,
+      "urgent": false
+    },
+    {
+      "id": "furniture",
+      "date": "2028-01-01",
+      "precision": "year",
+      "label": "Furniture",
+      "detail": "Indicative: ESPR delegated act for furniture expected in 2028. Estimate, not adopted law.",
+      "source": "https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en",
+      "indicative": true,
       "urgent": false
     },
     {
       "id": "textiles",
-      "date": "2028-01-01",
-      "endDate": "2029-12-31",
-      "precision": "year",
+      "date": "2029-04-01",
+      "endDate": "2029-09-30",
+      "precision": "quarter",
       "label": "Textiles, Apparel & Footwear",
-      "detail": "Fibre composition, recycled content, country of origin and care instructions via DPP.",
-      "source": "https://eur-lex.europa.eu/eli/reg/2024/1781/oj",
+      "detail": "Estimate: delegated act indicative Q3-Q4 2027, with DPP rules applying at least 18 months later (around mid-2029). Fibre composition, recycled content, country of origin and care instructions.",
+      "source": "https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en",
+      "indicative": true,
       "urgent": false
     },
     {
-      "id": "construction",
-      "date": "2029-01-01",
-      "endDate": "2030-12-31",
+      "id": "electronics",
+      "date": "2030-01-01",
+      "endDate": "2031-12-31",
       "precision": "year",
-      "label": "Construction Products & Furniture",
-      "detail": "Structural products, insulation and furniture enter scope under the ESPR working plan.",
-      "source": "https://eur-lex.europa.eu/eli/reg/2024/1781/oj",
+      "label": "Electronics & ICT Products",
+      "detail": "Estimate: ICT delegated act indicative 2029, with DPP rules applying at least 18 months later (around 2030-31).",
+      "source": "https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en",
+      "indicative": true,
       "urgent": false
     }
   ]
