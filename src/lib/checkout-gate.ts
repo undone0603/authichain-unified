@@ -705,7 +705,10 @@ async function readFormFields(request: Request): Promise<URLSearchParams> {
  *   POST     → validate (email, honeypot, origin, bot/prefetch) → 303 Stripe.
  */
 /** Plans whose /checkout/<plan> page is closed to new buyers. */
-export const RETIRED_GATED_PLAN_IDS: readonly PlanId[] = ["qron_launch"];
+export const RETIRED_GATED_PLAN_IDS: readonly PlanId[] = [
+  "qron_launch",
+  "qron_launch_annual",
+];
 
 export async function tryHandleGatedCheckout(
   request: Request,

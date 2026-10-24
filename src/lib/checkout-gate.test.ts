@@ -600,7 +600,9 @@ describe("QRON Interdiction Gate (qron_launch)", () => {
     expect(html).not.toContain('<input type="hidden" name="qron_attestation"');
   });
 
-  it("returns 403 on POST /checkout/qron_launch_annual when qron_attestation is missing or unsigned", async () => {
+  // Both QRON gated plans are retired (RES-86c follow-up): the retired check
+  // runs before the attestation gate, so POSTs 303 to /pricing.
+  it("retired: POST /checkout/qron_launch_annual with an unsigned attestation 303s to /pricing", async () => {
     const body = new URLSearchParams({
       email: "founder@authichain.com",
       qron_attestation: "QRON-spoofed",
@@ -620,14 +622,12 @@ describe("QRON Interdiction Gate (qron_launch)", () => {
       QRON_INTERDICTION_SECRET: secret,
     });
 
-    expect(res?.status).toBe(403);
-    const html = await res!.text();
-    expect(html).toContain(
-      "QRON Interdiction: Valid signed attestation token required for provisioning."
-    );
+    expect(res?.status).toBe(303);
+    expect(res?.headers.get("location")).toBe("/pricing");
+    expect(await res!.text()).not.toContain("<form");
   });
 
-  it("proceeds to Stripe 303 redirect on POST /checkout/qron_launch_annual with a valid signed token and forwards metadata", async () => {
+  it("retired: POST /checkout/qron_launch_annual with a valid signed token never calls Stripe", async () => {
     let capturedStripeBody = null as URLSearchParams | null;
     const body = new URLSearchParams({
       email: "founder@authichain.com",
@@ -664,10 +664,8 @@ describe("QRON Interdiction Gate (qron_launch)", () => {
     );
 
     expect(res?.status).toBe(303);
-    expect(res?.headers.get("Location")).toBe(
-      "https://checkout.stripe.com/c/pay/cs_test_qron"
-    );
-    expect(capturedStripeBody?.get("metadata[qron_attestation]")).toBe(validToken);
+    expect(res?.headers.get("Location")).toBe("/pricing");
+    expect(capturedStripeBody).toBeNull();
   });
 });
 
@@ -716,7 +714,7 @@ describe("QRON Interdiction Gate hardening", () => {
     expect(await verifyQronAttestationToken(extended, secret)).toBe(false);
   });
 
-  it("gates qron_launch_annual the same way as qron_launch", async () => {
+  it("keeps qron_launch_annual QRON-gated but retired, so POSTs never reach Stripe", async () => {
     expect(isQronGatedPlan("qron_launch")).toBe(true);
     expect(isQronGatedPlan("qron_launch_annual")).toBe(true);
     expect(isQronGatedPlan("starter")).toBe(false);
@@ -725,7 +723,8 @@ describe("QRON Interdiction Gate hardening", () => {
       postCheckout("qron_launch_annual"),
       { STRIPE_SECRET_KEY: "sk_test_mock", QRON_INTERDICTION_SECRET: secret }
     );
-    expect(denied?.status).toBe(403);
+    expect(denied?.status).toBe(303);
+    expect(denied?.headers.get("location")).toBe("/pricing");
 
     const fetchImpl = vi.fn(async () =>
       new Response(
@@ -746,7 +745,8 @@ describe("QRON Interdiction Gate hardening", () => {
       }
     );
     expect(allowed?.status).toBe(303);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(allowed?.headers.get("location")).toBe("/pricing");
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it("renders the attestation input on the qron_launch_annual confirm page", () => {
@@ -783,12 +783,13 @@ describe("retired /checkout/qron_launch (RES-86c)", () => {
     expect(isQronGatedPlan("qron_launch")).toBe(true);
   });
 
-  it("still renders the annual plan confirm page", async () => {
+  it("redirects the retired annual plan to /pricing with no form", async () => {
     const res = await tryHandleGatedCheckout(
       new Request("https://authichain.com/checkout/qron_launch_annual"),
       {}
     );
-    expect(res!.status).toBe(200);
-    expect(await res!.text()).toContain("<form");
+    expect(res!.status).toBe(303);
+    expect(res!.headers.get("location")).toBe("/pricing");
+    expect(await res!.text()).not.toContain("<form");
   });
 });

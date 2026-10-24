@@ -1643,7 +1643,7 @@ function authenticateHtml(): string {
         inputId: "auth-starter-email",
       }) +
       '<p><a href="' +
-      escapeHtml(planPaymentLink("qron_launch") || "/checkout/qron_launch") +
+      "/pricing" +
       '">Start Launch $19/mo</a> · <a href="' +
       escapeHtml(
         planPaymentLink("qron_launch_annual") || "/checkout/qron_launch_annual"
