@@ -12,7 +12,7 @@
  * page (price undecided, ADM-212); the 402 response carries it.
  * Copy rule: no "live", customer, or accuracy claims.
  */
-import { EMAIL_OPTIN_CONSENT_TEXT, EMAIL_OPTIN_PATH, EMAIL_OPTIN_PRIVACY_LINE } from "./email-optin.ts";
+import { EMAIL_OPTIN_CONSENT_TEXT, EMAIL_OPTIN_PATH, EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL } from "./email-optin.ts";
 
 export const IS_THIS_REAL_PATH = "/is-this-real";
 export const IS_THIS_REAL_SOURCE = "is-this-real";
@@ -46,7 +46,7 @@ code{background:#f3f3f3;padding:.1rem .3rem;border-radius:4px}
   <label for="email">Email (optional)</label>
   <input type="email" id="email" name="email" maxlength="254" autocomplete="email">
   <label class="small"><input type="checkbox" id="consent" name="consent" value="yes"> ${EMAIL_OPTIN_CONSENT_TEXT}</label>
-  <p class="small">${EMAIL_OPTIN_PRIVACY_LINE}</p>
+  <p class="small">${EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL}</p>
   <button type="submit" id="go">Check</button>
 </form>
 <p id="status" class="small" role="status" aria-live="polite"></p>
