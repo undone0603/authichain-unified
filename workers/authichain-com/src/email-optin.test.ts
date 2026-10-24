@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  tryHandleEmailOptin, emailOptinBlock, saltedIpHash, runEmailOptinCleanup, CRON_RATE_PURGE_SQL, confirmEmailText, PURGE_SQL, UPSERT_SQL, RATE_SQL, RATE_MAX,
+  tryHandleEmailOptin, emailOptinBlock, saltedIpHash, runEmailOptinCleanup, runIsThisRealLeadPurge, CRON_RATE_PURGE_SQL, confirmEmailText, PURGE_SQL, UPSERT_SQL, RATE_SQL, RATE_MAX,
   EMAIL_OPTIN_CONSENT_TEXT, EMAIL_OPTIN_PRIVACY_LINE, EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL, type D1Like,
 } from "./email-optin";
 import { renderDppCheckPage } from "./dpp-check-page";
@@ -65,7 +65,7 @@ describe("email opt-in", () => {
   });
   it("stores only email, consent time, pending status and a token hash; purges first", async () => {
     const { db, calls } = fakeDb();
-    const r = await tryHandleEmailOptin(post({ email: " A@B.co ", consent: "yes", name: "x" }), { DB: db }, new Date("2026-10-23T12:00:00Z"));
+    const r = await tryHandleEmailOptin(post({ email: " A@B.co ", consent: "yes", name: "x" }), { DB: db, IP_HASH_SALT: SALT }, new Date("2026-10-23T12:00:00Z"));
     expect(r!.status).toBe(202);
     expect(calls.map(c => c.sql)).toContain(PURGE_SQL);
     const up = calls.find(c => c.sql === UPSERT_SQL)!;
@@ -123,7 +123,7 @@ describe("email opt-in", () => {
     const form = new URLSearchParams({ email: "a@b.co", consent: "yes" });
     const r = await tryHandleEmailOptin(new Request("https://authichain.com/api/email-optin", {
       method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", origin: ORIGIN }, body: form,
-    }), { DB: db });
+    }), { DB: db, IP_HASH_SALT: SALT });
     expect(r!.status).toBe(202);
     expect(r!.headers.get("content-type")).toContain("text/html");
     expect(await r!.text()).not.toContain('{"ok"');
@@ -132,7 +132,7 @@ describe("email opt-in", () => {
     for (const env of [{ RESEND_API_KEY: "k" }, { EMAIL_OPTIN_SEND_ENABLED: "true" }, { EMAIL_OPTIN_SEND_ENABLED: "false", RESEND_API_KEY: "k" }]) {
       const { db } = fakeDb();
       const { sent, f } = mockFetch();
-      expect((await tryHandleEmailOptin(post(ok), { DB: db, ...env }, new Date(), f))!.status).toBe(202);
+      expect((await tryHandleEmailOptin(post(ok), { DB: db, IP_HASH_SALT: SALT, ...env }, new Date(), f))!.status).toBe(202);
       expect(sent).toHaveLength(0);
     }
   });
@@ -153,7 +153,7 @@ describe("email opt-in", () => {
   });
   it("Research wording is byte-identical to gate PR2013-b2dbd98d", () => {
     expect(EMAIL_OPTIN_CONSENT_TEXT).toBe("Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@mail.grokbot.com.");
-    expect(EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL).toBe('If you tick the box, we store your email, the first seal ID you check, the page address, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep a copy of the sign-up until you ask us to delete it at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.');
+    expect(EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL).toBe('If you tick the box, we store your email, the first seal ID you check, the page address, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups are deleted after 30 days. The seal ID and page address are deleted after 30 days even if you confirm. If you confirm, we keep your email and confirmation until you unsubscribe or ask us to delete them at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.');
     expect(confirmEmailText("TOK")).toBe("Someone entered this email address on authichain.com and asked for AuthiChain product updates (at most once a month).\n\nTo confirm, open this link (valid for 30 days):\n\nhttps://authichain.com/api/email-optin/confirm?token=TOK\n\nIf you did not ask for this, ignore this email. Unless you confirm, we will not send you anything else.");
   });
   it("served consent text never contains PLACEHOLDER (both pages)", () => {
@@ -165,7 +165,7 @@ describe("email opt-in", () => {
     }
     expect(itr).toContain(EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL);
     expect(dpp).toContain(EMAIL_OPTIN_PRIVACY_LINE);
-    expect(EMAIL_OPTIN_PRIVACY_LINE).toBe('We store only your email, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be deleted after 30 days, and you can ask us to delete yours at any time at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.');
+    expect(EMAIL_OPTIN_PRIVACY_LINE).toBe('We store only your email, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups are deleted after 30 days, and you can ask us to delete yours at any time at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.');
     expect(dpp).not.toContain("first seal ID");
   });
   it("UI block: optional email, unchecked consent, privacy link", () => {
@@ -188,14 +188,30 @@ describe("email opt-in", () => {
     expect(key).not.toBe(plain);
     expect(await saltedIpHash("other-salt-0123456789", "203.0.113.9")).not.toBe(key);
   });
-  it("salt unset or short: no rate-limit storage at all, opt-in still works", async () => {
-    for (const salt of [undefined, "short"]) {
-      const { db, calls } = fakeDb({ hits: 999 });
-      const r = await tryHandleEmailOptin(post(ok), { DB: db, IP_HASH_SALT: salt });
-      expect(r!.status).toBe(202);
-      expect(calls.some(c => c.sql.includes("email_optin_rate"))).toBe(false);
-      expect(calls.some(c => c.sql === UPSERT_SQL)).toBe(true);
-    }
+  for (const [label, salt] of [["unset", undefined], ["short (<16 chars)", "short-salt-15ch"]] as const) {
+    it(`salt ${label}: fails closed with 503 optin_unavailable, no DB write, no send`, async () => {
+      const { db, calls } = fakeDb();
+      const { sent, f } = mockFetch();
+      const r = await tryHandleEmailOptin(post(ok), { DB: db, RESEND_API_KEY: "k", EMAIL_OPTIN_SEND_ENABLED: "true", IP_HASH_SALT: salt }, new Date(), f);
+      expect(r!.status).toBe(503);
+      expect(await r!.json()).toEqual({ ok: false, error: "optin_unavailable" });
+      expect(calls).toHaveLength(0);
+      expect(sent).toHaveLength(0);
+    });
+  }
+  it("cron purges /is-this-real lead_captures older than 30 days only; skips without creds; 503-safe", async () => {
+    const reqs: { url: string; init: RequestInit }[] = [];
+    let status = 204;
+    const f = (async (url: string, init: RequestInit) => { reqs.push({ url, init }); return new Response(null, { status }); }) as unknown as typeof fetch;
+    const env = { SUPABASE_URL: "https://x.supabase.co", SUPABASE_SERVICE_ROLE_KEY: "svc" };
+    expect(await runIsThisRealLeadPurge(env, f, new Date("2026-10-31T00:00:00Z"))).toEqual({ ok: true });
+    expect(reqs).toHaveLength(1);
+    expect(reqs[0].init.method).toBe("DELETE");
+    expect(reqs[0].url).toBe("https://x.supabase.co/rest/v1/lead_captures?source=eq.is-this-real&created_at=lt." + encodeURIComponent("2026-10-01T00:00:00.000Z"));
+    expect(await runIsThisRealLeadPurge({}, f)).toEqual({ ok: false });
+    expect(reqs).toHaveLength(1);
+    status = 500;
+    expect(await runIsThisRealLeadPurge(env, f)).toEqual({ ok: false });
   });
   it("cron cleanup deletes pending > 30 days and rate rows > 24h; 503-safe", async () => {
     const { db, calls } = fakeDb();

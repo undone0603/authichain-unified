@@ -22,6 +22,8 @@ describe("/is-this-real", () => {
   it("keeps the existing lead capture POST, unchanged, when email + consent are given", () => {
     expect(html).toContain('fetch("/api/leads/capture"');
     expect(html).toContain(`source:"${IS_THIS_REAL_SOURCE}",product_interest:"nickel-verify"`);
+    expect(IS_THIS_REAL_SOURCE).toBe("is-this-real");
+    expect(html).toContain('source:"is-this-real",product_interest:"nickel-verify"');
     expect(html).toContain('message:"consent: yes; first seal: "+seal.slice(0,128),page_url:location.href');
     expect(html.indexOf("/api/leads/capture")).toBeGreaterThan(html.indexOf("if(!captured&&email&&f.consent.checked)"));
   });

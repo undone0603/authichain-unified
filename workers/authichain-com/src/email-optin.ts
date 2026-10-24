@@ -5,7 +5,9 @@
  * - Consent must be explicitly "yes" (box starts unchecked in the UI).
  * - Stores only email, consent timestamp, status, and a SHA-256 hash of the
  *   confirmation token in AuthiChain's D1 (authichain-db), not QRON-v2.
- * - Unconfirmed rows older than 30 days are purged on every write.
+ * - Unconfirmed rows older than 30 days are purged by the daily cron
+ *   (17 7 * * *, runEmailOptinCleanup), which also purges rate rows > 24h
+ *   and /is-this-real lead_captures rows > 30 days (runIsThisRealLeadPurge).
  * - Double opt-in email (PM ruling 2026-10-23): Resend free tier, from
  *   no-reply@mail.authichain.com (send-only subdomain; never strainchain.io).
  *   Sent ONLY when EMAIL_OPTIN_SEND_ENABLED === "true" AND RESEND_API_KEY is
@@ -19,12 +21,12 @@ export const EMAIL_OPTIN_CONFIRM_PATH = "/api/email-optin/confirm";
 /** Research gate PR2013 @ b2dbd98d, FIX 1, verbatim. */
 export const EMAIL_OPTIN_CONSENT_TEXT =
   "Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@mail.grokbot.com.";
-/** /is-this-real (also POSTs /api/leads/capture). Research FIX 2 Option B, verbatim. */
+/** /is-this-real (also POSTs /api/leads/capture). Research string 2026-10-23 (#2015, 30-day lead purge), verbatim. */
 export const EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL =
-  'If you tick the box, we store your email, the first seal ID you check, the page address, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep a copy of the sign-up until you ask us to delete it at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
+  'If you tick the box, we store your email, the first seal ID you check, the page address, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups are deleted after 30 days. The seal ID and page address are deleted after 30 days even if you confirm. If you confirm, we keep your email and confirmation until you unsubscribe or ask us to delete them at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
 /** /dpp-check (email-optin only). Research: keep the current line here. */
 export const EMAIL_OPTIN_PRIVACY_LINE =
-  'We store only your email, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be deleted after 30 days, and you can ask us to delete yours at any time at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
+  'We store only your email, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups are deleted after 30 days, and you can ask us to delete yours at any time at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
 
 /*
  * MARKETING RULE (Research gate, PR #2013): only email_optins rows with
@@ -135,6 +137,34 @@ export async function runEmailOptinCleanup(db: D1Like | undefined): Promise<{ ok
   }
 }
 
+/**
+ * Daily cron (PM + Advisor 2026-10-23): purge /is-this-real lead_captures
+ * (QRON-v2 Supabase; email, seal ID, page address) older than 30 days.
+ * Equivalent SQL: DELETE FROM lead_captures WHERE source = 'is-this-real'
+ *   AND created_at < now() - interval '30 days'
+ * Needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY; skips (ok:false) without them.
+ */
+export async function runIsThisRealLeadPurge(
+  env: { SUPABASE_URL?: string; SUPABASE_SERVICE_ROLE_KEY?: string },
+  fetchImpl: typeof fetch = fetch,
+  now: Date = new Date(),
+): Promise<{ ok: boolean }> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return { ok: false };
+  const cutoff = new Date(now.getTime() - 30 * 86400_000).toISOString();
+  const url = `${env.SUPABASE_URL}/rest/v1/lead_captures?source=eq.is-this-real&created_at=lt.${encodeURIComponent(cutoff)}`;
+  try {
+    const r = await fetchImpl(url, {
+      method: "DELETE",
+      headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, prefer: "return=minimal" },
+    });
+    if (!r.ok) throw new Error(String(r.status));
+    return { ok: true };
+  } catch {
+    console.log(JSON.stringify({ event: "is_this_real_lead_purge_failed" }));
+    return { ok: false };
+  }
+}
+
 function changes(r: unknown): number {
   const m = (r as { meta?: { changes?: number } } | null)?.meta;
   return typeof m?.changes === "number" ? m.changes : 0;
@@ -218,13 +248,16 @@ export async function tryHandleEmailOptin(
   if (body.consent !== "yes" && body.consent !== true && body.consent !== "on")
     return reply(false, 400, "consent_required");
   if (!db) return reply(false, 503, "unavailable");
+  // Fail closed (CFA-536 P1): no valid salt means no rate limit, so refuse
+  // before any DB write or confirm-email send.
+  if (!env.IP_HASH_SALT || env.IP_HASH_SALT.length < 16) return reply(false, 503, "optin_unavailable");
   const consentAt = now.toISOString().replace("T", " ").slice(0, 19);
   const raw = [...crypto.getRandomValues(new Uint8Array(32))]
     .map(b => b.toString(16).padStart(2, "0")).join("");
   let fresh = false;
   try {
     const ipKey = await saltedIpHash(env.IP_HASH_SALT, request.headers.get("cf-connecting-ip") || "unknown");
-    // No salt bound: skip rate-limit storage entirely rather than store an unsalted IP hash.
+    // Salt validated above, so ipKey is always set here.
     if (ipKey) {
       const rate = await db.prepare(RATE_SQL).bind(ipKey, consentAt).first?.<{ hits: number }>();
       if (rate && rate.hits > RATE_MAX) return reply(false, 429, "rate_limited");

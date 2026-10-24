@@ -106,7 +106,7 @@ import {
   estateTrust,
   tryHandleEstateIndexNow,
 } from '../../_shared/estate-landing.ts';
-import { EMAIL_OPTIN_PATH, runEmailOptinCleanup, tryHandleEmailOptin, type D1Like } from './email-optin.ts';
+import { EMAIL_OPTIN_PATH, runEmailOptinCleanup, runIsThisRealLeadPurge, tryHandleEmailOptin, type D1Like } from './email-optin.ts';
 import { tryHandleEstatePricing } from '../../_shared/estate-pricing.ts';
 import { tryRedirectSeoRootCanonical } from '../../_shared/seo-hub-routes.ts';
 
@@ -3741,7 +3741,7 @@ export default {
     env: Env,
     ctx?: { waitUntil?: (promise: Promise<unknown>) => void }
   ) {
-    const p = runEmailOptinCleanup(env.DB);
+    const p = Promise.all([runEmailOptinCleanup(env.DB), runIsThisRealLeadPurge(env)]);
     if (ctx?.waitUntil) ctx.waitUntil(p); else await p;
   },
 };
