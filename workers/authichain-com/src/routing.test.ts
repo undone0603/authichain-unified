@@ -1237,6 +1237,15 @@ test("the 404 escapes the path, so a hostile URL cannot inject markup", async ()
   );
 });
 
+test("sitemap does not list /checkout/qron_launch after it closed to new buyers (#2020)", async () => {
+  const res = await get("/sitemap.xml");
+  assert.equal(res.status, 200);
+  const xml = await res.text();
+  assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
+  assert.ok(!xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>"));
+  assert.ok(!xml.includes("/checkout/qron_launch"));
+});
+
 test("the sitemap no longer lists pages that do not exist", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   for (const gone of [
@@ -1275,7 +1284,8 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
   // Retired plans 303 to /pricing, so they are no longer sitemap pages.
   assert.ok(
-    !xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
+    !xml.includes("/checkout/qron_launch"),
+    "/checkout/qron_launch is closed to new buyers (#2020); sitemap must not list it"
   );
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/creator</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));
