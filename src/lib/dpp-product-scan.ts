@@ -14,7 +14,17 @@ import {
   type DppReadinessResult,
 } from "./dpp-readiness";
 
-/** New StorePilot Pro $29 one-time link. The only paid next step shown. */
+/** Required on every DPP scan/report surface (Research gate, verbatim). */
+export const DPP_NOT_EC_DISCLAIMER =
+  "Not affiliated with or endorsed by the European Commission.";
+export const DPP_QR_DISCLAIMER =
+  "The QR in this report is not an EU DPP and is not registered in the EU DPP Registry.";
+
+/**
+ * StorePilot Pro $29 one-time link. The only paid next step shown.
+ * HOLD (2026-10-24): CTA kept as-is pending the product/naming ruling
+ * (DPP report vs StorePilot Pro product). Do not merge before the ruling.
+ */
 export const STOREPILOT_PRO_LINK =
   "https://buy.stripe.com/6oU14n87n8Jo5iabDC1NE02";
 

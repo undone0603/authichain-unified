@@ -52,3 +52,15 @@ describe("/dpp/scan redirect", () => {
     expect(res?.headers.get("Location")).toBe("https://authichain.com/dpp-check?gtin=1");
   });
 });
+
+describe("required disclaimers (Research gate)", () => {
+  it("lede and result both carry both strings verbatim", async () => {
+    const { renderDppProductScanPage } = await import("./dpp-product-scan-page.ts");
+    const blank = renderDppProductScanPage(new URL("https://authichain.com/dpp-check/product"));
+    const filled = renderDppProductScanPage(new URL("https://authichain.com/dpp-check/product?name=x&gtin=4006381333931"));
+    for (const html of [blank, filled]) {
+      expect(html).toContain("Not affiliated with or endorsed by the European Commission.");
+      expect(html).toContain("The QR in this report is not an EU DPP and is not registered in the EU DPP Registry.");
+    }
+  });
+});

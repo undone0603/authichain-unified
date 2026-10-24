@@ -110,9 +110,31 @@ describe('formatMilestoneDate', () => {
     expect(formatMilestoneDate(electronics)).toBe('2030–2031');
   });
 
-  it('renders a quarter range (textiles)', () => {
-    const textiles = listMilestones().find((m) => m.id === 'textiles')!;
-    expect(formatMilestoneDate(textiles)).toBe('Q2–Q3 2029');
+  it('renders a quarter range (construction)', () => {
+    const c = listMilestones().find((m) => m.id === 'construction')!;
+    expect(formatMilestoneDate(c)).toBe('Q2 2027');
+  });
+
+  it('textiles is a year floor, labelled indicative, with no countdown', () => {
+    const t = listMilestones().find((m) => m.id === 'textiles')!;
+    expect(formatMilestoneDate(t)).toBe('2029');
+    expect(t.detail).toContain('2029 at the earliest (estimate)');
+    expect(t.label).toContain('(indicative)');
+  });
+
+  it('every indicative entry hides its countdown/status and says so in its label or detail', () => {
+    for (const m of listMilestones().filter((m) => m.indicative)) {
+      expect(m.hideStatus).toBe(true);
+    }
+    for (const id of ['furniture', 'textiles', 'electronics']) {
+      expect(listMilestones().find((m) => m.id === id)!.label).toContain('(indicative)');
+    }
+  });
+
+  it('battery label does not apply >2 kWh to EV batteries', () => {
+    const b = listMilestones().find((m) => m.id === 'batteries')!;
+    expect(b.label).toBe('LMT, EV and industrial (>2 kWh) batteries');
+    expect(b.detail).toContain('apply later, on their own dates');
   });
 });
 

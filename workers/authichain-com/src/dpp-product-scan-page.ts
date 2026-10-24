@@ -12,6 +12,8 @@ import {
 import { DPP_CATEGORIES } from "../../../src/lib/dpp-readiness";
 import {
   STOREPILOT_PRO_LINK,
+  DPP_NOT_EC_DISCLAIMER,
+  DPP_QR_DISCLAIMER,
   parseProductScanInput,
   scanDppProduct,
   type ProductScanInput,
@@ -66,7 +68,7 @@ function resultHtml(r: ProductScanResult): string {
   <ul class="dc-gaps">${rows}</ul>
   <p>${esc(r.readiness.category.label)}: ${esc(r.readiness.nextStep)}</p>
   <p class="dc-cta"><a class="btn btn-primary" href="${STOREPILOT_PRO_LINK}">Scan up to 200 products: StorePilot Pro, $29 one-time</a></p>
-  <p class="bp-note">${esc(r.disclaimer)}</p>
+  <p class="bp-note">${esc(r.disclaimer)} ${DPP_NOT_EC_DISCLAIMER} ${DPP_QR_DISCLAIMER}</p>
 </section>`;
 }
 
@@ -103,7 +105,7 @@ export function renderDppProductScanPage(url: URL, now: Date = new Date()): stri
     <div class="wrap hero-content">
       <p class="estate-badge hero-badge">Free tool · One product</p>
       <h1>Scan one product's DPP data. Free.</h1>
-      <p class="estate-lede hero-sub">See which passport data points this product record has and which are missing. Nothing is stored. AuthiChain does not operate the EU DPP registry. Not legal advice. <a href="/dpp-check">Prefer the 8-question check?</a></p>
+      <p class="estate-lede hero-sub">See which passport data points this product record has and which are missing. Nothing is stored. AuthiChain does not operate the EU DPP registry. Not legal advice. ${DPP_NOT_EC_DISCLAIMER} ${DPP_QR_DISCLAIMER} <a href="/dpp-check">Prefer the 8-question check?</a></p>
       ${formHtml(input)}
     </div>
   </header>
