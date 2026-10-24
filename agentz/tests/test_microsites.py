@@ -112,3 +112,13 @@ def test_microsite_has_free_sample_and_starter_ctas():
     assert 'href="https://qron.space/generate?utm_source=agentz&utm_medium=microsite"' in page
     assert 'href="https://authichain.com/checkout/starter?src=agentz_microsite"' in page
     assert "Starter Pack: 100 generations for $29, paid once." in page
+
+
+@pytest.mark.parametrize("claim", [
+    "Blockchain anchored", "Pipeline Value", "Provisioned autonomously by AgentZ",
+    "LIVING DIGITAL TWIN", "Digital Twin", "INITIALIZE PARTNERSHIP",
+])
+def test_microsite_has_no_unbuilt_claims(claim):
+    page = microsites.generate_microsite_html({"name": "Acme", "amount": "50000"})
+    assert claim not in page
+    assert "50000" not in page

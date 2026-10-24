@@ -51,30 +51,24 @@ STARTER_URL = "https://authichain.com/checkout/starter?src=agentz_microsite"
 
 
 def generate_microsite_html(lead_data: Dict[str, Any]) -> str:
-    """Generates a high-fidelity 'Living Digital Twin' HTML page."""
+    """Generates the lead's microsite HTML page."""
     # Lead fields come from HubSpot and other external sources: escape them so
     # a crafted name cannot inject script into an authichain.com subdomain.
     name = html.escape(str(lead_data.get("name", "Valued Partner")))
-    amount = html.escape(str(lead_data.get("amount", "TBD")))
 
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{name} - Digital Twin</title>
+<title>{name}</title>
 <style>
   body {{ background: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }}
   .card {{ border: 1px solid #00ff88; padding: 40px; border-radius: 20px; text-align: center; max-width: 500px; }}
-  h1 {{ color: #00ff88; }}
 </style>
 </head>
 <body>
   <div class="card">
-    <h1>LIVING DIGITAL TWIN</h1>
     <h2>{name}</h2>
-    <p>Pipeline Value: ${amount}</p>
-    <p>Provisioned autonomously by AgentZ. Blockchain anchored.</p>
-    <a href="https://authichain.com" style="color:#00ff88;">INITIALIZE PARTNERSHIP</a>
     <p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts.</p>
     <p><a href="{FREE_SAMPLE_URL}" style="color:#00ff88;">Try 5 free generations</a></p>
     <p><a href="{STARTER_URL}" style="color:#00ff88;">Starter Pack: 100 generations for $29, paid once.</a></p>
