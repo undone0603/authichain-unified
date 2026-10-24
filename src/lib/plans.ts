@@ -199,7 +199,7 @@ export const PLANS: Plan[] = [
       "Self-serve activation",
       "50 workspace generations",
       "Not an audit and not a legal opinion",
-      "Does not register a product in EUDAMED",
+      "Does not register a product in the EU DPP registry.",
     ],
     cta: "Open DPP workspace — $299",
   },

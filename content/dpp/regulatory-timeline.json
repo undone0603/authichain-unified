@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-07",
+  "updated": "2026-10-24",
   "note": "Regulatory milestones for the EU Digital Product Passport. Dates drive the live countdowns on /digital-product-passport, so every entry needs a real ISO date and a source anyone can check. Maintained by the 'DPP regulatory watch' Routine; see docs/strategy/persuasion-doctrine.md for the copy rules.",
   "milestones": [
     {
@@ -17,10 +17,11 @@
       "id": "batteries",
       "date": "2027-02-18",
       "precision": "day",
-      "label": "Industrial & EV Batteries (≥2 kWh)",
-      "detail": "Mandatory DPP for EV, industrial storage and LMT batteries. Carbon footprint, material declaration and recycled content required.",
+      "label": "Batteries: EV, LMT and industrial batteries over 2 kWh",
+      "detail": "Mandatory DPP for EV, industrial storage and LMT batteries.",
       "source": "https://eur-lex.europa.eu/eli/reg/2023/1542/oj",
-      "urgent": true
+      "urgent": true,
+      "hideStatus": true
     },
     {
       "id": "electronics",
@@ -28,9 +29,10 @@
       "endDate": "2027-12-31",
       "precision": "quarter",
       "label": "Electronics & ICT Products",
-      "detail": "Smartphones, tablets and laptops. Repairability scores, spare parts availability and recycled material content.",
+      "detail": "Date not set: awaiting an EU delegated act",
       "source": "https://eur-lex.europa.eu/eli/reg/2024/1781/oj",
-      "urgent": false
+      "urgent": false,
+      "hideStatus": true
     },
     {
       "id": "textiles",
@@ -38,9 +40,10 @@
       "endDate": "2029-12-31",
       "precision": "year",
       "label": "Textiles, Apparel & Footwear",
-      "detail": "Fibre composition, recycled content, country of origin and care instructions via DPP.",
+      "detail": "Date not set: awaiting an EU delegated act",
       "source": "https://eur-lex.europa.eu/eli/reg/2024/1781/oj",
-      "urgent": false
+      "urgent": false,
+      "hideStatus": true
     },
     {
       "id": "construction",
@@ -50,7 +53,8 @@
       "label": "Construction Products & Furniture",
       "detail": "Structural products, insulation and furniture enter scope under the ESPR working plan.",
       "source": "https://eur-lex.europa.eu/eli/reg/2024/1781/oj",
-      "urgent": false
+      "urgent": false,
+      "hideStatus": true
     }
   ]
 }
