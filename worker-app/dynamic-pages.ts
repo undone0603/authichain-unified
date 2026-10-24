@@ -1659,7 +1659,48 @@ function renderAuthenticate(c: Context): Response {
 
 // --- /generate — Living QR intake (qron.space CTA) -------------------------
 
-function generatePackLinksHtml(): string {
+// Attribution carried from /generate into /checkout/starter. The gated
+// checkout (src/lib/checkout-gate.ts) already copies ref into
+// metadata[affiliate_code] and utm_* into metadata; /generate dropped them.
+// Allowlist characters and cap length so nothing odd reaches the URL.
+export const GENERATE_CARRY_KEYS = [
+  "ref",
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+] as const;
+
+export function sanitizeGenerateCarry(
+  from: URLSearchParams | Record<string, unknown> | null | undefined
+): URLSearchParams {
+  const out = new URLSearchParams();
+  if (!from) return out;
+  const get = (k: string): string => {
+    const v =
+      from instanceof URLSearchParams
+        ? from.get(k)
+        : (from as Record<string, unknown>)[k];
+    return typeof v === "string" ? v.trim() : "";
+  };
+  for (const key of GENERATE_CARRY_KEYS) {
+    const v = get(key);
+    const max = key === "ref" ? 64 : 128;
+    if (v && v.length <= max && /^[A-Za-z0-9._~-]+$/.test(v)) out.set(key, v);
+  }
+  return out;
+}
+
+function withCarry(href: string, carry?: URLSearchParams): string {
+  const isCheckout =
+    href.startsWith("https://authichain.com/checkout/") ||
+    href.startsWith("/checkout/");
+  if (!carry || !carry.toString() || !isCheckout) return href;
+  return href + (href.includes("?") ? "&" : "?") + carry.toString();
+}
+
+function generatePackLinksHtml(carry?: URLSearchParams): string {
   // LOOP-03 order: Starter $29 → Creator; DPP via /pricing.
   // CFA-460: QRON Launch $19/mo is not offered on /generate (unlisted).
   // The /checkout/qron_launch route and Stripe price are untouched.
@@ -1677,7 +1718,7 @@ function generatePackLinksHtml(): string {
       const href =
         p.id === "dpp_readiness"
           ? "/pricing"
-          : planPaymentLink(p.id) || "/pricing";
+          : withCarry(planPaymentLink(p.id) || "/pricing", carry);
       const price =
         p.price_suffix === "/month" ? `$${p.price}/mo` : `$${p.price}`;
       return (
@@ -1724,8 +1765,21 @@ function generateCreditLinksHtml(): string {
 function generateFormHtml(
   error?: string,
   paid = false,
-  cancelled = false
+  cancelled = false,
+  carry?: URLSearchParams
 ): string {
+  const carryInputs = carry
+    ? Array.from(carry.entries())
+        .map(
+          ([k, v]) =>
+            '<input type="hidden" name="' +
+            escapeHtml(k) +
+            '" value="' +
+            escapeHtml(v) +
+            '">\n'
+        )
+        .join("")
+    : "";
   const statusBlock = paid
     ? '<p role="alert" id="generate-paid">Payment received</p>\n'
     : cancelled
@@ -1754,11 +1808,12 @@ function generateFormHtml(
       '<input id="targetUrl" name="targetUrl" type="url" required maxlength="500" placeholder="https://">\n' +
       '<label for="prompt">Style prompt (optional)</label>\n' +
       '<input id="prompt" name="prompt" type="text" maxlength="200" placeholder="Industrial tech aesthetic">\n' +
+      carryInputs +
       '<button type="submit">Queue Living QR</button>\n' +
       "</form>\n" +
       generateCreditLinksHtml() +
       "<p>Need a generation pack? " +
-      generatePackLinksHtml() +
+      generatePackLinksHtml(carry) +
       ' · <a href="/pricing">All pricing</a></p>\n' +
       // Absolute: qron.space proxies this page, and qron.space/dashboard and
       // /login do not exist (404). Account links stay hidden until they do.
@@ -1809,8 +1864,10 @@ function generateFormHtml(
 async function handleGeneratePost(c: Context): Promise<Response> {
   let targetUrl = "";
   let prompt = "";
+  let carry = new URLSearchParams();
   try {
     const form = await c.req.parseBody();
+    carry = sanitizeGenerateCarry(form as Record<string, unknown>);
     targetUrl = String(form.targetUrl || "").trim();
     prompt = String(form.prompt || "")
       .trim()
@@ -1828,6 +1885,7 @@ async function handleGeneratePost(c: Context): Promise<Response> {
   const dest = new URL("https://authichain.com/checkout/starter");
   dest.searchParams.set("targetUrl", targetUrl);
   if (prompt) dest.searchParams.set("prompt", prompt);
+  for (const [k, v] of carry) dest.searchParams.set(k, v);
   return c.redirect(dest.pathname + dest.search, 303);
 }
 
@@ -1841,7 +1899,8 @@ async function renderGenerate(c: Context): Promise<Response> {
     generateFormHtml(
       undefined,
       url.searchParams.get("paid") === "1",
-      url.searchParams.get("cancelled") === "1"
+      url.searchParams.get("cancelled") === "1",
+      sanitizeGenerateCarry(url.searchParams)
     ),
     200
   );
