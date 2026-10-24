@@ -33,7 +33,7 @@ vi.mock("./onboard-notify", () => ({
   notifyPilotIntake: vi.fn().mockResolvedValue(undefined),
 }));
 
-const { renderDynamicPage } = await import("./dynamic-pages");
+const { renderDynamicPage, sanitizeGenerateCarry } = await import("./dynamic-pages");
 const { notifyPilotIntake } = await import("./onboard-notify");
 const { getHyperdriveDb, createHyperdriveRequestDb } =
   await import("../server/db");
@@ -1126,6 +1126,49 @@ describe("renderDynamicPage: /generate Living QR", () => {
       "https://example.com/sku"
     );
     expect(location.searchParams.get("prompt")).toBe("neon");
+  });
+
+  it("forwards sanitized ref and utm params from /generate to Starter checkout", async () => {
+    const page = await app.request(
+      "/generate?ref=partner_1&utm_source=x&utm_campaign=launch-wk&utm_term=%3Cscript%3E",
+      {},
+      makeEnv() as any
+    );
+    const html = await page.text();
+    expect(html).toContain("/checkout/starter?ref=partner_1&amp;utm_source=x&amp;utm_campaign=launch-wk");
+    expect(html).toContain('<input type="hidden" name="ref" value="partner_1">');
+    expect(html).not.toContain("utm_term");
+    expect(html).not.toContain("<script>\"");
+
+    const res = await app.request(
+      "/generate",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body:
+          "targetUrl=https%3A%2F%2Fexample.com%2Fsku&ref=partner_1&utm_medium=email&utm_content=" +
+          "a".repeat(200),
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+    expect(res.status).toBe(303);
+    const location = new URL(res.headers.get("location") || "", "https://example.test");
+    expect(location.pathname).toBe("/checkout/starter");
+    expect(location.searchParams.get("ref")).toBe("partner_1");
+    expect(location.searchParams.get("utm_medium")).toBe("email");
+    expect(location.searchParams.get("utm_content")).toBeNull();
+  });
+
+  it("sanitizeGenerateCarry allowlists characters and caps length", () => {
+    const out = sanitizeGenerateCarry(
+      new URLSearchParams({ ref: "ok-1.2_x~", utm_source: "bad value", utm_medium: "a&b", foo: "x" })
+    );
+    expect(out.get("ref")).toBe("ok-1.2_x~");
+    expect(out.get("utm_source")).toBeNull();
+    expect(out.get("utm_medium")).toBeNull();
+    expect(out.get("foo")).toBeNull();
+    expect(sanitizeGenerateCarry(new URLSearchParams({ ref: "r".repeat(65) })).get("ref")).toBeNull();
   });
 });
 
