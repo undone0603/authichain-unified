@@ -28,6 +28,8 @@ jobs:
           node-version: "22"
           cache: "pnpm"
           cache-dependency-path: pnpm-lock.yaml
+      - name: Install node-gyp (native builds)
+        run: npm i -g node-gyp@11
       - name: Install
         env:
           # bufferutil/utf-8-validate are optional ws speedups; ws falls back to JS.
