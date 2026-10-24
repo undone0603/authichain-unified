@@ -44,6 +44,12 @@ def microsite_slug(raw: Any) -> Optional[str]:
     return slug
 
 
+# Signal-raising CTAs. Copy reuses approved strings from worker-app/dynamic-pages.ts
+# (/generate page); links go to existing routes only (no new SKU or price).
+FREE_SAMPLE_URL = "https://qron.space/generate?utm_source=agentz&utm_medium=microsite"
+STARTER_URL = "https://authichain.com/checkout/starter?src=agentz_microsite"
+
+
 def generate_microsite_html(lead_data: Dict[str, Any]) -> str:
     """Generates a high-fidelity 'Living Digital Twin' HTML page."""
     # Lead fields come from HubSpot and other external sources: escape them so
@@ -69,6 +75,9 @@ def generate_microsite_html(lead_data: Dict[str, Any]) -> str:
     <p>Pipeline Value: ${amount}</p>
     <p>Provisioned autonomously by AgentZ. Blockchain anchored.</p>
     <a href="https://authichain.com" style="color:#00ff88;">INITIALIZE PARTNERSHIP</a>
+    <p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts.</p>
+    <p><a href="{FREE_SAMPLE_URL}" style="color:#00ff88;">Try 5 free generations</a></p>
+    <p><a href="{STARTER_URL}" style="color:#00ff88;">Starter Pack: 100 generations for $29, paid once.</a></p>
   </div>
 </body>
 </html>"""
