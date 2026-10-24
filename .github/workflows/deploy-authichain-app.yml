@@ -81,7 +81,8 @@ jobs:
           if ! git merge-base --is-ancestor "$EXPECTED_SHA" origin/main; then
             echo "::error::$EXPECTED_SHA is not an ancestor of origin/main"; exit 1
           fi
-          NAME="$(node -e 'const s=require("fs").readFileSync("wrangler.app.jsonc","utf8");const m=s.match(/^\s*"name":\s*"([^"]+)"/m);process.stdout.write(m?m[1]:"")')"
+          # setup-node has not run yet. The self-hosted runner has no node on PATH here.
+          NAME="$(sed -n 's/^[[:space:]]*"name":[[:space:]]*"\([^"]*\)".*/\1/p' wrangler.app.jsonc | head -n 1)"
           if [ "$NAME" != "authichain-app" ]; then
             echo "::error::wrangler.app.jsonc name is '$NAME', expected authichain-app"; exit 1
           fi
