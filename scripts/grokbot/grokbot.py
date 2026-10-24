@@ -72,11 +72,20 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _redact_match(match: re.Match[str]) -> str:
+    """Replace the secret value; keep a prefix capture only when it is not the whole match."""
+    if match.lastindex:
+        prefix = match.group(1)
+        if prefix != match.group(0):
+            return f"{prefix}[REDACTED]"
+    return "[REDACTED]"
+
+
 def redact(text: str) -> tuple[str, bool]:
     changed = False
     out = text
     for pattern in SECRET_PATTERNS:
-        out2 = pattern.sub(lambda m: (m.group(1) if m.lastindex else "") + "[REDACTED]", out)
+        out2 = pattern.sub(_redact_match, out)
         changed = changed or out2 != out
         out = out2
     return out, changed
