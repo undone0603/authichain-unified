@@ -1651,7 +1651,7 @@ function authenticateHtml(): string {
       }) +
       '<p><a href="' +
       "/pricing" +
-      '">See pricing</a> · <a href="/pricing">All pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
+      '">See pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
       "</main>",
   });
 }

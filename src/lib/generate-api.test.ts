@@ -40,7 +40,7 @@ describe("generateCreditPacks", () => {
     expect(byId.qron_launch_annual.checkout).toBe(
       "https://authichain.com/checkout/qron_launch_annual"
     );
-    expect(byId.qron_launch.cta).toMatch(/Launch/i);
+    expect(byId.qron_launch.cta).toBe("See pricing");
   });
 });
 

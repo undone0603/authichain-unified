@@ -100,7 +100,7 @@ export const PLANS: Plan[] = [
       "Designed for AuthiChain signed verification (in development)",
       "Cancel any time",
     ],
-    cta: "Start Launch $19/mo",
+    cta: "See pricing",
   },
   {
     id: "qron_launch_annual",
@@ -121,7 +121,7 @@ export const PLANS: Plan[] = [
       "Designed for AuthiChain signed verification (in development)",
       "Cancel any time",
     ],
-    cta: "Start Annual Launch — $190/yr",
+    cta: "See pricing",
   },
   {
     id: "creator",
