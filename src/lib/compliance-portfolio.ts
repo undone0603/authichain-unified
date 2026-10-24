@@ -154,3 +154,25 @@ export async function loadPortfolioRows(
     .order("created_at", { ascending: false });
   return (data ?? []) as DppProductRow[];
 }
+
+/** StorePilot Pro catalog cap (PR-C entitlement default). */
+export const DEFAULT_CATALOG_LIMIT = 200;
+
+export type CappedCatalog =
+  | { ok: true; rows: DppProductRow[] }
+  | { ok: false; error: "catalog_over_limit"; limit: number; received: number; message: string };
+
+/** Refuses (does not silently truncate) a catalog over the entitlement cap. */
+export function capCatalog(
+  rows: DppProductRow[],
+  limit: number = DEFAULT_CATALOG_LIMIT
+): CappedCatalog {
+  if (rows.length <= limit) return { ok: true, rows };
+  return {
+    ok: false,
+    error: "catalog_over_limit",
+    limit,
+    received: rows.length,
+    message: `Your plan covers up to ${limit} products. This upload has ${rows.length}. Remove ${rows.length - limit} and try again.`,
+  };
+}
