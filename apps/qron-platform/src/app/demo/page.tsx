@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 const DEMOS = [
   {
     id: 'demo-musa-shield',
-    name: 'FTC "Made in USA" Shield',
+    name: '"Made in USA" Origin Demo',
     style: 'Patriotic Heritage',
     image: '/media/usa/unnamed.jpg',
     description: 'Origin proof for American manufacturing.',
@@ -29,7 +29,7 @@ const DEMOS = [
   },
   {
     id: 'demo-bmw',
-    name: 'BMW iX Pilot',
+    name: 'EV Component Demo',
     style: 'Brushed Aluminum',
     image: '/media/samples/04_flux_ev_industry.png',
     description: 'Industrial telemetry meets luxury aesthetic. Anchored on Polygon.',
@@ -37,7 +37,7 @@ const DEMOS = [
   },
   {
     id: 'demo-rolex',
-    name: 'Rolex Cosmograph',
+    name: 'Luxury Watch Demo',
     style: 'Holographic Gold',
     image: '/media/samples/06_flux_haute_couture.png',
     description: 'Cryptographic proof of authenticity for the world\'s finest timepieces.',
@@ -45,7 +45,7 @@ const DEMOS = [
   },
   {
     id: 'demo-nike',
-    name: 'Nike kinetic',
+    name: 'Athletic Apparel Demo',
     style: 'Liquid Motion',
     image: '/media/samples/10_flux_athletedao.png',
     description: 'Dynamic athlete storytelling through scannable sports art.',
@@ -132,7 +132,7 @@ export default function DemoGalleryPage() {
                 <div className="pt-6 border-t border-zinc-900 flex justify-between items-center">
                    <div className="flex items-center gap-2">
                       <Lock className="w-3 h-3 text-zinc-700" />
-                      <code className="text-[9px] font-mono text-zinc-700">{demo.hash}</code>
+                      <code className="text-[9px] font-mono text-zinc-700">Example hash: {demo.hash}</code>
                    </div>
                    <Link href={`/reveal/${demo.id}`} className="text-[9px] font-black text-white hover:text-gold uppercase tracking-widest flex items-center gap-2">
                       View Anchor <ExternalLink className="w-3 h-3" />
