@@ -1075,6 +1075,15 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain('name="targetUrl"');
     expect(body).toContain("fetch('/api/generate'");
     expect(body).toContain("if(r.res.status===401)");
+    expect(body).toContain("r.data.code==='FREE_SAMPLE_USED'");
+    expect(body).toContain("form.hidden=true");
+    expect(body).toContain("a.href='/checkout/starter?'+q");
+    expect(body).toContain("Buy Starter Pack — $29");
+    const usedAt = body.indexOf("FREE_SAMPLE_USED");
+    const submitAt = body.indexOf("form.submit()");
+    expect(usedAt).toBeGreaterThan(-1);
+    expect(submitAt).toBeGreaterThan(usedAt);
+    expect(body.indexOf("return;", usedAt)).toBeLessThan(submitAt);
     expect(body).toContain("form.submit()");
     expect(body).toContain("$29");
     expect(body).not.toContain("$19/mo");

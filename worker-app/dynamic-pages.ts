@@ -1781,6 +1781,23 @@ function generateFormHtml(
       ".then(function(res){return res.json().then(function(data){return {res:res,data:data};});})\n" +
       ".then(function(r){\n" +
       "if(r.res.status===401){\n" +
+      "if(r.data&&r.data.code==='FREE_SAMPLE_USED'){\n" +
+      "err.hidden=false;err.textContent=r.data.message||'Your 5 free generations are used.';\n" +
+      "form.hidden=true;\n" +
+      "var gate=document.getElementById('generate-upgrade');\n" +
+      "if(!gate){\n" +
+      "gate=document.createElement('p');\n" +
+      "gate.id='generate-upgrade';\n" +
+      "var a=document.createElement('a');\n" +
+      "var q='targetUrl='+encodeURIComponent(targetUrl);\n" +
+      "if(prompt)q+='&prompt='+encodeURIComponent(prompt);\n" +
+      "a.href='/checkout/starter?'+q;\n" +
+      "a.textContent='Buy Starter Pack — $29';\n" +
+      "gate.appendChild(a);\n" +
+      "form.parentNode.insertBefore(gate,form.nextSibling);\n" +
+      "}\n" +
+      "return;\n" +
+      "}\n" +
       "if(r.data&&r.data.code&&r.data.code.indexOf('FREE_SAMPLE_')===0){err.hidden=false;err.textContent=r.data.message;}\n" +
       "form.submit();\n" +
       "return;\n" +
