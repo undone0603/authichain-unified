@@ -14,7 +14,7 @@ The federal applicant for this UEI is the individual SAM entity:
 | UEI | R34XKWRJY9A5 |
 | CAGE | 1PUJ6 |
 | Registration status | Active through 2027-04-20 |
-| Physical address | 109 N 4th St, Roscommon, MI 48653 |
+| Physical address | [MAILING_ADDRESS] |
 
 ## Brand vs legal framing
 
@@ -38,7 +38,7 @@ prep checklist rows; they must not be executed:
 - [ ] Confirm SAM legal business name still reads **ZACHARY KIETZMAN** (do not change it)
 - [ ] Confirm UEI R34XKWRJY9A5 and CAGE 1PUJ6 still match this entity
 - [ ] Confirm registration remains Active through 2027-04-20 (renew before expiration)
-- [ ] Confirm physical address: 109 N 4th St, Roscommon, MI 48653
+- [ ] Confirm physical address: [MAILING_ADDRESS]
 - [ ] Confirm Entity Administrator Login.gov access for this entity
 - [ ] Keep TIN and bank validation current for this individual entity
 - [ ] Prepare a notarized letter only if SAM requests one for *this* entity

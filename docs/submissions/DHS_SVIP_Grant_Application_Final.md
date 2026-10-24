@@ -1,3 +1,5 @@
+> Redacted copy; contact details removed.
+
 # DHS SVIP Grant Application: AuthiChain Autonomous Launch Infrastructure
 ## Preventing Forgery and Counterfeiting of Federal Credentials
 
@@ -5,7 +7,7 @@
 **Brand / product:** AuthiChain
 **UEI:** R34XKWRJY9A5
 **CAGE Code:** 1PUJ6
-**Physical Address:** 109 N 4th St, Roscommon, MI 48653-9090 USA
+**Physical Address:** [MAILING_ADDRESS]
 **Registration Status:** Active (Expires Apr 20, 2027)
 **Program:** DHS Science and Technology Directorate — Silicon Valley Innovation Program (SVIP)
 **Topic:** Preventing Forgery and Counterfeiting of Certificates and Licenses
