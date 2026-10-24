@@ -194,6 +194,7 @@
         "deploy-qron-ai-api.yml": "manual",
         "deploy-govchain-nft-base.yml": "manual",
         "deploy-manufacturer-status.yml": "manual",
+        "deploy-authichain-app.yml": "manual",
         "dpp-outreach-trigger.yml": "manual",
         "guardrail-digest.yml": "manual",
         "outreach-trigger.yml": "manual",
