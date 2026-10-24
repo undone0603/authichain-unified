@@ -68,7 +68,7 @@ A large automation layer invisible to repo code search. Key clusters:
 
 **GitHub Actions (the real cron layer — ~15 scheduled workflows):**
 
-- `autonomous-business-cycle.yml` — **14 daily jobs** hitting the CRON_SECRET-gated Vercel endpoints (pipeline 00:00, subscription-health 03:00, customer-health 05:00, automation 06:00, govchain 07:00, dunning 08:00, retention 09:00, trial-reminder 10:00, live-check 11:00, token-metrics 12:00, ecosystem-health 13:00; competitive-monitor Mondays; founder-payout 1st of month). **This is LIVE — the autonomous business cycle runs.**
+- `autonomous-business-cycle.yml` — **14 daily jobs** hitting the CRON_SECRET-gated Vercel endpoints (pipeline 00:00, subscription-health 03:00, customer-health 05:00, automation 06:00, govchain 07:00, dunning 08:00, retention 09:00, trial-reminder 10:00, live-check 11:00, token-metrics 12:00, ecosystem-health 13:00; competitive-monitor Mondays; founder-payout 1st of month). Scheduled jobs (14) are defined but NOT running: the last run was Sep 20 2026, and Actions has been billing-locked since. The full revenue loop has never completed.
 - `outreach-trigger.yml` (every 4h) + `dpp-outreach-trigger.yml` (every 8h) → qron-outreach worker. **Both hit exhausted queues — no-ops burning minutes.**
 - `b2b-outreach.yml` (Mondays 14:00) → `scripts/b2b-cold-outreach.ts` (Apollo-enriched)
 - `gov-engine.yml` (6am) + gov-{ingest,score,mint,notify,proposals}.yml — gov procurement pipeline
@@ -96,7 +96,7 @@ Autonomous business-operations agent. Capabilities span gov grant proposals, Doc
 ## Cross-cutting risks (for a future ops pass)
 
 1. **Worker drift** — 11 live CF workers have no repo source; `qron-daily-ops` carries dead-but-embedded secrets. Source them into `workers/` or document as deliberate.
-2. **Shadow schedulers** — GitHub Actions + Supabase pg_cron + CF worker crons all fire independently; no single pane. The autonomous business cycle IS live daily.
+2. **Shadow schedulers** — GitHub Actions + Supabase pg_cron + CF worker crons all fire independently; no single pane. The autonomous business cycle is DORMANT while Actions is locked.
 3. **AgentZ default-auto** — CLI executes side-effects by default; only 1/53 workflows gated. Consider flipping the CLI default to `confirm`.
 4. **Outreach** — 16% bounce rate, 0 replies ever, daily drip sends from `noreply@` with no reply-to (see `outreach-pipeline-audit` memory).
 5. **Edge-function sprawl** — 80+ functions, most `verify_jwt:false`, undocumented; overlap with tRPC/workers unknown.
