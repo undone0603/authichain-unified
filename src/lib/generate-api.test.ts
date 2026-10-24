@@ -252,7 +252,7 @@ describe("handleGeneratePost", () => {
     expect(result.status).toBe(401);
     expect(result.body.code).toBe("FREE_SAMPLE_PAUSED");
     expect(String(result.body.message)).toMatch(
-      /^Free samples are paused for today\./
+      /^Free samples are paused right now\./
     );
     expect(generateImage).not.toHaveBeenCalled();
   });
