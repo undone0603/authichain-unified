@@ -16,12 +16,13 @@ import {
 import { constructStripeEventAsync } from "@/lib/stripe-construct-event";
 import { accrueAffiliateCommission } from "../../../../lib/affiliate-accrual";
 import {
-  STOREPILOT_PRO_OFFER,
-  isStorePilotProSession,
+  DPP_REPORT_OFFER,
+  dppReportPriceId,
+  isDppReportSession,
   resolveCheckoutPlanId,
   starterAmountFallbackRefusals,
 } from "../../../../lib/billing/live-catalog";
-import { fulfillStorePilotPro } from "../../../../lib/storepilot-pro-fulfill";
+import { fulfillDppReport } from "../../../../lib/dpp-report-fulfill";
 
 // Never anchor test-mode objects from a production deployment.
 function isAnchorable(event: Stripe.Event): boolean {
@@ -337,10 +338,32 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        // StorePilot Pro $29 one-time. Must run before the $29.00 Starter
-        // amount fallback below, which would otherwise grant Starter.
-        if (isStorePilotProSession(session, linePriceId)) {
-          const pro = await fulfillStorePilotPro(getSupabase(), session);
+        // DPP report $29 one-time (price wiring HOLD; see live-catalog).
+        // Idempotent on checkout session id. Must run before the $29.00
+        // Starter amount fallback below, which would otherwise grant Starter.
+        let dppReport = isDppReportSession(session as never, linePriceId);
+        // Payment Link sessions arrive without line_items; a $29.00 one could
+        // be the DPP report (matched by price/product metadata). Read-only
+        // lookup; a failure throws so Stripe retries instead of the amount
+        // fallback granting Starter.
+        // Only once the DPP price is issued (DPP_REPORT_PRICE_ID set).
+        if (
+          !dppReport &&
+          dppReportPriceId() !== null &&
+          !session.line_items &&
+          session.amount_total === DPP_REPORT_OFFER.amountCents
+        ) {
+          const items = await stripe.checkout.sessions.listLineItems(
+            session.id,
+            { limit: 5, expand: ["data.price.product"] }
+          );
+          dppReport = isDppReportSession(
+            { metadata: md, line_items: items as never },
+            items.data?.[0]?.price?.id ?? linePriceId
+          );
+        }
+        if (dppReport) {
+          const pro = await fulfillDppReport(getSupabase(), session, linePriceId);
           if (
             pro.unlocked &&
             isAnchorable(event) &&
@@ -350,7 +373,7 @@ export async function POST(req: NextRequest) {
               anchorStripeSale({
                 eventId: event.id,
                 objectId: session.id,
-                sku: STOREPILOT_PRO_OFFER.sku,
+                sku: DPP_REPORT_OFFER.sku,
                 amountCents: session.amount_total!,
                 currency: session.currency ?? "usd",
                 buyerWallet: resolveBuyerWallet(md),

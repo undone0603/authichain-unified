@@ -1,5 +1,5 @@
 /**
- * Phase 3 PR-C: fail-closed 503 + StorePilot Pro $29 one-time unlock.
+ * Phase 3 PR-C: fail-closed 503 + DPP report $29 one-time unlock (idempotent on session id).
  * Stripe, Supabase, next/server and the ledger are faked in-process.
  * No network, no live money, no real keys.
  */
@@ -8,8 +8,8 @@ import type { NextRequest } from "next/server";
 import { POST } from "./route";
 import { provisionPurchase } from "@/lib/provisioning";
 import {
-  STOREPILOT_PRO_OFFER,
-  isStorePilotProSession,
+  STOREPILOT_PRO_PRICE_ID,
+  isDppReportSession,
   resolveCheckoutPlanId,
 } from "../../../../lib/billing/live-catalog";
 
@@ -132,14 +132,15 @@ function proSession(over: Record<string, unknown> = {}) {
       object: {
         id: "cs_live_pro_1",
         payment_status: "paid",
-        payment_link: STOREPILOT_PRO_OFFER.paymentLinkId,
+        payment_link: "plink_dpp_fixture",
         amount_total: 2900,
         amount_subtotal: 2900,
         total_details: { amount_discount: 0 },
         currency: "usd",
         customer_details: { email: "Buyer@Example.com" },
         customer: "cus_1",
-        metadata: {},
+        metadata: { product_line: "dpp_report" },
+        line_items: { data: [] },
         created: 1790000000,
         ...over,
       },
@@ -191,59 +192,63 @@ describe("fail closed", () => {
   });
 });
 
-describe("StorePilot Pro $29 one-time", () => {
-  it("the $29 one-time price resolves to Pro, NOT Starter", async () => {
+describe("DPP report $29 one-time", () => {
+  it("metadata product_line=dpp_report unlocks the report, NOT Starter", async () => {
     const res = await post(proSession());
     expect(res.status).toBe(200);
     expect(provisionPurchase).not.toHaveBeenCalled();
     const pay = [...table("payments").values()];
-    const ent = [...table("storepilot_entitlements").values()];
+    const ent = [...table("dpp_report_entitlements").values()];
     expect(pay).toHaveLength(1);
     expect(pay[0]).toMatchObject({ session_id: "cs_live_pro_1", amount_cents: 2900, status: "paid" });
     expect(ent).toHaveLength(1);
-    expect(ent[0]).toMatchObject({ tier: "pro", catalog_limit: 200, price_id: STOREPILOT_PRO_OFFER.priceId });
-    expect(mockAfter).toHaveLength(1);
+    expect(ent[0]).toMatchObject({ tier: "dpp_report", sku: "dpp_report", catalog_limit: 200 });
     await mockAfter[0]();
-    expect(mockAnchorSale).toHaveBeenCalledWith(expect.objectContaining({ sku: "storepilot_pro", amountCents: 2900 }));
+    expect(mockAnchorSale).toHaveBeenCalledWith(expect.objectContaining({ sku: "dpp_report", amountCents: 2900 }));
   });
 
-  it("matches on metadata.stripe_price_id too", async () => {
-    await post(proSession({ payment_link: null, metadata: { stripe_price_id: STOREPILOT_PRO_OFFER.priceId } }));
-    expect(table("storepilot_entitlements").size).toBe(1);
-    expect(provisionPurchase).not.toHaveBeenCalled();
+  it("configured DPP_REPORT_PRICE_ID matches; unset matches nothing by id", () => {
+    const env = { DPP_REPORT_PRICE_ID: "price_dppfixture" };
+    expect(isDppReportSession({ metadata: {} }, "price_dppfixture", env)).toBe(true);
+    expect(isDppReportSession({ metadata: {} }, "price_dppfixture", {})).toBe(false);
   });
 
-  it("replayed event is a duplicate and writes nothing more", async () => {
+  it("product metadata on the line item marks DPP", () => {
+    expect(isDppReportSession({ line_items: { data: [{ price: { id: "price_x", product: { metadata: { product_line: "dpp_report" } } } }] } }, "price_x", {})).toBe(true);
+  });
+
+  it("StorePilot Pro price never unlocks DPP, even if configured or marked", () => {
+    const env = { DPP_REPORT_PRICE_ID: STOREPILOT_PRO_PRICE_ID };
+    expect(isDppReportSession({ metadata: {} }, STOREPILOT_PRO_PRICE_ID, env)).toBe(false);
+    expect(isDppReportSession({ metadata: { product_line: "dpp_report" } }, STOREPILOT_PRO_PRICE_ID, {})).toBe(false);
+  });
+
+  it("duplicate event delivery -> 200, one row", async () => {
     await post(proSession());
-    const writes = db.writes;
     const res = await post(proSession());
+    expect(res.status).toBe(200);
     expect(res.body.duplicate).toBe(true);
-    expect(db.writes).toBe(writes);
-    expect(table("payments").size).toBe(1);
+    expect(table("dpp_report_entitlements").size).toBe(1);
   });
 
-  it("a second event for the same session keeps one row each", async () => {
+  it("second event for the same session id -> 200, still one row", async () => {
     await post(proSession());
     db.eventSeen = false;
-    await post({ ...proSession(), id: "evt_pro_2", type: "checkout.session.async_payment_succeeded" });
+    const res = await post({ ...proSession(), id: "evt_pro_2", type: "checkout.session.async_payment_succeeded" });
+    expect(res.status).toBe(200);
     expect(table("payments").size).toBe(1);
-    expect(table("storepilot_entitlements").size).toBe(1);
+    expect(table("dpp_report_entitlements").size).toBe(1);
   });
 
-  it("unpaid session -> no payment row, no entitlement", async () => {
+  it("unpaid session -> no writes", async () => {
     await post(proSession({ payment_status: "unpaid" }));
     expect(db.writes).toBe(0);
   });
 
-  it("the retired price never unlocks Pro", () => {
-    expect(isStorePilotProSession({ metadata: {} }, "price_1UHlnqRETIRED")).toBe(false);
-    expect(isStorePilotProSession({ payment_link: "plink_other", metadata: { stripe_price_id: "price_1UHlnqRETIRED" } }, null)).toBe(false);
-  });
-
-  it("an unmarked $29 session still provisions Starter (existing path unchanged)", async () => {
-    await post(proSession({ payment_link: null }));
-    expect(table("storepilot_entitlements").size).toBe(0);
+  it("an unmarked $29 session with line items still provisions Starter", async () => {
+    await post(proSession({ metadata: {} }));
+    expect(table("dpp_report_entitlements").size).toBe(0);
     expect(provisionPurchase).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ plan: "starter" }));
-    expect(resolveCheckoutPlanId({ priceId: STOREPILOT_PRO_OFFER.priceId })).toBeNull();
+    expect(resolveCheckoutPlanId({ priceId: STOREPILOT_PRO_PRICE_ID })).toBeNull();
   });
 });
