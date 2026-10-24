@@ -61,7 +61,7 @@ export default function AuthichainPilots() {
                         <span className="px-2 py-1 rounded bg-yellow-500/10 text-yellow-500 text-[10px] font-black uppercase tracking-widest">Deploying</span>
                     </div>
                     <p className="text-zinc-500 text-sm leading-relaxed font-medium">
-                        Responding directly to EO 14392, multiple domestic manufacturers are deploying the AuthiChain SDK to cryptographically anchor &ldquo;Made in USA&rdquo; claims to the Polygon network, ensuring irrefutable audit trails.
+                        Following the FTC&apos;s April 2026 enforcement sweep under the Made in USA Labeling Rule (16 CFR Part 323), domestic manufacturers can use the AuthiChain SDK to cryptographically anchor &ldquo;Made in USA&rdquo; claims to the Polygon network, producing a per-unit audit trail.
                     </p>
                 </div>
             </div>

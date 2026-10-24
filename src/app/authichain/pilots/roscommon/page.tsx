@@ -198,7 +198,7 @@ export default function RoscommonPilotPage() {
             QRON postcards don&apos;t replace philately — they extend it. Every Roscommon
             postcard sent ships a 3D micro-tour, a town-history exhibit, and a redeemable
             local coupon to the recipient&apos;s phone, with cryptographic proof of
-            authenticity baked into the artwork itself. The Postal Service could capture the
+            authenticity baked into the artwork itself. A pilot could combine the
             postcard sale, a sponsorship tier from local businesses on the landing page,
             and durable analytics on every scan — which could turn a single mailing
             into an ongoing local tourism and commerce channel, while the
@@ -209,7 +209,6 @@ export default function RoscommonPilotPage() {
           <div className="grid sm:grid-cols-3 gap-4 mt-8">
             {[
               { stat: '3', label: 'Proposed revenue streams (concept)' },
-              { stat: '~25%', label: 'Scan lift vs plain QR' },
             ].map((s) => (
               <div
                 key={s.label}
