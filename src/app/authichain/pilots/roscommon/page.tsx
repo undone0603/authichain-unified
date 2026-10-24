@@ -14,32 +14,28 @@ import {
 const stampSheet = [
   {
     theme: 'Liberty & Service',
-    price: '$0.60',
     img: '/media/usa/unnamed2.jpg',
     sub: 'America, scannable',
   },
   {
     theme: 'Wildlife & Heritage',
-    price: '$0.85',
     img: '/media/samples/02_flux_strainchain.png',
     sub: 'Au Sable forests, on-chain',
   },
   {
     theme: 'Renewal & Hope',
-    price: '$1.10',
     img: '/media/samples/05_flux_medchain.png',
     sub: 'Public-good provenance',
   },
   {
     theme: 'Cybersecurity & Data',
-    price: '$2.00',
     img: '/media/samples/01-neon-glitch.png',
     sub: '',
   },
 ] as const;
 
 export const metadata: Metadata = {
-  title: 'Roscommon Phygital Stamp Pilot | AuthiChain Protocol',
+  title: 'Roscommon Phygital Postcard Concept | AuthiChain Protocol',
   description:
     'A Heart-of-Michigan pilot proposal: QRON-stamped postcards that open a 3D landmark tour, AI-narrated town history, and a local-business coupon book — a concept for local sponsorship revenue.',
 };
@@ -50,7 +46,7 @@ const experiences = [
     tag: 'Tourism Driver',
     title: 'The 3D Landmark Tour',
     body:
-      "Tap to step onto the shores of Higgins Lake at sunset, or inside the historic Gallimore Boarding House. A 360° AR view turns the recipient's living room into a micro-tourism billboard — funded entirely by the cost of postage.",
+      "Tap to step onto the shores of Higgins Lake at sunset, or inside the historic Gallimore Boarding House. A 360° AR view turns the recipient's living room into a micro-tourism billboard — which we propose funding through local sponsorships.",
     color: 'text-gold',
     border: 'border-gold/30',
     glow: 'rgba(201,162,39,0.08)',
@@ -106,7 +102,7 @@ export default function RoscommonPilotPage() {
 
         <p className="max-w-2xl text-zinc-400 text-lg font-medium mb-16 leading-relaxed">
           An unsolicited concept we would like to propose to postal and tourism partners: a thematic series of
-          QRON stamps where every issue becomes a phygital portal — fully scannable,
+          concept QRON postcard designs where each one opens a phygital portal — fully scannable,
           cryptographically signed, and tied to a local economic engine. Roscommon is
           the testbed because rich history, natural landmarks, and a tight-knit local
           economy converge here.
@@ -141,10 +137,7 @@ export default function RoscommonPilotPage() {
               className="protocol-card p-4 border-zinc-800 bg-zinc-950/50"
             >
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-lg font-black gold-text">{s.price}</span>
-                <span className="text-[8px] font-black uppercase tracking-widest text-zinc-600">
-                  Tier
-                </span>
+                <span className="text-lg font-black gold-text">Concept design</span>
               </div>
               <p className="text-[10px] font-black uppercase tracking-widest text-zinc-300 mt-2">
                 {s.theme}
@@ -202,13 +195,13 @@ export default function RoscommonPilotPage() {
             From delivery service to economic engine.
           </h2>
           <p className="text-zinc-300 text-base leading-relaxed font-medium max-w-3xl">
-            QRON stamps don&apos;t replace philately — they extend it. Every Roscommon
-            stamp sold ships a 3D micro-tour, a town-history exhibit, and a redeemable
+            QRON postcards don&apos;t replace philately — they extend it. Every Roscommon
+            postcard sent ships a 3D micro-tour, a town-history exhibit, and a redeemable
             local coupon to the recipient&apos;s phone, with cryptographic proof of
             authenticity baked into the artwork itself. The Postal Service could capture the
-            stamp sale, a sponsorship tier from local businesses on the landing page,
-            and durable analytics on every scan — converting a one-time postage
-            transaction into a recurring tourism-and-commerce revenue stream, while the
+            postcard sale, a sponsorship tier from local businesses on the landing page,
+            and durable analytics on every scan — which could turn a single mailing
+            into an ongoing local tourism and commerce channel, while the
             municipality gets measurable, targeted advertising delivered into living
             rooms across the country.
           </p>
@@ -236,7 +229,7 @@ export default function RoscommonPilotPage() {
             Interested in piloting a QRON postcard concept?
           </h3>
           <a
-            href="mailto:partners@qron.space?subject=Roscommon%20Phygital%20Stamp%20Pilot"
+            href="mailto:partners@qron.space?subject=Roscommon%20Phygital%20Postcard%20Concept"
             className="btn-gold px-12 py-5 font-black uppercase tracking-widest text-xs shadow-gold inline-flex items-center gap-3"
           >
             Request Pilot Brief
