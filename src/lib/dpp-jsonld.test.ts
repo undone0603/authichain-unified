@@ -51,7 +51,9 @@ describe("portfolioToJsonLd", () => {
   });
 
   it("makes no conformity or registry claims", () => {
-    const text = JSON.stringify(portfolioToJsonLd(buildPortfolio(rows(5), NOW)));
+    const { description, ...rest } = portfolioToJsonLd(buildPortfolio(rows(5), NOW));
+    expect(description).toContain("is not registered in the EU DPP Registry.");
+    const text = JSON.stringify(rest);
     expect(text).not.toMatch(/compliant|certified|registry-ready|registered|EPCIS/i);
   });
 });

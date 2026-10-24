@@ -29,12 +29,19 @@ function product(i: PortfolioItem) {
   };
 }
 
+/** Required on every DPP report output (Research gate, verbatim). */
+export const DPP_REPORT_DISCLAIMERS = [
+  "Not affiliated with or endorsed by the European Commission.",
+  "The QR in this report is not an EU DPP and is not registered in the EU DPP Registry.",
+] as const;
+
 export function portfolioToJsonLd(p: Portfolio) {
   const items = [...p.items].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "EU DPP readiness report",
+    description: DPP_REPORT_DISCLAIMERS.join(" "),
     numberOfItems: items.length,
     itemListElement: items.map((i, n) => ({
       "@type": "ListItem",

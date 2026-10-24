@@ -9,12 +9,13 @@ import { createClient } from "@/utils/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { buildPortfolio, capCatalog } from "../../../../lib/compliance-portfolio";
 import { parseCatalogUpload } from "../../../../lib/catalog-upload";
-import { portfolioToJsonLd } from "../../../../lib/dpp-jsonld";
+import { DPP_REPORT_DISCLAIMERS, portfolioToJsonLd } from "../../../../lib/dpp-jsonld";
 import { loadStorePilotEntitlement } from "../../../../lib/storepilot-entitlement";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// HOLD (2026-10-24): paid link kept as-is pending the product/naming ruling.
 export const STOREPILOT_PRO_LINK = "https://buy.stripe.com/6oU14n87n8Jo5iabDC1NE02";
 
 export async function POST(request: Request) {
@@ -51,5 +52,5 @@ export async function POST(request: Request) {
       headers: { "Content-Type": "application/ld+json", "Cache-Control": "private, no-store" },
     });
   }
-  return NextResponse.json(portfolio, { headers: { "Cache-Control": "private, no-store" } });
+  return NextResponse.json({ ...portfolio, disclaimer: [...DPP_REPORT_DISCLAIMERS] }, { headers: { "Cache-Control": "private, no-store" } });
 }

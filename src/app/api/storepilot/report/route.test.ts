@@ -83,6 +83,15 @@ describe("POST /api/storepilot/report", () => {
     expect(r.headers.get("Content-Type")).toBe("application/ld+json");
     expect(JSON.parse(r.body).numberOfItems).toBe(3);
   });
+  it("JSON and JSON-LD both carry both disclaimers verbatim", async () => {
+    const a = "Not affiliated with or endorsed by the European Commission.";
+    const b = "The QR in this report is not an EU DPP and is not registered in the EU DPP Registry.";
+    for (const q of ["", "?format=jsonld"]) {
+      const r = await call(csv(2), q);
+      expect(r.body).toContain(a);
+      expect(r.body).toContain(b);
+    }
+  });
   it("422 for an unparseable upload", async () => {
     expect((await call("[oops")).status).toBe(422);
   });

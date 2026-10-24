@@ -1,6 +1,6 @@
 /**
  * Reads a StorePilot Pro entitlement written by the Stripe webhook (PR-C,
- * table storepilot_entitlements). Server-side only, service-role client.
+ * table dpp_report_entitlements). Server-side only, service-role client.
  */
 import { DEFAULT_CATALOG_LIMIT } from "./compliance-portfolio";
 
@@ -18,10 +18,10 @@ export async function loadStorePilotEntitlement(
   const e = email?.trim().toLowerCase();
   if (!e) return { entitled: false };
   const { data, error } = await admin
-    .from("storepilot_entitlements")
+    .from("dpp_report_entitlements")
     .select("catalog_limit")
     .eq("customer_email", e)
-    .eq("tier", "pro")
+    .eq("tier", "dpp_report")
     .is("revoked_at", null)
     .order("catalog_limit", { ascending: false })
     .limit(1)
