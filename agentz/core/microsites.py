@@ -70,8 +70,8 @@ def generate_microsite_html(lead_data: Dict[str, Any]) -> str:
   <div class="card">
     <h2>{name}</h2>
     <p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts.</p>
-    <p><a href="{FREE_SAMPLE_URL}" style="color:#00ff88;">Try 5 free generations</a></p>
-    <p><a href="{STARTER_URL}" style="color:#00ff88;">Starter Pack: 100 generations for $29, paid once.</a></p>
+    <p><a href="{html.escape(FREE_SAMPLE_URL)}" style="color:#00ff88;">Try 5 free generations</a></p>
+    <p><a href="{html.escape(STARTER_URL)}" style="color:#00ff88;">Starter Pack: 100 generations for $29, paid once.</a></p>
   </div>
 </body>
 </html>"""

@@ -109,7 +109,9 @@ def test_no_vercel_left_in_the_agent():
 
 def test_microsite_has_free_sample_and_starter_ctas():
     page = microsites.generate_microsite_html({"name": "Acme"})
-    assert 'href="https://qron.space/generate?utm_source=agentz&utm_medium=microsite"' in page
+    assert 'href="https://qron.space/generate?utm_source=agentz&amp;utm_medium=microsite"' in page
+    # The raw "&" must not appear unescaped inside the href.
+    assert 'utm_source=agentz&utm_medium' not in page
     assert 'href="https://authichain.com/checkout/starter?src=agentz_microsite"' in page
     assert "Starter Pack: 100 generations for $29, paid once." in page
 
