@@ -145,3 +145,26 @@ describe("modesForPlan", () => {
     expect(modesForPlan("free").map(m => m.id)).toEqual(["stellar_seal", "batch_verify", "limited_drop"]);
   });
 });
+
+describe("credit-low Starter hint after a mode generation", () => {
+  async function gen(remaining: number, mode?: string) {
+    return handleGeneratePost({
+      body: { targetUrl: "https://example.com/p", prompt: "x", ...(mode ? { mode } : {}) },
+      userId: "u1",
+      checkCredit: async () => ({ ok: true, remaining: remaining + 1 }),
+      deductCredit: async () => ({ ok: true, remaining }),
+      generateImage: async () => ({ imageUrl: "https://img.example/x.png" }),
+    });
+  }
+  it("19 left => upgrade to the existing Starter checkout", async () => {
+    const r = await gen(19, "stellar-art");
+    const { gatedCheckoutUrl } = await import("./plans");
+    expect((r.body.upgrade as { url: string }).url).toBe(gatedCheckoutUrl("starter"));
+  });
+  it("20 left => no upgrade", async () => {
+    expect((await gen(20, "stellar-art")).body.upgrade).toBeUndefined();
+  });
+  it("no mode => no upgrade", async () => {
+    expect((await gen(3)).body.upgrade).toBeUndefined();
+  });
+});

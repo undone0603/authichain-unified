@@ -7,7 +7,7 @@ import { applyMode, parseSelectableMode } from "./qron-modes";
  * This module is the worker-owned handler: credit packs come from
  * `src/lib/plans.ts`, and image generation proxies to qron-image-gen.
  */
-import { listedPlans, planPaymentLink, type Plan } from "./plans";
+import { gatedCheckoutUrl, listedPlans, planPaymentLink, type Plan } from "./plans";
 import {
   CANONICAL_VERIFY_URL,
   DECISION_CONTRACT,
@@ -181,6 +181,8 @@ export type GeneratePostResult = {
  * with a global daily ceiling so the sample cannot run up image-gen cost.
  */
 export const FREE_SAMPLE_GENERATIONS = 5;
+/** Mode generations with fewer credits left than this get a Starter upgrade hint. */
+export const MODE_LOW_CREDIT_THRESHOLD = 20;
 export const FREE_SAMPLE_WINDOW_MS = 30 * 24 * 60 * 60_000;
 export const FREE_SAMPLE_GLOBAL_DAILY_CAP = 100;
 
@@ -434,6 +436,12 @@ export async function handleGeneratePost(opts: {
         },
         ...(anonymous ? {} : { presentation }),
         remaining_credits: deducted.ok ? deducted.remaining : credit.remaining,
+        ...(() => {
+          const left = deducted.ok ? deducted.remaining : credit.remaining;
+          return modeId && typeof left === "number" && left < MODE_LOW_CREDIT_THRESHOLD
+            ? { upgrade: { url: gatedCheckoutUrl("starter"), plan: "starter", remaining_credits: left } }
+            : {};
+        })(),
         ...(anonymous ? { free_sample: true } : {}),
       },
     };
