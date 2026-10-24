@@ -23,7 +23,7 @@ describe("/dpp-check/product", () => {
     expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     expect(html).toContain("Data score:");
     expect(html).toContain("check digit");
-    expect(html).toContain(NEW_LINK);
+    expect(html).not.toContain(NEW_LINK); // Pro CTA hidden (2026-10-24)
   });
 
   it("escapes user input", async () => {
@@ -61,6 +61,21 @@ describe("required disclaimers (Research gate)", () => {
     for (const html of [blank, filled]) {
       expect(html).toContain("Not affiliated with or endorsed by the European Commission.");
       expect(html).toContain("The QR in this report is not an EU DPP and is not registered in the EU DPP Registry.");
+    }
+  });
+});
+
+describe("StorePilot Pro CTA hidden (PM ruling 2026-10-24)", () => {
+  it("does not render the $29 Pro buy button on blank or filled scans", async () => {
+    const { renderDppProductScanPage } = await import("./dpp-product-scan-page.ts");
+    const { STOREPILOT_PRO_LINK } = await import("../../../src/lib/dpp-product-scan");
+    const blank = renderDppProductScanPage(new URL("https://authichain.com/dpp-check/product"));
+    const filled = renderDppProductScanPage(new URL("https://authichain.com/dpp-check/product?name=x&gtin=4006381333931"));
+    for (const html of [blank, filled]) {
+      expect(html).not.toContain(STOREPILOT_PRO_LINK);
+      expect(html).not.toContain("buy.stripe.com");
+      expect(html).not.toContain("StorePilot Pro");
+      expect(html).not.toContain("$29");
     }
   });
 });
