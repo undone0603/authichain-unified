@@ -3140,7 +3140,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <div class="section-label">INDUSTRIES SERVED</div>
       <h2 class="section-title">Industries we're building for</h2>
       <div class="industries">
-        <div class="industry-card"><div class="industry-name">⚡ Batteries</div><div class="industry-deadline">EV, LMT and industrial batteries over 2 kWh</div></div>
+        <div class="industry-card"><div class="industry-name">⚡ EV Batteries</div><div class="industry-deadline">EV, LMT and industrial batteries over 2 kWh</div></div>
         <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Date not set</div></div>
         <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">Date not set</div></div>
         <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Product authenticity</div><div class="industry-deadline">Goal: counterfeit detection for luxury goods</div></div>
