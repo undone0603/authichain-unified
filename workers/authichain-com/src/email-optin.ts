@@ -42,6 +42,8 @@ export interface EmailOptinEnv {
   DB?: D1Like;
   RESEND_API_KEY?: string;
   EMAIL_OPTIN_SEND_ENABLED?: string;
+  /** Secret. Per-deploy salt for the rate-limit IP hash. Unset = no rate-limit storage. */
+  IP_HASH_SALT?: string;
 }
 
 export function optinSendEnabled(env: EmailOptinEnv): boolean {
@@ -110,6 +112,28 @@ export const RATE_SQL =
   "RETURNING hits";
 export const RATE_PURGE_SQL = "DELETE FROM email_optin_rate WHERE window_start < datetime('now','-1 day')";
 export const ALLOWED_ORIGINS = ["https://authichain.com", "https://www.authichain.com"];
+
+/** HMAC-SHA256(IP_HASH_SALT, ip). Returns null if the salt is unset or too short (never hash unsalted). */
+export async function saltedIpHash(salt: string | undefined, ip: string): Promise<string | null> {
+  if (!salt || salt.length < 16) return null;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(salt), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(ip));
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Daily cron cleanup: pending opt-ins > 30 days, rate rows > 24h. */
+export const CRON_RATE_PURGE_SQL = "DELETE FROM email_optin_rate WHERE window_start < datetime('now','-24 hours')";
+export async function runEmailOptinCleanup(db: D1Like | undefined): Promise<{ ok: boolean }> {
+  if (!db) return { ok: false };
+  try {
+    await db.prepare(PURGE_SQL).bind().run();
+    await db.prepare(CRON_RATE_PURGE_SQL).bind().run();
+    return { ok: true };
+  } catch {
+    console.log(JSON.stringify({ event: "email_optin_cleanup_failed" }));
+    return { ok: false };
+  }
+}
 
 function changes(r: unknown): number {
   const m = (r as { meta?: { changes?: number } } | null)?.meta;
@@ -199,10 +223,13 @@ export async function tryHandleEmailOptin(
     .map(b => b.toString(16).padStart(2, "0")).join("");
   let fresh = false;
   try {
-    const ip = request.headers.get("cf-connecting-ip") || "unknown";
-    const rate = await db.prepare(RATE_SQL).bind(await sha256Hex("optin-rate:" + ip), consentAt).first?.<{ hits: number }>();
-    if (rate && rate.hits > RATE_MAX) return reply(false, 429, "rate_limited");
-    await db.prepare(RATE_PURGE_SQL).bind().run();
+    const ipKey = await saltedIpHash(env.IP_HASH_SALT, request.headers.get("cf-connecting-ip") || "unknown");
+    // No salt bound: skip rate-limit storage entirely rather than store an unsalted IP hash.
+    if (ipKey) {
+      const rate = await db.prepare(RATE_SQL).bind(ipKey, consentAt).first?.<{ hits: number }>();
+      if (rate && rate.hits > RATE_MAX) return reply(false, 429, "rate_limited");
+      await db.prepare(RATE_PURGE_SQL).bind().run();
+    }
     await db.prepare(PURGE_SQL).bind().run();
     fresh = changes(await db.prepare(UPSERT_SQL).bind(email, consentAt, await sha256Hex(raw)).run()) > 0;
   } catch {

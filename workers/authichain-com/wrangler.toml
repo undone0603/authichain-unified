@@ -186,3 +186,8 @@ binding = "DB"
 database_name = "authichain-db"
 database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 migrations_dir = "migrations"
+
+# Daily email opt-in retention cleanup (pending > 30 days, rate rows > 24h). Free cron.
+# Rollback: delete this block (and redeploy).
+[triggers]
+crons = ["17 7 * * *"]

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  tryHandleEmailOptin, emailOptinBlock, confirmEmailText, PURGE_SQL, UPSERT_SQL, RATE_SQL, RATE_MAX,
+  tryHandleEmailOptin, emailOptinBlock, saltedIpHash, runEmailOptinCleanup, CRON_RATE_PURGE_SQL, confirmEmailText, PURGE_SQL, UPSERT_SQL, RATE_SQL, RATE_MAX,
   EMAIL_OPTIN_CONSENT_TEXT, EMAIL_OPTIN_PRIVACY_LINE, EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL, type D1Like,
 } from "./email-optin";
 import { renderDppCheckPage } from "./dpp-check-page";
@@ -43,7 +43,8 @@ function mockFetch() {
   }) as unknown as typeof fetch;
   return { sent, f };
 }
-const ON = { RESEND_API_KEY: "test-key", EMAIL_OPTIN_SEND_ENABLED: "true" };
+const SALT = "test-salt-0123456789abcdef";
+const ON = { RESEND_API_KEY: "test-key", EMAIL_OPTIN_SEND_ENABLED: "true", IP_HASH_SALT: SALT };
 
 describe("email opt-in", () => {
   it("ignores other paths", async () => {
@@ -90,7 +91,7 @@ describe("email opt-in", () => {
   it("D1 failures return 503 {ok:false}", async () => {
     for (const t of ["email_optin_rate", "DELETE FROM email_optins", "INSERT INTO email_optins"]) {
       const { db } = fakeDb({ throwOn: t });
-      const r = await tryHandleEmailOptin(post(ok), { DB: db });
+      const r = await tryHandleEmailOptin(post(ok), { DB: db, IP_HASH_SALT: SALT });
       expect(r!.status).toBe(503);
       expect((await r!.json()).ok).toBe(false);
     }
@@ -175,5 +176,34 @@ describe("email opt-in", () => {
     const html = renderDppCheckPage(new URL("https://authichain.com/dpp-check?category=battery_passport&sells_in_eu=yes"));
     expect(html).toContain("Your result:");
     expect(html).toContain('id="dpp-email-optin"');
+  });
+  it("rate-limit key is HMAC-SHA256 with IP_HASH_SALT, never raw or unsalted", async () => {
+    const { db, calls } = fakeDb();
+    await tryHandleEmailOptin(post(ok), { DB: db, IP_HASH_SALT: SALT });
+    const key = calls.find(c => c.sql === RATE_SQL)!.args[0];
+    expect(key).toBe(await saltedIpHash(SALT, "203.0.113.9"));
+    expect(key).not.toContain("203.0.113.9");
+    const plain = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode("optin-rate:203.0.113.9")))].map(b => b.toString(16).padStart(2, "0")).join("");
+    expect(key).not.toBe(plain);
+    expect(await saltedIpHash("other-salt-0123456789", "203.0.113.9")).not.toBe(key);
+  });
+  it("salt unset or short: no rate-limit storage at all, opt-in still works", async () => {
+    for (const salt of [undefined, "short"]) {
+      const { db, calls } = fakeDb({ hits: 999 });
+      const r = await tryHandleEmailOptin(post(ok), { DB: db, IP_HASH_SALT: salt });
+      expect(r!.status).toBe(202);
+      expect(calls.some(c => c.sql.includes("email_optin_rate"))).toBe(false);
+      expect(calls.some(c => c.sql === UPSERT_SQL)).toBe(true);
+    }
+  });
+  it("cron cleanup deletes pending > 30 days and rate rows > 24h; 503-safe", async () => {
+    const { db, calls } = fakeDb();
+    expect(await runEmailOptinCleanup(db)).toEqual({ ok: true });
+    expect(calls.map(c => c.sql)).toEqual([PURGE_SQL, CRON_RATE_PURGE_SQL]);
+    expect(PURGE_SQL).toContain("status = 'pending'");
+    expect(PURGE_SQL).toContain("-30 days");
+    expect(CRON_RATE_PURGE_SQL).toContain("-24 hours");
+    expect(await runEmailOptinCleanup(fakeDb({ throwOn: "DELETE" }).db)).toEqual({ ok: false });
+    expect(await runEmailOptinCleanup(undefined)).toEqual({ ok: false });
   });
 });
