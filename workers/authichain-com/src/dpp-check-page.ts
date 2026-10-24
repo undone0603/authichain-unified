@@ -24,6 +24,11 @@ import {
   type DppReadinessResult,
 } from "../../../src/lib/dpp-readiness";
 
+import {
+  isDppProductScanPath,
+  renderDppProductScanPage,
+} from "./dpp-product-scan-page.ts";
+
 export const DPP_CHECK_PATH = "/dpp-check";
 export const DPP_CHECK_CANONICAL = `https://authichain.com${DPP_CHECK_PATH}`;
 const CHECKOUT_ACTION = "https://authichain.com/checkout/dpp_readiness";
@@ -242,9 +247,11 @@ ${estateFooter(
 export function tryHandleDppCheck(request: Request): Response | null {
   if (request.method !== "GET" && request.method !== "HEAD") return null;
   const url = new URL(request.url);
-  if (!isDppCheckPath(url.pathname)) return null;
+  const productScan = isDppProductScanPath(url.pathname);
+  if (!productScan && !isDppCheckPath(url.pathname)) return null;
+  const render = productScan ? renderDppProductScanPage : renderDppCheckPage;
   return new Response(
-    request.method === "HEAD" ? null : renderDppCheckPage(url),
+    request.method === "HEAD" ? null : render(url),
     {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
