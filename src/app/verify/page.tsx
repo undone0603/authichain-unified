@@ -53,19 +53,18 @@ export default async function VerifyPage({ searchParams }: PageProps) {
 
   if (hash && meta?.hash && meta?.expiresAt) {
     const record: QRVerificationRecord = {
-      id:        (meta.verificationId as string) ?? '',
-      hash:      meta.hash as string,
+      id: (meta.verificationId as string) ?? '',
+      hash: meta.hash as string,
       productId: String(productId),
-      issuedAt:  new Date(),
+      issuedAt: new Date(),
       expiresAt: new Date(meta.expiresAt as string),
       scanCount: qrCode?.scanCount ?? 0,
-      revoked:   false,
+      revoked: false,
     };
     const result = verifyHash(hash, record);
     hashVerification = { valid: result.valid, message: result.message };
   }
 
-  // Increment scan count + log event (fire-and-forget — don't block page render)
   if (qrCode?.id) {
     const isAuthentic = hashVerification?.valid ?? null;
     supabase
@@ -86,8 +85,6 @@ export default async function VerifyPage({ searchParams }: PageProps) {
   return (
     <div className="min-h-screen bg-black text-white selection:bg-gold selection:text-black">
       <div className="max-w-3xl mx-auto px-6 py-12">
-
-        {/* Status Badge */}
         <div className="text-center mb-12">
           {isAuthentic && (
             <div className="inline-flex items-center gap-2 bg-green-500/10 text-green-400 border border-green-500/20 px-8 py-4 rounded-full font-black uppercase tracking-widest animate-gold-pulse">
@@ -114,7 +111,6 @@ export default async function VerifyPage({ searchParams }: PageProps) {
           )}
         </div>
 
-        {/* Product Card */}
         <div className="protocol-card p-8 mb-8">
           <div className="flex items-center gap-3 mb-6">
             <Package className="w-5 h-5 text-gold" />
@@ -125,7 +121,6 @@ export default async function VerifyPage({ searchParams }: PageProps) {
 
           {product.imageUrl && (
             <div className="mb-6 flex justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={product.imageUrl}
                 alt={product.name}
@@ -178,7 +173,6 @@ export default async function VerifyPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        {/* Storymode Narrative */}
         {(() => {
           const pm = product.metadata as Record<string, unknown> | null;
           const story = pm?.storymode as { chapters: Array<{ title: string; content: string }> } | undefined;
@@ -205,7 +199,6 @@ export default async function VerifyPage({ searchParams }: PageProps) {
           );
         })()}
 
-        {/* Hash Verification Detail */}
         {hash && (
           <div className={`protocol-card p-6 mb-8 ${isAuthentic ? 'border-green-500/20 bg-green-500/5' : isCounterfeit ? 'border-red-500/20 bg-red-500/5' : 'border-zinc-700/40'}`}>
             <div className="flex items-center gap-3 mb-4">
@@ -239,34 +232,62 @@ export default async function VerifyPage({ searchParams }: PageProps) {
           </div>
         )}
 
-        {/* CTA */}
+        <form
+          className="protocol-card p-6 mb-8"
+          action="/api/verify-lead"
+          method="POST"
+        >
+          <input type="hidden" name="productId" value={productId} />
+          <input type="hidden" name="status" value={isAuthentic ? 'authentic' : isCounterfeit ? 'counterfeit' : 'unverified'} />
+          <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">
+            Email me this report (optional)
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              name="email"
+              placeholder="you@brand.com"
+              className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm"
+            />
+            <button
+              type="submit"
+              className="btn-gold px-4 py-2 rounded-lg text-xs font-black uppercase"
+            >
+              Send
+            </button>
+          </div>
+          <label className="flex items-center gap-2 mt-2 text-[10px] text-zinc-500">
+            <input type="checkbox" name="consent" required />
+            I consent to receive this verification report and occasional product updates. Unsubscribe anytime.
+          </label>
+        </form>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link
-            href="/"
+            href="/onboard"
             className="btn-gold w-full py-4 text-center rounded-xl font-black uppercase tracking-widest text-xs block shadow-gold"
           >
-            Protect Your Brand &rarr;
+            Claim / Seal Your Catalog →
           </Link>
           <div className="protocol-card p-6 bg-zinc-900/50 border-dashed border-zinc-800 text-center flex flex-col items-center justify-center gap-2">
             <Sparkles className="w-5 h-5 text-gold" />
             <p className="text-[10px] text-zinc-500 uppercase font-bold">
-              Want tamper-evident QR codes for your products?
+              Passport Monitor: 300 verifications/mo + $0.05 overage
             </p>
             <Link
-              href="/?utm_source=verify_page&utm_medium=viral_loop"
+              href="/onboard"
               className="text-[10px] font-black text-gold hover:underline uppercase tracking-tighter"
             >
-              Start Free &rarr;
+              Start free check →
             </Link>
           </div>
         </div>
 
-        {/* Footer */}
         <div className="text-center mt-12">
           <p className="text-zinc-600 text-[10px] font-bold uppercase tracking-[0.2em]">
             Powered by{' '}
             <Link href="https://qron.space" className="text-zinc-400">QRON</Link>
-            {' '}&middot; AuthiChain Protocol &middot; SHA-256 Verified
+            {' '}· AuthiChain Protocol · SHA-256 Verified
           </p>
         </div>
       </div>
