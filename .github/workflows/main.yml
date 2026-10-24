@@ -2,6 +2,7 @@ name: CI Main
 
 # Required quality gate: install, typecheck, lint, test, production build.
 # Schema/AgentZ extras live in ci.yml so this job is not duplicated there.
+# Concurrency: per-commit runs on main are kept (CFA-123/PM-328); no cancel-in-progress. Deploys are dispatched manually by CF Deploy, who confirms the self-hosted runner is idle before each dispatch.
 
 on:
   push:
