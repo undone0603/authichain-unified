@@ -301,7 +301,7 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
       /not affiliated with, endorsed by, or acting on behalf of any government agency/,
       path
     );
-    assert.match(html, /Effective 5 October 2026/, path);
+    assert.match(html, /Effective 24 October 2026/, path);
     assert.doesNotMatch(html, /privacy@authichain\.com/, path);
     assert.doesNotMatch(html, /legal@authichain\.com/, path);
     assert.doesNotMatch(html, /Vercel/, path);
@@ -316,6 +316,15 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   assert.match(privacy, /0\.05 USDC/);
   assert.match(privacy, /\$QRON token is not a way to pay/);
   assert.match(privacy, /simulated/);
+  assert.match(privacy, /id="outbound"/);
+  assert.match(privacy, /Zachary J Kietzman d\/b\/a AuthiChain \(sole proprietor\)/);
+  assert.match(privacy, /authichain@mail\.grokbot\.com/);
+  assert.match(privacy, /balancing test/);
+  assert.match(privacy, /12 months after our last contact/);
+  assert.match(privacy, /do not claim one is in place/);
+  assert.doesNotMatch(privacy, /agentmail/i);
+  assert.doesNotMatch(privacy, /@gmail\.com/);
+  assert.doesNotMatch(privacy, /POSTAL ADDRESS|street address/i);
 
   const terms = await (await get("/terms")).text();
   assert.match(terms, /not a GS1 Conformant Resolver/);

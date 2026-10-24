@@ -8,7 +8,7 @@
  */
 
 /** Shown at the top of both pages. Change it when the text changes. */
-export const LEGAL_EFFECTIVE = "5 October 2026";
+export const LEGAL_EFFECTIVE = "24 October 2026";
 
 const OPERATOR =
   "Zachary Kietzman, a sole proprietor in Michigan, USA, using the brand AuthiChain. AuthiChain is a brand, not a corporation. The SAM legal entity is ZACHARY KIETZMAN.";
@@ -141,7 +141,23 @@ export function renderPrivacyPage(): string {
 <li><strong>The x402 facilitator named on <a href="/x402">/x402</a></strong> — the payment proof for a paid agent call.</li>
 </ul>
 <p>We also share information when the law requires it, or to respond to a valid legal process.</p>
-<p>Separate from this website, we sometimes email a business about the product. That email is not sent because you visited this page. A business that receives one can reply and ask us to stop, and we will.</p>
+<p>Separate from this website, we sometimes email a business about the product. That email is not sent because you visited this page. A business that receives one can reply and ask us to stop, and we will. If you are in the EU, see <a href="#outbound">Business contacts we reach out to</a>.</p>
+<h2 id="outbound">Business contacts we reach out to</h2>
+<p>This section is the notice under Article 14 of the EU General Data Protection Regulation (GDPR) for people at businesses we email about AuthiChain's EU Digital Product Passport (DPP) readiness products. We give you this notice at the latest in the first email we send you.</p>
+<ul>
+<li><strong>Controller.</strong> Zachary J Kietzman d/b/a AuthiChain (sole proprietor). Privacy and opt-out contact: <a href="mailto:authichain@mail.grokbot.com">authichain@mail.grokbot.com</a>. That address only receives mail; we do not send marketing from it. No data-protection officer is appointed.</li>
+<li><strong>EU representative.</strong> [EU representative - pending legal check]</li>
+<li><strong>Where we got your data.</strong> Business contact details from Apollo.io, a B2B contact database operated by Zenleads Inc. (dba Apollo.io).</li>
+<li><strong>What data.</strong> Your name, job title or role, work email address, company name, and company details (domain, headquarters country, product category). We do not process sensitive data about you.</li>
+<li><strong>Why, and on what legal basis.</strong> To offer EU DPP readiness tools relevant to your professional role. Legal basis: legitimate interest (GDPR Art. 6(1)(f)). The specific interest is our interest in offering EU DPP readiness tools to businesses whose products fall under the DPP rules. You can ask us for the balancing test behind this at the contact address above. Where national e-privacy law requires prior consent for this kind of email, we do not send it.</li>
+<li><strong>Recipients.</strong> Apollo.io, as the source of the data, and Resend, which sends our marketing email to EU contacts. We do not sell your data.</li>
+<li><strong>Transfers outside the EU.</strong> Your data is processed in the United States. Zenleads Inc. (dba Apollo.io) is listed as active under the EU-U.S. Data Privacy Framework. Resend is listed under the EU-U.S. Data Privacy Framework, with its re-certification under review. We have not signed a data processing agreement with these vendors, and we do not claim one is in place.</li>
+<li><strong>How long we keep it.</strong> We delete your data 12 months after our last contact with you if you have not replied. If you opt out, we keep only your email address on a suppression list for as long as needed to honour your opt-out.</li>
+<li><strong>No automated decisions.</strong> We make no automated decisions and do no profiling about you that has legal or similarly significant effects.</li>
+</ul>
+<p><strong>Your right to object.</strong> You can object at any time to the use of your data for direct marketing, by replying "stop" to our email or by emailing <a href="mailto:authichain@mail.grokbot.com">authichain@mail.grokbot.com</a>. We will then stop processing it for that purpose.</p>
+<p><strong>Your other rights.</strong> You can ask for access to, correction, erasure, restriction, or a portable copy of your data (GDPR Arts. 15-20) by emailing <a href="mailto:authichain@mail.grokbot.com">authichain@mail.grokbot.com</a>.</p>
+<p><strong>Your right to complain.</strong> You can complain to a data protection supervisory authority, in particular in the EU member state where you live or work, for example the CNIL in France, the Autoriteit Persoonsgegevens in the Netherlands, or IMY in Sweden.</p>
 <h2>How long we keep it</h2>
 <p>We keep order and payment records for as long as we need them to deliver what you bought, to handle a dispute, and to meet tax and accounting duties. We keep correspondence until the matter is finished, and for a period after that so we can show what was said. Public chain entries stay public.</p>
 <h2>Asking us about your data</h2>
