@@ -1,0 +1,19 @@
+{
+  "commands": [
+    {
+      "name": "install",
+      "run": "pnpm install --frozen-lockfile"
+    },
+    {
+      "name": "test",
+      "run": "pytest",
+      "role": "gate",
+      "timeout": 300
+    }
+  ],
+  "vcs": {
+    "org": "undone0603",
+    "repo": "authichain-unified"
+  },
+  "orgID": "502b9c39-0b08-47e5-8d8d-3cb0124b3610"
+}
