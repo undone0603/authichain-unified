@@ -2,8 +2,9 @@
  * /is-this-real — NICKEL-VERIFY-V1 lead magnet (Zac, 2026-10-16).
  *
  * The visitor enters a seal ID. Email is optional (2026-10-23): only if they
- * give one AND tick the unchecked consent box does the page POST it to
- * /api/email-optin (AuthiChain D1, see email-optin.ts). The check never waits
+ * give one AND tick the unchecked consent box does the page POST it to the
+ * existing /api/leads/capture (QRON-v2 lead_captures, source "is-this-real",
+ * unchanged payload) and to /api/email-optin (AuthiChain D1, see email-optin.ts). The check never waits
  * on it. After that the page runs up to 3 free checks against the
  * public GET /api/verify. The limit is counted in the browser (localStorage)
  * and is a courtesy cap, not enforcement. Then it shows the paid option:
@@ -73,6 +74,10 @@ code{background:#f3f3f3;padding:.1rem .3rem;border-radius:4px}
     st.textContent="Checking...";
     try{
       if(!captured&&email&&f.consent.checked){
+        var lr=await fetch("/api/leads/capture",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({email:email,source:"${IS_THIS_REAL_SOURCE}",product_interest:"nickel-verify",
+            message:"consent: yes; first seal: "+seal.slice(0,128),page_url:location.href})});
+        if(!lr.ok){st.textContent="We could not save your details. Please try again.";return}
         captured=true;
         fetch("${EMAIL_OPTIN_PATH}",{method:"POST",headers:{"Content-Type":"application/json"},
           body:JSON.stringify({email:email,consent:"yes"})}).catch(function(){});

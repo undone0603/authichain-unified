@@ -6,9 +6,11 @@
  * - Stores only email, consent timestamp, status, and a SHA-256 hash of the
  *   confirmation token in AuthiChain's D1 (authichain-db), not QRON-v2.
  * - Unconfirmed rows older than 30 days are purged on every write.
- * - Double opt-in email: NOT SENT YET. authichain-com has no $0 email-sending
- *   binding today (see PR body). Rows stay "pending" until that is approved,
- *   and are purged after 30 days. GET /api/email-optin/confirm is ready.
+ * - Double opt-in email (PM ruling 2026-10-23): Resend free tier, from
+ *   no-reply@mail.authichain.com (send-only subdomain; never strainchain.io).
+ *   Sent ONLY when EMAIL_OPTIN_SEND_ENABLED === "true" AND RESEND_API_KEY is
+ *   set. Default off: rows stay "pending" and nothing sends. Strictly
+ *   transactional: confirm link only. DNS setup: docs/email-optin-sender.md.
  */
 
 export const EMAIL_OPTIN_PATH = "/api/email-optin";
@@ -19,6 +21,48 @@ export const EMAIL_OPTIN_CONSENT_TEXT =
   "[PLACEHOLDER — Research to check] Optional: email me AuthiChain product updates, at most once a month. I can unsubscribe any time. We will first send one email asking you to confirm.";
 export const EMAIL_OPTIN_PRIVACY_LINE =
   'We store only your email, when you agreed, and whether you confirmed. Unconfirmed emails are deleted after 30 days. See the <a href="/privacy">privacy policy</a>.';
+
+export const EMAIL_OPTIN_FROM = "AuthiChain <no-reply@mail.authichain.com>";
+export const EMAIL_OPTIN_SUBJECT = "Confirm your email for AuthiChain";
+export const EMAIL_OPTIN_CONFIRM_BASE = "https://authichain.com/api/email-optin/confirm?token=";
+
+export interface EmailOptinEnv {
+  DB?: D1Like;
+  RESEND_API_KEY?: string;
+  EMAIL_OPTIN_SEND_ENABLED?: string;
+}
+
+export function optinSendEnabled(env: EmailOptinEnv): boolean {
+  return env.EMAIL_OPTIN_SEND_ENABLED === "true" && !!env.RESEND_API_KEY;
+}
+
+/** Transactional only: the confirm link, nothing else. [Research to check wording] */
+export function confirmEmailText(token: string): string {
+  return `Please confirm your email by opening this link (valid for 30 days):\n\n${EMAIL_OPTIN_CONFIRM_BASE}${token}\n\nIf you did not ask for this, ignore this email and nothing more will be sent.`;
+}
+
+export async function sendConfirmEmail(
+  env: EmailOptinEnv, to: string, token: string, fetchImpl: typeof fetch = fetch
+): Promise<boolean> {
+  if (!optinSendEnabled(env)) return false;
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 8000);
+  try {
+    const res = await fetchImpl("https://api.resend.com/emails", {
+      method: "POST",
+      signal: ctl.signal,
+      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: EMAIL_OPTIN_FROM, to: [to], subject: EMAIL_OPTIN_SUBJECT, text: confirmEmailText(token) }),
+    });
+    if (!res.ok) console.log(JSON.stringify({ event: "email_optin_send_failed", status: res.status }));
+    return res.ok;
+  } catch {
+    console.log(JSON.stringify({ event: "email_optin_send_failed", status: "network" }));
+    return false;
+  } finally {
+    clearTimeout(t);
+  }
+}
 
 export interface D1Like {
   prepare(sql: string): {
@@ -55,9 +99,11 @@ function json(body: unknown, status = 200): Response {
 /** Returns null when the path is not ours. Datetimes are SQLite UTC text. */
 export async function tryHandleEmailOptin(
   request: Request,
-  db: D1Like | undefined,
-  now: Date = new Date()
+  env: EmailOptinEnv,
+  now: Date = new Date(),
+  fetchImpl: typeof fetch = fetch
 ): Promise<Response | null> {
+  const db = env.DB;
   const url = new URL(request.url);
   if (url.pathname === EMAIL_OPTIN_CONFIRM_PATH) {
     if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
@@ -89,7 +135,7 @@ export async function tryHandleEmailOptin(
   const consentAt = now.toISOString().replace("T", " ").slice(0, 19);
   await db.prepare(PURGE_SQL).bind().run();
   await db.prepare(UPSERT_SQL).bind(email, consentAt, await sha256Hex(raw)).run();
-  // Double opt-in send intentionally absent until a $0 sender is approved.
+  await sendConfirmEmail(env, email, raw, fetchImpl);
   return json({ ok: true, status: "pending" }, 202);
 }
 

@@ -3225,6 +3225,9 @@ interface Env {
   SUPABASE_SERVICE_ROLE_KEY?: string;
   /** authichain-db (D1): email_optins table only. */
   DB?: D1Like;
+  /** "true" turns on the opt-in confirmation email (also needs RESEND_API_KEY). Default off. */
+  EMAIL_OPTIN_SEND_ENABLED?: string;
+  RESEND_API_KEY?: string;
 }
 
 const APP_WORKER_TIMEOUT_MS_DEFAULT = 4000;
@@ -3408,7 +3411,7 @@ async function handleAuthichainCom(
     if (appHost) return appHost;
     const p = url.pathname;
     if (p.startsWith(EMAIL_OPTIN_PATH)) {
-      const optin = await tryHandleEmailOptin(request, env.DB);
+      const optin = await tryHandleEmailOptin(request, env);
       if (optin) return optin;
     }
     const docsClick = docsCtaClickEvent(request.method, url);

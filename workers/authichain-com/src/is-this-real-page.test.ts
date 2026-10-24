@@ -18,8 +18,12 @@ describe("/is-this-real", () => {
     expect(html).toContain('if(!seal){st.textContent="Enter a seal ID.";return}');
     expect(html).toContain("if(!captured&&email&&f.consent.checked)");
     expect(html).toContain("/api/email-optin");
-    expect(html).not.toContain("/api/leads/capture");
-    expect(IS_THIS_REAL_SOURCE).toBe("is-this-real");
+  });
+  it("keeps the existing lead capture POST, unchanged, when email + consent are given", () => {
+    expect(html).toContain('fetch("/api/leads/capture"');
+    expect(html).toContain(`source:"${IS_THIS_REAL_SOURCE}",product_interest:"nickel-verify"`);
+    expect(html).toContain('message:"consent: yes; first seal: "+seal.slice(0,128),page_url:location.href');
+    expect(html.indexOf("/api/leads/capture")).toBeGreaterThan(html.indexOf("if(!captured&&email&&f.consent.checked)"));
   });
   it("offers 3 free checks then a price-free x402 option", () => {
     expect(html).toContain("MAX=3");
