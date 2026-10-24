@@ -217,3 +217,78 @@ export function publicCheckoutHref(id: PublicPlanId): string {
   if (id === "free") return "https://qron.space/generate";
   return `https://authichain.com/checkout/${id}`;
 }
+
+/**
+ * DPP readiness report: $29 one-time, up to 200 products (Phase 3,
+ * Advisor ruling 2026-10-24). Only authichain.com/api/stripe/webhook unlocks
+ * it. Not a PlanId and not on /pricing.
+ *
+ * HOLD: the Stripe price is not issued yet (Stripe Price Adder). The price id
+ * is read from the plain var DPP_REPORT_PRICE_ID; until it is set, only
+ * product/session metadata product_line=dpp_report matches. No id is
+ * hard-coded, and the StorePilot Pro price/product never unlocks this.
+ * Must be checked before the $29.00 Starter amount fallback.
+ */
+export const DPP_REPORT_METADATA_KEY = "product_line";
+export const DPP_REPORT_METADATA_VALUE = "dpp_report";
+/** StorePilot Pro price (prod_VIMWy4q5ImqEkm). Explicitly never DPP. */
+export const STOREPILOT_PRO_PRICE_ID = "price_1UTxvpGqTruSqV8TQu5gkqyc";
+
+export const DPP_REPORT_OFFER = {
+  sku: "dpp_report",
+  tier: "dpp_report",
+  amountCents: 2900,
+  catalogLimit: 200,
+} as const;
+
+/** Configured DPP report price id, or null while the price is unissued. */
+export function dppReportPriceId(
+  env: Record<string, string | undefined> = process.env
+): string | null {
+  const id = (env.DPP_REPORT_PRICE_ID || "").trim();
+  if (!id.startsWith("price_") || id === STOREPILOT_PRO_PRICE_ID) return null;
+  return id;
+}
+
+type MetaLike = Record<string, unknown> | null | undefined;
+function marksDpp(md: MetaLike): boolean {
+  return md?.[DPP_REPORT_METADATA_KEY] === DPP_REPORT_METADATA_VALUE;
+}
+
+export type DppReportSessionLike = {
+  metadata?: MetaLike;
+  line_items?: {
+    data?: Array<{
+      price?: {
+        id?: string | null;
+        metadata?: MetaLike;
+        product?: string | { metadata?: MetaLike } | null;
+      } | null;
+    }>;
+  } | null;
+};
+
+export function isDppReportSession(
+  session: DppReportSessionLike,
+  linePriceId: string | null | undefined,
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  if (linePriceId === STOREPILOT_PRO_PRICE_ID) return false;
+  const configured = dppReportPriceId(env);
+  if (configured && linePriceId === configured) return true;
+  if (marksDpp(session.metadata)) return true;
+  for (const li of session.line_items?.data ?? []) {
+    const price = li?.price;
+    if (!price || price.id === STOREPILOT_PRO_PRICE_ID) continue;
+    if (configured && price.id === configured) return true;
+    if (marksDpp(price.metadata)) return true;
+    if (typeof price.product === "object" && marksDpp(price.product?.metadata)) return true;
+  }
+  return false;
+}
+
+/** catalog_limit from session metadata, else the 200 default. */
+export function dppReportCatalogLimit(metadata?: MetaLike): number {
+  const n = Number.parseInt(String(metadata?.catalog_limit ?? ""), 10);
+  return Number.isInteger(n) && n > 0 ? n : DPP_REPORT_OFFER.catalogLimit;
+}
