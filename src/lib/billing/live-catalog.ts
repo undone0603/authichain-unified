@@ -226,6 +226,10 @@ export function publicCheckoutHref(id: PublicPlanId): string {
  * This MUST be checked before the $29.00 Starter amount fallback, or a Pro
  * purchase would be granted Starter.
  */
+// HOLD (2026-10-24): price wiring is NOT final. price_1UTxvp… lives on the
+// "StorePilot Pro" product (prod_VIMWy4q5ImqEkm, descriptor STOREPILOT PRO).
+// Advisor/Zac are ruling whether DPP Pro needs a separate Stripe product.
+// Do not merge until that ruling lands; do not substitute an invented price id.
 export const STOREPILOT_PRO_OFFER = {
   sku: "storepilot_pro",
   tier: "pro",
