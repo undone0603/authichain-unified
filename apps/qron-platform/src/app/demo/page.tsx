@@ -24,7 +24,7 @@ const DEMOS = [
     name: 'FTC "Made in USA" Shield',
     style: 'Patriotic Heritage',
     image: '/media/usa/unnamed.jpg',
-    description: 'EO 14392 compliant origin proof for American manufacturing.',
+    description: 'Origin proof for American manufacturing.',
     hash: '0x8f2a...1b9c'
   },
   {
