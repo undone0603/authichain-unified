@@ -329,8 +329,9 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   assert.match(privacy, /reply 'stop' \(or tell us in any words\) to our email/);
   assert.doesNotMatch(privacy, /If we start emailing businesses|Any future outreach/);
   assert.match(privacy, /and, if we start it, the DPP readiness email sequence to people who confirmed a double opt-in/);
-  assert.match(privacy, /If we start sending marketing email, we will send it only to recipients in the United States who confirmed a double opt-in, and every message will carry an unsubscribe link\./);
-  assert.match(privacy, /We keep your subscriber data until you unsubscribe, then delete it within 30 days\./);
+  assert.equal(privacy.split("No outbound marketing email sends are active yet. We have two email streams: (1) a double-opt-in sequence for recipients in the United States, which we will send only if we start it, and where every message will carry an unsubscribe link; and (2) individual 1-to-1 emails from Zachary to business contacts, which you can stop by replying 'stop'.").length - 1, 2);
+  assert.doesNotMatch(privacy, /If we start sending marketing email/);
+  assert.match(privacy, /We keep your subscriber data until you unsubscribe, then delete it within 30 days, except your email address, kept on a suppression list only to honour your unsubscribe\./);
   assert.match(privacy, /12 months after our last contact/);
   assert.match(privacy, /do not claim one is in place/);
   assert.match(privacy, /AgentMail/);
