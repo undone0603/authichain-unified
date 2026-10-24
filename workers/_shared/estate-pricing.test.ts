@@ -174,6 +174,11 @@ test("PAYMENT_LINKS only points at live catalogue Payment Links", () => {
 test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   const html = renderEstatePricingPage("authichain");
   assert.match(html, /<title>Pricing — AuthiChain<\/title>/);
+  assert.ok(
+    html.includes(
+      'content="Start with the Starter Pack: $29 one-time for 100 generations."'
+    )
+  );
   assert.doesNotMatch(html, /AuthiChain Starter/);
   assert.equal(hasDeadLink(html), false);
   for (const id of ["dpp_readiness", "starter", "creator"] as const) {

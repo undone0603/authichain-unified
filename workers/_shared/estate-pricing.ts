@@ -341,7 +341,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       brand: "authichain",
       title: "Pricing — AuthiChain",
       description:
-        "Live AuthiChain prices from the published plan catalogue. Start with QRON Launch at $19/mo or Starter Pack at $29.",
+        "Start with the Starter Pack: $29 one-time for 100 generations.",
       canonical: "https://authichain.com/pricing",
       themeColor: "#4F46E5",
       primary: {
