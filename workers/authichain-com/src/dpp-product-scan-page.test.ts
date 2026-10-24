@@ -23,7 +23,8 @@ describe("/dpp-check/product", () => {
     expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     expect(html).toContain("Data score:");
     expect(html).toContain("check digit");
-    expect(html).toContain(NEW_LINK);
+    expect(html).not.toContain(NEW_LINK);
+    expect(html).not.toContain("buy.stripe.com");
   });
 
   it("escapes user input", async () => {
