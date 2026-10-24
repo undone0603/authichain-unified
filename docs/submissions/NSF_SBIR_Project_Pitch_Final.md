@@ -1,3 +1,5 @@
+> Redacted copy; the filed original is held offline
+
 # NSF SBIR Project Pitch: The Truth Protocol for Industrial Supply Chains
 
 ## Submitting entity (SAM legal business name): ZACHARY KIETZMAN

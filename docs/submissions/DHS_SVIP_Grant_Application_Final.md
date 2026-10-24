@@ -1,3 +1,5 @@
+> Redacted copy; the filed original is held offline
+
 # DHS SVIP Grant Application: AuthiChain Autonomous Launch Infrastructure
 ## Preventing Forgery and Counterfeiting of Federal Credentials
 

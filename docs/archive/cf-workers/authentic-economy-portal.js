@@ -387,7 +387,7 @@ var index_default = {
         entity: {
           name: "AuthiChain",
           ceo: "Zachary Kietzman",
-          location: "Roscommon, MI 48653",
+          location: "[MAILING_ADDRESS]",
           sam_gov: { uei: "R34XKWRJY9A5", cage: "1PUJ6", naics: "541519", psc: "7A20" }
         },
         platforms: {

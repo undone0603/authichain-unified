@@ -228,7 +228,8 @@ jobs:
         env:
           MAILING_ADDRESS: ${{ secrets.MAILING_ADDRESS }}
         run: |
-          if [ -n "$MAILING_ADDRESS" ]; then echo "configured=true" >> "$GITHUB_OUTPUT"; else echo "configured=false" >> "$GITHUB_OUTPUT"; echo "::warning::MAILING_ADDRESS secret not set; skipping send steps"; fi
+          trimmed="$(printf '%s' "$MAILING_ADDRESS" | tr -d '[:space:]')"
+          if [ -n "$trimmed" ]; then echo "configured=true" >> "$GITHUB_OUTPUT"; else echo "configured=false" >> "$GITHUB_OUTPUT"; echo "::warning::MAILING_ADDRESS secret not set; skipping send steps"; fi
 
       - name: Run B2B cold outreach
         if: ${{ inputs.flush_queued != true && steps.addr.outputs.configured == 'true' }}
