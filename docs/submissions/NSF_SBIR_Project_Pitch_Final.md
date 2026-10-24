@@ -1,4 +1,4 @@
-> Redacted copy; the original with contact details is kept offline.
+> Redacted copy; contact details removed.
 
 # NSF SBIR Project Pitch: The Truth Protocol for Industrial Supply Chains
 
