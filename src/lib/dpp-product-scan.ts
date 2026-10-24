@@ -62,7 +62,7 @@ export const PRODUCT_SCAN_DISCLAIMER =
 
 const s = (v?: string) => (typeof v === "string" ? v.trim() : "");
 
-/** GS1 mod-10 check digit for GTIN-8/12/13/14. */
+/** Mod-10 check digit for GTIN-8/12/13/14. */
 export function isValidGtin(raw: string): boolean {
   const d = raw.replace(/\s+/g, "");
   if (!/^\d{8}$|^\d{12,14}$/.test(d)) return false;
@@ -102,7 +102,7 @@ export function scanDppProduct(
       weight: 25,
       ok: isValidGtin(gtin) && serial.length > 0,
       gap: !gtin
-        ? "Add a GS1 GTIN for this product."
+        ? "Add a valid GTIN (barcode number) for this product."
         : !isValidGtin(gtin)
           ? "The GTIN check digit does not match. Re-check the number."
           : !serial
