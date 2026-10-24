@@ -195,15 +195,12 @@ export default function RoscommonPilotPage() {
             From delivery service to economic engine.
           </h2>
           <p className="text-zinc-300 text-base leading-relaxed font-medium max-w-3xl">
-            QRON postcards don&apos;t replace philately — they extend it. Every Roscommon
-            postcard sent ships a 3D micro-tour, a town-history exhibit, and a redeemable
-            local coupon to the recipient&apos;s phone, with cryptographic proof of
-            authenticity baked into the artwork itself. Revenue could come from the
-            postcard sale and a sponsorship tier for local businesses on the landing page,
-            and durable analytics on every scan — which could turn a single mailing
-            into an ongoing local tourism and commerce channel, while the
-            municipality gets measurable, targeted advertising delivered into living
-            rooms across the country.
+            QRON postcards would extend philately, not replace it. In this concept, each
+            Roscommon postcard would open a 3D micro-tour, a town-history exhibit, and a
+            local coupon on the recipient&apos;s phone, with a QRON code that can be checked
+            for authenticity. Revenue could come from the postcard sale and a sponsorship
+            tier for local businesses, and scan counts would show the town how many people
+            engaged.
           </p>
 
           <div className="grid sm:grid-cols-3 gap-4 mt-8">
