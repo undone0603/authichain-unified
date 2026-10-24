@@ -153,7 +153,7 @@ describe("email opt-in", () => {
   });
   it("Research wording is byte-identical to gate PR2013-b2dbd98d", () => {
     expect(EMAIL_OPTIN_CONSENT_TEXT).toBe("Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@mail.grokbot.com.");
-    expect(EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL).toBe('If you tick the box, we store your email, the first seal ID you check, the page address, when you agreed, and whether you confirmed. We send updates only after you confirm. Unconfirmed sign-ups are removed from our mailing list after 30 days. See the <a href="/privacy">privacy policy</a>.');
+    expect(EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL).toBe('If you tick the box, we store your email, the first seal ID you check, the page address, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. We keep the record until you ask us to delete it at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.');
     expect(confirmEmailText("TOK")).toBe("Someone entered this email address on authichain.com and asked for AuthiChain product updates (at most once a month).\n\nTo confirm, open this link (valid for 30 days):\n\nhttps://authichain.com/api/email-optin/confirm?token=TOK\n\nIf you did not ask for this, ignore this email. Unless you confirm, we will not send you anything else.");
   });
   it("served consent text never contains PLACEHOLDER (both pages)", () => {
@@ -165,6 +165,7 @@ describe("email opt-in", () => {
     }
     expect(itr).toContain(EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL);
     expect(dpp).toContain(EMAIL_OPTIN_PRIVACY_LINE);
+    expect(EMAIL_OPTIN_PRIVACY_LINE).toBe('We store only your email, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. To delete your email, write to authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.');
     expect(dpp).not.toContain("first seal ID");
   });
   it("UI block: optional email, unchecked consent, privacy link", () => {
