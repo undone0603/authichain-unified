@@ -1781,7 +1781,8 @@ function generateFormHtml(
       ".then(function(res){return res.json().then(function(data){return {res:res,data:data};});})\n" +
       ".then(function(r){\n" +
       "if(r.res.status===401){\n" +
-      "if(r.data&&r.data.code&&r.data.code.indexOf('FREE_SAMPLE_')===0){err.hidden=false;err.textContent=r.data.message;}\n" +
+      "if(r.data&&r.data.code&&r.data.code.indexOf('FREE_SAMPLE_')===0){err.hidden=false;err.textContent=r.data.message;\n" +
+      "var up=r.data.upgrade;if(up&&typeof up.url==='string'&&up.url.indexOf('https://authichain.com/checkout/starter')===0){var a=document.createElement('a');a.href=up.url;a.className='button';a.id='sample-exhausted-starter';a.textContent=up.label||'Starter Pack: 100 generations for $29, paid once';var pp=document.createElement('p');pp.appendChild(a);err.appendChild(pp);a.focus();return;}}\n" +
       "form.submit();\n" +
       "return;\n" +
       "}\n" +

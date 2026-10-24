@@ -1126,6 +1126,14 @@ describe("renderDynamicPage: /generate Living QR", () => {
     );
     expect(location.searchParams.get("prompt")).toBe("neon");
   });
+
+  it("shows the API's Starter upgrade link when the free sample is used up", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain("var up=r.data.upgrade;");
+    expect(body).toContain("up.url.indexOf('https://authichain.com/checkout/starter')===0");
+    expect(body).toContain("a.id='sample-exhausted-starter'");
+  });
 });
 
 describe("renderDynamicPage: /story StoryMode", () => {
