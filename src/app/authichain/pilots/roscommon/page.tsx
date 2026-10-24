@@ -41,7 +41,7 @@ const stampSheet = [
 export const metadata: Metadata = {
   title: 'Roscommon Phygital Stamp Pilot | AuthiChain Protocol',
   description:
-    'A Heart-of-Michigan pilot proposal: QRON-stamped postcards that open a 3D landmark tour, AI-narrated town history, and a local-business coupon book — a new revenue tier for postal services.',
+    'A Heart-of-Michigan pilot proposal: QRON-stamped postcards that open a 3D landmark tour, AI-narrated town history, and a local-business coupon book — a concept for local sponsorship revenue.',
 };
 
 const experiences = [
@@ -70,7 +70,7 @@ const experiences = [
     tag: 'Economic Stimulus',
     title: 'The Local Business Discount',
     body:
-      'A digital coupon book drops down: free coffee at a local roaster, 15% off a kayak rental at the Au Sable River Outfitters. Local businesses pay a small sponsorship fee to be featured — the postal service captures a recurring secondary revenue stream.',
+      'A digital coupon book drops down: free coffee at a local roaster, 15% off a kayak rental at the Au Sable River Outfitters. Local businesses pay a small sponsorship fee to be featured — the postal service could capture a recurring secondary revenue stream.',
     color: 'text-green-400',
     border: 'border-green-500/30',
     glow: 'rgba(34,197,94,0.08)',
@@ -90,7 +90,7 @@ export default function RoscommonPilotPage() {
           </Link>
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-widest">
             <Stamp className="w-3 h-3" />
-            USPS · Pilot Open
+            Concept · Unsolicited proposal
           </div>
         </header>
 
@@ -105,7 +105,7 @@ export default function RoscommonPilotPage() {
         </h1>
 
         <p className="max-w-2xl text-zinc-400 text-lg font-medium mb-16 leading-relaxed">
-          A pilot proposal for the United States Postal Service: a thematic series of
+          An unsolicited concept we would like to propose to postal and tourism partners: a thematic series of
           QRON stamps where every issue becomes a phygital portal — fully scannable,
           cryptographically signed, and tied to a local economic engine. Roscommon is
           the testbed because rich history, natural landmarks, and a tight-knit local
@@ -120,7 +120,7 @@ export default function RoscommonPilotPage() {
           >
             <Image
               src="/media/roscommon-stamp-sheet.png"
-              alt="A Collection of Thematic QR Stamps — Roscommon, MI 2024 issue: Global Ocean Wildlife $0.85, Liberty & Service $0.60, Renewal & Hope $1.10, Cybersecurity & Data $2.00"
+              alt="Concept artwork, not postage"
               width={1920}
               height={1080}
               priority
@@ -129,7 +129,7 @@ export default function RoscommonPilotPage() {
             />
           </div>
           <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-500 text-center max-w-md">
-            Series 01 · Roscommon Issue · 2024 — &ldquo;Scan the forest to explore Roscommon.&rdquo;
+            Concept artwork · Not postage — &ldquo;Scan the forest to explore Roscommon.&rdquo;
           </p>
         </div>
 
@@ -205,7 +205,7 @@ export default function RoscommonPilotPage() {
             QRON stamps don&apos;t replace philately — they extend it. Every Roscommon
             stamp sold ships a 3D micro-tour, a town-history exhibit, and a redeemable
             local coupon to the recipient&apos;s phone, with cryptographic proof of
-            authenticity baked into the artwork itself. The Postal Service captures the
+            authenticity baked into the artwork itself. The Postal Service could capture the
             stamp sale, a sponsorship tier from local businesses on the landing page,
             and durable analytics on every scan — converting a one-time postage
             transaction into a recurring tourism-and-commerce revenue stream, while the
@@ -215,7 +215,7 @@ export default function RoscommonPilotPage() {
 
           <div className="grid sm:grid-cols-3 gap-4 mt-8">
             {[
-              { stat: '3', label: 'Revenue tiers per stamp' },
+              { stat: '3', label: 'Proposed revenue streams (concept)' },
               { stat: '~25%', label: 'Scan lift vs plain QR' },
             ].map((s) => (
               <div
@@ -233,7 +233,7 @@ export default function RoscommonPilotPage() {
 
         <div className="text-center">
           <h3 className="text-2xl font-black uppercase tracking-tight mb-6">
-            Ready to launch the first phygital postage tier?
+            Interested in piloting a QRON postcard concept?
           </h3>
           <a
             href="mailto:partners@qron.space?subject=Roscommon%20Phygital%20Stamp%20Pilot"
@@ -243,6 +243,10 @@ export default function RoscommonPilotPage() {
             <ArrowRight className="w-4 h-4" />
           </a>
         </div>
+
+        <p className="mt-12 text-center text-[11px] text-zinc-500">
+          AuthiChain and QRON are not affiliated with or endorsed by the United States Postal Service.
+        </p>
       </div>
     </div>
   );

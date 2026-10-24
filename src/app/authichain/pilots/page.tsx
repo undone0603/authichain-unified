@@ -80,11 +80,11 @@ export default function AuthichainPilots() {
                 </div>
                 <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-4 mb-2">
-                        <h3 className="text-2xl font-black uppercase tracking-tight">USPS · Roscommon Phygital Stamp</h3>
+                        <h3 className="text-2xl font-black uppercase tracking-tight">Roscommon Phygital Postcard (concept)</h3>
                         <span className="px-2 py-1 rounded bg-gold/15 border border-gold/30 text-gold text-[10px] font-black uppercase tracking-widest">Proposed · Pilot Open</span>
                     </div>
                     <p className="text-zinc-400 text-sm leading-relaxed font-medium mb-3">
-                        Heart of Michigan testbed: a QRON-stamped postcard that opens a 3D landmark tour, an AI-narrated town history, and a local-business coupon book — turning every piece of mail into a micro-tourism billboard with a sponsorship revenue stream for the Postal Service.
+                        Heart of Michigan testbed: a QRON-stamped postcard that opens a 3D landmark tour, an AI-narrated town history, and a local-business coupon book — turning every piece of mail into a micro-tourism billboard with a possible local-sponsorship revenue stream.
                     </p>
                     <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gold group-hover:translate-x-1 transition-transform">
                         View pilot prospectus <ArrowRight className="w-3 h-3" />
@@ -99,6 +99,10 @@ export default function AuthichainPilots() {
               Request Pilot Access
             </Link>
         </div>
+
+        <p className="mt-12 text-center text-[11px] text-zinc-500">
+          AuthiChain and QRON are not affiliated with or endorsed by the United States Postal Service.
+        </p>
       </div>
     </div>
   );
