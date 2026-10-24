@@ -2,14 +2,21 @@ name: Deploy authichain-app
 # Gated, manual-only deploy of the authichain-app Worker (OpenNext build of the
 # root Next.js app; config: wrangler.app.jsonc). Modeled on
 # deploy-first-dollar-desk.yml (#2044). Start it by hand after a merge.
-# Rollback: npx wrangler rollback 9aedb978 --name authichain-app (same gated path).
+# Rollback: dispatch on main with rollback_version=9aedb978 (runs only
+# `pnpm exec wrangler rollback 9aedb978 --name authichain-app`, then the same post-checks).
 on:
   workflow_dispatch:
     inputs:
       expected_sha:
-        description: "Full 40-char commit SHA on main to deploy (e.g. the merge commit)"
-        required: true
+        description: "Full 40-char commit SHA on main to deploy (e.g. the merge commit). Leave empty only when rollback_version is set."
+        required: false
         type: string
+        default: ""
+      rollback_version:
+        description: "Optional. Worker version ID (UUID or hex prefix, e.g. 9aedb978) to roll back to. When set, build and deploy are skipped."
+        required: false
+        type: string
+        default: ""
 permissions:
   contents: read
 concurrency:
@@ -20,25 +27,47 @@ jobs:
     # Same self-hosted WSL runner as deploy-first-dollar-desk.yml / deploy-authichain-com.yml.
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 45
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
     steps:
-      - name: Gate - ref must be main and SHA must be 40 hex chars
+      - name: Preflight - memory (build peaks ~5.1 GiB RSS)
+        run: |
+          set -euo pipefail
+          free -m
+          total_kb="$(awk '/^(MemTotal|SwapTotal):/ {s+=$2} END {print s+0}' /proc/meminfo)"
+          total_mib=$((total_kb / 1024))
+          echo "MemTotal+SwapTotal: ${total_mib} MiB (minimum 6144 MiB)"
+          if [ "$total_mib" -lt 6144 ]; then
+            echo "::error::runner has ${total_mib} MiB RAM+swap; the OpenNext build needs at least 6144 MiB (peaks ~5.1 GiB RSS). Add swap or use a bigger runner."; exit 1
+          fi
+      - name: Gate - ref must be main; validate inputs
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
+          ROLLBACK_VERSION: ${{ inputs.rollback_version }}
           RUN_REF: ${{ github.ref }}
         run: |
           set -euo pipefail
           if [ "$RUN_REF" != "refs/heads/main" ]; then
             echo "::error::must be dispatched from refs/heads/main (got $RUN_REF)"; exit 1
           fi
-          if ! printf '%s' "$EXPECTED_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
-            echo "::error::expected_sha must be a full 40-char lowercase hex SHA"; exit 1
+          if [ -n "$ROLLBACK_VERSION" ]; then
+            if ! printf '%s' "$ROLLBACK_VERSION" | grep -Eq '^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{8,32})$'; then
+              echo "::error::rollback_version must be a lowercase UUID or an 8-32 char hex prefix"; exit 1
+            fi
+            echo "mode: rollback to $ROLLBACK_VERSION (build and deploy skipped)"
+          else
+            if ! printf '%s' "$EXPECTED_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+              echo "::error::expected_sha must be a full 40-char lowercase hex SHA"; exit 1
+            fi
+            echo "mode: deploy $EXPECTED_SHA"
           fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.expected_sha }}
+          ref: ${{ inputs.rollback_version == '' && inputs.expected_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Gate - HEAD equals expected SHA and is an ancestor of main
+        if: ${{ inputs.rollback_version == '' }}
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
@@ -67,12 +96,23 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: pnpm-lock.yaml
       - name: Install node-gyp (native builds)
-        run: npm i -g node-gyp@11
+        run: npm i -g node-gyp@11.5.0
       - name: Install
         env:
           npm_config_build_from_source: "false"
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile
+      - name: Rollback authichain-app
+        if: ${{ inputs.rollback_version != '' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ROLLBACK_VERSION: ${{ inputs.rollback_version }}
+        run: |
+          set -euo pipefail
+          pnpm exec wrangler rollback "$ROLLBACK_VERSION" --name authichain-app
+          pnpm exec wrangler deployments list --name authichain-app
       - name: Build (OpenNext)
+        if: ${{ inputs.rollback_version == '' }}
         env:
           # Matches Workers Builds (playwright-core stubbed). Public-by-design
           # build values from existing repo secrets; never echoed.
@@ -86,14 +126,15 @@ jobs:
           done
           pnpm exec opennextjs-cloudflare build --config wrangler.app.jsonc
       - name: Publish authichain-app
+        if: ${{ inputs.rollback_version == '' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         # --keep-vars keeps dashboard vars/secrets attached. No secret put, no --var.
         run: |
           set -euo pipefail
-          npx wrangler deploy --keep-vars --config wrangler.app.jsonc
-          npx wrangler deployments list --name authichain-app
+          pnpm exec wrangler deploy --keep-vars --config wrangler.app.jsonc
+          pnpm exec wrangler deployments list --name authichain-app
       - name: Live GET checks (qron.space)
         run: |
           set -euo pipefail
@@ -102,3 +143,18 @@ jobs:
             echo "$u -> $code"
             if [ "$code" != "200" ]; then echo "::error::$u returned $code"; exit 1; fi
           done
+      - name: Live GET check (authichain.com/checkout/starter redirects)
+        run: |
+          set -euo pipefail
+          u="https://authichain.com/checkout/starter"
+          # No -L: assert the redirect itself. Print only Location host+path, never the query string.
+          out="$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 30 "$u")"
+          code="${out%% *}"
+          loc="${out#* }"
+          loc="${loc%%[?#]*}"
+          echo "$u -> $code (Location: ${loc:-none})"
+          case "$code" in
+            30[0-9]) ;;
+            *) echo "::error::$u returned $code, expected a 30x redirect"; exit 1 ;;
+          esac
+          if [ -z "$loc" ]; then echo "::error::$u returned $code with no Location"; exit 1; fi
