@@ -1,0 +1,104 @@
+name: Deploy authichain-app
+# Gated, manual-only deploy of the authichain-app Worker (OpenNext build of the
+# root Next.js app; config: wrangler.app.jsonc). Modeled on
+# deploy-first-dollar-desk.yml (#2044). Start it by hand after a merge.
+# Rollback: npx wrangler rollback 9aedb978 --name authichain-app (same gated path).
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: "Full 40-char commit SHA on main to deploy (e.g. the merge commit)"
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: deploy-authichain-app
+  cancel-in-progress: false
+jobs:
+  deploy:
+    # Same self-hosted WSL runner as deploy-first-dollar-desk.yml / deploy-authichain-com.yml.
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    timeout-minutes: 45
+    steps:
+      - name: Gate - ref must be main and SHA must be 40 hex chars
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          RUN_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$RUN_REF" != "refs/heads/main" ]; then
+            echo "::error::must be dispatched from refs/heads/main (got $RUN_REF)"; exit 1
+          fi
+          if ! printf '%s' "$EXPECTED_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::expected_sha must be a full 40-char lowercase hex SHA"; exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Gate - HEAD equals expected SHA and is an ancestor of main
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          HEAD_SHA="$(git rev-parse HEAD)"
+          echo "checkout SHA: $HEAD_SHA"
+          if [ "$HEAD_SHA" != "$EXPECTED_SHA" ]; then
+            echo "::error::HEAD $HEAD_SHA != expected $EXPECTED_SHA"; exit 1
+          fi
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$EXPECTED_SHA" origin/main; then
+            echo "::error::$EXPECTED_SHA is not an ancestor of origin/main"; exit 1
+          fi
+          NAME="$(node -e 'const s=require("fs").readFileSync("wrangler.app.jsonc","utf8");const m=s.match(/^\s*"name":\s*"([^"]+)"/m);process.stdout.write(m?m[1]:"")')"
+          if [ "$NAME" != "authichain-app" ]; then
+            echo "::error::wrangler.app.jsonc name is '$NAME', expected authichain-app"; exit 1
+          fi
+          echo "wrangler.app.jsonc name: $NAME"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          version: "10.28.2"
+          run_install: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install node-gyp (native builds)
+        run: npm i -g node-gyp@11
+      - name: Install
+        env:
+          npm_config_build_from_source: "false"
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+      - name: Build (OpenNext)
+        env:
+          # Matches Workers Builds (playwright-core stubbed). Public-by-design
+          # build values from existing repo secrets; never echoed.
+          WORKERS_CI: "1"
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          for n in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY; do
+            if [ -z "${!n:-}" ]; then echo "::error::secret $n is empty"; exit 1; fi
+          done
+          pnpm exec opennextjs-cloudflare build --config wrangler.app.jsonc
+      - name: Publish authichain-app
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        # --keep-vars keeps dashboard vars/secrets attached. No secret put, no --var.
+        run: |
+          set -euo pipefail
+          npx wrangler deploy --keep-vars --config wrangler.app.jsonc
+          npx wrangler deployments list --name authichain-app
+      - name: Live GET checks (qron.space)
+        run: |
+          set -euo pipefail
+          for u in https://qron.space/ https://qron.space/generate; do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$u")"
+            echo "$u -> $code"
+            if [ "$code" != "200" ]; then echo "::error::$u returned $code"; exit 1; fi
+          done
