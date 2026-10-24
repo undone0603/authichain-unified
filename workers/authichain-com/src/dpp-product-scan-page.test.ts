@@ -43,3 +43,12 @@ describe("/dpp-check/product", () => {
     expect(html).toContain("Map your EU DPP gaps. Free.");
   });
 });
+
+describe("/dpp/scan redirect", () => {
+  it("301s to /dpp-check preserving the query", async () => {
+    const { tryHandleDppCheck } = await import("./dpp-check-page.ts");
+    const res = tryHandleDppCheck(new Request("https://authichain.com/dpp/scan?gtin=1"));
+    expect(res?.status).toBe(301);
+    expect(res?.headers.get("Location")).toBe("https://authichain.com/dpp-check?gtin=1");
+  });
+});

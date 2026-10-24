@@ -247,6 +247,12 @@ ${estateFooter(
 export function tryHandleDppCheck(request: Request): Response | null {
   if (request.method !== "GET" && request.method !== "HEAD") return null;
   const url = new URL(request.url);
+  if (url.pathname.replace(/\/+$/, "") === "/dpp/scan") {
+    return new Response(null, {
+      status: 301,
+      headers: { Location: `https://authichain.com/dpp-check${url.search}` },
+    });
+  }
   const productScan = isDppProductScanPath(url.pathname);
   if (!productScan && !isDppCheckPath(url.pathname)) return null;
   const render = productScan ? renderDppProductScanPage : renderDppCheckPage;
