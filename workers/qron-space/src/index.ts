@@ -21,6 +21,7 @@ import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
 import { tryHandleEstateCanonicalVerify } from "../../_shared/estate-canonical-verify";
 import { tryHandleEstateProtocolDiscovery } from "../../_shared/estate-protocol-discovery";
 import { tryHandleEstateQronResolve } from "../../_shared/estate-qron-resolve";
+import { runModeUsageCron } from "./mode-usage-cron";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -2121,6 +2122,8 @@ a.ghost{background:transparent;border:1px solid #27272a}
 
 type Env = {
   APP_ORIGIN?: string;
+  /** Kill switch for the hourly mode-usage digest ("true" to enable). */
+  MODE_USAGE_CRON_ENABLED?: string;
   /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
   VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
   /** Optional override; defaults to https://authichain.com/api/v1/attestation/verify */
@@ -2193,6 +2196,9 @@ async function proxyToApp(request: Request, url: URL, origin: string): Promise<R
 }
 
 export default {
+  async scheduled(_event: unknown, env?: Env): Promise<void> {
+    await runModeUsageCron(env);
+  },
   async fetch(request: Request, env?: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/health") {
