@@ -15,6 +15,10 @@
 
 export const EMAIL_OPTIN_PATH = "/api/email-optin";
 export const EMAIL_OPTIN_CONFIRM_PATH = "/api/email-optin/confirm";
+/** One-click unsubscribe (GET from the email link, POST from List-Unsubscribe-Post). */
+export const EMAIL_UNSUBSCRIBE_PATH = "/email/unsubscribe";
+export const EMAIL_UNSUBSCRIBE_BASE = "https://authichain.com/email/unsubscribe?token=";
+export const EMAIL_UNSUBSCRIBE_MAILTO = "authichain@mail.grokbot.com";
 
 /** Research gate PR2013 @ b2dbd98d, FIX 1, verbatim. */
 export const EMAIL_OPTIN_CONSENT_TEXT =
@@ -30,8 +34,9 @@ export const EMAIL_OPTIN_PRIVACY_LINE =
  * MARKETING RULE (Research gate, PR #2013): only email_optins rows with
  * status = 'confirmed' may EVER receive updates/marketing. Never send
  * marketing from lead_captures (source "is-this-real") or from pending rows.
- * Before any update is sent: one-click unsubscribe + 'unsubscribed' status,
- * and a Zac-approved postal address (CAN-SPAM).
+ * Every email carries a one-click unsubscribe link + List-Unsubscribe headers
+ * (unsubscribed rows must never be emailed). Still needed before any update:
+ * a Zac-approved postal address (CAN-SPAM).
  */
 
 export const EMAIL_OPTIN_FROM = "AuthiChain <no-reply@mail.authichain.com>";
@@ -59,8 +64,21 @@ ${EMAIL_OPTIN_CONFIRM_BASE}${token}
 If you did not ask for this, ignore this email. Unless you confirm, we will not send you anything else.`;
 }
 
+/** Plain-text footer added to every email: a visible one-click unsubscribe link. */
+export function unsubscribeFooter(unsubToken: string): string {
+  return `\n\n--\nTo unsubscribe, open this link: ${EMAIL_UNSUBSCRIBE_BASE}${unsubToken}`;
+}
+
+/** RFC 2369 / RFC 8058 headers for every email. */
+export function unsubscribeHeaders(unsubToken: string): Record<string, string> {
+  return {
+    "List-Unsubscribe": `<${EMAIL_UNSUBSCRIBE_BASE}${unsubToken}>, <mailto:${EMAIL_UNSUBSCRIBE_MAILTO}?subject=unsubscribe>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+}
+
 export async function sendConfirmEmail(
-  env: EmailOptinEnv, to: string, token: string, fetchImpl: typeof fetch = fetch
+  env: EmailOptinEnv, to: string, token: string, unsubToken: string, fetchImpl: typeof fetch = fetch
 ): Promise<boolean> {
   if (!optinSendEnabled(env)) return false;
   const ctl = new AbortController();
@@ -70,7 +88,7 @@ export async function sendConfirmEmail(
       method: "POST",
       signal: ctl.signal,
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: EMAIL_OPTIN_FROM, to: [to], subject: EMAIL_OPTIN_SUBJECT, text: confirmEmailText(token) }),
+      body: JSON.stringify({ from: EMAIL_OPTIN_FROM, to: [to], subject: EMAIL_OPTIN_SUBJECT, text: confirmEmailText(token) + unsubscribeFooter(unsubToken), headers: unsubscribeHeaders(unsubToken) }),
     });
     if (!res.ok) console.log(JSON.stringify({ event: "email_optin_send_failed", status: res.status }));
     return res.ok;
@@ -95,11 +113,15 @@ export const PURGE_SQL =
   "DELETE FROM email_optins WHERE status = 'pending' AND consent_at < datetime('now','-30 days')";
 /** 10-minute resend floor: an existing pending row is only refreshed (and re-sent) after 10 min. */
 export const UPSERT_SQL =
-  "INSERT INTO email_optins (email, consent_at, status, token_hash) VALUES (?1, ?2, 'pending', ?3) " +
-  "ON CONFLICT(email) DO UPDATE SET consent_at = excluded.consent_at, token_hash = excluded.token_hash " +
+  "INSERT INTO email_optins (email, consent_at, status, token_hash, country, unsub_token) VALUES (?1, ?2, 'pending', ?3, ?4, ?5) " +
+  "ON CONFLICT(email) DO UPDATE SET consent_at = excluded.consent_at, token_hash = excluded.token_hash, " +
+  "country = excluded.country, unsub_token = excluded.unsub_token " +
   "WHERE email_optins.status = 'pending' AND email_optins.consent_at <= datetime(?2,'-10 minutes')";
 const CONFIRM_SQL =
   "UPDATE email_optins SET status = 'confirmed', token_hash = NULL WHERE token_hash = ?1 AND status = 'pending' AND consent_at >= datetime('now','-30 days')";
+/** One-click unsubscribe. Matches any status so a repeat click still succeeds. */
+export const UNSUBSCRIBE_SQL =
+  "UPDATE email_optins SET status = 'unsubscribed', token_hash = NULL WHERE unsub_token = ?1";
 /** Per-IP fixed window (hashed IP, 1 hour, max RATE_MAX). Same D1, $0. */
 export const RATE_MAX = 5;
 export const RATE_SQL =
@@ -114,6 +136,15 @@ export const ALLOWED_ORIGINS = ["https://authichain.com", "https://www.authichai
 function changes(r: unknown): number {
   const m = (r as { meta?: { changes?: number } } | null)?.meta;
   return typeof m?.changes === "number" ? m.changes : 0;
+}
+
+/** Optional ISO 3166-1 alpha-2 code. Returns null when empty, undefined when invalid. */
+export function normalizeCountry(v: unknown): string | null | undefined {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== "string") return undefined;
+  const c = v.trim().toUpperCase();
+  if (c === "") return null;
+  return /^[A-Z]{2}$/.test(c) ? c : undefined;
 }
 
 const EMAIL_RE = /^[^\s@<>"']{1,64}@[^\s@<>"']{1,190}\.[a-z]{2,24}$/i;
@@ -170,6 +201,20 @@ export async function tryHandleEmailOptin(
     // Same reply whether or not a row matched: no email enumeration.
     return html("<p>Thanks. If this link was valid, your email is confirmed.</p>");
   }
+  if (url.pathname === EMAIL_UNSUBSCRIBE_PATH) {
+    if (request.method !== "GET" && request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+    const token = url.searchParams.get("token") || "";
+    if (!/^[a-f0-9]{64}$/.test(token)) return html("<p>This unsubscribe link is not valid.</p>", 400);
+    if (!db) return html("<p>This page is unavailable right now. Please try again later.</p>", 503);
+    let n = 0;
+    try {
+      n = changes(await db.prepare(UNSUBSCRIBE_SQL).bind(token).run());
+    } catch {
+      return html("<p>This page is unavailable right now. Please try again later.</p>", 503);
+    }
+    if (n === 0) return html("<p>This unsubscribe link is not valid.</p>", 404);
+    return html("<p>You are unsubscribed. We will not send you more emails at this address.</p>");
+  }
   if (url.pathname !== EMAIL_OPTIN_PATH) return null;
   if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   if (!ALLOWED_ORIGINS.includes(request.headers.get("origin") || "")) return json({ ok: false, error: "forbidden_origin" }, 403);
@@ -193,9 +238,13 @@ export async function tryHandleEmailOptin(
   if (!isValidEmail(email)) return reply(false, 400, "invalid_email");
   if (body.consent !== "yes" && body.consent !== true && body.consent !== "on")
     return reply(false, 400, "consent_required");
+  const country = normalizeCountry(body.country);
+  if (country === undefined) return reply(false, 400, "invalid_country");
   if (!db) return reply(false, 503, "unavailable");
   const consentAt = now.toISOString().replace("T", " ").slice(0, 19);
   const raw = [...crypto.getRandomValues(new Uint8Array(32))]
+    .map(b => b.toString(16).padStart(2, "0")).join("");
+  const unsub = [...crypto.getRandomValues(new Uint8Array(32))]
     .map(b => b.toString(16).padStart(2, "0")).join("");
   let fresh = false;
   try {
@@ -204,12 +253,12 @@ export async function tryHandleEmailOptin(
     if (rate && rate.hits > RATE_MAX) return reply(false, 429, "rate_limited");
     await db.prepare(RATE_PURGE_SQL).bind().run();
     await db.prepare(PURGE_SQL).bind().run();
-    fresh = changes(await db.prepare(UPSERT_SQL).bind(email, consentAt, await sha256Hex(raw)).run()) > 0;
+    fresh = changes(await db.prepare(UPSERT_SQL).bind(email, consentAt, await sha256Hex(raw), country, unsub).run()) > 0;
   } catch {
     return reply(false, 503, "unavailable");
   }
   // Send only when a row was actually written/refreshed (meta.changes > 0).
-  if (fresh) await sendConfirmEmail(env, email, raw, fetchImpl);
+  if (fresh) await sendConfirmEmail(env, email, raw, unsub, fetchImpl);
   return reply(true, 202);
 }
 
@@ -218,6 +267,8 @@ export function emailOptinBlock(id: string): string {
   return `<form class="email-optin" id="${id}" action="${EMAIL_OPTIN_PATH}" method="post">
   <label for="${id}-email">Email (optional)</label>
   <input type="email" id="${id}-email" name="email" maxlength="254" autocomplete="email">
+  <label for="${id}-country">Country (optional, 2-letter code, e.g. US)</label>
+  <input type="text" id="${id}-country" name="country" maxlength="2" pattern="[A-Za-z]{2}" autocomplete="country" style="text-transform:uppercase">
   <label class="small"><input type="checkbox" name="consent" value="yes"> ${EMAIL_OPTIN_CONSENT_TEXT}</label>
   <p class="small">${EMAIL_OPTIN_PRIVACY_LINE}</p>
   <button type="submit">Save my email</button>
@@ -225,7 +276,7 @@ export function emailOptinBlock(id: string): string {
 </form>
 <script>(function(){var f=document.getElementById("${id}");if(!f||!window.fetch)return;f.addEventListener("submit",function(e){e.preventDefault();var st=f.querySelector("[role=status]");
 if(!f.consent.checked){st.textContent="To save your email, tick the box.";return}
-fetch(f.action,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:f.email.value.trim(),consent:"yes"})})
+fetch(f.action,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:f.email.value.trim(),country:f.country.value.trim().toUpperCase(),consent:"yes"})})
 .then(function(r){st.textContent=r.ok?"Saved. Your email is not confirmed yet.":"We could not save your email. Please try again."})
 .catch(function(){st.textContent="We could not save your email. Please try again."})})})();</script>`;
 }

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  tryHandleEmailOptin, emailOptinBlock, confirmEmailText, PURGE_SQL, UPSERT_SQL, RATE_SQL, RATE_MAX,
+  tryHandleEmailOptin, emailOptinBlock, confirmEmailText, PURGE_SQL, UPSERT_SQL, UNSUBSCRIBE_SQL, unsubscribeFooter, normalizeCountry, RATE_SQL, RATE_MAX,
   EMAIL_OPTIN_CONSENT_TEXT, EMAIL_OPTIN_PRIVACY_LINE, EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL, type D1Like,
 } from "./email-optin";
 import { renderDppCheckPage } from "./dpp-check-page";
 import { renderIsThisRealPage } from "./is-this-real-page";
 
-type Opts = { upsertChanges?: number; hits?: number; throwOn?: string };
+type Opts = { upsertChanges?: number; unsubChanges?: number; hits?: number; throwOn?: string };
 function fakeDb(o: Opts = {}) {
   const calls: { sql: string; args: unknown[] }[] = [];
   const db: D1Like = {
@@ -15,7 +15,7 @@ function fakeDb(o: Opts = {}) {
         run: async () => {
           calls.push({ sql, args });
           if (o.throwOn && sql.includes(o.throwOn)) throw new Error("d1 down");
-          return { meta: { changes: sql === UPSERT_SQL ? (o.upsertChanges ?? 1) : 0 } };
+          return { meta: { changes: sql === UPSERT_SQL ? (o.upsertChanges ?? 1) : sql === UNSUBSCRIBE_SQL ? (o.unsubChanges ?? 1) : 0 } };
         },
         first: async <T,>() => {
           calls.push({ sql, args });
@@ -68,7 +68,7 @@ describe("email opt-in", () => {
     expect(r!.status).toBe(202);
     expect(calls.map(c => c.sql)).toContain(PURGE_SQL);
     const up = calls.find(c => c.sql === UPSERT_SQL)!;
-    expect(up.args).toEqual(["a@b.co", "2026-10-23 12:00:00", expect.stringMatching(/^[a-f0-9]{64}$/)]);
+    expect(up.args).toEqual(["a@b.co", "2026-10-23 12:00:00", expect.stringMatching(/^[a-f0-9]{64}$/), null, expect.stringMatching(/^[a-f0-9]{64}$/)]);
     expect(PURGE_SQL).toContain("-30 days");
   });
   it("per-IP rate limit returns 429 above RATE_MAX and never upserts", async () => {
@@ -145,8 +145,10 @@ describe("email opt-in", () => {
     expect(sent[0].body.subject).toBe("Confirm your email for AuthiChain");
     expect(sent[0].body.to).toEqual(["a@b.co"]);
     expect(sent[0].body.html).toBeUndefined();
-    const token = sent[0].body.text.match(/token=([a-f0-9]{64})/)[1];
-    expect(sent[0].body.text).toBe(confirmEmailText(token));
+    const token = sent[0].body.text.match(/confirm\?token=([a-f0-9]{64})/)[1];
+    const unsub = sent[0].body.text.match(/unsubscribe\?token=([a-f0-9]{64})/)[1];
+    expect(sent[0].body.text).toBe(confirmEmailText(token) + unsubscribeFooter(unsub));
+    expect(calls.find(c => c.sql === UPSERT_SQL)!.args[4]).toBe(unsub);
     expect(calls.find(c => c.sql === UPSERT_SQL)!.args[2]).not.toBe(token);
     expect(JSON.stringify(sent[0].body)).not.toMatch(/strainchain/);
   });
@@ -176,5 +178,67 @@ describe("email opt-in", () => {
     const html = renderDppCheckPage(new URL("https://authichain.com/dpp-check?category=battery_passport&sells_in_eu=yes"));
     expect(html).toContain("Your result:");
     expect(html).toContain('id="dpp-email-optin"');
+  });
+
+  it("country: optional, uppercased, ISO alpha-2 only; stored on insert", async () => {
+    expect(normalizeCountry(undefined)).toBeNull();
+    expect(normalizeCountry("")).toBeNull();
+    expect(normalizeCountry(" us ")).toBe("US");
+    for (const bad of ["USA", "U", "1A", "u$", 12]) expect(normalizeCountry(bad)).toBeUndefined();
+    const { db, calls } = fakeDb();
+    expect((await tryHandleEmailOptin(post({ ...ok, country: "us" }), { DB: db }))!.status).toBe(202);
+    expect(calls.find(c => c.sql === UPSERT_SQL)!.args[3]).toBe("US");
+    const bad = fakeDb();
+    const r = await tryHandleEmailOptin(post({ ...ok, country: "USA" }), { DB: bad.db });
+    expect(r!.status).toBe(400);
+    expect((await r!.json()).error).toBe("invalid_country");
+    expect(bad.calls).toHaveLength(0);
+  });
+  it("both opt-in forms have a 2-letter country field", () => {
+    const dpp = renderDppCheckPage(new URL("https://authichain.com/dpp-check?category=battery_passport&sells_in_eu=yes"));
+    for (const h of [dpp, renderIsThisRealPage()]) {
+      expect(h).toMatch(/name="country" maxlength="2" pattern="\[A-Za-z\]\{2\}"/);
+      expect(h).toContain("country:");
+    }
+  });
+  it("unsubscribe: GET with a valid token flips status to unsubscribed", async () => {
+    const { db, calls } = fakeDb();
+    const tok = "b".repeat(64);
+    const r = await tryHandleEmailOptin(new Request("https://authichain.com/email/unsubscribe?token=" + tok), { DB: db });
+    expect(r!.status).toBe(200);
+    expect(await r!.text()).toContain("You are unsubscribed.");
+    expect(calls).toEqual([{ sql: UNSUBSCRIBE_SQL, args: [tok] }]);
+    expect(UNSUBSCRIBE_SQL).toContain("status = 'unsubscribed'");
+    const p = await tryHandleEmailOptin(new Request("https://authichain.com/email/unsubscribe?token=" + tok, { method: "POST", body: "List-Unsubscribe=One-Click" }), { DB: db });
+    expect(p!.status).toBe(200);
+  });
+  it("unsubscribe: malformed token is 400 with no DB call; unknown token is 404 with no change", async () => {
+    const { db, calls } = fakeDb();
+    for (const q of ["", "?token=", "?token=xyz", "?token=" + "G".repeat(64)]) {
+      expect((await tryHandleEmailOptin(new Request("https://authichain.com/email/unsubscribe" + q), { DB: db }))!.status).toBe(400);
+    }
+    expect(calls).toHaveLength(0);
+    const miss = fakeDb({ unsubChanges: 0 });
+    const r = await tryHandleEmailOptin(new Request("https://authichain.com/email/unsubscribe?token=" + "c".repeat(64)), { DB: miss.db });
+    expect(r!.status).toBe(404);
+    expect(miss.calls.every(c => c.sql === UNSUBSCRIBE_SQL)).toBe(true);
+  });
+  it("every sent email has a visible unsubscribe link and List-Unsubscribe headers", async () => {
+    const { db } = fakeDb();
+    const { sent, f } = mockFetch();
+    await tryHandleEmailOptin(post(ok), { DB: db, ...ON }, new Date(), f);
+    expect(sent).toHaveLength(1);
+    const m = sent[0].body.text.match(/https:\/\/authichain\.com\/email\/unsubscribe\?token=([a-f0-9]{64})/);
+    expect(m).not.toBeNull();
+    expect(sent[0].body.headers["List-Unsubscribe"]).toContain(`<https://authichain.com/email/unsubscribe?token=${m[1]}>`);
+    expect(sent[0].body.headers["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
+  });
+  it("sending is disabled unless EMAIL_OPTIN_SEND_ENABLED is exactly \"true\"", async () => {
+    for (const v of [undefined, "", "TRUE", "1", "yes", "false"]) {
+      const { db } = fakeDb();
+      const { sent, f } = mockFetch();
+      await tryHandleEmailOptin(post(ok), { DB: db, RESEND_API_KEY: "k", EMAIL_OPTIN_SEND_ENABLED: v }, new Date(), f);
+      expect(sent).toHaveLength(0);
+    }
   });
 });

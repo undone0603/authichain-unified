@@ -107,7 +107,7 @@ import {
   estateTrust,
   tryHandleEstateIndexNow,
 } from '../../_shared/estate-landing.ts';
-import { EMAIL_OPTIN_PATH, tryHandleEmailOptin, type D1Like } from './email-optin.ts';
+import { EMAIL_OPTIN_PATH, EMAIL_UNSUBSCRIBE_PATH, tryHandleEmailOptin, type D1Like } from './email-optin.ts';
 import { tryHandleEstatePricing } from '../../_shared/estate-pricing.ts';
 import { tryRedirectSeoRootCanonical } from '../../_shared/seo-hub-routes.ts';
 
@@ -3411,7 +3411,7 @@ async function handleAuthichainCom(
     const appHost = tryHandleAppHost(request);
     if (appHost) return appHost;
     const p = url.pathname;
-    if (p.startsWith(EMAIL_OPTIN_PATH)) {
+    if (p.startsWith(EMAIL_OPTIN_PATH) || p === EMAIL_UNSUBSCRIBE_PATH) {
       const optin = await tryHandleEmailOptin(request, env);
       if (optin) return optin;
     }
