@@ -3084,7 +3084,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         ${listMilestones().map((m) => {
           const status = milestoneStatus(m, now);
           const cls = status === 'in-force' ? 'live' : (status === 'imminent' && m.urgent ? 'urgent' : '');
-          const [head, tail] = formatMilestoneDate(m).split(/,\s|–/);
+          const [head, tail] = (formatMilestoneDate(m) || '').split(/,\s|–/);
           return `
         <div class="dpp-phase ${cls}">
           <div class="dpp-date">${escHtml(head.toUpperCase())}${tail ? `<br>${escHtml(tail)}` : ''}</div>

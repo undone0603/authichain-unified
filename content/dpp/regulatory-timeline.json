@@ -25,9 +25,8 @@
     },
     {
       "id": "electronics",
-      "date": "2027-07-01",
-      "endDate": "2027-12-31",
-      "precision": "quarter",
+      "date": null,
+      "precision": "tbd",
       "label": "Electronics & ICT Products",
       "detail": "Date not set: awaiting an EU delegated act",
       "source": "https://eur-lex.europa.eu/eli/reg/2024/1781/oj",
@@ -36,9 +35,8 @@
     },
     {
       "id": "textiles",
-      "date": "2028-01-01",
-      "endDate": "2029-12-31",
-      "precision": "year",
+      "date": null,
+      "precision": "tbd",
       "label": "Textiles, Apparel & Footwear",
       "detail": "Date not set: awaiting an EU delegated act",
       "source": "https://eur-lex.europa.eu/eli/reg/2024/1781/oj",
@@ -47,11 +45,10 @@
     },
     {
       "id": "construction",
-      "date": "2029-01-01",
-      "endDate": "2030-12-31",
-      "precision": "year",
+      "date": null,
+      "precision": "tbd",
       "label": "Construction Products & Furniture",
-      "detail": "Structural products, insulation and furniture enter scope under the ESPR working plan.",
+      "detail": "Date not set: awaiting an EU delegated act",
       "source": "https://eur-lex.europa.eu/eli/reg/2024/1781/oj",
       "urgent": false,
       "hideStatus": true

@@ -1531,3 +1531,15 @@ test("/dpp copy fixes (Research-gated 6b75ad2a)", async () => {
   assert.ok(home.includes("ESPR will require a passport for product groups the EU designates in delegated acts."));
   assert.ok(home.includes("Not affiliated with or endorsed by the European Commission."));
 });
+
+test("/dpp undated timeline rows show no year, only 'Date not set'", async () => {
+  const html = await (await get("/digital-product-passport")).text();
+  const rows = html.split('<div class="dpp-phase ').slice(1).map(r => r.split('</div>\n        </div>')[0]);
+  for (const label of ["Electronics &amp; ICT Products", "Textiles, Apparel &amp; Footwear", "Construction Products &amp; Furniture"]) {
+    const row = rows.find(r => r.includes(label));
+    assert.ok(row, `row missing: ${label}`);
+    assert.ok(row.includes("Date not set: awaiting an EU delegated act"), label);
+    assert.ok(!/2027|2028|2029|2030/.test(row), `year in row: ${label}`);
+  }
+  assert.ok(!html.includes("enter scope under the ESPR working plan"));
+});
