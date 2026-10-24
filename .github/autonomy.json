@@ -179,6 +179,7 @@
       "purpose": "One-shot operator tools (secret binding, backfills, manual sends). Run by hand only; state is not managed.",
       "managed": false,
       "workflows": {
+        "self-hosted-ops-smoke.yml": "manual",
         "agentz-manual-post.yml": "manual",
         "agentz-tunnel-bringup.yml": "manual",
         "authichain-ledger-reconstruction.yml": "manual",
