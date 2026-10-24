@@ -68,7 +68,7 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
             Authentic <span className="gold-text">Reveal</span>
           </h1>
           <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest max-w-[280px]">
-            Syncing on-chain metadata for artifact registry #{id.slice(0, 8)}
+            Loading demo preview
           </p>
         </div>
 
