@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { NextRequest } from "next/server";
 import { POST } from "./route";
+import { fulfillDppReport, PAYMENTS_INSERT_COLUMNS } from "../../../../lib/dpp-report-fulfill";
 import { provisionPurchase } from "@/lib/provisioning";
 import {
   STOREPILOT_PRO_PRICE_ID,
@@ -250,6 +251,32 @@ describe("DPP report $29 one-time", () => {
     expect(res.status).toBe(200);
     expect(table("payments").size).toBe(1);
     expect(table("dpp_report_entitlements").size).toBe(1);
+  });
+
+  it("payments insert uses only columns in the live readback (2026-10-24)", async () => {
+    const LIVE_PAYMENTS_COLUMNS = [
+      "id", "user_id", "amount", "currency", "status", "payment_method",
+      "stripe_payment_id", "stripe_invoice_id", "description", "metadata",
+      "created_at", "updated_at", "subscription_id", "session_id", "customer_email",
+    ];
+    await post(proSession());
+    const [row] = [...table("payments").values()];
+    expect(Object.keys(row).sort()).toEqual([...PAYMENTS_INSERT_COLUMNS].sort());
+    for (const k of Object.keys(row)) expect(LIVE_PAYMENTS_COLUMNS).toContain(k);
+    expect(row).not.toHaveProperty("amount_cents");
+  });
+
+  it("paid session with no email -> 200, reason no_email, no writes, no throw", async () => {
+    const res = await post(proSession({ customer_details: { email: null }, customer_email: null }));
+    expect(res.status).toBe(200);
+    expect(db.writes).toBe(0);
+    expect(table("dpp_report_entitlements").size).toBe(0);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    await expect(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      fulfillDppReport({ from: builder } as any, { id: "cs_no_email", payment_status: "paid" })
+    ).resolves.toEqual({ unlocked: false, reason: "no_email" });
+    expect(db.writes).toBe(0);
   });
 
   it("unpaid session -> no writes", async () => {

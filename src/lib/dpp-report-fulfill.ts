@@ -1,9 +1,13 @@
 /**
  * Records a paid DPP readiness report ($29 one-time) checkout session:
- * one `payments` row (PK session_id) and one `dpp_report_entitlements` row
- * (UNIQUE stripe_session_id), both ON CONFLICT DO NOTHING, so a duplicate
- * delivery returns 200 with no second row. catalog_limit=200. Throws on any write error so the webhook marks the event
- * `error` and Stripe retries. Logs ids only, never email or secrets.
+ * looks up `payments` by session_id and inserts one row only if none exists
+ * (payments has a uuid PK and no unique index on session_id), then upserts one
+ * `dpp_report_entitlements` row. The ONLY idempotency anchor is
+ * UNIQUE(dpp_report_entitlements.stripe_session_id): two concurrent deliveries
+ * can each insert a payments row (accepted P3), but the entitlement stays single.
+ * catalog_limit=200. A paid session with no email returns { reason: "no_email" }
+ * with no writes (no retry loop). Throws on any write error so the webhook marks
+ * the event `error` and Stripe retries. Logs ids only, never email or secrets.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -26,6 +30,19 @@ export type DppReportResult =
   | { unlocked: true; catalogLimit: number }
   | { unlocked: false; reason: "not_paid" | "no_email" };
 
+/** Columns written to public.payments; all confirmed in the live readback. */
+export const PAYMENTS_INSERT_COLUMNS = [
+  "session_id",
+  "customer_email",
+  "amount",
+  "currency",
+  "status",
+  "description",
+  "metadata",
+  "created_at",
+  "updated_at",
+] as const;
+
 export async function fulfillDppReport(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: SupabaseClient<any>,
@@ -43,7 +60,10 @@ export async function fulfillDppReport(
     .toLowerCase()
     .trim();
   if (!email) {
-    throw new Error("dpp_report: paid session has no customer email");
+    console.warn(
+      JSON.stringify({ evt: "dpp_report_no_email", session: session.id })
+    );
+    return { unlocked: false, reason: "no_email" };
   }
   const now = new Date().toISOString();
   const catalogLimit = dppReportCatalogLimit(session.metadata);
@@ -62,6 +82,8 @@ export async function fulfillDppReport(
     .maybeSingle();
   if (payReadErr) throw new Error(`dpp_report payments read failed: ${payReadErr.message}`);
   if (!existingPay) {
+    // Every key below is a column in the live public.payments readback
+    // (briefs/payments-columns-2026-10-24.md); see PAYMENTS_INSERT_COLUMNS.
     const { error: payErr } = await supabase.from("payments").insert({
       session_id: session.id,
       customer_email: email,
