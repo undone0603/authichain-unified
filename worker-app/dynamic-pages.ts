@@ -576,7 +576,8 @@ function verifyNoRecordResponse(
 
 /** Reserved path. Not a certificate number. Matches src/app/verify/live/page.tsx. */
 function verifyLiveSealHtml(): string {
-  const mintTx = "0xa07d0bbadcc958b3f6fc8d81acda16a54c4bcfdb5e86bd2ce186e27f5752ab3b";
+  const mintTx =
+    "0xa07d0bbadcc958b3f6fc8d81acda16a54c4bcfdb5e86bd2ce186e27f5752ab3b";
   const holder = "authichain.base.eth";
   const contract = "0x34370EDA96e0C7e47f46F18e2D3a7298C241E16F";
   return htmlDocument({
@@ -590,13 +591,19 @@ function verifyLiveSealHtml(): string {
       "<p>Founder example. Signature check + on-chain anchor. You can verify it without trusting us.</p>\n" +
       "<h2>Public proof</h2>\n" +
       "<dl>\n" +
-      "<dt>Holder</dt><dd>" + escapeHtml(holder) + "</dd>\n" +
-      "<dt>Contract</dt><dd>" + escapeHtml(contract) + "</dd>\n" +
-      "<dt>Mint tx</dt><dd><a href=\"https://basescan.org/tx/" + mintTx + "\">view on BaseScan</a></dd>\n" +
-      "<dt>Open protocol</dt><dd><a href=\"/protocol\">run the verifier yourself</a></dd>\n" +
+      "<dt>Holder</dt><dd>" +
+      escapeHtml(holder) +
+      "</dd>\n" +
+      "<dt>Contract</dt><dd>" +
+      escapeHtml(contract) +
+      "</dd>\n" +
+      '<dt>Mint tx</dt><dd><a href="https://basescan.org/tx/' +
+      mintTx +
+      '">view on BaseScan</a></dd>\n' +
+      '<dt>Open protocol</dt><dd><a href="/protocol">run the verifier yourself</a></dd>\n' +
       "</dl>\n" +
       "<p>What this does not prove: that any physical object is genuine. A signed record is not an inspection.</p>\n" +
-      "<p><a href=\"/generate\">Generate your own Living QR</a> · <a href=\"/pricing\">Buy Starter — $29</a></p>\n" +
+      '<p><a href="/generate">Generate your own Living QR</a> · <a href="/pricing">Buy Starter — $29</a></p>\n' +
       "<h2>FAQ</h2>\n" +
       "<h3>Does this prove the product is authentic?</h3>\n" +
       "<p>No. It proves the claim was signed and the anchor hash matches what is on Base. Physical genuineness is a separate inspection.</p>\n" +
@@ -1623,13 +1630,13 @@ function authenticateHtml(): string {
   return htmlDocument({
     title: "Sign in | AuthiChain",
     description:
-      "Start with QRON Starter Pack $29 or Launch $19/mo. Onboard a pilot or open the dashboard — no app.* login host required.",
+      "Start with QRON Starter Pack $29. Onboard a pilot or open the dashboard — no app.* login host required.",
     canonicalPath: "/authenticate",
     extraHead: "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>\n",
     bodyHtml:
       "<main>\n" +
       "<h1>Sign in</h1>\n" +
-      "<p>The public console does not require a separate app host. Start with the Starter Pack at $29 or Launch at $19/mo, or open onboard / dashboard.</p>\n" +
+      "<p>The public console does not require a separate app host. Start with the Starter Pack at $29, or open onboard / dashboard.</p>\n" +
       "<ul>\n" +
       '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
       '<li><a href="/dashboard">Dashboard</a></li>\n' +
@@ -1644,11 +1651,7 @@ function authenticateHtml(): string {
       }) +
       '<p><a href="' +
       "/pricing" +
-      '">Start Launch $19/mo</a> · <a href="' +
-      escapeHtml(
-        planPaymentLink("qron_launch_annual") || "/checkout/qron_launch_annual"
-      ) +
-      '">Launch $190/yr</a> · <a href="/pricing">All pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
+      '">See pricing</a> · <a href="/pricing">All pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
       "</main>",
   });
 }
