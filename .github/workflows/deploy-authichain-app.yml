@@ -109,7 +109,7 @@ jobs:
           ROLLBACK_VERSION: ${{ inputs.rollback_version }}
         run: |
           set -euo pipefail
-          pnpm exec wrangler rollback "$ROLLBACK_VERSION" --name authichain-app
+          pnpm exec wrangler rollback "$ROLLBACK_VERSION" --name authichain-app --message "CI rollback via deploy-authichain-app" --yes
           pnpm exec wrangler deployments list --name authichain-app
       - name: Build (OpenNext)
         if: ${{ inputs.rollback_version == '' }}
