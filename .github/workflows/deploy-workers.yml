@@ -39,7 +39,7 @@ jobs:
         run: |
           # Tree scan only. Removed keys in old commits were failing a
           # history scan and skipping every deploy.
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz -o gitleaks.tgz
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_arm64.tar.gz -o gitleaks.tgz
           tar --no-same-owner -xzf gitleaks.tgz gitleaks
           ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
 
@@ -183,7 +183,7 @@ jobs:
           echo "deploy matrix (auto-deploy, narrowed to changed allow-listed workers): ${eligible}"
 
   deploy:
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
     timeout-minutes: 45
     needs: [secret-scan, deploy-matrix]
     # GitHub fails the whole workflow when `strategy.matrix` expands to an
