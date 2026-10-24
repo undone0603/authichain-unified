@@ -513,7 +513,7 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
 
   it("display override only: plans.ts Starter description is unchanged", () => {
     expect(planById("starter")?.description).toContain(
-      "Pack credits never expire."
+      "Pack credits never expire unless you switch to a Launch subscription."
     );
   });
 });
