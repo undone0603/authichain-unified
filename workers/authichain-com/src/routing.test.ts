@@ -322,7 +322,15 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   assert.match(privacy, /balancing test/);
   assert.match(privacy, /12 months after our last contact/);
   assert.match(privacy, /do not claim one is in place/);
-  assert.doesNotMatch(privacy, /agentmail/i);
+  assert.match(privacy, /AgentMail/);
+  assert.match(privacy, /Amazon SES/);
+  assert.match(privacy, /section 12\.1/);
+  assert.match(privacy, /No outbound marketing email sends are active yet/);
+  assert.match(privacy, /receive-only/);
+  assert.match(privacy, /None appointed/);
+  assert.doesNotMatch(privacy, /Resend[^<]*(marketing|EU contacts)/);
+  assert.doesNotMatch(privacy, /(sends|sent by|sender)[^<.]*(AgentMail|Resend)|(AgentMail|Resend)[^<.]*sends our/i);
+  assert.doesNotMatch(privacy, /pending legal check|\[EU representative/);
   assert.doesNotMatch(privacy, /@gmail\.com/);
   assert.doesNotMatch(privacy, /POSTAL ADDRESS|street address/i);
 
