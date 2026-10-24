@@ -151,7 +151,7 @@ describe("email opt-in", () => {
     expect(JSON.stringify(sent[0].body)).not.toMatch(/strainchain/);
   });
   it("Research wording is byte-identical to gate PR2013-b2dbd98d", () => {
-    expect(EMAIL_OPTIN_CONSENT_TEXT).toBe("Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@gmail.com.");
+    expect(EMAIL_OPTIN_CONSENT_TEXT).toBe("Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@mail.grokbot.com.");
     expect(EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL).toBe('If you tick the box, we store your email, the first seal ID you check, the page address, when you agreed, and whether you confirmed. We send updates only after you confirm. Unconfirmed sign-ups are removed from our mailing list after 30 days. See the <a href="/privacy">privacy policy</a>.');
     expect(confirmEmailText("TOK")).toBe("Someone entered this email address on authichain.com and asked for AuthiChain product updates (at most once a month).\n\nTo confirm, open this link (valid for 30 days):\n\nhttps://authichain.com/api/email-optin/confirm?token=TOK\n\nIf you did not ask for this, ignore this email. Unless you confirm, we will not send you anything else.");
   });
