@@ -4,7 +4,6 @@ import {
   Shield,
   ChevronLeft,
   Building2,
-  FileCheck,
   Stamp,
   ArrowRight
 } from 'lucide-react';
@@ -47,19 +46,6 @@ export default function AuthichainPilots() {
                     <p className="text-zinc-500 text-sm leading-relaxed font-medium">
                         Eliminating 14-day physical battery quarantine delays using Edge Cryptography.
                     </p>
-                </div>
-            </div>
-
-            {/* Pilot 2 */}
-            <div className="protocol-card p-10 border-zinc-800 bg-zinc-950/50 flex flex-col md:flex-row gap-10 items-center">
-                <div className="w-20 h-20 shrink-0 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-                    <FileCheck className="w-10 h-10 text-gold" />
-                </div>
-                <div>
-                    <div className="flex items-center gap-4 mb-2">
-                        <h3 className="text-2xl font-black uppercase tracking-tight">FTC Compliance Shield</h3>
-                        <span className="px-2 py-1 rounded bg-yellow-500/10 text-yellow-500 text-[10px] font-black uppercase tracking-widest">Deploying</span>
-                    </div>
                 </div>
             </div>
 

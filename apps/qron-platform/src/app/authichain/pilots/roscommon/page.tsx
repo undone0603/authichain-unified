@@ -66,7 +66,7 @@ const experiences = [
     tag: 'Economic Stimulus',
     title: 'The Local Business Discount',
     body:
-      'A digital coupon book drops down: free coffee at a local roaster, 15% off a kayak rental at the Au Sable River Outfitters. Local businesses pay a small sponsorship fee to be featured — the postal service could capture a recurring secondary revenue stream.',
+      'A digital coupon book drops down with offers from local businesses, who could pay a small sponsorship fee to be featured, creating a possible recurring revenue stream.',
     color: 'text-green-400',
     border: 'border-green-500/30',
     glow: 'rgba(34,197,94,0.08)',
@@ -198,8 +198,8 @@ export default function RoscommonPilotPage() {
             QRON postcards don&apos;t replace philately — they extend it. Every Roscommon
             postcard sent ships a 3D micro-tour, a town-history exhibit, and a redeemable
             local coupon to the recipient&apos;s phone, with cryptographic proof of
-            authenticity baked into the artwork itself. A local sponsorship program could capture the
-            postcard sale, a sponsorship tier from local businesses on the landing page,
+            authenticity baked into the artwork itself. Revenue could come from the
+            postcard sale and a sponsorship tier for local businesses on the landing page,
             and durable analytics on every scan — which could turn a single mailing
             into an ongoing local tourism and commerce channel, while the
             municipality gets measurable, targeted advertising delivered into living
