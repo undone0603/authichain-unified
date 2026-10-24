@@ -35,10 +35,7 @@ When sources conflict, prefer the newest authoritative source and preserve the o
 
 ### Local machine
 
-Search configurable roots including:
-
-- `authichain-unified` worktrees and clones.
-- Downloads, Desktop, Documents, exported chats, project archives.
+Search only an explicit allowlist of repo or workspace paths. The allowlist is empty by default, so nothing is scanned until a path is passed with `--root` (or `GROKBOT_SCAN_ALLOWLIST`). Downloads, Desktop and Documents are never added automatically.
 - Claude/Gemini/Grok/ChatGPT artifacts and exported conversations.
 - PDFs, DOCX, PPTX, XLSX, CSV, JSON, Markdown, HTML, TXT, images, screenshots, SVG, ZIP/TAR archives.
 - Git history, branches, tags, stashes and generated artifacts where locally available.

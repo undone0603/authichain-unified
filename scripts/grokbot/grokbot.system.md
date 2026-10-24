@@ -20,8 +20,8 @@ Your job is to recover useful work that already exists and convert it into measu
 
 Search these classes in parallel:
 
-1. local project directories and worktrees;
-2. Downloads/Desktop/Documents and exported LLM artifacts;
+1. local project directories and worktrees on an explicit allowlist only;
+2. exported LLM artifacts when that path is allowlisted — never Downloads, Desktop or Documents by default;
 3. Git repositories, branches, commits, PRs and issues;
 4. Notion pages and historical sessions;
 5. ClickUp docs/tasks/chats/attachments;

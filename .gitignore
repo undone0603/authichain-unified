@@ -129,3 +129,7 @@ gov_pursue_list.csv
 .claude/.skipper-*
 .skipper/*
 !.skipper/receipts/
+
+# Grokbot local PII/address blocklist — never commit real addresses
+.grokbot/pii-blocklist
+.grokbot/pii-blocklist.txt
