@@ -458,6 +458,11 @@ app.post("/api/generate", async c => {
           workerUrl: c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL,
         }),
       bindAttestation: args => bindQronGenerateAttestation(c.env, args),
+      // QRON modes: mode_select / gen_with_mode via the shared automation log.
+      logEvent: async (event, payload) => {
+        const { logAutomation } = await import("../src/lib/automation");
+        await logAutomation(event, "event", "success", payload);
+      },
       claimFreeSample: async () => {
         // Fail closed: no limiter binding or no client IP = no free sample.
         const ns = c.env?.RATE_LIMITER;

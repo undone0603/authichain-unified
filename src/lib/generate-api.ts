@@ -1,3 +1,4 @@
+import { applyMode, parseSelectableMode } from "./qron-modes";
 /**
  * Edge-callable Living QR generation.
  *
@@ -127,6 +128,8 @@ export type GeneratePostInput = {
   prompt?: string;
   presetId?: string;
   mode?: string;
+  /** Selectable mode id or slug; body.mode is also accepted when it is one. */
+  modeId?: string;
   style?: string;
 };
 
@@ -250,6 +253,8 @@ export async function handleGeneratePost(opts: {
    * when the limiter is unavailable. Omitted = no anonymous sample.
    */
   claimFreeSample?: () => Promise<{ ok: boolean; reason?: "used" | "paused" }>;
+  /** Optional event log (mode_select, gen_with_mode). Must never throw. */
+  logEvent?: (event: "mode_select" | "gen_with_mode", payload: Record<string, unknown>) => Promise<void>;
 }): Promise<GeneratePostResult> {
   const packs = generateCreditPacks();
   if (!opts.userId && !opts.claimFreeSample) {
@@ -271,7 +276,12 @@ export async function handleGeneratePost(opts: {
     };
   }
 
-  const prompt = resolvePrompt(opts.body);
+  const basePrompt = resolvePrompt(opts.body);
+  // Selectable mode: valid id/slug in modeId or mode prepends the mode seed.
+  // Invalid or missing = unchanged behavior. 1 generation = 1 normal credit.
+  const modeId =
+    parseSelectableMode(opts.body.modeId) ?? parseSelectableMode(opts.body.mode);
+  const prompt = basePrompt && modeId ? applyMode(basePrompt, modeId) : basePrompt;
   if (!prompt) {
     return {
       status: 400,
@@ -328,9 +338,21 @@ export async function handleGeneratePost(opts: {
   }
 
   const mode =
-    typeof opts.body.mode === "string" && opts.body.mode.trim()
+    !modeId && typeof opts.body.mode === "string" && opts.body.mode.trim()
       ? opts.body.mode.trim()
       : "static";
+  const safeLog = async (
+    event: "mode_select" | "gen_with_mode",
+    payload: Record<string, unknown>,
+  ) => {
+    if (!modeId || !opts.logEvent) return;
+    try {
+      await opts.logEvent(event, payload);
+    } catch {
+      // Logging never blocks generation.
+    }
+  };
+  await safeLog("mode_select", { modeId, anonymous: !opts.userId });
   const presetId =
     typeof opts.body.presetId === "string" ? opts.body.presetId.trim() : "";
   const style = parseQronImageStyle(opts.body.style);
@@ -381,9 +403,11 @@ export async function handleGeneratePost(opts: {
     const qrDataUrl = await scannableQrDataUrl(
       anonymous ? targetUrl : presentation.resolve_url
     );
+    await safeLog("gen_with_mode", { modeId, anonymous, objectId });
     if (bind && opts.rememberPresentation) {
       try {
         await opts.rememberPresentation({
+          ...(modeId ? { mode_id: modeId } : {}),
           object_id: presentation.object_id,
           destination_url: targetUrl,
           resolve_url: presentation.resolve_url,
@@ -405,6 +429,7 @@ export async function handleGeneratePost(opts: {
           resolveUrl: anonymous ? null : presentation.resolve_url,
           prompt,
           mode,
+          ...(modeId ? { modeId } : {}),
           objectId: presentation.object_id,
         },
         ...(anonymous ? {} : { presentation }),

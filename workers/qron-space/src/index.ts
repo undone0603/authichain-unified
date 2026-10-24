@@ -2297,7 +2297,7 @@ export default {
 <meta name="theme-color" content="#b45309">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 ${ESTATE_FONTS_LINK}
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"QRON","url":"https://qron.space","logo":"https://qron.space/favicon.svg","description":"Generate signed Living QR codes for packaging and labels.","sameAs":["https://authichain.com","https://twitter.com/authichain"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"QRON","url":"https://qron.space","logo":"https://qron.space/favicon.svg","description":"Generate scannable Living QR codes for packaging and labels.","sameAs":["https://authichain.com","https://twitter.com/authichain"]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"QRON","url":"https://qron.space","description":"Living QR generation for the AuthiChain estate."}</script>
 <style>
 ${estateCssVars("qron")}

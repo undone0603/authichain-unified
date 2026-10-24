@@ -30,20 +30,44 @@ export interface GenerationMode {
   upgradeHint?: string;
 }
 
+/**
+ * Display names for the three selectable modes. ONE place to rename them
+ * (Marketing, 2026-10-24: Stellar Art, Batch Create, Limited Drop). The ids
+ * below are internal only and never shown to buyers.
+ */
+export const MODE_DISPLAY_NAMES = {
+  stellar_seal: "Stellar Art",
+  batch_verify: "Batch Create",
+  limited_drop: "Limited Drop",
+} as const;
+
+export type SelectableModeId = keyof typeof MODE_DISPLAY_NAMES;
+
+/** URL slugs for ?mode=<slug> on /generate (per Marketing copy). */
+export const MODE_SLUGS: Record<SelectableModeId, string> = {
+  stellar_seal: "stellar-art",
+  batch_verify: "batch-create",
+  limited_drop: "limited-drop",
+};
+
+export const SELECTABLE_MODE_IDS = Object.keys(MODE_DISPLAY_NAMES) as SelectableModeId[];
+
+/** Starter Pack checkout (existing live path; no new SKU). */
+export const STARTER_CHECKOUT_URL = "https://authichain.com/checkout/starter";
+
 export const QRON_MODES: Record<ModeId, GenerationMode> = {
   stellar_seal: {
     id: "stellar_seal",
-    name: "Stellar Seal Certificate Portal",
+    name: MODE_DISPLAY_NAMES.stellar_seal,
     promptSeed:
       "Living QR portal for a Polygon NFT authenticity certificate. Show product photo, seal status, chain-of-custody timeline, and one-tap verify CTA. Dark luxury + metallic seal accent.",
     style:
       "high-contrast, certificate-grade typography, subtle holographic edge, premium dark palette",
     includedIn: ["starter", "qron_launch", "creator"],
-    upgradeHint: "Unlock Stellar Seal templates with Starter Pack — $29 for 100 generations.",
   },
   batch_verify: {
     id: "batch_verify",
-    name: "Batch Product Verification Mode",
+    name: MODE_DISPLAY_NAMES.batch_verify,
     promptSeed:
       "QR that opens a multi-item scan sheet. Each row = SKU + photo + authenticity badge + last-scan timestamp. Optimized for warehouse or retail counter.",
     style: "clean table layout, status chips (Verified / Pending / Flagged), high scannability",
@@ -51,7 +75,7 @@ export const QRON_MODES: Record<ModeId, GenerationMode> = {
   },
   limited_drop: {
     id: "limited_drop",
-    name: "Limited-Edition Drop Portal",
+    name: MODE_DISPLAY_NAMES.limited_drop,
     promptSeed:
       "Time-gated living QR for a product drop. Countdown, scarcity counter, owner wallet check, and post-drop provenance feed.",
     style: "event-like high-energy but premium, countdown overlay, scarcity indicators",
@@ -92,4 +116,34 @@ export function applyMode(userPrompt: string, modeId: ModeId): string {
   const mode = QRON_MODES[modeId];
   if (!mode) return userPrompt;
   return `${mode.promptSeed}\n\nUser request: ${userPrompt}\nStyle: ${mode.style}`;
+}
+
+/**
+ * Parses a selectable mode from an id ("stellar_seal") or slug
+ * ("stellar-art"). Anything else (including render modes like "static")
+ * returns null, so callers keep their existing behavior.
+ */
+export function parseSelectableMode(value: unknown): SelectableModeId | null {
+  if (typeof value !== "string") return null;
+  const v = value.trim().toLowerCase();
+  if (!v) return null;
+  for (const id of SELECTABLE_MODE_IDS) {
+    if (v === id || v === MODE_SLUGS[id]) return id;
+  }
+  return null;
+}
+
+/** /generate link that preselects a mode, with UTM tags. */
+export function modeGenerateUrl(
+  id: SelectableModeId | null,
+  utm: { source: string; medium: string; campaign: string; content?: string },
+  base = "https://qron.space/generate",
+): string {
+  const u = new URL(base);
+  if (id) u.searchParams.set("mode", MODE_SLUGS[id]);
+  u.searchParams.set("utm_source", utm.source);
+  u.searchParams.set("utm_medium", utm.medium);
+  u.searchParams.set("utm_campaign", utm.campaign);
+  if (utm.content) u.searchParams.set("utm_content", utm.content);
+  return u.toString();
 }
