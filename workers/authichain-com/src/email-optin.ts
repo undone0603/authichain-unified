@@ -21,10 +21,10 @@ export const EMAIL_OPTIN_CONSENT_TEXT =
   "Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@mail.grokbot.com.";
 /** /is-this-real (also POSTs /api/leads/capture). Research FIX 2 Option B, verbatim. */
 export const EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL =
-  'If you tick the box, we store your email, the first seal ID you check, the page address, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. We keep the record until you ask us to delete it at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
+  'If you tick the box, we store your email, the first seal ID you check, the page address, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep a copy of the sign-up until you ask us to delete it at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
 /** /dpp-check (email-optin only). Research: keep the current line here. */
 export const EMAIL_OPTIN_PRIVACY_LINE =
-  'We store only your email, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. To delete your email, write to authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
+  'We store only your email, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be deleted after 30 days, and you can ask us to delete yours at any time at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
 
 /*
  * MARKETING RULE (Research gate, PR #2013): only email_optins rows with
