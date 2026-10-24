@@ -10,6 +10,10 @@ crons = ["0 10 * * *"]
 [vars]
 # Default ON: the run computes and prints the summary but writes nothing.
 DRY_RUN = "true"
+# Default OFF: daily runs look back 48h; Sundays (UTC) scan full history.
+# Set "true" to force a full-history scan, e.g. for the first live dry run
+# (Advisor condition 3: must show excluded_test_count=1 and $0 revenue).
+FULL_HISTORY = "false"
 SUPABASE_URL = "https://REPLACE_WITH_QRON_V2_REF.supabase.co"
 
 # Secrets (set by Zac via `wrangler secret put`, names only, never committed):

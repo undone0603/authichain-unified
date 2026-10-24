@@ -4,12 +4,14 @@ import allowlistFile from "../../../ops/reconcile/excluded-test-payments.json";
 
 export interface Env {
   DRY_RUN?: string;
+  FULL_HISTORY?: string; // "true" forces full-history scan (default off)
   SUPABASE_URL: string;
   STRIPE_RECON_RESTRICTED_KEY: string; // secret, restricted read-only
   SUPABASE_ANON_KEY: string;           // secret
   RECON_DB_JWT: string;                // secret, role claim = stripe_reconciler
 }
 
+export const isFullHistory = (env: Pick<Env, "FULL_HISTORY">) => (env.FULL_HISTORY ?? "false").toLowerCase() === "true";
 export const isDryRun = (env: Pick<Env, "DRY_RUN">) => (env.DRY_RUN ?? "true").toLowerCase() !== "false";
 
 /** Refuse anything but the dedicated restricted role. Never logs the token. */
@@ -53,7 +55,7 @@ async function db(env: Env, path: string, init: RequestInit = {}): Promise<any> 
 }
 
 export async function gather(env: Env, now: Date): Promise<ReconInput> {
-  const full = now.getUTCDay() === 0;
+  const full = isFullHistory(env) || now.getUTCDay() === 0;
   const start = full ? new Date(0) : new Date(now.getTime() - 48 * 3600e3);
   const gte = String(Math.floor(start.getTime() / 1000));
   const created = { "created[gte]": gte };
@@ -90,7 +92,7 @@ export async function run(env: Env, now = new Date()): Promise<ReconSummary> {
   assertRestrictedStripeKey(env.STRIPE_RECON_RESTRICTED_KEY);
   assertRestrictedRole(env.RECON_DB_JWT);
   const summary = reconcile(await gather(env, now));
-  console.log(JSON.stringify({ dry_run: isDryRun(env), ...summary }));
+  console.log(JSON.stringify({ dry_run: isDryRun(env), full_history: isFullHistory(env) || now.getUTCDay() === 0, ...summary }));
   if (!isDryRun(env)) {
     await db(env, "reconciliation_runs", { method: "POST", body: JSON.stringify(toRow(summary)),
       headers: { Prefer: "return=minimal" } });

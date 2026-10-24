@@ -99,6 +99,38 @@ describe("dry run + role guard", () => {
     expect(posts.length).toBe(1);
     expect(String(posts[0][0])).toMatch(/\/rest\/v1\/reconciliation_runs$/);
   });
+  it("FULL_HISTORY=true on a non-Sunday dry run sees Sep 20 allowlisted $10 -> excluded=1, $0, no POST", async () => {
+    const urls: string[] = [];
+    const f = vi.fn(async (u: string, init?: RequestInit) => {
+      urls.push(String(u));
+      const url = String(u);
+      if (url.includes("stripe.com/v1/charges")) {
+        const gte = Number(new URL(url).searchParams.get("created[gte]"));
+        const sep20 = Date.parse("2026-09-20T04:32:00Z") / 1000;
+        const data = gte <= sep20 ? [{ id: "ch_3UHcQfGqTruSqV8T1j4hdD7l", payment_intent: "pi_3UHcQfGqTruSqV8T18dYFwd3",
+          amount: 1000, amount_refunded: 0, currency: "usd", status: "succeeded", refunded: false, livemode: true,
+          created: sep20, metadata: {} }] : [];
+        return new Response(JSON.stringify({ data, has_more: false }));
+      }
+      if (url.includes("stripe.com")) return new Response(JSON.stringify({ data: [], has_more: false }));
+      return new Response(JSON.stringify(init?.method === "POST" ? {} : []));
+    });
+    vi.stubGlobal("fetch", f); vi.spyOn(console, "log").mockImplementation(() => {});
+    const sat = new Date("2026-10-24T10:00:00Z"); // Saturday
+    expect(sat.getUTCDay()).not.toBe(0);
+    const s = await run(env({ FULL_HISTORY: "true" }) as any, sat);
+    expect(s.window_start).toBe(new Date(0).toISOString());
+    expect(s.excluded_test_count).toBe(1);
+    expect(s.customer_revenue_cents).toBe(0);
+    expect(s.mismatch_count).toBe(0);
+    expect(f.mock.calls.some(([, i]) => (i as RequestInit | undefined)?.method === "POST")).toBe(false);
+  });
+  it("FULL_HISTORY default off: non-Sunday run uses 48h window and misses Sep 20", async () => {
+    vi.stubGlobal("fetch", mockFetch()); vi.spyOn(console, "log").mockImplementation(() => {});
+    const s = await run(env() as any, new Date("2026-10-24T10:00:00Z"));
+    expect(s.window_start).toBe("2026-10-22T10:00:00.000Z");
+    expect(s.excluded_test_count).toBe(0);
+  });
   it("refuses service_role JWT", () => {
     expect(() => assertRestrictedRole(jwt("service_role"))).toThrow();
   });
