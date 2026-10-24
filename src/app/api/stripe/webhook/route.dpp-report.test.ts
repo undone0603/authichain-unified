@@ -13,7 +13,7 @@ import {
   resolveCheckoutPlanId,
 } from "../../../../lib/billing/live-catalog";
 
-const { mockAfter, mockAnchorSale, mockConstructEvent, db } = vi.hoisted(() => {
+const { mockAfter, mockAnchorSale, mockConstructEvent, db, mockListLineItems } = vi.hoisted(() => {
   const db = {
     eventSeen: false,
     tables: {} as Record<string, Map<string, Record<string, unknown>>>,
@@ -23,6 +23,7 @@ const { mockAfter, mockAnchorSale, mockConstructEvent, db } = vi.hoisted(() => {
     mockAfter: [] as Array<() => unknown>,
     mockAnchorSale: vi.fn().mockResolvedValue(undefined),
     mockConstructEvent: vi.fn(),
+    mockListLineItems: vi.fn(),
     db,
   };
 });
@@ -81,7 +82,7 @@ vi.mock("next/server", () => ({
 vi.mock("stripe", () => ({
   default: class {
     subscriptions = { retrieve: vi.fn() };
-    checkout = { sessions: { list: vi.fn().mockResolvedValue({ data: [] }) } };
+    checkout = { sessions: { list: vi.fn().mockResolvedValue({ data: [] }), listLineItems: mockListLineItems } };
   },
 }));
 vi.mock("@supabase/supabase-js", () => ({
@@ -250,5 +251,22 @@ describe("DPP report $29 one-time", () => {
     expect(table("dpp_report_entitlements").size).toBe(0);
     expect(provisionPurchase).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ plan: "starter" }));
     expect(resolveCheckoutPlanId({ priceId: STOREPILOT_PRO_PRICE_ID })).toBeNull();
+  });
+});
+
+describe("Payment Link session: line items fetched", () => {
+  it("stores the FOUND items.data[0].price.id on the entitlement, not linePriceId", async () => {
+    process.env.DPP_REPORT_PRICE_ID = "price_dppfixture";
+    mockListLineItems.mockResolvedValue({ data: [{ price: { id: "price_dppfixture" } }] });
+    try {
+      const res = await post(proSession({ metadata: {}, line_items: undefined }));
+      expect(res.status).toBe(200);
+      expect(mockListLineItems).toHaveBeenCalledWith("cs_live_pro_1", expect.objectContaining({ expand: ["data.price.product"] }));
+      const ent = [...table("dpp_report_entitlements").values()];
+      expect(ent).toHaveLength(1);
+      expect(ent[0]).toMatchObject({ price_id: "price_dppfixture" });
+    } finally {
+      delete process.env.DPP_REPORT_PRICE_ID;
+    }
   });
 });

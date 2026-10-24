@@ -342,6 +342,7 @@ export async function POST(req: NextRequest) {
         // Idempotent on checkout session id. Must run before the $29.00
         // Starter amount fallback below, which would otherwise grant Starter.
         let dppReport = isDppReportSession(session as never, linePriceId);
+        let dppPriceId: string | null = linePriceId;
         // Payment Link sessions arrive without line_items; a $29.00 one could
         // be the DPP report (matched by price/product metadata). Read-only
         // lookup; a failure throws so Stripe retries instead of the amount
@@ -357,13 +358,14 @@ export async function POST(req: NextRequest) {
             session.id,
             { limit: 5, expand: ["data.price.product"] }
           );
+          dppPriceId = items.data?.[0]?.price?.id ?? linePriceId;
           dppReport = isDppReportSession(
             { metadata: md, line_items: items as never },
-            items.data?.[0]?.price?.id ?? linePriceId
+            dppPriceId
           );
         }
         if (dppReport) {
-          const pro = await fulfillDppReport(getSupabase(), session, linePriceId);
+          const pro = await fulfillDppReport(getSupabase(), session, dppPriceId);
           if (
             pro.unlocked &&
             isAnchorable(event) &&
