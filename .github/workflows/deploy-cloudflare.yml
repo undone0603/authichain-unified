@@ -65,6 +65,10 @@ jobs:
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
+      - name: Verify Lint Checkpoint
+        if: steps.secrets_check.outputs.skip != 'true'
+        run: pnpm run lint:checkpoint
+
       - name: Build frontend
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm run build

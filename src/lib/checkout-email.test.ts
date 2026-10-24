@@ -143,6 +143,19 @@ describe("rewriteCheckoutHref (buy.stripe.com)", () => {
     expect(rewriteCheckoutHref("https://buy.stripe.com/unknown")).toBeUndefined();
     expect(rewriteCheckoutHref("https://authichain.com/checkout/creator")).toBeUndefined();
   });
+
+  it("sends the deleted DPP Payment Link to the $299 confirm page", () => {
+    expect(
+      rewriteCheckoutHref(
+        "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c?prefilled_email=a%40b.co&utm_source=x"
+      )
+    ).toBe(
+      "https://authichain.com/checkout/dpp_readiness?email=a%40b.co&utm_source=x"
+    );
+    expect(
+      rewriteCheckoutHref("https://buy.stripe.com/cNi4gzgDTf7McKCePO1ND44")
+    ).toBe("https://authichain.com/checkout/dpp_readiness");
+  });
 });
 
 describe("paymentLinkWithPrefilledEmail", () => {
@@ -207,7 +220,7 @@ describe("checkoutNeedEmailRedirect", () => {
     );
     expect(
       checkoutNeedEmailRedirect("plan", undefined, "strainchain_farm")
-    ).toBe("https://authichain.com/checkout/strainchain_farm?need_email=1");
+    ).toBe("https://authichain.com/checkout?need_email=1");
   });
 
   it("keeps visit_id when decorating bounced checkout forms", () => {
@@ -249,13 +262,13 @@ describe("rewriteCheckoutHref", () => {
       )
     ).toBe(passport);
     expect(rewriteCheckoutHref("/api/checkout/plan/strainchain_farm")).toBe(
-      planPaymentLink("strainchain_farm")
+      "https://authichain.com/checkout"
     );
     expect(rewriteCheckoutHref("/api/checkout/plan/theater_1")).toBe(
-      planPaymentLink("theater_1")
+      "https://authichain.com/checkout"
     );
     expect(rewriteCheckoutHref("/api/checkout/plan/theater_3")).toBe(
-      planPaymentLink("theater_3")
+      "https://authichain.com/checkout"
     );
   });
 

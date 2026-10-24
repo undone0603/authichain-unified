@@ -60,7 +60,15 @@ describe("gated checkout paths", () => {
 
   it("resolves ids and aliases, rejects free/unknown plans", () => {
     expect(planFromGatedPath("/checkout/dpp")?.id).toBe("dpp_readiness");
-    expect(planFromGatedPath("/checkout/theater_3/")?.id).toBe("theater_3");
+    expect(planFromGatedPath("/checkout/musa_claim_file")?.id).toBe(
+      "made_in_usa_claim_file"
+    );
+    expect(planFromGatedPath("/checkout/musa_audit_bundle")?.id).toBe(
+      "made_in_usa_audit_bundle"
+    );
+    expect(planFromGatedPath("/checkout/theater_3/")).toBeUndefined();
+    expect(planFromGatedPath("/checkout/strainchain_farm")).toBeUndefined();
+    expect(planFromGatedPath("/checkout/farm")).toBeUndefined();
     expect(planFromGatedPath("/checkout/free")).toBeUndefined();
     expect(planFromGatedPath("/checkout/nope")).toBeUndefined();
   });
@@ -187,11 +195,28 @@ describe("tryHandleGatedCheckout — GET/HEAD never call Stripe", () => {
 });
 
 describe("tryHandleGatedCheckout — POST", () => {
+  it("does not open a Stripe session for farm or theater", async () => {
+    const fetchImpl = stripeOk();
+    for (const path of [
+      "/checkout/strainchain_farm",
+      "/checkout/theater_1",
+      "/checkout/theater_3",
+    ]) {
+      const res = await tryHandleGatedCheckout(
+        post(path, { email: "grower@farm.com" }),
+        { STRIPE_SECRET_KEY: "sk_test_x" },
+        { fetchImpl }
+      );
+      expect(res!.status, path).toBe(404);
+    }
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("creates one session with customer_email and catalogue price, then 303s to Stripe", async () => {
     const fetchImpl = stripeOk();
     const res = await tryHandleGatedCheckout(
-      post("/checkout/strainchain_farm", {
-        email: "grower@farm.com",
+      post("/checkout/qron_launch", {
+        email: "buyer@brand.com",
         utm_source: "mail",
         visit_id: "v_1",
         checkout_key: "12345678-1234-4234-8234-123456789abc",
@@ -212,20 +237,32 @@ describe("tryHandleGatedCheckout — POST", () => {
     const body = new URLSearchParams(String(init.body));
     expect(body.get("mode")).toBe("subscription");
     expect(body.get("line_items[0][price]")).toBe(
-      planById("strainchain_farm")!.stripe_price_id
+      planById("qron_launch")!.stripe_price_id
     );
-    expect(body.get("customer_email")).toBe("grower@farm.com");
-    expect(body.get("metadata[plan]")).toBe("strainchain_farm");
+    expect(body.get("customer_email")).toBe("buyer@brand.com");
+    expect(body.get("metadata[plan]")).toBe("qron_launch");
     expect(body.get("metadata[checkout_gate]")).toBe("confirm_post");
-    expect(body.get("subscription_data[metadata][plan]")).toBe(
-      "strainchain_farm"
-    );
+    expect(body.get("subscription_data[metadata][plan]")).toBe("qron_launch");
     expect(body.get("metadata[utm_source]")).toBe("mail");
     expect(body.get("client_reference_id")).toBe("v_1");
     expect(body.get("after_expiration[recovery][enabled]")).toBe("true");
     expect(fetchImpl.mock.calls[0]![1]?.headers).toMatchObject({
       "Idempotency-Key": "12345678-1234-4234-8234-123456789abc",
     });
+  });
+
+  it("refuses an internal farm POST without calling Stripe", async () => {
+    const fetchImpl = stripeOk();
+    const res = await tryHandleGatedCheckout(
+      post("/checkout/strainchain_farm", {
+        email: "grower@farm.com",
+        checkout_key: "12345678-1234-4234-8234-123456789abc",
+      }),
+      { STRIPE_SECRET_KEY: "sk_test_x" },
+      { fetchImpl }
+    );
+    expect(res!.status).toBe(404);
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it("reuses the form idempotency key after a Stripe network failure", async () => {

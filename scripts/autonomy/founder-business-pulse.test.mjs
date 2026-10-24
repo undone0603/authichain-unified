@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { findOfferDrift } from "./founder-business-pulse.mjs";
-import { PLANS } from "../../src/lib/plans.ts";
+import { PLANS, PLAN_ALIASES } from "../../src/lib/plans.ts";
 
 // The bug this guards against: the pulse only checked that each offer ID
 // appeared in plans.ts, so founder-business.json could advertise $19 while
@@ -62,5 +62,16 @@ test("the committed founder-business.json matches the real PLANS", () => {
   const manifest = JSON.parse(
     readFileSync(new URL("../../.github/founder-business.json", import.meta.url), "utf8")
   );
-  assert.deepEqual(findOfferDrift(manifest.offers, PLANS), []);
+  assert.deepEqual(findOfferDrift(manifest.offers, PLANS, PLAN_ALIASES), []);
+});
+
+test("a manifest alias matches the catalogue price", () => {
+  assert.deepEqual(
+    findOfferDrift(
+      [offer({ id: "musa_claim_file", checkout: "/checkout/musa_claim_file", price_usd: 299 })],
+      [...plans, { id: "made_in_usa_claim_file", price: 299, stripe_mode: "payment" }],
+      { musa_claim_file: "made_in_usa_claim_file" }
+    ),
+    []
+  );
 });

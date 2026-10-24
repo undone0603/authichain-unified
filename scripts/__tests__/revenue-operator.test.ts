@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { sealStripeApiPayload } from "../../src/lib/economic-authority";
 import {
   checkFarmRails,
   classifyRevenue,
@@ -22,226 +23,167 @@ function snap(partial: Partial<RevenueSnapshot>): RevenueSnapshot {
   };
 }
 
+function fresh(partial: {
+  charges?: Record<string, unknown>[];
+  subscriptions?: Record<string, unknown>[];
+  payouts?: Record<string, unknown>[];
+}, fetchedAt = new Date().toISOString()) {
+  return sealStripeApiPayload(
+    {
+      charges: (partial.charges ?? []).map(row => ({
+        object: "charge",
+        livemode: true,
+        ...row,
+        customer_email: row.customer_email ?? row.email,
+      })),
+      subscriptions: (partial.subscriptions ?? []).map(row => ({
+        object: "subscription",
+        livemode: true,
+        ...row,
+        customer_email: row.customer_email ?? row.customerEmail,
+      })),
+      payouts: (partial.payouts ?? []).map(row => ({
+        object: "payout",
+        livemode: true,
+        ...row,
+      })),
+    },
+    fetchedAt
+  );
+}
+
 describe("classifyRevenue", () => {
-  it("does not treat an empty livemode account as revenue", () => {
-    expect(classifyRevenue(snap({}), founders).qualifying).toBe(false);
+  it("does not treat an unsealed snapshot as revenue", () => {
+    const verdict = classifyRevenue(snap({}), founders);
+    expect(verdict.qualifying).toBe(false);
+    expect(verdict.status).toBe("REVENUE_UNVERIFIED");
   });
 
-  it("does not count the founder $10 charge as a first sale", () => {
+  it("does not infer livemode from a wrapper flag", () => {
     const verdict = classifyRevenue(
-      snap({
-        charges: [
-          {
-            id: "ch_10",
-            amount: 1000,
-            paid: true,
-            email: "undone.k@gmail.com",
-          },
-        ],
-      }),
+      { livemode: true, charges: [{ id: "ch_wrap", amount: 100, paid: true, email: "ops@example.com" }] },
       founders
     );
+    expect(verdict.status).toBe("REVENUE_UNVERIFIED");
     expect(verdict.qualifying).toBe(false);
   });
 
-  it("counts a paid stranger charge as a first sale", () => {
+  it("rejects CRM, simulation, and freedom-ledger objects", () => {
+    for (const input of [
+      { deals: [{ amount: 299 }] },
+      { simulation_cash_usd: 4833 },
+      { entries: [{ status: "autonomous", revenue_impact_usd: 299 }] },
+    ]) {
+      expect(classifyRevenue(input, founders).status).toBe("REVENUE_UNVERIFIED");
+    }
+  });
+
+  it("marks a stale sealed pull as stale", () => {
     const verdict = classifyRevenue(
-      snap({
-        charges: [
-          {
-            id: "ch_farm",
-            amount: 14900,
-            paid: true,
-            email: "ops@example.com",
-          },
-        ],
+      fresh(
+        { charges: [{ id: "ch_old", amount: 29900, paid: true, email: "ops@example.com" }] },
+        "2020-01-01T00:00:00.000Z"
+      ),
+      founders
+    );
+    expect(verdict.status).toBe("REVENUE_DATA_STALE");
+    expect(verdict.qualifying).toBe(false);
+  });
+
+  it("counts a fresh livemode stranger charge", () => {
+    const verdict = classifyRevenue(
+      fresh({
+        charges: [{ id: "ch_farm", amount: 14900, paid: true, email: "ops@example.com" }],
       }),
       founders
     );
+    expect(verdict.status).toBe("VERIFIED_REVENUE");
     expect(verdict.qualifying).toBe(true);
     expect(verdict.reason).toContain("ch_farm");
   });
 
-  it("does not count a founder-only subscription as a first sale", () => {
+  it("does not count a test-mode charge", () => {
     const verdict = classifyRevenue(
-      snap({
-        subscriptions: [
-          {
-            id: "sub_founder",
-            status: "active",
-            customerEmail: "undone.k@gmail.com",
-          },
-        ],
+      fresh({
+        charges: [{ id: "ch_test", amount: 14900, paid: true, email: "ops@example.com", livemode: false }],
       }),
       founders
     );
-    expect(verdict.qualifying).toBe(false);
+    expect(verdict.status).toBe("NO_QUALIFYING_REVENUE");
   });
 
-  it("counts an active subscription whose email is not a founder", () => {
-    const verdict = classifyRevenue(
-      snap({
-        subscriptions: [
-          {
-            id: "sub_farm",
-            status: "active",
-            customerEmail: "ops@example.com",
-          },
-        ],
-      }),
-      founders
-    );
-    expect(verdict.qualifying).toBe(true);
-    expect(verdict.reason).toContain("sub_farm");
-  });
-
-  it("does not count a subscription with no email", () => {
-    const verdict = classifyRevenue(
-      snap({
-        subscriptions: [
-          { id: "sub_anon", status: "active", customerEmail: null },
-        ],
-      }),
-      founders
-    );
-    expect(verdict.qualifying).toBe(false);
-    expect(verdict.reason).toContain("no customer email");
-  });
-
-  it("still counts a stranger sub when an anonymous sub is also present", () => {
-    const verdict = classifyRevenue(
-      snap({
-        subscriptions: [
-          { id: "sub_anon", status: "active", customerEmail: null },
-          {
-            id: "sub_farm",
-            status: "active",
-            customerEmail: "ops@example.com",
-          },
-        ],
-      }),
-      founders
-    );
-    expect(verdict.qualifying).toBe(true);
-    expect(verdict.reason).toContain("sub_farm");
-  });
-
-  it("counts a trialing stranger subscription", () => {
-    const verdict = classifyRevenue(
-      snap({
-        subscriptions: [
-          {
-            id: "sub_trial",
-            status: "trialing",
-            customerEmail: "ops@example.com",
-          },
-        ],
-      }),
-      founders
-    );
-    expect(verdict.qualifying).toBe(true);
-    expect(verdict.reason).toContain("sub_trial");
-  });
-
-  it("counts past_due stranger subs and ignores cancelled ones", () => {
+  it("does not count a founder charge or a founder subscription", () => {
     expect(
       classifyRevenue(
-        snap({
-          subscriptions: [
-            {
-              id: "sub_due",
-              status: "past_due",
-              customerEmail: "ops@example.com",
-            },
-          ],
-        }),
+        fresh({ charges: [{ id: "ch_10", amount: 1000, paid: true, email: "undone.k@gmail.com" }] }),
         founders
-      ).qualifying
-    ).toBe(true);
+      ).status
+    ).toBe("NO_QUALIFYING_REVENUE");
     expect(
       classifyRevenue(
-        snap({
-          subscriptions: [
-            {
-              id: "sub_dead",
-              status: "canceled",
-              customerEmail: "ops@example.com",
-            },
-          ],
+        fresh({
+          subscriptions: [{ id: "sub_case", status: "active", customerEmail: "  Undone.K@gmail.com " }],
         }),
         founders
       ).qualifying
     ).toBe(false);
   });
 
-  it("counts a payout only when a non-founder charge was paid", () => {
-    const blocked = classifyRevenue(
-      snap({
-        payouts: [{ id: "po_self", amount: 931, status: "pending" }],
-      }),
-      founders
-    );
-    expect(blocked.qualifying).toBe(false);
-
-    const ok = classifyRevenue(
-      snap({
-        payouts: [{ id: "po_real", amount: 14900, status: "paid" }],
-        charges: [
-          {
-            id: "ch_farm",
-            amount: 14900,
-            paid: true,
-            email: "ops@example.com",
-          },
-        ],
-      }),
-      founders
-    );
-    expect(ok.qualifying).toBe(true);
+  it("counts a fresh livemode stranger subscription and ignores canceled or anonymous", () => {
+    expect(
+      classifyRevenue(
+        fresh({ subscriptions: [{ id: "sub_farm", status: "active", customerEmail: "ops@example.com" }] }),
+        founders
+      ).status
+    ).toBe("VERIFIED_REVENUE");
+    expect(
+      classifyRevenue(
+        fresh({ subscriptions: [{ id: "sub_trial", status: "trialing", customerEmail: "ops@example.com" }] }),
+        founders
+      ).qualifying
+    ).toBe(true);
+    expect(
+      classifyRevenue(
+        fresh({ subscriptions: [{ id: "sub_due", status: "past_due", customerEmail: "ops@example.com" }] }),
+        founders
+      ).qualifying
+    ).toBe(true);
+    expect(
+      classifyRevenue(
+        fresh({ subscriptions: [{ id: "sub_dead", status: "canceled", customerEmail: "ops@example.com" }] }),
+        founders
+      ).status
+    ).toBe("NO_QUALIFYING_REVENUE");
+    expect(
+      classifyRevenue(
+        fresh({ subscriptions: [{ id: "sub_anon", status: "active", customerEmail: null }] }),
+        founders
+      ).qualifying
+    ).toBe(false);
   });
 
-  it("does not treat a paid charge with no email as a stranger first sale", () => {
-    const verdict = classifyRevenue(
-      snap({
-        charges: [{ id: "ch_blank", amount: 14900, paid: true, email: null }],
-      }),
-      founders
-    );
-    expect(verdict.qualifying).toBe(false);
-  });
-
-  it("does not unlock a payout with an unpaid stranger charge", () => {
-    const verdict = classifyRevenue(
-      snap({
-        payouts: [{ id: "po_open", amount: 14900, status: "pending" }],
-        charges: [
-          {
-            id: "ch_open",
-            amount: 14900,
-            paid: false,
-            email: "ops@example.com",
-          },
-        ],
-      }),
-      founders
-    );
-    expect(verdict.qualifying).toBe(false);
-  });
-
-  it("treats founder email case and whitespace as founder", () => {
-    const verdict = classifyRevenue(
-      snap({
-        subscriptions: [
-          {
-            id: "sub_case",
-            status: "active",
-            customerEmail: "  Undone.K@gmail.com ",
-          },
-        ],
-      }),
-      founders
-    );
-    expect(verdict.qualifying).toBe(false);
+  it("does not let a payout or an unpaid charge qualify on its own", () => {
+    expect(
+      classifyRevenue(
+        fresh({ payouts: [{ id: "po_self", amount: 931, status: "pending" }] }),
+        founders
+      ).qualifying
+    ).toBe(false);
+    expect(
+      classifyRevenue(
+        fresh({
+          payouts: [{ id: "po_open", amount: 14900, status: "pending" }],
+          charges: [{ id: "ch_open", amount: 14900, paid: false, email: "ops@example.com" }],
+        }),
+        founders
+      ).status
+    ).toBe("NO_QUALIFYING_REVENUE");
+    expect(
+      classifyRevenue(
+        fresh({ charges: [{ id: "ch_blank", amount: 14900, paid: true, email: null }] }),
+        founders
+      ).qualifying
+    ).toBe(false);
   });
 });
 
@@ -327,7 +269,7 @@ describe("decideOperatorAction", () => {
   it("returns qualifying for a stranger sub and does not send", () => {
     const decision = decideOperatorAction({
       rails: railsOk,
-      snapshot: snap({
+      snapshot: fresh({
         subscriptions: [
           {
             id: "sub_farm",

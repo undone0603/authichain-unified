@@ -1,6 +1,6 @@
 # Riese & Müller: manual outreach record
 
-Manual outreach playbook, one prospect. **Status: drafted, not sent.** Waiting for owner approval.
+Manual outreach playbook, one prospect. **Status: sent 2026-10-16.** One message to `presse@r-m.de`. No reply yet.
 
 ## Contact
 
@@ -90,3 +90,6 @@ Best regards,
 | Date       | Event                                                                                                                                                      |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-09-25 | Contact found on r-m.de/de/presse; passport draft and email written; Gmail draft created in authichain@gmail.com (draft id r3667980476124479111); not sent |
+| 2026-10-16 | Owner approved and allowed the role inbox. `classifySend` allowed `presse@r-m.de` as `published_contact`. Sent one German note. Gmail message id `1a14780473ed4b96`. The mailbox sent it as Z K `<undone.k@gmail.com>`, not the `z@authichain.com` alias. The private artifact link was left out. The ask is the public Starter checkout, 29 USD. |
+| 2026-10-17 | Checked the thread. One message only. No reply from r-m.de. No mailer-daemon or bounce. No second send. |
+| 2026-10-17 | Rechecked. Still one sent message. Gmail send-as has only `undone.k@gmail.com`, so `z@authichain.com` cannot be the From address until that alias is verified. Stripe still has 5 livemode charges, 1 paid founder, 0 paid non-founder. Newest livemode charge is 2026-09-20T04:32:42Z. |

@@ -138,8 +138,8 @@ describe("tryHandleApiCheckoutEmailGate", () => {
       ["/api/checkout/dpp?visit_id=dpp_anon", "https://authichain.com/checkout/dpp_readiness?visit_id=dpp_anon"],
       ["/api/checkout/dpp?email=ops%40brand.com", "https://authichain.com/checkout/dpp_readiness?email=ops%40brand.com"],
       ["/api/checkout/plan/strainchain_passport", "https://authichain.com/checkout/strainchain_passport"],
-      ["/api/checkout/plan/strainchain_farm?email=ops%40brand.com&utm_source=mail", "https://authichain.com/checkout/strainchain_farm?email=ops%40brand.com&utm_source=mail"],
-      ["/api/checkout/plan/theater_3", "https://authichain.com/checkout/theater_3"],
+      ["/api/checkout/plan/strainchain_farm?email=ops%40brand.com&utm_source=mail", "https://authichain.com/checkout?need_email=1"],
+      ["/api/checkout/plan/theater_3", "https://authichain.com/checkout?need_email=1"],
       ["/api/checkout/plan/nope", "https://authichain.com/checkout?need_email=1"],
     ];
     for (const [path, loc] of cases) {

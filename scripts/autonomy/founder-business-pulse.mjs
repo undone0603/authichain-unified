@@ -5,6 +5,8 @@
  * send mail, or change autonomy gates.
  */
 import { readFileSync, existsSync, appendFileSync } from "node:fs";
+import { buildSubstrate, findSubstrateErrors } from "./substrate.mjs";
+import { assess } from "./orchestrate.mjs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -17,11 +19,14 @@ const CADENCE_TO_STRIPE_MODE = { monthly: "subscription", one_time: "payment" };
  * no drift. The manifest repeats price_usd and cadence for readability, so
  * any disagreement means it has become a second, wrong price catalogue.
  */
-export function findOfferDrift(offers, plans) {
+export function findOfferDrift(offers, plans, aliases = {}) {
   const byId = new Map(plans.map((plan) => [plan.id, plan]));
   const errors = [];
   for (const offer of offers) {
-    const plan = byId.get(offer.id);
+    const catalogueId = Object.prototype.hasOwnProperty.call(aliases, offer.id)
+      ? aliases[offer.id]
+      : offer.id;
+    const plan = byId.get(catalogueId);
     if (!plan) {
       errors.push("Offer missing from src/lib/plans.ts: " + offer.id);
       continue;
@@ -66,7 +71,9 @@ async function main() {
   const manifest = JSON.parse(readFileSync(resolve(root, paths[0]), "utf8"));
   // plans.ts has no imports, so Node 22's type stripping loads the real PLANS
   // array: no regex over source text.
-  const { PLANS } = await import(pathToFileURL(resolve(root, paths[1])).href);
+  const { PLANS, PLAN_ALIASES, PUBLIC_PLAN_IDS } = await import(
+    pathToFileURL(resolve(root, paths[1])).href
+  );
   const autonomy = JSON.parse(readFileSync(resolve(root, paths[2]), "utf8"));
 
   if (manifest.mode !== "founder-only") {
@@ -74,19 +81,22 @@ async function main() {
     process.exit(1);
   }
 
-  const driftErrors = findOfferDrift(manifest.offers || [], PLANS);
+  const driftErrors = findOfferDrift(manifest.offers || [], PLANS, PLAN_ALIASES);
   if (driftErrors.length > 0) {
     for (const message of driftErrors) console.error("::error::" + message);
     process.exit(1);
   }
 
   const gates = new Set(manifest.founder_only_gates || []);
+  if (gates.has("merge_security_revenue_schema_or_charter_changes")) {
+    console.error("::error::Dead merge gate must not be active decision logic");
+    process.exit(1);
+  }
   for (const required of [
     "pricing_or_new_sku_changes",
     "production_schema_migrations",
     "secrets_rotation",
-    "dns_or_cloudflare_access",
-    "merge_security_revenue_schema_or_charter_changes"
+    "dns_or_cloudflare_access"
   ]) {
     if (!gates.has(required)) {
       console.error("::error::Founder gate missing: " + required);
@@ -96,6 +106,42 @@ async function main() {
 
   if (autonomy.owner !== manifest.owner) {
     console.error("::error::Business owner and autonomy owner disagree.");
+    process.exit(1);
+  }
+
+  const substrateInput = {
+    plans: PLANS,
+    publicPlanIds: PUBLIC_PLAN_IDS,
+    aliases: PLAN_ALIASES,
+    founderBusiness: manifest,
+    autonomy,
+  };
+  const substrateErrors = findSubstrateErrors(buildSubstrate(substrateInput), substrateInput);
+  if (substrateErrors.length > 0) {
+    for (const message of substrateErrors) console.error("::error::" + message);
+    process.exit(1);
+  }
+
+  const goal = JSON.parse(readFileSync(resolve(root, "docs/operations/best-case-goal.json"), "utf8"));
+  const ledger = JSON.parse(readFileSync(resolve(root, "docs/operations/founder-freedom-ledger.json"), "utf8"));
+  const today = new Date().toISOString().slice(0, 10);
+  const economy = assess(
+    {
+      plans: PLANS,
+      publicPlanIds: PUBLIC_PLAN_IDS,
+      aliases: PLAN_ALIASES,
+      founderBusiness: manifest,
+      autonomy,
+      goal,
+      ledger,
+    },
+    { qualifying: false, dppRetained: false, now: today, mode: "boring", snapshot: false }
+  );
+  if (!economy.system_reached || economy.ledger_errors.length || economy.substrate_errors.length) {
+    for (const message of [...economy.substrate_errors, ...economy.ledger_errors]) {
+      console.error("::error::" + message);
+    }
+    console.error("::error::Orchestrator system goal is not reached");
     process.exit(1);
   }
 
@@ -111,7 +157,11 @@ async function main() {
     "## Founder-only business pulse",
     "",
     "- Mode: **" + manifest.mode + "**",
-    "- Offers matching src/lib/plans.ts (id, price, cadence): **" + manifest.offers.length + "**",
+    "- Offers matching src/lib/plans.ts (id, price, cadence, alias allowed): **" + manifest.offers.length + "**",
+    "- Substrate: projection of " + substrateInput.plans.length + " catalogue rows. Qualifying revenue is not stored.",
+    "- Best-case goal: " + (economy.reached ? "REACHED" : "OPEN at " + economy.economic.filter(item => !item.ok).map(item => item.id).join(", ")),
+    "- Next action: " + economy.next_action.id + " (" + economy.next_action.interrupt + ", " + (economy.next_action.executable ? "ready, sends_mail " + Boolean(economy.next_action.sends_mail) : "blocked on " + economy.next_action.blocked_on) + ")",
+    "- Founder freedom: " + ledger.entries.length + " autonomous rows, measured minute rows " + ledger.entries.filter(entry => entry.saved_min_per_week != null).length,
     "- Autonomous loop actions: **" + Object.values(manifest.loops).flat().length + "**",
     "- Founder-only gates: **" + manifest.founder_only_gates.length + "**",
     "",

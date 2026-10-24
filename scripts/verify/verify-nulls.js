@@ -1,16 +1,15 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
-require('dotenv').config();
+import postgres from 'postgres';
+import 'dotenv/config';
 
 const sql = postgres(process.env.DATABASE_URL || '');
 
 async function checkNullability() {
   try {
     const brands = await sql`SELECT column_name, is_nullable FROM information_schema.columns WHERE table_name = 'brands' AND column_name = 'user_id'`;
-    console.log('brands user_id nullable:', brands[0].is_nullable);
+    console.log('brands user_id nullable:', brands[0]?.is_nullable);
 
     const fee = await sql`SELECT column_name, is_nullable FROM information_schema.columns WHERE table_name = 'fee_flows' AND column_name = 'user_id'`;
-    console.log('fee_flows user_id nullable:', fee[0].is_nullable);
+    console.log('fee_flows user_id nullable:', fee[0]?.is_nullable);
   } catch (err) {
     console.error('Failed:', err.message);
   } finally {

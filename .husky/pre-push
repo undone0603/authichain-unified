@@ -1,3 +1,10 @@
 #!/usr/bin/env sh
 # Whole index: catch ADS / colon paths even if they were committed earlier.
 bash scripts/check-windows-paths.sh
+
+# Ensure lint checkpoint exists before pushing
+if [ ! -f ".turbo/lint-checkpoint.json" ]; then
+  echo "pre-push: No lint checkpoint found at .turbo/lint-checkpoint.json." >&2
+  echo "  Please run 'pnpm run lint:checkpoint' before pushing." >&2
+  exit 1
+fi

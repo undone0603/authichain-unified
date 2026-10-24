@@ -251,7 +251,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       brand: "strainchain",
       title: "Pricing — StrainChain",
       description:
-        "Passport ($49) and Farm Plan ($149/mo) use live Stripe checkout from the published catalogue.",
+        "Passport ($49) uses live Stripe checkout from the published catalogue. Farm is not a public offer.",
       canonical: "https://strainchain.io/pricing",
       themeColor: "#15803d",
       primary: passport
@@ -270,7 +270,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         "Genetics passport SKUs check out via live Stripe — figures from the catalogue only.",
       secondary: { href: "/onboard", label: "Request demo", primary: false },
       plansNote:
-        "Passport is $49 on the published Payment Link. Farm Plan ($149/mo) is the recurring plan, on its Payment Link or email-gated checkout on authichain.com.",
+        "Passport is $49 on the published Payment Link. Farm is not a public offer.",
       ctaTitle: passport ? passport.cta : "Request demo",
       ctaLede: passport
         ? "$49 one-time per cultivar — live Stripe checkout."

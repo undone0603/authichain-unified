@@ -20,7 +20,7 @@ import {
   dppSmokeRequestAuthorized,
   isDppSmokePromo,
 } from "../../../src/lib/dpp-loop";
-import { gatedConfirmUrl } from "../../../src/lib/checkout-gate";
+import { gatedConfirmUrl, planFromGatedPath } from "../../../src/lib/checkout-gate";
 
 export const DPP_PRICE_ID = "price_1TwmD8GqTruSqV8TpAF8dfyA";
 export const APP_ORIGIN = "https://authichain.govchain.us";
@@ -204,8 +204,9 @@ export function tryHandleApiCheckoutEmailGate(
     return null;
   }
   const planId = planIdFromCheckoutAction(url.pathname);
-  if (!planId) {
+  const plan = planId ? planFromGatedPath(`/checkout/${planId}`) : undefined;
+  if (!plan) {
     return checkoutRedirectResponse(checkoutNeedEmailRedirect("plan"));
   }
-  return checkoutRedirectResponse(gatedConfirmUrl(planId, url.searchParams));
+  return checkoutRedirectResponse(gatedConfirmUrl(plan.id, url.searchParams));
 }

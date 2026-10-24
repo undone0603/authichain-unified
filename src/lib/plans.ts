@@ -170,7 +170,7 @@ export const PLANS: Plan[] = [
     description: "One-time EU DPP readiness audit with self-serve activation",
     generations: 50,
     stripe_price_id: "price_1TwmD8GqTruSqV8TpAF8dfyA",
-    stripe_payment_link: "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c",
+    stripe_payment_link: "https://buy.stripe.com/cNi4gzgDTf7McKCePO1ND44",
     stripe_mode: "payment",
     tier: "pro",
     features: [
@@ -277,6 +277,26 @@ export const PUBLIC_PLAN_IDS = [
   "made_in_usa_audit_bundle",
 ] as const;
 
+/**
+ * Route and manifest slugs that mean a catalogue plan. Not a second price list.
+ * `/checkout/musa_claim_file` is the live Made in USA path; the charge id is
+ * `made_in_usa_claim_file`.
+ */
+export const PLAN_ALIASES: Record<string, PlanId> = {
+  dpp: "dpp_readiness",
+  passport: "strainchain_passport",
+  farm: "strainchain_farm",
+  musa_claim_file: "made_in_usa_claim_file",
+  musa_audit_bundle: "made_in_usa_audit_bundle",
+};
+
+export function resolvePlanId(id: string): PlanId | undefined {
+  const key = id.trim().toLowerCase();
+  const aliased = PLAN_ALIASES[key];
+  if (aliased) return aliased;
+  return PLANS.some(plan => plan.id === key) ? (key as PlanId) : undefined;
+}
+
 export function isPurchasable(plan: Plan): boolean {
   return (
     plan.price === 0 ||
@@ -285,15 +305,22 @@ export function isPurchasable(plan: Plan): boolean {
 }
 
 export function listedPlans(brand: "qron" | "strainchain" = "qron"): Plan[] {
+  const pub = new Set<string>(PUBLIC_PLAN_IDS);
   return PLANS.filter(
-    p => (p.brand ?? "qron") === brand && isPurchasable(p) && p.listed !== false
+    p =>
+      pub.has(p.id) &&
+      (p.brand ?? "qron") === brand &&
+      isPurchasable(p) &&
+      p.listed !== false
   );
 }
 
 export const DPP_OFFER_KEY = "dpp_readiness_2026";
 
-export function planById(id: PlanId): Plan | undefined {
-  return PLANS.find(p => p.id === id);
+export function planById(id: PlanId | string): Plan | undefined {
+  const resolved = resolvePlanId(id);
+  if (!resolved) return undefined;
+  return PLANS.find(p => p.id === resolved);
 }
 
 export const GATED_CHECKOUT_ORIGIN = "https://authichain.com";
@@ -313,7 +340,7 @@ export function planStripePaymentLink(id: PlanId): string | undefined {
   return planById(id)?.stripe_payment_link;
 }
 
-export function planUsd(id: PlanId): number {
+export function planUsd(id: PlanId | string): number {
   const plan = planById(id);
   if (!plan) throw new Error(`plans.ts has no ${id}`);
   return plan.price;

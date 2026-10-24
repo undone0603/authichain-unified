@@ -937,11 +937,6 @@ function onboardPayNowHtml(): string {
     }) +
     "\n" +
     catalogPaymentLinkHtml({
-      planId: "strainchain_farm",
-      label: "StrainChain Farm Plan — $149/mo",
-    }) +
-    "\n" +
-    catalogPaymentLinkHtml({
       planId: "dpp_readiness",
       label: "EU DPP Readiness Audit — $299",
     }) +

@@ -266,6 +266,12 @@ async def post_dm(lead_name: str, message: str) -> bool:
         f"and send this DM: {message}"
     )
 
+    from agentz.core.auto_policy import consult_agentz_policy
+
+    if not consult_agentz_policy(Mode.AUTO.value).get("allowed"):
+        logger.error("Refusing DM for %s: AgentZ auto is frozen", lead_name)
+        return False
+
     ctx = ExecutionContext(workflow_id="outreach_post", mode=Mode.AUTO)
 
     try:

@@ -28,7 +28,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--mode",
-        default=os.getenv("AGENTZ_MODE", "auto"),
+        default=os.getenv("AGENTZ_MODE", "confirm"),
         choices=["dry-run", "confirm", "auto"],
         help="Execution mode: dry-run (no side-effects), confirm, or auto.",
     )
@@ -45,7 +45,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     mode = parse_mode(args.mode)
-    
+    from agentz.core.auto_policy import consult_agentz_policy
+
+    decision = consult_agentz_policy(mode.value)
+    if not decision.get("allowed"):
+        print(decision.get("reason") or "AgentZ mode refused", file=sys.stderr)
+        return 2
+
     params = {}
     if args.params:
         try:

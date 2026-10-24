@@ -60,6 +60,13 @@ export const CANONICAL_RULESETS: RulesetVersion[] = [
   },
 ];
 
+export class UnknownComplianceRulesetError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UnknownComplianceRulesetError";
+  }
+}
+
 export function getRuleset(idOrJurisdiction: string): RulesetVersion {
   const found = CANONICAL_RULESETS.find(
     (r) => r.id === idOrJurisdiction || r.jurisdiction === idOrJurisdiction

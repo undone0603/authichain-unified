@@ -1,8 +1,6 @@
 # GS1 Conformant Resolver: status
 
-**Updated:** 2026-09-30 · **Status:** resolution behaviour implemented and
-tested locally against the suite's checks. **Not yet run against GS1's hosted
-test suite, so no conformance is claimed anywhere.**
+**Updated:** 2026-10-21 · **Status:** scheduled hosted-suite check (gs1-conformance-pulse), 26/26 passed, 0 failed, 0 warned. Run: https://ref.gs1.org/test-suites/resolver/. No conformance claim is made here beyond this count -- see BANNED_COPY in workers/authichain-com/src/docs-pages.ts for what that would require.
 
 ## Why this matters
 

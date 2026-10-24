@@ -33,8 +33,7 @@ const { runGenerateProposal, runSendContract } = await import("./closer.js");
 const { invokeLLM } = await import("../_core/llm.js");
 const { sendEmail } = await import("../email-service.js");
 const { getStripe } = await import("../stripe-service.js");
-const { createSystemNotification, getAllAdminIds, logActivity } =
-  await import("../db.js");
+const { createSystemNotification, logActivity } = await import("../db.js");
 
 function makeTask(payload: Record<string, unknown>) {
   return { id: "task-1", missionId: "mission-1", payload } as any;
@@ -54,19 +53,12 @@ beforeEach(() => {
   });
 });
 
-describe("runGenerateProposal: Stripe checkout failure is no longer silent", () => {
-  it("notifies every admin and logs the failure when checkout session creation throws, but still sends the proposal email", async () => {
+describe("runGenerateProposal", () => {
+  it("drafts a catalogue proposal and does not charge or send", async () => {
     mockLlmJson({
       subject: "Proposal: AuthiChain Pilot",
       body: "Here is our proposal.",
     });
-    (getStripe as any).mockReturnValue({
-      checkout: {
-        sessions: {
-          create: vi.fn().mockRejectedValue(new Error("Stripe API down")),
-        },
-      },
-    });
 
     await runGenerateProposal(
       makeTask({
@@ -76,93 +68,29 @@ describe("runGenerateProposal: Stripe checkout failure is no longer silent", () 
       })
     );
 
-    // Email still goes out even without a payment link -- non-fatal by design.
-    expect(sendEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ to: "lead@example.com" })
-    );
-
-    // But the failure is no longer swallowed silently.
-    expect(getAllAdminIds).toHaveBeenCalled();
-    expect(createSystemNotification).toHaveBeenCalledTimes(2); // one per admin id
-    expect(createSystemNotification).toHaveBeenCalledWith(
-      1,
-      expect.stringContaining("Payment link failed"),
-      expect.stringContaining("Stripe API down"),
-      "alert"
-    );
+    expect(getStripe).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(createSystemNotification).not.toHaveBeenCalled();
+    const prompt = (invokeLLM as any).mock.calls[0][0].messages[0].content as string;
+    expect(prompt).toContain("dpp_readiness");
+    expect(prompt).not.toContain("$5,000");
+    expect(prompt).not.toContain("$25,000");
     expect(logActivity).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: "checkout_link_creation_failed",
+        action: "proposal_drafted",
         details: expect.objectContaining({
-          context: "proposal",
-          error: "Stripe API down",
+          sendStatus: "refused",
+          reason: "no inbox named this turn",
+          hasPaymentLink: false,
         }),
       })
     );
   });
-
-  it("does not notify admins when checkout session creation succeeds", async () => {
-    mockLlmJson({ subject: "Proposal", body: "Body" });
-    (getStripe as any).mockReturnValue({
-      checkout: {
-        sessions: {
-          create: vi
-            .fn()
-            .mockResolvedValue({ url: "https://pay.example/1", id: "cs_1" }),
-        },
-      },
-    });
-
-    await runGenerateProposal(
-      makeTask({
-        leadEmail: "lead@example.com",
-        leadOrg: "Acme",
-        segment: "RETAIL",
-      })
-    );
-
-    expect(createSystemNotification).not.toHaveBeenCalled();
-  });
 });
 
-describe("runSendContract: Stripe checkout failure is no longer silent", () => {
-  it("notifies every admin and logs the failure when checkout session creation throws, but still sends the contract email", async () => {
+describe("runSendContract", () => {
+  it("drafts a catalogue agreement and does not charge or send", async () => {
     mockLlmJson({ subject: "AuthiChain Service Agreement", body: "Terms..." });
-    (getStripe as any).mockReturnValue({
-      checkout: {
-        sessions: {
-          create: vi.fn().mockRejectedValue(new Error("network timeout")),
-        },
-      },
-    });
-
-    await runSendContract(
-      makeTask({
-        leadEmail: "lead@example.com",
-        leadOrg: "Acme",
-        segment: "GOV",
-      })
-    );
-
-    expect(sendEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ to: "lead@example.com" })
-    );
-    expect(createSystemNotification).toHaveBeenCalledWith(
-      1,
-      expect.stringContaining("Payment link failed"),
-      expect.stringContaining("network timeout"),
-      "alert"
-    );
-    expect(logActivity).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: "checkout_link_creation_failed",
-        details: expect.objectContaining({ context: "contract" }),
-      })
-    );
-  });
-
-  it("reuses an existing payment link from the payload without calling Stripe again", async () => {
-    mockLlmJson({ subject: "Agreement", body: "Terms" });
 
     await runSendContract(
       makeTask({
@@ -174,6 +102,19 @@ describe("runSendContract: Stripe checkout failure is no longer silent", () => {
     );
 
     expect(getStripe).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
     expect(createSystemNotification).not.toHaveBeenCalled();
+    const prompt = (invokeLLM as any).mock.calls[0][0].messages[0].content as string;
+    expect(prompt).toContain("/checkout/dpp_readiness");
+    expect(prompt).not.toContain("$25,000");
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "contract_drafted",
+        details: expect.objectContaining({
+          sendStatus: "refused",
+          hasPaymentLink: false,
+        }),
+      })
+    );
   });
 });

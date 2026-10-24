@@ -7,12 +7,13 @@ import { getBrandIdFromRequest } from "./brand-billing";
 import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
 import { checkoutReturnOrigin } from "./checkout-gate";
+import { resolveCommerce } from "./economic-authority";
 import { PLANS, type PlanId } from "./plans";
 
 export type PlanCheckoutOk = { ok: true; url: string; planId: string };
 export type PlanCheckoutErr = {
   ok: false;
-  status: 400 | 500 | 303;
+  status: 400 | 404 | 500 | 303;
   error: string;
   detail?: string;
   url?: string;
@@ -54,6 +55,13 @@ export async function createPlanCheckoutSession(opts: {
       ok: false,
       status: 400,
       error: "Free plan does not require checkout",
+    };
+  }
+  if (!resolveCommerce(plan.id).publicly_sellable) {
+    return {
+      ok: false,
+      status: 404,
+      error: "Plan is not a public offer",
     };
   }
 

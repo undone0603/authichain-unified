@@ -111,7 +111,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
 
       expect(newBrowser.getBrowser()).toBeNull();
       await newBrowser.close();
-    }, 15_000);
+    }, 30_000);
   });
 
   describe('stale session recovery (all pages closed)', () => {

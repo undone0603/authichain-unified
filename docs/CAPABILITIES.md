@@ -68,7 +68,7 @@ A large automation layer invisible to repo code search. Key clusters:
 
 **GitHub Actions (the real cron layer — ~15 scheduled workflows):**
 
-- `autonomous-business-cycle.yml` — **14 daily jobs** hitting the CRON_SECRET-gated Vercel endpoints (pipeline 00:00, subscription-health 03:00, customer-health 05:00, automation 06:00, govchain 07:00, dunning 08:00, retention 09:00, trial-reminder 10:00, live-check 11:00, token-metrics 12:00, ecosystem-health 13:00; competitive-monitor Mondays; founder-payout 1st of month). **This is LIVE — the autonomous business cycle runs.**
+- `autonomous-business-cycle.yml` — the former 14-job daily scheduler was **retired on 2026-09-08**. The file is manual `workflow_dispatch` only. It is not a live daily cycle.
 - `outreach-trigger.yml` (every 4h) + `dpp-outreach-trigger.yml` (every 8h) → qron-outreach worker. **Both hit exhausted queues — no-ops burning minutes.**
 - `b2b-outreach.yml` (Mondays 14:00) → `scripts/b2b-cold-outreach.ts` (Apollo-enriched)
 - `gov-engine.yml` (6am) + gov-{ingest,score,mint,notify,proposals}.yml — gov procurement pipeline
@@ -77,11 +77,11 @@ A large automation layer invisible to repo code search. Key clusters:
 - `email-proposals.yml` (weekdays 15:00)
 - `agentz-orchestration.yml` (8am) → Phase 0 pings `https://claw.authichain.com/health` + `https://agentz.authichain.com/health` (architect dry-run via claw if a bearer secret exists); then qualify/funnel; POSTs `/api/agentz/webhook` (logging). Schedule is dry-run. See `docs/operations/AGENTZ_ORCHESTRATION.md`.
 
-**Supabase pg_cron (6 jobs — shadow scheduler):** `agentZ-growth-engine` (30m), `agentZ-ph-tracker` (30m), `strainchain-mi-blast` (00:05), `strainchain-day25` (09:00), `automation-orchestrator` (14:00 — the daily drip sender), `stripe-sync-worker` (EVERY MINUTE).
+**Supabase pg_cron on QRON-v2 (`nhdnkzhtadfkkluiulhs`), read 2026-10-06, eight active jobs:** `agentZ-growth-30min` (`*/30`, edge `agentZ-growth-engine`), `agentZ-ph-tracker-30min` (`*/30`), `ai-adapt-archive-pump` (`*/2`), `ai-adapt-archive-swh-refresh` (hourly at :07), `automation-orchestrator-daily` (14:00 UTC, edge `automation-orchestrator`), `strainchain-day25-upgrade` (09:00 UTC), `strainchain-mi-blast-daily` (00:05 UTC), `stripe-sync-worker` (every minute, edge `stripe-worker`). Each of those last runs succeeded the same day. The cron return text is `1 row` or `0 rows`, which is the SQL result count, not a mail receipt and not revenue.
 
 **Vercel native cron (`vercel.json`):** only `/api/cron/nurture-replies`. Everything else is GitHub-driven.
 
-## 6. AgentZ — 53 Python workflows (`agentz/workflows/registry.yaml`)
+## 6. AgentZ — 75 workflow ids (`agentz/workflows/registry.yaml`)
 
 Autonomous business-operations agent. Capabilities span gov grant proposals, DocuSign blitzes, HubSpot drip repair, LinkedIn/Reddit outreach, Stripe link generation, pilot deployments (Detroit/Michigan), SEO, content multiplication, RFP capture, executive reporting, the reinvestment flywheel, and social launches.
 
@@ -89,14 +89,14 @@ Autonomous business-operations agent. Capabilities span gov grant proposals, Doc
 
 ## 7. Money surface
 
-- **Stripe** acct `acct_1SXIyEGqTruSqV8T` ("Authichain+claude"): ~28 active payment links, 3 flagship subscription tiers (`src/app/pricing/page.tsx`, 5 buy-links live), 1 registered webhook path. **Zero successful charges ever** — every historical charge is a failed owner self-test. Constraint is traffic, not plumbing.
+- **Stripe** acct `acct_1SXIyEGqTruSqV8T` ("Authichain+claude"), read 2026-10-06: five livemode charges, zero subscriptions, one automatic payout of $9.31. The only succeeded charge is $10 on a founder email. Four founder charges failed ($49, $49, $29, $29). `classifyRevenue` is `NO_QUALIFYING_REVENUE`. A founder charge is not a customer.
 - **Revenue provisioning:** `checkout.session.completed` → find/create user by email → record revenue → welcome email. Verified working end-to-end.
-- **x402 agent pay (LIVE, not `not_configured`):** `GET https://authichain.com/api/x402/health` → 200 `ready` / `trustless`. PayTo / tokenomics EOA `0xaebf…e437` (owner-authorized treasury; not the `$QRON` holder `0x5db5…`, not the NFT deployer), Base `8453`, Circle USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`, **$0.05 / call**, PayAI facilitator reachable. `POST /api/x402` returns **402** with asset + EIP-712 extra when unpaid. Public docs: `https://authichain.com/x402`. Machine catalog: `GET /api/x402/catalog` and `/.well-known/x402.json` (prices copied from health). Tokenomics: `docs/strategy/AGENT_TOKENOMICS_x402.md`. Identity: `docs/strategy/WEB3_IDENTITY.md`. `$QRON` is not this rail. Do not rebind payTo away from the authorized treasury / facilitator. Live self-pay smokes already succeeded — do not treat another settle as required. // pragma: allowlist secret
+- **x402 agent pay:** the live `authichain.com` health body on 2026-10-06 is `ready: true` with `paidVerify.status` `registry_not_bound`. `payTo` is the treasury ending `6e6AA2`. That response does not yet include `settlementStatus`, `settled`, or `canonicalTreasury`. The working tree adds those fields and keeps settlement not ready until registry binding. `ready` means the facilitator and payTo are configured. It is not a settlement. Live catalogs on `authichain.com` and `strainchain.io` still publish `farmUsd: 149` and a Farm payment link; that production copy is behind this tree. `$QRON` `0xAebf…E437` is not payTo. Base `8453`, Circle USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`, **$0.05 / call**. // pragma: allowlist secret
 
 ## Cross-cutting risks (for a future ops pass)
 
 1. **Worker drift** — 11 live CF workers have no repo source; `qron-daily-ops` carries dead-but-embedded secrets. Source them into `workers/` or document as deliberate.
-2. **Shadow schedulers** — GitHub Actions + Supabase pg_cron + CF worker crons all fire independently; no single pane. The autonomous business cycle IS live daily.
-3. **AgentZ default-auto** — CLI executes side-effects by default; only 1/53 workflows gated. Consider flipping the CLI default to `confirm`.
-4. **Outreach** — 16% bounce rate, 0 replies ever, daily drip sends from `noreply@` with no reply-to (see `outreach-pipeline-audit` memory).
+2. **Shadow schedulers** — GitHub Actions and any Supabase `pg_cron` jobs still outside this repo are separate clocks. The 14-job business cycle was retired on 2026-09-08.
+3. **AgentZ auto** — `run` defaults to `confirm`. `run --all --mode auto` is refused. A single `--mode auto` is refused by `agentzExecutionPolicy` before a handler loads. The registry has 75 ids.
+4. **Outreach** — `automation-orchestrator-daily` is active and its 2026-10-06 14:00 UTC run succeeded with cron message `1 row`. That is not proof a message was delivered. Do not treat it as a send.
 5. **Edge-function sprawl** — 80+ functions, most `verify_jwt:false`, undocumented; overlap with tRPC/workers unknown.

@@ -142,11 +142,10 @@ export function agentPricingDiscovery() {
       source: MONEY_RAILS.stripe.source,
       strainchain_passport: `$${MONEY_RAILS.stripe.skus.passportUsd} one-time`,
       dpp_readiness: `$${MONEY_RAILS.stripe.skus.dppUsd} one-time`,
-      strainchain_farm: `$${MONEY_RAILS.stripe.skus.farmUsd}/month`,
+      strainchain_farm: "not a public offer",
       checkout: {
         passport: planPaymentLink("strainchain_passport"),
         dpp: planPaymentLink("dpp_readiness"),
-        farm: planPaymentLink("strainchain_farm"),
         emailCapture: {
           passport: "https://authichain.com/passport",
           dpp: "https://authichain.com/dpp",

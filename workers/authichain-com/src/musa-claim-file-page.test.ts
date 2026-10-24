@@ -79,7 +79,7 @@ describe("Made in USA claim file page", () => {
     });
     expect(body.get("success_url")).toContain(CLAIM_FILE_THANKS_PATH);
     expect(body.get("success_url")).not.toContain("/dpp/");
-    expect(body.get("metadata[plan]")).toBe("musa_claim_file");
+    expect(body.get("metadata[plan]")).toBe("made_in_usa_claim_file");
     expect(body.get("metadata[offer]")).toBeNull();
     expect(renderClaimFileThanksPage()).toContain("claim file is started");
   });

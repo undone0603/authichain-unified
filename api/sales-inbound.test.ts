@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const create = vi.fn();
 vi.mock("@anthropic-ai/sdk", () => ({
@@ -132,6 +132,9 @@ describe("sales inbound: pricing comes only from plans.ts", () => {
     for (const id of [
       "free",
       "theater_1",
+      "theater_3",
+      "strainchain_farm",
+      "authichain_basic",
       "studio",
       "enterprise_compliance",
       "nope",
@@ -298,7 +301,26 @@ describe("sales inbound: the Claude request", () => {
   });
 });
 
+function checkout(planId: string) {
+  return new Request("https://worker.test/stripe/checkout", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": "k",
+    },
+    body: JSON.stringify({
+      plan_id: planId,
+      brand: "authichain.com",
+      customer_email: "buyer@brand.com",
+    }),
+  });
+}
+
 describe("revenue worker routing", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("mounts /sales/inbound behind its own secret, not WORKER_API_KEY", async () => {
     const e = { WORKER_API_KEY: "k" } as unknown as Env;
     const res = await worker.fetch(req(lead), e);
@@ -309,5 +331,48 @@ describe("revenue worker routing", () => {
       e
     );
     expect(other.status).toBe(401);
+  });
+
+  it("refuses old brand SKUs and Farm without calling Stripe", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const e = {
+      WORKER_API_KEY: "k",
+      STRIPE_SECRET_KEY: "sk_test_x",
+      STRIPE_PRICE_BASIC: "price_basic_must_not_be_used",
+      NEXT_PUBLIC_APP_URL: "https://authichain.com",
+    } as Env;
+    for (const planId of [
+      "authichain_basic",
+      "authichain_pro",
+      "authichain_enterprise",
+      "strainchain_farm",
+    ]) {
+      const res = await worker.fetch(checkout(planId), e);
+      expect(res.status, planId).toBe(404);
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("charges a public plan at the catalogue price", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ url: "https://checkout.stripe.com/c/pay/cs_test" }), {
+          status: 200,
+        })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const e = {
+      WORKER_API_KEY: "k",
+      STRIPE_SECRET_KEY: "sk_test_x",
+      STRIPE_PRICE_BASIC: "price_basic_must_not_be_used",
+      NEXT_PUBLIC_APP_URL: "https://authichain.com",
+    } as Env;
+    const res = await worker.fetch(checkout("dpp_readiness"), e);
+    expect(res.status).toBe(200);
+    const sent = decodeURIComponent(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(sent).toContain(planById("dpp_readiness")?.stripe_price_id);
+    expect(sent).toContain("mode=payment");
+    expect(sent).not.toContain("price_basic_must_not_be_used");
   });
 });

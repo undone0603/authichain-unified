@@ -9,12 +9,17 @@ import {
   canSend,
   type VerificationSource,
 } from "../server/outreach/send-guard";
+import {
+  agentzExecutionPolicy,
+  classifyRevenue,
+  DEFAULT_FOUNDER_EMAILS,
+  isFounderEmail,
+  type RevenueVerdict,
+} from "../src/lib/economic-authority";
 import { planPaymentLink } from "../src/lib/plans";
 
-export const DEFAULT_FOUNDER_EMAILS = [
-  "undone.k@gmail.com",
-  "authichain@gmail.com",
-] as const;
+export { classifyRevenue, DEFAULT_FOUNDER_EMAILS, isFounderEmail };
+export type { RevenueStatus, RevenueVerdict } from "../src/lib/economic-authority";
 
 export const FROZEN_DISPATCH = ["gov-mint"] as const;
 
@@ -44,11 +49,6 @@ export type RevenueSnapshot = {
   subscriptions: RevenueSubscription[];
   payouts: RevenuePayout[];
   charges: RevenueCharge[];
-};
-
-export type RevenueVerdict = {
-  qualifying: boolean;
-  reason: string;
 };
 
 export type SendRequest = {
@@ -95,92 +95,6 @@ export type OperatorDecision = {
   revenue: RevenueVerdict;
   send?: SendVerdict;
 };
-
-const ACTIVE = new Set(["active", "trialing", "past_due"]);
-const PAID_OUT = new Set(["paid", "in_transit", "pending"]);
-
-export function isFounderEmail(
-  email: string | null | undefined,
-  founderEmails: readonly string[] = DEFAULT_FOUNDER_EMAILS
-): boolean {
-  if (!email) return false;
-  const needle = email.trim().toLowerCase();
-  return founderEmails.some(item => item.trim().toLowerCase() === needle);
-}
-
-function isStrangerEmail(
-  email: string | null | undefined,
-  founderEmails: readonly string[]
-): boolean {
-  if (!email || !email.trim()) return false;
-  return !isFounderEmail(email, founderEmails);
-}
-
-export function classifyRevenue(
-  snapshot: RevenueSnapshot,
-  founderEmails: readonly string[] = DEFAULT_FOUNDER_EMAILS
-): RevenueVerdict {
-  let sawAnonymous = false;
-  for (const sub of snapshot.subscriptions) {
-    if (!ACTIVE.has((sub.status ?? "active").toLowerCase())) continue;
-    if (!sub.customerEmail) {
-      sawAnonymous = true;
-      continue;
-    }
-    if (!isFounderEmail(sub.customerEmail, founderEmails)) {
-      return {
-        qualifying: true,
-        reason: `subscription ${sub.id} for ${sub.customerEmail}`,
-      };
-    }
-  }
-
-  const firstSale = snapshot.charges.find(
-    charge =>
-      charge.paid &&
-      charge.amount > 0 &&
-      isStrangerEmail(charge.email, founderEmails)
-  );
-  if (firstSale) {
-    return {
-      qualifying: true,
-      reason: `first sale ${firstSale.id}`,
-    };
-  }
-
-  const strangerPaid = snapshot.charges.some(
-    charge => charge.paid && isStrangerEmail(charge.email, founderEmails)
-  );
-  let blockedPayout: string | null = null;
-  for (const payout of snapshot.payouts) {
-    if (!PAID_OUT.has((payout.status ?? "paid").toLowerCase())) continue;
-    if (payout.amount <= 0) continue;
-    if (strangerPaid) {
-      return {
-        qualifying: true,
-        reason: `payout ${payout.id} with a non-founder paid charge`,
-      };
-    }
-    blockedPayout = payout.id;
-  }
-
-  if (blockedPayout) {
-    return {
-      qualifying: false,
-      reason: `payout ${blockedPayout} has no paid sale`,
-    };
-  }
-  if (sawAnonymous) {
-    return {
-      qualifying: false,
-      reason: "subscription has no customer email; not counted",
-    };
-  }
-  return {
-    qualifying: false,
-    reason: "no first sale, non-founder subscription, or payout",
-  };
-}
 
 export function classifySend(
   req: SendRequest,
@@ -282,7 +196,7 @@ export async function checkFarmRails(
 
 export function decideOperatorAction(input: {
   rails: { ok: boolean; reason: string };
-  snapshot: RevenueSnapshot;
+  snapshot: unknown;
   founderEmails?: readonly string[];
   send?: SendRequest | null;
 }): OperatorDecision {
@@ -341,10 +255,8 @@ export function mayRunAgentzAuto(mode: string): {
   allowed: boolean;
   reason: string;
 } {
-  if (mode.trim().toLowerCase() === "auto") {
-    return { allowed: false, reason: "AgentZ --mode auto is frozen" };
-  }
-  return { allowed: true, reason: `AgentZ mode ${mode}` };
+  const decision = agentzExecutionPolicy(mode);
+  return { allowed: decision.allowed, reason: decision.reason };
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

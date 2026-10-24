@@ -74,13 +74,8 @@ describe("authentic-economy identity join", () => {
     expect(d.humanCheckout.checkout.dpp).toBe(
       "https://authichain.com/checkout/dpp_readiness"
     );
-    expect(d.humanCheckout.checkout.farm).toBe(
-      "https://authichain.com/checkout/strainchain_farm"
-    );
-    expect(d.humanCheckout.strainchain_farm).toBe("$149/month");
-    expect(new URL(d.humanCheckout.checkout.farm ?? "").hostname).toBe(
-      "authichain.com"
-    );
+    expect(d.humanCheckout.checkout.farm).toBeUndefined();
+    expect(d.humanCheckout.strainchain_farm).toBe("not a public offer");
     expect(JSON.stringify(d)).not.toContain("/api/checkout");
     expect(d.qron.isPaymentRail).toBe(false);
     expect(d.qron.totalSupply).toBe(QRON_TOTAL_SUPPLY);

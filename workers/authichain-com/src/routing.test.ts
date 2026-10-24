@@ -271,9 +271,9 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
       `${path} must not mention secrets`
     );
     const farmPay = planPaymentLink("strainchain_farm") ?? "";
-    assert.ok(farmPay, `${path} Farm Payment Link must exist in plans.ts`);
+    assert.ok(farmPay, "farm keeps an internal checkout url");
     assert.equal(new URL(farmPay).hostname, "authichain.com");
-    assert.ok(html.includes(`href="${farmPay}"`), `${path} must list Farm`);
+    assert.equal(html.includes(`href="${farmPay}"`), false, `${path} must not list Farm`);
     assert.doesNotMatch(html, /href=["']\/api\/checkout/);
     assert.doesNotMatch(html, /GET \/api\/checkout/);
   }
@@ -598,16 +598,7 @@ test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async
     assert.equal(body.protocol, "x402", path);
     assert.equal(body.catalog, "/api/x402/catalog", path);
     assert.equal(body.health, "/api/x402/health", path);
-    assert.equal(
-      body.humanCheckout?.farmPaymentLink,
-      planPaymentLink("strainchain_farm"),
-      path
-    );
-    assert.equal(
-      new URL(body.humanCheckout?.farmPaymentLink ?? "").hostname,
-      "authichain.com",
-      path
-    );
+    assert.equal(body.humanCheckout?.farmPaymentLink, undefined, path);
   }
 });
 

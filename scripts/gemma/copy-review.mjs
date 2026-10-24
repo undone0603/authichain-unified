@@ -27,7 +27,7 @@ export const PAGES = [
 
 export const SYSTEM = [
   "You are a conversion copywriter reviewing a small B2B product's live pages.",
-  "The paid offers are: QRON Starter Pack $29, Creator Pack $99, EU DPP Readiness $299, StrainChain Passport $49, Farm Plan $149/month.",
+  "The public paid offers are: QRON Launch $19/month, QRON Starter Pack $29, Creator Pack $99, EU DPP Readiness $299, StrainChain Passport $49, Made in USA Claim File $299, Made in USA Audit Bundle $2500. Farm and Theater are not public offers.",
   TRUTH_RULES,
   "Be specific and brief. Quote the exact current text you would change.",
 ].join(" ");

@@ -13,7 +13,6 @@ import {
 } from "../service-catalog";
 import { ORDER_STATUSES, type OrderStatus } from "../../shared/const";
 import * as db from "../db";
-import { createPaymentCheckout } from "../stripe-service";
 
 const serviceKeyEnum = z.enum(SERVICE_KEYS as [ServiceType, ...ServiceType[]]);
 const orderStatusEnum = z.enum(
@@ -57,37 +56,13 @@ export const servicesRouter = router({
         notes: z.string().optional(),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const key = input.serviceKey ?? input.serviceType;
       if (!key) throw new Error("serviceKey or serviceType is required");
-      const service = SERVICE_CATALOG[key];
-
-      const { url, sessionId } = await createPaymentCheckout({
-        userId: ctx.user.id,
-        userEmail: ctx.user.email || "",
-        userName: ctx.user.name || "",
-        description: service.name,
-        amount: service.price,
-        origin: input.origin ?? "https://authichain.com",
-        metadata: {
-          service_key: service.key,
-          type: "one_time_service",
-          business_name: input.businessName || "",
-          business_type: input.businessType || "",
-          business_url: input.businessUrl || "",
-          notes: input.notes || "",
-        },
-      });
-
-      await db.createServiceOrder({
-        userId: ctx.user.id,
-        serviceType: service.key,
-        status: "pending",
-        amount: String(service.price),
-        stripeSessionId: sessionId,
-        customerName: ctx.user.name || null,
-      });
-
-      return { checkoutUrl: url };
+      // SERVICE_CATALOG prices are not public offers. Do not open Checkout.
+      if (!SERVICE_CATALOG[key]) {
+        throw new Error("serviceKey or serviceType is required");
+      }
+      throw new Error("Plan is not a public offer");
     }),
 });

@@ -9,6 +9,7 @@
 import {
   PLAN_CREDITS,
   PUBLIC_PLAN_IDS,
+  planByAmountCents,
   planById,
   planByStripePriceId,
   type PlanId,
@@ -16,9 +17,15 @@ import {
 
 export const FIRST_STRANGER_SKU: PlanId = "starter";
 
+/**
+ * Exact founder inboxes, plus "@domain" entries that cover every alias on an
+ * owned domain (same contract as scripts/autonomy/revenue-watch.mjs isFounder
+ * and .github/autonomy.json founder_emails).
+ */
 export const FOUNDER_EMAILS = [
   "undone.k@gmail.com",
   "authichain@gmail.com",
+  "@authichain.com",
 ] as const;
 
 export type PublicPlanId = (typeof PUBLIC_PLAN_IDS)[number];
@@ -58,7 +65,7 @@ export const LIVE_PRICE_MAP: Record<
     productId: "prod_UwfYVM0TYpdg4J",
     mode: "payment",
     grant: 50,
-    stripeLink: "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c",
+    stripeLink: "https://buy.stripe.com/cNi4gzgDTf7McKCePO1ND44",
   },
   strainchain_passport: {
     priceId: "price_1UHjCZGqTruSqV8T35M6AmoJ",
@@ -93,9 +100,17 @@ export const UNLISTED_SMOKE = {
 const PUBLIC_SET = new Set<string>(PUBLIC_PLAN_IDS);
 const UNLISTED_PRICE_SET = new Set<string>(Object.values(UNLISTED_SMOKE));
 
-export function isFounderEmail(email?: string | null): boolean {
+export function isFounderEmail(
+  email?: string | null,
+  founderEmails: readonly string[] = FOUNDER_EMAILS
+): boolean {
   const e = (email || "").toLowerCase().trim();
-  return (FOUNDER_EMAILS as readonly string[]).includes(e);
+  if (!e) return false;
+  if (founderEmails.some(item => item.trim().toLowerCase() === e)) return true;
+  const at = e.lastIndexOf("@");
+  if (at < 0) return false;
+  const domainEntry = e.slice(at);
+  return founderEmails.some(item => item.trim().toLowerCase() === domainEntry);
 }
 
 export function isPublicPlanId(id: string): id is PublicPlanId {
@@ -124,6 +139,25 @@ export function grantForPriceId(
   if (!plan) return null;
   if (!isPublicPlanId(plan.id) && plan.id !== "strainchain_farm") return null;
   return { planId: plan.id, grant: PLAN_CREDITS[plan.id] };
+}
+
+/**
+ * Payment Links omit metadata.plan. Prefer an explicit public plan, then a
+ * known price id, then a unique public amount. $299 is shared, so it does
+ * not resolve. Unlisted smoke prices never resolve.
+ */
+export function resolveCheckoutPlanId(input: {
+  plan?: string | null;
+  priceId?: string | null;
+  amountTotal?: number | null;
+}): PlanId | null {
+  if (input.plan && isPublicPlanId(input.plan)) return input.plan;
+  if (input.plan === "strainchain_farm") return "strainchain_farm";
+  const granted = grantForPriceId(input.priceId);
+  if (granted) return granted.planId;
+  const byAmount = planByAmountCents(input.amountTotal);
+  if (byAmount && isPublicPlanId(byAmount.id)) return byAmount.id;
+  return null;
 }
 
 export function liveBypassLink(id: PlanId): string | undefined {

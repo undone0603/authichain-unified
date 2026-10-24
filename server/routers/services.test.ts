@@ -86,16 +86,19 @@ describe("servicesRouter — checkout", () => {
     ).rejects.toThrow("serviceKey or serviceType is required");
   });
 
-  it("calls createPaymentCheckout and returns checkoutUrl", async () => {
+  it("does not open a Stripe checkout for an off-catalogue service", async () => {
     const { createPaymentCheckout } = await import("../stripe-service.js");
+    const { createServiceOrder } = await import("../db.js");
     const { servicesRouter } = await import("../services/router.js");
     const ctx = { user: { id: 1, email: "a@b.com", name: "Test" } };
-    const result = await (servicesRouter as any).checkout._fn({
-      ctx,
-      input: { serviceKey: "authenticity_audit", origin: "https://example.com" },
-    });
-    expect(vi.mocked(createPaymentCheckout)).toHaveBeenCalledOnce();
-    expect(result.checkoutUrl).toBe("https://checkout.stripe.com/mock");
+    await expect(
+      (servicesRouter as any).checkout._fn({
+        ctx,
+        input: { serviceKey: "authenticity_audit", origin: "https://example.com" },
+      }),
+    ).rejects.toThrow("Plan is not a public offer");
+    expect(vi.mocked(createPaymentCheckout)).not.toHaveBeenCalled();
+    expect(vi.mocked(createServiceOrder)).not.toHaveBeenCalled();
   });
 });
 

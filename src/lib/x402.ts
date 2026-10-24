@@ -10,17 +10,19 @@
  * `$QRON` and any governance token stay off this rail (see
  * docs/strategy/AGENT_TOKENOMICS_x402.md). Wallets vs rails:
  * docs/strategy/WEB3_IDENTITY.md. Do not rebind X402_PAY_TO away from
- * the owner-authorized treasury 0xaebf…e437.
- * Do not rebind X402_FACILITATOR_URL or X402_USDC_ASSET. payTo is the
- * tokenomics EOA (0xaebf…e437), not the $QRON holder EOA (0x5db5…), not
- * the NFT deployer EOA (0xbad4…), and not the Coinbase Smart Wallet.
+ * the owner-authorized treasury TOKENOMICS_PAY_TO (0x5db5…6AA2).
+ * Do not rebind X402_FACILITATOR_URL or X402_USDC_ASSET. payTo is that
+ * treasury EOA, not the $QRON ERC-20 (QRON_ERC20, 0xAebf…E437), not the
+ * NFT deployer EOA (0xbad4…), and not the Coinbase Smart Wallet.
+ * Registry binding is still false, so settlement status stays
+ * HEALTHY_BUT_NOT_SETTLEMENT_READY. A paid call must not be reported as settled.
  *
  * Pure helpers here are fully unit-tested; settlement verification has a single
  * documented integration point (`verifyPaymentProof`) to wire to an x402
  * facilitator or an on-chain check.
  */
 
-import { BASE_USDC, TOKENOMICS_PAY_TO } from "../../scripts/lib/evm-chains";
+import { BASE_USDC, QRON_ERC20, TOKENOMICS_PAY_TO } from "../../scripts/lib/evm-chains";
 import { planPaymentLink, planUsd } from "./plans";
 
 export interface PaymentRequirement {
@@ -169,8 +171,8 @@ export const BASE_USDC_ASSET = BASE_USDC;
 
 /**
  * Live published X402_PAY_TO — owner-authorized treasury / tokenomics EOA
- * 0xaebf…e437. Distinct from the $QRON
- * holder EOA (0x5db5…) and the NFT deployer EOA (0xbad4…). Canonical map:
+ * TOKENOMICS_PAY_TO (0x5db5…6AA2). Distinct from the $QRON ERC-20
+ * (QRON_ERC20, 0xAebf…E437) and the NFT deployer EOA (0xbad4…). Canonical map:
  * docs/strategy/WEB3_IDENTITY.md. Do not rebind away from this address.
  * Runtime health still reads the Worker/env binding; this constant
  * documents the live value. It is NOT a fallback when X402_PAY_TO is
@@ -815,6 +817,10 @@ export type X402HealthBody = {
   status: "ready" | "not_configured" | "degraded";
   mode: "trustless" | "not_configured" | "dev";
   payTo: string | null;
+  canonicalTreasury: string;
+  qronToken: string;
+  settlementStatus: "HEALTHY_BUT_NOT_SETTLEMENT_READY" | "SETTLEMENT_READY";
+  settled: false;
   network: string;
   chainId: string;
   asset: string;
@@ -894,6 +900,12 @@ export async function x402HealthReport(
   }
   const paidVerify = x402PaidVerifyStatus();
   if (!paidVerify.bound) warnings.push(paidVerify.detail);
+  if (payTo && payTo.toLowerCase() === QRON_ERC20.toLowerCase()) {
+    warnings.push("X402_PAY_TO is the $QRON token contract, not the treasury.");
+  }
+  const settlementStatus = paidVerify.bound
+    ? "SETTLEMENT_READY"
+    : "HEALTHY_BUT_NOT_SETTLEMENT_READY";
 
   return {
     ok: ready,
@@ -902,6 +914,10 @@ export async function x402HealthReport(
     status,
     mode: facilitator.configured ? "trustless" : "not_configured",
     payTo,
+    canonicalTreasury: TOKENOMICS_PAY_TO,
+    qronToken: QRON_ERC20,
+    settlementStatus,
+    settled: false,
     network: env.X402_NETWORK || process.env.X402_NETWORK || "base",
     chainId: env.X402_CHAIN_ID || process.env.X402_CHAIN_ID || "8453",
     asset: resolveX402Asset(
@@ -958,9 +974,9 @@ export type X402CatalogBody = {
     rail: "stripe";
     passportUsd: number;
     dppUsd: number;
-    farmUsd: number;
     passportPaymentLink?: string;
     dppPaymentLink?: string;
+    farmUsd?: number;
     farmPaymentLink?: string;
     source: string;
   };
@@ -1041,6 +1057,7 @@ export async function x402Catalog(
         "/api/v1/agent-verify",
         "AuthiChain agent verification (seal / product)"
       ),
+      paid("/api/dpp/compliance-verify", "EU DPP regulatory compliance & material provenance verification"),
       paid("/mcp", "MCP tools/call verify (GET is free discovery)"),
       paid("/api/mcp", "MCP tools/call verify alias"),
     ],
@@ -1048,10 +1065,8 @@ export async function x402Catalog(
       rail: "stripe",
       passportUsd: planUsd("strainchain_passport"),
       dppUsd: planUsd("dpp_readiness"),
-      farmUsd: planUsd("strainchain_farm"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
-      farmPaymentLink: planPaymentLink("strainchain_farm"),
       source: "src/lib/plans.ts",
     },
     discovery: {

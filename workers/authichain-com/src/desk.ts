@@ -469,11 +469,7 @@ function sealCta(seal: DeskSeal): string {
     });
   }
   if (seal.plan === "strainchain_farm") {
-    return catalogPaymentLinkHtml({
-      planId: "strainchain_farm",
-      label: "Pay Farm $149/mo",
-      className: "btn",
-    });
+    return `<a class="btn" href="/desk/pricing">Passport is the public StrainChain offer</a>`;
   }
   if (seal.plan === "strainchain_passport") {
     return catalogPaymentLinkHtml({
@@ -648,11 +644,6 @@ function home(): string {
          label: "Passport $49",
          className: "btn ghost",
        })}
-       ${catalogPaymentLinkHtml({
-         planId: "strainchain_farm",
-         label: "Farm $149/mo",
-         className: "btn ghost",
-       })}
      </div>
      <div class="grid g3" style="margin-top:2.5rem">
        <div class="card"><p class="kicker">TruMark</p><p>Scan seal. Not a SKU.</p><a href="/trumark">Open TruMark</a></div>
@@ -706,32 +697,19 @@ function pricing(): string {
     inputId: "desk-price-pass-email",
     buttonClass: "btn",
   });
-  const farm = checkoutEmailFormHtml({
-    action: "https://authichain.com/checkout/strainchain_farm",
-    label: "Start a Farm Plan",
-    formId: "desk-price-farm",
-    inputId: "desk-price-farm-email",
-    buttonClass: "btn",
-  });
   return shell(
     "Pricing — AuthiChain desk",
-    "Live catalogue. Farm $149/mo is the recurring SKU. A POST on the confirm page starts Stripe.",
+    "Live catalogue. Passport $49 is the public StrainChain offer. A POST on the confirm page starts Stripe.",
     "/desk/pricing",
     `<p class="kicker">Published catalogue</p>
      <h1>Prices that already charge.</h1>
      <p class="muted">The confirm page is a GET. Stripe starts only when that form is posted with a work email.</p>
      <div class="grid g2" style="margin-top:1.5rem">
-       <div class="card"><p class="kicker">Farm</p><p class="price">$149<span style="font-size:1rem;color:var(--muted)">/mo</span></p><p class="muted">Unlimited cultivars. Recurring. Same live Stripe link as strainchain.io.</p>${farm}
-         <p style="margin-top:.75rem">${catalogPaymentLinkHtml({
-           planId: "strainchain_farm",
-           label: "Pay $149/mo on Stripe",
-           className: "btn ghost",
-         })}</p></div>
        <div class="card"><p class="kicker">Passport</p><p class="price">$49</p><p class="muted">One cultivar. StrainChain, not an AuthiChain desk fee.</p>${passport}
          <p style="margin-top:.75rem"><a href="/telegram">Telegram Mini App</a></p></div>
        <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Credits toward AuthiChain Basic.</p>${dpp}</div>
      </div>
-     <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only. Theater is not listed. Farm $149/mo is the founder-income recurring rail.</p>`
+     <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only. Farm and Theater are not public offers.</p>`
   );
 }
 

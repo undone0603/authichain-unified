@@ -33,33 +33,39 @@ design a second control plane, manifest, or orchestration framework.
 `FOUNDER_ONLY_BUSINESS.md` forbids one ("No second orchestration framework").
 
 # SOURCE-OF-TRUTH ORDER (read first; higher wins on conflict)
-1. `docs/OPERATING_CHARTER.md`: what runs alone and what waits for the owner.
+1. `docs/OPERATING_CHARTER.md`: founder decisions. What runs alone and what waits.
 2. `.github/autonomy.json`: the only switchboard. Lanes: ship, health,
    revenue, growth, improve, repair, manual, retired. Every workflow appears
    exactly once, and `autonomy-reconcile` reverts any change made in the
    Actions UI.
-3. `.github/founder-business.json` + `docs/operations/FOUNDER_ONLY_BUSINESS.md`:
-   the business control plane. It defines loops (acquire, convert, fulfill,
-   retain, operate, improve), `founder_only_gates`, `success_metrics` and
-   `exception_policy`. `scripts/autonomy/founder-business-pulse.mjs` checks
-   it, read-only.
-4. `CLAUDE.md`, `AGENTS.md`, `.claude/skills/steward/SKILL.md`.
-5. `src/lib/plans.ts` is the ONLY pricing source for charging humans.
-   `shared/pricing.ts` is a test-mode reference. Agent pay is x402 Base USDC
-   (`src/lib/x402.ts`). Wallets and chains are in
-   `docs/strategy/WEB3_IDENTITY.md`.
-6. The operations docs: `docs/operations/AUTONOMOUS_REVENUE_LOOP.md`,
+3. `classifyRevenue` in `src/lib/economic-authority.ts`, re-exported by
+   `scripts/revenue-operator.ts`. A handwritten snapshot is
+   `REVENUE_UNVERIFIED`. Founder charges, CRM rows, simulations, and the
+   freedom ledger are not qualifying money.
+4. `src/lib/plans.ts` `PUBLIC_PLAN_IDS` is the only public-offer boundary.
+   `shared/pricing.ts` is a test-mode reference. Farm and Theater are not
+   public. GovChain and AgentZ have no public offer.
+5. `docs/ECONOMIC_CONSTITUTION_AND_AGENT_OS.md` expresses policy and does
+   not override 1–3.
+6. `.github/founder-business.json` is subordinate. It must not override the
+   chain above. `founder-business-pulse` checks it, read-only.
+7. `CLAUDE.md`, `AGENTS.md`, `.claude/skills/steward/SKILL.md`.
+8. Agent pay is x402 Base USDC (`src/lib/x402.ts`). The treasury is
+   `TOKENOMICS_PAY_TO`, not the `$QRON` token contract. Settlement stays
+   `HEALTHY_BUT_NOT_SETTLEMENT_READY` until registry binding succeeds.
+   Wallets and chains are in `docs/strategy/WEB3_IDENTITY.md`.
+9. The operations docs: `docs/operations/AUTONOMOUS_REVENUE_LOOP.md`,
    `docs/operations/AUTONOMOUS_AI_STACK.md`,
    `docs/operations/AGENTZ_ORCHESTRATION.md`,
    `docs/operations/CLOUDFLARE_FIRST_BASELINE.md`,
    `docs/operations/CLOUDFLARE_ESTATE_RECONCILIATION.md` (Worker ownership
    ledger `config/cloudflare-estate.json`; read-only audit
    `scripts/cloudflare/audit-estate.mjs`).
-7. `GEMINI.md`: the AgentZ agent roster and handlers. Its deploy and
+10. `GEMINI.md`: the AgentZ agent roster and handlers. Its deploy and
    failover sections were corrected on 2026-10-01: Cloudflare only, the web
    app is Next.js via OpenNext, and Vercel deploys are blocked by
    `vercel-deploy-guard`. Read `node_modules/next/dist/docs/` before writing
-   Next code. Where it disagrees with 1-6, follow 1-6 and list the conflict.
+   Next code. Where it disagrees with 1-8, follow 1-8 and list the conflict.
 
 # STANDING GATE
 `AUTONOMOUS_REVENUE_LOOP.md`: "Do not add agents or new verticals until this

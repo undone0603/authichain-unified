@@ -1,9 +1,10 @@
 // server/outreach/email-verify.ts
 // Free, open-source email verification via a self-hosted Reacher backend
 // (github.com/reacherhq/check-if-email-exists — `docker run -p 8080:8080 reacherhq/backend`).
-// Plus B2B email-pattern inference, so a name + company domain becomes a verified,
-// deliverable address WITHOUT a paid contact database. A "safe" (deliverable,
-// non-catch-all) result is tagged source 'reacher_verified', which passes the send-guard.
+// Plus B2B email-pattern inference. A "safe" Reacher result proves the mailbox
+// accepted the recipient. It does not prove the person published that address.
+// Callers must keep source `pattern_guess`. Do not stamp `reacher_verified`:
+// that source passes the send-guard.
 
 export type Reachability = "safe" | "risky" | "invalid" | "unknown";
 
@@ -68,9 +69,9 @@ export async function verifyEmail(email: string): Promise<EmailVerification> {
 }
 
 /**
- * Infer likely addresses for a person and return the first deliverable (verified) one.
- * Returns null if none verify — e.g. a catch-all domain (big corporates), where this free
- * stack honestly can't confirm a mailbox. Pair with the inbound engine for those.
+ * Infer likely addresses and return the first deliverable one.
+ * Deliverable is not a trusted send source. Returns null when none are
+ * deliverable, including catch-all domains.
  */
 export async function findVerifiedEmail(
   firstName: string,

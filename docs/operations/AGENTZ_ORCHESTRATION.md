@@ -9,6 +9,11 @@ That var does **not** flip AgentZ to `auto` or send mail from this workflow.
 This is the thaw of **`agentz-orchestration.yml` only**. It is not a thaw of
 `content-publish`, genesis cold send, or `gov-*`.
 
+The registry has **75** workflow ids. CLI `run` defaults to `confirm`.
+`run --all --mode auto` is refused. A single `--mode auto` is refused by
+`src/lib/economic-authority.ts` `agentzExecutionPolicy` before a handler loads.
+Python `execute`, the workflow runner, and the substrate call that same policy.
+
 Do **not** invent `OPENCLAW_GATEWAY_URL`. Do **not** deploy
 `authichain-agentz` Containers / Workers Paid.
 

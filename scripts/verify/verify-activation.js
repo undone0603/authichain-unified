@@ -1,5 +1,6 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
+import postgres from 'postgres';
+import 'dotenv/config';
+
 const sql = postgres(process.env.DATABASE_URL || '');
 
 async function verify() {
@@ -14,4 +15,3 @@ async function verify() {
 }
 
 verify();
-

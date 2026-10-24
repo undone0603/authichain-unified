@@ -19,7 +19,7 @@ import {
   estateNav,
   estateSkipLink,
 } from "../../_shared/estate-landing";
-import { planById } from "../../../src/lib/plans";
+import { planById, resolvePlanId } from "../../../src/lib/plans";
 
 export const CLAIM_FILE_PATH = "/made-in-usa-claim-file";
 export const CLAIM_FILE_THANKS_PATH = `${CLAIM_FILE_PATH}/thanks`;
@@ -128,7 +128,7 @@ const FAQ: Array<{ q: string; a: string }> = [
 ];
 
 export function renderClaimFilePage(): string {
-  const plan = planById("musa_claim_file");
+  const plan = planById(resolvePlanId("musa_claim_file") ?? "musa_claim_file");
   const price = plan?.price ?? 299;
   const multiLink = plan?.stripe_payment_link;
   const title = `Made in USA claim file: evidence behind your label, $${price} per product | AuthiChain`;
@@ -145,13 +145,12 @@ export function renderClaimFilePage(): string {
     f =>
       `<details class="cf-faq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`
   ).join("");
-  const bundle = planById("musa_audit_bundle");
+  const bundle = planById(resolvePlanId("musa_audit_bundle") ?? "musa_audit_bundle");
   const bundleSection = bundle?.stripe_payment_link
     ? `<section class="estate-section" id="bundle">
     <div class="wrap">
       <h2>More than a few products?</h2>
       <p class="cf-price">$${bundle.price.toLocaleString("en-US")} <span class="cf-note">per engagement</span></p>
-      <ul class="cf-list">${bundle.features.map(f => `<li>${esc(f)}</li>`).join("")}</ul>
       <p class="section-sub">Stripe asks for your company name, how many SKUs, and billing details so the invoice is right.</p>
       <p><a class="btn btn-outline" href="${esc(bundle.stripe_payment_link)}" rel="nofollow">Buy the audit bundle — $${bundle.price.toLocaleString("en-US")}</a></p>
     </div>

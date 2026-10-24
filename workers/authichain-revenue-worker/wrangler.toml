@@ -1,0 +1,15 @@
+name = "authichain-revenue-worker"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Cron stays off until scheduled() has a verified lead. The placeholder
+# founder@target-brand.com address would create a Checkout session every hour.
+# [triggers]
+# crons = ["0 * * * *"]
+
+[vars]
+NEXT_PUBLIC_APP_URL = "https://authichain.com"
+
+[observability]
+enabled = true

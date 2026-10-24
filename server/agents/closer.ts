@@ -12,24 +12,38 @@ import { leads } from "../../drizzle/schema.js";
 import { invokeLLM, parseLLMContent } from "../_core/llm.js";
 import {
   createProposal,
-  createSystemNotification,
   enqueueTask,
-  getAllAdminIds,
   getDb,
   logActivity,
 } from "../db.js";
-import { checkThreadReplies, sendEmail } from "../email-service.js";
-import { getStripe } from "../stripe-service.js";
+import { checkThreadReplies } from "../email-service.js";
+import {
+  PLANS,
+  PUBLIC_PLAN_IDS,
+  gatedCheckoutUrl,
+} from "../../src/lib/plans";
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
-const PILOT_PRICE_USD: Record<string, number> = {
-  GOV: 25_000,
-  RETAIL: 5_000,
-  PARTNER: 10_000,
-  PRESS: 0, // press is comp
-  DEFAULT: 10_000,
+/** A task payload is not an inbox the founder named this turn. */
+const TASK_SEND_REFUSED = {
+  status: "refused" as const,
+  reason: "no inbox named this turn",
 };
+
+function publicOfferLines(): string {
+  return PLANS.filter(
+    plan =>
+      (PUBLIC_PLAN_IDS as readonly string[]).includes(plan.id) &&
+      plan.price > 0 &&
+      Boolean(plan.stripe_price_id)
+  )
+    .map(
+      plan =>
+        `${plan.name}: $${plan.price}${plan.price_suffix ?? ""} ${gatedCheckoutUrl(plan.id)}`
+    )
+    .join("\n");
+}
 
 async function updateLeadStatus(email: string, status: string) {
   const db = await getDb();
@@ -38,54 +52,6 @@ async function updateLeadStatus(email: string, status: string) {
     .update(leads)
     .set({ status, updatedAt: new Date() })
     .where(eq(leads.email, email.toLowerCase()));
-}
-
-/**
- * Stripe checkout-session creation failing here previously degraded silently
- * to "send the email without a payment link, follow up manually" — no log,
- * no alert. That means the entire point of automating the close (a working
- * payment link) could quietly go missing on every affected proposal/contract
- * with no one ever finding out short of a customer complaining. This makes
- * the same degrade visible: still non-fatal (the email still sends), but now
- * logged and pushed to every admin as an alert instead of assumed away.
- */
-async function notifyCheckoutLinkFailed(opts: {
-  context: "proposal" | "contract";
-  taskId: string;
-  missionId: string;
-  leadEmail: string;
-  segment: string;
-  error: unknown;
-}): Promise<void> {
-  const message =
-    opts.error instanceof Error ? opts.error.message : String(opts.error);
-
-  await logActivity({
-    userId: null,
-    action: "checkout_link_creation_failed",
-    entityType: "task",
-    entityId: 0,
-    details: {
-      taskId: opts.taskId,
-      missionId: opts.missionId,
-      leadEmail: opts.leadEmail,
-      segment: opts.segment,
-      context: opts.context,
-      error: message,
-    },
-  });
-
-  const adminIds = await getAllAdminIds();
-  await Promise.all(
-    adminIds.map(adminId =>
-      createSystemNotification(
-        adminId,
-        "Payment link failed to generate",
-        `Stripe checkout session creation failed while sending a ${opts.context} to ${opts.leadEmail} (${opts.segment}). The email still sent, but without a payment link — it needs manual follow-up. Error: ${message}`,
-        "alert"
-      )
-    )
-  );
 }
 
 // ─── CHECK_REPLIES ─────────────────────────────────────────────────────────────
@@ -297,7 +263,6 @@ export async function runSendDemoPacket(task: Task): Promise<void> {
     leadTitle,
     segment,
     replyText,
-    threadId,
   } = payload;
 
   const roiContext =
@@ -334,39 +299,18 @@ Return JSON: { "subject": "...", "body": "..." }`;
 
   if (!body) throw new Error("Demo packet LLM returned empty body");
 
-  const sendResult = await sendEmail({ to: leadEmail, subject, body });
-
-  if (sendResult.status === "sent") {
-    await updateLeadStatus(leadEmail, "DEMO_SENT");
-    // Enqueue reply check in 72h
-    const check72h = new Date(Date.now() + 72 * 60 * 60 * 1000);
-    await enqueueTask(
-      task.missionId,
-      "CHECK_REPLIES",
-      {
-        threadId: sendResult.threadId ?? threadId,
-        leadEmail,
-        leadName,
-        leadOrg,
-        leadTitle,
-        segment,
-        sequence: 0,
-        maxSequence: 1,
-      },
-      check72h
-    );
-  }
-
   await logActivity({
     userId: null,
-    action: "demo_packet_sent",
+    action: "demo_packet_drafted",
     entityType: "task",
     entityId: 0,
     details: {
       taskId: task.id,
       leadEmail,
       segment,
-      sendStatus: sendResult.status,
+      subject,
+      sendStatus: TASK_SEND_REFUSED.status,
+      reason: TASK_SEND_REFUSED.reason,
     },
   });
 }
@@ -387,15 +331,17 @@ export async function runGenerateProposal(task: Task): Promise<void> {
   const payload = task.payload as ProposalPayload;
   const { leadEmail, leadName, leadOrg, leadTitle, segment, replyText } =
     payload;
-  const priceUsd = PILOT_PRICE_USD[segment] ?? PILOT_PRICE_USD.DEFAULT;
+  const offers = publicOfferLines();
 
   // ── LLM proposal generation ───────────────────────────────────────────────
   const prompt = `Write a professional B2B proposal for AuthiChain (authichain.com), a blockchain product authentication platform.
 
 Client: ${leadName ?? "Decision-Maker"} at ${leadOrg ?? "your organization"}${leadTitle ? `, ${leadTitle}` : ""}
 Segment: ${segment}
-Pilot price: $${priceUsd.toLocaleString()} USD (6-month pilot program)
 ${replyText ? `Context from their last email: "${replyText.slice(0, 400)}"` : ""}
+
+Public offers, and the only amounts you may quote:
+${offers}
 
 Write a 400–600 word proposal covering:
 1. Executive Summary (2–3 sentences, specific to their industry)
@@ -403,8 +349,8 @@ Write a 400–600 word proposal covering:
 3. Our Solution (how AuthiChain addresses it — QR authentication, AI confidence scoring, NFT provenance)
 4. ROI Analysis (3 bullet points with realistic numbers for their segment)
 5. Pilot Scope (what's included in the 6-month pilot: onboarding, integrations, support)
-6. Investment: $${priceUsd.toLocaleString()} for 6-month pilot (then [quote renewal])
-7. Next Steps (one sentence directing them to the payment link to get started immediately)
+6. Investment: one of the public offers above. Do not invent a pilot price.
+7. Next Steps (one sentence pointing at that offer's checkout URL)
 
 Tone: authoritative, specific, zero fluff.
 Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." }`;
@@ -424,86 +370,17 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
 
   if (!proposalContent) throw new Error("Proposal LLM returned empty content");
 
-  // ── Stripe checkout session (payment link) ─────────────────────────────────
-  let paymentLink: string | undefined;
-  let checkoutSessionId: string | undefined;
-
-  if (priceUsd > 0) {
-    try {
-      const stripe = getStripe();
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        payment_method_types: ["card"],
-        line_items: [
-          {
-            price_data: {
-              currency: "usd",
-              unit_amount: priceUsd * 100,
-              product_data: {
-                name: `AuthiChain ${segment} Pilot Program`,
-                description: `6-month pilot program for ${leadOrg ?? "your organization"}`,
-              },
-            },
-            quantity: 1,
-          },
-        ],
-        metadata: {
-          leadEmail,
-          segment,
-          missionId: task.missionId,
-          taskId: task.id,
-        },
-        success_url:
-          "https://authichain.com/welcome?session_id={CHECKOUT_SESSION_ID}",
-        cancel_url: "https://authichain.com/pricing",
-        customer_email: leadEmail,
-        // Stripe payment-mode checkout sessions expire within 24h.
-        expires_at: Math.floor(Date.now() / 1000) + 23 * 3600,
-      });
-      paymentLink = session.url ?? undefined;
-      checkoutSessionId = session.id;
-    } catch (error) {
-      // Non-fatal — send the proposal without a link, but make sure someone
-      // actually finds out (see notifyCheckoutLinkFailed's doc comment).
-      await notifyCheckoutLinkFailed({
-        context: "proposal",
-        taskId: task.id,
-        missionId: task.missionId,
-        leadEmail,
-        segment,
-        error,
-      });
-    }
-  }
-
-  // ── Store proposal ────────────────────────────────────────────────────────
   const proposalId = await createProposal({
     leadEmail,
     missionId: task.missionId,
     taskId: task.id,
     segment,
     content: proposalContent,
-    paymentLink,
-    checkoutSessionId,
-    pilotPriceUsd: priceUsd,
   });
-
-  // ── Send email ────────────────────────────────────────────────────────────
-  const paymentSection = paymentLink
-    ? `\n\n---\n🔒 Ready to proceed? Secure your pilot today:\n${paymentLink}\n(This link is valid for 24 hours)`
-    : "";
-
-  const sendResult = await sendEmail({
-    to: leadEmail,
-    subject,
-    body: `${proposalContent}${paymentSection}`,
-  });
-
-  await updateLeadStatus(leadEmail, "PILOT_PROPOSED");
 
   await logActivity({
     userId: null,
-    action: "proposal_sent",
+    action: "proposal_drafted",
     entityType: "task",
     entityId: 0,
     details: {
@@ -511,9 +388,9 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
       leadEmail,
       segment,
       proposalId,
-      hasPaymentLink: !!paymentLink,
-      sendStatus: sendResult.status,
-      priceUsd,
+      hasPaymentLink: false,
+      sendStatus: TASK_SEND_REFUSED.status,
+      reason: TASK_SEND_REFUSED.reason,
     },
   });
 }
@@ -533,18 +410,17 @@ interface ContractPayload {
 export async function runSendContract(task: Task): Promise<void> {
   const payload = task.payload as ContractPayload;
   const { leadEmail, leadName, leadOrg, segment } = payload;
-  const priceUsd = PILOT_PRICE_USD[segment] ?? PILOT_PRICE_USD.DEFAULT;
-
   const prompt = `Draft a simple, professional Service Agreement between AuthiChain Inc. and ${leadOrg ?? "Client"}.
 
 Terms to include:
 1. Parties: AuthiChain Inc. (Provider) and ${leadOrg ?? "Client"} (Client), represented by ${leadName ?? "authorized signatory"}
 2. Services: 6-month AuthiChain pilot — product authentication platform including QR code generation, blockchain provenance tracking, AI confidence scoring, dashboard access, and onboarding support
-3. Payment: $${priceUsd.toLocaleString()} USD, due upon execution
+3. Payment: one public offer from this list, and no other amount:
+${publicOfferLines()}
 4. IP: AuthiChain retains all platform IP. Client retains rights to their product data.
 5. Data: AuthiChain stores no personally identifiable consumer data beyond scan metadata.
 6. Termination: Either party may terminate with 30 days written notice after the pilot period.
-7. Acceptance: Execution of payment constitutes acceptance of these terms.
+7. Acceptance: Payment of a public offer constitutes acceptance of these terms.
 8. Governing law: State of Delaware, United States.
 
 Keep it to 250–350 words. Professional but readable — this is a pilot agreement, not a 50-page enterprise contract.
@@ -563,73 +439,20 @@ Return JSON: { "subject": "AuthiChain Service Agreement — [Org]", "body": "...
     `AuthiChain Service Agreement — ${leadOrg ?? segment}`;
   const contractBody = parsed_contract.body ?? "";
 
-  // Re-use existing payment link from payload or create a new checkout session
-  let paymentLink = payload.paymentLink;
-  if (!paymentLink && priceUsd > 0) {
-    try {
-      const stripe = getStripe();
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        payment_method_types: ["card"],
-        line_items: [
-          {
-            price_data: {
-              currency: "usd",
-              unit_amount: priceUsd * 100,
-              product_data: {
-                name: `AuthiChain ${segment} Pilot — Contract Execution`,
-              },
-            },
-            quantity: 1,
-          },
-        ],
-        metadata: {
-          leadEmail,
-          segment,
-          missionId: task.missionId,
-          taskId: task.id,
-          type: "contract",
-        },
-        success_url:
-          "https://authichain.com/welcome?session_id={CHECKOUT_SESSION_ID}",
-        cancel_url: "https://authichain.com/pricing",
-        customer_email: leadEmail,
-        expires_at: Math.floor(Date.now() / 1000) + 86400 * 14, // 14 days to sign
-      });
-      paymentLink = session.url ?? undefined;
-    } catch (error) {
-      await notifyCheckoutLinkFailed({
-        context: "contract",
-        taskId: task.id,
-        missionId: task.missionId,
-        leadEmail,
-        segment,
-        error,
-      });
-    }
-  }
-
-  const paymentSection = paymentLink
-    ? `\n\n---\nTo execute this agreement, complete payment here:\n${paymentLink}\n(Link expires in 14 days. Payment constitutes acceptance of the above terms.)`
-    : "";
-
-  const sendResult = await sendEmail({
-    to: leadEmail,
-    subject,
-    body: `${contractBody}${paymentSection}`,
-  });
-
   await logActivity({
     userId: null,
-    action: "contract_sent",
+    action: "contract_drafted",
     entityType: "task",
     entityId: 0,
     details: {
       taskId: task.id,
       leadEmail,
       segment,
-      sendStatus: sendResult.status,
-      hasPaymentLink: !!paymentLink,
+      sendStatus: TASK_SEND_REFUSED.status,
+      reason: TASK_SEND_REFUSED.reason,
+      hasPaymentLink: false,
+      subject,
+      drafted: contractBody.length > 0,
     },
   });
 }
@@ -646,24 +469,17 @@ interface AutoReplyPayload {
   threadId?: string;
 }
 
-const PRICING_TABLE: Record<string, string> = {
-  GOV: "$25,000 for a 6-month pilot. Includes full onboarding, integrations, dedicated support, and a blockchain dashboard. Government pricing is fixed — no negotiation on scope, but we can phase the payment.",
-  RETAIL:
-    "$5,000 for a 6-month pilot. Includes unlimited SKU onboarding, QR code generation, authentication analytics, and brand protection reporting. ROI typically pays back within 60 days.",
-  PARTNER:
-    "$10,000 for 6 months. Includes API access, white-label dashboard, co-marketing, and a dedicated integration engineer.",
-  DEFAULT:
-    "Pricing is $5,000–$25,000 depending on scope, with a 6-month pilot structure. We can tailor the package to your needs.",
-};
+function pricingContext(): string {
+  return `Public offers only:\n${publicOfferLines()}\nDo not quote any other price. Do not offer a custom pilot checkout.`;
+}
 
 export async function runAutoReply(task: Task): Promise<void> {
   const payload = task.payload as AutoReplyPayload;
-  const { leadEmail, leadName, leadOrg, segment, replyText, intent, threadId } =
-    payload;
+  const { leadEmail, leadName, leadOrg, segment, replyText, intent } = payload;
 
   const intentGuidance =
     intent === "pricing"
-      ? `Pricing context for ${segment}: ${PRICING_TABLE[segment] ?? PRICING_TABLE.DEFAULT}\nProvide clear pricing, justify the ROI, and offer a direct payment link.`
+      ? `${pricingContext()}\nProvide clear pricing from that list and point at one checkout URL.`
       : `This is an objection. Address it directly, confidently, and with evidence. Do NOT be defensive.`;
 
   const prompt = `You are responding to a prospect on behalf of AuthiChain. No hedging — be direct and close.
@@ -691,30 +507,9 @@ Return JSON: { "subject": "Re: [keep thread subject]", "body": "..." }`;
   const subject = parsed_reply.subject ?? `Re: AuthiChain`;
   const body = parsed_reply.body ?? "";
 
-  const sendResult = await sendEmail({ to: leadEmail, subject, body });
-
-  if (sendResult.status === "sent") {
-    // Check again in 72h
-    const check72h = new Date(Date.now() + 72 * 60 * 60 * 1000);
-    await enqueueTask(
-      task.missionId,
-      "CHECK_REPLIES",
-      {
-        threadId: sendResult.threadId ?? threadId,
-        leadEmail,
-        leadName,
-        leadOrg,
-        segment,
-        sequence: 0,
-        maxSequence: 1,
-      },
-      check72h
-    );
-  }
-
   await logActivity({
     userId: null,
-    action: "auto_reply_sent",
+    action: "auto_reply_drafted",
     entityType: "task",
     entityId: 0,
     details: {
@@ -722,7 +517,10 @@ Return JSON: { "subject": "Re: [keep thread subject]", "body": "..." }`;
       leadEmail,
       segment,
       intent,
-      sendStatus: sendResult.status,
+      subject,
+      drafted: body.length > 0,
+      sendStatus: TASK_SEND_REFUSED.status,
+      reason: TASK_SEND_REFUSED.reason,
     },
   });
 }

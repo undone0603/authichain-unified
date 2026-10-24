@@ -12,8 +12,10 @@
  *      over VERIFY_APP, or refused 503 before settlement when neither is set.
  *
  * Do not rebind X402_PAY_TO away from the owner-authorized treasury
- * 0xaebf…e437. Do not rebind
- * X402_FACILITATOR_URL / X402_USDC_ASSET.
+ * 0x5db5…6AA2. 0xAebf…E437 is the $QRON token contract, not the treasury.
+ * Do not rebind X402_FACILITATOR_URL / X402_USDC_ASSET.
+ * Until registry binding succeeds, settlement status is
+ * HEALTHY_BUT_NOT_SETTLEMENT_READY. Do not report a paid settlement.
  *
  * Facilitator is optional. Without X402_FACILITATOR_URL the health report is
  * `not_configured` and paid settlement stays closed ($0 path).

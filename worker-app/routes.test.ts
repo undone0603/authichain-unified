@@ -183,6 +183,24 @@ describe("POST /api/checkout", () => {
     }
   });
 
+  it("refuses Farm without calling Stripe", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_plan";
+    dppCreate.mockReset();
+    const res = await app.request("/api/checkout", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X)",
+      },
+      body: JSON.stringify({ planId: "strainchain_farm" }),
+    });
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe("Plan is not a public offer");
+    expect(dppCreate).not.toHaveBeenCalled();
+    delete process.env.STRIPE_SECRET_KEY;
+  });
+
   it("returns 400 without planId", async () => {
     const res = await app.request("/api/checkout", {
       method: "POST",

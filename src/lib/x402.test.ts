@@ -581,6 +581,11 @@ describe("x402HealthReport", () => {
     expect(report.catalog).toBe("/api/x402/catalog");
     expect(report.docs).toBe("/x402");
     expect(report.payTo).toBeNull();
+    expect(report.settlementStatus).toBe("HEALTHY_BUT_NOT_SETTLEMENT_READY");
+    expect(report.settled).toBe(false);
+    expect(report.canonicalTreasury.toLowerCase()).not.toBe(
+      report.qronToken.toLowerCase()
+    );
   });
 });
 
@@ -620,13 +625,8 @@ describe("x402Catalog", () => {
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
       planPaymentLink("dpp_readiness")
     );
-    expect(catalog.humanCheckout.farmPaymentLink).toBe(
-      planPaymentLink("strainchain_farm")
-    );
-    expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
-    expect(new URL(catalog.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
-      "authichain.com"
-    );
+    expect(catalog.humanCheckout.farmPaymentLink).toBeUndefined();
+    expect(catalog.humanCheckout.farmUsd).toBeUndefined();
     expect(JSON.stringify(catalog)).not.toContain("/api/checkout");
     expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
       "facilitator.payai"
@@ -683,5 +683,17 @@ describe("x402OpenApiDocument", () => {
     expect(JSON.stringify(spec).toLowerCase()).not.toContain(
       "facilitator.payai"
     );
+  });
+
+  it("enforces autonomous agent zero-facilitator compliance and exact pricing", () => {
+    const requirement = buildPaymentRequired({
+      resource: "https://authichain.com/api/x402",
+      priceUsd: 0.05,
+      payTo: X402_PUBLISHED_PAY_TO,
+    });
+    expect(requirement.status).toBe(402);
+    expect(requirement.body.accepts[0].maxAmountRequired).toBe("50000");
+    expect(requirement.body.accepts[0].payTo).toBe(X402_PUBLISHED_PAY_TO);
+    expect(requirement.body.extensions.bazaar).toBeDefined();
   });
 });

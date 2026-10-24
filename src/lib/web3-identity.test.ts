@@ -88,13 +88,8 @@ describe("canonical web3 identity lock", () => {
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
       planPaymentLink("dpp_readiness")
     );
-    expect(catalog.humanCheckout.farmPaymentLink).toBe(
-      planPaymentLink("strainchain_farm")
-    );
-    expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
-    expect(new URL(catalog.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
-      "authichain.com"
-    );
+    expect(catalog.humanCheckout.farmPaymentLink).toBeUndefined();
+    expect(catalog.humanCheckout.farmUsd).toBeUndefined();
   });
 
   it("keeps $QRON out of x402 accepts[]", () => {
@@ -124,13 +119,8 @@ describe("canonical web3 identity lock", () => {
     const d = agentPricingDiscovery();
     expect(d.humanCheckout.source).toBe("src/lib/plans.ts");
     expect(d.humanCheckout.strainchain_passport).toBe("$49 one-time");
-    expect(d.humanCheckout.strainchain_farm).toBe("$149/month");
-    expect(d.humanCheckout.checkout.farm).toBe(
-      planPaymentLink("strainchain_farm")
-    );
-    expect(new URL(d.humanCheckout.checkout.farm ?? "").hostname).toBe(
-      "authichain.com"
-    );
+    expect(d.humanCheckout.strainchain_farm).toBe("not a public offer");
+    expect(d.humanCheckout.checkout.farm).toBeUndefined();
     expect(d.nft.deployer).toBe(NFT_DEPLOYER_EOA);
     expect(d.nft.contract).toBe(POLYGON_AUTHICHAIN_NFT);
   });

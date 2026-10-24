@@ -1,0 +1,16 @@
+{
+  "/home/zac/projects/authichain-unified/contracts/ledger/AuthiChainLedger.sol": {
+    "jobHash": "solc-0_8_19-9c433210e64f6d838623db91704fd963058affb2",
+    "isolated": false,
+    "compilerType": "solc",
+    "artifactPaths": [
+      "/home/zac/projects/authichain-unified/artifacts/contracts/ledger/AuthiChainLedger.sol/AuthiChainLedger.json"
+    ],
+    "buildInfoPath": "/home/zac/projects/authichain-unified/artifacts/build-info/solc-0_8_19-9c433210e64f6d838623db91704fd963058affb2.json",
+    "buildInfoOutputPath": "/home/zac/projects/authichain-unified/artifacts/build-info/solc-0_8_19-9c433210e64f6d838623db91704fd963058affb2.output.json",
+    "typeFilePath": "/home/zac/projects/authichain-unified/artifacts/contracts/ledger/AuthiChainLedger.sol/artifacts.d.ts",
+    "wasm": false,
+    "artifactsDirectory": "/home/zac/projects/authichain-unified/artifacts",
+    "emitsTypeDeclarations": true
+  }
+}

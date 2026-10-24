@@ -5,6 +5,18 @@ from pathlib import Path
 from agentz.core.modes import ExecutionContext, Mode
 
 def run_all_workflows():
+    import argparse
+    parser = argparse.ArgumentParser(description="Run AgentZ workflows")
+    parser.add_argument("--mode", default="dry-run", help="Execution mode (dry-run, confirm, auto)")
+    args = parser.parse_args()
+    mode_str = args.mode
+
+    from agentz.core.auto_policy import consult_agentz_policy
+
+    decision = consult_agentz_policy(mode_str)
+    if not decision.get("allowed"):
+        print(decision.get("reason") or "AgentZ mode refused", file=sys.stderr)
+        sys.exit(2)
     # Adjusted to root directory relative path
     handlers_dir = Path("agentz/workflows/handlers")
     log_file = Path("workflow_execution_summary.log")
@@ -28,7 +40,8 @@ def run_all_workflows():
                 spec.loader.exec_module(module)
                 
                 if hasattr(module, "run"):
-                    ctx = ExecutionContext(mode=Mode.AUTO, workflow_id=workflow_id)
+                    exec_mode = Mode.DRY_RUN if mode_str == "dry-run" else (Mode.CONFIRM if mode_str == "confirm" else Mode.AUTO)
+                    ctx = ExecutionContext(mode=exec_mode, workflow_id=workflow_id)
                     # We assume it runs successfully if it doesn't raise
                     result = module.run(ctx)
                     f.write(f"SUCCESS: {result}\n")

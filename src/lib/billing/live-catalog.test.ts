@@ -7,6 +7,7 @@ import {
   isFounderEmail,
   isPublicPlanId,
   publicCheckoutHref,
+  resolveCheckoutPlanId,
 } from "./live-catalog";
 import { PUBLIC_PLAN_IDS, planByStripePriceId } from "../plans";
 
@@ -41,6 +42,36 @@ describe("catalog freeze 2026-09-28", () => {
     expect(grantForPriceId(UNLISTED_SMOKE.seal_monthly)).toBeNull();
   });
 
+  it("resolves a $29 Payment Link with no metadata to starter", () => {
+    expect(
+      resolveCheckoutPlanId({ plan: null, priceId: null, amountTotal: 2900 })
+    ).toBe("starter");
+    expect(
+      resolveCheckoutPlanId({
+        plan: "",
+        priceId: LIVE_PRICE_MAP.starter.priceId,
+        amountTotal: null,
+      })
+    ).toBe("starter");
+    expect(
+      resolveCheckoutPlanId({
+        plan: "starter",
+        priceId: null,
+        amountTotal: null,
+      })
+    ).toBe("starter");
+  });
+
+  it("does not guess a plan when the amount is shared or unlisted", () => {
+    expect(resolveCheckoutPlanId({ amountTotal: 29900 })).toBeNull();
+    expect(
+      resolveCheckoutPlanId({ priceId: UNLISTED_SMOKE.first_dollar_human })
+    ).toBeNull();
+    expect(resolveCheckoutPlanId({ plan: "studio", amountTotal: 2900 })).toBe(
+      "starter"
+    );
+  });
+
   it("grants starter 100 and launch 100", () => {
     expect(grantForPriceId(LIVE_PRICE_MAP.starter.priceId)).toEqual({
       planId: "starter",
@@ -70,5 +101,12 @@ describe("catalog freeze 2026-09-28", () => {
     expect(isFounderEmail("undone.k@gmail.com")).toBe(true);
     expect(isFounderEmail("authichain@gmail.com")).toBe(true);
     expect(isFounderEmail("buyer@example.com")).toBe(false);
+  });
+
+  it("treats every alias on an owned @domain founder entry as founder", () => {
+    expect(isFounderEmail("ops@authichain.com")).toBe(true);
+    expect(isFounderEmail("smoke+dpp@authichain.com")).toBe(true);
+    expect(isFounderEmail("a@authichain.com.au")).toBe(false);
+    expect(isFounderEmail("buyer@farm.com")).toBe(false);
   });
 });

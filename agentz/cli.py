@@ -134,6 +134,12 @@ def cmd_creds(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     mode = parse_mode(args.mode)
+    from agentz.core.auto_policy import consult_agentz_policy
+
+    decision = consult_agentz_policy(mode.value)
+    if not decision.get("allowed"):
+        print(decision.get("reason") or "AgentZ mode refused", file=sys.stderr)
+        return 2
     if args.all and mode == Mode.AUTO:
         print(
             "Refusing `run --all --mode auto`. Re-run with --mode dry-run "

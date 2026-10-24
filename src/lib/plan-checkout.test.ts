@@ -125,16 +125,34 @@ describe("createPlanCheckoutSession", () => {
     expect(create.mock.calls[0][0].customer_email).toBe("mike@example.com");
   });
 
-  it("does not set customer_creation on Farm Plan subscription checkout", async () => {
+  it("refuses Farm and Theater without calling Stripe", async () => {
+    for (const planId of ["strainchain_farm", "theater_3"]) {
+      const result = await createPlanCheckoutSession({
+        request: new Request("https://authichain.govchain.us/api/checkout", {
+          method: "POST",
+        }),
+        body: { planId },
+        stripeSecretKey: "sk_test_x",
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        status: 404,
+        error: "Plan is not a public offer",
+      });
+    }
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("does not set customer_creation on the public Launch subscription", async () => {
     create.mockResolvedValue({
-      url: "https://checkout.stripe.com/c/pay/cs_test_farm",
+      url: "https://checkout.stripe.com/c/pay/cs_test_launch",
     });
     const result = await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.govchain.us/api/checkout/plan/strainchain_farm",
+        "https://authichain.govchain.us/api/checkout/plan/qron_launch",
         { method: "GET" }
       ),
-      body: { planId: "strainchain_farm" },
+      body: { planId: "qron_launch" },
       stripeSecretKey: "sk_test_x",
     });
     expect(result.ok).toBe(true);
@@ -147,17 +165,17 @@ describe("createPlanCheckoutSession", () => {
 
   it("carries aff_ref + ref_code cookies into session and subscription metadata", async () => {
     create.mockResolvedValue({
-      url: "https://checkout.stripe.com/c/pay/cs_test_farm_aff",
+      url: "https://checkout.stripe.com/c/pay/cs_test_launch_aff",
     });
     const result = await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.govchain.us/api/checkout/plan/strainchain_farm",
+        "https://authichain.govchain.us/api/checkout/plan/qron_launch",
         {
           method: "GET",
           headers: { cookie: "aff_ref=AFF-COOKIE; ref_code=USER-456" },
         }
       ),
-      body: { planId: "strainchain_farm" },
+      body: { planId: "qron_launch" },
       stripeSecretKey: "sk_test_x",
     });
     expect(result.ok).toBe(true);
@@ -203,14 +221,14 @@ describe("createPlanCheckoutSession", () => {
 
   it("prefers an explicit affiliateCode over the cookie", async () => {
     create.mockResolvedValue({
-      url: "https://checkout.stripe.com/c/pay/cs_test_farm_aff2",
+      url: "https://checkout.stripe.com/c/pay/cs_test_launch_aff2",
     });
     await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.govchain.us/api/checkout/plan/strainchain_farm",
+        "https://authichain.govchain.us/api/checkout/plan/qron_launch",
         { method: "GET", headers: { cookie: "aff_ref=AFF-COOKIE" } }
       ),
-      body: { planId: "strainchain_farm", affiliateCode: "AFF-EXPLICIT" },
+      body: { planId: "qron_launch", affiliateCode: "AFF-EXPLICIT" },
       stripeSecretKey: "sk_test_x",
     });
     expect(create.mock.calls[0][0].metadata.affiliate_code).toBe(

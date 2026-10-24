@@ -59,10 +59,6 @@ const SUPABASE_KEY =
   process.env.SUPABASE_SERVICE_KEY ??
   "";
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY ?? "";
-const APP_URL = (process.env.APP_URL ?? "https://authichain.com").replace(
-  /\/$/,
-  ""
-);
 const CRON_SECRET = process.env.CRON_SECRET ?? "";
 
 const WARM_STATUSES = new Set([
@@ -180,7 +176,7 @@ function hasVerifiedProvenance(lead: LeadProvenanceInput): boolean {
   return !!p && VERIFIED_PROVENANCE.has(p);
 }
 
-/** Map lead.segment (or similar) onto closer PILOT_PRICE_USD keys. */
+/** Map a lead segment onto a public catalogue checkout label. */
 function normalizeCloserSegment(seg?: string | null): string {
   const s = (seg ?? "").toLowerCase();
   if (s.startsWith("gov")) return "GOV";
@@ -282,57 +278,6 @@ async function stripeGet(path: string): Promise<any> {
     throw new Error(`Stripe ${res.status}: ${body.slice(0, 200)}`);
   }
   return res.json();
-}
-
-async function createCheckoutSession(opts: {
-  leadEmail: string;
-  leadId: number;
-  segment: string;
-  amountCents: number;
-  productName: string;
-}): Promise<string | null> {
-  if (!STRIPE_KEY) return null;
-  const params = new URLSearchParams();
-  params.set("mode", "payment");
-  params.set(
-    "success_url",
-    `${APP_URL}/thanks?session_id={CHECKOUT_SESSION_ID}`
-  );
-  params.set("cancel_url", `${APP_URL}/pricing`);
-  params.set("customer_email", opts.leadEmail);
-  params.set(
-    // Stripe Checkout Session expiry must be ≤ 24h from creation for payment mode.
-    "expires_at",
-    String(Math.floor(Date.now() / 1000) + 23 * 3600)
-  );
-  params.set("line_items[0][quantity]", "1");
-  params.set("line_items[0][price_data][currency]", "usd");
-  params.set(
-    "line_items[0][price_data][unit_amount]",
-    String(opts.amountCents)
-  );
-  params.set("line_items[0][price_data][product_data][name]", opts.productName);
-  params.set("metadata[leadEmail]", opts.leadEmail);
-  params.set("metadata[leadId]", String(opts.leadId));
-  params.set("metadata[segment]", opts.segment);
-  params.set("metadata[source]", "revenue_cycle");
-
-  const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${STRIPE_KEY}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: params,
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(
-      `Checkout session failed (${res.status}): ${body.slice(0, 240)}`
-    );
-  }
-  const data = (await res.json()) as { url?: string };
-  return data.url ?? null;
 }
 
 // ─── Phases ───────────────────────────────────────────────────────────────────
@@ -479,10 +424,6 @@ async function phaseCheckoutLinks(db: SupabaseClient | null): Promise<number> {
     const cta = segmentPaymentCta(lead.segment);
     if (!cta) continue;
     const attributed = withAttribution(cta.url, lead.id, "warm_checkout");
-    const amountHint =
-      cta.price.replace(/[^0-9.]/g, "") === ""
-        ? 49900
-        : Math.round(parseFloat(cta.price.replace(/[^0-9.]/g, "")) * 100);
 
     console.log(
       `  • lead#${lead.id} ${lead.email} [${lead.segment ?? "n/a"}] → ${cta.name} ${cta.price}`
@@ -494,24 +435,7 @@ async function phaseCheckoutLinks(db: SupabaseClient | null): Promise<number> {
       continue;
     }
 
-    let checkoutUrl = attributed;
-    if (STRIPE_KEY) {
-      try {
-        const sessionUrl = await createCheckoutSession({
-          leadEmail: lead.email,
-          leadId: lead.id,
-          segment: String(lead.segment ?? "default"),
-          amountCents:
-            Number.isFinite(amountHint) && amountHint > 0 ? amountHint : 49900,
-          productName: cta.name,
-        });
-        if (sessionUrl) checkoutUrl = sessionUrl;
-      } catch (err: any) {
-        console.warn(
-          `    ⚠️  Checkout session failed, using static link: ${err.message?.slice(0, 120)}`
-        );
-      }
-    }
+    const checkoutUrl = attributed;
 
     const nextMeta = {
       ...((lead.metadata ?? {}) as object),
@@ -980,10 +904,14 @@ async function phaseReport(db: SupabaseClient | null): Promise<void> {
 
   lines.push(`Catalog CTAs ready:`);
   lines.push(
-    `  QRON Creator: ${planPaymentLink("creator") ?? PAYMENT_LINKS.qron.brandPack.url}`
+    `  ${PAYMENT_LINKS.qron.brandPack.name}: ${planPaymentLink("creator") ?? PAYMENT_LINKS.qron.brandPack.url}`
   );
-  lines.push(`  AuthiChain Starter: ${PAYMENT_LINKS.authichain.starter.url}`);
-  lines.push(`  StrainChain Basic: ${PAYMENT_LINKS.strainchain.basic.url}`);
+  lines.push(
+    `  ${PAYMENT_LINKS.authichain.starter.name}: ${PAYMENT_LINKS.authichain.starter.url}`
+  );
+  lines.push(
+    `  ${PAYMENT_LINKS.strainchain.basic.name}: ${PAYMENT_LINKS.strainchain.basic.url}`
+  );
   lines.push(`Generated: ${new Date().toISOString()}`);
 
   console.log(lines.join("\n"));

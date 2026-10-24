@@ -10,7 +10,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
-import { handleSalesInbound, type RateLimiter } from "./sales-inbound";
+import { handleSalesInbound, sellablePlan, type RateLimiter } from "./sales-inbound";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -324,14 +324,9 @@ async function handleStripeCheckout(req: Request, env: Env): Promise<Response> {
       400
     );
 
-  const priceMap: Record<string, string> = {
-    authichain_basic: env.STRIPE_PRICE_BASIC,
-    authichain_pro: env.STRIPE_PRICE_PRO,
-    authichain_enterprise: env.STRIPE_PRICE_ENTERPRISE,
-  };
-  const price_id = priceMap[plan_id as string];
-  if (!price_id)
-    return jsonResponse({ error: `Unknown plan_id: ${plan_id}` }, 400);
+  const plan = sellablePlan(plan_id);
+  if (!plan)
+    return jsonResponse({ error: "Plan is not a public offer" }, 404);
 
   const base_url = env.NEXT_PUBLIC_APP_URL;
   const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
@@ -341,12 +336,13 @@ async function handleStripeCheckout(req: Request, env: Env): Promise<Response> {
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams({
-      mode: "subscription",
+      mode: plan.stripe_mode,
       "payment_method_types[]": "card",
       customer_email: customer_email as string,
-      "line_items[0][price]": price_id,
+      "line_items[0][price]": plan.stripe_price_id,
       "line_items[0][quantity]": "1",
-      "metadata[plan_id]": plan_id as string,
+      "metadata[plan]": plan.id,
+      "metadata[plan_id]": plan.id,
       "metadata[brand]": brand as string,
       success_url: `${base_url}/dashboard?brand=${brand}&session_id={CHECKOUT_SESSION_ID}&status=success`,
       cancel_url: `${base_url}/pricing?brand=${brand}&status=cancelled`,

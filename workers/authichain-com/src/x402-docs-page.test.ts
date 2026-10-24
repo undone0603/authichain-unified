@@ -96,24 +96,19 @@ describe("x402 public docs page", () => {
     expect(html).toContain('name="email"');
     expect(html).toContain('action="https://authichain.com/checkout/dpp_readiness"');
     expect(html).toContain('action="https://authichain.com/checkout/strainchain_passport"');
-    expect(html).toContain('action="https://authichain.com/checkout/strainchain_farm"');
+    expect(html).not.toContain('action="https://authichain.com/checkout/strainchain_farm"');
     expect(html).not.toMatch(/href=["']\/api\/checkout/);
     expect(html).not.toMatch(/href=["']\/protocol\/checkout/);
     expect(html).not.toContain("GET /api/checkout");
 
     const passport = planPaymentLink("strainchain_passport");
-    const farm = planPaymentLink("strainchain_farm");
     const dpp = planPaymentLink("dpp_readiness");
     expect(passport).toBeTruthy();
-    expect(farm).toBeTruthy();
     expect(dpp).toBeTruthy();
     expect(httpsUrl(passport!).hostname).toBe("authichain.com");
-    expect(httpsUrl(farm!).hostname).toBe("authichain.com");
     expect(httpsUrl(dpp!).hostname).toBe("authichain.com");
     expect(html).toContain(`href="${passport}"`);
-    expect(html).toContain(`href="${farm}"`);
     expect(html).toContain(`href="${dpp}"`);
-    expect(html).toContain(`Pay $${planUsd("strainchain_farm")} on Stripe`);
-    expect(html).toContain("StrainChain Farm");
+    expect(html).not.toContain("StrainChain Farm");
   });
 });

@@ -1,0 +1,63 @@
+{
+  "goal_id": "authentic-economy-best-case",
+  "label": "SIMULATION",
+  "reached": false,
+  "system_reached": true,
+  "revision": 2,
+  "stop": "external_gate",
+  "open": [
+    "qualifying_revenue",
+    "dpp_retained"
+  ],
+  "next_action": {
+    "id": "offer_dpp_openclaw",
+    "interrupt": "L2",
+    "priority": "L2",
+    "status": "READY",
+    "blocking_requirement": null,
+    "executable": true,
+    "blocked_on": null,
+    "mode": "boring",
+    "plan_id": "dpp_readiness",
+    "channel": "openclaw_inbound",
+    "sends_mail": false,
+    "opens_checkout_session": false,
+    "checkout_url": "https://authichain.com/checkout/dpp_readiness",
+    "price_usd": 299,
+    "why": {
+      "revenue": true,
+      "customer_value": true
+    }
+  },
+  "simulation": {
+    "label": "SIMULATION",
+    "not_revenue": true,
+    "rows": [
+      {
+        "id": "battery",
+        "plan_id": "dpp_readiness",
+        "price_usd": 299,
+        "price_source": "src/lib/plans.ts",
+        "sessions": 500,
+        "cvr": 0.03,
+        "paid_count": 15,
+        "cash_usd": 4485,
+        "label": "SIMULATION"
+      },
+      {
+        "id": "generate",
+        "plan_id": "starter",
+        "price_usd": 29,
+        "price_source": "src/lib/plans.ts",
+        "sessions": 200,
+        "cvr": 0.06,
+        "paid_count": 12,
+        "cash_usd": 348,
+        "label": "SIMULATION"
+      }
+    ],
+    "cash_usd": 4833
+  },
+  "freedom_rows": 2,
+  "freedom_measured_rows": 0
+}

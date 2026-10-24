@@ -47,7 +47,7 @@ export const PAYMENT_LINKS = {
     starter: offer("dpp_readiness"),
   },
   strainchain: {
-    basic: offer("strainchain_farm"),
+    basic: offer("strainchain_passport"),
   },
 } as const;
 

@@ -222,7 +222,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
     );
     assert.equal(
       body.pricing.humanCheckout.farmPaymentLink,
-      planPaymentLink("strainchain_farm"),
+      undefined,
       path
     );
     assert.equal(
@@ -272,10 +272,7 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
     };
   };
   assert.equal(body.catalog, "/api/x402/catalog");
-  assert.equal(
-    new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-    "authichain.com"
-  );
+  assert.equal(body.humanCheckout.farmPaymentLink, undefined);
   assert.equal(
     new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
     "authichain.com"

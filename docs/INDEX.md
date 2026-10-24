@@ -8,6 +8,9 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [CLAUDE.md](../CLAUDE.md) — AI context, essential commands, architecture summary
 - [GEMINI.md](../GEMINI.md) — AgentZ autonomous launch conventions
 - [AGENTS.md](../AGENTS.md) — Next.js agent rules
+- [ECONOMIC_CONSTITUTION_AND_AGENT_OS.md](ECONOMIC_CONSTITUTION_AND_AGENT_OS.md) — economic constitution and agent OS, bound to the charter, `plans.ts`, and `classifyRevenue`
+- [operations/SUBSTRATE.md](operations/SUBSTRATE.md) — one verification substrate, one orchestrator, best-case goal, founder freedom ledger
+- [operations/agentz-mission-replay.md](operations/agentz-mission-replay.md) — non-authoritative AgentZ mission audit; cash stays `classifyRevenue`
 - [project/START_HERE.md](project/START_HERE.md) — conversion funnel tracking quickstart
 - [project/todo.md](project/todo.md) — platform TODO / progress tracker
 - [project/SAM_PREP.md](project/SAM_PREP.md) — live SAM.gov record; contracts/SAM = ZACHARY KIETZMAN, IRS = AuthiChain, Inc.

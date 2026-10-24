@@ -122,6 +122,19 @@ def execute(
     started = time.time()
     started_iso = datetime.now(timezone.utc).isoformat()
 
+    from agentz.core.auto_policy import consult_agentz_policy
+
+    decision = consult_agentz_policy(mode.value)
+    if not decision.get("allowed"):
+        return RunResult(
+            workflow_id=wf.id,
+            status="blocked",
+            started_at=started_iso,
+            finished_at=datetime.now(timezone.utc).isoformat(),
+            duration_s=time.time() - started,
+            notes=str(decision.get("reason") or "AgentZ mode refused"),
+        )
+
     # 1. Rate limit check
     if wf.max_runs_per_day is not None and audit_log_path.exists():
         recent_count = _count_recent_runs(wf.id, audit_log_path)

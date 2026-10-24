@@ -157,7 +157,7 @@ Use the live VT-26 page as the template. Do not invent panels.
 - **Subhead:** Totals on this page are recomputed from the lab panel at render time. A scan is not a potency guarantee.
 - **Proof:** Named CoA sample IDs already on the page. METRC integration is on the roadmap — do not say live.
 - **Primary CTA:** Publish your cultivar — $49 → `/checkout/strainchain_passport`
-- **Secondary:** Farm Plan $149/mo → `/checkout/strainchain_farm`
+- **Secondary:** Farm is not a public offer. Do not link `/checkout/strainchain_farm`.
 
 ### FAQ
 

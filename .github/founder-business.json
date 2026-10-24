@@ -96,8 +96,7 @@
     "dns_or_cloudflare_access",
     "npm_publish",
     "live_social_posts",
-    "live_agentz_mode",
-    "merge_security_revenue_schema_or_charter_changes"
+    "live_agentz_mode"
   ],
   "success_metrics": [
     "paid_checkouts",

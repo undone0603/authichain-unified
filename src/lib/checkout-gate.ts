@@ -39,15 +39,9 @@ import {
   type Plan,
   type PlanId,
 } from "./plans";
+import { resolveCommerce } from "./economic-authority";
 
 export { GATED_CHECKOUT_ORIGIN, gatedCheckoutUrl };
-
-/** Friendly aliases → catalogue ids for /checkout/<alias>. */
-const PLAN_ALIASES: Record<string, PlanId> = {
-  dpp: "dpp_readiness",
-  passport: "strainchain_passport",
-  farm: "strainchain_farm",
-};
 
 /** Query/form keys carried from the landing into Stripe metadata. */
 export const CHECKOUT_CARRY_KEYS = [
@@ -88,14 +82,14 @@ export function isGatedCheckoutPath(pathname: string): boolean {
   return p === "/checkout" || /^\/checkout\/[A-Za-z0-9_-]+$/.test(p);
 }
 
-/** `/checkout/<id|alias>` → purchasable catalogue plan, else undefined. */
+/** `/checkout/<id|alias>` → public catalogue plan, else undefined. */
 export function planFromGatedPath(pathname: string): Plan | undefined {
   const p = pathname.replace(/\/+$/, "");
   const m = p.match(/^\/checkout\/([A-Za-z0-9_-]+)$/);
   if (!m) return undefined;
-  const slug = m[1].toLowerCase();
-  const id = (PLAN_ALIASES[slug] ?? slug) as PlanId;
-  const plan = planById(id);
+  const commerce = resolveCommerce(m[1]);
+  if (!commerce.publicly_sellable || !commerce.plan_id) return undefined;
+  const plan = planById(commerce.plan_id);
   if (!plan || !plan.stripe_price_id || !plan.stripe_mode) return undefined;
   return plan;
 }
@@ -374,7 +368,7 @@ export function buildGatedSessionBody(opts: {
   body.set("payment_method_types[0]", "card");
   // The claim file has its own landing: /dpp/thanks would tell a Made in USA
   // buyer their "DPP audit" was provisioned.
-  const isClaimFile = plan.id === "musa_claim_file";
+  const isClaimFile = plan.id === "made_in_usa_claim_file";
   body.set(
     "success_url",
     isClaimFile

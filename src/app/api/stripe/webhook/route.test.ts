@@ -13,6 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { NextRequest } from "next/server";
 import { POST } from "./route";
+import { provisionPurchase } from "@/lib/provisioning";
 
 // ─── Hoisted fakes ────────────────────────────────────────────────────────────
 
@@ -225,7 +226,6 @@ vi.mock("@/lib/dpp-fulfill-checkout", () => ({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function invoiceEvent(
   billingReason: string,
   ids: { event: string; invoice: string }
@@ -355,6 +355,42 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
         objectId: "in_cycle_001",
         amountCents: 14900,
         invoiceId: "in_cycle_001",
+      })
+    );
+  });
+
+  it("checkout.session.completed: $29 with no plan metadata provisions starter", async () => {
+    vi.mocked(provisionPurchase).mockResolvedValue({
+      profileId: "prof_1",
+      created: false,
+      status: "provisioned",
+    });
+    const res = await postInvoice({
+      id: "evt_cs_starter_001",
+      object: "event",
+      type: "checkout.session.completed",
+      livemode: false,
+      data: {
+        object: {
+          id: "cs_starter_001",
+          object: "checkout.session",
+          amount_total: 2900,
+          currency: "usd",
+          customer_email: "buyer@example.com",
+          customer_details: { email: "buyer@example.com" },
+          metadata: {},
+          payment_status: "paid",
+        },
+      },
+    });
+    await flushAfter();
+
+    expect(res.body).toMatchObject({ received: true });
+    expect(provisionPurchase).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        email: "buyer@example.com",
+        plan: "starter",
       })
     );
   });
