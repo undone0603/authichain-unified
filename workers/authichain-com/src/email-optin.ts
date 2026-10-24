@@ -18,7 +18,7 @@ export const EMAIL_OPTIN_CONFIRM_PATH = "/api/email-optin/confirm";
 
 /** Research gate PR2013 @ b2dbd98d, FIX 1, verbatim. */
 export const EMAIL_OPTIN_CONSENT_TEXT =
-  "Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@gmail.com.";
+  "Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@mail.grokbot.com.";
 /** /is-this-real (also POSTs /api/leads/capture). Research FIX 2 Option B, verbatim. */
 export const EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL =
   'If you tick the box, we store your email, the first seal ID you check, the page address, when you agreed, and whether you confirmed. We send updates only after you confirm. Unconfirmed sign-ups are removed from our mailing list after 30 days. See the <a href="/privacy">privacy policy</a>.';
