@@ -6,7 +6,7 @@
  * This module is the worker-owned handler: credit packs come from
  * `src/lib/plans.ts`, and image generation proxies to qron-image-gen.
  */
-import { listedPlans, planPaymentLink, type Plan } from "./plans";
+import { gatedCheckoutUrl, listedPlans, planPaymentLink, type Plan } from "./plans";
 import {
   CANONICAL_VERIFY_URL,
   DECISION_CONTRACT,
@@ -178,6 +178,26 @@ export type GeneratePostResult = {
  * with a global daily ceiling so the sample cannot run up image-gen cost.
  */
 export const FREE_SAMPLE_GENERATIONS = 5;
+/** Signed-in generations with fewer credits left than this get a Starter-only soft prompt. */
+export const LOW_CREDIT_THRESHOLD = 20;
+/** Marketing v5 copy (qron-modes-copy.md, trigger b, Variant A "low-starter-a"), verbatim. */
+export const LOW_CREDIT_STARTER_PROMPT = {
+  message: "You're running low on generations. Top up any time: Starter is 100 for $29, paid once.",
+  button: "Add 100 generations for $29",
+  dismiss: "Not now",
+  small_print: "Checkout on authichain.com.",
+} as const;
+export function lowCreditUpgrade(left: unknown): Record<string, unknown> {
+  if (typeof left !== "number" || left >= LOW_CREDIT_THRESHOLD) return {};
+  return {
+    upgrade: {
+      url: `${gatedCheckoutUrl("starter")}?src=low_credit&utm_content=low-starter-a`,
+      plan: "starter",
+      remaining_credits: left,
+      ...LOW_CREDIT_STARTER_PROMPT,
+    },
+  };
+}
 export const FREE_SAMPLE_WINDOW_MS = 30 * 24 * 60 * 60_000;
 export const FREE_SAMPLE_GLOBAL_DAILY_CAP = 100;
 
@@ -409,6 +429,7 @@ export async function handleGeneratePost(opts: {
         },
         ...(anonymous ? {} : { presentation }),
         remaining_credits: deducted.ok ? deducted.remaining : credit.remaining,
+        ...(anonymous ? {} : lowCreditUpgrade(deducted.ok ? deducted.remaining : credit.remaining)),
         ...(anonymous ? { free_sample: true } : {}),
       },
     };
