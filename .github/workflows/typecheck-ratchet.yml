@@ -18,10 +18,11 @@ on:
     branches: [main]
 
 concurrency:
-  group: typecheck-ratchet-${{ github.ref }}
-  # Only PR runs are superseded; a push to main must never cancel a running
-  # deploy/check mid-way (PM-328). Newer main runs queue behind it instead.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # PM ruling Oct 24: CI-only per-workflow group, cancel stale runs so a
+  # push to main cannot pile CI up ahead of a deploy on the single
+  # self-hosted runner. Never a deploy group name.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -52,3 +53,14 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=8192
         run: node scripts/typecheck-ratchet.mjs
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +

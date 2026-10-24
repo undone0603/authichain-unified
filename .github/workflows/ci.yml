@@ -19,10 +19,16 @@ on:
       - "docs/archive/**"
 
 concurrency:
-  group: ci-extras-${{ github.head_ref || github.ref }}
-  # Only PR runs are superseded; a push to main must never cancel a running
-  # deploy/check mid-way (PM-328). Newer main runs queue behind it instead.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # PM ruling Oct 24: CI-only per-workflow group, cancel stale runs so a
+  # push to main cannot pile CI up ahead of a deploy on the single
+  # self-hosted runner. Never a deploy group name.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
+# Flip to 'false' once the runner is verified; the skip step warns visibly.
+env:
+  SKIP_PY312_ON_SELF_HOSTED: 'true'
 
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
@@ -81,8 +87,12 @@ jobs:
       - name: Validate living identity rights boundaries
         run: pnpm run test:living-identities
 
+      - name: "Skipped on self-hosted: AgentZ pytest (Python 3.12)"
+        if: env.SKIP_PY312_ON_SELF_HOSTED == 'true'
+        run: echo "::warning title=Skipped on self-hosted::AgentZ pytest (Python 3.12) not run - Python 3.12 is unverified on the ARM64 runner. Not a pass."
+
       - name: Set up Python (AgentZ)
-        if: hashFiles('requirements-agentz.txt') != ''
+        if: env.SKIP_PY312_ON_SELF_HOSTED != 'true' && (hashFiles('requirements-agentz.txt') != '')
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
@@ -92,21 +102,21 @@ jobs:
       # the pip download cache). Keyed on Python version + requirements.
       - name: Cache AgentZ venv
         id: venv-cache
-        if: hashFiles('requirements-agentz.txt') != ''
+        if: env.SKIP_PY312_ON_SELF_HOSTED != 'true' && (hashFiles('requirements-agentz.txt') != '')
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: .venv
           key: agentz-venv-${{ runner.os }}-py3.12-${{ hashFiles('requirements-agentz.txt') }}
 
       - name: Install AgentZ Python dependencies
-        if: hashFiles('requirements-agentz.txt') != '' && steps.venv-cache.outputs.cache-hit != 'true'
+        if: env.SKIP_PY312_ON_SELF_HOSTED != 'true' && (hashFiles('requirements-agentz.txt') != '' && steps.venv-cache.outputs.cache-hit != 'true')
         run: |
           python -m venv .venv
           ./.venv/bin/pip install --upgrade pip
           ./.venv/bin/pip install -r requirements-agentz.txt
 
       - name: Run AgentZ tests
-        if: hashFiles('requirements-agentz.txt') != ''
+        if: env.SKIP_PY312_ON_SELF_HOSTED != 'true' && (hashFiles('requirements-agentz.txt') != '')
         run: |
           source .venv/bin/activate
           # Scoped to agentz/tests -- the only real pytest suite; the test_*.py
@@ -120,3 +130,14 @@ jobs:
         if: always()
         with:
           report_paths: "**/test-results/*.xml"
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +

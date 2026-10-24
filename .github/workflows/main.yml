@@ -16,6 +16,8 @@ on:
   workflow_dispatch:
 
 concurrency:
+  # Kept as-is (not ci-<workflow>-<ref> + cancel true): check-deploy-invariants
+  # enforces CFA-123/PM-328 on the required "Main quality gate" workflow.
   # PRs: one active CI Main run per source branch; a newer commit supersedes
   # an older run even when GitHub opened a new PR for the same feature branch.
   # Pushes to main: one group PER COMMIT (CFA-123). GitHub keeps at most one
@@ -28,6 +30,11 @@ concurrency:
   # deploy/check mid-way (PM-328). With per-commit push groups, main runs
   # never queue behind or cancel each other.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
+# Flip to 'false' once the runner is verified; the skip step warns visibly.
+env:
+  SKIP_PLAYWRIGHT_ON_SELF_HOSTED: 'true'
 
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
@@ -77,6 +84,17 @@ jobs:
       - name: Lint
         run: pnpm lint:ci
 
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
+
   test:
     # The workspace suites mix Vitest, node:test and tsx --test, so
     # `vitest --shard` cannot split them. Shards split turbo's package graph
@@ -113,22 +131,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: "Skipped on self-hosted: Playwright browser install"
+        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED == 'true' && matrix.shard == 2
+        run: echo "::warning title=Skipped on self-hosted::Playwright Chromium install not run (needs apt/sudo and ARM64 Chromium). Browser-dependent tests in shard 2 may fail or be absent. Not a pass."
+
       # GB-26 fix 2: cache the Chromium download (~26 s); system deps still
       # install on a hit. Keyed on the lockfile, so a Playwright bump misses.
       - name: Cache Playwright browsers
         id: pw-cache
-        if: matrix.shard == 2
+        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && (matrix.shard == 2)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright browsers
-        if: matrix.shard == 2 && steps.pw-cache.outputs.cache-hit != 'true'
+        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && (matrix.shard == 2 && steps.pw-cache.outputs.cache-hit != 'true')
         run: pnpm --filter agent-browser exec playwright install --with-deps chromium
 
       - name: Install Playwright system deps (cache hit)
-        if: matrix.shard == 2 && steps.pw-cache.outputs.cache-hit == 'true'
+        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && (matrix.shard == 2 && steps.pw-cache.outputs.cache-hit == 'true')
         run: pnpm --filter agent-browser exec playwright install-deps chromium
 
       # turbo.json's test task dependsOn build, so each shard builds the
@@ -144,6 +166,17 @@ jobs:
           echo "Tests failed; retrying once for a possible next/font fetch flake in a workspace build"
           sleep 15
           pnpm test ${{ matrix.filter }} --continue=dependencies-successful
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
 
   build:
     name: Production build
@@ -183,6 +216,17 @@ jobs:
           sleep 15
           pnpm build
 
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
+
   ci:
     name: Main quality gate
     needs: [quality, test, build]
@@ -201,6 +245,17 @@ jobs:
               exit 1
             fi
           done
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
 
   production-proof:
     name: Production launch proof
@@ -262,3 +317,14 @@ jobs:
             artifacts/production-launch-proof.json
             artifacts/launch-proof-qron.png
           if-no-files-found: warn
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +

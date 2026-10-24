@@ -15,10 +15,16 @@ on:
     branches: [main]
 
 concurrency:
-  group: lint-${{ github.head_ref || github.ref }}
-  # Only PR runs are superseded; a push to main must never cancel a running
-  # deploy/check mid-way (PM-328). Newer main runs queue behind it instead.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # PM ruling Oct 24: CI-only per-workflow group, cancel stale runs so a
+  # push to main cannot pile CI up ahead of a deploy on the single
+  # self-hosted runner. Never a deploy group name.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
+# Flip to 'false' once the runner is verified; the skip step warns visibly.
+env:
+  SKIP_HARDHAT_ON_SELF_HOSTED: 'true'
 
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
@@ -100,7 +106,23 @@ jobs:
       # Hardhat contract tests (test/AuthiChainLedger.test.ts). Hardhat fetches
       # solc 0.8.19 on first run; no other job ran these.
       - name: Contract tests (Hardhat)
+        if: env.SKIP_HARDHAT_ON_SELF_HOSTED != 'true'
         run: pnpm test:contracts
+
+      - name: "Skipped on self-hosted: Hardhat contract tests"
+        if: env.SKIP_HARDHAT_ON_SELF_HOSTED == 'true'
+        run: echo "::warning title=Skipped on self-hosted::Hardhat contract tests (pnpm test:contracts) not run - solc 0.8.19 fetch/ARM64 binary unverified on the runner. Not a pass."
 
       - name: Check wrangler.toml Durable Object migrations
         run: node scripts/check-wrangler-durable-objects.mjs
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
