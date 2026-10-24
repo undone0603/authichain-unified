@@ -695,7 +695,7 @@ async function refreshAgent402DispatchCache(env, origin) {
       routerDispatchDetail: body.routerDispatchByChain?.base?.detail ?? null,
       routeSearchUrl: "https://agent402.tools/api/route?q=first%20dollar%20verify&include=external",
       indexUrl,
-      note: body.routerDispatchEligible === false ? "Agent402 Smart Order Router will not pay this seller yet. Autonomous agents must settle x402 directly (MCP verify or POST /api/agent/verify) with a non-owner wallet." : "Agent402 router may pay this seller on your behalf."
+      note: body.routerDispatchEligible === false ? "Agent402 currently reports routerDispatchEligible: false for this seller; pay x402 directly. Autonomous agents must settle x402 directly (MCP verify or POST /api/agent/verify) with a non-owner wallet." : "Agent402 router may pay this seller on your behalf."
     };
     await env.LEDGER.put("agent402_dispatch", JSON.stringify(snapshot));
     return snapshot;
@@ -844,7 +844,7 @@ function goalPayload(ledger, origin, env = {}, extras = {}) {
       nextActions: {
         human: "A non-operator completes Stripe Checkout \u2265$1 at humanShortUrl or humanCheckout; webhook ingests without manual steps.",
         agent: "A non-owner wallet settles x402 on agentVerifyUrl or MCP tool verify ($0.05+ USDC Base). Agent Stripe card does not count.",
-        discovery: "Listed on agent402.tools and x402scan; submit PayAPI form at discovery.payapiListing for marketplace canary traffic.",
+        discovery: "Listed on agent402.tools; submit PayAPI form at discovery.payapiListing for marketplace canary traffic.",
         optionalWorkerSecrets: [
           "STRIPE_SECRET_KEY \u2014 poll payment links + drain /thanks",
           "FIATDOCK_GATEWAY_SECRET \u2014 FiatDock marketplace gateway"
@@ -2332,7 +2332,7 @@ ${urls.map((href) => `  <url><loc>${href}</loc></url>`).join("\n")}
         `- Smithery card: ${url.origin}/.well-known/mcp/server-card.json`,
         `- Bounty manifest: ${url.origin}/.well-known/first-dollar-goal.json`,
         "- Facilitators: PayAI (https://facilitator.payai.network) and CDP x402",
-        "- Agent402 Smart Order Router requires seller settlement history; pay x402 directly until routerDispatchEligible is true",
+        "- Agent402 currently reports routerDispatchEligible: false for this seller; pay x402 directly.",
         "",
         "## Ledger",
         "- GET /api/ledger",
