@@ -24,6 +24,7 @@ export function renderLlmsTxt(): string {
     "> The authentic agentic economy. Signed seals, MCP verify, x402 pay-per-call.",
     "",
     "## Agent pay (x402)",
+    "- Unpaid POST https://authichain.com/api/x402 returns HTTP 402",
     "- Agents get 3 free verification calls per day on POST /api/v1/agent-verify. After that, each call returns an x402 payment request for $0.05 USDC on Base.",
     "- Canonical paid verify: POST https://authichain.com/api/v1/agent-verify",
     "- Read https://authichain.com/api/x402/health first. paidVerify.bound false means HTTP 503 before settlement and no payment is taken.",
