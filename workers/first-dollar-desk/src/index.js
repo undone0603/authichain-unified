@@ -2082,6 +2082,14 @@ async function releaseStripeEvent(env, eventId) {
   }
 }
 __name(releaseStripeEvent, "releaseStripeEvent");
+function isDppReportCheckout(env, event) {
+  // CFA-633: checkout.session.completed carries no line_items unless the
+  // session is fetched with expand, so detect DPP by session metadata only.
+  if (!String(event?.type ?? "").startsWith("checkout.session.")) return false;
+  const s = event.data?.object ?? {};
+  return s.metadata?.product_line === "dpp_report";
+}
+__name(isDppReportCheckout, "isDppReportCheckout");
 async function handleStripeWebhook(request, env) {
   const header = request.headers.get("stripe-signature");
   if (!header) {
@@ -2093,6 +2101,11 @@ async function handleStripeWebhook(request, env) {
     event = await constructStripeEvent(payload, header, env.STRIPE_WEBHOOK_SECRET);
   } catch {
     return Response.json({ error: "invalid_signature" }, { status: 400 });
+  }
+  // Advisor ruling 2026-10-24: only authichain.com/api/stripe/webhook unlocks
+  // the DPP report. Ack a DPP session with 200: no claim, no receipt, no write.
+  if (isDppReportCheckout(env, event)) {
+    return Response.json({ received: true, skipped: "dpp_report" });
   }
   if (!await claimStripeEvent(env, event.id)) {
     return Response.json({ received: true, duplicate: true });
