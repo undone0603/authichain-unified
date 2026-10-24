@@ -1,4 +1,4 @@
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/postgres-js";
 import type { SQL } from "drizzle-orm";
 import {
   eq, desc, and, sql, gte, lte, inArray, like

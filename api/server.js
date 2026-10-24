@@ -12,87 +12,218 @@ var __export = (target, all) => {
 // drizzle/schema.ts
 var schema_exports = {};
 __export(schema_exports, {
+  abTestStatusEnum: () => abTestStatusEnum,
   abTests: () => abTests,
   activityLog: () => activityLog,
   affiliateCommissions: () => affiliateCommissions,
+  affiliateStatusEnum: () => affiliateStatusEnum,
+  affiliateTierEnum: () => affiliateTierEnum,
   affiliates: () => affiliates,
+  agentStatusEnum: () => agentStatusEnum,
   aiModels: () => aiModels,
+  archetypeEnum: () => archetypeEnum,
   auctionBids: () => auctionBids,
+  auctionStatusEnum: () => auctionStatusEnum,
   auctions: () => auctions,
+  authResultEnum: () => authResultEnum,
   authentications: () => authentications,
   autopilotConfig: () => autopilotConfig,
+  autopilotDecisionStatusEnum: () => autopilotDecisionStatusEnum,
   autopilotDecisions: () => autopilotDecisions,
+  autopilotModeEnum: () => autopilotModeEnum,
+  batchStatusEnum: () => batchStatusEnum,
+  batchTypeEnum: () => batchTypeEnum,
+  billingCycleEnum: () => billingCycleEnum,
+  bonusStatusEnum: () => bonusStatusEnum,
+  bonusTierEnum: () => bonusTierEnum,
   bonuses: () => bonuses,
+  campaignStatusEnum: () => campaignStatusEnum,
+  campaignTypeEnum: () => campaignTypeEnum,
+  certificateStatusEnum: () => certificateStatusEnum,
   certificates: () => certificates,
+  charGenStatusEnum: () => charGenStatusEnum,
   characterAssets: () => characterAssets,
   characterGenerations: () => characterGenerations,
   checkpointBatches: () => checkpointBatches,
+  claimStatusEnum: () => claimStatusEnum,
+  claimTypeEnum: () => claimTypeEnum,
+  commissionStatusEnum: () => commissionStatusEnum,
+  consensusFinalStatusEnum: () => consensusFinalStatusEnum,
   consensusResults: () => consensusResults,
   customerHealthScores: () => customerHealthScores,
   emailCampaigns: () => emailCampaigns,
+  emailDraftStatusEnum: () => emailDraftStatusEnum,
   emailDrafts: () => emailDrafts,
+  fraudAlertStatusEnum: () => fraudAlertStatusEnum,
   fraudAlerts: () => fraudAlerts,
+  fraudSeverityEnum: () => fraudSeverityEnum,
+  healthTrendEnum: () => healthTrendEnum,
+  invoiceStatusEnum: () => invoiceStatusEnum,
   invoices: () => invoices,
+  jobRunStatusEnum: () => jobRunStatusEnum,
+  leadStatusEnum: () => leadStatusEnum,
   leads: () => leads,
+  mintStatusEnum: () => mintStatusEnum,
+  missionStatusEnum: () => missionStatusEnum,
+  missionTaskStatusEnum: () => missionTaskStatusEnum,
   missionTasks: () => missionTasks,
   missions: () => missions,
   modelPurchases: () => modelPurchases,
   modelReviews: () => modelReviews,
+  modelStatusEnum: () => modelStatusEnum,
   nftCollections: () => nftCollections,
+  nftStatusEnum: () => nftStatusEnum,
   nfts: () => nfts,
+  notificationTypeEnum: () => notificationTypeEnum,
   notifications: () => notifications,
+  paymentMethodEnum: () => paymentMethodEnum,
+  paymentStatusEnum: () => paymentStatusEnum,
   payments: () => payments,
+  productStatusEnum: () => productStatusEnum,
   products: () => products,
   protocolAgents: () => protocolAgents,
+  purchaseStatusEnum: () => purchaseStatusEnum,
+  purchaseTypeEnum: () => purchaseTypeEnum,
   qrCodes: () => qrCodes,
   qronRewardLedger: () => qronRewardLedger,
   referralClicks: () => referralClicks,
+  referralStatusEnum: () => referralStatusEnum,
+  referralTierEnum: () => referralTierEnum,
   referrals: () => referrals,
   revenueRecords: () => revenueRecords,
+  revenueTypeEnum: () => revenueTypeEnum,
+  rewardReasonEnum: () => rewardReasonEnum,
+  rewardStatusEnum: () => rewardStatusEnum,
   scheduledJobRuns: () => scheduledJobRuns,
+  serviceOrderStatusEnum: () => serviceOrderStatusEnum,
   serviceOrders: () => serviceOrders,
+  serviceTypeEnum: () => serviceTypeEnum,
+  subscriptionPlanEnum: () => subscriptionPlanEnum,
+  subscriptionStatusEnum: () => subscriptionStatusEnum,
   subscriptions: () => subscriptions,
+  supplyChainEventTypeEnum: () => supplyChainEventTypeEnum,
   supplyChainEvents: () => supplyChainEvents,
   usageRecords: () => usageRecords,
+  userRoleEnum: () => userRoleEnum,
   users: () => users,
   verificationClaims: () => verificationClaims,
-  whiteLabelClients: () => whiteLabelClients
+  whiteLabelClients: () => whiteLabelClients,
+  whiteLabelStatusEnum: () => whiteLabelStatusEnum
 });
 import {
-  mysqlTable,
+  pgTable,
+  pgEnum,
   varchar,
   text,
-  mysqlEnum,
-  int,
+  integer,
+  serial,
   timestamp,
   json,
   decimal
-} from "drizzle-orm/mysql-core";
-var missions, missionTasks, products, authentications, certificates, qrCodes, nftCollections, nfts, auctions, auctionBids, subscriptions, usageRecords, invoices, payments, leads, emailCampaigns, emailDrafts, supplyChainEvents, referrals, affiliates, affiliateCommissions, autopilotConfig, autopilotDecisions, abTests, whiteLabelClients, activityLog, fraudAlerts, customerHealthScores, revenueRecords, notifications, scheduledJobRuns, characterGenerations, characterAssets, protocolAgents, verificationClaims, consensusResults, qronRewardLedger, checkpointBatches, bonuses, referralClicks, aiModels, modelPurchases, modelReviews, serviceOrders, users;
+} from "drizzle-orm/pg-core";
+var missionStatusEnum, missionTaskStatusEnum, productStatusEnum, authResultEnum, certificateStatusEnum, nftStatusEnum, auctionStatusEnum, subscriptionPlanEnum, subscriptionStatusEnum, billingCycleEnum, invoiceStatusEnum, paymentMethodEnum, paymentStatusEnum, leadStatusEnum, campaignTypeEnum, campaignStatusEnum, emailDraftStatusEnum, supplyChainEventTypeEnum, referralStatusEnum, referralTierEnum, affiliateTierEnum, affiliateStatusEnum, commissionStatusEnum, autopilotModeEnum, autopilotDecisionStatusEnum, abTestStatusEnum, whiteLabelStatusEnum, fraudSeverityEnum, fraudAlertStatusEnum, healthTrendEnum, revenueTypeEnum, notificationTypeEnum, jobRunStatusEnum, archetypeEnum, charGenStatusEnum, mintStatusEnum, agentStatusEnum, claimTypeEnum, claimStatusEnum, consensusFinalStatusEnum, rewardReasonEnum, rewardStatusEnum, batchTypeEnum, batchStatusEnum, bonusTierEnum, bonusStatusEnum, modelStatusEnum, purchaseTypeEnum, purchaseStatusEnum, serviceTypeEnum, serviceOrderStatusEnum, userRoleEnum, missions, missionTasks, products, authentications, certificates, qrCodes, nftCollections, nfts, auctions, auctionBids, subscriptions, usageRecords, invoices, payments, leads, emailCampaigns, emailDrafts, supplyChainEvents, referrals, affiliates, affiliateCommissions, autopilotConfig, autopilotDecisions, abTests, whiteLabelClients, activityLog, fraudAlerts, customerHealthScores, revenueRecords, notifications, scheduledJobRuns, characterGenerations, characterAssets, protocolAgents, verificationClaims, consensusResults, qronRewardLedger, checkpointBatches, bonuses, referralClicks, aiModels, modelPurchases, modelReviews, serviceOrders, users;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
-    missions = mysqlTable("missions", {
+    missionStatusEnum = pgEnum("mission_status", ["pending", "active", "completed", "failed"]);
+    missionTaskStatusEnum = pgEnum("mission_task_status", ["pending", "in_progress", "completed", "failed"]);
+    productStatusEnum = pgEnum("product_status", ["active", "recalled", "expired", "flagged"]);
+    authResultEnum = pgEnum("auth_result", ["authentic", "counterfeit", "uncertain"]);
+    certificateStatusEnum = pgEnum("certificate_status", ["active", "revoked", "expired"]);
+    nftStatusEnum = pgEnum("nft_status", ["listed", "sold", "unlisted", "auction"]);
+    auctionStatusEnum = pgEnum("auction_status", ["active", "ended", "cancelled"]);
+    subscriptionPlanEnum = pgEnum("subscription_plan", ["starter", "professional", "enterprise"]);
+    subscriptionStatusEnum = pgEnum("subscription_status", ["active", "cancelled", "past_due", "trialing", "paused"]);
+    billingCycleEnum = pgEnum("billing_cycle", ["monthly", "annual"]);
+    invoiceStatusEnum = pgEnum("invoice_status", ["draft", "pending", "paid", "overdue", "cancelled"]);
+    paymentMethodEnum = pgEnum("payment_method", ["stripe", "crypto", "escrow"]);
+    paymentStatusEnum = pgEnum("payment_status", ["pending", "completed", "failed", "refunded", "escrowed"]);
+    leadStatusEnum = pgEnum("lead_status", ["new", "contacted", "qualified", "proposal", "won", "lost"]);
+    campaignTypeEnum = pgEnum("campaign_type", ["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]);
+    campaignStatusEnum = pgEnum("campaign_status", ["draft", "scheduled", "sending", "sent", "paused"]);
+    emailDraftStatusEnum = pgEnum("email_draft_status", ["pending", "approved", "rejected", "sent"]);
+    supplyChainEventTypeEnum = pgEnum("supply_chain_event_type", ["manufactured", "shipped", "in_transit", "customs", "delivered", "verified", "recalled"]);
+    referralStatusEnum = pgEnum("referral_status", ["pending", "active", "converted", "expired"]);
+    referralTierEnum = pgEnum("referral_tier", ["starter", "professional", "enterprise", "agency"]);
+    affiliateTierEnum = pgEnum("affiliate_tier", ["basic", "silver", "gold", "platinum"]);
+    affiliateStatusEnum = pgEnum("affiliate_status", ["active", "suspended", "pending"]);
+    commissionStatusEnum = pgEnum("commission_status", ["pending", "approved", "paid", "rejected"]);
+    autopilotModeEnum = pgEnum("autopilot_mode", ["conservative", "balanced", "aggressive"]);
+    autopilotDecisionStatusEnum = pgEnum("autopilot_decision_status", ["pending", "executed", "overridden", "failed"]);
+    abTestStatusEnum = pgEnum("ab_test_status", ["draft", "running", "completed", "paused"]);
+    whiteLabelStatusEnum = pgEnum("white_label_status", ["active", "suspended", "pending"]);
+    fraudSeverityEnum = pgEnum("fraud_severity", ["low", "medium", "high", "critical"]);
+    fraudAlertStatusEnum = pgEnum("fraud_alert_status", ["open", "investigating", "resolved", "dismissed"]);
+    healthTrendEnum = pgEnum("health_trend", ["improving", "stable", "declining"]);
+    revenueTypeEnum = pgEnum("revenue_type", ["subscription", "one_time", "overage", "affiliate", "marketplace"]);
+    notificationTypeEnum = pgEnum("notification_type", [
+      "authentication",
+      "certificate",
+      "payment",
+      "subscription",
+      "nft",
+      "referral",
+      "system",
+      "alert",
+      "supply_chain",
+      "autopilot"
+    ]);
+    jobRunStatusEnum = pgEnum("job_run_status", ["running", "completed", "failed"]);
+    archetypeEnum = pgEnum("archetype", ["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]);
+    charGenStatusEnum = pgEnum("char_gen_status", ["pending", "generating", "completed", "selected", "mint_ready", "failed"]);
+    mintStatusEnum = pgEnum("mint_status", ["not_minted", "preparing", "queued", "minting", "minted", "failed"]);
+    agentStatusEnum = pgEnum("agent_status", ["active", "inactive", "suspended"]);
+    claimTypeEnum = pgEnum("claim_type", ["authentic", "counterfeit", "inconclusive", "needs_review"]);
+    claimStatusEnum = pgEnum("claim_status", ["pending", "accepted", "rejected", "superseded"]);
+    consensusFinalStatusEnum = pgEnum("consensus_final_status", ["authentic", "counterfeit", "inconclusive"]);
+    rewardReasonEnum = pgEnum("reward_reason", [
+      "verification_reward",
+      "consensus_participation",
+      "accuracy_bonus",
+      "streak_bonus",
+      "referral_reward",
+      "staking_yield",
+      "penalty"
+    ]);
+    rewardStatusEnum = pgEnum("reward_status", ["pending", "settled", "claimed", "expired"]);
+    batchTypeEnum = pgEnum("batch_type", ["verification", "reward_settlement", "agent_registration"]);
+    batchStatusEnum = pgEnum("batch_status", ["pending", "submitted", "confirmed", "failed"]);
+    bonusTierEnum = pgEnum("bonus_tier", ["starter", "professional", "enterprise", "agency"]);
+    bonusStatusEnum = pgEnum("bonus_status", ["pending", "claimed", "delivered"]);
+    modelStatusEnum = pgEnum("model_status", ["active", "draft", "archived"]);
+    purchaseTypeEnum = pgEnum("purchase_type", ["purchase", "subscription", "rental"]);
+    purchaseStatusEnum = pgEnum("purchase_status", ["active", "expired", "refunded"]);
+    serviceTypeEnum = pgEnum("service_type", [
+      "authenticity_audit",
+      "cinematic_page",
+      "automation_setup",
+      "landing_page",
+      "brand_story_pack",
+      "government_dossier"
+    ]);
+    serviceOrderStatusEnum = pgEnum("service_order_status", ["pending", "paid", "in_progress", "delivered", "cancelled"]);
+    userRoleEnum = pgEnum("user_role", ["user", "admin", "brand"]);
+    missions = pgTable("missions", {
       id: varchar("id", { length: 36 }).primaryKey(),
       title: varchar("title", { length: 255 }).notNull(),
       description: text("description").notNull(),
-      status: mysqlEnum("status", ["pending", "active", "completed", "failed"]).notNull(),
+      status: missionStatusEnum("status").notNull(),
       createdAt: timestamp("created_at").defaultNow(),
-      updatedAt: timestamp("updated_at").onUpdateNow()
+      updatedAt: timestamp("updated_at")
     });
-    missionTasks = mysqlTable("mission_tasks", {
+    missionTasks = pgTable("mission_tasks", {
       id: varchar("id", { length: 36 }).primaryKey(),
       missionId: varchar("mission_id", { length: 36 }).notNull().references(() => missions.id),
       title: varchar("title", { length: 255 }).notNull(),
       description: text("description").notNull(),
-      status: mysqlEnum("status", ["pending", "in_progress", "completed", "failed"]).notNull(),
-      order: int("order").notNull(),
+      status: missionTaskStatusEnum("status").notNull(),
+      order: integer("order").notNull(),
       createdAt: timestamp("created_at").defaultNow(),
-      updatedAt: timestamp("updated_at").onUpdateNow()
+      updatedAt: timestamp("updated_at")
     });
-    products = mysqlTable("products", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
+    products = pgTable("products", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
       name: varchar("name", { length: 512 }).notNull(),
       brand: varchar("brand", { length: 256 }),
       category: varchar("category", { length: 128 }),
@@ -103,52 +234,52 @@ var init_schema = __esm({
       manufacturingDate: timestamp("manufacturingDate"),
       blockchainTxHash: varchar("blockchainTxHash", { length: 128 }),
       nftTokenId: varchar("nftTokenId", { length: 128 }),
-      status: mysqlEnum("status", ["active", "recalled", "expired", "flagged"]).default("active"),
+      status: productStatusEnum("status").default("active"),
       metadata: json("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
-    authentications = mysqlTable("authentications", {
-      id: int("id").autoincrement().primaryKey(),
-      productId: int("productId").notNull(),
-      userId: int("userId").notNull(),
-      result: mysqlEnum("result", ["authentic", "counterfeit", "uncertain"]).notNull(),
-      confidenceScore: int("confidenceScore").notNull(),
+    authentications = pgTable("authentications", {
+      id: serial("id").primaryKey(),
+      productId: integer("productId").notNull(),
+      userId: integer("userId").notNull(),
+      result: authResultEnum("result").notNull(),
+      confidenceScore: integer("confidenceScore").notNull(),
       aiAnalysis: json("aiAnalysis"),
       imageUrl: text("imageUrl"),
-      isPublic: int("isPublic").default(0),
+      isPublic: integer("isPublic").default(0),
       shareToken: varchar("shareToken", { length: 128 }),
-      shareCount: int("shareCount").default(0),
+      shareCount: integer("shareCount").default(0),
       verificationMethod: varchar("verificationMethod", { length: 64 }).default("ai_image"),
-      blockchainVerified: int("blockchainVerified").default(0),
+      blockchainVerified: integer("blockchainVerified").default(0),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    certificates = mysqlTable("certificates", {
-      id: int("id").autoincrement().primaryKey(),
-      productId: int("productId").notNull(),
-      authenticationId: int("authenticationId"),
-      userId: int("userId").notNull(),
+    certificates = pgTable("certificates", {
+      id: serial("id").primaryKey(),
+      productId: integer("productId").notNull(),
+      authenticationId: integer("authenticationId"),
+      userId: integer("userId").notNull(),
       certificateNumber: varchar("certificateNumber", { length: 64 }).notNull().unique(),
-      status: mysqlEnum("status", ["active", "revoked", "expired"]).default("active"),
+      status: certificateStatusEnum("status").default("active"),
       issuedAt: timestamp("issuedAt").defaultNow().notNull(),
       expiresAt: timestamp("expiresAt"),
       blockchainTxHash: varchar("blockchainTxHash", { length: 128 }),
       metadata: json("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    qrCodes = mysqlTable("qr_codes", {
-      id: int("id").autoincrement().primaryKey(),
-      productId: int("productId").notNull(),
-      userId: int("userId").notNull(),
+    qrCodes = pgTable("qr_codes", {
+      id: serial("id").primaryKey(),
+      productId: integer("productId").notNull(),
+      userId: integer("userId").notNull(),
       qrData: text("qrData").notNull(),
       qrImageUrl: text("qrImageUrl"),
-      scanCount: int("scanCount").default(0),
+      scanCount: integer("scanCount").default(0),
       lastScannedAt: timestamp("lastScannedAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    nftCollections = mysqlTable("nft_collections", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
+    nftCollections = pgTable("nft_collections", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
       name: varchar("name", { length: 256 }).notNull(),
       slug: varchar("slug", { length: 256 }).notNull().unique(),
       description: text("description"),
@@ -157,16 +288,16 @@ var init_schema = __esm({
       category: varchar("category", { length: 128 }),
       floorPrice: decimal("floorPrice", { precision: 18, scale: 8 }).default("0"),
       totalVolume: decimal("totalVolume", { precision: 18, scale: 8 }).default("0"),
-      itemCount: int("itemCount").default(0),
-      ownerCount: int("ownerCount").default(0),
-      verified: int("verified").default(0),
+      itemCount: integer("itemCount").default(0),
+      ownerCount: integer("ownerCount").default(0),
+      verified: integer("verified").default(0),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    nfts = mysqlTable("nfts", {
-      id: int("id").autoincrement().primaryKey(),
-      collectionId: int("collectionId"),
-      ownerId: int("ownerId").notNull(),
-      creatorId: int("creatorId").notNull(),
+    nfts = pgTable("nfts", {
+      id: serial("id").primaryKey(),
+      collectionId: integer("collectionId"),
+      ownerId: integer("ownerId").notNull(),
+      creatorId: integer("creatorId").notNull(),
       name: varchar("name", { length: 512 }).notNull(),
       description: text("description"),
       imageUrl: text("imageUrl"),
@@ -176,131 +307,131 @@ var init_schema = __esm({
       blockchain: varchar("blockchain", { length: 64 }).default("polygon"),
       price: decimal("price", { precision: 18, scale: 8 }),
       currency: varchar("currency", { length: 16 }).default("ETH"),
-      rarityScore: int("rarityScore"),
-      rarityRank: int("rarityRank"),
+      rarityScore: integer("rarityScore"),
+      rarityRank: integer("rarityRank"),
       traits: json("traits"),
-      status: mysqlEnum("status", ["listed", "sold", "unlisted", "auction"]).default("listed"),
-      viewCount: int("viewCount").default(0),
-      likeCount: int("likeCount").default(0),
-      productId: int("productId"),
+      status: nftStatusEnum("status").default("listed"),
+      viewCount: integer("viewCount").default(0),
+      likeCount: integer("likeCount").default(0),
+      productId: integer("productId"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
-    auctions = mysqlTable("auctions", {
-      id: int("id").autoincrement().primaryKey(),
-      nftId: int("nftId").notNull(),
-      sellerId: int("sellerId").notNull(),
+    auctions = pgTable("auctions", {
+      id: serial("id").primaryKey(),
+      nftId: integer("nftId").notNull(),
+      sellerId: integer("sellerId").notNull(),
       startPrice: decimal("startPrice", { precision: 18, scale: 8 }).notNull(),
       reservePrice: decimal("reservePrice", { precision: 18, scale: 8 }),
       currentBid: decimal("currentBid", { precision: 18, scale: 8 }),
-      highestBidderId: int("highestBidderId"),
-      bidCount: int("bidCount").default(0),
-      status: mysqlEnum("status", ["active", "ended", "cancelled"]).default("active"),
+      highestBidderId: integer("highestBidderId"),
+      bidCount: integer("bidCount").default(0),
+      status: auctionStatusEnum("status").default("active"),
       startsAt: timestamp("startsAt").defaultNow().notNull(),
       endsAt: timestamp("endsAt").notNull(),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    auctionBids = mysqlTable("auction_bids", {
-      id: int("id").autoincrement().primaryKey(),
-      auctionId: int("auctionId").notNull(),
-      bidderId: int("bidderId").notNull(),
+    auctionBids = pgTable("auction_bids", {
+      id: serial("id").primaryKey(),
+      auctionId: integer("auctionId").notNull(),
+      bidderId: integer("bidderId").notNull(),
       amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    subscriptions = mysqlTable("subscriptions", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
-      plan: mysqlEnum("plan", ["starter", "professional", "enterprise"]).notNull(),
-      status: mysqlEnum("status", ["active", "cancelled", "past_due", "trialing", "paused"]).default("active"),
-      monthlyQuota: int("monthlyQuota").notNull(),
-      usedQuota: int("usedQuota").default(0),
+    subscriptions = pgTable("subscriptions", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
+      plan: subscriptionPlanEnum("plan").notNull(),
+      status: subscriptionStatusEnum("status").default("active"),
+      monthlyQuota: integer("monthlyQuota").notNull(),
+      usedQuota: integer("usedQuota").default(0),
       stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
       stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
       paddleSubscriptionId: varchar("paddleSubscriptionId", { length: 128 }),
       paddleCustomerId: varchar("paddleCustomerId", { length: 128 }),
-      billingCycle: mysqlEnum("billingCycle", ["monthly", "annual"]).default("monthly"),
+      billingCycle: billingCycleEnum("billingCycle").default("monthly"),
       currentPeriodStart: timestamp("currentPeriodStart"),
       currentPeriodEnd: timestamp("currentPeriodEnd"),
       trialEndsAt: timestamp("trialEndsAt"),
       cancelledAt: timestamp("cancelledAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
-    usageRecords = mysqlTable("usage_records", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
-      subscriptionId: int("subscriptionId"),
+    usageRecords = pgTable("usage_records", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
+      subscriptionId: integer("subscriptionId"),
       type: varchar("type", { length: 64 }).notNull(),
-      quantity: int("quantity").default(1),
+      quantity: integer("quantity").default(1),
       metadata: json("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    invoices = mysqlTable("invoices", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
-      subscriptionId: int("subscriptionId"),
+    invoices = pgTable("invoices", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
+      subscriptionId: integer("subscriptionId"),
       amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
       currency: varchar("currency", { length: 8 }).default("USD"),
-      status: mysqlEnum("status", ["draft", "pending", "paid", "overdue", "cancelled"]).default("draft"),
+      status: invoiceStatusEnum("status").default("draft"),
       stripeInvoiceId: varchar("stripeInvoiceId", { length: 128 }),
       paidAt: timestamp("paidAt"),
       dueDate: timestamp("dueDate"),
       items: json("items"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    payments = mysqlTable("payments", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
+    payments = pgTable("payments", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
       amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
       currency: varchar("currency", { length: 16 }).default("USD"),
-      method: mysqlEnum("method", ["stripe", "crypto", "escrow"]).notNull(),
-      status: mysqlEnum("status", ["pending", "completed", "failed", "refunded", "escrowed"]).default("pending"),
+      method: paymentMethodEnum("method").notNull(),
+      status: paymentStatusEnum("status").default("pending"),
       stripePaymentId: varchar("stripePaymentId", { length: 128 }),
       cryptoPaymentId: varchar("cryptoPaymentId", { length: 128 }),
       cryptoAddress: varchar("cryptoAddress", { length: 256 }),
       escrowReleaseDate: timestamp("escrowReleaseDate"),
       metadata: json("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
-    leads = mysqlTable("leads", {
-      id: int("id").autoincrement().primaryKey(),
+    leads = pgTable("leads", {
+      id: serial("id").primaryKey(),
       email: varchar("email", { length: 320 }).notNull(),
       name: varchar("name", { length: 256 }),
       company: varchar("company", { length: 256 }),
       title: varchar("title", { length: 256 }),
       phone: varchar("phone", { length: 32 }),
       source: varchar("source", { length: 128 }),
-      score: int("score").default(0),
-      status: mysqlEnum("status", ["new", "contacted", "qualified", "proposal", "won", "lost"]).default("new"),
+      score: integer("score").default(0),
+      status: leadStatusEnum("status").default("new"),
       industry: varchar("industry", { length: 128 }),
       notes: text("notes"),
       lastContactedAt: timestamp("lastContactedAt"),
-      assignedTo: int("assignedTo"),
+      assignedTo: integer("assignedTo"),
       metadata: json("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
-    emailCampaigns = mysqlTable("email_campaigns", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
+    emailCampaigns = pgTable("email_campaigns", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
       name: varchar("name", { length: 256 }).notNull(),
       subject: varchar("subject", { length: 512 }).notNull(),
       body: text("body").notNull(),
-      type: mysqlEnum("type", ["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]).notNull(),
-      status: mysqlEnum("status", ["draft", "scheduled", "sending", "sent", "paused"]).default("draft"),
-      recipientCount: int("recipientCount").default(0),
-      sentCount: int("sentCount").default(0),
-      openCount: int("openCount").default(0),
-      clickCount: int("clickCount").default(0),
-      bounceCount: int("bounceCount").default(0),
+      type: campaignTypeEnum("type").notNull(),
+      status: campaignStatusEnum("status").default("draft"),
+      recipientCount: integer("recipientCount").default(0),
+      sentCount: integer("sentCount").default(0),
+      openCount: integer("openCount").default(0),
+      clickCount: integer("clickCount").default(0),
+      bounceCount: integer("bounceCount").default(0),
       scheduledAt: timestamp("scheduledAt"),
       sentAt: timestamp("sentAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
-    emailDrafts = mysqlTable("email_drafts", {
-      id: int("id").autoincrement().primaryKey(),
+    emailDrafts = pgTable("email_drafts", {
+      id: serial("id").primaryKey(),
       prospectName: varchar("prospectName", { length: 256 }),
       prospectEmail: varchar("prospectEmail", { length: 320 }).notNull(),
       prospectCompany: varchar("prospectCompany", { length: 256 }),
@@ -309,18 +440,18 @@ var init_schema = __esm({
       subject: varchar("subject", { length: 512 }).notNull(),
       body: text("body").notNull(),
       templateUsed: varchar("templateUsed", { length: 128 }),
-      status: mysqlEnum("status", ["pending", "approved", "rejected", "sent"]).default("pending"),
+      status: emailDraftStatusEnum("status").default("pending"),
       generatedBy: varchar("generatedBy", { length: 64 }).default("ai_manager"),
-      approvedBy: int("approvedBy"),
+      approvedBy: integer("approvedBy"),
       approvedAt: timestamp("approvedAt"),
       sentAt: timestamp("sentAt"),
       notes: text("notes"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    supplyChainEvents = mysqlTable("supply_chain_events", {
-      id: int("id").autoincrement().primaryKey(),
-      productId: int("productId").notNull(),
-      eventType: mysqlEnum("eventType", ["manufactured", "shipped", "in_transit", "customs", "delivered", "verified", "recalled"]).notNull(),
+    supplyChainEvents = pgTable("supply_chain_events", {
+      id: serial("id").primaryKey(),
+      productId: integer("productId").notNull(),
+      eventType: supplyChainEventTypeEnum("eventType").notNull(),
       location: varchar("location", { length: 512 }),
       latitude: decimal("latitude", { precision: 10, scale: 7 }),
       longitude: decimal("longitude", { precision: 10, scale: 7 }),
@@ -333,84 +464,84 @@ var init_schema = __esm({
       metadata: json("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    referrals = mysqlTable("referrals", {
-      id: int("id").autoincrement().primaryKey(),
-      referrerId: int("referrerId").notNull(),
-      referredId: int("referredId"),
+    referrals = pgTable("referrals", {
+      id: serial("id").primaryKey(),
+      referrerId: integer("referrerId").notNull(),
+      referredId: integer("referredId"),
       referralCode: varchar("referralCode", { length: 32 }).notNull().unique(),
-      status: mysqlEnum("status", ["pending", "active", "converted", "expired"]).default("pending"),
+      status: referralStatusEnum("status").default("pending"),
       referredEmail: varchar("referredEmail", { length: 320 }),
-      tier: mysqlEnum("tier", ["starter", "professional", "enterprise", "agency"]),
+      tier: referralTierEnum("tier"),
       rewardAmount: decimal("rewardAmount", { precision: 10, scale: 2 }).default("0"),
       commissionPaid: decimal("commissionPaid", { precision: 10, scale: 2 }).default("0"),
-      rewardPaid: int("rewardPaid").default(0),
+      rewardPaid: integer("rewardPaid").default(0),
       convertedAt: timestamp("convertedAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    affiliates = mysqlTable("affiliates", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
+    affiliates = pgTable("affiliates", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
       affiliateCode: varchar("affiliateCode", { length: 32 }).notNull().unique(),
       commissionRate: decimal("commissionRate", { precision: 5, scale: 2 }).default("10.00"),
       totalEarnings: decimal("totalEarnings", { precision: 18, scale: 2 }).default("0"),
       pendingPayout: decimal("pendingPayout", { precision: 18, scale: 2 }).default("0"),
-      totalReferrals: int("totalReferrals").default(0),
-      totalConversions: int("totalConversions").default(0),
-      tier: mysqlEnum("affiliateTier", ["basic", "silver", "gold", "platinum"]).default("basic"),
-      activeReferrals: int("activeReferrals").default(0),
+      totalReferrals: integer("totalReferrals").default(0),
+      totalConversions: integer("totalConversions").default(0),
+      tier: affiliateTierEnum("affiliateTier").default("basic"),
+      activeReferrals: integer("activeReferrals").default(0),
       paypalEmail: varchar("paypalEmail", { length: 320 }),
-      status: mysqlEnum("status", ["active", "suspended", "pending"]).default("pending"),
+      status: affiliateStatusEnum("status").default("pending"),
       payoutMethod: varchar("payoutMethod", { length: 64 }),
       payoutDetails: json("payoutDetails"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
-    affiliateCommissions = mysqlTable("affiliate_commissions", {
-      id: int("id").autoincrement().primaryKey(),
-      affiliateId: int("affiliateId").notNull(),
-      paymentId: int("paymentId"),
+    affiliateCommissions = pgTable("affiliate_commissions", {
+      id: serial("id").primaryKey(),
+      affiliateId: integer("affiliateId").notNull(),
+      paymentId: integer("paymentId"),
       amount: decimal("amount", { precision: 18, scale: 2 }).notNull(),
-      status: mysqlEnum("status", ["pending", "approved", "paid", "rejected"]).default("pending"),
+      status: commissionStatusEnum("status").default("pending"),
       paidAt: timestamp("paidAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    autopilotConfig = mysqlTable("autopilot_config", {
-      id: int("id").autoincrement().primaryKey(),
-      enabled: int("enabled").default(0),
-      mode: mysqlEnum("mode", ["conservative", "balanced", "aggressive"]).default("balanced"),
+    autopilotConfig = pgTable("autopilot_config", {
+      id: serial("id").primaryKey(),
+      enabled: integer("enabled").default(0),
+      mode: autopilotModeEnum("mode").default("balanced"),
       guardrails: json("guardrails"),
-      updatedBy: int("updatedBy"),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+      updatedBy: integer("updatedBy"),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull(),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    autopilotDecisions = mysqlTable("autopilot_decisions", {
-      id: int("id").autoincrement().primaryKey(),
+    autopilotDecisions = pgTable("autopilot_decisions", {
+      id: serial("id").primaryKey(),
       type: varchar("type", { length: 64 }).notNull(),
       action: varchar("action", { length: 256 }).notNull(),
       reasoning: text("reasoning"),
-      confidence: int("confidence"),
-      status: mysqlEnum("status", ["pending", "executed", "overridden", "failed"]).default("pending"),
+      confidence: integer("confidence"),
+      status: autopilotDecisionStatusEnum("status").default("pending"),
       result: json("result"),
-      overriddenBy: int("overriddenBy"),
+      overriddenBy: integer("overriddenBy"),
       overrideReason: text("overrideReason"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    abTests = mysqlTable("ab_tests", {
-      id: int("id").autoincrement().primaryKey(),
+    abTests = pgTable("ab_tests", {
+      id: serial("id").primaryKey(),
       name: varchar("name", { length: 256 }).notNull(),
       description: text("description"),
       type: varchar("type", { length: 64 }).notNull(),
-      status: mysqlEnum("status", ["draft", "running", "completed", "paused"]).default("draft"),
+      status: abTestStatusEnum("status").default("draft"),
       variants: json("variants"),
       winnerVariant: varchar("winnerVariant", { length: 64 }),
-      totalParticipants: int("totalParticipants").default(0),
+      totalParticipants: integer("totalParticipants").default(0),
       startedAt: timestamp("startedAt"),
       endedAt: timestamp("endedAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    whiteLabelClients = mysqlTable("white_label_clients", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
+    whiteLabelClients = pgTable("white_label_clients", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
       companyName: varchar("companyName", { length: 256 }).notNull(),
       domain: varchar("domain", { length: 256 }),
       logoUrl: text("logoUrl"),
@@ -418,95 +549,84 @@ var init_schema = __esm({
       secondaryColor: varchar("secondaryColor", { length: 16 }),
       apiKey: varchar("apiKey", { length: 128 }).notNull().unique(),
       apiSecret: varchar("apiSecret", { length: 256 }),
-      status: mysqlEnum("status", ["active", "suspended", "pending"]).default("pending"),
-      monthlyApiCalls: int("monthlyApiCalls").default(0),
-      apiCallLimit: int("apiCallLimit").default(1e4),
+      status: whiteLabelStatusEnum("status").default("pending"),
+      monthlyApiCalls: integer("monthlyApiCalls").default(0),
+      apiCallLimit: integer("apiCallLimit").default(1e4),
       features: json("features"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
-    activityLog = mysqlTable("activity_log", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId"),
+    activityLog = pgTable("activity_log", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId"),
       action: varchar("action", { length: 128 }).notNull(),
       entityType: varchar("entityType", { length: 64 }),
-      entityId: int("entityId"),
+      entityId: integer("entityId"),
       details: json("details"),
       ipAddress: varchar("ipAddress", { length: 64 }),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    fraudAlerts = mysqlTable("fraud_alerts", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId"),
-      productId: int("productId"),
+    fraudAlerts = pgTable("fraud_alerts", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId"),
+      productId: integer("productId"),
       alertType: varchar("alertType", { length: 128 }).notNull(),
-      severity: mysqlEnum("severity", ["low", "medium", "high", "critical"]).default("medium"),
+      severity: fraudSeverityEnum("severity").default("medium"),
       description: text("description"),
-      status: mysqlEnum("status", ["open", "investigating", "resolved", "dismissed"]).default("open"),
-      resolvedBy: int("resolvedBy"),
+      status: fraudAlertStatusEnum("status").default("open"),
+      resolvedBy: integer("resolvedBy"),
       resolvedAt: timestamp("resolvedAt"),
       metadata: json("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    customerHealthScores = mysqlTable("customer_health_scores", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
-      score: int("score").notNull(),
+    customerHealthScores = pgTable("customer_health_scores", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
+      score: integer("score").notNull(),
       factors: json("factors"),
-      trend: mysqlEnum("trend", ["improving", "stable", "declining"]).default("stable"),
+      trend: healthTrendEnum("trend").default("stable"),
       lastCalculatedAt: timestamp("lastCalculatedAt").defaultNow().notNull(),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    revenueRecords = mysqlTable("revenue_records", {
-      id: int("id").autoincrement().primaryKey(),
+    revenueRecords = pgTable("revenue_records", {
+      id: serial("id").primaryKey(),
       source: varchar("source", { length: 128 }).notNull(),
       amount: decimal("amount", { precision: 18, scale: 2 }).notNull(),
       currency: varchar("currency", { length: 8 }).default("USD"),
-      type: mysqlEnum("type", ["subscription", "one_time", "overage", "affiliate", "marketplace"]).notNull(),
-      userId: int("userId"),
+      type: revenueTypeEnum("type").notNull(),
+      userId: integer("userId"),
       metadata: json("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    notifications = mysqlTable("notifications", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
-      type: mysqlEnum("type", [
-        "authentication",
-        "certificate",
-        "payment",
-        "subscription",
-        "nft",
-        "referral",
-        "system",
-        "alert",
-        "supply_chain",
-        "autopilot"
-      ]).notNull(),
+    notifications = pgTable("notifications", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
+      type: notificationTypeEnum("type").notNull(),
       title: varchar("title", { length: 256 }).notNull(),
       message: text("message").notNull(),
-      isRead: int("isRead").default(0).notNull(),
+      isRead: integer("isRead").default(0).notNull(),
       actionUrl: varchar("actionUrl", { length: 512 }),
       metadata: json("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    scheduledJobRuns = mysqlTable("scheduled_job_runs", {
-      id: int("id").autoincrement().primaryKey(),
+    scheduledJobRuns = pgTable("scheduled_job_runs", {
+      id: serial("id").primaryKey(),
       jobName: varchar("jobName", { length: 128 }).notNull(),
-      status: mysqlEnum("status", ["running", "completed", "failed"]).notNull(),
+      status: jobRunStatusEnum("status").notNull(),
       startedAt: timestamp("startedAt").defaultNow().notNull(),
       completedAt: timestamp("completedAt"),
-      duration: int("duration"),
+      duration: integer("duration"),
       // milliseconds
       result: json("result"),
       error: text("error"),
-      itemsProcessed: int("itemsProcessed").default(0)
+      itemsProcessed: integer("itemsProcessed").default(0)
     });
-    characterGenerations = mysqlTable("character_generations", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
+    characterGenerations = pgTable("character_generations", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
       tenantId: varchar("tenantId", { length: 128 }),
       objectId: varchar("objectId", { length: 128 }),
-      archetype: mysqlEnum("archetype", ["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]).notNull(),
+      archetype: archetypeEnum("archetype").notNull(),
       style: varchar("style", { length: 256 }).default("premium futuristic heraldic concept art"),
       colorway: varchar("colorway", { length: 256 }),
       mood: varchar("mood", { length: 256 }),
@@ -514,21 +634,21 @@ var init_schema = __esm({
       negativePrompt: text("negativePrompt"),
       provider: varchar("provider", { length: 64 }).default("openart"),
       providerModel: varchar("providerModel", { length: 128 }),
-      variantCount: int("variantCount").default(4),
-      status: mysqlEnum("status", ["pending", "generating", "completed", "selected", "mint_ready", "failed"]).default("pending"),
-      selectedAssetId: int("selectedAssetId"),
-      bestAssetId: int("bestAssetId"),
+      variantCount: integer("variantCount").default(4),
+      status: charGenStatusEnum("status").default("pending"),
+      selectedAssetId: integer("selectedAssetId"),
+      bestAssetId: integer("bestAssetId"),
       context: json("context"),
       requestPayload: json("requestPayload"),
       responsePayload: json("responsePayload"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       completedAt: timestamp("completedAt")
     });
-    characterAssets = mysqlTable("character_assets", {
-      id: int("id").autoincrement().primaryKey(),
-      generationId: int("generationId").notNull(),
+    characterAssets = pgTable("character_assets", {
+      id: serial("id").primaryKey(),
+      generationId: integer("generationId").notNull(),
       tenantId: varchar("tenantId", { length: 128 }),
-      userId: int("userId"),
+      userId: integer("userId"),
       providerAssetId: varchar("providerAssetId", { length: 256 }),
       imageUrl: text("imageUrl").notNull(),
       previewUrl: text("previewUrl"),
@@ -545,40 +665,40 @@ var init_schema = __esm({
       uiCompatibilityScore: decimal("uiCompatibilityScore", { precision: 4, scale: 1 }),
       totalScore: decimal("totalScore", { precision: 5, scale: 2 }),
       // Legacy integer scores (backward compat)
-      scoreIconity: int("scoreIconity"),
-      scoreTrustClarity: int("scoreTrustClarity"),
-      scorePremiumFeel: int("scorePremiumFeel"),
-      scoreSilhouette: int("scoreSilhouette"),
-      scoreUiCompat: int("scoreUiCompat"),
-      scoreMintReady: int("scoreMintReady"),
-      scoreProtocolAlign: int("scoreProtocolAlign"),
-      isRecommended: int("isRecommended").default(0),
-      isSelected: int("isSelected").default(0),
+      scoreIconity: integer("scoreIconity"),
+      scoreTrustClarity: integer("scoreTrustClarity"),
+      scorePremiumFeel: integer("scorePremiumFeel"),
+      scoreSilhouette: integer("scoreSilhouette"),
+      scoreUiCompat: integer("scoreUiCompat"),
+      scoreMintReady: integer("scoreMintReady"),
+      scoreProtocolAlign: integer("scoreProtocolAlign"),
+      isRecommended: integer("isRecommended").default(0),
+      isSelected: integer("isSelected").default(0),
       selectedAt: timestamp("selectedAt"),
       // Mint fields
       metadataUri: text("metadataUri"),
       metadataHash: varchar("metadataHash", { length: 128 }),
       imageHash: varchar("imageHash", { length: 128 }),
-      mintStatus: mysqlEnum("mintStatus", ["not_minted", "preparing", "queued", "minting", "minted", "failed"]).default("not_minted"),
+      mintStatus: mintStatusEnum("mintStatus").default("not_minted"),
       mintTxHash: varchar("mintTxHash", { length: 128 }),
       tokenId: varchar("tokenId", { length: 128 }),
       mintedAt: timestamp("mintedAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    protocolAgents = mysqlTable("protocol_agents", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
-      characterAssetId: int("characterAssetId"),
+    protocolAgents = pgTable("protocol_agents", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
+      characterAssetId: integer("characterAssetId"),
       name: varchar("name", { length: 256 }).notNull(),
-      agentType: mysqlEnum("agentType", ["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]).notNull(),
-      status: mysqlEnum("status", ["active", "inactive", "suspended"]).default("active"),
-      level: int("level").default(1),
-      xp: int("xp").default(0),
-      reputationScore: int("reputationScore").default(100),
-      totalVerifications: int("totalVerifications").default(0),
-      successfulVerifications: int("successfulVerifications").default(0),
-      totalClaims: int("totalClaims").default(0),
-      consensusParticipations: int("consensusParticipations").default(0),
+      agentType: archetypeEnum("agentType").notNull(),
+      status: agentStatusEnum("status").default("active"),
+      level: integer("level").default(1),
+      xp: integer("xp").default(0),
+      reputationScore: integer("reputationScore").default(100),
+      totalVerifications: integer("totalVerifications").default(0),
+      successfulVerifications: integer("successfulVerifications").default(0),
+      totalClaims: integer("totalClaims").default(0),
+      consensusParticipations: integer("consensusParticipations").default(0),
       qronEarned: decimal("qronEarned", { precision: 18, scale: 8 }).default("0"),
       qronPending: decimal("qronPending", { precision: 18, scale: 8 }).default("0"),
       walletAddress: varchar("walletAddress", { length: 128 }),
@@ -587,82 +707,74 @@ var init_schema = __esm({
       featureScopes: json("featureScopes"),
       metadata: json("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
-    verificationClaims = mysqlTable("verification_claims", {
-      id: int("id").autoincrement().primaryKey(),
-      agentId: int("agentId").notNull(),
-      productId: int("productId").notNull(),
-      authenticationId: int("authenticationId"),
-      claimType: mysqlEnum("claimType", ["authentic", "counterfeit", "inconclusive", "needs_review"]).notNull(),
-      confidence: int("confidence").notNull(),
+    verificationClaims = pgTable("verification_claims", {
+      id: serial("id").primaryKey(),
+      agentId: integer("agentId").notNull(),
+      productId: integer("productId").notNull(),
+      authenticationId: integer("authenticationId"),
+      claimType: claimTypeEnum("claimType").notNull(),
+      confidence: integer("confidence").notNull(),
       evidence: json("evidence"),
       reasoning: text("reasoning"),
-      status: mysqlEnum("status", ["pending", "accepted", "rejected", "superseded"]).default("pending"),
+      status: claimStatusEnum("status").default("pending"),
       weight: decimal("weight", { precision: 5, scale: 3 }).default("1.000"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    consensusResults = mysqlTable("consensus_results", {
-      id: int("id").autoincrement().primaryKey(),
-      productId: int("productId").notNull(),
-      authenticationId: int("authenticationId"),
-      finalStatus: mysqlEnum("finalStatus", ["authentic", "counterfeit", "inconclusive"]).notNull(),
-      finalScore: int("finalScore").notNull(),
-      quorumCount: int("quorumCount").notNull(),
+    consensusResults = pgTable("consensus_results", {
+      id: serial("id").primaryKey(),
+      productId: integer("productId").notNull(),
+      authenticationId: integer("authenticationId"),
+      finalStatus: consensusFinalStatusEnum("finalStatus").notNull(),
+      finalScore: integer("finalScore").notNull(),
+      quorumCount: integer("quorumCount").notNull(),
       claimIds: json("claimIds"),
-      settledOnChain: int("settledOnChain").default(0),
-      checkpointBatchId: int("checkpointBatchId"),
+      settledOnChain: integer("settledOnChain").default(0),
+      checkpointBatchId: integer("checkpointBatchId"),
       txHash: varchar("txHash", { length: 128 }),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    qronRewardLedger = mysqlTable("qron_reward_ledger", {
-      id: int("id").autoincrement().primaryKey(),
-      agentId: int("agentId").notNull(),
-      userId: int("userId").notNull(),
+    qronRewardLedger = pgTable("qron_reward_ledger", {
+      id: serial("id").primaryKey(),
+      agentId: integer("agentId").notNull(),
+      userId: integer("userId").notNull(),
       amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
-      reason: mysqlEnum("reason", [
-        "verification_reward",
-        "consensus_participation",
-        "accuracy_bonus",
-        "streak_bonus",
-        "referral_reward",
-        "staking_yield",
-        "penalty"
-      ]).notNull(),
+      reason: rewardReasonEnum("reason").notNull(),
       referenceType: varchar("referenceType", { length: 64 }),
-      referenceId: int("referenceId"),
-      status: mysqlEnum("status", ["pending", "settled", "claimed", "expired"]).default("pending"),
-      settlementBatchId: int("settlementBatchId"),
+      referenceId: integer("referenceId"),
+      status: rewardStatusEnum("status").default("pending"),
+      settlementBatchId: integer("settlementBatchId"),
       claimedAt: timestamp("claimedAt"),
       metadata: json("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    checkpointBatches = mysqlTable("checkpoint_batches", {
-      id: int("id").autoincrement().primaryKey(),
-      batchType: mysqlEnum("batchType", ["verification", "reward_settlement", "agent_registration"]).notNull(),
+    checkpointBatches = pgTable("checkpoint_batches", {
+      id: serial("id").primaryKey(),
+      batchType: batchTypeEnum("batchType").notNull(),
       rootHash: varchar("rootHash", { length: 128 }).notNull(),
-      chainId: int("chainId").default(137),
+      chainId: integer("chainId").default(137),
       txHash: varchar("txHash", { length: 128 }),
-      itemCount: int("itemCount").default(0),
-      status: mysqlEnum("status", ["pending", "submitted", "confirmed", "failed"]).default("pending"),
+      itemCount: integer("itemCount").default(0),
+      status: batchStatusEnum("status").default("pending"),
       finalizedAt: timestamp("finalizedAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    bonuses = mysqlTable("bonuses", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
+    bonuses = pgTable("bonuses", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
       bonusType: varchar("bonusType", { length: 64 }).notNull(),
       bonusName: varchar("bonusName", { length: 256 }).notNull(),
-      bonusValue: int("bonusValue").notNull(),
-      tier: mysqlEnum("bonusTier", ["starter", "professional", "enterprise", "agency"]),
-      status: mysqlEnum("bonusStatus", ["pending", "claimed", "delivered"]).default("pending"),
+      bonusValue: integer("bonusValue").notNull(),
+      tier: bonusTierEnum("bonusTier").default("starter"),
+      status: bonusStatusEnum("bonusStatus").default("pending"),
       deliveryMethod: varchar("deliveryMethod", { length: 64 }),
       claimedAt: timestamp("claimedAt"),
       deliveredAt: timestamp("deliveredAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    referralClicks = mysqlTable("referral_clicks", {
-      id: int("id").autoincrement().primaryKey(),
+    referralClicks = pgTable("referral_clicks", {
+      id: serial("id").primaryKey(),
       referralCode: varchar("referralCode", { length: 32 }).notNull(),
       ipAddress: varchar("ipAddress", { length: 64 }),
       userAgent: text("userAgent"),
@@ -671,55 +783,48 @@ var init_schema = __esm({
       convertedAt: timestamp("convertedAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    aiModels = mysqlTable("ai_models", {
-      id: int("id").autoincrement().primaryKey(),
+    aiModels = pgTable("ai_models", {
+      id: serial("id").primaryKey(),
       name: varchar("name", { length: 256 }).notNull(),
       description: text("description"),
       category: varchar("category", { length: 128 }),
-      price: int("price").notNull().default(0),
-      status: mysqlEnum("modelStatus", ["active", "draft", "archived"]).default("draft"),
-      downloads: int("downloads").default(0),
+      price: integer("price").notNull().default(0),
+      status: modelStatusEnum("modelStatus").default("draft"),
+      downloads: integer("downloads").default(0),
       rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
-      reviewCount: int("reviewCount").default(0),
-      creatorId: int("creatorId").notNull(),
+      reviewCount: integer("reviewCount").default(0),
+      creatorId: integer("creatorId").notNull(),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
-    modelPurchases = mysqlTable("model_purchases", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull(),
-      modelId: int("modelId").notNull(),
-      pricePaid: int("pricePaid").notNull(),
-      purchaseType: mysqlEnum("purchaseType", ["purchase", "subscription", "rental"]).default("purchase"),
-      status: mysqlEnum("purchaseStatus", ["active", "expired", "refunded"]).default("active"),
+    modelPurchases = pgTable("model_purchases", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
+      modelId: integer("modelId").notNull(),
+      pricePaid: integer("pricePaid").notNull(),
+      purchaseType: purchaseTypeEnum("purchaseType").default("purchase"),
+      status: purchaseStatusEnum("purchaseStatus").default("active"),
       expiresAt: timestamp("expiresAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    modelReviews = mysqlTable("model_reviews", {
-      id: int("id").autoincrement().primaryKey(),
-      modelId: int("modelId").notNull(),
-      userId: int("userId").notNull(),
-      rating: int("rating").notNull(),
+    modelReviews = pgTable("model_reviews", {
+      id: serial("id").primaryKey(),
+      modelId: integer("modelId").notNull(),
+      userId: integer("userId").notNull(),
+      rating: integer("rating").notNull(),
       review: text("review"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    serviceOrders = mysqlTable("service_orders", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId"),
+    serviceOrders = pgTable("service_orders", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId"),
       customerEmail: varchar("customerEmail", { length: 320 }).notNull(),
       customerName: varchar("customerName", { length: 256 }),
       customerCompany: varchar("customerCompany", { length: 256 }),
       customerPhone: varchar("customerPhone", { length: 32 }),
-      serviceType: mysqlEnum("serviceType", [
-        "authenticity_audit",
-        "cinematic_page",
-        "automation_setup",
-        "landing_page",
-        "brand_story_pack",
-        "government_dossier"
-      ]).notNull(),
-      status: mysqlEnum("status", ["pending", "paid", "in_progress", "delivered", "cancelled"]).default("pending").notNull(),
-      amount: int("amount").notNull(),
+      serviceType: serviceTypeEnum("serviceType").notNull(),
+      status: serviceOrderStatusEnum("status").default("pending").notNull(),
+      amount: integer("amount").notNull(),
       stripeSessionId: varchar("stripeSessionId", { length: 256 }),
       stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 256 }),
       businessName: varchar("businessName", { length: 256 }),
@@ -729,19 +834,19 @@ var init_schema = __esm({
       deliveryUrl: text("deliveryUrl"),
       deliveredAt: timestamp("deliveredAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
-    users = mysqlTable("users", {
-      id: int("id").autoincrement().primaryKey(),
+    users = pgTable("users", {
+      id: serial("id").primaryKey(),
       openId: varchar("open_id", { length: 256 }).notNull().unique(),
       email: varchar("email", { length: 320 }),
       name: varchar("name", { length: 256 }),
       loginMethod: varchar("login_method", { length: 64 }),
-      role: mysqlEnum("role", ["user", "admin", "brand"]).default("user").notNull(),
+      role: userRoleEnum("role").default("user").notNull(),
       stripeCustomerId: varchar("stripe_customer_id", { length: 256 }),
       lastSignedIn: timestamp("last_signed_in"),
       createdAt: timestamp("created_at").defaultNow().notNull(),
-      updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull()
+      updatedAt: timestamp("updated_at").defaultNow().notNull()
     });
   }
 });
@@ -849,7 +954,7 @@ __export(db_exports, {
   upsertStripeSubscription: () => upsertStripeSubscription,
   upsertUser: () => upsertUser
 });
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/postgres-js";
 import {
   eq,
   desc,
