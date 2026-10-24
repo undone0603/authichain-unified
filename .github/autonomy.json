@@ -90,6 +90,7 @@
         "deploy-edge-worker.yml": "on",
         "deploy-workers.yml": "on",
         "deploy-verifier-web.yml": "on",
+        "deploy-first-dollar-desk.yml": "on",
         "content-routine-pr.yml": "off",
         "dependabot-auto-merge.yml": "off",
         "automerge-dependabot.yml": "off",
