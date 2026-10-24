@@ -612,7 +612,7 @@ async function sha256Hex(value) {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 __name(sha256Hex, "sha256Hex");
-var LEDGER_PUBLIC_NOTICE = "Paid receipts appear on a public ledger with the amount, time and payment rail. On-chain payments also show the transaction hash, which is already public on Base. Your email and name are not shown on the ledger.";
+var LEDGER_PUBLIC_NOTICE = "Paid receipts appear on a public ledger with the amount, time, payment rail and status. On-chain payments also show the transaction hash, which is already public on Base. Your email and name are not shown on the ledger.";
 var ONCHAIN_TX_HASH = /^0x[0-9a-fA-F]{64}$/;
 // RES-78: built fresh on every read, so receipts stored before this change are
 // redacted too. No buyer field at all (even a hash of an email or wallet can be
@@ -1118,7 +1118,7 @@ function htmlAgentCheckout(origin) {
     </ul>
     <a class="btn" href="${origin}/api/agent/verify">Fetch 402 challenge</a>
     <p class="note ledger-notice">${LEDGER_PUBLIC_NOTICE}</p>
-    <p class="note">Agent402 router pays sellers only after third-party settlement history \u2014 pay x402 directly here until then. Bounty: <a href="${origin}/.well-known/first-dollar-goal.json">first-dollar-goal.json</a></p>
+    <p class="note">Bounty: <a href="${origin}/.well-known/first-dollar-goal.json">first-dollar-goal.json</a></p>
     <p class="note"><button type="button" id="copy-agent" style="margin-top:8px;padding:8px 12px;cursor:pointer;">Copy agent page link</button> <span id="copy-agent-ok" hidden>Copied.</span></p>
     <script>
       document.getElementById("copy-agent")?.addEventListener("click", () => {
@@ -2330,7 +2330,6 @@ ${urls.map((href) => `  <url><loc>${href}</loc></url>`).join("\n")}
         `- Catalog: ${url.origin}${url.pathname.includes("/first-dollar") ? "/first-dollar" : ""}/.well-known/x402.json`,
         `- MCP: ${url.origin}${url.pathname.includes("/first-dollar") ? "/first-dollar" : ""}/mcp`,
         `- Smithery card: ${url.origin}/.well-known/mcp/server-card.json`,
-        "- Indexed on x402scan and listed on agent402.tools; PayAPI Market listing is queued for a third-party canary",
         `- Bounty manifest: ${url.origin}/.well-known/first-dollar-goal.json`,
         "- Facilitators: PayAI (https://facilitator.payai.network) and CDP x402",
         "- Agent402 Smart Order Router requires seller settlement history; pay x402 directly until routerDispatchEligible is true",
