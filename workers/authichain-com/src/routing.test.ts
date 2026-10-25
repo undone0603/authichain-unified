@@ -1173,6 +1173,45 @@ test("/verify/live is the founder seal, not an app lookup for the id live", asyn
     assert.notEqual(html, "app");
   }
   assert.deepEqual(seen, []);
+  const manufacturerSeen: string[] = [];
+  const manufacturerEnv = {
+    APP_WORKER: {
+      fetch: async (r: Request) => {
+        manufacturerSeen.push(new URL(r.url).pathname);
+        return new Response("app", { status: 200 });
+      },
+    },
+  } as unknown as Env;
+  for (const path of [
+    "/verify/manufacturer",
+    "/verify/manufacturer/",
+    "/verify/MANUFACTURER",
+  ]) {
+    const res = await get(path, manufacturerEnv);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.match(html, /<h1>Manufacturer role history<\/h1>/);
+    assert.match(html, /This path is not a certificate number\./);
+    assert.match(html, /GET \/api\/manufacturer-status\/\{address\}\/history/);
+    assert.match(html, /does not invent a role/);
+    assert.match(html, /does not sell a role/);
+    assert.doesNotMatch(html, /No record found/);
+    assert.doesNotMatch(html, /\$49/);
+    assert.notEqual(html, "app");
+  }
+  assert.deepEqual(manufacturerSeen, []);
+  const manufacturerWithId = await get(
+    "/verify/manufacturer?id=polygon-anchor-1",
+    manufacturerEnv
+  );
+  assert.equal(await manufacturerWithId.text(), "app");
+  const manufacturerPost = await worker.fetch(
+    new Request("https://authichain.com/verify/manufacturer", {
+      method: "POST",
+    }),
+    manufacturerEnv
+  );
+  assert.equal(manufacturerPost.status, 405);
   const other = await get("/verify/not-a-real-record", env);
   assert.equal(await other.text(), "app");
   const withId = await get("/verify/live?id=polygon-anchor-1", env);
