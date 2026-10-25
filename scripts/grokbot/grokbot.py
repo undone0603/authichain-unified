@@ -436,6 +436,26 @@ def _join_continuations(text: str) -> str:
     return re.sub(r"(?<=[A-Za-z0-9_+\-/=.])\r?\n(?=[A-Za-z0-9_+\-/=.])", "", out)
 
 
+def _normalized_views(text: str) -> list[str]:
+    """Decode/join first. Detection runs on these views, never the other way around."""
+    views: list[str] = []
+    for view in (
+        _join_continuations(text),
+        _url_decode(text),
+        _unicode_unescape(text),
+        _url_decode(_unicode_unescape(_join_continuations(text))),
+    ):
+        if view != text and view not in views:
+            views.append(view)
+    return views
+
+
+def _has_unredacted_secret(text: str) -> bool:
+    if _secret_values(text, include_pii=False):
+        return True
+    return any(_secret_values(view, include_pii=False) for view in _normalized_views(text))
+
+
 def _url_decode(text: str) -> str:
     prev = text
     for _ in range(3):
@@ -533,32 +553,40 @@ def _redact_base64_runs(text: str, counts: dict[str, int]) -> tuple[str, bool, b
 
 
 def redact(text: str) -> RedactResult:
-    counts = empty_category_counts()
-    out = _apply_scanners(text, include_pii=True, counts=counts)
-    drop = False
-    changed = out != text
+    """Normalize/decode, then detect. Stats increment only after a mapped replace.
 
-    for normalized in (_join_continuations(text), _url_decode(text), _unicode_unescape(text)):
-        if normalized == text:
-            continue
-        for secret in _secret_values(normalized, include_pii=False):
-            present = secret in out or _span_with_breaks(out, secret)
-            already = (not present) and (secret in text or _span_with_breaks(text, secret))
-            if already:
-                continue
-            out, replaced, n = _replace_original_span(out, secret)
-            if replaced:
-                changed = True
-                _bump(counts, _category_for_value(secret), n)
-            else:
+    If a secret is visible on a normalized view and cannot be mapped back to a
+    span in the original (or remains visible after redaction), drop the item.
+    Counting never changes that decision.
+    """
+    counts = empty_category_counts()
+    drop = False
+
+    # Detect on normalized views first. Mapping is always against the original.
+    detected: list[str] = []
+    for view in _normalized_views(text):
+        for secret in _secret_values(view, include_pii=False):
+            if secret not in detected:
+                detected.append(secret)
+            _, mapped, _ = _replace_original_span(text, secret)
+            if not mapped:
                 drop = True
+
+    # Redact the original. Counts follow successful replacements only.
+    out = _apply_scanners(text, include_pii=True, counts=counts)
+    changed = out != text
+    for secret in detected:
+        out, replaced, n = _replace_original_span(out, secret)
+        if replaced:
+            changed = True
+            _bump(counts, _category_for_value(secret), n)
 
     out, b64_changed, b64_drop = _redact_base64_runs(out, counts)
     changed = changed or b64_changed
     drop = drop or b64_drop
 
-    leftovers = _secret_values(out, include_pii=False)
-    if leftovers:
+    # Fail closed if any normalized view of the result still carries a secret.
+    if _has_unredacted_secret(out):
         drop = True
     return RedactResult(text=out, changed=changed, drop=drop, counts=counts)
 
