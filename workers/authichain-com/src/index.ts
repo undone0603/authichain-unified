@@ -55,6 +55,7 @@ import {
   isDppManufacturerArticlePath,
   renderDppManufacturerArticle,
 } from "./dpp-manufacturer-article.ts";
+import { tryHandleDppChecklist } from "./dpp-checklist-page.ts";
 import {
   isBatteryPassportPath,
   renderBatteryPassportPage,
@@ -3522,6 +3523,8 @@ async function handleAuthichainCom(
     if (!isDppCheckPath(p)) {
       const dppCheck = tryHandleDppCheck(request);
       if (dppCheck) return dppCheck;
+      const dppChecklist = tryHandleDppChecklist(request);
+      if (dppChecklist) return dppChecklist;
     }
     if (isDppCheckPath(p)) {
       const done = request.method === 'GET' ? dppCheckCompleteEvent(url) : null;
