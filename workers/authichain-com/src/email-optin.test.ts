@@ -14,6 +14,7 @@ import {
   sendUpdateEmail,
   sendOptinMail,
   isEmailOptinPath,
+  hashOptinIp,
   RATE_SQL,
   RATE_MAX,
   EMAIL_UNSUBSCRIBE_MAILTO,
@@ -148,7 +149,57 @@ describe("email opt-in", () => {
     expect(calls.some(c => c.sql === UPSERT_SQL)).toBe(false);
     expect(sent).toHaveLength(0);
     const rate = calls.find(c => c.sql === RATE_SQL)!;
-    expect(rate.args[0]).not.toContain("203.0.113.9");
+    expect(rate.args[0]).toBeNull();
+  });
+  it("IP hash is NULL when IP_HASH_SALT is unset or empty; opt-in still works", async () => {
+    expect(await hashOptinIp(undefined, "203.0.113.9")).toBeNull();
+    expect(await hashOptinIp("", "203.0.113.9")).toBeNull();
+    for (const salt of [undefined, ""]) {
+      const { db, calls } = fakeDb();
+      const r = await tryHandleEmailOptin(
+        post(ok),
+        { DB: db, IP_HASH_SALT: salt },
+        new Date("2026-10-23T12:00:00Z")
+      );
+      expect(r!.status).toBe(202);
+      const rate = calls.find(c => c.sql === RATE_SQL)!;
+      expect(rate.args[0]).toBeNull();
+      expect(calls.some(c => c.sql === UPSERT_SQL)).toBe(true);
+    }
+  });
+  it("IP hash is sha256(IP_HASH_SALT + ':' + ip) when salt is set", async () => {
+    const salt = "unit-test-salt";
+    const ip = "203.0.113.9";
+    const expected = await hashOptinIp(salt, ip);
+    expect(expected).toMatch(/^[a-f0-9]{64}$/);
+    expect(expected).not.toBe(await hashOptinIp(undefined, ip));
+    const d = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(salt + ":" + ip)
+    );
+    const hex = [...new Uint8Array(d)]
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
+    expect(expected).toBe(hex);
+    const unsalted = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode("optin-rate:" + ip)
+    );
+    const unsaltedHex = [...new Uint8Array(unsalted)]
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
+    expect(expected).not.toBe(unsaltedHex);
+    const { db, calls } = fakeDb();
+    const r = await tryHandleEmailOptin(
+      post(ok),
+      { DB: db, IP_HASH_SALT: salt },
+      new Date("2026-10-23T12:00:00Z")
+    );
+    expect(r!.status).toBe(202);
+    const rate = calls.find(c => c.sql === RATE_SQL)!;
+    expect(rate.args[0]).toBe(expected);
+    expect(String(rate.args[0])).not.toContain(ip);
+    expect(String(rate.args[0])).not.toContain(salt);
   });
   it("10-minute resend floor: upsert only refreshes rows older than 10 minutes; no send when changes = 0", async () => {
     expect(UPSERT_SQL).toContain("-10 minutes");
@@ -284,7 +335,7 @@ describe("email opt-in", () => {
       "Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@mail.grokbot.com."
     );
     expect(EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL).toBe(
-      'If you tick the box, we store your email, the first seal ID you check, the page address, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep a copy of the sign-up until you ask us to delete it at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.'
+      'If you tick the box, we store your email, the first seal ID you check, the page address, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Your email, seal ID and page address are saved in our Supabase lead list (lead_captures), and your email, country if you give it, when you agreed and whether you confirmed are saved in AuthiChain\'s Cloudflare D1 database. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep the Supabase copy until you ask us to delete it at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.'
     );
     expect(confirmEmailText("TOK")).toBe(
       "Someone entered this email address on authichain.com and asked for AuthiChain product updates (at most once a month).\n\nTo confirm, open this link (valid for 30 days):\n\nhttps://authichain.com/api/email-optin/confirm?token=TOK\n\nIf you did not ask for this, ignore this email. Unless you confirm, we will not send you anything else."
@@ -397,7 +448,9 @@ describe("email opt-in", () => {
     expect(r!.status).toBe(200);
     expect(await r!.text()).toContain("You are unsubscribed.");
     expect(calls).toEqual([{ sql: UNSUBSCRIBE_SQL, args: [tok] }]);
-    expect(UNSUBSCRIBE_SQL).toContain("status = 'unsubscribed'");
+    expect(UNSUBSCRIBE_SQL).toBe(
+      "UPDATE email_optins SET status = 'unsubscribed', token_hash = NULL, country = NULL WHERE unsub_token = ?1"
+    );
   });
   it("unsubscribe: RFC 8058 one-click POST (query token, List-Unsubscribe=One-Click body) works", async () => {
     const { db, calls } = fakeDb();

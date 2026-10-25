@@ -26,6 +26,7 @@ Don't add an MX on `mail.authichain.com` itself. It's send-only, and the `send.m
 
 - `RESEND_API_KEY`: a sending-only key scoped to `mail.authichain.com`. Set it from file via stdin: `wrangler secret put RESEND_API_KEY --name authichain-com < keyfile`.
 - `EMAIL_OPTIN_SEND_ENABLED=true`: set this only after the domain shows Verified in Resend. Leave it unset or anything other than `true` to keep sending off.
+- `IP_HASH_SALT` (optional): `wrangler secret put IP_HASH_SALT --name authichain-com`. Unset or empty stores NULL for the rate-limit IP hash. Never print the value.
 
 Note: setting a secret creates and deploys a new Worker version right away.
 

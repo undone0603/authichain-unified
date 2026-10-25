@@ -3229,6 +3229,8 @@ interface Env {
   /** "true" turns on the opt-in confirmation email (also needs RESEND_API_KEY). Default off. */
   EMAIL_OPTIN_SEND_ENABLED?: string;
   RESEND_API_KEY?: string;
+  /** Optional secret name only. Unset or empty: store NULL for the rate-limit IP hash. */
+  IP_HASH_SALT?: string;
 }
 
 const APP_WORKER_TIMEOUT_MS_DEFAULT = 4000;
