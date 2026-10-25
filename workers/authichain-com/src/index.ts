@@ -3229,7 +3229,7 @@ interface Env {
   /** "true" turns on the opt-in confirmation email (also needs RESEND_API_KEY). Default off. */
   EMAIL_OPTIN_SEND_ENABLED?: string;
   RESEND_API_KEY?: string;
-  /** Optional secret name only. Unset or empty: store NULL for the rate-limit IP hash. */
+  /** Optional secret name only. Unset or empty: 503 before any write (fail closed). */
   IP_HASH_SALT?: string;
 }
 

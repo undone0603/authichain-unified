@@ -32,10 +32,10 @@ export const EMAIL_OPTIN_CONSENT_TEXT =
   "Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@mail.grokbot.com.";
 /** /is-this-real (also POSTs /api/leads/capture). Research FIX 2 Option B, verbatim. */
 export const EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL =
-  'If you tick the box, we store your email, the first seal ID you check, the page address, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Your email, seal ID and page address are saved in our Supabase lead list (lead_captures), and your email, country if you give it, when you agreed and whether you confirmed are saved in AuthiChain\'s Cloudflare D1 database. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep the Supabase copy until you ask us to delete it at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
+  'If you tick the box, we store your email, the first seal ID you check, the page address, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Your email, seal ID and page address are saved in our Supabase lead list (lead_captures), and your email, country if you give it, when you agreed and whether you confirmed are saved in AuthiChain\'s Cloudflare D1 database. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep the Supabase copy until you ask us to delete it at authichain@mail.grokbot.com. To limit abuse, we also keep a salted hash of your IP address for about a day; we never store the IP address itself. See the <a href="/privacy">privacy policy</a>.';
 /** /dpp-check (email-optin only). Research: keep the current line here. */
 export const EMAIL_OPTIN_PRIVACY_LINE =
-  'We store only your email, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be deleted after 30 days, and you can ask us to delete yours at any time at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.';
+  'We store only your email, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be deleted after 30 days, and you can ask us to delete yours at any time at authichain@mail.grokbot.com. To limit abuse, we also keep a salted hash of your IP address for about a day; we never store the IP address itself. See the <a href="/privacy">privacy policy</a>.';
 
 /*
  * MARKETING RULE (Research gate, PR #2013): only email_optins rows with
@@ -55,7 +55,7 @@ export interface EmailOptinEnv {
   DB?: D1Like;
   RESEND_API_KEY?: string;
   EMAIL_OPTIN_SEND_ENABLED?: string;
-  /** Optional secret name only. Unset or empty: store NULL, never an unsalted hash. */
+  /** Optional secret name only. Unset or empty: 503 before any write (fail closed). */
   IP_HASH_SALT?: string;
 }
 
@@ -277,7 +277,7 @@ async function sha256Hex(s: string): Promise<string> {
 
 /**
  * Rate-limit IP hash. Salted as sha256(IP_HASH_SALT + ':' + ip).
- * Unset or empty salt: NULL (fail closed — never store an unsalted hash).
+ * Unset or empty salt: null; the handler must 503 before any write (fail closed).
  */
 export async function hashOptinIp(
   salt: string | undefined,
@@ -440,6 +440,8 @@ export async function tryHandleEmailOptin(
   const country = normalizeCountry(body.country);
   if (country === undefined) return reply(false, 400, "invalid_country");
   if (!db) return reply(false, 503, "unavailable");
+  if (typeof env.IP_HASH_SALT !== "string" || env.IP_HASH_SALT === "")
+    return reply(false, 503, "unavailable");
   const consentAt = now.toISOString().replace("T", " ").slice(0, 19);
   const raw = [...crypto.getRandomValues(new Uint8Array(32))]
     .map(b => b.toString(16).padStart(2, "0"))

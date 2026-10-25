@@ -1,3 +1,4 @@
+import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import {
   tryHandleEmailOptin,
@@ -82,7 +83,12 @@ function mockFetch() {
   }) as unknown as typeof fetch;
   return { sent, f };
 }
-const ON = { RESEND_API_KEY: "test-key", EMAIL_OPTIN_SEND_ENABLED: "true" };
+const SALT = "unit-test-salt";
+const ON = {
+  RESEND_API_KEY: "test-key",
+  EMAIL_OPTIN_SEND_ENABLED: "true",
+  IP_HASH_SALT: SALT,
+};
 
 describe("email opt-in", () => {
   it("ignores other paths", async () => {
@@ -96,7 +102,10 @@ describe("email opt-in", () => {
   it("requires consent and a valid email, writes nothing otherwise", async () => {
     const { db, calls } = fakeDb();
     expect(
-      (await tryHandleEmailOptin(post({ email: "a@b.co" }), { DB: db }))!.status
+      (await tryHandleEmailOptin(post({ email: "a@b.co" }), {
+        DB: db,
+        IP_HASH_SALT: SALT,
+      }))!.status
     ).toBe(400);
     expect(
       (await tryHandleEmailOptin(post({ email: "nope", consent: "yes" }), {
@@ -117,14 +126,17 @@ describe("email opt-in", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(ok),
     });
-    expect((await tryHandleEmailOptin(noOrigin, { DB: db }))!.status).toBe(403);
+    expect(
+      (await tryHandleEmailOptin(noOrigin, { DB: db, IP_HASH_SALT: SALT }))!
+        .status
+    ).toBe(403);
     expect(calls).toHaveLength(0);
   });
   it("stores only email, consent time, pending status and a token hash; purges first", async () => {
     const { db, calls } = fakeDb();
     const r = await tryHandleEmailOptin(
       post({ email: " A@B.co ", consent: "yes", name: "x" }),
-      { DB: db },
+      { DB: db, IP_HASH_SALT: SALT },
       new Date("2026-10-23T12:00:00Z")
     );
     expect(r!.status).toBe(202);
@@ -149,9 +161,51 @@ describe("email opt-in", () => {
     expect(calls.some(c => c.sql === UPSERT_SQL)).toBe(false);
     expect(sent).toHaveLength(0);
     const rate = calls.find(c => c.sql === RATE_SQL)!;
-    expect(rate.args[0]).toBeNull();
+    expect(rate.args[0]).toMatch(/^[a-f0-9]{64}$/);
+    expect(String(rate.args[0])).not.toContain("203.0.113.9");
   });
-  it("IP hash is NULL when IP_HASH_SALT is unset or empty; opt-in still works", async () => {
+  it("rate limit on real SQLite: repeated sign-ups from one IP with salt set get limited", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec(`
+      CREATE TABLE email_optins (
+        email TEXT PRIMARY KEY,
+        consent_at TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        token_hash TEXT,
+        country TEXT,
+        unsub_token TEXT
+      );
+      CREATE TABLE email_optin_rate (
+        ip_hash TEXT PRIMARY KEY,
+        window_start TEXT NOT NULL,
+        hits INTEGER NOT NULL
+      );
+    `);
+    const db: D1Like = {
+      prepare: sql => ({
+        bind: (...values) => ({
+          run: async () => {
+            const info = sqlite.prepare(sql).run(...values);
+            return { meta: { changes: Number(info.changes) } };
+          },
+          first: async <T>() =>
+            (sqlite.prepare(sql).get(...values) ?? null) as T | null,
+        }),
+      }),
+    };
+    const statuses: number[] = [];
+    for (let i = 1; i <= RATE_MAX + 1; i++) {
+      const r = await tryHandleEmailOptin(
+        post({ email: `u${i}@b.co`, consent: "yes" }),
+        { DB: db, IP_HASH_SALT: SALT },
+        new Date("2026-10-25T12:00:00Z")
+      );
+      statuses.push(r!.status);
+    }
+    expect(statuses.slice(0, RATE_MAX)).toEqual(Array(RATE_MAX).fill(202));
+    expect(statuses[RATE_MAX]).toBe(429);
+  });
+  it("IP_HASH_SALT unset or empty fails closed: 503 before any write", async () => {
     expect(await hashOptinIp(undefined, "203.0.113.9")).toBeNull();
     expect(await hashOptinIp("", "203.0.113.9")).toBeNull();
     for (const salt of [undefined, ""]) {
@@ -161,10 +215,9 @@ describe("email opt-in", () => {
         { DB: db, IP_HASH_SALT: salt },
         new Date("2026-10-23T12:00:00Z")
       );
-      expect(r!.status).toBe(202);
-      const rate = calls.find(c => c.sql === RATE_SQL)!;
-      expect(rate.args[0]).toBeNull();
-      expect(calls.some(c => c.sql === UPSERT_SQL)).toBe(true);
+      expect(r!.status).toBe(503);
+      expect((await r!.json()).ok).toBe(false);
+      expect(calls).toHaveLength(0);
     }
   });
   it("IP hash is sha256(IP_HASH_SALT + ':' + ip) when salt is set", async () => {
@@ -218,7 +271,10 @@ describe("email opt-in", () => {
       "INSERT INTO email_optins",
     ]) {
       const { db } = fakeDb({ throwOn: t });
-      const r = await tryHandleEmailOptin(post(ok), { DB: db });
+      const r = await tryHandleEmailOptin(post(ok), {
+        DB: db,
+        IP_HASH_SALT: SALT,
+      });
       expect(r!.status).toBe(503);
       expect((await r!.json()).ok).toBe(false);
     }
@@ -230,7 +286,7 @@ describe("email opt-in", () => {
         method: "POST",
         body: form,
       }),
-      { DB: db }
+      { DB: db, IP_HASH_SALT: SALT }
     );
     expect(r!.status).toBe(503);
     expect((await r!.json()).ok).toBe(false);
@@ -242,7 +298,7 @@ describe("email opt-in", () => {
       new Request(
         "https://authichain.com/api/email-optin/confirm?token=" + tok
       ),
-      { DB: db }
+      { DB: db, IP_HASH_SALT: SALT }
     );
     expect(g!.status).toBe(200);
     const page = await g!.text();
@@ -256,7 +312,7 @@ describe("email opt-in", () => {
         method: "POST",
         body: form,
       }),
-      { DB: db }
+      { DB: db, IP_HASH_SALT: SALT }
     );
     expect(p!.status).toBe(200);
     expect(calls).toHaveLength(1);
@@ -265,7 +321,7 @@ describe("email opt-in", () => {
     expect(
       (await tryHandleEmailOptin(
         new Request("https://authichain.com/api/email-optin/confirm?token=x"),
-        { DB: db }
+        { DB: db, IP_HASH_SALT: SALT }
       ))!.status
     ).toBe(400);
   });
@@ -281,7 +337,7 @@ describe("email opt-in", () => {
         },
         body: form,
       }),
-      { DB: db }
+      { DB: db, IP_HASH_SALT: SALT }
     );
     expect(r!.status).toBe(202);
     expect(r!.headers.get("content-type")).toContain("text/html");
@@ -298,7 +354,7 @@ describe("email opt-in", () => {
       expect(
         (await tryHandleEmailOptin(
           post(ok),
-          { DB: db, ...env },
+          { DB: db, IP_HASH_SALT: SALT, ...env },
           new Date(),
           f
         ))!.status
@@ -335,7 +391,7 @@ describe("email opt-in", () => {
       "Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@mail.grokbot.com."
     );
     expect(EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL).toBe(
-      'If you tick the box, we store your email, the first seal ID you check, the page address, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Your email, seal ID and page address are saved in our Supabase lead list (lead_captures), and your email, country if you give it, when you agreed and whether you confirmed are saved in AuthiChain\'s Cloudflare D1 database. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep the Supabase copy until you ask us to delete it at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.'
+      'If you tick the box, we store your email, the first seal ID you check, the page address, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Your email, seal ID and page address are saved in our Supabase lead list (lead_captures), and your email, country if you give it, when you agreed and whether you confirmed are saved in AuthiChain\'s Cloudflare D1 database. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep the Supabase copy until you ask us to delete it at authichain@mail.grokbot.com. To limit abuse, we also keep a salted hash of your IP address for about a day; we never store the IP address itself. See the <a href="/privacy">privacy policy</a>.'
     );
     expect(confirmEmailText("TOK")).toBe(
       "Someone entered this email address on authichain.com and asked for AuthiChain product updates (at most once a month).\n\nTo confirm, open this link (valid for 30 days):\n\nhttps://authichain.com/api/email-optin/confirm?token=TOK\n\nIf you did not ask for this, ignore this email. Unless you confirm, we will not send you anything else."
@@ -355,7 +411,7 @@ describe("email opt-in", () => {
     expect(itr).toContain(EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL);
     expect(dpp).toContain(EMAIL_OPTIN_PRIVACY_LINE);
     expect(EMAIL_OPTIN_PRIVACY_LINE).toBe(
-      'We store only your email, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be deleted after 30 days, and you can ask us to delete yours at any time at authichain@mail.grokbot.com. See the <a href="/privacy">privacy policy</a>.'
+      'We store only your email, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Unconfirmed sign-ups may be deleted after 30 days, and you can ask us to delete yours at any time at authichain@mail.grokbot.com. To limit abuse, we also keep a salted hash of your IP address for about a day; we never store the IP address itself. See the <a href="/privacy">privacy policy</a>.'
     );
     expect(dpp).not.toContain("first seal ID");
   });
@@ -382,8 +438,10 @@ describe("email opt-in", () => {
       expect(normalizeCountry(bad)).toBeUndefined();
     const { db, calls } = fakeDb();
     expect(
-      (await tryHandleEmailOptin(post({ ...ok, country: "us" }), { DB: db }))!
-        .status
+      (await tryHandleEmailOptin(post({ ...ok, country: "us" }), {
+        DB: db,
+        IP_HASH_SALT: SALT,
+      }))!.status
     ).toBe(202);
     expect(calls.find(c => c.sql === UPSERT_SQL)!.args[3]).toBe("US");
     const bad = fakeDb();
@@ -412,7 +470,7 @@ describe("email opt-in", () => {
     const tok = "b".repeat(64);
     const r = await tryHandleEmailOptin(
       new Request("https://authichain.com/email/unsubscribe?token=" + tok),
-      { DB: db }
+      { DB: db, IP_HASH_SALT: SALT }
     );
     expect(r!.status).toBe(200);
     const h = await r!.text();
@@ -443,7 +501,7 @@ describe("email opt-in", () => {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: "token=" + tok,
       }),
-      { DB: db }
+      { DB: db, IP_HASH_SALT: SALT }
     );
     expect(r!.status).toBe(200);
     expect(await r!.text()).toContain("You are unsubscribed.");
@@ -461,7 +519,7 @@ describe("email opt-in", () => {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: "List-Unsubscribe=One-Click",
       }),
-      { DB: db }
+      { DB: db, IP_HASH_SALT: SALT }
     );
     expect(p!.status).toBe(200);
     expect(await p!.text()).toContain("You are unsubscribed.");
@@ -481,7 +539,7 @@ describe("email opt-in", () => {
             method: "POST",
             body,
           }),
-          { DB: db }
+          { DB: db, IP_HASH_SALT: SALT }
         ))!.status
       ).toBe(400);
     }
@@ -503,7 +561,7 @@ describe("email opt-in", () => {
       expect(
         (await tryHandleEmailOptin(
           new Request("https://authichain.com/email/unsubscribe" + q),
-          { DB: db }
+          { DB: db, IP_HASH_SALT: SALT }
         ))!.status
       ).toBe(400);
     }
@@ -555,7 +613,7 @@ describe("email opt-in", () => {
         },
         body: form,
       }),
-      { DB: db }
+      { DB: db, IP_HASH_SALT: SALT }
     );
     expect(r!.status).toBe(202);
     expect(calls.find(c => c.sql === UPSERT_SQL)!.args[3]).toBe("GB");
@@ -642,7 +700,7 @@ describe("email opt-in", () => {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: "List-Unsubscribe=One-Click",
       }),
-      { DB: db }
+      { DB: db, IP_HASH_SALT: SALT }
     );
     expect(r!.status).toBe(200);
     expect(calls).toEqual([{ sql: UNSUBSCRIBE_SQL, args: [tok] }]);
@@ -653,7 +711,12 @@ describe("email opt-in", () => {
       const { sent, f } = mockFetch();
       await tryHandleEmailOptin(
         post(ok),
-        { DB: db, RESEND_API_KEY: "k", EMAIL_OPTIN_SEND_ENABLED: v },
+        {
+          DB: db,
+          IP_HASH_SALT: SALT,
+          RESEND_API_KEY: "k",
+          EMAIL_OPTIN_SEND_ENABLED: v,
+        },
         new Date(),
         f
       );

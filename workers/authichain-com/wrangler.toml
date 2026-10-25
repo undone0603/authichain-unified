@@ -152,7 +152,7 @@ service = "authichain-api"
 # Secrets (set at deploy from GitHub): STRIPE_SECRET_KEY, optional STRIPE_PRICE_ID.
 # DPP_SMOKE_SECRET (16+ chars) gates the $0 DPP-SMOKE-E2E session. Unset fails closed.
 # IP_HASH_SALT (optional): wrangler secret put IP_HASH_SALT --name authichain-com
-# Unset or empty stores NULL for the rate-limit IP hash (never an unsalted hash).
+# Unset or empty fails closed: 503, no write.
 
 # VERIFY_APP: service binding to the Next app worker `authichain-app`
 # (wrangler.app.jsonc). Paid verify prefers the Supabase read below. This

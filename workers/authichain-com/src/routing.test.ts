@@ -344,7 +344,7 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   );
   assert.match(
     privacy,
-    /and Supabase, which stores the contact records for business contacts at US brands\./
+    /Supabase, which stores the contact records for business contacts at US brands and sign-ups from \/is-this-real; and Cloudflare, which stores email opt-in sign-ups in its D1 database\. We do not sell your data\./
   );
   assert.match(
     privacy,
@@ -383,7 +383,7 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   assert.doesNotMatch(privacy, /If we start sending marketing email/);
   assert.match(
     privacy,
-    /Cloudflare, which stores email opt-in sign-ups in its D1 database; and Supabase, which also stores sign-ups from \/is-this-real\./
+    /To limit abuse, we also keep a salted hash of the IP address used to sign up for about a day; we never store the IP address itself\./
   );
   assert.match(
     privacy,
