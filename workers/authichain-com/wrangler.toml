@@ -179,7 +179,7 @@ binding = "MYBROWSER"
 binding = "X402_REPLAY_KV"
 id = "ab391dc529884161bd84707d7627a9f0"
 
-# Optional email opt-in from the free checks (email_optins, migrations/0001).
+# Optional email opt-in from the free checks (email_optins, migrations/0001 + 0002 country/unsub).
 # Existing AuthiChain-owned D1, $0. Rollback: delete this block.
 [[d1_databases]]
 binding = "DB"
