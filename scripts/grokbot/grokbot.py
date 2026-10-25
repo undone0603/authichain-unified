@@ -19,7 +19,8 @@ import ipaddress
 import json
 import os
 import re
-from dataclasses import asdict, dataclass
+import sys
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
@@ -49,29 +50,49 @@ SCAN_ALLOWLIST: tuple[str, ...] = ()
 MARKER = "[REDACTED]"
 _SECRET_NAME = r"key|secret|token|password|pass|private|credential|auth|salt"
 
-SECRET_PATTERNS = [
-    re.compile(r"-----BEGIN [A-Z ]{0,40}PRIVATE KEY(?: BLOCK)?-----[\s\S]*?(?:-----END [A-Z ]{0,40}PRIVATE KEY(?: BLOCK)?-----|\Z)"),
-    re.compile(r"-----BEGIN PGP [A-Z ]+-----[\s\S]*?(?:-----END PGP [A-Z ]+-----|\Z)"),
-    re.compile(r"-----BEGIN ENCRYPTED [A-Z ]+-----[\s\S]*?(?:-----END ENCRYPTED [A-Z ]+-----|\Z)"),
-    re.compile(r"\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]{10,}\b", re.I),
-    re.compile(r"\bwhsec_[A-Za-z0-9]{16,}\b", re.I),
-    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b"),
-    re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b", re.I),
-    re.compile(r"\bxai-[A-Za-z0-9_-]{20,}\b", re.I),
-    re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"),
-    re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
-    re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"),
-    re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}\b"),
-    re.compile(r"\bsk-(?:proj-|ant-[a-z0-9]+-)?[A-Za-z0-9_-]{20,}\b"),
-    re.compile(r"\bre_[A-Za-z0-9_]{16,}\b"),
-    re.compile(r"(?i)(authorization\s*:\s*(?:basic|bearer|token)\s+)\S+"),
-    re.compile(r"(?i)\b((?:basic|bearer|token)\s+)[A-Za-z0-9._+/=-]{4,}"),
-    re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://[^\s:/@]+:)[^\s@/]+@"),
-    re.compile(r"\b0x[0-9a-fA-F]{64}\b"),
-    re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
-    re.compile(r"(?<!\d)(?:\+1[-. ]?)?(?:\(?\d{3}\)?[-. ]?)\d{3}[-. ]?\d{4}(?!\d)"),
-    re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
+_TAGGED_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"-----BEGIN [A-Z ]{0,40}PRIVATE KEY(?: BLOCK)?-----[\s\S]*?(?:-----END [A-Z ]{0,40}PRIVATE KEY(?: BLOCK)?-----|\Z)"), "key_block"),
+    (re.compile(r"-----BEGIN PGP [A-Z ]+-----[\s\S]*?(?:-----END PGP [A-Z ]+-----|\Z)"), "key_block"),
+    (re.compile(r"-----BEGIN ENCRYPTED [A-Z ]+-----[\s\S]*?(?:-----END ENCRYPTED [A-Z ]+-----|\Z)"), "key_block"),
+    (re.compile(r"\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]{10,}\b", re.I), "stripe"),
+    (re.compile(r"\bwhsec_[A-Za-z0-9]{16,}\b", re.I), "stripe"),
+    (re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b"), "github"),
+    (re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b", re.I), "github"),
+    (re.compile(r"\bxai-[A-Za-z0-9_-]{20,}\b", re.I), "generic_assignment"),
+    (re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"), "jwt"),
+    (re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"), "aws"),
+    (re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"), "generic_assignment"),
+    (re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}\b"), "generic_assignment"),
+    (re.compile(r"\bsk-(?:proj-|ant-[a-z0-9]+-)?[A-Za-z0-9_-]{20,}\b"), "generic_assignment"),
+    (re.compile(r"\bre_[A-Za-z0-9_]{16,}\b"), "generic_assignment"),
+    (re.compile(r"(?i)(authorization\s*:\s*(?:basic|bearer|token)\s+)\S+"), "auth_header"),
+    (re.compile(r"(?i)\b((?:basic|bearer|token)\s+)[A-Za-z0-9._+/=-]{4,}"), "auth_header"),
+    (re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://[^\s:/@]+:)[^\s@/]+@"), "url_credential"),
+    (re.compile(r"\b0x[0-9a-fA-F]{64}\b"), "wallet"),
+    (re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"), "email"),
+    (re.compile(r"(?<!\d)(?:\+1[-. ]?)?(?:\(?\d{3}\)?[-. ]?)\d{3}[-. ]?\d{4}(?!\d)"), "phone"),
+    (re.compile(r"\b\d{3}-\d{2}-\d{4}\b"), "ssn"),
 ]
+SECRET_PATTERNS = [pattern for pattern, _ in _TAGGED_PATTERNS]
+
+REDACTION_CATEGORIES = (
+    "stripe",
+    "github",
+    "jwt",
+    "aws",
+    "generic_assignment",
+    "auth_header",
+    "key_block",
+    "wallet",
+    "seed_phrase",
+    "url_credential",
+    "email",
+    "phone",
+    "ssn",
+    "card",
+    "ip",
+    "address_blocklist",
+)
 
 _CARD_RE = re.compile(r"(?:\d[ -]?){13,19}")
 _IPV4_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
@@ -136,11 +157,40 @@ _WORDLIST_PATH = Path(__file__).resolve().parent / "data" / "bip39_english.txt"
 _BIP39_WORDS: frozenset[str] | None = None
 
 
-@dataclass(frozen=True)
+def empty_category_counts() -> dict[str, int]:
+    return {name: 0 for name in REDACTION_CATEGORIES}
+
+
+def _bump(counts: dict[str, int], category: str, n: int = 1) -> None:
+    counts[category] = counts.get(category, 0) + n
+
+
+@dataclass
 class RedactResult:
     text: str
     changed: bool
     drop: bool = False
+    counts: dict[str, int] = field(default_factory=empty_category_counts)
+
+
+@dataclass
+class HarvestStats:
+    files_considered: int = 0
+    files_scanned: int = 0
+    files_skipped_denylist: int = 0
+    files_dropped_failclosed: int = 0
+    records_written: int = 0
+    redactions_by_category: dict[str, int] = field(default_factory=empty_category_counts)
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "files_considered": self.files_considered,
+            "files_scanned": self.files_scanned,
+            "files_skipped_denylist": self.files_skipped_denylist,
+            "files_dropped_failclosed": self.files_dropped_failclosed,
+            "records_written": self.records_written,
+            "redactions_by_category": {name: int(self.redactions_by_category.get(name, 0)) for name in REDACTION_CATEGORIES},
+        }
 
 
 @dataclass
@@ -218,42 +268,49 @@ def _luhn_ok(digits: str) -> bool:
     return total % 10 == 0
 
 
-def _redact_cards(text: str) -> str:
+def _redact_cards(text: str, counts: dict[str, int]) -> str:
     def repl(match: re.Match[str]) -> str:
         digits = re.sub(r"\D", "", match.group(0))
         if 13 <= len(digits) <= 19 and _luhn_ok(digits):
+            _bump(counts, "card")
             return MARKER
         return match.group(0)
 
     return _CARD_RE.sub(repl, text)
 
 
-def _redact_ipv4(text: str) -> str:
+def _redact_ipv4(text: str, counts: dict[str, int]) -> str:
     def repl(match: re.Match[str]) -> str:
         parts = match.group(0).split(".")
         if all(p.isdigit() and 0 <= int(p) <= 255 for p in parts):
+            _bump(counts, "ip")
             return MARKER
         return match.group(0)
 
     return _IPV4_RE.sub(repl, text)
 
 
-def _redact_ipv6(text: str) -> str:
+def _redact_ipv6(text: str, counts: dict[str, int]) -> str:
     def repl(match: re.Match[str]) -> str:
         try:
             ipaddress.IPv6Address(match.group(0))
         except ValueError:
             return match.group(0)
+        _bump(counts, "ip")
         return MARKER
 
     return _IPV6_RE.sub(repl, text)
 
 
-def _redact_addresses(text: str) -> str:
-    return _US_ADDR_RE.sub(MARKER, text)
+def _redact_addresses(text: str, counts: dict[str, int]) -> str:
+    def repl(match: re.Match[str]) -> str:
+        _bump(counts, "address_blocklist")
+        return MARKER
+
+    return _US_ADDR_RE.sub(repl, text)
 
 
-def _redact_bip39(text: str) -> str:
+def _redact_bip39(text: str, counts: dict[str, int]) -> str:
     words = bip39_words()
     tokens = list(_WORD_RE.finditer(text))
     spans: list[tuple[int, int]] = []
@@ -281,14 +338,17 @@ def _redact_bip39(text: str) -> str:
     out = text
     for start, end in reversed(spans):
         out = out[:start] + MARKER + out[end:]
+        _bump(counts, "seed_phrase")
     return out
 
 
-def _redact_blocklist(text: str) -> str:
+def _redact_blocklist(text: str, counts: dict[str, int]) -> str:
     out = text
     for item in load_blocklist():
-        if item in out:
+        found = out.count(item)
+        if found:
             out = out.replace(item, MARKER)
+            _bump(counts, "address_blocklist", found)
     return out
 
 
@@ -296,15 +356,17 @@ def _name_holds_secret(name: str) -> bool:
     return bool(_SECRET_NAME_RE.search(name))
 
 
-def _redact_named_assignments(text: str) -> str:
+def _redact_named_assignments(text: str, counts: dict[str, int]) -> str:
     def env_repl(match: re.Match[str]) -> str:
         if not _name_holds_secret(match.group(2)):
             return match.group(0)
+        _bump(counts, "generic_assignment")
         return f"{match.group(1)}{MARKER}"
 
     def json_repl(match: re.Match[str]) -> str:
         if not _name_holds_secret(match.group(2)):
             return match.group(0)
+        _bump(counts, "generic_assignment")
         return f"{match.group(1)}{MARKER}"
 
     return _JSON_ASSIGN_RE.sub(json_repl, _ASSIGNMENT_RE.sub(env_repl, text))
@@ -317,19 +379,25 @@ _PII_ONLY_PREFIXES = (
 )
 
 
-def _apply_scanners(text: str, include_pii: bool) -> str:
-    out = _redact_blocklist(text)
-    out = _redact_cards(out)
-    for pattern in SECRET_PATTERNS:
+def _apply_scanners(text: str, include_pii: bool, counts: dict[str, int] | None = None) -> str:
+    tallies = counts if counts is not None else empty_category_counts()
+    out = _redact_blocklist(text, tallies)
+    out = _redact_cards(out, tallies)
+    for pattern, category in _TAGGED_PATTERNS:
         if not include_pii and pattern.pattern.startswith(_PII_ONLY_PREFIXES):
             continue
-        out = pattern.sub(_redact_match, out)
-    out = _redact_named_assignments(out)
-    out = _redact_bip39(out)
+
+        def repl(match: re.Match[str], _category: str = category) -> str:
+            _bump(tallies, _category)
+            return _redact_match(match)
+
+        out = pattern.sub(repl, out)
+    out = _redact_named_assignments(out, tallies)
+    out = _redact_bip39(out, tallies)
     if include_pii:
-        out = _redact_ipv4(out)
-        out = _redact_ipv6(out)
-        out = _redact_addresses(out)
+        out = _redact_ipv4(out, tallies)
+        out = _redact_ipv6(out, tallies)
+        out = _redact_addresses(out, tallies)
     return out
 
 
@@ -408,16 +476,25 @@ def _encoding_variants(secret: str) -> list[str]:
     return variants
 
 
-def _replace_original_span(text: str, secret: str) -> tuple[str, bool]:
+def _category_for_value(secret: str) -> str:
+    for pattern, category in _TAGGED_PATTERNS:
+        if pattern.search(secret):
+            return category
+    return "generic_assignment"
+
+
+def _replace_original_span(text: str, secret: str) -> tuple[str, bool, int]:
     if secret and secret in text:
-        return text.replace(secret, MARKER), True
+        n = text.count(secret)
+        return text.replace(secret, MARKER), True, n
     match = _span_with_breaks(text, secret)
     if match:
-        return text[: match.start()] + MARKER + text[match.end() :], True
+        return text[: match.start()] + MARKER + text[match.end() :], True, 1
     for encoded in _encoding_variants(secret):
         if encoded and encoded in text:
-            return text.replace(encoded, MARKER), True
-    return text, False
+            n = text.count(encoded)
+            return text.replace(encoded, MARKER), True, n
+    return text, False, 0
 
 
 def _try_b64_decode(blob: str) -> str | None:
@@ -436,7 +513,7 @@ def _try_b64_decode(blob: str) -> str | None:
     return None
 
 
-def _redact_base64_runs(text: str) -> tuple[str, bool, bool]:
+def _redact_base64_runs(text: str, counts: dict[str, int]) -> tuple[str, bool, bool]:
     changed = False
     drop = False
     spans = list(_B64_RE.finditer(text))
@@ -451,11 +528,13 @@ def _redact_base64_runs(text: str) -> tuple[str, bool, bool]:
             continue
         out = out[: match.start()] + MARKER + out[match.end() :]
         changed = True
+        _bump(counts, _category_for_value(secrets[0] if secrets else decoded))
     return out, changed, drop
 
 
 def redact(text: str) -> RedactResult:
-    out = _apply_scanners(text, include_pii=True)
+    counts = empty_category_counts()
+    out = _apply_scanners(text, include_pii=True, counts=counts)
     drop = False
     changed = out != text
 
@@ -463,20 +542,25 @@ def redact(text: str) -> RedactResult:
         if normalized == text:
             continue
         for secret in _secret_values(normalized, include_pii=False):
-            out, replaced = _replace_original_span(out, secret)
+            present = secret in out or _span_with_breaks(out, secret)
+            already = (not present) and (secret in text or _span_with_breaks(text, secret))
+            if already:
+                continue
+            out, replaced, n = _replace_original_span(out, secret)
             if replaced:
                 changed = True
+                _bump(counts, _category_for_value(secret), n)
             else:
                 drop = True
 
-    out, b64_changed, b64_drop = _redact_base64_runs(out)
+    out, b64_changed, b64_drop = _redact_base64_runs(out, counts)
     changed = changed or b64_changed
     drop = drop or b64_drop
 
     leftovers = _secret_values(out, include_pii=False)
     if leftovers:
         drop = True
-    return RedactResult(text=out, changed=changed, drop=drop)
+    return RedactResult(text=out, changed=changed, drop=drop, counts=counts)
 
 
 def classify(text: str, name: str) -> tuple[str, list[str]]:
@@ -558,13 +642,13 @@ def resolve_scan_roots(cli_roots: list[str] | None) -> list[Path]:
     return [Path(part).expanduser() for part in raw]
 
 
-def iter_files(roots: Iterable[Path]) -> Iterable[Path]:
+def iter_candidates(roots: Iterable[Path]) -> Iterable[Path]:
+    """Yield regular files under roots, excluding SKIP_DIRS and escaped symlinks."""
     for root in roots:
         if not root.exists():
             continue
         if root.is_file():
-            if not is_denied_path(root):
-                yield root
+            yield root
             continue
         try:
             resolved_root = root.resolve(strict=True)
@@ -582,12 +666,16 @@ def iter_files(roots: Iterable[Path]) -> Iterable[Path]:
                 continue
             if any(part in SKIP_DIRS for part in path.parts):
                 continue
-            if is_denied_path(path):
-                continue
             yield path
 
 
-def read_preview(path: Path) -> tuple[str, bool] | None:
+def iter_files(roots: Iterable[Path]) -> Iterable[Path]:
+    for path in iter_candidates(roots):
+        if not is_denied_path(path):
+            yield path
+
+
+def read_preview(path: Path) -> RedactResult | None:
     """Return a redacted preview, or None to drop the item (fail closed)."""
     if is_denied_path(path) or artifact_type(path) != "text":
         return None
@@ -604,30 +692,45 @@ def read_preview(path: Path) -> tuple[str, bool] | None:
     result = redact(raw)
     if result.drop:
         return None
-    return result.text[:12_000], result.changed
+    return RedactResult(
+        text=result.text[:12_000],
+        changed=result.changed,
+        drop=False,
+        counts=result.counts,
+    )
 
 
-def discover(roots: list[Path]) -> list[Evidence]:
+def harvest(roots: list[Path], max_results: int | None = None) -> tuple[list[Evidence], HarvestStats]:
+    stats = HarvestStats()
     if not roots:
-        return []
+        return [], stats
     results: list[Evidence] = []
     seen_hashes: set[str] = set()
-    for path in iter_files(roots):
+    for path in iter_candidates(roots):
         try:
+            stats.files_considered += 1
+            if is_denied_path(path):
+                stats.files_skipped_denylist += 1
+                continue
             preview = read_preview(path)
             if preview is None:
+                stats.files_dropped_failclosed += 1
                 continue
-            text, redacted = preview
+            stats.files_scanned += 1
             size = path.stat().st_size
             digest = sha256_file(path)
             if digest in seen_hashes:
                 continue
             seen_hashes.add(digest)
-            product, terms = classify(text, path.name)
+            product, terms = classify(preview.text, path.name)
             if not terms and product == "shared":
                 product, terms = classify("", path.name)
             if product == "shared" and not terms:
                 continue
+            if max_results is not None and len(results) >= max_results:
+                continue
+            for name, n in preview.counts.items():
+                _bump(stats.redactions_by_category, name, n)
             modified = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat()
             results.append(Evidence(
                 id=f"sha256:{digest}",
@@ -638,12 +741,40 @@ def discover(roots: list[Path]) -> list[Evidence]:
                 modified_at=modified,
                 content_hash=digest,
                 matched_terms=terms,
-                preview=text,
-                secret_redacted=redacted,
+                preview=preview.text,
+                secret_redacted=preview.changed,
             ))
         except (OSError, PermissionError):
             continue
-    return sorted(results, key=lambda item: (item.product, item.modified_at), reverse=True)
+    results = sorted(results, key=lambda item: (item.product, item.modified_at), reverse=True)
+    stats.records_written = len(results)
+    return results, stats
+
+
+def discover(roots: list[Path]) -> list[Evidence]:
+    records, _stats = harvest(roots)
+    return records
+
+
+def format_stats_line(stats: HarvestStats) -> str:
+    cats = " ".join(f"{name}={stats.redactions_by_category.get(name, 0)}" for name in REDACTION_CATEGORIES)
+    return (
+        f"grokbot stats: considered={stats.files_considered} "
+        f"scanned={stats.files_scanned} skipped_denylist={stats.files_skipped_denylist} "
+        f"dropped_failclosed={stats.files_dropped_failclosed} written={stats.records_written} "
+        f"{cats}"
+    )
+
+
+def build_manifest(roots: list[Path], records: list[Evidence], stats: HarvestStats) -> dict[str, object]:
+    return {
+        "schema": "grokbot-evidence/v1",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "roots": [sanitize_path(path.resolve()) if path.exists() else sanitize_path(path) for path in roots],
+        "count": len(records),
+        "stats": stats.as_dict(),
+        "records": [asdict(record) for record in records],
+    }
 
 
 def main() -> int:
@@ -661,14 +792,9 @@ def main() -> int:
     args = parser.parse_args()
 
     roots = resolve_scan_roots(args.roots)
-    records = discover(roots)[: args.max_results]
-    manifest = {
-        "schema": "grokbot-evidence/v1",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "roots": [sanitize_path(path.resolve()) if path.exists() else sanitize_path(path) for path in roots],
-        "count": len(records),
-        "records": [asdict(record) for record in records],
-    }
+    records, stats = harvest(roots, max_results=args.max_results)
+    manifest = build_manifest(roots, records, stats)
+    print(format_stats_line(stats), file=sys.stderr)
 
     if args.json:
         print(json.dumps(manifest, indent=2))

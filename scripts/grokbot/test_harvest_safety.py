@@ -8,6 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from grokbot import (
+    HarvestStats,
     SCAN_ALLOWLIST,
     SKIP_DIRS,
     discover,
@@ -100,15 +101,17 @@ def test_ambiguous_encoded_secret_fails_closed() -> None:
 def test_main_without_root_scans_nothing(monkeypatch, capsys) -> None:
     seen: dict[str, list] = {}
 
-    def fake_discover(roots):
+    def fake_harvest(roots, max_results=None):
         seen["roots"] = list(roots)
-        return []
+        return [], HarvestStats()
 
-    monkeypatch.setattr("grokbot.discover", fake_discover)
+    monkeypatch.setattr("grokbot.harvest", fake_harvest)
     monkeypatch.setattr("sys.argv", ["grokbot", "--json"])
     assert main() == 0
     assert seen["roots"] == []
-    assert "Downloads" not in capsys.readouterr().out
+    captured = capsys.readouterr()
+    assert "Downloads" not in captured.out
+    assert "considered=0" in captured.err
 
 
 def test_symlink_outside_root_is_skipped(tmp_path: Path) -> None:
