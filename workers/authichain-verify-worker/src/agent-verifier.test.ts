@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AGENT_CAPABILITIES,
+  type AgentCapability,
   type AgentIdentityAttestation,
   type AgentIdentityResolver,
 } from "./agent-types";
@@ -25,7 +26,7 @@ async function keys() {
     { name: "ECDSA", namedCurve: "P-256" },
     true,
     ["sign", "verify"],
-  );
+  ) as CryptoKeyPair;
   return {
     pair,
     publicKey: JSON.stringify(await crypto.subtle.exportKey("jwk", pair.publicKey)),
@@ -196,11 +197,14 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
 
   it("rejects an ungranted capability", async () => {
     const fixture = await signedFixtures();
-    const base = { ...fixture.base, capabilities: ["PROPOSE_LIFECYCLE_ACTION"] as const };
+    const base = {
+      ...fixture.base,
+      capabilities: ["PROPOSE_LIFECYCLE_ACTION"] as AgentCapability[],
+    };
     const message = {
       ...base,
-      signature: await sign(canonicalizeAgentMessage(base as never), fixture.agent.pair.privateKey),
-    } as SignedAgentMessage;
+      signature: await sign(canonicalizeAgentMessage(base), fixture.agent.pair.privateKey),
+    };
     const result = await verifyAgentMessage(message, {
       resolver: fixture.resolver,
       replayStore: new MemoryAgentReplayStore(),
@@ -290,7 +294,7 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
       resolver: fixture.resolver,
       replayStore: new MemoryAgentReplayStore(),
       now: fixture.now,
-      auditSink: { emit: (event) => events.push(event) },
+      auditSink: { emit: (event) => { events.push(event); } },
     });
     const serialized = JSON.stringify(events);
     expect(serialized).toContain(fixture.message.message_id);
