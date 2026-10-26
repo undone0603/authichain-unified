@@ -120,11 +120,23 @@ jobs:
 
       - name: Install Playwright browsers
         if: matrix.shard == 2 && steps.pw-cache.outputs.cache-hit != 'true'
-        run: pnpm --filter agent-browser exec playwright install --with-deps chromium
+        run: |
+          # --with-deps needs passwordless sudo. The self-hosted runner does not
+          # have it; its system libraries are already installed.
+          if sudo -n true 2>/dev/null; then
+            pnpm --filter agent-browser exec playwright install --with-deps chromium
+          else
+            pnpm --filter agent-browser exec playwright install chromium
+          fi
 
       - name: Install Playwright system deps (cache hit)
         if: matrix.shard == 2 && steps.pw-cache.outputs.cache-hit == 'true'
-        run: pnpm --filter agent-browser exec playwright install-deps chromium
+        run: |
+          if sudo -n true 2>/dev/null; then
+            pnpm --filter agent-browser exec playwright install-deps chromium
+          else
+            echo "No passwordless sudo; using the libraries already on this runner."
+          fi
 
       # turbo.json's test task dependsOn build, so each shard builds the
       # workspace apps it tests. One retry for the next/font/google fetch
