@@ -77,4 +77,4 @@ jobs:
           ws="${GITHUB_WORKSPACE:?}"
           case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
           cd "$ws"
-          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name build \) -prune -exec rm -rf {} + || true
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name build \) -prune -exec rm -rf -- {} +
