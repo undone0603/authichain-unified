@@ -38,6 +38,9 @@ jobs:
         uses: pnpm/action-setup@v6
         with:
           version: "10.28.2"
+          # action-setup deletes dest on every job. A shared ~/setup-pnpm
+          # races when both self-hosted runners install pnpm together.
+          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
       - name: Use Node.js
         uses: actions/setup-node@v7
