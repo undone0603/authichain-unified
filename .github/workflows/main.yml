@@ -2,6 +2,7 @@ name: CI Main
 
 # Required quality gate: install, typecheck, lint, test, production build.
 # Schema/AgentZ extras live in ci.yml so this job is not duplicated there.
+# Concurrency: per-commit runs on main are kept (CFA-123/PM-328); no cancel-in-progress. Deploys are dispatched manually by CF Deploy, who confirms the self-hosted runner is idle before each dispatch.
 
 on:
   push:
@@ -16,6 +17,8 @@ on:
   workflow_dispatch:
 
 concurrency:
+  # Kept as-is (not ci-<workflow>-<ref> + cancel true): check-deploy-invariants
+  # enforces CFA-123/PM-328 on the required "Main quality gate" workflow.
   # PRs: one active CI Main run per source branch; a newer commit supersedes
   # an older run even when GitHub opened a new PR for the same feature branch.
   # Pushes to main: one group PER COMMIT (CFA-123). GitHub keeps at most one
@@ -29,6 +32,14 @@ concurrency:
   # never queue behind or cancel each other.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
+# Flip to 'false' once the runner is verified; the skip step warns visibly.
+env:
+  SKIP_PLAYWRIGHT_ON_SELF_HOSTED: 'true'
+
+# Least privilege (self-hosted CI move). Jobs that need more set it per job.
+permissions:
+  contents: read
 jobs:
   # GB-26 fix 1: the old single "Main quality gate" job ran typecheck, lint,
   # tests (~314 s) and the production build (~218 s) one after another. They
@@ -39,14 +50,13 @@ jobs:
   # Rollback: git revert <merge sha> (restores the single serial job).
   quality:
     name: Typecheck and lint
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'self-hosted' || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'authichain-ci' || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
           # action-setup deletes dest on every job. A shared ~/setup-pnpm
@@ -54,7 +64,7 @@ jobs:
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
           cache: "pnpm"
@@ -76,6 +86,17 @@ jobs:
       - name: Lint
         run: pnpm lint:ci
 
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
+
   test:
     # The workspace suites mix Vitest, node:test and tsx --test, so
     # `vitest --shard` cannot split them. Shards split turbo's package graph
@@ -83,7 +104,7 @@ jobs:
     # `pnpm test` is `turbo test --filter=!.`, so the two shards together
     # equal the old run (and check-node-test-runners still sees `pnpm test`).
     name: Tests (shard ${{ matrix.shard }}/2)
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'self-hosted' || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'authichain-ci' || 'ubuntu-24.04' }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -95,10 +116,9 @@ jobs:
             filter: "--filter=!./workers/*"
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
           # action-setup deletes dest on every job. A shared ~/setup-pnpm
@@ -106,7 +126,7 @@ jobs:
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
           cache: "pnpm"
@@ -114,18 +134,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: "Skipped on self-hosted: Playwright browser install"
+        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED == 'true' && matrix.shard == 2
+        run: echo "::warning title=Skipped on self-hosted::Playwright Chromium install not run (needs apt/sudo and ARM64 Chromium). Browser-dependent tests in shard 2 may fail or be absent. Not a pass."
+
       # GB-26 fix 2: cache the Chromium download (~26 s); system deps still
       # install on a hit. Keyed on the lockfile, so a Playwright bump misses.
       - name: Cache Playwright browsers
         id: pw-cache
-        if: matrix.shard == 2
-        uses: actions/cache@v6
+        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && (matrix.shard == 2)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright browsers
-        if: matrix.shard == 2 && steps.pw-cache.outputs.cache-hit != 'true'
+        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && matrix.shard == 2 && steps.pw-cache.outputs.cache-hit != 'true'
         run: |
           # --with-deps needs passwordless sudo. The self-hosted runner does not
           # have it; its system libraries are already installed.
@@ -136,7 +160,7 @@ jobs:
           fi
 
       - name: Install Playwright system deps (cache hit)
-        if: matrix.shard == 2 && steps.pw-cache.outputs.cache-hit == 'true'
+        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && matrix.shard == 2 && steps.pw-cache.outputs.cache-hit == 'true'
         run: |
           if sudo -n true 2>/dev/null; then
             pnpm --filter agent-browser exec playwright install-deps chromium
@@ -158,16 +182,26 @@ jobs:
           sleep 15
           pnpm test ${{ matrix.filter }} --continue=dependencies-successful
 
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
+
   build:
     name: Production build
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'self-hosted' || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'authichain-ci' || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
           # action-setup deletes dest on every job. A shared ~/setup-pnpm
@@ -175,7 +209,7 @@ jobs:
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
           cache: "pnpm"
@@ -192,11 +226,22 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=4096
         run: pnpm build
 
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
+
   ci:
     name: Main quality gate
     needs: [quality, test, build]
     if: always()
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'self-hosted' || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'authichain-ci' || 'ubuntu-24.04' }}
     timeout-minutes: 5
     steps:
       - name: All CI Main jobs passed
@@ -211,20 +256,30 @@ jobs:
             fi
           done
 
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
+
   production-proof:
     name: Production launch proof
     if: github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 20
     permissions:
       contents: read
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
           # action-setup deletes dest on every job. A shared ~/setup-pnpm
@@ -232,7 +287,7 @@ jobs:
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
 
@@ -268,10 +323,21 @@ jobs:
 
       - name: Upload launch proof
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: authichain-production-launch-proof
           path: |
             artifacts/production-launch-proof.json
             artifacts/launch-proof-qron.png
           if-no-files-found: warn
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
