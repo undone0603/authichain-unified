@@ -27,12 +27,12 @@ on:
         default: "true"
         type: boolean
       runner:
-        description: Runner target (self-hosted-ops bypasses GitHub-hosted billing lock)
+        description: Runner target (authichain-ops bypasses GitHub-hosted billing lock)
         required: false
         type: choice
-        default: self-hosted-ops
+        default: authichain-ops
         options:
-          - self-hosted-ops
+          - authichain-ops
           - ubuntu-latest
 
 permissions:

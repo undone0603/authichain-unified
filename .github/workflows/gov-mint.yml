@@ -19,12 +19,12 @@ on:
         required: false
         default: "base"
       runner:
-        description: Runner target (self-hosted-ops bypasses GitHub-hosted billing lock)
+        description: Runner target (authichain-ops bypasses GitHub-hosted billing lock)
         required: false
         type: choice
-        default: self-hosted-ops
+        default: authichain-ops
         options:
-          - self-hosted-ops
+          - authichain-ops
           - ubuntu-latest
   workflow_call:
     inputs:
@@ -39,7 +39,7 @@ on:
       runner:
         required: false
         type: string
-        default: "self-hosted-ops"
+        default: "authichain-ops"
     secrets:
       ALCHEMY_API_KEY:
         required: false
@@ -61,7 +61,7 @@ permissions:
 
 jobs:
   mint:
-    runs-on: ${{ (inputs.runner || 'self-hosted-ops') == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
+    runs-on: ${{ (inputs.runner || 'authichain-ops') == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
 
     steps:
       - uses: actions/checkout@v7
