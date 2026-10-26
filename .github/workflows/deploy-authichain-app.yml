@@ -125,7 +125,7 @@ jobs:
           for n in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY; do
             if [ -z "${!n:-}" ]; then echo "::error::secret $n is empty"; exit 1; fi
           done
-          pnpm exec opennextjs-cloudflare build --config wrangler.app.jsonc
+          bash scripts/with-build-lock.sh pnpm exec opennextjs-cloudflare build --config wrangler.app.jsonc
       - name: Publish authichain-app
         if: ${{ inputs.rollback_version == '' }}
         env:
