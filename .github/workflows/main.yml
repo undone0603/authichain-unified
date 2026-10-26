@@ -174,20 +174,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      # next/font/google sometimes 404s mid-build (null CSS parse at
-      # google/loader.js:122 on Public_Sans); one retry. Second `pnpm build`
-      # keeps the step's exit code. 4096 MB heap kept from the serial job
-      # (next build --webpack aborted with exit 134 under the ~2 GB cap).
+      # Retries live in scripts/build-with-retry.sh, which holds the
+      # machine-wide build lock for the whole attempt loop. A second
+      # invocation here would drop that lock during the pause.
+      # 4096 MB heap: next build --webpack aborted with exit 134 under ~2 GB.
       - name: Production build
         env:
           NODE_OPTIONS: --max-old-space-size=4096
-        run: |
-          if pnpm build; then
-            exit 0
-          fi
-          echo "Production build failed; retrying once for next/font fetch flake"
-          sleep 15
-          pnpm build
+        run: pnpm build
 
   ci:
     name: Main quality gate
