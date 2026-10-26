@@ -46,7 +46,9 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
-          cache: "pnpm"
+          # Self-hosted runners keep a persistent pnpm store. Uploading it
+          # through actions/cache packs ~1 GB and stalls the runner.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
