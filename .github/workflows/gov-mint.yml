@@ -18,6 +18,14 @@ on:
         description: Chain key (base | base-sepolia | polygon)
         required: false
         default: "base"
+      runner:
+        description: Runner target (self-hosted-ops bypasses GitHub-hosted billing lock)
+        required: false
+        type: choice
+        default: self-hosted-ops
+        options:
+          - self-hosted-ops
+          - ubuntu-latest
   workflow_call:
     inputs:
       dry_run:
@@ -28,6 +36,10 @@ on:
         required: false
         type: string
         default: "base"
+      runner:
+        required: false
+        type: string
+        default: "self-hosted-ops"
     secrets:
       ALCHEMY_API_KEY:
         required: false
@@ -49,15 +61,47 @@ permissions:
 
 jobs:
   mint:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner || 'self-hosted-ops') == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      # Hosted runners need setup actions. Self-hosted authichain-ops already
+      # has nvm Node + a persistent PNPM_HOME from the systemd unit.
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        if: runner.environment == 'github-hosted'
         with: { version: "10.28.2" }
       - uses: actions/setup-node@v7
+        if: runner.environment == 'github-hosted'
         with: { node-version: "22", cache: pnpm }
-      - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+      - name: Use runner toolchain (self-hosted)
+        if: runner.environment != 'github-hosted'
+        run: |
+          set -euo pipefail
+          export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+          # shellcheck disable=SC1091
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          echo "node=$(command -v node) $(node -v)"
+          if ! command -v pnpm >/dev/null 2>&1; then
+            corepack enable
+            corepack prepare pnpm@10.28.2 --activate
+          fi
+          echo "pnpm=$(command -v pnpm) $(pnpm -v)"
+          PNPM_HOME_DIR="${PNPM_HOME:-$HOME/setup-pnpm}"
+          mkdir -p "$PNPM_HOME_DIR/store"
+          {
+            echo "PNPM_HOME=$PNPM_HOME_DIR"
+            echo "PNPM_STORE_PATH=$PNPM_HOME_DIR/store"
+          } >> "$GITHUB_ENV"
+          echo "$PNPM_HOME_DIR" >> "$GITHUB_PATH"
+          NODE_BIN="$(dirname "$(command -v node)")"
+          echo "$NODE_BIN" >> "$GITHUB_PATH"
+          echo "PNPM_HOME=$PNPM_HOME_DIR store=$PNPM_HOME_DIR/store"
+
+      - name: Install deps
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       - name: Preflight getCode (no keys)
         env:
