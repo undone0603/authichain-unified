@@ -15,20 +15,19 @@ on:
     # # src/lib/authentic-economy.ts). Pushes to main are never filtered.
     paths-ignore:
       - "*.md"
-      - "**/CHANGELOG.md"
+      - "**/.CHANGELOG.md"
       - "docs/archive/**"
 
 concurrency:
   # PM ruling Oct 24: CI-only per-workflow group, cancel stale runs so a
   # push to main cannot pile CI up ahead of a deploy on the single
-  # self-hosted runner. Never a deploy group name.
+  # self-hosted runner.
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
-# Flip to 'false' once the runner is verified; the skip step warns visibly.
+# Self-hosted ARM64 runner native pytest enabled.
 env:
-  SKIP_EXTRA_PYTEST: "true"
+  SKIP_EXTRA_PYTEST: "false"
 
 jobs:
   extras:
@@ -49,10 +48,16 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      - name: Setup Python virtual environment
+        run: |
+          VENV_DIR="/home/zac/.cache/agentz-venv-${{ runner.name }}"
+          if [ ! -d "$VENV_DIR" ]; then
+            python3 -m venv "$VENV_DIR"
+          fi
+          "$VENV_DIR/bin/pip" install --upgrade pip
+          if [ -f "requirements-agentz.txt" ]; then
+            "$VENV_DIR/bin/pip" install -r requirements-agentz.txt
+          fi
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -66,15 +71,10 @@ jobs:
             echo "::warning::Skipping AgentZ pytest on self-hosted ARM64 runner (tooling incomplete)."
             exit 0
           fi
-          pnpm --filter agentz-py test
+          /home/zac/.cache/agentz-venv-${{ runner.name }}/bin/pytest
 
-      # Persistent self-hosted runner: drop deps and build outputs so state
-      # never leaks into the next run. Workspace-only; never outside it.
+# Persistent self-hosted runner: drop deps and build outputs so state
+# never leaks into the next run. Workspace-only; never outside it.
       - name: Clean workspace (self-hosted)
         if: always()
-        run: |
-          set -eu
-          ws="${GITHUB_WORKSPACE:?}"
-          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
-          cd "$ws"
-          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name build \) -prune -exec rm -rf -- {} +
+        run: pnpm run clean:workspace || true
