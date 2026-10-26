@@ -15,7 +15,7 @@ on:
     # # src/lib/authentic-economy.ts). Pushes to main are never filtered.
     paths-ignore:
       - "*.md"
-      - "**/.CHANGELOG.md"
+      - "**/CHANGELOG.md"
       - "docs/archive/**"
 
 concurrency:
@@ -71,10 +71,15 @@ jobs:
             echo "::warning::Skipping AgentZ pytest on self-hosted ARM64 runner (tooling incomplete)."
             exit 0
           fi
-          /home/zac/.cache/agentz-venv-${{ runner.name }}/bin/pytest
+          PYTHONPATH="${GITHUB_WORKSPACE}" /home/zac/.cache/agentz-venv-${{ runner.name }}/bin/pytest agentz/tests
 
-# Persistent self-hosted runner: drop deps and build outputs so state
-# never leaks into the next run. Workspace-only; never outside it.
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
       - name: Clean workspace (self-hosted)
         if: always()
-        run: pnpm run clean:workspace || true
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name build \) -prune -exec rm -rf -- {} +
