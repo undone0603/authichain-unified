@@ -31,6 +31,17 @@ type OfferPayload = {
   acceptance: string;
 };
 
+/** Confirmed Base data-only self-call. No NFT minted. */
+const BASE_ANCHOR = {
+  chain: "base",
+  chain_id: 8453,
+  tx: "0x5ddf381ab4b3be5e8a2b4879ef3d6821fcf67c82e41b67c5fa6abb492a490f2d",
+  block: 53116780,
+  record_hash: "5ee3e5e7e8b2c32c8f096b77cc41baece9dd2555d5af24d73f8880484ed6b1e1",
+  note: "Data-only self-call from 0x5db51170…. No NFT minted.",
+  explorer: "https://basescan.org/tx/0x5ddf381ab4b3be5e8a2b4879ef3d6821fcf67c82e41b67c5fa6abb492a490f2d",
+} as const;
+
 function publishedMessage(): SignedAgentMessage<OfferPayload> {
   const message = AGENTZ_PRESENTATION.message;
   return {
@@ -73,10 +84,10 @@ const unusedReplayStore: AgentReplayStore = {
 
 function esc(value: unknown): string {
   return String(value)
-    .replace(/&/g, "&")
-    .replace(/</g, "<")
-    .replace(/>/g, ">")
-    .replace(/"/g, """);
+    .replace(/&/g, "\u0026amp;")
+    .replace(/</g, "\u0026lt;")
+    .replace(/>/g, "\u0026gt;")
+    .replace(/"/g, "\u0026quot;");
 }
 
 export async function renderAgentPresentation(options?: {
@@ -122,12 +133,7 @@ export async function renderAgentPresentation(options?: {
     message_digest: result.message_digest,
     payload,
     verified_at: result.verified_at,
-    base_anchor: {
-      chain: "base",
-      tx: "0x5ddf381ab4b3be5e8a2b4879ef3d6821fcf67c82e41b67c5fa6abb492a490f2d",
-      hash: "5ee3e5e7e8b2c32c8f096b77cc41baece9dd2555d5af24d73f8880484ed6b1e1",
-      block: 53116780,
-    },
+    onchain_anchor: BASE_ANCHOR,
   };
   const html = page(
     "AgentZ",
@@ -143,7 +149,7 @@ export async function renderAgentPresentation(options?: {
        <dt>Not allowed</dt><dd>Sending this offer, registering a product, or calling the draft a battery passport.</dd>
        <dt>Expires</dt><dd>${esc(message.expires_at)}</dd>
        <dt>Digest</dt><dd><code>${esc(result.message_digest)}</code></dd>
-       <dt>Base anchor</dt><dd><a href="https://basescan.org/tx/0x5ddf381ab4b3be5e8a2b4879ef3d6821fcf67c82e41b67c5fa6abb492a490f2d">0x5ddf381ab4b3be5e8a2b4879ef3d6821fcf67c82e41b67c5fa6abb492a490f2d</a> (hash 5ee3e5e7e8b2c32c8f096b77cc41baece9dd2555d5af24d73f8880484ed6b1e1)</dd>
+       <dt>On-chain anchor</dt><dd><a href="${esc(BASE_ANCHOR.explorer)}" rel="noopener">Base tx ${esc(BASE_ANCHOR.tx.slice(0, 10))}…</a> (block ${BASE_ANCHOR.block}). Data-only. No NFT minted.</dd>
      </dl>
      <p>${esc(payload.acceptance)}</p>
      <p><a href="/agent/agentz/draft">Draft for one battery model</a></p>
