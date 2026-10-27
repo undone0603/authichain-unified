@@ -18,6 +18,7 @@ import {
   type QronPresentationAttestation,
 } from "./qron-presentation";
 import {
+  QRON_RESOLVE_ORIGIN,
   qronResolveUrl,
   scannableQrDataUrl,
   type StoredQronPresentation,
@@ -36,8 +37,8 @@ export type CreditPack = {
 };
 
 export function generateCreditPacks(): CreditPack[] {
-  // LOOP-03 order: Starter $29 → Launch $19/mo → Creator; DPP last.
-  const order = ["starter", "qron_launch", "creator", "dpp_readiness"] as const;
+  // LOOP-03 order: Starter $29 → Launch $19/mo → Launch $190/yr → Creator; DPP last.
+  const order = ["starter", "qron_launch", "qron_launch_annual", "creator", "dpp_readiness"] as const;
   return listedPlans("qron")
     .filter(p => (order as readonly string[]).includes(p.id))
     .sort(
@@ -87,6 +88,11 @@ export function generateHealthBody(
       estate_urls: readonly string[];
       jwks_url: string;
     };
+    scan: {
+      method: "GET";
+      url_template: string;
+      missing: "presentation_not_found";
+    };
   };
 } {
   return {
@@ -105,6 +111,11 @@ export function generateHealthBody(
         canonical_url: CANONICAL_VERIFY_URL,
         estate_urls: ESTATE_VERIFY_URLS,
         jwks_url: QRON_ATTESTATION_JWKS_URL,
+      },
+      scan: {
+        method: "GET",
+        url_template: `${QRON_RESOLVE_ORIGIN}/qron/r/{object_id}`,
+        missing: "presentation_not_found",
       },
     },
   };
@@ -167,6 +178,9 @@ export type GeneratePostResult = {
  * with a global daily ceiling so the sample cannot run up image-gen cost.
  */
 export const FREE_SAMPLE_GENERATIONS = 5;
+/** Starter checkout link shown when the free sample is used up or paused. */
+export const SAMPLE_EXHAUSTED_STARTER_URL =
+  "https://authichain.com/checkout/starter?src=sample_exhausted";
 export const FREE_SAMPLE_WINDOW_MS = 30 * 24 * 60 * 60_000;
 export const FREE_SAMPLE_GLOBAL_DAILY_CAP = 100;
 
@@ -287,11 +301,17 @@ export async function handleGeneratePost(opts: {
         status: 401,
         body: {
           message: used
-            ? "You've used your 5 free generations. Keep going with Starter: 100 more for $29, paid once. No subscription, and pack credits never expire unless you switch to a Launch subscription."
-            : "Free samples are paused for today. Try again later, or get Starter now: 100 generations for $29, paid once. No subscription, and pack credits never expire unless you switch to a Launch subscription.",
+            ? "You've used your 5 free generations. Keep going with Starter: 100 more for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits."
+            : "Free samples are paused right now. Try again later, or get Starter now: 100 generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits.",
           code: used ? "FREE_SAMPLE_USED" : "FREE_SAMPLE_PAUSED",
           packs,
           pricing: "/pricing",
+          // Same shape as the low-credit prompt (#2050): existing Starter only.
+          upgrade: {
+            url: SAMPLE_EXHAUSTED_STARTER_URL,
+            plan: "starter",
+            label: "Starter Pack: 100 generations for $29, paid once",
+          },
         },
       };
     }

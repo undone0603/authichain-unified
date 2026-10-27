@@ -189,7 +189,12 @@ describe("tryHandleX402", () => {
     expect(spec.paths["/api/x402"].post["x-payment-info"].price.amount).toBe(
       "0.05"
     );
-    expect(JSON.stringify(spec)).not.toContain("/api/checkout");
+    const raw = JSON.stringify(spec);
+    expect(raw).toContain("/qron/r/{object_id}");
+    expect(raw).toContain("This host verifies the signature");
+    expect(raw).toContain("Not an x402 payment endpoint");
+    expect(raw).not.toContain("does not verify the signature");
+    expect(raw).not.toContain("/api/checkout");
   });
 
   it("POST /api/x402/catalog is 405", async () => {

@@ -200,21 +200,21 @@ curl -sS https://authichain.com/api/x402/catalog
 curl -sS https://authichain.com/.well-known/x402.json
 ```
 
-Unpaid 402 challenge:
+Unpaid 402 challenge. An empty body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment.
 
 ```bash
 curl -sS -i -X POST https://authichain.com/api/x402 \
   -H 'content-type: application/json' \
-  -d '{"sealId":"demo"}'
+  -d '{}'
 ```
 
-Settle retry after the agent wallet paid the challenge (placeholder header only):
+Settle retry after the agent wallet paid the challenge (placeholder header only). The body is a seal UUID. A non-UUID body is HTTP 400 before payment.
 
 ```bash
 curl -sS -i -X POST https://authichain.com/api/x402 \
   -H 'content-type: application/json' \
   -H 'X-PAYMENT: <base64-x402-payload>' \
-  -d '{"sealId":"demo"}'
+  -d '{"sealId":"<seal-uuid>"}'
 ```
 
 A valid payload is base64 of JSON, either flat `{ "scheme":"exact", "network":"base", "payer":"0x…", "amount":"50000", "signature":"0x…" }` or the official x402 envelope with `payload.authorization.{from,to,value}` and `payload.signature`. `to` must be the published `payTo`.

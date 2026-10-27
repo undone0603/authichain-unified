@@ -31,6 +31,11 @@ import {
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
 import { planById, type PlanId } from "../../../src/lib/plans";
+
+type McpEnv = X402Env & {
+  /** Service binding to authichain-edge-router. Public fetch of this zone returns 522. */
+  APP_WORKER?: { fetch: (request: Request) => Promise<Response> };
+};
 import { unpaidSealRefusal } from "../../../src/lib/agent-verify";
 import {
   guardedForward,
@@ -198,6 +203,22 @@ export const TOOLS = [
         ),
       },
       required: ["category"],
+    },
+  },
+  {
+    name: "scan_living_qr",
+    description:
+      "Free. Scan a stored Living QR. GET https://authichain.com/qron/r/{object_id} returns AuthiChain Verification Decision v1. This host verifies the signature. A missing id is presentation_not_found. Not an x402 payment endpoint, and it does not inspect a physical product.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        object_id: {
+          type: "string",
+          description:
+            "Stored presentation id. Canonical form is qron:url: plus 8 hex characters.",
+        },
+      },
+      required: ["object_id"],
     },
   },
 ];
@@ -451,6 +472,7 @@ export function mcpPricingDiscovery(env?: X402Env) {
       "query_provenance",
       "dpp_readiness_check",
       "get_pricing",
+      "scan_living_qr",
     ],
     agentPayPerCall: {
       rail: "x402",
@@ -674,7 +696,7 @@ async function unpaidOrRefusedVerify(
 
 async function handleRpc(
   request: Request,
-  env?: X402Env,
+  env?: McpEnv,
   verifyApp?: X402VerifyBinding
 ): Promise<Response> {
   let body: {
@@ -721,9 +743,10 @@ async function handleRpc(
       serverInfo: { name: "authichain", version: SERVER_VERSION },
       instructions:
         "AuthiChain verification is free. verify_record checks an Ed25519 " +
-        "signed provenance record. dpp_readiness_check " +
-        "scores EU Digital Product Passport readiness. Neither inspects a " +
-        "physical product, and neither is legal advice.",
+        "signed provenance record. scan_living_qr reads a stored Living QR " +
+        "as AuthiChain Verification Decision v1. dpp_readiness_check " +
+        "scores EU Digital Product Passport readiness. None of these inspects " +
+        "a physical product, and none is legal advice.",
     });
   }
 
@@ -784,6 +807,17 @@ async function handleRpc(
         ...("error" in result ? { isError: true } : {}),
       });
     }
+    if (name === "scan_living_qr") {
+      const binding = env?.APP_WORKER;
+      const fetchImpl: typeof fetch = binding
+        ? (input, init) => binding.fetch(new Request(input, init))
+        : globalThis.fetch;
+      const result = await scanLivingQr(params.arguments ?? {}, fetchImpl);
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(result.body) }],
+        ...(result.isError ? { isError: true } : {}),
+      });
+    }
     if (name === "dpp_readiness_check") {
       const args = params.arguments ?? {};
       const input = parseDppReadinessInput(k => args[k]);
@@ -813,7 +847,7 @@ async function handleRpc(
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use verify_record (free), get_pricing (free), dpp_readiness_check (free), query_provenance (free, not an attestation), or verify (legacy x402 seal verify).",
+          text: "Unknown tool. Use verify_record (free), scan_living_qr (free), get_pricing (free), dpp_readiness_check (free), query_provenance (free, not an attestation), or verify (legacy x402 seal verify).",
         },
       ],
       isError: true,
@@ -823,9 +857,89 @@ async function handleRpc(
   return rpcError(id, `Method not found: ${method}`);
 }
 
+const LIVING_QR_OBJECT_ID = /^qron:url:[0-9a-f]{8}$/;
+const LIVING_QR_SCAN_ORIGIN = "https://authichain.com";
+const LIVING_QR_DECISION_FIELDS = [
+  "valid",
+  "decision",
+  "decision_contract",
+  "cryptographic_status",
+  "status",
+  "error",
+  "overall_valid",
+] as const;
+
+/** Public Decision v1 scan. The object id never chooses the host. */
+export async function scanLivingQr(
+  args: Record<string, unknown>,
+  fetchImpl: typeof fetch = globalThis.fetch
+): Promise<{ isError: boolean; body: Record<string, unknown> }> {
+  const objectId = String(args.object_id ?? args.objectId ?? "").trim();
+  if (!LIVING_QR_OBJECT_ID.test(objectId)) {
+    return {
+      isError: true,
+      body: {
+        valid: false,
+        decision: "indeterminate",
+        decision_contract: "AuthiChain Verification Decision v1",
+        error: "object_id_invalid",
+        expected: "qron:url: plus 8 hex characters",
+      },
+    };
+  }
+  const scan = `${LIVING_QR_SCAN_ORIGIN}/qron/r/${encodeURIComponent(objectId)}`;
+  try {
+    const res = await fetchImpl(scan, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        "user-agent": "authichain-suggestions-probe",
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+    const parsed = await res.json().catch(() => null);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {
+        isError: true,
+        body: {
+          object_id: objectId,
+          scan,
+          http_status: res.status,
+          valid: false,
+          decision: "indeterminate",
+          decision_contract: "AuthiChain Verification Decision v1",
+          error: "qron_resolve_unreachable",
+        },
+      };
+    }
+    const source = parsed as Record<string, unknown>;
+    const body: Record<string, unknown> = {
+      object_id: objectId,
+      scan,
+      http_status: res.status,
+    };
+    for (const key of LIVING_QR_DECISION_FIELDS) {
+      if (key in source) body[key] = source[key];
+    }
+    return { isError: false, body };
+  } catch {
+    return {
+      isError: true,
+      body: {
+        object_id: objectId,
+        scan,
+        valid: false,
+        decision: "indeterminate",
+        decision_contract: "AuthiChain Verification Decision v1",
+        error: "qron_resolve_unreachable",
+      },
+    };
+  }
+}
+
 export async function tryHandleMcp(
   request: Request,
-  env: X402Env = {},
+  env: McpEnv = {},
   verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
   if (!isMcpPath(new URL(request.url).pathname)) return null;

@@ -24,6 +24,7 @@ describe("catalog freeze 2026-09-28", () => {
     expect([...PUBLIC_PLAN_IDS]).toEqual([
       "free",
       "qron_launch",
+      "qron_launch_annual",
       "starter",
       "creator",
       "dpp_readiness",
@@ -103,6 +104,10 @@ describe("catalog freeze 2026-09-28", () => {
     expect(grantForPriceId(LIVE_PRICE_MAP.qron_launch.priceId)).toEqual({
       planId: "qron_launch",
       grant: 100,
+    });
+    expect(grantForPriceId(LIVE_PRICE_MAP.qron_launch_annual.priceId)).toEqual({
+      planId: "qron_launch_annual",
+      grant: 1200,
     });
   });
 
