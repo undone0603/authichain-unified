@@ -130,6 +130,15 @@ export async function fulfillDppPaidSession(
     );
   }
 
+  // No buyer identity means no profile and no persisted entitlement. Do not
+  // record a grant side effect or return a successful webhook response. Keep
+  // this owner-held until Stripe retry/reconciliation policy is reviewed.
+  if (prov.status === "no_identity") {
+    throw markRetryableFulfillment(
+      new Error("DPP provision blocked: no buyer identity")
+    );
+  }
+
   try {
     await finishProvisionContinuity(supabase, {
       sessionId: session.id,
@@ -153,20 +162,6 @@ export async function fulfillDppPaidSession(
       dedupeKey: session.id,
       metadata: {
         created: prov.created,
-        plan,
-        ...(demo ? { is_demo: true } : {}),
-      },
-    });
-  } else if (visitId && prov.status === "no_identity") {
-    await recordDppLoopEventOnce(supabase, {
-      visitId: String(visitId),
-      stage: "provisioned",
-      source: md.source || "direct",
-      email: email || null,
-      stripeSessionId: session.id,
-      dedupeKey: session.id,
-      metadata: {
-        skip_reason: "no_identity",
         plan,
         ...(demo ? { is_demo: true } : {}),
       },
