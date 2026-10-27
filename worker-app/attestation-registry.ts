@@ -138,12 +138,34 @@ export async function recordStatusEvent(
     if (upsertError) return { ok: false, status: 503, error: "attestation status write failed" };
     const { data: existing, error: lookupError } = await db
       .from("attestation_status_events")
-      .select("event_id")
+      .select("event_id,event_type,attestation_id,supersedes_attestation_id")
       .eq("issuer_id", input.issuerId)
       .eq("idempotency_key", input.idempotencyKey)
       .single();
     if (lookupError || !existing) return { ok: false, status: 503, error: "attestation status write failed" };
-    return { ok: true, eventId: String((existing as { event_id: string }).event_id) };
+    // ignoreDuplicates hides whether OUR row was written. The key is
+    // issuer-scoped and every AuthiChain attestation shares one issuer, so the
+    // stored row may be a different fact (another attestation, or the
+    // `attestation.issued` row QRON writes with key = attestation_id). Handing
+    // its id back would report a revocation that never happened.
+    const stored = existing as {
+      event_id: string;
+      event_type: string;
+      attestation_id: string;
+      supersedes_attestation_id: string | null;
+    };
+    if (
+      stored.event_type !== input.eventType ||
+      stored.attestation_id !== input.attestationId ||
+      (stored.supersedes_attestation_id ?? null) !== (input.supersedesAttestationId ?? null)
+    ) {
+      return {
+        ok: false,
+        status: 409,
+        error: "idempotency key already used for a different lifecycle event",
+      };
+    }
+    return { ok: true, eventId: String(stored.event_id) };
   }
 
   const { data, error } = await db
