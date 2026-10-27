@@ -6,9 +6,15 @@ permissions:
 
 jobs:
   verify-and-heal:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@v7
+
+      - name: Compile AgentZ Python sources
+        run: python -m compileall -q agentz
+
+      - name: Run AgentZ control-plane tests
+        run: python -m unittest discover -s agentz/tests -p 'test_*.py'
 
       - name: Confirm the web-client stub is not sold as an ABI
         run: |

@@ -7,7 +7,8 @@
  * and answers an empty 404.
  *
  * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → 200 health
- *      (not_configured is OK — GET must not 404)
+ *      (not_configured is OK — GET must not 404). `freeCalls` says whether
+ *      the daily UUID allowance is armed. It never includes the salt or keys.
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
  * GET  /api/x402/listing → PayAPI-ready pack copied from health
  * GET  /api/x402/growth → directories + skills + sisters
@@ -40,11 +41,43 @@ import {
 } from "../../../src/lib/x402";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
 import {
+  readSeal,
+  guardedForward,
+  scopedReplayStore,
   resolvePaidSealVerify,
+  type ReplayStore,
+  sealLookupCredentials,
   type SealLookupEnv,
 } from "../../../src/lib/paid-seal-verify";
+import {
+  parseSealRequest,
+  registryAnswer,
+} from "../../../src/lib/agent-verify";
+import {
+  claimFreeCall,
+  FREE_CALLS_HEADER,
+  freeDailyCalls,
+  supabaseFreeTierStore,
+  type FreeTierStore,
+} from "../../../src/lib/x402-free-tier";
 
-export type X402Env = X402EnvVars & SealLookupEnv;
+export type X402Env = X402EnvVars &
+  SealLookupEnv & {
+    X402_FREE_DAILY_CALLS?: string;
+    X402_FREE_IP_SALT?: string;
+    /** [vars] in wrangler.toml; edge router derives the same via paidVerifyPath. */
+    X402_PAID_VERIFY_PATH?: string;
+    /** KV namespace for the x402 replay guard (CFA-343). */
+    X402_REPLAY_KV?: ReplayStore;
+  };
+
+/** Test seams: inject the free-tier counter store and clock. */
+export type X402Options = {
+  freeStore?: FreeTierStore | null;
+  now?: Date;
+  fetchImpl?: typeof fetch;
+  replayStore?: ReplayStore | null;
+};
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -148,12 +181,39 @@ function healthEnv(env?: X402Env): X402HealthEnv {
     X402_PRICE_USD: env?.X402_PRICE_USD || process.env.X402_PRICE_USD,
     X402_DAILY_CAP_USD:
       env?.X402_DAILY_CAP_USD || process.env.X402_DAILY_CAP_USD,
+    X402_PAID_VERIFY_PATH: env?.X402_PAID_VERIFY_PATH,
+  };
+}
+
+export type X402FreeCallsHealth = {
+  armed: boolean;
+  limit: number;
+  window: "utc_day";
+  requires: "sealId UUID";
+};
+
+/**
+ * Public view of the daily free allowance. Armed only when this worker can
+ * actually grant a call: a service-role registry, a non-empty IP salt, and
+ * a positive limit. The salt and keys stay out of the JSON.
+ */
+export function x402FreeCallsHealth(env?: X402Env): X402FreeCallsHealth {
+  const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);
+  const salt = (env?.X402_FREE_IP_SALT || "").trim();
+  const creds = sealLookupCredentials(env);
+  const armed = salt.length > 0 && creds?.role === "service" && limit > 0;
+  return {
+    armed,
+    limit: armed ? limit : 0,
+    window: "utc_day",
+    requires: "sealId UUID",
   };
 }
 
 async function healthResponse(env?: X402Env): Promise<Response> {
   hydrateX402(env);
-  return json(200, await x402HealthReport(healthEnv(env)));
+  const report = await x402HealthReport(healthEnv(env));
+  return json(200, { ...report, freeCalls: x402FreeCallsHealth(env) });
 }
 
 async function catalogResponse(env?: X402Env): Promise<Response> {
@@ -182,10 +242,98 @@ async function openApiResponse(env?: X402Env): Promise<Response> {
   return json(200, await x402OpenApiDocument(healthEnv(env)));
 }
 
+function parseJsonObject(text: string): Record<string, unknown> {
+  if (!text.trim()) return {};
+  try {
+    const value = JSON.parse(text) as unknown;
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Free daily allowance (X402_FREE_DAILY_CALLS, default 3 per client IP per
+ * UTC day). Returns null when the caller must pay; never settles anything.
+ */
+async function tryFreeCall(
+  request: Request,
+  env: X402Env | undefined,
+  opts: X402Options | undefined
+): Promise<{ response: Response | null; remaining: number | null }> {
+  const raw = parseJsonObject(await request.clone().text());
+  const parsed = parseSealRequest(raw);
+  if (!parsed.ok) {
+    // No body: 402 so a scanner can read the price. A named seal that cannot
+    // exist, or productId/serial used as the key, is refused here. The paid
+    // path does the same before settlement. This runs before the registry
+    // credential check so a bad id is not a payment challenge.
+    if (Object.keys(raw).length > 0) {
+      return { response: json(parsed.status, parsed.body), remaining: null };
+    }
+    return { response: null, remaining: null };
+  }
+  const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);
+  const creds = sealLookupCredentials(env);
+  if (!creds || limit <= 0) return { response: null, remaining: limit <= 0 ? 0 : null };
+  const fetchImpl = opts?.fetchImpl ?? fetch;
+  const store =
+    opts && "freeStore" in opts
+      ? (opts.freeStore ?? null)
+      : supabaseFreeTierStore(creds, fetchImpl);
+  const claim = await claimFreeCall({
+    request,
+    store,
+    limit,
+    now: opts?.now ?? new Date(),
+    salt: env?.X402_FREE_IP_SALT,
+  });
+  if (!claim.free) return { response: null, remaining: claim.remaining };
+  const headers = { [FREE_CALLS_HEADER]: String(claim.remaining) };
+  const lookup = await readSeal(fetchImpl, creds, parsed.sealId);
+  if (!lookup.ok) {
+    return {
+      response: json(
+        503,
+        {
+          error: "registry_unavailable",
+          settled: false,
+          freeCallsRemaining: claim.remaining,
+        },
+        headers
+      ),
+      remaining: claim.remaining,
+    };
+  }
+  const answer = registryAnswer(lookup.seal);
+  return {
+    response: json(
+      200,
+      {
+        verified: false,
+        registered: answer.registered,
+        status: answer.status,
+        checks: answer.checks,
+        subject: parsed.sealId,
+        details: answer.details,
+        settlement: null,
+        free: true,
+        freeCallsRemaining: claim.remaining,
+        timestamp: new Date().toISOString(),
+      },
+      headers
+    ),
+    remaining: claim.remaining,
+  };
+}
+
 async function agentVerify(
   request: Request,
   env?: X402Env,
-  verifyApp?: X402VerifyBinding
+  verifyApp?: X402VerifyBinding,
+  opts?: X402Options
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
@@ -208,7 +356,14 @@ async function agentVerify(
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof || !proofHeader) {
-    return json(402, required.v2, required.headers);
+    const free = await tryFreeCall(request, env, opts);
+    if (free.response) return free.response;
+    return json(402, required.v2, {
+      ...required.headers,
+      ...(free.remaining === null
+        ? {}
+        : { [FREE_CALLS_HEADER]: String(free.remaining) }),
+    });
   }
 
   const bodyText = await request.text();
@@ -221,12 +376,25 @@ async function agentVerify(
     payTo,
     description: "AuthiChain agent verification",
     env,
+    fetchImpl: opts?.fetchImpl,
+    replayStore:
+      opts?.replayStore ??
+      scopedReplayStore(env?.X402_REPLAY_KV, "authichain-com"),
   });
   if (decision.action === "answer") {
     return json(decision.status, decision.body, decision.headers);
   }
   if (decision.action === "forward" && verifyApp) {
-    return forwardPaidVerify(verifyApp, request, proofHeader, bodyText);
+    const sealReq = parseSealRequest(parseJsonObject(bodyText));
+    return guardedForward({
+      proofHeader,
+      replayStore:
+        opts?.replayStore ??
+        scopedReplayStore(env?.X402_REPLAY_KV, "authichain-com"),
+      sealId: sealReq.ok ? sealReq.sealId : null,
+      forward: () =>
+        forwardPaidVerify(verifyApp, request, proofHeader, bodyText),
+    });
   }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
@@ -236,7 +404,8 @@ async function agentVerify(
 export async function tryHandleX402(
   request: Request,
   env: X402Env = {},
-  verifyApp?: X402VerifyBinding
+  verifyApp?: X402VerifyBinding,
+  opts?: X402Options
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isX402Path(url.pathname)) return null;
@@ -276,7 +445,7 @@ export async function tryHandleX402(
   }
 
   if (request.method === "POST" && isPaidPath(url.pathname)) {
-    return agentVerify(request, env, verifyApp);
+    return agentVerify(request, env, verifyApp, opts);
   }
 
   return json(405, { error: "method not allowed" });

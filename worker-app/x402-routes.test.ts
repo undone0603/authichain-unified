@@ -2,12 +2,38 @@ import { describe, it, expect, afterEach } from "vitest";
 import { Hono } from "hono";
 import { registerX402Routes } from "./x402-routes";
 
+// CFA-363: paid paths need a replay store; an in-memory stub for these tests.
+function kvStub() {
+  const m = new Map<string, string>();
+  return {
+    get: async (k: string) => m.get(k) ?? null,
+    put: async (k: string, v: string) => void m.set(k, v),
+    delete: async (k: string) => void m.delete(k),
+  };
+}
+
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
 
 function app() {
   const hono = new Hono();
   registerX402Routes(hono);
   return hono;
+}
+
+function signedHeader(nonce: string) {
+  return proofHeader({
+    scheme: "exact",
+    network: "base",
+    payload: {
+      signature: "0xsig",
+      authorization: {
+        from: PAYER,
+        value: "50000",
+        validBefore: String(Math.floor(Date.now() / 1000) + 600),
+        nonce,
+      },
+    },
+  });
 }
 
 function proofHeader(p: Record<string, unknown>) {
@@ -40,7 +66,10 @@ describe("GET /api/x402/health", () => {
   it("GET /api/x402/listing and /api/x402/growth are not 404", async () => {
     const listing = await app().request("/api/x402/listing");
     expect(listing.status).toBe(200);
-    const listingBody = (await listing.json()) as { protocol: string; listing: string };
+    const listingBody = (await listing.json()) as {
+      protocol: string;
+      listing: string;
+    };
     expect(listingBody.protocol).toBe("x402");
     expect(listingBody.listing).toBe("https://authichain.com/api/x402/listing");
 
@@ -80,7 +109,10 @@ describe("GET /api/x402/health", () => {
       protocol?: string;
     };
     expect(body.version).toBe(1);
-    expect(body.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(body.resources).toEqual([
+      "https://authichain.com/api/v1/agent-verify",
+      "https://authichain.com/api/x402",
+    ]);
     expect(body.protocol).toBeUndefined();
   });
 
@@ -101,7 +133,11 @@ describe("GET /api/x402/health", () => {
     expect(spec.paths["/api/x402"].post["x-payment-info"].protocols).toEqual([
       "x402",
     ]);
-    expect(JSON.stringify(spec)).not.toContain("/api/checkout");
+    const raw = JSON.stringify(spec);
+    expect(raw).toContain("/qron/r/{object_id}");
+    expect(raw).toContain("This host verifies the signature");
+    expect(raw).not.toContain("does not verify the signature");
+    expect(raw).not.toContain("/api/checkout");
   });
 
   it("GET /api/x402 is the same health document", async () => {
@@ -127,6 +163,37 @@ describe("POST /api/x402", () => {
     expect(res.status).toBe(503);
     const body = (await res.json()) as { status: string };
     expect(body.status).toBe("not_configured");
+  });
+
+  it("returns 400 for a body that cannot be a seal and does not ask for payment", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    for (const body of [
+      { sealId: "demo" },
+      { probe: "suggestions" },
+      { productId: "p-1" },
+    ]) {
+      const res = await app().request("/api/v1/agent-verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      expect(res.status).toBe(400);
+      expect(res.headers.get("PAYMENT-REQUIRED")).toBeNull();
+      const json = (await res.json()) as { error: string; settled: boolean };
+      expect(json.settled).toBe(false);
+      expect(["seal_id_required", "seal_id_not_uuid"]).toContain(json.error);
+    }
+  });
+
+  it("keeps an empty unpaid POST on the 402 challenge", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    const res = await app().request("/api/v1/agent-verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    expect(res.status).toBe(402);
+    expect(res.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
   });
 
   it("returns HTTP 402 requirements when unpaid", async () => {
@@ -191,14 +258,10 @@ describe("POST /api/x402 with the VERIFY_APP binding", () => {
   it("forwards the paid call to the Next registry route", async () => {
     process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
     process.env.X402_NETWORK = "base";
-    const header = proofHeader({
-      scheme: "exact",
-      network: "base",
-      payer: PAYER,
-      amount: "50000",
-    });
+    const header = signedHeader("0xe0e0");
     const seen: Request[] = [];
     const env = {
+      X402_REPLAY_KV: kvStub(),
       VERIFY_APP: {
         fetch: async (r: Request) => {
           seen.push(r);
@@ -303,5 +366,35 @@ describe("GET /api/x402/health paidVerify reflects the worker's registry path", 
       VERIFY_APP: {},
     });
     expect(body.paidVerify.bound).toBe(false);
+  });
+});
+
+describe("CFA-363/366: edge-router paid forward needs X402_REPLAY_KV", () => {
+  it("503 replay_store_unavailable and no forward when unbound", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    process.env.X402_NETWORK = "base";
+    const header = signedHeader("0xe0e1");
+    let calls = 0;
+    const res = await app().request(
+      "https://authichain.com/api/x402",
+      {
+        method: "POST",
+        headers: { "x-payment": header, "content-type": "application/json" },
+        body: JSON.stringify({ sealId: "seal-1" }),
+      },
+      {
+        VERIFY_APP: {
+          fetch: async () => {
+            calls++;
+            return new Response("{}", { status: 200 });
+          },
+        },
+      }
+    );
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({
+      error: "replay_store_unavailable",
+    });
+    expect(calls).toBe(0);
   });
 });
