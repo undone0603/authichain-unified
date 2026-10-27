@@ -64,8 +64,20 @@ export type RevenueVerdict = {
 
 export type SendRequest = {
   namedInboxThisTurn: string | null | undefined;
+  /**
+   * Operator-chosen published inbox. Substitutes for named-this-turn so the
+   * loop can pick one lawful contact without the owner typing it. This module
+   * still never sends mail.
+   */
+  operatorSelectedInbox?: string | null | undefined;
   source: VerificationSource;
   allowRoleInbox?: boolean;
+};
+
+export type OutreachCandidate = {
+  email: string;
+  source: VerificationSource;
+  sourceUrl?: string;
 };
 
 export type SendVerdict = {
@@ -184,7 +196,9 @@ export function classifySend(
   req: SendRequest,
   founderEmails: readonly string[] = DEFAULT_FOUNDER_EMAILS
 ): SendVerdict {
-  const to = (req.namedInboxThisTurn ?? "").trim().toLowerCase();
+  const named = (req.namedInboxThisTurn ?? "").trim().toLowerCase();
+  const selected = (req.operatorSelectedInbox ?? "").trim().toLowerCase();
+  const to = named || selected;
   if (!to) {
     return { allowed: false, reason: "no inbox named this turn" };
   }
@@ -200,7 +214,30 @@ export function classifySend(
       reason: assessment.reasons.join("; ") || "send guard rejected",
     };
   }
-  return { allowed: true, reason: `send to ${to}`, to };
+  const via = named ? "send to" : "operator-selected send to";
+  return { allowed: true, reason: `${via} ${to}`, to };
+}
+
+/**
+ * First candidate whose provenance the send guard would allow. Skips founders,
+ * role inboxes, guesses, and government addresses. One inbox. Never sends.
+ */
+export function selectNextSendCandidate(
+  candidates: readonly OutreachCandidate[],
+  founderEmails: readonly string[] = DEFAULT_FOUNDER_EMAILS
+): SendVerdict {
+  for (const candidate of candidates) {
+    const verdict = classifySend(
+      {
+        namedInboxThisTurn: null,
+        operatorSelectedInbox: candidate.email,
+        source: candidate.source,
+      },
+      founderEmails
+    );
+    if (verdict.allowed) return verdict;
+  }
+  return { allowed: false, reason: "no sendable published inbox" };
 }
 
 /**
@@ -311,6 +348,7 @@ export function decideOperatorAction(input: {
   snapshot: RevenueSnapshot;
   founderEmails?: readonly string[];
   send?: SendRequest | null;
+  candidates?: readonly OutreachCandidate[] | null;
 }): OperatorDecision {
   const founderEmails = input.founderEmails ?? DEFAULT_FOUNDER_EMAILS;
   const revenue = classifyRevenue(input.snapshot, founderEmails);
@@ -332,6 +370,19 @@ export function decideOperatorAction(input: {
       };
     }
     return { action: "refuse_send", reason: send.reason, revenue, send };
+  }
+  if (input.candidates && input.candidates.length > 0) {
+    const send = selectNextSendCandidate(input.candidates, founderEmails);
+    if (send.allowed && send.to) {
+      return {
+        action: "send_one",
+        reason: send.reason,
+        to: send.to,
+        revenue,
+        send,
+      };
+    }
+    return { action: "wait_buyer", reason: send.reason, revenue, send };
   }
   return { action: "wait_buyer", reason: revenue.reason, revenue };
 }
@@ -482,9 +533,11 @@ async function main(argv: string[]): Promise<number> {
       : hasFlag(argv, "--published")
         ? "published_contact"
         : "unknown";
+  const operatorSelected = hasFlag(argv, "--operator-selected");
   const send: SendRequest | null = sendRequested
     ? {
         namedInboxThisTurn: hasFlag(argv, "--named-this-turn") ? to : null,
+        operatorSelectedInbox: operatorSelected ? to : null,
         source,
         allowRoleInbox: hasFlag(argv, "--role-inbox"),
       }
@@ -493,6 +546,7 @@ async function main(argv: string[]): Promise<number> {
   if (cmd === "send") {
     const verdict = classifySend({
       namedInboxThisTurn: hasFlag(argv, "--named-this-turn") ? to : null,
+      operatorSelectedInbox: operatorSelected ? to : null,
       source,
       allowRoleInbox: hasFlag(argv, "--role-inbox"),
     });
@@ -500,11 +554,23 @@ async function main(argv: string[]): Promise<number> {
     return verdict.allowed ? 0 : 2;
   }
 
+  let candidates: OutreachCandidate[] | undefined;
+  const candidatesPath = flagValue(argv, "--candidates");
+  if (candidatesPath) {
+    const { readFileSync } = await import("node:fs");
+    const parsed = JSON.parse(readFileSync(candidatesPath, "utf8"));
+    if (!Array.isArray(parsed)) {
+      console.error("candidates file must be a JSON array");
+      return 2;
+    }
+    candidates = parsed as OutreachCandidate[];
+  }
+
   const rails =
     cmd === "decide" && hasFlag(argv, "--skip-rails")
       ? { ok: true, reason: "rails skipped" }
       : await checkMoneyRails();
-  const decision = decideOperatorAction({ rails, snapshot, send });
+  const decision = decideOperatorAction({ rails, snapshot, send, candidates });
   console.log(JSON.stringify(decision, null, 2));
   if (decision.action === "qualifying" || decision.action === "send_one") {
     return 0;

@@ -4,6 +4,7 @@ import {
   classifyRevenue,
   classifySend,
   decideOperatorAction,
+  selectNextSendCandidate,
   moneyRailsSteps,
   mayDisableOutreachApproval,
   mayDispatch,
@@ -268,6 +269,56 @@ describe("classifySend", () => {
       }).allowed
     ).toBe(true);
   });
+
+  it("allows an operator-selected published inbox without named-this-turn", () => {
+    const verdict = classifySend({
+      namedInboxThisTurn: null,
+      operatorSelectedInbox: "claire.stromboni@verkor.com",
+      source: "published_contact",
+    });
+    expect(verdict.allowed).toBe(true);
+    expect(verdict.to).toBe("claire.stromboni@verkor.com");
+    expect(verdict.reason).toContain("operator-selected");
+  });
+
+  it("still refuses operator-selected guesses and role inboxes", () => {
+    expect(
+      classifySend({
+        namedInboxThisTurn: null,
+        operatorSelectedInbox: "ops@example.com",
+        source: "pattern_guess",
+      }).allowed
+    ).toBe(false);
+    expect(
+      classifySend({
+        namedInboxThisTurn: null,
+        operatorSelectedInbox: "info@sfm-bikes.de",
+        source: "published_contact",
+      }).allowed
+    ).toBe(false);
+  });
+});
+
+describe("selectNextSendCandidate", () => {
+  it("skips guesses and role inboxes, then picks the first published human", () => {
+    const verdict = selectNextSendCandidate([
+      { email: "info@guessed.com", source: "pattern_guess" },
+      { email: "sales@ironfishdistillery.com", source: "published_contact" },
+      { email: "claire.stromboni@verkor.com", source: "published_contact" },
+      { email: "second@verkor.com", source: "published_contact" },
+    ]);
+    expect(verdict.allowed).toBe(true);
+    expect(verdict.to).toBe("claire.stromboni@verkor.com");
+  });
+
+  it("returns no sendable published inbox when the list is only untrusted", () => {
+    expect(
+      selectNextSendCandidate([
+        { email: "undone.k@gmail.com", source: "published_contact" },
+        { email: "info@sfm-bikes.de", source: "published_contact" },
+      ]).reason
+    ).toBe("no sendable published inbox");
+  });
 });
 
 describe("decideOperatorAction", () => {
@@ -338,6 +389,32 @@ describe("decideOperatorAction", () => {
       },
     });
     expect(refused.action).toBe("refuse_send");
+  });
+
+  it("selects one published candidate when no inbox was named this turn", () => {
+    const decision = decideOperatorAction({
+      rails: railsOk,
+      snapshot: snap({}),
+      candidates: [
+        { email: "info@sfm-bikes.de", source: "published_contact" },
+        { email: "claire.stromboni@verkor.com", source: "published_contact" },
+      ],
+    });
+    expect(decision.action).toBe("send_one");
+    expect(decision.to).toBe("claire.stromboni@verkor.com");
+  });
+
+  it("stays wait_buyer when candidates are only role or guessed inboxes", () => {
+    const decision = decideOperatorAction({
+      rails: railsOk,
+      snapshot: snap({}),
+      candidates: [
+        { email: "info@sfm-bikes.de", source: "published_contact" },
+        { email: "ops@example.com", source: "pattern_guess" },
+      ],
+    });
+    expect(decision.action).toBe("wait_buyer");
+    expect(decision.reason).toBe("no sendable published inbox");
   });
 });
 
