@@ -12,7 +12,7 @@ Money truth is `classifyRevenue` in `scripts/revenue-operator.ts`. Founder addre
 
 ## Cycle
 
-1. `checkFarmRails` — Payment Link GET 200, Farm HEAD 204. Do not GET `/api/checkout/dpp` without `?email=`.
+1. `checkMoneyRails` — GET `/checkout/starter` 200, GET `/checkout/dpp_readiness` 200, GET the Starter `buy.stripe.com` Payment Link 200, HEAD `/api/checkout/dpp` 204. Do not GET `/api/checkout/dpp` without `?email=`. Farm is not the public money rail.
 2. `classifyRevenue` on livemode subscriptions, payouts, and charges.
 3. `decideOperatorAction`. `wait_buyer` means stop.
 4. Send only when the action is `send_one`. That requires `classifySend` (verified-inbox skill). HubSpot / Airtable / Apollo rows go through `scripts/revenue-crm.ts` first (crm-named-humans skill). They are not cash.

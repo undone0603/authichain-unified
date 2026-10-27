@@ -9,7 +9,7 @@ import {
   canSend,
   type VerificationSource,
 } from "../server/outreach/send-guard";
-import { planPaymentLink } from "../src/lib/plans";
+import { planStripePaymentLink } from "../src/lib/plans";
 
 export const DEFAULT_FOUNDER_EMAILS = [
   "undone.k@gmail.com",
@@ -24,6 +24,11 @@ export const FROZEN_DISPATCH = [
   "gov-mint",
 ] as const;
 
+/** Public money SKUs: Starter $29 and EU DPP $299. HEAD only — never GET. */
+export const DPP_HEAD_PATH = "/api/checkout/dpp";
+export const STARTER_CHECKOUT_PATH = "/checkout/starter";
+export const DPP_CHECKOUT_PATH = "/checkout/dpp_readiness";
+/** @deprecated Farm is not a public money rail. Kept for old imports. */
 export const FARM_HEAD_PATH = "/api/checkout/plan/strainchain_farm";
 export const DEFAULT_ORIGIN = "https://authichain.com";
 
@@ -198,43 +203,63 @@ export function classifySend(
   return { allowed: true, reason: `send to ${to}`, to };
 }
 
-export function farmRailsSteps(
-  origin = DEFAULT_ORIGIN,
-  paymentLink = planPaymentLink("strainchain_farm")
-): RailsStep[] {
+/**
+ * Probe the public chargeable rails without opening a Stripe session.
+ * GET the gated confirm pages and the Starter Payment Link. HEAD the DPP
+ * anonymous cart so a GET without email cannot create a session.
+ */
+export function moneyRailsSteps(origin = DEFAULT_ORIGIN): RailsStep[] {
   const base = origin.replace(/\/+$/, "");
-  const steps: RailsStep[] = [];
-  if (paymentLink) {
-    steps.push({
-      id: "farm_payment_link",
-      url: paymentLink,
+  const steps: RailsStep[] = [
+    {
+      id: "starter_checkout",
+      url: `${base}${STARTER_CHECKOUT_PATH}`,
+      method: "GET",
+      accept: [200],
+    },
+    {
+      id: "dpp_checkout",
+      url: `${base}${DPP_CHECKOUT_PATH}`,
+      method: "GET",
+      accept: [200],
+    },
+    {
+      id: "dpp_head",
+      url: `${base}${DPP_HEAD_PATH}`,
+      method: "HEAD",
+      accept: [204],
+    },
+  ];
+  const starterLink = planStripePaymentLink("starter");
+  if (starterLink) {
+    steps.splice(1, 0, {
+      id: "starter_payment_link",
+      url: starterLink,
       method: "GET",
       accept: [200],
     });
   }
-  steps.push({
-    id: "farm_head",
-    url: `${base}${FARM_HEAD_PATH}`,
-    method: "HEAD",
-    accept: [204],
-  });
   return steps;
 }
 
-export async function checkFarmRails(
+/** @deprecated Use moneyRailsSteps. Farm is not the public money rail. */
+export function farmRailsSteps(origin = DEFAULT_ORIGIN): RailsStep[] {
+  return moneyRailsSteps(origin);
+}
+
+export async function checkMoneyRails(
   origin = DEFAULT_ORIGIN,
-  fetchImpl: typeof fetch = fetch,
-  paymentLink = planPaymentLink("strainchain_farm")
+  fetchImpl: typeof fetch = fetch
 ): Promise<RailsReport> {
-  if (!paymentLink) {
+  if (!planStripePaymentLink("starter")) {
     return {
       ok: false,
-      reason: "no Farm Payment Link in plans.ts",
+      reason: "no Starter Payment Link in plans.ts",
       results: [],
     };
   }
   const results: RailsResult[] = [];
-  for (const step of farmRailsSteps(origin, paymentLink)) {
+  for (const step of moneyRailsSteps(origin)) {
     try {
       const res = await fetchImpl(step.url, {
         method: step.method,
@@ -267,10 +292,18 @@ export async function checkFarmRails(
     ok: failed.length === 0,
     reason:
       failed.length === 0
-        ? "Farm Payment Link 200 and Farm HEAD 204"
-        : failed.map(f => f.detail ?? f.id).join("; "),
+        ? "Starter $29 and DPP $299 checkout rails up"
+        : failed.map(f => `${f.id}: ${f.detail ?? "failed"}`).join("; "),
     results,
   };
+}
+
+/** @deprecated Use checkMoneyRails. */
+export async function checkFarmRails(
+  origin = DEFAULT_ORIGIN,
+  fetchImpl: typeof fetch = fetch
+): Promise<RailsReport> {
+  return checkMoneyRails(origin, fetchImpl);
 }
 
 export function decideOperatorAction(input: {
@@ -416,7 +449,7 @@ function hasFlag(argv: string[], name: string): boolean {
 async function main(argv: string[]): Promise<number> {
   const cmd = argv[2] ?? "decide";
   if (cmd === "rails") {
-    const report = await checkFarmRails();
+    const report = await checkMoneyRails();
     console.log(JSON.stringify(report, null, 2));
     return report.ok ? 0 : 1;
   }
@@ -470,7 +503,7 @@ async function main(argv: string[]): Promise<number> {
   const rails =
     cmd === "decide" && hasFlag(argv, "--skip-rails")
       ? { ok: true, reason: "rails skipped" }
-      : await checkFarmRails();
+      : await checkMoneyRails();
   const decision = decideOperatorAction({ rails, snapshot, send });
   console.log(JSON.stringify(decision, null, 2));
   if (decision.action === "qualifying" || decision.action === "send_one") {

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  checkFarmRails,
+  checkMoneyRails,
   classifyRevenue,
   classifySend,
   decideOperatorAction,
-  farmRailsSteps,
+  moneyRailsSteps,
   mayDisableOutreachApproval,
   mayDispatch,
   mayRunAgentzAuto,
@@ -271,11 +271,11 @@ describe("classifySend", () => {
 });
 
 describe("decideOperatorAction", () => {
-  const railsOk = { ok: true, reason: "Farm rails ok" };
+  const railsOk = { ok: true, reason: "Starter $29 and DPP $299 checkout rails up" };
 
   it("returns fix_rails before anything else", () => {
     const decision = decideOperatorAction({
-      rails: { ok: false, reason: "Farm HEAD 500" },
+      rails: { ok: false, reason: "DPP HEAD 500" },
       snapshot: snap({
         subscriptions: [
           {
@@ -341,41 +341,77 @@ describe("decideOperatorAction", () => {
   });
 });
 
-describe("farm rails", () => {
-  it("GET the Payment Link and HEAD Farm checkout, never GET dpp", () => {
-    const steps = farmRailsSteps();
+describe("money rails", () => {
+  it("GET Starter and DPP confirm pages plus the Starter Payment Link; HEAD DPP; never GET anonymous dpp checkout", () => {
+    const steps = moneyRailsSteps();
     expect(
-      steps.some(s => s.id === "farm_payment_link" && s.method === "GET")
-    ).toBe(true);
-    expect(steps.some(s => s.id === "farm_head" && s.method === "HEAD")).toBe(
-      true
-    );
-    expect(
-      steps.every(
-        s => !s.url.includes("/api/checkout/dpp") && s.method !== "POST"
+      steps.some(
+        s =>
+          s.id === "starter_checkout" &&
+          s.method === "GET" &&
+          s.url.endsWith("/checkout/starter")
       )
     ).toBe(true);
-    const farm = steps.find(s => s.id === "farm_head");
-    expect(farm?.accept).toEqual([204]);
+    expect(
+      steps.some(
+        s =>
+          s.id === "dpp_checkout" &&
+          s.method === "GET" &&
+          s.url.endsWith("/checkout/dpp_readiness")
+      )
+    ).toBe(true);
+    expect(
+      steps.some(
+        s =>
+          s.id === "starter_payment_link" &&
+          s.method === "GET" &&
+          s.url.includes("buy.stripe.com")
+      )
+    ).toBe(true);
+    const dppHead = steps.find(s => s.id === "dpp_head");
+    expect(dppHead?.method).toBe("HEAD");
+    expect(dppHead?.url).toMatch(/\/api\/checkout\/dpp$/);
+    expect(dppHead?.accept).toEqual([204]);
+    expect(
+      steps
+        .filter(s => s.method === "GET")
+        .every(s => !s.url.includes("/api/checkout/dpp") && s.method !== "POST")
+    ).toBe(true);
+    expect(
+      steps.every(s => !s.url.includes("/api/checkout/plan/strainchain_farm"))
+    ).toBe(true);
   });
 
-  it("passes when Payment Link is 200 and Farm HEAD is 204", async () => {
-    const fetchImpl = async (url: string, init?: RequestInit) => {
+  it("passes when Starter/DPP GET 200 and DPP HEAD 204", async () => {
+    const fetchImpl = async (_url: string, init?: RequestInit) => {
       const method = (init?.method || "GET").toUpperCase();
       const status = method === "HEAD" ? 204 : 200;
       return { status } as Response;
     };
-    const report = await checkFarmRails("https://authichain.com", fetchImpl);
+    const report = await checkMoneyRails("https://authichain.com", fetchImpl);
     expect(report.ok).toBe(true);
+    expect(report.reason).toMatch(/Starter \$29 and DPP \$299/);
   });
 
-  it("fails when Farm HEAD is not 204", async () => {
+  it("fails when DPP HEAD is not 204", async () => {
     const fetchImpl = async (_url: string, init?: RequestInit) => {
       const method = (init?.method || "GET").toUpperCase();
       return { status: method === "HEAD" ? 405 : 200 } as Response;
     };
-    const report = await checkFarmRails("https://authichain.com", fetchImpl);
+    const report = await checkMoneyRails("https://authichain.com", fetchImpl);
     expect(report.ok).toBe(false);
+  });
+
+  it("fails when Starter confirm is not 200", async () => {
+    const fetchImpl = async (url: string, init?: RequestInit) => {
+      const method = (init?.method || "GET").toUpperCase();
+      if (method === "HEAD") return { status: 204 } as Response;
+      if (url.endsWith("/checkout/starter")) return { status: 500 } as Response;
+      return { status: 200 } as Response;
+    };
+    const report = await checkMoneyRails("https://authichain.com", fetchImpl);
+    expect(report.ok).toBe(false);
+    expect(report.reason).toMatch(/starter_checkout/);
   });
 });
 
