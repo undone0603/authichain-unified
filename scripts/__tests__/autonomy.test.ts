@@ -23,6 +23,8 @@ import {
   isQueuedCancellation,
   pickLatestCompletedRun,
   runProbes,
+  monitorFulfilment,
+  renderReport,
   signature,
 } from "../autonomy/ops-pulse.mjs";
 
@@ -469,6 +471,50 @@ describe("ops pulse", () => {
     expect(isCallOnly('on:\n  schedule:\n    - cron: "0 6 * * *"\n')).toBe(
       false
     );
+  });
+
+  it("alerts when fulfilment read credentials are absent instead of silently skipping", async () => {
+    const f = await monitorFulfilment({
+      stripeKey: "",
+      supabaseUrl: "https://example.test",
+      supabaseKey: "read-only-key",
+    });
+    expect(f).toEqual({
+      checked: 0,
+      problems: [],
+      monitoring: [{ name: "fulfilment", kind: "credentials_missing" }],
+    });
+    const report = { at: "t", probes: [], workflows: [], ...f };
+    expect(signature(report)).toBe("monitor:fulfilment:credentials_missing");
+    expect(decideIssueAction(null, report).action).toBe("create");
+    expect(renderReport(report)).toContain("required read credentials are missing");
+  });
+
+  it("redacts monitoring read failures and only clears alert after a successful read", async () => {
+    const config = {
+      stripeKey: "stripe-read-key",
+      supabaseUrl: "https://example.test",
+      supabaseKey: "supabase-read-key",
+    };
+    const failed = await monitorFulfilment({
+      ...config,
+      check: async () => {
+        throw new Error("secret-token customer@example.test");
+      },
+    });
+    const redReport = { at: "t", probes: [], workflows: [], ...failed };
+    expect(signature(redReport)).toBe("monitor:fulfilment:read_failed");
+    expect(renderReport(redReport)).toContain("Stripe/Supabase read failed");
+    expect(renderReport(redReport)).not.toContain("secret-token");
+    expect(renderReport(redReport)).not.toContain("customer@example.test");
+    const ok = await monitorFulfilment({
+      ...config,
+      check: async () => ({ checked: 0, problems: [] }),
+    });
+    expect(ok.monitoring).toEqual([]);
+    const greenReport = { at: "t", probes: [], workflows: [], ...ok };
+    expect(signature(greenReport)).toBe("");
+    expect(decideIssueAction({ number: 1, body: renderReport(redReport) }, greenReport).action).toBe("close");
   });
 
   const red = {
