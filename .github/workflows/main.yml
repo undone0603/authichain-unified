@@ -36,6 +36,8 @@ concurrency:
 # Flip to 'false' once the runner is verified; the skip step warns visibly.
 env:
   SKIP_PLAYWRIGHT_ON_SELF_HOSTED: "true"
+  PLAYWRIGHT_BROWSERS_PATH: "/home/zac/.cache/ms-playwright"
+  TURBO_CACHE_DIR: "/home/zac/.cache/turbo"
 
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
@@ -119,7 +121,7 @@ jobs:
           - shard: 1
             filter: "--filter=./workers/*"
           - shard: 2
-            filter: "--filter=!./workers/*"
+            filter: "--filter=!./workers/* --filter=!*worker*"
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -144,7 +146,12 @@ jobs:
 
       - name: "Skipped on self-hosted: Playwright browser install"
         if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED == 'true' && matrix.shard == 2
-        run: echo "::warning title=Skipped on self-hosted::Playwright Chromium install not run (needs apt/sudo and ARM64 Chromium). Browser-dependent tests in shard 2 may fail or be absent. Not a pass."
+        run: |
+          if [ -d "$PLAYWRIGHT_BROWSERS_PATH" ] && [ "$(ls -A "$PLAYWRIGHT_BROWSERS_PATH" 2>/dev/null)" ]; then
+            echo "Using pre-cached Playwright browsers at $PLAYWRIGHT_BROWSERS_PATH"
+          else
+            echo "::warning title=Skipped on self-hosted::Playwright Chromium install not run (needs apt/sudo and ARM64 Chromium). Browser-dependent tests in shard 2 may fail or be absent. Not a pass."
+          fi
 
       # GB-26 fix 2: cache the Chromium download (~26 s); system deps still
       # install on a hit. Keyed on the lockfile, so a Playwright bump misses.
@@ -183,12 +190,12 @@ jobs:
       # running after one fails; turbo still exits non-zero.
       - name: Run tests
         run: |
-          if pnpm test ${{ matrix.filter }} --continue=dependencies-successful; then
+          if pnpm test ${{ matrix.filter }} --log-order=stream --continue=dependencies-successful; then
             exit 0
           fi
           echo "Tests failed; retrying once for a possible next/font fetch flake in a workspace build"
           sleep 15
-          pnpm test ${{ matrix.filter }} --continue=dependencies-successful
+          pnpm test ${{ matrix.filter }} --log-order=stream --continue=dependencies-successful
 
       # Persistent self-hosted runner: drop deps and build outputs so state
       # never leaks into the next run. Workspace-only; never outside it.
