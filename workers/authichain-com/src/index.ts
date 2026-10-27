@@ -1,3 +1,5 @@
+import { isVerifyLivePath, renderVerifyLivePage } from "./verify-live-page.ts";
+import { isIsThisRealPath, renderIsThisRealPage } from "./is-this-real-page.ts";
 import { handleSalesInquiry } from './routes/sales';
 import mcpServer from './mcp-server';
 // The DPP regulatory timeline is shared with the Next.js page rather than
@@ -10,13 +12,14 @@ import {
   tryHandleApiCheckoutEmailGate,
   tryHandleProtocolCheckout,
 } from "./protocol-checkout";
-import { tryHandleGatedCheckout } from "../../../src/lib/checkout-gate";
+import { displayPlanDescription, tryHandleGatedCheckout } from "../../../src/lib/checkout-gate";
 import {
   deliverCheckoutGateEvent,
   deliverDppCheckoutStarted,
 } from "./checkout-growth";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
+import { tryHandleMcpFree } from "./mcp-free-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import { isMcpInstallPath, renderMcpInstallPage } from "./mcp-install-page";
@@ -71,6 +74,7 @@ import {
   dppCheckoutClickEvent,
   isDppCheckPath,
   renderDppCheckPage,
+  tryHandleDppCheck,
 } from "./dpp-check-page.ts";
 import {
   micrositeSitemapUrls,
@@ -161,21 +165,21 @@ const FONTS_LINK = ESTATE_FONTS_LINK;
 // structured-data blocks (Organization, WebSite, FAQPage).
 const SEO = {
   description:
-    'AuthiChain: QRON Starter Pack $29 or Launch $19/mo on Stripe, Living QR generation, and x402 pay-per-call for agents. EU DPP Readiness is $299 when you need the battery passport path.',
+    'AuthiChain: QRON Starter Pack $29 on Stripe, Living QR generation, and x402 pay-per-call for agents. EU DPP Readiness is $299 when you need the battery passport path.',
   keywords:
-    'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain, Starter Pack, QRON Launch',
+    'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain, Starter Pack',
   ogTitle: 'AuthiChain — The authentic agentic economy',
   ogDescription:
-    'Start with QRON Starter at $29 or Launch at $19/mo. Signed seals, MCP tools, x402 at $0.05 USDC. EU DPP Readiness is $299 on live Stripe checkout when you need it.',
+    'Start with QRON Starter at $29. Signed seals, MCP tools, x402 at $0.05 USDC. EU DPP Readiness is $299 on live Stripe checkout when you need it.',
   twitterTitle: 'AuthiChain — The authentic agentic economy',
   twitterDescription:
-    'Starter Pack $29 or Launch $19/mo. Issue → Bind → Verify. x402 for agents. EU DPP Readiness $299 when you need the passport path.',
+    'Starter Pack $29. Issue → Bind → Verify. x402 for agents. EU DPP Readiness $299 when you need the passport path.',
   ogImage: 'https://authichain.com/og-image.png',
   themeColor: '#4F46E5',
   faqs: [
     {
       q: 'How much does AuthiChain cost?',
-      a: `The first checkout is QRON Starter at $29 at ${planPaymentLink("starter") ?? ""} or Launch at $19/mo at ${planPaymentLink("qron_launch") ?? ""}. StrainChain Passport is $49 at ${planPaymentLink("strainchain_passport") ?? ""}. EU DPP Readiness stays $299 at ${planPaymentLink("dpp_readiness") ?? ""} (or enter a work email so Stripe can recover that cart). Creator is $99 at ${planPaymentLink("creator") ?? ""}. See /pricing.`,
+      a: `The first checkout is QRON Starter at $29 at ${planPaymentLink("starter") ?? ""}. StrainChain Passport is $49 at ${planPaymentLink("strainchain_passport") ?? ""}. EU DPP Readiness stays $299 at ${planPaymentLink("dpp_readiness") ?? ""} (or enter a work email so Stripe can recover that cart). Creator is $99 at ${planPaymentLink("creator") ?? ""}. See /pricing.`,
     },
     {
       q: 'What is EU DPP Readiness?',
@@ -2197,7 +2201,7 @@ function catalogJsonLdOffer(id: PlanId) {
   return {
     '@type': 'Offer' as const,
     name: plan.name,
-    description: plan.description,
+    description: displayPlanDescription(plan),
     price: plan.price,
     priceCurrency: 'USD',
     url: offerUrl,
@@ -2520,7 +2524,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   ${estateSkipLink()}
-  <div class="banner">The first checkout is the $29 Starter Pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy Starter — $29</a>. Or <a href="${escHtml(planPaymentLink("qron_launch") ?? "/checkout/qron_launch")}">Launch at $19/mo</a>. EU DPP Readiness stays $299 further down.</div>
+  <div class="banner">The first checkout is the $29 Starter Pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy Starter — $29</a>. EU DPP Workspace stays $299 further down.</div>
   ${estateNav(
     "authichain",
     [
@@ -2538,7 +2542,7 @@ const HTML = `<!DOCTYPE html>
   ${estateHero({
     eyebrow: "The authentic agentic economy",
     title: "Signed QR seals for real products.",
-    lede: "Start with the Starter Pack at $29 or Launch at $19/mo. EU DPP Readiness is $299 when you need the battery passport path. Add a work email so Stripe can recover the cart.",
+    lede: "Start with the Starter Pack at $29. EU DPP Workspace is $299 when you need the battery passport path. Add a work email so Stripe can recover the cart.",
     lead: {
       href: planPaymentLink("starter") ?? "#hero",
       label: "Buy a QRON Starter Pack — $29",
@@ -2548,18 +2552,12 @@ const HTML = `<!DOCTYPE html>
       label: "Buy Starter Pack — $29",
     },
     actions: [
-      {
-        href: planPaymentLink("qron_launch") ?? "/checkout/qron_launch",
-        label: "Start Launch $19/mo",
-        primary: false,
-      },
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/generate", label: "Generate Living QR", primary: false },
     ],
   })}
   ${estateTrust([
     { value: "$29", label: "Starter Pack" },
-    { value: "$19/mo", label: "QRON Launch" },
     { value: "x402", label: "Agent micropayments" },
   ])}
 
@@ -2608,7 +2606,7 @@ const HTML = `<!DOCTYPE html>
     "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
-      { title: "Settlement", body: "Humans start with Starter $29 or Launch $19/mo on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
+      { title: "Settlement", body: "Humans start with Starter $29 on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
   )}
@@ -2620,17 +2618,12 @@ const HTML = `<!DOCTYPE html>
   ${marketReality()}
   ${estateCtaBand({
     title: "Buy the Starter Pack",
-    lede: "$29, one time — 100 AI QR generations. Or Launch at $19/mo. Enter a work email so abandoned-checkout recovery can reach you.",
+    lede: "$29, one time — 100 AI QR generations. Enter a work email so abandoned-checkout recovery can reach you.",
     emailCheckout: {
       action: "https://authichain.com/checkout/starter",
       label: "Buy Starter Pack",
     },
     actions: [
-      {
-        href: planPaymentLink("qron_launch") ?? "/checkout/qron_launch",
-        label: "Start Launch $19/mo",
-        primary: false,
-      },
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/x402", label: "x402 agent pay", primary: false },
     ],
@@ -2851,9 +2844,9 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   <p>Zero dependencies &mdash; Node builtins only. It checks an Ed25519 signature over a JCS-canonicalised W3C Verifiable Credential, then checks that the record&rsquo;s hash matches what was committed on-chain.</p>
 
   <div class="cta">
-    <a class="btn primary" href="https://github.com/undone0603/authichain-unified/tree/main/protocol">Read the spec</a>
-    <a class="btn" href="https://github.com/undone0603/authichain-unified/blob/main/protocol/verifier.mjs">Run the verifier</a>
-    <a class="btn" href="https://github.com/undone0603/authichain-unified/blob/main/protocol/LICENSE">View the license</a>
+    <a class="btn primary" href="https://unpkg.com/authichain-verify/SPEC.md">Read the spec</a>
+    <a class="btn" href="https://www.npmjs.com/package/authichain-verify">Run the verifier (npx authichain-verify)</a>
+    <a class="btn" href="https://www.apache.org/licenses/LICENSE-2.0">View the license (Apache-2.0)</a>
   </div>
 
   <h2>Three verdicts. No partial credit.</h2>
@@ -2868,7 +2861,7 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   <p>It is a demonstration, not a product.</p>
   <ul>
     <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
-    <li>Files: <a href="https://github.com/undone0603/authichain-unified/tree/main/protocol/examples">record and anchor JSON</a>, to run with the verifier above</li>
+    <li>Files: record and anchor JSON ship in the npm package (<code>examples/polygon-anchor-1.*.json</code>), to run with the verifier above</li>
     <li>For agents: MCP tool <code>verify_record</code> at <code>https://authichain.com/mcp</code>, free</li>
   </ul>
 
@@ -2963,7 +2956,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <a class="nav-link" href="/battery-passport">Battery example</a>
       <a class="nav-link" href="/docs">Docs</a>
       <a class="nav-link" href="/x402">Agent pay</a>
-      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Start DPP Audit — $299</a>
+      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Open EU DPP Workspace — $299</a>
     </div>
   </nav>
 
@@ -3448,10 +3441,10 @@ async function handleAuthichainCom(
         // First-dollar LOOP-03 paths (live 200; generate proxies to APP_WORKER).
         { loc: 'https://authichain.com/generate', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/checkout/starter', freq: 'weekly', pri: '0.95' },
-        { loc: 'https://authichain.com/checkout/qron_launch', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/checkout/creator', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/verify/live', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/digital-product-passport', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/genetics', freq: 'weekly', pri: '0.85' },
@@ -3515,10 +3508,20 @@ async function handleAuthichainCom(
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
     }
+    if (isIsThisRealPath(p)) {
+      return new Response(renderIsThisRealPage(), {
+        headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
     if (isBatteryPassportPath(p)) {
       return new Response(renderBatteryPassportPage(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
+    }
+    // CFA-629: /dpp-check/product and the /dpp/scan 301 live in tryHandleDppCheck.
+    if (!isDppCheckPath(p)) {
+      const dppCheck = tryHandleDppCheck(request);
+      if (dppCheck) return dppCheck;
     }
     if (isDppCheckPath(p)) {
       const done = request.method === 'GET' ? dppCheckCompleteEvent(url) : null;
@@ -3617,6 +3620,9 @@ async function handleAuthichainCom(
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
     const x402 = await tryHandleX402(request, env, env.VERIFY_APP);
     if (x402) return x402;
+    // /mcp/free: free-only sibling for the marketplace plugin (Advisor ruling B).
+    const mcpFree = await tryHandleMcpFree(request, env);
+    if (mcpFree) return mcpFree;
     const mcp = await tryHandleMcp(request, env, env.VERIFY_APP);
     if (mcp) return mcp;
     const apiV1 = await tryHandleApiV1(request, env);
@@ -3680,6 +3686,23 @@ async function handleAuthichainCom(
           ...HTML_SECURITY_HEADERS,
           'Content-Type': 'text/html; charset=utf-8',
           ...(seoPassport.noindex ? { 'X-Robots-Tag': 'noindex' } : {}),
+        },
+      });
+    }
+    // /verify/live is a reserved founder page, not a certificate id. The edge
+    // router would look up the id "live" and 404. A real id still proxies.
+    if (isVerifyLivePath(p) && !url.searchParams.get("id")) {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response("method not allowed", {
+          status: 405,
+          headers: { Allow: "GET, HEAD", "Cache-Control": "no-store" },
+        });
+      }
+      return new Response(renderVerifyLivePage(), {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, max-age=300",
         },
       });
     }

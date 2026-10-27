@@ -126,6 +126,56 @@ describe("merge autopilot decide()", () => {
     );
   });
 
+  it("updates a held branch that is behind and never merges it", () => {
+    const held = pr({ labels: [{ name: "hold" }], draft: true });
+    assert.deepEqual(decide(held, GREEN, NO_STATUS, 4, cfg), {
+      action: "update",
+      reason: "4 commit(s) behind main; label hold blocks merge",
+    });
+    assert.equal(
+      decide(pr({ labels: [{ name: "hold" }] }), GREEN, NO_STATUS, 0, cfg)
+        .action,
+      "skip"
+    );
+  });
+
+  it("waits on a held branch when it has no PAT to update with", () => {
+    const d = decide(
+      pr({ labels: [{ name: "do-not-merge" }] }),
+      GREEN,
+      NO_STATUS,
+      2,
+      cfg,
+      { canUpdate: false }
+    );
+    assert.equal(d.action, "wait");
+    assert.match(d.reason, /label do-not-merge/);
+  });
+
+  it("does not update a plain draft that is behind", () => {
+    assert.equal(
+      decide(pr({ draft: true }), GREEN, NO_STATUS, 5, cfg).action,
+      "skip"
+    );
+  });
+
+  it("flags a held branch that conflicts and does not update it", () => {
+    assert.equal(
+      decide(
+        pr({
+          labels: [{ name: "hold" }],
+          mergeable_state: "dirty",
+          draft: true,
+        }),
+        GREEN,
+        NO_STATUS,
+        3,
+        cfg
+      ).action,
+      "conflict"
+    );
+  });
+
   it("only merges when GitHub reports clean", () => {
     for (const s of ["blocked", "unstable", "has_hooks", "behind"])
       assert.equal(

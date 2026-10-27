@@ -6,8 +6,8 @@
  * No facilitator URL, no private keys, no settle steps.
  *
  * payTo is the owner-authorized treasury / tokenomics EOA
- * (X402_PUBLISHED_PAY_TO = 0xaebf…e437), not the $QRON holder EOA
- * (0x5db5…), not the NFT deployer, and not the Coinbase Smart Wallet.
+ * (X402_PUBLISHED_PAY_TO = 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2), never the $QRON
+ * contract (0xAebf…E437), not the NFT deployer, and not the Coinbase Smart Wallet.
  * Asset is Circle USDC on Base — not $QRON. Map:
  * docs/strategy/WEB3_IDENTITY.md. Do not rebind away from that treasury.
  *
@@ -256,7 +256,7 @@ export function renderX402DocsPage(): string {
           legalName: p.legalEntity,
         },
         url: p.canonicalUrl,
-        termsOfService: p.tokenomicsUrl,
+        termsOfService: "https://authichain.com/terms",
         offers: {
           "@type": "Offer",
           name: "x402 verification call",
@@ -339,8 +339,8 @@ ${CHECKOUT_EMAIL_FORM_CSS}
           <figcaption>curl — unpaid challenge</figcaption>
           <pre><code>curl -sS -i -X POST https://authichain.com/api/x402 \\
   -H 'content-type: application/json' \\
-  -d '{"sealId":"demo"}'</code></pre>
-          <p>Expect HTTP 402. The body lists the asset, payTo, and EIP-712 extra. No wallet, key, or <code>X-PAYMENT</code> header is required for this probe.</p>
+  -d '{}'</code></pre>
+          <p>An empty body is the unpaid HTTP 402. The 402 response lists the asset, payTo, and EIP-712 extra. A non-UUID sealId is HTTP 400 before payment. No wallet, key, or <code>X-PAYMENT</code> header is required for this probe.</p>
         </figure>
         <figure>
           <figcaption>curl — catalog</figcaption>
@@ -352,8 +352,8 @@ ${CHECKOUT_EMAIL_FORM_CSS}
           <pre><code>curl -sS -i -X POST https://authichain.com/api/x402 \\
   -H 'content-type: application/json' \\
   -H 'X-PAYMENT: &lt;base64-x402-payload&gt;' \\
-  -d '{"sealId":"demo"}'</code></pre>
-          <p>After an x402 client pays the 402 <code>accepts[]</code> requirement to the published payTo, retry the same POST with <code>X-PAYMENT</code>. Do not send private keys here. Facilitator URL is not republished on this page.</p>
+  -d '{"sealId":"&lt;seal-uuid&gt;"}'</code></pre>
+          <p>After an x402 client pays the 402 <code>accepts[]</code> requirement to the published payTo, retry the same POST with <code>X-PAYMENT</code> and a seal UUID. A non-UUID body is HTTP 400 before payment. Do not send private keys here. Facilitator URL is not republished on this page.</p>
         </figure>
       </div>
     </div>
@@ -369,8 +369,8 @@ ${CHECKOUT_EMAIL_FORM_CSS}
         <dt>Fan-out</dt><dd class="mono"><a href="${esc(p.fanoutUrl)}">${esc(p.fanoutUrl)}</a></dd>
         <dt>OpenAPI</dt><dd class="mono"><a href="${esc(p.openApiUrl)}">${esc(p.openApiUrl)}</a></dd>
         <dt>Health</dt><dd class="mono"><a href="${esc(p.healthUrl)}">${esc(p.healthUrl)}</a></dd>
-        <dt>Tokenomics</dt><dd class="mono"><a href="${esc(p.tokenomicsUrl)}">AGENT_TOKENOMICS_x402.md</a></dd>
-        <dt>Wallets</dt><dd class="mono"><a href="${esc(p.identityUrl)}">WEB3_IDENTITY.md</a></dd>
+        <dt>Pricing</dt><dd class="mono"><a href="https://authichain.com/pricing">Pricing</a></dd>
+        <dt>Wallets</dt><dd class="mono"><a href="${esc(p.wellKnownUrl)}">.well-known/x402.json</a></dd>
       </dl>
     </section>
     <section class="card" aria-labelledby="human-title">

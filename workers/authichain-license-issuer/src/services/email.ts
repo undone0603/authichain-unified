@@ -62,9 +62,6 @@ export async function deliverKeyViaEmail(
     Docs: <a href="https://github.com/Z-kie/agent-browser" style="color:#10b981">github.com/Z-kie/agent-browser</a><br>
     Support: <a href="mailto:support@authichain.com" style="color:#10b981">support@authichain.com</a>
   </p>
-  <p style="color:#bbb;font-size:12px;margin-top:8px">
-    💡 Connect Telegram for future key deliveries: start a chat with @AuthiChainBot and send <code>/connect ${email}</code>
-  </p>
 </body>
 </html>
 `.trim()

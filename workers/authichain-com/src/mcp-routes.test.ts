@@ -17,12 +17,23 @@ import {
   PRODUCTION_ISSUER_DID,
   PRODUCTION_ISSUER_KID,
   isMcpPath,
+  scanLivingQr,
   tryHandleMcp,
   verifyRecordTool,
 } from "./mcp-routes";
 import anchorJson from "../../../protocol/examples/polygon-anchor-1.anchor.json" with { type: "json" };
 import recordJson from "../../../protocol/examples/polygon-anchor-1.record.json" with { type: "json" };
 import serverManifest from "../../../server.json" with { type: "json" };
+
+// CFA-363: paid paths need a replay store; an in-memory stub for these tests.
+function kvStub() {
+  const m = new Map<string, string>();
+  return {
+    get: async (k: string) => m.get(k) ?? null,
+    put: async (k: string, v: string) => void m.set(k, v),
+    delete: async (k: string) => void m.delete(k),
+  };
+}
 
 function req(path: string, init?: RequestInit): Request {
   return new Request(`https://authichain.govchain.us${path}`, init);
@@ -194,7 +205,7 @@ describe("mcp discovery", () => {
           jsonrpc: "2.0",
           id: 3,
           method: "tools/call",
-          params: { name: "verify", arguments: { serial: "AC-1" } },
+          params: { name: "verify", arguments: {} },
         }),
       }),
       { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" }
@@ -221,6 +232,29 @@ describe("mcp discovery", () => {
     expect(unpaid!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
   });
 
+  it("tools/call verify with a non-key argument is 400 and does not ask for payment", async () => {
+    for (const args of [{ serial: "AC-1" }, { sealId: "demo" }, { productId: "p-1" }]) {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 31,
+            method: "tools/call",
+            params: { name: "verify", arguments: args },
+          }),
+        }),
+        { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" }
+      );
+      expect(res?.status).toBe(400);
+      expect(res!.headers.get("PAYMENT-REQUIRED")).toBeNull();
+      const body = (await res!.json()) as { error: string; settled: boolean };
+      expect(body.settled).toBe(false);
+      expect(["seal_id_required", "seal_id_not_uuid"]).toContain(body.error);
+    }
+  });
+
   it("tools/call verify with a payment proof is 503 and never settles", async () => {
     const orig = globalThis.fetch;
     const calls: string[] = [];
@@ -235,6 +269,7 @@ describe("mcp discovery", () => {
           network: "base",
           payer: "0x1234567890abcdef1234567890abcdef12345678",
           amount: "50000",
+          validBefore: String(Math.floor(Date.now() / 1000) + 600),
           signature: "0xdead",
         })
       ).toString("base64");
@@ -328,6 +363,7 @@ describe("mcp discovery", () => {
           network: "base",
           payer: "0x1234567890abcdef1234567890abcdef12345678",
           amount: "50000",
+          validBefore: String(Math.floor(Date.now() / 1000) + 600),
           signature: "0xdead",
         })
       ).toString("base64");
@@ -502,6 +538,7 @@ describe("mcp paid verify with the VERIFY_APP binding", () => {
       network: "base",
       payer: "0x1234567890abcdef1234567890abcdef12345678",
       amount: "50000",
+      validBefore: String(Math.floor(Date.now() / 1000) + 600),
       signature: "0xdead",
     })
   ).toString("base64");
@@ -521,7 +558,10 @@ describe("mcp paid verify with the VERIFY_APP binding", () => {
     const seen: Request[] = [];
     const res = await tryHandleMcp(
       call(),
-      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_REPLAY_KV: kvStub(),
+      },
       {
         fetch: async (r: Request) => {
           seen.push(r);
@@ -551,7 +591,10 @@ describe("mcp paid verify with the VERIFY_APP binding", () => {
   it("passes a registry refusal through as HTTP", async () => {
     const res = await tryHandleMcp(
       call(),
-      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_REPLAY_KV: kvStub(),
+      },
       {
         fetch: async () =>
           new Response(JSON.stringify({ error: "seal_id_required" }), {
@@ -985,5 +1028,134 @@ describe("mcp streamable http conformance", () => {
       result: { tools: { name: string }[] };
     };
     expect(body.result.tools.map(t => t.name)).toContain("verify_record");
+    expect(body.result.tools.map(t => t.name)).toContain("scan_living_qr");
+  });
+});
+
+describe("scan_living_qr", () => {
+  const originalFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("rejects an id that is not a stored presentation id without fetching", async () => {
+    let called = false;
+    const result = await scanLivingQr(
+      { object_id: "https://evil.example/qron" },
+      async () => {
+        called = true;
+        throw new Error("should not fetch");
+      }
+    );
+    expect(called).toBe(false);
+    expect(result.isError).toBe(true);
+    expect(result.body.error).toBe("object_id_invalid");
+    expect(result.body.decision_contract).toBe(
+      "AuthiChain Verification Decision v1"
+    );
+  });
+
+  it("returns Decision v1 fields and drops the JWS", async () => {
+    globalThis.fetch = (async (url: string) => {
+      expect(url).toBe("https://authichain.com/qron/r/qron%3Aurl%3Adeadbeef");
+      return new Response(
+        JSON.stringify({
+          valid: true,
+          decision: "verified",
+          decision_contract: "AuthiChain Verification Decision v1",
+          cryptographic_status: "valid",
+          status: "active",
+          jws: "header.payload.sig",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    }) as typeof fetch;
+
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 7,
+          method: "tools/call",
+          params: {
+            name: "scan_living_qr",
+            arguments: { object_id: "qron:url:deadbeef" },
+          },
+        }),
+      })
+    );
+    expect(res?.status).toBe(200);
+    const payload = (await res!.json()) as {
+      result: { isError?: boolean; content: Array<{ text: string }> };
+    };
+    expect(payload.result.isError).toBeUndefined();
+    const body = JSON.parse(payload.result.content[0].text) as {
+      decision: string;
+      decision_contract: string;
+      http_status: number;
+      jws?: string;
+    };
+    expect(body.decision).toBe("verified");
+    expect(body.decision_contract).toBe(
+      "AuthiChain Verification Decision v1"
+    );
+    expect(body.http_status).toBe(200);
+    expect(body.jws).toBeUndefined();
+    expect(payload.result.content[0].text).not.toContain("header.payload.sig");
+  });
+
+  it("scans through the edge service binding instead of a public same-zone fetch", async () => {
+    let publicFetch = false;
+    globalThis.fetch = (async () => {
+      publicFetch = true;
+      throw new Error("public fetch");
+    }) as typeof fetch;
+    let seen = "";
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 8,
+          method: "tools/call",
+          params: {
+            name: "scan_living_qr",
+            arguments: { object_id: "qron:url:deadbeef" },
+          },
+        }),
+      }),
+      {
+        APP_WORKER: {
+          fetch: async request => {
+            seen = request.url;
+            return new Response(
+              JSON.stringify({
+                valid: true,
+                decision: "verified",
+                decision_contract: "AuthiChain Verification Decision v1",
+                cryptographic_status: "valid",
+                status: "active",
+                jws: "header.payload.sig",
+              }),
+              { status: 200, headers: { "content-type": "application/json" } }
+            );
+          },
+        },
+      }
+    );
+    expect(publicFetch).toBe(false);
+    expect(seen).toBe("https://authichain.com/qron/r/qron%3Aurl%3Adeadbeef");
+    const payload = (await res!.json()) as {
+      result: { isError?: boolean; content: Array<{ text: string }> };
+    };
+    expect(payload.result.isError).toBeUndefined();
+    const body = JSON.parse(payload.result.content[0].text) as {
+      decision: string;
+    };
+    expect(body.decision).toBe("verified");
+    expect(payload.result.content[0].text).not.toContain("header.payload.sig");
   });
 });
