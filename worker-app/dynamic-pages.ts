@@ -1724,6 +1724,14 @@ function generateCreditLinksHtml(): string {
   );
 }
 
+// Starter CTA (Marketing copy variant A, as in #2047) shown after a successful generation.
+const STARTER_CHECKOUT_URL = "https://authichain.com/checkout/starter";
+const GENERATE_STARTER_CTA_HTML =
+  '<p id="generate-starter-cta" hidden>Like it? Get 100 generations for $29, paid once. No subscription. ' +
+  '<a class="credit-btn" href="' + STARTER_CHECKOUT_URL +
+  '?utm_source=qron&amp;utm_medium=onsite&amp;utm_campaign=starter-cta&amp;utm_content=starter-a">Get 100 generations for $29</a> ' +
+  "Checkout on authichain.com.</p>\n";
+
 function generateFormHtml(
   error?: string,
   paid = false,
@@ -1759,6 +1767,7 @@ function generateFormHtml(
       '<input id="prompt" name="prompt" type="text" maxlength="200" placeholder="Industrial tech aesthetic">\n' +
       '<button type="submit">Queue Living QR</button>\n' +
       "</form>\n" +
+      GENERATE_STARTER_CTA_HTML +
       generateCreditLinksHtml() +
       "<p>Need a generation pack? " +
       generatePackLinksHtml() +
@@ -1776,12 +1785,14 @@ function generateFormHtml(
       "e.preventDefault();\n" +
       "var targetUrl=document.getElementById('targetUrl').value.trim();\n" +
       "var prompt=document.getElementById('prompt').value.trim();\n" +
+      "var cta=document.getElementById('generate-starter-cta');if(cta)cta.hidden=true;\n" +
       "err.hidden=true; out.hidden=true;\n" +
       "fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUrl:targetUrl,prompt:prompt,mode:'static'})})\n" +
       ".then(function(res){return res.json().then(function(data){return {res:res,data:data};});})\n" +
       ".then(function(r){\n" +
       "if(r.res.status===401){\n" +
-      "if(r.data&&r.data.code&&r.data.code.indexOf('FREE_SAMPLE_')===0){err.hidden=false;err.textContent=r.data.message;}\n" +
+      "if(r.data&&r.data.code&&r.data.code.indexOf('FREE_SAMPLE_')===0){err.hidden=false;err.textContent=r.data.message;\n" +
+      "var up=r.data.upgrade;if(up&&typeof up.url==='string'&&up.url.indexOf('https://authichain.com/checkout/starter')===0){var a=document.createElement('a');a.href=up.url;a.className='button';a.id='sample-exhausted-starter';a.textContent=up.label||'Starter Pack: 100 generations for $29, paid once';var pp=document.createElement('p');pp.appendChild(a);err.appendChild(pp);a.focus();return;}}\n" +
       "form.submit();\n" +
       "return;\n" +
       "}\n" +
@@ -1800,6 +1811,7 @@ function generateFormHtml(
       "if(url.indexOf('data:image/')!==0&&url.indexOf('https://')!==0){err.hidden=false;err.textContent='Unexpected image URL.';return;}\n" +
       "out.hidden=false;\n" +
       'out.innerHTML=\'<img alt="Generated Living QR" src="\'+url.replace(/"/g,\'\')+\'" width="320" height="320">\';\n' +
+      "if(cta)cta.hidden=false;\n" +
       "})\n" +
       " .catch(function(){err.hidden=false;err.textContent='Network error. Please try again.';});\n" +
       "});\n" +
