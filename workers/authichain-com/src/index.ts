@@ -74,6 +74,7 @@ import {
   dppCheckoutClickEvent,
   isDppCheckPath,
   renderDppCheckPage,
+  tryHandleDppCheck,
 } from "./dpp-check-page.ts";
 import {
   micrositeSitemapUrls,
@@ -3516,6 +3517,11 @@ async function handleAuthichainCom(
       return new Response(renderBatteryPassportPage(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
+    }
+    // CFA-629: /dpp-check/product and the /dpp/scan 301 live in tryHandleDppCheck.
+    if (!isDppCheckPath(p)) {
+      const dppCheck = tryHandleDppCheck(request);
+      if (dppCheck) return dppCheck;
     }
     if (isDppCheckPath(p)) {
       const done = request.method === 'GET' ? dppCheckCompleteEvent(url) : null;
