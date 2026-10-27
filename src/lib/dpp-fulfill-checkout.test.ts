@@ -336,27 +336,50 @@ describe("fulfillDppPaidSession", () => {
     });
   });
 
-  it("writes provisioned with skip_reason when there is no buyer identity", async () => {
-    const { supabase, rows } = fakeSupabase({ profileId: null });
-    const result = await fulfillDppPaidSession(supabase, {
-      ...paidSession,
-      customer_details: null,
-      customer_email: null,
-      metadata: { ...paidSession.metadata, user_id: undefined },
-    });
-    expect(result).toEqual({
-      handled: true,
-      profileId: null,
-      activationEmail: "skipped",
+  it("fails closed on a paid checkout without buyer identity; no grant side effect or success", async () => {
+    const { supabase, rows, continuity } = fakeSupabase({ profileId: null });
+    await expect(
+      fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        id: "cs_paid_no_identity",
+        amount_total: 29900,
+        customer_details: null,
+        customer_email: null,
+        metadata: { ...paidSession.metadata, user_id: undefined },
+      })
+    ).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+      message: "DPP provision blocked: no buyer identity",
     });
     expect(rows.map(r => r.event_type)).toEqual([
       "dpp_loop:payment_succeeded",
-      "dpp_loop:provisioned",
     ]);
-    expect(rows[1].metadata).toMatchObject({
-      loop_stage: "provisioned",
-      skip_reason: "no_identity",
-    });
+    expect(continuity.get("founder_exit_side_effects") ?? []).toHaveLength(0);
+    const actions = continuity.get("founder_exit_actions") ?? [];
+    expect(actions).toHaveLength(1);
+    expect(actions[0]?.state).not.toBe("succeeded");
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("does not falsely complete a demo without buyer identity", async () => {
+    const { supabase, rows, continuity } = fakeSupabase({ profileId: null });
+    await expect(
+      fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        id: "cs_demo_no_identity",
+        customer_details: null,
+        customer_email: null,
+        metadata: { ...paidSession.metadata, is_demo: "true", user_id: undefined },
+      })
+    ).rejects.toMatchObject({ name: "RetryableFulfillmentError" });
+    expect(rows.map(r => r.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+    ]);
+    expect(continuity.get("founder_exit_side_effects") ?? []).toHaveLength(0);
+    expect((continuity.get("founder_exit_actions") ?? [])[0]?.state).not.toBe(
+      "succeeded"
+    );
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
   it("throws when the entitlement update fails and does not record provisioned", async () => {
