@@ -642,6 +642,19 @@ describe("fulfilment watchdog", async () => {
     ).rejects.toThrow("missing page cursor");
   });
 
+  it("fails closed when Stripe omits or corrupts the pagination flag", async () => {
+    for (const page of [{ data: [] }, { data: [], has_more: "false" }]) {
+      await expect(
+        checkFulfilment({
+          stripeKey: "test-only",
+          supabaseUrl: "https://example.test",
+          supabaseKey: "test-only",
+          fetchImpl: async () => ({ ok: true, json: async () => page }),
+        })
+      ).rejects.toThrow("invalid pagination flag");
+    }
+  });
+
   it("puts unfulfilled payments into the alert signature", () => {
     const report = {
       at: "t",
