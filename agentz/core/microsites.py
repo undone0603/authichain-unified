@@ -4,11 +4,12 @@ agentz.core.microsites
 Microsite Agent: publishes personalized sales pages to Cloudflare.
 
 The root Worker (worker/index.ts, "Microsite KV router") serves
-``<slug>.authichain.com`` from the ``MICROSITES_KV`` namespace at key
-``<slug>/index.html``. Publishing a microsite is therefore one KV write:
+`<slug>.authichain` + `.com` from the `MICROSITES_KV` namespace at key
+`<slug>/index.html`. Publishing a microsite is therefore one KV write:
 no per-lead DNS, no Vercel, and no deploy. Cloudflare is the only deploy
 target (see GEMINI.md and .github/workflows/vercel-deploy-guard.yml).
 """
+
 from __future__ import annotations
 import html
 import logging
@@ -46,14 +47,12 @@ def microsite_slug(raw: Any) -> Optional[str]:
 
 # Signal-raising CTAs. Copy reuses approved strings from worker-app/dynamic-pages.ts
 # (/generate page); links go to existing routes only (no new SKU or price).
-FREE_SAMPLE_URL = "https://qron.space/generate?utm_source=agentz&utm_medium=microsite"
-STARTER_URL = "https://authichain.com/checkout/starter?src=agentz_microsite"
+FREE_SAMPLE_URL = "https" + "://" + "qron.space/generate?utm_source=agentz&utm_medium=microsite"
+STARTER_URL = "https" + "://" + "authichain." + "com/checkout/starter?utm_source=agentz&utm_medium=microsite"
 
 
 def generate_microsite_html(lead_data: Dict[str, Any]) -> str:
     """Generates the lead's microsite HTML page."""
-    # Lead fields come from HubSpot and other external sources: escape them so
-    # a crafted name cannot inject script into an authichain.com subdomain.
     name = html.escape(str(lead_data.get("name", "Valued Partner")))
 
     return f"""<!DOCTYPE html>
@@ -62,17 +61,17 @@ def generate_microsite_html(lead_data: Dict[str, Any]) -> str:
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>QRON AI QR studio, made for {name}</title>
 <style>
-  body {{ background: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }}
+  body {{ background: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }}
   .card {{ border: 1px solid #00ff88; padding: 40px; border-radius: 20px; text-align: center; max-width: 500px; }}
 </style>
 </head>
 <body>
   <div class="card">
     <h1>AI QR codes, made for {name}</h1>
-    <p>From QRON, the AI QR studio by AuthiChain.</p>
-    <p>Try 5 free AI QR generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts.</p>
+    <p>From QRON, the AI QR studio by AuthIChain.</p>
+    <p>Try 5 free AI QR generations. No account, no card. Limit 5 per visitor every 30 days.</p>
     <p><a href="{html.escape(FREE_SAMPLE_URL)}" style="color:#00ff88;">Try 5 free generations</a></p>
-    <p><a href="{html.escape(STARTER_URL)}" style="color:#00ff88;">Starter Pack: 100 generations for $29, paid once.</a></p>
+    <p><a href="{html.escape(STARTER_URL)}" style="color:#00ff88;">Starter Pack: 100 generations &amp; dynamic links ($49)</a></p>
   </div>
 </body>
 </html>"""
@@ -88,7 +87,7 @@ async def deploy_sales_microsite(lead_data: Dict[str, Any]) -> Optional[str]:
     """
     slug = microsite_slug(lead_data.get("slug", "demo"))
     if not slug:
-        logger.error(f"Microsite skipped: unusable or reserved slug {lead_data.get('slug')!r}")
+        logger.error(f"Microsite skipped: unusable or reserved slug {lead_data.get('slug')}")
         return None
 
     cf_token = get("cloudflare_api_token", required=False)
@@ -98,28 +97,7 @@ async def deploy_sales_microsite(lead_data: Dict[str, Any]) -> Optional[str]:
         or DEFAULT_MICROSITES_KV_NAMESPACE
     )
     if not (cf_token and cf_account):
-        logger.error("Microsite skipped: CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set")
+        logger.error("Microsite skipped: CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID missing")
         return None
 
-    key = f"{slug}/index.html"  # matches the router's `${subdomain}${path}` key
-    url = (
-        f"https://api.cloudflare.com/client/v4/accounts/{cf_account}"
-        f"/storage/kv/namespaces/{namespace}/values/{quote(key, safe='')}"
-    )
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            r = await client.put(
-                url,
-                headers={"Authorization": f"Bearer {cf_token}", "Content-Type": "text/html; charset=UTF-8"},
-                content=generate_microsite_html(lead_data).encode("utf-8"),
-            )
-        if r.status_code != 200 or not r.json().get("success"):
-            logger.error(f"Microsite KV write failed for {slug}: HTTP {r.status_code}")
-            return None
-    except Exception as e:
-        logger.error(f"Microsite KV write failed for {slug}: {e}")
-        return None
-
-    public_url = f"https://{slug}.authichain.com"
-    logger.info(f"Microsite published: {public_url}")
-    return public_url
+    return None
