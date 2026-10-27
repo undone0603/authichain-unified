@@ -259,7 +259,8 @@ export function resolveCheckoutPlanId(input: {
 
 export function liveBypassLink(id: PlanId): string | undefined {
   const row = LIVE_PRICE_MAP[id as keyof typeof LIVE_PRICE_MAP];
-  return row?.stripeLink ?? planById(id)?.stripe_payment_link;
+  const link = row && "stripeLink" in row ? row.stripeLink : undefined;
+  return link ?? planById(id)?.stripe_payment_link;
 }
 
 export function publicCheckoutHref(id: PublicPlanId): string {
