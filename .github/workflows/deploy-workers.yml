@@ -207,7 +207,10 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: "pnpm"
+          # Skip the Actions cache on authichain-ops. The hosted agentz job
+          # still caches. A self-hosted save packs ~1 GB and can fail the job
+          # after the worker is already published.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

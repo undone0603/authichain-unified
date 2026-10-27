@@ -782,6 +782,7 @@ export async function tryHandleGatedCheckout(
       return new Response(null, { status: 200, headers: HTML_HEADERS });
     }
     if (isGrowthSku(plan.id)) report(checkoutViewEvent(plan.id));
+    logUpgradePromptClick(plan.id, url.searchParams.get("src"));
     return htmlResponse(
       renderCheckoutConfirmPage({ plan, params: url.searchParams })
     );
@@ -895,4 +896,24 @@ export async function tryHandleGatedCheckout(
 /** Every catalogue plan that the gate can sell (for tests/inventory). */
 export function gatedCheckoutPlanIds(): PlanId[] {
   return PLANS.filter(p => p.stripe_price_id && p.stripe_mode).map(p => p.id);
+}
+
+/** Upgrade-prompt sources whose Starter link carries ?src=. Allowlisted so
+ * arbitrary query text never reaches the logs. */
+export const UPGRADE_PROMPT_SOURCES = ["sample_exhausted", "low_credit"] as const;
+
+/**
+ * upgrade_prompt_click: a GET of /checkout/starter that came from an upgrade
+ * prompt. Logged to Workers Logs only (no network call, no table write: the
+ * growth_loop_events check constraint does not list this event).
+ */
+export function logUpgradePromptClick(planId: string, src: string | null): boolean {
+  if (planId !== "starter" || !src) return false;
+  if (!(UPGRADE_PROMPT_SOURCES as readonly string[]).includes(src)) return false;
+  try {
+    console.log(JSON.stringify({ event: "upgrade_prompt_click", sku: "starter", src }));
+  } catch {
+    /* logging must never break checkout */
+  }
+  return true;
 }

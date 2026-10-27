@@ -1078,6 +1078,14 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("form.submit()");
     expect(body).toContain("$29");
     expect(body).not.toContain("$19/mo");
+    // Starter CTA (variant A): hidden until a generation succeeds.
+    expect(body).toContain(
+      '<p id="generate-starter-cta" hidden>Like it? Get 100 generations for $29, paid once. No subscription. '
+    );
+    expect(body).toContain(
+      'href="https://authichain.com/checkout/starter?utm_source=qron&amp;utm_medium=onsite&amp;utm_campaign=starter-cta&amp;utm_content=starter-a">Get 100 generations for $29</a>'
+    );
+    expect(body).toContain("if(cta)cta.hidden=false;");
     expect(body).toContain("$299");
     // Top-ups: Starter $29, Creator $99. Launch $19/mo is unlisted (CFA-460).
     // Retired credit bundles ($9.99/$39.99/$99.99) had no live Stripe account.
@@ -1125,6 +1133,14 @@ describe("renderDynamicPage: /generate Living QR", () => {
       "https://example.com/sku"
     );
     expect(location.searchParams.get("prompt")).toBe("neon");
+  });
+
+  it("shows the API's Starter upgrade link when the free sample is used up", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain("var up=r.data.upgrade;");
+    expect(body).toContain("up.url.indexOf('https://authichain.com/checkout/starter')===0");
+    expect(body).toContain("a.id='sample-exhausted-starter'");
   });
 });
 

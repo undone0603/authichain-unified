@@ -170,7 +170,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
-    setupFiles: ["./apps/verifier-web/src/setupTests.ts"],
+    setupFiles: [
+      "./scripts/vitest-isolate-delivery-env.ts",
+      "./apps/verifier-web/src/setupTests.ts",
+    ],
     exclude: [
       ...configDefaults.exclude,
       "apps/agent-browser/**",

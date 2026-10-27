@@ -26,7 +26,10 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: "pnpm"
+          # Self-hosted runners already keep a local pnpm store. Saving it
+          # through actions/cache packs ~1 GB and the post-step fails the
+          # deploy after wrangler publish has already succeeded.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
           cache-dependency-path: pnpm-lock.yaml
       - name: Install node-gyp (native builds)
         run: npm i -g node-gyp@11
