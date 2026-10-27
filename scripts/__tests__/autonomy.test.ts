@@ -518,7 +518,7 @@ describe("ops pulse", () => {
 });
 
 describe("fulfilment watchdog", async () => {
-  const { findUnfulfilled } = await import("../autonomy/revenue-watch.mjs");
+  const { findUnfulfilled, checkFulfilment } = await import("../autonomy/revenue-watch.mjs");
   const now = Date.parse("2026-09-23T12:00:00Z");
   const s = (
     id: string,
@@ -595,6 +595,51 @@ describe("fulfilment watchdog", async () => {
       "cs_chargeable",
       "cs_unknown",
     ]);
+  });
+
+  it("paginates completed sessions before claiming healthy webhook delivery", async () => {
+    const first = Array.from({ length: 100 }, (_, i) =>
+      s(`cs_free_${i}`, 60, { amount_total: 0 })
+    );
+    const pages = [
+      { data: first, has_more: true },
+      { data: [s("cs_paid_second_page", 60)], has_more: false },
+    ];
+    const stripeUrls: string[] = [];
+    const result = await checkFulfilment({
+      stripeKey: "test-only",
+      supabaseUrl: "https://example.test",
+      supabaseKey: "test-only",
+      fetchImpl: async (url: string) => {
+        if (url.startsWith("https://api.stripe.com/")) {
+          stripeUrls.push(url);
+          return { ok: true, json: async () => pages.shift() };
+        }
+        if (url.includes("/rest/v1/stripe_events?"))
+          return { ok: true, json: async () => [] };
+        throw new Error("unexpected URL");
+      },
+    });
+    expect(stripeUrls).toHaveLength(2);
+    expect(stripeUrls[1]).toContain("starting_after=cs_free_99");
+    expect(result.checked).toBe(1);
+    expect(result.problems.map((p: { session: string }) => p.session)).toEqual([
+      "cs_paid_second_page",
+    ]);
+  });
+
+  it("fails closed when Stripe reports more results without a cursor", async () => {
+    await expect(
+      checkFulfilment({
+        stripeKey: "test-only",
+        supabaseUrl: "https://example.test",
+        supabaseKey: "test-only",
+        fetchImpl: async () => ({
+          ok: true,
+          json: async () => ({ data: [], has_more: true }),
+        }),
+      })
+    ).rejects.toThrow("missing page cursor");
   });
 
   it("puts unfulfilled payments into the alert signature", () => {
