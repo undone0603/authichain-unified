@@ -86,6 +86,10 @@ export async function checkFulfilment({
     const body = await sRes.json();
     if (!Array.isArray(body.data))
       throw new Error("Stripe checkout sessions: invalid page");
+    // Stripe must supply a boolean has_more; an absent/malformed flag cannot
+    // be interpreted as the final page (which would silently hide payments).
+    if (typeof body.has_more !== "boolean")
+      throw new Error("Stripe checkout sessions: invalid pagination flag");
     sessions.push(...body.data);
     if (!body.has_more) {
       complete = true;
