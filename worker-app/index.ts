@@ -523,6 +523,44 @@ app.all("/qron/r/*", async c => {
   } = await import("../src/lib/qron-resolve");
   const kv = c.env?.SESSIONS;
   const response = await handleQronResolve(c.req.raw, {
+    // Same-worker HTTP to the public verify URL fails across zones
+    // (authichain.govchain.us → authichain.com) with verify_unreachable.
+    // Dispatch the route in-process instead.
+    verify: async (jws, objectId) => {
+      const url = new URL(c.req.url);
+      url.pathname = "/api/v1/attestation/verify";
+      url.search = "";
+      const res = await app.fetch(
+        new Request(url.toString(), {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json",
+          },
+          body: JSON.stringify({
+            jws,
+            expected_object_id: objectId,
+          }),
+        }),
+        c.env,
+      );
+      const parsed = await res.json().catch(() => null);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return {
+          status: 502,
+          body: {
+            valid: false,
+            decision: "indeterminate",
+            decision_contract: "AuthiChain Verification Decision v1",
+            error: "verify_unreachable",
+          },
+        };
+      }
+      return {
+        status: res.status,
+        body: parsed as Record<string, unknown>,
+      };
+    },
     load: async objectId => {
       if (!kv) throw new QronStoreUnavailable();
       const raw = await kv.get(qronPresentationKvKey(objectId));

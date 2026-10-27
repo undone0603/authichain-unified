@@ -103,10 +103,10 @@ Worked request that is live today (agent rail, not a DPP registry call):
 ```bash
 curl -sS -i -X POST https://authichain.com/api/x402 \
   -H 'content-type: application/json' \
-  -d '{"sealId":"demo"}'
+  -d '{}'
 ```
 
-Expect HTTP 402 and a payment requirement. That is how a machine starts a verification. It is not a registry filing.
+An empty body is the unpaid HTTP 402 and a payment requirement. A non-UUID sealId is HTTP 400 before payment. That challenge is how a machine learns the price. It is not a registry filing.
 
 Human path that is live today:
 

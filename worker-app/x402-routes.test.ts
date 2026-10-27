@@ -109,7 +109,10 @@ describe("GET /api/x402/health", () => {
       protocol?: string;
     };
     expect(body.version).toBe(1);
-    expect(body.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(body.resources).toEqual([
+      "https://authichain.com/api/v1/agent-verify",
+      "https://authichain.com/api/x402",
+    ]);
     expect(body.protocol).toBeUndefined();
   });
 
@@ -130,7 +133,11 @@ describe("GET /api/x402/health", () => {
     expect(spec.paths["/api/x402"].post["x-payment-info"].protocols).toEqual([
       "x402",
     ]);
-    expect(JSON.stringify(spec)).not.toContain("/api/checkout");
+    const raw = JSON.stringify(spec);
+    expect(raw).toContain("/qron/r/{object_id}");
+    expect(raw).toContain("This host verifies the signature");
+    expect(raw).not.toContain("does not verify the signature");
+    expect(raw).not.toContain("/api/checkout");
   });
 
   it("GET /api/x402 is the same health document", async () => {
