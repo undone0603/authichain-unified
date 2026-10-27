@@ -1,10 +1,9 @@
 // scripts/autonomy/revenue-watch.mjs
 //
-// Fulfilment watchdog. Every Checkout Session that Stripe says is paid must
-// have been handled by our webhook: a `stripe_events` row for that session
-// with a successful status. A paid session with no such row means a
-// customer paid and may not have received what they bought — that is the
-// one failure that must reach the owner fast.
+// Chargeable-payment webhook-delivery watchdog. A Stripe `paid` session with
+// amount_total=0 is not customer revenue. A positive-amount paid session must
+// have a successful `stripe_events` receipt; absence needs investigation.
+// A successful webhook receipt does NOT prove entitlement or activation.
 //
 // Read-only: Stripe GET + Supabase REST GET. Output carries session IDs only
 // (no emails, no amounts) because the alert issue lives in a public repo.
@@ -44,8 +43,8 @@ export function findUnfulfilled(
     .filter(
       s =>
         s.status === "complete" &&
-        (s.payment_status === "paid" ||
-          s.payment_status === "no_payment_required")
+        s.payment_status === "paid" &&
+        s.amount_total !== 0
     )
     .filter(s => now - s.created * 1000 > graceMs)
     .filter(s => s.metadata?.is_demo !== "true")
@@ -81,8 +80,7 @@ export async function checkFulfilment({
   if (!sRes.ok) throw new Error(`Stripe checkout sessions -> ${sRes.status}`);
   const sessions = (await sRes.json()).data ?? [];
   const paid = sessions.filter(
-    s =>
-      s.payment_status === "paid" || s.payment_status === "no_payment_required"
+    s => s.payment_status === "paid" && s.amount_total !== 0
   );
   if (!paid.length) return { checked: 0, problems: [] };
   const ids = paid.map(s => `"${s.id}"`).join(",");
