@@ -30,6 +30,12 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 
 ## Operations
 
+- [LAUNCH_MATRIX.md](LAUNCH_MATRIX.md) — production status of public surfaces, checked 2026-10-13
+- [FOUNDER_INDEPENDENCE.md](FOUNDER_INDEPENDENCE.md) — continuity ledger and the remaining founder-exit blockers
+- [AUTONOMOUS_ACTION_LEDGER.md](AUTONOMOUS_ACTION_LEDGER.md) — action identity, leases, and evidence classes
+- [RECOVERY_AND_RECONCILIATION.md](RECOVERY_AND_RECONCILIATION.md) — interrupted-action recovery without a second side effect
+- [FOUNDER_EXIT_DRILL.md](FOUNDER_EXIT_DRILL.md) — isolated drill and `docs/evidence/founder-exit-drill.json`
+- [FUNNEL_HEALTH.md](FUNNEL_HEALTH.md) — landing through activation, with payment and provisioning blocked
 - [operations/CLOUDFLARE_FIRST_BASELINE.md](operations/CLOUDFLARE_FIRST_BASELINE.md) — main-only integration, Cloudflare deploy authority, smoke + repair loop
 - [architecture/THIN_COMMERCIAL_SURFACES.md](architecture/THIN_COMMERCIAL_SURFACES.md) — brand sites stay thin; verify is shared
 - [operations/LAUNCH-READINESS-2026-06-23.md](operations/LAUNCH-READINESS-2026-06-23.md) — launch readiness checklist

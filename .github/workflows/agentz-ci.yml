@@ -1,0 +1,31 @@
+name: AgentZ Autonomous CI
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-heal:
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compile AgentZ Python sources
+        run: python -m compileall -q agentz
+
+      - name: Run AgentZ control-plane tests
+        run: python -m unittest discover -s agentz/tests -p 'test_*.py'
+
+      - name: Confirm the web-client stub is not sold as an ABI
+        run: |
+          # apps/web-client.ts is an unused stub. Nothing imports AuthTokenABI.
+          # Failing on the word "Placeholder" only triggered agentz/healing/auto-fix.js,
+          # which then died on a missing @modelcontextprotocol/sdk install and, when
+          # it ran, wrote { status: "secure" } and opened a pull request. That object
+          # is not an ABI. Do not treat this file as a contract.
+          test -f apps/web-client.ts
+          if grep -q 'status: "secure"' apps/web-client.ts; then
+            echo "web-client.ts must not claim a secure ABI that is not wired"
+            exit 1
+          fi
+          echo "web-client.ts is a stub. No contract ABI is wired."

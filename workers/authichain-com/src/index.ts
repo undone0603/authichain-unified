@@ -1,15 +1,25 @@
+import { isVerifyLivePath, renderVerifyLivePage } from "./verify-live-page.ts";
+import { isIsThisRealPath, renderIsThisRealPage } from "./is-this-real-page.ts";
+import { handleSalesInquiry } from './routes/sales';
+import mcpServer from './mcp-server';
 // The DPP regulatory timeline is shared with the Next.js page rather than
 // duplicated here: content/dpp/regulatory-timeline.json is the single source of
 // truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild
 // inlines it at build time, so the worker stays self-contained at runtime.
 import { tryHandleDppRoute } from "./dpp-routes";
+import { tryHandleAgentPresentation } from "./agent-present-page";
 import {
   tryHandleApiCheckoutEmailGate,
   tryHandleProtocolCheckout,
 } from "./protocol-checkout";
-import { tryHandleGatedCheckout } from "../../../src/lib/checkout-gate";
+import { displayPlanDescription, tryHandleGatedCheckout } from "../../../src/lib/checkout-gate";
+import {
+  deliverCheckoutGateEvent,
+  deliverDppCheckoutStarted,
+} from "./checkout-growth";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
+import { tryHandleMcpFree } from "./mcp-free-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import { isMcpInstallPath, renderMcpInstallPage } from "./mcp-install-page";
@@ -64,6 +74,7 @@ import {
   dppCheckoutClickEvent,
   isDppCheckPath,
   renderDppCheckPage,
+  tryHandleDppCheck,
 } from "./dpp-check-page.ts";
 import {
   micrositeSitemapUrls,
@@ -154,15 +165,15 @@ const FONTS_LINK = ESTATE_FONTS_LINK;
 // structured-data blocks (Organization, WebSite, FAQPage).
 const SEO = {
   description:
-    'AuthiChain: product seals, EU DPP Readiness on Stripe checkout, and x402 pay-per-call for agents.',
+    'AuthiChain: QRON Starter Pack $29 on Stripe, Living QR generation, and x402 pay-per-call for agents. EU DPP Readiness is $299 when you need the battery passport path.',
   keywords:
-    'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain',
+    'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain, Starter Pack',
   ogTitle: 'AuthiChain — The authentic agentic economy',
   ogDescription:
-    'Agents can pay. They still need to know if it is real. Signed seals, MCP tools, x402 at $0.05 USDC, and EU DPP Readiness on live Stripe checkout.',
+    'Start with QRON Starter at $29. Signed seals, MCP tools, x402 at $0.05 USDC. EU DPP Readiness is $299 on live Stripe checkout when you need it.',
   twitterTitle: 'AuthiChain — The authentic agentic economy',
   twitterDescription:
-    'The authenticity layer for the agentic economy. Issue → Bind → Verify. x402 for agents. DPP Readiness for humans.',
+    'Starter Pack $29. Issue → Bind → Verify. x402 for agents. EU DPP Readiness $299 when you need the passport path.',
   ogImage: 'https://authichain.com/og-image.png',
   themeColor: '#4F46E5',
   faqs: [
@@ -250,6 +261,21 @@ function assetResponse(svg: string): Response {
     },
   });
 }
+
+// No service worker. /verify must not be cached: a stored page can show a
+// record that has since been revoked. This file is not a contract ABI and
+// the lookup is not an authenticity verdict.
+const VERIFY_MANIFEST = JSON.stringify({
+  name: 'AuthiChain',
+  short_name: 'AuthiChain',
+  description: 'Look up an AuthiChain record. On-chain verification is in development.',
+  start_url: '/verify',
+  scope: '/',
+  display: 'browser',
+  background_color: '#0c0c0d',
+  theme_color: '#0c0c0d',
+  icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+});
 
 // __OG_PNG_B64_START__
 const OG_IMAGE_PNG_B64 =
@@ -2175,7 +2201,7 @@ function catalogJsonLdOffer(id: PlanId) {
   return {
     '@type': 'Offer' as const,
     name: plan.name,
-    description: plan.description,
+    description: displayPlanDescription(plan),
     price: plan.price,
     priceCurrency: 'USD',
     url: offerUrl,
@@ -2498,7 +2524,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   ${estateSkipLink()}
-  <div class="banner">The first checkout is the $29 signed pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy the $29 pack</a>. EU DPP Readiness stays on the form below.</div>
+  <div class="banner">The first checkout is the $29 Starter Pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy Starter — $29</a>. EU DPP Workspace stays $299 further down.</div>
   ${estateNav(
     "authichain",
     [
@@ -2510,28 +2536,28 @@ const HTML = `<!DOCTYPE html>
       { href: "/x402", label: "x402" },
       { href: "/contact", label: "Contact" },
     ],
-    { href: "/pricing", label: "View pricing" },
+    { href: planPaymentLink("starter") ?? "/checkout/starter", label: "Buy Starter" },
   )}
   <main id="main">
   ${estateHero({
     eyebrow: "The authentic agentic economy",
     title: "Signed QR seals for real products.",
-    lede: "The first checkout on this page is the $29 signed pack. EU DPP Readiness remains $299 on the form below, or enter a work email so Stripe can recover that cart.",
+    lede: "Start with the Starter Pack at $29. EU DPP Workspace is $299 when you need the battery passport path. Add a work email so Stripe can recover the cart.",
     lead: {
       href: planPaymentLink("starter") ?? "#hero",
       label: "Buy a QRON Starter Pack — $29",
     },
     emailCheckout: {
-      action: "https://authichain.com/checkout/dpp_readiness",
-      label: "Start DPP checkout — $299",
+      action: "https://authichain.com/checkout/starter",
+      label: "Buy Starter Pack — $29",
     },
     actions: [
       { href: "/pricing", label: "View pricing", primary: false },
-      { href: "/onboard", label: "Onboard", primary: false },
+      { href: "/generate", label: "Generate Living QR", primary: false },
     ],
   })}
   ${estateTrust([
-    { value: "$299", label: "EU DPP Readiness" },
+    { value: "$29", label: "Starter Pack" },
     { value: "x402", label: "Agent micropayments" },
   ])}
 
@@ -2580,7 +2606,7 @@ const HTML = `<!DOCTYPE html>
     "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
-      { title: "Settlement", body: "Humans enroll EU DPP Readiness on Stripe. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
+      { title: "Settlement", body: "Humans start with Starter $29 on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
   )}
@@ -2591,11 +2617,11 @@ const HTML = `<!DOCTYPE html>
   ${communityHub(BRAND)}
   ${marketReality()}
   ${estateCtaBand({
-    title: "Start EU DPP Readiness",
-    lede: "Enter a work email so abandoned-checkout recovery can reach you. Onboard and dashboard stay available. x402 is the secondary agent-pay rail.",
+    title: "Buy the Starter Pack",
+    lede: "$29, one time — 100 AI QR generations. Enter a work email so abandoned-checkout recovery can reach you.",
     emailCheckout: {
-      action: "https://authichain.com/checkout/dpp_readiness",
-      label: "Start DPP checkout",
+      action: "https://authichain.com/checkout/starter",
+      label: "Buy Starter Pack",
     },
     actions: [
       { href: "/pricing", label: "View pricing", primary: false },
@@ -2818,9 +2844,9 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   <p>Zero dependencies &mdash; Node builtins only. It checks an Ed25519 signature over a JCS-canonicalised W3C Verifiable Credential, then checks that the record&rsquo;s hash matches what was committed on-chain.</p>
 
   <div class="cta">
-    <a class="btn primary" href="https://github.com/undone0603/authichain-unified/tree/main/protocol">Read the spec</a>
-    <a class="btn" href="https://github.com/undone0603/authichain-unified/blob/main/protocol/verifier.mjs">Run the verifier</a>
-    <a class="btn" href="https://github.com/undone0603/authichain-unified/blob/main/protocol/LICENSE">View the license</a>
+    <a class="btn primary" href="https://unpkg.com/authichain-verify/SPEC.md">Read the spec</a>
+    <a class="btn" href="https://www.npmjs.com/package/authichain-verify">Run the verifier (npx authichain-verify)</a>
+    <a class="btn" href="https://www.apache.org/licenses/LICENSE-2.0">View the license (Apache-2.0)</a>
   </div>
 
   <h2>Three verdicts. No partial credit.</h2>
@@ -2835,7 +2861,7 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   <p>It is a demonstration, not a product.</p>
   <ul>
     <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
-    <li>Files: <a href="https://github.com/undone0603/authichain-unified/tree/main/protocol/examples">record and anchor JSON</a>, to run with the verifier above</li>
+    <li>Files: record and anchor JSON ship in the npm package (<code>examples/polygon-anchor-1.*.json</code>), to run with the verifier above</li>
     <li>For agents: MCP tool <code>verify_record</code> at <code>https://authichain.com/mcp</code>, free</li>
   </ul>
 
@@ -2930,7 +2956,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <a class="nav-link" href="/battery-passport">Battery example</a>
       <a class="nav-link" href="/docs">Docs</a>
       <a class="nav-link" href="/x402">Agent pay</a>
-      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Start DPP Audit — $299</a>
+      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Open EU DPP Workspace — $299</a>
     </div>
   </nav>
 
@@ -3361,7 +3387,11 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
   });
 }
 
-async function handleAuthichainCom(request: Request, env: Env) {
+async function handleAuthichainCom(
+  request: Request,
+  env: Env,
+  ctx?: { waitUntil?: (promise: Promise<unknown>) => void }
+) {
     const url = new URL(request.url);
     // Canonical hub is authichain.com. www.authichain.com 301s to the apex;
     // authichain.govchain.us stays a working fallback host and serves the
@@ -3386,6 +3416,15 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (p === '/favicon.svg' || p === '/favicon.ico' || p === '/favicon.png') {
       return assetResponse(FAVICON_SVG);
     }
+    if (p === '/manifest.webmanifest') {
+      return new Response(VERIFY_MANIFEST, {
+        headers: {
+          'content-type': 'application/manifest+json; charset=utf-8',
+          'cache-control': 'public, max-age=3600',
+          'x-content-type-options': 'nosniff',
+        },
+      });
+    }
     if (p === '/apple-touch-icon.svg' || p === '/apple-touch-icon.png' || p === '/apple-touch-icon-precomposed.png') {
       return assetResponse(FAVICON_SVG);
     }
@@ -3399,8 +3438,13 @@ async function handleAuthichainCom(request: Request, env: Env) {
         { loc: 'https://authichain.com/', freq: 'weekly', pri: '1.0' },
         { loc: 'https://authichain.com/pricing', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/onboard', freq: 'weekly', pri: '0.95' },
+        // First-dollar LOOP-03 paths (live 200; generate proxies to APP_WORKER).
+        { loc: 'https://authichain.com/generate', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/checkout/starter', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/checkout/creator', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/verify/live', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/digital-product-passport', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/genetics', freq: 'weekly', pri: '0.85' },
@@ -3464,10 +3508,20 @@ async function handleAuthichainCom(request: Request, env: Env) {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
     }
+    if (isIsThisRealPath(p)) {
+      return new Response(renderIsThisRealPage(), {
+        headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
     if (isBatteryPassportPath(p)) {
       return new Response(renderBatteryPassportPage(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
+    }
+    // CFA-629: /dpp-check/product and the /dpp/scan 301 live in tryHandleDppCheck.
+    if (!isDppCheckPath(p)) {
+      const dppCheck = tryHandleDppCheck(request);
+      if (dppCheck) return dppCheck;
     }
     if (isDppCheckPath(p)) {
       const done = request.method === 'GET' ? dppCheckCompleteEvent(url) : null;
@@ -3545,10 +3599,16 @@ async function handleAuthichainCom(request: Request, env: Env) {
     // (confirm page) never call Stripe; only the confirm form's POST does.
     const dppClick = await dppCheckoutClickEvent(request);
     if (dppClick) console.log(JSON.stringify(dppClick));
-    const gated = await tryHandleGatedCheckout(request, env);
+    const gated = await tryHandleGatedCheckout(request, env, {
+      onEvent: (event) => deliverCheckoutGateEvent(env, ctx, event),
+      onSessionStarted: (info) =>
+        deliverDppCheckoutStarted(env, ctx, info),
+    });
     if (gated) return gated;
     const dppPage = tryHandleDppRoute(request);
     if (dppPage) return dppPage;
+    const agentPage = await tryHandleAgentPresentation(request);
+    if (agentPage) return agentPage;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
     // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the
@@ -3560,10 +3620,16 @@ async function handleAuthichainCom(request: Request, env: Env) {
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
     const x402 = await tryHandleX402(request, env, env.VERIFY_APP);
     if (x402) return x402;
+    // /mcp/free: free-only sibling for the marketplace plugin (Advisor ruling B).
+    const mcpFree = await tryHandleMcpFree(request, env);
+    if (mcpFree) return mcpFree;
     const mcp = await tryHandleMcp(request, env, env.VERIFY_APP);
     if (mcp) return mcp;
     const apiV1 = await tryHandleApiV1(request, env);
     if (apiV1) return apiV1;
+    if (p === '/api/sales') {
+      return handleSalesInquiry(request, env);
+    }
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
@@ -3623,6 +3689,23 @@ async function handleAuthichainCom(request: Request, env: Env) {
         },
       });
     }
+    // /verify/live is a reserved founder page, not a certificate id. The edge
+    // router would look up the id "live" and 404. A real id still proxies.
+    if (isVerifyLivePath(p) && !url.searchParams.get("id")) {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response("method not allowed", {
+          status: 405,
+          headers: { Allow: "GET, HEAD", "Cache-Control": "no-store" },
+        });
+      }
+      return new Response(renderVerifyLivePage(), {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, max-age=300",
+        },
+      });
+    }
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
       return proxyAppWorker(request, env);
     }
@@ -3635,7 +3718,14 @@ async function handleAuthichainCom(request: Request, env: Env) {
 }
 
 export default {
-  async fetch(request: Request, env: Env) {
-    return withHtmlEgress(request, await handleAuthichainCom(request, env));
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx?: { waitUntil?: (promise: Promise<unknown>) => void }
+  ) {
+    return withHtmlEgress(
+      request,
+      await handleAuthichainCom(request, env, ctx)
+    );
   },
 };

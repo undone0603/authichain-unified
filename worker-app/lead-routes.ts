@@ -331,7 +331,7 @@ async function handleBook(c: LeadContext) {
     if (!admin) return c.json({ error: "Supabase not configured" }, 503);
 
     const now = new Date().toISOString();
-    await admin.from("leads").upsert(
+    const { error } = await admin.from("leads").upsert(
       {
         email,
         name,
@@ -350,6 +350,18 @@ async function handleBook(c: LeadContext) {
       },
       { onConflict: "email" }
     );
+    if (error) {
+      console.error("[api/book] DB error:", error.message);
+      await logAutomation(
+        c,
+        "book.db_upsert",
+        "failure",
+        { email, source: prospectId ? "b2b_outreach_reply" : "book_page" },
+        error.message
+      );
+      // A stored row is the only success. HubSpot and mail must not run.
+      return c.json({ error: "Could not store the request" }, 500);
+    }
 
     const token = hubspotToken(c);
     if (token) {
@@ -399,6 +411,9 @@ type CapturedLead = {
   message?: string;
 };
 
+/** Lead source from /is-this-real; must not trigger outbound webhooks. */
+export const NO_OUTBOUND_SOURCE = "is-this-real";
+
 async function runLeadAutomation(c: LeadContext, lead: CapturedLead) {
   try {
     const apollo = envValue(c, "APOLLO_API_KEY");
@@ -410,7 +425,10 @@ async function runLeadAutomation(c: LeadContext, lead: CapturedLead) {
     };
     const finalLead = { ...lead, ...scored };
 
-    const make = envValue(c, "MAKE_LEAD_WEBHOOK_URL");
+    // /is-this-real promises no automated email: skip the Make/n8n hops
+    // (either can send mail). Supabase row + HubSpot contact only.
+    const quiet = lead.source === NO_OUTBOUND_SOURCE;
+    const make = quiet ? undefined : envValue(c, "MAKE_LEAD_WEBHOOK_URL");
     if (make) {
       await fetch(make, {
         method: "POST",
@@ -422,7 +440,7 @@ async function runLeadAutomation(c: LeadContext, lead: CapturedLead) {
       });
     }
 
-    const n8n = envValue(c, "N8N_LEAD_WEBHOOK_URL");
+    const n8n = quiet ? undefined : envValue(c, "N8N_LEAD_WEBHOOK_URL");
     if (n8n) {
       await fetch(n8n, {
         method: "POST",
@@ -558,6 +576,9 @@ async function handleLeadCapture(c: LeadContext) {
       { email, source: lead.source },
       errorMessage(err)
     );
+    // A stored row is the only success. Automation must not run, and the
+    // form must not tell the visitor the request was saved.
+    return c.json({ error: "Could not store the request" }, 500);
   }
 
   await background(c, runLeadAutomation(c, lead));

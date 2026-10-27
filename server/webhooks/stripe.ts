@@ -38,6 +38,10 @@ import {
   planById,
   planByStripePriceId,
 } from "../../src/lib/plans";
+import {
+  isRetryableFulfillment,
+  markRetryableFulfillment,
+} from "../../src/lib/retryable-fulfillment";
 import { accrueAffiliateCommission } from "../../src/lib/affiliate-accrual";
 import {
   claimStripeEvent,
@@ -168,7 +172,21 @@ async function fulfillCatalogCreditsIfPaid(
   const recurring = isRecurringCheckoutSession(session);
   let catalog = planByStripePriceId(linePriceId)?.id;
   if (!catalog && !recurring) {
-    catalog = planByAmountCents(session.amount_total ?? undefined)?.id;
+    // #1890 parity: the amount-only fallback may grant Starter only for a
+    // paid, livemode, USD, undiscounted $29.00 session. Nothing else is
+    // resolved from the amount.
+    const { starterAmountFallbackRefusals, STARTER_FALLBACK_AMOUNT_CENTS } =
+      await import("../../src/lib/billing/live-catalog");
+    const refusals = starterAmountFallbackRefusals(session, session.livemode);
+    if (refusals.length === 0) {
+      const byAmount = planByAmountCents(STARTER_FALLBACK_AMOUNT_CENTS);
+      if (byAmount?.id === "starter") catalog = byAmount.id;
+    } else if (!metaPlan) {
+      console.warn("[stripe-webhook] starter amount fallback refused", {
+        sessionId: session.id,
+        reasons: refusals,
+      });
+    }
   }
   if (
     !catalog &&
@@ -242,6 +260,7 @@ async function fulfillCatalogCreditsIfPaid(
       typeof session.customer === "string" ? session.customer : null,
     stripeSubscriptionId:
       typeof session.subscription === "string" ? session.subscription : null,
+    sessionId: session.id,
   });
   if (prov.status === "upsert_failed") {
     throw new Error(
@@ -659,10 +678,10 @@ export async function handleStripeWebhook(
         handled: true,
       };
     } catch (dppErr) {
-      const msg = dppErr instanceof Error ? dppErr.message : String(dppErr);
+      const retryable = markRetryableFulfillment(dppErr);
       console.error("[stripe-webhook] DPP fulfill failed", dppErr);
-      await logDelivery("error", { httpStatus: 400, error: msg });
-      throw dppErr;
+      await logDelivery("error", { httpStatus: 500, error: retryable.message });
+      throw retryable;
     }
   }
 
@@ -1028,7 +1047,7 @@ export async function handleStripeWebhook(
           }
         } catch (dppErr) {
           console.error("[stripe-webhook] checkout fulfill failed", dppErr);
-          throw dppErr;
+          throw markRetryableFulfillment(dppErr);
         }
 
         await optionalDb(
@@ -1165,7 +1184,8 @@ export async function handleStripeWebhook(
     return { received: true, type: event.type, handled };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await logDelivery("error", { httpStatus: 400, error: msg });
+    const httpStatus = isRetryableFulfillment(err) ? 500 : 400;
+    await logDelivery("error", { httpStatus, error: msg });
     throw err;
   }
 }

@@ -36,6 +36,7 @@ export type FunnelSource = (typeof FUNNEL_SOURCES)[number];
 /** DPP loop stages the edge funnel hook accepts without a new mount. */
 export const DPP_FUNNEL_STAGE_ALIASES = {
   attributed_visit: "visit_landing_page",
+  checkout_started: "start_checkout",
   dpp_published: "subscribe",
   verification: "subscribe",
   retained: "subscribe",

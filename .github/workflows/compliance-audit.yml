@@ -5,10 +5,25 @@ on:
     branches:
       - main
   pull_request:
+    # GB-26 fix 3: skip PRs that touch ONLY these paths. Kept narrow on
+    # purpose: docs/** is NOT ignored because product code renders and
+    # validates it (workers/authichain-com docs pages, identity validators,
+    # src/lib/authentic-economy.ts). Pushes to main are never filtered.
+    paths-ignore:
+      - "*.md"
+      - "**/CHANGELOG.md"
+      - "docs/archive/**"
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# GB-26 fix 4: a newer commit on the same PR cancels the older run. Pushes to
+# main, schedules and dispatches get one group per commit and are never
+# cancelled (PM-328).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   compliance-audit:
@@ -21,7 +36,8 @@ jobs:
     # available in a job-level `if`, so the availability check runs as the
     # first step and the audit step is guarded with an env-based condition.
     env:
-      HAS_SUPABASE_SECRETS: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+      # CFA-215: false on pull_request so PR code never receives these secrets.
+      HAS_SUPABASE_SECRETS: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
 
     steps:
       - name: Checkout repository
@@ -48,6 +64,6 @@ jobs:
       - name: Run Compliance Audit
         if: env.HAS_SUPABASE_SECRETS == 'true'
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_URL || '' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
         run: python -m agentz.workflows.runner --handler authichain_compliance_audit

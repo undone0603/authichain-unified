@@ -43,13 +43,15 @@ function esc(value: unknown): string {
   return String(value ?? "").replace(
     /[&<>"']/g,
     c =>
-      (({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      }) as Record<string, string>)[c] as string
+      (
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        }) as Record<string, string>
+      )[c] as string
   );
 }
 
@@ -121,7 +123,7 @@ function activateHtml(sessionId: string, visitId: string): string {
     "Activate workspace | AuthiChain",
     `<p class="kicker">Self-serve activation</p>
      <h1>Activate your workspace</h1>
-     <p>Complete this once. This records merchant activation for this workspace. It includes 50 workspace generations. It does not include a written assessment or a scheduled call.</p>
+     <p>Complete this once. This records merchant activation for this workspace. It includes 50 workspace generations. It does not include a written assessment or a scheduled call. After it saves, you can download a field file of what you typed and what is still missing. That file is not a battery passport, not a certificate, and not EU registry filing.</p>
      <form id="f">
        <label>Product categories / SKU families in scope
          <textarea name="categories" rows="3" required></textarea></label>
@@ -129,6 +131,11 @@ function activateHtml(sessionId: string, visitId: string): string {
          <textarea name="markets" rows="2" required></textarea></label>
        <label>Current labeling / QR / NFC setup (or "none")
          <textarea name="labeling" rows="2" required></textarea></label>
+       <p style="margin:1rem 0 0.5rem;color:#94a3b8;font-size:0.9rem">Optional pack figures (same as the free /battery-passport gap map). Leave blank if unknown.</p>
+       <label>Pack model <input name="pack_model" type="text" /></label>
+       <label>Stated energy (Wh) <input name="stated_wh" type="number" step="any" min="0" /></label>
+       <label>Rated capacity (Ah) <input name="ah" type="number" step="any" min="0" /></label>
+       <label>Nominal voltage (V) <input name="nominal_v" type="number" step="any" min="0" /></label>
        <button class="btn" type="submit">Activate workspace</button>
        <p id="msg" style="margin-top:1rem"></p>
      </form>
@@ -147,12 +154,26 @@ function activateHtml(sessionId: string, visitId: string): string {
                visit_id: ${JSON.stringify(visitId)},
                categories: fd.get('categories'),
                markets: fd.get('markets'),
-               labeling: fd.get('labeling')
+               labeling: fd.get('labeling'),
+               pack_model: fd.get('pack_model') || undefined,
+               stated_wh: fd.get('stated_wh') || undefined,
+               ah: fd.get('ah') || undefined,
+               nominal_v: fd.get('nominal_v') || undefined
              })
            });
            var data = await res.json().catch(function () { return {}; });
            if (!res.ok) throw new Error(data.error || data.detail || ('HTTP ' + res.status));
            msg.textContent = 'Activated. This workspace includes 50 workspace generations.';
+           if (data.importer_file) {
+             var blob = new Blob([JSON.stringify(data.importer_file, null, 2)], { type: 'application/json' });
+             var url = URL.createObjectURL(blob);
+             var a = document.createElement('a');
+             a.href = url;
+             a.download = 'authichain-dpp-importer-file.json';
+             a.textContent = 'Download field file (JSON)';
+             msg.appendChild(document.createElement('br'));
+             msg.appendChild(a);
+           }
          } catch (err) {
            msg.textContent = err.message || 'Activation failed';
          }

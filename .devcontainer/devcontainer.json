@@ -1,0 +1,68 @@
+{
+  "name": "authichain-unified (condensed)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": false,
+      "installOhMyZsh": false,
+      "upgradePackages": false
+    }
+  },
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+  "forwardPorts": [3000, 8787],
+  "portsAttributes": {
+    "3000": { "label": "Next / Vite", "onAutoForward": "notify" },
+    "8787": { "label": "Wrangler", "onAutoForward": "silent" }
+  },
+  "containerEnv": {
+    "AUTHICHAIN_CODESPACE_SCOPE": "core",
+    "HUSKY": "0",
+    "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "1",
+    "PUPPETEER_SKIP_DOWNLOAD": "1",
+    "CI": "true"
+  },
+  "updateContentCommand": "bash .devcontainer/setup.sh",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postAttachCommand": "bash .devcontainer/post-attach.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss"
+      ],
+      "settings": {
+        "files.watcherExclude": {
+          "**/node_modules/**": true,
+          "**/.git/objects/**": true,
+          "**/.turbo/**": true,
+          "**/dist/**": true,
+          "**/.next/**": true,
+          "**/coverage/**": true,
+          "**/playwright-report/**": true,
+          "**/test-results/**": true
+        },
+        "search.exclude": {
+          "**/node_modules": true,
+          "**/.turbo": true,
+          "**/dist": true,
+          "**/.next": true,
+          "**/pnpm-lock.yaml": true
+        },
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    },
+    "codespaces": {
+      "openFiles": [
+        ".devcontainer/CONDENSING.md",
+        "README.md"
+      ]
+    }
+  },
+  "remoteUser": "node"
+}

@@ -506,6 +506,8 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         mode: "payment",
         payment_status: "paid",
         amount_total: 2900,
+        currency: "usd",
+        livemode: true,
         customer: "cus_pack",
         customer_details: { email: "buyer@example.com" },
         metadata: { brand: "authichain" },
@@ -519,6 +521,7 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
       expect.objectContaining({
         plan: "starter",
         email: "buyer@example.com",
+        sessionId: "cs_starter_pack",
       })
     );
     expect(growthRecordRpc).toHaveBeenCalledWith(
@@ -739,7 +742,7 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         eventId: "evt_dpp_fail",
         sessionId: "cs_live_a1y4Tu_fail",
         status: "error",
-        httpStatus: 400,
+        httpStatus: 500,
         error: "supabase down",
       })
     );
@@ -1342,5 +1345,59 @@ describe("handleStripeWebhook — stripe_events claim fails closed (PM-338)", ()
     await expect(handleStripeWebhook(RAW_BODY, SIG)).resolves.toMatchObject({
       received: true,
     });
+  });
+});
+
+describe("handleStripeWebhook — Starter amount fallback gate (#1890 parity, edge-router)", () => {
+  const base = {
+    mode: "payment",
+    payment_status: "paid",
+    amount_total: 2900,
+    amount_subtotal: 2900,
+    currency: "usd",
+    livemode: true,
+    total_details: { amount_discount: 0 },
+    customer: "cus_gate",
+    customer_details: { email: "gate@example.com" },
+    metadata: {},
+  };
+  const run = async (id: string, over: Record<string, unknown>) => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", `evt_${id}`, {
+        ...base,
+        id: `cs_${id}`,
+        ...over,
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    return handleStripeWebhook(RAW_BODY, SIG);
+  };
+  const starterCalls = () =>
+    provisionPurchase.mock.calls.filter(
+      c => (c[1] as { plan?: string })?.plan === "starter"
+    );
+
+  it("paid + livemode + USD + $29 undiscounted grants Starter by amount", async () => {
+    await run("gate_ok", {});
+    expect(starterCalls().length).toBe(1);
+  });
+
+  it.each([
+    ["not livemode", { livemode: false }],
+    ["unpaid", { payment_status: "unpaid" }],
+    ["non-USD", { currency: "eur" }],
+    ["wrong amount", { amount_total: 2800, amount_subtotal: 2800 }],
+    [
+      "discounted to $29",
+      { amount_subtotal: 4900, total_details: { amount_discount: 2000 } },
+    ],
+  ])("%s grants nothing from the amount", async (_l, over) => {
+    await run(`gate_${String(_l).replace(/\W+/g, "_")}`, over);
+    expect(starterCalls().length).toBe(0);
+  });
+
+  it("explicit metadata.plan=starter still grants in test mode", async () => {
+    await run("gate_meta", { livemode: false, metadata: { plan: "starter" } });
+    expect(starterCalls().length).toBe(1);
   });
 });

@@ -15,6 +15,10 @@ import {
 } from "@/lib/ledger-service";
 import { constructStripeEventAsync } from "@/lib/stripe-construct-event";
 import { accrueAffiliateCommission } from "../../../../lib/affiliate-accrual";
+import {
+  resolveCheckoutPlanId,
+  starterAmountFallbackRefusals,
+} from "../../../../lib/billing/live-catalog";
 
 // Never anchor test-mode objects from a production deployment.
 function isAnchorable(event: Stripe.Event): boolean {
@@ -264,8 +268,23 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
-      case "checkout.session.completed": {
+      case "checkout.session.completed":
+      case "checkout.session.async_payment_succeeded": {
         const session = event.data.object;
+        // Delayed methods emit completed while payment_status is still unpaid.
+        // Granting there would provision Launch before the money arrives.
+        // async_payment_succeeded is the paid event for those methods.
+        // A missing status still grants. A trial is no_payment_required.
+        if (session.payment_status === "unpaid") {
+          console.log(
+            JSON.stringify({
+              evt: "stripe_grant_held_unpaid",
+              session: session.id,
+              type: event.type,
+            })
+          );
+          break;
+        }
         const md = session.metadata || {};
         const userId = md.user_id;
         const plan = md.plan;
@@ -298,16 +317,60 @@ export async function POST(req: NextRequest) {
         // Hands-off provisioning for BOTH authenticated and guest checkouts.
         // Guests get a profile created/resolved by email so the purchase is
         // never lost.
+        // Amount-only Starter fallback: paid + livemode + USD + exactly
+        // $29.00 undiscounted. Anything else grants nothing from the amount.
+        const fallbackRefusals = starterAmountFallbackRefusals(
+          session,
+          event.livemode
+        );
+        const resolvedPlan = resolveCheckoutPlanId({
+          plan,
+          priceId: linePriceId,
+          amountTotal: session.amount_total,
+          allowAmountFallback: fallbackRefusals.length === 0,
+        });
+        if (!resolvedPlan && fallbackRefusals.length > 0) {
+          console.warn("[webhook] starter amount fallback refused", {
+            sessionId: session.id,
+            eventId: event.id,
+            reasons: fallbackRefusals,
+          });
+        }
         const prov = await provisionPurchase(getSupabase(), {
           email,
           userId,
-          plan: plan || (dppOffer ? "dpp_readiness" : plan),
+          plan: resolvedPlan ?? undefined,
           brand,
           stripeCustomerId: customerId,
           stripeSubscriptionId: subscriptionId,
           isTrial,
           generationsGrant,
+          sessionId: session.id,
         });
+
+        if (prov.status === "upsert_failed") {
+          throw new Error(
+            `Provision failed: ${prov.error || "profiles upsert failed"}`
+          );
+        }
+
+        if (
+          resolvedPlan === "qron_launch_annual" &&
+          prov.status === "provisioned" &&
+          !prov.skippedIdempotent
+        ) {
+          console.log(
+            JSON.stringify({
+              evt: "checkout_paid_qron_annual",
+              plan_id: "qron_launch_annual",
+              session_id: session.id,
+              amount_usd: 190,
+              generations: 1200,
+              brand,
+              ts: Date.now(),
+            })
+          );
+        }
 
         if (prov.profileId) {
           await getSupabase()
@@ -330,8 +393,8 @@ export async function POST(req: NextRequest) {
             });
           }
 
-          // Brand-aware welcome email (replaces the cross-call to /api/email).
-          if (email) {
+          // A replay of the same checkout session already sent access.
+          if (email && !prov.skippedIdempotent) {
             const mail = dppOffer
               ? renderBillingEmail("dpp_audit_provisioned", brand, {
                   planName: "EU DPP Workspace",
@@ -398,7 +461,9 @@ export async function POST(req: NextRequest) {
             eventId: event.id,
           });
           if (!accrual.credited) {
-            throw new Error(`Affiliate commission not recorded: ${accrual.reason}`);
+            throw new Error(
+              `Affiliate commission not recorded: ${accrual.reason}`
+            );
           }
         }
 
@@ -480,7 +545,9 @@ export async function POST(req: NextRequest) {
               eventId: event.id,
             });
             if (!accrual.credited) {
-              throw new Error(`Affiliate commission not recorded: ${accrual.reason}`);
+              throw new Error(
+                `Affiliate commission not recorded: ${accrual.reason}`
+              );
             }
           }
         }

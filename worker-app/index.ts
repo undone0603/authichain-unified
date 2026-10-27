@@ -10,7 +10,7 @@ import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 import { getSessionCookieOptions } from "../server/_core/cookies";
 import { products, certificates } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
-import { checkRateLimit } from "./rate-limiter";
+import { checkRateLimit, refundRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
 import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
@@ -30,6 +30,7 @@ import {
   CHECKOUT_REDIRECT_HEADERS,
   checkoutRedirectResponse,
 } from "../src/lib/checkout-email";
+import { isRetryableFulfillment } from "../src/lib/retryable-fulfillment";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
@@ -73,7 +74,9 @@ type Env = {
 };
 
 function generateServiceKey(env?: Env): string | undefined {
-  return env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return (
+    env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
 }
 
 function hydrateProcessEnv(env?: Env) {
@@ -235,6 +238,9 @@ function isAppHostname(host: string): boolean {
   return h.startsWith("app.");
 }
 
+// Paths the app host links to but only the apex serves; see the catch-all.
+const APEX_ONLY_PATHS = new Set(["/pricing", "/protocol", "/api/verify"]);
+
 // ─── DPP $299 + catalogue plan checkout (GET = click-to-confirm) ────────────
 // A GET never opens a Stripe session: link scanners, email security gateways
 // and chat previews were creating ~28 unpaid sessions/day. Every GET 303s to
@@ -251,9 +257,8 @@ app.get("/api/checkout/dpp", async c => {
   }
   const search = new URL(c.req.url).searchParams;
   const { gatedConfirmUrl } = await import("../src/lib/checkout-gate");
-  const { dppSmokeRequestAuthorized, isDppSmokePromo } = await import(
-    "../src/lib/dpp-loop"
-  );
+  const { dppSmokeRequestAuthorized, isDppSmokePromo } =
+    await import("../src/lib/dpp-loop");
   const smokeAuthorized =
     isDppSmokePromo(search.get("promo")) &&
     dppSmokeRequestAuthorized(
@@ -334,7 +339,8 @@ app.get("/api/checkout", c => {
     methods: ["POST"],
     smoke:
       "GET /api/checkout/dpp?promo=DPP-SMOKE-E2E requires x-dpp-smoke-secret",
-    confirm: "GET https://authichain.com/checkout/<plan> (POST form creates the session)",
+    confirm:
+      "GET https://authichain.com/checkout/<plan> (POST form creates the session)",
     webhook: "POST /api/stripe/webhook",
     thanks: "/dpp/thanks",
     activate: "/dpp/activate",
@@ -342,7 +348,8 @@ app.get("/api/checkout", c => {
 });
 
 app.post("/api/checkout", async c => {
-  const { isAutomatedCheckoutRequest } = await import("../src/lib/checkout-gate");
+  const { isAutomatedCheckoutRequest } =
+    await import("../src/lib/checkout-gate");
   if (isAutomatedCheckoutRequest(c.req.raw)) {
     c.header("Cache-Control", "private, no-store");
     return c.json({ error: "automated_request_blocked" }, 403);
@@ -434,6 +441,10 @@ app.post("/api/generate", async c => {
       supabaseUrl,
       supabaseKey,
     });
+    const { bindQronGenerateAttestation } =
+      await import("./qron-generate-bind");
+    const { qronPresentationKvKey } = await import("../src/lib/qron-resolve");
+    const sessions = c.env?.SESSIONS;
     const result = await handleGeneratePost({
       body,
       userId,
@@ -446,15 +457,50 @@ app.post("/api/generate", async c => {
           style: args.style,
           workerUrl: c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL,
         }),
+      bindAttestation: args => bindQronGenerateAttestation(c.env, args),
+      claimFreeSample: async () => {
+        // Fail closed: no limiter binding or no client IP = no free sample.
+        const ns = c.env?.RATE_LIMITER;
+        const ip = c.req.header("cf-connecting-ip");
+        if (!ns || !ip) return { ok: false, reason: "paused" as const };
+        const {
+          FREE_SAMPLE_GENERATIONS,
+          FREE_SAMPLE_WINDOW_MS,
+          FREE_SAMPLE_GLOBAL_DAILY_CAP,
+        } = await import("../src/lib/generate-api");
+        const { claimFreeSampleSlot } = await import("../src/lib/generate-api");
+        const ipKey = `free-sample:${ip}`;
+        return claimFreeSampleSlot({
+          claimIp: () =>
+            checkRateLimit(
+              ns,
+              ipKey,
+              FREE_SAMPLE_GENERATIONS,
+              FREE_SAMPLE_WINDOW_MS
+            ),
+          claimDaily: () =>
+            checkRateLimit(
+              ns,
+              "free-sample:global",
+              FREE_SAMPLE_GLOBAL_DAILY_CAP,
+              24 * 60 * 60_000
+            ),
+          refundIp: () => refundRateLimit(ns, ipKey),
+        });
+      },
+      rememberPresentation: async record => {
+        if (!sessions) return;
+        await sessions.put(
+          qronPresentationKvKey(record.object_id),
+          JSON.stringify(record)
+        );
+      },
     });
-    // LOOP-03: a 401 here is a stranger who filled the form and was walled by
-    // the auth requirement. /generate promises "Five generations are free", so
-    // this count measures the size of that broken promise, not noise.
-    //
-    // free_gen_granted / free_gen_exhausted are deliberately NOT emitted here.
-    // They describe the 5-free ANONYMOUS tier, which does not exist yet; a 200
-    // is an authenticated paid generation and a 403 is paid credits exhausted.
-    // Labelling either as "free" would corrupt the funnel the kill criteria read.
+    // LOOP-03: a 401 here is a stranger whose free sample is used up (or the
+    // limiter was unavailable), sent on to the Starter checkout.
+    if (result.status === 200 && (result.body as any).free_sample) {
+      reportGrowthEvent(c, { event: "free_gen_granted", sku: "starter" });
+    }
     if (result.status === 401) {
       reportGrowthEvent(c, { event: "generate_submit_anon", sku: "starter" });
     }
@@ -464,6 +510,107 @@ app.post("/api/generate", async c => {
     console.error("[generate] Error:", err?.message || err);
     return c.json({ message: "Generation failed", detail: err?.message }, 500);
   }
+});
+
+// Living QR scan target. The image encodes https://authichain.com/qron/r/{object_id}.
+// GET loads the stored JWS and returns AuthiChain Verification Decision v1.
+app.all("/qron/r/*", async c => {
+  const {
+    handleQronResolve,
+    qronPresentationKvKey,
+    QronPresentationMalformed,
+    QronStoreUnavailable,
+  } = await import("../src/lib/qron-resolve");
+  const kv = c.env?.SESSIONS;
+  const response = await handleQronResolve(c.req.raw, {
+    // Same-worker HTTP to the public verify URL fails across zones
+    // (authichain.govchain.us → authichain.com) with verify_unreachable.
+    // Dispatch the route in-process instead.
+    verify: async (jws, objectId) => {
+      const url = new URL(c.req.url);
+      url.pathname = "/api/v1/attestation/verify";
+      url.search = "";
+      const res = await app.fetch(
+        new Request(url.toString(), {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json",
+          },
+          body: JSON.stringify({
+            jws,
+            expected_object_id: objectId,
+          }),
+        }),
+        c.env,
+      );
+      const parsed = await res.json().catch(() => null);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return {
+          status: 502,
+          body: {
+            valid: false,
+            decision: "indeterminate",
+            decision_contract: "AuthiChain Verification Decision v1",
+            error: "verify_unreachable",
+          },
+        };
+      }
+      return {
+        status: res.status,
+        body: parsed as Record<string, unknown>,
+      };
+    },
+    load: async objectId => {
+      if (!kv) throw new QronStoreUnavailable();
+      const raw = await kv.get(qronPresentationKvKey(objectId));
+      if (!raw) return null;
+      let parsed: {
+        object_id?: string;
+        destination_url?: string;
+        resolve_url?: string;
+        jws?: string;
+        kid?: string;
+        jwks_url?: string;
+      };
+      try {
+        parsed = JSON.parse(raw) as typeof parsed;
+      } catch {
+        throw new QronPresentationMalformed();
+      }
+      if (
+        parsed.object_id !== objectId ||
+        typeof parsed.destination_url !== "string" ||
+        typeof parsed.resolve_url !== "string" ||
+        typeof parsed.jws !== "string" ||
+        !parsed.jws ||
+        typeof parsed.kid !== "string" ||
+        typeof parsed.jwks_url !== "string"
+      ) {
+        throw new QronPresentationMalformed();
+      }
+      return {
+        object_id: parsed.object_id,
+        destination_url: parsed.destination_url,
+        resolve_url: parsed.resolve_url,
+        jws: parsed.jws,
+        kid: parsed.kid,
+        jwks_url: parsed.jwks_url,
+      };
+    },
+  });
+  if (!response) {
+    return c.json(
+      {
+        valid: false,
+        decision: "indeterminate",
+        decision_contract: "AuthiChain Verification Decision v1",
+        error: "presentation_not_found",
+      },
+      404
+    );
+  }
+  return response;
 });
 
 // ─── Funnel events (DPP attributed_visit + outreach) ────────────────────────
@@ -554,8 +701,12 @@ async function stripeWebhookPost(c: {
     return c.json(result);
   } catch (err: any) {
     console.error(`[Stripe Webhook] Error: ${err.message}`);
-    // PM-338: duplicate guard unavailable -> 500 so Stripe retries.
-    if (err?.name === "StripeEventClaimUnavailableError") {
+    // PM-338: a down duplicate guard, or a paid fulfillment failure, must be
+    // 500 so Stripe retries. A bad signature stays 400.
+    if (
+      err?.name === "StripeEventClaimUnavailableError" ||
+      isRetryableFulfillment(err)
+    ) {
       return c.json({ error: "Temporarily unavailable; retry" }, 500);
     }
     return c.json({ error: err.message }, 400);
@@ -1825,6 +1976,12 @@ app.get("*", async c => {
     c.req.header("x-forwarded-host") ?? c.req.header("host") ?? "";
   if ((rawPathname === "/" || rawPathname === "") && isAppHostname(appHost)) {
     return c.redirect("/dashboard", 302);
+  }
+  // The dashboard SPA links to these with relative hrefs, but they are only
+  // served on the apex (authichain-com worker), so on app.* they 404'd.
+  if (isAppHostname(appHost) && APEX_ONLY_PATHS.has(rawPathname)) {
+    const { search } = new URL(c.req.url);
+    return c.redirect(`https://authichain.com${rawPathname}${search}`, 301);
   }
   // Normalize a trailing slash (except root "/") so /about/ resolves the same
   // as /about; otherwise the exact-match marketing lookup misses and the page

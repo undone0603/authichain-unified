@@ -30,7 +30,7 @@ permissions:
 jobs:
   secret-scan:
     name: Secret scan
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -39,7 +39,7 @@ jobs:
         run: |
           # Tree scan only. Removed keys in old commits were failing a
           # history scan and skipping every deploy.
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz -o gitleaks.tgz
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_arm64.tar.gz -o gitleaks.tgz
           tar --no-same-owner -xzf gitleaks.tgz gitleaks
           ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
 
@@ -58,15 +58,16 @@ jobs:
   # (gs1-resolver's is workers/gs1-resolver/src/conformance.test.ts,
   # mirroring GS1's hosted suite) -- not just CI type/lint, which every
   # worker already has. `deploy` below consumes whatever this outputs
-  # unchanged: a full list (CLOUDFLARE_DEPLOY_ENABLED or workflow_dispatch),
-  # a narrowed one-or-few-worker list (auto-deploy), or an empty one (a
-  # plain push touching no allow-listed worker, or nothing to narrow) --
+  # unchanged: a full list (CLOUDFLARE_DEPLOY_ENABLED, or blank
+  # workflow_dispatch), a single-worker list (workflow_dispatch with
+  # inputs.worker set), a narrowed one-or-few-worker list (auto-deploy),
+  # or an empty one (a plain push touching no allow-listed worker) --
   # so no per-step gating anywhere below this job needs to change, and no
   # *other* worker's bind step can ever run on the auto-deploy path, because
   # no other worker is ever in that path's matrix.
   deploy-matrix:
     name: Build worker matrix
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     timeout-minutes: 5
     outputs:
@@ -82,6 +83,7 @@ jobs:
           DEPLOY_AGENTZ: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_agentz_containers == 'true' }}
           CLOUDFLARE_DEPLOY_ENABLED: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED }}
           EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_WORKER: ${{ github.event.inputs.worker }}
           PUSH_BEFORE: ${{ github.event.before }}
           PUSH_SHA: ${{ github.sha }}
         run: |
@@ -140,6 +142,22 @@ jobs:
           fi
 
           if [ "${CLOUDFLARE_DEPLOY_ENABLED}" = "true" ] || [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            # workflow_dispatch with a specific worker must not expand the
+            # full ~40-job matrix (install + checkout per skipped row).
+            # Validate against the known list, then emit a one-element matrix.
+            target="${DISPATCH_WORKER:-}"
+            target="${target#"${target%%[![:space:]]*}"}"
+            target="${target%"${target##*[![:space:]]}"}"
+            if [ -n "${target}" ]; then
+              if ! echo "${workers}" | jq -e --arg t "${target}" 'index($t) != null' >/dev/null; then
+                echo "::error::Unknown worker '${target}'. Pass a directory under workers/ from the deploy matrix (or leave blank for all)."
+                exit 1
+              fi
+              workers=$(jq -nc --arg t "${target}" '[$t]')
+              echo "workers=${workers}" >> "${GITHUB_OUTPUT}"
+              echo "deploy matrix (workflow_dispatch single worker): ${workers}"
+              exit 0
+            fi
             echo "workers=${workers}" >> "${GITHUB_OUTPUT}"
             if [ "${DEPLOY_AGENTZ}" = "true" ]; then
               echo "deploy matrix (agentz opt-in): ${workers}"
@@ -165,7 +183,7 @@ jobs:
           echo "deploy matrix (auto-deploy, narrowed to changed allow-listed workers): ${eligible}"
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
     timeout-minutes: 45
     needs: [secret-scan, deploy-matrix]
     # GitHub fails the whole workflow when `strategy.matrix` expands to an
@@ -189,9 +207,12 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: "pnpm"
+          # Skip the Actions cache on authichain-ops. The hosted agentz job
+          # still caches. A self-hosted save packs ~1 GB and can fail the job
+          # after the worker is already published.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile
 
       # Cloudflare Containers (wrangler.jsonc "containers") need a Docker
       # builder on the runner. Without Buildx, authichain-agentz fails mid-deploy
@@ -424,7 +445,7 @@ jobs:
     name: Post-deploy smoke (blocking)
     needs: [deploy]
     if: ${{ needs.deploy.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 10
     permissions:
       contents: read

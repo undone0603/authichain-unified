@@ -59,6 +59,14 @@ describe("resolveVerificationDecision", () => {
     });
   });
 
+  it("preserves durable expiry as a lifecycle reason", () => {
+    expect(resolveVerificationDecision({ ...base, claimStatus: "expired" })).toEqual({
+      decision: "expired",
+      valid: false,
+      reasons: ["durable_status_expired"],
+    });
+  });
+
   it.each([
     ["warning", "warning", "decision_warning"],
     ["blocked", "blocked", "decision_blocked"],

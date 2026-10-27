@@ -1,0 +1,20 @@
+366:     .gm-status { font-family:ui-monospace,monospace; font-size:.82rem; white-space:nowrap; }
+367:     .gm-errors { color:#c0392b; }
+368:     ${LEAD_FORM_CSS}
+369:   </style>
+370: </head>
+371: <body>
+372:   ${estateSkipLink()}
+373:   ${estateNav(
+374:     "authichain",
+375:     [
+376:       { href: "/dpp", label: "EU DPP" },
+377:       { href: "/pricing", label: "Pricing" },
+378:       { href: "/contact", label: "Contact" },
+379:     ],
+380:     { href: "#get-started", label: `Get ready — $${price}` }
+381:   )}
+382: <main id="main">
+383:   <header class="estate-hero hero" id="hero">
+384:     <div class="wrap hero-content">
+385:       <p class="estate-badge hero-badge">EU Battery Regulation · Digital Battery Passport</p>

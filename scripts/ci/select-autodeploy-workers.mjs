@@ -12,6 +12,26 @@ import { execFileSync } from "node:child_process";
 // A push deploys the members of this list that the push actually changed.
 // passport-demo, qron-portfolio, and first-dollar-desk stay off: they are
 // archived and not in the matrix.
+/**
+ * workers/_shared is not a deployable worker. These allowlisted workers
+ * import it, so a push that only touches _shared must still redeploy them.
+ */
+export const SHARED_WORKER_DIR = "_shared";
+export const SHARED_DIR_CONSUMERS = [
+  "authichain-com",
+  "qron-space",
+  "strainchain-io",
+  "govchain-us",
+];
+
+export function expandSharedWorkerDirs(
+  changedDirs,
+  consumers = SHARED_DIR_CONSUMERS
+) {
+  if (!changedDirs.includes(SHARED_WORKER_DIR)) return changedDirs;
+  return [...new Set([...changedDirs, ...consumers])];
+}
+
 export const AUTO_DEPLOY_ALLOWLIST = [
   "authichain-api",
   "authichain-api-gateway",
@@ -98,7 +118,7 @@ export function changedWorkerDirsBetween(before, sha) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const before = process.env.PUSH_BEFORE ?? "";
   const sha = process.env.PUSH_SHA ?? "";
-  const changed = changedWorkerDirsBetween(before, sha);
+  const changed = expandSharedWorkerDirs(changedWorkerDirsBetween(before, sha));
   const eligible = selectAutoDeployWorkers(changed, AUTO_DEPLOY_ALLOWLIST);
   console.log(JSON.stringify(eligible));
 }

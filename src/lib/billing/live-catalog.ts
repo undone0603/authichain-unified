@@ -5,10 +5,13 @@
  * First stranger SKU is QRON Starter $29. Do not list $1 or Seal $99.
  *
  * Live Stripe acct_1SXIyEGqTruSqV8T. Price IDs must match src/lib/plans.ts.
+ *
+ * 2026-10-19: added qron_launch_annual to LIVE_PRICE_MAP.
  */
 import {
   PLAN_CREDITS,
   PUBLIC_PLAN_IDS,
+  planByAmountCents,
   planById,
   planByStripePriceId,
   type PlanId,
@@ -16,9 +19,15 @@ import {
 
 export const FIRST_STRANGER_SKU: PlanId = "starter";
 
+/**
+ * Exact founder inboxes, plus "@domain" entries that cover every alias on an
+ * owned domain (same contract as scripts/autonomy/revenue-watch.mjs isFounder
+ * and .github/autonomy.json founder_emails).
+ */
 export const FOUNDER_EMAILS = [
   "undone.k@gmail.com",
   "authichain@gmail.com",
+  "@authichain.com",
 ] as const;
 
 export type PublicPlanId = (typeof PUBLIC_PLAN_IDS)[number];
@@ -38,6 +47,12 @@ export const LIVE_PRICE_MAP: Record<
     productId: "prod_UVdvzB03BvV4CU",
     mode: "subscription",
     grant: 100,
+  },
+  qron_launch_annual: {
+    priceId: "price_1USNoSGqTruSqV8ThTIW7Ej8",
+    productId: "prod_UVdvzB03BvV4CU",
+    mode: "subscription",
+    grant: 1200,
   },
   starter: {
     priceId: "price_1UIoEVGqTruSqV8T61lp48wB",
@@ -92,9 +107,19 @@ export const UNLISTED_SMOKE = {
 const PUBLIC_SET = new Set<string>(PUBLIC_PLAN_IDS);
 const UNLISTED_PRICE_SET = new Set<string>(Object.values(UNLISTED_SMOKE));
 
-export function isFounderEmail(email?: string | null): boolean {
+export function isFounderEmail(
+  email?: string | null,
+  founderEmails: readonly string[] = FOUNDER_EMAILS
+): boolean {
   const e = (email || "").toLowerCase().trim();
-  return (FOUNDER_EMAILS as readonly string[]).includes(e);
+  if (!e) return false;
+  if (founderEmails.some(item => item.trim().toLowerCase() === e)) return true;
+  const at = e.lastIndexOf("@");
+  if (at < 0) return false;
+  const domainEntry = e.slice(at);
+  return founderEmails.some(
+    item => item.trim().toLowerCase() === domainEntry
+  );
 }
 
 export function isPublicPlanId(id: string): id is PublicPlanId {
@@ -121,6 +146,66 @@ export function grantForPriceId(
   if (!plan) return null;
   if (!isPublicPlanId(plan.id) && plan.id !== "strainchain_farm") return null;
   return { planId: plan.id, grant: PLAN_CREDITS[plan.id] };
+}
+
+/** Starter is $29.00 USD; the only amount the fallback may grant. */
+export const STARTER_FALLBACK_AMOUNT_CENTS = 2900;
+
+export type AmountFallbackSession = {
+  payment_status?: string | null;
+  currency?: string | null;
+  amount_total?: number | null;
+  amount_subtotal?: number | null;
+  total_details?: { amount_discount?: number | null } | null;
+};
+
+/**
+ * Why the amount-only Starter fallback is refused for this session, or an
+ * empty list when it is allowed. Requires a paid, live, USD, undiscounted
+ * $29.00 session. Reasons carry no customer data or secrets.
+ */
+export function starterAmountFallbackRefusals(
+  session: AmountFallbackSession,
+  livemode: boolean | null | undefined
+): string[] {
+  const reasons: string[] = [];
+  if (session.payment_status !== "paid") reasons.push("not_paid");
+  if (livemode !== true) reasons.push("not_livemode");
+  if ((session.currency || "").toLowerCase() !== "usd") reasons.push("not_usd");
+  if (session.amount_total !== STARTER_FALLBACK_AMOUNT_CENTS)
+    reasons.push("amount_not_2900");
+  if (
+    session.amount_subtotal != null &&
+    session.amount_subtotal !== STARTER_FALLBACK_AMOUNT_CENTS
+  )
+    reasons.push("subtotal_not_2900");
+  if ((session.total_details?.amount_discount ?? 0) !== 0)
+    reasons.push("discounted");
+  return reasons;
+}
+
+/**
+ * Payment Links omit metadata.plan. Prefer an explicit public plan, then a
+ * known price id. The amount fallback (Starter only) runs only when the caller
+ * passes allowAmountFallback after starterAmountFallbackRefusals() is empty.
+ * Unlisted smoke prices never resolve.
+ */
+export function resolveCheckoutPlanId(input: {
+  plan?: string | null;
+  priceId?: string | null;
+  amountTotal?: number | null;
+  allowAmountFallback?: boolean;
+}): PlanId | null {
+  if (input.plan && isPublicPlanId(input.plan)) return input.plan;
+  if (input.plan === "strainchain_farm") return "strainchain_farm";
+  const granted = grantForPriceId(input.priceId);
+  if (granted) return granted.planId;
+  if (!input.allowAmountFallback) return null;
+  if (input.amountTotal !== STARTER_FALLBACK_AMOUNT_CENTS) return null;
+  const byAmount = planByAmountCents(input.amountTotal);
+  if (byAmount && byAmount.id === "starter" && isPublicPlanId(byAmount.id))
+    return byAmount.id;
+  return null;
 }
 
 export function liveBypassLink(id: PlanId): string | undefined {

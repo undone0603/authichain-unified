@@ -7,6 +7,8 @@ import {
   isFounderEmail,
   isPublicPlanId,
   publicCheckoutHref,
+  resolveCheckoutPlanId,
+  starterAmountFallbackRefusals,
 } from "./live-catalog";
 import { PUBLIC_PLAN_IDS, planByStripePriceId } from "../plans";
 
@@ -22,6 +24,7 @@ describe("catalog freeze 2026-09-28", () => {
     expect([...PUBLIC_PLAN_IDS]).toEqual([
       "free",
       "qron_launch",
+      "qron_launch_annual",
       "starter",
       "creator",
       "dpp_readiness",
@@ -39,6 +42,60 @@ describe("catalog freeze 2026-09-28", () => {
     expect(grantForPriceId(UNLISTED_SMOKE.seal_monthly)).toBeNull();
   });
 
+  it("resolves a $29 Payment Link with no metadata to starter", () => {
+    expect(
+      resolveCheckoutPlanId({
+        plan: null,
+        priceId: null,
+        amountTotal: 2900,
+        allowAmountFallback: true,
+      })
+    ).toBe("starter");
+    // Without the caller's paid/live/usd gate, the amount grants nothing.
+    expect(
+      resolveCheckoutPlanId({ plan: null, priceId: null, amountTotal: 2900 })
+    ).toBeNull();
+    expect(
+      resolveCheckoutPlanId({
+        plan: "",
+        priceId: LIVE_PRICE_MAP.starter.priceId,
+        amountTotal: null,
+      })
+    ).toBe("starter");
+    expect(
+      resolveCheckoutPlanId({
+        plan: "starter",
+        priceId: null,
+        amountTotal: null,
+      })
+    ).toBe("starter");
+  });
+
+  it("does not guess a plan when the amount is shared or unlisted", () => {
+    expect(
+      resolveCheckoutPlanId({ amountTotal: 29900, allowAmountFallback: true })
+    ).toBeNull();
+    expect(
+      resolveCheckoutPlanId({ amountTotal: 9900, allowAmountFallback: true })
+    ).toBeNull();
+    expect(
+      resolveCheckoutPlanId({ amountTotal: 1900, allowAmountFallback: true })
+    ).toBeNull();
+    expect(
+      resolveCheckoutPlanId({ priceId: UNLISTED_SMOKE.first_dollar_human })
+    ).toBeNull();
+    expect(
+      resolveCheckoutPlanId({
+        plan: "studio",
+        amountTotal: 2900,
+        allowAmountFallback: true,
+      })
+    ).toBe("starter");
+    expect(
+      resolveCheckoutPlanId({ plan: "studio", amountTotal: 2900 })
+    ).toBeNull();
+  });
+
   it("grants starter 100 and launch 100", () => {
     expect(grantForPriceId(LIVE_PRICE_MAP.starter.priceId)).toEqual({
       planId: "starter",
@@ -47,6 +104,10 @@ describe("catalog freeze 2026-09-28", () => {
     expect(grantForPriceId(LIVE_PRICE_MAP.qron_launch.priceId)).toEqual({
       planId: "qron_launch",
       grant: 100,
+    });
+    expect(grantForPriceId(LIVE_PRICE_MAP.qron_launch_annual.priceId)).toEqual({
+      planId: "qron_launch_annual",
+      grant: 1200,
     });
   });
 
@@ -66,5 +127,59 @@ describe("catalog freeze 2026-09-28", () => {
     expect(isFounderEmail("undone.k@gmail.com")).toBe(true);
     expect(isFounderEmail("authichain@gmail.com")).toBe(true);
     expect(isFounderEmail("buyer@example.com")).toBe(false);
+  });
+
+  it("treats every alias on an owned @domain founder entry as founder", () => {
+    expect(isFounderEmail("ops@authichain.com")).toBe(true);
+    expect(isFounderEmail("smoke+dpp@authichain.com")).toBe(true);
+    expect(isFounderEmail("a@authichain.com.au")).toBe(false);
+    expect(isFounderEmail("buyer@farm.com")).toBe(false);
+  });
+});
+
+describe("starterAmountFallbackRefusals", () => {
+  const ok = {
+    payment_status: "paid",
+    currency: "usd",
+    amount_total: 2900,
+    amount_subtotal: 2900,
+    total_details: { amount_discount: 0 },
+  };
+  it("allows a paid live USD $29.00 undiscounted session", () => {
+    expect(starterAmountFallbackRefusals(ok, true)).toEqual([]);
+  });
+  it("refuses unpaid, test mode, non-USD, other amounts and discounts", () => {
+    expect(
+      starterAmountFallbackRefusals({ ...ok, payment_status: "unpaid" }, true)
+    ).toContain("not_paid");
+    expect(
+      starterAmountFallbackRefusals(
+        { ...ok, payment_status: "no_payment_required" },
+        true
+      )
+    ).toContain("not_paid");
+    expect(starterAmountFallbackRefusals(ok, false)).toContain("not_livemode");
+    expect(starterAmountFallbackRefusals(ok, undefined)).toContain(
+      "not_livemode"
+    );
+    expect(
+      starterAmountFallbackRefusals({ ...ok, currency: "eur" }, true)
+    ).toContain("not_usd");
+    expect(
+      starterAmountFallbackRefusals(
+        { ...ok, amount_total: 2901, amount_subtotal: 2901 },
+        true
+      )
+    ).toContain("amount_not_2900");
+    expect(
+      starterAmountFallbackRefusals(
+        {
+          ...ok,
+          amount_subtotal: 9900,
+          total_details: { amount_discount: 7000 },
+        },
+        true
+      )
+    ).toEqual(expect.arrayContaining(["subtotal_not_2900", "discounted"]));
   });
 });

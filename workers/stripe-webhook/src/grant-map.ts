@@ -23,6 +23,12 @@ export const GRANT_BY_PRICE: Record<string, Grant> = {
     generations: 100,
     refillOnInvoicePaid: true,
   },
+  price_1USNoSGqTruSqV8ThTIW7Ej8: {
+    plan: "qron_launch_annual",
+    brand: "qron",
+    generations: 1200,
+    refillOnInvoicePaid: true,
+  },
   price_1UIoEVGqTruSqV8T61lp48wB: {
     plan: "starter",
     brand: "qron",
@@ -83,6 +89,21 @@ export function grantForPrice(priceId: string | null | undefined): Grant | null 
   return GRANT_BY_PRICE[priceId] ?? null;
 }
 
+/** Amounts that map to exactly one public price. $299 is shared, so it is absent. */
+const GRANT_BY_UNIQUE_AMOUNT: Record<number, string> = {
+  2900: "price_1UIoEVGqTruSqV8T61lp48wB",
+};
+
+export function grantForCheckout(input: {
+  priceId?: string | null;
+  amountTotal?: number | null;
+}): Grant | null {
+  const byPrice = grantForPrice(input.priceId);
+  if (byPrice) return byPrice;
+  if (input.amountTotal == null) return null;
+  return grantForPrice(GRANT_BY_UNIQUE_AMOUNT[input.amountTotal]);
+}
+
 /**
  * Growth loop identity per plan. Lockstep with src/lib/growth/loops.ts
  * GROWTH_LOOPS — this Worker deliberately duplicates catalogue constants rather
@@ -107,10 +128,44 @@ export function loopForPlan(plan: string | null | undefined): LoopIdentity | nul
   return LOOP_BY_PLAN[plan] ?? null;
 }
 
-/** Lockstep with src/lib/billing/live-catalog.ts FOUNDER_EMAILS. */
-export const FOUNDER_EMAILS = ["undone.k@gmail.com", "authichain@gmail.com"] as const;
+/**
+ * Lockstep with src/lib/billing/live-catalog.ts FOUNDER_EMAILS.
+ * Exact emails plus "@domain" entries (autonomy revenue-watch contract).
+ */
+export const FOUNDER_EMAILS = [
+  "undone.k@gmail.com",
+  "authichain@gmail.com",
+  "@authichain.com",
+] as const;
+
+/** True when this checkout session already wrote the generation grant. */
+export function alreadyGrantedSession(
+  existingSessionId: string | null | undefined,
+  sessionId: string
+): boolean {
+  return Boolean(existingSessionId) && existingSessionId === sessionId;
+}
+
+/**
+ * Same checkout session must not reset generations_used.
+ * A failed lookup is a retry, not a fresh grant.
+ */
+export function grantReplayAction(
+  lookup:
+    | { ok: true; sessionId: string | null | undefined }
+    | { ok: false },
+  sessionId: string
+): "skip" | "grant" | "retry" {
+  if (!lookup.ok) return "retry";
+  if (alreadyGrantedSession(lookup.sessionId, sessionId)) return "skip";
+  return "grant";
+}
 
 export function isFounderEmail(email: string | null | undefined): boolean {
   const e = (email || "").toLowerCase().trim();
-  return (FOUNDER_EMAILS as readonly string[]).includes(e);
+  if (!e) return false;
+  if ((FOUNDER_EMAILS as readonly string[]).includes(e)) return true;
+  const at = e.lastIndexOf("@");
+  if (at < 0) return false;
+  return (FOUNDER_EMAILS as readonly string[]).includes(e.slice(at));
 }

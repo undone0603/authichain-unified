@@ -67,12 +67,39 @@ const ISO_DATE_TIME = (value: unknown) =>
   typeof value === "string" && !Number.isNaN(Date.parse(value));
 
 export function canonicalize(value: Json): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (value === null || typeof value !== "object") {
+    const encoded = JSON.stringify(value);
+    // JSON.stringify(undefined) is undefined, and a template string would
+    // then emit the raw token `undefined`, which is not JSON.
+    if (typeof encoded !== "string") {
+      throw new Error("cannot canonicalize undefined");
+    }
+    return encoded;
+  }
   if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`;
-  return `{${Object.keys(value)
+  const record = value as { [key: string]: Json | undefined };
+  return `{${Object.keys(record)
+    .filter(key => record[key] !== undefined)
     .sort()
-    .map(key => `${JSON.stringify(key)}:${canonicalize(value[key])}`)
+    .map(key => `${JSON.stringify(key)}:${canonicalize(record[key] as Json)}`)
     .join(",")}}`;
+}
+
+/** Read a signature payload. Signature bytes are checked before this runs. */
+export function parseAttestationPayload(bytes: Uint8Array): unknown {
+  const text = new TextDecoder().decode(bytes);
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    // Living QR image evidence used `uri: undefined` for data URLs. The old
+    // canonicalizer wrote that as the raw token `undefined`. Drop only that
+    // token; the Ed25519 signature still covers the original bytes.
+    const repaired = text
+      .replace(/,"uri":undefined\b/g, "")
+      .replace(/\{"uri":undefined,/g, "{");
+    if (repaired === text) throw error;
+    return JSON.parse(repaired);
+  }
 }
 
 // Utility functions for base64url encoding/decoding using standard APIs
@@ -265,9 +292,7 @@ export async function inspectAttestationJws(
 
   const key = await importJWK(publicJwk, "EdDSA");
   const { payload } = await compactVerify(jws, key);
-  const parsed = validateAttestation(
-    JSON.parse(new TextDecoder().decode(payload))
-  );
+  const parsed = validateAttestation(parseAttestationPayload(payload));
 
   if (
     options.expectedObjectId !== undefined &&
@@ -390,3 +415,21 @@ export function toW3cVerifiableCredential(
     },
   };
 }
+
+export { resolveVerificationDecision } from "./verification-decision";
+export type {
+  VerificationDecision,
+  VerificationDecisionInput,
+  VerificationDecisionResult,
+} from "./verification-decision";
+export {
+  isVerificationDecisionResponse,
+  projectVerificationDecision,
+} from "./verification-decision-response";
+export type { VerificationDecisionResponse } from "./verification-decision-response";
+export {
+  DEFAULT_CANONICAL_VERIFY_URL,
+  resolveCanonicalVerifyUrl,
+  verifyWithCanonicalWorker,
+  type CanonicalVerificationResponse,
+} from "./canonical-worker-client";

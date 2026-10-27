@@ -3,7 +3,7 @@
  * deadline: small e-bike / e-scooter (LMT) and industrial battery brands that
  * must ship an EU battery passport from 18 Feb 2027.
  *
- * Sells the existing $299 EU DPP Readiness Audit (price_1TwmD8…) — no new SKU,
+ * Sells the existing $299 EU DPP workspace (price_1TwmD8…) — no new SKU,
  * no new price. Checkout is tagged utm_campaign=battery-passport so the
  * Command Center and Stripe metadata show which sales this page produced.
  *
@@ -139,11 +139,6 @@ const FAQ: Array<{ q: string; a: string }> = [
 
 const GAP_PLACINGS: Placing[] = ["self", "cell_maker", "unknown"];
 
-/**
- * Row templates per placing, computed server-side from battery-gap-map.ts with
- * no figures typed, so the browser script only flips the typed rows to
- * user_provided. Keeps a single source of truth for wording and statuses.
- */
 function gapMapTemplates(): Record<Placing, AnnexRow[]> {
   const out = {} as Record<Placing, AnnexRow[]>;
   for (const placing of GAP_PLACINGS)
@@ -165,11 +160,6 @@ const jsonForScript = (v: unknown) =>
     .replace(/\u2028/g, "\\u2028")
     .replace(/\u2029/g, "\\u2029");
 
-/**
- * Browser-only calculator. Never fetches, never stores, never submits: the
- * submit handler calls preventDefault and renders with textContent only.
- * Formulas mirror scorePack() in battery-gap-map.ts.
- */
 const GAP_MAP_SCRIPT = `(function () {
   var form = document.getElementById("gap-map-form");
   var out = document.getElementById("gap-map-results");
@@ -263,8 +253,8 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
   const plan = planById("dpp_readiness");
   const price = plan?.price ?? 299;
   const days = daysUntilDeadline(now);
-  const title = `EU Battery Passport for e-bike, e-scooter & industrial batteries — ready before 18 Feb 2027 | AuthiChain`;
-  const description = `From 18 Feb 2027 every LMT, industrial (>2 kWh) and EV battery sold in the EU needs a QR-linked digital passport. Self-serve workspace activation and 50 workspace generations, for $${price}.`;
+  const title = `Free EU Battery Passport gap map | AuthiChain`;
+  const description = `Score data gaps for the 18 February 2027 battery passport. Workspace + 50 generations $${price}. Not a registry filing.`;
   const checklist = CHECKLIST.map(
     g => `<article class="estate-card card">
       <h3>${esc(g.tier)}</h3>
@@ -272,9 +262,9 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       <ul>${g.items.map(i => `<li>${esc(i)}</li>`).join("")}</ul>
     </article>`
   ).join("");
-  const deliverables = PAGE_DELIVERABLES.map(f => `<li>${esc(f)}</li>`).join(
-    ""
-  );
+  const deliverables = PAGE_DELIVERABLES.map(
+    f => `<li>${esc(f)}</li>`
+  ).join("");
   const faq = FAQ.map(
     f =>
       `<details class="bp-faq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`
@@ -368,11 +358,14 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
 <main id="main">
   <header class="estate-hero hero" id="hero">
     <div class="wrap hero-content">
-      <p class="estate-badge hero-badge">EU Battery Regulation · Digital Battery Passport</p>
+      <p class="estate-badge hero-badge">Free tool · EU Battery Regulation</p>
       <p class="bp-countdown"><strong>${days}</strong> <span>days until 18 February 2027</span></p>
-      <h1>Your e-bike, e-scooter or industrial battery needs a passport to be sold in the EU.</h1>
-      <p class="estate-lede hero-sub">From 18 February 2027, every LMT battery, every industrial battery over 2 kWh and every EV battery placed on the EU market must carry a QR code linking to a digital passport. AuthiChain tells you exactly what data you're missing and gets you ready for your first passport, for a one-time $${price}.</p>
-      <div class="estate-actions hero-cta">${checkoutForm("hero-checkout", `Get passport-ready — $${price}`)}</div>
+      <h1>Free EU Battery Passport gap map</h1>
+      <p class="estate-lede hero-sub">Your e-bike, e-scooter or industrial battery needs a passport to be sold in the EU. Map the public-tier gaps in your browser — nothing is sent or stored. From 18 February 2027.</p>
+      <div class="estate-actions hero-cta">
+        <a class="btn btn-secondary" href="#gap-map">Map my gaps</a>
+        ${checkoutForm("hero-checkout", `Get passport-ready — $${price}`)}
+      </div>
     </div>
   </header>
 
@@ -445,16 +438,16 @@ ${estateFooter(
 </html>`;
 }
 
-export function tryHandleBatteryPassport(request: Request): Response | null {
-  if (request.method !== "GET" && request.method !== "HEAD") return null;
-  if (!isBatteryPassportPath(new URL(request.url).pathname)) return null;
-  return new Response(
-    request.method === "HEAD" ? null : renderBatteryPassportPage(),
-    {
-      headers: {
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "public, max-age=300",
-      },
-    }
-  );
+export function tryHandleBatteryPassport(req: Request): Response | null {
+  const url = new URL(req.url);
+  if (!isBatteryPassportPath(url.pathname)) return null;
+  if (req.method !== "GET" && req.method !== "HEAD") return null;
+  const html = renderBatteryPassportPage();
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "public, max-age=300",
+    },
+  });
 }

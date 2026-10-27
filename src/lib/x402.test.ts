@@ -85,6 +85,9 @@ describe("buildPaymentRequired", () => {
     expect(r.body.extensions.bazaar.info.input.method).toBe("POST");
     expect(r.body.extensions.bazaar.info.input.bodyType).toBe("json");
     expect(r.body.extensions.bazaar.schema["required"]).toEqual(["input"]);
+    expect(r.body.extensions.bazaar.info.input.body.sealId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    );
     expect(r.body.accepts[0].outputSchema).toEqual(
       r.body.extensions.bazaar.info
     );
@@ -633,7 +636,10 @@ describe("x402ScanFanout", () => {
   it("is the x402scan version+resources document, not the catalog", () => {
     const doc = x402ScanFanout();
     expect(doc.version).toBe(1);
-    expect(doc.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(doc.resources).toEqual([
+      "https://authichain.com/api/v1/agent-verify",
+      "https://authichain.com/api/x402",
+    ]);
     expect(JSON.stringify(doc)).not.toContain("/api/checkout");
     // "Not the catalog": exactly the two x402scan fields. (This line used to
     // assert the document never mentions authichain.com, which contradicts
@@ -667,16 +673,62 @@ describe("x402OpenApiDocument", () => {
       currency: "USD",
       amount: "0.1",
     });
+    expect(post.responses["400"]).toBeTruthy();
     expect(post.responses["402"]).toBeTruthy();
+    const schema = (
+      spec.paths["/api/x402"] as {
+        post: {
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: { properties: Record<string, { format?: string }> };
+              };
+            };
+          };
+        };
+      }
+    ).post.requestBody.content["application/json"].schema;
+    expect(Object.keys(schema.properties)).toEqual(["sealId"]);
+    expect(schema.properties.sealId.format).toBe("uuid");
+    expect(spec.info.description).toContain("POST /api/v1/agent-verify");
+    expect(spec.info.description).toContain("HTTP 400 before payment");
     const battery = spec.paths["/battery-passport"] as {
       get: { description: string };
     };
     expect(battery.get.description).toContain("18 February 2027");
     expect(battery.get.description).toContain("LMT");
     expect(battery.get.description).toContain("e-bike");
+    const scan = spec.paths["/qron/r/{object_id}"] as {
+      get: {
+        summary: string;
+        parameters: Array<{ name: string; in: string; required: boolean }>;
+        responses: Record<string, unknown>;
+        "x-payment-info"?: unknown;
+      };
+    };
+    expect(scan.get.summary).toContain("This host verifies the signature");
+    expect(scan.get.summary).toContain("Not an x402 payment endpoint");
+    expect(scan.get.parameters[0]).toMatchObject({
+      name: "object_id",
+      in: "path",
+      required: true,
+    });
+    expect(scan.get.responses["200"]).toBeTruthy();
+    expect(scan.get.responses["404"]).toBeTruthy();
+    expect(scan.get["x-payment-info"]).toBeUndefined();
     expect(JSON.stringify(spec)).not.toContain("/api/checkout");
     expect(JSON.stringify(spec).toLowerCase()).not.toContain(
       "facilitator.payai"
     );
+  });
+});
+
+describe("x402PaidVerifyPathBound", () => {
+  it("accepts only the two real registry paths", async () => {
+    const { x402PaidVerifyPathBound } = await import("./x402");
+    expect(x402PaidVerifyPathBound("seal_lookup")).toBe(true);
+    expect(x402PaidVerifyPathBound("verify_app")).toBe(true);
+    expect(x402PaidVerifyPathBound("yes")).toBe(false);
+    expect(x402PaidVerifyPathBound(undefined)).toBe(false);
   });
 });
