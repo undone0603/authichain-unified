@@ -528,6 +528,7 @@ describe("fulfilment watchdog", async () => {
     id,
     status: "complete",
     payment_status: "paid",
+    amount_total: 29900,
     created: Math.floor((now - minsAgo * 60_000) / 1000),
     customer_details: { email: `${id}@buyer.com` },
     ...extra,
@@ -541,6 +542,8 @@ describe("fulfilment watchdog", async () => {
       s("cs_fresh", 5),
       s("cs_founder", 60, { customer_details: { email: "Me@Founder.com" } }),
       s("cs_unpaid", 60, { payment_status: "unpaid" }),
+      s("cs_zero", 60, { amount_total: 0 }),
+      s("cs_no_payment_required", 60, { payment_status: "no_payment_required" }),
       s("cs_demo", 60, { metadata: { is_demo: "true" } }),
       s("cs_smoke", 60, {
         customer_details: { email: "smoke+dpp@authichain.com" },
@@ -574,6 +577,23 @@ describe("fulfilment watchdog", async () => {
     ).toEqual([
       "cs_missing:no webhook record",
       "cs_error:webhook ran but did not succeed",
+    ]);
+  });
+
+  it("excludes free completed checkouts without hiding unknown-amount payments", () => {
+    const out = findUnfulfilled(
+      [
+        s("cs_chargeable", 60, { amount_total: 2900 }),
+        s("cs_free", 60, { amount_total: 0 }),
+        s("cs_no_payment", 60, { payment_status: "no_payment_required" }),
+        s("cs_unknown", 60, { amount_total: null }),
+      ],
+      [],
+      { now }
+    );
+    expect(out.map((p: { session: string }) => p.session)).toEqual([
+      "cs_chargeable",
+      "cs_unknown",
     ]);
   });
 
