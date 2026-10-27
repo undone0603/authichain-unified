@@ -518,7 +518,7 @@ describe("ops pulse", () => {
 });
 
 describe("fulfilment watchdog", async () => {
-  const { findUnfulfilled } = await import("../autonomy/revenue-watch.mjs");
+  const { findUnfulfilled, checkFulfilment } = await import("../autonomy/revenue-watch.mjs");
   const now = Date.parse("2026-09-23T12:00:00Z");
   const s = (
     id: string,
@@ -528,6 +528,7 @@ describe("fulfilment watchdog", async () => {
     id,
     status: "complete",
     payment_status: "paid",
+    amount_total: 29900,
     created: Math.floor((now - minsAgo * 60_000) / 1000),
     customer_details: { email: `${id}@buyer.com` },
     ...extra,
@@ -541,6 +542,8 @@ describe("fulfilment watchdog", async () => {
       s("cs_fresh", 5),
       s("cs_founder", 60, { customer_details: { email: "Me@Founder.com" } }),
       s("cs_unpaid", 60, { payment_status: "unpaid" }),
+      s("cs_zero", 60, { amount_total: 0 }),
+      s("cs_no_payment_required", 60, { payment_status: "no_payment_required" }),
       s("cs_demo", 60, { metadata: { is_demo: "true" } }),
       s("cs_smoke", 60, {
         customer_details: { email: "smoke+dpp@authichain.com" },
@@ -575,6 +578,81 @@ describe("fulfilment watchdog", async () => {
       "cs_missing:no webhook record",
       "cs_error:webhook ran but did not succeed",
     ]);
+  });
+
+  it("excludes free completed checkouts without hiding unknown-amount payments", () => {
+    const out = findUnfulfilled(
+      [
+        s("cs_chargeable", 60, { amount_total: 2900 }),
+        s("cs_free", 60, { amount_total: 0 }),
+        s("cs_no_payment", 60, { payment_status: "no_payment_required" }),
+        s("cs_unknown", 60, { amount_total: null }),
+      ],
+      [],
+      { now }
+    );
+    expect(out.map((p: { session: string }) => p.session)).toEqual([
+      "cs_chargeable",
+      "cs_unknown",
+    ]);
+  });
+
+  it("paginates completed sessions before claiming healthy webhook delivery", async () => {
+    const first = Array.from({ length: 100 }, (_, i) =>
+      s(`cs_free_${i}`, 60, { amount_total: 0 })
+    );
+    const pages = [
+      { data: first, has_more: true },
+      { data: [s("cs_paid_second_page", 60)], has_more: false },
+    ];
+    const stripeUrls: string[] = [];
+    const result = await checkFulfilment({
+      stripeKey: "test-only",
+      supabaseUrl: "https://example.test",
+      supabaseKey: "test-only",
+      fetchImpl: async (url: string) => {
+        if (url.startsWith("https://api.stripe.com/")) {
+          stripeUrls.push(url);
+          return { ok: true, json: async () => pages.shift() };
+        }
+        if (url.includes("/rest/v1/stripe_events?"))
+          return { ok: true, json: async () => [] };
+        throw new Error("unexpected URL");
+      },
+    });
+    expect(stripeUrls).toHaveLength(2);
+    expect(stripeUrls[1]).toContain("starting_after=cs_free_99");
+    expect(result.checked).toBe(1);
+    expect(result.problems.map((p: { session: string }) => p.session)).toEqual([
+      "cs_paid_second_page",
+    ]);
+  });
+
+  it("fails closed when Stripe reports more results without a cursor", async () => {
+    await expect(
+      checkFulfilment({
+        stripeKey: "test-only",
+        supabaseUrl: "https://example.test",
+        supabaseKey: "test-only",
+        fetchImpl: async () => ({
+          ok: true,
+          json: async () => ({ data: [], has_more: true }),
+        }),
+      })
+    ).rejects.toThrow("missing page cursor");
+  });
+
+  it("fails closed when Stripe omits or corrupts the pagination flag", async () => {
+    for (const page of [{ data: [] }, { data: [], has_more: "false" }]) {
+      await expect(
+        checkFulfilment({
+          stripeKey: "test-only",
+          supabaseUrl: "https://example.test",
+          supabaseKey: "test-only",
+          fetchImpl: async () => ({ ok: true, json: async () => page }),
+        })
+      ).rejects.toThrow("invalid pagination flag");
+    }
   });
 
   it("puts unfulfilled payments into the alert signature", () => {
