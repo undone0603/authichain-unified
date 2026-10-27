@@ -71,25 +71,48 @@ export async function checkFulfilment({
   fetchImpl = fetch,
 }) {
   const since = Math.floor(Date.now() / 1000) - hours * 3600;
-  const sRes = await fetchImpl(
-    `https://api.stripe.com/v1/checkout/sessions?limit=100&created[gte]=${since}&status=complete`,
-    {
+  // Stripe returns at most 100 sessions per page; never silently miss later
+  // pages. Incomplete reads must fail closed in the ops-pulse monitor.
+  const sessions = [];
+  let cursor;
+  let complete = false;
+  for (let page = 0; page < 10; page++) {
+    const url = `https://api.stripe.com/v1/checkout/sessions?limit=100&created[gte]=${since}&status=complete` +
+      (cursor ? `&starting_after=${encodeURIComponent(cursor)}` : "");
+    const sRes = await fetchImpl(url, {
       headers: { Authorization: `Bearer ${stripeKey}` },
+    });
+    if (!sRes.ok) throw new Error(`Stripe checkout sessions -> ${sRes.status}`);
+    const body = await sRes.json();
+    if (!Array.isArray(body.data))
+      throw new Error("Stripe checkout sessions: invalid page");
+    sessions.push(...body.data);
+    if (!body.has_more) {
+      complete = true;
+      break;
     }
-  );
-  if (!sRes.ok) throw new Error(`Stripe checkout sessions -> ${sRes.status}`);
-  const sessions = (await sRes.json()).data ?? [];
+    cursor = body.data.at(-1)?.id;
+    if (!cursor) throw new Error("Stripe checkout sessions: missing page cursor");
+  }
+  if (!complete)
+    throw new Error("Stripe checkout sessions: pagination limit exceeded");
   const paid = sessions.filter(
     s => s.payment_status === "paid" && s.amount_total !== 0
   );
   if (!paid.length) return { checked: 0, problems: [] };
-  const ids = paid.map(s => `"${s.id}"`).join(",");
-  const eRes = await fetchImpl(
-    `${supabaseUrl}/rest/v1/stripe_events?select=session_id,event_type,status&session_id=in.(${encodeURIComponent(ids)})`,
-    { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } }
-  );
-  if (!eRes.ok) throw new Error(`Supabase stripe_events -> ${eRes.status}`);
-  const events = await eRes.json();
+  const events = [];
+  // Bound URL length for large windows; any failed page invalidates the check.
+  for (let i = 0; i < paid.length; i += 50) {
+    const ids = paid.slice(i, i + 50).map(s => `"${s.id}"`).join(",");
+    const eRes = await fetchImpl(
+      `${supabaseUrl}/rest/v1/stripe_events?select=session_id,event_type,status&session_id=in.(${encodeURIComponent(ids)})`,
+      { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } }
+    );
+    if (!eRes.ok) throw new Error(`Supabase stripe_events -> ${eRes.status}`);
+    const rows = await eRes.json();
+    if (!Array.isArray(rows)) throw new Error("Supabase stripe_events: invalid response");
+    events.push(...rows);
+  }
   return {
     checked: paid.length,
     problems: findUnfulfilled(paid, events, { founderEmails }),
