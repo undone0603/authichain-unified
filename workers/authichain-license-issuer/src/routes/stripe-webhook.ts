@@ -14,6 +14,16 @@ import { deliverKeyViaEmail } from "../services/email";
 import { describeLicenseBindings } from "./health";
 import type { Env } from "../index";
 
+// Live generation plans from src/lib/plans.ts — fulfill into users.generations_limit
+const LIVE_GENERATION_PRICES: Record<string, { planId: string; generations: number }> = {
+  "price_1UIoEVGqTruSqV8T61lp48wB": { planId: "starter", generations: 100 },
+  "price_1UJjzPGqTruSqV8TmhFSc8vh": { planId: "qron_launch", generations: 100 },
+  "price_1USNoSGqTruSqV8ThTIW7Ej8": { planId: "qron_launch_annual", generations: 1200 },
+  "price_1UIoEYGqTruSqV8TCXTNipvh": { planId: "creator", generations: 500 },
+  "price_1TwmD8GqTruSqV8TpAF8dfyA": { planId: "dpp_readiness", generations: 50 },
+  "price_1UHjCZGqTruSqV8T35M6AmoJ": { planId: "strainchain_passport", generations: 0 },
+};
+
 function json(status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -160,6 +170,29 @@ export type CheckoutResult = {
   priceId: string;
 } | void;
 
+async function fulfillGenerations(env: Env, session: CheckoutSession, priceId: string): Promise<void> {
+  const mapping = LIVE_GENERATION_PRICES[priceId];
+  if (!mapping || mapping.generations === 0) return;
+
+  const email = (session.customer_details?.email ?? session.customer_email ?? "").trim();
+  if (!email) throw new Error("missing email for generations fulfillment");
+
+  // Current entitlement model: users.generations_limit
+  await env.DB.prepare(`
+    UPDATE users
+    SET generations_limit = COALESCE(generations_limit, 0) + ?,
+        updatedAt = now()
+    WHERE email = ?
+  `).bind(mapping.generations, email).run();
+
+  console.log(JSON.stringify({
+    event: "generations_fulfilled",
+    planId: mapping.planId,
+    generations: mapping.generations,
+    email,
+  }));
+}
+
 export async function handleCheckout(
   env: Env,
   session: CheckoutSession
@@ -186,6 +219,9 @@ export async function handleCheckout(
     // keep this a 5xx and let Stripe retry.
     throw new Error("checkout.session.completed missing price id");
   }
+
+  // Fulfill generations for live plans that grant them (additive, independent of license path)
+  await fulfillGenerations(env, session, priceId);
 
   // A price that is not a license SKU (another product on the same Stripe
   // account) will never succeed on retry. Skip it instead of throwing.

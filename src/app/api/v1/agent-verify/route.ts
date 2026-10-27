@@ -2,7 +2,9 @@
  * POST /api/v1/agent-verify
  *
  * Pay-per-call verification endpoint for autonomous agents (x402).
- * No payment -> HTTP 402 + requirements. Paid (X-PAYMENT proof) -> verify the
+ * No payment and an empty body -> HTTP 402 + requirements. A body that
+ * names a non-UUID seal, or uses productId/serial as the key, is HTTP 400
+ * before that challenge. Paid (X-PAYMENT proof) -> verify the
  * payment, enforce a per-payer daily spend cap + rate limit and look the seal
  * up, and only then settle and return the verification result. Every refusal
  * happens before settlement. Price is fixed, so daily spend = call-count x price,
@@ -72,12 +74,25 @@ export async function POST(request: Request) {
     description: "AuthiChain agent verification",
   });
 
+  // Read once. A later request.json() would see an empty body.
+  const raw = await request.json().catch(() => ({}));
+  const input =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {};
+
   // 1. Require a payment proof (v1 X-PAYMENT or v2 PAYMENT-SIGNATURE).
   const paymentHeader = readPaymentProofHeader(name =>
     request.headers.get(name)
   );
   const proof = parsePaymentHeader(paymentHeader);
   if (!proof) {
+    if (Object.keys(input).length > 0) {
+      const early = parseSealRequest(input);
+      if (!early.ok) {
+        return NextResponse.json(early.body, { status: early.status });
+      }
+    }
     return NextResponse.json(required.v2, {
       status: 402,
       headers: required.headers,
@@ -102,10 +117,6 @@ export async function POST(request: Request) {
   // 4. Everything that can refuse runs before settlement, so a refused call
   // never costs the agent the $0.05: missing subject, spend cap, registry
   // outage. Only a call that will get a real registry answer is settled.
-  const input = (await request.json().catch(() => ({}))) as Record<
-    string,
-    unknown
-  >;
   const parsed = parseSealRequest(input);
   if (!parsed.ok) {
     return NextResponse.json(parsed.body, { status: parsed.status });

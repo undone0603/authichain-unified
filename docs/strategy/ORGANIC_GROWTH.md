@@ -11,8 +11,8 @@ One rail. Health is the source of truth. Everything else copies it.
 
 ## Rules
 
-- Do not rebind `X402_PAY_TO` away from `0xaebf…e437`.
-- Do not type `0x5db5…` into a directory form. That EOA still holds `$QRON`. It is not live settlement.
+- Do not rebind `X402_PAY_TO` away from `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2`.
+- Never type the `$QRON` contract `0xAebf…E437` into a directory form as a wallet.
 - Do not put `$QRON` in x402 `accepts[]`.
 - Do not invent a facilitator. Stay on `https://facilitator.payai.network`.
 - Price on a listing must match `health.pricePerCall.usd` (live `$0.05`).

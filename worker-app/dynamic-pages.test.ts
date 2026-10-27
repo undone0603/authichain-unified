@@ -524,6 +524,23 @@ describe("renderDynamicPage: /verify verification landing", () => {
     expect(getProductById).not.toHaveBeenCalled();
   });
 
+  it("serves /verify/live as the founder seal page, not a record lookup", async () => {
+    const res = await app.request("/verify/live", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("This seal is already on Base.");
+    expect(body).toContain("authichain.base.eth");
+    expect(body).toContain("0x34370EDA96e0C7e47f46F18e2D3a7298C241E16F");
+    expect(body).toContain(
+      "basescan.org/tx/0xa07d0bbadcc958b3f6fc8d81acda16a54c4bcfdb5e86bd2ce186e27f5752ab3b"
+    );
+    expect(body).toContain("What this does not prove");
+    expect(body).not.toContain("No record found");
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
+    expect(getProductById).not.toHaveBeenCalled();
+  });
+
   it("returns a clean 404 'No record found' page for an unknown id", async () => {
     (getCertificateByNumber as any).mockResolvedValue(undefined);
     (getHyperdriveDb as any).mockReturnValue({});
@@ -969,7 +986,10 @@ describe("renderDynamicPage: /login and /authenticate", () => {
         'action="https://authichain.com/checkout/starter"'
       );
       expect(body).toContain("Buy Starter Pack — $29");
-      expect(body).toContain("Start Launch $19/mo");
+      expect(body).toContain('<a href="/pricing">See pricing</a>');
+      expect(body).not.toContain("$19/mo");
+      expect(body).not.toContain("$190/yr");
+      expect(body).not.toContain("qron_launch");
       expect(body).toContain(
         'href="https://authichain.com/checkout/dpp_readiness"'
       );
@@ -1019,9 +1039,18 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     const body = await res.text();
     expect(body).toContain("min-height:44px");
     expect(body).toContain('<label for="targetUrl">Product URL</label>');
-    expect(body).toContain("Sign in to use account credits.");
-    expect(body).toContain("100 generations for $29, one-time");
-    expect(body).toContain("Launch at $19/mo");
+    expect(body).toContain(
+      "Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts."
+    );
+    expect(body).toContain("Try 5 free generations. No account, no card.");
+    expect(body).toContain(
+      "100 generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof."
+    );
+    expect(body).not.toContain("Launch at $19/mo");
+    // CFA-460 release check: GET /generate has 0 hits for these.
+    expect(body).not.toContain("$19");
+    expect(body).not.toContain("qron_launch");
+    expect(body).not.toContain("Launch subscription");
     expect(body).not.toContain("Five generations are free");
     expect(body).toContain("not an authenticity proof");
     expect(body).not.toContain("<code>POST /api/generate</code>");
@@ -1036,7 +1065,7 @@ describe("renderDynamicPage: /generate Living QR", () => {
     const body = await res.text();
     expect(res.status).toBe(200);
     expect(body).toContain(
-      "<title>Living QR generator | QRON — account credits and $29 Starter Pack</title>"
+      "<title>AI QR Art Generator | 5 Free, Then $29 Once, No Subscription | QRON</title>"
     );
     expect(body).toContain("Generate a Living QR");
     expect(body).not.toContain("$QRON");
@@ -1048,14 +1077,25 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("if(r.res.status===401)");
     expect(body).toContain("form.submit()");
     expect(body).toContain("$29");
-    expect(body).toContain("$19/mo");
+    expect(body).not.toContain("$19/mo");
+    // Starter CTA (variant A): hidden until a generation succeeds.
+    expect(body).toContain(
+      '<p id="generate-starter-cta" hidden>Like it? Get 100 generations for $29, paid once. No subscription. '
+    );
+    expect(body).toContain(
+      'href="https://authichain.com/checkout/starter?utm_source=qron&amp;utm_medium=onsite&amp;utm_campaign=starter-cta&amp;utm_content=starter-a">Get 100 generations for $29</a>'
+    );
+    expect(body).toContain("if(cta)cta.hidden=false;");
     expect(body).toContain("$299");
-    // Top-ups: Starter $29, Launch $19/mo (LOOP-03 tertiary), Creator $99.
+    // Top-ups: Starter $29, Creator $99. Launch $19/mo is unlisted (CFA-460).
     // Retired credit bundles ($9.99/$39.99/$99.99) had no live Stripe account.
     expect(body).toContain('href="https://authichain.com/checkout/starter"');
-    expect(body).toContain('href="https://authichain.com/checkout/qron_launch"');
+    expect(body).not.toContain(
+      'href="https://authichain.com/checkout/qron_launch"'
+    );
     expect(body).toContain('href="https://authichain.com/checkout/creator"');
-    expect(body).toContain("Start Launch — $19/mo");
+    expect(body).not.toContain("Start Launch — $19/mo");
+    expect(body).toContain("Starter Pack — $29");
     expect(body).not.toContain("$9.99");
     expect(body).not.toContain("$39.99");
     expect(
@@ -1064,7 +1104,7 @@ describe("renderDynamicPage: /generate Living QR", () => {
         .slice(1)
         .some(rest => rest.slice(0, 40).includes("1Nu"))
     ).toBe(false);
-    expect(body).toContain("Sign in to use account credits.");
+    expect(body).toContain("Try 5 free generations. No account, no card.");
     expect(body).not.toContain("Five generations are free");
     expect(body).not.toContain("buy.stripe.com");
     expect(body).not.toContain("Those 5 are signed");
@@ -1093,6 +1133,14 @@ describe("renderDynamicPage: /generate Living QR", () => {
       "https://example.com/sku"
     );
     expect(location.searchParams.get("prompt")).toBe("neon");
+  });
+
+  it("shows the API's Starter upgrade link when the free sample is used up", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain("var up=r.data.upgrade;");
+    expect(body).toContain("up.url.indexOf('https://authichain.com/checkout/starter')===0");
+    expect(body).toContain("a.id='sample-exhausted-starter'");
   });
 });
 

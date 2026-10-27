@@ -8,7 +8,7 @@
  */
 
 /** Shown at the top of /privacy. Change it when that page's text changes. */
-export const LEGAL_EFFECTIVE = "5 October 2026";
+export const LEGAL_EFFECTIVE = "24 October 2026";
 
 /**
  * Shown at the top of /terms only.
@@ -142,16 +142,34 @@ export function renderPrivacyPage(): string {
 <li><strong>Stripe</strong> — card checkout, the amount, and checkout recovery email.</li>
 <li><strong>Supabase</strong> — database for accounts, checkout attempts, and product records we store.</li>
 <li><strong>Cloudflare</strong> — hosting, delivery, and request security.</li>
-<li><strong>Resend</strong> — email about an order you started or paid for, sent from hello@authichain.com. Not a newsletter.</li>
+<li><strong>Resend</strong> — email about an order you started or paid for, sent from hello@authichain.com, and, if we start it, the DPP readiness email sequence to people who confirmed a double opt-in.</li>
 <li><strong>HubSpot</strong> — the order email and name, when we record a paid order so it can be delivered.</li>
 <li><strong>The x402 facilitator named on <a href="/x402">/x402</a></strong> — the payment proof for a paid agent call.</li>
 </ul>
 <p>We also share information when the law requires it, or to respond to a valid legal process.</p>
-<p>Separate from this website, we sometimes email a business about the product. That email is not sent because you visited this page. A business that receives one can reply and ask us to stop, and we will.</p>
+<p>No automated marketing email sequence is active yet. Zachary does send individual 1-to-1 emails to business contacts at US brands, which you can stop by replying 'stop'. If we start the automated sequence, it will go only to recipients in the United States who confirmed a double opt-in, and every message will carry an unsubscribe link. There are no sends to the EU or EEA, and sends to the UK, Switzerland (CH) and Norway (NO) are not active. See <a href="#outbound">Business contacts we reach out to</a>.</p>
+<h2 id="outbound">Business contacts we reach out to</h2>
+<p>No automated marketing email sequence is active yet. Zachary does send individual 1-to-1 emails to business contacts at US brands, which you can stop by replying 'stop'. If we start the automated sequence, it will go only to recipients in the United States who confirmed a double opt-in, and every message will carry an unsubscribe link. There are no outreach sends to recipients in the EU or EEA, and outreach sends to the UK, Switzerland (CH) and Norway (NO) are not active. The details below describe how we handle business contact data we hold for that purpose.</p>
+<ul>
+<li><strong>Controller.</strong> Zachary J Kietzman d/b/a AuthiChain (sole proprietor). Privacy and opt-out contact: <a href="mailto:authichain@mail.grokbot.com">authichain@mail.grokbot.com</a>. That address is receive-only: it receives replies and opt-out requests, and no email is sent from it. No data-protection officer is appointed.</li>
+<li><strong>EU representative.</strong> None appointed.</li>
+<li><strong>Where we got your data.</strong> Opt-in sequence: from you. 1-to-1 business emails: public sources (such as your company's website) or Apollo.io, a B2B contact database operated by Zenleads Inc. (dba Apollo.io).</li>
+<li><strong>What data.</strong> Your name, job title or role, work email address, company name, and company details (domain, headquarters country, product category). We do not process sensitive data about you.</li>
+<li><strong>Why, and on what legal basis: opt-in sequence.</strong> If we start the opt-in sequence and you sign up through our double opt-in (for example at /dpp-check), we will email you on the basis of your consent (GDPR Art. 6(1)(a)). We will get your email address from you. You will be able to withdraw consent at any time through the unsubscribe link in those emails.</li>
+<li><strong>Why, and on what legal basis: 1-to-1 business emails.</strong> If you are a business contact at a US brand, Zachary may email you personally. We got your work contact details from public sources or Apollo.io. Legal basis: legitimate interest (GDPR Art. 6(1)(f)) in offering EU DPP readiness tools to businesses whose products fall under the DPP rules. Reply 'stop' (or tell us in any words) and we won't email you again.</li>
+<li><strong>Recipients.</strong> Apollo.io, as the source of the data; Resend, for the opt-in sequence; Google (Gmail), which Zachary uses to send and receive 1-to-1 emails with business contacts at US brands; AgentMail, which hosts the receive-only reply inbox at authichain@mail.grokbot.com, with Amazon SES (Amazon Web Services) as its sub-processor; and Supabase, which stores the contact records for business contacts at US brands. We do not sell your data.</li>
+<li><strong>Transfers outside the EU.</strong> Your data is processed in the United States. Zenleads Inc. (dba Apollo.io) is listed as active under the EU-U.S. Data Privacy Framework. Supabase's data processing agreement provides Standard Contractual Clauses for transfers (Supabase DPA section 12.1). Open item: we have no data processing agreement with AgentMail (the reply-inbox provider) or with Apollo.io, and we do not claim one is in place. Resend and Google process data in the United States; we have not yet confirmed their transfer safeguards on this page.</li>
+<li><strong>How long we keep it: 1-to-1 business emails.</strong> We delete your contact data 12 months after our last contact with you if you have not replied. If you opt out, we keep only your email address on a suppression list for as long as needed to honour your opt-out.</li>
+<li><strong>How long we keep it: opt-in sequence.</strong> We keep your subscriber data until you unsubscribe, then delete it within 30 days, except your email address, kept on a suppression list only to honour your unsubscribe.</li>
+<li><strong>No automated decisions.</strong> We make no automated decisions and do no profiling about you that has legal or similarly significant effects.</li>
+</ul>
+<p><strong>Your right to object.</strong> You can object at any time to the use of your data for direct marketing: reply 'stop' (or tell us in any words) to our email, or email <a href="mailto:authichain@mail.grokbot.com">authichain@mail.grokbot.com</a>. We will then stop processing it for that purpose.</p>
+<p><strong>Your other rights.</strong> You can ask for access to, correction, erasure, restriction, or a portable copy of your data (GDPR Arts. 15-20) by emailing <a href="mailto:authichain@mail.grokbot.com">authichain@mail.grokbot.com</a>.</p>
+<p><strong>Your right to complain.</strong> You can complain to a data protection supervisory authority, in particular in the EU member state where you live or work, for example the CNIL in France, the Autoriteit Persoonsgegevens in the Netherlands, or IMY in Sweden.</p>
 <h2>How long we keep it</h2>
 <p>We keep order and payment records for as long as we need them to deliver what you bought, to handle a dispute, and to meet tax and accounting duties. We keep correspondence until the matter is finished, and for a period after that so we can show what was said. Public chain entries stay public.</p>
 <h2>Asking us about your data</h2>
-<p>Email <a href="mailto:hello@authichain.com">hello@authichain.com</a> to ask for a copy of the off-chain personal data we hold about you, to correct it, or to delete it. There is no separate privacy mailbox and no appointed data-protection officer. If a law where you live gives you a right to access, correct, delete, or object, use that same address. We will answer.</p>
+<p>Email <a href="mailto:hello@authichain.com">hello@authichain.com</a> to ask for a copy of the off-chain personal data we hold about you, to correct it, or to delete it. If we hold your data as a business contact (see <a href="#outbound">Business contacts we reach out to</a>), you can also use authichain@mail.grokbot.com. There is no appointed data-protection officer. If a law where you live gives you a right to access, correct, delete, or object, use that same address. We will answer.</p>
 <p>We cannot delete a public blockchain record. We may also keep a payment record that tax, accounting, or fraud rules require us to keep, and we will tell you if we do.</p>
 <h2>Children</h2>
 <p>Paid checkout and accounts are for people 18 or older. We do not knowingly collect personal information from anyone under 13. If you believe we have, email hello@authichain.com and we will delete it.</p>
@@ -160,7 +178,7 @@ export function renderPrivacyPage(): string {
 <h2>Changes</h2>
 <p>When we change this policy, we change the date at the top. We do not email every visitor about an edit. If you have a paid order and we change how we handle that order's personal data, we email the work address on the order.</p>
 <h2>Contact</h2>
-<p>Privacy questions: <a href="mailto:hello@authichain.com">hello@authichain.com</a>. An existing order: <a href="mailto:support@authichain.com">support@authichain.com</a>. Government inquiries: <a href="mailto:proposals@authichain.com">proposals@authichain.com</a>.</p>`,
+<p>Privacy questions: <a href="mailto:hello@authichain.com">hello@authichain.com</a> (business contacts may also use authichain@mail.grokbot.com). An existing order: <a href="mailto:support@authichain.com">support@authichain.com</a>. Government inquiries: <a href="mailto:proposals@authichain.com">proposals@authichain.com</a>.</p>`,
   });
 }
 

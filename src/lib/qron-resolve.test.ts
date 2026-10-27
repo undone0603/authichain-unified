@@ -233,6 +233,9 @@ describe("handleQronResolve", () => {
     expect(html).toContain("AuthiChain Verification Decision v1");
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");
+    expect(html).toContain(
+      '<footer><p><a href="https://qron.space/generate?utm_source=qron&amp;utm_medium=resolve_footer">Create your own Living QR — free to try</a></p></footer>'
+    );
   });
 
   it("rejects non-GET methods with indeterminate JSON", async () => {
