@@ -3,6 +3,7 @@ name: Execute canonical verification integration
 on:
   push:
     branches: [feat/north-star-mvps]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -10,7 +11,8 @@ permissions:
 jobs:
   integrate:
     if: github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
+    # GitHub-hosted runners are billing-locked. Use the ops machine.
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     steps:
       - uses: actions/checkout@v4
         with:
