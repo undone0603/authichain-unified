@@ -5,6 +5,8 @@
  * First stranger SKU is QRON Starter $29. Do not list $1 or Seal $99.
  *
  * Live Stripe acct_1SXIyEGqTruSqV8T. Price IDs must match src/lib/plans.ts.
+ *
+ * 2026-10-19: added qron_launch_annual to LIVE_PRICE_MAP.
  */
 import {
   PLAN_CREDITS,
@@ -45,6 +47,12 @@ export const LIVE_PRICE_MAP: Record<
     productId: "prod_UVdvzB03BvV4CU",
     mode: "subscription",
     grant: 100,
+  },
+  qron_launch_annual: {
+    priceId: "price_1USNoSGqTruSqV8ThTIW7Ej8",
+    productId: "prod_UVdvzB03BvV4CU",
+    mode: "subscription",
+    grant: 1200,
   },
   starter: {
     priceId: "price_1UIoEVGqTruSqV8T61lp48wB",

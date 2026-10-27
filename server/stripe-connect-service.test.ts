@@ -111,6 +111,9 @@ describe("Stripe Connect Service (v2)", () => {
         }),
         expect.objectContaining({ stripeAccount: "acct_123" })
       );
+      expect(
+        mockStripe.checkout.sessions.create.mock.calls[0][0].payment_method_types
+      ).toBeUndefined();
       expect(result).toBe(mockUrl);
     });
   });

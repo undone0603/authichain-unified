@@ -1,0 +1,42 @@
+name: Deploy first-dollar-desk
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "workers/first-dollar-desk/**"
+      - ".github/workflows/deploy-first-dollar-desk.yml"
+permissions:
+  contents: read
+concurrency:
+  group: deploy-first-dollar-desk
+  cancel-in-progress: false
+jobs:
+  deploy:
+    # Same self-hosted WSL runner as deploy-authichain-com.yml (public-repo: no PR jobs on this host).
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: "10.28.2"
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install node-gyp (native builds)
+        run: npm i -g node-gyp@11
+      - name: Install
+        env:
+          npm_config_build_from_source: "false"
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+      - name: Publish first-dollar-desk
+        working-directory: workers/first-dollar-desk
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        # --keep-vars keeps dashboard vars/secrets (Stripe webhook secret etc.) attached.
+        run: npx wrangler deploy --minify --keep-vars --config wrangler.jsonc

@@ -320,3 +320,14 @@ async def sse_all_events(request: Request):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
     )
+
+
+# ── Deployment control-plane endpoint ───────────────────────────────────────
+# This router is already mounted by agentz.api.main, so the control plane is
+# exposed without changing the main FastAPI bootstrap. Reads are fail-closed:
+# missing provider credentials become explicit "unavailable" states.
+@router.get("/control-plane/state", tags=["Control Plane"])
+async def deployment_control_plane_state(request: Request):
+    _verify_token_query(request)
+    from agentz.control_plane import collect_state
+    return collect_state()

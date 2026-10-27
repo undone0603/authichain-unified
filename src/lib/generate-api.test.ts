@@ -19,23 +19,19 @@ function toBase64Url(value: string): string {
 }
 
 describe("generateCreditPacks", () => {
-  it("exposes Starter → Launch → Creator → DPP in LOOP-03 order", () => {
+  it("exposes Starter, Creator, then DPP (Launch unlisted)", () => {
     const packs = generateCreditPacks();
     const byId = Object.fromEntries(packs.map(p => [p.id, p]));
     expect(byId.starter.price).toBe(29);
-    expect(byId.qron_launch.price).toBe(19);
     expect(byId.creator.price).toBe(99);
     expect(byId.dpp_readiness.price).toBe(299);
     expect(packs.map(p => p.id)).toEqual([
       "starter",
-      "qron_launch",
       "creator",
       "dpp_readiness",
     ]);
-    expect(byId.qron_launch.checkout).toBe(
-      "https://authichain.com/checkout/qron_launch"
-    );
-    expect(byId.qron_launch.cta).toMatch(/Launch/i);
+    expect(byId.qron_launch).toBeUndefined();
+    expect(byId.qron_launch_annual).toBeUndefined();
   });
 });
 
@@ -55,6 +51,11 @@ describe("generateHealthBody", () => {
     );
     expect(body.presentation.verify.jwks_url).toContain("protocol/jwks.json");
     expect(body.presentation.fallback).toBe("image_issued");
+    expect(body.presentation.scan).toEqual({
+      method: "GET",
+      url_template: "https://authichain.com/qron/r/{object_id}",
+      missing: "presentation_not_found",
+    });
   });
 
   it("reports whether a Supabase session can be resolved", () => {
@@ -180,7 +181,7 @@ describe("handleGeneratePost", () => {
     expect(result.body.message).toMatch(/Authentication required/i);
     expect(Array.isArray(result.body.packs)).toBe(true);
     const packs = result.body.packs as Array<{ id: string }>;
-    expect(packs.map(p => p.id)).toContain("qron_launch");
+    expect(packs.map(p => p.id)).not.toContain("qron_launch");
     expect(packs.map(p => p.id)).toContain("starter");
     expect(generateImage).not.toHaveBeenCalled();
     expect(checkCredit).not.toHaveBeenCalled();
@@ -226,8 +227,13 @@ describe("handleGeneratePost", () => {
     });
     expect(result.status).toBe(401);
     expect(result.body.code).toBe("FREE_SAMPLE_USED");
+    expect(result.body.upgrade).toEqual({
+      url: "https://authichain.com/checkout/starter?src=sample_exhausted",
+      plan: "starter",
+      label: "Starter Pack: 100 generations for $29, paid once",
+    });
     expect(String(result.body.message)).toMatch(
-      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and pack credits never expire unless you switch to a Launch subscription\.$/
+      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and pack credits have no expiry date\. Starting a monthly plan replaces unused pack credits\.$/
     );
     expect(generateImage).not.toHaveBeenCalled();
   });
@@ -246,7 +252,7 @@ describe("handleGeneratePost", () => {
     expect(result.status).toBe(401);
     expect(result.body.code).toBe("FREE_SAMPLE_PAUSED");
     expect(String(result.body.message)).toMatch(
-      /^Free samples are paused for today\./
+      /^Free samples are paused right now\./
     );
     expect(generateImage).not.toHaveBeenCalled();
   });
