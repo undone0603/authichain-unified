@@ -17,7 +17,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops, authichain-wsl]
     environment: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v7
