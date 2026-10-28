@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
