@@ -3,11 +3,16 @@
  * succeeds. Return independently reproducible signature/validity evidence.
  */
 import { createHash } from "node:crypto";
-import { parseSealRequest } from "./agent-verify";
+import {
+  coerceSealBody,
+  listedSealId,
+  parseSealRequest,
+} from "./agent-verify";
 import { sealBaseline } from "./seal-baseline";
 import {
   buildPaymentRequired,
   dailyCapUsd,
+  isDiscoveryExampleSealId,
   parsePaymentHeader,
   paymentResponseHeaders,
   settlePayment,
@@ -512,7 +517,7 @@ export async function resolvePaidSealVerify(input: {
     try {
       const value = JSON.parse(input.bodyText) as unknown;
       if (value && typeof value === "object" && !Array.isArray(value)) {
-        parsedBody = value as Record<string, unknown>;
+        parsedBody = coerceSealBody(value as Record<string, unknown>);
       }
     } catch {
       parsedBody = {};
@@ -520,10 +525,13 @@ export async function resolvePaidSealVerify(input: {
   }
   const parsed = parseSealRequest(parsedBody);
   const emptyBody = Object.keys(parsedBody).length === 0;
+  const listed = listedSealId(parsedBody);
+  const discoveryAlias = Boolean(listed) && isDiscoveryExampleSealId(listed);
   // Empty unpaid is the 402 price challenge. x402 clients retry that same
-  // empty body with a payment header. Named-but-invalid bodies stay 400
+  // empty body with a payment header. Listing samples (`demo`, bazaar UUID)
+  // settle as missing-seal evidence. Other named-but-invalid bodies stay 400
   // before settle so the agent is not charged for a key that cannot exist.
-  if (!parsed.ok && !emptyBody) {
+  if (!parsed.ok && !emptyBody && !discoveryAlias) {
     return { action: "answer", status: parsed.status, body: parsed.body };
   }
   const sealId = parsed.ok ? parsed.sealId : null;
@@ -616,7 +624,7 @@ export async function resolvePaidSealVerify(input: {
     status: 200,
     body: {
       ...answer,
-      subject: sealId,
+      subject: sealId ?? (discoveryAlias ? listed : null),
       settlement: {
         payer: proof.payer,
         amountAtomic: verification.amount.toString(),

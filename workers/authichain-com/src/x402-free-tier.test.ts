@@ -88,11 +88,7 @@ describe("x402 health freeCalls", () => {
 describe("unpaid body that cannot be a seal", () => {
   it("returns 400 and does not ask for payment", async () => {
     const pay = { X402_PAY_TO: ENV.X402_PAY_TO };
-    for (const body of [
-      { sealId: "demo" },
-      { probe: "suggestions" },
-      { productId: "p-1" },
-    ]) {
+    for (const body of [{ probe: "suggestions" }, { productId: "p-1" }]) {
       const res = await tryHandleX402(
         new Request("https://authichain.com/api/v1/agent-verify", {
           method: "POST",
@@ -115,6 +111,24 @@ describe("unpaid body that cannot be a seal", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: "{}",
+      }),
+      { X402_PAY_TO: ENV.X402_PAY_TO }
+    );
+    expect(res!.status).toBe(402);
+    expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+  });
+
+  it("keeps the stale PayAI sample `demo` on the 402 challenge", async () => {
+    const res = await tryHandleX402(
+      new Request("https://authichain.com/api/v1/agent-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "http",
+          method: "POST",
+          bodyType: "json",
+          body: { sealId: "demo" },
+        }),
       }),
       { X402_PAY_TO: ENV.X402_PAY_TO }
     );

@@ -231,6 +231,29 @@ describe("tryHandleX402", () => {
     expect(body.x402Version).toBe(2);
   });
 
+  it("GET with a payment proof is not ignored (unbound registry refuses before settle)", async () => {
+    const header = proofHeader({
+      scheme: "exact",
+      network: "base",
+      payer: PAYER,
+      amount: "50000",
+    });
+    const res = await tryHandleX402(
+      req("/api/v1/agent-verify", {
+        method: "GET",
+        headers: { "x-payment": header },
+      }),
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_NETWORK: "base",
+      }
+    );
+    expect(res!.status).toBe(503);
+    const body = (await res!.json()) as { error: string; settled: boolean };
+    expect(body.error).toBe("registry_not_bound");
+    expect(body.settled).toBe(false);
+  });
+
   it("GET /api/x402 without payTo is 503, not a free 200", async () => {
     const res = await tryHandleX402(req("/api/x402"));
     expect(res!.status).toBe(503);

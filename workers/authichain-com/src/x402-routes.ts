@@ -11,8 +11,10 @@
  *      never includes the salt or keys.
  * GET  /api/x402 + /api/v1/agent-verify → 402 advertisement when unpaid.
  *      GET-first crawlers treat a 200 here as "free" and never buy. Health
- *      stays on /api/x402/health. GET never consumes the free UUID allowance
- *      and never settles.
+ *      stays on /api/x402/health. GET never consumes the free UUID allowance.
+ *      A GET that already carries a payment proof is settled the same as
+ *      POST (empty body → missing-seal evidence). Otherwise GET-paying
+ *      scouts retry with a proof and receive the same 402.
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
  * GET  /api/x402/listing → PayAPI-ready pack copied from health
  * GET  /api/x402/growth → directories + skills + sisters
@@ -23,9 +25,9 @@
  *      set (src/lib/paid-seal-verify.ts) and settles only after that read.
  *      Otherwise it forwards over VERIFY_APP. With neither, 503
  *      registry_not_bound before any settlement (X402_REGISTRY_NOT_BOUND).
- *      The bazaar example UUID is never a free 200: crawlers POST that body
- *      and treat 2xx as payability=free. Real UUIDs still get 3/IP/UTC-day.
- *      Empty unpaid POST stays 402.
+ *      The bazaar example UUID and the stale PayAI sample `demo` are never a
+ *      free 200: crawlers POST those bodies and treat 2xx as payability=free.
+ *      Real UUIDs still get 3/IP/UTC-day. Empty unpaid POST stays 402.
  *
  * Do not rebind X402_PAY_TO away from the owner-authorized treasury
  * 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2. Do not rebind
@@ -58,7 +60,11 @@ import {
   sealLookupCredentials,
   type SealLookupEnv,
 } from "../../../src/lib/paid-seal-verify";
-import { parseSealRequest } from "../../../src/lib/agent-verify";
+import {
+  coerceSealBody,
+  parseSealRequest,
+  unpaidSealRefusal,
+} from "../../../src/lib/agent-verify";
 import {
   claimFreeCall,
   FREE_CALLS_HEADER,
@@ -264,16 +270,16 @@ async function tryFreeCall(
   env: X402Env | undefined,
   opts: X402Options | undefined
 ): Promise<{ response: Response | null; remaining: number | null }> {
-  const raw = parseJsonObject(await request.clone().text());
+  const raw = coerceSealBody(parseJsonObject(await request.clone().text()));
+  const refusal = unpaidSealRefusal(raw);
+  if (refusal) {
+    return { response: json(refusal.status, refusal.body), remaining: null };
+  }
   const parsed = parseSealRequest(raw);
   if (!parsed.ok) {
-    // No body: 402 so a scanner can read the price. A named seal that cannot
-    // exist, or productId/serial used as the key, is refused here. The paid
-    // path refuses those same named-but-invalid bodies before settlement.
-    // An empty body with a valid payment is settled as missing-seal evidence.
-    if (Object.keys(raw).length > 0) {
-      return { response: json(parsed.status, parsed.body), remaining: null };
-    }
+    // Empty body or listing sample (`demo` / bazaar UUID): 402 so a scanner
+    // can read the price. An empty body with a valid payment is settled as
+    // missing-seal evidence.
     return { response: null, remaining: null };
   }
   // Listing example UUID: crawlers POST this body. A free 200 is classified
@@ -410,7 +416,7 @@ async function agentVerify(
     return json(decision.status, decision.body, decision.headers);
   }
   if (decision.action === "forward" && verifyApp) {
-    const sealReq = parseSealRequest(parseJsonObject(bodyText));
+    const sealReq = parseSealRequest(coerceSealBody(parseJsonObject(bodyText)));
     return guardedForward({
       proofHeader,
       replayStore:
@@ -470,6 +476,12 @@ export async function tryHandleX402(
   }
 
   if (request.method === "GET" && isPaidPath(url.pathname)) {
+    const proofHeader = readPaymentProofHeader(name =>
+      request.headers.get(name)
+    );
+    if (proofHeader && parsePaymentHeader(proofHeader)) {
+      return agentVerify(request, env, verifyApp, opts);
+    }
     return unpaidQuote(request, env);
   }
 

@@ -119,8 +119,19 @@ export type X402BazaarExtension = {
 export const X402_DISCOVERY_EXAMPLE_SEAL_ID =
   "00000000-0000-4000-8000-000000000000";
 
+/**
+ * PayAI still lists `/api/v1/agent-verify` with `sealId: "demo"` (cached
+ * 2026-10-17). Crawlers POST that body and treat HTTP 400 as "POST does not
+ * pay". Accept it as a listing sample only: unpaid 402, paid missing-seal
+ * evidence, never a free 200. Do not advertise `demo` on new 402s.
+ */
+export const X402_STALE_DISCOVERY_SEAL_ID = "demo";
+
 export function isDiscoveryExampleSealId(sealId: string): boolean {
-  return sealId.trim().toLowerCase() === X402_DISCOVERY_EXAMPLE_SEAL_ID;
+  const id = sealId.trim().toLowerCase();
+  return (
+    id === X402_DISCOVERY_EXAMPLE_SEAL_ID || id === X402_STALE_DISCOVERY_SEAL_ID
+  );
 }
 
 /** Stable ISO-ms timestamp in the advertised sample (length matches live). */

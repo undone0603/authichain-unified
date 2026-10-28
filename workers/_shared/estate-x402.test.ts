@@ -103,11 +103,7 @@ test("unpaid POST /api/x402 is 402 v2 with published payTo and sister resource",
 });
 
 test("a body that cannot be a seal is 400 and does not ask for payment", async () => {
-  for (const body of [
-    { sealId: "demo" },
-    { probe: "suggestions" },
-    { productId: "p-1" },
-  ]) {
+  for (const body of [{ probe: "suggestions" }, { productId: "p-1" }]) {
     const res = await tryHandleSisterX402(
       req("qron.space", "/api/x402", {
         method: "POST",
