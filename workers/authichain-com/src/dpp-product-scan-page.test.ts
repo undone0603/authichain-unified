@@ -24,6 +24,7 @@ describe("/dpp-check/product", () => {
     expect(html).toContain("Data score:");
     expect(html).toContain("check digit");
     expect(html).not.toContain(NEW_LINK); // Pro CTA hidden (2026-10-24)
+    expect(html).not.toContain("buy.stripe.com");
   });
 
   it("escapes user input", async () => {

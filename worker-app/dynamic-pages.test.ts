@@ -806,6 +806,11 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain('<form action="/onboard" method="post">');
     expect(body).toContain('name="email"');
     expect(body).toContain('name="company"');
+    // First-dollar path leads Starter; passport + DPP remain as secondary buys.
+    expect(body).toContain("Buy Starter Pack — $29");
+    expect(body).toContain(
+      'href="https://authichain.com/checkout/starter"'
+    );
     expect(body).toContain(
       'href="https://authichain.com/checkout/strainchain_passport"'
     );
@@ -814,6 +819,9 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     );
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
+    );
+    expect(body.indexOf("checkout/starter")).toBeLessThan(
+      body.indexOf("checkout/dpp_readiness")
     );
     // Retired StrainChain Basic link (no live Stripe account) must not return.
     expect(body).not.toContain("9B6cN59br5xcaCuazy1Nu1o");
