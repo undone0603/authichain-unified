@@ -175,6 +175,38 @@ describe("tryHandleX402", () => {
     expect(body.protocol).toBeUndefined();
   });
 
+  it("GET /.well-known/agent-card.json is a 200 A2A card with x402 payment metadata", async () => {
+    const env = {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+      X402_PRICE_USD: "0.05",
+    };
+    for (const path of [
+      "/.well-known/agent-card.json",
+      "/.well-known/agent.json",
+    ]) {
+      const res = await tryHandleX402(req(path), env);
+      expect(res, path).not.toBeNull();
+      expect(res!.status, path).toBe(200);
+      const body = (await res!.json()) as {
+        name: string;
+        description: string;
+        skills: Array<{ id: string; tags?: string[] }>;
+        x402: { payTo: string; amount: string; scheme: string };
+      };
+      expect(body.name).toBe("AuthiChain");
+      expect(body.description).toContain(
+        "A valid signature is not real-world truth"
+      );
+      expect(body.skills.some(s => s.id === "paid-evidence-check")).toBe(true);
+      expect(body.x402.scheme).toBe("exact");
+      expect(body.x402.payTo).toBe(env.X402_PAY_TO);
+      expect(body.x402.amount).toBe("50000");
+      const raw = JSON.stringify(body).toLowerCase();
+      expect(raw).not.toContain("authenticityscore");
+      expect(raw).not.toContain("erc8004");
+    }
+  });
+
   it("GET /openapi.json declares x-payment-info for POST /api/x402", async () => {
     const res = await tryHandleX402(req("/openapi.json"), {
       X402_PRICE_USD: "0.05",

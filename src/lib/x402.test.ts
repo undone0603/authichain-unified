@@ -24,6 +24,7 @@ import {
   isDiscoveryExampleSealId,
   x402BazaarDiscovery,
   x402PaidOutputExample,
+  x402AgentCard,
   type PaymentRequirement,
 } from "./x402";
 import { planPaymentLink, planUsd } from "./plans";
@@ -791,6 +792,45 @@ describe("x402Catalog", () => {
     expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
       "authenticityscore"
     );
+  });
+});
+
+describe("x402AgentCard", () => {
+  it("publishes an A2A Agent Card with skills and live x402 payment metadata", async () => {
+    const env = {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+      X402_PRICE_USD: "0.05",
+      X402_NETWORK: "base",
+    };
+    const card = await x402AgentCard(env);
+    expect(card.name).toBe("AuthiChain");
+    expect(card.description.toLowerCase()).toContain("evidence");
+    expect(card.description).toContain("A valid signature is not real-world truth");
+    expect(card.provider.url).toBe("https://authichain.com");
+    expect(card.documentationUrl).toBe("https://authichain.com/x402");
+    expect(card.url).toBe("https://authichain.com/mcp");
+    expect(card.skills.length).toBeGreaterThan(0);
+    const skill = card.skills.find(s => s.id === "paid-evidence-check");
+    expect(skill?.tags).toEqual(
+      expect.arrayContaining(["verification", "authenticity", "evidence"])
+    );
+    expect(card.x402.scheme).toBe("exact");
+    expect(card.x402.network).toBe("eip155:8453");
+    expect(card.x402.payTo).toBe(env.X402_PAY_TO);
+    expect(card.x402.amount).toBe("50000");
+    expect(card.x402.priceUsd).toBe(0.05);
+    expect(card.x402.accepts?.length).toBeGreaterThan(0);
+    expect(card.x402.resources).toEqual(
+      expect.arrayContaining([
+        "https://authichain.com/api/v1/agent-verify",
+        "https://authichain.com/api/x402",
+      ])
+    );
+    const raw = JSON.stringify(card).toLowerCase();
+    expect(raw).not.toContain("authenticityscore");
+    expect(raw).not.toContain("@");
+    expect(raw).not.toContain("erc8004");
+    expect(card).not.toHaveProperty("info");
   });
 });
 

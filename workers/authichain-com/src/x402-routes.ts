@@ -23,6 +23,8 @@
  * GET  /api/x402/listing → PayAPI-ready pack copied from health
  * GET  /api/x402/growth → directories + skills + sisters
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
+ * GET  /.well-known/agent-card.json (+ agent.json) → A2A Agent Card
+ *      with skills and x402 payment metadata. No contact email. No ERC-8004.
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
  * POST /api/x402 + /api/v1/agent-verify → 402 challenge when unpaid. A paid
  *      call reads auth_seals on this worker when SUPABASE_URL and a key are
@@ -45,6 +47,7 @@ import {
   X402_REGISTRY_NOT_BOUND,
   X402_RESOURCE_DESCRIPTION,
   isDiscoveryExampleSealId,
+  x402AgentCard,
   x402Catalog,
   x402HealthReport,
   x402OpenApiDocument,
@@ -131,6 +134,8 @@ export function isX402Path(pathname: string): boolean {
     p === "/api/v1/agent-verify" ||
     p === "/.well-known/x402" ||
     p === "/.well-known/x402.json" ||
+    p === "/.well-known/agent-card.json" ||
+    p === "/.well-known/agent.json" ||
     p === "/openapi.json"
   );
 }
@@ -154,6 +159,11 @@ function isGrowthPath(pathname: string): boolean {
 
 function isFanoutPath(pathname: string): boolean {
   return normalizePath(pathname) === "/.well-known/x402";
+}
+
+function isAgentCardPath(pathname: string): boolean {
+  const p = normalizePath(pathname);
+  return p === "/.well-known/agent-card.json" || p === "/.well-known/agent.json";
 }
 
 function isOpenApiPath(pathname: string): boolean {
@@ -247,6 +257,11 @@ async function growthResponse(env?: X402Env): Promise<Response> {
 
 function fanoutResponse(): Response {
   return json(200, x402ScanFanout());
+}
+
+async function agentCardResponse(env?: X402Env): Promise<Response> {
+  hydrateX402(env);
+  return json(200, await x402AgentCard(healthEnv(env)));
 }
 
 async function openApiResponse(env?: X402Env): Promise<Response> {
@@ -477,6 +492,10 @@ export async function tryHandleX402(
 
   if (request.method === "GET" && isFanoutPath(url.pathname)) {
     return fanoutResponse();
+  }
+
+  if (request.method === "GET" && isAgentCardPath(url.pathname)) {
+    return agentCardResponse(env);
   }
 
   if (request.method === "GET" && isOpenApiPath(url.pathname)) {

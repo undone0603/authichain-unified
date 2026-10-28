@@ -1228,6 +1228,124 @@ export async function x402Catalog(
   };
 }
 
+export type X402AgentCardSkill = {
+  id: string;
+  name: string;
+  description: string;
+  tags: string[];
+  examples?: string[];
+};
+
+export type X402AgentCard = {
+  name: "AuthiChain";
+  description: string;
+  url: string;
+  version: string;
+  documentationUrl: string;
+  provider: { organization: "AuthiChain"; url: string };
+  capabilities: {
+    streaming: false;
+    pushNotifications: false;
+    extendedAgentCard: false;
+  };
+  defaultInputModes: string[];
+  defaultOutputModes: string[];
+  supportedInterfaces: Array<{
+    url: string;
+    protocolBinding: string;
+    protocolVersion: string;
+  }>;
+  additionalInterfaces: Array<{ url: string; transport: string }>;
+  skills: X402AgentCardSkill[];
+  x402: {
+    scheme: "exact";
+    network: string;
+    payTo: string | null;
+    asset: string;
+    amount: string;
+    priceUsd: number;
+    extra: { name: "USD Coin"; version: "2" };
+    accepts?: X402CatalogAccept[];
+    resources: string[];
+  };
+};
+
+/**
+ * A2A Agent Card at `/.well-known/agent-card.json`.
+ * Identity + skills + x402 payment metadata for Trust Passport probes.
+ * This host has no A2A JSON-RPC and no ERC-8004 registration — do not claim either.
+ * A valid signature is not real-world truth. Do not add contact email.
+ */
+export async function x402AgentCard(
+  env: X402HealthEnv = process.env
+): Promise<X402AgentCard> {
+  const catalog = await x402Catalog(env);
+  const paid = catalog.endpoints.filter(e => e.paid);
+  const resources = [
+    ...new Set(
+      paid
+        .map(e => e.url || e.resource)
+        .filter((u): u is string => Boolean(u))
+    ),
+  ];
+  const accepts = paid.find(e => e.accepts && e.accepts.length > 0)?.accepts;
+  return {
+    name: "AuthiChain",
+    description: X402_RESOURCE_DESCRIPTION,
+    url: "https://authichain.com/mcp",
+    version: "1.3.2",
+    documentationUrl: "https://authichain.com/x402",
+    provider: {
+      organization: "AuthiChain",
+      url: "https://authichain.com",
+    },
+    capabilities: {
+      streaming: false,
+      pushNotifications: false,
+      extendedAgentCard: false,
+    },
+    defaultInputModes: ["application/json"],
+    defaultOutputModes: ["application/json"],
+    supportedInterfaces: [
+      {
+        url: "https://authichain.com/mcp",
+        protocolBinding: "HTTP",
+        protocolVersion: "2025-03-26",
+      },
+    ],
+    additionalInterfaces: [
+      { url: "https://authichain.com/mcp", transport: "HTTP+JSON" },
+      {
+        url: "https://authichain.com/api/v1/agent-verify",
+        transport: "HTTP+JSON",
+      },
+    ],
+    skills: [
+      {
+        id: "paid-evidence-check",
+        name: "Paid evidence check",
+        description: X402_RESOURCE_DESCRIPTION,
+        tags: [...X402_RESOURCE_TAGS],
+        examples: [
+          "POST https://authichain.com/api/v1/agent-verify with an X-PAYMENT header",
+          "Run the independent verifier on the signed record; leftover unknowns stay unknown",
+        ],
+      },
+    ],
+    x402: {
+      scheme: "exact",
+      network: catalog.network,
+      payTo: catalog.payTo,
+      asset: catalog.asset,
+      amount: catalog.pricePerCall.atomic,
+      priceUsd: catalog.pricePerCall.usd,
+      extra: { name: "USD Coin", version: "2" },
+      accepts,
+      resources,
+    },
+  };
+}
+
 /**
  * x402scan compatibility fan-out (`GET /.well-known/x402`). Keep this
  * document tiny — scanners expect `version` + `resources`, not the catalog.
