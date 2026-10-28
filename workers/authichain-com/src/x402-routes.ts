@@ -40,6 +40,7 @@ import {
   type X402VerifyBinding,
 } from "../../../src/lib/x402";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
+import { sealBaseline } from "../../../src/lib/seal-baseline";
 import {
   readSeal,
   guardedForward,
@@ -49,10 +50,7 @@ import {
   sealLookupCredentials,
   type SealLookupEnv,
 } from "../../../src/lib/paid-seal-verify";
-import {
-  parseSealRequest,
-  registryAnswer,
-} from "../../../src/lib/agent-verify";
+import { parseSealRequest } from "../../../src/lib/agent-verify";
 import {
   claimFreeCall,
   FREE_CALLS_HEADER,
@@ -268,8 +266,8 @@ async function tryFreeCall(
   if (!parsed.ok) {
     // No body: 402 so a scanner can read the price. A named seal that cannot
     // exist, or productId/serial used as the key, is refused here. The paid
-    // path does the same before settlement. This runs before the registry
-    // credential check so a bad id is not a payment challenge.
+    // path refuses those same named-but-invalid bodies before settlement.
+    // An empty body with a valid payment is settled as missing-seal evidence.
     if (Object.keys(raw).length > 0) {
       return { response: json(parsed.status, parsed.body), remaining: null };
     }
@@ -277,7 +275,8 @@ async function tryFreeCall(
   }
   const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);
   const creds = sealLookupCredentials(env);
-  if (!creds || limit <= 0) return { response: null, remaining: limit <= 0 ? 0 : null };
+  if (!creds || limit <= 0)
+    return { response: null, remaining: limit <= 0 ? 0 : null };
   const fetchImpl = opts?.fetchImpl ?? fetch;
   const store =
     opts && "freeStore" in opts
@@ -307,17 +306,13 @@ async function tryFreeCall(
       remaining: claim.remaining,
     };
   }
-  const answer = registryAnswer(lookup.seal);
+  const answer = sealBaseline(lookup.seal);
   return {
     response: json(
       200,
       {
-        verified: false,
-        registered: answer.registered,
-        status: answer.status,
-        checks: answer.checks,
+        ...answer,
         subject: parsed.sealId,
-        details: answer.details,
         settlement: null,
         free: true,
         freeCallsRemaining: claim.remaining,

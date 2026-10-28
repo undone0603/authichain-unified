@@ -11,7 +11,6 @@
  * tracked in automation_logs (same ledger the rate-limiter uses).
  */
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -26,9 +25,9 @@ import {
   settlePayment,
   X402_REGISTRY_NOT_BOUND,
 } from "@/lib/x402";
-import { attestSeal } from "@/lib/seal-attestation";
+import { sealBaseline } from "../../../../lib/seal-baseline";
 // Relative, not "@/lib/…": tsconfig.worker.json maps "@/*" to client/src only.
-import { parseSealRequest, registryAnswer } from "../../../../lib/agent-verify";
+import { parseSealRequest } from "../../../../lib/agent-verify";
 import { onVerificationEvent } from "../../../../../server/revenue-engine/loop";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +42,7 @@ async function dailySpentAtomic(
   payer: string,
   priceAtomic: bigint,
   supabaseUrl: string,
-  serviceKey: string,
+  serviceKey: string
 ): Promise<bigint | null> {
   const supabase = createAdminClient(supabaseUrl, serviceKey);
   const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -114,17 +113,18 @@ export async function POST(request: Request) {
     );
   }
 
-  // 4. Everything that can refuse runs before settlement, so a refused call
-  // never costs the agent the $0.05: missing subject, spend cap, registry
-  // outage. Only a call that will get a real registry answer is settled.
+  // 4. Named-but-invalid bodies, spend cap, and registry outage refuse
+  // before settlement. An empty body is the x402 402 challenge; a valid
+  // payment on that same body settles and returns missing-seal evidence.
+  const emptyBody = Object.keys(input).length === 0;
   const parsed = parseSealRequest(input);
-  if (!parsed.ok) {
+  if (!parsed.ok && !emptyBody) {
     return NextResponse.json(parsed.body, { status: parsed.status });
   }
-  const { sealId } = parsed;
+  const sealId = parsed.ok ? parsed.sealId : null;
 
-  // A row in auth_seals is not an attestation. verified is true only when
-  // protocol/verifier.mjs returns verdict "verified" (Ed25519 + mainnet anchor).
+  // A row in auth_seals is not an attestation. This path checks signature
+  // and validity only; it does not query an anchor or authenticate an issuer.
   // The paid ledger also requires the service role: if we cannot read it,
   // fail closed before settlement rather than treating the spend as zero.
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -136,7 +136,12 @@ export async function POST(request: Request) {
 
   const priceAtomic = BigInt(usdToAtomic(PRICE_USD));
   const capAtomic = BigInt(usdToAtomic(dailyCapUsd()));
-  const spent = await dailySpentAtomic(proof.payer, priceAtomic, supabaseUrl, serviceKey);
+  const spent = await dailySpentAtomic(
+    proof.payer,
+    priceAtomic,
+    supabaseUrl,
+    serviceKey
+  );
   if (spent === null) {
     return NextResponse.json(
       { error: "spend_ledger_unavailable", settled: false },
@@ -149,17 +154,23 @@ export async function POST(request: Request) {
       { status: 402 }
     );
   }
-  const { data: seal, error: sealError } = await admin
-    .from("auth_seals")
-    .select("*")
-    .eq("id", sealId)
-    .maybeSingle();
-  if (sealError) {
-    return NextResponse.json(
-      { error: "registry_unavailable", settled: false },
-      { status: 503 }
-    );
+  let seal: Record<string, unknown> | null = null;
+  if (sealId) {
+    const { data, error: sealError } = await admin
+      .from("auth_seals")
+      .select("id,product_id,batch_id,brand,created_at,qr_payload")
+      .eq("id", sealId)
+      .maybeSingle();
+    if (sealError) {
+      return NextResponse.json(
+        { error: "registry_unavailable", settled: false },
+        { status: 503 }
+      );
+    }
+    seal = (data as Record<string, unknown> | null) ?? null;
   }
+
+  const answer = sealBaseline(seal);
 
   // 5. Trustless settlement via the x402 facilitator (on-chain EIP-3009).
   // In production a facilitator MUST confirm settlement; dev-mode (no facilitator
@@ -187,30 +198,19 @@ export async function POST(request: Request) {
     payload: proof.payer,
   });
 
-  const attestation = attestSeal(
-    seal ? (seal as Record<string, unknown>) : null
-  );
-  const answer = registryAnswer(seal as Record<string, unknown> | null);
-  if (attestation.verdict) {
-    answer.details.verdict = attestation.verdict;
-    answer.details.reasons = attestation.reasons;
-    if (attestation.verified) answer.checks.signature = "checked";
+  if (sealId) {
+    await onVerificationEvent({
+      seal_id: sealId,
+      brand: (seal?.brand as string | undefined) ?? "authichain.com",
+      scan_context: { source: "agent-verify", payer: proof.payer },
+      status: answer.verified ? "valid" : "invalid",
+    });
   }
-  await onVerificationEvent({
-    seal_id: sealId,
-    brand: (seal?.brand as string | undefined) ?? "authichain.com",
-    scan_context: { source: "agent-verify", payer: proof.payer },
-    status: attestation.verified ? "valid" : "invalid",
-  });
 
   return NextResponse.json(
     {
-      verified: attestation.verified,
-      registered: answer.registered,
-      status: answer.status,
-      checks: answer.checks,
+      ...answer,
       subject: sealId,
-      details: answer.details,
       settlement: {
         payer: proof.payer,
         amountAtomic: verification.amount.toString(),
