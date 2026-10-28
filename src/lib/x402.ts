@@ -1045,6 +1045,15 @@ export async function x402HealthReport(
   };
 }
 
+export type X402CatalogAccept = {
+  scheme: "exact";
+  network: string;
+  payTo: string;
+  asset: string;
+  amount: string;
+  extra?: { name?: string; version?: string };
+};
+
 export type X402CatalogEndpoint = {
   method: "GET" | "POST";
   path: string;
@@ -1054,6 +1063,11 @@ export type X402CatalogEndpoint = {
   priceAtomic: string | null;
   unpaidStatus?: number;
   answersPaidCalls?: boolean;
+  /** Absolute URL so Saylor/CDP well-known parsers can list this endpoint. */
+  url?: string;
+  resource?: string;
+  accepts?: X402CatalogAccept[];
+  tags?: string[];
 };
 
 export type X402CatalogBody = {
@@ -1107,22 +1121,42 @@ export async function x402Catalog(
 ): Promise<X402CatalogBody> {
   const health = await x402HealthReport(env);
   const bound = health.paidVerify.bound;
+  const origin = "https://authichain.com";
   const paid = (
     path: string,
     description: string,
     method: "GET" | "POST" = "POST"
-  ): X402CatalogEndpoint => ({
-    method,
-    path,
-    paid: true,
-    description: bound
-      ? description
-      : `${description}. Not answering yet: a paid call is refused with 503 registry_not_bound before settlement; no payment is taken.`,
-    priceUsd: health.pricePerCall.usd,
-    priceAtomic: health.pricePerCall.atomic,
-    unpaidStatus: 402,
-    answersPaidCalls: bound,
-  });
+  ): X402CatalogEndpoint => {
+    const url = `${origin}${path}`;
+    const accepts: X402CatalogAccept[] | undefined = health.payTo
+      ? [
+          {
+            scheme: "exact",
+            network: x402Caip2Network(health.network),
+            payTo: health.payTo,
+            asset: health.asset,
+            amount: health.pricePerCall.atomic,
+            extra: { name: "USD Coin", version: "2" },
+          },
+        ]
+      : undefined;
+    return {
+      method,
+      path,
+      paid: true,
+      description: bound
+        ? description
+        : `${description}. Not answering yet: a paid call is refused with 503 registry_not_bound before settlement; no payment is taken.`,
+      priceUsd: health.pricePerCall.usd,
+      priceAtomic: health.pricePerCall.atomic,
+      unpaidStatus: 402,
+      answersPaidCalls: bound,
+      url,
+      resource: url,
+      accepts,
+      tags: [...X402_RESOURCE_TAGS],
+    };
+  };
   const free = (path: string, description: string): X402CatalogEndpoint => ({
     method: "GET",
     path,
@@ -1162,19 +1196,16 @@ export async function x402Catalog(
       free("/openapi.json", "OpenAPI 3.1 with x-payment-info for x402scan"),
       paid(
         "/api/x402",
-        "AuthiChain agent verification (unpaid GET is 402)",
+        `${X402_RESOURCE_DESCRIPTION} Unpaid GET is 402.`,
         "GET"
       ),
       paid(
         "/api/v1/agent-verify",
-        "AuthiChain agent verification (unpaid GET is 402)",
+        `${X402_RESOURCE_DESCRIPTION} Unpaid GET is 402.`,
         "GET"
       ),
-      paid("/api/x402", "AuthiChain agent verification (seal UUID)"),
-      paid(
-        "/api/v1/agent-verify",
-        "AuthiChain agent verification (seal UUID)"
-      ),
+      paid("/api/x402", X402_RESOURCE_DESCRIPTION),
+      paid("/api/v1/agent-verify", X402_RESOURCE_DESCRIPTION),
       paid("/mcp", "MCP tools/call verify (GET is free discovery)"),
       paid("/api/mcp", "MCP tools/call verify alias"),
     ],

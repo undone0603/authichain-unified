@@ -762,6 +762,36 @@ describe("x402Catalog", () => {
       "facilitator.payai"
     );
   });
+
+  it("puts Saylor/CDP accepts[] on paid catalog endpoints so a 200 well-known lists", async () => {
+    const env = {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+      X402_PRICE_USD: "0.05",
+      X402_NETWORK: "base",
+    };
+    const catalog = await x402Catalog(env);
+    const paid = catalog.endpoints.filter(e => e.paid);
+    expect(paid.length).toBeGreaterThan(0);
+    for (const e of paid) {
+      const url = e.url || e.resource;
+      expect(url).toMatch(/^https:\/\/authichain\.com\/api\/|^https:\/\/authichain\.com\/mcp$/);
+      expect(e.accepts?.length).toBeGreaterThan(0);
+      for (const a of e.accepts ?? []) {
+        expect(a.scheme).toBe("exact");
+        expect(a.network).toBe("eip155:8453");
+        expect(a.payTo).toBe(env.X402_PAY_TO);
+        expect(a.amount).toBe("50000");
+      }
+    }
+    const x402 = paid.find(e => e.path === "/api/x402" && e.method === "POST");
+    expect(x402?.description.toLowerCase()).toContain("evidence");
+    expect(x402?.tags).toEqual(
+      expect.arrayContaining(["verification", "authenticity", "evidence"])
+    );
+    expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
+      "authenticityscore"
+    );
+  });
 });
 
 describe("x402ScanFanout", () => {
