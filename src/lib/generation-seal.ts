@@ -288,6 +288,30 @@ export async function checkGenerationSeal(
   return { verdict: "valid-unanchored", reasons };
 }
 
+/** Stranger check. The key is the issuer did:key inside the record. */
+export async function checkPresentedSeal(
+  record: ProtocolRecord,
+  image?: BufferSource
+): Promise<{ verdict: "valid-unanchored" | "invalid"; reasons: string[] }> {
+  try {
+    const key = await issuerKey(record.issuer);
+    return checkGenerationSeal(record, key, image);
+  } catch {
+    return { verdict: "invalid", reasons: ["bad_signature"] };
+  }
+}
+
+async function issuerKey(did: string): Promise<CryptoKey> {
+  if (!did.startsWith("did:key:z")) throw new Error("issuer is not a did:key");
+  const prefixed = b58ToBytes(did.slice("did:key:z".length));
+  if (prefixed.length !== 34 || prefixed[0] !== 0xed || prefixed[1] !== 0x01) {
+    throw new Error("issuer multicodec is not ed25519");
+  }
+  const raw = new Uint8Array(32);
+  raw.set(prefixed.subarray(2));
+  return crypto.subtle.importKey("raw", raw, { name: "Ed25519" }, true, ["verify"]);
+}
+
 export function resolveBody(seal: SealResult | null): {
   status: "signature_valid" | "signature_not_checked";
   headline: string;
