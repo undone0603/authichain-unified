@@ -38,6 +38,45 @@ export interface PaymentRequirement {
   outputSchema?: X402BazaarInfo;
 }
 
+/**
+ * HTTP 200 body after a paid missing-seal check (the advertised bazaar
+ * example UUID). Crawlers that walk `accepts[0].outputSchema.output` as
+ * the response template compare these keys to the JSON they paid for.
+ * Never include `authenticityScore`. A valid signature is not claimed.
+ */
+export type X402PaidHttpBodyExample = {
+  registered: boolean;
+  status: string;
+  checks: {
+    registry: string;
+    signature: string;
+    revocation: string;
+  };
+  details: {
+    verdict: string;
+    reasons: string[];
+  };
+  verified: false;
+  baseline: {
+    version: "1";
+    scope: "signature-and-validity";
+    checkedAt: string;
+    verdict: string;
+    reasons: string[];
+    checks: Record<string, unknown>;
+    evidence: { record: null; anchor: null };
+    unknowns: string[];
+  };
+  subject: string;
+  settlement: {
+    payer: string;
+    amountAtomic: string;
+    txHash: string;
+    trustless: boolean;
+  };
+  timestamp: string;
+};
+
 /** Bazaar discovery `info` (HTTP POST skill). Schema must validate this object. */
 export type X402BazaarInfo = {
   input: {
@@ -50,19 +89,19 @@ export type X402BazaarInfo = {
   };
   output: {
     type: "json";
-    example: {
-      verified: boolean;
-      authenticityScore: number;
-      subject: string | null;
-      details: Record<string, unknown>;
-      settlement: {
-        payer: string;
-        amountAtomic: string;
-        txHash: string;
-        trustless: boolean;
-      };
-    };
+    example: X402PaidHttpBodyExample;
   };
+};
+
+/**
+ * v2 `accepts[0].outputSchema`. Keep `input` so PayAI can catalog the
+ * skill. Put the unwrapped HTTP body on `output` so field-check crawlers
+ * (Settled `basis=example`) do not treat bazaar `{type, example}` wrapper
+ * keys as promised response fields.
+ */
+export type X402V2OutputSchema = {
+  input: X402BazaarInfo["input"];
+  output: X402PaidHttpBodyExample;
 };
 
 export type X402BazaarExtension = {
@@ -84,6 +123,54 @@ export function isDiscoveryExampleSealId(sealId: string): boolean {
   return sealId.trim().toLowerCase() === X402_DISCOVERY_EXAMPLE_SEAL_ID;
 }
 
+/** Stable ISO-ms timestamp in the advertised sample (length matches live). */
+export const X402_PAID_OUTPUT_EXAMPLE_CHECKED_AT = "2026-01-01T00:00:00.000Z";
+
+/**
+ * Paid missing-seal JSON the Worker actually returns (plus settlement
+ * receipt). Used as bazaar `output.example` and as v2 `outputSchema.output`.
+ */
+export function x402PaidOutputExample(): X402PaidHttpBodyExample {
+  return {
+    registered: false,
+    status: "not_registered",
+    checks: {
+      registry: "not_found",
+      signature: "not_checked",
+      revocation: "not_available",
+    },
+    details: {
+      verdict: "unsigned",
+      reasons: ["seal_not_found"],
+    },
+    verified: false,
+    baseline: {
+      version: "1",
+      scope: "signature-and-validity",
+      checkedAt: X402_PAID_OUTPUT_EXAMPLE_CHECKED_AT,
+      verdict: "unsigned",
+      reasons: ["seal_not_found"],
+      checks: {},
+      evidence: { record: null, anchor: null },
+      unknowns: [
+        "issuer_identity_not_authenticated",
+        "registry_subject_binding_not_verified",
+        "revocation_not_checked",
+        "anchor_not_queried",
+        "physical_authenticity_not_inspected",
+      ],
+    },
+    subject: X402_DISCOVERY_EXAMPLE_SEAL_ID,
+    settlement: {
+      payer: "0x0000000000000000000000000000000000000000",
+      amountAtomic: "50000",
+      txHash: "0x",
+      trustless: true,
+    },
+    timestamp: X402_PAID_OUTPUT_EXAMPLE_CHECKED_AT,
+  };
+}
+
 /**
  * Discovery metadata for PayAI / x402 Bazaar. Declared on the unpaid 402 so a
  * compatible client can echo `extensions.bazaar` in X-PAYMENT. Do not put a
@@ -99,18 +186,7 @@ export function x402BazaarDiscovery(): X402BazaarExtension {
     },
     output: {
       type: "json",
-      example: {
-        verified: false,
-        authenticityScore: 0,
-        subject: X402_DISCOVERY_EXAMPLE_SEAL_ID,
-        details: {},
-        settlement: {
-          payer: "0x0000000000000000000000000000000000000000",
-          amountAtomic: "50000",
-          txHash: "0x",
-          trustless: true,
-        },
-      },
+      example: x402PaidOutputExample(),
     },
   };
   return {
@@ -254,8 +330,8 @@ export type PaymentRequiredV2 = {
     payTo: string;
     maxTimeoutSeconds: number;
     extra?: { name?: string; version?: string };
-    /** PayAI / CDP Bazaar catalog the skill from the unpaid 402 accepts row. */
-    outputSchema: X402BazaarInfo;
+    /** PayAI catalogs `input`; Settled walks `output` as the HTTP body sample. */
+    outputSchema: X402V2OutputSchema;
   }>;
   extensions: X402BazaarExtension;
 };
@@ -326,7 +402,10 @@ function buildPaymentRequiredV2(opts: {
         asset: opts.asset,
         payTo: opts.payTo,
         maxTimeoutSeconds: X402_MAX_TIMEOUT_SECONDS,
-        outputSchema: opts.extensions.bazaar.info,
+        outputSchema: {
+          input: opts.extensions.bazaar.info.input,
+          output: x402PaidOutputExample(),
+        },
         ...(opts.extra ? { extra: opts.extra } : {}),
       },
     ],
@@ -341,7 +420,9 @@ function buildPaymentRequiredV2(opts: {
  * `x402Version`; a v1 body is rejected as "expected 2"). The unpaid
  * `accepts[0]` carries `outputSchema.input` (`type` + `method`) so Bazaar
  * can catalog from the 402 body, not only from a later `/settle`.
- * `body` stays the v1 requirement PayAI `/settle` still posts.
+ * v2 `outputSchema.output` is the unwrapped paid HTTP body sample.
+ * `body` stays the v1 requirement PayAI `/settle` still posts
+ * (`outputSchema` = bazaar.info, including `{type, example}`).
  * Do not rebind `X402_FACILITATOR_URL` to chase CDP listing.
  */
 export function buildPaymentRequired(opts: {

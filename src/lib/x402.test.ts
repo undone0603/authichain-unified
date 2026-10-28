@@ -20,11 +20,14 @@ import {
   readPaymentProofHeader,
   X402_PUBLISHED_PAY_TO,
   X402_DISCOVERY_EXAMPLE_SEAL_ID,
+  X402_PAID_OUTPUT_EXAMPLE_CHECKED_AT,
   isDiscoveryExampleSealId,
   x402BazaarDiscovery,
+  x402PaidOutputExample,
   type PaymentRequirement,
 } from "./x402";
 import { planPaymentLink, planUsd } from "./plans";
+import { sealBaseline } from "./seal-baseline";
 
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
 const req: PaymentRequirement = {
@@ -166,7 +169,81 @@ describe("buildPaymentRequired", () => {
     });
     expect(unpaid.extensions.bazaar.schema.properties).toHaveProperty("input");
   });
+
+  it("advertises the paid HTTP body on v2 outputSchema.output, not the bazaar wrapper", () => {
+    const r = buildPaymentRequired({
+      resource: "https://authichain.govchain.us/api/x402",
+      priceUsd: 0.05,
+      payTo: "0xabc0000000000000000000000000000000000001",
+    });
+    const advertised = r.v2.accepts[0].outputSchema.output;
+    const bazaarOut = r.v2.extensions.bazaar.info.output;
+    expect(r.body.accepts[0].outputSchema).toEqual(
+      r.body.extensions.bazaar.info
+    );
+    expect(bazaarOut).toEqual({
+      type: "json",
+      example: x402PaidOutputExample(),
+    });
+    expect(advertised).toEqual(x402PaidOutputExample());
+    expect(advertised).not.toHaveProperty("example");
+    expect(advertised).not.toHaveProperty("type");
+    expect("authenticityScore" in advertised).toBe(false);
+    expect(JSON.stringify(r.v2.accepts[0].outputSchema)).not.toMatch(
+      /authenticityScore/i
+    );
+    expect(JSON.stringify(bazaarOut.example)).not.toMatch(/authenticityScore/i);
+
+    const paid = {
+      ...sealBaseline(null, X402_PAID_OUTPUT_EXAMPLE_CHECKED_AT),
+      subject: X402_DISCOVERY_EXAMPLE_SEAL_ID,
+      settlement: advertised.settlement,
+      timestamp: advertised.timestamp,
+    };
+    const missing = flattenObjectPaths(advertised).filter(
+      path => !hasObjectPath(paid, path)
+    );
+    expect(missing).toEqual([]);
+    expect(advertised.verified).toBe(false);
+    expect(advertised.baseline.verdict).toBe("unsigned");
+    expect(advertised.baseline.evidence.record).toBeNull();
+  });
 });
+
+function flattenObjectPaths(value: unknown, prefix = ""): string[] {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return prefix ? [prefix] : [];
+  }
+  const keys = Object.keys(value as object);
+  const out: string[] = [];
+  if (prefix) out.push(prefix);
+  if (keys.length === 0 && prefix) return out;
+  for (const key of keys) {
+    out.push(
+      ...flattenObjectPaths(
+        (value as Record<string, unknown>)[key],
+        prefix ? `${prefix}.${key}` : key
+      )
+    );
+  }
+  return out;
+}
+
+function hasObjectPath(value: unknown, path: string): boolean {
+  let cur: unknown = value;
+  for (const part of path.split(".")) {
+    if (
+      cur === null ||
+      typeof cur !== "object" ||
+      Array.isArray(cur) ||
+      !(part in (cur as object))
+    ) {
+      return false;
+    }
+    cur = (cur as Record<string, unknown>)[part];
+  }
+  return true;
+}
 
 describe("resolveX402Asset", () => {
   it("uses official Base USDC when the ticker or nothing is set", () => {
