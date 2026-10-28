@@ -1157,8 +1157,13 @@ function onboardPayNowHtml(): string {
   return (
     '<section aria-label="Live checkout" class="onboard-pay">\n' +
     "<h2>Or buy now, no call needed</h2>\n" +
-    "<p>The pilot request is free.</p>\n" +
+    "<p>The pilot request is free. First paid checkout is the Starter Pack.</p>\n" +
     '<p class="onboard-pay-links">\n' +
+    catalogPaymentLinkHtml({
+      planId: "starter",
+      label: "Buy Starter Pack — $29",
+    }) +
+    "\n" +
     catalogPaymentLinkHtml({
       planId: "strainchain_passport",
       label: "StrainChain Passport — $49",

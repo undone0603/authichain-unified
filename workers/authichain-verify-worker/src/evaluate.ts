@@ -110,7 +110,7 @@ function emptyVector() {
     issuer: "unknown" as CheckState,
     signature: "unknown" as CheckState,
     provenance: "unknown" as CheckState,
-    physical_binding: "unknown" as const,
+    physical_binding: "unknown" as CheckState,
     scan_behavior: "clear" as CheckState,
     revocation: "clear" as CheckState,
     freshness: "unknown" as CheckState,
