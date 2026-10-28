@@ -122,7 +122,7 @@ export default defineConfig({
         replacement: path.resolve(templateRoot, "src", "db") + "$1",
       },
       {
-        find: "@/…/fixtures",
+        find: "@/../fixtures",
         replacement: path.resolve(templateRoot, "fixtures"),
       },
       // Client catch-all: @/anything-else → client/src
