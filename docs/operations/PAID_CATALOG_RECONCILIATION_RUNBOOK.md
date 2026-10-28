@@ -62,6 +62,45 @@ There were **zero** `reconciliation_required` rows. Also zero
 session grant marker, and three locally active subscriptions. These are
 diagnostic counts only; the last two do not prove paid renewals.
 
+## Stripe destination ownership: sync is not fulfillment (2026-10-28 read-only)
+
+The live Stripe account has **10 webhook endpoints**, **six enabled**. Four
+enabled destinations subscribe to `checkout.session.completed`:
+
+| Destination | Intended/observed role | What is *not* established |
+| --- | --- | --- |
+| `https://authichain.com/api/stripe/webhook` (`we_1UGTCSGqTruSqV8ThM9bXVWp`) | Canonical AuthiChain edge-router webhook per repo routing and Stripe configuration | Exact deployed Cloudflare Worker revision, per-event delivery outcome, persisted paid grant |
+| `https://nhdnkzhtadfkkluiulhs.supabase.co/functions/v1/stripe-webhook` | Stripe Sync Engine ingestion into `stripe_sdp_data` | Customer entitlement or `public.revenue_events` writer |
+| `https://first-dollar-desk.undone-k.workers.dev/api/stripe/webhook` | Separate first-dollar-desk receiver | Effect on this specific catalog/DPP order |
+| `https://authichain-license-issuer.undone-k.workers.dev/api/license/stripe-webhook` | Separate license-issuer receiver | Effect on this specific catalog/DPP order |
+
+The **deployed** Supabase Edge Function `stripe-webhook` (version **36**,
+SHA-256 `171afd1b8c0f578e1046bfbab8ac753ea588b3f9fddcef0cedfc42e434e86555`)
+contains `@stripe/sync-engine` version `1.0.32`, verifies Stripe signatures
+and synchronizes Stripe objects. The inspected function has no
+`provisionPurchase`, `profiles`, or `revenue_events` writer. Its five
+synced charges and 779 synced sessions are **source-of-truth payment
+observations**, not evidence of business-ledger or entitlement completion.
+An empty `public.revenue_events` table cannot be repaired by assuming
+the Stripe Sync Engine performs AuthiChain fulfillment.
+
+Stripe live read-only on this date: **five charges** (one successful $10
+founder smoke payment, four failed), **zero subscriptions**; QRON-v2:
+**zero `public.revenue_events`**, **zero `public.entitlements`**, and
+**zero `reconciliation_required` holds**. The Stripe Events list API only
+returns events from roughly the past 30 days; a missing older event in that
+listing is **not** proof of webhook non-delivery. A current Vercel READY
+deployment also does not identify the Cloudflare Worker version.
+
+**Next evidence, no side effects:** For the exact paid session, inspect
+Stripe Dashboard delivery attempts for the canonical endpoint separately
+from other destinations; obtain the deployed Cloudflare Worker revision and
+redacted request/runtime evidence; then match the signed delivery to a
+persisted session-specific grant and usable product access. Do not disable,
+reroute, replay, resend, or consolidate any endpoint on this evidence alone.
+Multiple subscribed destinations do not by themselves prove duplicate grants.
+Any change to destination ownership or economic handling requires owner review.
+
 ## Per-session operator decision (not an automated replay)
 
 1. **Identify and authenticate the payment from Stripe live read-only data.**
