@@ -845,6 +845,14 @@ describe("owner digest", async () => {
           {
             status: "succeeded",
             paid: true,
+            amount: 1000,
+            currency: "usd",
+            billing_details: { email: "  " },
+            receipt_email: "me@x.com",
+          },
+          {
+            status: "succeeded",
+            paid: true,
             amount: 4900,
             currency: "usd",
             receipt_email: "buyer@farm.com",
