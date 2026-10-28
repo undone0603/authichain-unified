@@ -71,7 +71,8 @@ Production apex is `authichain-com`. `tryHandleX402` runs **before** `APP_PREFIX
 | GET    | `/api/x402/catalog`      | 200 catalog (`x402Catalog` — prices copied from health) |
 | GET    | `/.well-known/x402.json` | 200 catalog                                             |
 | GET    | `/x402`, `/docs/x402`    | 200 HTML docs                                           |
-| HEAD   | any x402 API path        | 204                                                     |
+| HEAD   | `/api/x402`, `/api/v1/agent-verify` | **402** (empty body, `PAYMENT-REQUIRED` header) |
+| HEAD   | other x402 API paths     | 204                                                     |
 
 Health is safe to scrape: `payTo`, `asset`, `network`, `chainId`, `pricePerCall`, `dailyCapUsd`, `status`, `mode`, facilitator **reachability** (not the URL).
 

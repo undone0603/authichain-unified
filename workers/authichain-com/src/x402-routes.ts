@@ -15,6 +15,10 @@
  *      A GET that already carries a payment proof is settled the same as
  *      POST (empty body → missing-seal evidence). Otherwise GET-paying
  *      scouts retry with a proof and receive the same 402.
+ * HEAD /api/x402 + /api/v1/agent-verify → 402 with the same PAYMENT-REQUIRED
+ *      header as unpaid GET and an empty body. PayAI probes HEAD first and
+ *      only GET on 404/405; HEAD 204 looked alive with no paywall.
+ *      Other x402 paths keep HEAD 204.
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
  * GET  /api/x402/listing → PayAPI-ready pack copied from health
  * GET  /api/x402/growth → directories + skills + sisters
@@ -442,6 +446,13 @@ export async function tryHandleX402(
   if (!isX402Path(url.pathname)) return null;
 
   if (request.method === "HEAD") {
+    if (isPaidPath(url.pathname)) {
+      const quote = unpaidQuote(request, env);
+      return new Response(null, {
+        status: quote.status,
+        headers: quote.headers,
+      });
+    }
     return new Response(null, {
       status: 204,
       headers: {
