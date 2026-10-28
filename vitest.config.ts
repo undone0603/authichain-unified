@@ -72,7 +72,7 @@ export default defineConfig({
       // @radix.
       //
       // Each replacement must end in $1, because a regex `find` is applied as
-      // id.replace(find, replacement) and these patterns are anchored with $ –
+      // id.replace(find, replacement) and these patterns are anchored with $ -
       // so the match spans the whole specifier, subpath included. Without the
       // backreference the subpath is swallowed: "@/db/schema" becomes "src/db"
       // and "@/lib/attestation/v01" becomes a directory with no index file.
@@ -90,7 +90,7 @@ export default defineConfig({
       },
       // Same carve-out as attestation above: these live under src/lib, while
       // the catch-all sends @/* to client/src. A blanket @/lib rule cannot be
-      // used – client/src/lib/utils.ts is imported as @/lib/utils by most of
+      // used - client/src/lib/utils.ts is imported as @/lib/utils by most of
       // the UI components.
       {
         find: /^@\/lib\/fingerprint(\/.*)?$/,
@@ -125,7 +125,7 @@ export default defineConfig({
         find: "@/.../fixtures",
         replacement: path.resolve(templateRoot, "fixtures"),
       },
-      // Client catch-all: @/anything-else → client/src
+      // Client catch-all: @/anything-else -> client/src
       {
         find: /^@\/(.*)/,
         replacement: path.resolve(templateRoot, "client", "src", "$1"),
