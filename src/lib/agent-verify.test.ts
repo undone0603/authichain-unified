@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseSealRequest, registryAnswer } from "./agent-verify";
+import { parseSealRequest, registryAnswer, unpaidSealRefusal } from "./agent-verify";
 
 const SEAL = "3f6c2a4e-8b1d-4c7a-9e2f-0a1b2c3d4e5f";
 
@@ -29,6 +29,24 @@ describe("parseSealRequest", () => {
       expect(r.body.error).toBe("seal_id_required");
       expect(r.body.detail).toMatch(/not registry keys/);
     }
+  });
+
+  it("leaves an empty unpaid body and a real UUID on the 402 path", () => {
+    expect(unpaidSealRefusal({})).toBeNull();
+    expect(unpaidSealRefusal({ sealId: SEAL })).toBeNull();
+    expect(unpaidSealRefusal({ serial: "AC-1" })).toMatchObject({
+      status: 400,
+      body: { error: "seal_id_required", settled: false },
+    });
+    expect(unpaidSealRefusal({ sealId: "demo" })).toBeNull();
+    expect(
+      unpaidSealRefusal({
+        type: "http",
+        method: "POST",
+        bodyType: "json",
+        body: { sealId: "demo" },
+      })
+    ).toBeNull();
   });
 
   it("requires a subject", () => {

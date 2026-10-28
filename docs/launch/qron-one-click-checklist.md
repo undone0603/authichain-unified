@@ -208,7 +208,7 @@ See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [auth
 
 - **Core styles:** Neon Glitch, Matrix, Teal Pulse
 - **Signature styles:** Holographic, Prism, Bioluminescent
-- **Premium styles:** Cosmic Nebula, Aurora Dreams
+- Every style and preset, the same ones as the free sample
 
 Free preview before you commit. What style interests you?
 ```

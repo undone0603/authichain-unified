@@ -19,9 +19,15 @@ import {
   toFacilitatorV1Payload,
   readPaymentProofHeader,
   X402_PUBLISHED_PAY_TO,
+  X402_DISCOVERY_EXAMPLE_SEAL_ID,
+  X402_PAID_OUTPUT_EXAMPLE_CHECKED_AT,
+  isDiscoveryExampleSealId,
+  x402BazaarDiscovery,
+  x402PaidOutputExample,
   type PaymentRequirement,
 } from "./x402";
 import { planPaymentLink, planUsd } from "./plans";
+import { sealBaseline } from "./seal-baseline";
 
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
 const req: PaymentRequirement = {
@@ -85,6 +91,21 @@ describe("buildPaymentRequired", () => {
     expect(r.body.extensions.bazaar.info.input.method).toBe("POST");
     expect(r.body.extensions.bazaar.info.input.bodyType).toBe("json");
     expect(r.body.extensions.bazaar.schema["required"]).toEqual(["input"]);
+    expect(r.body.extensions.bazaar.info.input.body.sealId).toBe(
+      X402_DISCOVERY_EXAMPLE_SEAL_ID
+    );
+    expect(isDiscoveryExampleSealId(r.body.extensions.bazaar.info.input.body.sealId)).toBe(
+      true
+    );
+    expect(x402BazaarDiscovery().bazaar.info.input.body.sealId).toBe(
+      X402_DISCOVERY_EXAMPLE_SEAL_ID
+    );
+    expect(isDiscoveryExampleSealId("11111111-2222-4333-8444-555555555555")).toBe(
+      false
+    );
+    expect(isDiscoveryExampleSealId("demo")).toBe(true);
+    expect(isDiscoveryExampleSealId("DEMO")).toBe(true);
+    expect(isDiscoveryExampleSealId("probe")).toBe(false);
     expect(r.body.accepts[0].outputSchema).toEqual(
       r.body.extensions.bazaar.info
     );
@@ -151,7 +172,81 @@ describe("buildPaymentRequired", () => {
     });
     expect(unpaid.extensions.bazaar.schema.properties).toHaveProperty("input");
   });
+
+  it("advertises the paid HTTP body on v2 outputSchema.output, not the bazaar wrapper", () => {
+    const r = buildPaymentRequired({
+      resource: "https://authichain.govchain.us/api/x402",
+      priceUsd: 0.05,
+      payTo: "0xabc0000000000000000000000000000000000001",
+    });
+    const advertised = r.v2.accepts[0].outputSchema.output;
+    const bazaarOut = r.v2.extensions.bazaar.info.output;
+    expect(r.body.accepts[0].outputSchema).toEqual(
+      r.body.extensions.bazaar.info
+    );
+    expect(bazaarOut).toEqual({
+      type: "json",
+      example: x402PaidOutputExample(),
+    });
+    expect(advertised).toEqual(x402PaidOutputExample());
+    expect(advertised).not.toHaveProperty("example");
+    expect(advertised).not.toHaveProperty("type");
+    expect("authenticityScore" in advertised).toBe(false);
+    expect(JSON.stringify(r.v2.accepts[0].outputSchema)).not.toMatch(
+      /authenticityScore/i
+    );
+    expect(JSON.stringify(bazaarOut.example)).not.toMatch(/authenticityScore/i);
+
+    const paid = {
+      ...sealBaseline(null, X402_PAID_OUTPUT_EXAMPLE_CHECKED_AT),
+      subject: X402_DISCOVERY_EXAMPLE_SEAL_ID,
+      settlement: advertised.settlement,
+      timestamp: advertised.timestamp,
+    };
+    const missing = flattenObjectPaths(advertised).filter(
+      path => !hasObjectPath(paid, path)
+    );
+    expect(missing).toEqual([]);
+    expect(advertised.verified).toBe(false);
+    expect(advertised.baseline.verdict).toBe("unsigned");
+    expect(advertised.baseline.evidence.record).toBeNull();
+  });
 });
+
+function flattenObjectPaths(value: unknown, prefix = ""): string[] {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return prefix ? [prefix] : [];
+  }
+  const keys = Object.keys(value as object);
+  const out: string[] = [];
+  if (prefix) out.push(prefix);
+  if (keys.length === 0 && prefix) return out;
+  for (const key of keys) {
+    out.push(
+      ...flattenObjectPaths(
+        (value as Record<string, unknown>)[key],
+        prefix ? `${prefix}.${key}` : key
+      )
+    );
+  }
+  return out;
+}
+
+function hasObjectPath(value: unknown, path: string): boolean {
+  let cur: unknown = value;
+  for (const part of path.split(".")) {
+    if (
+      cur === null ||
+      typeof cur !== "object" ||
+      Array.isArray(cur) ||
+      !(part in (cur as object))
+    ) {
+      return false;
+    }
+    cur = (cur as Record<string, unknown>)[part];
+  }
+  return true;
+}
 
 describe("resolveX402Asset", () => {
   it("uses official Base USDC when the ticker or nothing is set", () => {
@@ -611,6 +706,26 @@ describe("x402Catalog", () => {
     expect(
       catalog.endpoints.find(e => e.path === "/api/x402" && e.paid)?.priceUsd
     ).toBe(0.1);
+    expect(
+      catalog.endpoints.some(
+        e => e.path === "/api/x402" && e.method === "GET" && e.paid
+      )
+    ).toBe(true);
+    expect(
+      catalog.endpoints.some(
+        e => e.path === "/api/v1/agent-verify" && e.method === "GET" && e.paid
+      )
+    ).toBe(true);
+    expect(
+      catalog.endpoints.some(
+        e => e.path === "/api/x402" && e.method === "GET" && !e.paid
+      )
+    ).toBe(false);
+    expect(
+      catalog.endpoints.find(
+        e => e.path === "/api/x402/health" && e.method === "GET"
+      )?.paid
+    ).toBe(false);
     expect(catalog.endpoints.some(e => e.paid && e.path === "/mcp")).toBe(true);
     expect(catalog.discovery.bazaarDeclared).toBe(true);
     expect(catalog.discovery.paymentRequiredHeader).toBe(true);
@@ -633,7 +748,10 @@ describe("x402ScanFanout", () => {
   it("is the x402scan version+resources document, not the catalog", () => {
     const doc = x402ScanFanout();
     expect(doc.version).toBe(1);
-    expect(doc.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(doc.resources).toEqual([
+      "https://authichain.com/api/v1/agent-verify",
+      "https://authichain.com/api/x402",
+    ]);
     expect(JSON.stringify(doc)).not.toContain("/api/checkout");
     // "Not the catalog": exactly the two x402scan fields. (This line used to
     // assert the document never mentions authichain.com, which contradicts
@@ -667,13 +785,69 @@ describe("x402OpenApiDocument", () => {
       currency: "USD",
       amount: "0.1",
     });
+    expect(post.responses["400"]).toBeTruthy();
     expect(post.responses["402"]).toBeTruthy();
+    const getOp = (
+      spec.paths["/api/x402"] as {
+        get: {
+          "x-payment-info": {
+            protocols: string[];
+            price: { amount: string };
+          };
+          responses: Record<string, unknown>;
+        };
+      }
+    ).get;
+    expect(getOp["x-payment-info"].protocols).toEqual(["x402"]);
+    expect(getOp.responses["402"]).toBeTruthy();
+    expect(JSON.stringify(getOp)).not.toContain("Rail health");
+    const getAlias = (
+      spec.paths["/api/v1/agent-verify"] as {
+        get: { "x-payment-info": { protocols: string[] } };
+      }
+    ).get;
+    expect(getAlias["x-payment-info"].protocols).toEqual(["x402"]);
+    const schema = (
+      spec.paths["/api/x402"] as {
+        post: {
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: { properties: Record<string, { format?: string }> };
+              };
+            };
+          };
+        };
+      }
+    ).post.requestBody.content["application/json"].schema;
+    expect(Object.keys(schema.properties)).toEqual(["sealId"]);
+    expect(schema.properties.sealId.format).toBe("uuid");
+    expect(spec.info.description).toContain("POST /api/v1/agent-verify");
+    expect(spec.info.description).toContain("HTTP 400 before payment");
     const battery = spec.paths["/battery-passport"] as {
       get: { description: string };
     };
     expect(battery.get.description).toContain("18 February 2027");
     expect(battery.get.description).toContain("LMT");
     expect(battery.get.description).toContain("e-bike");
+    const scan = spec.paths["/qron/r/{object_id}"] as {
+      get: {
+        summary: string;
+        parameters: Array<{ name: string; in: string; required: boolean }>;
+        responses: Record<string, unknown>;
+        "x-payment-info"?: unknown;
+      };
+    };
+    expect(scan.get.summary).toContain("This host verifies the signature");
+    expect(scan.get.summary).toContain("Not an x402 payment endpoint");
+    expect(scan.get.parameters[0]).toMatchObject({
+      name: "object_id",
+      in: "path",
+      required: true,
+    });
+    expect(scan.get.responses["200"]).toBeTruthy();
+    expect(scan.get.responses["404"]).toBeTruthy();
+    expect(scan.get["x-payment-info"]).toBeUndefined();
     expect(JSON.stringify(spec)).not.toContain("/api/checkout");
     expect(JSON.stringify(spec).toLowerCase()).not.toContain(
       "facilitator.payai"

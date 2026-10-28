@@ -2224,7 +2224,6 @@ async function createSubscriptionCheckout(params) {
   const priceAmount = params.billing === "annual" ? product.priceAnnual : product.priceMonthly;
   const sessionConfig = {
     mode: "subscription",
-    payment_method_types: ["card"],
     allow_promotion_codes: true,
     client_reference_id: params.userId.toString(),
     customer_email: params.stripeCustomerId ? void 0 : params.userEmail,
@@ -2262,7 +2261,6 @@ async function createPaymentCheckout(params) {
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
-    payment_method_types: ["card"],
     allow_promotion_codes: true,
     client_reference_id: params.userId.toString(),
     customer_email: params.stripeCustomerId ? void 0 : params.userEmail,
@@ -5801,7 +5799,6 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
       const stripe = getStripe();
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
-        payment_method_types: ["card"],
         line_items: [{
           price_data: {
             currency: "usd",
@@ -5926,7 +5923,6 @@ Return JSON: { "subject": "AuthiChain Service Agreement \u2014 [Org]", "body": "
       const stripe = getStripe();
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
-        payment_method_types: ["card"],
         line_items: [{ price_data: { currency: "usd", unit_amount: priceUsd * 100, product_data: { name: `AuthiChain ${segment} Pilot \u2014 Contract Execution` } }, quantity: 1 }],
         metadata: { leadEmail, segment, missionId: task.missionId, taskId: task.id, type: "contract" },
         success_url: "https://authichain.com/welcome?session_id={CHECKOUT_SESSION_ID}",
@@ -10313,7 +10309,6 @@ async function createVendorCheckoutSession(vendorAccountId, currency = "usd") {
       }
     ],
     mode: "payment",
-    payment_method_types: ["card"],
     payment_intent_data: {
       application_fee_amount: 1e4
       // 10% Platform Fee

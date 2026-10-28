@@ -1,0 +1,6 @@
+### Phase 4 Validated Deployment Protocols (Updated Oct 2026)
+
+*   **Orchestration Environment:** The project utilizes a monorepo architecture fully integrated with GitLab CI/CD. All pushes trigger strict pipeline validation.
+*   **Security Gate Enforcement (`humanHold=true`):** All pipeline execution stages—specifically `launch_gate`, `production_health`, `production_build`, and provenance artifact generation (`dogfood_record`)—are explicitly configured as **Manual** jobs. Automated execution is strictly denied to ensure all state changes and cryptographic provisions are audited and human-authorized.
+*   **Agentic Execution Loop:** We utilize an automated observation-to-implementation loop. Pipeline configuration errors and syntax corruptions are triaged by automated agents (e.g., Duo Fix Pipeline) which draft immediate MR proposals (e.g., !1995). Human oversight is required for conflict resolution and final merges.
+*   **Provenance Generation:** Internal dogfooding successfully outputs sandboxed schema artifacts (e.g., `AUTHICHAIN_DOGFOOD_RECORD.json`) to the `docs/execution/` directory, confirming strict scoping (using correct relative `ROOT` variables) and environment isolation.

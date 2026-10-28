@@ -132,7 +132,7 @@ Pricing strategy:
 See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [authichain.com/pricing](https://authichain.com/pricing)).
 - Basic artistic QR
 See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [authichain.com/pricing](https://authichain.com/pricing)).
-- Premium styles (cosmic, glitch)
+- Every style and preset, the same ones as the free sample
 See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [authichain.com/pricing](https://authichain.com/pricing)).
 - Animated/video QR
 See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [authichain.com/pricing](https://authichain.com/pricing)).
