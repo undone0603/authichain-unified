@@ -30,7 +30,7 @@ permissions:
 jobs:
   secret-scan:
     name: Secret scan
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -67,7 +67,7 @@ jobs:
   # no other worker is ever in that path's matrix.
   deploy-matrix:
     name: Build worker matrix
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     timeout-minutes: 5
     outputs:
@@ -183,7 +183,7 @@ jobs:
           echo "deploy matrix (auto-deploy, narrowed to changed allow-listed workers): ${eligible}"
 
   deploy:
-    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","ARM64","authichain-ops","authichain-wsl"]') }}
+    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
     timeout-minutes: 45
     needs: [secret-scan, deploy-matrix]
     # GitHub fails the whole workflow when `strategy.matrix` expands to an
@@ -207,7 +207,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
-          # Skip the Actions cache on authichain-ops. The hosted agentz job
+          # Skip the Actions cache on the self-hosted publish runner. The hosted agentz job
           # still caches. A self-hosted save packs ~1 GB and can fail the job
           # after the worker is already published.
           cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
@@ -445,7 +445,7 @@ jobs:
     name: Post-deploy smoke (blocking)
     needs: [deploy]
     if: ${{ needs.deploy.result == 'success' }}
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 10
     permissions:
       contents: read
