@@ -99,6 +99,7 @@ jobs:
           scripts/ci/*.test.mjs
           protocol/qfs/envelope.test.mjs
           scripts/lib/b2b-send-policy.test.ts
+          src/lib/generation-seal.test.ts
           worker-app/cron-dispatch.test.ts
           workers/authichain-verify-worker/src/protocol-verify.test.mjs
           workers/authichain-verify-worker/src/published-record.test.mjs
