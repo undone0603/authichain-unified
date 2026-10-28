@@ -29,11 +29,36 @@ export class RateLimiter {
   }
 
   async fetch(request: Request): Promise<Response> {
-    const { limit, windowMs } = await request.json<{ limit: number; windowMs: number }>();
-    const allowed = await this.check(limit, windowMs);
+    const { limit, windowMs, refund } = await request.json<{
+      limit: number;
+      windowMs: number;
+      refund?: boolean;
+    }>();
+    const allowed = refund
+      ? await this.refund()
+      : await this.check(limit, windowMs);
     return new Response(JSON.stringify({ allowed }), {
       headers: { "content-type": "application/json" },
     });
+  }
+
+  /**
+   * Gives back one slot taken in the current window (count - 1, never below
+   * 0). Returns true when a slot was returned. An expired or missing entry has
+   * nothing to give back.
+   */
+  private async refund(): Promise<boolean> {
+    const stored = await this.state.storage.get<{
+      count: number;
+      resetAt: number;
+    }>("entry");
+    if (!stored || Date.now() >= stored.resetAt || stored.count <= 0)
+      return false;
+    await this.state.storage.put("entry", {
+      count: stored.count - 1,
+      resetAt: stored.resetAt,
+    });
+    return true;
   }
 
   /**
@@ -46,10 +71,16 @@ export class RateLimiter {
    */
   private async check(limit: number, windowMs: number): Promise<boolean> {
     const now = Date.now();
-    const stored = await this.state.storage.get<{ count: number; resetAt: number }>("entry");
+    const stored = await this.state.storage.get<{
+      count: number;
+      resetAt: number;
+    }>("entry");
 
     if (!stored || now >= stored.resetAt) {
-      await this.state.storage.put("entry", { count: 1, resetAt: now + windowMs });
+      await this.state.storage.put("entry", {
+        count: 1,
+        resetAt: now + windowMs,
+      });
       return true;
     }
 
@@ -57,7 +88,10 @@ export class RateLimiter {
       return false;
     }
 
-    await this.state.storage.put("entry", { count: stored.count + 1, resetAt: stored.resetAt });
+    await this.state.storage.put("entry", {
+      count: stored.count + 1,
+      resetAt: stored.resetAt,
+    });
     return true;
   }
 }
@@ -79,6 +113,20 @@ export async function checkRateLimit(
   const res = await stub.fetch("https://rate-limiter/check", {
     method: "POST",
     body: JSON.stringify({ limit, windowMs }),
+  });
+  const { allowed } = await res.json<{ allowed: boolean }>();
+  return allowed;
+}
+
+/** Returns one slot taken under `key` in the current window. */
+export async function refundRateLimit(
+  namespace: DurableObjectNamespace,
+  key: string
+): Promise<boolean> {
+  const stub = namespace.get(namespace.idFromName(key));
+  const res = await stub.fetch("https://rate-limiter/check", {
+    method: "POST",
+    body: JSON.stringify({ limit: 0, windowMs: 0, refund: true }),
   });
   const { allowed } = await res.json<{ allowed: boolean }>();
   return allowed;

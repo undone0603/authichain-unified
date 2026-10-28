@@ -14,8 +14,9 @@ permissions:
   contents: read
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Publish runner only: authichain-wsl. CI stays on authichain-ops (laptop).
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -25,8 +26,18 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: "pnpm"
+          # Self-hosted runners already keep a local pnpm store. Saving it
+          # through actions/cache packs ~1 GB and the post-step fails the
+          # deploy after wrangler publish has already succeeded.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install node-gyp (native builds)
+        run: npm i -g node-gyp@11
       - name: Install
+        env:
+          # bufferutil/utf-8-validate are optional ws speedups; ws falls back to JS.
+          # Skip their native builds here instead of installing toolchains on the runner.
+          npm_config_build_from_source: "false"
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Embed microsite HTML
         run: node scripts/sync-microsite-packs.mjs

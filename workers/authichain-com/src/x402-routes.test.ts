@@ -1,6 +1,16 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 
+// CFA-363: paid paths need a replay store; an in-memory stub for these tests.
+function kvStub() {
+  const m = new Map<string, string>();
+  return {
+    get: async (k: string) => m.get(k) ?? null,
+    put: async (k: string, v: string) => void m.set(k, v),
+    delete: async (k: string) => void m.delete(k),
+  };
+}
+
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
 
 function req(path: string, init?: RequestInit): Request {
@@ -8,7 +18,12 @@ function req(path: string, init?: RequestInit): Request {
 }
 
 function proofHeader(p: Record<string, unknown>) {
-  return Buffer.from(JSON.stringify(p)).toString("base64");
+  return Buffer.from(
+    JSON.stringify({
+      validBefore: String(Math.floor(Date.now() / 1000) + 600),
+      ...p,
+    })
+  ).toString("base64");
 }
 
 afterEach(() => {
@@ -19,7 +34,9 @@ afterEach(() => {
 
 describe("tryHandleX402", () => {
   it("returns null for other API paths so APP_WORKER still owns them", async () => {
-    expect(await tryHandleX402(req("https://authichain.com/checkout/dpp_readiness"))).toBeNull();
+    expect(
+      await tryHandleX402(req("https://authichain.com/checkout/dpp_readiness"))
+    ).toBeNull();
     expect(await tryHandleX402(req("/api/stripe/webhook"))).toBeNull();
     expect(await tryHandleX402(req("/dashboard"))).toBeNull();
   });
@@ -53,6 +70,7 @@ describe("tryHandleX402", () => {
       pricePerCall: { usd: number };
       endpoints: Array<{
         path: string;
+        method: string;
         paid: boolean;
         priceUsd: number | null;
       }>;
@@ -67,6 +85,16 @@ describe("tryHandleX402", () => {
     expect(body.endpoints.some(e => e.paid && e.path === "/api/x402")).toBe(
       true
     );
+    expect(
+      body.endpoints.some(
+        e => e.path === "/api/x402" && e.method === "GET" && e.paid
+      )
+    ).toBe(true);
+    expect(
+      body.endpoints.some(
+        e => e.path === "/api/x402/health" && e.method === "GET" && e.paid
+      )
+    ).toBe(false);
     expect(body.humanCheckout.farmUsd).toBe(149);
     expect(body.humanCheckout.farmPaymentLink).toBeUndefined();
   });
@@ -89,9 +117,7 @@ describe("tryHandleX402", () => {
     };
     expect(body.name).toBe("AuthiChain Agent Verify");
     expect(body.category).toBe("Verification");
-    expect(body.paidRoute).toBe(
-      "https://authichain.com/api/v1/agent-verify"
-    );
+    expect(body.paidRoute).toBe("https://authichain.com/api/v1/agent-verify");
     expect(body.wallet).toBe("0xabc0000000000000000000000000000000000001");
     expect(body.payapi.form.wallet).toBe(body.wallet);
     expect(body.priceUsd).toBe(0.05);
@@ -142,7 +168,10 @@ describe("tryHandleX402", () => {
       protocol?: string;
     };
     expect(body.version).toBe(1);
-    expect(body.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(body.resources).toEqual([
+      "https://authichain.com/api/v1/agent-verify",
+      "https://authichain.com/api/x402",
+    ]);
     expect(body.protocol).toBeUndefined();
   });
 
@@ -155,6 +184,11 @@ describe("tryHandleX402", () => {
       openapi: string;
       paths: {
         "/api/x402": {
+          get?: {
+            "x-payment-info": {
+              protocols: string[];
+            };
+          };
           post: {
             "x-payment-info": {
               protocols: string[];
@@ -171,7 +205,15 @@ describe("tryHandleX402", () => {
     expect(spec.paths["/api/x402"].post["x-payment-info"].price.amount).toBe(
       "0.05"
     );
-    expect(JSON.stringify(spec)).not.toContain("/api/checkout");
+    expect(spec.paths["/api/x402"].get?.["x-payment-info"]?.protocols).toEqual([
+      "x402",
+    ]);
+    const raw = JSON.stringify(spec);
+    expect(raw).toContain("/qron/r/{object_id}");
+    expect(raw).toContain("This host verifies the signature");
+    expect(raw).toContain("Not an x402 payment endpoint");
+    expect(raw).not.toContain("does not verify the signature");
+    expect(raw).not.toContain("/api/checkout");
   });
 
   it("POST /api/x402/catalog is 405", async () => {
@@ -182,19 +224,61 @@ describe("tryHandleX402", () => {
     expect(res!.status).toBe(405);
   });
 
-  it("GET /api/x402 is the same health document", async () => {
-    const res = await tryHandleX402(req("/api/x402"));
-    expect(res!.status).toBe(200);
-    const body = (await res!.json()) as { status: string; aliases: string[] };
-    expect(body.status).toBe("not_configured");
-    expect(body.aliases).toContain("/api/x402/health");
+  it("GET /api/x402 is HTTP 402 when unpaid so GET-first crawlers see a paywall", async () => {
+    const res = await tryHandleX402(req("/api/x402"), {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+    });
+    expect(res!.status).toBe(402);
+    const body = (await res!.json()) as {
+      x402Version: number;
+      accepts: Array<{ payTo: string; amount?: string }>;
+    };
+    expect(body.x402Version).toBe(2);
+    expect(body.accepts[0].payTo).toBe(
+      "0xabc0000000000000000000000000000000000001"
+    );
+    expect(body.accepts[0].amount).toBe("50000");
+    expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
   });
 
-  it("GET /api/v1/agent-verify is health, not a 404", async () => {
-    const res = await tryHandleX402(req("/api/v1/agent-verify"));
-    expect(res!.status).toBe(200);
-    const body = (await res!.json()) as { status: string };
-    expect(body.status).toBe("not_configured");
+  it("GET /api/v1/agent-verify is HTTP 402 when unpaid, not a 404", async () => {
+    const res = await tryHandleX402(req("/api/v1/agent-verify"), {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+    });
+    expect(res!.status).toBe(402);
+    const body = (await res!.json()) as { x402Version: number };
+    expect(body.x402Version).toBe(2);
+  });
+
+  it("GET with a payment proof is not ignored (unbound registry refuses before settle)", async () => {
+    const header = proofHeader({
+      scheme: "exact",
+      network: "base",
+      payer: PAYER,
+      amount: "50000",
+    });
+    const res = await tryHandleX402(
+      req("/api/v1/agent-verify", {
+        method: "GET",
+        headers: { "x-payment": header },
+      }),
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_NETWORK: "base",
+      }
+    );
+    expect(res!.status).toBe(503);
+    const body = (await res!.json()) as { error: string; settled: boolean };
+    expect(body.error).toBe("registry_not_bound");
+    expect(body.settled).toBe(false);
+  });
+
+  it("GET /api/x402 without payTo is 503, not a free 200", async () => {
+    const res = await tryHandleX402(req("/api/x402"));
+    expect(res!.status).toBe(503);
+    const body = (await res!.json()) as { error: string; health: string };
+    expect(body.error).toBe("payments_not_configured");
+    expect(body.health).toBe("/api/x402/health");
   });
 
   it("HEAD /api/x402/health is 204", async () => {
@@ -202,6 +286,26 @@ describe("tryHandleX402", () => {
       req("/api/x402/health", { method: "HEAD" })
     );
     expect(res!.status).toBe(204);
+  });
+
+  it("HEAD /api/x402 is 402 unpaid quote with empty body", async () => {
+    const res = await tryHandleX402(
+      req("/api/x402", { method: "HEAD" }),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" }
+    );
+    expect(res!.status).toBe(402);
+    expect(await res!.text()).toBe("");
+    expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+  });
+
+  it("HEAD /api/v1/agent-verify is 402 unpaid quote with empty body", async () => {
+    const res = await tryHandleX402(
+      req("/api/v1/agent-verify", { method: "HEAD" }),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" }
+    );
+    expect(res!.status).toBe(402);
+    expect(await res!.text()).toBe("");
+    expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
   });
 
   it("POST /api/x402 is 503 payments_not_configured when payTo is missing", async () => {
@@ -239,6 +343,23 @@ describe("tryHandleX402", () => {
     );
     expect(body.accepts[0].outputSchema?.input?.type).toBe("http");
     expect(body.accepts[0].outputSchema?.input?.method).toBe("POST");
+    expect(
+      (
+        body.accepts[0].outputSchema as {
+          output?: { example?: unknown; verified?: boolean };
+        }
+      )?.output?.example
+    ).toBeUndefined();
+    expect(
+      (
+        body.accepts[0].outputSchema as {
+          output?: { verified?: boolean };
+        }
+      )?.output?.verified
+    ).toBe(false);
+    expect(JSON.stringify(body.accepts[0].outputSchema)).not.toMatch(
+      /authenticityScore/i
+    );
     expect(body.extensions?.bazaar?.info?.input?.method).toBe("POST");
     expect(JSON.stringify(body).toLowerCase()).not.toContain(
       "facilitator.payai"
@@ -375,7 +496,10 @@ describe("POST /api/x402 with the VERIFY_APP binding", () => {
         headers: { "x-payment": header, "content-type": "application/json" },
         body: JSON.stringify({ sealId: "seal-1" }),
       }),
-      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_REPLAY_KV: kvStub(),
+      },
       verifyApp
     );
     expect(res!.status).toBe(200);

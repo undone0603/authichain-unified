@@ -5,7 +5,7 @@ import { configDefaults, defineConfig } from "vitest/config";
 
 const templateRoot = path.resolve(import.meta.dirname);
 
-const NODE_TEST_IMPORT = /(?:from\s+|require\(\s*)["']node:test["']/;
+const NODE_TEST_IMPORT = /(?:from\s+|require\(\s*)[`"']node:test[`"']/;
 const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/;
 const SKIP_DIRS = new Set([
   "node_modules",
@@ -108,7 +108,7 @@ export default defineConfig({
       // importing them through the catch-all today; the carve-out only fixes
       // resolution for src/ consumers.
       {
-        find: /^@\/lib\/(provisioning|billing-emails|brand-billing|email|dpp-loop|dpp-verify|dpp-fulfill-checkout|ledger-service|stripe-construct-event|founder-alerts|anchoring-status|blockchain|automation|vertical-verification|api-usage)(\/.*)?$/,
+        find: /^@\/lib\/(provisioning|billing-emails|brand-billing|email|dpp-loop|dpp-verify|dpp-fulfill-checkout|ledger-service|stripe-construct-event|founder-alerts|anchoring-status|blockchain|automation|vertical-verification|api-usage|rate-limit|x402|seal-attestation)(\/.*)?$/,
         replacement: path.resolve(templateRoot, "src", "lib") + "/$1$2",
       },
       // src/utils (Supabase server/client helpers). client/src has no utils/
@@ -170,7 +170,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
-    setupFiles: ["./apps/verifier-web/src/setupTests.ts"],
+    testTimeout: 30000,
+    hookTimeout: 30000,
+    setupFiles: [
+      "./scripts/vitest-isolate-delivery-env.ts",
+      "./apps/verifier-web/src/setupTests.ts",
+    ],
     exclude: [
       ...configDefaults.exclude,
       "apps/agent-browser/**",

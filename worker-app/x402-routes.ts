@@ -9,7 +9,9 @@
  *      is a public 404 even when the apex worker implements the same path.
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
- * POST /api/x402 + /api/v1/agent-verify → 402 advertisement when unpaid. A
+ * POST /api/x402 + /api/v1/agent-verify → 402 advertisement when unpaid and
+ *      the body is empty. A body that names a non-UUID seal, or uses
+ *      productId/serial as the key, is 400 before any payment challenge. A
  *      paid call reads auth_seals on this worker when SUPABASE_URL and a key
  *      are set, and settles only after that read. Otherwise it is forwarded
  *      over VERIFY_APP, or refused 503 before settlement when neither is set.
@@ -37,8 +39,15 @@ import {
   type X402VerifyBinding,
 } from "../src/lib/x402";
 import {
+  coerceSealBody,
+  unpaidSealRefusal as refuseUnpaidSeal,
+} from "../src/lib/agent-verify";
+import {
+  guardedForward,
   resolvePaidSealVerify,
+  scopedReplayStore,
   sealLookupCredentials,
+  type ReplayStore,
   type SealLookupEnv,
 } from "../src/lib/paid-seal-verify";
 import { growthDiscovery, x402ListingPack } from "../src/lib/x402-growth";
@@ -49,6 +58,8 @@ type X402Bindings = X402HealthEnv &
   SealLookupEnv & {
     X402_PAY_TO?: string;
     NODE_ENV?: string;
+    /** x402 replay guard (CFA-366). Unbound = paid path returns 503. */
+    X402_REPLAY_KV?: ReplayStore;
   };
 
 /** VERIFY_APP is a Fetcher, which X402HealthEnv's string index can't hold. */
@@ -174,6 +185,27 @@ async function openapi(c: {
   return c.json(await x402OpenApiDocument(healthEnv(c.env)), 200, NO_STORE);
 }
 
+function parseJsonObject(text: string): Record<string, unknown> {
+  if (!text.trim()) return {};
+  try {
+    const value = JSON.parse(text) as unknown;
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+/** 400 when the body cannot be a registry key. Null keeps the 402 challenge. */
+async function unpaidSealRefusal(
+  rawRequest: Request
+): Promise<{ status: number; body: unknown } | null> {
+  return refuseUnpaidSeal(
+    coerceSealBody(parseJsonObject(await rawRequest.clone().text()))
+  );
+}
+
 async function agentVerify(c: {
   env?: X402Bindings;
   req: {
@@ -213,6 +245,8 @@ async function agentVerify(c: {
   const proofHeader = readPaymentProofHeader(name => c.req.header(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof || !proofHeader) {
+    const refusal = await unpaidSealRefusal(c.req.raw);
+    if (refusal) return c.json(refusal.body, refusal.status, NO_STORE);
     return c.json(required.v2, 402, { ...NO_STORE, ...required.headers });
   }
 
@@ -227,6 +261,7 @@ async function agentVerify(c: {
     payTo,
     description: "AuthiChain agent verification",
     env: c.env,
+    replayStore: scopedReplayStore(c.env?.X402_REPLAY_KV, "edge-router"),
   });
   if (decision.action === "answer") {
     return c.json(decision.body, decision.status, {
@@ -235,7 +270,20 @@ async function agentVerify(c: {
     });
   }
   if (decision.action === "forward" && verifyApp) {
-    return forwardPaidVerify(verifyApp, c.req.raw, proofHeader, bodyText);
+    let sealId: string | null = null;
+    try {
+      const b = JSON.parse(bodyText) as { sealId?: unknown };
+      sealId = typeof b?.sealId === "string" ? b.sealId : null;
+    } catch {
+      sealId = null;
+    }
+    return guardedForward({
+      proofHeader,
+      replayStore: scopedReplayStore(c.env?.X402_REPLAY_KV, "edge-router"),
+      sealId,
+      forward: () =>
+        forwardPaidVerify(verifyApp, c.req.raw, proofHeader, bodyText),
+    });
   }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
