@@ -13,6 +13,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { verifyHash, type QRVerificationRecord } from '../../../server/_core/verification';
+import { SoftGate } from './SoftGate';
 
 interface PageProps {
   searchParams: Promise<{ id?: string; hash?: string }>;
@@ -239,6 +240,9 @@ export default async function VerifyPage({ searchParams }: PageProps) {
           </div>
         )}
 
+        {/* Soft gate — always show */}
+        <SoftGate productId={productIdStr} />
+
         {/* CTA */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link
@@ -283,6 +287,7 @@ function ErrorState({ message }: { message: string }): React.ReactElement {
           Verification Failed
         </div>
         <p className="text-zinc-500 text-sm mb-8">{message}</p>
+        <SoftGate />
         <Link
           href="/"
           className="btn-gold py-3 px-8 rounded-xl font-black uppercase tracking-widest text-xs shadow-gold"
