@@ -6,6 +6,8 @@ change adds no price, billing system, database table, or migration.
 
 POST a `sealId` UUID to `/api/v1/agent-verify` or `/api/x402`, using the existing
 x402 payment challenge. Eligible free calls return the same evidence format.
+The advertised bazaar example UUID is not eligible: unpaid POST of that id
+returns 402 so discovery crawlers do not classify the route as free.
 The seal's existing `qr_payload` must contain a protocol record (direct JSON or
 `{"record": ...}`). URL-only payloads remain explicitly unsigned. A missing
 seal produces a not-registered, unsigned result; payment buys the check, not a

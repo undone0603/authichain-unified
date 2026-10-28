@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { tryHandleX402, x402FreeCallsHealth } from "./x402-routes";
 import type { FreeTierStore } from "../../../src/lib/x402-free-tier";
+import { X402_DISCOVERY_EXAMPLE_SEAL_ID } from "../../../src/lib/x402";
 
 const SEAL = "11111111-2222-4333-8444-555555555555";
 const ENV = {
@@ -119,6 +120,34 @@ describe("unpaid body that cannot be a seal", () => {
     );
     expect(res!.status).toBe(402);
     expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+  });
+
+  it("does not grant a free 200 for the bazaar discovery example UUID", async () => {
+    const store = memStore();
+    const now = new Date("2026-10-16T15:00:00Z");
+    const res = (await tryHandleX402(
+      new Request("https://authichain.com/api/x402", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "CF-Connecting-IP": "203.0.113.7",
+        },
+        body: JSON.stringify({ sealId: X402_DISCOVERY_EXAMPLE_SEAL_ID }),
+      }),
+      ENV,
+      undefined,
+      { freeStore: store, now, fetchImpl: sealFetch }
+    ))!;
+    expect(res.status).toBe(402);
+    expect(res.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+    expect(store.rows).toHaveLength(0);
+    const real = (await tryHandleX402(call(), ENV, undefined, {
+      freeStore: store,
+      now,
+      fetchImpl: sealFetch,
+    }))!;
+    expect(real.status).toBe(200);
+    expect(store.rows).toHaveLength(1);
   });
 });
 
