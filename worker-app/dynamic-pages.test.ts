@@ -1150,6 +1150,15 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("up.url.indexOf('https://authichain.com/checkout/starter')===0");
     expect(body).toContain("a.id='sample-exhausted-starter'");
   });
+
+  it("renders signed-in low-credit soft-prompt from API upgrade on success", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain('id="generate-low-credit"');
+    expect(body).toContain("function showLowCredit(up)");
+    expect(body).toContain("a.id='low-credit-starter'");
+    expect(body).toContain("showLowCredit(r.data&&r.data.upgrade)");
+  });
 });
 
 describe("renderDynamicPage: /story StoryMode", () => {
