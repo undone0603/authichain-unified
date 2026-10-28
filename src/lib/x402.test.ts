@@ -143,6 +143,26 @@ describe("buildPaymentRequired", () => {
     );
   });
 
+  it("indexes PayAI search words evidence and verification on the unpaid v2 resource", () => {
+    const r = buildPaymentRequired({
+      resource: "https://authichain.com/api/x402",
+      priceUsd: 0.05,
+      payTo: "0xabc0000000000000000000000000000000000001",
+    });
+    const description = r.v2.resource.description.toLowerCase();
+    expect(description).toContain("evidence");
+    expect(description).toContain("verification");
+    expect(description).toContain("not real-world truth");
+    expect(r.v2.resource.tags).toEqual(
+      expect.arrayContaining(["verification", "authenticity", "evidence"])
+    );
+    expect(JSON.stringify(r.v2).toLowerCase()).not.toContain("authenticityscore");
+    expect(r.v2.accepts[0].amount).toBe("50000");
+    expect(r.v2.accepts[0].payTo).toBe(
+      "0xabc0000000000000000000000000000000000001"
+    );
+  });
+
   it("unpaid v2 JSON has the CDP Bazaar validate preflight fields", () => {
     const r = buildPaymentRequired({
       resource: "https://authichain.govchain.us/api/x402",

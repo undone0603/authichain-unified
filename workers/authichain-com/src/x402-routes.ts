@@ -43,6 +43,7 @@ import {
   parsePaymentHeader,
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
+  X402_RESOURCE_DESCRIPTION,
   isDiscoveryExampleSealId,
   x402Catalog,
   x402HealthReport,
@@ -359,7 +360,7 @@ function unpaidQuote(request: Request, env?: X402Env): Response {
     resource,
     priceUsd,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
   });
   return json(402, required.v2, required.headers);
 }
@@ -386,7 +387,7 @@ async function agentVerify(
     resource,
     priceUsd,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
   });
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
@@ -409,7 +410,7 @@ async function agentVerify(
     resource,
     priceUsd,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
     env,
     fetchImpl: opts?.fetchImpl,
     replayStore:

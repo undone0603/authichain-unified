@@ -385,6 +385,16 @@ export function readPaymentProofHeader(
   return raw && raw.trim() ? raw.trim() : null;
 }
 
+/** PayAI Bazaar indexes description + tags. Keep "evidence" so search matches. */
+export const X402_RESOURCE_DESCRIPTION =
+  "Paid evidence check for agents: signed record, machine-readable verification result, explicit unknowns, and a settlement receipt. A valid signature is not real-world truth.";
+
+export const X402_RESOURCE_TAGS = [
+  "verification",
+  "authenticity",
+  "evidence",
+] as const;
+
 function buildPaymentRequiredV2(opts: {
   resource: string;
   description: string;
@@ -403,7 +413,7 @@ function buildPaymentRequiredV2(opts: {
       description: opts.description,
       mimeType: "application/json",
       serviceName: "AuthiChain",
-      tags: ["verification", "authenticity"],
+      tags: [...X402_RESOURCE_TAGS],
     },
     accepts: [
       {
@@ -457,7 +467,7 @@ export function buildPaymentRequired(opts: {
   const asset = resolveX402Asset(network, opts.asset);
   const extra = requirementExtra(network, asset);
   const extensions = x402BazaarDiscovery();
-  const description = opts.description ?? "AuthiChain verification";
+  const description = opts.description ?? X402_RESOURCE_DESCRIPTION;
   const amountAtomic = usdToAtomic(opts.priceUsd);
   const requirement: PaymentRequirement = {
     scheme: "exact",

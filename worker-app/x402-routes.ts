@@ -30,6 +30,7 @@ import {
   parsePaymentHeader,
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
+  X402_RESOURCE_DESCRIPTION,
   x402Catalog,
   x402HealthReport,
   x402OpenApiDocument,
@@ -240,7 +241,7 @@ async function agentVerify(c: {
     resource,
     priceUsd,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
   });
   const proofHeader = readPaymentProofHeader(name => c.req.header(name));
   const proof = parsePaymentHeader(proofHeader);
@@ -259,7 +260,7 @@ async function agentVerify(c: {
     resource,
     priceUsd,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
     env: c.env,
     replayStore: scopedReplayStore(c.env?.X402_REPLAY_KV, "edge-router"),
   });
