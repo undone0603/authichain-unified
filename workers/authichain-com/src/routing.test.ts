@@ -735,17 +735,26 @@ test("GET /api/x402/listing and /api/x402/growth are answered here", async () =>
   assert.match(growthBody.listing ?? "", /\/api\/x402\/listing$/);
 });
 
-test("GET /api/x402, /health, and /api/v1/agent-verify are answered here", async () => {
-  for (const path of [
-    "/api/x402",
-    "/api/x402/health",
-    "/api/v1/agent-verify",
-  ]) {
-    const res = await get(path);
-    assert.equal(res.status, 200, path);
-    const body = (await res.json()) as { status: string; catalog?: string };
-    assert.equal(body.status, "not_configured", path);
-    assert.equal(body.catalog, "/api/x402/catalog", path);
+test("GET /api/x402/health is 200; GET paid aliases are 402 with payTo", async () => {
+  const health = await get("/api/x402/health");
+  assert.equal(health.status, 200);
+  const healthBody = (await health.json()) as {
+    status: string;
+    catalog?: string;
+  };
+  assert.equal(healthBody.status, "not_configured");
+  assert.equal(healthBody.catalog, "/api/x402/catalog");
+
+  const env = {
+    ...ENV,
+    X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+  } as unknown as Env;
+  for (const path of ["/api/x402", "/api/v1/agent-verify"]) {
+    const res = await get(path, env);
+    assert.equal(res.status, 402, path);
+    const body = (await res.json()) as { x402Version: number };
+    assert.equal(body.x402Version, 2, path);
+    assert.ok(res.headers.get("PAYMENT-REQUIRED"), path);
   }
 });
 
