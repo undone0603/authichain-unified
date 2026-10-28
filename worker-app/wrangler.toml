@@ -109,10 +109,9 @@ zone_name = "authichain.com"
 pattern = "authichain.com/api/guardrail/*"
 zone_name = "authichain.com"
 
-[[routes]]
-pattern = "authichain.com/api/v1/agent-verify*"
-zone_name = "authichain.com"
-
+# agent-verify* (including ?query) is on authichain-com so GET/HEAD 402.
+# Do not re-add authichain.com/api/v1/agent-verify* here — a deploy would
+# steal query-string crawlers back to this worker's old GET health 200.
 [[routes]]
 pattern = "authichain.com/api/x402*"
 zone_name = "authichain.com"

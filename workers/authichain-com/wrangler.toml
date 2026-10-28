@@ -43,6 +43,14 @@ zone_name = "authichain.com"
 pattern = "authichain.com/api/v1/agent-verify/"
 zone_name = "authichain.com"
 
+# Query-string GETs do not match the exact routes above. Edge used to own
+# agent-verify* and answered 200 health, so GET-first crawlers saw no paywall.
+# Keep this wildcard on the landing worker (GET/HEAD 402). Live CF route id
+# 936e5446f2f1456c84f11be9649d7fc0 was pointed here 2026-10-28.
+[[routes]]
+pattern = "authichain.com/api/v1/agent-verify*"
+zone_name = "authichain.com"
+
 [[routes]]
 pattern = "authichain.com/api/x402/health"
 zone_name = "authichain.com"
