@@ -2,9 +2,10 @@
  * POST /api/v1/agent-verify
  *
  * Pay-per-call verification endpoint for autonomous agents (x402).
- * No payment and an empty body -> HTTP 402 + requirements. A body that
- * names a non-UUID seal, or uses productId/serial as the key, is HTTP 400
- * before that challenge. Paid (X-PAYMENT proof) -> verify the
+ * No payment and an empty body -> HTTP 402 + requirements. Listing samples
+ * (`demo`, bazaar example UUID) also 402 when unpaid. A body that names a
+ * non-UUID seal other than those samples, or uses productId/serial as the
+ * key, is HTTP 400 before that challenge. Paid (X-PAYMENT proof) -> verify the
  * payment, enforce a per-payer daily spend cap + rate limit and look the seal
  * up, and only then settle and return the verification result. Every refusal
  * happens before settlement. Price is fixed, so daily spend = call-count x price,
@@ -23,11 +24,17 @@ import {
   usdToAtomic,
   dailyCapUsd,
   settlePayment,
+  isDiscoveryExampleSealId,
   X402_REGISTRY_NOT_BOUND,
 } from "@/lib/x402";
 import { sealBaseline } from "../../../../lib/seal-baseline";
 // Relative, not "@/lib/…": tsconfig.worker.json maps "@/*" to client/src only.
-import { parseSealRequest } from "../../../../lib/agent-verify";
+import {
+  coerceSealBody,
+  listedSealId,
+  parseSealRequest,
+  unpaidSealRefusal,
+} from "../../../../lib/agent-verify";
 import { onVerificationEvent } from "../../../../../server/revenue-engine/loop";
 
 export const dynamic = "force-dynamic";
@@ -75,10 +82,11 @@ export async function POST(request: Request) {
 
   // Read once. A later request.json() would see an empty body.
   const raw = await request.json().catch(() => ({}));
-  const input =
+  const input = coerceSealBody(
     raw && typeof raw === "object" && !Array.isArray(raw)
       ? (raw as Record<string, unknown>)
-      : {};
+      : {}
+  );
 
   // 1. Require a payment proof (v1 X-PAYMENT or v2 PAYMENT-SIGNATURE).
   const paymentHeader = readPaymentProofHeader(name =>
@@ -86,11 +94,9 @@ export async function POST(request: Request) {
   );
   const proof = parsePaymentHeader(paymentHeader);
   if (!proof) {
-    if (Object.keys(input).length > 0) {
-      const early = parseSealRequest(input);
-      if (!early.ok) {
-        return NextResponse.json(early.body, { status: early.status });
-      }
+    const early = unpaidSealRefusal(input);
+    if (early) {
+      return NextResponse.json(early.body, { status: early.status });
     }
     return NextResponse.json(required.v2, {
       status: 402,
@@ -117,8 +123,10 @@ export async function POST(request: Request) {
   // before settlement. An empty body is the x402 402 challenge; a valid
   // payment on that same body settles and returns missing-seal evidence.
   const emptyBody = Object.keys(input).length === 0;
+  const listed = listedSealId(input);
+  const discoveryAlias = Boolean(listed) && isDiscoveryExampleSealId(listed);
   const parsed = parseSealRequest(input);
-  if (!parsed.ok && !emptyBody) {
+  if (!parsed.ok && !emptyBody && !discoveryAlias) {
     return NextResponse.json(parsed.body, { status: parsed.status });
   }
   const sealId = parsed.ok ? parsed.sealId : null;
@@ -210,7 +218,7 @@ export async function POST(request: Request) {
   return NextResponse.json(
     {
       ...answer,
-      subject: sealId,
+      subject: sealId ?? (discoveryAlias ? listed : null),
       settlement: {
         payer: proof.payer,
         amountAtomic: verification.amount.toString(),
@@ -228,4 +236,40 @@ export async function POST(request: Request) {
       }),
     }
   );
+}
+
+/** Unpaid GET is the 402 quote. Paid GET settles like an empty POST. */
+export async function GET(request: Request) {
+  const paymentHeader = readPaymentProofHeader(name =>
+    request.headers.get(name)
+  );
+  if (paymentHeader && parsePaymentHeader(paymentHeader)) {
+    const headers = new Headers(request.headers);
+    headers.set("content-type", "application/json");
+    headers.delete("content-length");
+    return POST(
+      new Request(request.url, {
+        method: "POST",
+        headers,
+        body: "{}",
+      })
+    );
+  }
+  const payTo = process.env.X402_PAY_TO;
+  if (!payTo) {
+    return NextResponse.json(
+      { error: "payments_not_configured" },
+      { status: 503 }
+    );
+  }
+  const required = buildPaymentRequired({
+    resource: new URL(request.url).toString(),
+    priceUsd: PRICE_USD,
+    payTo,
+    description: "AuthiChain agent verification",
+  });
+  return NextResponse.json(required.v2, {
+    status: 402,
+    headers: required.headers,
+  });
 }

@@ -7,7 +7,10 @@ change adds no price, billing system, database table, or migration.
 POST a `sealId` UUID to `/api/v1/agent-verify` or `/api/x402`, using the existing
 x402 payment challenge. Eligible free calls return the same evidence format.
 The advertised bazaar example UUID is not eligible: unpaid POST of that id
-returns 402 so discovery crawlers do not classify the route as free.
+returns 402 so discovery crawlers do not classify the route as free. The
+stale PayAI listing sample `sealId: "demo"` on `/api/v1/agent-verify` is
+treated the same way. A GET that already carries a payment proof settles
+like POST; unpaid GET stays 402 so GET-first crawlers still see a paywall.
 HTTP crawlers read the v2 402 JSON: `accepts[0].outputSchema.input` stays the
 POST skill catalog, and `accepts[0].outputSchema.output` is the unwrapped paid
 HTTP body sample (registered/status/checks/details/baseline/verified/subject/

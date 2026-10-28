@@ -167,11 +167,7 @@ describe("POST /api/x402", () => {
 
   it("returns 400 for a body that cannot be a seal and does not ask for payment", async () => {
     process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
-    for (const body of [
-      { sealId: "demo" },
-      { probe: "suggestions" },
-      { productId: "p-1" },
-    ]) {
+    for (const body of [{ probe: "suggestions" }, { productId: "p-1" }]) {
       const res = await app().request("/api/v1/agent-verify", {
         method: "POST",
         headers: { "content-type": "application/json" },

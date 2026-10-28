@@ -103,6 +103,9 @@ describe("buildPaymentRequired", () => {
     expect(isDiscoveryExampleSealId("11111111-2222-4333-8444-555555555555")).toBe(
       false
     );
+    expect(isDiscoveryExampleSealId("demo")).toBe(true);
+    expect(isDiscoveryExampleSealId("DEMO")).toBe(true);
+    expect(isDiscoveryExampleSealId("probe")).toBe(false);
     expect(r.body.accepts[0].outputSchema).toEqual(
       r.body.extensions.bazaar.info
     );
