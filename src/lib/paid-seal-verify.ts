@@ -1,9 +1,10 @@
 /**
  * Worker-local auth_seals read for paid verify. Settle only after that read
- * succeeds. verified stays false: a registry row is not an attestation.
+ * succeeds. Return independently reproducible signature/validity evidence.
  */
 import { createHash } from "node:crypto";
-import { parseSealRequest, registryAnswer } from "./agent-verify";
+import { parseSealRequest } from "./agent-verify";
+import { sealBaseline } from "./seal-baseline";
 import {
   buildPaymentRequired,
   dailyCapUsd,
@@ -15,7 +16,7 @@ import {
   wouldExceedCap,
 } from "./x402";
 
-const SEAL_SELECT = "id,product_id,batch_id,brand,created_at";
+const SEAL_SELECT = "id,product_id,batch_id,brand,created_at,qr_payload";
 
 export type SealLookupEnv = {
   SUPABASE_URL?: string;
@@ -562,6 +563,10 @@ export async function resolvePaidSealVerify(input: {
     };
   }
 
+  // Prepare evidence before taking payment; verifier failures cannot charge
+  // the caller and then prevent delivery of a result.
+  const answer = sealBaseline(lookup.seal);
+
   // Pending marker BEFORE settle (CFA-351); released if settle fails.
   const claim = await claimReplay(replayStore, keys);
   if (claim) return { action: "answer", ...claim };
@@ -596,17 +601,12 @@ export async function resolvePaidSealVerify(input: {
     txHash: settlement.txHash ?? proof.txHash ?? null,
   });
   await recordSpend(fetchImpl, creds, proof.payer);
-  const answer = registryAnswer(lookup.seal);
   return {
     action: "answer",
     status: 200,
     body: {
-      verified: false,
-      registered: answer.registered,
-      status: answer.status,
-      checks: answer.checks,
+      ...answer,
       subject: parsed.sealId,
-      details: answer.details,
       settlement: {
         payer: proof.payer,
         amountAtomic: verification.amount.toString(),
