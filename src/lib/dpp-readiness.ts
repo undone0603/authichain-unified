@@ -267,7 +267,7 @@ export function scoreDppReadiness(
   } else if (days !== null) {
     nextStep = `${days} days left. The $${price} checkout opens an AuthiChain workspace for this product line${audit}.`;
   } else {
-    nextStep = `Obligations are expected, not yet law. The ${price} checkout opens an AuthiChain workspace for this product line; use the gaps above to plan your next steps before importers start asking${audit}.`;
+    nextStep = `Obligations are expected, not yet law. The ${"\u0024"}${price} checkout opens an AuthiChain workspace for this product line; use the gaps above to plan your next steps before importers start asking${audit}.`;
   }
 
   return {
