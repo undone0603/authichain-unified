@@ -288,6 +288,26 @@ describe("tryHandleX402", () => {
     expect(res!.status).toBe(204);
   });
 
+  it("HEAD /api/x402 is 402 unpaid quote with empty body", async () => {
+    const res = await tryHandleX402(
+      req("/api/x402", { method: "HEAD" }),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" }
+    );
+    expect(res!.status).toBe(402);
+    expect(await res!.text()).toBe("");
+    expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+  });
+
+  it("HEAD /api/v1/agent-verify is 402 unpaid quote with empty body", async () => {
+    const res = await tryHandleX402(
+      req("/api/v1/agent-verify", { method: "HEAD" }),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" }
+    );
+    expect(res!.status).toBe(402);
+    expect(await res!.text()).toBe("");
+    expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+  });
+
   it("POST /api/x402 is 503 payments_not_configured when payTo is missing", async () => {
     const res = await tryHandleX402(req("/api/x402", { method: "POST" }));
     expect(res!.status).toBe(503);
