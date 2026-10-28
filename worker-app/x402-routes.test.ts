@@ -165,7 +165,7 @@ describe("POST /api/x402", () => {
     expect(body.status).toBe("not_configured");
   });
 
-  it("returns 400 for a body that cannot be a seal and does not ask for payment", async () => {
+  it("returns 402 for quote JSON without sealId and 400 for a non-UUID sealId", async () => {
     process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
     for (const body of [{ probe: "suggestions" }, { productId: "p-1" }]) {
       const res = await app().request("/api/v1/agent-verify", {
@@ -173,12 +173,19 @@ describe("POST /api/x402", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
-      expect(res.status).toBe(400);
-      expect(res.headers.get("PAYMENT-REQUIRED")).toBeNull();
-      const json = (await res.json()) as { error: string; settled: boolean };
-      expect(json.settled).toBe(false);
-      expect(["seal_id_required", "seal_id_not_uuid"]).toContain(json.error);
+      expect(res.status).toBe(402);
+      expect(res.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
     }
+    const bad = await app().request("/api/v1/agent-verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sealId: "AC-DEMO-001" }),
+    });
+    expect(bad.status).toBe(400);
+    expect(bad.headers.get("PAYMENT-REQUIRED")).toBeNull();
+    const json = (await bad.json()) as { error: string; settled: boolean };
+    expect(json.settled).toBe(false);
+    expect(json.error).toBe("seal_id_not_uuid");
   });
 
   it("keeps an empty unpaid POST on the 402 challenge", async () => {

@@ -207,6 +207,35 @@ describe("tryHandleX402", () => {
     }
   });
 
+  it("GET /.well-known/lumi-monitor.txt is the Watch-trial domain proof", async () => {
+    const res = await tryHandleX402(req("/.well-known/lumi-monitor.txt"));
+    expect(res).not.toBeNull();
+    expect(res!.status).toBe(200);
+    expect(res!.headers.get("content-type")).toMatch(/text\/plain/);
+    const text = await res!.text();
+    expect(text).toContain("lumi-monitor-verify=");
+    expect(text).not.toMatch(/authenticityscore/i);
+  });
+
+  it("unpaid POST with quote-crawler JSON and no sealId is 402", async () => {
+    const res = await tryHandleX402(
+      req("/api/v1/agent-verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          url: "https://authichain.com/api/v1/agent-verify",
+        }),
+      }),
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_PRICE_USD: "0.05",
+      }
+    );
+    expect(res).not.toBeNull();
+    expect(res!.status).toBe(402);
+    expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+  });
+
   it("GET /openapi.json declares x-payment-info for POST /api/x402", async () => {
     const res = await tryHandleX402(req("/openapi.json"), {
       X402_PRICE_USD: "0.05",

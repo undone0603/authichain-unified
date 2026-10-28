@@ -25,6 +25,7 @@
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
  * GET  /.well-known/agent-card.json (+ agent.json) → A2A Agent Card
  *      with skills and x402 payment metadata. No contact email. No ERC-8004.
+ * GET  /.well-known/lumi-monitor.txt → Lumi Watch-trial domain proof.
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
  * POST /api/x402 + /api/v1/agent-verify → 402 challenge when unpaid. A paid
  *      call reads auth_seals on this worker when SUPABASE_URL and a key are
@@ -47,6 +48,7 @@ import {
   X402_REGISTRY_NOT_BOUND,
   X402_RESOURCE_DESCRIPTION,
   isDiscoveryExampleSealId,
+  LUMI_MONITOR_VERIFY_LINE,
   x402AgentCard,
   x402Catalog,
   x402HealthReport,
@@ -136,6 +138,7 @@ export function isX402Path(pathname: string): boolean {
     p === "/.well-known/x402.json" ||
     p === "/.well-known/agent-card.json" ||
     p === "/.well-known/agent.json" ||
+    p === "/.well-known/lumi-monitor.txt" ||
     p === "/openapi.json"
   );
 }
@@ -164,6 +167,25 @@ function isFanoutPath(pathname: string): boolean {
 function isAgentCardPath(pathname: string): boolean {
   const p = normalizePath(pathname);
   return p === "/.well-known/agent-card.json" || p === "/.well-known/agent.json";
+}
+
+function isLumiMonitorPath(pathname: string): boolean {
+  return normalizePath(pathname) === "/.well-known/lumi-monitor.txt";
+}
+
+function lumiMonitorResponse(method: string): Response {
+  const headers = {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "private, no-store",
+    "CDN-Cache-Control": "no-store",
+  };
+  if (method.toUpperCase() === "HEAD") {
+    return new Response(null, { status: 200, headers });
+  }
+  return new Response(`${LUMI_MONITOR_VERIFY_LINE}\n`, {
+    status: 200,
+    headers,
+  });
 }
 
 function isOpenApiPath(pathname: string): boolean {
@@ -460,6 +482,13 @@ export async function tryHandleX402(
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isX402Path(url.pathname)) return null;
+
+  if (isLumiMonitorPath(url.pathname)) {
+    if (request.method === "GET" || request.method === "HEAD") {
+      return lumiMonitorResponse(request.method);
+    }
+    return json(405, { error: "method not allowed" });
+  }
 
   if (request.method === "HEAD") {
     if (isPaidPath(url.pathname)) {

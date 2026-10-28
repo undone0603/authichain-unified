@@ -127,6 +127,10 @@ export const X402_DISCOVERY_EXAMPLE_SEAL_ID =
  */
 export const X402_STALE_DISCOVERY_SEAL_ID = "demo";
 
+/** Lumi Watch-trial domain proof. Public verification string, not a secret. */
+export const LUMI_MONITOR_VERIFY_LINE =
+  "lumi-monitor-verify=a3d5185455e49db093ba4e9b37f7e460";
+
 export function isDiscoveryExampleSealId(sealId: string): boolean {
   const id = sealId.trim().toLowerCase();
   return (
@@ -1428,7 +1432,7 @@ export async function x402OpenApiDocument(
     responses: {
       "400": {
         description:
-          "A body that cannot be a seal UUID is refused before payment.",
+          "A sealId that is not a UUID is refused before payment. Quote JSON without sealId is HTTP 402.",
       },
       ...paidResponses,
     },
@@ -1439,8 +1443,8 @@ export async function x402OpenApiDocument(
       title: "AuthiChain x402",
       version: "1.0.0",
       description: health.paidVerify.bound
-        ? "Canonical paid verify is POST /api/v1/agent-verify. sealId must be a UUID. An empty body is HTTP 402. A body that cannot be a seal UUID is HTTP 400 before payment. Human SKUs are Stripe Payment Links on /pricing."
-        : `Canonical paid verify is POST /api/v1/agent-verify. sealId must be a UUID. An empty body is HTTP 402. A body that cannot be a seal UUID is HTTP 400 before payment. ${health.paidVerify.detail} Human SKUs are Stripe Payment Links on /pricing.`,
+        ? "Canonical paid verify is POST /api/v1/agent-verify. sealId must be a UUID. An empty body or quote JSON without sealId is HTTP 402. A sealId that is not a UUID is HTTP 400 before payment. Human SKUs are Stripe Payment Links on /pricing."
+        : `Canonical paid verify is POST /api/v1/agent-verify. sealId must be a UUID. An empty body or quote JSON without sealId is HTTP 402. A sealId that is not a UUID is HTTP 400 before payment. ${health.paidVerify.detail} Human SKUs are Stripe Payment Links on /pricing.`,
     },
     servers: [{ url: origin.replace(/\/+$/, "") || "https://authichain.com" }],
     paths: {

@@ -907,6 +907,14 @@ test("GET /.well-known/agent-card.json is the A2A Agent Card", async () => {
   }
 });
 
+test("GET /.well-known/lumi-monitor.txt is the Lumi domain proof", async () => {
+  const res = await get("/.well-known/lumi-monitor.txt");
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") || "", /text\/plain/);
+  const text = await res.text();
+  assert.match(text, /lumi-monitor-verify=/);
+});
+
 test("GET /openapi.json declares x-payment-info for unpaid POST /api/x402", async () => {
   const res = await get("/openapi.json");
   assert.equal(res.status, 200);
