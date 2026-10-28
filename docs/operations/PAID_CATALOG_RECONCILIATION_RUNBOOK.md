@@ -51,6 +51,55 @@ SELECT
     WHERE status = 'active') AS local_active_subscriptions;
 ```
 
+## Reproducible paid-session linkage check (aggregate only)
+
+This query was executed read-only on QRON-v2 on 2026-10-28. It scopes
+to the live AuthiChain Stripe account, uses **positive-amount paid**
+Checkout Sessions, joins synced charges by payment intent **and account**,
+and checks for a session-keyed webhook log and profile grant marker.
+It returns counts only: **no customer identifiers, emails, session IDs,
+or payment IDs**. It does not prove that Stripe delivered a signed event,
+that the Worker processed it, or that product access works.
+
+```sql
+WITH paid_sessions AS (
+  SELECT s.id, s._account_id, s.payment_intent,
+    COALESCE(BOOL_OR(c.paid IS TRUE AND c.status = 'succeeded'
+      AND c.amount > 0 AND c.refunded IS NOT TRUE), false) AS succeeded_charge
+  FROM stripe_sdp_data.checkout_sessions AS s
+  LEFT JOIN stripe_sdp_data.charges AS c
+    ON c.payment_intent = s.payment_intent
+   AND c._account_id = s._account_id
+  WHERE s._account_id = 'acct_1SXIyEGqTruSqV8T'
+    AND s.livemode IS TRUE
+    AND s.status = 'complete'
+    AND s.payment_status = 'paid'
+    AND s.amount_total > 0
+  GROUP BY s.id, s._account_id, s.payment_intent
+), evidence AS (
+  SELECT p.id, p.succeeded_charge,
+    EXISTS (SELECT 1 FROM public.stripe_events AS e
+            WHERE e.session_id = p.id) AS has_session_webhook_log,
+    EXISTS (SELECT 1 FROM public.profiles AS pr
+            WHERE pr.last_grant_session_id = p.id) AS has_profile_grant_marker
+  FROM paid_sessions AS p
+)
+SELECT COUNT(*)::int AS paid_positive_sessions,
+       COUNT(*) FILTER (WHERE succeeded_charge)::int AS matched_successful_charges,
+       COUNT(*) FILTER (WHERE has_session_webhook_log)::int AS session_keyed_webhook_logs,
+       COUNT(*) FILTER (WHERE has_profile_grant_marker)::int AS matching_profile_grant_markers
+FROM evidence;
+```
+
+Observed result: **1 paid-positive session**, **1 matched succeeded charge**,
+**0 session-keyed webhook logs**, **0 matching profile grant markers**.
+The only positive paid session is the previously classified $10 **founder
+smoke payment**, not a qualifying independent customer. Absence of a
+session-keyed log is an evidence gap, **not proof of webhook non-delivery**:
+historical/base-only logs can lack `session_id`. This query is not a
+reconciliation writer or an entitlement grant, and must never be used
+to trigger an automatic replay or backfill.
+
 Snapshot on 2026-10-28: 227 `stripe_events` (148 `success`,
 75 `error`, four NULL status). The 75 error rows were **all**
 `checkout.session.expired` with `DATABASE_URL environment variable is not
