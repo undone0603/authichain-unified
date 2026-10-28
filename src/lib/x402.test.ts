@@ -706,6 +706,26 @@ describe("x402Catalog", () => {
     expect(
       catalog.endpoints.find(e => e.path === "/api/x402" && e.paid)?.priceUsd
     ).toBe(0.1);
+    expect(
+      catalog.endpoints.some(
+        e => e.path === "/api/x402" && e.method === "GET" && e.paid
+      )
+    ).toBe(true);
+    expect(
+      catalog.endpoints.some(
+        e => e.path === "/api/v1/agent-verify" && e.method === "GET" && e.paid
+      )
+    ).toBe(true);
+    expect(
+      catalog.endpoints.some(
+        e => e.path === "/api/x402" && e.method === "GET" && !e.paid
+      )
+    ).toBe(false);
+    expect(
+      catalog.endpoints.find(
+        e => e.path === "/api/x402/health" && e.method === "GET"
+      )?.paid
+    ).toBe(false);
     expect(catalog.endpoints.some(e => e.paid && e.path === "/mcp")).toBe(true);
     expect(catalog.discovery.bazaarDeclared).toBe(true);
     expect(catalog.discovery.paymentRequiredHeader).toBe(true);
@@ -767,6 +787,26 @@ describe("x402OpenApiDocument", () => {
     });
     expect(post.responses["400"]).toBeTruthy();
     expect(post.responses["402"]).toBeTruthy();
+    const getOp = (
+      spec.paths["/api/x402"] as {
+        get: {
+          "x-payment-info": {
+            protocols: string[];
+            price: { amount: string };
+          };
+          responses: Record<string, unknown>;
+        };
+      }
+    ).get;
+    expect(getOp["x-payment-info"].protocols).toEqual(["x402"]);
+    expect(getOp.responses["402"]).toBeTruthy();
+    expect(JSON.stringify(getOp)).not.toContain("Rail health");
+    const getAlias = (
+      spec.paths["/api/v1/agent-verify"] as {
+        get: { "x-payment-info": { protocols: string[] } };
+      }
+    ).get;
+    expect(getAlias["x-payment-info"].protocols).toEqual(["x402"]);
     const schema = (
       spec.paths["/api/x402"] as {
         post: {

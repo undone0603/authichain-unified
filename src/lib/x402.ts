@@ -1097,8 +1097,12 @@ export async function x402Catalog(
 ): Promise<X402CatalogBody> {
   const health = await x402HealthReport(env);
   const bound = health.paidVerify.bound;
-  const paid = (path: string, description: string): X402CatalogEndpoint => ({
-    method: "POST",
+  const paid = (
+    path: string,
+    description: string,
+    method: "GET" | "POST" = "POST"
+  ): X402CatalogEndpoint => ({
+    method,
     path,
     paid: true,
     description: bound
@@ -1142,14 +1146,19 @@ export async function x402Catalog(
     mode: health.mode,
     endpoints: [
       free("/api/x402/health", "Public rail health (no secrets)"),
-      free("/api/x402", "Health alias"),
       free("/api/x402/catalog", "Paid-endpoint catalog for agents and MCP"),
       free("/.well-known/x402.json", "Well-known catalog document"),
       free("/.well-known/x402", "x402scan fan-out (version + resources)"),
       free("/openapi.json", "OpenAPI 3.1 with x-payment-info for x402scan"),
-      free(
+      paid(
+        "/api/x402",
+        "AuthiChain agent verification (unpaid GET is 402)",
+        "GET"
+      ),
+      paid(
         "/api/v1/agent-verify",
-        "Health alias on GET; POST is the paid skill"
+        "AuthiChain agent verification (unpaid GET is 402)",
+        "GET"
       ),
       paid("/api/x402", "AuthiChain agent verification (seal UUID)"),
       paid(
@@ -1208,7 +1217,9 @@ type X402OpenApiDocument = {
 /**
  * OpenAPI-first discovery for x402scan. Price comes from the same health
  * report as the catalog — never a second schedule. Do not list GET checkout.
- * The Living QR scan is a free Decision v1 GET and has no x-payment-info.
+ * GET /api/x402 and GET /api/v1/agent-verify are the paid paywall (HTTP 402);
+ * free health is GET /api/x402/health. The Living QR scan is a free Decision
+ * v1 GET and has no x-payment-info.
  */
 export async function x402OpenApiDocument(
   env: X402HealthEnv = process.env,
@@ -1231,6 +1242,22 @@ export async function x402OpenApiDocument(
       },
     },
   };
+  const paidResponses = {
+    "402": { description: "Payment required (x402)" },
+    ...(health.paidVerify.bound
+      ? { "200": { description: "Paid verification result" } }
+      : {
+          "503": {
+            description:
+              "registry_not_bound: a paid call is refused before settlement; no payment is taken",
+          },
+        }),
+  };
+  const paidGet = {
+    summary: "AuthiChain agent verification",
+    "x-payment-info": paymentInfo,
+    responses: paidResponses,
+  };
   const paidPost = {
     operationId: "agentVerify",
     summary: "AuthiChain agent verification",
@@ -1244,15 +1271,7 @@ export async function x402OpenApiDocument(
         description:
           "A body that cannot be a seal UUID is refused before payment.",
       },
-      "402": { description: "Payment required (x402)" },
-      ...(health.paidVerify.bound
-        ? { "200": { description: "Paid verification result" } }
-        : {
-            "503": {
-              description:
-                "registry_not_bound: a paid call is refused before settlement; no payment is taken",
-            },
-          }),
+      ...paidResponses,
     },
   };
   return {
@@ -1267,17 +1286,11 @@ export async function x402OpenApiDocument(
     servers: [{ url: origin.replace(/\/+$/, "") || "https://authichain.com" }],
     paths: {
       "/api/x402": {
-        get: {
-          summary: "Rail health (free)",
-          responses: { "200": { description: "Health" } },
-        },
+        get: { ...paidGet, operationId: "agentVerifyGet" },
         post: paidPost,
       },
       "/api/v1/agent-verify": {
-        get: {
-          summary: "Rail health alias (free)",
-          responses: { "200": { description: "Health" } },
-        },
+        get: { ...paidGet, operationId: "agentVerifyGetAlias" },
         post: { ...paidPost, operationId: "agentVerifyAlias" },
       },
       "/battery-passport": {
