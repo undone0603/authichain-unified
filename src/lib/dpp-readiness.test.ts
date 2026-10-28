@@ -47,6 +47,7 @@ describe("scoreDppReadiness", () => {
     expect(r.daysUntilDeadline).toBeNull();
     expect(r.nextStep).toContain("expected, not yet law");
     expect(r.nextStep).toContain("opens an AuthiChain workspace");
+    expect(r.nextStep).toContain("$299");
     expect(r.nextStep).not.toMatch(/readiness audit/i);
   });
 
