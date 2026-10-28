@@ -23,6 +23,9 @@
  *      set (src/lib/paid-seal-verify.ts) and settles only after that read.
  *      Otherwise it forwards over VERIFY_APP. With neither, 503
  *      registry_not_bound before any settlement (X402_REGISTRY_NOT_BOUND).
+ *      The bazaar example UUID is never a free 200: crawlers POST that body
+ *      and treat 2xx as payability=free. Real UUIDs still get 3/IP/UTC-day.
+ *      Empty unpaid POST stays 402.
  *
  * Do not rebind X402_PAY_TO away from the owner-authorized treasury
  * 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2. Do not rebind
@@ -34,6 +37,7 @@ import {
   parsePaymentHeader,
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
+  isDiscoveryExampleSealId,
   x402Catalog,
   x402HealthReport,
   x402OpenApiDocument,
@@ -270,6 +274,12 @@ async function tryFreeCall(
     if (Object.keys(raw).length > 0) {
       return { response: json(parsed.status, parsed.body), remaining: null };
     }
+    return { response: null, remaining: null };
+  }
+  // Listing example UUID: crawlers POST this body. A free 200 is classified
+  // as payability=free so they never buy. Do not consume the real-UUID
+  // allowance. Paid lookup of this id is still missing-seal evidence.
+  if (isDiscoveryExampleSealId(parsed.sealId)) {
     return { response: null, remaining: null };
   }
   const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);

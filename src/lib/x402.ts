@@ -73,6 +73,18 @@ export type X402BazaarExtension = {
 };
 
 /**
+ * Placeholder UUID in 402 bazaar/example bodies. Discovery crawlers POST this
+ * as the listing example. It is not a real seal and must not take the free
+ * daily allowance — a 200 on this UUID is classified as payability=free.
+ */
+export const X402_DISCOVERY_EXAMPLE_SEAL_ID =
+  "00000000-0000-4000-8000-000000000000";
+
+export function isDiscoveryExampleSealId(sealId: string): boolean {
+  return sealId.trim().toLowerCase() === X402_DISCOVERY_EXAMPLE_SEAL_ID;
+}
+
+/**
  * Discovery metadata for PayAI / x402 Bazaar. Declared on the unpaid 402 so a
  * compatible client can echo `extensions.bazaar` in X-PAYMENT. Do not put a
  * facilitator URL here.
@@ -83,14 +95,14 @@ export function x402BazaarDiscovery(): X402BazaarExtension {
       type: "http",
       method: "POST",
       bodyType: "json",
-      body: { sealId: "00000000-0000-4000-8000-000000000000" },
+      body: { sealId: X402_DISCOVERY_EXAMPLE_SEAL_ID },
     },
     output: {
       type: "json",
       example: {
         verified: false,
         authenticityScore: 0,
-        subject: "00000000-0000-4000-8000-000000000000",
+        subject: X402_DISCOVERY_EXAMPLE_SEAL_ID,
         details: {},
         settlement: {
           payer: "0x0000000000000000000000000000000000000000",

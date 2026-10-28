@@ -19,6 +19,9 @@ import {
   toFacilitatorV1Payload,
   readPaymentProofHeader,
   X402_PUBLISHED_PAY_TO,
+  X402_DISCOVERY_EXAMPLE_SEAL_ID,
+  isDiscoveryExampleSealId,
+  x402BazaarDiscovery,
   type PaymentRequirement,
 } from "./x402";
 import { planPaymentLink, planUsd } from "./plans";
@@ -85,8 +88,17 @@ describe("buildPaymentRequired", () => {
     expect(r.body.extensions.bazaar.info.input.method).toBe("POST");
     expect(r.body.extensions.bazaar.info.input.bodyType).toBe("json");
     expect(r.body.extensions.bazaar.schema["required"]).toEqual(["input"]);
-    expect(r.body.extensions.bazaar.info.input.body.sealId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    expect(r.body.extensions.bazaar.info.input.body.sealId).toBe(
+      X402_DISCOVERY_EXAMPLE_SEAL_ID
+    );
+    expect(isDiscoveryExampleSealId(r.body.extensions.bazaar.info.input.body.sealId)).toBe(
+      true
+    );
+    expect(x402BazaarDiscovery().bazaar.info.input.body.sealId).toBe(
+      X402_DISCOVERY_EXAMPLE_SEAL_ID
+    );
+    expect(isDiscoveryExampleSealId("11111111-2222-4333-8444-555555555555")).toBe(
+      false
     );
     expect(r.body.accepts[0].outputSchema).toEqual(
       r.body.extensions.bazaar.info
