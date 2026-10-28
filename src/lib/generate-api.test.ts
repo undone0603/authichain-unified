@@ -5,6 +5,7 @@ import {
   generateCreditPacks,
   generateHealthBody,
   handleGeneratePost,
+  lowCreditUpgrade,
   proxyQronImageGen,
 } from "./generate-api";
 import { qronObjectIdForDestination } from "./qron-presentation";
@@ -393,6 +394,40 @@ describe("handleGeneratePost", () => {
     );
   });
 
+  it("attaches Starter upgrade when remaining credits are below 20", async () => {
+    deductCredit.mockResolvedValueOnce({ ok: true, remaining: 19 });
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: "user_1",
+      checkCredit,
+      deductCredit,
+      generateImage,
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.remaining_credits).toBe(19);
+    const upgrade = result.body.upgrade as Record<string, unknown>;
+    expect(upgrade.url).toBe(
+      "https://authichain.com/checkout/starter?src=low_credit&utm_content=low-starter-a"
+    );
+    expect(upgrade.plan).toBe("starter");
+    expect(upgrade.button).toBe("Add 100 generations for $29");
+  });
+
+  it("omits upgrade when remaining credits are at or above 20", async () => {
+    checkCredit.mockResolvedValueOnce({ ok: true, remaining: 21 });
+    deductCredit.mockResolvedValueOnce({ ok: true, remaining: 20 });
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: "user_1",
+      checkCredit,
+      deductCredit,
+      generateImage,
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.remaining_credits).toBe(20);
+    expect(result.body.upgrade).toBeUndefined();
+  });
+
   it("binds attestation when bindAttestation returns jws/kid/jwks", async () => {
     const bindAttestation = vi.fn(async () => ({
       jws: "a.b.c",
@@ -495,6 +530,22 @@ describe("handleGeneratePost", () => {
     expect((result.body.presentation as { status: string }).status).toBe(
       "image_issued"
     );
+  });
+});
+
+describe("lowCreditUpgrade", () => {
+  it("19 left => Starter-only prompt with low_credit link", () => {
+    const u = lowCreditUpgrade(19).upgrade as Record<string, unknown>;
+    expect(u.url).toBe(
+      "https://authichain.com/checkout/starter?src=low_credit&utm_content=low-starter-a"
+    );
+    expect(u.plan).toBe("starter");
+    expect(u.button).toBe("Add 100 generations for $29");
+  });
+
+  it("20 left or non-number => no prompt", () => {
+    expect(lowCreditUpgrade(20)).toEqual({});
+    expect(lowCreditUpgrade(undefined)).toEqual({});
   });
 });
 

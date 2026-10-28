@@ -70,6 +70,7 @@ describe("tryHandleX402", () => {
       pricePerCall: { usd: number };
       endpoints: Array<{
         path: string;
+        method: string;
         paid: boolean;
         priceUsd: number | null;
       }>;
@@ -84,6 +85,16 @@ describe("tryHandleX402", () => {
     expect(body.endpoints.some(e => e.paid && e.path === "/api/x402")).toBe(
       true
     );
+    expect(
+      body.endpoints.some(
+        e => e.path === "/api/x402" && e.method === "GET" && e.paid
+      )
+    ).toBe(true);
+    expect(
+      body.endpoints.some(
+        e => e.path === "/api/x402/health" && e.method === "GET" && e.paid
+      )
+    ).toBe(false);
     expect(body.humanCheckout.farmUsd).toBe(149);
     expect(body.humanCheckout.farmPaymentLink).toBeUndefined();
   });
@@ -173,6 +184,11 @@ describe("tryHandleX402", () => {
       openapi: string;
       paths: {
         "/api/x402": {
+          get?: {
+            "x-payment-info": {
+              protocols: string[];
+            };
+          };
           post: {
             "x-payment-info": {
               protocols: string[];
@@ -189,6 +205,9 @@ describe("tryHandleX402", () => {
     expect(spec.paths["/api/x402"].post["x-payment-info"].price.amount).toBe(
       "0.05"
     );
+    expect(spec.paths["/api/x402"].get?.["x-payment-info"]?.protocols).toEqual([
+      "x402",
+    ]);
     const raw = JSON.stringify(spec);
     expect(raw).toContain("/qron/r/{object_id}");
     expect(raw).toContain("This host verifies the signature");
@@ -205,19 +224,61 @@ describe("tryHandleX402", () => {
     expect(res!.status).toBe(405);
   });
 
-  it("GET /api/x402 is the same health document", async () => {
-    const res = await tryHandleX402(req("/api/x402"));
-    expect(res!.status).toBe(200);
-    const body = (await res!.json()) as { status: string; aliases: string[] };
-    expect(body.status).toBe("not_configured");
-    expect(body.aliases).toContain("/api/x402/health");
+  it("GET /api/x402 is HTTP 402 when unpaid so GET-first crawlers see a paywall", async () => {
+    const res = await tryHandleX402(req("/api/x402"), {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+    });
+    expect(res!.status).toBe(402);
+    const body = (await res!.json()) as {
+      x402Version: number;
+      accepts: Array<{ payTo: string; amount?: string }>;
+    };
+    expect(body.x402Version).toBe(2);
+    expect(body.accepts[0].payTo).toBe(
+      "0xabc0000000000000000000000000000000000001"
+    );
+    expect(body.accepts[0].amount).toBe("50000");
+    expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
   });
 
-  it("GET /api/v1/agent-verify is health, not a 404", async () => {
-    const res = await tryHandleX402(req("/api/v1/agent-verify"));
-    expect(res!.status).toBe(200);
-    const body = (await res!.json()) as { status: string };
-    expect(body.status).toBe("not_configured");
+  it("GET /api/v1/agent-verify is HTTP 402 when unpaid, not a 404", async () => {
+    const res = await tryHandleX402(req("/api/v1/agent-verify"), {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+    });
+    expect(res!.status).toBe(402);
+    const body = (await res!.json()) as { x402Version: number };
+    expect(body.x402Version).toBe(2);
+  });
+
+  it("GET with a payment proof is not ignored (unbound registry refuses before settle)", async () => {
+    const header = proofHeader({
+      scheme: "exact",
+      network: "base",
+      payer: PAYER,
+      amount: "50000",
+    });
+    const res = await tryHandleX402(
+      req("/api/v1/agent-verify", {
+        method: "GET",
+        headers: { "x-payment": header },
+      }),
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_NETWORK: "base",
+      }
+    );
+    expect(res!.status).toBe(503);
+    const body = (await res!.json()) as { error: string; settled: boolean };
+    expect(body.error).toBe("registry_not_bound");
+    expect(body.settled).toBe(false);
+  });
+
+  it("GET /api/x402 without payTo is 503, not a free 200", async () => {
+    const res = await tryHandleX402(req("/api/x402"));
+    expect(res!.status).toBe(503);
+    const body = (await res!.json()) as { error: string; health: string };
+    expect(body.error).toBe("payments_not_configured");
+    expect(body.health).toBe("/api/x402/health");
   });
 
   it("HEAD /api/x402/health is 204", async () => {
@@ -262,6 +323,23 @@ describe("tryHandleX402", () => {
     );
     expect(body.accepts[0].outputSchema?.input?.type).toBe("http");
     expect(body.accepts[0].outputSchema?.input?.method).toBe("POST");
+    expect(
+      (
+        body.accepts[0].outputSchema as {
+          output?: { example?: unknown; verified?: boolean };
+        }
+      )?.output?.example
+    ).toBeUndefined();
+    expect(
+      (
+        body.accepts[0].outputSchema as {
+          output?: { verified?: boolean };
+        }
+      )?.output?.verified
+    ).toBe(false);
+    expect(JSON.stringify(body.accepts[0].outputSchema)).not.toMatch(
+      /authenticityScore/i
+    );
     expect(body.extensions?.bazaar?.info?.input?.method).toBe("POST");
     expect(JSON.stringify(body).toLowerCase()).not.toContain(
       "facilitator.payai"

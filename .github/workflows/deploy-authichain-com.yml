@@ -14,8 +14,8 @@ permissions:
   contents: read
 jobs:
   deploy:
-    # Self-hosted WSL runner label authichain-ops (public-repo: no PR jobs on this host).
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops, authichain-wsl]
+    # Publish runner only: authichain-wsl. CI stays on authichain-ops (laptop).
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7

@@ -8,8 +8,36 @@
  * mainnet anchor) via attestSeal — this module does not set it.
  */
 
+import { isDiscoveryExampleSealId } from "./x402";
+
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * PayAI/Bazaar crawlers sometimes POST `outputSchema.input` (`type` +
+ * `method` + `bodyType` + `body`) as the JSON body. Unwrap that so the
+ * inner `sealId` is what we parse.
+ */
+export function coerceSealBody(
+  raw: Record<string, unknown>
+): Record<string, unknown> {
+  const nested = raw.body;
+  if (
+    raw.type === "http" &&
+    nested &&
+    typeof nested === "object" &&
+    !Array.isArray(nested)
+  ) {
+    return nested as Record<string, unknown>;
+  }
+  return raw;
+}
+
+export function listedSealId(raw: Record<string, unknown>): string {
+  const body = coerceSealBody(raw);
+  const v = body.sealId ?? body.seal_id;
+  return typeof v === "string" ? v.trim() : "";
+}
 
 export type SealRequest =
   | { ok: true; sealId: string }
@@ -54,13 +82,16 @@ export function parseSealRequest(input: Record<string, unknown>): SealRequest {
 /**
  * Unpaid calls with a body that cannot be a registry key are 400.
  * An empty object stays null so the caller can still return the 402
- * price challenge. A valid seal UUID also stays null.
+ * price challenge. A valid seal UUID, and listing samples (`demo` /
+ * the bazaar example UUID), also stay null.
  */
 export function unpaidSealRefusal(
   raw: Record<string, unknown>
 ): { status: number; body: Extract<SealRequest, { ok: false }>["body"] } | null {
-  if (Object.keys(raw).length === 0) return null;
-  const parsed = parseSealRequest(raw);
+  const body = coerceSealBody(raw);
+  if (Object.keys(body).length === 0) return null;
+  if (isDiscoveryExampleSealId(listedSealId(body))) return null;
+  const parsed = parseSealRequest(body);
   if (parsed.ok) return null;
   return { status: parsed.status, body: parsed.body };
 }

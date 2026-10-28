@@ -6,9 +6,15 @@
  * authichain-edge-router, whose unmounted GET /api/* falls through to ASSETS
  * and answers an empty 404.
  *
- * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → 200 health
- *      (not_configured is OK — GET must not 404). `freeCalls` says whether
- *      the daily UUID allowance is armed. It never includes the salt or keys.
+ * GET  /api/x402/health → 200 health (not_configured is OK — GET must not
+ *      404). `freeCalls` says whether the daily UUID allowance is armed. It
+ *      never includes the salt or keys.
+ * GET  /api/x402 + /api/v1/agent-verify → 402 advertisement when unpaid.
+ *      GET-first crawlers treat a 200 here as "free" and never buy. Health
+ *      stays on /api/x402/health. GET never consumes the free UUID allowance.
+ *      A GET that already carries a payment proof is settled the same as
+ *      POST (empty body → missing-seal evidence). Otherwise GET-paying
+ *      scouts retry with a proof and receive the same 402.
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
  * GET  /api/x402/listing → PayAPI-ready pack copied from health
  * GET  /api/x402/growth → directories + skills + sisters
@@ -19,6 +25,9 @@
  *      set (src/lib/paid-seal-verify.ts) and settles only after that read.
  *      Otherwise it forwards over VERIFY_APP. With neither, 503
  *      registry_not_bound before any settlement (X402_REGISTRY_NOT_BOUND).
+ *      The bazaar example UUID and the stale PayAI sample `demo` are never a
+ *      free 200: crawlers POST those bodies and treat 2xx as payability=free.
+ *      Real UUIDs still get 3/IP/UTC-day. Empty unpaid POST stays 402.
  *
  * Do not rebind X402_PAY_TO away from the owner-authorized treasury
  * 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2. Do not rebind
@@ -30,6 +39,7 @@ import {
   parsePaymentHeader,
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
+  isDiscoveryExampleSealId,
   x402Catalog,
   x402HealthReport,
   x402OpenApiDocument,
@@ -40,6 +50,7 @@ import {
   type X402VerifyBinding,
 } from "../../../src/lib/x402";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
+import { sealBaseline } from "../../../src/lib/seal-baseline";
 import {
   readSeal,
   guardedForward,
@@ -50,8 +61,9 @@ import {
   type SealLookupEnv,
 } from "../../../src/lib/paid-seal-verify";
 import {
+  coerceSealBody,
   parseSealRequest,
-  registryAnswer,
+  unpaidSealRefusal,
 } from "../../../src/lib/agent-verify";
 import {
   claimFreeCall,
@@ -119,12 +131,7 @@ export function isX402Path(pathname: string): boolean {
 }
 
 function isHealthPath(pathname: string): boolean {
-  const p = normalizePath(pathname);
-  return (
-    p === "/api/x402" ||
-    p === "/api/x402/health" ||
-    p === "/api/v1/agent-verify"
-  );
+  return normalizePath(pathname) === "/api/x402/health";
 }
 
 function isCatalogPath(pathname: string): boolean {
@@ -263,21 +270,28 @@ async function tryFreeCall(
   env: X402Env | undefined,
   opts: X402Options | undefined
 ): Promise<{ response: Response | null; remaining: number | null }> {
-  const raw = parseJsonObject(await request.clone().text());
+  const raw = coerceSealBody(parseJsonObject(await request.clone().text()));
+  const refusal = unpaidSealRefusal(raw);
+  if (refusal) {
+    return { response: json(refusal.status, refusal.body), remaining: null };
+  }
   const parsed = parseSealRequest(raw);
   if (!parsed.ok) {
-    // No body: 402 so a scanner can read the price. A named seal that cannot
-    // exist, or productId/serial used as the key, is refused here. The paid
-    // path does the same before settlement. This runs before the registry
-    // credential check so a bad id is not a payment challenge.
-    if (Object.keys(raw).length > 0) {
-      return { response: json(parsed.status, parsed.body), remaining: null };
-    }
+    // Empty body or listing sample (`demo` / bazaar UUID): 402 so a scanner
+    // can read the price. An empty body with a valid payment is settled as
+    // missing-seal evidence.
+    return { response: null, remaining: null };
+  }
+  // Listing example UUID: crawlers POST this body. A free 200 is classified
+  // as payability=free so they never buy. Do not consume the real-UUID
+  // allowance. Paid lookup of this id is still missing-seal evidence.
+  if (isDiscoveryExampleSealId(parsed.sealId)) {
     return { response: null, remaining: null };
   }
   const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);
   const creds = sealLookupCredentials(env);
-  if (!creds || limit <= 0) return { response: null, remaining: limit <= 0 ? 0 : null };
+  if (!creds || limit <= 0)
+    return { response: null, remaining: limit <= 0 ? 0 : null };
   const fetchImpl = opts?.fetchImpl ?? fetch;
   const store =
     opts && "freeStore" in opts
@@ -307,17 +321,13 @@ async function tryFreeCall(
       remaining: claim.remaining,
     };
   }
-  const answer = registryAnswer(lookup.seal);
+  const answer = sealBaseline(lookup.seal);
   return {
     response: json(
       200,
       {
-        verified: false,
-        registered: answer.registered,
-        status: answer.status,
-        checks: answer.checks,
+        ...answer,
         subject: parsed.sealId,
-        details: answer.details,
         settlement: null,
         free: true,
         freeCallsRemaining: claim.remaining,
@@ -327,6 +337,27 @@ async function tryFreeCall(
     ),
     remaining: claim.remaining,
   };
+}
+
+function unpaidQuote(request: Request, env?: X402Env): Response {
+  hydrateX402(env);
+  const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
+  const resource = new URL(request.url).toString();
+  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  if (!payTo) {
+    return json(503, {
+      error: "payments_not_configured",
+      status: "not_configured",
+      health: "/api/x402/health",
+    });
+  }
+  const required = buildPaymentRequired({
+    resource,
+    priceUsd,
+    payTo,
+    description: "AuthiChain agent verification",
+  });
+  return json(402, required.v2, required.headers);
 }
 
 async function agentVerify(
@@ -385,7 +416,7 @@ async function agentVerify(
     return json(decision.status, decision.body, decision.headers);
   }
   if (decision.action === "forward" && verifyApp) {
-    const sealReq = parseSealRequest(parseJsonObject(bodyText));
+    const sealReq = parseSealRequest(coerceSealBody(parseJsonObject(bodyText)));
     return guardedForward({
       proofHeader,
       replayStore:
@@ -442,6 +473,16 @@ export async function tryHandleX402(
 
   if (request.method === "GET" && isHealthPath(url.pathname)) {
     return healthResponse(env);
+  }
+
+  if (request.method === "GET" && isPaidPath(url.pathname)) {
+    const proofHeader = readPaymentProofHeader(name =>
+      request.headers.get(name)
+    );
+    if (proofHeader && parsePaymentHeader(proofHeader)) {
+      return agentVerify(request, env, verifyApp, opts);
+    }
+    return unpaidQuote(request, env);
   }
 
   if (request.method === "POST" && isPaidPath(url.pathname)) {

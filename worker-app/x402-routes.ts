@@ -38,7 +38,10 @@ import {
   type X402HealthEnv,
   type X402VerifyBinding,
 } from "../src/lib/x402";
-import { parseSealRequest } from "../src/lib/agent-verify";
+import {
+  coerceSealBody,
+  unpaidSealRefusal as refuseUnpaidSeal,
+} from "../src/lib/agent-verify";
 import {
   guardedForward,
   resolvePaidSealVerify,
@@ -198,11 +201,9 @@ function parseJsonObject(text: string): Record<string, unknown> {
 async function unpaidSealRefusal(
   rawRequest: Request
 ): Promise<{ status: number; body: unknown } | null> {
-  const raw = parseJsonObject(await rawRequest.clone().text());
-  if (Object.keys(raw).length === 0) return null;
-  const parsed = parseSealRequest(raw);
-  if (parsed.ok) return null;
-  return { status: parsed.status, body: parsed.body };
+  return refuseUnpaidSeal(
+    coerceSealBody(parseJsonObject(await rawRequest.clone().text()))
+  );
 }
 
 async function agentVerify(c: {

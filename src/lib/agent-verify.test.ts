@@ -38,10 +38,15 @@ describe("parseSealRequest", () => {
       status: 400,
       body: { error: "seal_id_required", settled: false },
     });
-    expect(unpaidSealRefusal({ sealId: "demo" })).toMatchObject({
-      status: 400,
-      body: { error: "seal_id_not_uuid", settled: false },
-    });
+    expect(unpaidSealRefusal({ sealId: "demo" })).toBeNull();
+    expect(
+      unpaidSealRefusal({
+        type: "http",
+        method: "POST",
+        bodyType: "json",
+        body: { sealId: "demo" },
+      })
+    ).toBeNull();
   });
 
   it("requires a subject", () => {
