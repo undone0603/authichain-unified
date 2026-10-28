@@ -222,7 +222,7 @@ export function renderMadeInAmericaPage(): string {
   ${estateHero({
     eyebrow: "Made in America",
     title: "Prove the origin claim before anyone asks.",
-    lede: "The FTC Made in USA Labeling Rule (16 CFR Part 323) turns on whether all or virtually all of a product is US-origin. Executive Order 14392 told the FTC to prioritize truthful Made in America advertising. A signed, per-unit record is documentation — it does not replace meeting the standard.",
+    lede: "The FTC Made in USA Labeling Rule (16 CFR Part 323) turns on whether all or virtually all of a product is US-origin. Executive Order 14392 (March 13, 2026) directs the FTC to prioritize, where appropriate, enforcement against unlawful Made in America claims. A signed, per-unit record is documentation — it does not replace meeting the standard.",
     emailCheckout: {
       action: CLAIM_FILE_CHECKOUT,
       label: "Start my claim file — $299",
@@ -236,7 +236,7 @@ export function renderMadeInAmericaPage(): string {
   })}
   ${estateSteps(
     "How origin evidence works",
-    "The April 2026 FTC sweep produced a $625,000 order. The rule a seller is held to is 16 CFR Part 323, not the Executive Order itself.",
+    "In April 2026 the FTC announced a Made in USA sweep that included a $625,000 stipulated order for consumer redress against TouchTunes Music Company, LLC, over electronic dartboards (ftc.gov, Apr 14, 2026). The rule a seller is held to is 16 CFR Part 323, not the Executive Order itself.",
     [
       {
         title: "Record",
@@ -258,7 +258,7 @@ export function renderMadeInAmericaPage(): string {
       },
       {
         title: "EO 14392",
-        body: "Directs agencies on Made in America advertising priority. It is context for the sweep, not a product certification.",
+        body: "Signed March 13, 2026. Directs the FTC to prioritize enforcement against unlawful American-origin claims and to consider marketplace verification rules. It is context for the sweep, not a product certification or a seller standard.",
       },
       {
         title: "USDA Product of USA",
