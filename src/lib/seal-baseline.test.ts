@@ -92,8 +92,40 @@ describe("buyer-verifiable seal baseline", () => {
       response.baseline.evidence.record!.credentialSubject = { id: "forged" };
       writeFileSync(path, JSON.stringify(response));
       expect(run().status).toBe(1);
+      const unsigned = {
+        subject: "expected-seal",
+        ...sealBaseline({ qr_payload: "https://authichain.com/verify" }, now),
+      };
+      writeFileSync(path, JSON.stringify(unsigned));
+      expect(run().status).toBe(1);
+      const expired = JSON.parse(
+        readFileSync("protocol/conformance/fixtures/time-expired.json", "utf8")
+      );
+      writeFileSync(
+        path,
+        JSON.stringify({
+          subject: "expected-seal",
+          ...sealBaseline({ record: expired.record }, now),
+        })
+      );
+      expect(run().status).toBe(1);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("publishes an unpaid buyer walk labeled demonstration", () => {
+    const walk = spawnSync(
+      process.execPath,
+      ["scripts/x402-buyer-example.mjs"],
+      {
+        encoding: "utf8",
+      }
+    );
+    expect(walk.status).toBe(0);
+    const body = JSON.parse(walk.stdout);
+    expect(body.label).toBe("demonstration");
+    expect(body.steps.join(" ")).toMatch(/X-PAYMENT/);
+    expect(body.verifier).toMatch(/verify-paid-baseline/);
   });
 });

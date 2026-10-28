@@ -188,6 +188,112 @@ describe("resolvePaidSealVerify", () => {
     }
   });
 
+  it("delivers unsigned missing-seal evidence after trustless settlement", async () => {
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    process.env.X402_NETWORK = "base";
+    const original = globalThis.fetch;
+    const { fetchImpl, calls } = callsOf(url => {
+      if (url.includes("/settle")) {
+        return new Response(
+          JSON.stringify({ success: true, txHash: "0xabc" }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        );
+      }
+      if (url.includes("auth_seals")) {
+        return new Response("[]", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response("[]", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    globalThis.fetch = fetchImpl;
+    try {
+      const decision = await resolvePaidSealVerify({
+        replayStore: kvStub(),
+        ...bound,
+        hasVerifyApp: false,
+        proofHeader: proof({ signature: "0xdead" }),
+        bodyText: JSON.stringify({ sealId: SEAL }),
+        fetchImpl,
+      });
+      expect(decision).toMatchObject({
+        action: "answer",
+        status: 200,
+        body: {
+          verified: false,
+          registered: false,
+          subject: SEAL,
+          baseline: { verdict: "unsigned", evidence: { record: null } },
+          settlement: { trustless: true, txHash: "0xabc" },
+        },
+      });
+      expect(calls.some(call => call.url.includes("/settle"))).toBe(true);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it("delivers expired evidence as invalid after trustless settlement", async () => {
+    const { readFileSync } = await import("node:fs");
+    const expired = JSON.parse(
+      readFileSync("protocol/conformance/fixtures/time-expired.json", "utf8")
+    );
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    process.env.X402_NETWORK = "base";
+    const original = globalThis.fetch;
+    const { fetchImpl } = callsOf(url => {
+      if (url.includes("/settle")) {
+        return new Response(
+          JSON.stringify({ success: true, txHash: "0xabc" }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        );
+      }
+      if (url.includes("auth_seals")) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: SEAL,
+              product_id: "pack",
+              batch_id: "b1",
+              brand: "acme",
+              created_at: "2026-01-01T00:00:00Z",
+              qr_payload: JSON.stringify({ record: expired.record }),
+            },
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } }
+        );
+      }
+      return new Response("[]", { status: 200 });
+    });
+    globalThis.fetch = fetchImpl;
+    try {
+      const decision = await resolvePaidSealVerify({
+        replayStore: kvStub(),
+        ...bound,
+        hasVerifyApp: false,
+        proofHeader: proof({ signature: "0xdead" }),
+        bodyText: JSON.stringify({ sealId: SEAL }),
+        fetchImpl,
+      });
+      expect(decision.action).toBe("answer");
+      if (decision.action !== "answer") return;
+      expect(decision.status).toBe(200);
+      const body = decision.body as {
+        verified: boolean;
+        baseline: { verdict: string; reasons: string[] };
+      };
+      expect(body.verified).toBe(false);
+      expect(body.baseline.verdict).toBe("invalid");
+      expect(body.baseline.reasons).toContain("expired");
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
   it.each(["unsigned", "signed", "tampered"])(
     "delivers reproducible %s evidence after trustless settlement",
     async kind => {

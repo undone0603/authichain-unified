@@ -29,9 +29,22 @@ for its outcome. Registry membership is a server assertion, not independently
 signed evidence. The embedded record authenticates only its signed contents
 against its embedded verification key, not the business identity of that key.
 
-## Independent buyer check
+## Easy buyer walk (demonstration)
 
-Save the API response as `response.json` in a trusted checkout of this repository:
+These unpaid probes are labeled demonstration. They are not customer revenue.
+
+```sh
+node scripts/x402-buyer-example.mjs
+node scripts/x402-buyer-example.mjs --live
+```
+
+1. Discover: `POST https://authichain.com/api/x402` with `{}` returns HTTP 402.
+   `accepts[0].amount` is `50000` atomic Base USDC ($0.05). `payTo` is in the
+   body. `GET /api/x402/health` confirms the same price and network.
+2. Submit payment: POST the same path with `{"sealId":"<uuid>"}` and an
+   `X-PAYMENT` header from **your** Base USDC wallet. A non-UUID body is HTTP
+   400 before payment. Save the JSON body as `response.json`.
+3. Independent verifier (separate process, no registry or facilitator):
 
 ```sh
 node scripts/verify-paid-baseline.mjs response.json <expected-seal-uuid>
