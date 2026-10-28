@@ -35,6 +35,14 @@ zone_name = "authichain.com"
 pattern = "authichain.com/api/x402/"
 zone_name = "authichain.com"
 
+# Query strings miss the exact routes above and were served by the edge
+# router's authichain.com/api/x402* wildcard as GET health 200. Keep the
+# wildcard here so GET/HEAD/POST /api/x402?query is the unpaid 402 quote.
+# health, catalog, listing, and growth stay on their more specific routes.
+[[routes]]
+pattern = "authichain.com/api/x402*"
+zone_name = "authichain.com"
+
 [[routes]]
 pattern = "authichain.com/api/v1/agent-verify"
 zone_name = "authichain.com"
