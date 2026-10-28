@@ -205,19 +205,38 @@ describe("tryHandleX402", () => {
     expect(res!.status).toBe(405);
   });
 
-  it("GET /api/x402 is the same health document", async () => {
-    const res = await tryHandleX402(req("/api/x402"));
-    expect(res!.status).toBe(200);
-    const body = (await res!.json()) as { status: string; aliases: string[] };
-    expect(body.status).toBe("not_configured");
-    expect(body.aliases).toContain("/api/x402/health");
+  it("GET /api/x402 is HTTP 402 when unpaid so GET-first crawlers see a paywall", async () => {
+    const res = await tryHandleX402(req("/api/x402"), {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+    });
+    expect(res!.status).toBe(402);
+    const body = (await res!.json()) as {
+      x402Version: number;
+      accepts: Array<{ payTo: string; amount?: string }>;
+    };
+    expect(body.x402Version).toBe(2);
+    expect(body.accepts[0].payTo).toBe(
+      "0xabc0000000000000000000000000000000000001"
+    );
+    expect(body.accepts[0].amount).toBe("50000");
+    expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
   });
 
-  it("GET /api/v1/agent-verify is health, not a 404", async () => {
-    const res = await tryHandleX402(req("/api/v1/agent-verify"));
-    expect(res!.status).toBe(200);
-    const body = (await res!.json()) as { status: string };
-    expect(body.status).toBe("not_configured");
+  it("GET /api/v1/agent-verify is HTTP 402 when unpaid, not a 404", async () => {
+    const res = await tryHandleX402(req("/api/v1/agent-verify"), {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+    });
+    expect(res!.status).toBe(402);
+    const body = (await res!.json()) as { x402Version: number };
+    expect(body.x402Version).toBe(2);
+  });
+
+  it("GET /api/x402 without payTo is 503, not a free 200", async () => {
+    const res = await tryHandleX402(req("/api/x402"));
+    expect(res!.status).toBe(503);
+    const body = (await res!.json()) as { error: string; health: string };
+    expect(body.error).toBe("payments_not_configured");
+    expect(body.health).toBe("/api/x402/health");
   });
 
   it("HEAD /api/x402/health is 204", async () => {
