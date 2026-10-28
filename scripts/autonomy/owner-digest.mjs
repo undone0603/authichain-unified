@@ -46,11 +46,11 @@ export function summarize(
     c => c.status === "succeeded" && c.paid && !c.refunded
   );
   // A charge with no attributable buyer is not proof of a non-founder sale.
-  // Keep it visible for reconciliation instead of silently counting it as
-  // customer revenue. Use || so an empty billing email can fall back to the
-  // receipt email (which may identify a founder).
+  // Trim billing email before falling back to the receipt address, so a
+  // whitespace-only billing field cannot hide an attributable founder.
   const buyerEmail = c =>
-    String(c.billing_details?.email || c.receipt_email || "").trim();
+    String(c.billing_details?.email ?? "").trim() ||
+    String(c.receipt_email ?? "").trim();
   const unattributedPayments = paid.filter(c => !buyerEmail(c)).length;
   const ext = paid.filter(c => {
     const email = buyerEmail(c);
