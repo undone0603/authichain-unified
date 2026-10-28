@@ -1408,6 +1408,38 @@ describe("handleStripeWebhook — paid Starter missing-identity hold (#2122)", (
     expect(provisionPurchase).toHaveBeenCalledTimes(1);
   });
 
+  it("does not acknowledge a missing-identity hold when only legacy base columns persist", async () => {
+    provisionPurchase.mockResolvedValueOnce({
+      profileId: null,
+      created: false,
+      status: "no_identity",
+    });
+    recordStripeWebhookDelivery
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, detail: "base_columns_only" });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_starter_hold_legacy", {
+        id: "cs_starter_hold_legacy",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 2900,
+        customer_details: null,
+        metadata: { plan: "starter" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_starter_hold_legacy",
+        status: "reconciliation_required",
+      })
+    );
+  });
+
   it("still returns a retryable failure for a paid Starter profile-write error", async () => {
     provisionPurchase.mockResolvedValueOnce({
       profileId: null,
