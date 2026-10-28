@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolvePaidSealVerify } from "./paid-seal-verify";
+import fixture from "../../protocol/conformance/fixtures/valid-unanchored.json";
+import { verifyRecord } from "../../protocol/verifier.mjs";
 
 // CFA-363: paid paths need a replay store; an in-memory stub for these tests.
 function kvStub() {
@@ -186,70 +188,106 @@ describe("resolvePaidSealVerify", () => {
     }
   });
 
-  it("returns the registry row after trustless settlement without claiming verified", async () => {
-    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
-    process.env.X402_NETWORK = "base";
-    const original = globalThis.fetch;
-    const { fetchImpl, calls } = callsOf(url => {
-      if (url.includes("/settle")) {
-        return new Response(
-          JSON.stringify({ success: true, txHash: "0xabc" }),
-          {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          }
-        );
-      }
-      if (url.includes("auth_seals")) {
-        return new Response(
-          JSON.stringify([
+  it.each(["unsigned", "signed", "tampered"])(
+    "delivers reproducible %s evidence after trustless settlement",
+    async kind => {
+      const record = structuredClone(fixture.record);
+      if (kind === "tampered") record.credentialSubject.serial = "FORGED";
+      process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+      process.env.X402_NETWORK = "base";
+      const original = globalThis.fetch;
+      const { fetchImpl, calls } = callsOf(url => {
+        if (url.includes("/settle")) {
+          return new Response(
+            JSON.stringify({ success: true, txHash: "0xabc" }),
             {
-              id: SEAL,
-              product_id: "pack",
-              batch_id: "b1",
-              brand: "acme",
-              created_at: "2026-01-01T00:00:00Z",
-            },
-          ]),
-          { status: 200, headers: { "content-type": "application/json" } }
+              status: 200,
+              headers: { "content-type": "application/json" },
+            }
+          );
+        }
+        if (url.includes("auth_seals")) {
+          return new Response(
+            JSON.stringify([
+              {
+                id: SEAL,
+                product_id: "pack",
+                batch_id: "b1",
+                brand: "acme",
+                created_at: "2026-01-01T00:00:00Z",
+                qr_payload:
+                  kind === "unsigned"
+                    ? "https://authichain.com/verify"
+                    : JSON.stringify({ record }),
+              },
+            ]),
+            { status: 200, headers: { "content-type": "application/json" } }
+          );
+        }
+        return new Response("[]", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      });
+      globalThis.fetch = fetchImpl;
+      try {
+        const decision = await resolvePaidSealVerify({
+          replayStore: kvStub(),
+          ...bound,
+          hasVerifyApp: false,
+          proofHeader: proof({ signature: "0xdead" }),
+          bodyText: JSON.stringify({ sealId: SEAL }),
+          fetchImpl,
+        });
+        expect(decision.action).toBe("answer");
+        if (decision.action !== "answer") return;
+        expect(decision.status).toBe(200);
+        expect(decision.body).toMatchObject({
+          verified: false,
+          registered: true,
+          status: "registered",
+          checks: {
+            registry: "found",
+            signature: kind === "unsigned" ? "not_checked" : "checked",
+          },
+          subject: SEAL,
+          details: { brand: "acme", productId: "pack" },
+          settlement: { payer: PAYER, trustless: true, txHash: "0xabc" },
+        });
+        const body = decision.body as {
+          baseline: {
+            verdict: string;
+            checkedAt: string;
+            evidence: { record: unknown };
+          };
+        };
+        expect(body.baseline.verdict).toBe(
+          kind === "unsigned"
+            ? "unsigned"
+            : kind === "signed"
+              ? "valid-unanchored"
+              : "invalid"
         );
+        if (kind !== "unsigned") {
+          expect(body.baseline).toMatchObject(
+            verifyRecord(body.baseline.evidence.record, null, {
+              now: body.baseline.checkedAt,
+            })
+          );
+        }
+        const lookup = calls.find(call => call.url.includes("auth_seals"));
+        expect(lookup?.url).toContain("qr_payload");
+        expect(
+          calls.some(
+            call =>
+              call.method === "POST" && call.url.includes("automation_logs")
+          )
+        ).toBe(false);
+      } finally {
+        globalThis.fetch = original;
       }
-      return new Response("[]", {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    });
-    globalThis.fetch = fetchImpl;
-    try {
-      const decision = await resolvePaidSealVerify({
-        replayStore: kvStub(),
-        ...bound,
-        hasVerifyApp: false,
-        proofHeader: proof({ signature: "0xdead" }),
-        bodyText: JSON.stringify({ sealId: SEAL }),
-        fetchImpl,
-      });
-      expect(decision.action).toBe("answer");
-      if (decision.action !== "answer") return;
-      expect(decision.status).toBe(200);
-      expect(decision.body).toMatchObject({
-        verified: false,
-        registered: true,
-        status: "registered",
-        checks: { registry: "found", signature: "not_checked" },
-        subject: SEAL,
-        details: { brand: "acme", productId: "pack" },
-        settlement: { payer: PAYER, trustless: true, txHash: "0xabc" },
-      });
-      expect(
-        calls.some(
-          call => call.method === "POST" && call.url.includes("automation_logs")
-        )
-      ).toBe(false);
-    } finally {
-      globalThis.fetch = original;
     }
-  });
+  );
 
   it("refuses dev-mode settlement when NODE_ENV is production", async () => {
     // vi.stubEnv rather than assigning: NODE_ENV is read-only in the Node
