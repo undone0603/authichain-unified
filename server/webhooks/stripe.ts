@@ -1057,7 +1057,9 @@ export async function handleStripeWebhook(
               httpStatus: 200,
               error: "paid_catalog_missing_buyer_identity",
             });
-            if (!hold.ok) {
+            if (!hold.ok || hold.detail === "base_columns_only") {
+              // The legacy fallback omits status; an event-id-only row is not
+              // a durable reconciliation hold and must not yield HTTP 200.
               throw markRetryableFulfillment(
                 new Error("Could not persist paid catalog reconciliation hold")
               );
