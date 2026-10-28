@@ -84,7 +84,7 @@ Health is safe to scrape: `payTo`, `asset`, `network`, `chainId`, `pricePerCall`
 
 If `X402_PAY_TO` is missing: POST returns **503** `payments_not_configured` (the $0 / unbound path). Live production has `payTo` set — unpaid callers get 402, not 503.
 
-**402 body (shape):** Coinbase CDP `POST /v2/x402/validate` reads this JSON body's `x402Version`. A v1 body is rejected (`actual 1 expected 2`). The same object is base64 in `PAYMENT-REQUIRED`. Unpaid `accepts[0]` carries `outputSchema.input` (`type` + `method`) so PayAI Bazaar can catalog from the 402 body. PayAI `/settle` still receives the v1 `paymentRequirements` (also with `outputSchema`) from `buildPaymentRequired().body`.
+**402 body (shape):** Coinbase CDP `POST /v2/x402/validate` reads this JSON body's `x402Version`. A v1 body is rejected (`actual 1 expected 2`). The same object is base64 in `PAYMENT-REQUIRED`. Unpaid `accepts[0]` carries `outputSchema.input` (`type` + `method`) so PayAI Bazaar can catalog from the 402 body, and `outputSchema.output` is the unwrapped HTTP 200 body sample so field-check crawlers do not treat bazaar `{type, example}` wrapper keys as promised response fields. PayAI `/settle` still receives the v1 `paymentRequirements` (also with `outputSchema`) from `buildPaymentRequired().body`.
 
 ```json
 {
@@ -129,12 +129,24 @@ If `X402_PAY_TO` is missing: POST returns **503** `payments_not_configured` (the
 
 ```json
 {
-  "verified": false,
-  "authenticityScore": 0,
-  "subject": "demo",
-  "details": {
-    "note": "Paid settlement accepted; registry lookup is not bound on this edge path."
+  "registered": false,
+  "status": "not_registered",
+  "checks": {
+    "registry": "not_found",
+    "signature": "not_checked",
+    "revocation": "not_available"
   },
+  "details": {
+    "verdict": "unsigned",
+    "reasons": ["seal_not_found"]
+  },
+  "verified": false,
+  "baseline": {
+    "version": "1",
+    "scope": "signature-and-validity",
+    "verdict": "unsigned"
+  },
+  "subject": "00000000-0000-4000-8000-000000000000",
   "settlement": {
     "payer": "0x…",
     "amountAtomic": "50000",
@@ -233,7 +245,7 @@ Owner-only live settle smoke: `scripts/x402-smoke.ts`. Do not dispatch another l
 | `GET /api/x402/health`                                       | Agents. Live bindings.                                                                                                                                                                                                                                                                                                                            |
 | `GET /api/x402/catalog`                                      | Agents / MCP / OpenAPI-style clients. Paid endpoints + price + payTo.                                                                                                                                                                                                                                                                             |
 | `GET /.well-known/x402.json`                                 | Same catalog, well-known path.                                                                                                                                                                                                                                                                                                                    |
-| Unpaid `POST /api/x402` 402 body + `PAYMENT-REQUIRED` header | `extensions.bazaar` (info + schema) **and** `accepts[0].outputSchema.input` (`type` + `method`). JSON body and header are the v2 envelope (`x402Version: 2`, `resource` object, `accepts[].amount`, CAIP-2 `eip155:8453`) so CDP Bazaar validate can pass. PayAI `/settle` still uses the v1 requirement with `outputSchema`. No facilitator URL. |
+| Unpaid `POST /api/x402` 402 body + `PAYMENT-REQUIRED` header | `extensions.bazaar` (info + schema), `accepts[0].outputSchema.input` (`type` + `method`), and `accepts[0].outputSchema.output` (unwrapped paid HTTP body sample, no `authenticityScore`). JSON body and header are the v2 envelope (`x402Version: 2`, `resource` object, `accepts[].amount`, CAIP-2 `eip155:8453`) so CDP Bazaar validate can pass. PayAI `/settle` still uses the v1 requirement with `outputSchema`. No facilitator URL. |
 | `server/mcp` `get_pricing` / `verify_paid`                   | MCP tools. Must point at **Base**, not Polygon.                                                                                                                                                                                                                                                                                                   |
 
 Catalog **must** call `x402HealthReport` (or the same env readers). A hardcoded $0.05 that disagrees with `X402_PRICE_USD` is a bug.

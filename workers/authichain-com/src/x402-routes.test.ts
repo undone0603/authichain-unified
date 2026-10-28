@@ -281,6 +281,23 @@ describe("tryHandleX402", () => {
     );
     expect(body.accepts[0].outputSchema?.input?.type).toBe("http");
     expect(body.accepts[0].outputSchema?.input?.method).toBe("POST");
+    expect(
+      (
+        body.accepts[0].outputSchema as {
+          output?: { example?: unknown; verified?: boolean };
+        }
+      )?.output?.example
+    ).toBeUndefined();
+    expect(
+      (
+        body.accepts[0].outputSchema as {
+          output?: { verified?: boolean };
+        }
+      )?.output?.verified
+    ).toBe(false);
+    expect(JSON.stringify(body.accepts[0].outputSchema)).not.toMatch(
+      /authenticityScore/i
+    );
     expect(body.extensions?.bazaar?.info?.input?.method).toBe("POST");
     expect(JSON.stringify(body).toLowerCase()).not.toContain(
       "facilitator.payai"

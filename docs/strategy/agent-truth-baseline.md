@@ -8,6 +8,11 @@ POST a `sealId` UUID to `/api/v1/agent-verify` or `/api/x402`, using the existin
 x402 payment challenge. Eligible free calls return the same evidence format.
 The advertised bazaar example UUID is not eligible: unpaid POST of that id
 returns 402 so discovery crawlers do not classify the route as free.
+HTTP crawlers read the v2 402 JSON: `accepts[0].outputSchema.input` stays the
+POST skill catalog, and `accepts[0].outputSchema.output` is the unwrapped paid
+HTTP body sample (registered/status/checks/details/baseline/verified/subject/
+settlement/timestamp). Bazaar `extensions.bazaar.info.output` stays
+`{type: "json", example: <that sample>}`. The sample has no `authenticityScore`.
 The seal's existing `qr_payload` must contain a protocol record (direct JSON or
 `{"record": ...}`). URL-only payloads remain explicitly unsigned. A missing
 seal produces a not-registered, unsigned result; payment buys the check, not a
