@@ -822,6 +822,50 @@ describe("owner digest", async () => {
     );
     expect(m).toMatchObject({ revenue: 4900, payments: 1 });
   });
+
+  it("holds successful charges without buyer identity out of customer revenue", () => {
+    const m = summarize(
+      {
+        charges: [
+          {
+            status: "succeeded",
+            paid: true,
+            amount: 1000,
+            currency: "usd",
+            billing_details: { email: "" },
+            receipt_email: "me@x.com",
+          },
+          {
+            status: "succeeded",
+            paid: true,
+            amount: 2900,
+            currency: "usd",
+            billing_details: { email: "  " },
+          },
+          {
+            status: "succeeded",
+            paid: true,
+            amount: 4900,
+            currency: "usd",
+            receipt_email: "buyer@farm.com",
+          },
+        ],
+      },
+      new Set(["me@x.com"])
+    );
+    expect(m).toMatchObject({
+      revenue: 4900,
+      payments: 1,
+      unattributedPayments: 1,
+    });
+    const digest = buildDigest(
+      { ...base, date: "2026-10-26T12:00:00Z", money: m },
+      { force: true }
+    );
+    expect(digest.text).toContain(
+      "Paid charges missing buyer identity: 1 (excluded from customer revenue; reconcile)"
+    );
+  });
 });
 
 describe("owner digest scoreboard", async () => {
