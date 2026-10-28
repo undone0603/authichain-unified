@@ -140,20 +140,46 @@ describe("GET /api/x402/health", () => {
     expect(raw).not.toContain("/api/checkout");
   });
 
-  it("GET /api/x402 is the same health document", async () => {
-    const res = await app().request("/api/x402");
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { status: string; aliases: string[] };
-    expect(body.status).toBe("not_configured");
-    expect(body.aliases).toContain("/api/x402/health");
+  it("GET /api/x402 is HTTP 402 when unpaid so query-string crawlers see a paywall", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    for (const path of ["/api/x402", "/api/x402?url=https://example.com"]) {
+      const res = await app().request(path);
+      expect(res.status).toBe(402);
+      const body = (await res.json()) as {
+        x402Version: number;
+        accepts: Array<{ payTo: string; amount?: string }>;
+      };
+      expect(body.x402Version).toBe(2);
+      expect(body.accepts[0].payTo).toBe(process.env.X402_PAY_TO);
+      expect(body.accepts[0].amount).toBe("50000");
+      expect(res.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+    }
   });
 
-  it("GET /api/v1/agent-verify is health, not a 404", async () => {
-    const res = await app().request("/api/v1/agent-verify");
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { status: string; aliases: string[] };
-    expect(body.status).toBe("not_configured");
-    expect(body.aliases).toContain("/api/v1/agent-verify");
+  it("GET /api/v1/agent-verify is HTTP 402 when unpaid, including ?query", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    const res = await app().request("/api/v1/agent-verify?foo=bar");
+    expect(res.status).toBe(402);
+    const body = (await res.json()) as { x402Version: number };
+    expect(body.x402Version).toBe(2);
+  });
+
+  it("GET /api/x402 without payTo is 503, not a free 200", async () => {
+    const res = await app().request("/api/x402");
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error: string; health: string };
+    expect(body.error).toBe("payments_not_configured");
+    expect(body.health).toBe("/api/x402/health");
+  });
+
+  it("HEAD /api/x402 and /api/v1/agent-verify are 402 unpaid quotes with empty bodies", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    for (const path of ["/api/x402", "/api/v1/agent-verify?url=https://x"]) {
+      const res = await app().request(path, { method: "HEAD" });
+      expect(res.status).toBe(402);
+      expect(await res.text()).toBe("");
+      expect(res.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+    }
   });
 });
 

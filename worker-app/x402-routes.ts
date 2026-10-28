@@ -1,8 +1,13 @@
 /**
  * x402 agent micropayment routes on authichain-edge-router.
  *
- * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → public health
- *      (200, not_configured OK — GET must not 404)
+ * GET  /api/x402/health → public health (200, not_configured OK).
+ * GET  /api/x402 + /api/v1/agent-verify → 402 advertisement when unpaid
+ *      (same quote as POST). Query strings stay on this worker because the
+ *      Cloudflare route is authichain.com/api/x402* / agent-verify*; a 200
+ *      health body here made GET-first crawlers treat the paywall as free.
+ * HEAD /api/x402 + /api/v1/agent-verify → 402 with PAYMENT-REQUIRED and an
+ *      empty body. Other x402 paths keep their GET handlers.
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
  * GET  /api/x402/listing + /api/x402/growth → PayAPI pack and directory list.
  *      authichain.com/api/x402* lands on this worker, so a missing route here
@@ -124,6 +129,75 @@ async function health(c: {
 }) {
   hydrateX402(c.env);
   return c.json(await x402HealthReport(healthEnv(c.env)), 200, NO_STORE);
+}
+
+type QuoteCtx = {
+  env?: X402Bindings;
+  req: { url: string; header: (name: string) => string | undefined };
+  json: (
+    body: unknown,
+    status?: number,
+    headers?: Record<string, string>
+  ) => Response;
+};
+
+function unpaidQuote(c: QuoteCtx): Response {
+  hydrateX402(c.env);
+  const payTo = (c.env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
+  const resource = new URL(c.req.url, "https://authichain.com").toString();
+  const priceUsd = x402PriceUsd(c.env?.X402_PRICE_USD);
+  if (!payTo) {
+    return c.json(
+      {
+        error: "payments_not_configured",
+        status: "not_configured",
+        health: "/api/x402/health",
+      },
+      503,
+      NO_STORE
+    );
+  }
+  const required = buildPaymentRequired({
+    resource,
+    priceUsd,
+    payTo,
+    description: X402_RESOURCE_DESCRIPTION,
+  });
+  return c.json(required.v2, 402, { ...NO_STORE, ...required.headers });
+}
+
+function unpaidHead(c: QuoteCtx): Response {
+  hydrateX402(c.env);
+  const payTo = (c.env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
+  if (!payTo) {
+    return new Response(null, { status: 503, headers: NO_STORE });
+  }
+  const resource = new URL(c.req.url, "https://authichain.com").toString();
+  const priceUsd = x402PriceUsd(c.env?.X402_PRICE_USD);
+  const required = buildPaymentRequired({
+    resource,
+    priceUsd,
+    payTo,
+    description: X402_RESOURCE_DESCRIPTION,
+  });
+  return new Response(null, {
+    status: 402,
+    headers: { ...NO_STORE, ...required.headers },
+  });
+}
+
+async function unpaidOrPaidGet(c: QuoteCtx & {
+  req: QuoteCtx["req"] & {
+    raw: Request;
+    json: () => Promise<unknown>;
+  };
+}): Promise<Response> {
+  hydrateX402(c.env);
+  const proofHeader = readPaymentProofHeader(name => c.req.header(name));
+  if (proofHeader && parsePaymentHeader(proofHeader)) {
+    return agentVerify(c);
+  }
+  return unpaidQuote(c);
 }
 
 async function listing(c: {
@@ -295,7 +369,7 @@ export function registerX402Routes<
   E extends X402Bindings,
   V extends Record<string, unknown> = Record<string, never>,
 >(app: Hono<{ Bindings: E; Variables: V }>): void {
-  app.get("/api/x402", c => health(c));
+  app.get("/api/x402", c => unpaidOrPaidGet(c));
   app.get("/api/x402/health", c => health(c));
   app.get("/api/x402/catalog", c => catalog(c));
   app.get("/api/x402/listing", c => listing(c));
@@ -303,7 +377,9 @@ export function registerX402Routes<
   app.get("/.well-known/x402", c => fanout(c));
   app.get("/.well-known/x402.json", c => catalog(c));
   app.get("/openapi.json", c => openapi(c));
-  app.get("/api/v1/agent-verify", c => health(c));
+  app.get("/api/v1/agent-verify", c => unpaidOrPaidGet(c));
+  app.on("HEAD", "/api/x402", c => unpaidHead(c));
+  app.on("HEAD", "/api/v1/agent-verify", c => unpaidHead(c));
   app.post("/api/x402", c => agentVerify(c));
   app.post("/api/v1/agent-verify", c => agentVerify(c));
 }
