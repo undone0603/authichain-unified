@@ -6,7 +6,12 @@
  * This module is the worker-owned handler: credit packs come from
  * `src/lib/plans.ts`, and image generation proxies to qron-image-gen.
  */
-import { listedPlans, planPaymentLink, type Plan } from "./plans";
+import {
+  gatedCheckoutUrl,
+  listedPlans,
+  planPaymentLink,
+  type Plan,
+} from "./plans";
 import {
   CANONICAL_VERIFY_URL,
   DECISION_CONTRACT,
@@ -26,6 +31,31 @@ import {
 
 export const QRON_IMAGE_GEN_DEFAULT =
   "https://qron-image-gen.undone-k.workers.dev";
+
+/** Soft-prompt when a signed-in user has fewer than this many credits left. */
+export const LOW_CREDIT_THRESHOLD = 20;
+
+/** Marketing v5 copy (qron-modes-copy.md, trigger b, Variant A "low-starter-a"). */
+export const LOW_CREDIT_STARTER_PROMPT = {
+  message:
+    "You're running low on generations. Top up any time: Starter is 100 for $29, paid once.",
+  button: "Add 100 generations for $29",
+  dismiss: "Not now",
+  small_print: "Checkout on authichain.com.",
+} as const;
+
+/** Starter-only upgrade payload when remaining credits are below threshold. */
+export function lowCreditUpgrade(left: unknown): Record<string, unknown> {
+  if (typeof left !== "number" || left >= LOW_CREDIT_THRESHOLD) return {};
+  return {
+    upgrade: {
+      url: `${gatedCheckoutUrl("starter")}?src=low_credit&utm_content=low-starter-a`,
+      plan: "starter",
+      remaining_credits: left,
+      ...LOW_CREDIT_STARTER_PROMPT,
+    },
+  };
+}
 
 export type CreditPack = {
   id: Plan["id"];
@@ -404,6 +434,7 @@ export async function handleGeneratePost(opts: {
         // Generate still returns. A scan 404s until a later bind stores the JWS.
       }
     }
+    const remaining = deducted.ok ? deducted.remaining : credit.remaining;
     return {
       status: 200,
       body: {
@@ -417,8 +448,9 @@ export async function handleGeneratePost(opts: {
           objectId: presentation.object_id,
         },
         ...(anonymous ? {} : { presentation }),
-        remaining_credits: deducted.ok ? deducted.remaining : credit.remaining,
+        remaining_credits: remaining,
         ...(anonymous ? { free_sample: true } : {}),
+        ...(anonymous ? {} : lowCreditUpgrade(remaining)),
       },
     };
   } catch (err) {
