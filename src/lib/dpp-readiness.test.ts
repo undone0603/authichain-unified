@@ -46,6 +46,8 @@ describe("scoreDppReadiness", () => {
     expect(r.gaps).toEqual([]);
     expect(r.daysUntilDeadline).toBeNull();
     expect(r.nextStep).toContain("expected, not yet law");
+    expect(r.nextStep).toContain("opens an AuthiChain workspace");
+    expect(r.nextStep).not.toMatch(/readiness audit/i);
   });
 
   it("does not sell the audit when there is no EU duty", () => {
