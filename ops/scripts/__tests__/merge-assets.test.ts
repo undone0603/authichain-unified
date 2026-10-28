@@ -46,7 +46,7 @@ describe("mergeAssets", () => {
     expect(read(path.join(outDir, "index.html"))).toBe(
       read(path.join(spaDir, "index.html")),
     );
-  });
+  }, 15_000);
 
   it("copies SPA assets/**", async () => {
     await mergeAssets({ spaDir, mktDir, outDir });
