@@ -1,0 +1,18 @@
+{
+  "linkedin": "A QR code is just a pointer. Anyone can print a sticker that points somewhere else and put it over the original, and a phone camera has no way to tell the difference.\n\nQRON is built around that gap. Each QRON code carries a cryptographic signature over its payload, made with Ed25519. A verifier checks the signature against the issuer's public key before it trusts what the code says. If the payload was edited, or the code was re-issued by someone who doesn't hold the key, the check fails and the scan says so.\n\nThis does not stop someone from physically covering a code with another one. It does mean a signed code can be told apart from an unsigned one, and a forged payload can be told apart from a genuine one.\n\nIf you print QR codes on packaging, labels or documents, what does your current process do to confirm the code a customer scans is the one you issued?\n\nhttps://qron.space/?utm_source=linkedin&utm_medium=social&utm_campaign=qr-tamper-check&utm_content=a",
+  "reddit": {
+    "subreddit": "QRCodes",
+    "title": "Signing the payload of a QR code so a scanner can tell a tampered code from the one you issued",
+    "body": "A standard QR code carries no proof of who made it. If someone prints a replacement sticker with a different URL, the camera reads it just as happily as the original.\n\nQRON takes the approach of signing the payload with Ed25519 and having the verifier check that signature against the issuer's public key before trusting the contents. An edited payload, or one signed by a different key, fails the check.\n\nTo be clear about the limits: a signature does not prevent someone from physically covering a code with another one, and it does not make Ed25519 safe against a future quantum computer. It only lets a verifier distinguish codes you issued from codes you didn't.\n\nQuestion for people who deploy QR codes on physical goods: do you do anything today to detect swapped or overprinted codes, and where does that process break down?\n\nhttps://qron.space/?utm_source=reddit&utm_medium=social&utm_campaign=qr-tamper-check&utm_content=a\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "A QR code is only a pointer. Print a different sticker, stick it over the original, and a phone camera can't tell the difference.",
+    "QRON signs the payload of each code with Ed25519. A verifier checks the signature against the issuer's public key first, so an edited or re-issued payload fails the check.",
+    "It won't stop someone covering a code with another one. It does let a scanner tell a code you issued from one you didn't: https://qron.space/?utm_source=twitter&utm_medium=social&utm_campaign=qr-tamper-check&utm_content=a"
+  ],
+  "experiment": {
+    "campaign": "qr-tamper-check",
+    "variant": "a",
+    "hypothesis": "a problem-led hook (a QR code is only a pointer anyone can replace) drives more clicks than a capability-led hook"
+  }
+}
