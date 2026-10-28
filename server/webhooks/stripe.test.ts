@@ -1349,7 +1349,6 @@ describe("handleStripeWebhook — stripe_events claim fails closed (PM-338)", ()
 });
 
 describe("handleStripeWebhook — paid Starter missing-identity hold (#2122)", () => {
-
   it("durably holds a paid Starter checkout with no buyer identity and does not report a grant", async () => {
     provisionPurchase.mockResolvedValueOnce({
       profileId: null,
