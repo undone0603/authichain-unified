@@ -70,6 +70,7 @@ describe("tryHandleX402", () => {
       pricePerCall: { usd: number };
       endpoints: Array<{
         path: string;
+        method: string;
         paid: boolean;
         priceUsd: number | null;
       }>;
@@ -84,6 +85,16 @@ describe("tryHandleX402", () => {
     expect(body.endpoints.some(e => e.paid && e.path === "/api/x402")).toBe(
       true
     );
+    expect(
+      body.endpoints.some(
+        e => e.path === "/api/x402" && e.method === "GET" && e.paid
+      )
+    ).toBe(true);
+    expect(
+      body.endpoints.some(
+        e => e.path === "/api/x402/health" && e.method === "GET" && e.paid
+      )
+    ).toBe(false);
     expect(body.humanCheckout.farmUsd).toBe(149);
     expect(body.humanCheckout.farmPaymentLink).toBeUndefined();
   });
@@ -173,6 +184,11 @@ describe("tryHandleX402", () => {
       openapi: string;
       paths: {
         "/api/x402": {
+          get?: {
+            "x-payment-info": {
+              protocols: string[];
+            };
+          };
           post: {
             "x-payment-info": {
               protocols: string[];
@@ -189,6 +205,9 @@ describe("tryHandleX402", () => {
     expect(spec.paths["/api/x402"].post["x-payment-info"].price.amount).toBe(
       "0.05"
     );
+    expect(spec.paths["/api/x402"].get?.["x-payment-info"]?.protocols).toEqual([
+      "x402",
+    ]);
     const raw = JSON.stringify(spec);
     expect(raw).toContain("/qron/r/{object_id}");
     expect(raw).toContain("This host verifies the signature");
