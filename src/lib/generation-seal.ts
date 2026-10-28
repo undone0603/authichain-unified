@@ -9,10 +9,16 @@
  * Verdict contract (protocol/SPEC.md §5.1):
  *   valid-unanchored  signature checks, no anchor
  *   verified          forbidden here — anchoring is a separate prod step
- *   invalid           bad signature, future validFrom, or a product claim
+ *   invalid           bad signature, future validFrom, a product claim,
+ *                     or presented image bytes that do not match imageSha256
  *
  * Workers: WebCrypto only. No node:crypto. Issuer key is a secret
  * (ISSUER_ED25519_PKCS8_B64). Do not commit it.
+ *
+ * Optional caption is signed when the issuer passes one. Omitting it keeps
+ * the previous canonical bytes, so older callers still issue the same shape.
+ * checkGenerationSeal(record, publicKey) is unchanged when no image is passed.
+ * Pass image bytes as the third argument to rehash them.
  */
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -24,6 +30,8 @@ export type GenerationInput = {
   imageSha256: string;
   planId: "starter" | "qron_launch" | "creator" | "free";
   issuedAt: string;
+  /** Signed into credentialSubject when present. 1–280 characters. */
+  caption?: string;
 };
 
 export type ProtocolRecord = {
@@ -38,6 +46,7 @@ export type ProtocolRecord = {
     imageSha256: string;
     planId: string;
     statement: string;
+    caption?: string;
   };
   proof: {
     type: "Ed25519Signature2020";
@@ -144,6 +153,11 @@ export function didKeyFromPublic(raw: Uint8Array): string {
   return `did:key:z${bytesToB58(prefixed)}`;
 }
 
+export async function sha256HexBytes(bytes: BufferSource): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 export async function importIssuer(pkcs8B64: string): Promise<CryptoKeyPair> {
   const der = Uint8Array.from(atob(pkcs8B64), c => c.charCodeAt(0));
   const privateKey = await crypto.subtle.importKey(
@@ -166,6 +180,15 @@ export async function importIssuer(pkcs8B64: string): Promise<CryptoKeyPair> {
   return { privateKey, publicKey };
 }
 
+function signedCaption(caption: string | undefined): string | undefined {
+  if (caption === undefined) return undefined;
+  const trimmed = caption.trim();
+  if (trimmed.length < 1 || trimmed.length > 280) {
+    throw new Error("caption must be 1-280 characters");
+  }
+  return trimmed;
+}
+
 export async function issueGenerationSeal(
   input: GenerationInput,
   issuer: CryptoKeyPair
@@ -180,6 +203,7 @@ export async function issueGenerationSeal(
   if (!/^[a-f0-9]{64}$/.test(input.imageSha256)) {
     throw new Error("imageSha256 must be 64 hex chars");
   }
+  const caption = signedCaption(input.caption);
   const publicJwk = await crypto.subtle.exportKey("jwk", issuer.publicKey);
   if (!publicJwk.x) throw new Error("public jwk missing x");
   const raw = Uint8Array.from(
@@ -203,6 +227,7 @@ export async function issueGenerationSeal(
       imageSha256: input.imageSha256,
       planId: input.planId,
       statement: STATEMENT,
+      ...(caption ? { caption } : {}),
     },
     proof: {
       type: "Ed25519Signature2020",
@@ -230,11 +255,16 @@ export async function issueGenerationSeal(
   };
 }
 
+async function imageReason(record: ProtocolRecord, image: BufferSource): Promise<string> {
+  const hashed = await sha256HexBytes(image);
+  return hashed === record.credentialSubject.imageSha256 ? "image_matches" : "image_mismatch";
+}
+
 export async function checkGenerationSeal(
   record: ProtocolRecord,
-  publicKey: CryptoKey
+  publicKey: CryptoKey,
+  image?: BufferSource
 ): Promise<{ verdict: "valid-unanchored" | "invalid"; reasons: string[] }> {
-  const reasons: string[] = [];
   if (record.credentialSubject.claim !== "artwork_only") {
     return { verdict: "invalid", reasons: ["product_claim_refused"] };
   }
@@ -249,9 +279,37 @@ export async function checkGenerationSeal(
   const sig = b58ToBytes(proofValue.slice(1));
   const payload = new TextEncoder().encode(canonicalize(unsigned(record)));
   const ok = await crypto.subtle.verify("Ed25519", publicKey, sig, payload);
-  if (!ok) return { verdict: "invalid", reasons: ["bad_signature"] };
-  reasons.push("signature_valid", "no_anchor", "not_a_product_attestation");
+  const reasons: string[] = [ok ? "signature_valid" : "bad_signature"];
+  if (image) reasons.push(await imageReason(record, image));
+  if (!ok || reasons.includes("image_mismatch")) {
+    return { verdict: "invalid", reasons };
+  }
+  reasons.push("no_anchor", "not_a_product_attestation");
   return { verdict: "valid-unanchored", reasons };
+}
+
+/** Stranger check. The key is the issuer did:key inside the record. */
+export async function checkPresentedSeal(
+  record: ProtocolRecord,
+  image?: BufferSource
+): Promise<{ verdict: "valid-unanchored" | "invalid"; reasons: string[] }> {
+  try {
+    const key = await issuerKey(record.issuer);
+    return checkGenerationSeal(record, key, image);
+  } catch {
+    return { verdict: "invalid", reasons: ["bad_signature"] };
+  }
+}
+
+async function issuerKey(did: string): Promise<CryptoKey> {
+  if (!did.startsWith("did:key:z")) throw new Error("issuer is not a did:key");
+  const prefixed = b58ToBytes(did.slice("did:key:z".length));
+  if (prefixed.length !== 34 || prefixed[0] !== 0xed || prefixed[1] !== 0x01) {
+    throw new Error("issuer multicodec is not ed25519");
+  }
+  const raw = new Uint8Array(32);
+  raw.set(prefixed.subarray(2));
+  return crypto.subtle.importKey("raw", raw, { name: "Ed25519" }, true, ["verify"]);
 }
 
 export function resolveBody(seal: SealResult | null): {
