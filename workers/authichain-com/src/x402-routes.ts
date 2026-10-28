@@ -6,9 +6,13 @@
  * authichain-edge-router, whose unmounted GET /api/* falls through to ASSETS
  * and answers an empty 404.
  *
- * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → 200 health
- *      (not_configured is OK — GET must not 404). `freeCalls` says whether
- *      the daily UUID allowance is armed. It never includes the salt or keys.
+ * GET  /api/x402/health → 200 health (not_configured is OK — GET must not
+ *      404). `freeCalls` says whether the daily UUID allowance is armed. It
+ *      never includes the salt or keys.
+ * GET  /api/x402 + /api/v1/agent-verify → 402 advertisement when unpaid.
+ *      GET-first crawlers treat a 200 here as "free" and never buy. Health
+ *      stays on /api/x402/health. GET never consumes the free UUID allowance
+ *      and never settles.
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
  * GET  /api/x402/listing → PayAPI-ready pack copied from health
  * GET  /api/x402/growth → directories + skills + sisters
@@ -117,12 +121,7 @@ export function isX402Path(pathname: string): boolean {
 }
 
 function isHealthPath(pathname: string): boolean {
-  const p = normalizePath(pathname);
-  return (
-    p === "/api/x402" ||
-    p === "/api/x402/health" ||
-    p === "/api/v1/agent-verify"
-  );
+  return normalizePath(pathname) === "/api/x402/health";
 }
 
 function isCatalogPath(pathname: string): boolean {
@@ -324,6 +323,27 @@ async function tryFreeCall(
   };
 }
 
+function unpaidQuote(request: Request, env?: X402Env): Response {
+  hydrateX402(env);
+  const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
+  const resource = new URL(request.url).toString();
+  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  if (!payTo) {
+    return json(503, {
+      error: "payments_not_configured",
+      status: "not_configured",
+      health: "/api/x402/health",
+    });
+  }
+  const required = buildPaymentRequired({
+    resource,
+    priceUsd,
+    payTo,
+    description: "AuthiChain agent verification",
+  });
+  return json(402, required.v2, required.headers);
+}
+
 async function agentVerify(
   request: Request,
   env?: X402Env,
@@ -437,6 +457,10 @@ export async function tryHandleX402(
 
   if (request.method === "GET" && isHealthPath(url.pathname)) {
     return healthResponse(env);
+  }
+
+  if (request.method === "GET" && isPaidPath(url.pathname)) {
+    return unpaidQuote(request, env);
   }
 
   if (request.method === "POST" && isPaidPath(url.pathname)) {
