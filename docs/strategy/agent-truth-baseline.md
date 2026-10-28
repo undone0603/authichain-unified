@@ -41,9 +41,10 @@ node scripts/x402-buyer-example.mjs --live
 1. Discover: `POST https://authichain.com/api/x402` with `{}` returns HTTP 402.
    `accepts[0].amount` is `50000` atomic Base USDC ($0.05). `payTo` is in the
    body. `GET /api/x402/health` confirms the same price and network.
-2. Submit payment: POST the same path with `{"sealId":"<uuid>"}` and an
-   `X-PAYMENT` header from **your** Base USDC wallet. A non-UUID body is HTTP
-   400 before payment. Save the JSON body as `response.json`.
+2. Submit payment: retry the same empty POST with an `X-PAYMENT` header from
+   **your** Base USDC wallet to receive missing-seal evidence plus a settlement
+   receipt, or POST `{"sealId":"<uuid>"}` with payment. A named non-UUID body is
+   HTTP 400 before payment. Save the JSON body as `response.json`.
 3. Independent verifier (separate process, no registry or facilitator):
 
 ```sh

@@ -519,9 +519,14 @@ export async function resolvePaidSealVerify(input: {
     }
   }
   const parsed = parseSealRequest(parsedBody);
-  if (!parsed.ok) {
+  const emptyBody = Object.keys(parsedBody).length === 0;
+  // Empty unpaid is the 402 price challenge. x402 clients retry that same
+  // empty body with a payment header. Named-but-invalid bodies stay 400
+  // before settle so the agent is not charged for a key that cannot exist.
+  if (!parsed.ok && !emptyBody) {
     return { action: "answer", status: parsed.status, body: parsed.body };
   }
+  const sealId = parsed.ok ? parsed.sealId : null;
 
   // Replay guard: refuse any reuse of a settled proof, BEFORE settling.
   const keys = replayKeys(input.proofHeader, proof);
@@ -554,18 +559,23 @@ export async function resolvePaidSealVerify(input: {
     };
   }
 
-  const lookup = await readSeal(fetchImpl, creds, parsed.sealId);
-  if (!lookup.ok) {
-    return {
-      action: "answer",
-      status: 503,
-      body: { error: "registry_unavailable", settled: false },
-    };
+  let seal: Record<string, unknown> | null = null;
+  if (sealId) {
+    const lookup = await readSeal(fetchImpl, creds, sealId);
+    if (!lookup.ok) {
+      return {
+        action: "answer",
+        status: 503,
+        body: { error: "registry_unavailable", settled: false },
+      };
+    }
+    seal = lookup.seal;
   }
 
   // Prepare evidence before taking payment; verifier failures cannot charge
-  // the caller and then prevent delivery of a result.
-  const answer = sealBaseline(lookup.seal);
+  // the caller and then prevent delivery of a result. Empty body is missing
+  // evidence, not a registry outage.
+  const answer = sealBaseline(seal);
 
   // Pending marker BEFORE settle (CFA-351); released if settle fails.
   const claim = await claimReplay(replayStore, keys);
@@ -597,7 +607,7 @@ export async function resolvePaidSealVerify(input: {
   }
 
   await rememberSettledProof(replayStore, keys, {
-    sealId: parsed.sealId,
+    sealId,
     txHash: settlement.txHash ?? proof.txHash ?? null,
   });
   await recordSpend(fetchImpl, creds, proof.payer);
@@ -606,7 +616,7 @@ export async function resolvePaidSealVerify(input: {
     status: 200,
     body: {
       ...answer,
-      subject: parsed.sealId,
+      subject: sealId,
       settlement: {
         payer: proof.payer,
         amountAtomic: verification.amount.toString(),

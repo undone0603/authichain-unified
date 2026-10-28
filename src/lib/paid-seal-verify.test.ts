@@ -188,6 +188,55 @@ describe("resolvePaidSealVerify", () => {
     }
   });
 
+  it("settles an empty paid body as missing-seal evidence (x402 retry of the 402 challenge)", async () => {
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    process.env.X402_NETWORK = "base";
+    const original = globalThis.fetch;
+    const { fetchImpl, calls } = callsOf(url => {
+      if (url.includes("/settle")) {
+        return new Response(
+          JSON.stringify({ success: true, txHash: "0xabc" }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        );
+      }
+      return new Response("[]", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    globalThis.fetch = fetchImpl;
+    try {
+      const decision = await resolvePaidSealVerify({
+        replayStore: kvStub(),
+        ...bound,
+        hasVerifyApp: false,
+        proofHeader: proof({ signature: "0xdead" }),
+        bodyText: "{}",
+        fetchImpl,
+      });
+      expect(decision).toMatchObject({
+        action: "answer",
+        status: 200,
+        body: {
+          verified: false,
+          registered: false,
+          subject: null,
+          baseline: {
+            verdict: "unsigned",
+            evidence: { record: null },
+          },
+          settlement: { trustless: true, txHash: "0xabc" },
+        },
+      });
+      const body = decision.action === "answer" ? decision.body : null;
+      expect(JSON.stringify(body)).not.toMatch(/"verified":true/);
+      expect(calls.some(call => call.url.includes("auth_seals"))).toBe(false);
+      expect(calls.some(call => call.url.includes("/settle"))).toBe(true);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
   it("delivers unsigned missing-seal evidence after trustless settlement", async () => {
     process.env.X402_FACILITATOR_URL = "https://facilitator.example";
     process.env.X402_NETWORK = "base";

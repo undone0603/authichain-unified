@@ -113,14 +113,15 @@ export async function POST(request: Request) {
     );
   }
 
-  // 4. Everything that can refuse runs before settlement, so a refused call
-  // never costs the agent the $0.05: missing subject, spend cap, registry
-  // outage. Only a call that will get a real registry answer is settled.
+  // 4. Named-but-invalid bodies, spend cap, and registry outage refuse
+  // before settlement. An empty body is the x402 402 challenge; a valid
+  // payment on that same body settles and returns missing-seal evidence.
+  const emptyBody = Object.keys(input).length === 0;
   const parsed = parseSealRequest(input);
-  if (!parsed.ok) {
+  if (!parsed.ok && !emptyBody) {
     return NextResponse.json(parsed.body, { status: parsed.status });
   }
-  const { sealId } = parsed;
+  const sealId = parsed.ok ? parsed.sealId : null;
 
   // A row in auth_seals is not an attestation. This path checks signature
   // and validity only; it does not query an anchor or authenticate an issuer.
@@ -153,19 +154,23 @@ export async function POST(request: Request) {
       { status: 402 }
     );
   }
-  const { data: seal, error: sealError } = await admin
-    .from("auth_seals")
-    .select("id,product_id,batch_id,brand,created_at,qr_payload")
-    .eq("id", sealId)
-    .maybeSingle();
-  if (sealError) {
-    return NextResponse.json(
-      { error: "registry_unavailable", settled: false },
-      { status: 503 }
-    );
+  let seal: Record<string, unknown> | null = null;
+  if (sealId) {
+    const { data, error: sealError } = await admin
+      .from("auth_seals")
+      .select("id,product_id,batch_id,brand,created_at,qr_payload")
+      .eq("id", sealId)
+      .maybeSingle();
+    if (sealError) {
+      return NextResponse.json(
+        { error: "registry_unavailable", settled: false },
+        { status: 503 }
+      );
+    }
+    seal = (data as Record<string, unknown> | null) ?? null;
   }
 
-  const answer = sealBaseline(seal as Record<string, unknown> | null);
+  const answer = sealBaseline(seal);
 
   // 5. Trustless settlement via the x402 facilitator (on-chain EIP-3009).
   // In production a facilitator MUST confirm settlement; dev-mode (no facilitator
@@ -193,12 +198,14 @@ export async function POST(request: Request) {
     payload: proof.payer,
   });
 
-  await onVerificationEvent({
-    seal_id: sealId,
-    brand: (seal?.brand as string | undefined) ?? "authichain.com",
-    scan_context: { source: "agent-verify", payer: proof.payer },
-    status: answer.verified ? "valid" : "invalid",
-  });
+  if (sealId) {
+    await onVerificationEvent({
+      seal_id: sealId,
+      brand: (seal?.brand as string | undefined) ?? "authichain.com",
+      scan_context: { source: "agent-verify", payer: proof.payer },
+      status: answer.verified ? "valid" : "invalid",
+    });
+  }
 
   return NextResponse.json(
     {

@@ -266,8 +266,8 @@ async function tryFreeCall(
   if (!parsed.ok) {
     // No body: 402 so a scanner can read the price. A named seal that cannot
     // exist, or productId/serial used as the key, is refused here. The paid
-    // path does the same before settlement. This runs before the registry
-    // credential check so a bad id is not a payment challenge.
+    // path refuses those same named-but-invalid bodies before settlement.
+    // An empty body with a valid payment is settled as missing-seal evidence.
     if (Object.keys(raw).length > 0) {
       return { response: json(parsed.status, parsed.body), remaining: null };
     }

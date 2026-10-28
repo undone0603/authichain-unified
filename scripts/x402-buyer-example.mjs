@@ -50,6 +50,7 @@ if (!live) {
           "GET /api/x402/health — confirm ready, $0.05, Base USDC, payTo",
           "POST /api/x402 {} — HTTP 402 with accepts amount 50000 (USDC $0.05)",
           "POST /api/x402 {sealId: not-a-uuid} — HTTP 400 before payment",
+          "Retry the same empty POST with X-PAYMENT to receive missing-seal evidence plus a settlement receipt, or POST a seal UUID",
           "Submit X-PAYMENT with your own Base USDC; save the JSON body",
           "node scripts/verify-paid-baseline.mjs response.json <seal-uuid>",
           "Confirm settlement.txHash on Base; a valid signature is not real-world truth",
