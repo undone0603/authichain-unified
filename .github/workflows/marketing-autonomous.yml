@@ -86,6 +86,8 @@ jobs:
             "https://authichain.com/mcp" \
             "https://authichain.com/m/insulin-vial" \
             "https://authichain.com/onboard" \
+            "https://authichain.com/generate" \
+            "https://authichain.com/checkout/starter" \
             "https://authichain.com/trumark" \
             "https://authichain.com/made-in-america" \
             "https://authichain.com/passport" \
