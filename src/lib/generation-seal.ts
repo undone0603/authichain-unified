@@ -160,7 +160,7 @@ export async function sha256HexBytes(bytes: BufferSource): Promise<string> {
 
 /** @cloudflare/workers-types types every exportKey format as ArrayBuffer | JsonWebKey. */
 function ed25519RawFromExport(exported: ArrayBuffer | JsonWebKey, missing: string): Uint8Array {
-  if (exported instanceof ArrayBuffer || typeof exported.x !== "string" || exported.x.length === 0) {
+  if (!("x" in exported) || typeof exported.x !== "string" || exported.x.length === 0) {
     throw new Error(missing);
   }
   return Uint8Array.from(
