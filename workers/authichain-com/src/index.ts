@@ -47,6 +47,7 @@ import {
   tryHandleTelegramMiniApp,
 } from "./telegram-miniapp.ts";
 import { DESK_SITEMAP, tryHandleDesk } from "./desk.ts";
+import { tryHandleGeneration } from "./generation-check";
 // Extensionless on purpose. tsconfig.workers.json counts each ".ts" import.
 import { attestationSchemaResponse } from "./attestation-schema";
 import { tryHandleLlmsTxt } from "./llms-txt.ts";
@@ -3567,6 +3568,9 @@ async function handleAuthichainCom(
     if (microsite) return microsite;
     const miniapp = tryHandleTelegramMiniApp(request);
     if (miniapp) return miniapp;
+    const generation = tryHandleGeneration(request);
+    if (generation) return generation;
+
     const desk = tryHandleDesk(request);
     if (desk) return desk;
 
