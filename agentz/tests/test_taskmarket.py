@@ -6,7 +6,13 @@ import json
 from datetime import datetime, timezone
 
 from agentz.core.modes import ExecutionContext, Mode
-from agentz.core.taskmarket import fetch_open_tasks, reward_usdc, select_task
+from agentz.core.taskmarket import (
+    apply_acceptance,
+    fetch_open_tasks,
+    record_submission,
+    reward_usdc,
+    select_task,
+)
 from agentz.workflows.handlers.taskmarket_cycle import run
 
 NOW = datetime(2026, 10, 28, 22, 9, tzinfo=timezone.utc)
@@ -131,6 +137,98 @@ def test_handler_uses_supplied_tasks_and_does_not_sign():
     assert plan["referenceCode"] == "TSK-HANDLER"
     assert plan["signs"] is False
     assert plan["stakes"] is False
+
+
+def test_picker_skips_the_ledger_and_the_refused_shapes():
+    from datetime import timedelta
+
+    far = (NOW + timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    soon = (NOW + timedelta(minutes=30)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    recorded = _task(
+        id="0xrecorded",
+        referenceCode="TSK-RECORDED",
+        reward="9000000",
+        submissionCount=0,
+        expiryTime=far,
+    )
+    fresh = _task(
+        id="0xfresh",
+        referenceCode="TSK-FRESH",
+        reward="2000000",
+        submissionCount=1,
+        expiryTime=far,
+    )
+    tasks = [
+        recorded,
+        fresh,
+        _task(id="0xauction", mode="auction", description="Dutch auction for a logo.", reward="8000000"),
+        _task(id="0xexploit", description="Write a proof of concept for this bug bounty."),
+        _task(id="0xstake", mode="claim", stakeRequired=True, reward="8000000", description="Claim and deliver the note."),
+        _task(id="0xcrowd", reward="8000000", submissionCount=40, expiryTime=soon),
+    ]
+    plan = select_task(tasks, now=NOW, exclude_ids=["0xrecorded"])
+    assert plan["taskId"] == "0xfresh"
+    assert plan["taskId"] != "0xrecorded"
+    assert "0xrecorded" in plan["excludedTaskIds"]
+    assert plan["signatureMessage"] == "taskmarket:market:submit:0xfresh"
+    assert plan["signs"] is False
+
+
+def test_acceptance_updates_the_same_ledger_row():
+    ledger = record_submission(
+        {"rows": []},
+        task_id="0xfresh",
+        submission_id="sub-real",
+        worker_address="0xworker",
+    )
+    updated = apply_acceptance(ledger, task_id="0xfresh", settlement_tx="0xsettlement")
+    assert len(updated["rows"]) == 1
+    row = updated["rows"][0]
+    assert row["taskId"] == "0xfresh"
+    assert row["submissionId"] == "sub-real"
+    assert row["workerAddress"] == "0xworker"
+    assert row["settlementTx"] == "0xsettlement"
+
+
+def test_handler_reads_the_ledger_before_it_chooses(tmp_path):
+    from datetime import timedelta
+
+    clock = datetime.now(timezone.utc)
+    far = (clock + timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    soon = (clock + timedelta(minutes=20)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    ledger_path = tmp_path / "taskmarket-ledger.json"
+    ledger_path.write_text(
+        json.dumps(
+            {
+                "rows": [
+                    {
+                        "taskId": "0xrecorded",
+                        "submissionId": "sub-real",
+                        "workerAddress": "0xworker",
+                        "settlementTx": None,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    tasks = [
+        _task(id="0xrecorded", referenceCode="TSK-RECORDED", reward="9000000", submissionCount=0, expiryTime=far),
+        _task(id="0xfresh", referenceCode="TSK-FRESH", reward="1500000", submissionCount=2, expiryTime=far),
+        _task(id="0xauction", mode="auction", description="Auction a mark."),
+        _task(id="0xbug", description="Smart contract bug bounty proof of concept."),
+        _task(id="0xstake", mode="claim", stakeRequired=True, description="Deliver the file."),
+        _task(id="0xcrowd", reward="5000000", submissionCount=30, expiryTime=soon),
+    ]
+    ctx = ExecutionContext(
+        mode=Mode.DRY_RUN,
+        workflow_id="taskmarket_cycle",
+        parameters={"tasks": tasks, "ledger_path": str(ledger_path)},
+    )
+    plan = json.loads(run(ctx))
+    assert plan["taskId"] == "0xfresh"
+    assert "0xrecorded" in plan["excludedTaskIds"]
+    assert plan["signatureMessage"] == "taskmarket:market:submit:0xfresh"
 
 
 def test_fetch_stops_when_the_page_says_no_more():

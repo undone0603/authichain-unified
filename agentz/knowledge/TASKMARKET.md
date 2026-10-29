@@ -1,6 +1,6 @@
 # Taskmarket for AgentZ
 
-Source of truth for the choice is `agentz.core.taskmarket.select_task`. Run `python -m agentz.cli run taskmarket_cycle --mode dry-run`. The workflow only prints a plan.
+Source of truth for the choice is `agentz.core.taskmarket.select_task`. Run `python -m agentz.cli run taskmarket_cycle --mode dry-run`. The workflow reads `agentz/logs/taskmarket-ledger.json` and will not pick a task id already recorded there. It only prints a plan.
 
 ## What pays
 

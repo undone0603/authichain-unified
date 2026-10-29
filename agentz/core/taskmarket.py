@@ -14,9 +14,11 @@ from __future__ import annotations
 import json
 import urllib.request
 from datetime import datetime, timezone
-from typing import Any, Callable
+from pathlib import Path
+from typing import Any, Callable, Iterable
 
 API = "https://api.taskmarket.dev"
+LEDGER_PATH = Path(__file__).resolve().parents[1] / "logs" / "taskmarket-ledger.json"
 USDC_DECIMALS = 6
 BASE_CHAIN_ID = 8453
 
@@ -84,6 +86,80 @@ def _hours_left(task: dict[str, Any], now: datetime) -> float | None:
 def _blob(task: dict[str, Any]) -> str:
     tags = " ".join(str(tag) for tag in (task.get("tags") or []))
     return f"{task.get('description') or ''}\n{tags}".lower()
+
+
+def empty_ledger() -> dict[str, Any]:
+    return {"rows": []}
+
+
+def load_ledger(path: Path | None = None) -> dict[str, Any]:
+    """Read the receipt ledger. A missing file is an empty ledger."""
+    target = path or LEDGER_PATH
+    if not target.is_file():
+        return empty_ledger()
+    loaded = json.loads(target.read_text(encoding="utf-8"))
+    rows = loaded.get("rows") if isinstance(loaded, dict) else None
+    if not isinstance(rows, list):
+        return empty_ledger()
+    return {"rows": [row for row in rows if isinstance(row, dict)]}
+
+
+def save_ledger(ledger: dict[str, Any], path: Path | None = None) -> None:
+    target = path or LEDGER_PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
+
+
+def ledger_task_ids(ledger: dict[str, Any]) -> set[str]:
+    return {
+        str(row["taskId"])
+        for row in ledger.get("rows") or []
+        if isinstance(row, dict) and row.get("taskId")
+    }
+
+
+def record_submission(
+    ledger: dict[str, Any],
+    *,
+    task_id: str,
+    submission_id: str,
+    worker_address: str,
+) -> dict[str, Any]:
+    """Store one receipt. A second record for the same task updates that row."""
+    if not task_id or not submission_id or not worker_address:
+        raise ValueError("submission evidence is incomplete")
+    rows = [dict(row) for row in ledger.get("rows") or [] if isinstance(row, dict)]
+    for row in rows:
+        if row.get("taskId") == task_id:
+            row["submissionId"] = submission_id
+            row["workerAddress"] = worker_address
+            return {"rows": rows}
+    rows.append(
+        {
+            "taskId": task_id,
+            "submissionId": submission_id,
+            "workerAddress": worker_address,
+            "settlementTx": None,
+        }
+    )
+    return {"rows": rows}
+
+
+def apply_acceptance(
+    ledger: dict[str, Any],
+    *,
+    task_id: str,
+    settlement_tx: str,
+) -> dict[str, Any]:
+    """Write a settlement onto the existing receipt. Does not add a row."""
+    if not task_id or not settlement_tx:
+        raise ValueError("acceptance evidence is incomplete")
+    rows = [dict(row) for row in ledger.get("rows") or [] if isinstance(row, dict)]
+    for row in rows:
+        if row.get("taskId") == task_id:
+            row["settlementTx"] = settlement_tx
+            return {"rows": rows}
+    raise ValueError("no ledger row for task")
 
 
 def _blocked_reason(task: dict[str, Any], now: datetime, allow_stake: bool) -> str | None:
@@ -161,6 +237,7 @@ def select_task(
     *,
     now: datetime | None = None,
     allow_stake: bool = False,
+    exclude_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Pick one open Base-USDC worker task, or wait.
 
@@ -171,11 +248,15 @@ def select_task(
     clock = now or datetime.now(timezone.utc)
     if clock.tzinfo is None:
         clock = clock.replace(tzinfo=timezone.utc)
+    exclude = {str(task_id) for task_id in (exclude_ids or []) if task_id}
     best: dict[str, Any] | None = None
     best_score = -1.0
     skipped = 0
     for task in tasks:
         if not isinstance(task, dict):
+            skipped += 1
+            continue
+        if str(task.get("id") or "") in exclude:
             skipped += 1
             continue
         reason = _blocked_reason(task, clock, allow_stake)
@@ -203,6 +284,7 @@ def select_task(
             "reason": "No open unclaimed Base USDC task passed the worker filter.",
             "refuses": list(REFUSES),
             "blockers": [],
+            "excludedTaskIds": sorted(exclude),
             "skipped": skipped,
             "signs": False,
             "stakes": False,
@@ -227,6 +309,7 @@ def select_task(
         ),
         "refuses": list(REFUSES),
         "blockers": _blockers(best),
+        "excludedTaskIds": sorted(exclude),
         "skipped": skipped,
         "signs": False,
         "stakes": False,
