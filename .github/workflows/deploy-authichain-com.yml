@@ -20,10 +20,19 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      # Self-hosted WSL already has pnpm (11.x). pnpm/action-setup@v6 with
+      # version 10.28.2 downloads from npm and ETIMEDOUT / signature-fails
+      # (runs 40865371006). GitHub-hosted still uses the pin.
       - uses: pnpm/action-setup@v6
+        if: runner.environment != 'self-hosted'
         with:
           version: "10.28.2"
           run_install: false
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          command -v pnpm
+          pnpm --version
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
