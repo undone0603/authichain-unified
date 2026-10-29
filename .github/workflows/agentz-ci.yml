@@ -1,5 +1,11 @@
 name: AgentZ Autonomous CI
-on: [push, pull_request]
+# Push runs only on main. pull_request already covers every PR head, and
+# push on every branch doubled the self-hosted runner load (two runs per
+# PR push, both failing on the missing `python` alias).
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 permissions:
   contents: read
@@ -10,25 +16,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Self-hosted ARM64 runner does not provide the `python` command by
-      # default (CI run 40835361953, exit 127). Provision the interpreter
-      # explicitly, as the existing AgentZ orchestration workflow does.
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-
+      # The self-hosted ARM64 runner has python3 but no `python` alias (run
+      # 40835361953, exit 127). No setup-python download: registry access
+      # from that runner is unreliable (see #2165).
       - name: Compile AgentZ Python sources
-        run: python -m compileall -q agentz
+        run: python3 -m compileall -q agentz
 
-      # The suite uses pytest fixtures and imports runtime libraries. Running
-      # unittest discovery without the project's dependencies produces import
-      # errors instead of meaningful AgentZ test results.
-      - name: Install AgentZ test dependencies
-        run: python -m pip install -r requirements-agentz.txt
-
-      - name: Run AgentZ control-plane tests
-        run: python -m pytest agentz/tests
+      # agentz/tests is a pytest suite with runtime dependencies. It already
+      # runs in CI / Drizzle + Pytest Extras (ci.yml) against the cached
+      # requirements-agentz.txt venv, so it is not repeated here.
 
       - name: Confirm the web-client stub is not sold as an ABI
         run: |
