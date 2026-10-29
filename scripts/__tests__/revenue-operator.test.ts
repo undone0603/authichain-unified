@@ -165,6 +165,25 @@ describe("classifyRevenue", () => {
     expect(ok.qualifying).toBe(true);
   });
 
+  it("counts a non-founder paid one-time charge without a payout (Starter path)", () => {
+    const verdict = classifyRevenue(
+      snap({
+        charges: [
+          {
+            id: "ch_starter",
+            amount: 2900,
+            paid: true,
+            email: "buyer@example.com",
+          },
+        ],
+      }),
+      founders
+    );
+    expect(verdict.qualifying).toBe(true);
+    expect(verdict.reason).toContain("ch_starter");
+    expect(verdict.reason).toContain("buyer@example.com");
+  });
+
   it("does not treat a paid charge with no email as a stranger", () => {
     const verdict = classifyRevenue(
       snap({
