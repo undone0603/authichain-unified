@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "workers/authichain-com/**"
+      - "src/lib/generation-seal.ts"
       - "src/lib/plans.ts"
       - "src/lib/checkout-gate.ts"
       - "content/microsites/**"
