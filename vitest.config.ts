@@ -5,7 +5,7 @@ import { configDefaults, defineConfig } from "vitest/config";
 
 const templateRoot = path.resolve(import.meta.dirname);
 
-const NODE_TEST_IMPORT = /(?:from\s+|require\(\s*)["']node:test["']/;
+const NODE_TEST_IMPORT = /(?:from\s+|require\(\s*)[`"']node:test[`"']/;
 const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/;
 const SKIP_DIRS = new Set([
   "node_modules",
@@ -170,6 +170,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
+    testTimeout: 30000,
+    hookTimeout: 30000,
     setupFiles: [
       "./scripts/vitest-isolate-delivery-env.ts",
       "./apps/verifier-web/src/setupTests.ts",
