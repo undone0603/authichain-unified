@@ -106,7 +106,7 @@ async function rpc(
   }
   if (!res.ok || parsed.error) {
     const message = String(parsed.error?.message ?? "");
-    if (/10000|range|archive|params/i.test(message)) {
+    if (/10000|range|archive/i.test(message)) {
       throw new Error("log_range_rejected");
     }
     throw new Error("log_query_failed");
@@ -128,6 +128,65 @@ async function rpcFirst(
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error("log_query_failed");
+}
+
+const LOG_SPANS = [FREE_RPC_SPAN, 1_000n, 100n] as const;
+
+function rangeRejected(err: unknown): boolean {
+  return err instanceof Error && err.message === "log_range_rejected";
+}
+
+async function readLogs(
+  fetchImpl: typeof fetch,
+  rpcUrl: string,
+  address: string
+): Promise<{
+  current: bigint;
+  fromBlock: bigint;
+  granted: unknown;
+  revoked: unknown;
+  verified: unknown;
+  unverified: unknown;
+}> {
+  const currentHex = await rpc(fetchImpl, "eth_blockNumber", [], rpcUrl);
+  if (typeof currentHex !== "string") throw new Error("log_query_failed");
+  const current = BigInt(currentHex);
+  let lastErr: unknown;
+  for (const span of LOG_SPANS) {
+    const fromBlock = logFromBlock(current, DEPLOYED_BLOCK, span);
+    const roleFilter = (topic: string) => ({
+      address: CONTRACT,
+      fromBlock: "0x" + fromBlock.toString(16),
+      toBlock: "0x" + current.toString(16),
+      topics: [topic, null, accountTopic(address)],
+    });
+    const manufacturerFilter = (topic: string) => ({
+      address: CONTRACT,
+      fromBlock: "0x" + fromBlock.toString(16),
+      toBlock: "0x" + current.toString(16),
+      topics: [topic, accountTopic(address)],
+    });
+    try {
+      // Serialize: parallel bursts trip flaky free RPCs.
+      const granted = await rpc(fetchImpl, "eth_getLogs", [
+        roleFilter(EVENT_TOPICS.roleGranted),
+      ], rpcUrl);
+      const revoked = await rpc(fetchImpl, "eth_getLogs", [
+        roleFilter(EVENT_TOPICS.roleRevoked),
+      ], rpcUrl);
+      const verified = await rpc(fetchImpl, "eth_getLogs", [
+        manufacturerFilter(EVENT_TOPICS.manufacturerVerified),
+      ], rpcUrl);
+      const unverified = await rpc(fetchImpl, "eth_getLogs", [
+        manufacturerFilter(EVENT_TOPICS.manufacturerRevoked),
+      ], rpcUrl);
+      return { current, fromBlock, granted, revoked, verified, unverified };
+    } catch (err) {
+      if (!rangeRejected(err)) throw err;
+      lastErr = err;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("log_range_rejected");
 }
 
 function logIndexOf(log: RpcLog): string {
@@ -271,53 +330,21 @@ export async function tryHandleManufacturerStatus(
     return json(502, { error, address, contract: CONTRACT });
   }
   try {
-    const currentHex = await rpcFirst(fetchImpl, "eth_blockNumber", []);
-    if (typeof currentHex !== "string") throw new Error("log_query_failed");
-    const current = BigInt(currentHex);
-    // publicnode intermittently rejects even valid windows with
-    // "invalid block range params". Retry, then shrink the span.
-    const spans = [FREE_RPC_SPAN, 1_000n, 100n] as const;
-    let fromBlock = logFromBlock(current, DEPLOYED_BLOCK, spans[0]);
-    let granted: unknown;
-    let revoked: unknown;
-    let verified: unknown;
-    let unverified: unknown;
+    let read: Awaited<ReturnType<typeof readLogs>> | undefined;
     let lastErr: unknown;
-    for (const span of spans) {
-      fromBlock = logFromBlock(current, DEPLOYED_BLOCK, span);
-      const roleFilter = (topic: string) => ({
-        address: CONTRACT,
-        fromBlock: "0x" + fromBlock.toString(16),
-        toBlock: "0x" + current.toString(16),
-        topics: [topic, null, accountTopic(address)],
-      });
-      const manufacturerFilter = (topic: string) => ({
-        address: CONTRACT,
-        fromBlock: "0x" + fromBlock.toString(16),
-        toBlock: "0x" + current.toString(16),
-        topics: [topic, accountTopic(address)],
-      });
+    for (const url of RPCS) {
       try {
-        // Serialize: parallel bursts trip flaky free RPCs.
-        granted = await rpcFirst(fetchImpl, "eth_getLogs", [
-          roleFilter(EVENT_TOPICS.roleGranted),
-        ]);
-        revoked = await rpcFirst(fetchImpl, "eth_getLogs", [
-          roleFilter(EVENT_TOPICS.roleRevoked),
-        ]);
-        verified = await rpcFirst(fetchImpl, "eth_getLogs", [
-          manufacturerFilter(EVENT_TOPICS.manufacturerVerified),
-        ]);
-        unverified = await rpcFirst(fetchImpl, "eth_getLogs", [
-          manufacturerFilter(EVENT_TOPICS.manufacturerRevoked),
-        ]);
-        lastErr = null;
+        read = await readLogs(fetchImpl, url, address);
+        lastErr = undefined;
         break;
       } catch (err) {
         lastErr = err;
       }
     }
-    if (lastErr) throw lastErr;
+    if (!read) {
+      throw lastErr instanceof Error ? lastErr : new Error("log_query_failed");
+    }
+    const { current, fromBlock, granted, revoked, verified, unverified } = read;
     if (
       !Array.isArray(granted) ||
       !Array.isArray(revoked) ||

@@ -194,4 +194,75 @@ describe("manufacturer status on the apex", () => {
     expect(JSON.stringify(body)).not.toContain("secret-host.example");
     expect(JSON.stringify(body)).not.toContain("quota");
   });
+
+  it("does not treat a quota failure as a shorter successful window", async () => {
+    const widths: bigint[] = [];
+    const fetchImpl = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      if (body.method === "eth_call") {
+        return new Response(JSON.stringify({ result: "0x" + "0".repeat(63) + "1" }));
+      }
+      if (body.method === "eth_blockNumber") {
+        return new Response(JSON.stringify({ result: "0x5000000" }));
+      }
+      const from = BigInt(body.params[0].fromBlock);
+      const to = BigInt(body.params[0].toBlock);
+      widths.push(to - from);
+      return new Response(
+        JSON.stringify({ error: { message: "quota exceeded at secret-host.example" } }),
+        { status: 429 }
+      );
+    }) as typeof fetch;
+    const res = await tryHandleManufacturerStatus(
+      req(`/api/manufacturer-status/${ADDRESS}/history`),
+      fetchImpl
+    );
+    expect(res?.status).toBe(200);
+    const body = await res!.json();
+    expect(body.history).toEqual([]);
+    expect(body.historyError).toBe("log_query_failed");
+    expect(widths.length).toBeGreaterThan(0);
+    expect(widths.every((width) => width === 10_000n)).toBe(true);
+    expect(JSON.stringify(body)).not.toContain("secret-host.example");
+  });
+
+  it("reads logs from the host that supplied the block number", async () => {
+    const logHosts: string[] = [];
+    const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const body = JSON.parse(String(init?.body));
+      if (body.method === "eth_call") {
+        return new Response(JSON.stringify({ result: "0x" + "0".repeat(64) }));
+      }
+      if (url.includes("tenderly")) {
+        return new Response(
+          JSON.stringify({ error: { message: "temporarily unavailable" } }),
+          { status: 503 }
+        );
+      }
+      if (body.method === "eth_blockNumber") {
+        return new Response(JSON.stringify({ result: "0x4000000" }));
+      }
+      logHosts.push(url);
+      const toBlock = body.params[0].toBlock as string;
+      if (toBlock !== "0x4000000") {
+        return new Response(
+          JSON.stringify({ error: { message: "invalid block range params" } }),
+          { status: 200 }
+        );
+      }
+      return new Response(JSON.stringify({ result: [] }));
+    }) as typeof fetch;
+    const res = await tryHandleManufacturerStatus(
+      req(`/api/manufacturer-status/${ADDRESS}/history`),
+      fetchImpl
+    );
+    expect(res?.status).toBe(200);
+    const body = await res!.json();
+    expect(body.historyError).toBeUndefined();
+    expect(body.currentBlock).toBe(BigInt("0x4000000").toString());
+    expect(BigInt(body.currentBlock) - BigInt(body.fromBlock)).toBe(10_000n);
+    expect(logHosts.length).toBe(4);
+    expect(logHosts.every((host) => host.includes("publicnode"))).toBe(true);
+  });
 });

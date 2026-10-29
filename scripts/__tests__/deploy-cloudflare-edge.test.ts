@@ -72,7 +72,11 @@ describe("manufacturer-status stays off the public workers.dev host", () => {
     const route = read("workers/authichain-com/src/manufacturer-status-route.ts");
     expect(route).toContain("/api/manufacturer-status/");
     expect(route).toContain("/verify/manufacturer");
-    expect(route).toContain('const RPC = "https://polygon-bor-rpc.publicnode.com"');
+    const tenderly = route.indexOf("https://polygon.gateway.tenderly.co/public");
+    const publicnode = route.indexOf("https://polygon-bor-rpc.publicnode.com");
+    expect(tenderly).toBeGreaterThan(-1);
+    expect(publicnode).toBeGreaterThan(tenderly);
+    expect(route).not.toContain('const RPC = "https://polygon-bor-rpc.publicnode.com"');
     expect(route).not.toContain("https://polygon-rpc.com");
     expect(route).not.toContain("https://polygon.drpc.org");
     expect(route).not.toContain("$49");
