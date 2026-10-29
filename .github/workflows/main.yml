@@ -232,11 +232,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      # Next build is ~218s. The baseline lists roots Next does not compile
+      # (.github, docs, workers). A diff that stays inside them skips the
+      # build. Any other path, a missing base, or workflow_dispatch still
+      # runs pnpm build. A bad baseline fails this step.
+      - name: Build baseline
+        id: baseline
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/ci/build-baseline.mjs --ci
+
       # Retries live in scripts/build-with-retry.sh, which holds the
       # machine-wide build lock for the whole attempt loop. A second
       # invocation here would drop that lock during the pause.
       # 4096 MB heap: next build --webpack aborted with exit 134 under ~2 GB.
       - name: Production build
+        if: steps.baseline.outputs.skip != 'true'
         env:
           NODE_OPTIONS: --max-old-space-size=4096
         run: pnpm build

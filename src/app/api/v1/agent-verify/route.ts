@@ -16,6 +16,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   buildPaymentRequired,
+  X402_RESOURCE_DESCRIPTION,
   parsePaymentHeader,
   paymentResponseHeaders,
   readPaymentProofHeader,
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
     resource,
     priceUsd: PRICE_USD,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
   });
 
   // Read once. A later request.json() would see an empty body.
@@ -266,7 +267,7 @@ export async function GET(request: Request) {
     resource: new URL(request.url).toString(),
     priceUsd: PRICE_USD,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
   });
   return NextResponse.json(required.v2, {
     status: 402,
