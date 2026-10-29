@@ -826,6 +826,11 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain('<form action="/onboard" method="post">');
     expect(body).toContain('name="email"');
     expect(body).toContain('name="company"');
+    // First-dollar path leads Starter; passport + DPP remain as secondary buys.
+    expect(body).toContain("Buy Starter Pack — $29");
+    expect(body).toContain(
+      'href="https://authichain.com/checkout/starter"'
+    );
     expect(body).toContain(
       'href="https://authichain.com/checkout/strainchain_passport"'
     );
@@ -834,6 +839,9 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     );
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
+    );
+    expect(body.indexOf("checkout/starter")).toBeLessThan(
+      body.indexOf("checkout/dpp_readiness")
     );
     // Retired StrainChain Basic link (no live Stripe account) must not return.
     expect(body).not.toContain("9B6cN59br5xcaCuazy1Nu1o");
@@ -1161,6 +1169,15 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("var up=r.data.upgrade;");
     expect(body).toContain("up.url.indexOf('https://authichain.com/checkout/starter')===0");
     expect(body).toContain("a.id='sample-exhausted-starter'");
+  });
+
+  it("renders signed-in low-credit soft-prompt from API upgrade on success", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain('id="generate-low-credit"');
+    expect(body).toContain("function showLowCredit(up)");
+    expect(body).toContain("a.id='low-credit-starter'");
+    expect(body).toContain("showLowCredit(r.data&&r.data.upgrade)");
   });
 });
 

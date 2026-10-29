@@ -24,8 +24,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
-    # Same self-hosted WSL runner as deploy-first-dollar-desk.yml / deploy-authichain-com.yml.
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    # Publish runner only: authichain-wsl, same as deploy-authichain-com.yml.
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 45
     env:
       NODE_OPTIONS: --max-old-space-size=4096
@@ -125,7 +125,7 @@ jobs:
           for n in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY; do
             if [ -z "${!n:-}" ]; then echo "::error::secret $n is empty"; exit 1; fi
           done
-          pnpm exec opennextjs-cloudflare build --config wrangler.app.jsonc
+          bash scripts/with-build-lock.sh pnpm exec opennextjs-cloudflare build --config wrangler.app.jsonc
       - name: Publish authichain-app
         if: ${{ inputs.rollback_version == '' }}
         env:
@@ -144,18 +144,27 @@ jobs:
             echo "$u -> $code"
             if [ "$code" != "200" ]; then echo "::error::$u returned $code"; exit 1; fi
           done
-      - name: Live GET check (authichain.com/checkout/starter redirects)
+      - name: Live GET check (authichain.com/checkout/starter)
         run: |
           set -euo pipefail
           u="https://authichain.com/checkout/starter"
-          # No -L: assert the redirect itself. Print only Location host+path, never the query string.
-          out="$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 30 "$u")"
+          # No -L. 200 is the email confirm form. 30x is a direct redirect.
+          # Print only the status and Location host+path, never the query string.
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+          out="$(curl -sS -o "$body" -w '%{http_code} %{redirect_url}' --max-time 30 "$u")"
           code="${out%% *}"
           loc="${out#* }"
           loc="${loc%%[?#]*}"
           echo "$u -> $code (Location: ${loc:-none})"
           case "$code" in
-            30[0-9]) ;;
-            *) echo "::error::$u returned $code, expected a 30x redirect"; exit 1 ;;
+            30[0-9])
+              if [ -z "$loc" ]; then echo "::error::$u returned $code with no Location"; exit 1; fi
+              ;;
+            200)
+              if ! grep -q "Confirm Starter Pack" "$body"; then
+                echo "::error::$u returned 200 without the confirm form"; exit 1
+              fi
+              ;;
+            *) echo "::error::$u returned $code, expected 200 or a 30x redirect"; exit 1 ;;
           esac
-          if [ -z "$loc" ]; then echo "::error::$u returned $code with no Location"; exit 1; fi
