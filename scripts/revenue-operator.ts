@@ -161,7 +161,7 @@ export function classifyRevenue(
   // One-time catalog charges (Starter $29, DPP $299) qualify without waiting for
   // a Stripe payout batch. Payouts alone never qualify without a stranger charge.
   const strangerCharge = snapshot.charges.find(
-    charge => charge.paid && isStrangerEmail(charge.email, founderEmails)
+    charge => charge.paid && charge.amount > 0 && isStrangerEmail(charge.email, founderEmails)
   );
   if (strangerCharge) {
     return {
