@@ -224,18 +224,45 @@ export const DEMONSTRATION_SIGNER_DID =
 export const DEMONSTRATION_RECORD_HASH =
   "5ee3e5e7e8b2c32c8f096b77cc41baece9dd2555d5af24d73f8880484ed6b1e1";
 /**
- * Production attestation issuer: kid lue84w… published at /protocol/jwks.json
+ * Production attestation issuer: kid T3AL7c4w… (RFC 7638 thumbprint, CFA-462) published at /protocol/jwks.json
  * and /.well-known/jwks.json (authichain-edge-router,
  * AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64). did:key is derived from that JWK's x.
  * The authichain-api certificate key (kid A_qAn4…) is deliberately not listed.
  */
 export const PRODUCTION_ISSUER_KID =
-  "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+  "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ";
 export const PRODUCTION_ISSUER_DID =
+  "did:key:z6MkjoaFgNbVQfsk2Tuiza2RT2vXTWpy7CNwuWv74nj7Sb2c";
+/**
+ * RETIRED issuer (Advisor ruling, Oct 17 2026, CFA-462): the pre-Oct-9 key
+ * (x=mJx2TLqU…j7k, kid lue84w… = its RFC 7638 thumbprint). Its private half was
+ * overwritten by deploy-cloudflare.yml at 2026-10-09T05:12:01Z, so it can never
+ * sign again. Accepted ONLY for records whose validFrom is before that instant;
+ * never used for new signing.
+ */
+export const RETIRED_ISSUER_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+export const RETIRED_ISSUER_DID =
   "did:key:z6MkpizPezaS2HsKKWghbcNp8ns7C98fYmypaFHWQyfcVA8G";
+export const RETIRED_ISSUER_RETIRED_AT = "2026-10-09T05:12:01Z";
 type AllowedSigner =
-  | { role: "demonstration"; kid: null; recordHash: string }
-  | { role: "production_issuer"; kid: string; recordHash: null };
+  | {
+      role: "demonstration";
+      kid: null;
+      recordHash: string;
+      retiredAt?: undefined;
+    }
+  | {
+      role: "production_issuer";
+      kid: string;
+      recordHash: null;
+      retiredAt?: undefined;
+    }
+  | {
+      role: "retired_issuer";
+      kid: string;
+      recordHash: null;
+      retiredAt: string;
+    };
 const ALLOWED_SIGNERS: Record<string, AllowedSigner> = {
   // Demonstration signer, not the production issuer. Valid for polygon-anchor-1 only.
   [DEMONSTRATION_SIGNER_DID]: {
@@ -247,6 +274,13 @@ const ALLOWED_SIGNERS: Record<string, AllowedSigner> = {
     role: "production_issuer",
     kid: PRODUCTION_ISSUER_KID,
     recordHash: null,
+  },
+  // Retired: verify-only for records issued before the Oct 9 key replacement.
+  [RETIRED_ISSUER_DID]: {
+    role: "retired_issuer",
+    kid: RETIRED_ISSUER_KID,
+    recordHash: null,
+    retiredAt: RETIRED_ISSUER_RETIRED_AT,
   },
 };
 /** Sender (and recipient, self-send) of demo anchor tx 0x2491…10b7. */
@@ -310,6 +344,14 @@ export async function verifyRecordTool(
   ) {
     allowed = undefined;
     trustReasons.push("demonstration_signer_not_valid_for_this_record");
+  } else if (entry.retiredAt) {
+    const vf = Date.parse(
+      String((record as { validFrom?: unknown })?.validFrom ?? "")
+    );
+    if (!(vf < Date.parse(entry.retiredAt))) {
+      allowed = undefined;
+      trustReasons.push("retired_issuer_not_valid_after_retirement");
+    }
   }
   if (anchor) {
     if (!chain.onChain)

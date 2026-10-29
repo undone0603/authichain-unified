@@ -1494,13 +1494,13 @@ async function renderOnboard(c: Context): Promise<Response> {
 // deterministic reference object. That page must exist. Unknown ids 404.
 
 const LAUNCH_PROOF_PRODUCT_ID = "00000000-0000-4000-8000-000000000001";
-const LAUNCH_PROOF_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+const LAUNCH_PROOF_KID = "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ";
 
 function launchProofStoryHtml(): string {
   return htmlDocument({
     title: "AuthiChain Launch Proof — QRON / StoryMode",
     description:
-      "Deterministic production reference object. The compact JWS verifies against live JWKS.",
+      "Deterministic production reference object and its published signing key id.",
     canonicalPath: "/story/" + LAUNCH_PROOF_PRODUCT_ID,
     bodyHtml:
       "<main>\n" +
@@ -1515,9 +1515,9 @@ function launchProofStoryHtml(): string {
       '<dt>Issuer</dt><dd><a href="/protocol/issuer.json">/protocol/issuer.json</a></dd>\n' +
       "</dl>\n" +
       "<h2>Identity</h2>\n" +
-      "<p>A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation.</p>\n" +
+      "<p>A deterministic QRON reference resolves to an AuthiChain object record. A signed attestation for it is not published yet.</p>\n" +
       "<h2>Proof</h2>\n" +
-      "<p>The production attestation is independently verified against the live public JWKS using its kid. A valid signature is signed evidence — not physical authenticity.</p>\n" +
+      "<p>This page shows the signing key ID (kid) and links to the public JWKS and issuer record. It does not include a signed attestation yet, so there is nothing on this page to verify. A valid signature is signed evidence — not physical authenticity.</p>\n" +
       "<h2>Reveal</h2>\n" +
       "<p>Scanning the QRON launch code opens StoryMode. Tamper tests (altered payload, altered signature, wrong subject, revoked, stale) must reject.</p>\n" +
       '<p><a href="/verify?id=polygon-anchor-1">Open the published verification example</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +

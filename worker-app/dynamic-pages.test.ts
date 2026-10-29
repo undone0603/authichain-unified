@@ -1172,8 +1172,19 @@ describe("renderDynamicPage: /story StoryMode", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("AuthiChain Launch Proof");
-    expect(body).toContain("lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE");
+    expect(body).toContain("T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ");
     expect(body).toContain("StoryMode");
+    expect(body).not.toContain("verified against the live public JWKS");
+    expect(body).toContain(
+      "This page shows the signing key ID (kid) and links to the public JWKS and issuer record. It does not include a signed attestation yet, so there is nothing on this page to verify."
+    );
+    expect(body).not.toContain("Check the attestation yourself");
+    expect(body).not.toContain(
+      "A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation."
+    );
+    expect(body).toContain(
+      "A deterministic QRON reference resolves to an AuthiChain object record. A signed attestation for it is not published yet."
+    );
   });
 
   it("returns 404 HTML for an unknown story id", async () => {
