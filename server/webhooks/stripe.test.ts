@@ -1401,7 +1401,7 @@ describe("handleStripeWebhook — Starter amount fallback gate (#1890 parity, ed
     ["Creator metadata", { metadata: { plan: "creator" } }],
     ["known Starter price", { metadata: { stripe_price_id: "price_1UIoEVGqTruSqV8T61lp48wB" } }],
   ])("zero-total paid %s checkout never grants catalog credits", async (label, over) => {
-    await run(`gate_zero_${String(label).replace(/\\W+/g, "_")}`, {
+    await run(`gate_zero_${String(label).replace(/\W+/g, "_")}`, {
       amount_total: 0,
       amount_subtotal: 0,
       ...over,
