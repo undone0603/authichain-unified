@@ -289,6 +289,74 @@ describe("resolvePaidSealVerify", () => {
     }
   });
 
+  it("settles a v2 PAYMENT-SIGNATURE retry as 200, not a second 402", async () => {
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    process.env.X402_NETWORK = "base";
+    const original = globalThis.fetch;
+    const { fetchImpl, calls } = callsOf(url => {
+      if (url.includes("/settle")) {
+        return new Response(
+          JSON.stringify({ success: true, transaction: "0xpaid" }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        );
+      }
+      return new Response("[]", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    const validBefore = String(Math.floor(Date.now() / 1000) + 600);
+    const header = Buffer.from(
+      JSON.stringify({
+        x402Version: 2,
+        accepted: {
+          scheme: "exact",
+          network: "eip155:8453",
+          amount: "50000",
+          asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          payTo: PAY_TO,
+        },
+        payload: {
+          signature: "0xsig",
+          authorization: {
+            from: PAYER,
+            to: PAY_TO,
+            value: "50000",
+            validAfter: "0",
+            validBefore,
+            nonce: "0x" + "ab".repeat(32),
+          },
+        },
+      })
+    ).toString("base64");
+    globalThis.fetch = fetchImpl;
+    try {
+      const decision = await resolvePaidSealVerify({
+        replayStore: kvStub(),
+        ...bound,
+        hasVerifyApp: false,
+        proofHeader: header,
+        bodyText: "{}",
+        fetchImpl,
+      });
+      expect(decision).toMatchObject({
+        action: "answer",
+        status: 200,
+        body: {
+          verified: false,
+          subject: null,
+          baseline: { verdict: "unsigned" },
+          settlement: { trustless: true, txHash: "0xpaid" },
+        },
+      });
+      expect(calls.some(call => call.url.endsWith("/settle"))).toBe(true);
+      const settleCall = calls.find(call => call.url.endsWith("/settle"));
+      expect(settleCall?.method).toBe("POST");
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
   it("settles an empty paid body as missing-seal evidence (x402 retry of the 402 challenge)", async () => {
     process.env.X402_FACILITATOR_URL = "https://facilitator.example";
     process.env.X402_NETWORK = "base";
