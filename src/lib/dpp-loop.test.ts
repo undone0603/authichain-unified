@@ -8,6 +8,7 @@ import {
   isDppOffer,
   isDemoVisit,
   recordDppLoopEvent,
+  recordDppLoopEventOnce,
   recordEarnedRetention,
   runDppExceptionsReport,
   stallOf,
@@ -121,6 +122,28 @@ describe("dpp-loop", () => {
         }),
       })
     );
+  });
+
+  it("does not report a once-only event as recorded when its insert fails", async () => {
+    const supabase = {
+      from: vi.fn(() => ({
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              limit: async () => ({ data: [], error: null }),
+            }),
+          }),
+        }),
+        insert: async () => ({ error: { message: "db unavailable" } }),
+      })),
+    };
+
+    const result = await recordDppLoopEventOnce(supabase, {
+      visitId: "dpp_visit_failed",
+      stage: "provisioned",
+      dedupeKey: "cs_test_failed",
+    });
+    expect(result).toEqual({ recorded: false, reason: "write_failed" });
   });
 
   it("does not treat bounce/abandon as founder exceptions", () => {

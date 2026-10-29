@@ -543,13 +543,15 @@ export async function recordDppLoopEventOnce(
     console.error("[dpp-loop] dedupe check failed:", input.stage, err);
   }
 
-  await recordDppLoopEvent(supabase, {
+  const write = await recordDppLoopEvent(supabase, {
     ...input,
     metadata: {
       ...(input.metadata || {}),
       ...(input.dedupeKey ? { dedupe_key: input.dedupeKey } : {}),
     },
   });
+  // A failed insert is not evidence that a paid fulfillment stage was recorded.
+  if (!write.ok) return { recorded: false, reason: "write_failed" };
   return { recorded: true };
 }
 
