@@ -155,7 +155,14 @@ export function didKeyFromPublic(raw: Uint8Array): string {
 
 export async function sha256HexBytes(bytes: BufferSource): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+  return [...new Uint8Array(buf)]
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function jwkX(exported: ArrayBuffer | JsonWebKey, missing: string): string {
+  if (exported instanceof ArrayBuffer || !exported.x) throw new Error(missing);
+  return exported.x;
 }
 
 export async function importIssuer(pkcs8B64: string): Promise<CryptoKeyPair> {
@@ -167,9 +174,14 @@ export async function importIssuer(pkcs8B64: string): Promise<CryptoKeyPair> {
     true,
     ["sign"]
   );
-  const jwk = await crypto.subtle.exportKey("jwk", privateKey);
-  if (!jwk.x) throw new Error("issuer jwk missing x");
-  const raw = Uint8Array.from(atob(jwk.x.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+  const jwkXValue = jwkX(
+    await crypto.subtle.exportKey("jwk", privateKey),
+    "issuer jwk missing x"
+  );
+  const raw = Uint8Array.from(
+    atob(jwkXValue.replace(/-/g, "+").replace(/_/g, "/")),
+    c => c.charCodeAt(0)
+  );
   const publicKey = await crypto.subtle.importKey(
     "raw",
     raw,
@@ -199,15 +211,18 @@ export async function issueGenerationSeal(
   } catch {
     throw new Error("destinationUrl must be absolute");
   }
-  if (dest.protocol !== "https:") throw new Error("destinationUrl must be https");
+  if (dest.protocol !== "https:")
+    throw new Error("destinationUrl must be https");
   if (!/^[a-f0-9]{64}$/.test(input.imageSha256)) {
     throw new Error("imageSha256 must be 64 hex chars");
   }
   const caption = signedCaption(input.caption);
-  const publicJwk = await crypto.subtle.exportKey("jwk", issuer.publicKey);
-  if (!publicJwk.x) throw new Error("public jwk missing x");
+  const publicX = jwkX(
+    await crypto.subtle.exportKey("jwk", issuer.publicKey),
+    "public jwk missing x"
+  );
   const raw = Uint8Array.from(
-    atob(publicJwk.x.replace(/-/g, "+").replace(/_/g, "/")),
+    atob(publicX.replace(/-/g, "+").replace(/_/g, "/")),
     c => c.charCodeAt(0)
   );
   const did = didKeyFromPublic(raw);
@@ -255,9 +270,14 @@ export async function issueGenerationSeal(
   };
 }
 
-async function imageReason(record: ProtocolRecord, image: BufferSource): Promise<string> {
+async function imageReason(
+  record: ProtocolRecord,
+  image: BufferSource
+): Promise<string> {
   const hashed = await sha256HexBytes(image);
-  return hashed === record.credentialSubject.imageSha256 ? "image_matches" : "image_mismatch";
+  return hashed === record.credentialSubject.imageSha256
+    ? "image_matches"
+    : "image_mismatch";
 }
 
 export async function checkGenerationSeal(
@@ -275,7 +295,8 @@ export async function checkGenerationSeal(
     return { verdict: "invalid", reasons: ["valid_from_in_future"] };
   }
   const proofValue = record.proof.proofValue;
-  if (!proofValue.startsWith("z")) return { verdict: "invalid", reasons: ["proof_encoding"] };
+  if (!proofValue.startsWith("z"))
+    return { verdict: "invalid", reasons: ["proof_encoding"] };
   const sig = b58ToBytes(proofValue.slice(1));
   const payload = new TextEncoder().encode(canonicalize(unsigned(record)));
   const ok = await crypto.subtle.verify("Ed25519", publicKey, sig, payload);
@@ -309,7 +330,9 @@ async function issuerKey(did: string): Promise<CryptoKey> {
   }
   const raw = new Uint8Array(32);
   raw.set(prefixed.subarray(2));
-  return crypto.subtle.importKey("raw", raw, { name: "Ed25519" }, true, ["verify"]);
+  return crypto.subtle.importKey("raw", raw, { name: "Ed25519" }, true, [
+    "verify",
+  ]);
 }
 
 export function resolveBody(seal: SealResult | null): {
