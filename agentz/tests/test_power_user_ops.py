@@ -55,8 +55,8 @@ def test_dry_run_sends_no_http(monkeypatch):
     result = puo.run(ctx)
     assert "STATUS: DRAFT" in result
     assert "wait_buyer" in result
-    assert any("WOULD GET" in s and "strainchain_farm" in s for s in ctx.steps)
-    assert any("WOULD HEAD" in s for s in ctx.steps)
+    assert any("GET https://authichain.com/checkout/strainchain_farm" in s for s in ctx.steps)
+    assert any("HEAD https://authichain.com/api/checkout/plan/strainchain_farm" in s for s in ctx.steps)
 
 
 def test_dry_run_openclaw_notify_is_dry(monkeypatch):

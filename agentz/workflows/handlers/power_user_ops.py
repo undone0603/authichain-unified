@@ -224,7 +224,7 @@ def run(ctx: ExecutionContext) -> str:
     ctx.step("1. product_rails")
     if ctx.mode == Mode.DRY_RUN:
         for spec in RAILS:
-            ctx.step(f"WOULD {spec.method} {spec.url} (expect {spec.expect})")
+            ctx.step(f"{spec.method} {spec.url} (expect {spec.expect})")
         rails_ok = [f"dry-run plan {spec.method} {spec.url}" for spec in RAILS]
         rails_fail: list[str] = []
         farm_ok = x402_ok = jwks_ok = True
