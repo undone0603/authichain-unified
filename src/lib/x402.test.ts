@@ -808,7 +808,12 @@ describe("x402AgentCard", () => {
     expect(card.description).toContain("A valid signature is not real-world truth");
     expect(card.provider.url).toBe("https://authichain.com");
     expect(card.documentationUrl).toBe("https://authichain.com/x402");
-    expect(card.url).toBe("https://authichain.com/mcp");
+    expect(card.url).toBe("https://authichain.com/api/a2a");
+    expect(card.supportedInterfaces[0]).toEqual({
+      url: "https://authichain.com/api/a2a",
+      protocolBinding: "JSONRPC",
+      protocolVersion: "1.0",
+    });
     expect(card.skills.length).toBeGreaterThan(0);
     const skill = card.skills.find(s => s.id === "paid-evidence-check");
     expect(skill?.tags).toEqual(
