@@ -80,17 +80,19 @@ export function parseSealRequest(input: Record<string, unknown>): SealRequest {
 }
 
 /**
- * Unpaid calls with a body that cannot be a registry key are 400.
- * An empty object stays null so the caller can still return the 402
- * price challenge. A valid seal UUID, and listing samples (`demo` /
- * the bazaar example UUID), also stay null.
+ * Unpaid 400 only when the caller sent a sealId that cannot exist.
+ * Quote crawlers (Lumi, others) POST probe JSON with url/resource/probe
+ * and no sealId; HTTP 400 is classified as needs_different_request and
+ * they never buy. Empty objects, listing samples (`demo` / bazaar UUID),
+ * valid UUIDs, and no-sealId probe JSON stay null so the caller returns 402.
  */
 export function unpaidSealRefusal(
   raw: Record<string, unknown>
 ): { status: number; body: Extract<SealRequest, { ok: false }>["body"] } | null {
   const body = coerceSealBody(raw);
-  if (Object.keys(body).length === 0) return null;
-  if (isDiscoveryExampleSealId(listedSealId(body))) return null;
+  const listed = listedSealId(body);
+  if (!listed) return null;
+  if (isDiscoveryExampleSealId(listed)) return null;
   const parsed = parseSealRequest(body);
   if (parsed.ok) return null;
   return { status: parsed.status, body: parsed.body };

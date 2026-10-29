@@ -19,16 +19,19 @@ describe("POST /api/v1/agent-verify (Next)", () => {
     delete process.env.X402_PAY_TO;
   });
 
-  it("returns 400 for a body that cannot be a seal and does not ask for payment", async () => {
+  it("returns 402 for quote JSON without sealId and 400 for a non-UUID sealId", async () => {
     process.env.X402_PAY_TO = PAY_TO;
     for (const body of [{ probe: "suggestions" }, { productId: "p-1" }]) {
       const res = await post(JSON.stringify(body));
-      expect(res.status).toBe(400);
-      expect(res.headers.get("PAYMENT-REQUIRED")).toBeNull();
-      const json = (await res.json()) as { error: string; settled: boolean };
-      expect(json.settled).toBe(false);
-      expect(["seal_id_required", "seal_id_not_uuid"]).toContain(json.error);
+      expect(res.status).toBe(402);
+      expect(res.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
     }
+    const bad = await post(JSON.stringify({ sealId: "AC-DEMO-001" }));
+    expect(bad.status).toBe(400);
+    expect(bad.headers.get("PAYMENT-REQUIRED")).toBeNull();
+    const json = (await bad.json()) as { error: string; settled: boolean };
+    expect(json.settled).toBe(false);
+    expect(json.error).toBe("seal_id_not_uuid");
   });
 
   it("keeps the stale PayAI sample `demo` on the 402 challenge", async () => {

@@ -158,6 +158,17 @@ export async function sha256HexBytes(bytes: BufferSource): Promise<string> {
   return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** @cloudflare/workers-types types every exportKey format as ArrayBuffer | JsonWebKey. */
+function ed25519RawFromExport(exported: ArrayBuffer | JsonWebKey, missing: string): Uint8Array {
+  if (exported instanceof ArrayBuffer || typeof exported.x !== "string" || exported.x.length === 0) {
+    throw new Error(missing);
+  }
+  return Uint8Array.from(
+    atob(exported.x.replace(/-/g, "+").replace(/_/g, "/")),
+    c => c.charCodeAt(0)
+  );
+}
+
 export async function importIssuer(pkcs8B64: string): Promise<CryptoKeyPair> {
   const der = Uint8Array.from(atob(pkcs8B64), c => c.charCodeAt(0));
   const privateKey = await crypto.subtle.importKey(
@@ -167,9 +178,10 @@ export async function importIssuer(pkcs8B64: string): Promise<CryptoKeyPair> {
     true,
     ["sign"]
   );
-  const jwk = await crypto.subtle.exportKey("jwk", privateKey);
-  if (!jwk.x) throw new Error("issuer jwk missing x");
-  const raw = Uint8Array.from(atob(jwk.x.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+  const raw = ed25519RawFromExport(
+    await crypto.subtle.exportKey("jwk", privateKey),
+    "issuer jwk missing x"
+  );
   const publicKey = await crypto.subtle.importKey(
     "raw",
     raw,
@@ -204,11 +216,9 @@ export async function issueGenerationSeal(
     throw new Error("imageSha256 must be 64 hex chars");
   }
   const caption = signedCaption(input.caption);
-  const publicJwk = await crypto.subtle.exportKey("jwk", issuer.publicKey);
-  if (!publicJwk.x) throw new Error("public jwk missing x");
-  const raw = Uint8Array.from(
-    atob(publicJwk.x.replace(/-/g, "+").replace(/_/g, "/")),
-    c => c.charCodeAt(0)
+  const raw = ed25519RawFromExport(
+    await crypto.subtle.exportKey("jwk", issuer.publicKey),
+    "public jwk missing x"
   );
   const did = didKeyFromPublic(raw);
   const verifyUrl = verifyUrlFor(input.id);
