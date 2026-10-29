@@ -1,6 +1,6 @@
 # Autonomous economy status
 
-Evidence read on 2026-10-13 from Supabase project `nhdnkzhtadfkkluiulhs` and the live webhook route. This is not a claim that the autonomous economy is complete.
+Profile and `stripe_events` counts below were read on 2026-10-13 from Supabase project `nhdnkzhtadfkkluiulhs` and were not re-read on 2026-10-29. Later paragraphs name their own dates. This is not a claim that the autonomous economy is complete.
 
 ## VERIFIED
 
@@ -16,7 +16,7 @@ Evidence read on 2026-10-13 from Supabase project `nhdnkzhtadfkkluiulhs` and the
 ## IMPLEMENTED BUT NOT LIVE-VERIFIED
 
 - The grant fix is on `main` as `d144c215` and was deployed. `provisionPurchase` no longer writes `subscribed_at`. A failed entitlement update throws before `dpp_loop:provisioned`. The $0 demo above is the live persistence check. A non-founder $299 checkout has not been fulfilled.
-- Verifiable outbound for Scout and AgentZ merged as PR 1829 (`151365e38`, 2026-10-16) while the PR still carries the `hold` label. `defaultOutboundPolicy().production_send` is false, and the email gate returns `PRODUCTION_SEND_DISABLED` unless that flag, a configured sender, and human send approval are all set. No mail was sent for this check. PR 1832 was closed and was not merged. `humanHold` remains true for the $299 price.
+- Verifiable outbound for Scout and AgentZ merged as PR 1829 (`151365e38`, 2026-10-16) while the PR still carries the `hold` label. `defaultOutboundPolicy().production_send` is false. An email transport with that flag false returns `PRODUCTION_SEND_DISABLED`. Missing `human_send_approved` returns `CAMPAIGN_UNAUTHORIZED`. A missing sender returns `TRANSPORT_REFUSED`. No mail was sent for this check. PR 1832 was closed and was not merged. `humanHold` remains true for the $299 price.
 
 ## BLOCKED
 

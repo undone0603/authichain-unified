@@ -1,6 +1,6 @@
 # Founder independence
 
-Status after `main` commit `d1dac908`: **partially ready. Not founder-independent.**
+Status as of 2026-10-29, still after the continuity work in `d1dac908`: **partially ready. Not founder-independent.** The table below is the current evidence. The 2026-10-13 profile counts in `docs/AUTONOMOUS_ECONOMY_STATUS.md` were not re-read.
 
 A replacement agent can resume the isolated continuity drill without the founder in the room. It cannot yet run the live business alone. Production payment idempotency, entitlement storage, outbound send, deployments, and migrations stay on their existing gates.
 
@@ -16,7 +16,7 @@ A replacement agent can resume the isolated continuity drill without the founder
 
 `src/lib/founder-exit/ledger.ts` is an operational continuity ledger. It records action identity, authorization, lease, side-effect idempotency, and append-only history. It is not a price catalogue and not a second economic ledger.
 
-`MemoryActionLedger` and `FileContinuityLog` remain the CI stores. `PostgresContinuityLog` in `src/lib/founder-exit/postgres-log.ts` flushes those same transitions to `public.founder_exit_actions` and commits each side-effect key in its own transaction. Migration `20261013232408_founder_exit_action_ledger.sql` is applied on Supabase `nhdnkzhtadfkkluiulhs`. Both tables have RLS enabled, no policies, and no grants for `anon` or `authenticated`. `service_role` can select, insert, and update actions, and can select and insert side-effect keys. Deletes are rejected. The production tables were empty after apply, and a read-only count on 2026-10-14 was still 0 actions and 0 side effects. `fulfillDppPaidSession` writes one running action before `provisionPurchase` and one grant key before marking that action succeeded. That writer is in live worker `authichain-edge-router` version `e12ea615-8db2-4f82-b754-6a8594e85eb5` (2026-10-14T00:30:36Z). No production continuity row has been written. A public `DPP-SMOKE-E2E` request stays on the confirm page because `DPP_SMOKE_SECRET` is not bound.
+`MemoryActionLedger` and `FileContinuityLog` remain the CI stores. `PostgresContinuityLog` in `src/lib/founder-exit/postgres-log.ts` flushes those same transitions to `public.founder_exit_actions` and commits each side-effect key in its own transaction. Migration `20261013232408_founder_exit_action_ledger.sql` is applied on Supabase `nhdnkzhtadfkkluiulhs`. Both tables have RLS enabled, no policies, and no grants for `anon` or `authenticated`. `service_role` can select, insert, and update actions, and can select and insert side-effect keys. Deletes are rejected. The production tables were empty after apply, and a read-only count on 2026-10-14 was still 0 actions and 0 side effects. `fulfillDppPaidSession` writes one running action before `provisionPurchase` and one grant key before marking that action succeeded. That writer was in the 2026-10-14 script `e12ea615-8db2-4f82-b754-6a8594e85eb5`. On 2026-10-29 the live version was `28ff2813-38fe-4eb6-88e3-3ebb8a96d3d9`, recorded as a secret change. This check did not re-download that script. A read-only count on 2026-10-29 was still 0 actions and 0 side effects. A public `DPP-SMOKE-E2E` GET returned HTTP 303 to the confirm page on 2026-10-14 because `DPP_SMOKE_SECRET` is not bound.
 
 ## What a replacement agent can answer from the ledger
 
