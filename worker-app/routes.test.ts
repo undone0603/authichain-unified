@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, onTestFinished } from "vitest";
 
 vi.mock("../server/webhooks/stripe", () => ({
   handleStripeWebhook: vi.fn().mockResolvedValue({ received: true }),
@@ -213,6 +213,11 @@ describe("GET /api/generate", () => {
     expect(body.presentation.verify.decision_contract).toBe(
       "AuthiChain Verification Decision v1"
     );
+    expect(body.presentation.scan).toEqual({
+      method: "GET",
+      url_template: "https://authichain.com/qron/r/{object_id}",
+      missing: "presentation_not_found",
+    });
     expect(body.packs.some((p: { price: number }) => p.price === 29)).toBe(
       true
     );
@@ -271,6 +276,33 @@ describe("GET /qron/r/:objectId", () => {
     expect(page).not.toContain("counterfeit");
   });
 
+  it("verifies a stored presentation in-process on a sister host", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const stored = JSON.stringify({
+      object_id: objectId,
+      destination_url: "https://authichain.com/protocol",
+      resolve_url: `https://authichain.govchain.us${path}`,
+      jws: "a.b.c",
+      kid: "kid",
+      jwks_url: "https://authichain.com/protocol/jwks.json",
+    });
+    const res = await app.request(
+      `https://authichain.govchain.us${path}`,
+      { headers: { accept: "application/json" } },
+      {
+        SESSIONS: {
+          get: async () => stored,
+          put: async () => undefined,
+        },
+      }
+    );
+    const body = await res.json();
+    expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
+    expect(body.error).not.toBe("verify_unreachable");
+    expect(res.status).not.toBe(502);
+  });
+
   it("returns indeterminate when the stored presentation is malformed", async () => {
     const objectId = "qron:url:deadbeef";
     const path = `/qron/r/${encodeURIComponent(objectId)}`;
@@ -304,7 +336,8 @@ describe("POST /api/generate", () => {
     expect(res.status).toBe(401);
     expect(res.headers.get("content-type")).toMatch(/json/);
     const body = await res.json();
-    expect(body.message).toMatch(/Authentication required/i);
+    // No RATE_LIMITER binding in tests: the free sample fails closed as paused.
+    expect(body.code).toBe("FREE_SAMPLE_PAUSED");
     expect(Array.isArray(body.packs)).toBe(true);
   });
 });
@@ -341,6 +374,30 @@ describe("app host /", () => {
     });
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/dashboard");
+  });
+
+  it.each([
+    ["/pricing", "https://authichain.com/pricing"],
+    ["/protocol", "https://authichain.com/protocol"],
+    [
+      "/api/verify?id=polygon-anchor-1",
+      "https://authichain.com/api/verify?id=polygon-anchor-1",
+    ],
+  ])("301s app.authichain.com%s to the apex", async (path, location) => {
+    const res = await app.request(path, {
+      headers: { host: "app.authichain.com" },
+      redirect: "manual",
+    });
+    expect(res.status).toBe(301);
+    expect(res.headers.get("location")).toBe(location);
+  });
+
+  it("leaves /pricing alone on the apex host", async () => {
+    const res = await app.request("/pricing", {
+      headers: { host: "authichain.com" },
+      redirect: "manual",
+    });
+    expect(res.status).not.toBe(301);
   });
 });
 
@@ -979,6 +1036,14 @@ describe("GET /api/generate requires the service role", () => {
     expect((await res.json()).auth).toBe(false);
   });
   it("stays 401 for a bearer token when credit checks cannot run", async () => {
+    // The bearer token goes to Supabase Auth at SUPABASE_URL. Without this stub
+    // that was a real request to example.supabase.co, which timed out CI at 5s.
+    // Unreachable auth must still fail closed.
+    const authFetch = vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    });
+    vi.stubGlobal("fetch", authFetch);
+    onTestFinished(() => vi.unstubAllGlobals());
     const res = await app.request("/api/generate", {
       method: "POST",
       headers: {
@@ -991,6 +1056,8 @@ describe("GET /api/generate requires the service role", () => {
       }),
     });
     expect(res.status).toBe(401);
+    expect(authFetch).toHaveBeenCalled();
+    expect(String(authFetch.mock.calls[0]?.[0])).toContain("example.supabase.co/auth/");
   });
 });
 

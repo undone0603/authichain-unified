@@ -15,27 +15,52 @@ on:
     branches: [main]
 
 concurrency:
-  group: lint-${{ github.head_ref || github.ref }}
-  # Only PR runs are superseded; a push to main must never cancel a running
-  # deploy/check mid-way (PM-328). Newer main runs queue behind it instead.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # PM ruling Oct 24: CI-only per-workflow group, cancel stale runs so a
+  # push to main cannot pile CI up ahead of a deploy on the single
+  # self-hosted runner. Never a deploy group name.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
+# Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
+# Flip to 'false' once the runner is verified; the skip step warns visibly.
+env:
+  SKIP_HARDHAT_ON_SELF_HOSTED: "true"
+
+# Least privilege (self-hosted CI move). Jobs that need more set it per job.
+permissions:
+  contents: read
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
+    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
-
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        if: runner.environment != 'self-hosted'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
+          dest: ~/setup-pnpm
 
-      - uses: actions/setup-node@v7
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          command -v pnpm
+          actual="$(pnpm --version)"
+          if [ "$actual" != "10.28.2" ]; then
+            echo "ERROR: expected pinned pnpm 10.28.2 on self-hosted runner, got $actual" >&2
+            exit 1
+          fi
+          echo "Verified runner pnpm version: $actual"
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
-          cache: "pnpm"
+          # Self-hosted runners keep a persistent pnpm store. Uploading it
+          # through actions/cache packs ~1 GB and stalls the runner.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
@@ -84,6 +109,7 @@ jobs:
           scripts/ci/*.test.mjs
           protocol/qfs/envelope.test.mjs
           scripts/lib/b2b-send-policy.test.ts
+          src/lib/generation-seal.test.ts
           worker-app/cron-dispatch.test.ts
           workers/authichain-verify-worker/src/protocol-verify.test.mjs
           workers/authichain-verify-worker/src/published-record.test.mjs
@@ -96,7 +122,23 @@ jobs:
       # Hardhat contract tests (test/AuthiChainLedger.test.ts). Hardhat fetches
       # solc 0.8.19 on first run; no other job ran these.
       - name: Contract tests (Hardhat)
+        if: env.SKIP_HARDHAT_ON_SELF_HOSTED != 'true'
         run: pnpm test:contracts
+
+      - name: "Skipped on self-hosted: Hardhat contract tests"
+        if: env.SKIP_HARDHAT_ON_SELF_HOSTED == 'true'
+        run: echo "::warning title=Skipped on self-hosted::Hardhat contract tests (pnpm test:contracts) not run - solc 0.8.19 fetch/ARM64 binary unverified on the runner. Not a pass."
 
       - name: Check wrangler.toml Durable Object migrations
         run: node scripts/check-wrangler-durable-objects.mjs
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +

@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { parseSealRequest } from "../../src/lib/agent-verify";
 
 /**
  * MCP tools for the public AuthiChain API.
@@ -33,6 +34,21 @@ export async function apiCall(
 
 function textResult(status: number, body: string) {
   return { content: [{ type: "text" as const, text: `HTTP ${status}\n${body}` }] };
+}
+
+/** Body for POST /api/x402. A non-UUID never becomes productId. */
+export function paidVerifyPayload(subject: string):
+  | { ok: true; body: { sealId: string } }
+  | {
+      ok: false;
+      status: number;
+      body: { error: string; detail: string; settled: false };
+    } {
+  const parsed = parseSealRequest({ sealId: subject });
+  if (!parsed.ok) {
+    return { ok: false, status: parsed.status, body: parsed.body };
+  }
+  return { ok: true, body: { sealId: parsed.sealId } };
 }
 
 const server = new McpServer({
@@ -110,13 +126,17 @@ server.tool("whoami", {}, async () => {
 server.tool(
   "verify_paid",
   {
-    subject: z.string().describe("Product id or serial to verify"),
+    subject: z.string().describe("Seal UUID to verify"),
     payment: z
       .string()
       .optional()
       .describe("x402 X-PAYMENT proof. Omit to receive the 402 requirements."),
   },
   async ({ subject, payment }) => {
+    const payload = paidVerifyPayload(subject);
+    if (!payload.ok) {
+      return textResult(payload.status, JSON.stringify(payload.body));
+    }
     const headers: Record<string, string> = {
       "content-type": "application/json",
     };
@@ -124,7 +144,7 @@ server.tool(
     const res = await apiCall("/api/x402", {
       method: "POST",
       headers,
-      body: JSON.stringify({ productId: subject }),
+      body: JSON.stringify(payload.body),
     });
     return textResult(res.status, res.body);
   }
