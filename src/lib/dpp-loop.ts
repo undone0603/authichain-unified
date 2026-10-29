@@ -83,9 +83,9 @@ function normalizeSource(
 export async function recordDppLoopEvent(
   supabase: SupabaseLike,
   input: RecordDppLoopEventInput
-): Promise<void> {
+): Promise<{ ok: boolean }> {
   const visitId = input.visitId?.trim();
-  if (!visitId) return;
+  if (!visitId) return { ok: false };
 
   try {
     const { error } = await supabase.from("funnel_events").insert({
@@ -107,9 +107,12 @@ export async function recordDppLoopEvent(
     });
     if (error) {
       console.error("[dpp-loop] record failed:", input.stage, error);
+      return { ok: false };
     }
+    return { ok: true };
   } catch (err) {
     console.error("[dpp-loop] record failed:", input.stage, err);
+    return { ok: false };
   }
 }
 
