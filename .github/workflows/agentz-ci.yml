@@ -10,6 +10,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Self-hosted ARM64 runner does not provide the `python` command by
+      # default (CI run 40835361953, exit 127). Provision the interpreter
+      # explicitly, as the existing AgentZ orchestration workflow does.
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
       - name: Compile AgentZ Python sources
         run: python -m compileall -q agentz
 
