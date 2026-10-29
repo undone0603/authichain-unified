@@ -2,6 +2,6 @@
   "projects": {
     "tsconfig.json": 350,
     "tsconfig.worker.json": 775,
-    "tsconfig.workers.json": 16
+    "tsconfig.workers.json": 14
   }
 }
