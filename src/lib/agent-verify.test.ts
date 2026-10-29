@@ -34,10 +34,9 @@ describe("parseSealRequest", () => {
   it("leaves an empty unpaid body and a real UUID on the 402 path", () => {
     expect(unpaidSealRefusal({})).toBeNull();
     expect(unpaidSealRefusal({ sealId: SEAL })).toBeNull();
-    expect(unpaidSealRefusal({ serial: "AC-1" })).toMatchObject({
-      status: 400,
-      body: { error: "seal_id_required", settled: false },
-    });
+    expect(unpaidSealRefusal({ serial: "AC-1" })).toBeNull();
+    expect(unpaidSealRefusal({ url: "https://authichain.com/api/v1/agent-verify" })).toBeNull();
+    expect(unpaidSealRefusal({ probe: true })).toBeNull();
     expect(unpaidSealRefusal({ sealId: "demo" })).toBeNull();
     expect(
       unpaidSealRefusal({
@@ -47,6 +46,10 @@ describe("parseSealRequest", () => {
         body: { sealId: "demo" },
       })
     ).toBeNull();
+    expect(unpaidSealRefusal({ sealId: "AC-DEMO-001" })).toMatchObject({
+      status: 400,
+      body: { error: "seal_id_not_uuid", settled: false },
+    });
   });
 
   it("requires a subject", () => {
