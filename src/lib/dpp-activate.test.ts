@@ -211,6 +211,38 @@ describe("activateDppMerchant", () => {
     expect(from).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["price_1UL0vVGqTruSqV8T5WYjrq6i", "another product"],
+    [undefined, "missing price ID"],
+  ])(
+    "rejects DPP metadata when line items contain %s (%s)",
+    async (priceId) => {
+      retrieve.mockResolvedValueOnce({
+        payment_status: "paid",
+        status: "complete",
+        amount_total: 29900,
+        currency: "usd",
+        metadata: { plan: "dpp_readiness" },
+        line_items: { data: [{ price: priceId ? { id: priceId } : null }] },
+      });
+      const from = vi.fn();
+      const { activateDppMerchant } = await import("./dpp-activate");
+      const result = await activateDppMerchant({
+        body: {
+          session_id: "cs_wrong_price",
+          categories: "a",
+          markets: "b",
+          labeling: "c",
+        },
+        stripeSecretKey: "sk_test",
+        supabase: { from },
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.status).toBe(400);
+      expect(from).not.toHaveBeenCalled();
+    }
+  );
+
   it("returns 500 when the activation row is not stored", async () => {
     retrieve.mockResolvedValueOnce({
       payment_status: "paid",

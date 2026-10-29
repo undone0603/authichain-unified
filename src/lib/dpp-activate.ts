@@ -4,6 +4,7 @@
  */
 
 import {
+  DPP_PRICE_ID,
   dppActivateUrl,
   isDppDemoSession,
   isDppOffer,
@@ -108,10 +109,9 @@ export async function activateDppMerchant(opts: {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
   const linePriceId = session.line_items?.data?.[0]?.price?.id ?? null;
-  if (linePriceId && !isDppOffer(md, linePriceId)) {
-    return { ok: false, status: 400, error: "Not a DPP workspace session" };
-  }
-  if (!isDppOffer(md, linePriceId)) {
+  // Stripe metadata alone cannot override the product actually purchased.
+  // The canonical $299 DPP checkout has one known live price ID.
+  if (linePriceId !== DPP_PRICE_ID) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
   // DPP metadata is not cash. Demo, $0, and the founder $10 session must not
