@@ -86,8 +86,23 @@ jobs:
       # client, workers) are outside `turbo test --filter=!.`, so no other job
       # runs them. node:test files are excluded by vitest.config.ts and run on
       # their workspace runners, or in the next step when they have none.
+      # The job-log blob sometimes returns 404; retain failed root-suite output
+      # without changing the test command, exit code, or release gates.
       - name: Root Vitest suite
-        run: pnpm exec vitest run
+        id: root_vitest
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec vitest run 2>&1 | tee "${RUNNER_TEMP}/root-vitest.log"
+
+      - name: Upload failed root Vitest diagnostics
+        if: ${{ failure() && steps.root_vitest.outcome == 'failure' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: root-vitest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/root-vitest.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       # node:test files that no workspace `test` script runs. Named, not
       # globbed, past scripts/ci: scripts/lib and worker-app also hold Vitest
