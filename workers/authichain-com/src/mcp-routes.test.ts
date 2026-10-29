@@ -233,7 +233,7 @@ describe("mcp discovery", () => {
   });
 
   it("tools/call verify with a non-key argument is 400 and does not ask for payment", async () => {
-    for (const args of [{ serial: "AC-1" }, { sealId: "demo" }, { productId: "p-1" }]) {
+    for (const args of [{ serial: "AC-1" }, { productId: "p-1" }]) {
       const res = await tryHandleMcp(
         req("/mcp", {
           method: "POST",

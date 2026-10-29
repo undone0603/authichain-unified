@@ -7,6 +7,8 @@ import {
   isFounderEmail,
   isPublicPlanId,
   publicCheckoutHref,
+  liveTierForPriceId,
+  liveTierGrantForPriceId,
   resolveCheckoutPlanId,
   starterAmountFallbackRefusals,
 } from "./live-catalog";
@@ -113,6 +115,7 @@ describe("catalog freeze 2026-09-28", () => {
 
   it("price ids in LIVE_PRICE_MAP resolve in plans.ts", () => {
     for (const [id, row] of Object.entries(LIVE_PRICE_MAP)) {
+      if ("tier" in row) continue; // tier-only rows are not PlanIds
       const plan = planByStripePriceId(row.priceId);
       expect(plan?.id).toBe(id);
     }
@@ -181,5 +184,34 @@ describe("starterAmountFallbackRefusals", () => {
         true
       )
     ).toEqual(expect.arrayContaining(["subtotal_not_2900", "discounted"]));
+  });
+});
+
+describe("StorePilot Pro price_1UTxvp", () => {
+  const PRO = "price_1UTxvpGqTruSqV8TQu5gkqyc";
+
+  it("is mapped to tier=pro, catalog_limit=200 in LIVE_PRICE_MAP", () => {
+    expect(LIVE_PRICE_MAP.storepilot_pro.priceId).toBe(PRO);
+    expect(LIVE_PRICE_MAP.storepilot_pro.tier).toBe("pro");
+    expect(LIVE_PRICE_MAP.storepilot_pro.catalogLimit).toBe(200);
+    expect(liveTierForPriceId(PRO)).toBe("pro");
+    expect(liveTierForPriceId(LIVE_PRICE_MAP.starter.priceId)).toBeNull();
+  });
+
+  it("never resolves to Starter, even on an exact $29.00 fallback-eligible session", () => {
+    for (const allowAmountFallback of [true, false]) {
+      const r = resolveCheckoutPlanId({ priceId: PRO, amountTotal: 2900, allowAmountFallback });
+      expect(r).not.toBe("starter");
+      expect(r).toBeNull();
+    }
+    expect(grantForPriceId(PRO)).toBeNull();
+  });
+
+  it("grants tier=pro and catalog_limit=200 keyed to the checkout email", () => {
+    const g = liveTierGrantForPriceId(PRO, "  Buyer@Example.com ");
+    expect(g).toEqual({ email: "buyer@example.com", tier: "pro", catalog_limit: 200 });
+    expect(g?.tier).not.toBe("starter");
+    expect(liveTierGrantForPriceId(PRO, null)).toBeNull();
+    expect(liveTierGrantForPriceId(LIVE_PRICE_MAP.starter.priceId, "a@b.co")).toBeNull();
   });
 });

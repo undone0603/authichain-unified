@@ -183,7 +183,7 @@ jobs:
           echo "deploy matrix (auto-deploy, narrowed to changed allow-listed workers): ${eligible}"
 
   deploy:
-    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
+    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
     timeout-minutes: 45
     needs: [secret-scan, deploy-matrix]
     # GitHub fails the whole workflow when `strategy.matrix` expands to an
@@ -207,7 +207,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
-          # Skip the Actions cache on authichain-ops. The hosted agentz job
+          # Skip the Actions cache on the self-hosted publish runner. The hosted agentz job
           # still caches. A self-hosted save packs ~1 GB and can fail the job
           # after the worker is already published.
           cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
