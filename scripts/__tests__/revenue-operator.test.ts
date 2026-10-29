@@ -550,3 +550,56 @@ describe("snapshotFromStripeLike", () => {
     expect(snapshot.charges[0].email).toBe("ops@example.com");
   });
 });
+
+describe("campaign candidate compliance", () => {
+  it("selects a confirmed_reply candidate and refuses unknown provenance", () => {
+    const allowed = selectNextSendCandidate(
+      [
+        {
+          email: "robert@joinclab.com",
+          source: "confirmed_reply",
+          sourceUrl: "https://mail.google.com/",
+        },
+        {
+          email: "scott.krupa@fastsigns.com",
+          source: "unknown",
+        },
+      ],
+      founders
+    );
+    expect(allowed.allowed).toBe(true);
+    expect(allowed.to).toBe("robert@joinclab.com");
+
+    const refused = selectNextSendCandidate(
+      [
+        {
+          email: "scott.krupa@fastsigns.com",
+          source: "unknown",
+        },
+        {
+          email: "hannah.melotto@melottogroup.com",
+          source: "unknown",
+        },
+      ],
+      founders
+    );
+    expect(refused.allowed).toBe(false);
+  });
+
+  it("keeps decideOperatorAction on send_one for confirmed_reply without inventing revenue", () => {
+    const decision = decideOperatorAction({
+      rails: { ok: true, reason: "skipped", results: [] },
+      snapshot: snap({}),
+      candidates: [
+        {
+          email: "robert@joinclab.com",
+          source: "confirmed_reply",
+        },
+      ],
+      founderEmails: founders,
+    });
+    expect(decision.action).toBe("send_one");
+    expect(decision.to).toBe("robert@joinclab.com");
+    expect(decision.revenue.qualifying).toBe(false);
+  });
+});

@@ -22,11 +22,11 @@
       "checkout": "https://authichain.com/checkout/dpp_readiness",
       "product": "https://authichain.com/battery-passport",
       "probe": "GET 200 EU DPP Workspace $299; HEAD /api/checkout/dpp 204",
-      "copy_constraint": "Workspace with 50 generations — not an audit, certificate, or EU filing"
+      "copy_constraint": "Workspace with 50 generations \u2014 not an audit, certificate, or EU filing"
     }
   },
   "exclusions": [
-    "Fabricated luxury CRM seeds (LVMH/Hermès/Rolex/etc.)",
+    "Fabricated luxury CRM seeds (LVMH/Herm\u00e8s/Rolex/etc.)",
     "Mendo Love Farms / realthcv@gmail.com (DNC)",
     "klong@c3industries.com (suppressed do-not-contact)",
     "Passport/Farm/MUSA as delivered (#1553 OPEN)",
@@ -49,8 +49,14 @@
       "qualification": "HOT",
       "qualification_evidence": "Named founder human; trusted provenance class already used by classifySend when inbox named; company sells genetics/tools adjacent to Living QR + verify",
       "recommended_offer": "starter",
-      "message_draft": "Robert — AuthiChain ships signed product/agent evidence with an open verifier (https://authichain.com/api/verify?id=polygon-anchor-1) and a $29 Starter Pack for 100 Living QR generations (https://authichain.com/checkout/starter). If CLAB wants buyers to check a seal without trusting a PDF, that path is live. Reply stop to opt out. — AuthiChain (AI-assisted draft)",
-      "campaign_status": "draft_ready_awaiting_send_auth"
+      "message_draft": "Robert \u2014 AuthiChain ships signed product/agent evidence with an open verifier (https://authichain.com/api/verify?id=polygon-anchor-1) and a $29 Starter Pack for 100 Living QR generations (https://authichain.com/checkout/starter). If CLAB wants buyers to check a seal without trusting a PDF, that path is live. Reply stop to opt out. \u2014 AuthiChain (AI-assisted draft)",
+      "campaign_status": "sent_gmail_reply_2026-10-29",
+      "send_evidence": {
+        "gmail_message_id": "1a186e58fb73f6f4",
+        "thread_id": "1a17da2f20ce4663",
+        "decide_action": "send_one",
+        "source": "confirmed_reply"
+      }
     },
     {
       "id": "p02",
@@ -66,9 +72,9 @@
       "published_fallback": "contact@sirraya.org (role; site homepage)",
       "source_url": "https://sirraya.org",
       "qualification": "WARM",
-      "qualification_evidence": "Standards chair fit for protocol partnership; amir@ not re-printed on homepage this scan — treat as CRM-sourced until published or inbound",
+      "qualification_evidence": "Standards chair fit for protocol partnership; amir@ not re-printed on homepage this scan \u2014 treat as CRM-sourced until published or inbound",
       "recommended_offer": "starter",
-      "message_draft": "Amir — for VSC CG demos that need a stranger-checkable seal, AuthiChain’s public verify door and JWKS are live (https://authichain.com/api/verify?id=polygon-anchor-1, https://authichain.com/protocol/jwks.json). Starter Pack $29 is the low-friction product path: https://authichain.com/checkout/starter. Happy to compare notes on agent-to-agent purchase evidence. Opt out: reply stop. — AuthiChain (AI-assisted)",
+      "message_draft": "Amir \u2014 for VSC CG demos that need a stranger-checkable seal, AuthiChain\u2019s public verify door and JWKS are live (https://authichain.com/api/verify?id=polygon-anchor-1, https://authichain.com/protocol/jwks.json). Starter Pack $29 is the low-friction product path: https://authichain.com/checkout/starter. Happy to compare notes on agent-to-agent purchase evidence. Opt out: reply stop. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "needs_published_or_named_send"
     },
     {
@@ -86,7 +92,7 @@
       "qualification": "WARM",
       "qualification_evidence": "Prior warm MI processor; named human; offer Starter not Passport while #1553 open",
       "recommended_offer": "starter",
-      "message_draft": "Erik — quick path for a scannable, signed product seal buyers can verify themselves: AuthiChain Starter Pack $29 → https://authichain.com/checkout/starter (100 generations). Demo verify: https://authichain.com/api/verify?id=polygon-anchor-1. Not a METRC write or certificate. Reply stop to opt out. — AuthiChain (AI-assisted)",
+      "message_draft": "Erik \u2014 quick path for a scannable, signed product seal buyers can verify themselves: AuthiChain Starter Pack $29 \u2192 https://authichain.com/checkout/starter (100 generations). Demo verify: https://authichain.com/api/verify?id=polygon-anchor-1. Not a METRC write or certificate. Reply stop to opt out. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "draft_ready_awaiting_send_auth"
     },
     {
@@ -102,9 +108,9 @@
       "verification_source": "unknown",
       "source_url": "scripts/data/high-leverage-2026-09-19.json",
       "qualification": "WARM",
-      "qualification_evidence": "Named human on owner Tier-1 list; provenance still unknown for auto classifySend — needs published_contact/reacher/inbound before live send",
+      "qualification_evidence": "Named human on owner Tier-1 list; provenance still unknown for auto classifySend \u2014 needs published_contact/reacher/inbound before live send",
       "recommended_offer": "starter",
-      "message_draft": "Wendy — AuthiChain Starter ($29) gives Living QR generations with open verification (https://authichain.com/checkout/starter). Useful when retail packs need a seal a buyer can check without calling compliance. Opt out: reply stop. — AuthiChain (AI-assisted)",
+      "message_draft": "Wendy \u2014 AuthiChain Starter ($29) gives Living QR generations with open verification (https://authichain.com/checkout/starter). Useful when retail packs need a seal a buyer can check without calling compliance. Opt out: reply stop. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "blocked_untrusted_provenance"
     },
     {
@@ -122,7 +128,7 @@
       "qualification": "HOT",
       "qualification_evidence": "Direct QRON ICP (print shop); named non-role inbox on Tier-1 list; site CF 403 blocked re-publish check this run",
       "recommended_offer": "starter",
-      "message_draft": "Scott — for FASTSIGNS jobs where the QR should carry a signed seal (not only a landing page), AuthiChain Starter Pack is $29 once: https://authichain.com/checkout/starter. Live generate: https://qron.space/generate. Opt out: reply stop. — AuthiChain / QRON (AI-assisted)",
+      "message_draft": "Scott \u2014 for FASTSIGNS jobs where the QR should carry a signed seal (not only a landing page), AuthiChain Starter Pack is $29 once: https://authichain.com/checkout/starter. Live generate: https://qron.space/generate. Opt out: reply stop. \u2014 AuthiChain / QRON (AI-assisted)",
       "campaign_status": "blocked_untrusted_provenance"
     },
     {
@@ -140,7 +146,7 @@
       "qualification": "HOT",
       "qualification_evidence": "Second named FASTSIGNS buyer on Tier-1; same provenance gap as Scott",
       "recommended_offer": "starter",
-      "message_draft": "Mark — short note: AuthiChain Starter ($29) issues Living QR generations with independent verify (https://authichain.com/checkout/starter). Built for print/brand shops that need a seal, not theater. Opt out: reply stop. — AuthiChain / QRON (AI-assisted)",
+      "message_draft": "Mark \u2014 short note: AuthiChain Starter ($29) issues Living QR generations with independent verify (https://authichain.com/checkout/starter). Built for print/brand shops that need a seal, not theater. Opt out: reply stop. \u2014 AuthiChain / QRON (AI-assisted)",
       "campaign_status": "blocked_untrusted_provenance"
     },
     {
@@ -156,9 +162,9 @@
       "verification_source": "hubspot_crm",
       "source_url": "HubSpot 554803074806",
       "qualification": "WARM",
-      "qualification_evidence": "Warm channel partner; already received live Resend historically — do not duplicate cold blast; partnership follow only",
+      "qualification_evidence": "Warm channel partner; already received live Resend historically \u2014 do not duplicate cold blast; partnership follow only",
       "recommended_offer": "starter",
-      "message_draft": "Existo — following up as a channel partner only (not a cold blast): Starter $29 and verify remain the stranger-ready doors (https://authichain.com/checkout/starter). If you want co-sell collateral for Metrc-adjacent QR seals, say the word. Opt out: reply stop. — AuthiChain (AI-assisted)",
+      "message_draft": "Existo \u2014 following up as a channel partner only (not a cold blast): Starter $29 and verify remain the stranger-ready doors (https://authichain.com/checkout/starter). If you want co-sell collateral for Metrc-adjacent QR seals, say the word. Opt out: reply stop. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "partner_follow_not_cold"
     },
     {
@@ -174,9 +180,9 @@
       "verification_source": "hubspot_crm",
       "source_url": "HubSpot 554855350999",
       "qualification": "WARM",
-      "qualification_evidence": "Channel partner role inbox; already contacted — partner track only",
+      "qualification_evidence": "Channel partner role inbox; already contacted \u2014 partner track only",
       "recommended_offer": "dpp_workspace",
-      "message_draft": "ICS — for clients who need an EU battery/workspace kickoff (not a notified-body certificate), AuthiChain’s $299 EU DPP Workspace is self-serve: https://authichain.com/checkout/dpp_readiness. It opens a workspace + 50 generations; it is not an audit opinion. Opt out: reply stop. — AuthiChain (AI-assisted)",
+      "message_draft": "ICS \u2014 for clients who need an EU battery/workspace kickoff (not a notified-body certificate), AuthiChain\u2019s $299 EU DPP Workspace is self-serve: https://authichain.com/checkout/dpp_readiness. It opens a workspace + 50 generations; it is not an audit opinion. Opt out: reply stop. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "partner_follow_not_cold"
     },
     {
@@ -192,9 +198,9 @@
       "verification_source": "hubspot_crm",
       "source_url": "HubSpot 555027359470",
       "qualification": "WARM",
-      "qualification_evidence": "Named counselor; non-.gov domain; gov-mint frozen — recommend Starter demo not mint",
+      "qualification_evidence": "Named counselor; non-.gov domain; gov-mint frozen \u2014 recommend Starter demo not mint",
       "recommended_offer": "starter",
-      "message_draft": "Shawna — for APEX clients who need a portable, independently verifiable product seal before any federal pilot talk: https://authichain.com/api/verify?id=polygon-anchor-1 and Starter $29 https://authichain.com/checkout/starter. No cold .gov blast intended. Opt out: reply stop. — AuthiChain (AI-assisted)",
+      "message_draft": "Shawna \u2014 for APEX clients who need a portable, independently verifiable product seal before any federal pilot talk: https://authichain.com/api/verify?id=polygon-anchor-1 and Starter $29 https://authichain.com/checkout/starter. No cold .gov blast intended. Opt out: reply stop. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "draft_ready_awaiting_send_auth"
     },
     {
@@ -210,9 +216,9 @@
       "verification_source": "unknown",
       "source_url": "HubSpot 530055549660",
       "qualification": "WARM",
-      "qualification_evidence": "Named human on owner Starter list; CRM alone ≠ sendable",
+      "qualification_evidence": "Named human on owner Starter list; CRM alone \u2260 sendable",
       "recommended_offer": "starter",
-      "message_draft": "Hannah — AuthiChain Starter Pack ($29) is the one-visit Living QR path: https://authichain.com/checkout/starter. Verify demo: https://authichain.com/api/verify?id=polygon-anchor-1. Opt out: reply stop. — AuthiChain (AI-assisted)",
+      "message_draft": "Hannah \u2014 AuthiChain Starter Pack ($29) is the one-visit Living QR path: https://authichain.com/checkout/starter. Verify demo: https://authichain.com/api/verify?id=polygon-anchor-1. Opt out: reply stop. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "blocked_untrusted_provenance"
     },
     {
@@ -228,14 +234,14 @@
       "verification_source": "published_contact",
       "source_url": "https://www.canyon.com/en-us/about-content/imprint.html",
       "qualification": "COLD",
-      "qualification_evidence": "Strong product fit; only role inboxes published — auto send-guard refuses without allowRoleInbox + manual",
+      "qualification_evidence": "Strong product fit; only role inboxes published \u2014 auto send-guard refuses without allowRoleInbox + manual",
       "recommended_offer": "dpp_workspace",
-      "message_draft": "Canyon team — EU battery passport readiness for e-bike packs: AuthiChain EU DPP Workspace ($299) opens a self-serve workspace (not a notified-body audit): https://authichain.com/checkout/dpp_readiness. Background: https://authichain.com/battery-passport. Opt out: reply stop. — AuthiChain (AI-assisted)",
+      "message_draft": "Canyon team \u2014 EU battery passport readiness for e-bike packs: AuthiChain EU DPP Workspace ($299) opens a self-serve workspace (not a notified-body audit): https://authichain.com/checkout/dpp_readiness. Background: https://authichain.com/battery-passport. Opt out: reply stop. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "manual_role_inbox_only"
     },
     {
       "id": "p12",
-      "company": "Riese & Müller",
+      "company": "Riese & M\u00fcller",
       "website": "https://www.r-m.de",
       "industry": "e-bike / EU battery",
       "problem": "Premium e-bike OEM with EU battery passport exposure",
@@ -248,7 +254,7 @@
       "qualification": "COLD",
       "qualification_evidence": "Role inbox only on impressum; presse@ noted historically as CF-protected role",
       "recommended_offer": "dpp_workspace",
-      "message_draft": "Riese & Müller — for EU Battery Regulation workspace kickoff (self-serve, not a certificate): https://authichain.com/checkout/dpp_readiness. Opt out: reply stop. — AuthiChain (AI-assisted)",
+      "message_draft": "Riese & M\u00fcller \u2014 for EU Battery Regulation workspace kickoff (self-serve, not a certificate): https://authichain.com/checkout/dpp_readiness. Opt out: reply stop. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "manual_role_inbox_only"
     },
     {
@@ -266,7 +272,7 @@
       "qualification": "COLD",
       "qualification_evidence": "Published webshop role inbox; low decision-maker accessibility",
       "recommended_offer": "dpp_workspace",
-      "message_draft": "SFM — EU DPP Workspace ($299) for battery-pack documentation kickoff: https://authichain.com/checkout/dpp_readiness. Opt out: reply stop. — AuthiChain (AI-assisted)",
+      "message_draft": "SFM \u2014 EU DPP Workspace ($299) for battery-pack documentation kickoff: https://authichain.com/checkout/dpp_readiness. Opt out: reply stop. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "manual_role_inbox_only"
     },
     {
@@ -284,7 +290,7 @@
       "qualification": "COLD",
       "qualification_evidence": "Enterprise fit but only role/press inboxes; long cycle; no named DM this pass",
       "recommended_offer": "dpp_workspace",
-      "message_draft": "Northvolt — AuthiChain EU DPP Workspace is a $299 self-serve kickoff for passport documentation gaps (not a notified-body audit): https://authichain.com/checkout/dpp_readiness. Opt out: reply stop. — AuthiChain (AI-assisted)",
+      "message_draft": "Northvolt \u2014 AuthiChain EU DPP Workspace is a $299 self-serve kickoff for passport documentation gaps (not a notified-body audit): https://authichain.com/checkout/dpp_readiness. Opt out: reply stop. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "manual_role_inbox_only"
     },
     {
@@ -300,9 +306,9 @@
       "verification_source": "published_contact",
       "source_url": "https://verkor.com/en/legal-notice-and-gdpr/",
       "qualification": "COLD",
-      "qualification_evidence": "DPO role inbox published; personal CRM email not on site — do not use benoit@ as published",
+      "qualification_evidence": "DPO role inbox published; personal CRM email not on site \u2014 do not use benoit@ as published",
       "recommended_offer": "dpp_workspace",
-      "message_draft": "Verkor DPO desk — pointing to a public EU DPP Workspace offer for manufacturers preparing Battery Regulation documentation: https://authichain.com/checkout/dpp_readiness (workspace, not legal advice). Opt out: reply stop. — AuthiChain (AI-assisted)",
+      "message_draft": "Verkor DPO desk \u2014 pointing to a public EU DPP Workspace offer for manufacturers preparing Battery Regulation documentation: https://authichain.com/checkout/dpp_readiness (workspace, not legal advice). Opt out: reply stop. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "manual_role_inbox_only"
     },
     {
@@ -318,9 +324,9 @@
       "verification_source": "published_contact",
       "source_url": "scripts/dpp-outreach/pipeline/researched.csv",
       "qualification": "COLD",
-      "qualification_evidence": "Role inbox — manual only per research notes",
+      "qualification_evidence": "Role inbox \u2014 manual only per research notes",
       "recommended_offer": "starter",
-      "message_draft": "STIIIZY Compliance — for pack-level seals customers can verify themselves: Starter $29 https://authichain.com/checkout/starter. Opt out: reply stop. — AuthiChain (AI-assisted)",
+      "message_draft": "STIIIZY Compliance \u2014 for pack-level seals customers can verify themselves: Starter $29 https://authichain.com/checkout/starter. Opt out: reply stop. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "manual_role_inbox_only"
     },
     {
@@ -329,7 +335,7 @@
       "website": "https://tmediatech.com",
       "industry": "media / merch authenticity",
       "problem": "Authenticity infra for merch + verification",
-      "evidence": "researched.csv marked licensing@tmediatech.com published_contact Jul 2026; 2026-10-29 site 404 — treat as stale until re-verified",
+      "evidence": "researched.csv marked licensing@tmediatech.com published_contact Jul 2026; 2026-10-29 site 404 \u2014 treat as stale until re-verified",
       "decision_maker": "Truth API Licensing Team",
       "contact_channel": "licensing@tmediatech.com",
       "contact_verified": false,
@@ -338,7 +344,7 @@
       "qualification": "COLD",
       "qualification_evidence": "Prior note + prior BD send; domain unresolved this scan",
       "recommended_offer": "creator",
-      "message_draft": "TMTG Licensing — if Truth API merch still needs signed seals at higher generation volume, Creator Pack $99: https://authichain.com/checkout/creator. Opt out: reply stop. — AuthiChain (AI-assisted)",
+      "message_draft": "TMTG Licensing \u2014 if Truth API merch still needs signed seals at higher generation volume, Creator Pack $99: https://authichain.com/checkout/creator. Opt out: reply stop. \u2014 AuthiChain (AI-assisted)",
       "campaign_status": "reverify_domain"
     },
     {
@@ -348,7 +354,7 @@
       "industry": "apparel",
       "problem": "EU textile DPP readiness 2027-28",
       "evidence": "targets.csv priority 1; contact/imprint 404 this scan",
-      "decision_maker": "August Bard Bringéus (named in research; no email)",
+      "decision_maker": "August Bard Bring\u00e9us (named in research; no email)",
       "contact_channel": null,
       "contact_verified": false,
       "verification_source": null,
@@ -382,7 +388,7 @@
       "company": "Kotn",
       "website": "https://kotn.com",
       "industry": "apparel / cotton",
-      "problem": "Cotton traceability → DPP data readiness",
+      "problem": "Cotton traceability \u2192 DPP data readiness",
       "evidence": "targets.csv; contact 429",
       "decision_maker": null,
       "contact_channel": null,
@@ -455,7 +461,7 @@
       "website": "https://www.moo.com",
       "industry": "print",
       "problem": "Living QR for print products",
-      "evidence": "Homepage shows support@moo.com; prior repo note inquiries@moo.com as published_contact — inquiries not confirmed on 2026-10-29 homepage",
+      "evidence": "Homepage shows support@moo.com; prior repo note inquiries@moo.com as published_contact \u2014 inquiries not confirmed on 2026-10-29 homepage",
       "decision_maker": null,
       "contact_channel": "support@moo.com",
       "contact_verified": true,
@@ -464,7 +470,7 @@
       "qualification": "COLD",
       "qualification_evidence": "Role support inbox only confirmed this scan",
       "recommended_offer": "starter",
-      "message_draft": "MOO — Living QR with a signed seal (Starter $29): https://authichain.com/checkout/starter. Opt out: reply stop. — AuthiChain / QRON (AI-assisted)",
+      "message_draft": "MOO \u2014 Living QR with a signed seal (Starter $29): https://authichain.com/checkout/starter. Opt out: reply stop. \u2014 AuthiChain / QRON (AI-assisted)",
       "campaign_status": "manual_role_inbox_only"
     },
     {
@@ -486,13 +492,25 @@
       "campaign_status": "do_not_contact_until_requalified"
     }
   ],
-  "priority10": ["p01", "p05", "p06", "p03", "p02", "p09", "p04", "p10", "p07", "p08"],
+  "priority10": [
+    "p01",
+    "p05",
+    "p06",
+    "p03",
+    "p02",
+    "p09",
+    "p04",
+    "p10",
+    "p07",
+    "p08"
+  ],
   "priority10_rationale": "Favor named humans + print/Starter ICP + warm MI/APEX paths; partners last as follow-not-cold. Role-only EU battery OEMs stay in the 25 but outside priority until a named DM is published.",
   "send_policy": {
     "max_touches": 3,
     "production_send": false,
     "cold_outreach_enabled": false,
     "require_named_or_operator_selected_inbox": true,
-    "opt_out_ready": false
+    "opt_out_ready": false,
+    "first_manual_send": "robert@joinclab.com gmail 1a186e58fb73f6f4"
   }
 }
