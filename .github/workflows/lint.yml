@@ -48,7 +48,12 @@ jobs:
         if: runner.environment == 'self-hosted'
         run: |
           command -v pnpm
-          pnpm --version
+          actual="$(pnpm --version)"
+          if [ "$actual" != "10.28.2" ]; then
+            echo "ERROR: expected pinned pnpm 10.28.2 on self-hosted runner, got $actual" >&2
+            exit 1
+          fi
+          echo "Verified runner pnpm version: $actual"
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
