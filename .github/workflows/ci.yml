@@ -37,11 +37,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Self-hosted ARM64 already has pnpm 11.x. pnpm/action-setup with
+      # version 10.28.2 downloads from npm and ETIMEDOUT / signature-fails.
+      # GitHub-hosted still uses the pin.
       - name: Install pnpm
         uses: pnpm/action-setup@v6
+        if: runner.environment != 'self-hosted'
         with:
           version: "10.28.2"
           dest: /home/zac/setup-pnpm-${{ runner.name }}
+
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          command -v pnpm
+          pnpm --version
 
       - name: Setup Node
         uses: actions/setup-node@v4
