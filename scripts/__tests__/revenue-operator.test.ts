@@ -506,6 +506,33 @@ describe("freeze gates", () => {
     expect(mayRunAgentzAuto("auto").allowed).toBe(false);
     expect(mayRunAgentzAuto("confirm").allowed).toBe(true);
   });
+
+  it("keeps cold_outreach master switch off in autonomy.json", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const { fileURLToPath } = await import("node:url");
+    const { dirname, join } = await import("node:path");
+    const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
+    const autonomy = JSON.parse(
+      await readFile(join(root, ".github/autonomy.json"), "utf8")
+    );
+    expect(autonomy.cold_outreach.enabled).toBe(false);
+    expect(autonomy.operator_hold.workflows).toEqual(
+      expect.arrayContaining([
+        "b2b-outreach.yml",
+        "content-publish.yml",
+        "gov-mint.yml",
+        "marketing-autonomous.yml",
+        "pipeline-tick.yml",
+      ])
+    );
+  });
+
+  it("defaults agent outbound email production_send to false", async () => {
+    const { defaultOutboundPolicy } = await import(
+      "../../workers/authichain-verify-worker/src/outbound-types"
+    );
+    expect(defaultOutboundPolicy().production_send).toBe(false);
+  });
 });
 
 describe("snapshotFromStripeLike", () => {
