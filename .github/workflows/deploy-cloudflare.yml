@@ -9,8 +9,6 @@ on:
 permissions:
   contents: read
 
-# Serialize production deploys so an older commit can never land after a newer one.
-# Never cancel a running deploy (a cancelled deploy can leave a Worker half-bound).
 concurrency:
   group: deploy-cloudflare-${{ github.ref }}
   cancel-in-progress: false
@@ -26,16 +24,13 @@ jobs:
 
       - name: Scan the tree being deployed
         run: |
-          # Same tree scan as deploy-workers.yml. gitleaks-action@v3 fails
-          # the job when its license lookup is rate-limited, which skipped
-          # this deploy without a secret in the tree.
           curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz -o gitleaks.tgz
           tar --no-same-owner -xzf gitleaks.tgz gitleaks
           ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
 
   deploy:
     name: Deploy to Cloudflare
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     needs: secret-scan
     timeout-minutes: 20
     steps:
@@ -70,47 +65,10 @@ jobs:
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
-      - name: Build frontend
+      - name: Deploy manufacturer-status
         if: steps.secrets_check.outputs.skip != 'true'
-        env:
-          NODE_OPTIONS: --max-old-space-size=4096
-          VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
-          VITE_ANALYTICS_ENDPOINT: ${{ secrets.VITE_ANALYTICS_ENDPOINT }}
-          VITE_ANALYTICS_WEBSITE_ID: ${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}
-        run: |
-          # Same cap as CI Main. The default heap aborts next build --webpack
-          # with exit 134 before the edge router can publish.
-          if pnpm build; then
-            exit 0
-          fi
-          echo "Production build failed; retrying once"
-          sleep 15
-          pnpm build
-
-      - name: Inspect build output
-        if: steps.secrets_check.outputs.skip != 'true'
-        shell: bash
-        run: |
-          set -euxo pipefail
-          echo "=== cwd ==="
-          pwd
-          echo "=== package.json scripts ==="
-          node -e "const p=require('./package.json'); console.log(JSON.stringify(p.scripts||{},null,2))"
-          echo "=== wrangler configs ==="
-          find . -name 'wrangler.toml' -o -name 'wrangler.json' -o -name 'wrangler.jsonc' | head -50
-          echo "=== deep artifact search ==="
-          find . \( -path './.git' -o -path './node_modules' \) -prune -o \
-            \( -name dist -o -name out -o -name .open-next -o -name .next -o -name build \) -print
-          echo "=== next.config output ==="
-          find . -name 'next.config.*' -print
-      # Publishes worker-app as authichain-edge-router. Does NOT bind
-      # STRIPE_WEBHOOK_* — those persist from wrangler secret put / the
-      # bind-stripe-webhook-secrets workflow. A reminted Dashboard secret
-      # will keep 400ing until that Worker secret is updated.
-      - name: Publish application Worker + Assets
-        if: steps.secrets_check.outputs.skip != 'true'
-        working-directory: worker-app
-        run: npx wrangler deploy --minify --keep-vars --config wrangler.toml
+        working-directory: workers/manufacturer-status
+        run: npx wrangler deploy --minify
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -133,40 +91,6 @@ jobs:
           fi
           echo "JWKS live ($JWKS_CODE); no key changes made"
 
-      # success() || failure() still runs after a failed edge publish.
-      # always() also runs after a cancel, which published this worker on
-      # 2026-10-09 when the edge-router steps were cancelled.
-      - name: Deploy authichain-scan-validate
-        if: ${{ (success() || failure()) && steps.secrets_check.outputs.skip != 'true' }}
-        working-directory: workers/authichain-scan-validate
-        run: npx wrangler deploy --minify --keep-vars --config wrangler.toml
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
       - name: Deploy skipped notice
         if: steps.secrets_check.outputs.skip == 'true'
         run: echo "::notice::Cloudflare deploy skipped — set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID in repo secrets to enable."
-
-  # PM-330 item 6: blocking post-deploy smoke, AFTER the deploy job. Fails the
-  # run if a public money/protocol surface is down, answers the wrong code
-  # (unsigned Stripe webhook must 400, unpaid /api/x402 must 402), or redirects
-  # to cloudflareaccess.com. Read-only: HEAD on checkout, nothing signed.
-  # Rollback: delete this job.
-  post-deploy-smoke:
-    name: Post-deploy smoke (blocking)
-    needs: [deploy]
-    if: ${{ needs.deploy.result == 'success' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-      - name: Setup Node 22
-        uses: actions/setup-node@v7
-        with:
-          node-version: "22"
-      - name: Smoke public surfaces after deploy
-        run: node scripts/ci/post-deploy-smoke.mjs

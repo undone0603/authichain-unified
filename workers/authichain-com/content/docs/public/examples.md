@@ -18,10 +18,19 @@ A marketing claim is not an artifact. These are.
 # https://authichain.com/protocol
 node verifier.mjs record.json anchor.json
 
-# Agent rail — unpaid. Expect HTTP 402, not a product verdict.
+# Agent rail. A non-UUID sealId is HTTP 400 before payment.
+# An empty body is the unpaid HTTP 402 challenge, not a product verdict.
 curl -sS -i -X POST https://authichain.com/api/x402 \
   -H 'content-type: application/json' \
-  -d '{"sealId":"demo"}'
+  -d '{}'
+
+# Living QR scan. This host verifies the signature.
+# The object id form is qron:url: plus 8 hex characters.
+# A missing id is HTTP 404 presentation_not_found.
+# qron.space, strainchain.io, and govchain.us each proxy that GET.
+# Each host does not verify the signature.
+curl -sS -H 'accept: application/json' \
+  "https://authichain.com/qron/r/{object_id}"
 
 # Health of the agent rail
 curl -sS https://authichain.com/api/x402/health
@@ -56,7 +65,7 @@ These fixtures contain no production secrets.
 
 Repository demo identifiers are not listed on this page. An unknown resolver id returns `status: "not_found"` with `reason: "unknown_seal"`. That is not a working product scan and is not a counterfeit finding.
 
-Cite the well-known file, JWKS, protocol verifier, unpaid x402 402, and the repo fixtures. Do not treat a 404 as a live demo.
+Cite the well-known file, JWKS, protocol verifier, the empty-body unpaid x402 402, the Living QR scan, and the repo fixtures. Do not treat a resolver 404 as a live demo. A Living QR id with no stored presentation is HTTP 404 with `decision: "indeterminate"` and `error: "presentation_not_found"`. That is not a verdict and not a counterfeit finding.
 
 ## Human path
 

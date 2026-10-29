@@ -2,6 +2,8 @@
 // Products and prices are pre-created in the Stripe dashboard.
 // priceId values are LIVE; keep in sync with Stripe.
 //
+// 2026-10-19: qron_launch_annual $190/yr (price_1USNoSGqTruSqV8ThTIW7Ej8),
+// 1,200 generations. The other catalogue rows stay in this file.
 // 2026-10-06: homepage paid product is starter $29. dpp_readiness stays
 // listed as EU DPP Workspace, not an audit. Price id unchanged.
 // Theater stays unlisted. Studio stays unlisted until a hard cap exists.
@@ -12,6 +14,7 @@ export type PlanId =
   | "starter"
   | "creator"
   | "qron_launch"
+  | "qron_launch_annual"
   | "studio"
   | "business"
   | "theater_1"
@@ -21,7 +24,10 @@ export type PlanId =
   | "strainchain_farm"
   | "musa_claim_file"
   | "musa_audit_bundle"
-  | "enterprise_compliance";
+  | "enterprise_compliance"
+  | "battery_gap_report"
+  | "battery_gap_report_extra"
+  | "gov_provenance_pilot";
 
 export interface Plan {
   id: PlanId;
@@ -39,6 +45,10 @@ export interface Plan {
   highlighted?: boolean;
   brand?: "qron" | "strainchain" | "musa";
   listed?: boolean;
+  /** Stripe Checkout adjustable quantity range (line_items[0][adjustable_quantity]). */
+  adjustable_quantity?: { minimum: number; maximum: number };
+  /** Where the gated checkout returns the buyer (path on GATED_CHECKOUT_ORIGIN). */
+  return_path?: string;
 }
 
 export const PLANS: Plan[] = [
@@ -91,13 +101,34 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "pro",
     brand: "qron",
-    listed: true,
+    listed: false,
     features: [
       "100 generations / month",
       "Designed for AuthiChain signed verification (in development)",
       "Cancel any time",
     ],
-    cta: "Start Launch $19/mo",
+    cta: "See pricing",
+  },
+  {
+    id: "qron_launch_annual",
+    name: "QRON Launch Annual",
+    price: 190,
+    price_suffix: "/yr",
+    description:
+      "1,200 AI QR generations (100/mo equivalent). Two months free vs monthly. Cancel any time.",
+    generations: 1200,
+    stripe_price_id: "price_1USNoSGqTruSqV8ThTIW7Ej8",
+    stripe_mode: "subscription",
+    tier: "pro",
+    brand: "qron",
+    listed: false,
+    features: [
+      "1,200 generations per year",
+      "Two months free vs $19/mo",
+      "Designed for AuthiChain signed verification (in development)",
+      "Cancel any time",
+    ],
+    cta: "See pricing",
   },
   {
     id: "creator",
@@ -273,11 +304,67 @@ export const PLANS: Plan[] = [
     ],
     cta: "Buy the audit bundle",
   },
+  // 2026-10-16 (Zac approved RES-34 prices). Unlisted: sold from
+  // /battery-passport and /made-in-america via /checkout/<id>, not /pricing.
+  {
+    id: "battery_gap_report",
+    name: "EU Battery Passport written gap report",
+    price: 950,
+    price_suffix: " first model",
+    description:
+      "Written readiness assessment of one battery model against Annex XIII, in 10 business days. Readiness only: not a conformity assessment, not legal advice, not an issued passport.",
+    generations: 0,
+    stripe_price_id: "price_1UREvgGqTruSqV8TMMYXVF69",
+    stripe_mode: "payment",
+    tier: "pro",
+    listed: false,
+    return_path: "/battery-passport",
+    features: [
+      "Written gap report for one battery model",
+      "Delivered in 10 business days",
+      "Readiness only, not legal advice",
+    ],
+    cta: "Order the gap report — $950",
+  },
+  {
+    id: "battery_gap_report_extra",
+    name: "EU Battery Passport gap report — extra model",
+    price: 350,
+    price_suffix: " per extra model",
+    description:
+      "Each additional battery model in the written gap report. Readiness only: not a conformity assessment, not legal advice, not an issued passport.",
+    generations: 0,
+    stripe_price_id: "price_1UREviGqTruSqV8T04Pr9DR1",
+    stripe_mode: "payment",
+    tier: "pro",
+    listed: false,
+    adjustable_quantity: { minimum: 1, maximum: 20 },
+    return_path: "/battery-passport",
+    features: ["One extra battery model per unit", "Choose 1 to 20 at checkout"],
+    cta: "Add a model — $350",
+  },
+  {
+    id: "gov_provenance_pilot",
+    name: "Federal provenance pilot (60 days)",
+    price: 7500,
+    price_suffix: " fixed",
+    description:
+      "60-day fixed-price provenance pilot for federal buyers. Not legal advice.",
+    generations: 0,
+    stripe_price_id: "price_1UREvjGqTruSqV8TzUZ4fxya",
+    stripe_mode: "payment",
+    tier: "enterprise",
+    listed: false,
+    return_path: "/made-in-america",
+    features: ["60-day pilot", "Fixed price"],
+    cta: "Start the pilot — $7,500",
+  },
 ];
 
 export const PUBLIC_PLAN_IDS = [
   "free",
   "qron_launch",
+  "qron_launch_annual",
   "starter",
   "creator",
   "dpp_readiness",
@@ -368,6 +455,7 @@ export const PLAN_CREDITS: Record<PlanId, number> = {
   starter: 100,
   creator: 500,
   qron_launch: 100,
+  qron_launch_annual: 1200,
   studio: 2000,
   business: 999999,
   theater_1: 5000,
@@ -378,6 +466,9 @@ export const PLAN_CREDITS: Record<PlanId, number> = {
   musa_claim_file: 0,
   musa_audit_bundle: 0,
   enterprise_compliance: 0,
+  battery_gap_report: 0,
+  battery_gap_report_extra: 0,
+  gov_provenance_pilot: 0,
 };
 
 export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
@@ -385,6 +476,7 @@ export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
   starter: "pro",
   creator: "pro",
   qron_launch: "pro",
+  qron_launch_annual: "pro",
   studio: "pro",
   business: "enterprise",
   theater_1: "enterprise",
@@ -395,6 +487,9 @@ export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
   musa_claim_file: "pro",
   musa_audit_bundle: "pro",
   enterprise_compliance: "enterprise",
+  battery_gap_report: "pro",
+  battery_gap_report_extra: "pro",
+  gov_provenance_pilot: "enterprise",
 };
 
 /**

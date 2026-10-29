@@ -24,11 +24,13 @@ async function keys() {
   const pair = await crypto.subtle.generateKey(
     { name: "ECDSA", namedCurve: "P-256" },
     true,
-    ["sign", "verify"],
+    ["sign", "verify"]
   );
   return {
     pair,
-    publicKey: JSON.stringify(await crypto.subtle.exportKey("jwk", pair.publicKey)),
+    publicKey: JSON.stringify(
+      await crypto.subtle.exportKey("jwk", pair.publicKey)
+    ),
   };
 }
 
@@ -36,7 +38,7 @@ async function sign(value: string, privateKey: CryptoKey): Promise<string> {
   const sig = await crypto.subtle.sign(
     { name: "ECDSA", hash: { name: "SHA-256" } },
     privateKey,
-    new TextEncoder().encode(value),
+    new TextEncoder().encode(value)
   );
   return b64(new Uint8Array(sig));
 }
@@ -61,7 +63,7 @@ async function signedFixtures() {
   };
   const attestationSignature = await sign(
     canonicalizeAgentIdentityAttestation(attestationBase),
-    issuer.pair.privateKey,
+    issuer.pair.privateKey
   );
   const attestation: AgentIdentityAttestation = {
     ...attestationBase,
@@ -91,15 +93,19 @@ async function signedFixtures() {
   };
   const message: SignedAgentMessage<{ sku: string }> = {
     ...base,
-    signature: await sign(canonicalizeAgentMessage(base), agent.pair.privateKey),
+    signature: await sign(
+      canonicalizeAgentMessage(base),
+      agent.pair.privateKey
+    ),
   };
   return { agent, issuer, attestation, resolver, base, message, now };
 }
 
 describe("AuthiChain Phase 2 Agent Trust", () => {
   it("canonicalizes object keys deterministically", () => {
-    expect(canonicalizeJson({ z: 1, a: { y: 2, b: true } }))
-      .toBe('{"a":{"b":true,"y":2},"z":1}');
+    expect(canonicalizeJson({ z: 1, a: { y: 2, b: true } })).toBe(
+      '{"a":{"b":true,"y":2},"z":1}'
+    );
   });
 
   it("canonicalizes -0 and rejects non-finite numbers", () => {
@@ -123,7 +129,11 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
   it("accepts a valid issuer-signed, agent-signed message", async () => {
     const { resolver, message, now } = await signedFixtures();
     const replayStore = new MemoryAgentReplayStore();
-    const result = await verifyAgentMessage(message, { resolver, replayStore, now });
+    const result = await verifyAgentMessage(message, {
+      resolver,
+      replayStore,
+      now,
+    });
     expect(result.valid).toBe(true);
     expect(result.reasons).toEqual([]);
     expect(result.capabilities).toEqual(["VERIFY_ATTESTATION"]);
@@ -149,7 +159,10 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
 
   it("fails closed when issuer key is missing", async () => {
     const fixture = await signedFixtures();
-    const resolver = { ...fixture.resolver, getIssuerPublicKey: async () => null };
+    const resolver = {
+      ...fixture.resolver,
+      getIssuerPublicKey: async () => null,
+    };
     const result = await verifyAgentMessage(fixture.message, {
       resolver,
       replayStore: new MemoryAgentReplayStore(),
@@ -161,8 +174,14 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
 
   it("fails closed when issuer signature is tampered", async () => {
     const fixture = await signedFixtures();
-    const tampered = { ...fixture.attestation, signature: fixture.attestation.signature.slice(0, -2) + "AA" };
-    const resolver: AgentIdentityResolver = { ...fixture.resolver, resolve: async () => tampered };
+    const tampered = {
+      ...fixture.attestation,
+      signature: fixture.attestation.signature.slice(0, -2) + "AA",
+    };
+    const resolver: AgentIdentityResolver = {
+      ...fixture.resolver,
+      resolve: async () => tampered,
+    };
     const result = await verifyAgentMessage(fixture.message, {
       resolver,
       replayStore: new MemoryAgentReplayStore(),
@@ -170,6 +189,18 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
     });
     expect(result.valid).toBe(false);
     expect(result.reasons).toContain("ISSUER_SIGNATURE_INVALID");
+  });
+
+  it("fails closed for a revoked attestation", async () => {
+    const fixture = await signedFixtures();
+    const resolver = { ...fixture.resolver, isRevoked: async () => true };
+    const result = await verifyAgentMessage(fixture.message, {
+      resolver,
+      replayStore: new MemoryAgentReplayStore(),
+      now: fixture.now,
+    });
+    expect(result.valid).toBe(false);
+    expect(result.reasons).toContain("ATTESTATION_REVOKED");
   });
 
   it("fails closed for a revoked issuer", async () => {
@@ -186,20 +217,89 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
 
   it("enforces lifecycle precedence and impossible ordering", async () => {
     const fixture = await signedFixtures();
-    expect(createAgentPassport(fixture.attestation, true, fixture.now).status).toBe("REVOKED");
-    const future = { ...fixture.attestation, effective_at: "2026-10-09T00:00:00.000Z" };
-    expect(createAgentPassport(future, false, fixture.now).status).toBe("NOT_YET_EFFECTIVE");
-    const expired = { ...fixture.attestation, expires_at: "2026-10-07T00:00:00.000Z" };
-    expect(createAgentPassport(expired, false, fixture.now).status).toBe("EXPIRED");
+    expect(
+      createAgentPassport(fixture.attestation, true, fixture.now).status
+    ).toBe("REVOKED");
+    const future = {
+      ...fixture.attestation,
+      effective_at: "2026-10-09T00:00:00.000Z",
+    };
+    expect(createAgentPassport(future, false, fixture.now).status).toBe(
+      "NOT_YET_EFFECTIVE"
+    );
+    const expired = {
+      ...fixture.attestation,
+      expires_at: "2026-10-07T00:00:00.000Z",
+    };
+    expect(createAgentPassport(expired, false, fixture.now).status).toBe(
+      "EXPIRED"
+    );
     expect(() => canonicalizeAgentIdentityAttestation(expired)).not.toThrow();
+  });
+
+  it("fails closed when the attestation is expired", async () => {
+    const fixture = await signedFixtures();
+    const attestationBase = {
+      ...fixture.attestation,
+      expires_at: "2026-10-08T18:30:00.000Z",
+    };
+    delete (attestationBase as { signature?: string }).signature;
+    const signature = await sign(
+      canonicalizeAgentIdentityAttestation(attestationBase),
+      fixture.issuer.pair.privateKey
+    );
+    const attestation = { ...attestationBase, signature };
+    const result = await verifyAgentMessage(fixture.message, {
+      resolver: { ...fixture.resolver, resolve: async () => attestation },
+      replayStore: new MemoryAgentReplayStore(),
+      now: fixture.now,
+    });
+    expect(result.valid).toBe(false);
+    expect(result.reasons).toContain("ATTESTATION_EXPIRED");
+  });
+
+  it("fails closed when the message is expired", async () => {
+    const fixture = await signedFixtures();
+    const result = await verifyAgentMessage(fixture.message, {
+      resolver: fixture.resolver,
+      replayStore: new MemoryAgentReplayStore(),
+      now: new Date("2026-10-08T19:10:00.000Z"),
+    });
+    expect(result.valid).toBe(false);
+    expect(result.reasons).toContain("MESSAGE_EXPIRED");
+  });
+
+  it("fails closed when the policy version does not match the attestation", async () => {
+    const fixture = await signedFixtures();
+    const base = { ...fixture.base, policy_version: "1999.0" };
+    const message = {
+      ...base,
+      signature: await sign(
+        canonicalizeAgentMessage(base),
+        fixture.agent.pair.privateKey
+      ),
+    };
+    const result = await verifyAgentMessage(message, {
+      resolver: fixture.resolver,
+      replayStore: new MemoryAgentReplayStore(),
+      now: fixture.now,
+    });
+    expect(result.valid).toBe(false);
+    expect(result.reasons).toContain("POLICY_VERSION_MISMATCH");
   });
 
   it("rejects an ungranted capability", async () => {
     const fixture = await signedFixtures();
-    const base = { ...fixture.base, capabilities: ["PROPOSE_LIFECYCLE_ACTION"] as const };
+    const base = {
+      ...fixture.base,
+      capabilities: ["PROPOSE_LIFECYCLE_ACTION"] as const,
+    };
     const message = {
       ...base,
-      signature: await sign(canonicalizeAgentMessage(base as never), fixture.agent.pair.privateKey),
+      signature: await sign(
+        canonicalizeAgentMessage(base as never),
+        fixture.agent.pair.privateKey
+      ),
     } as SignedAgentMessage;
     const result = await verifyAgentMessage(message, {
       resolver: fixture.resolver,
@@ -273,12 +373,18 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
     expect(result.valid).toBe(false);
     const validBase = { ...fixture.message, message_id: "msg:1002" };
     const valid = await verifyAgentMessage(
-      { ...validBase, signature: await sign(canonicalizeAgentMessage(validBase), fixture.agent.pair.privateKey) },
+      {
+        ...validBase,
+        signature: await sign(
+          canonicalizeAgentMessage(validBase),
+          fixture.agent.pair.privateKey
+        ),
+      },
       {
         resolver: fixture.resolver,
         replayStore: store,
         now: fixture.now,
-      },
+      }
     );
     expect(valid.valid).toBe(true);
   });
@@ -290,7 +396,7 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
       resolver: fixture.resolver,
       replayStore: new MemoryAgentReplayStore(),
       now: fixture.now,
-      auditSink: { emit: (event) => events.push(event) },
+      auditSink: { emit: event => events.push(event) },
     });
     const serialized = JSON.stringify(events);
     expect(serialized).toContain(fixture.message.message_id);
