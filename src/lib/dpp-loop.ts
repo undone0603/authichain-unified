@@ -262,7 +262,22 @@ export function stallOf(
 export function isDemoVisit(rows: LoopEventRow[]): boolean {
   return rows.some(row => {
     const meta = row.metadata;
-    return meta?.is_demo === true || meta?.demo === true;
+    if (
+      meta?.is_demo === true || meta?.demo === true ||
+      meta?.is_demo === "true" || meta?.demo === "true"
+    ) return true;
+
+    // Older Stripe smoke sessions omitted is_demo, including the $10 founder
+    // payment and a $0 DPP activation. These are not customer revenue.
+    if (/^(?:dpp_smoke_|smoke_check_|paid_smoke_)/i.test(
+      row.prospect_id?.trim() ?? ""
+    )) return true;
+
+    // Stripe marks $0 completed checkouts "paid" even without collecting money.
+    // Only the payment stage is authoritative for this amount classification.
+    const total = meta?.amount_total;
+    return stageOf(row) === "payment_succeeded" &&
+      (total === 0 || total === "0");
   });
 }
 
