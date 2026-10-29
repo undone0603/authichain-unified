@@ -184,6 +184,18 @@ describe("classifyRevenue", () => {
     expect(verdict.reason).toContain("buyer@example.com");
   });
 
+  it("does not count zero-dollar paid-status charges as customer revenue", () => {
+    const verdict = classifyRevenue(
+      snap({
+        charges: [
+          { id: "ch_free", amount: 0, paid: true, email: "buyer@example.com" },
+        ],
+      }),
+      founders
+    );
+    expect(verdict.qualifying).toBe(false);
+  });
+
   it("does not treat a paid charge with no email as a stranger", () => {
     const verdict = classifyRevenue(
       snap({
