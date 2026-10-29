@@ -111,12 +111,12 @@ export async function activateDppMerchant(opts: {
   if (linePriceId && !isDppOffer(md, linePriceId)) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
-  if (!isDppOffer(md) && session.amount_total !== 29900) {
+  if (!isDppOffer(md, linePriceId)) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
   // DPP metadata is not cash. Demo, $0, and the founder $10 session must not
   // write merchant_activated. Only a paid 29900-cent USD session can.
-  const currency = String(session.currency || "usd").toLowerCase();
+  const currency = String(session.currency || "").toLowerCase();
   if (
     isDppDemoSession(md) ||
     session.amount_total !== 29900 ||

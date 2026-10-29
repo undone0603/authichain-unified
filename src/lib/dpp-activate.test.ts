@@ -151,6 +151,66 @@ describe("activateDppMerchant", () => {
     expect(from).not.toHaveBeenCalled();
   });
 
+  it.each([undefined, "eur"])(
+    "rejects a paid $299 DPP session with currency %s",
+    async (currency) => {
+      retrieve.mockResolvedValueOnce({
+        payment_status: "paid",
+        status: "complete",
+        amount_total: 29900,
+        currency,
+        metadata: { plan: "dpp_readiness" },
+        line_items: {
+          data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+        },
+      });
+      const from = vi.fn();
+      const { activateDppMerchant } = await import("./dpp-activate");
+      const result = await activateDppMerchant({
+        body: {
+          session_id: "cs_wrong_currency",
+          categories: "a",
+          markets: "b",
+          labeling: "c",
+        },
+        stripeSecretKey: "sk_test",
+        supabase: { from },
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.status).toBe(402);
+      expect(from).not.toHaveBeenCalled();
+    }
+  );
+
+  it("rejects a paid $299 session with no DPP offer identity", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      currency: "usd",
+      metadata: {},
+      line_items: { data: [{}] },
+    });
+    const from = vi.fn();
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_unknown_product",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(400);
+      expect(result.error).toMatch(/Not a DPP workspace session/);
+    }
+    expect(from).not.toHaveBeenCalled();
+  });
+
   it("returns 500 when the activation row is not stored", async () => {
     retrieve.mockResolvedValueOnce({
       payment_status: "paid",
@@ -239,6 +299,7 @@ describe("activateDppMerchant", () => {
       payment_status: "paid",
       status: "complete",
       amount_total: 29900,
+      currency: "usd",
       metadata: { plan: "dpp_readiness", visit_id: "visit_1", source: "seo" },
       customer_details: { email: "buyer@example.com" },
       line_items: {
