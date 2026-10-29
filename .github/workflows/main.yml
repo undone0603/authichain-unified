@@ -2,7 +2,9 @@ name: CI Main
 
 # Required quality gate: install, typecheck, lint, test, production build.
 # Schema/AgentZ extras live in ci.yml so this job is not duplicated there.
-# Concurrency: per-commit runs on main are kept (CFA-123/PM-328); no cancel-in-progress. Deploys are dispatched manually by CF Deploy, who confirms the self-hosted runner is idle before each dispatch.
+# Concurrency: one group per PR branch and one group for main. A newer
+# commit cancels the superseded CI Main run so the runner is not stacked
+# behind stale SHAs. Deploy workflows keep cancel-in-progress false (PM-328).
 
 on:
   push:
@@ -17,20 +19,14 @@ on:
   workflow_dispatch:
 
 concurrency:
-  # Kept as-is (not ci-<workflow>-<ref> + cancel true): check-deploy-invariants
-  # enforces CFA-123/PM-328 on the required "Main quality gate" workflow.
-  # PRs: one active CI Main run per source branch; a newer commit supersedes
-  # an older run even when GitHub opened a new PR for the same feature branch.
-  # Pushes to main: one group PER COMMIT (CFA-123). GitHub keeps at most one
-  # pending run per group and cancels the older pending one when a newer run
-  # queues, whatever cancel-in-progress says; with a shared main group that
-  # cancelled the 5cd3f6de run at 9:22 AM ET on Oct 9 before it started.
-  # Rollback: restore `group: ci-main-${{ github.head_ref || github.ref }}`.
-  group: ci-main-${{ github.event_name == 'push' && github.sha || github.head_ref || github.ref }}
-  # Only PR runs are superseded; a push to main must never cancel a running
-  # deploy/check mid-way (PM-328). With per-commit push groups, main runs
-  # never queue behind or cancel each other.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # PRs: one active CI Main run per source branch.
+  # Pushes to main: one shared group so only the tip runs. check-deploy-invariants
+  # requires this (no github.sha in the group, cancel-in-progress: true).
+  # Deploy workflows stay on cancel-in-progress false (PM-328).
+  # Rollback: group: ci-main-${{ github.event_name == 'push' && github.sha || github.head_ref || github.ref }}
+  # and cancel-in-progress: ${{ github.event_name == 'pull_request' }}.
+  group: ci-main-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 # Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
 # Flip to 'false' once the runner is verified; the skip step warns visibly.
@@ -236,11 +232,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      # Next build is ~218s. The baseline lists roots Next does not compile
+      # (.github, docs, workers). A diff that stays inside them skips the
+      # build. Any other path, a missing base, or workflow_dispatch still
+      # runs pnpm build. A bad baseline fails this step.
+      - name: Build baseline
+        id: baseline
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/ci/build-baseline.mjs --ci
+
       # Retries live in scripts/build-with-retry.sh, which holds the
       # machine-wide build lock for the whole attempt loop. A second
       # invocation here would drop that lock during the pause.
       # 4096 MB heap: next build --webpack aborted with exit 134 under ~2 GB.
       - name: Production build
+        if: steps.baseline.outputs.skip != 'true'
         env:
           NODE_OPTIONS: --max-old-space-size=4096
         run: pnpm build

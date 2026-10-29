@@ -32,7 +32,7 @@ jobs:
 
   deploy:
     needs: secret-scan
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 20
 
     env:
