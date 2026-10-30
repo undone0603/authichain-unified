@@ -107,7 +107,8 @@ export default defineConfig({
         replacement:
           path.resolve(templateRoot, "src", "lib", "genetics") + "$1",
       },
-      // Next route deps (stripe webhook, agent-verify). None of these
+      // Next webhook route deps (src/app/api/stripe/webhook/route.ts), plus
+      // founder-alerts (src/lib/dreamdash/notify-draft.ts). None of these
       // basenames exist under client/src/lib, so no client test can be
       // importing them through the catch-all today; the carve-out only fixes
       // resolution for src/ consumers.

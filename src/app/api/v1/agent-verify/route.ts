@@ -95,16 +95,9 @@ export async function POST(request: Request) {
   );
   const proof = parsePaymentHeader(paymentHeader);
   if (!proof) {
-    const raw = (await request.json().catch(() => ({}))) as unknown;
-    const input =
-      raw && typeof raw === "object" && !Array.isArray(raw)
-        ? (raw as Record<string, unknown>)
-        : {};
-    if (Object.keys(input).length > 0) {
-      const early = parseSealRequest(input);
-      if (!early.ok) {
-        return NextResponse.json(early.body, { status: early.status });
-      }
+    const early = unpaidSealRefusal(input);
+    if (early) {
+      return NextResponse.json(early.body, { status: early.status });
     }
     return NextResponse.json(required.v2, {
       status: 402,
