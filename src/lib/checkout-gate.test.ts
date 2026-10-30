@@ -494,7 +494,7 @@ describe("tryHandleGatedCheckout — POST", () => {
 });
 
 describe("CFA-460: /checkout/starter confirm copy", () => {
-  it("shows the RES-86c option C sentence and no Launch $19 copy", async () => {
+  it("shows the Research PASS FREE-PREVIEW sentence and no Launch $19 copy", async () => {
     const res = await tryHandleGatedCheckout(
       new Request("https://authichain.com/checkout/starter"),
       {}
@@ -503,21 +503,25 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
     expect(res!.status).toBe(200);
     const html = await res!.text();
     expect(html).toContain(
-      "100 AI QR generations for $29, paid once. No subscription, and one-time pack credits never expire."
+      "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits."
     );
     expect(html).not.toContain("$19");
     expect(html).not.toContain("qron_launch");
     expect(html).not.toContain("Launch subscription");
-    expect(html).not.toContain("Starting a monthly plan replaces");
-    expect(html).not.toContain("Pack credits never expire.");
+    expect(html).not.toContain("never expire");
+    expect(html).not.toContain("no expiry date");
   });
 
-  it("plans.ts Starter pricing copy uses the Advisor C qualifier", () => {
-    expect(planById("starter")?.description).toContain(
-      "One-time pack credits (Starter and Creator) never expire."
+  it("plans.ts Starter pricing copy uses the Advisor-GO replace-only sentence", () => {
+    expect(planById("starter")?.description).toBe(
+      "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits."
     );
     expect(planById("starter")?.features).toContain(
-      "One-time pack credits (Starter and Creator) never expire"
+      "Starting a monthly plan replaces unused pack credits"
+    );
+    expect(planById("starter")?.description).not.toContain("never expire");
+    expect(planById("starter")?.features?.join(" ")).not.toContain(
+      "never expire"
     );
   });
 });

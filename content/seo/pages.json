@@ -11399,6 +11399,14 @@
     }
   },
   {
+    "slug": "product-registry-404-unknown-serial-number-counterfeit-check",
+    "keyword": "product registry 404 unknown serial number counterfeit check",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Product Registry 404 Unknown Serial Number | AuthiChain",
+    "metaDescription": "A registry that answers a scan of an unknown serial number with 404 is telling you the item has no record; the AuthiChain specification requires this, and.",
+    "h1": "Product Registry 404 Unknown Serial Number Counterfeit Check",
+    "bodyHtml": "<p>A registry that answers a scan of an unknown serial number with 404 is telling you the item has no record; the AuthiChain specification requires this, and forbids returning a synthesised or empty-but-successful record in its place.</p><h2>Why AuthiChain</h2><ul><li>Section 6 of the spec requires a registry to return 404 for unknown items, so a counterfeit label carrying an invented serial cannot come back looking like a valid empty passport</li><li>Records are served at a permanent URL without authentication, so a scan result can be reproduced by anyone with the link</li><li>A 404 shows that no record exists at that identifier; a duplicated genuine serial on a copied label still resolves, which is why the signed record and its events are what you read</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does a 200 response mean an item is genuine?</h3><p>No. It means a record exists at that URL. Run the verifier on the record to learn who signed it, and compare its fields with the physical item.</p><h3>Can a counterfeiter copy a real serial?</h3><p>Yes. A label can be copied, and a registry cannot see the physical item. A signature proves authorship of the record, not that the label sits on the right goods.</p>",
     "slug": "did-key-issuer-key-rotation-verifiable-credential",
     "keyword": "did:key issuer key rotation verifiable credential",
     "brand": "AuthiChain",
@@ -11412,12 +11420,15 @@
       "@graph": [
         {
           "@type": "Service",
+          "name": "AuthiChain — Product Registry 404 Unknown Serial Number Counterfeit Check",
           "name": "AuthiChain — DID:Key Issuer Key Rotation Verifiable Credential",
           "provider": {
             "@type": "Organization",
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
+          "description": "A registry that answers a scan of an unknown serial number with 404 is telling you the item has no record; the AuthiChain specification requires this, and forbids returning a synthesised or empty-but-successful record in its place.",
+          "url": "https://authichain.com/p/product-registry-404-unknown-serial-number-counterfeit-check"
           "description": "A did:key identifier is the public key itself, so an issuer cannot rotate the key behind an identifier: a new key means a new did:key, and records signed under the old one keep verifying against the old one.",
           "url": "https://authichain.com/p/did-key-issuer-key-rotation-verifiable-credential"
         },
@@ -11433,6 +11444,8 @@
             {
               "@type": "ListItem",
               "position": 2,
+              "name": "Product Registry 404 Unknown Serial Number Counterfeit Check",
+              "item": "https://authichain.com/p/product-registry-404-unknown-serial-number-counterfeit-check"
               "name": "DID:Key Issuer Key Rotation Verifiable Credential",
               "item": "https://authichain.com/p/did-key-issuer-key-rotation-verifiable-credential"
             }
@@ -11443,6 +11456,10 @@
           "mainEntity": [
             {
               "@type": "Question",
+              "name": "Does a 200 response mean an item is genuine?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It means a record exists at that URL. Run the verifier on the record to learn who signed it, and compare its fields with the physical item."
               "name": "Does a rotated key invalidate old records?",
               "acceptedAnswer": {
                 "@type": "Answer",
@@ -11451,6 +11468,26 @@
             },
             {
               "@type": "Question",
+              "name": "Can a counterfeiter copy a real serial?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. A label can be copied, and a registry cannot see the physical item. A signature proves authorship of the record, not that the label sits on the right goods."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verify-product-records-in-a-ci-pipeline-exit-code",
+    "keyword": "verify product records in a ci pipeline exit code",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verify Product Records In A Ci Pipeline Exit | AuthiChain",
+    "metaDescription": "The authichain-verify command line exits 0 for verified and valid-unanchored, 1 for invalid and 2 for a usage error, and prints the verdict, the reasons and.",
+    "h1": "Verify Product Records In A Ci Pipeline Exit Code",
+    "bodyHtml": "<p>The authichain-verify command line exits 0 for verified and valid-unanchored, 1 for invalid and 2 for a usage error, and prints the verdict, the reasons and each check as JSON, so a pipeline can gate on a record without parsing prose.</p><h2>Why AuthiChain</h2><ul><li>Run npx authichain-verify record.json, or add an anchor file as a second argument to check the record hash against it</li><li>The verifier has no dependencies, needs Node 18 or later, and makes no network call, so it runs in a build with no outbound access</li><li>Set ALLOW_TESTNET=1 only in test pipelines; without it a testnet anchor is not accepted as an anchor</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does exit code 0 mean the record is anchored?</h3><p>No. Exit 0 covers both verified and valid-unanchored. Read the verdict field in the JSON output if your pipeline requires an anchor.</p><h3>Does the CLI confirm the anchor transaction on-chain?</h3><p>No. It checks that the anchor carries the record hash and is well formed. Look up the transaction hash on a block explorer for that network to confirm it exists.</p>",
               "name": "Can I keep one stable issuer identity across rotations?",
               "acceptedAnswer": {
                 "@type": "Answer",
@@ -11476,12 +11513,15 @@
       "@graph": [
         {
           "@type": "Service",
+          "name": "AuthiChain — Verify Product Records In A Ci Pipeline Exit Code",
           "name": "AuthiChain — Verifiable Credential Proofvalue Multibase Base58btc Ed25519",
           "provider": {
             "@type": "Organization",
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
+          "description": "The authichain-verify command line exits 0 for verified and valid-unanchored, 1 for invalid and 2 for a usage error, and prints the verdict, the reasons and each check as JSON, so a pipeline can gate on a record without parsing prose.",
+          "url": "https://authichain.com/p/verify-product-records-in-a-ci-pipeline-exit-code"
           "description": "In an AuthiChain record, proofValue is an Ed25519 signature written as a multibase string: a leading z marks base58btc encoding, and the bytes after decoding are the 64-byte signature defined in RFC 8032.",
           "url": "https://authichain.com/p/verifiable-credential-proofvalue-multibase-base58btc-ed25519"
         },
@@ -11497,6 +11537,8 @@
             {
               "@type": "ListItem",
               "position": 2,
+              "name": "Verify Product Records In A Ci Pipeline Exit Code",
+              "item": "https://authichain.com/p/verify-product-records-in-a-ci-pipeline-exit-code"
               "name": "Verifiable Credential Proofvalue Multibase Base58btc Ed25519",
               "item": "https://authichain.com/p/verifiable-credential-proofvalue-multibase-base58btc-ed25519"
             }
@@ -11507,6 +11549,10 @@
           "mainEntity": [
             {
               "@type": "Question",
+              "name": "Does exit code 0 mean the record is anchored?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Exit 0 covers both verified and valid-unanchored. Read the verdict field in the JSON output if your pipeline requires an anchor."
               "name": "How do I check a proofValue without our verifier?",
               "acceptedAnswer": {
                 "@type": "Answer",
@@ -11515,6 +11561,26 @@
             },
             {
               "@type": "Question",
+              "name": "Does the CLI confirm the anchor transaction on-chain?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It checks that the anchor carries the record hash and is well formed. Look up the transaction hash on a block explorer for that network to confirm it exists."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "detect-a-tampered-product-record-sha-256-hash-mismatch",
+    "keyword": "detect a tampered product record sha-256 hash mismatch",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Detect A Tampered Product Record Sha-256 Hash | AuthiChain",
+    "metaDescription": "Change any field of a signed AuthiChain record and two checks can fail: the Ed25519 signature no longer matches the canonical bytes, and the SHA-256 of those.",
+    "h1": "Detect A Tampered Product Record Sha-256 Hash Mismatch",
+    "bodyHtml": "<p>Change any field of a signed AuthiChain record and two checks can fail: the Ed25519 signature no longer matches the canonical bytes, and the SHA-256 of those bytes no longer equals the recordHash in the anchor.</p><h2>Why AuthiChain</h2><ul><li>The signed payload is the record with proofValue removed, canonicalised under RFC 8785, so two verifiers derive identical bytes from the same record</li><li>The signature check needs only the record, because the issuer key is embedded in the did:key identifier</li><li>The hash check needs the anchor object, and a mismatch makes the verdict invalid rather than a warning</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can someone edit a record and re-sign it?</h3><p>Yes, with their own key. The result verifies against that key, which is a different issuer DID. Tamper detection tells you the record is unchanged since the named issuer signed it; you still decide whether you trust that issuer.</p><h3>Does an anchor stop a record from being edited?</h3><p>No. It makes an edit detectable: the edited record hashes to a different value than the one committed to the ledger.</p>",
               "name": "Does a valid proofValue show the record is true?",
               "acceptedAnswer": {
                 "@type": "Answer",
@@ -11540,12 +11606,15 @@
       "@graph": [
         {
           "@type": "Service",
+          "name": "AuthiChain — Detect A Tampered Product Record Sha-256 Hash Mismatch",
           "name": "AuthiChain — ESPR Unique Operator Identifier Facility Identifier ISO/IEC 15459",
           "provider": {
             "@type": "Organization",
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
+          "description": "Change any field of a signed AuthiChain record and two checks can fail: the Ed25519 signature no longer matches the canonical bytes, and the SHA-256 of those bytes no longer equals the recordHash in the anchor.",
+          "url": "https://authichain.com/p/detect-a-tampered-product-record-sha-256-hash-mismatch"
           "description": "Under the ESPR, a digital product passport is linked to a unique product identifier, and the regulation also calls for unique operator and facility identifiers; the text points to ISO/IEC 15459 for their structure, and CEN/CENELEC EN 18219:2026 sets requirements for all three.",
           "url": "https://authichain.com/p/espr-unique-operator-identifier-facility-identifier-iso-iec-15459"
         },
@@ -11561,6 +11630,8 @@
             {
               "@type": "ListItem",
               "position": 2,
+              "name": "Detect A Tampered Product Record Sha-256 Hash Mismatch",
+              "item": "https://authichain.com/p/detect-a-tampered-product-record-sha-256-hash-mismatch"
               "name": "ESPR Unique Operator Identifier Facility Identifier ISO/IEC 15459",
               "item": "https://authichain.com/p/espr-unique-operator-identifier-facility-identifier-iso-iec-15459"
             }
@@ -11571,6 +11642,10 @@
           "mainEntity": [
             {
               "@type": "Question",
+              "name": "Can someone edit a record and re-sign it?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, with their own key. The result verifies against that key, which is a different issuer DID. Tamper detection tells you the record is unchanged since the named issuer signed it; you still decide whether you trust that issuer."
               "name": "Is a GTIN the same as a unique product identifier?",
               "acceptedAnswer": {
                 "@type": "Answer",
@@ -11579,6 +11654,26 @@
             },
             {
               "@type": "Question",
+              "name": "Does an anchor stop a record from being edited?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It makes an edit detectable: the edited record hashes to a different value than the one committed to the ledger."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "caip-2-chain-identifier-polygon-137-eip155-bip122-anchor",
+    "keyword": "caip-2 chain identifier polygon:137 eip155 bip122 anchor",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Caip-2 Chain Identifier Polygon:137 Eip155 | AuthiChain",
+    "metaDescription": "CAIP-2 names a blockchain as namespace:reference, such as polygon:137, eip155:1 for Ethereum mainnet or bip122 followed by the first 32 characters of the.",
+    "h1": "Caip-2 Chain Identifier Polygon:137 Eip155 Bip122 Anchor",
+    "bodyHtml": "<p>CAIP-2 names a blockchain as namespace:reference, such as polygon:137, eip155:1 for Ethereum mainnet or bip122 followed by the first 32 characters of the Bitcoin genesis block hash, so an anchor states exactly which network it sits on.</p><h2>Why AuthiChain</h2><ul><li>The AuthiChain spec requires the chain field of every anchor to use CAIP-2 form, so the network cannot be inferred or assumed</li><li>A verifier uses the chain identifier to decide whether an anchor is on a mainnet or a testnet, and treats a testnet anchor as unanchored by default</li><li>The transaction hash must be well formed for the named chain: an EVM chain needs 64 hex characters, and a malformed value is rejected</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Why not just write the chain name?</h3><p>Names are ambiguous: several networks share a name across forks and test deployments. A namespace and reference pair identifies one network.</p><h3>Does the verifier look up the transaction on the chain?</h3><p>No. It validates the anchor offline. Confirming that the transaction exists is a separate step you do with an explorer or node for the named chain.</p>",
               "name": "Does a did:key replace an operator identifier?",
               "acceptedAnswer": {
                 "@type": "Answer",
