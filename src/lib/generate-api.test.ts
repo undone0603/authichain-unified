@@ -234,8 +234,9 @@ describe("handleGeneratePost", () => {
       label: "Starter Pack: 100 generations for $29, paid once",
     });
     expect(String(result.body.message)).toMatch(
-      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and one-time pack credits never expire\.$/
+      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription\. Starting a monthly plan replaces unused pack credits\.$/
     );
+    expect(String(result.body.message)).not.toContain("never expire");
     expect(generateImage).not.toHaveBeenCalled();
   });
 
@@ -253,8 +254,9 @@ describe("handleGeneratePost", () => {
     expect(result.status).toBe(401);
     expect(result.body.code).toBe("FREE_SAMPLE_PAUSED");
     expect(String(result.body.message)).toMatch(
-      /^Free samples are paused right now\./
+      /^Free samples are paused right now\. Try again later, or get Starter now: 100 generations for \$29, paid once\. No subscription\. Starting a monthly plan replaces unused pack credits\.$/
     );
+    expect(String(result.body.message)).not.toContain("never expire");
     expect(generateImage).not.toHaveBeenCalled();
   });
 
