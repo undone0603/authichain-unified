@@ -332,13 +332,13 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
       "/terms",
       "Terms of Service — AuthiChain",
       "https://authichain.com/terms",
-      "16 October 2026",
+      "30 October 2026",
     ],
     [
       "/terms/",
       "Terms of Service — AuthiChain",
       "https://authichain.com/terms",
-      "16 October 2026",
+      "30 October 2026",
     ],
   ] as const) {
     const res = await get(path);
