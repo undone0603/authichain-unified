@@ -808,9 +808,7 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain('name="company"');
     // First-dollar path leads Starter; passport + DPP remain as secondary buys.
     expect(body).toContain("Buy Starter Pack — $29");
-    expect(body).toContain(
-      'href="https://authichain.com/checkout/starter"'
-    );
+    expect(body).toContain('href="https://authichain.com/checkout/starter"');
     expect(body).toContain(
       'href="https://authichain.com/checkout/strainchain_passport"'
     );
@@ -1052,7 +1050,7 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     );
     expect(body).toContain("Try 5 free generations. No account, no card.");
     expect(body).toContain(
-      "100 generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof."
+      "100 generations for $29, paid once. No subscription, and one-time pack credits never expire. A scannable QR is not an authenticity proof."
     );
     expect(body).not.toContain("Launch at $19/mo");
     // CFA-460 release check: GET /generate has 0 hits for these.
@@ -1147,7 +1145,9 @@ describe("renderDynamicPage: /generate Living QR", () => {
     const res = await app.request("/generate", {}, makeEnv() as any);
     const body = await res.text();
     expect(body).toContain("var up=r.data.upgrade;");
-    expect(body).toContain("up.url.indexOf('https://authichain.com/checkout/starter')===0");
+    expect(body).toContain(
+      "up.url.indexOf('https://authichain.com/checkout/starter')===0"
+    );
     expect(body).toContain("a.id='sample-exhausted-starter'");
   });
 

@@ -234,7 +234,7 @@ describe("handleGeneratePost", () => {
       label: "Starter Pack: 100 generations for $29, paid once",
     });
     expect(String(result.body.message)).toMatch(
-      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and pack credits have no expiry date\. Starting a monthly plan replaces unused pack credits\.$/
+      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and one-time pack credits never expire\.$/
     );
     expect(generateImage).not.toHaveBeenCalled();
   });

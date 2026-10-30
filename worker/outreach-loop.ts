@@ -182,7 +182,10 @@ async function putQueue(env: OutreachEnv, emails: string[]) {
   );
 }
 
-async function getLead(env: OutreachEnv, email: string): Promise<OutreachLead | null> {
+async function getLead(
+  env: OutreachEnv,
+  email: string
+): Promise<OutreachLead | null> {
   const raw = await env.SESSIONS.get(LEAD_PREFIX + email.toLowerCase());
   if (!raw) return null;
   try {
@@ -194,7 +197,10 @@ async function getLead(env: OutreachEnv, email: string): Promise<OutreachLead | 
 
 async function putLead(env: OutreachEnv, lead: OutreachLead) {
   const email = lead.email.toLowerCase();
-  await env.SESSIONS.put(LEAD_PREFIX + email, JSON.stringify({ ...lead, email }));
+  await env.SESSIONS.put(
+    LEAD_PREFIX + email,
+    JSON.stringify({ ...lead, email })
+  );
 }
 
 async function getGmailAccessToken(env: OutreachEnv): Promise<string | null> {
@@ -255,7 +261,7 @@ function renderTemplate(lead: OutreachLead): { subject: string; body: string } {
     ``,
     `I'm Zac, founder of AuthiChain, a small company that builds product-authentication and Digital Product Passport tools.`,
     ``,
-    `If ${company} sells into the EU, or sells to brands that do, the $299 checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.`,
+    `If ${company} sells into the EU, or sells to brands that do, the $299 checkout opens an AuthiChain workspace with self-serve activation.`,
     ``,
     `Details: https://authichain.com/dpp?utm_source=email&utm_medium=autonomous&utm_campaign=dpp_outreach`,
     ``,
@@ -310,19 +316,30 @@ async function gmailSend(
     inReplyTo?: string;
     references?: string;
   }
-): Promise<{ ok: boolean; id?: string; threadId?: string; error?: string; auth?: boolean }> {
+): Promise<{
+  ok: boolean;
+  id?: string;
+  threadId?: string;
+  error?: string;
+  auth?: boolean;
+}> {
   const fromEmail = env.GMAIL_FROM_EMAIL;
   // Configuration problems fail every lead the same way, so they stop the
   // batch (`auth`) instead of marking each lead failed.
-  if (!fromEmail) return { ok: false, error: "GMAIL_FROM_EMAIL unset", auth: true };
+  if (!fromEmail)
+    return { ok: false, error: "GMAIL_FROM_EMAIL unset", auth: true };
   const address = env.MAILING_ADDRESS?.trim();
-  if (!address) return { ok: false, error: "mailing_address_not_configured", auth: true };
+  if (!address)
+    return { ok: false, error: "mailing_address_not_configured", auth: true };
   const replyTo = env.OUTREACH_REPLY_TO || fromEmail;
   const rendered = renderTemplate(lead);
   const subject = opts?.subject || rendered.subject;
   // A reply inside the recipient's own thread legitimately carries "Re:", so
   // only the body is checked then; everything else is checked in full.
-  const violations = checkClaims(opts?.inReplyTo ? "" : subject, opts?.body || rendered.body);
+  const violations = checkClaims(
+    opts?.inReplyTo ? "" : subject,
+    opts?.body || rendered.body
+  );
   if (violations.length) {
     return {
       ok: false,
@@ -354,17 +371,22 @@ async function gmailSend(
     body
   );
 
-  const payload: Record<string, string> = { raw: toBase64Url(mimeLines.join("\r\n")) };
+  const payload: Record<string, string> = {
+    raw: toBase64Url(mimeLines.join("\r\n")),
+  };
   if (opts?.threadId) payload.threadId = opts.threadId;
 
-  const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  const res = await fetch(
+    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    }
+  );
   if (!res.ok) {
     return {
       ok: false,
@@ -396,13 +418,19 @@ async function notifyFounder(env: OutreachEnv, subject: string, text: string) {
   }).catch(() => undefined);
 }
 
-async function ensureProcessedLabelId(env: OutreachEnv, token: string): Promise<string | null> {
+async function ensureProcessedLabelId(
+  env: OutreachEnv,
+  token: string
+): Promise<string | null> {
   const cached = await env.SESSIONS.get(LABEL_CACHE_KEY);
   if (cached) return cached;
 
-  const listRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/labels", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const listRes = await fetch(
+    "https://gmail.googleapis.com/gmail/v1/users/me/labels",
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
   if (!listRes.ok) return null;
   const list = (await listRes.json()) as {
     labels?: Array<{ id: string; name: string }>;
@@ -413,18 +441,21 @@ async function ensureProcessedLabelId(env: OutreachEnv, token: string): Promise<
     return existing.id;
   }
 
-  const createRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/labels", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: LABEL_NAME,
-      labelListVisibility: "labelShow",
-      messageListVisibility: "show",
-    }),
-  });
+  const createRes = await fetch(
+    "https://gmail.googleapis.com/gmail/v1/users/me/labels",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: LABEL_NAME,
+        labelListVisibility: "labelShow",
+        messageListVisibility: "show",
+      }),
+    }
+  );
   if (!createRes.ok) return null;
   const created = (await createRes.json()) as { id?: string };
   if (!created.id) return null;
@@ -457,7 +488,10 @@ async function markProcessed(
   ).catch(() => undefined);
 }
 
-async function wasProcessed(env: OutreachEnv, messageId: string): Promise<boolean> {
+async function wasProcessed(
+  env: OutreachEnv,
+  messageId: string
+): Promise<boolean> {
   return (await env.SESSIONS.get(PROCESSED_PREFIX + messageId)) !== null;
 }
 
@@ -465,7 +499,11 @@ async function wasProcessed(env: OutreachEnv, messageId: string): Promise<boolea
 export async function enqueueLeads(
   env: OutreachEnv,
   leads: Array<Omit<OutreachLead, "status">>
-): Promise<{ queued: number; skipped: number; rejected: Array<{ email: string; reasons: string[] }> }> {
+): Promise<{
+  queued: number;
+  skipped: number;
+  rejected: Array<{ email: string; reasons: string[] }>;
+}> {
   const queue = await getQueue(env);
   let queued = 0;
   let skipped = 0;
@@ -473,7 +511,8 @@ export async function enqueueLeads(
   for (const lead of leads) {
     const email = lead.email.trim().toLowerCase();
     const reasons = leadSendBlockers({ ...lead, email });
-    if (isRoleInbox(email) && !reasons.includes("role_inbox")) reasons.push("role_inbox");
+    if (isRoleInbox(email) && !reasons.includes("role_inbox"))
+      reasons.push("role_inbox");
     if (reasons.length) {
       rejected.push({ email, reasons });
       // Keep bad addresses out of the send queue permanently
@@ -514,7 +553,12 @@ export async function enqueueLeads(
 
 async function consumeSendBudget(
   env: OutreachEnv
-): Promise<{ remaining: number; sentToday: number; cap: number; sentDate: string }> {
+): Promise<{
+  remaining: number;
+  sentToday: number;
+  cap: number;
+  sentDate: string;
+}> {
   const cap = Math.max(1, Math.min(25, Number(env.OUTREACH_DAILY_CAP || "10")));
   const sentMeta = await env.SESSIONS.get(SENT_TODAY_KEY);
   let sentToday = 0;
@@ -530,12 +574,21 @@ async function consumeSendBudget(
   return { remaining: Math.max(0, cap - sentToday), sentToday, cap, sentDate };
 }
 
-async function bumpSentToday(env: OutreachEnv, sentDate: string, sentToday: number) {
-  await env.SESSIONS.put(SENT_TODAY_KEY, JSON.stringify({ date: sentDate, count: sentToday }));
+async function bumpSentToday(
+  env: OutreachEnv,
+  sentDate: string,
+  sentToday: number
+) {
+  await env.SESSIONS.put(
+    SENT_TODAY_KEY,
+    JSON.stringify({ date: sentDate, count: sentToday })
+  );
 }
 
 /** Send up to daily cap from queue. */
-export async function runOutreachSend(env: OutreachEnv): Promise<Record<string, unknown>> {
+export async function runOutreachSend(
+  env: OutreachEnv
+): Promise<Record<string, unknown>> {
   if (env.OUTREACH_AUTONOMOUS !== "true") {
     return { skipped: true, reason: "OUTREACH_AUTONOMOUS!=true" };
   }
@@ -562,7 +615,10 @@ export async function runOutreachSend(env: OutreachEnv): Promise<Record<string, 
   const doneEmails = new Set<string>();
   let aborted: string | null = null;
   for (const email of batch) {
-    const lead = (await getLead(env, email)) || { email, status: "queued" as const };
+    const lead = (await getLead(env, email)) || {
+      email,
+      status: "queued" as const,
+    };
     if (
       lead.status === "suppressed" ||
       lead.status === "replied" ||
@@ -576,7 +632,8 @@ export async function runOutreachSend(env: OutreachEnv): Promise<Record<string, 
     // Hard gate at send time — the same rules as enqueueLeads, re-run in case
     // a lead was written to KV some other way.
     const blockers = leadSendBlockers(lead);
-    if (isRoleInbox(email) && !blockers.includes("role_inbox")) blockers.push("role_inbox");
+    if (isRoleInbox(email) && !blockers.includes("role_inbox"))
+      blockers.push("role_inbox");
     if (blockers.length) {
       failed++;
       doneEmails.add(email);
@@ -619,7 +676,10 @@ export async function runOutreachSend(env: OutreachEnv): Promise<Record<string, 
   // Failed leads leave the queue for a person to look at. Re-queuing them
   // every run is how 2026-05-16 produced eleven attempts at the same batch.
   // Leads not reached (auth abort or batch end) stay queued.
-  await putQueue(env, queue.filter(e => !doneEmails.has(e)));
+  await putQueue(
+    env,
+    queue.filter(e => !doneEmails.has(e))
+  );
   await bumpSentToday(env, budget.sentDate, sentToday);
 
   if (sent > 0) {
@@ -634,18 +694,27 @@ export async function runOutreachSend(env: OutreachEnv): Promise<Record<string, 
 }
 
 /** One follow-up to non-responders after OUTREACH_FOLLOWUP_DAYS (default 3). */
-export async function runFollowUps(env: OutreachEnv): Promise<Record<string, unknown>> {
+export async function runFollowUps(
+  env: OutreachEnv
+): Promise<Record<string, unknown>> {
   if (env.OUTREACH_AUTONOMOUS !== "true") {
     return { skipped: true, reason: "OUTREACH_AUTONOMOUS!=true" };
   }
   const token = await getGmailAccessToken(env);
   if (!token) return { skipped: true, reason: "gmail_token_unavailable" };
 
-  const days = Math.max(2, Math.min(14, Number(env.OUTREACH_FOLLOWUP_DAYS || "3")));
+  const days = Math.max(
+    2,
+    Math.min(14, Number(env.OUTREACH_FOLLOWUP_DAYS || "3"))
+  );
   const cutoff = daysAgoIso(days);
   const budget = await consumeSendBudget(env);
   if (budget.remaining === 0) {
-    return { skipped: true, reason: "daily_cap_reached", sentToday: budget.sentToday };
+    return {
+      skipped: true,
+      reason: "daily_cap_reached",
+      sentToday: budget.sentToday,
+    };
   }
 
   // Scan queue + known sent leads via queue snapshot is incomplete; use list by prefix via status endpoint pattern.
@@ -713,7 +782,9 @@ export async function runFollowUps(env: OutreachEnv): Promise<Record<string, unk
 }
 
 /** Poll Gmail for unreplied INBOX messages that look like outreach replies. */
-export async function runReplyPoll(env: OutreachEnv): Promise<Record<string, unknown>> {
+export async function runReplyPoll(
+  env: OutreachEnv
+): Promise<Record<string, unknown>> {
   const token = await getGmailAccessToken(env);
   if (!token) return { skipped: true, reason: "gmail_token_unavailable" };
 
@@ -752,7 +823,8 @@ export async function runReplyPoll(env: OutreachEnv): Promise<Record<string, unk
     };
     const headers = full.payload?.headers || [];
     const header = (name: string) =>
-      headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || "";
+      headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value ||
+      "";
 
     const from = header("From");
     const subject = header("Subject");
@@ -766,7 +838,12 @@ export async function runReplyPoll(env: OutreachEnv): Promise<Record<string, unk
     }
 
     const ourAddresses = new Set(
-      [env.GMAIL_FROM_EMAIL, env.OUTREACH_REPLY_TO, "noreply@authichain.com", "hello@authichain.com"]
+      [
+        env.GMAIL_FROM_EMAIL,
+        env.OUTREACH_REPLY_TO,
+        "noreply@authichain.com",
+        "hello@authichain.com",
+      ]
         .filter(Boolean)
         .map(e => String(e).toLowerCase())
     );
@@ -774,10 +851,15 @@ export async function runReplyPoll(env: OutreachEnv): Promise<Record<string, unk
     const earlySnippet = (full.snippet || "").slice(0, 280);
 
     // Bounce / DSN → suppress the failed recipient if we know them
-    if (BOUNCE_FROM_RE.test(fromEmail) || /delivery status notification|undeliverable|mail delivery subsystem/i.test(subject)) {
+    if (
+      BOUNCE_FROM_RE.test(fromEmail) ||
+      /delivery status notification|undeliverable|mail delivery subsystem/i.test(
+        subject
+      )
+    ) {
       const bounceTarget =
-        (earlySnippet.match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/) || [])[0]?.toLowerCase() ||
-        null;
+        (earlySnippet.match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/) ||
+          [])[0]?.toLowerCase() || null;
       if (bounceTarget && !ourAddresses.has(bounceTarget)) {
         const bounced = await getLead(env, bounceTarget);
         if (bounced) {
@@ -817,7 +899,10 @@ export async function runReplyPoll(env: OutreachEnv): Promise<Record<string, unk
     // Also match by threadId against known sent leads when From is unexpected
     let matched: OutreachLead | null = threadLead;
     if (!matched && full.threadId) {
-      const listed = await env.SESSIONS.list({ prefix: LEAD_PREFIX, limit: 200 });
+      const listed = await env.SESSIONS.list({
+        prefix: LEAD_PREFIX,
+        limit: 200,
+      });
       for (const key of listed.keys) {
         const raw = await env.SESSIONS.get(key.name);
         if (!raw) continue;
@@ -836,12 +921,13 @@ export async function runReplyPoll(env: OutreachEnv): Promise<Record<string, unk
     const looksLikeReply =
       Boolean(
         matched &&
-          (matched.status === "sent" ||
-            matched.status === "followup_sent" ||
-            matched.status === "nurtured") &&
-          matched.threadId
+        (matched.status === "sent" ||
+          matched.status === "followup_sent" ||
+          matched.status === "nurtured") &&
+        matched.threadId
       ) ||
-      (Boolean(inReplyTo) && /dpp|authichain|passport|audit|readiness/i.test(subject));
+      (Boolean(inReplyTo) &&
+        /dpp|authichain|passport|audit|readiness/i.test(subject));
 
     if (!looksLikeReply) continue;
 
@@ -866,7 +952,12 @@ export async function runReplyPoll(env: OutreachEnv): Promise<Record<string, unk
         `Outreach SUPPRESSED (negative) ${targetEmail}`,
         `Subject: ${subject}\n\n${snippet}\n`
       );
-      replies.push({ from: targetEmail, subject, snippet, action: "suppressed" });
+      replies.push({
+        from: targetEmail,
+        subject,
+        snippet,
+        action: "suppressed",
+      });
       continue;
     }
 
@@ -1019,15 +1110,15 @@ export async function processInboundReply(
   );
 
   const shouldNurture =
-    input.sendNurture !== false &&
-    shouldAutoNurture(env, blob);
+    input.sendNurture !== false && shouldAutoNurture(env, blob);
 
   if (!shouldNurture) {
     return { ok: true, action: "replied" };
   }
 
   const token = await getGmailAccessToken(env);
-  if (!token) return { ok: true, action: "replied", nurture: "gmail_token_unavailable" };
+  if (!token)
+    return { ok: true, action: "replied", nurture: "gmail_token_unavailable" };
 
   const nurtureBody = [
     greet(lead.name),
@@ -1068,7 +1159,9 @@ export async function processInboundReply(
   return { ok: true, action: "replied", nurtureError: nurtureRes.error };
 }
 
-export async function getOutreachStatus(env: OutreachEnv): Promise<Record<string, unknown>> {
+export async function getOutreachStatus(
+  env: OutreachEnv
+): Promise<Record<string, unknown>> {
   const queue = await getQueue(env);
   const budget = await consumeSendBudget(env);
   const listed = await env.SESSIONS.list({ prefix: LEAD_PREFIX, limit: 500 });
