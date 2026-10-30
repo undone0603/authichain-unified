@@ -137,6 +137,12 @@ const ROLE_LOCALPARTS = new Set([
   "hr",
   "jobs",
   "careers",
+  "crew",
+  "us",
+  "webshop",
+  "hi",
+  "dpo",
+  "service.ebike",
 ]);
 
 const TITLE_AS_NAME_RE =
