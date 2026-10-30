@@ -20,6 +20,7 @@ import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
 import { tryHandleManufacturerStatus } from "./manufacturer-status-route";
+import { tryHandleLiveSeal } from "./live-seal-route";
 import { tryHandleProtocolExample } from "./protocol-example-route";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import { isMcpInstallPath, renderMcpInstallPage } from "./mcp-install-page";
@@ -3591,6 +3592,8 @@ async function handleAuthichainCom(
     if (mcp) return mcp;
     const apiV1 = await tryHandleApiV1(request, env);
     if (apiV1) return apiV1;
+    const liveSeal = tryHandleLiveSeal(request);
+    if (liveSeal) return liveSeal;
     const manufacturer = await tryHandleManufacturerStatus(request);
     if (manufacturer) return manufacturer;
     // Before APP_PREFIXES. /protocol/* otherwise proxies, and the credential
