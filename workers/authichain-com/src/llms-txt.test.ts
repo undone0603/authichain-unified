@@ -23,12 +23,18 @@ describe("llms.txt", () => {
     expect(text).toContain("https://authichain.com/battery-passport");
     expect(text).toContain("18 February 2027");
     expect(text).toContain("e-bike / LMT");
-    expect(text).toContain(planPaymentLink("qron_launch"));
+    expect(text).not.toContain("/checkout/qron_launch");
+    expect(text).not.toContain("QRON Launch");
     expect(text).toContain(planPaymentLink("starter"));
     expect(text).toContain(planPaymentLink("creator"));
     expect(text).toContain("https://authichain.com/generate");
+    expect(text).toContain("EU DPP Workspace $299");
     expect(text).toContain(planPaymentLink("dpp_readiness"));
+    expect(text).not.toContain("EU DPP Readiness $");
     expect(text).toContain(planPaymentLink("strainchain_passport"));
+    expect(text).toContain(
+      "Made in USA Claim File $299 per SKU: https://authichain.com/made-in-usa-claim-file"
+    );
     expect(text).not.toContain(planPaymentLink("strainchain_farm"));
     expect(text).not.toContain("GET /api/checkout");
     expect(text.toLowerCase()).not.toContain("facilitator.payai");
@@ -45,5 +51,30 @@ describe("llms.txt", () => {
     expect(
       tryHandleLlmsTxt(new Request("https://authichain.govchain.us/pricing"))
     ).toBeNull();
+  });
+  it("names the canonical paid verify endpoint and the health check", () => {
+    const text = renderLlmsTxt();
+    expect(text).toContain(
+      "Canonical paid verify: POST https://authichain.com/api/v1/agent-verify"
+    );
+    expect(text).toContain("https://authichain.com/api/x402/health");
+    expect(text).toContain(
+      "paidVerify.bound false means HTTP 503 before settlement"
+    );
+  });
+
+  it("names the canonical Living QR scan and says this host verifies", () => {
+    const text = renderLlmsTxt();
+    expect(text).toContain(
+      "Living QR scan: GET https://authichain.com/qron/r/{object_id}"
+    );
+    expect(text).toContain(
+      "Decision v1 verify: POST https://authichain.com/api/v1/attestation/verify"
+    );
+    expect(text).toContain("https://authichain.com/protocol/issuer.json");
+    expect(text).toContain("https://authichain.com/protocol/jwks.json");
+    expect(text).toContain("This host verifies the signature");
+    expect(text).not.toContain("does not verify the signature");
+    expect(text).not.toContain("freeCalls");
   });
 });

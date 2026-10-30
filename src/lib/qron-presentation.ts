@@ -164,12 +164,20 @@ export function buildQronLivingQrAttestation(input: {
     },
   ];
   if (input.imageDigest) {
-    evidence.push({
+    const imageEvidence: {
+      id: string;
+      type: string;
+      digest: string;
+      uri?: string;
+    } = {
       id: "living-qr-image",
       type: "living_qr_image",
       digest: input.imageDigest,
-      uri: imageUrl.startsWith("data:") ? undefined : imageUrl,
-    });
+    };
+    // A data URL is huge and is already covered by imageDigest. Omit uri
+    // entirely. Setting it to undefined used to be signed as invalid JSON.
+    if (!imageUrl.startsWith("data:")) imageEvidence.uri = imageUrl;
+    evidence.push(imageEvidence);
   }
 
   return {
