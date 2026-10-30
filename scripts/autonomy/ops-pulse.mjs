@@ -121,11 +121,55 @@ export function evaluateWorkflows(
   return problems;
 }
 
+/**
+ * Public-safe reason the fulfilment check could not run. The alert issue is in
+ * a public repo, so only the upstream and HTTP status survive, never a body.
+ */
+export function blindReason(error) {
+  const msg = String(error?.message ?? error ?? "");
+  const m = msg.match(/^(Stripe checkout sessions|Supabase stripe_events) -> (\d{3})/);
+  return m ? `${m[1]} answered HTTP ${m[2]}` : "the check failed before it could read Stripe and Supabase";
+ * Read-only monitoring must fail closed. Never put exception messages (which
+ * could contain tokens or customer details) in a public ops-alert issue.
+ * This checks webhook receipt only, not entitlement or activation.
+ */
+export async function monitorFulfilment({
+  stripeKey,
+  supabaseUrl,
+  supabaseKey,
+  founderEmails = [],
+  check = checkFulfilment,
+} = {}) {
+  if (!stripeKey || !supabaseUrl || !supabaseKey)
+    return {
+      checked: 0,
+      problems: [],
+      monitoring: [{ name: "fulfilment", kind: "credentials_missing" }],
+    };
+  try {
+    const result = await check({
+      stripeKey,
+      supabaseUrl,
+      supabaseKey,
+      founderEmails,
+    });
+    return { checked: result.checked, problems: result.problems, monitoring: [] };
+  } catch {
+    return {
+      checked: 0,
+      problems: [],
+      monitoring: [{ name: "fulfilment", kind: "read_failed" }],
+    };
+  }
+}
+
 export function signature(report) {
   const keys = [
     ...report.probes.filter(p => !p.ok).map(p => `probe:${p.name}`),
     ...report.workflows.map(w => `wf:${w.file}:${w.kind}`),
     ...(report.revenue ?? []).map(r => `pay:${r.session}`),
+    ...(report.fulfilmentBlind ? ["watchdog:fulfilment"] : []),
+    ...(report.monitoring ?? []).map(m => `monitor:${m.name}:${m.kind}`),
   ].sort();
   return keys.join("|");
 }
@@ -148,12 +192,26 @@ export function renderReport(report) {
         `- \`${w.file}\` (${w.lane}): ${w.detail}${w.url ? ` - [run](${w.url})` : ""}`
       );
   }
+  if (report.monitoring?.length) {
+    lines.push("", "#### Fulfilment monitoring unavailable");
+    for (const m of report.monitoring)
+      lines.push(
+        `- ${m.name}: ${m.kind === "credentials_missing" ? "required read credentials are missing" : "Stripe/Supabase read failed"}. No conclusion about paid checkout delivery or activation is possible.`
+      );
+  }
   if (report.revenue?.length) {
     lines.push("", "#### Paid but not fulfilled");
     for (const r of report.revenue)
       lines.push(
         `- Checkout \`${r.session}\` paid ${r.paid_at}: ${r.reason}. Check the customer received what they bought, then replay the event from the Stripe dashboard.`
       );
+  }
+  if (report.fulfilmentBlind) {
+    lines.push(
+      "",
+      "#### Fulfilment watchdog cannot see",
+      `- ${report.fulfilmentBlind}. Until this is fixed nobody is checking that paying customers received what they bought.`
+    );
   }
   lines.push(
     "",
@@ -290,11 +348,17 @@ async function main() {
 
   const stripeKey =
     process.env.STRIPE_READ_KEY || process.env.STRIPE_SECRET_KEY;
-  if (
-    stripeKey &&
-    process.env.SUPABASE_URL &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  ) {
+  // A watchdog that could not look is not a green watchdog. Before this, a
+  // missing key or a Stripe 401 logged "skipped" and the pulse stayed green.
+  const missing = [
+    !stripeKey && "STRIPE_READ_KEY/STRIPE_SECRET_KEY",
+    !process.env.SUPABASE_URL && "SUPABASE_URL",
+    !process.env.SUPABASE_SERVICE_ROLE_KEY && "SUPABASE_SERVICE_ROLE_KEY",
+  ].filter(Boolean);
+  if (missing.length) {
+    report.fulfilmentBlind = `not configured: ${missing.join(", ")} unset`;
+    console.log(`fulfilment check blind: ${report.fulfilmentBlind}`);
+  } else {
     try {
       const f = await checkFulfilment({
         stripeKey,
@@ -310,9 +374,26 @@ async function main() {
         `fulfilment: ${f.checked} paid checkouts checked, ${f.problems.length} unfulfilled`
       );
     } catch (e) {
-      console.log(`fulfilment check skipped: ${e.message}`);
+      report.fulfilmentBlind = blindReason(e);
+      console.log(`fulfilment check blind: ${report.fulfilmentBlind}`);
     }
   }
+  const f = await monitorFulfilment({
+    stripeKey: process.env.STRIPE_READ_KEY || process.env.STRIPE_SECRET_KEY,
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    founderEmails: [
+      ...(manifest.founder_emails ?? []),
+      ...(process.env.FOUNDER_EMAILS ?? "").split(","),
+    ],
+  });
+  report.revenue = f.problems;
+  report.monitoring = f.monitoring;
+  console.log(
+    f.monitoring.length
+      ? `fulfilment: UNVERIFIED (${f.monitoring[0].kind})`
+      : `fulfilment: ${f.checked} chargeable paid checkouts checked, ${f.problems.length} missing webhook receipts`
+  );
 
   const sig = signature(report);
   out(

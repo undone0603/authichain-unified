@@ -6,7 +6,7 @@ This is the canonical economics document for the **already live** x402 micropaym
 
 **Do not change** `X402_PAY_TO`, `X402_FACILITATOR_URL`, or `X402_USDC_ASSET`. Bind workflow: `.github/workflows/bind-x402-secrets.yml`. Public HTML: `https://authichain.com/x402`. Machine catalog: `https://authichain.com/api/x402/catalog` and `https://authichain.com/.well-known/x402.json`.
 
-Owner-authorized treasury is `0xaebf…e437`. Do not rebind `X402_PAY_TO` away from that address.
+Owner-authorized treasury is `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2`. Do not rebind `X402_PAY_TO` away from that address.
 
 Verified live on 2026-09-20: `GET https://authichain.com/api/x402/health` → `ready` / `trustless`; unpaid `POST /api/x402` → HTTP 402.
 
@@ -32,7 +32,7 @@ There is **no new token launch** in this work and none is required for agent-to-
 - **Unit of account:** USD-denominated Circle USDC on **Base** (CAIP-2 / chain id `8453`).
 - **Asset (do not rebind):** `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`.
 - **Meter:** one priced **verification (or seal) call**. Default **$0.05** = **50000** atomic units (USDC 6 decimals). Override only via `X402_PRICE_USD` in the same config `x402HealthReport` / `x402Catalog` already read. Never display a second hardcoded schedule.
-- **Recipient / treasury (do not rebind away):** owner-authorized payTo / tokenomics EOA `0xaebf…e437` (`X402_PAY_TO`). `$QRON` remains held by former payTo `0x5db5…`; that does **not** make `$QRON` the rail. Distinct from the NFT deployer EOA `0xbad4…`. Map: [`WEB3_IDENTITY.md`](./WEB3_IDENTITY.md).
+- **Recipient / treasury (do not rebind away):** owner-authorized payTo / tokenomics EOA `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2` (`X402_PAY_TO`). The same EOA holds `$QRON`; that does **not** make `$QRON` the rail. Distinct from the NFT deployer EOA `0xbad4…`. Map: [`WEB3_IDENTITY.md`](./WEB3_IDENTITY.md).
 - **Cap:** `dailyCapUsd` default **10** (`X402_DAILY_CAP_USD`). 200 calls/day at $0.05. Next.js `POST /api/v1/agent-verify` also rate-limits 120/window and writes `automation_logs` (`workflow_name = x402_spend`).
 - **Facilitator:** PayAI, reachable. URL is an operational secret/binding — **not republished** on `/x402` or in this file. The edge calls `/settle`; agents use any compatible x402 client.
 
@@ -51,7 +51,7 @@ Stripe, x402 USDC, and `$QRON` are **three** paths. Full wallet map: [`WEB3_IDEN
 | SKUs            | Passport $49 · DPP $299 · QRON packs | $0.05 / verify call (Base USDC)            | 1B supply; speculative / theater       |
 | Receipt         | Stripe charge                        | On-chain USDC to `payTo`                   | Token transfer, not agent settlement   |
 | Source of truth | `src/lib/plans.ts`                   | `src/lib/x402.ts` + live health JSON       | `docs/strategy/WEB3_IDENTITY.md`       |
-| Wallet          | Stripe acct `acct_1SXIyEGqTruSqV8T`  | payTo / tokenomics EOA `0xaebf…e437` on Base | Former payTo `0x5db5…` holds the Polygon token |
+| Wallet          | Stripe acct `acct_1SXIyEGqTruSqV8T`  | payTo / tokenomics EOA `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2` on Base | Same EOA holds the Polygon token; `0xAebf…E437` is the $QRON contract, never payTo |
 
 A passport or DPP purchase does **not** credit x402 calls. An x402 payment does **not** publish a genetics passport. Genetics public verify (`GET /api/genetics/verify`) remains **free** and is not a second paid skill.
 
@@ -71,7 +71,8 @@ Production apex is `authichain-com`. `tryHandleX402` runs **before** `APP_PREFIX
 | GET    | `/api/x402/catalog`      | 200 catalog (`x402Catalog` — prices copied from health) |
 | GET    | `/.well-known/x402.json` | 200 catalog                                             |
 | GET    | `/x402`, `/docs/x402`    | 200 HTML docs                                           |
-| HEAD   | any x402 API path        | 204                                                     |
+| HEAD   | `/api/x402`, `/api/v1/agent-verify` | **402** (empty body, `PAYMENT-REQUIRED` header) |
+| HEAD   | other x402 API paths     | 204                                                     |
 
 Health is safe to scrape: `payTo`, `asset`, `network`, `chainId`, `pricePerCall`, `dailyCapUsd`, `status`, `mode`, facilitator **reachability** (not the URL).
 
@@ -84,7 +85,7 @@ Health is safe to scrape: `payTo`, `asset`, `network`, `chainId`, `pricePerCall`
 
 If `X402_PAY_TO` is missing: POST returns **503** `payments_not_configured` (the $0 / unbound path). Live production has `payTo` set — unpaid callers get 402, not 503.
 
-**402 body (shape):** Coinbase CDP `POST /v2/x402/validate` reads this JSON body's `x402Version`. A v1 body is rejected (`actual 1 expected 2`). The same object is base64 in `PAYMENT-REQUIRED`. Unpaid `accepts[0]` carries `outputSchema.input` (`type` + `method`) so PayAI Bazaar can catalog from the 402 body. PayAI `/settle` still receives the v1 `paymentRequirements` (also with `outputSchema`) from `buildPaymentRequired().body`.
+**402 body (shape):** Coinbase CDP `POST /v2/x402/validate` reads this JSON body's `x402Version`. A v1 body is rejected (`actual 1 expected 2`). The same object is base64 in `PAYMENT-REQUIRED`. Unpaid `accepts[0]` carries `outputSchema.input` (`type` + `method`) so PayAI Bazaar can catalog from the 402 body, and `outputSchema.output` is the unwrapped HTTP 200 body sample so field-check crawlers do not treat bazaar `{type, example}` wrapper keys as promised response fields. PayAI `/settle` still receives the v1 `paymentRequirements` (also with `outputSchema`) from `buildPaymentRequired().body`.
 
 ```json
 {
@@ -103,7 +104,7 @@ If `X402_PAY_TO` is missing: POST returns **503** `payments_not_configured` (the
       "network": "eip155:8453",
       "amount": "50000",
       "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-      "payTo": "0xaebf…e437",
+      "payTo": "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2",
       "maxTimeoutSeconds": 60,
       "extra": { "name": "USD Coin", "version": "2" },
       "outputSchema": {
@@ -129,12 +130,24 @@ If `X402_PAY_TO` is missing: POST returns **503** `payments_not_configured` (the
 
 ```json
 {
-  "verified": false,
-  "authenticityScore": 0,
-  "subject": "demo",
-  "details": {
-    "note": "Paid settlement accepted; registry lookup is not bound on this edge path."
+  "registered": false,
+  "status": "not_registered",
+  "checks": {
+    "registry": "not_found",
+    "signature": "not_checked",
+    "revocation": "not_available"
   },
+  "details": {
+    "verdict": "unsigned",
+    "reasons": ["seal_not_found"]
+  },
+  "verified": false,
+  "baseline": {
+    "version": "1",
+    "scope": "signature-and-validity",
+    "verdict": "unsigned"
+  },
+  "subject": "00000000-0000-4000-8000-000000000000",
   "settlement": {
     "payer": "0x…",
     "amountAtomic": "50000",
@@ -200,21 +213,21 @@ curl -sS https://authichain.com/api/x402/catalog
 curl -sS https://authichain.com/.well-known/x402.json
 ```
 
-Unpaid 402 challenge:
+Unpaid 402 challenge. An empty body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment.
 
 ```bash
 curl -sS -i -X POST https://authichain.com/api/x402 \
   -H 'content-type: application/json' \
-  -d '{"sealId":"demo"}'
+  -d '{}'
 ```
 
-Settle retry after the agent wallet paid the challenge (placeholder header only):
+Settle retry after the agent wallet paid the challenge (placeholder header only). The body is a seal UUID. A non-UUID body is HTTP 400 before payment.
 
 ```bash
 curl -sS -i -X POST https://authichain.com/api/x402 \
   -H 'content-type: application/json' \
   -H 'X-PAYMENT: <base64-x402-payload>' \
-  -d '{"sealId":"demo"}'
+  -d '{"sealId":"<seal-uuid>"}'
 ```
 
 A valid payload is base64 of JSON, either flat `{ "scheme":"exact", "network":"base", "payer":"0x…", "amount":"50000", "signature":"0x…" }` or the official x402 envelope with `payload.authorization.{from,to,value}` and `payload.signature`. `to` must be the published `payTo`.
@@ -233,7 +246,7 @@ Owner-only live settle smoke: `scripts/x402-smoke.ts`. Do not dispatch another l
 | `GET /api/x402/health`                                       | Agents. Live bindings.                                                                                                                                                                                                                                                                                                                            |
 | `GET /api/x402/catalog`                                      | Agents / MCP / OpenAPI-style clients. Paid endpoints + price + payTo.                                                                                                                                                                                                                                                                             |
 | `GET /.well-known/x402.json`                                 | Same catalog, well-known path.                                                                                                                                                                                                                                                                                                                    |
-| Unpaid `POST /api/x402` 402 body + `PAYMENT-REQUIRED` header | `extensions.bazaar` (info + schema) **and** `accepts[0].outputSchema.input` (`type` + `method`). JSON body and header are the v2 envelope (`x402Version: 2`, `resource` object, `accepts[].amount`, CAIP-2 `eip155:8453`) so CDP Bazaar validate can pass. PayAI `/settle` still uses the v1 requirement with `outputSchema`. No facilitator URL. |
+| Unpaid `POST /api/x402` 402 body + `PAYMENT-REQUIRED` header | `extensions.bazaar` (info + schema), `accepts[0].outputSchema.input` (`type` + `method`), and `accepts[0].outputSchema.output` (unwrapped paid HTTP body sample, no `authenticityScore`). JSON body and header are the v2 envelope (`x402Version: 2`, `resource` object, `accepts[].amount`, CAIP-2 `eip155:8453`) so CDP Bazaar validate can pass. PayAI `/settle` still uses the v1 requirement with `outputSchema`. No facilitator URL. |
 | `server/mcp` `get_pricing` / `verify_paid`                   | MCP tools. Must point at **Base**, not Polygon.                                                                                                                                                                                                                                                                                                   |
 
 Catalog **must** call `x402HealthReport` (or the same env readers). A hardcoded $0.05 that disagrees with `X402_PRICE_USD` is a bug.
@@ -246,7 +259,7 @@ Sitemap includes `/x402`, `/.well-known/x402`, `/openapi.json`, and `/llms.txt`.
 
 ## 7. Forbidden changes
 
-- Do **not** invent a `payTo` or rotate `X402_PAY_TO` away from the owner-authorized treasury `0xaebf…e437` (not the `$QRON` holder `0x5db5…`, not the NFT deployer).
+- Do **not** invent a `payTo` or rotate `X402_PAY_TO` away from the owner-authorized treasury `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2` (never the `$QRON` contract `0xAebf…E437`, not the NFT deployer).
 - Do **not** rebind `X402_FACILITATOR_URL` or publish it on HTML/docs.
 - Do **not** replace Circle USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` with a ticker-only asset or another chain.
 - Do **not** add `$QRON`, a governance token, or a mint to `accepts[]`.

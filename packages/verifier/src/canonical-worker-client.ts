@@ -31,10 +31,19 @@ export function resolveCanonicalVerifyUrl(explicit?: string | null): string {
   return DEFAULT_CANONICAL_VERIFY_URL;
 }
 
+/** How long a consumer waits for the canonical worker before failing closed. */
+export const CANONICAL_VERIFY_TIMEOUT_MS = 10_000;
+
+/**
+ * Call the canonical worker. Throws when it cannot be reached in time or does
+ * not answer in the decision vocabulary; callers map a throw to
+ * `indeterminate`, so an outage or a proxy error page is never a decision.
+ */
 export async function verifyWithCanonicalWorker(
   endpoint: string,
   jws: string,
   expectedObjectId?: string,
+  options: { timeoutMs?: number } = {},
 ): Promise<{ httpStatus: number; response: CanonicalVerificationResponse }> {
   const body: Record<string, string> = { jws };
   if (expectedObjectId) body.expected_object_id = expectedObjectId;
@@ -42,7 +51,34 @@ export async function verifyWithCanonicalWorker(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(options.timeoutMs ?? CANONICAL_VERIFY_TIMEOUT_MS),
   });
   const response = (await res.json()) as CanonicalVerificationResponse;
+  if (
+    !response ||
+    typeof response !== "object" ||
+    typeof response.valid !== "boolean" ||
+    typeof response.decision !== "string"
+  ) {
+    throw new Error("canonical verify returned a response outside the decision contract");
+  }
   return { httpStatus: res.status, response };
+}
+
+/**
+ * The one positive rule every consumer applies: a 2xx from the canonical
+ * worker carrying valid=true AND decision=verified. A body that says verified
+ * under an error status, or valid=true with any other decision, is not
+ * positive.
+ */
+export function isCanonicalPositive(result: {
+  httpStatus: number;
+  response: CanonicalVerificationResponse;
+}): boolean {
+  return (
+    result.httpStatus >= 200 &&
+    result.httpStatus < 300 &&
+    result.response.valid === true &&
+    result.response.decision === "verified"
+  );
 }
