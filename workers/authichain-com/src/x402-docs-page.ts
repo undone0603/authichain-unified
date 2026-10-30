@@ -1,8 +1,8 @@
 /**
  * Public x402 agent-pay docs at /x402 (and /docs/x402).
  *
- * The live rail is already bound on authichain-com. This page is discovery
- * only — published payTo / asset / price, health URL, and unpaid 402 curls.
+ * x402 paid verification and on-chain anchoring in development. This page is
+ * discovery only — payTo / asset, health URL, and unpaid 402 curls.
  * No facilitator URL, no private keys, no settle steps.
  *
  * payTo is the owner-authorized treasury / tokenomics EOA
@@ -52,8 +52,8 @@ export const X402_PUBLIC = {
     "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
   tokenomicsUrl:
     "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/AGENT_TOKENOMICS_x402.md",
-  priceUsd: "$0.05",
-  priceUsdNumber: "0.05",
+  priceUsd: "in development",
+  priceUsdNumber: "",
   network: "Base",
   chainId: "8453",
   /** payTo / tokenomics EOA — not the NFT deployer. Do not rebind. */
@@ -173,7 +173,7 @@ footer.site{margin-top:auto;border-top:1px solid var(--ac-border);padding:1.75re
 export function renderX402DocsPage(): string {
   const p = X402_PUBLIC;
   const rows = [
-    { label: "Price", value: `${p.priceUsd} USDC per call` },
+    { label: "Price", value: "x402 paid verification and on-chain anchoring in development" },
     { label: "Network", value: `${p.network} (chain id ${p.chainId})` },
     {
       label: "Asset",
@@ -225,7 +225,7 @@ export function renderX402DocsPage(): string {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>x402 agent pay — AuthiChain</title>
-<meta name="description" content="AuthiChain x402 agent verification micropayments: ${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}. Health at /api/x402/health. Unpaid POST returns HTTP 402.">
+<meta name="description" content="AuthiChain x402 paid verification and on-chain anchoring in development."> <!-- pragma: allowlist secret -->
 <link rel="canonical" href="${esc(p.canonicalUrl)}">
 <link rel="alternate" type="application/json" href="${esc(p.catalogUrl)}" title="x402 catalog">
 <link rel="describedby" href="${esc(p.wellKnownUrl)}">
@@ -233,7 +233,7 @@ export function renderX402DocsPage(): string {
 <meta name="theme-color" content="#4F46E5">
 <meta property="og:type" content="website">
 <meta property="og:title" content="x402 agent pay — AuthiChain">
-<meta property="og:description" content="${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)} per agent verification. Discover the live rail, then POST unpaid for a 402 challenge.">
+<meta property="og:description" content="x402 paid verification and on-chain anchoring in development.">
 <meta property="og:url" content="${esc(p.canonicalUrl)}">
 <meta property="og:image" content="https://authichain.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -243,7 +243,7 @@ export function renderX402DocsPage(): string {
       {
         "@type": "TechArticle",
         headline: "AuthiChain x402 agent verification",
-        description: `Pay-per-call product verification for autonomous agents. ${p.priceUsd} USDC on Base.`,
+        description: `x402 paid verification and on-chain anchoring in development.`,
         url: p.canonicalUrl,
         identifier: p.catalogUrl,
       },
@@ -260,11 +260,8 @@ export function renderX402DocsPage(): string {
         offers: {
           "@type": "Offer",
           name: "x402 verification call",
-          price: p.priceUsdNumber,
-          priceCurrency: "USD",
-          description: `${p.priceUsd} ${p.assetName} on ${p.network} per POST /api/x402`,
+          description: "x402 paid verification and on-chain anchoring in development",
           url: p.catalogUrl,
-          availability: "https://schema.org/InStock",
         },
       },
     ],
@@ -296,10 +293,10 @@ ${CHECKOUT_EMAIL_FORM_CSS}
 <main id="main">
   <section class="hero" aria-labelledby="x402-title">
     <div class="wrap">
-      <p class="kicker"><i aria-hidden="true"></i> Live · x402 · ${esc(p.priceUsd)} USDC</p>
+      <p class="kicker"><i aria-hidden="true"></i> In development · x402</p>
       <h1 id="x402-title">Agent verification, paid per call.</h1>
       <p class="lede">AuthiChain exposes an <strong>x402</strong> micropayment rail so a funded agent can verify a product without a contract, an API key, or a human in the runtime loop.</p>
-      <p>An unpaid <code>POST</code> receives <code>HTTP 402 Payment Required</code> with the exact scheme, asset, and receiving address. The agent settles ${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}, retries with an <code>X-PAYMENT</code> proof, and the edge verifies settlement before answering.</p>
+      <p>x402 paid verification and on-chain anchoring in development. An unpaid <code>POST</code> may still return <code>HTTP 402 Payment Required</code>. Do not treat a published dollar amount or a live agent-pay rail as current.</p>
       <div class="cta">
         <a class="btn btn-primary" href="${esc(p.healthUrl)}">GET /api/x402/health</a>
         <a class="btn" href="${esc(p.catalogUrl)}">GET /api/x402/catalog</a>
@@ -311,14 +308,14 @@ ${CHECKOUT_EMAIL_FORM_CSS}
   <div class="wrap panel-grid">
     <section class="card rail" aria-labelledby="rail-title">
       <h2 id="rail-title">Published rail</h2>
-      <p>These values match the live health document. Treat <a href="${esc(p.healthUrl)}"><code>GET /api/x402/health</code></a> as the source of truth if anything here and the JSON ever disagree.</p>
+      <p>x402 paid verification and on-chain anchoring in development. Treat <a href="${esc(p.healthUrl)}"><code>GET /api/x402/health</code></a> as operational JSON, not a public live-price claim.</p>
       <dl class="spec">${spec}</dl>
     </section>
     <section class="card flow" aria-labelledby="flow-title">
       <h2 id="flow-title">Unpaid POST → 402</h2>
       <ol>
         <li>Agent <code>POST</code>s ${esc(p.payUrl)} (or the agent-verify alias) with a JSON body and no payment header.</li>
-        <li>The edge answers <code>402</code> with <code>x402Version: 2</code> JSON (<code>resource</code> object, <code>accepts[].amount</code>, CAIP-2 <code>eip155:8453</code>, plus EIP-712 extra for Circle USDC) and the same envelope in the <code>PAYMENT-REQUIRED</code> header. Both declare <code>extensions.bazaar</code> and <code>accepts[0].outputSchema.input</code> (<code>type</code> + <code>method</code>) so discovery clients can catalog the skill. PayAI settle still uses the v1 requirement internally.</li>
+        <li>The edge answers <code>402</code> with <code>x402Version: 2</code> JSON (<code>resource</code> object, <code>accepts[].amount</code>, CAIP-2 <code>eip155:8453</code>, plus EIP-712 extra for Circle USDC) and the same envelope in the <code>PAYMENT-REQUIRED</code> header. Both declare <code>extensions.bazaar</code> and <code>accepts[0].outputSchema.input</code> (<code>type</code> + <code>method</code>) so discovery clients can catalog the skill. <code>accepts[0].outputSchema.output</code> is the unwrapped HTTP 200 body sample (not the bazaar <code>{type, example}</code> wrapper). PayAI settle still uses the v1 requirement internally.</li>
         <li>The agent settles through a compatible x402 client, then retries the same POST with <code>X-PAYMENT</code> (v1) or <code>PAYMENT-SIGNATURE</code> (v2).</li>
         <li>A valid settlement returns <code>200</code> JSON. A missing or invalid proof returns another <code>402</code>.</li>
       </ol>
@@ -333,19 +330,19 @@ ${CHECKOUT_EMAIL_FORM_CSS}
         <figure>
           <figcaption>curl — health</figcaption>
           <pre><code>curl -sS https://authichain.com/api/x402/health</code></pre>
-          <p>Expect HTTP 200 with <code>"status":"ready"</code>, <code>"mode":"trustless"</code>, the payTo and Circle USDC addresses above, and <code>"pricePerCall":{"usd":0.05}</code>.</p>
+          <p>x402 paid verification and on-chain anchoring in development. Do not treat health JSON as a public live-price claim.</p>
         </figure>
         <figure>
           <figcaption>curl — unpaid challenge</figcaption>
           <pre><code>curl -sS -i -X POST https://authichain.com/api/x402 \\
   -H 'content-type: application/json' \\
   -d '{}'</code></pre>
-          <p>An empty body is the unpaid HTTP 402. The body lists the asset, payTo, and EIP-712 extra. A non-UUID sealId is HTTP 400 before payment. No wallet, key, or <code>X-PAYMENT</code> header is required for this probe.</p>
+          <p>An empty body is the unpaid HTTP 402. The 402 response lists the asset, payTo, and EIP-712 extra. A non-UUID sealId is HTTP 400 before payment. No wallet, key, or <code>X-PAYMENT</code> header is required for this probe.</p>
         </figure>
         <figure>
           <figcaption>curl — catalog</figcaption>
           <pre><code>curl -sS https://authichain.com/api/x402/catalog</code></pre>
-          <p>Machine-readable paid endpoints, price, payTo, and health URL. Same numbers as health — not a second price list. Catalog also at <a href="${esc(p.wellKnownUrl)}"><code>/.well-known/x402.json</code></a>. x402scan fan-out is <a href="${esc(p.fanoutUrl)}"><code>/.well-known/x402</code></a>. OpenAPI with <code>x-payment-info</code> is <a href="${esc(p.openApiUrl)}"><code>/openapi.json</code></a>.</p>
+          <p>Machine-readable endpoints, payTo, and health URL. x402 paid verification and on-chain anchoring in development. Catalog also at <a href="${esc(p.wellKnownUrl)}"><code>/.well-known/x402.json</code></a>. x402scan fan-out is <a href="${esc(p.fanoutUrl)}"><code>/.well-known/x402</code></a>. OpenAPI with <code>x-payment-info</code> is <a href="${esc(p.openApiUrl)}"><code>/openapi.json</code></a>.</p>
         </figure>
         <figure>
           <figcaption>curl — settle retry (Agent A → AuthiChain)</figcaption>
@@ -362,7 +359,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
   <div class="wrap panel-grid">
     <section class="card" aria-labelledby="machine-title">
       <h2 id="machine-title">Machine-readable discovery</h2>
-      <p>Agents should fetch JSON, not scrape this HTML. Health is the live rail; catalog lists paid methods and prices copied from that same report.</p>
+      <p>Agents should fetch JSON, not scrape this HTML. x402 paid verification and on-chain anchoring in development.</p>
       <dl class="spec">
         <dt>Catalog</dt><dd class="mono"><a href="${esc(p.catalogUrl)}">${esc(p.catalogUrl)}</a></dd>
         <dt>Well-known</dt><dd class="mono"><a href="${esc(p.wellKnownUrl)}">${esc(p.wellKnownUrl)}</a></dd>
@@ -379,7 +376,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
       <ul>
         <li>StrainChain Passport — <strong>$${planUsd("strainchain_passport")}</strong> one-time. Enter a work email so Stripe can recover the cart.</li>
         <li>EU DPP Readiness — <strong>$${planUsd("dpp_readiness")}</strong> one-time. Same recovery path.</li>
-        <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}. <strong>$QRON is not this rail.</strong></li>
+        <li>Agent verification — x402 paid verification and on-chain anchoring in development. <strong>$QRON is not this rail.</strong></li>
       </ul>
       ${checkoutEmailFormHtml({
         action: "https://authichain.com/checkout/strainchain_passport",
@@ -412,7 +409,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
 </main>
 <footer class="site">
   <div class="wrap foot-inner">
-    <p>© 2026 AuthiChain. SAM legal entity ${esc(p.legalEntity)} (sole proprietor; AuthiChain is a brand, not a corporation). Agent pay is live at <a href="${esc(p.canonicalPath)}">/x402</a>.</p>
+    <p>© 2026 AuthiChain. SAM legal entity ${esc(p.legalEntity)} (sole proprietor; AuthiChain is a brand, not a corporation). x402 paid verification and on-chain anchoring in development. Docs at <a href="${esc(p.canonicalPath)}">/x402</a>.</p> <!-- pragma: allowlist secret -->
     <p><a href="/">Home</a> · <a href="/contact">Contact</a> · <a href="/dpp">/dpp</a></p>
   </div>
 </footer>

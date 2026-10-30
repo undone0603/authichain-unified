@@ -13,7 +13,10 @@ const ENV = {
 } as unknown as Env;
 
 async function get(path: string) {
-  return worker.fetch(new Request(`https://authichain.govchain.us${path}`), ENV);
+  return worker.fetch(
+    new Request(`https://authichain.govchain.us${path}`),
+    ENV
+  );
 }
 
 test("/desk is a real page, not the indigo homepage", async () => {
@@ -23,7 +26,10 @@ test("/desk is a real page, not the indigo homepage", async () => {
   assert.match(html, /<title>Self-serve desk — AuthiChain<\/title>/);
   assert.match(html, /Issue\. Bind\. Verify\./);
   assert.match(html, /--ink:#0c0c0d/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
   assert.doesNotMatch(html, /Aura|MediLedger|Walmart/);
   assert.doesNotMatch(html, /1369/);
@@ -65,7 +71,10 @@ test("/desk/pricing collects recovery email for plan checkout", async () => {
   const res = await get("/desk/pricing");
   assert.equal(res.status, 200);
   const html = await res.text();
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
+  );
   assert.match(html, /name="email"/);
   assert.match(html, /\$49/);
   assert.match(html, /\$299/);
@@ -183,5 +192,6 @@ test("/desk/pricing sells the passport and DPP, not Farm", async () => {
   );
   assert.doesNotMatch(html, /href="\/api\/checkout/);
   assert.doesNotMatch(html, /AuthiChain Basic/);
-  assert.match(html, /50 workspace generations/);
+  assert.match(html, /self-serve activation/);
+  assert.equal(html.includes("50 workspace generations"), false);
 });

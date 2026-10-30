@@ -13,12 +13,18 @@
  * GET  /api/x402/listing → PayAPI-ready pack copied from health
  * GET  /api/x402/growth → directories + skills + sisters
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
+ * GET  /.well-known/agent-card.json (+ agent.json) → A2A Agent Card
+ *      with skills and x402 payment metadata. No contact email. No ERC-8004.
+ * GET  /.well-known/lumi-monitor.txt → Lumi Watch-trial domain proof.
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
  * POST /api/x402 + /api/v1/agent-verify → 402 challenge when unpaid. A paid
  *      call reads auth_seals on this worker when SUPABASE_URL and a key are
  *      set (src/lib/paid-seal-verify.ts) and settles only after that read.
  *      Otherwise it forwards over VERIFY_APP. With neither, 503
  *      registry_not_bound before any settlement (X402_REGISTRY_NOT_BOUND).
+ *      The bazaar example UUID and the stale PayAI sample `demo` are never a
+ *      free 200: crawlers POST those bodies and treat 2xx as payability=free.
+ *      Real UUIDs still get 3/IP/UTC-day. Empty unpaid POST stays 402.
  *
  * Do not rebind X402_PAY_TO away from the owner-authorized treasury
  * 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2. Do not rebind
@@ -30,6 +36,10 @@ import {
   parsePaymentHeader,
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
+  X402_RESOURCE_DESCRIPTION,
+  isDiscoveryExampleSealId,
+  LUMI_MONITOR_VERIFY_LINE,
+  x402AgentCard,
   x402Catalog,
   x402HealthReport,
   x402OpenApiDocument,
@@ -40,6 +50,7 @@ import {
   type X402VerifyBinding,
 } from "../../../src/lib/x402";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
+import { sealBaseline } from "../../../src/lib/seal-baseline";
 import {
   readSeal,
   guardedForward,
@@ -50,8 +61,9 @@ import {
   type SealLookupEnv,
 } from "../../../src/lib/paid-seal-verify";
 import {
+  coerceSealBody,
   parseSealRequest,
-  registryAnswer,
+  unpaidSealRefusal,
 } from "../../../src/lib/agent-verify";
 import {
   claimFreeCall,
@@ -114,17 +126,15 @@ export function isX402Path(pathname: string): boolean {
     p === "/api/v1/agent-verify" ||
     p === "/.well-known/x402" ||
     p === "/.well-known/x402.json" ||
+    p === "/.well-known/agent-card.json" ||
+    p === "/.well-known/agent.json" ||
+    p === "/.well-known/lumi-monitor.txt" ||
     p === "/openapi.json"
   );
 }
 
 function isHealthPath(pathname: string): boolean {
-  const p = normalizePath(pathname);
-  return (
-    p === "/api/x402" ||
-    p === "/api/x402/health" ||
-    p === "/api/v1/agent-verify"
-  );
+  return normalizePath(pathname) === "/api/x402/health";
 }
 
 function isCatalogPath(pathname: string): boolean {
@@ -142,6 +152,30 @@ function isGrowthPath(pathname: string): boolean {
 
 function isFanoutPath(pathname: string): boolean {
   return normalizePath(pathname) === "/.well-known/x402";
+}
+
+function isAgentCardPath(pathname: string): boolean {
+  const p = normalizePath(pathname);
+  return p === "/.well-known/agent-card.json" || p === "/.well-known/agent.json";
+}
+
+function isLumiMonitorPath(pathname: string): boolean {
+  return normalizePath(pathname) === "/.well-known/lumi-monitor.txt";
+}
+
+function lumiMonitorResponse(method: string): Response {
+  const headers = {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "private, no-store",
+    "CDN-Cache-Control": "no-store",
+  };
+  if (method.toUpperCase() === "HEAD") {
+    return new Response(null, { status: 200, headers });
+  }
+  return new Response(`${LUMI_MONITOR_VERIFY_LINE}\n`, {
+    status: 200,
+    headers,
+  });
 }
 
 function isOpenApiPath(pathname: string): boolean {
@@ -237,6 +271,11 @@ function fanoutResponse(): Response {
   return json(200, x402ScanFanout());
 }
 
+async function agentCardResponse(env?: X402Env): Promise<Response> {
+  hydrateX402(env);
+  return json(200, await x402AgentCard(healthEnv(env)));
+}
+
 async function openApiResponse(env?: X402Env): Promise<Response> {
   hydrateX402(env);
   return json(200, await x402OpenApiDocument(healthEnv(env)));
@@ -307,17 +346,13 @@ async function tryFreeCall(
       remaining: claim.remaining,
     };
   }
-  const answer = registryAnswer(lookup.seal);
+  const answer = sealBaseline(lookup.seal);
   return {
     response: json(
       200,
       {
-        verified: false,
-        registered: answer.registered,
-        status: answer.status,
-        checks: answer.checks,
+        ...answer,
         subject: parsed.sealId,
-        details: answer.details,
         settlement: null,
         free: true,
         freeCallsRemaining: claim.remaining,
@@ -327,6 +362,27 @@ async function tryFreeCall(
     ),
     remaining: claim.remaining,
   };
+}
+
+function unpaidQuote(request: Request, env?: X402Env): Response {
+  hydrateX402(env);
+  const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
+  const resource = new URL(request.url).toString();
+  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  if (!payTo) {
+    return json(503, {
+      error: "payments_not_configured",
+      status: "not_configured",
+      health: "/api/x402/health",
+    });
+  }
+  const required = buildPaymentRequired({
+    resource,
+    priceUsd,
+    payTo,
+    description: X402_RESOURCE_DESCRIPTION,
+  });
+  return json(402, required.v2, required.headers);
 }
 
 async function agentVerify(
@@ -351,7 +407,7 @@ async function agentVerify(
     resource,
     priceUsd,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
   });
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
@@ -374,7 +430,7 @@ async function agentVerify(
     resource,
     priceUsd,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
     env,
     fetchImpl: opts?.fetchImpl,
     replayStore:
@@ -385,7 +441,7 @@ async function agentVerify(
     return json(decision.status, decision.body, decision.headers);
   }
   if (decision.action === "forward" && verifyApp) {
-    const sealReq = parseSealRequest(parseJsonObject(bodyText));
+    const sealReq = parseSealRequest(coerceSealBody(parseJsonObject(bodyText)));
     return guardedForward({
       proofHeader,
       replayStore:
@@ -410,7 +466,21 @@ export async function tryHandleX402(
   const url = new URL(request.url);
   if (!isX402Path(url.pathname)) return null;
 
+  if (isLumiMonitorPath(url.pathname)) {
+    if (request.method === "GET" || request.method === "HEAD") {
+      return lumiMonitorResponse(request.method);
+    }
+    return json(405, { error: "method not allowed" });
+  }
+
   if (request.method === "HEAD") {
+    if (isPaidPath(url.pathname)) {
+      const quote = unpaidQuote(request, env);
+      return new Response(null, {
+        status: quote.status,
+        headers: quote.headers,
+      });
+    }
     return new Response(null, {
       status: 204,
       headers: {
@@ -436,12 +506,26 @@ export async function tryHandleX402(
     return fanoutResponse();
   }
 
+  if (request.method === "GET" && isAgentCardPath(url.pathname)) {
+    return agentCardResponse(env);
+  }
+
   if (request.method === "GET" && isOpenApiPath(url.pathname)) {
     return openApiResponse(env);
   }
 
   if (request.method === "GET" && isHealthPath(url.pathname)) {
     return healthResponse(env);
+  }
+
+  if (request.method === "GET" && isPaidPath(url.pathname)) {
+    const proofHeader = readPaymentProofHeader(name =>
+      request.headers.get(name)
+    );
+    if (proofHeader && parsePaymentHeader(proofHeader)) {
+      return agentVerify(request, env, verifyApp, opts);
+    }
+    return unpaidQuote(request, env);
   }
 
   if (request.method === "POST" && isPaidPath(url.pathname)) {

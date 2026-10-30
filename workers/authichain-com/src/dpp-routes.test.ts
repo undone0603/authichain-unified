@@ -41,7 +41,8 @@ describe("tryHandleDppRoute", () => {
     ]) {
       const html = await (await tryHandleDppRoute(req(path)))!.text();
       expect(html).toContain("Workspace opened");
-      expect(html).toContain("50 workspace generations");
+      expect(html).toContain("with self-serve activation.");
+      expect(html).not.toContain("50 workspace generations");
       expect(html).toContain("/dpp/activate?");
     }
   });

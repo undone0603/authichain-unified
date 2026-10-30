@@ -29,7 +29,7 @@ Claim
 
 ## Why it matters
 
-Most “verified authentic” badges resolve to a vendor server saying *trust me*. That relocates the trust problem.
+Most “verified authentic” badges resolve to a vendor server saying _trust me_. That relocates the trust problem.
 
 A usable reference has to answer four different questions:
 
@@ -44,11 +44,11 @@ Those are not the same question. Mixing them produces false confidence and false
 
 Published at [/protocol](/protocol). Reference verifier: `verifier.mjs` (Node builtins only, Apache-2.0, v0.1.0 draft).
 
-| Verdict | Meaning |
-|---|---|
-| `verified` | Signature valid; anchor present, well formed, mainnet; hash matches |
-| `valid-unanchored` | Signature valid; no anchor supplied |
-| `invalid` | Any required check failed |
+| Verdict            | Meaning                                                             |
+| ------------------ | ------------------------------------------------------------------- |
+| `verified`         | Signature valid; anchor present, well formed, mainnet; hash matches |
+| `valid-unanchored` | Signature valid; no anchor supplied                                 |
+| `invalid`          | Any required check failed                                           |
 
 There is no score in this layer. A score is a product feature. A verdict is what a verifier owes you.
 
@@ -79,10 +79,10 @@ Anomalous scan reasons in that worker include `impossible_travel` and `cloned_id
 
 Documented in `docs/attestation/v0.1.md`.
 
-| Axis | Values |
-|---|---|
+| Axis     | Values                               |
+| -------- | ------------------------------------ |
 | Decision | `verified` \| `warning` \| `blocked` |
-| Status | `active` \| `revoked` \| `unknown` |
+| Status   | `active` \| `revoked` \| `unknown`   |
 
 Representation: compact JWS, protected header `typ=AC-ATTESTATION+JWS`, algorithm Ed25519 / EdDSA. Verify against the public JWKS.
 
@@ -90,7 +90,7 @@ Representation: compact JWS, protected header `typ=AC-ATTESTATION+JWS`, algorith
 GET https://authichain.com/.well-known/jwks.json
 ```
 
-kid `lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE`, `kty=OKP`, `crv=Ed25519`, `alg=EdDSA`.
+kid `T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ`, `kty=OKP`, `crv=Ed25519`, `alg=EdDSA`.
 
 v0.1 has no live status list. The status in the signed payload is the status at issuance.
 
@@ -113,11 +113,13 @@ Accept: application/json
 
 The object id form is `qron:url:` plus 8 hex characters.
 
-| Result | HTTP | Meaning |
+| HTTP | `decision` | Meaning |
 |---|---|---|
-| `verified` | 200 | The stored presentation signature checks out |
-| `presentation_not_found` | 404 | No stored presentation for that id |
-| `indeterminate` | 400 or 502 | The check did not finish |
+| 200 | `verified` | Signature valid, issuer trusted, presentation active and unexpired |
+| 409 | `warning`, `blocked`, `revoked`, `expired`, `risk`, or `indeterminate` | Signature valid, but the presentation is not verified |
+| 400 | `indeterminate` with `cryptographic_status: "invalid"` | The signature or object id check failed |
+| 404 | `indeterminate` with `error: "presentation_not_found"` | No stored presentation for that id |
+| 422, 502, or 503 | `indeterminate` | The check did not finish |
 
 qron.space, strainchain.io, and govchain.us each proxy that GET. Each host does not verify the signature. Their responses set `x-qron-resolve-origin: https://authichain.com`.
 
@@ -163,7 +165,7 @@ curl -sS -H 'accept: application/json' \
 ```
 
 Human lookup: [/verify](/verify).
-Agent pay rail: [/x402](/x402?utm_source=docs&utm_medium=authority&utm_campaign=verification) — $0.05 USDC on Base. Do not send private keys.
+Agent pay rail: [/x402](/x402?utm_source=docs&utm_medium=authority&utm_campaign=verification) — x402 paid verification and on-chain anchoring in development. Do not send private keys.
 
 Negative fixtures live in the repo:
 
