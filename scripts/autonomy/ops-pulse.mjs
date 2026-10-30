@@ -129,6 +129,9 @@ export function blindReason(error) {
   const msg = String(error?.message ?? error ?? "");
   const m = msg.match(/^(Stripe checkout sessions|Supabase stripe_events) -> (\d{3})/);
   return m ? `${m[1]} answered HTTP ${m[2]}` : "the check failed before it could read Stripe and Supabase";
+}
+
+/**
  * Read-only monitoring must fail closed. Never put exception messages (which
  * could contain tokens or customer details) in a public ops-alert issue.
  * This checks webhook receipt only, not entitlement or activation.
@@ -346,38 +349,6 @@ async function main() {
     );
   }
 
-  const stripeKey =
-    process.env.STRIPE_READ_KEY || process.env.STRIPE_SECRET_KEY;
-  // A watchdog that could not look is not a green watchdog. Before this, a
-  // missing key or a Stripe 401 logged "skipped" and the pulse stayed green.
-  const missing = [
-    !stripeKey && "STRIPE_READ_KEY/STRIPE_SECRET_KEY",
-    !process.env.SUPABASE_URL && "SUPABASE_URL",
-    !process.env.SUPABASE_SERVICE_ROLE_KEY && "SUPABASE_SERVICE_ROLE_KEY",
-  ].filter(Boolean);
-  if (missing.length) {
-    report.fulfilmentBlind = `not configured: ${missing.join(", ")} unset`;
-    console.log(`fulfilment check blind: ${report.fulfilmentBlind}`);
-  } else {
-    try {
-      const f = await checkFulfilment({
-        stripeKey,
-        supabaseUrl: process.env.SUPABASE_URL,
-        supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-        founderEmails: [
-          ...(manifest.founder_emails ?? []),
-          ...(process.env.FOUNDER_EMAILS ?? "").split(","),
-        ],
-      });
-      report.revenue = f.problems;
-      console.log(
-        `fulfilment: ${f.checked} paid checkouts checked, ${f.problems.length} unfulfilled`
-      );
-    } catch (e) {
-      report.fulfilmentBlind = blindReason(e);
-      console.log(`fulfilment check blind: ${report.fulfilmentBlind}`);
-    }
-  }
   const f = await monitorFulfilment({
     stripeKey: process.env.STRIPE_READ_KEY || process.env.STRIPE_SECRET_KEY,
     supabaseUrl: process.env.SUPABASE_URL,
