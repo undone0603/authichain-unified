@@ -291,7 +291,7 @@ export function verifyAttestationJws(jws, jwks, opts = {}) {
   if (payload?.expires_at !== undefined) {
     const exp = new Date(payload.expires_at);
     if (Number.isNaN(exp.getTime())) reasons.push('expires_at_malformed');
-    else if (exp < now) reasons.push('expired');
+    else if (exp <= now) reasons.push('expired');
   }
   if (payload?.decision !== 'verified') reasons.push(`decision:${payload?.decision}`);
   if (payload?.status !== 'active') reasons.push(`status:${payload?.status}`);
