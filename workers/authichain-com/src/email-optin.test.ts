@@ -403,9 +403,7 @@ describe("email opt-in", () => {
   });
   it("served consent text never contains PLACEHOLDER (both pages)", () => {
     const dpp = renderDppCheckPage(
-      new URL(
-        "https://authichain.com/dpp-check?category=battery_passport&sells_in_eu=yes"
-      )
+      new URL("https://authichain.com/dpp-check?category=other&sells_in_eu=no")
     );
     const itr = renderIsThisRealPage();
     for (const h of [dpp, itr, emailOptinBlock("t")]) {
@@ -426,12 +424,28 @@ describe("email opt-in", () => {
   });
   it("free DPP check still renders a result with no email given", () => {
     const html = renderDppCheckPage(
+      new URL("https://authichain.com/dpp-check?category=other&sells_in_eu=no")
+    );
+    expect(html).toContain("Your result:");
+    expect(html).toContain('id="dpp-email-optin"');
+  });
+
+  it("shows one consent form: in-scope result-optin, out-of-scope dpp-email-optin", () => {
+    const inScope = renderDppCheckPage(
       new URL(
         "https://authichain.com/dpp-check?category=battery_passport&sells_in_eu=yes"
       )
     );
-    expect(html).toContain("Your result:");
-    expect(html).toContain('id="dpp-email-optin"');
+    expect(inScope).toContain("Your result:");
+    expect(inScope).toContain('id="result-optin"');
+    expect(inScope).not.toContain("dpp-email-optin");
+
+    const outOfScope = renderDppCheckPage(
+      new URL("https://authichain.com/dpp-check?category=other&sells_in_eu=no")
+    );
+    expect(outOfScope).toContain("Your result:");
+    expect(outOfScope).toContain('id="dpp-email-optin"');
+    expect(outOfScope).not.toContain("result-optin");
   });
 
   it("country: optional, uppercased, ISO alpha-2 only; stored on insert", async () => {
@@ -458,9 +472,7 @@ describe("email opt-in", () => {
   });
   it("both opt-in forms have a 2-letter country field", () => {
     const dpp = renderDppCheckPage(
-      new URL(
-        "https://authichain.com/dpp-check?category=battery_passport&sells_in_eu=yes"
-      )
+      new URL("https://authichain.com/dpp-check?category=other&sells_in_eu=no")
     );
     for (const h of [dpp, renderIsThisRealPage()]) {
       expect(h).toMatch(

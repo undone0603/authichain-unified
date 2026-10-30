@@ -186,9 +186,8 @@ function resultHtml(r: DppReadinessResult, price: number): string {
     <h3>Next step</h3>
     <p>${esc(r.nextStep)}</p>
     ${cta}
-    ${r.inScope ? optInForm(r, price) : ""}
+    ${r.inScope ? optInForm(r, price) : emailOptinBlock("dpp-email-optin")}
     <p class="bp-note">${esc(r.disclaimer)}</p>
-    ${emailOptinBlock("dpp-email-optin")}
   </div>
 </section>`;
 }

@@ -175,6 +175,7 @@ describe("/dpp-check email opt-in", () => {
   it("offers an opt-in form on an in-scope result, hidden until JavaScript runs", () => {
     const html = inScope();
     expect(html).toContain('id="result-optin"');
+    expect(html).not.toContain("dpp-email-optin");
     // Without JS the form would end on the endpoint's raw JSON, so it ships hidden.
     expect(html).toMatch(/<form[^>]*id="result-optin"[^>]*\shidden>/);
     expect(html).toContain("/api/leads/capture");
@@ -221,7 +222,9 @@ describe("/dpp-check email opt-in", () => {
       NOW
     );
     expect(blank).not.toContain("result-optin");
+    expect(blank).not.toContain("dpp-email-optin");
     expect(noDuty).not.toContain("result-optin");
+    expect(noDuty).toContain('id="dpp-email-optin"');
   });
 
   it("no longer claims that nothing is stored", () => {
