@@ -14,7 +14,7 @@ export const LEGAL_EFFECTIVE = "24 October 2026";
  * Shown at the top of /terms only.
  * Set to the authichain-com go-live day just before deploy.
  */
-export const TERMS_EFFECTIVE = "16 October 2026";
+export const TERMS_EFFECTIVE = "30 October 2026";
 
 const OPERATOR =
   "Zachary Kietzman, a sole proprietor in Michigan, USA, using the brand AuthiChain. AuthiChain is a brand, not a corporation. The SAM legal entity is ZACHARY KIETZMAN.";
