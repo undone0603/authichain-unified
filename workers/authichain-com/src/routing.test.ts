@@ -121,13 +121,64 @@ test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
   }
   const starter = await (await get("/checkout/starter")).text();
   assert.ok(starter.includes(starterDesc));
-  assert.ok(!starter.includes("never expire"), "/checkout/starter must not say never expire");
-  assert.ok(!starter.includes("no expiry date"), "/checkout/starter must not say no expiry date");
+  assert.ok(
+    !starter.includes("never expire"),
+    "/checkout/starter must not say never expire"
+  );
+  assert.ok(
+    !starter.includes("never-expire"),
+    "/checkout/starter must not say never-expire"
+  );
+  assert.ok(
+    !starter.includes("no expiry"),
+    "/checkout/starter must not say no expiry"
+  );
+  assert.ok(
+    !starter.includes("no-expiry"),
+    "/checkout/starter must not say no-expiry"
+  );
+  assert.ok(
+    !starter.includes("50 workspace generations"),
+    "/checkout/starter must not say 50 workspace generations"
+  );
   const home = await (await get("/")).text();
   assert.ok(
     home.includes(starterDesc),
     "home JSON-LD Starter offer uses the Research PASS FREE-PREVIEW sentence"
   );
+});
+
+test("CFA-758: money routes have no 50-workspace-generation or never-expire pack claims", async () => {
+  const banned = [
+    "50 workspace generations",
+    "50 workspace generation",
+    "never expire",
+    "never-expire",
+    "no expiry",
+    "no-expiry",
+  ];
+  for (const path of [
+    "/",
+    "/pricing",
+    "/checkout/starter",
+    "/checkout/creator",
+    "/checkout/dpp_readiness",
+    "/dpp",
+    "/battery-passport",
+    "/trumark",
+    "/docs/dpp-architecture",
+  ]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    for (const phrase of banned) {
+      assert.equal(
+        html.toLowerCase().includes(phrase),
+        false,
+        `${path} must have 0 hits on ${phrase}`
+      );
+    }
+  }
 });
 
 test("the apex still renders the homepage", async () => {
