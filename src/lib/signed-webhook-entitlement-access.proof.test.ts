@@ -37,8 +37,17 @@ const memory = vi.hoisted(() => {
           filters.push({ column, value, isNull: true });
           return query;
         },
-        async maybeSingle() { return { data: matches()[0] ?? null, error: null }; },
-        async single() { return { data: matches()[0] ?? null, error: null }; },
+        // PostgREST returns detached JSON rows. Returning a direct Map reference
+        // would let a later update mutate the earlier read and falsely deduct
+        // credits twice in the result calculation (100 -> 98 after one spend).
+        async maybeSingle() {
+          const row = matches()[0];
+          return { data: row ? { ...row } : null, error: null };
+        },
+        async single() {
+          const row = matches()[0];
+          return { data: row ? { ...row } : null, error: null };
+        },
         insert(row: Record<string, unknown>) {
           const id = "test_profile_" + ++nextId;
           rows.set(id, {
