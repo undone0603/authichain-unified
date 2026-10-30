@@ -61,7 +61,7 @@
   },
   "homepage": "https://github.com/vercel-labs/agent-browser#readme",
   "dependencies": {
-    "next": "^16.4.0",
+    "next": "^15.5.28",
     "node-simctl": "^9.1.1",
     "playwright-core": "^1.63.0",
     "react": "^19.3.0",
