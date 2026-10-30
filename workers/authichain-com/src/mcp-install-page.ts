@@ -9,8 +9,9 @@
  *
  * Two rules govern everything below.
  *
- * 1. The tool list is NOT retyped. It is rendered from the live `TOOLS`
- *    array exported by mcp-routes.ts, so this page cannot drift from what
+ * 1. The tool list is NOT retyped. It is rendered from `toolsFor(env)` (the
+ *    `TOOLS` array exported by mcp-routes.ts, with the verify description
+ *    resolved against this worker's env), so this page cannot drift from what
  *    tools/list actually answers. Adding a tool there adds a row here.
  *
  * 2. Showcases are seeded ONLY from records that are already public. That
@@ -30,7 +31,8 @@ import { ESTATE_FONTS_LINK } from "../../_shared/estate-landing";
 // Extensionless on purpose: tsconfig.workers.json charges one TS5097 per
 // ".ts" import and the ratchet fails on any increase.
 import { DPP_CATEGORIES } from "../../../src/lib/dpp-readiness";
-import { TOOLS } from "./mcp-routes";
+import { mcpPaidVerifyStatus, toolsFor } from "./mcp-routes";
+import type { X402Env } from "./x402-routes";
 import { PUBLISHED_PACKS as PACKS, packUrl } from "./published-packs";
 
 export const MCP_INSTALL_PATHS = [
@@ -195,7 +197,7 @@ export const SHOWCASES: readonly Showcase[] = [
     title: "Ask what a call costs before making it",
     call: { tool: "get_pricing", args: {} },
     returns:
-      "Verification is free: no API key, no payment header, no account. Returns the free tool list and the status of the paid plans, which are currently on hold.",
+      "Verification is free: no API key, no payment header, no account. Returns the free tool list, the x402 per-call price, and the one-time plans listed on /pricing.",
     limit:
       "The legacy x402 seal verify tool is a separate rail and answers 402 on an unpaid call. Use verify_record instead.",
     evidence: null,
@@ -305,11 +307,23 @@ function showcaseCard(s: Showcase): string {
 </article>`;
 }
 
-export function renderMcpInstallPage(): string {
+/**
+ * Meta description. The paid-verify sentence follows mcpPaidVerifyStatus(env),
+ * the same binding get_pricing and /api/x402/health report, so this page
+ * cannot say "in development" while the rail answers (or the reverse).
+ */
+export function mcpInstallMetaDescription(env?: X402Env): string {
+  const paid = mcpPaidVerifyStatus(env).bound
+    ? "Paid seal verify over x402 is live: paid calls are answered from the seal registry."
+    : "Paid seal verify over x402 is not answering yet: a paid call is refused before settlement, so no payment is taken.";
+  return `Connect AuthiChain to Claude, Cursor or VS Code in one step. Free signed-record verification and EU DPP readiness checks. ${paid}`;
+}
+
+export function renderMcpInstallPage(env?: X402Env): string {
   const configJson = JSON.stringify(MCP_CLIENT_CONFIG, null, 2);
   const vscodeConfigJson = JSON.stringify(VSCODE_CLIENT_CONFIG, null, 2);
 
-  const toolRows = TOOLS.map(t => {
+  const toolRows = toolsFor(env).map(t => {
     const paid = t.name === "verify";
     return `<tr>
       <td><code>${esc(t.name)}</code> ${
@@ -334,7 +348,7 @@ export function renderMcpInstallPage(): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Install the AuthiChain MCP server | AuthiChain</title>
-<meta name="description" content="Connect AuthiChain to Claude, Cursor or VS Code in one step. Look up AuthiChain product records. x402 paid verification and on-chain anchoring in development.">
+<meta name="description" content="${esc(mcpInstallMetaDescription(env))}">
 <link rel="canonical" href="${MCP_INSTALL_CANONICAL}">
 ${ESTATE_FONTS_LINK}
 <style>${CSS}</style>
