@@ -172,7 +172,21 @@ async function fulfillCatalogCreditsIfPaid(
   const recurring = isRecurringCheckoutSession(session);
   let catalog = planByStripePriceId(linePriceId)?.id;
   if (!catalog && !recurring) {
-    catalog = planByAmountCents(session.amount_total ?? undefined)?.id;
+    // #1890 parity: the amount-only fallback may grant Starter only for a
+    // paid, livemode, USD, undiscounted $29.00 session. Nothing else is
+    // resolved from the amount.
+    const { starterAmountFallbackRefusals, STARTER_FALLBACK_AMOUNT_CENTS } =
+      await import("../../src/lib/billing/live-catalog");
+    const refusals = starterAmountFallbackRefusals(session, session.livemode);
+    if (refusals.length === 0) {
+      const byAmount = planByAmountCents(STARTER_FALLBACK_AMOUNT_CENTS);
+      if (byAmount?.id === "starter") catalog = byAmount.id;
+    } else if (!metaPlan) {
+      console.warn("[stripe-webhook] starter amount fallback refused", {
+        sessionId: session.id,
+        reasons: refusals,
+      });
+    }
   }
   if (
     !catalog &&

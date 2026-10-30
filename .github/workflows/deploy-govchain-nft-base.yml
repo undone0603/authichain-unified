@@ -103,7 +103,7 @@ jobs:
     name: Deploy or grant AuthiChainNFT
     if: github.event_name == 'workflow_dispatch'
     needs: compile-nft
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 20
     outputs:
       contract_address: ${{ steps.deploy.outputs.contract_address }}

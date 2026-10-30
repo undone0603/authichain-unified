@@ -54,12 +54,16 @@ function readKeyMaterial(env?: AttestationEnv): {
   kid?: string;
   publicJwk?: string;
 } {
-  const proc =
-    typeof process !== "undefined" ? process.env : undefined;
+  const proc = typeof process !== "undefined" ? process.env : undefined;
   return {
-    raw: env?.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 || proc?.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64,
-    kid: env?.AUTHICHAIN_ATTESTATION_KEY_ID || proc?.AUTHICHAIN_ATTESTATION_KEY_ID,
-    publicJwk: env?.AUTHICHAIN_ATTESTATION_PUBLIC_JWK || proc?.AUTHICHAIN_ATTESTATION_PUBLIC_JWK,
+    raw:
+      env?.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 ||
+      proc?.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64,
+    kid:
+      env?.AUTHICHAIN_ATTESTATION_KEY_ID || proc?.AUTHICHAIN_ATTESTATION_KEY_ID,
+    publicJwk:
+      env?.AUTHICHAIN_ATTESTATION_PUBLIC_JWK ||
+      proc?.AUTHICHAIN_ATTESTATION_PUBLIC_JWK,
   };
 }
 
@@ -94,7 +98,7 @@ async function publicJwkFromPem(pem: string): Promise<PublicOkp> {
     pemToPkcs8Der(pem),
     { name: "Ed25519" },
     true,
-    ["sign"],
+    ["sign"]
   );
   const jwk = await crypto.subtle.exportKey("jwk", key);
   const { d: _d, key_ops: _ops, ext: _ext, ...pub } = jwk as JsonWebKey;
@@ -102,7 +106,7 @@ async function publicJwkFromPem(pem: string): Promise<PublicOkp> {
 }
 
 export async function resolveAttestationKey(
-  env?: AttestationEnv,
+  env?: AttestationEnv
 ): Promise<
   | { ok: true; key: ResolvedAttestationKey }
   | { ok: false; error: string; reason?: string; via?: string }
@@ -114,14 +118,29 @@ export async function resolveAttestationKey(
     return { ok: false, error: "attestation key unavailable" };
   }
   try {
-    const pub =
-      fromSecret || (await publicJwkFromPem(privatePem as string));
+    const pub = fromSecret || (await publicJwkFromPem(privatePem as string));
     if (pub.kty !== "OKP" || typeof pub.x !== "string") {
       throw new Error("not an OKP public JWK");
     }
     const { d: _d, ...safe } = pub as PublicOkp & { d?: unknown };
-    const kid =
-      configuredKid || safe.kid || (await calculateJwkThumbprint(safe));
+    // CFA-462: the kid is always the RFC 7638 thumbprint of the public key
+    // actually served/used for signing. A configured or embedded kid that
+    // disagrees is stale (Oct 9 key regeneration) and is ignored.
+    const kid = await calculateJwkThumbprint({
+      kty: safe.kty,
+      crv: safe.crv,
+      x: safe.x,
+    });
+    if (configuredKid && configuredKid !== kid) {
+      console.warn(
+        "attestation: AUTHICHAIN_ATTESTATION_KEY_ID differs from the RFC 7638 thumbprint of the attestation public key; ignoring AUTHICHAIN_ATTESTATION_KEY_ID"
+      );
+    }
+    if (safe.kid && safe.kid !== kid) {
+      console.warn(
+        "attestation: kid in AUTHICHAIN_ATTESTATION_PUBLIC_JWK differs from its RFC 7638 thumbprint; ignoring it"
+      );
+    }
     return {
       ok: true,
       key: {

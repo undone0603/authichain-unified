@@ -168,7 +168,7 @@ Next endpoint answering the same tool names as the worker.
 ### Phase 3 — publish a real record end to end
 
 Issue one production record through the allowlisted production issuer
-(`kid lue84w…`), anchor it, and publish it alongside `polygon-anchor-1`.
+(`kid T3AL7c4w…`), anchor it, and publish it alongside `polygon-anchor-1`.
 That converts G4 from "the path exists" to "the path has been walked", and
 gives the install page a showcase that is a product rather than a
 demonstration.

@@ -157,7 +157,7 @@ describe("registerAttestationApi", () => {
     expect(signed.status).toBe(200);
     const body = (await signed.json()) as { jws: string; kid: string };
     expect(body.jws).toBeTruthy();
-    expect(body.kid).toBe("attest-api-kid");
+    expect(body.kid).toMatch(/^[A-Za-z0-9_-]{43}$/); // CFA-462: kid = RFC 7638 thumbprint, configured kid ignored
     expect(validateAttestation(SAMPLE).attestation_id).toBe(
       SAMPLE.attestation_id
     );
@@ -264,6 +264,47 @@ describe("registerAttestationApi", () => {
     expect(((await first.json()) as { event_id: string }).event_id).toBe(
       ((await second.json()) as { event_id: string }).event_id
     );
+  });
+
+  it("a refused lifecycle write is a 409, never a reported revocation", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerJwksRoute(app);
+    const registry = mockRegistry();
+    registerAttestationApi(app, {
+      ...registry,
+      recordStatusEvent: async () => ({
+        ok: false as const,
+        status: 409,
+        error: "idempotency key already used for a different lifecycle event",
+      }),
+    });
+    const signed = await app.request("/api/v1/attestation", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
+      body: JSON.stringify(SAMPLE),
+    });
+    const { jws } = (await signed.json()) as { jws: string };
+    const res = await app.request(
+      "/api/v1/attestations/" + encodeURIComponent(SAMPLE.attestation_id) + "/revoke",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer issuer-test-secret",
+          "Idempotency-Key": SAMPLE.attestation_id,
+        },
+        body: JSON.stringify({ jws }),
+      },
+    );
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.claim_status).toBeUndefined();
+    expect(body.error).toMatch(/idempotency key/);
   });
 
   it("supersedes an attestation with a differently identified replacement from the same issuer", async () => {

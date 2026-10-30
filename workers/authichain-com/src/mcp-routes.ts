@@ -26,7 +26,21 @@ import {
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
-import { resolvePaidSealVerify } from "../../../src/lib/paid-seal-verify";
+
+type McpEnv = X402Env & {
+  /** Service binding to authichain-edge-router. Public fetch of this zone returns 522. */
+  APP_WORKER?: { fetch: (request: Request) => Promise<Response> };
+};
+import {
+  coerceSealBody,
+  parseSealRequest,
+  unpaidSealRefusal,
+} from "../../../src/lib/agent-verify";
+import {
+  guardedForward,
+  scopedReplayStore,
+  resolvePaidSealVerify,
+} from "../../../src/lib/paid-seal-verify";
 import {
   expectedRecordHash,
   readAnchorOnChain,
@@ -90,14 +104,17 @@ export const TOOLS = [
   {
     name: "verify",
     description: x402PaidVerifyStatus().bound
-      ? "Legacy x402 seal verify. Unpaid tools/call returns HTTP 402. For free verification use verify_record."
-      : "Legacy x402 seal verify, not answering. Unpaid tools/call returns HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
+      ? "Legacy x402 seal verify. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. For free verification use verify_record."
+      : "Legacy x402 seal verify, not answering. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
     inputSchema: {
       type: "object",
       properties: {
-        sealId: { type: "string" },
-        productId: { type: "string" },
-        serial: { type: "string" },
+        sealId: {
+          type: "string",
+          format: "uuid",
+          description:
+            "Required seal UUID. productId and serial are not registry keys.",
+        },
       },
     },
   },
@@ -170,6 +187,22 @@ export const TOOLS = [
       required: ["category"],
     },
   },
+  {
+    name: "scan_living_qr",
+    description:
+      "Free. Scan a stored Living QR. GET https://authichain.com/qron/r/{object_id} returns AuthiChain Verification Decision v1. This host verifies the signature. A missing id is presentation_not_found. Not an x402 payment endpoint, and it does not inspect a physical product.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        object_id: {
+          type: "string",
+          description:
+            "Stored presentation id. Canonical form is qron:url: plus 8 hex characters.",
+        },
+      },
+      required: ["object_id"],
+    },
+  },
 ];
 
 const DPP_CHECK_URL = "https://authichain.com/dpp-check";
@@ -191,18 +224,45 @@ export const DEMONSTRATION_SIGNER_DID =
 export const DEMONSTRATION_RECORD_HASH =
   "5ee3e5e7e8b2c32c8f096b77cc41baece9dd2555d5af24d73f8880484ed6b1e1";
 /**
- * Production attestation issuer: kid lue84w… published at /protocol/jwks.json
+ * Production attestation issuer: kid T3AL7c4w… (RFC 7638 thumbprint, CFA-462) published at /protocol/jwks.json
  * and /.well-known/jwks.json (authichain-edge-router,
  * AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64). did:key is derived from that JWK's x.
  * The authichain-api certificate key (kid A_qAn4…) is deliberately not listed.
  */
 export const PRODUCTION_ISSUER_KID =
-  "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+  "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ";
 export const PRODUCTION_ISSUER_DID =
+  "did:key:z6MkjoaFgNbVQfsk2Tuiza2RT2vXTWpy7CNwuWv74nj7Sb2c";
+/**
+ * RETIRED issuer (Advisor ruling, Oct 17 2026, CFA-462): the pre-Oct-9 key
+ * (x=mJx2TLqU…j7k, kid lue84w… = its RFC 7638 thumbprint). Its private half was
+ * overwritten by deploy-cloudflare.yml at 2026-10-09T05:12:01Z, so it can never
+ * sign again. Accepted ONLY for records whose validFrom is before that instant;
+ * never used for new signing.
+ */
+export const RETIRED_ISSUER_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+export const RETIRED_ISSUER_DID =
   "did:key:z6MkpizPezaS2HsKKWghbcNp8ns7C98fYmypaFHWQyfcVA8G";
+export const RETIRED_ISSUER_RETIRED_AT = "2026-10-09T05:12:01Z";
 type AllowedSigner =
-  | { role: "demonstration"; kid: null; recordHash: string }
-  | { role: "production_issuer"; kid: string; recordHash: null };
+  | {
+      role: "demonstration";
+      kid: null;
+      recordHash: string;
+      retiredAt?: undefined;
+    }
+  | {
+      role: "production_issuer";
+      kid: string;
+      recordHash: null;
+      retiredAt?: undefined;
+    }
+  | {
+      role: "retired_issuer";
+      kid: string;
+      recordHash: null;
+      retiredAt: string;
+    };
 const ALLOWED_SIGNERS: Record<string, AllowedSigner> = {
   // Demonstration signer, not the production issuer. Valid for polygon-anchor-1 only.
   [DEMONSTRATION_SIGNER_DID]: {
@@ -214,6 +274,13 @@ const ALLOWED_SIGNERS: Record<string, AllowedSigner> = {
     role: "production_issuer",
     kid: PRODUCTION_ISSUER_KID,
     recordHash: null,
+  },
+  // Retired: verify-only for records issued before the Oct 9 key replacement.
+  [RETIRED_ISSUER_DID]: {
+    role: "retired_issuer",
+    kid: RETIRED_ISSUER_KID,
+    recordHash: null,
+    retiredAt: RETIRED_ISSUER_RETIRED_AT,
   },
 };
 /** Sender (and recipient, self-send) of demo anchor tx 0x2491…10b7. */
@@ -277,6 +344,14 @@ export async function verifyRecordTool(
   ) {
     allowed = undefined;
     trustReasons.push("demonstration_signer_not_valid_for_this_record");
+  } else if (entry.retiredAt) {
+    const vf = Date.parse(
+      String((record as { validFrom?: unknown })?.validFrom ?? "")
+    );
+    if (!(vf < Date.parse(entry.retiredAt))) {
+      allowed = undefined;
+      trustReasons.push("retired_issuer_not_valid_after_retirement");
+    }
   }
   if (anchor) {
     if (!chain.onChain)
@@ -390,6 +465,7 @@ export function mcpPricingDiscovery(_env?: X402Env) {
       "query_provenance",
       "dpp_readiness_check",
       "get_pricing",
+      "scan_living_qr",
     ],
     paidPlans: {
       status: "on_hold",
@@ -543,6 +619,15 @@ async function unpaidOrRefusedVerify(
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof || !proofHeader) {
+    const refusal = unpaidSealRefusal(args);
+    if (refusal) return json(refusal.status, refusal.body);
+    // HTTP quote crawlers get 402 for probe JSON with no sealId. This MCP
+    // tool still refuses a non-empty argument that is not a seal UUID
+    // before payment. Empty arguments stay the unpaid 402 quote.
+    if (Object.keys(args).length > 0) {
+      const parsed = parseSealRequest(coerceSealBody(args));
+      if (!parsed.ok) return json(parsed.status, parsed.body);
+    }
     return json(402, required.v2, required.headers);
   }
 
@@ -555,6 +640,7 @@ async function unpaidOrRefusedVerify(
     payTo,
     description: "AuthiChain MCP verify",
     env,
+    replayStore: scopedReplayStore(env?.X402_REPLAY_KV, "authichain-com"),
   });
   if (decision.action === "answer") {
     if (decision.status !== 200) {
@@ -580,7 +666,14 @@ async function unpaidOrRefusedVerify(
     );
   }
   if (decision.action === "forward" && verifyApp) {
-    return forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id);
+    // VERIFY_APP settles: guard the replay at this edge (CFA-343/351).
+    return guardedForward({
+      proofHeader,
+      replayStore: scopedReplayStore(env?.X402_REPLAY_KV, "authichain-com"),
+      sealId: typeof args.sealId === "string" ? args.sealId : null,
+      forward: () =>
+        forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id),
+    });
   }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
@@ -589,7 +682,7 @@ async function unpaidOrRefusedVerify(
 
 async function handleRpc(
   request: Request,
-  env?: X402Env,
+  env?: McpEnv,
   verifyApp?: X402VerifyBinding
 ): Promise<Response> {
   let body: {
@@ -636,9 +729,10 @@ async function handleRpc(
       serverInfo: { name: "authichain", version: SERVER_VERSION },
       instructions:
         "AuthiChain verification is free. verify_record checks an Ed25519 " +
-        "signed provenance record. dpp_readiness_check " +
-        "scores EU Digital Product Passport readiness. Neither inspects a " +
-        "physical product, and neither is legal advice.",
+        "signed provenance record. scan_living_qr reads a stored Living QR " +
+        "as AuthiChain Verification Decision v1. dpp_readiness_check " +
+        "scores EU Digital Product Passport readiness. None of these inspects " +
+        "a physical product, and none is legal advice.",
     });
   }
 
@@ -699,6 +793,17 @@ async function handleRpc(
         ...("error" in result ? { isError: true } : {}),
       });
     }
+    if (name === "scan_living_qr") {
+      const binding = env?.APP_WORKER;
+      const fetchImpl: typeof fetch = binding
+        ? (input, init) => binding.fetch(new Request(input, init))
+        : globalThis.fetch;
+      const result = await scanLivingQr(params.arguments ?? {}, fetchImpl);
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(result.body) }],
+        ...(result.isError ? { isError: true } : {}),
+      });
+    }
     if (name === "dpp_readiness_check") {
       const args = params.arguments ?? {};
       const input = parseDppReadinessInput(k => args[k]);
@@ -728,7 +833,7 @@ async function handleRpc(
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use verify_record (free), get_pricing (free), dpp_readiness_check (free), query_provenance (free, not an attestation), or verify (legacy x402 seal verify).",
+          text: "Unknown tool. Use verify_record (free), scan_living_qr (free), get_pricing (free), dpp_readiness_check (free), query_provenance (free, not an attestation), or verify (legacy x402 seal verify).",
         },
       ],
       isError: true,
@@ -738,9 +843,89 @@ async function handleRpc(
   return rpcError(id, `Method not found: ${method}`);
 }
 
+const LIVING_QR_OBJECT_ID = /^qron:url:[0-9a-f]{8}$/;
+const LIVING_QR_SCAN_ORIGIN = "https://authichain.com";
+const LIVING_QR_DECISION_FIELDS = [
+  "valid",
+  "decision",
+  "decision_contract",
+  "cryptographic_status",
+  "status",
+  "error",
+  "overall_valid",
+] as const;
+
+/** Public Decision v1 scan. The object id never chooses the host. */
+export async function scanLivingQr(
+  args: Record<string, unknown>,
+  fetchImpl: typeof fetch = globalThis.fetch
+): Promise<{ isError: boolean; body: Record<string, unknown> }> {
+  const objectId = String(args.object_id ?? args.objectId ?? "").trim();
+  if (!LIVING_QR_OBJECT_ID.test(objectId)) {
+    return {
+      isError: true,
+      body: {
+        valid: false,
+        decision: "indeterminate",
+        decision_contract: "AuthiChain Verification Decision v1",
+        error: "object_id_invalid",
+        expected: "qron:url: plus 8 hex characters",
+      },
+    };
+  }
+  const scan = `${LIVING_QR_SCAN_ORIGIN}/qron/r/${encodeURIComponent(objectId)}`;
+  try {
+    const res = await fetchImpl(scan, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        "user-agent": "authichain-suggestions-probe",
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+    const parsed = await res.json().catch(() => null);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {
+        isError: true,
+        body: {
+          object_id: objectId,
+          scan,
+          http_status: res.status,
+          valid: false,
+          decision: "indeterminate",
+          decision_contract: "AuthiChain Verification Decision v1",
+          error: "qron_resolve_unreachable",
+        },
+      };
+    }
+    const source = parsed as Record<string, unknown>;
+    const body: Record<string, unknown> = {
+      object_id: objectId,
+      scan,
+      http_status: res.status,
+    };
+    for (const key of LIVING_QR_DECISION_FIELDS) {
+      if (key in source) body[key] = source[key];
+    }
+    return { isError: false, body };
+  } catch {
+    return {
+      isError: true,
+      body: {
+        object_id: objectId,
+        scan,
+        valid: false,
+        decision: "indeterminate",
+        decision_contract: "AuthiChain Verification Decision v1",
+        error: "qron_resolve_unreachable",
+      },
+    };
+  }
+}
+
 export async function tryHandleMcp(
   request: Request,
-  env: X402Env = {},
+  env: McpEnv = {},
   verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
   if (!isMcpPath(new URL(request.url).pathname)) return null;

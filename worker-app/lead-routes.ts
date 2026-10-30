@@ -411,6 +411,9 @@ type CapturedLead = {
   message?: string;
 };
 
+/** Lead source from /is-this-real; must not trigger outbound webhooks. */
+export const NO_OUTBOUND_SOURCE = "is-this-real";
+
 async function runLeadAutomation(c: LeadContext, lead: CapturedLead) {
   try {
     const apollo = envValue(c, "APOLLO_API_KEY");
@@ -422,7 +425,10 @@ async function runLeadAutomation(c: LeadContext, lead: CapturedLead) {
     };
     const finalLead = { ...lead, ...scored };
 
-    const make = envValue(c, "MAKE_LEAD_WEBHOOK_URL");
+    // /is-this-real promises no automated email: skip the Make/n8n hops
+    // (either can send mail). Supabase row + HubSpot contact only.
+    const quiet = lead.source === NO_OUTBOUND_SOURCE;
+    const make = quiet ? undefined : envValue(c, "MAKE_LEAD_WEBHOOK_URL");
     if (make) {
       await fetch(make, {
         method: "POST",
@@ -434,7 +440,7 @@ async function runLeadAutomation(c: LeadContext, lead: CapturedLead) {
       });
     }
 
-    const n8n = envValue(c, "N8N_LEAD_WEBHOOK_URL");
+    const n8n = quiet ? undefined : envValue(c, "N8N_LEAD_WEBHOOK_URL");
     if (n8n) {
       await fetch(n8n, {
         method: "POST",

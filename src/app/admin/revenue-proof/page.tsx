@@ -6,7 +6,7 @@ import { ChevronLeft, Loader2, RefreshCw } from "lucide-react";
 import type { RevenueProof } from "@/lib/revenue-proof";
 
 const LABELS: Record<
-  keyof Omit<RevenueProof, "generated_at" | "revenue_by_surface">,
+  keyof Omit<RevenueProof, "generated_at" | "revenue_by_surface" | "excluded">,
   string
 > = {
   verification_requests: "Verification requests",
@@ -101,6 +101,10 @@ export default function RevenueProofPage() {
                 </div>
               ))}
             </div>
+            <p className="text-zinc-500 text-xs">
+              Not counted above: {data.excluded.demo} demo, {data.excluded.test}{" "}
+              Stripe test-mode, {data.excluded.founder} founder visits.
+            </p>
             <section className="border border-zinc-900 bg-zinc-950 p-6">
               <h2 className="text-sm font-black uppercase tracking-widest mb-4">
                 Paid loop events by surface

@@ -64,8 +64,12 @@ describe("x402 public docs page", () => {
       "curl -sS -i -X POST https://authichain.com/api/x402"
     );
     expect(html).toContain("HTTP 402");
+    expect(html).toContain("An empty body is the unpaid HTTP 402");
+    expect(html).toContain("A non-UUID sealId is HTTP 400 before payment");
+    expect(html).not.toContain('{"sealId":"demo"}');
     expect(html).toContain("extensions.bazaar");
     expect(html).toContain("accepts[0].outputSchema.input");
+    expect(html).toContain("accepts[0].outputSchema.output");
     expect(html).toContain("PAYMENT-REQUIRED");
     expect(html).toContain("x402Version: 2");
     expect(html).toContain("application/ld+json");
@@ -74,7 +78,8 @@ describe("x402 public docs page", () => {
     expect(html).toContain(X402_PUBLIC.openApiUrl);
     expect(html).toContain("<dt>Fan-out</dt>");
     expect(html).toContain("<dt>OpenAPI</dt>");
-    expect(html).toContain(X402_PUBLIC.identityUrl);
+    expect(html).not.toContain("github.com/undone0603");
+    expect(html).toContain("<dt>Wallets</dt><dd class=\"mono\"><a href=\"" + X402_PUBLIC.wellKnownUrl);
     expect(html).toContain("$QRON is not this rail");
     expect(html).toContain('rel="alternate"');
     expect(html).toContain("ZACHARY KIETZMAN");
