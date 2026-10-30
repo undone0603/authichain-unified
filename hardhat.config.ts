@@ -32,26 +32,23 @@ const config: HardhatUserConfig = {
     sources: "./contracts/ledger",
     tests: "./test",
     cache: "./cache",
-    // Not ./artifacts itself: a build deletes every artifact there that it
-    // did not produce, and that includes the committed AuthiChainNFT.json.
+    // Hardhat owns this subdirectory and prunes it on every compile. Pointed at
+    // ./artifacts it deleted the tracked artifacts/contracts/AuthiChainNFT.sol/
+    // AuthiChainNFT.json that deploy-govchain-nft-base.yml reads, whenever
+    // anyone ran `pnpm test:contracts` locally.
     artifacts: "./artifacts/hardhat",
   },
   networks: {
     hardhat: { type: "edr-simulated" },
     amoy: {
       type: "http",
-      url:
-        process.env.POLYGON_AMOY_RPC_URL ||
-        "https://rpc-amoy.polygon.technology",
+      url: process.env.POLYGON_AMOY_RPC_URL || "https://rpc-amoy.polygon.technology",
       accounts,
       chainId: 80002,
     },
     polygon: {
       type: "http",
-      url:
-        process.env.NFT_RPC_URL ||
-        process.env.POLYGON_RPC_URL ||
-        "https://polygon-rpc.com",
+      url: process.env.NFT_RPC_URL || process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
       accounts,
       chainId: 137,
     },

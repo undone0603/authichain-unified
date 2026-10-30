@@ -184,11 +184,47 @@ export function evaluateWorkflows(
   return problems;
 }
 
+/**
+ * Read-only monitoring must fail closed. Never put exception messages (which
+ * could contain tokens or customer details) in a public ops-alert issue.
+ * This checks webhook receipt only, not entitlement or activation.
+ */
+export async function monitorFulfilment({
+  stripeKey,
+  supabaseUrl,
+  supabaseKey,
+  founderEmails = [],
+  check = checkFulfilment,
+} = {}) {
+  if (!stripeKey || !supabaseUrl || !supabaseKey)
+    return {
+      checked: 0,
+      problems: [],
+      monitoring: [{ name: "fulfilment", kind: "credentials_missing" }],
+    };
+  try {
+    const result = await check({
+      stripeKey,
+      supabaseUrl,
+      supabaseKey,
+      founderEmails,
+    });
+    return { checked: result.checked, problems: result.problems, monitoring: [] };
+  } catch {
+    return {
+      checked: 0,
+      problems: [],
+      monitoring: [{ name: "fulfilment", kind: "read_failed" }],
+    };
+  }
+}
+
 export function signature(report) {
   const keys = [
     ...report.probes.filter(p => !p.ok).map(p => `probe:${p.name}`),
     ...report.workflows.map(w => `wf:${w.file}:${w.kind}`),
     ...(report.revenue ?? []).map(r => `pay:${r.session}`),
+    ...(report.monitoring ?? []).map(m => `monitor:${m.name}:${m.kind}`),
   ].sort();
   return keys.join("|");
 }
@@ -209,6 +245,13 @@ export function renderReport(report) {
     for (const w of report.workflows)
       lines.push(
         `- \`${w.file}\` (${w.lane}): ${w.detail}${w.url ? ` - [run](${w.url})` : ""}`
+      );
+  }
+  if (report.monitoring?.length) {
+    lines.push("", "#### Fulfilment monitoring unavailable");
+    for (const m of report.monitoring)
+      lines.push(
+        `- ${m.name}: ${m.kind === "credentials_missing" ? "required read credentials are missing" : "Stripe/Supabase read failed"}. No conclusion about paid checkout delivery or activation is possible.`
       );
   }
   if (report.revenue?.length) {
@@ -351,31 +394,22 @@ async function main() {
     );
   }
 
-  const stripeKey =
-    process.env.STRIPE_READ_KEY || process.env.STRIPE_SECRET_KEY;
-  if (
-    stripeKey &&
-    process.env.SUPABASE_URL &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  ) {
-    try {
-      const f = await checkFulfilment({
-        stripeKey,
-        supabaseUrl: process.env.SUPABASE_URL,
-        supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-        founderEmails: [
-          ...(manifest.founder_emails ?? []),
-          ...(process.env.FOUNDER_EMAILS ?? "").split(","),
-        ],
-      });
-      report.revenue = f.problems;
-      console.log(
-        `fulfilment: ${f.checked} paid checkouts checked, ${f.problems.length} unfulfilled`
-      );
-    } catch (e) {
-      console.log(`fulfilment check skipped: ${e.message}`);
-    }
-  }
+  const f = await monitorFulfilment({
+    stripeKey: process.env.STRIPE_READ_KEY || process.env.STRIPE_SECRET_KEY,
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    founderEmails: [
+      ...(manifest.founder_emails ?? []),
+      ...(process.env.FOUNDER_EMAILS ?? "").split(","),
+    ],
+  });
+  report.revenue = f.problems;
+  report.monitoring = f.monitoring;
+  console.log(
+    f.monitoring.length
+      ? `fulfilment: UNVERIFIED (${f.monitoring[0].kind})`
+      : `fulfilment: ${f.checked} chargeable paid checkouts checked, ${f.problems.length} missing webhook receipts`
+  );
 
   const sig = signature(report);
   out(

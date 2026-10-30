@@ -20,6 +20,7 @@ import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
 import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
 import { tryHandleEstateCanonicalVerify } from "../../_shared/estate-canonical-verify";
 import { tryHandleEstateProtocolDiscovery } from "../../_shared/estate-protocol-discovery";
+import { tryHandleEstateQronResolve } from "../../_shared/estate-qron-resolve";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -2252,9 +2253,16 @@ export default {
     // confused with paid agent verify credit settlement.
     const protocolDiscovery = await tryHandleEstateProtocolDiscovery(request, env);
     if (protocolDiscovery) return protocolDiscovery;
+    const qronResolve = await tryHandleEstateQronResolve(request, env);
+    if (qronResolve) return qronResolve;
     const canonicalVerify = await tryHandleEstateCanonicalVerify(request, env);
     if (canonicalVerify) return canonicalVerify;
-    const x402 = await tryHandleSisterX402(request, env, env?.VERIFY_APP);
+    const x402 = await tryHandleSisterX402(
+      request,
+      env,
+      env?.VERIFY_APP,
+      "qron"
+    );
     if (x402) return x402;
     const mcp = await tryHandleSisterMcp(
       request,
@@ -2338,7 +2346,7 @@ ${estateFeatures(
 <section class="estate-section" id="pricing">
   <div class="wrap">
     <h2>Products and pricing</h2>
-    <p class="section-sub">Figures from the published AuthiChain plan catalogue. Start with Starter Pack $29 or Launch $19/mo. Creator and EU DPP Readiness stay on the grid.</p>
+    <p class="section-sub">Figures from the published AuthiChain plan catalogue. Start with Starter Pack $29. Creator and EU DPP Readiness stay on the grid.</p>
     ${estatePricingGrid("qron")}
     <p class="section-sub" style="margin-top:20px"><a href="/pricing">Open the full pricing page</a></p>
   </div>
@@ -2348,11 +2356,11 @@ ${videosHtml}
 
 ${estateCtaBand({
   title: "Generate a Living QR",
-  lede: "The generate form is proxied to the AuthiChain app. That is the conversion path for qron.space — Starter $29 or Launch $19/mo.",
+  lede: "The generate form is proxied to the AuthiChain app. That is the conversion path for qron.space — Starter $29.",
   actions: [
     { href: "/generate", label: "Generate Living QR", primary: true },
     { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29", primary: false },
-    { href: "https://authichain.com/checkout/qron_launch", label: "Start Launch $19/mo", primary: false },
+    { href: "/pricing", label: "See pricing", primary: false },
   ],
 })}
 </main>
@@ -2365,7 +2373,6 @@ ${estateFooter(
         { href: "/generate", label: "Generate Living QR" },
         { href: "/pricing", label: "Pricing" },
         { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29" },
-        { href: "https://authichain.com/checkout/qron_launch", label: "Launch $19/mo" },
       ],
     },
     {

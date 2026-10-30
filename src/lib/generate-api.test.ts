@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  claimFreeSampleSlot,
   extractAccessToken,
   generateCreditPacks,
   generateHealthBody,
   handleGeneratePost,
+  lowCreditUpgrade,
   proxyQronImageGen,
 } from "./generate-api";
 import { qronObjectIdForDestination } from "./qron-presentation";
@@ -18,23 +20,19 @@ function toBase64Url(value: string): string {
 }
 
 describe("generateCreditPacks", () => {
-  it("exposes Starter → Launch → Creator → DPP in LOOP-03 order", () => {
+  it("exposes Starter, Creator, then DPP (Launch unlisted)", () => {
     const packs = generateCreditPacks();
     const byId = Object.fromEntries(packs.map(p => [p.id, p]));
     expect(byId.starter.price).toBe(29);
-    expect(byId.qron_launch.price).toBe(19);
     expect(byId.creator.price).toBe(99);
     expect(byId.dpp_readiness.price).toBe(299);
     expect(packs.map(p => p.id)).toEqual([
       "starter",
-      "qron_launch",
       "creator",
       "dpp_readiness",
     ]);
-    expect(byId.qron_launch.checkout).toBe(
-      "https://authichain.com/checkout/qron_launch"
-    );
-    expect(byId.qron_launch.cta).toMatch(/Launch/i);
+    expect(byId.qron_launch).toBeUndefined();
+    expect(byId.qron_launch_annual).toBeUndefined();
   });
 });
 
@@ -54,11 +52,105 @@ describe("generateHealthBody", () => {
     );
     expect(body.presentation.verify.jwks_url).toContain("protocol/jwks.json");
     expect(body.presentation.fallback).toBe("image_issued");
+    expect(body.presentation.scan).toEqual({
+      method: "GET",
+      url_template: "https://authichain.com/qron/r/{object_id}",
+      missing: "presentation_not_found",
+    });
   });
 
   it("reports whether a Supabase session can be resolved", () => {
     const body = generateHealthBody(undefined, { authConfigured: true });
     expect(body.auth).toBe(true);
+  });
+});
+
+describe("claimFreeSampleSlot ordering (CFA-361)", () => {
+  // In-memory fixed-window counters with the same semantics as RateLimiter.
+  function counters(ipLimit: number, dailyLimit: number) {
+    const st = { ip: 0, daily: 0, refunds: 0, calls: [] as string[] };
+    const tick = () => new Promise(r => setTimeout(r, 0));
+    return {
+      st,
+      l: {
+        claimIp: async () => {
+          st.calls.push("claimIp");
+          await tick();
+          if (st.ip >= ipLimit) return false;
+          st.ip += 1;
+          return true;
+        },
+        claimDaily: async () => {
+          st.calls.push("claimDaily");
+          await tick();
+          if (st.daily >= dailyLimit) return false;
+          st.daily += 1;
+          return true;
+        },
+        refundIp: async () => {
+          st.calls.push("refundIp");
+          st.refunds += 1;
+          if (st.ip > 0) st.ip -= 1;
+          return true;
+        },
+      },
+    };
+  }
+
+  it("claims the IP slot, then a daily slot", async () => {
+    const { st, l } = counters(5, 100);
+    expect(await claimFreeSampleSlot(l)).toEqual({ ok: true });
+    expect(st.calls).toEqual(["claimIp", "claimDaily"]);
+    expect(st).toMatchObject({ ip: 1, daily: 1 });
+  });
+
+  it("a visitor who used their samples never touches the daily counter", async () => {
+    const { st, l } = counters(0, 100);
+    expect(await claimFreeSampleSlot(l)).toEqual({ ok: false, reason: "used" });
+    expect(st.calls).toEqual(["claimIp"]);
+    expect(st.daily).toBe(0);
+  });
+
+  it("a parallel burst from one fresh IP takes at most 5 daily slots", async () => {
+    const { st, l } = counters(5, 100);
+    const results = await Promise.all(
+      Array.from({ length: 50 }, () => claimFreeSampleSlot(l))
+    );
+    expect(results.filter(r => r.ok)).toHaveLength(5);
+    expect(results.filter(r => r.reason === "used")).toHaveLength(45);
+    expect(st.daily).toBe(5);
+    expect(st.ip).toBe(5);
+  });
+
+  it("refunds the IP slot when the daily cap is hit", async () => {
+    const { st, l } = counters(5, 0);
+    expect(await claimFreeSampleSlot(l)).toEqual({
+      ok: false,
+      reason: "paused",
+    });
+    expect(st.calls).toEqual(["claimIp", "claimDaily", "refundIp"]);
+    expect(st.ip).toBe(0);
+  });
+
+  it("refunds the IP slot and fails closed when the daily claim throws", async () => {
+    const { st, l } = counters(5, 100);
+    l.claimDaily = async () => {
+      throw new Error("DO down");
+    };
+    await expect(claimFreeSampleSlot(l)).rejects.toThrow("DO down");
+    expect(st.ip).toBe(0);
+    expect(st.refunds).toBe(1);
+  });
+
+  it("still says paused if the refund itself fails", async () => {
+    const { l } = counters(5, 0);
+    l.refundIp = async () => {
+      throw new Error("refund failed");
+    };
+    expect(await claimFreeSampleSlot(l)).toEqual({
+      ok: false,
+      reason: "paused",
+    });
   });
 });
 
@@ -90,11 +182,111 @@ describe("handleGeneratePost", () => {
     expect(result.body.message).toMatch(/Authentication required/i);
     expect(Array.isArray(result.body.packs)).toBe(true);
     const packs = result.body.packs as Array<{ id: string }>;
-    expect(packs.map(p => p.id)).toContain("qron_launch");
+    expect(packs.map(p => p.id)).not.toContain("qron_launch");
     expect(packs.map(p => p.id)).toContain("starter");
     expect(generateImage).not.toHaveBeenCalled();
     expect(checkCredit).not.toHaveBeenCalled();
     expect(deductCredit).not.toHaveBeenCalled();
+  });
+
+  it("serves an anonymous free sample without touching account credits", async () => {
+    const claimFreeSample = vi.fn().mockResolvedValue({ ok: true });
+    const bindAttestation = vi.fn();
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      bindAttestation,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.free_sample).toBe(true);
+    expect(claimFreeSample).toHaveBeenCalledTimes(1);
+    expect(checkCredit).not.toHaveBeenCalled();
+    expect(deductCredit).not.toHaveBeenCalled();
+    expect(bindAttestation).not.toHaveBeenCalled();
+    expect(generateImage.mock.calls[0][0].targetUrl).toBe(
+      "https://example.com"
+    );
+    expect((result.body.qron as { resolveUrl: unknown }).resolveUrl).toBeNull();
+    expect(result.body.presentation).toBeUndefined();
+  });
+
+  it("walls the anonymous caller once the free sample is used", async () => {
+    const claimFreeSample = vi
+      .fn()
+      .mockResolvedValue({ ok: false, reason: "used" });
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(401);
+    expect(result.body.code).toBe("FREE_SAMPLE_USED");
+    expect(result.body.upgrade).toEqual({
+      url: "https://authichain.com/checkout/starter?src=sample_exhausted",
+      plan: "starter",
+      label: "Starter Pack: 100 generations for $29, paid once",
+    });
+    expect(String(result.body.message)).toMatch(
+      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and pack credits have no expiry date\. Starting a monthly plan replaces unused pack credits\.$/
+    );
+    expect(generateImage).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the free-sample limiter throws", async () => {
+    const claimFreeSample = vi.fn().mockRejectedValue(new Error("DO down"));
+    // fail closed as PAUSED, never "used up"
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(401);
+    expect(result.body.code).toBe("FREE_SAMPLE_PAUSED");
+    expect(String(result.body.message)).toMatch(
+      /^Free samples are paused right now\./
+    );
+    expect(generateImage).not.toHaveBeenCalled();
+  });
+
+  it("says paused, not used up, when the daily cap is hit", async () => {
+    const claimFreeSample = vi
+      .fn()
+      .mockResolvedValue({ ok: false, reason: "paused" });
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(401);
+    expect(result.body.code).toBe("FREE_SAMPLE_PAUSED");
+    expect(String(result.body.message)).not.toContain("used up");
+  });
+
+  it("does not spend a free sample on an invalid request", async () => {
+    const claimFreeSample = vi.fn().mockResolvedValue({ ok: true });
+    const result = await handleGeneratePost({
+      body: { prompt: "neon" },
+      userId: null,
+      checkCredit,
+      deductCredit,
+      generateImage,
+      claimFreeSample,
+    });
+    expect(result.status).toBe(400);
+    expect(claimFreeSample).not.toHaveBeenCalled();
   });
 
   it("returns 400 when the destination URL is missing", async () => {
@@ -171,9 +363,9 @@ describe("handleGeneratePost", () => {
     expect(presentation.verify.decision_contract).toBe(
       "AuthiChain Verification Decision v1"
     );
-    expect(
-      (result.body.qron as { objectId: string }).objectId
-    ).toBe(presentation.object_id);
+    expect((result.body.qron as { objectId: string }).objectId).toBe(
+      presentation.object_id
+    );
     expect(result.body.remaining_credits).toBe(9);
     expect(checkCredit).toHaveBeenCalledWith("user_1");
     expect(deductCredit).toHaveBeenCalledWith("user_1");
@@ -200,6 +392,40 @@ describe("handleGeneratePost", () => {
     expect(generateImage.mock.invocationCallOrder[0]).toBeLessThan(
       deductCredit.mock.invocationCallOrder[0]
     );
+  });
+
+  it("attaches Starter upgrade when remaining credits are below 20", async () => {
+    deductCredit.mockResolvedValueOnce({ ok: true, remaining: 19 });
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: "user_1",
+      checkCredit,
+      deductCredit,
+      generateImage,
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.remaining_credits).toBe(19);
+    const upgrade = result.body.upgrade as Record<string, unknown>;
+    expect(upgrade.url).toBe(
+      "https://authichain.com/checkout/starter?src=low_credit&utm_content=low-starter-a"
+    );
+    expect(upgrade.plan).toBe("starter");
+    expect(upgrade.button).toBe("Add 100 generations for $29");
+  });
+
+  it("omits upgrade when remaining credits are at or above 20", async () => {
+    checkCredit.mockResolvedValueOnce({ ok: true, remaining: 21 });
+    deductCredit.mockResolvedValueOnce({ ok: true, remaining: 20 });
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: "user_1",
+      checkCredit,
+      deductCredit,
+      generateImage,
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.remaining_credits).toBe(20);
+    expect(result.body.upgrade).toBeUndefined();
   });
 
   it("binds attestation when bindAttestation returns jws/kid/jwks", async () => {
@@ -281,9 +507,9 @@ describe("handleGeneratePost", () => {
       },
     });
     expect(result.status).toBe(200);
-    expect(
-      (result.body.presentation as { status: string }).status
-    ).toBe("attestation_bound");
+    expect((result.body.presentation as { status: string }).status).toBe(
+      "attestation_bound"
+    );
   });
 
   it("stays image_issued when bindAttestation throws", async () => {
@@ -301,9 +527,25 @@ describe("handleGeneratePost", () => {
       },
     });
     expect(result.status).toBe(200);
-    expect(
-      (result.body.presentation as { status: string }).status
-    ).toBe("image_issued");
+    expect((result.body.presentation as { status: string }).status).toBe(
+      "image_issued"
+    );
+  });
+});
+
+describe("lowCreditUpgrade", () => {
+  it("19 left => Starter-only prompt with low_credit link", () => {
+    const u = lowCreditUpgrade(19).upgrade as Record<string, unknown>;
+    expect(u.url).toBe(
+      "https://authichain.com/checkout/starter?src=low_credit&utm_content=low-starter-a"
+    );
+    expect(u.plan).toBe("starter");
+    expect(u.button).toBe("Add 100 generations for $29");
+  });
+
+  it("20 left or non-number => no prompt", () => {
+    expect(lowCreditUpgrade(20)).toEqual({});
+    expect(lowCreditUpgrade(undefined)).toEqual({});
   });
 });
 

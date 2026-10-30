@@ -38,7 +38,7 @@ function pemFromSecret(raw: string): string {
   if (trimmed.includes("BEGIN PRIVATE KEY")) return trimmed;
   try {
     const decoded = Buffer.from(trimmed.replace(/\s+/g, ""), "base64").toString(
-      "utf8",
+      "utf8"
     );
     if (decoded.includes("BEGIN PRIVATE KEY")) return decoded.trim();
   } catch {
@@ -72,7 +72,9 @@ async function githubOidcToken(audience: string): Promise<string | null> {
     },
   });
   if (!response.ok) {
-    throw new Error(`GitHub OIDC token request failed: HTTP ${response.status}`);
+    throw new Error(
+      `GitHub OIDC token request failed: HTTP ${response.status}`
+    );
   }
   const body = (await response.json()) as { value?: string };
   return body.value?.trim() || null;
@@ -80,7 +82,7 @@ async function githubOidcToken(audience: string): Promise<string | null> {
 
 async function waitForProductionIssuer(
   expectedKid: string,
-  timeoutMs = 10 * 60 * 1000,
+  timeoutMs = 10 * 60 * 1000
 ) {
   const started = Date.now();
   let delay = 5000;
@@ -99,7 +101,7 @@ async function waitForProductionIssuer(
         };
         if (body.ready && body.kid && body.kid !== expectedKid) {
           throw new Error(
-            `Production issuer kid ${body.kid} != live JWKS kid ${expectedKid}`,
+            `Production issuer kid ${body.kid} != live JWKS kid ${expectedKid}`
           );
         }
         if (body.ready && body.signing && body.kid === expectedKid) {
@@ -108,16 +110,19 @@ async function waitForProductionIssuer(
         last = `ready=${body.ready} signing=${body.signing} kid=${body.kid || "none"}`;
       }
     } catch (err) {
-      if (err instanceof Error && err.message.startsWith("Production issuer kid")) {
+      if (
+        err instanceof Error &&
+        err.message.startsWith("Production issuer kid")
+      ) {
         throw err;
       }
       last = err instanceof Error ? err.message : "issuer fetch failed";
     }
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    await new Promise(resolve => setTimeout(resolve, delay));
     delay = Math.min(delay + 5000, 20000);
   }
   throw new Error(
-    `Production issuer at ${ISSUER_URL} did not become ready (${last}). Wait for authichain-edge-router deploy, then re-run [pipeline-proof].`,
+    `Production issuer at ${ISSUER_URL} did not become ready (${last}). Wait for authichain-edge-router deploy, then re-run [pipeline-proof].`
   );
 }
 
@@ -132,7 +137,7 @@ async function requestProductionSignedJws(input: {
   const token = oidc || cron;
   if (!token) {
     throw new Error(
-      `Cannot bind launch proof: fixture kid does not match live kid ${input.liveKid}, AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 is empty, and neither GitHub OIDC nor CRON_SECRET is available to request a production-signed JWS (AUTHICHAIN_ATTESTATION_KEY_ID=${CONFIGURED_KID || "unset"}).`,
+      `Cannot bind launch proof: fixture kid does not match live kid ${input.liveKid}, AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 is empty, and neither GitHub OIDC nor CRON_SECRET is available to request a production-signed JWS (AUTHICHAIN_ATTESTATION_KEY_ID=${CONFIGURED_KID || "unset"}).`
     );
   }
   await waitForProductionIssuer(input.liveKid);
@@ -156,16 +161,20 @@ async function requestProductionSignedJws(input: {
   const raw = await response.text();
   if (!response.ok) {
     throw new Error(
-      `Production launch-proof sign failed: HTTP ${response.status} ${raw.slice(0, 500)}`,
+      `Production launch-proof sign failed: HTTP ${response.status} ${raw.slice(0, 500)}`
     );
   }
-  const body = JSON.parse(raw) as { jws?: string; kid?: string; source?: string };
+  const body = JSON.parse(raw) as {
+    jws?: string;
+    kid?: string;
+    source?: string;
+  };
   if (typeof body.jws !== "string" || body.jws.split(".").length !== 3) {
     throw new Error("production issuer returned no compact JWS");
   }
   if (body.kid && body.kid !== input.liveKid) {
     throw new Error(
-      `production issuer signed with kid ${body.kid} != live kid ${input.liveKid}`,
+      `production issuer signed with kid ${body.kid} != live kid ${input.liveKid}`
     );
   }
   return {
@@ -174,10 +183,7 @@ async function requestProductionSignedJws(input: {
   };
 }
 
-async function supabaseUpsert(
-  table: string,
-  rows: Record<string, unknown>[],
-) {
+async function supabaseUpsert(table: string, rows: Record<string, unknown>[]) {
   const url = `${SUPABASE_URL}/rest/v1/${table}?on_conflict=id`;
   const response = await fetch(url, {
     method: "POST",
@@ -191,7 +197,7 @@ async function supabaseUpsert(
   });
   if (!response.ok) {
     throw new Error(
-      `${table} upsert failed: ${response.status} ${await response.text()}`,
+      `${table} upsert failed: ${response.status} ${await response.text()}`
     );
   }
   return response.json();
@@ -199,7 +205,7 @@ async function supabaseUpsert(
 
 async function verifyExpectedFailure(
   label: string,
-  fn: () => Promise<unknown>,
+  fn: () => Promise<unknown>
 ) {
   try {
     await fn();
@@ -242,19 +248,15 @@ if (liveKeys.length === 0) {
   throw new Error("live JWKS published zero keys");
 }
 
-if (
-  CONFIGURED_KID &&
-  !liveKeys.some((key) => key.kid === CONFIGURED_KID)
-) {
+if (CONFIGURED_KID && !liveKeys.some(key => key.kid === CONFIGURED_KID)) {
   throw new Error(
     `AUTHICHAIN_ATTESTATION_KEY_ID=${CONFIGURED_KID} is not in live JWKS; live keys=${JSON.stringify(
-      liveKeys.map((key) => ({ kid: key.kid, alg: key.alg, crv: key.crv })),
-    )}`,
+      liveKeys.map(key => ({ kid: key.kid, alg: key.alg, crv: key.crv }))
+    )}`
   );
 }
 
-const liveKey =
-  liveKeys.find((key) => key.kid === CONFIGURED_KID) || liveKeys[0];
+const liveKey = liveKeys.find(key => key.kid === CONFIGURED_KID) || liveKeys[0];
 const liveKid = String(liveKey.kid || "");
 if (!liveKid) throw new Error("live JWKS key is missing kid");
 
@@ -289,7 +291,7 @@ if (productionKey) {
   productionJws = await signAttestation(
     launchAttestation,
     productionKey,
-    liveKid,
+    liveKid
   );
   source = "production-signed against live JWKS";
 } else if (fixtureKid === liveKid) {
@@ -306,7 +308,7 @@ if (productionKey) {
   source = signed.source;
 }
 
-const publicJwk = liveKeys.find((key) => key.kid === liveKid);
+const publicJwk = liveKeys.find(key => key.kid === liveKid);
 if (!publicJwk) {
   throw new Error(`live JWKS does not expose kid ${liveKid}`);
 }
@@ -317,14 +319,14 @@ const verifiedFixture = await verifyAttestationJws(productionJws, publicJwk, {
 
 const alteredPayload = productionJws.split(".");
 const payload = JSON.parse(
-  Buffer.from(alteredPayload[1], "base64url").toString("utf8"),
+  Buffer.from(alteredPayload[1], "base64url").toString("utf8")
 );
 payload.subject.object_id = "authi:altered-subject";
 alteredPayload[1] = Buffer.from(JSON.stringify(payload)).toString("base64url");
 await verifyExpectedFailure("altered payload", () =>
   verifyAttestationJws(alteredPayload.join("."), publicJwk, {
     expectedObjectId: fixturePayload.subject.object_id,
-  }),
+  })
 );
 
 const alteredSignature = productionJws.split(".");
@@ -334,18 +336,18 @@ alteredSignature[2] = [...alteredSignature[2]]
 await verifyExpectedFailure("altered signature", () =>
   verifyAttestationJws(alteredSignature.join("."), publicJwk, {
     expectedObjectId: fixturePayload.subject.object_id,
-  }),
+  })
 );
 
 await verifyExpectedFailure("wrong subject", () =>
   verifyAttestationJws(productionJws, publicJwk, {
     expectedObjectId: "authi:wrong-subject",
-  }),
+  })
 );
 
 const { privateKey: testKey, publicKey: testPublicKey } = await generateKeyPair(
   "Ed25519",
-  { extractable: true },
+  { extractable: true }
 );
 const testPublicJwk = await exportJWK(testPublicKey);
 testPublicJwk.kid = "proof-negative-kid";
@@ -368,12 +370,12 @@ const revokedJws = await signAttestation(
     ],
   },
   testKey,
-  "proof-negative-kid",
+  "proof-negative-kid"
 );
 await verifyExpectedFailure("revoked attestation", () =>
   verifyAttestationJws(revokedJws, testPublicJwk, {
     expectedObjectId: fixturePayload.subject.object_id,
-  }),
+  })
 );
 
 const staleJws = await signAttestation(
@@ -395,13 +397,13 @@ const staleJws = await signAttestation(
     ],
   },
   testKey,
-  "proof-negative-kid",
+  "proof-negative-kid"
 );
 await verifyExpectedFailure("stale attestation", () =>
   verifyAttestationJws(staleJws, testPublicJwk, {
     expectedObjectId: fixturePayload.subject.object_id,
     now: Date.parse("2024-01-03T00:00:00.000Z"),
-  }),
+  })
 );
 
 const objectId = fixturePayload.subject.object_id;
@@ -436,12 +438,12 @@ const storymode = {
     {
       title: "Identity",
       content:
-        "A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation.",
+        "A deterministic QRON reference resolves to an AuthiChain object record. A signed attestation for it is not published yet.",
     },
     {
       title: "Proof",
       content:
-        "The production attestation is independently verified against the live public JWKS using its kid.",
+        "This page shows the signing key ID (kid) and links to the public JWKS and issuer record. It does not include a signed attestation yet, so there is nothing on this page to verify.",
     },
     {
       title: "Reveal",
@@ -520,7 +522,7 @@ const qrPng = await QRCode.toDataURL(storyUrl, {
 });
 await writeFile(
   "artifacts/launch-proof-qron.png",
-  Buffer.from(qrPng.split(",")[1], "base64"),
+  Buffer.from(qrPng.split(",")[1], "base64")
 );
 
 const report = {
@@ -567,6 +569,6 @@ const report = {
 
 await writeFile(
   "artifacts/production-launch-proof.json",
-  JSON.stringify(report, null, 2),
+  JSON.stringify(report, null, 2)
 );
 console.log(JSON.stringify(report, null, 2));
