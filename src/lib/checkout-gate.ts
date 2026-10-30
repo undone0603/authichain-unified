@@ -248,13 +248,13 @@ function pageShell(title: string, body: string): string {
 }
 
 /**
- * CFA-460 / RES-86: displayed copy only. plans.ts is shared (authichain-revenue-worker
- * bundles it), so its Starter description, Stripe and prices stay unchanged; this
- * overrides only what the confirm page and the authichain.com home JSON-LD show.
+ * Confirm page and home JSON-LD use this override (Research PASS ebed0fd3).
+ * /pricing still reads plans.ts description and features.
+ * Stripe IDs, prices, and Launch refillOnInvoicePaid stay unchanged.
  */
 const PLAN_DISPLAY_DESCRIPTION: Partial<Record<string, string>> = {
   starter:
-    "100 AI QR generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits.",
+    "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits.",
 };
 
 export function displayPlanDescription(
@@ -413,19 +413,35 @@ export function buildGatedSessionBody(opts: {
   body.set("mode", mode);
   body.set("line_items[0][price]", plan.stripe_price_id as string);
   body.set("line_items[0][quantity]", "1");
+  if (plan.adjustable_quantity) {
+    body.set("line_items[0][adjustable_quantity][enabled]", "true");
+    body.set(
+      "line_items[0][adjustable_quantity][minimum]",
+      String(plan.adjustable_quantity.minimum)
+    );
+    body.set(
+      "line_items[0][adjustable_quantity][maximum]",
+      String(plan.adjustable_quantity.maximum)
+    );
+  }
   // Omit payment_method_types. Checkout then offers the methods enabled in
   // the Stripe Dashboard. A hardcoded card list blocks those methods.
   // Each product lands where its buyer can use what they bought.
   // The claim file has its own landing: /dpp/thanks would tell a Made in USA
   // buyer their "DPP audit" was provisioned.
   // Starter is the same problem: /dpp/thanks is the DPP workspace page, which
-  // names a DPP workspace, promises 50 workspace generations (Starter grants
+  // names a DPP workspace (Starter grants
   // 100, see PLAN_CREDITS) and offers only /dpp/activate, an EU DPP intake a
   // Starter buyer cannot answer. Starter lands on /generate, which reads
   // ?paid=1 and ?cancelled=1 (worker-app/dynamic-pages.ts) and is routed on
   // both authichain.com and authichain.govchain.us, so ${origin} is safe.
   const isClaimFile = plan.id === "musa_claim_file";
   const isStarter = plan.id === "starter";
+  // Service SKUs (gap report, gov pilot) return to their own offer page:
+  // /dpp/thanks would tell them a DPP workspace was provisioned.
+  const ret = plan.return_path
+    ? `${GATED_CHECKOUT_ORIGIN}${plan.return_path}`
+    : "";
   // Generation packs are used on /generate. /dpp/thanks names a DPP workspace.
   const isGenerationPack =
     isStarter ||
@@ -434,21 +450,25 @@ export function buildGatedSessionBody(opts: {
     plan.id === "qron_launch_annual";
   body.set(
     "success_url",
-    isClaimFile
-      ? `${origin}/made-in-usa-claim-file/thanks?session_id={CHECKOUT_SESSION_ID}`
-      : isGenerationPack
-        ? `${origin}/generate?paid=1&session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
-        : `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}&plan=${encodeURIComponent(plan.id)}`
+    ret
+      ? `${ret}?paid=1&session_id={CHECKOUT_SESSION_ID}&plan=${encodeURIComponent(plan.id)}`
+      : isClaimFile
+        ? `${origin}/made-in-usa-claim-file/thanks?session_id={CHECKOUT_SESSION_ID}`
+        : isGenerationPack
+          ? `${origin}/generate?paid=1&session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
+          : `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}&plan=${encodeURIComponent(plan.id)}`
   );
   body.set(
     "cancel_url",
-    isDpp
-      ? `${origin}/dpp?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
-      : isClaimFile
-        ? `${origin}/made-in-usa-claim-file?cancelled=1`
-        : isStarter
-          ? `${origin}/generate?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
-          : `${origin}/pricing?cancelled=1`
+    ret
+      ? `${ret}?cancelled=1&plan=${encodeURIComponent(plan.id)}`
+      : isDpp
+        ? `${origin}/dpp?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
+        : isClaimFile
+          ? `${origin}/made-in-usa-claim-file?cancelled=1`
+          : isStarter
+            ? `${origin}/generate?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
+            : `${origin}/pricing?cancelled=1`
   );
   body.set("client_reference_id", visitId.slice(0, 200));
   body.set("customer_email", email);
@@ -900,18 +920,27 @@ export function gatedCheckoutPlanIds(): PlanId[] {
 
 /** Upgrade-prompt sources whose Starter link carries ?src=. Allowlisted so
  * arbitrary query text never reaches the logs. */
-export const UPGRADE_PROMPT_SOURCES = ["sample_exhausted", "low_credit"] as const;
+export const UPGRADE_PROMPT_SOURCES = [
+  "sample_exhausted",
+  "low_credit",
+] as const;
 
 /**
  * upgrade_prompt_click: a GET of /checkout/starter that came from an upgrade
  * prompt. Logged to Workers Logs only (no network call, no table write: the
  * growth_loop_events check constraint does not list this event).
  */
-export function logUpgradePromptClick(planId: string, src: string | null): boolean {
+export function logUpgradePromptClick(
+  planId: string,
+  src: string | null
+): boolean {
   if (planId !== "starter" || !src) return false;
-  if (!(UPGRADE_PROMPT_SOURCES as readonly string[]).includes(src)) return false;
+  if (!(UPGRADE_PROMPT_SOURCES as readonly string[]).includes(src))
+    return false;
   try {
-    console.log(JSON.stringify({ event: "upgrade_prompt_click", sku: "starter", src }));
+    console.log(
+      JSON.stringify({ event: "upgrade_prompt_click", sku: "starter", src })
+    );
   } catch {
     /* logging must never break checkout */
   }
