@@ -97,7 +97,11 @@ gitignored:
 
 - `designs/NNN-<id>.png`: the exact raster that was validated.
 - `designs/NNN-<id>.svg`: re-rasterized in headless Chromium and run through
-  the full gate. An SVG that fails is **withheld**; the PNG still ships.
+  the full gate. Only a **verified** SVG is exported. Failed or skipped
+  verification withholds the SVG; the validated PNG still ships.
+  `--no-verify-svg`, missing Playwright, or a Chromium launch failure therefore
+  produce PNG-only exports. A rerun removes an existing SVG at the same
+  export path when it is withheld, and `svgWithheld` counts failures and skips.
   Set `QRON_CHROMIUM_PATH` if Playwright's browser download does not match.
 - `report.json` / `report.md`: per-design parameters, synthesis metrics,
   the per-condition × per-decoder matrix, scores and rejection reasons.
@@ -126,3 +130,4 @@ between reruns.
   one.
 - Fine-grained photographs do not survive module resolution well. Bold
   shapes and strong tonal regions read best.
+

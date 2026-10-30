@@ -17,7 +17,7 @@
  *   --max-candidates <n>    candidate cap (default 3 × count)
  *   --motifs a,b            procedural motifs to cycle through
  *   --shapes a,b            module shapes (square,liquid,dot,diamond,halftone)
- *   --no-verify-svg         skip re-scanning each SVG through headless Chromium
+ *   --no-verify-svg         withhold SVGs; export validated PNGs only
  *                           (set QRON_CHROMIUM_PATH to use a specific Chromium binary)
  *   --quiet                 no per-design progress lines
  *
@@ -28,7 +28,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import {
@@ -217,11 +217,15 @@ async function main() {
     });
     let svgCheck: SvgCheck = { status: "skipped", detail: svgSkipReason ?? undefined };
     if (verifier.kind === "on") svgCheck = await verifier.check(svg, d.raster!.width, payload, ppm);
-    // An SVG that does not itself pass the gate is not released.
+    // Only a verified SVG passes the release gate. Skipping is not a pass.
+    const svgCandidate = `designs/${stem}.svg`;
     let svgFile: string | null = null;
-    if (svgCheck.status !== "failed") {
-      svgFile = `designs/${stem}.svg`;
+    if (svgCheck.status === "verified") {
+      svgFile = svgCandidate;
       writeFileSync(path.join(outDir, svgFile), svg);
+    } else {
+      // A rerun must not leave a previous copy of this withheld export on disk.
+      rmSync(path.join(outDir, svgCandidate), { force: true });
     }
     exported.push({
       design: d,
@@ -267,7 +271,7 @@ async function main() {
       rejectionCounts[f] = (rejectionCounts[f] ?? 0) + 1;
     }
   }
-  const svgFailed = exported.filter((e) => e.svgCheck.status === "failed").length;
+  const svgWithheld = exported.filter((e) => e.svgCheck.status !== "verified").length;
   const svgVerified = exported.filter((e) => e.svgCheck.status === "verified").length;
   const summary = {
     requested: count,
@@ -276,7 +280,7 @@ async function main() {
     rejected: run.rejected.length,
     acceptanceRate: run.candidates ? run.accepted.length / run.candidates : 0,
     svgVerified,
-    svgWithheld: svgFailed,
+    svgWithheld,
     svgCheck: svgSkipReason ? `skipped: ${svgSkipReason}` : "chromium",
     elapsedSeconds: Math.round((Date.now() - started) / 100) / 10,
   };
@@ -313,7 +317,7 @@ async function main() {
     `- **Payload:** \`${payload}\` (sha256 \`${payloadHash.slice(0, 16)}…\`)`,
     `- **Generator:** ${STUDIO_VERSION}, seed ${seed}, ${ppm} px/module`,
     `- **Candidates tried:** ${run.candidates} · accepted ${run.accepted.length} · rejected ${run.rejected.length} (acceptance ${pct(summary.acceptanceRate)})`,
-    `- **Decoders:** ${run.decoders.join(", ")} · **SVG re-scan:** ${summary.svgCheck} (${svgVerified} verified, ${svgFailed} withheld)`,
+    `- **Decoders:** ${run.decoders.join(", ")} · **SVG re-scan:** ${summary.svgCheck} (${svgVerified} verified, ${svgWithheld} withheld)`,
     `- **Manifest sha256:** \`${manifestSha256}\` (not anchored)`,
     "",
     "## Release gate",
@@ -373,9 +377,10 @@ async function main() {
   console.log(
     `\n${run.accepted.length}/${count} accepted from ${run.candidates} candidates ` +
       `(${pct(summary.acceptanceRate)}), SVG re-scan: ${summary.svgCheck} ` +
-      `(${svgVerified} verified, ${svgFailed} withheld) in ${summary.elapsedSeconds}s\n→ ${outDir}`
+      `(${svgVerified} verified, ${svgWithheld} withheld) in ${summary.elapsedSeconds}s\n→ ${outDir}`
   );
   if (run.accepted.length < count) process.exitCode = 2;
 }
 
 await main();
+
