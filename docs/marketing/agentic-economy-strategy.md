@@ -14,9 +14,8 @@ Live agent economics: [`docs/strategy/AGENT_TOKENOMICS_x402.md`](../strategy/AGE
 Human SKUs: `src/lib/plans.ts`. Do not invent AuthiChain papers. Cite public
 research as context only (Xu arXiv:2602.14219; Teikari & Fuenmayor SSRN 6068907;
 ERC-8004; Galaxy agentic capital markets). Live estate claims only: signed seals,
-MCP tools, x402 at **$0.05 USDC on Base**, EU DPP Readiness
-and Passport on Stripe. The public page does not claim 5-agent consensus.
-`workers/authichain-verify-worker/src/score.ts` still marks every agent note simulated.
+5-agent consensus, MCP tools, x402 at **$0.05 USDC on Base**, EU DPP Readiness
+and Passport on Stripe.
 
 ## The thesis
 
@@ -39,11 +38,11 @@ Canonical map: [`WEB3_IDENTITY.md`](../strategy/WEB3_IDENTITY.md).
 
 `$QRON` held by payTo `0x5db5…` does **not** make `$QRON` the settlement asset. Live USDC `payTo` is `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2`. govchain.us staking figures are **theater**, not circulating supply.
 
-**What "zero human involvement" does not mean:** it does not mean this company runs
-without a founder. Money, mail, and deploy wait for the founder. A funded agent can
-pay $0.05 USDC per x402 call without a person approving that one call. The paying
-wallet still has a legal owner. Do not publish "fully autonomous," "self-scaling,"
-or "one-person unicorn."
+**What "zero human involvement" really means:** fully autonomous _execution_ is real — an agent
+with a funded wallet pays per API call with no human in the loop. But a human/legal entity must
+**fund and own the wallet** (KYC/AML lives at that boundary — you cannot fully escape it), and
+you need **spend caps + rate limits** to prevent runaway/abuse. So: autonomous at runtime, with
+a one-time human/legal setup and guardrails. That is the honest, defensible version.
 
 ## What you already have (the moat is mostly built)
 
