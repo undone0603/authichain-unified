@@ -411,3 +411,10 @@ describe("syncContactToHubSpot", () => {
     expect(result).toEqual({ ok: true, existed: true });
   });
 });
+
+import { NO_OUTBOUND_SOURCE } from "./lead-routes";
+describe("is-this-real lead source", () => {
+  it("is the source the /is-this-real page sends", () => {
+    expect(NO_OUTBOUND_SOURCE).toBe("is-this-real");
+  });
+});

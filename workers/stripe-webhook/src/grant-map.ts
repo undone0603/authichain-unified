@@ -23,6 +23,12 @@ export const GRANT_BY_PRICE: Record<string, Grant> = {
     generations: 100,
     refillOnInvoicePaid: true,
   },
+  price_1USNoSGqTruSqV8ThTIW7Ej8: {
+    plan: "qron_launch_annual",
+    brand: "qron",
+    generations: 1200,
+    refillOnInvoicePaid: true,
+  },
   price_1UIoEVGqTruSqV8T61lp48wB: {
     plan: "starter",
     brand: "qron",
@@ -81,6 +87,21 @@ const UNLISTED = new Set([
 export function grantForPrice(priceId: string | null | undefined): Grant | null {
   if (!priceId || UNLISTED.has(priceId)) return null;
   return GRANT_BY_PRICE[priceId] ?? null;
+}
+
+/** Amounts that map to exactly one public price. $299 is shared, so it is absent. */
+const GRANT_BY_UNIQUE_AMOUNT: Record<number, string> = {
+  2900: "price_1UIoEVGqTruSqV8T61lp48wB",
+};
+
+export function grantForCheckout(input: {
+  priceId?: string | null;
+  amountTotal?: number | null;
+}): Grant | null {
+  const byPrice = grantForPrice(input.priceId);
+  if (byPrice) return byPrice;
+  if (input.amountTotal == null) return null;
+  return grantForPrice(GRANT_BY_UNIQUE_AMOUNT[input.amountTotal]);
 }
 
 /**

@@ -1,0 +1,39 @@
+name: IndexNow submit
+
+# Daily: submit every page URL in the four brand sitemaps to IndexNow
+# (Bing, Yandex, Seznam, Naver and others share submissions).
+# Inbound-only — tells search engines which of our own public pages exist.
+# Sends no email and posts nothing; separate from marketing-autonomous.yml,
+# which is on operator hold for its social/publishing jobs.
+# Script: scripts/seo/indexnow-submit.mjs
+
+on:
+  schedule:
+    - cron: "17 7 * * *" # daily 07:17 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "List URLs without submitting"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: indexnow-submit
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    name: Submit sitemap URLs to IndexNow
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Submit
+        run: node scripts/seo/indexnow-submit.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
