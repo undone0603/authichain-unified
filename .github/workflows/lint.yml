@@ -73,6 +73,16 @@ jobs:
           # through actions/cache packs ~1 GB and stalls the runner.
           cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
 
+      # CFA-737: node --check one file at a time. `node --check a.mjs b.mjs`
+      # only parses the first argument, which is how a SyntaxError in
+      # ops-pulse.mjs reached main after #1865 / #1867.
+      - name: Syntax-check autonomy scripts
+        run: |
+          set -euo pipefail
+          for f in scripts/autonomy/*.mjs; do
+            node --check "$f"
+          done
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
