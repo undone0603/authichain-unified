@@ -1,0 +1,18 @@
+{
+  "linkedin": "A QR code is just text with a camera-friendly shape. Anyone can print one that points at a lookalike page, so \"it scanned\" has never meant \"it's genuine.\"\n\nQRON, the signed-QR layer behind AuthiChain, changes what the code carries. Instead of a bare URL, the payload includes a digital signature over the product data, made with an Ed25519 private key held by the issuer. A verifier recomputes the check against the matching public key. If the payload was altered, or the code was minted by someone without the key, the check fails and the result says so.\n\nTwo honest boundaries. A signature proves the payload is unchanged and came from the key holder; it does not prove the physical item in your hand is the one the code was issued for, so physical binding still matters. And Ed25519 is a classical signature scheme, so we make no post-quantum claims.\n\nIf you design labels, packaging or verification flows, the question worth asking is: what does your QR actually prove when a scan succeeds?\n\nhttps://qron.space/?utm_source=linkedin&utm_medium=social&utm_campaign=qron-signed-payload&utm_content=a",
+  "reddit": {
+    "subreddit": "qrcode",
+    "title": "A QR code is just text anyone can print. What signing the payload does (and doesn't) prove",
+    "body": "A normal QR code encodes a URL or string. Nothing in the code says who made it, so a sticker pointing at a lookalike page scans exactly like a genuine one.\n\nQRON takes a different approach: the payload carries a digital signature (Ed25519) over the product data, created with a private key held by the issuer. A verifier checks the signature against the public key. If the data was edited or the code was minted without the key, verification fails.\n\nLimits, stated plainly: a valid signature shows the payload is unaltered and came from the key holder. It does not prove the physical item is the one the code was issued for, so someone could still copy a genuine code onto a counterfeit unless the label is physically bound to the product. Ed25519 is a classical scheme, so no post-quantum claims here.\n\nFor people who work with QR codes in packaging or logistics: what do you rely on today to tell a genuine code from a copied or forged one?\n\nhttps://qron.space/?utm_source=reddit&utm_medium=social&utm_campaign=qron-signed-payload&utm_content=a\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "A QR code is just text with a camera-friendly shape. Anyone can print one pointing at a lookalike page, and it scans the same as a genuine one. \"It scanned\" has never meant \"it's genuine.\"",
+    "QRON puts an Ed25519 signature over the product data inside the QR payload. A verifier checks it against the issuer's public key; if the data was altered or the code was minted without the key, the check fails.",
+    "Limits: a signature proves the payload is unchanged and from the key holder, not that the physical item matches it. Ed25519 is a classical scheme; no post-quantum claims. https://qron.space/?utm_source=twitter&utm_medium=social&utm_campaign=qron-signed-payload&utm_content=a"
+  ],
+  "experiment": {
+    "campaign": "qron-signed-payload",
+    "variant": "a",
+    "hypothesis": "leading with the forgery problem (a QR code is just text anyone can print) outperforms a capability-led hook (what the signature adds) on click-through to qron.space"
+  }
+}
