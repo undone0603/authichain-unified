@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { planPaymentLink } from "../../../src/lib/plans.ts";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  planPaymentLink,
+  planStripePaymentLink,
+} from "../../../src/lib/plans.ts";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
+import { tryHandleX402 } from "./x402-routes";
 import {
   publicKeyFromDidKey,
   sha256Hex,
@@ -19,7 +25,10 @@ import {
   RETIRED_ISSUER_DID,
   RETIRED_ISSUER_KID,
   RETIRED_ISSUER_RETIRED_AT,
+  MCP_LIVE_CATALOGUE,
   isMcpPath,
+  mcpPricingDiscovery,
+  mcpTools,
   scanLivingQr,
   tryHandleMcp,
   verifyRecordTool,
@@ -42,6 +51,16 @@ function req(path: string, init?: RequestInit): Request {
   return new Request(`https://authichain.govchain.us${path}`, init);
 }
 
+const wranglerToml = readFileSync(
+  join(import.meta.dirname, "..", "wrangler.toml"),
+  "utf8"
+);
+const WRANGLER_PAID_VERIFY_PATH =
+  /^X402_PAID_VERIFY_PATH\s*=\s*"([^"]*)"/m.exec(wranglerToml)?.[1];
+const HEALTH_BOUND_ENV = {
+  X402_PAID_VERIFY_PATH: WRANGLER_PAID_VERIFY_PATH,
+};
+
 afterEach(() => {
   delete process.env.X402_FACILITATOR_URL;
   delete process.env.X402_PAY_TO;
@@ -60,7 +79,7 @@ describe("mcp discovery", () => {
     );
   });
 
-  it("GET discovery says verify is free and lists no prices or Payment Links", async () => {
+  it("GET discovery says verify is free and lists the live catalogue, not on_hold", async () => {
     for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
       const res = await tryHandleMcp(req(path));
       expect(res, path).not.toBeNull();
@@ -70,7 +89,7 @@ describe("mcp discovery", () => {
         pay: { x402: string };
         pricing: {
           verify: { price: string; mcpTool: string };
-          paidPlans: { status: string };
+          paidPlans: { status: string; catalogue: string[] };
           humanCheckout?: unknown;
         };
       };
@@ -78,21 +97,31 @@ describe("mcp discovery", () => {
       expect(body.pay.x402).toBe("POST https://authichain.com/api/x402");
       expect(body.pricing.verify.price).toBe("free");
       expect(body.pricing.verify.mcpTool).toBe("verify_record");
-      expect(body.pricing.paidPlans.status).toBe("on_hold");
+      expect(body.pricing.paidPlans.status).toBe("live");
+      expect(body.pricing.paidPlans.status).not.toBe("on_hold");
+      expect(body.pricing.paidPlans.catalogue).toEqual([...MCP_LIVE_CATALOGUE]);
       expect(body.pricing.humanCheckout).toBeUndefined();
       const text = JSON.stringify(body);
-      expect(text).not.toContain("$0.05");
+      expect(text).not.toContain("on_hold");
+      expect(text).not.toContain("50 workspace generations");
       expect(text).not.toContain("PaymentLink");
-      expect(text).not.toContain("USDC");
+      expect(text).not.toContain("/api/checkout");
+      expect(text).not.toContain("$19");
+      for (const line of MCP_LIVE_CATALOGUE) {
+        expect(text, path).toContain(line);
+      }
       for (const plan of [
         "dpp_readiness",
         "strainchain_passport",
         "strainchain_farm",
+        "starter",
+        "creator",
       ] as const) {
-        const link = planPaymentLink(plan);
-        if (link) expect(text).not.toContain(link);
+        const stripe = planStripePaymentLink(plan);
+        if (stripe) expect(text).not.toContain(stripe);
       }
-      expect(text).not.toContain("/api/checkout");
+      const farm = planPaymentLink("strainchain_farm");
+      if (farm) expect(text).not.toContain(farm);
     }
   });
 
@@ -129,35 +158,50 @@ describe("mcp discovery", () => {
     };
     const pricing = JSON.parse(priced.result.content[0].text) as {
       verify: { price: string; mcpTool: string; http: string };
-      paidPlans: { status: string };
+      paidPlans: { status: string; catalogue: string[] };
     };
     expect(pricing.verify.price).toBe("free");
     expect(pricing.verify.mcpTool).toBe("verify_record");
     expect(pricing.verify.http).toBe(
       "GET https://authichain.com/api/verify?id=polygon-anchor-1"
     );
-    expect(pricing.paidPlans.status).toBe("on_hold");
-    expect(priced.result.content[0].text).not.toContain("$0.05");
-    expect(priced.result.content[0].text).not.toContain("USDC");
+    expect(pricing.paidPlans.status).toBe("live");
+    expect(pricing.paidPlans.status).not.toBe("on_hold");
+    expect(pricing.paidPlans.catalogue).toEqual([...MCP_LIVE_CATALOGUE]);
+    expect(priced.result.content[0].text).toContain("$0.05");
+    expect(priced.result.content[0].text).toContain("USDC");
+    expect(priced.result.content[0].text).not.toContain("on_hold");
+    expect(priced.result.content[0].text).not.toContain(
+      "50 workspace generations"
+    );
     for (const plan of [
       "dpp_readiness",
       "strainchain_passport",
       "strainchain_farm",
+      "starter",
+      "creator",
     ] as const) {
-      const link = planPaymentLink(plan);
-      if (link) expect(priced.result.content[0].text).not.toContain(link);
+      const stripe = planStripePaymentLink(plan);
+      if (stripe) expect(priced.result.content[0].text).not.toContain(stripe);
     }
+    const farm = planPaymentLink("strainchain_farm");
+    if (farm) expect(priced.result.content[0].text).not.toContain(farm);
     expect(priced.result.content[0].text).not.toContain("/api/checkout");
 
     const tools = listed.result.tools as Array<{
       name: string;
       description?: string;
     }>;
-    for (const t of tools) {
-      expect(t.description ?? "", t.name).not.toContain("$0.05");
+    const pricingTool = tools.find(t => t.name === "get_pricing");
+    expect(pricingTool?.description).toMatch(/^Free\./);
+    for (const line of MCP_LIVE_CATALOGUE) {
+      expect(pricingTool?.description).toContain(line);
     }
-    expect(tools.find(t => t.name === "get_pricing")?.description).toMatch(
-      /^Free\./
+    expect(pricingTool?.description).toMatch(
+      /Free verify_record and free daily checks first; x402/
+    );
+    expect(tools.find(t => t.name === "verify")?.description).toContain(
+      "registry_not_bound"
     );
   });
 
@@ -189,7 +233,7 @@ describe("mcp discovery", () => {
     expect(result.score).toBe(40);
     expect(result.category.date).toBe("2027-02-18");
     expect(result.web).toBe("https://authichain.com/dpp-check");
-    // Paid plans are on hold: the MCP result names no audit, price or link.
+    // This tool still does not pitch an audit; get_pricing lists the catalogue.
     expect(result.nextStep).not.toContain(planPaymentLink("dpp_readiness"));
     expect(result.nextStep).not.toMatch(/\$\d|audit/i);
 
@@ -535,6 +579,138 @@ describe("mcp discovery", () => {
       await tryHandleMcp(req("https://authichain.com/checkout/dpp_readiness"))
     ).toBeNull();
     expect(await tryHandleMcp(req("/dashboard"))).toBeNull();
+  });
+});
+
+describe("mcp paidVerify matches /api/x402/health env path", () => {
+  it("wrangler.toml binds a real registry path", () => {
+    expect(WRANGLER_PAID_VERIFY_PATH).toMatch(/^(seal_lookup|verify_app)$/);
+  });
+
+  it("mcpPricingDiscovery is live catalogue, never on_hold", () => {
+    const pricing = mcpPricingDiscovery();
+    expect(pricing.paidPlans.status).toBe("live");
+    expect(pricing.paidPlans.status).not.toBe("on_hold");
+    expect(pricing.paidPlans.catalogue).toEqual([...MCP_LIVE_CATALOGUE]);
+    expect(JSON.stringify(pricing)).not.toContain("on_hold");
+    expect(JSON.stringify(pricing)).not.toContain("50 workspace generations");
+  });
+
+  it("GET /mcp is bound when health is bound via X402_PAID_VERIFY_PATH", async () => {
+    const healthRes = await tryHandleX402(
+      req("/api/x402/health"),
+      HEALTH_BOUND_ENV as never
+    );
+    expect(healthRes?.status).toBe(200);
+    const health = (await healthRes!.json()) as {
+      paidVerify: { bound: boolean; status: string; detail: string };
+    };
+    expect(health.paidVerify.bound).toBe(true);
+    expect(health.paidVerify.status).toBe("bound");
+    expect(health.paidVerify.detail).toBe(
+      "Paid calls are answered from the seal registry."
+    );
+
+    const mcpRes = await tryHandleMcp(req("/mcp"), HEALTH_BOUND_ENV as never);
+    expect(mcpRes?.status).toBe(200);
+    const mcp = (await mcpRes!.json()) as {
+      tools: Array<{ name: string; description: string }>;
+      pricing: {
+        paidPlans: { status: string };
+        legacySealVerify: {
+          status: string;
+          detail: string;
+          note: string;
+        };
+      };
+    };
+    expect(mcp.pricing.paidPlans.status).not.toBe("on_hold");
+    expect(mcp.pricing.legacySealVerify.status).toBe(health.paidVerify.status);
+    expect(mcp.pricing.legacySealVerify.detail).toBe(health.paidVerify.detail);
+    expect(mcp.pricing.legacySealVerify.note).toContain(
+      "Paid calls are answered from the seal registry."
+    );
+    const verify = mcp.tools.find(t => t.name === "verify");
+    expect(verify?.description).toContain(
+      "Paid calls are answered from the seal registry."
+    );
+    expect(verify?.description).not.toContain("registry_not_bound");
+    expect(JSON.stringify(mcp)).not.toContain("on_hold");
+  });
+
+  it("tools/list verify description follows env, not a module-init unbound constant", async () => {
+    const listCall = {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+    };
+    const unboundRes = await tryHandleMcp(req("/mcp", listCall));
+    const boundRes = await tryHandleMcp(
+      req("/mcp", listCall),
+      HEALTH_BOUND_ENV as never
+    );
+    const unbound = (await unboundRes!.json()) as {
+      result: { tools: Array<{ name: string; description: string }> };
+    };
+    const bound = (await boundRes!.json()) as {
+      result: { tools: Array<{ name: string; description: string }> };
+    };
+    const unboundVerify = unbound.result.tools.find(t => t.name === "verify");
+    const boundVerify = bound.result.tools.find(t => t.name === "verify");
+    expect(unboundVerify?.description).toContain("registry_not_bound");
+    expect(boundVerify?.description).toContain(
+      "Paid calls are answered from the seal registry."
+    );
+    expect(boundVerify?.description).not.toBe(unboundVerify?.description);
+    expect(
+      mcpTools(HEALTH_BOUND_ENV as never).find(t => t.name === "verify")
+        ?.description
+    ).toBe(boundVerify?.description);
+  });
+
+  it("paid verify still refuses before settlement when no registry lookup is bound", async () => {
+    const orig = globalThis.fetch;
+    const calls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return new Response(JSON.stringify({ success: true, txHash: "0xabc" }));
+    }) as typeof fetch;
+    try {
+      const proof = Buffer.from(
+        JSON.stringify({
+          scheme: "exact",
+          network: "base",
+          payer: "0x1234567890abcdef1234567890abcdef12345678",
+          amount: "50000",
+          validBefore: String(Math.floor(Date.now() / 1000) + 600),
+          signature: "0xdead",
+        })
+      ).toString("base64");
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-payment": proof },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 4,
+            method: "tools/call",
+            params: { name: "verify", arguments: { serial: "AC-1" } },
+          }),
+        }),
+        {
+          X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+          X402_FACILITATOR_URL: "https://facilitator.example",
+          X402_PAID_VERIFY_PATH: WRANGLER_PAID_VERIFY_PATH,
+        }
+      );
+      expect(res?.status).toBe(503);
+      const body = (await res!.json()) as { error: string; settled: boolean };
+      expect(body.error).toBe("registry_not_bound");
+      expect(body.settled).toBe(false);
+      expect(calls).toEqual([]);
+    } finally {
+      globalThis.fetch = orig;
+    }
   });
 });
 

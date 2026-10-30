@@ -803,6 +803,23 @@ export function x402PaidVerifyStatus(
 }
 
 /**
+ * Same binding rule as GET /api/x402/health: the worker env's
+ * X402_PAID_VERIFY_PATH ("seal_lookup" | "verify_app"), not the module
+ * constant. MCP discovery must call this; calling x402PaidVerifyStatus()
+ * with no env freezes registry_not_bound even when health is bound.
+ */
+export function x402PaidVerifyStatusForEnv(
+  env?: {
+    X402_PAID_VERIFY_PATH?: string;
+  } | null
+): X402PaidVerifyStatus {
+  return x402PaidVerifyStatus(
+    X402_PAID_VERIFY_BOUND ||
+      x402PaidVerifyPathBound(env?.X402_PAID_VERIFY_PATH)
+  );
+}
+
+/**
  * Cloudflare service binding to the Next app worker (`authichain-app`, see
  * wrangler.app.jsonc). Edge workers bind it as `VERIFY_APP`.
  */
@@ -1019,9 +1036,7 @@ export async function x402HealthReport(
   if (facilitator.configured && !facilitator.reachable) {
     warnings.push("Facilitator configured but unreachable.");
   }
-  const paidVerify = x402PaidVerifyStatus(
-    X402_PAID_VERIFY_BOUND || x402PaidVerifyPathBound(env.X402_PAID_VERIFY_PATH)
-  );
+  const paidVerify = x402PaidVerifyStatusForEnv(env);
   if (!paidVerify.bound) warnings.push(paidVerify.detail);
 
   return {
@@ -1287,9 +1302,7 @@ export async function x402AgentCard(
   const paid = catalog.endpoints.filter(e => e.paid);
   const resources = [
     ...new Set(
-      paid
-        .map(e => e.url || e.resource)
-        .filter((u): u is string => Boolean(u))
+      paid.map(e => e.url || e.resource).filter((u): u is string => Boolean(u))
     ),
   ];
   const accepts = paid.find(e => e.accepts && e.accepts.length > 0)?.accepts;
@@ -1462,7 +1475,9 @@ export async function x402OpenApiDocument(
           description:
             "E-bike and other light means of transport (LMT) batteries, plus industrial and EV batteries over 2 kWh, need a battery passport from 18 February 2027 under Regulation (EU) 2023/1542. This page is that gap map, with a worked example on a fictional e-bike pack at /battery-passport/sample-audit.",
           responses: {
-            "200": { description: "HTML gap map. Not an x402 payment endpoint." },
+            "200": {
+              description: "HTML gap map. Not an x402 payment endpoint.",
+            },
           },
         },
       },

@@ -2,10 +2,12 @@
  * Live /mcp and /api/mcp 404 today — landing 404s /mcp, APP_WORKER 404s
  * /api/mcp. Agents that probe those paths never see a pay rail.
  *
- * Verification is free (verify_record, GET /api/verify). Prices are on hold,
- * so get_pricing and GET discovery list no Payment Links and no x402 price.
+ * Verification is free (verify_record, GET /api/verify, free daily checks).
+ * get_pricing and GET discovery list the Research-approved live catalogue
+ * (checkout paths + x402 $0.05). Do not paste JSON-LD generation counts.
  * tools/call verify is the legacy unpaid 402 as /api/x402 — not a fake
- * "SECURED" JSON. Do not tell agents to GET /api/checkout.
+ * "SECURED" JSON. Paid-verify discovery uses the same env.X402_PAID_VERIFY_PATH
+ * as GET /api/x402/health. Do not tell agents to GET /api/checkout.
  *
  * Do not import authentic-economy here — that pulls supabase-js into the
  * landing worker. plans.ts + x402.ts are already on this worker.
@@ -19,7 +21,7 @@ import {
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
   x402PriceUsd,
-  x402PaidVerifyStatus,
+  x402PaidVerifyStatusForEnv,
   type X402EnvVars,
   type X402VerifyBinding,
   // Extensionless on purpose: tsconfig.workers.json counts each ".ts"
@@ -94,116 +96,148 @@ const JSON_HEADERS = {
   "MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
 };
 
-export const TOOLS = [
-  {
-    name: "get_pricing",
-    description:
-      "Free. AuthiChain verification is free: use the verify_record tool, or GET https://authichain.com/api/verify. Paid plans are on hold, so no prices or Payment Links are listed.",
-    inputSchema: { type: "object", properties: {} },
-  },
-  {
-    name: "verify",
-    description: x402PaidVerifyStatus().bound
-      ? "Legacy x402 seal verify. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. For free verification use verify_record."
-      : "Legacy x402 seal verify, not answering. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        sealId: {
-          type: "string",
-          format: "uuid",
-          description:
-            "Required seal UUID. productId and serial are not registry keys.",
+/**
+ * Research-approved live catalogue (2026-10-30). Exact lines only.
+ * Do not add SKUs, Stripe Payment Links, or JSON-LD generation counts.
+ */
+export const MCP_LIVE_CATALOGUE = [
+  "QRON Starter Pack — $29 one-time — https://authichain.com/checkout/starter",
+  "StrainChain Passport — $49 — https://authichain.com/checkout/strainchain_passport",
+  "Creator Pack — $99 — https://authichain.com/checkout/creator",
+  "EU DPP Workspace — $299 — https://authichain.com/checkout/dpp_readiness",
+  "x402 pay-per-call — $0.05 USDC on Base, daily cap $10 per payer — https://authichain.com/x402",
+] as const;
+
+const GET_PRICING_DESCRIPTION =
+  "Free. Verification is free: use the verify_record tool, or GET https://authichain.com/api/verify. Live catalogue: " +
+  MCP_LIVE_CATALOGUE.slice(0, 4).join("; ") +
+  ". Free verify_record and free daily checks first; " +
+  MCP_LIVE_CATALOGUE[4];
+
+function verifyToolDescription(bound: boolean): string {
+  return bound
+    ? "Free verification: use verify_record. Paid calls are answered from the seal registry. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402."
+    : "Free verification: use verify_record. Legacy x402 seal verify, not answering. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken.";
+}
+
+/**
+ * Tool list for this request. Built per call so verify/get_pricing copy
+ * follows env.X402_PAID_VERIFY_PATH the same way /api/x402/health does.
+ * Do not freeze descriptions at module-init against a stale unbound constant.
+ */
+export function mcpTools(env?: X402Env) {
+  const paid = x402PaidVerifyStatusForEnv(env);
+  return [
+    {
+      name: "get_pricing",
+      description: GET_PRICING_DESCRIPTION,
+      inputSchema: { type: "object", properties: {} },
+    },
+    {
+      name: "verify",
+      description: verifyToolDescription(paid.bound),
+      inputSchema: {
+        type: "object",
+        properties: {
+          sealId: {
+            type: "string",
+            format: "uuid",
+            description:
+              "Required seal UUID. productId and serial are not registry keys.",
+          },
         },
       },
     },
-  },
-  {
-    name: "query_provenance",
-    description:
-      "Free public lookup for an assetId / seal / QR token. Never attests. Resolves the published packs (" +
-      PUBLISHED_PACKS.map(p => p.slug).join(", ") +
-      "); any other id returns status unknown, because the certificates registry does not answer yet. " +
-      "For free signature and anchor verification use verify_record.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        assetId: {
-          type: "string",
-          description: "Seal, serial, or QR token identifier",
+    {
+      name: "query_provenance",
+      description:
+        "Free public lookup for an assetId / seal / QR token. Never attests. Resolves the published packs (" +
+        PUBLISHED_PACKS.map(p => p.slug).join(", ") +
+        "); any other id returns status unknown, because the certificates registry does not answer yet. " +
+        "For free signature and anchor verification use verify_record.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          assetId: {
+            type: "string",
+            description: "Seal, serial, or QR token identifier",
+          },
         },
-      },
-      required: ["assetId"],
-    },
-  },
-  {
-    name: "verify_record",
-    description: `Free. Verify an AuthiChain signed provenance record with the open reference verifier. Pass id "${"polygon-anchor-1"}" for the published demonstration record, or pass your own record and anchor JSON. Returns verified, valid-unanchored, or invalid, plus whether the transaction carries the record hash. It does not inspect a physical product.`,
-    inputSchema: {
-      type: "object",
-      properties: {
-        id: {
-          type: "string",
-          description: 'Published record id. Only "polygon-anchor-1" exists.',
-        },
-        record: {
-          type: "object",
-          description: "A signed AuthiChain provenance record (JSON).",
-        },
-        anchor: {
-          type: "object",
-          description:
-            'Anchor JSON: { recordHash, chain: "polygon:137", txHash }. Optional.',
-        },
+        required: ["assetId"],
       },
     },
-  },
-  {
-    name: "dpp_readiness_check",
-    description:
-      "Free EU Digital Product Passport readiness check. Returns a 0-100 score, gaps, and the dated obligation for the product category (battery passport is law from 18 Feb 2027; other categories are ESPR targets). Not legal advice.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        category: {
-          type: "string",
-          enum: DPP_CATEGORIES.map(c => c.id),
-          description: DPP_CATEGORIES.map(c => `${c.id}: ${c.label}`).join(
-            "; "
+    {
+      name: "verify_record",
+      description: `Free. Verify an AuthiChain signed provenance record with the open reference verifier. Pass id "${"polygon-anchor-1"}" for the published demonstration record, or pass your own record and anchor JSON. Returns verified, valid-unanchored, or invalid, plus whether the transaction carries the record hash. It does not inspect a physical product.`,
+      inputSchema: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            description: 'Published record id. Only "polygon-anchor-1" exists.',
+          },
+          record: {
+            type: "object",
+            description: "A signed AuthiChain provenance record (JSON).",
+          },
+          anchor: {
+            type: "object",
+            description:
+              'Anchor JSON: { recordHash, chain: "polygon:137", txHash }. Optional.',
+          },
+        },
+      },
+    },
+    {
+      name: "dpp_readiness_check",
+      description:
+        "Free EU Digital Product Passport readiness check. Returns a 0-100 score, gaps, and the dated obligation for the product category (battery passport is law from 18 Feb 2027; other categories are ESPR targets). Not legal advice.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          category: {
+            type: "string",
+            enum: DPP_CATEGORIES.map(c => c.id),
+            description: DPP_CATEGORIES.map(c => `${c.id}: ${c.label}`).join(
+              "; "
+            ),
+          },
+          sells_in_eu: {
+            type: "boolean",
+            description:
+              "Sold into the EU directly or via an importer. Default true.",
+          },
+          ...Object.fromEntries(
+            DPP_QUESTIONS.map(q => [
+              q.id,
+              { type: "boolean", description: q.question },
+            ])
           ),
         },
-        sells_in_eu: {
-          type: "boolean",
-          description:
-            "Sold into the EU directly or via an importer. Default true.",
-        },
-        ...Object.fromEntries(
-          DPP_QUESTIONS.map(q => [
-            q.id,
-            { type: "boolean", description: q.question },
-          ])
-        ),
+        required: ["category"],
       },
-      required: ["category"],
     },
-  },
-  {
-    name: "scan_living_qr",
-    description:
-      "Free. Scan a stored Living QR. GET https://authichain.com/qron/r/{object_id} returns AuthiChain Verification Decision v1. This host verifies the signature. A missing id is presentation_not_found. Not an x402 payment endpoint, and it does not inspect a physical product.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        object_id: {
-          type: "string",
-          description:
-            "Stored presentation id. Canonical form is qron:url: plus 8 hex characters.",
+    {
+      name: "scan_living_qr",
+      description:
+        "Free. Scan a stored Living QR. GET https://authichain.com/qron/r/{object_id} returns AuthiChain Verification Decision v1. This host verifies the signature. A missing id is presentation_not_found. Not an x402 payment endpoint, and it does not inspect a physical product.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          object_id: {
+            type: "string",
+            description:
+              "Stored presentation id. Canonical form is qron:url: plus 8 hex characters.",
+          },
         },
+        required: ["object_id"],
       },
-      required: ["object_id"],
     },
-  },
-];
+  ];
+}
+
+/** Unbound default for tests and /mcp/free. Live discovery uses mcpTools(env). */
+export const TOOLS = mcpTools();
 
 const DPP_CHECK_URL = "https://authichain.com/dpp-check";
 
@@ -446,12 +480,12 @@ function livePayTo(env?: X402Env): string {
 }
 
 /**
- * get_pricing and GET discovery. Verification is free; paid plans are on
- * hold, so this lists no Payment Links and no per-call price. Text only:
- * the legacy x402 `verify` path below is unchanged.
+ * get_pricing and GET discovery. Verification is free; paidPlans lists the
+ * Research-approved live catalogue. Paid-verify status follows the same
+ * env.X402_PAID_VERIFY_PATH as GET /api/x402/health.
  */
-export function mcpPricingDiscovery(_env?: X402Env) {
-  const legacy = x402PaidVerifyStatus();
+export function mcpPricingDiscovery(env?: X402Env) {
+  const legacy = x402PaidVerifyStatusForEnv(env);
   return {
     verify: {
       price: "free",
@@ -468,26 +502,27 @@ export function mcpPricingDiscovery(_env?: X402Env) {
       "scan_living_qr",
     ],
     paidPlans: {
-      status: "on_hold",
-      note: "Prices are on hold. No Payment Links or per-call prices are offered here.",
+      status: "live",
+      catalogue: [...MCP_LIVE_CATALOGUE],
     },
     legacySealVerify: {
       tool: "verify",
       status: legacy.status,
+      detail: legacy.detail,
       note: legacy.bound
-        ? "Legacy x402 seal verify. For free verification use verify_record."
-        : "Legacy x402 seal verify, not answering: a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
+        ? `Free verification: use verify_record. ${legacy.detail}`
+        : "Free verification: use verify_record. Legacy x402 seal verify, not answering: a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken.",
     },
   };
 }
 
-function discoveryBody() {
+function discoveryBody(env?: X402Env) {
   return {
     protocol: "mcp",
     jsonrpc: "2.0",
     serverInfo: { name: "authichain", version: SERVER_VERSION },
-    tools: TOOLS,
-    pricing: mcpPricingDiscovery(),
+    tools: mcpTools(env),
+    pricing: mcpPricingDiscovery(env),
     pay: {
       x402: "POST https://authichain.com/api/x402",
       mcpVerify: "POST https://authichain.com/mcp tools/call verify",
@@ -742,7 +777,7 @@ async function handleRpc(
   }
 
   if (method === "tools/list") {
-    return rpcResult(id, { tools: TOOLS });
+    return rpcResult(id, { tools: mcpTools(env) });
   }
 
   if (method === "tools/call") {
@@ -818,7 +853,7 @@ async function handleRpc(
           isError: true,
         });
       }
-      // Paid plans are on hold (see mcpPricingDiscovery): no audit pitch here.
+      // get_pricing lists the live catalogue; this tool still does not pitch an audit.
       const result = scoreDppReadiness(input, { offerAudit: false });
       return rpcResult(id, {
         content: [
@@ -974,7 +1009,7 @@ export async function tryHandleMcp(
       });
     }
     hydrateX402(env);
-    return json(200, discoveryBody());
+    return json(200, discoveryBody(env));
   }
 
   if (request.method === "POST") {

@@ -10,9 +10,15 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
+import { readFileSync } from "node:fs";
+import {
+  planPaymentLink,
+  planStripePaymentLink,
+  planUsd,
+} from "../../../src/lib/plans.ts";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
+import { MCP_LIVE_CATALOGUE } from "./mcp-routes.ts";
 import { VS_PAGES } from "./vs-pages.ts";
 
 type Env = Parameters<typeof worker.fetch>[1];
@@ -317,36 +323,95 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   assert.match(privacy, /\$QRON token is not a way to pay/);
   assert.match(privacy, /simulated/);
   assert.match(privacy, /id="outbound"/);
-  assert.match(privacy, /Zachary J Kietzman d\/b\/a AuthiChain \(sole proprietor\)/);
+  assert.match(
+    privacy,
+    /Zachary J Kietzman d\/b\/a AuthiChain \(sole proprietor\)/
+  );
   assert.match(privacy, /authichain@mail\.grokbot\.com/);
-  assert.match(privacy, /we will email you on the basis of your consent \(GDPR Art\. 6\(1\)\(a\)\)/);
-  assert.match(privacy, /You will be able to withdraw consent at any time through the unsubscribe link/);
-  assert.match(privacy, /Legal basis: legitimate interest \(GDPR Art\. 6\(1\)\(f\)\)/);
-  assert.match(privacy, /Where we got your data\.<\/strong> Opt-in sequence: from you\. 1-to-1 business emails: public sources \(such as your company's website\) or Apollo\.io/);
-  assert.match(privacy, /Resend, for the opt-in sequence; Google \(Gmail\), which Zachary uses to send and receive 1-to-1 emails with business contacts at US brands;/);
-  assert.match(privacy, /and Supabase, which stores the contact records for business contacts at US brands\./);
-  assert.match(privacy, /We got your work contact details from public sources or Apollo\.io\./);
-  assert.doesNotMatch(privacy, /We have two email streams|If we start, there will be two kinds|No outbound marketing email sends are active yet|if we start them|will store the contact records/);
-  assert.match(privacy, /Resend and Google process data in the United States; we have not yet confirmed their transfer safeguards on this page\./);
-  assert.match(privacy, /Reply 'stop' \(or tell us in any words\) and we won't email you again/);
-  assert.match(privacy, /reply 'stop' \(or tell us in any words\) to our email/);
-  assert.doesNotMatch(privacy, /If we start emailing businesses|Any future outreach/);
-  assert.match(privacy, /and, if we start it, the DPP readiness email sequence to people who confirmed a double opt-in/);
-  assert.equal(privacy.split("No automated marketing email sequence is active yet. Zachary does send individual 1-to-1 emails to business contacts at US brands, which you can stop by replying 'stop'. If we start the automated sequence, it will go only to recipients in the United States who confirmed a double opt-in, and every message will carry an unsubscribe link.").length - 1, 2);
+  assert.match(
+    privacy,
+    /we will email you on the basis of your consent \(GDPR Art\. 6\(1\)\(a\)\)/
+  );
+  assert.match(
+    privacy,
+    /You will be able to withdraw consent at any time through the unsubscribe link/
+  );
+  assert.match(
+    privacy,
+    /Legal basis: legitimate interest \(GDPR Art\. 6\(1\)\(f\)\)/
+  );
+  assert.match(
+    privacy,
+    /Where we got your data\.<\/strong> Opt-in sequence: from you\. 1-to-1 business emails: public sources \(such as your company's website\) or Apollo\.io/
+  );
+  assert.match(
+    privacy,
+    /Resend, for the opt-in sequence; Google \(Gmail\), which Zachary uses to send and receive 1-to-1 emails with business contacts at US brands;/
+  );
+  assert.match(
+    privacy,
+    /and Supabase, which stores the contact records for business contacts at US brands\./
+  );
+  assert.match(
+    privacy,
+    /We got your work contact details from public sources or Apollo\.io\./
+  );
+  assert.doesNotMatch(
+    privacy,
+    /We have two email streams|If we start, there will be two kinds|No outbound marketing email sends are active yet|if we start them|will store the contact records/
+  );
+  assert.match(
+    privacy,
+    /Resend and Google process data in the United States; we have not yet confirmed their transfer safeguards on this page\./
+  );
+  assert.match(
+    privacy,
+    /Reply 'stop' \(or tell us in any words\) and we won't email you again/
+  );
+  assert.match(
+    privacy,
+    /reply 'stop' \(or tell us in any words\) to our email/
+  );
+  assert.doesNotMatch(
+    privacy,
+    /If we start emailing businesses|Any future outreach/
+  );
+  assert.match(
+    privacy,
+    /and, if we start it, the DPP readiness email sequence to people who confirmed a double opt-in/
+  );
+  assert.equal(
+    privacy.split(
+      "No automated marketing email sequence is active yet. Zachary does send individual 1-to-1 emails to business contacts at US brands, which you can stop by replying 'stop'. If we start the automated sequence, it will go only to recipients in the United States who confirmed a double opt-in, and every message will carry an unsubscribe link."
+    ).length - 1,
+    2
+  );
   assert.doesNotMatch(privacy, /If we start sending marketing email/);
-  assert.match(privacy, /We keep your subscriber data until you unsubscribe, then delete it within 30 days, except your email address, kept on a suppression list only to honour your unsubscribe\./);
+  assert.match(
+    privacy,
+    /We keep your subscriber data until you unsubscribe, then delete it within 30 days, except your email address, kept on a suppression list only to honour your unsubscribe\./
+  );
   assert.match(privacy, /12 months after our last contact/);
   assert.match(privacy, /do not claim one is in place/);
   assert.match(privacy, /AgentMail/);
   assert.match(privacy, /Amazon SES/);
   assert.match(privacy, /section 12\.1/);
-  assert.match(privacy, /No automated marketing email sequence is active yet\./);
-  assert.doesNotMatch(privacy, /We send marketing email only|people who opted in|we email you on the basis of your consent/);
+  assert.match(
+    privacy,
+    /No automated marketing email sequence is active yet\./
+  );
+  assert.doesNotMatch(
+    privacy,
+    /We send marketing email only|people who opted in|we email you on the basis of your consent/
+  );
   assert.doesNotMatch(privacy, /not a newsletter/i);
   assert.match(privacy, /receive-only/);
   assert.match(privacy, /None appointed/);
   assert.doesNotMatch(privacy, /Resend[^<]*(marketing|EU contacts)/);
-  assert.doesNotMatch(privacy, /(sends|sent by|sender)[^<.]*(AgentMail|Resend)|(AgentMail|Resend)[^<.]*sends our/i);
+  assert.doesNotMatch(
+    privacy,
+    /(sends|sent by|sender)[^<.]*(AgentMail|Resend)|(AgentMail|Resend)[^<.]*sends our/i
+  );
   assert.doesNotMatch(privacy, /pending legal check|\[EU representative/);
   assert.doesNotMatch(privacy, /@gmail\.com/);
   assert.doesNotMatch(privacy, /POSTAL ADDRESS|street address/i);
@@ -815,7 +880,7 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
   }
 });
 
-test("/mcp and /api/mcp discovery says verify is free, with no Payment Links or x402 price", async () => {
+test("/mcp and /api/mcp discovery says verify is free and lists the live catalogue", async () => {
   for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
@@ -824,7 +889,7 @@ test("/mcp and /api/mcp discovery says verify is free, with no Payment Links or 
       pay: { x402: string };
       pricing: {
         verify: { price: string; mcpTool: string };
-        paidPlans: { status: string };
+        paidPlans: { status: string; catalogue: string[] };
         humanCheckout?: unknown;
       };
     };
@@ -832,20 +897,80 @@ test("/mcp and /api/mcp discovery says verify is free, with no Payment Links or 
     assert.equal(body.pay.x402, "POST https://authichain.com/api/x402", path);
     assert.equal(body.pricing.verify.price, "free", path);
     assert.equal(body.pricing.verify.mcpTool, "verify_record", path);
-    assert.equal(body.pricing.paidPlans.status, "on_hold", path);
+    assert.equal(body.pricing.paidPlans.status, "live", path);
+    assert.notEqual(body.pricing.paidPlans.status, "on_hold", path);
+    assert.deepEqual(
+      body.pricing.paidPlans.catalogue,
+      [...MCP_LIVE_CATALOGUE],
+      path
+    );
     assert.equal(body.pricing.humanCheckout, undefined, path);
     const text = JSON.stringify(body);
-    assert.equal(text.includes("$0.05"), false, path);
+    assert.equal(text.includes("on_hold"), false, path);
+    assert.equal(text.includes("50 workspace generations"), false, path);
+    assert.equal(text.includes("/api/checkout"), false, path);
+    for (const line of MCP_LIVE_CATALOGUE) {
+      assert.equal(text.includes(line), true, `${path} ${line}`);
+    }
     for (const plan of [
       "dpp_readiness",
       "strainchain_passport",
       "strainchain_farm",
+      "starter",
+      "creator",
     ] as const) {
-      const link = planPaymentLink(plan);
-      if (link) assert.equal(text.includes(link), false, `${path} ${plan}`);
+      const stripe = planStripePaymentLink(plan);
+      if (stripe)
+        assert.equal(text.includes(stripe), false, `${path} stripe ${plan}`);
     }
-    assert.equal(text.includes("/api/checkout"), false, path);
+    const farm = planPaymentLink("strainchain_farm");
+    if (farm) assert.equal(text.includes(farm), false, `${path} farm`);
   }
+});
+
+test("/mcp paidVerify matches /api/x402/health when X402_PAID_VERIFY_PATH is bound", async () => {
+  const toml = readFileSync(
+    new URL("../wrangler.toml", import.meta.url),
+    "utf8"
+  );
+  const path = /^X402_PAID_VERIFY_PATH\s*=\s*"([^"]*)"/m.exec(toml)?.[1];
+  assert.match(path ?? "", /^(seal_lookup|verify_app)$/);
+  const env = { ...ENV, X402_PAID_VERIFY_PATH: path } as Env;
+  const health = await get("/api/x402/health", env);
+  assert.equal(health.status, 200);
+  const healthBody = (await health.json()) as {
+    paidVerify: { bound: boolean; status: string; detail: string };
+  };
+  assert.equal(healthBody.paidVerify.bound, true);
+  assert.equal(
+    healthBody.paidVerify.detail,
+    "Paid calls are answered from the seal registry."
+  );
+  const mcp = await get("/mcp", env);
+  const mcpBody = (await mcp.json()) as {
+    tools: Array<{ name: string; description: string }>;
+    pricing: {
+      paidPlans: { status: string };
+      legacySealVerify: { status: string; detail: string };
+    };
+  };
+  assert.notEqual(mcpBody.pricing.paidPlans.status, "on_hold");
+  assert.equal(
+    mcpBody.pricing.legacySealVerify.status,
+    healthBody.paidVerify.status
+  );
+  assert.equal(
+    mcpBody.pricing.legacySealVerify.detail,
+    healthBody.paidVerify.detail
+  );
+  const verify = mcpBody.tools.find(t => t.name === "verify");
+  assert.equal(
+    verify?.description.includes(
+      "Paid calls are answered from the seal registry."
+    ),
+    true
+  );
+  assert.equal(verify?.description.includes("registry_not_bound"), false);
 });
 
 test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async () => {
@@ -1314,7 +1439,9 @@ test("sitemap does not list /checkout/qron_launch after it closed to new buyers 
   assert.equal(res.status, 200);
   const xml = await res.text();
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
-  assert.ok(!xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>"));
+  assert.ok(
+    !xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
+  );
   assert.ok(!xml.includes("/checkout/qron_launch"));
 });
 
@@ -1579,12 +1706,18 @@ test("vs pages and the scantrust page carry no unbacked 'Tamper-Proof by Design'
 
 // CFA-629: the dpp-check sub-routes must be reachable through the Worker's fetch.
 test("GET /dpp-check/product returns 200 through the Worker fetch", async () => {
-  const res = await worker.fetch(new Request("https://authichain.com/dpp-check/product"), ENV);
+  const res = await worker.fetch(
+    new Request("https://authichain.com/dpp-check/product"),
+    ENV
+  );
   assert.equal(res.status, 200);
 });
 
 test("GET /dpp/scan returns 301 to /dpp-check through the Worker fetch", async () => {
-  const res = await worker.fetch(new Request("https://authichain.com/dpp/scan"), ENV);
+  const res = await worker.fetch(
+    new Request("https://authichain.com/dpp/scan"),
+    ENV
+  );
   assert.equal(res.status, 301);
   assert.match(res.headers.get("Location") ?? "", /\/dpp-check$/);
 });
