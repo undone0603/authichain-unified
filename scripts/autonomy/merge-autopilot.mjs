@@ -6,14 +6,15 @@
 //
 //   update   the branch is behind main -> merge main into it (GitHub's
 //            update-branch, a merge commit, never a rebase) so CI re-runs on
-//            the up-to-date tree
+//            the up-to-date tree. A hold label still gets this update.
 //   merge    up to date, mergeable_state clean, and every check run and
 //            commit status on the head is green -> squash-merge, pinned to
-//            the head SHA that was checked
+//            the head SHA that was checked. A hold is never merged.
 //   conflict the branch conflicts with main -> label `merge-conflict` and
 //            leave it for a human or an agent to resolve
-//   wait / skip  anything else (draft, fork, untrusted author, hold label,
-//            checks pending or red, GitHub still computing mergeability)
+//   wait / skip  anything else (draft with no hold label, fork, untrusted
+//            author, a hold that is already up to date, checks pending or
+//            red, GitHub still computing mergeability)
 //
 // Owner decision 2026-10-02: every trusted PR is eligible, including ones
 // touching security, revenue, schema or the charter (docs/OPERATING_CHARTER.md,
@@ -75,14 +76,32 @@ export function decide(pr, checkRuns, status, behindBy, cfg, opts = {}) {
     return { action: "skip", reason: "not open" };
   if (pr.base?.ref !== cfg.baseBranch)
     return { action: "skip", reason: `base is ${pr.base?.ref}` };
-  if (pr.draft) return { action: "skip", reason: "draft" };
   if (pr.head?.repo?.full_name !== pr.base?.repo?.full_name)
     return { action: "skip", reason: "fork" };
   const author = pr.user?.login?.toLowerCase();
   if (!cfg.trustedAuthors.includes(author))
     return { action: "skip", reason: `author ${pr.user?.login} not trusted` };
   const hold = labelNames(pr).find(l => cfg.holdLabels.includes(l));
-  if (hold) return { action: "skip", reason: `label ${hold}` };
+  // A hold never merges. It still takes main when behind, including a draft.
+  if (hold) {
+    if (pr.mergeable_state === "dirty" || pr.mergeable === false)
+      return { action: "conflict", reason: "conflicts with base" };
+    if (pr.mergeable === null || pr.mergeable_state === "unknown")
+      return { action: "wait", reason: "mergeability not computed yet" };
+    if (behindBy > 0) {
+      return canUpdate
+        ? {
+            action: "update",
+            reason: `${behindBy} commit(s) behind ${cfg.baseBranch}; label ${hold} blocks merge`,
+          }
+        : {
+            action: "wait",
+            reason: `label ${hold}; behind ${cfg.baseBranch}; no PAT to update`,
+          };
+    }
+    return { action: "skip", reason: `label ${hold}` };
+  }
+  if (pr.draft) return { action: "skip", reason: "draft" };
 
   if (pr.mergeable_state === "dirty" || pr.mergeable === false)
     return { action: "conflict", reason: "conflicts with base" };

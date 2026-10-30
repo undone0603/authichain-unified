@@ -16,6 +16,9 @@ import {
   SERVER_VERSION,
   PRODUCTION_ISSUER_DID,
   PRODUCTION_ISSUER_KID,
+  RETIRED_ISSUER_DID,
+  RETIRED_ISSUER_KID,
+  RETIRED_ISSUER_RETIRED_AT,
   isMcpPath,
   scanLivingQr,
   tryHandleMcp,
@@ -233,7 +236,11 @@ describe("mcp discovery", () => {
   });
 
   it("tools/call verify with a non-key argument is 400 and does not ask for payment", async () => {
-    for (const args of [{ serial: "AC-1" }, { sealId: "demo" }, { productId: "p-1" }]) {
+    for (const args of [
+      { serial: "AC-1" },
+      { sealId: "demo" },
+      { productId: "p-1" },
+    ]) {
       const res = await tryHandleMcp(
         req("/mcp", {
           method: "POST",
@@ -768,7 +775,7 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
     expect(sha256Hex(signingBytes(recordJson))).toBe(DEMONSTRATION_RECORD_HASH);
   });
 
-  it("production issuer did:key matches JWKS kid lue84w… (RFC 7638)", () => {
+  it("production issuer did:key matches JWKS kid T3AL7c4w… (RFC 7638)", () => {
     const jwk = publicKeyFromDidKey(PRODUCTION_ISSUER_DID).export({
       format: "jwk",
     }) as { crv: string; kty: string; x: string };
@@ -776,6 +783,45 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
       .update(JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x }))
       .digest("base64url");
     expect(thumb).toBe(PRODUCTION_ISSUER_KID);
+    expect(PRODUCTION_ISSUER_KID).toBe(
+      "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ"
+    );
+    expect(jwk.x).toBe("T36jnq2kRJRxGBhtyGG3PSboG_Vb6f-l8TixLr95vG0");
+  });
+
+  it("retired issuer did:key matches its RFC 7638 kid lue84w… (pre-Oct-9 key)", () => {
+    const jwk = publicKeyFromDidKey(RETIRED_ISSUER_DID).export({
+      format: "jwk",
+    }) as { crv: string; kty: string; x: string };
+    const thumb = createHash("sha256")
+      .update(JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x }))
+      .digest("base64url");
+    expect(thumb).toBe(RETIRED_ISSUER_KID);
+    expect(jwk.x).toBe("mJx2TLqUmUnxAJW_L-EQ1f28M8B6t9x-9VJPjJxbj7k");
+    expect(RETIRED_ISSUER_DID).not.toBe(PRODUCTION_ISSUER_DID);
+    expect(RETIRED_ISSUER_RETIRED_AT).toBe("2026-10-09T05:12:01Z");
+  });
+
+  it("retired issuer is allowlisted only for records issued before Oct 9", async () => {
+    const vm = RETIRED_ISSUER_DID + "#" + RETIRED_ISSUER_DID.slice(8);
+    const mk = (validFrom: string) => ({
+      ...forgedRecord().record,
+      issuer: RETIRED_ISSUER_DID,
+      validFrom,
+      proof: { ...forgedRecord().record.proof, verificationMethod: vm },
+    });
+    const before = (await verifyRecordTool({
+      record: mk("2026-10-01T00:00:00Z"),
+    })) as any;
+    expect(before.signer).toMatchObject({
+      allowlisted: true,
+      role: "retired_issuer",
+      productionIssuer: false,
+    });
+    const after = (await verifyRecordTool({
+      record: mk("2026-10-10T00:00:00Z"),
+    })) as any;
+    expect(after.signer).toMatchObject({ allowlisted: false, role: null });
   });
 
   it("RES-42 repro: random key + made-up tx is not verified", async () => {
@@ -1098,9 +1144,7 @@ describe("scan_living_qr", () => {
       jws?: string;
     };
     expect(body.decision).toBe("verified");
-    expect(body.decision_contract).toBe(
-      "AuthiChain Verification Decision v1"
-    );
+    expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
     expect(body.http_status).toBe(200);
     expect(body.jws).toBeUndefined();
     expect(payload.result.content[0].text).not.toContain("header.payload.sig");

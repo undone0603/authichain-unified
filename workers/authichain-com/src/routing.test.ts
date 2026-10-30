@@ -326,7 +326,7 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
       /not affiliated with, endorsed by, or acting on behalf of any government agency/,
       path
     );
-    assert.match(html, /Effective 5 October 2026/, path);
+    assert.match(html, /Effective 24 October 2026/, path);
     assert.doesNotMatch(html, /privacy@authichain\.com/, path);
     assert.doesNotMatch(html, /legal@authichain\.com/, path);
     assert.doesNotMatch(html, /Vercel/, path);
@@ -341,6 +341,40 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   assert.match(privacy, /0\.05 USDC/);
   assert.match(privacy, /\$QRON token is not a way to pay/);
   assert.match(privacy, /simulated/);
+  assert.match(privacy, /id="outbound"/);
+  assert.match(privacy, /Zachary J Kietzman d\/b\/a AuthiChain \(sole proprietor\)/);
+  assert.match(privacy, /authichain@mail\.grokbot\.com/);
+  assert.match(privacy, /we will email you on the basis of your consent \(GDPR Art\. 6\(1\)\(a\)\)/);
+  assert.match(privacy, /You will be able to withdraw consent at any time through the unsubscribe link/);
+  assert.match(privacy, /Legal basis: legitimate interest \(GDPR Art\. 6\(1\)\(f\)\)/);
+  assert.match(privacy, /Where we got your data\.<\/strong> Opt-in sequence: from you\. 1-to-1 business emails: public sources \(such as your company's website\) or Apollo\.io/);
+  assert.match(privacy, /Resend, for the opt-in sequence; Google \(Gmail\), which Zachary uses to send and receive 1-to-1 emails with business contacts at US brands;/);
+  assert.match(privacy, /and Supabase, which stores the contact records for business contacts at US brands\./);
+  assert.match(privacy, /We got your work contact details from public sources or Apollo\.io\./);
+  assert.doesNotMatch(privacy, /We have two email streams|If we start, there will be two kinds|No outbound marketing email sends are active yet|if we start them|will store the contact records/);
+  assert.match(privacy, /Resend and Google process data in the United States; we have not yet confirmed their transfer safeguards on this page\./);
+  assert.match(privacy, /Reply 'stop' \(or tell us in any words\) and we won't email you again/);
+  assert.match(privacy, /reply 'stop' \(or tell us in any words\) to our email/);
+  assert.doesNotMatch(privacy, /If we start emailing businesses|Any future outreach/);
+  assert.match(privacy, /and, if we start it, the DPP readiness email sequence to people who confirmed a double opt-in/);
+  assert.equal(privacy.split("No automated marketing email sequence is active yet. Zachary does send individual 1-to-1 emails to business contacts at US brands, which you can stop by replying 'stop'. If we start the automated sequence, it will go only to recipients in the United States who confirmed a double opt-in, and every message will carry an unsubscribe link.").length - 1, 2);
+  assert.doesNotMatch(privacy, /If we start sending marketing email/);
+  assert.match(privacy, /We keep your subscriber data until you unsubscribe, then delete it within 30 days, except your email address, kept on a suppression list only to honour your unsubscribe\./);
+  assert.match(privacy, /12 months after our last contact/);
+  assert.match(privacy, /do not claim one is in place/);
+  assert.match(privacy, /AgentMail/);
+  assert.match(privacy, /Amazon SES/);
+  assert.match(privacy, /section 12\.1/);
+  assert.match(privacy, /No automated marketing email sequence is active yet\./);
+  assert.doesNotMatch(privacy, /We send marketing email only|people who opted in|we email you on the basis of your consent/);
+  assert.doesNotMatch(privacy, /not a newsletter/i);
+  assert.match(privacy, /receive-only/);
+  assert.match(privacy, /None appointed/);
+  assert.doesNotMatch(privacy, /Resend[^<]*(marketing|EU contacts)/);
+  assert.doesNotMatch(privacy, /(sends|sent by|sender)[^<.]*(AgentMail|Resend)|(AgentMail|Resend)[^<.]*sends our/i);
+  assert.doesNotMatch(privacy, /pending legal check|\[EU representative/);
+  assert.doesNotMatch(privacy, /@gmail\.com/);
+  assert.doesNotMatch(privacy, /POSTAL ADDRESS|street address/i);
 
   const terms = await (await get("/terms")).text();
   assert.match(terms, /not a GS1 Conformant Resolver/);
@@ -809,17 +843,26 @@ test("GET /api/x402/listing and /api/x402/growth are answered here", async () =>
   assert.match(growthBody.listing ?? "", /\/api\/x402\/listing$/);
 });
 
-test("GET /api/x402, /health, and /api/v1/agent-verify are answered here", async () => {
-  for (const path of [
-    "/api/x402",
-    "/api/x402/health",
-    "/api/v1/agent-verify",
-  ]) {
-    const res = await get(path);
-    assert.equal(res.status, 200, path);
-    const body = (await res.json()) as { status: string; catalog?: string };
-    assert.equal(body.status, "not_configured", path);
-    assert.equal(body.catalog, "/api/x402/catalog", path);
+test("GET /api/x402/health is 200; GET paid aliases are 402 with payTo", async () => {
+  const health = await get("/api/x402/health");
+  assert.equal(health.status, 200);
+  const healthBody = (await health.json()) as {
+    status: string;
+    catalog?: string;
+  };
+  assert.equal(healthBody.status, "not_configured");
+  assert.equal(healthBody.catalog, "/api/x402/catalog");
+
+  const env = {
+    ...ENV,
+    X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+  } as unknown as Env;
+  for (const path of ["/api/x402", "/api/v1/agent-verify"]) {
+    const res = await get(path, env);
+    assert.equal(res.status, 402, path);
+    const body = (await res.json()) as { x402Version: number };
+    assert.equal(body.x402Version, 2, path);
+    assert.ok(res.headers.get("PAYMENT-REQUIRED"), path);
   }
 });
 
@@ -957,8 +1000,40 @@ test("GET /.well-known/x402 is the x402scan fan-out, not the catalog", async () 
     protocol?: string;
   };
   assert.equal(body.version, 1);
-  assert.deepEqual(body.resources, ["https://authichain.com/api/x402"]);
+  assert.deepEqual(body.resources, [
+    "https://authichain.com/api/v1/agent-verify",
+    "https://authichain.com/api/x402",
+  ]);
   assert.equal(body.protocol, undefined);
+});
+
+test("GET /.well-known/agent-card.json is the A2A Agent Card", async () => {
+  for (const path of [
+    "/.well-known/agent-card.json",
+    "/.well-known/agent.json",
+  ]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const body = (await res.json()) as {
+      name: string;
+      skills?: Array<{ id: string }>;
+      x402?: { scheme?: string };
+    };
+    assert.equal(body.name, "AuthiChain", path);
+    assert.ok(
+      body.skills?.some(s => s.id === "paid-evidence-check"),
+      path
+    );
+    assert.equal(body.x402?.scheme, "exact", path);
+  }
+});
+
+test("GET /.well-known/lumi-monitor.txt is the Lumi domain proof", async () => {
+  const res = await get("/.well-known/lumi-monitor.txt");
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") || "", /text\/plain/);
+  const text = await res.text();
+  assert.match(text, /lumi-monitor-verify=/);
 });
 
 test("GET /openapi.json declares x-payment-info for unpaid POST /api/x402", async () => {
@@ -1231,6 +1306,45 @@ test("hung APP_WORKER /p lookup 404s with Payment Links instead of hanging", asy
   assert.match(html, /name="robots" content="noindex"/);
 });
 
+test("/verify/live is the founder seal, not an app lookup for the id live", async () => {
+  const seen: string[] = [];
+  const env = {
+    APP_WORKER: {
+      fetch: async (r: Request) => {
+        seen.push(new URL(r.url).pathname);
+        return new Response("app", { status: 200 });
+      },
+    },
+  } as unknown as Env;
+  for (const path of ["/verify/live", "/verify/live/", "/verify/LIVE"]) {
+    const res = await get(path, env);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.match(html, /This seal is already on Base\./);
+    assert.match(html, /authichain\.base\.eth/);
+    assert.match(html, /0x34370EDA96e0C7e47f46F18e2D3a7298C241E16F/);
+    assert.match(
+      html,
+      /basescan\.org\/tx\/0xa07d0bbadcc958b3f6fc8d81acda16a54c4bcfdb5e86bd2ce186e27f5752ab3b/
+    );
+    assert.match(html, /What this does not prove/);
+    assert.doesNotMatch(html, /No record found/);
+    assert.notEqual(html, "app");
+  }
+  assert.deepEqual(seen, []);
+  const other = await get("/verify/not-a-real-record", env);
+  assert.equal(await other.text(), "app");
+  const withId = await get("/verify/live?id=polygon-anchor-1", env);
+  assert.equal(await withId.text(), "app");
+  const posted = await worker.fetch(
+    new Request("https://authichain.govchain.us/verify/live", {
+      method: "POST",
+    }),
+    env
+  );
+  assert.equal(posted.status, 405);
+});
+
 test("hung APP_WORKER /verify lookup 404s with HTML instead of throwing (1101)", async () => {
   const env = {
     APP_WORKER_TIMEOUT_MS: "40",
@@ -1317,6 +1431,15 @@ test("the 404 escapes the path, so a hostile URL cannot inject markup", async ()
   );
 });
 
+test("sitemap does not list /checkout/qron_launch after it closed to new buyers (#2020)", async () => {
+  const res = await get("/sitemap.xml");
+  assert.equal(res.status, 200);
+  const xml = await res.text();
+  assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
+  assert.ok(!xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>"));
+  assert.ok(!xml.includes("/checkout/qron_launch"));
+});
+
 test("the sitemap no longer lists pages that do not exist", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   for (const gone of [
@@ -1353,8 +1476,10 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/onboard</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/generate</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
+  // Retired plans 303 to /pricing, so they are no longer sitemap pages.
   assert.ok(
-    xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
+    !xml.includes("/checkout/qron_launch"),
+    "/checkout/qron_launch is closed to new buyers (#2020); sitemap must not list it"
   );
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/creator</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));
@@ -1369,6 +1494,7 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/m/bat-2026-001</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/partners/brief</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/verify</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/verify/live</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/x402</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/.well-known/x402</loc>"));
   assert.ok(
@@ -1604,4 +1730,16 @@ test("vs pages and the scantrust page carry no unbacked 'Tamper-Proof by Design'
     "utf8"
   );
   assert.doesNotMatch(scantrust, banned, "src/app/vs/scantrust/page.tsx");
+});
+
+// CFA-629: the dpp-check sub-routes must be reachable through the Worker's fetch.
+test("GET /dpp-check/product returns 200 through the Worker fetch", async () => {
+  const res = await worker.fetch(new Request("https://authichain.com/dpp-check/product"), ENV);
+  assert.equal(res.status, 200);
+});
+
+test("GET /dpp/scan returns 301 to /dpp-check through the Worker fetch", async () => {
+  const res = await worker.fetch(new Request("https://authichain.com/dpp/scan"), ENV);
+  assert.equal(res.status, 301);
+  assert.match(res.headers.get("Location") ?? "", /\/dpp-check$/);
 });

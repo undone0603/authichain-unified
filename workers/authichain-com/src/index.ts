@@ -1,3 +1,4 @@
+import { isVerifyLivePath, renderVerifyLivePage } from "./verify-live-page.ts";
 import { isIsThisRealPath, renderIsThisRealPage } from "./is-this-real-page.ts";
 import { handleSalesInquiry } from './routes/sales';
 import mcpServer from './mcp-server';
@@ -18,6 +19,7 @@ import {
 } from "./checkout-growth";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
+import { tryHandleMcpFree } from "./mcp-free-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
 import { tryHandleManufacturerStatus } from "./manufacturer-status-route";
 import { tryHandleProtocolExample } from "./protocol-example-route";
@@ -47,6 +49,7 @@ import {
   tryHandleTelegramMiniApp,
 } from "./telegram-miniapp.ts";
 import { DESK_SITEMAP, tryHandleDesk } from "./desk.ts";
+import { tryHandleGeneration } from "./generation-check";
 // Extensionless on purpose. tsconfig.workers.json counts each ".ts" import.
 import { attestationSchemaResponse } from "./attestation-schema";
 import { tryHandleLlmsTxt } from "./llms-txt.ts";
@@ -74,6 +77,7 @@ import {
   dppCheckoutClickEvent,
   isDppCheckPath,
   renderDppCheckPage,
+  tryHandleDppCheck,
 } from "./dpp-check-page.ts";
 import {
   micrositeSitemapUrls,
@@ -2926,7 +2930,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <a class="nav-link" href="/battery-passport">Battery example</a>
       <a class="nav-link" href="/docs">Docs</a>
       <a class="nav-link" href="/x402">Agent pay</a>
-      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Start DPP Audit — $299</a>
+      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Open EU DPP Workspace — $299</a>
     </div>
   </nav>
 
@@ -3413,10 +3417,10 @@ async function handleAuthichainCom(
         // First-dollar LOOP-03 paths (live 200; generate proxies to APP_WORKER).
         { loc: 'https://authichain.com/generate', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/checkout/starter', freq: 'weekly', pri: '0.95' },
-        { loc: 'https://authichain.com/checkout/qron_launch', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/checkout/creator', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/verify/live', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/digital-product-passport', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/genetics', freq: 'weekly', pri: '0.85' },
@@ -3490,6 +3494,11 @@ async function handleAuthichainCom(
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
     }
+    // CFA-629: /dpp-check/product and the /dpp/scan 301 live in tryHandleDppCheck.
+    if (!isDppCheckPath(p)) {
+      const dppCheck = tryHandleDppCheck(request);
+      if (dppCheck) return dppCheck;
+    }
     if (isDppCheckPath(p)) {
       const done = request.method === 'GET' ? dppCheckCompleteEvent(url) : null;
       if (done) console.log(JSON.stringify(done));
@@ -3534,6 +3543,9 @@ async function handleAuthichainCom(
     if (microsite) return microsite;
     const miniapp = tryHandleTelegramMiniApp(request);
     if (miniapp) return miniapp;
+    const generation = tryHandleGeneration(request);
+    if (generation) return generation;
+
     const desk = tryHandleDesk(request);
     if (desk) return desk;
 
@@ -3587,6 +3599,9 @@ async function handleAuthichainCom(
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
     const x402 = await tryHandleX402(request, env, env.VERIFY_APP);
     if (x402) return x402;
+    // /mcp/free: free-only sibling for the marketplace plugin (Advisor ruling B).
+    const mcpFree = await tryHandleMcpFree(request, env);
+    if (mcpFree) return mcpFree;
     const mcp = await tryHandleMcp(request, env, env.VERIFY_APP);
     if (mcp) return mcp;
     const apiV1 = await tryHandleApiV1(request, env);
@@ -3656,6 +3671,23 @@ async function handleAuthichainCom(
           ...HTML_SECURITY_HEADERS,
           'Content-Type': 'text/html; charset=utf-8',
           ...(seoPassport.noindex ? { 'X-Robots-Tag': 'noindex' } : {}),
+        },
+      });
+    }
+    // /verify/live is a reserved founder page, not a certificate id. The edge
+    // router would look up the id "live" and 404. A real id still proxies.
+    if (isVerifyLivePath(p) && !url.searchParams.get("id")) {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response("method not allowed", {
+          status: 405,
+          headers: { Allow: "GET, HEAD", "Cache-Control": "no-store" },
+        });
+      }
+      return new Response(renderVerifyLivePage(), {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, max-age=300",
         },
       });
     }
