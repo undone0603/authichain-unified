@@ -162,3 +162,76 @@ describe("/dpp-check funnel events", () => {
     ).toBeNull();
   });
 });
+
+describe("/dpp-check email opt-in", () => {
+  const inScope = () =>
+    renderDppCheckPage(
+      new URL(
+        "https://authichain.com/dpp-check?category=battery_passport&sells_in_eu=yes&unique_id=yes"
+      ),
+      NOW
+    );
+
+  it("offers an opt-in form on an in-scope result, hidden until JavaScript runs", () => {
+    const html = inScope();
+    expect(html).toContain('id="result-optin"');
+    // Without JS the form would end on the endpoint's raw JSON, so it ships hidden.
+    expect(html).toMatch(/<form[^>]*id="result-optin"[^>]*\shidden>/);
+    expect(html).toContain("/api/leads/capture");
+  });
+
+  it("requires an unchecked consent box that names the single follow-up", () => {
+    const html = inScope();
+    const box =
+      /<input type="checkbox" name="consent" value="yes" required>/.exec(html);
+    expect(box).not.toBeNull();
+    expect(html).not.toMatch(/name="consent"[^>]*checked/);
+    expect(html).toContain("one follow-up about the $299 workspace");
+    expect(html).toContain("unsubscribe link");
+  });
+
+  it("stores the shape of the result, never anything typed", () => {
+    const html = inScope();
+    expect(html).toContain('name="source" value="dpp-check"');
+    expect(html).toContain(
+      'name="product_interest" value="dpp_check_followup"'
+    );
+    expect(html).toContain(
+      'name="message" value="dpp-check:battery_passport:20:not_started"'
+    );
+    expect(html).toContain('name="categories" value="battery_passport"');
+    expect(html).toContain('name="utm_campaign" value="dpp-check"');
+  });
+
+  it("does not describe the plan as an audit or a written plan", () => {
+    const optIn = /<form[^>]*id="result-optin"[\s\S]*?<\/script>/.exec(
+      inScope()
+    );
+    expect(optIn).not.toBeNull();
+    expect(optIn![0]).not.toMatch(/audit|written plan/i);
+  });
+
+  it("is absent from the blank form and from a result with no EU duty", () => {
+    const blank = renderDppCheckPage(
+      new URL("https://authichain.com/dpp-check"),
+      NOW
+    );
+    const noDuty = renderDppCheckPage(
+      new URL("https://authichain.com/dpp-check?category=other&sells_in_eu=no"),
+      NOW
+    );
+    expect(blank).not.toContain("result-optin");
+    expect(noDuty).not.toContain("result-optin");
+  });
+
+  it("no longer claims that nothing is stored", () => {
+    const blank = renderDppCheckPage(
+      new URL("https://authichain.com/dpp-check"),
+      NOW
+    );
+    expect(blank).not.toContain("nothing stored");
+    expect(blank).toContain(
+      "Nothing is stored unless you ask for your result by email"
+    );
+  });
+});

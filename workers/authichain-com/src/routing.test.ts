@@ -735,17 +735,26 @@ test("GET /api/x402/listing and /api/x402/growth are answered here", async () =>
   assert.match(growthBody.listing ?? "", /\/api\/x402\/listing$/);
 });
 
-test("GET /api/x402, /health, and /api/v1/agent-verify are answered here", async () => {
-  for (const path of [
-    "/api/x402",
-    "/api/x402/health",
-    "/api/v1/agent-verify",
-  ]) {
-    const res = await get(path);
-    assert.equal(res.status, 200, path);
-    const body = (await res.json()) as { status: string; catalog?: string };
-    assert.equal(body.status, "not_configured", path);
-    assert.equal(body.catalog, "/api/x402/catalog", path);
+test("GET /api/x402/health is 200; GET paid aliases are 402 with payTo", async () => {
+  const health = await get("/api/x402/health");
+  assert.equal(health.status, 200);
+  const healthBody = (await health.json()) as {
+    status: string;
+    catalog?: string;
+  };
+  assert.equal(healthBody.status, "not_configured");
+  assert.equal(healthBody.catalog, "/api/x402/catalog");
+
+  const env = {
+    ...ENV,
+    X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+  } as unknown as Env;
+  for (const path of ["/api/x402", "/api/v1/agent-verify"]) {
+    const res = await get(path, env);
+    assert.equal(res.status, 402, path);
+    const body = (await res.json()) as { x402Version: number };
+    assert.equal(body.x402Version, 2, path);
+    assert.ok(res.headers.get("PAYMENT-REQUIRED"), path);
   }
 });
 
@@ -875,6 +884,35 @@ test("GET /.well-known/x402 is the x402scan fan-out, not the catalog", async () 
     "https://authichain.com/api/x402",
   ]);
   assert.equal(body.protocol, undefined);
+});
+
+test("GET /.well-known/agent-card.json is the A2A Agent Card", async () => {
+  for (const path of [
+    "/.well-known/agent-card.json",
+    "/.well-known/agent.json",
+  ]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const body = (await res.json()) as {
+      name: string;
+      skills?: Array<{ id: string }>;
+      x402?: { scheme?: string };
+    };
+    assert.equal(body.name, "AuthiChain", path);
+    assert.ok(
+      body.skills?.some(s => s.id === "paid-evidence-check"),
+      path
+    );
+    assert.equal(body.x402?.scheme, "exact", path);
+  }
+});
+
+test("GET /.well-known/lumi-monitor.txt is the Lumi domain proof", async () => {
+  const res = await get("/.well-known/lumi-monitor.txt");
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") || "", /text\/plain/);
+  const text = await res.text();
+  assert.match(text, /lumi-monitor-verify=/);
 });
 
 test("GET /openapi.json declares x-payment-info for unpaid POST /api/x402", async () => {

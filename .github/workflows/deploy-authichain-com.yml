@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "workers/authichain-com/**"
+      - "src/lib/generation-seal.ts"
       - "src/lib/plans.ts"
       - "src/lib/checkout-gate.ts"
       - "content/microsites/**"
@@ -14,15 +15,31 @@ permissions:
   contents: read
 jobs:
   deploy:
-    # Self-hosted WSL runner label authichain-ops (public-repo: no PR jobs on this host).
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    # Publish runner only: authichain-wsl. CI stays on authichain-ops (laptop).
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 30
+    env:
+      # WSL has no IPv6. Node 22 Happy Eyeballs races AAAA (ENETUNREACH) with
+      # Cloudflare anycast A records and aborts in ~1.6s (wrangler fetch failed
+      # on 40874574341). ipv4first alone still tries AAAA. This flag makes
+      # undici connect IPv4-only. Proven on runner node v22.23.4: default
+      # fetch fail 1596ms, this combo HTTP 400 (unauthenticated verify) 4415ms.
+      NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
     steps:
       - uses: actions/checkout@v7
+      # Self-hosted WSL already has pnpm (11.x). pnpm/action-setup@v6 with
+      # version 10.28.2 downloads from npm and ETIMEDOUT / signature-fails
+      # (runs 40865371006). GitHub-hosted still uses the pin.
       - uses: pnpm/action-setup@v6
+        if: runner.environment != 'self-hosted'
         with:
           version: "10.28.2"
           run_install: false
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          command -v pnpm
+          pnpm --version
       - uses: actions/setup-node@v7
         with:
           node-version: "22"

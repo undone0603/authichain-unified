@@ -806,6 +806,11 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain('<form action="/onboard" method="post">');
     expect(body).toContain('name="email"');
     expect(body).toContain('name="company"');
+    // First-dollar path leads Starter; passport + DPP remain as secondary buys.
+    expect(body).toContain("Buy Starter Pack — $29");
+    expect(body).toContain(
+      'href="https://authichain.com/checkout/starter"'
+    );
     expect(body).toContain(
       'href="https://authichain.com/checkout/strainchain_passport"'
     );
@@ -814,6 +819,9 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     );
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
+    );
+    expect(body.indexOf("checkout/starter")).toBeLessThan(
+      body.indexOf("checkout/dpp_readiness")
     );
     // Retired StrainChain Basic link (no live Stripe account) must not return.
     expect(body).not.toContain("9B6cN59br5xcaCuazy1Nu1o");
@@ -1142,6 +1150,15 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("up.url.indexOf('https://authichain.com/checkout/starter')===0");
     expect(body).toContain("a.id='sample-exhausted-starter'");
   });
+
+  it("renders signed-in low-credit soft-prompt from API upgrade on success", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain('id="generate-low-credit"');
+    expect(body).toContain("function showLowCredit(up)");
+    expect(body).toContain("a.id='low-credit-starter'");
+    expect(body).toContain("showLowCredit(r.data&&r.data.upgrade)");
+  });
 });
 
 describe("renderDynamicPage: /story StoryMode", () => {
@@ -1155,8 +1172,19 @@ describe("renderDynamicPage: /story StoryMode", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("AuthiChain Launch Proof");
-    expect(body).toContain("lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE");
+    expect(body).toContain("T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ");
     expect(body).toContain("StoryMode");
+    expect(body).not.toContain("verified against the live public JWKS");
+    expect(body).toContain(
+      "This page shows the signing key ID (kid) and links to the public JWKS and issuer record. It does not include a signed attestation yet, so there is nothing on this page to verify."
+    );
+    expect(body).not.toContain("Check the attestation yourself");
+    expect(body).not.toContain(
+      "A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation."
+    );
+    expect(body).toContain(
+      "A deterministic QRON reference resolves to an AuthiChain object record. A signed attestation for it is not published yet."
+    );
   });
 
   it("returns 404 HTML for an unknown story id", async () => {

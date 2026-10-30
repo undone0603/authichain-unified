@@ -157,7 +157,7 @@ describe("registerAttestationApi", () => {
     expect(signed.status).toBe(200);
     const body = (await signed.json()) as { jws: string; kid: string };
     expect(body.jws).toBeTruthy();
-    expect(body.kid).toBe("attest-api-kid");
+    expect(body.kid).toMatch(/^[A-Za-z0-9_-]{43}$/); // CFA-462: kid = RFC 7638 thumbprint, configured kid ignored
     expect(validateAttestation(SAMPLE).attestation_id).toBe(
       SAMPLE.attestation_id
     );

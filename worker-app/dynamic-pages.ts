@@ -1157,8 +1157,13 @@ function onboardPayNowHtml(): string {
   return (
     '<section aria-label="Live checkout" class="onboard-pay">\n' +
     "<h2>Or buy now, no call needed</h2>\n" +
-    "<p>The pilot request is free.</p>\n" +
+    "<p>The pilot request is free. First paid checkout is the Starter Pack.</p>\n" +
     '<p class="onboard-pay-links">\n' +
+    catalogPaymentLinkHtml({
+      planId: "starter",
+      label: "Buy Starter Pack — $29",
+    }) +
+    "\n" +
     catalogPaymentLinkHtml({
       planId: "strainchain_passport",
       label: "StrainChain Passport — $49",
@@ -1489,13 +1494,13 @@ async function renderOnboard(c: Context): Promise<Response> {
 // deterministic reference object. That page must exist. Unknown ids 404.
 
 const LAUNCH_PROOF_PRODUCT_ID = "00000000-0000-4000-8000-000000000001";
-const LAUNCH_PROOF_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+const LAUNCH_PROOF_KID = "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ";
 
 function launchProofStoryHtml(): string {
   return htmlDocument({
     title: "AuthiChain Launch Proof — QRON / StoryMode",
     description:
-      "Deterministic production reference object. The compact JWS verifies against live JWKS.",
+      "Deterministic production reference object and its published signing key id.",
     canonicalPath: "/story/" + LAUNCH_PROOF_PRODUCT_ID,
     bodyHtml:
       "<main>\n" +
@@ -1510,9 +1515,9 @@ function launchProofStoryHtml(): string {
       '<dt>Issuer</dt><dd><a href="/protocol/issuer.json">/protocol/issuer.json</a></dd>\n' +
       "</dl>\n" +
       "<h2>Identity</h2>\n" +
-      "<p>A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation.</p>\n" +
+      "<p>A deterministic QRON reference resolves to an AuthiChain object record. A signed attestation for it is not published yet.</p>\n" +
       "<h2>Proof</h2>\n" +
-      "<p>The production attestation is independently verified against the live public JWKS using its kid. A valid signature is signed evidence — not physical authenticity.</p>\n" +
+      "<p>This page shows the signing key ID (kid) and links to the public JWKS and issuer record. It does not include a signed attestation yet, so there is nothing on this page to verify. A valid signature is signed evidence — not physical authenticity.</p>\n" +
       "<h2>Reveal</h2>\n" +
       "<p>Scanning the QRON launch code opens StoryMode. Tamper tests (altered payload, altered signature, wrong subject, revoked, stale) must reject.</p>\n" +
       '<p><a href="/verify?id=polygon-anchor-1">Open the published verification example</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
@@ -1731,6 +1736,9 @@ const GENERATE_STARTER_CTA_HTML =
   '<a class="credit-btn" href="' + STARTER_CHECKOUT_URL +
   '?utm_source=qron&amp;utm_medium=onsite&amp;utm_campaign=starter-cta&amp;utm_content=starter-a">Get 100 generations for $29</a> ' +
   "Checkout on authichain.com.</p>\n";
+/** Filled by /api/generate soft-prompt when remaining credits are low (signed-in). */
+const GENERATE_LOW_CREDIT_HTML =
+  '<div id="generate-low-credit" hidden role="status"></div>\n';
 
 function generateFormHtml(
   error?: string,
@@ -1768,6 +1776,7 @@ function generateFormHtml(
       '<button type="submit">Queue Living QR</button>\n' +
       "</form>\n" +
       GENERATE_STARTER_CTA_HTML +
+      GENERATE_LOW_CREDIT_HTML +
       generateCreditLinksHtml() +
       "<p>Need a generation pack? " +
       generatePackLinksHtml() +
@@ -1780,19 +1789,29 @@ function generateFormHtml(
       "var form=document.getElementById('generate-form');\n" +
       "var err=document.getElementById('generate-error');\n" +
       "var out=document.getElementById('generate-result');\n" +
+      "var soft=document.getElementById('generate-low-credit');\n" +
       "if(!form)return;\n" +
+      "function showLowCredit(up){\n" +
+      "if(!soft||!up||typeof up.url!=='string'||up.url.indexOf('https://authichain.com/checkout/starter')!==0)return false;\n" +
+      "soft.hidden=false;soft.textContent='';\n" +
+      "var msg=document.createElement('p');msg.textContent=up.message||\"You're running low on generations. Top up any time: Starter is 100 for $29, paid once.\";soft.appendChild(msg);\n" +
+      "var a=document.createElement('a');a.href=up.url;a.className='credit-btn';a.id='low-credit-starter';a.textContent=up.button||up.label||'Add 100 generations for $29';soft.appendChild(a);\n" +
+      "var dismiss=document.createElement('button');dismiss.type='button';dismiss.id='low-credit-dismiss';dismiss.textContent=up.dismiss||'Not now';dismiss.addEventListener('click',function(){soft.hidden=true;soft.textContent='';});soft.appendChild(dismiss);\n" +
+      "if(up.small_print){var sp=document.createElement('p');sp.className='small-print';sp.textContent=up.small_print;soft.appendChild(sp);}\n" +
+      "a.focus();return true;}\n" +
       "form.addEventListener('submit',function(e){\n" +
       "e.preventDefault();\n" +
       "var targetUrl=document.getElementById('targetUrl').value.trim();\n" +
       "var prompt=document.getElementById('prompt').value.trim();\n" +
       "var cta=document.getElementById('generate-starter-cta');if(cta)cta.hidden=true;\n" +
+      "if(soft){soft.hidden=true;soft.textContent='';}\n" +
       "err.hidden=true; out.hidden=true;\n" +
       "fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUrl:targetUrl,prompt:prompt,mode:'static'})})\n" +
       ".then(function(res){return res.json().then(function(data){return {res:res,data:data};});})\n" +
       ".then(function(r){\n" +
       "if(r.res.status===401){\n" +
       "if(r.data&&r.data.code&&r.data.code.indexOf('FREE_SAMPLE_')===0){err.hidden=false;err.textContent=r.data.message;\n" +
-      "var up=r.data.upgrade;if(up&&typeof up.url==='string'&&up.url.indexOf('https://authichain.com/checkout/starter')===0){var a=document.createElement('a');a.href=up.url;a.className='button';a.id='sample-exhausted-starter';a.textContent=up.label||'Starter Pack: 100 generations for $29, paid once';var pp=document.createElement('p');pp.appendChild(a);err.appendChild(pp);a.focus();return;}}\n" +
+      "var up=r.data.upgrade;if(up&&typeof up.url==='string'&&up.url.indexOf('https://authichain.com/checkout/starter')===0){var a=document.createElement('a');a.href=up.url;a.className='button';a.id='sample-exhausted-starter';a.textContent=up.button||up.label||'Starter Pack: 100 generations for $29, paid once';var pp=document.createElement('p');pp.appendChild(a);err.appendChild(pp);a.focus();return;}}\n" +
       "form.submit();\n" +
       "return;\n" +
       "}\n" +
@@ -1811,7 +1830,9 @@ function generateFormHtml(
       "if(url.indexOf('data:image/')!==0&&url.indexOf('https://')!==0){err.hidden=false;err.textContent='Unexpected image URL.';return;}\n" +
       "out.hidden=false;\n" +
       'out.innerHTML=\'<img alt="Generated Living QR" src="\'+url.replace(/"/g,\'\')+\'" width="320" height="320">\';\n' +
-      "if(cta)cta.hidden=false;\n" +
+      // Prefer API soft-prompt (signed-in, <20 credits) over the static post-success CTA.
+      "if(showLowCredit(r.data&&r.data.upgrade)){if(cta)cta.hidden=true;}\n" +
+      "else if(cta)cta.hidden=false;\n" +
       "})\n" +
       " .catch(function(){err.hidden=false;err.textContent='Network error. Please try again.';});\n" +
       "});\n" +

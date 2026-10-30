@@ -808,3 +808,33 @@ describe("retired /checkout/qron_launch (RES-86c)", () => {
     expect(await res!.text()).not.toContain("<form");
   });
 });
+
+describe("wording sweep 2026-10-16: gap report and gov pilot gated SKUs", () => {
+  it("resolves /checkout/<id> to the approved live prices", () => {
+    expect(planFromGatedPath("/checkout/battery_gap_report")?.stripe_price_id).toBe("price_1UREvgGqTruSqV8TMMYXVF69");
+    expect(planFromGatedPath("/checkout/battery_gap_report_extra")?.stripe_price_id).toBe("price_1UREviGqTruSqV8T04Pr9DR1");
+    expect(planFromGatedPath("/checkout/gov_provenance_pilot")?.stripe_price_id).toBe("price_1UREvjGqTruSqV8TzUZ4fxya");
+    for (const id of ["battery_gap_report", "battery_gap_report_extra", "gov_provenance_pilot"] as const) {
+      expect(planPaymentLink(id)).toBe(`https://authichain.com/checkout/${id}`);
+      expect(planById(id)?.stripe_payment_link).toBeUndefined();
+      expect(planById(id)?.listed).toBe(false);
+    }
+  });
+  it("extra model enables adjustable quantity 1-20; others do not", () => {
+    const extra = buildGatedSessionBody({ plan: planById("battery_gap_report_extra")!, email: "a@b.co", fields: new URLSearchParams() });
+    expect(extra.get("line_items[0][adjustable_quantity][enabled]")).toBe("true");
+    expect(extra.get("line_items[0][adjustable_quantity][minimum]")).toBe("1");
+    expect(extra.get("line_items[0][adjustable_quantity][maximum]")).toBe("20");
+    const report = buildGatedSessionBody({ plan: planById("battery_gap_report")!, email: "a@b.co", fields: new URLSearchParams() });
+    expect(report.get("line_items[0][adjustable_quantity][enabled]")).toBeNull();
+    expect(report.get("line_items[0][quantity]")).toBe("1");
+  });
+  it("service SKUs return to their offer page, not the DPP workspace page", () => {
+    const gov = buildGatedSessionBody({ plan: planById("gov_provenance_pilot")!, email: "a@b.co", fields: new URLSearchParams() });
+    expect(gov.get("success_url")).toMatch(/^https:\/\/authichain\.com\/made-in-america\?paid=1/);
+    expect(gov.get("cancel_url")).toMatch(/^https:\/\/authichain\.com\/made-in-america\?cancelled=1/);
+    const rep = buildGatedSessionBody({ plan: planById("battery_gap_report")!, email: "a@b.co", fields: new URLSearchParams() });
+    expect(rep.get("success_url")).not.toContain("/dpp/thanks");
+    expect(rep.get("success_url")).toMatch(/^https:\/\/authichain\.com\/battery-passport\?paid=1/);
+  });
+});
