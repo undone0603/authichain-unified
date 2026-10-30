@@ -50,6 +50,11 @@ jobs:
       - name: Use runner pnpm (self-hosted)
         if: runner.environment == 'self-hosted'
         run: |
+          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
+          if [ -x "$pin/pnpm" ]; then
+            echo "$pin" >> "$GITHUB_PATH"
+            export PATH="$pin:$PATH"
+          fi
           command -v pnpm
           actual="$(pnpm --version)"
           if [ "$actual" != "10.28.2" ]; then
