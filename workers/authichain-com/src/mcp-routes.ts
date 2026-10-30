@@ -2,10 +2,8 @@
  * Live /mcp and /api/mcp 404 today — landing 404s /mcp, APP_WORKER 404s
  * /api/mcp. Agents that probe those paths never see a pay rail.
  *
- * Verification is free (verify_record, GET /api/verify). get_pricing and GET
- * discovery also state the live x402 per-call price (the same number as
- * /api/x402/health) and the one-time plans shown on https://authichain.com/pricing,
- * read from plans.ts. They list no Payment Links: checkout stays on /pricing.
+ * Verification is free (verify_record, GET /api/verify). Prices are on hold,
+ * so get_pricing and GET discovery list no Payment Links and no x402 price.
  * tools/call verify is the legacy unpaid 402 as /api/x402 — not a fake
  * "SECURED" JSON. Do not tell agents to GET /api/checkout.
  *
@@ -22,15 +20,12 @@ import {
   X402_REGISTRY_NOT_BOUND,
   x402PriceUsd,
   x402PaidVerifyStatus,
-  X402_PAID_VERIFY_BOUND,
-  x402PaidVerifyPathBound,
   type X402EnvVars,
   type X402VerifyBinding,
   // Extensionless on purpose: tsconfig.workers.json counts each ".ts"
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
-import { planById, type PlanId } from "../../../src/lib/plans";
 
 type McpEnv = X402Env & {
   /** Service binding to authichain-edge-router. Public fetch of this zone returns 522. */
@@ -99,35 +94,18 @@ const JSON_HEADERS = {
   "MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
 };
 
-/**
- * Paid-verify binding as this worker really has it: the same expression
- * /api/x402/health uses (src/lib/x402.ts x402Health), so get_pricing, the
- * verify tool text and the health JSON cannot disagree. wrangler.toml sets
- * X402_PAID_VERIFY_PATH = "seal_lookup" on authichain-com.
- */
-export function mcpPaidVerifyStatus(env?: X402Env) {
-  return x402PaidVerifyStatus(
-    X402_PAID_VERIFY_BOUND ||
-      x402PaidVerifyPathBound(env?.X402_PAID_VERIFY_PATH)
-  );
-}
-
-function verifyToolDescription(bound: boolean): string {
-  return bound
-    ? "Legacy x402 seal verify. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. For free verification use verify_record."
-    : "Legacy x402 seal verify, not answering. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.";
-}
-
 export const TOOLS = [
   {
     name: "get_pricing",
     description:
-      "Free. Lists AuthiChain prices. Verification is free with the verify_record tool or GET https://authichain.com/api/verify. Paid: agent seal verify over x402 per call (POST https://authichain.com/api/x402), and the one-time plans on https://authichain.com/pricing. Returns prices only, no Payment Links.",
+      "Free. AuthiChain verification is free: use the verify_record tool, or GET https://authichain.com/api/verify. Paid plans are on hold, so no prices or Payment Links are listed.",
     inputSchema: { type: "object", properties: {} },
   },
   {
     name: "verify",
-    description: verifyToolDescription(mcpPaidVerifyStatus().bound),
+    description: x402PaidVerifyStatus().bound
+      ? "Legacy x402 seal verify. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. For free verification use verify_record."
+      : "Legacy x402 seal verify, not answering. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
     inputSchema: {
       type: "object",
       properties: {
@@ -475,12 +453,6 @@ function hydrateX402(env?: X402Env) {
   }
 }
 
-/** TOOLS with the verify description resolved against this worker's env. */
-export function toolsFor(env?: X402Env) {
-  const desc = verifyToolDescription(mcpPaidVerifyStatus(env).bound);
-  return TOOLS.map(t => (t.name === "verify" ? { ...t, description: desc } : t));
-}
-
 function livePayTo(env?: X402Env): string {
   return (
     env?.X402_PAY_TO?.trim() ||
@@ -490,37 +462,12 @@ function livePayTo(env?: X402Env): string {
 }
 
 /**
- * One-time plans shown on https://authichain.com/pricing (2026-10-17), read
- * from plans.ts so the numbers cannot drift from the page. Launch ($19/mo) is
- * left out while its listing is on hold (PM, CFA-460 / #1905).
+ * get_pricing and GET discovery. Verification is free; paid plans are on
+ * hold, so this lists no Payment Links and no per-call price. Text only:
+ * the legacy x402 `verify` path below is unchanged.
  */
-export const MCP_LISTED_PLAN_IDS = ["starter", "creator", "dpp_readiness"] as const satisfies readonly PlanId[];
-
-/** Exact Advisor-ruled wording for the free allowance (RES-74). */
-export const MCP_FREE_CHECKS_TEXT = "3 free checks per IP per UTC day";
-
-function listedPlanPrices() {
-  return MCP_LISTED_PLAN_IDS.map(id => {
-    const plan = planById(id);
-    if (!plan) throw new Error(`plans.ts has no ${id}`);
-    return {
-      id,
-      name: plan.name,
-      priceUsd: plan.price,
-      billing: plan.stripe_mode === "subscription" ? "monthly" : "one-time",
-      description: plan.description,
-    };
-  });
-}
-
-/**
- * get_pricing and GET discovery. Verification is free. The x402 per-call
- * price is the same value /api/x402/health reports; plan prices come from
- * plans.ts. No Payment Links: humans check out on /pricing. Text only: the
- * legacy x402 `verify` path below is unchanged.
- */
-export function mcpPricingDiscovery(env?: X402Env) {
-  const legacy = mcpPaidVerifyStatus(env);
+export function mcpPricingDiscovery(_env?: X402Env) {
+  const legacy = x402PaidVerifyStatus();
   return {
     verify: {
       price: "free",
@@ -536,23 +483,9 @@ export function mcpPricingDiscovery(env?: X402Env) {
       "get_pricing",
       "scan_living_qr",
     ],
-    agentPayPerCall: {
-      rail: "x402",
-      priceUsd: x402PriceUsd(env?.X402_PRICE_USD),
-      asset: "USDC on Base (chain id 8453)",
-      endpoint: "POST https://authichain.com/api/x402",
-      health: "https://authichain.com/api/x402/health",
-      catalog: "https://authichain.com/api/x402/catalog",
-      // Wording ruled by the AE Decision Advisor (RES-74). The cap is keyed on
-      // a salted client-IP hash per UTC day (x402-free-tier.ts), not per payer.
-      freeChecks: MCP_FREE_CHECKS_TEXT,
-      note: "Per paid seal-verify call. /api/x402/health is the source of truth for the live price.",
-    },
     paidPlans: {
-      status: "listed",
-      page: "https://authichain.com/pricing",
-      plans: listedPlanPrices(),
-      note: "Prices as shown on https://authichain.com/pricing. Checkout is on that page; this tool returns no Payment Links.",
+      status: "on_hold",
+      note: "Prices are on hold. No Payment Links or per-call prices are offered here.",
     },
     legacySealVerify: {
       tool: "verify",
@@ -564,13 +497,13 @@ export function mcpPricingDiscovery(env?: X402Env) {
   };
 }
 
-function discoveryBody(env?: X402Env) {
+function discoveryBody() {
   return {
     protocol: "mcp",
     jsonrpc: "2.0",
     serverInfo: { name: "authichain", version: SERVER_VERSION },
-    tools: toolsFor(env),
-    pricing: mcpPricingDiscovery(env),
+    tools: TOOLS,
+    pricing: mcpPricingDiscovery(),
     pay: {
       x402: "POST https://authichain.com/api/x402",
       mcpVerify: "POST https://authichain.com/mcp tools/call verify",
@@ -1288,7 +1221,7 @@ async function handleRpc(
   }
 
   if (method === "tools/list") {
-    return rpcResult(id, { tools: toolsFor(env) });
+    return rpcResult(id, { tools: TOOLS });
   }
 
   if (method === "tools/call") {
@@ -1532,7 +1465,7 @@ export async function tryHandleMcp(
       });
     }
     hydrateX402(env);
-    return json(200, discoveryBody(env));
+    return json(200, discoveryBody());
   }
 
   if (request.method === "POST") {
