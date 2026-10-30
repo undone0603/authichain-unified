@@ -20,6 +20,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f scripts/cloudflare-production-health.mjs
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
