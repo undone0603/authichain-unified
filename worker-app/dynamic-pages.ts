@@ -833,7 +833,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "📊",
         title: "EU DPP Readiness",
-        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
+        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation.",
       },
       {
         icon: "🌍",
@@ -1722,7 +1722,7 @@ function generateCreditLinksHtml(): string {
   }).join("\n");
   return (
     "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
-    "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof.</p>\n" +
+    "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and one-time pack credits never expire. A scannable QR is not an authenticity proof.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
@@ -1733,7 +1733,8 @@ function generateCreditLinksHtml(): string {
 const STARTER_CHECKOUT_URL = "https://authichain.com/checkout/starter";
 const GENERATE_STARTER_CTA_HTML =
   '<p id="generate-starter-cta" hidden>Like it? Get 100 generations for $29, paid once. No subscription. ' +
-  '<a class="credit-btn" href="' + STARTER_CHECKOUT_URL +
+  '<a class="credit-btn" href="' +
+  STARTER_CHECKOUT_URL +
   '?utm_source=qron&amp;utm_medium=onsite&amp;utm_campaign=starter-cta&amp;utm_content=starter-a">Get 100 generations for $29</a> ' +
   "Checkout on authichain.com.</p>\n";
 /** Filled by /api/generate soft-prompt when remaining credits are low (signed-in). */
@@ -1765,7 +1766,7 @@ function generateFormHtml(
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
       statusBlock +
-      "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof.</p>\n" +
+      "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and one-time pack credits never expire. A scannable QR is not an authenticity proof.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
       '<form id="generate-form" action="/generate" method="post">\n' +
