@@ -97,6 +97,7 @@ const handlerEvidence = vi.hoisted(() => ({
 }));
 
 vi.mock("../../server/db", () => ({
+  getHyperdriveDb: vi.fn().mockReturnValue({}),
   hasWebhookEventProcessed: vi.fn().mockResolvedValue(false),
   logActivity: vi.fn().mockResolvedValue(undefined),
   logAutomationAudit: vi.fn().mockResolvedValue(undefined),
@@ -105,6 +106,24 @@ vi.mock("../../server/db", () => ({
   setSubscriptionStatusByStripeId: vi.fn().mockResolvedValue(undefined),
   getSubscriptionByStripeSubscriptionId: vi.fn().mockResolvedValue(null),
   createSystemNotification: vi.fn().mockResolvedValue(undefined),
+}));
+// The Hono router has these unrelated integrations at import time. Stub
+// them without replacing the canonical Stripe handler under test.
+vi.mock("../../server/paddle/webhook", () => ({
+  handlePaddleWebhook: vi.fn(),
+}));
+vi.mock("../../server/webhooks/instantly", () => ({
+  handleInstantlyWebhook: vi.fn().mockResolvedValue({ success: true }),
+}));
+vi.mock("../../server/webhooks/docusign", () => ({
+  handleDocuSignWebhook: vi.fn().mockResolvedValue({ success: true }),
+}));
+vi.mock("../../server/_core/sdk", () => ({
+  sdk: { authenticateRequest: vi.fn() },
+}));
+vi.mock("../../server/_core/db-helpers", () => ({
+  getOpsSummary: vi.fn().mockResolvedValue({ ok: true }),
+  upsertUser: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../server/stripe-products", () => ({
   getPlanQuota: () => 100,
@@ -296,4 +315,70 @@ describe("canonical Stripe webhook handler: real HMAC and stateful test store", 
   // Blocked on held economic PR #2149: the current handler accepts metadata.plan
   // despite amount_total=0. Do not claim this negative test or release green.
   it.todo("refuses a signed $0 paid-status Starter checkout before any grant");
+});
+
+describe("Cloudflare Hono webhook HTTP route (in-process, no deployment)", () => {
+  beforeEach(() => {
+    memory.reset();
+    handlerEvidence.claims.clear();
+    handlerEvidence.deliveries.length = 0;
+    process.env.STRIPE_SECRET_KEY = "sk_test_component_proof_only";
+    process.env.STRIPE_WEBHOOK_SECRET = SECRET;
+    delete process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test-only.invalid";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-only-do-not-use";
+  });
+
+  it("POST verifies a real HMAC header, grants credits, and authorizes access", async () => {
+    const { app } = await import("../../worker-app/index");
+    const { body, signature } = fixture("cs_test_http_route");
+    const res = await app.request(
+      "https://authichain.com/api/stripe/webhook",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "stripe-signature": signature,
+        },
+        body,
+      },
+      {
+        STRIPE_SECRET_KEY: "sk_test_component_proof_only",
+        STRIPE_WEBHOOK_SECRET: SECRET,
+        NEXT_PUBLIC_SUPABASE_URL: "https://test-only.invalid",
+        SUPABASE_SERVICE_ROLE_KEY: "test-only-do-not-use",
+      } as never
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      received: true, type: "checkout.session.completed",
+    });
+    expect(memory.rows.size).toBe(1);
+    const profile = [...memory.rows.values()][0];
+    expect(profile.last_grant_session_id).toBe("cs_test_http_route");
+    expect(await checkCredit(profile.id)).toMatchObject({
+      ok: true, remaining: 100,
+    });
+  });
+
+  it("POST rejects an altered payload before any grant", async () => {
+    const { app } = await import("../../worker-app/index");
+    const { body, signature } = fixture("cs_test_http_tamper");
+    const res = await app.request(
+      "https://authichain.com/api/stripe/webhook",
+      {
+        method: "POST",
+        headers: { "stripe-signature": signature },
+        body: body.replace("2900", "2901"),
+      },
+      {
+        STRIPE_SECRET_KEY: "sk_test_component_proof_only",
+        STRIPE_WEBHOOK_SECRET: SECRET,
+        NEXT_PUBLIC_SUPABASE_URL: "https://test-only.invalid",
+        SUPABASE_SERVICE_ROLE_KEY: "test-only-do-not-use",
+      } as never
+    );
+    expect(res.status).toBe(400);
+    expect(memory.rows.size).toBe(0);
+  });
 });
