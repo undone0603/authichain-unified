@@ -88,6 +88,67 @@ const memory = vi.hoisted(() => {
 // The real credit reader is retained; only its Supabase connector is faked.
 vi.mock("@supabase/supabase-js", () => ({ createClient: () => memory.client }));
 
+// Exercise the canonical handleStripeWebhook implementation with the real Stripe
+// SDK while isolating all external side effects. The production handler is NOT
+// replaced or mocked; the internal database/event-claim transport is.
+const handlerEvidence = vi.hoisted(() => ({
+  claims: new Set<string>(),
+  deliveries: [] as Array<{ status: string; eventId: string }>,
+}));
+
+vi.mock("../../server/db", () => ({
+  hasWebhookEventProcessed: vi.fn().mockResolvedValue(false),
+  logActivity: vi.fn().mockResolvedValue(undefined),
+  logAutomationAudit: vi.fn().mockResolvedValue(undefined),
+  recordRevenue: vi.fn().mockResolvedValue(undefined),
+  upsertStripeSubscription: vi.fn().mockResolvedValue(undefined),
+  setSubscriptionStatusByStripeId: vi.fn().mockResolvedValue(undefined),
+  getSubscriptionByStripeSubscriptionId: vi.fn().mockResolvedValue(null),
+  createSystemNotification: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("../../server/stripe-products", () => ({
+  getPlanQuota: () => 100,
+  STRIPE_PRODUCTS: {
+    starter: { name: "Starter", features: [] },
+  },
+}));
+vi.mock("../../server/email-service", () => ({
+  sendEmail: vi.fn().mockResolvedValue({ status: "suppressed" }),
+}));
+vi.mock("../../server/services/order-payment-handler", () => ({
+  handleServiceOrderPayment: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("./affiliate-accrual", () => ({
+  accrueAffiliateCommission: vi.fn().mockResolvedValue({ credited: false }),
+}));
+vi.mock("./dpp-fulfill-checkout", () => ({
+  fulfillDppPaidSession: vi.fn().mockResolvedValue({ handled: false }),
+}));
+vi.mock("./stripe-webhook-claim", () => ({
+  StripeEventClaimUnavailableError: class extends Error {
+    name = "StripeEventClaimUnavailableError";
+  },
+  claimStripeEvent: vi.fn(async (_client: unknown, eventId: string) => {
+    if (handlerEvidence.claims.has(eventId)) return "duplicate";
+    handlerEvidence.claims.add(eventId);
+    return "claimed";
+  }),
+}));
+vi.mock("./stripe-webhook-log", () => ({
+  recordStripeWebhookDelivery: vi.fn(async (
+    _client: unknown, entry: { eventId: string; status: string }
+  ) => {
+    handlerEvidence.deliveries.push({
+      eventId: entry.eventId, status: entry.status,
+    });
+    return { ok: true };
+  }),
+  checkoutSessionIdFromEvent: (event: {
+    type: string; data?: { object?: { id?: string } }
+  }) => event.type.startsWith("checkout.session.")
+    ? event.data?.object?.id ?? null : null,
+}));
+
 const API_VERSION = "2026-08-26.dahlia" as const;
 const SECRET = "whsec_test_component_proof_only";
 const stripe = new Stripe("sk_test_component_proof_only", {
@@ -96,7 +157,7 @@ const stripe = new Stripe("sk_test_component_proof_only", {
 
 function fixture(sessionId: string) {
   const body = JSON.stringify({
-    id: "evt_test_" + sessionId, object: "event",
+    id: "evt_e2e_" + sessionId, object: "event",
     type: "checkout.session.completed", api_version: API_VERSION,
     created: Math.floor(Date.now() / 1000), livemode: false,
     data: { object: {
@@ -181,4 +242,58 @@ describe("signed webhook components -> stored entitlement -> customer access", (
       .rejects.toThrow(/valid Starter/);
     expect(memory.rows.size).toBe(0);
   });
+});
+
+describe("canonical Stripe webhook handler: real HMAC and stateful test store", () => {
+  beforeEach(() => {
+    memory.reset();
+    handlerEvidence.claims.clear();
+    handlerEvidence.deliveries.length = 0;
+    process.env.STRIPE_SECRET_KEY = "sk_test_component_proof_only";
+    process.env.STRIPE_WEBHOOK_SECRET = SECRET;
+    delete process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test-only.invalid";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-only-do-not-use";
+  });
+
+  it("processes a signed non-evt_test Checkout, stores grant and permits spending", async () => {
+    const { handleStripeWebhook } = await import("../../server/webhooks/stripe");
+    const { body, signature } = fixture("cs_test_handler_checkout");
+    const result = await handleStripeWebhook(Buffer.from(body), signature);
+    expect(result).toMatchObject({
+      received: true, type: "checkout.session.completed", handled: true,
+    });
+    expect(handlerEvidence.deliveries.some(x => x.status === "success")).toBe(true);
+    expect(memory.rows.size).toBe(1);
+    const profile = [...memory.rows.values()][0];
+    expect(profile).toMatchObject({
+      last_grant_session_id: "cs_test_handler_checkout",
+      generations_limit: 100,
+      generations_used: 0,
+    });
+    expect(await checkCredit(profile.id)).toMatchObject({
+      ok: true, remaining: 100,
+    });
+    expect(await deductCredit(profile.id)).toMatchObject({
+      ok: true, remaining: 99,
+    });
+    const replay = await handleStripeWebhook(Buffer.from(body), signature);
+    expect(replay.duplicate).toBe(true);
+    expect(memory.rows.get(profile.id)?.generations_limit).toBe(100);
+    expect(memory.rows.get(profile.id)?.generations_used).toBe(1);
+  });
+
+  it("the handler rejects a tampered signed event before creating a profile", async () => {
+    const { handleStripeWebhook } = await import("../../server/webhooks/stripe");
+    const { body, signature } = fixture("cs_test_handler_tamper");
+    await expect(
+      handleStripeWebhook(Buffer.from(body.replace("2900", "2901")), signature)
+    ).rejects.toThrow();
+    expect(memory.rows.size).toBe(0);
+    expect(handlerEvidence.claims.size).toBe(0);
+  });
+
+  // Blocked on held economic PR #2149: the current handler accepts metadata.plan
+  // despite amount_total=0. Do not claim this negative test or release green.
+  it.todo("refuses a signed $0 paid-status Starter checkout before any grant");
 });
