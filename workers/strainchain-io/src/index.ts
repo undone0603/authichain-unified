@@ -20,6 +20,7 @@ import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
 import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
 import { tryHandleEstateCanonicalVerify } from "../../_shared/estate-canonical-verify";
 import { tryHandleEstateProtocolDiscovery } from "../../_shared/estate-protocol-discovery";
+import { tryHandleEstateQronResolve } from "../../_shared/estate-qron-resolve";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -1981,6 +1982,8 @@ export default {
     // confused with paid agent verify credit settlement.
     const protocolDiscovery = await tryHandleEstateProtocolDiscovery(request, env);
     if (protocolDiscovery) return protocolDiscovery;
+    const qronResolve = await tryHandleEstateQronResolve(request, env);
+    if (qronResolve) return qronResolve;
     const canonicalVerify = await tryHandleEstateCanonicalVerify(request, env);
     if (canonicalVerify) return canonicalVerify;
     const x402 = await tryHandleSisterX402(

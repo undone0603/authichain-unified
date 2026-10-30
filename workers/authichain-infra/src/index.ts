@@ -1,5 +1,12 @@
 // AuthiChain Infrastructure Monitor
-// Cron: every 6h — health checks, alert on degradation, report to KV + email
+// Cron: hourly — the backstop that does not run on GitHub Actions. It probes
+// the same public URLs as ops-pulse (scripts/autonomy/probes.mjs), checks that
+// GitHub Actions is still completing jobs, and pushes to the founder ntfy
+// topic when something is down. Report to KV; email when the relay key is bound.
+
+import { checkGitHubActions } from "./actions-health";
+// @ts-ignore -- plain ESM shared with ops-pulse; bundled by wrangler.
+import { PROBES, runProbes } from "../../../scripts/autonomy/probes.mjs";
 
 interface Env {
   INFRA_KV: KVNamespace;
@@ -7,7 +14,11 @@ interface Env {
   STRIPE_SECRET_KEY: string;
   GITHUB_TOKEN?: string;
   ALERT_EMAIL: string;
-  RESEND_RELAY: string;
+  /** Service binding to resend-relay (workers_dev is off, so no public URL). */
+  RELAY?: Fetcher;
+  /** Same value as RELAY_SHARED_SECRET on resend-relay. Email is skipped without it. */
+  RELAY_SHARED_SECRET?: string;
+  NTFY_URL?: string;
 }
 
 interface CheckResult {
@@ -47,30 +58,14 @@ const SERVICE_ENDPOINTS: {
     url: "https://authichain-api.undone-k.workers.dev/health",
   },
   {
-    name: "qron-automation",
-    url: "https://qron-automation.undone-k.workers.dev/health",
-  },
-  {
     name: "qron-outreach",
     url: "https://qron-outreach.undone-k.workers.dev/health",
-  },
-  {
-    name: "resend-relay",
-    url: "https://resend-relay.undone-k.workers.dev/health",
   },
   {
     name: "qron-portfolio",
     url: "https://qron-portfolio.undone-k.workers.dev/",
   },
-  { name: "qron.space", url: "https://qron.space/" },
-  { name: "authichain.com", url: "https://authichain.com/" },
-  { name: "strainchain.io", url: "https://strainchain.io/" },
   { name: "qron-seo-engine (sitemap)", url: "https://qron.space/sitemap.xml" },
-  {
-    name: "stripe-webhook (next.js)",
-    url: "https://authichain.com/api/webhook",
-    expectStatus: 405,
-  },
 ];
 
 async function checkEndpoint(
@@ -277,13 +272,35 @@ async function checkKVConnectivity(env: Env): Promise<CheckResult> {
 
 // ── Core run ────────────────────────────────────────────────────────────────
 
+/** Stable identity of the current problem set: which checks, in which state. */
+export function alertSignature(problems: Pick<CheckResult, "name" | "status">[]): string {
+  return problems
+    .map(p => `${p.status}:${p.name}`)
+    .sort()
+    .join("|");
+}
+
 async function runChecks(env: Env): Promise<InfraReport> {
   const timestamp = new Date().toISOString();
 
-  // Service health checks (parallel)
-  const serviceResults = await Promise.all(
-    SERVICE_ENDPOINTS.map(checkEndpoint)
-  );
+  // Service health checks (parallel). The public sites come from the probe
+  // list ops-pulse uses, so both watchdogs agree on what "up" means.
+  const [serviceResults, pulseResults, actions] = await Promise.all([
+    Promise.all(SERVICE_ENDPOINTS.map(checkEndpoint)),
+    runProbes(PROBES, { timeoutMs: 10_000, retryDelayMs: 5_000 }) as Promise<
+      { name: string; url: string; status: number; ms: number; ok: boolean; error?: string; expect: number[] }[]
+    >,
+    checkGitHubActions(env.GITHUB_TOKEN),
+  ]);
+  const pulseChecks: CheckResult[] = pulseResults.map(p => ({
+    name: p.name,
+    url: p.url,
+    status: p.ok ? "ok" : "down",
+    latencyMs: p.ms,
+    detail: p.ok
+      ? `HTTP ${p.status}`
+      : `HTTP ${p.status || "no response"} (expected ${p.expect.join("/")})`,
+  }));
 
   // Deeper checks
   const [stripeResult, kvResult, branchResult, dependabotResult] =
@@ -295,6 +312,8 @@ async function runChecks(env: Env): Promise<InfraReport> {
     ]);
 
   const checks: CheckResult[] = [
+    { name: "github-actions", ...actions },
+    ...pulseChecks,
     ...serviceResults,
     stripeResult,
     kvResult,
@@ -314,16 +333,18 @@ async function runChecks(env: Env): Promise<InfraReport> {
 
   const alertsSent: string[] = [];
 
-  // Alert if anything is down or high severity
+  // Alert on change. The old dedup key was the *length* of the problem list's
+  // JSON, so a different problem of the same length never alerted, and the
+  // email went to a relay URL that answers 404 without the relay key, so no
+  // alert from this worker was ever delivered.
   const problems = checks.filter(
     c => c.status === "down" || c.status === "warn"
   );
+  const down = checks.filter(c => c.status === "down");
+  const signature = alertSignature(problems);
   if (problems.length > 0) {
-    const prevRaw = await env.INFRA_KV.get("last_alert_hash");
-    const currentHash = JSON.stringify(
-      problems.map(p => p.name + p.status)
-    ).length.toString();
-    if (prevRaw !== currentHash) {
+    const prev = await env.INFRA_KV.get("last_alert_hash");
+    if (prev !== signature) {
       const subject = `[AuthiChain Infra] ${summary.down} down, ${summary.warn} warn — ${timestamp.slice(0, 10)}`;
       const body = [
         `Infrastructure check: ${summary.ok} ok / ${summary.warn} warn / ${summary.down} down`,
@@ -333,30 +354,55 @@ async function runChecks(env: Env): Promise<InfraReport> {
           p => `[${p.status.toUpperCase()}] ${p.name}: ${p.detail ?? ""}`
         ),
         "",
-        "--- All checks ---",
-        ...checks.map(
-          c =>
-            `[${c.status}] ${c.name}${c.latencyMs ? ` (${c.latencyMs}ms)` : ""}: ${c.detail ?? ""}`
-        ),
-        "",
         `Run at: ${timestamp}`,
-        `Dashboard: https://authichain-infra.undone-k.workers.dev/status`,
       ].join("\n");
 
-      const emailRes = await fetch(env.RESEND_RELAY, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: env.ALERT_EMAIL,
-          subject,
-          text: body,
-          from: "AuthiChain Infra <hello@authichain.com>",
-          reply_to: env.ALERT_EMAIL,
-        }),
-      });
-      if (emailRes.ok) {
-        alertsSent.push(env.ALERT_EMAIL);
-        await env.INFRA_KV.put("last_alert_hash", currentHash, {
+      // Phone push for anything down. The topic is public, so only check
+      // names and short public details go out.
+      if (down.length > 0 && env.NTFY_URL) {
+        try {
+          const res = await fetch(env.NTFY_URL, {
+            method: "POST",
+            headers: {
+              Title: `AuthiChain: ${down.length} down`,
+              Priority: "high",
+              Tags: "rotating_light",
+            },
+            body: down
+              .map(d => `${d.name}: ${(d.detail ?? "").slice(0, 160)}`)
+              .join("\n"),
+          });
+          if (res.ok) alertsSent.push("ntfy");
+        } catch {
+          /* recorded by alertsSent staying empty */
+        }
+      }
+
+      if (env.RELAY && env.RELAY_SHARED_SECRET && env.ALERT_EMAIL) {
+        try {
+          const emailRes = await env.RELAY.fetch("https://resend-relay/emails", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Relay-Key": env.RELAY_SHARED_SECRET,
+            },
+            body: JSON.stringify({
+              to: env.ALERT_EMAIL,
+              subject,
+              text: body,
+              from: "AuthiChain Infra <hello@authichain.com>",
+              reply_to: env.ALERT_EMAIL,
+            }),
+          });
+          if (emailRes.ok) alertsSent.push(env.ALERT_EMAIL);
+        } catch {
+          /* see above */
+        }
+      }
+
+      // Only a delivered alert is remembered; an undelivered one retries next run.
+      if (alertsSent.length > 0) {
+        await env.INFRA_KV.put("last_alert_hash", signature, {
           expirationTtl: 86400,
         });
       }
