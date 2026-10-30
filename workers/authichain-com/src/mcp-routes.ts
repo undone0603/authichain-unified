@@ -1104,13 +1104,6 @@ async function unpaidOrRefusedVerify(
   if (!proof || !proofHeader) {
     const refusal = unpaidSealRefusal(args);
     if (refusal) return json(refusal.status, refusal.body);
-    // HTTP quote crawlers get 402 for probe JSON with no sealId. This MCP
-    // tool still refuses a non-empty argument that is not a seal UUID
-    // before payment. Empty arguments stay the unpaid 402 quote.
-    if (Object.keys(args).length > 0) {
-      const parsed = parseSealRequest(coerceSealBody(args));
-      if (!parsed.ok) return json(parsed.status, parsed.body);
-    }
     return json(402, required.v2, required.headers);
   }
 
