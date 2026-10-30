@@ -12,9 +12,9 @@ Call `classifySend` in `scripts/revenue-operator.ts` before any Gmail send. Prov
 
 Allowed only when all are true:
 
-- the user named one inbox in this turn
+- one inbox is either named this turn **or** operator-selected (`operatorSelectedInbox` / `--candidates`)
 - send-guard status is `allow` (`published_contact`, `apollo_verified`, inbound, or confirmed reply)
 - it is not a founder address in `DEFAULT_FOUNDER_EMAILS`
 - role inboxes also set `allowRoleInbox`
 
-Otherwise the action is `refuse_send` or `wait_buyer`. Do not dispatch frozen workflows (`mayDispatch`). One prospect, one send. After the gate passes, follow `manual-outreach-playbook` for copy.
+Otherwise the action is `refuse_send` or `wait_buyer`. Do not dispatch frozen workflows (`mayDispatch`). Do not live-send without a recordable opt-out. One prospect, one send. After the gate passes, follow `manual-outreach-playbook` for copy.

@@ -18,7 +18,7 @@ A QR names an item. A signature binds a claim to a key. An anchor binds a hash t
 ## Start here
 
 - [GS1 Digital Link](/docs/gs1-digital-link) — identifier syntax, not a proof of authenticity.
-- [Verification states](/docs/verification) — protocol verdicts vs product decisions. An anomaly is evidence, not a conviction.
+- [Verification states](/docs/verification) — protocol verdicts vs product decisions, including the live Living QR scan. An anomaly is evidence, not a conviction.
 - [Digital Product Passport architecture](/docs/dpp-architecture) — identity, carrier, resolver, evidence, verification, policy.
 - [Battery passport example](/battery-passport) — e-bike and other LMT batteries. A passport is required from 18 February 2027.
 - [Examples and fixtures](/docs/examples) — signed records you can check against the published JWKS.
@@ -37,6 +37,7 @@ Cite these. Do not infer the rest.
 | [/battery-passport](/battery-passport) | E-bike / LMT gap map. Battery passport from 18 February 2027. |
 | [/anchor](/anchor) | Public product-anchor UI |
 | [/openapi.json](https://authichain.com/openapi.json) | Machine description of public HTTP |
+| `GET https://authichain.com/qron/r/{object_id}` | Living QR scan. AuthiChain Verification Decision v1. This host verifies the signature. A missing id is HTTP 404 `presentation_not_found`. |
 
 ## What AuthiChain does not claim
 

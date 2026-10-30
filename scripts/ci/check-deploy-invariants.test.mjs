@@ -74,7 +74,7 @@ test("a renamed Worker is reported, not silently passed", () => {
 
 const JTARGET = [{ name: "w", file: "w/wrangler.jsonc" }];
 
-test("jsonc: \"workers_dev\": false passes, comments and trailing commas ok", () => {
+test('jsonc: "workers_dev": false passes, comments and trailing commas ok', () => {
   const root = repo({
     "w/wrangler.jsonc":
       '// c\n{\n  "name": "w", // x\n  /* "workers_dev": true */\n  "url": "https://a//b",\n  "workers_dev": false,\n}\n',
@@ -83,16 +83,21 @@ test("jsonc: \"workers_dev\": false passes, comments and trailing commas ok", ()
 });
 
 test("jsonc: workers_dev true or missing fails", () => {
-  const t = repo({ "w/wrangler.jsonc": '{ "name": "w", "workers_dev": true }' });
+  const t = repo({
+    "w/wrangler.jsonc": '{ "name": "w", "workers_dev": true }',
+  });
   assert.match(checkWorkersDev(t, JTARGET)[0], /must be false/);
   const m = repo({
-    "w/wrangler.jsonc": '{ "name": "w", // "workers_dev": false\n "env": { "x": { "workers_dev": false } } }',
+    "w/wrangler.jsonc":
+      '{ "name": "w", // "workers_dev": false\n "env": { "x": { "workers_dev": false } } }',
   });
   assert.match(checkWorkersDev(m, JTARGET)[0], /missing/);
 });
 
 test("stripJsonc keeps // inside strings", () => {
-  assert.deepEqual(JSON.parse(stripJsonc('{"a":"x//y", // z\n}')), { a: "x//y" });
+  assert.deepEqual(JSON.parse(stripJsonc('{"a":"x//y", // z\n}')), {
+    a: "x//y",
+  });
 });
 
 test("stripJsonc removes // line comments", () => {
@@ -105,7 +110,7 @@ test("stripJsonc removes /* block */ comments, single- and multi-line", () => {
     '/* head\n * more\n */{"a": /* inline */ 1,\n /* "b": 2,\n "c": 3, */ "d": 4}';
   assert.deepEqual(JSON.parse(stripJsonc(text)), { a: 1, d: 4 });
   // A block comment between tokens doesn't glue them together.
-  assert.deepEqual(JSON.parse(stripJsonc('[1,/*x*/2]')), [1, 2]);
+  assert.deepEqual(JSON.parse(stripJsonc("[1,/*x*/2]")), [1, 2]);
 });
 
 test("stripJsonc removes trailing commas in objects and arrays", () => {
@@ -134,7 +139,7 @@ test("stripJsonc keeps comment markers and ',}' inside strings", () => {
 });
 
 const PTARGET = [{ name: "w", file: "w/wrangler.jsonc" }];
-const APP = (extra) =>
+const APP = extra =>
   `// app\n{\n  "name": "w",\n  "workers_dev": false,\n${extra}  "main": "x.ts", // trailing\n}\n`;
 
 test("preview_urls: explicit false passes (with comments and trailing commas)", () => {
@@ -153,7 +158,9 @@ test("preview_urls: missing fails", () => {
 
 test("preview_urls: only commented out fails as missing", () => {
   const root = repo({
-    "w/wrangler.jsonc": APP('  // "preview_urls": false,\n  /* "preview_urls": false, */\n'),
+    "w/wrangler.jsonc": APP(
+      '  // "preview_urls": false,\n  /* "preview_urls": false, */\n'
+    ),
   });
   assert.match(checkPreviewUrls(root, PTARGET)[0], /preview_urls is missing/);
 });
@@ -182,13 +189,25 @@ test("authichain-app: the real wrangler.app.jsonc fails if preview_urls is remov
   const removed = repo({
     "wrangler.app.jsonc": real.replace(/^\s*"preview_urls":\s*false,\n/m, ""),
   });
-  assert.match(checkPreviewUrls(removed, target)[0], /authichain-app\): preview_urls is missing/);
+  assert.match(
+    checkPreviewUrls(removed, target)[0],
+    /authichain-app\): preview_urls is missing/
+  );
   const on = repo({
-    "wrangler.app.jsonc": real.replace(/"preview_urls":\s*false/, '"preview_urls": true'),
+    "wrangler.app.jsonc": real.replace(
+      /"preview_urls":\s*false/,
+      '"preview_urls": true'
+    ),
   });
-  assert.match(checkPreviewUrls(on, target)[0], /authichain-app\): preview_urls = true; must be false/);
+  assert.match(
+    checkPreviewUrls(on, target)[0],
+    /authichain-app\): preview_urls = true; must be false/
+  );
   // Unmodified copy passes.
-  assert.deepEqual(checkPreviewUrls(repo({ "wrangler.app.jsonc": real }), target), []);
+  assert.deepEqual(
+    checkPreviewUrls(repo({ "wrangler.app.jsonc": real }), target),
+    []
+  );
 });
 
 test("WORKERS_DEV_OFF covers dpp-fulfillment but not first-dollar-desk (CFA-153)", () => {
@@ -293,36 +312,40 @@ on:
   pull_request:
     branches: [main]
 concurrency:
-  group: ci-main-\${{ github.event_name == 'push' && github.sha || github.head_ref || github.ref }}
-  cancel-in-progress: \${{ github.event_name == 'pull_request' }}
+  group: ci-main-\${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 jobs: {}
 `;
 
-test("CI gate: per-commit group on push + PR-only cancel passes", () => {
+test("CI gate: shared ref group + cancel true passes", () => {
   const root = repo({ ".github/workflows/main.yml": CI_OK });
   assert.deepEqual(checkCiGateWorkflows(root, ["main.yml"]), []);
 });
 
-test("CI gate: shared main group fails (newer push cancels the pending run)", () => {
-  const shared = CI_OK.replace(
+test("CI gate: per-commit group fails (newer push must cancel the superseded run)", () => {
+  const perCommit = CI_OK.replace(
     /group: .*/,
-    "group: ci-main-${{ github.head_ref || github.ref }}"
+    "group: ci-main-${{ github.event_name == 'push' && github.sha || github.head_ref || github.ref }}"
   );
-  const root = repo({ ".github/workflows/main.yml": shared });
+  const root = repo({ ".github/workflows/main.yml": perCommit });
   const errors = checkCiGateWorkflows(root, ["main.yml"]);
   assert.equal(errors.length, 1);
-  assert.match(errors[0], /per commit/);
+  assert.match(errors[0], /per-commit/);
 });
 
-test("CI gate: literal cancel-in-progress: true fails", () => {
+test("CI gate: PR-only cancel fails", () => {
   const bad = CI_OK.replace(
     /cancel-in-progress: .*/,
-    "cancel-in-progress: true"
+    "cancel-in-progress: ${{ github.event_name == 'pull_request' }}"
   );
   const root = repo({ ".github/workflows/main.yml": bad });
   const errors = checkCiGateWorkflows(root, ["main.yml"]);
   assert.equal(errors.length, 1);
-  assert.match(errors[0], /main\.yml:\d+: cancel-in-progress: true/);
+  assert.match(errors[0], /cancel-in-progress: true/);
+});
+
+test("the real repo: CI Main cancels superseded runs on main", () => {
+  assert.deepEqual(checkCiGateWorkflows(), []);
 });
 
 test("CI gate: a listed workflow that is missing fails", () => {

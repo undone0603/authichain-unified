@@ -267,7 +267,7 @@ curl -s https://agentz.authichain.com/health              # sovereign / Polygon
 curl -s https://claw.authichain.com/health                # agentz_api configured; gateway not_set OK
 curl -s https://authichain.com/api/x402/health            # 200 ready / trustless
 curl -sI https://authichain.com/x402                      # 200 HTML docs
-curl -sS -i -X POST https://authichain.com/api/x402 -H 'content-type: application/json' -d '{"sealId":"demo"}'  # 402
+curl -sS -i -X POST https://authichain.com/api/x402 -H 'content-type: application/json' -d '{}'  # empty body 402; a non-UUID sealId is 400
 curl -sI https://app.authichain.com/                      # 302 → /dashboard
 curl -sI -X POST https://authichain.com/api/guardrail/check  # mounted (not 404) after B2B agent
 ```
