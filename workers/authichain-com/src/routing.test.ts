@@ -937,7 +937,7 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
   }
 });
 
-test("/mcp and /api/mcp discovery says verify is free, with no Payment Links or x402 price", async () => {
+test("/mcp and /api/mcp discovery says verify is free and lists prices, with no Payment Links", async () => {
   for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
@@ -954,10 +954,11 @@ test("/mcp and /api/mcp discovery says verify is free, with no Payment Links or 
     assert.equal(body.pay.x402, "POST https://authichain.com/api/x402", path);
     assert.equal(body.pricing.verify.price, "free", path);
     assert.equal(body.pricing.verify.mcpTool, "verify_record", path);
-    assert.equal(body.pricing.paidPlans.status, "on_hold", path);
+    assert.equal(body.pricing.paidPlans.status, "listed", path);
     assert.equal(body.pricing.humanCheckout, undefined, path);
     const text = JSON.stringify(body);
-    assert.equal(text.includes("$0.05"), false, path);
+    assert.equal(/on hold|on_hold/i.test(text), false, path);
+    assert.equal(text.includes("buy.stripe.com"), false, path);
     for (const plan of [
       "dpp_readiness",
       "strainchain_passport",
