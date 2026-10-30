@@ -202,11 +202,22 @@ export function x402BazaarDiscovery(): X402BazaarExtension {
       type: "http",
       method: "POST",
       bodyType: "json",
-      body: { sealId: X402_DISCOVERY_EXAMPLE_SEAL_ID },
+      body: { sealId: "00000000-0000-4000-8000-000000000000" },
     },
     output: {
       type: "json",
-      example: x402PaidOutputExample(),
+      example: {
+        verified: false,
+        authenticityScore: 0,
+        subject: "00000000-0000-4000-8000-000000000000",
+        details: {},
+        settlement: {
+          payer: "0x0000000000000000000000000000000000000000",
+          amountAtomic: "50000",
+          txHash: "0x",
+          trustless: true,
+        },
+      },
     },
   };
   return {

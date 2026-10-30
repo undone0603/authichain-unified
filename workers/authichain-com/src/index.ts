@@ -109,6 +109,7 @@ import {
   estateTrust,
   tryHandleEstateIndexNow,
 } from '../../_shared/estate-landing.ts';
+import { isEmailOptinPath, tryHandleEmailOptin, type D1Like } from './email-optin.ts';
 import { tryHandleEstatePricing } from '../../_shared/estate-pricing.ts';
 import { tryRedirectSeoRootCanonical } from '../../_shared/seo-hub-routes.ts';
 
@@ -172,7 +173,7 @@ const SEO = {
     'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain, Starter Pack',
   ogTitle: 'AuthiChain — The authentic agentic economy',
   ogDescription:
-    'Start with QRON Starter at $29. Signed seals, MCP tools, x402 at $0.05 USDC. EU DPP Readiness is $299 on live Stripe checkout when you need it.',
+    'Start with QRON Starter at $29. Signed seals, MCP tools. x402 paid verification and on-chain anchoring in development. EU DPP Readiness is $299 on live Stripe checkout when you need it.',
   twitterTitle: 'AuthiChain — The authentic agentic economy',
   twitterDescription:
     'Starter Pack $29. Issue → Bind → Verify. x402 for agents. EU DPP Readiness $299 when you need the passport path.',
@@ -2370,7 +2371,7 @@ function techStack() {
     "Claims limited to capabilities that are live on this estate.",
     [
       { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. The checkout opens an AuthiChain workspace with self-serve activation." },
-      { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
+      { title: "Agent pay (x402)", body: "Secondary money path. x402 paid verification and on-chain anchoring in development. Public docs at /x402." },
     ],
     "technology",
   );
@@ -2605,10 +2606,10 @@ const HTML = `<!DOCTYPE html>
   ${howItWorks()}
   ${estateFeatures(
     "The authentic agentic economy",
-    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
+    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools. x402 paid verification and on-chain anchoring in development.",
     [
       { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
-      { title: "Settlement", body: "Humans start with Starter $29 on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
+      { title: "Settlement", body: "Humans start with Starter $29 on Stripe. EU DPP Readiness is $299 when needed. x402 paid verification and on-chain anchoring in development." },
     ],
     "agentic",
   )}
@@ -3225,6 +3226,13 @@ interface Env {
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
+  /** authichain-db (D1): email_optins table only. */
+  DB?: D1Like;
+  /** "true" turns on the opt-in confirmation email (also needs RESEND_API_KEY). Default off. */
+  EMAIL_OPTIN_SEND_ENABLED?: string;
+  RESEND_API_KEY?: string;
+  /** Optional secret name only. Unset or empty: 503 before any write (fail closed). */
+  IP_HASH_SALT?: string;
 }
 
 const APP_WORKER_TIMEOUT_MS_DEFAULT = 4000;
@@ -3407,6 +3415,10 @@ async function handleAuthichainCom(
     const appHost = tryHandleAppHost(request);
     if (appHost) return appHost;
     const p = url.pathname;
+    if (isEmailOptinPath(p)) {
+      const optin = await tryHandleEmailOptin(request, env);
+      if (optin) return optin;
+    }
     const docsClick = docsCtaClickEvent(request.method, url);
     if (docsClick) console.log(JSON.stringify(docsClick));
     if (p === '/og-image.png' || p === '/og.png') {

@@ -121,13 +121,64 @@ test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
   }
   const starter = await (await get("/checkout/starter")).text();
   assert.ok(starter.includes(starterDesc));
-  assert.ok(!starter.includes("never expire"), "/checkout/starter must not say never expire");
-  assert.ok(!starter.includes("no expiry date"), "/checkout/starter must not say no expiry date");
+  assert.ok(
+    !starter.includes("never expire"),
+    "/checkout/starter must not say never expire"
+  );
+  assert.ok(
+    !starter.includes("never-expire"),
+    "/checkout/starter must not say never-expire"
+  );
+  assert.ok(
+    !starter.includes("no expiry"),
+    "/checkout/starter must not say no expiry"
+  );
+  assert.ok(
+    !starter.includes("no-expiry"),
+    "/checkout/starter must not say no-expiry"
+  );
+  assert.ok(
+    !starter.includes("50 workspace generations"),
+    "/checkout/starter must not say 50 workspace generations"
+  );
   const home = await (await get("/")).text();
   assert.ok(
     home.includes(starterDesc),
     "home JSON-LD Starter offer uses the Research PASS FREE-PREVIEW sentence"
   );
+});
+
+test("CFA-758: money routes have no 50-workspace-generation or never-expire pack claims", async () => {
+  const banned = [
+    "50 workspace generations",
+    "50 workspace generation",
+    "never expire",
+    "never-expire",
+    "no expiry",
+    "no-expiry",
+  ];
+  for (const path of [
+    "/",
+    "/pricing",
+    "/checkout/starter",
+    "/checkout/creator",
+    "/checkout/dpp_readiness",
+    "/dpp",
+    "/battery-passport",
+    "/trumark",
+    "/docs/dpp-architecture",
+  ]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    for (const phrase of banned) {
+      assert.equal(
+        html.toLowerCase().includes(phrase),
+        false,
+        `${path} must have 0 hits on ${phrase}`
+      );
+    }
+  }
 });
 
 test("the apex still renders the homepage", async () => {
@@ -264,22 +315,30 @@ test("/contact is a real page, not the homepage", async () => {
 });
 
 test("/privacy and /terms are the operator's pages, not a placeholder", async () => {
-  for (const [path, title, canonical] of [
+  for (const [path, title, canonical, effective] of [
     [
       "/privacy",
       "Privacy Policy — AuthiChain",
       "https://authichain.com/privacy",
+      "24 October 2026",
     ],
     [
       "/privacy/",
       "Privacy Policy — AuthiChain",
       "https://authichain.com/privacy",
+      "24 October 2026",
     ],
-    ["/terms", "Terms of Service — AuthiChain", "https://authichain.com/terms"],
+    [
+      "/terms",
+      "Terms of Service — AuthiChain",
+      "https://authichain.com/terms",
+      "16 October 2026",
+    ],
     [
       "/terms/",
       "Terms of Service — AuthiChain",
       "https://authichain.com/terms",
+      "16 October 2026",
     ],
   ] as const) {
     const res = await get(path);
@@ -301,7 +360,7 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
       /not affiliated with, endorsed by, or acting on behalf of any government agency/,
       path
     );
-    assert.match(html, /Effective 24 October 2026/, path);
+    assert.match(html, new RegExp(`Effective ${effective}`), path);
     assert.doesNotMatch(html, /privacy@authichain\.com/, path);
     assert.doesNotMatch(html, /legal@authichain\.com/, path);
     assert.doesNotMatch(html, /Vercel/, path);
@@ -313,7 +372,7 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   assert.match(privacy, /We do not sell personal information/);
   assert.match(privacy, /Stripe/);
   assert.match(privacy, /do not receive your card number/);
-  assert.match(privacy, /0\.05 USDC/);
+  assert.match(privacy, /x402 paid verification and on-chain anchoring are in development/);
   assert.match(privacy, /\$QRON token is not a way to pay/);
   assert.match(privacy, /simulated/);
   assert.match(privacy, /id="outbound"/);
@@ -344,7 +403,7 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   );
   assert.match(
     privacy,
-    /and Supabase, which stores the contact records for business contacts at US brands\./
+    /Supabase, which stores the contact records for business contacts at US brands and sign-ups from \/is-this-real; and Cloudflare, which stores email opt-in sign-ups in its D1 database\. We do not sell your data\./
   );
   assert.match(
     privacy,
@@ -383,7 +442,11 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   assert.doesNotMatch(privacy, /If we start sending marketing email/);
   assert.match(
     privacy,
-    /We keep your subscriber data until you unsubscribe, then delete it within 30 days, except your email address, kept on a suppression list only to honour your unsubscribe\./
+    /To limit abuse, we also keep a salted hash of the IP address used to sign up for about a day; we never store the IP address itself\./
+  );
+  assert.match(
+    privacy,
+    /We keep your sign-up \(email, country if given, when you agreed, and whether you confirmed\) in AuthiChain's Cloudflare D1 database until you unsubscribe\. When you unsubscribe, we delete your country right away and keep only your email address, when you agreed, and a random unsubscribe code, on a suppression list used only to honour your unsubscribe\./
   );
   assert.match(privacy, /12 months after our last contact/);
   assert.match(privacy, /do not claim one is in place/);
@@ -413,7 +476,7 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   const terms = await (await get("/terms")).text();
   assert.match(terms, /not a GS1 Conformant Resolver/);
   assert.match(terms, /not a legal opinion/);
-  assert.match(terms, /0\.05 USDC/);
+  assert.match(terms, /charged in USDC on Base/);
   assert.match(terms, /\$QRON token is not accepted as payment/);
   assert.match(terms, /State of Michigan/);
   assert.match(terms, /href="\/privacy"/);
