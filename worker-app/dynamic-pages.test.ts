@@ -1050,8 +1050,9 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     );
     expect(body).toContain("Try 5 free generations. No account, no card.");
     expect(body).toContain(
-      "100 generations for $29, paid once. No subscription, and one-time pack credits never expire. A scannable QR is not an authenticity proof."
+      "100 generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof."
     );
+    expect(body).not.toContain("never expire");
     expect(body).not.toContain("Launch at $19/mo");
     // CFA-460 release check: GET /generate has 0 hits for these.
     expect(body).not.toContain("$19");

@@ -512,12 +512,16 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
     expect(html).not.toContain("no expiry date");
   });
 
-  it("plans.ts Starter pricing copy uses the Advisor C qualifier", () => {
-    expect(planById("starter")?.description).toContain(
-      "One-time pack credits (Starter and Creator) never expire."
+  it("plans.ts Starter pricing copy uses the Advisor-GO replace-only sentence", () => {
+    expect(planById("starter")?.description).toBe(
+      "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits."
     );
     expect(planById("starter")?.features).toContain(
-      "One-time pack credits (Starter and Creator) never expire"
+      "Starting a monthly plan replaces unused pack credits"
+    );
+    expect(planById("starter")?.description).not.toContain("never expire");
+    expect(planById("starter")?.features?.join(" ")).not.toContain(
+      "never expire"
     );
   });
 });
