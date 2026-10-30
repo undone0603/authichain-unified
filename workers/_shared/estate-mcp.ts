@@ -27,7 +27,11 @@ import {
   type X402EnvVars,
   type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
-import { unpaidSealRefusal } from "../../src/lib/agent-verify.ts";
+import {
+  coerceSealBody,
+  parseSealRequest,
+  unpaidSealRefusal,
+} from "../../src/lib/agent-verify.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
 import { sisterOrigin, type SisterX402Env } from "./estate-x402.ts";
 import {
@@ -252,6 +256,13 @@ async function unpaidOrRefusedVerify(
   if (!proof || !proofHeader) {
     const refusal = unpaidSealRefusal(args);
     if (refusal) return json(refusal.status, refusal.body);
+    // HTTP quote crawlers get 402 for probe JSON with no sealId. This MCP
+    // tool still refuses a non-empty argument that is not a seal UUID
+    // before payment. Empty arguments stay the unpaid 402 quote.
+    if (Object.keys(args).length > 0) {
+      const parsed = parseSealRequest(coerceSealBody(args));
+      if (!parsed.ok) return json(parsed.status, parsed.body);
+    }
     return json(402, required.v2, required.headers);
   }
 

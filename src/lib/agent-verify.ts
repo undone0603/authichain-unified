@@ -10,8 +10,7 @@
 
 import { isDiscoveryExampleSealId } from "./x402";
 
-const UUID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * PayAI/Bazaar crawlers sometimes POST `outputSchema.input` (`type` +
@@ -51,7 +50,8 @@ export function parseSealRequest(input: Record<string, unknown>): SealRequest {
   const raw = input.sealId ?? input.seal_id;
   const sealId = typeof raw === "string" ? raw.trim() : "";
   if (!sealId) {
-    const aliasOnly = input.productId !== undefined || input.serial !== undefined;
+    const aliasOnly =
+      input.productId !== undefined || input.serial !== undefined;
     return {
       ok: false,
       status: 400,
@@ -85,10 +85,15 @@ export function parseSealRequest(input: Record<string, unknown>): SealRequest {
  * and no sealId; HTTP 400 is classified as needs_different_request and
  * they never buy. Empty objects, listing samples (`demo` / bazaar UUID),
  * valid UUIDs, and no-sealId probe JSON stay null so the caller returns 402.
+ * MCP verify applies a second check: a non-empty argument that is not a
+ * seal UUID is 400 before payment. That check is not this function.
  */
 export function unpaidSealRefusal(
   raw: Record<string, unknown>
-): { status: number; body: Extract<SealRequest, { ok: false }>["body"] } | null {
+): {
+  status: number;
+  body: Extract<SealRequest, { ok: false }>["body"];
+} | null {
   const body = coerceSealBody(raw);
   const listed = listedSealId(body);
   if (!listed) return null;
