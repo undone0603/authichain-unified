@@ -18,10 +18,19 @@ A marketing claim is not an artifact. These are.
 # https://authichain.com/protocol
 node verifier.mjs record.json anchor.json
 
-# Agent rail — unpaid. Expect HTTP 402, not a product verdict.
+# Agent rail. A non-UUID sealId is HTTP 400 before payment.
+# An empty body is the unpaid HTTP 402 challenge, not a product verdict.
 curl -sS -i -X POST https://authichain.com/api/x402 \
   -H 'content-type: application/json' \
-  -d '{"sealId":"demo"}'
+  -d '{}'
+
+# Living QR scan. This host verifies the signature.
+# The object id form is qron:url: plus 8 hex characters.
+# A missing id is HTTP 404 presentation_not_found.
+# qron.space, strainchain.io, and govchain.us each proxy that GET.
+# Each host does not verify the signature.
+curl -sS -H 'accept: application/json' \
+  "https://authichain.com/qron/r/{object_id}"
 
 # Health of the agent rail
 curl -sS https://authichain.com/api/x402/health
@@ -37,18 +46,18 @@ curl -sS -i -H 'Accept: application/json' \
   https://id.authichain.com/v1/passport/UNKNOWN-ID
 ```
 
-JWKS kid in production on 2026-09-27: `lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE`.
+JWKS kid in production (RFC 7638 thumbprint, corrected 2026-10-17): `T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ`.
 
 ## Repo fixtures
 
 In `undone0603/authichain-unified`:
 
-| File | Purpose |
-|---|---|
-| `fixtures/attestation-v0.1-valid.json` | Canonical payload |
-| `fixtures/attestation-v0.1-valid.jws` | Valid Ed25519 compact JWS |
+| File                                     | Purpose                                                |
+| ---------------------------------------- | ------------------------------------------------------ |
+| `fixtures/attestation-v0.1-valid.json`   | Canonical payload                                      |
+| `fixtures/attestation-v0.1-valid.jws`    | Valid Ed25519 compact JWS                              |
 | `fixtures/attestation-v0.1-tampered.jws` | Decision flipped, signature not recomputed — must fail |
-| `fixtures/attestation-v0.1-jwks.json` | Fixture public key only |
+| `fixtures/attestation-v0.1-jwks.json`    | Fixture public key only                                |
 
 These fixtures contain no production secrets.
 
@@ -56,7 +65,7 @@ These fixtures contain no production secrets.
 
 Repository demo identifiers are not listed on this page. An unknown resolver id returns `status: "not_found"` with `reason: "unknown_seal"`. That is not a working product scan and is not a counterfeit finding.
 
-Cite the well-known file, JWKS, protocol verifier, unpaid x402 402, and the repo fixtures. Do not treat a 404 as a live demo.
+Cite the well-known file, JWKS, protocol verifier, the empty-body unpaid x402 402, the Living QR scan, and the repo fixtures. Do not treat a resolver 404 as a live demo. A Living QR id with no stored presentation is HTTP 404 with `decision: "indeterminate"` and `error: "presentation_not_found"`. That is not a verdict and not a counterfeit finding.
 
 ## Human path
 
