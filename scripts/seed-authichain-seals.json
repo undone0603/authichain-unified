@@ -1,0 +1,6 @@
+[
+  { "product_id": "authichain-gap-map-page", "batch_id": "authichain-own-2026-10", "label": "AuthiChain's own seal: Annex XIII gap map page (authichain.com/battery-passport). Not a customer product." },
+  { "product_id": "authichain-is-this-real-demo", "batch_id": "authichain-own-2026-10", "label": "AuthiChain's own demo seal for authichain.com/is-this-real. Not a customer product." },
+  { "product_id": "authichain-x402-docs", "batch_id": "authichain-own-2026-10", "label": "AuthiChain's own seal: x402 agent verification docs (authichain.com/x402). Not a customer product." },
+  { "product_id": "authichain-protocol-jwks", "batch_id": "authichain-own-2026-10", "label": "AuthiChain's own seal: protocol signing key page (authichain.com/protocol/jwks.json). Not a customer product." }
+]

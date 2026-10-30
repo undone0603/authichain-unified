@@ -50,6 +50,29 @@ export const STUB_TOOL_NAMES = [
   "verify_sovereign_deal",
 ] as const;
 
+/** Unpaid verify_paid text. A non-UUID is 400 and does not name productId. */
+export function verifyPaidUnpaidReply(subject: string): string {
+  const parsed = parseSealRequest({ sealId: subject });
+  if (!parsed.ok) {
+    return JSON.stringify({ status: parsed.status, ...parsed.body });
+  }
+  return JSON.stringify({
+    status: 402,
+    x402Version: 2,
+    message: "Payment required for metered verification.",
+    pay: {
+      endpoint: "POST /api/v1/agent-verify",
+      network: "base",
+      chainId: "8453",
+      amount: "$0.05 USDC",
+      catalog: "https://authichain.com/api/x402/catalog",
+      identity:
+        "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
+    },
+    then: `Retry POST /api/v1/agent-verify with header X-PAYMENT: <base64 proof> and body { "sealId": "${parsed.sealId}" }.`,
+  });
+}
+
 export function stubToolReply() {
   return {
     content: [{ type: "text" as const, text: STUB_TOOL_REPLY }],

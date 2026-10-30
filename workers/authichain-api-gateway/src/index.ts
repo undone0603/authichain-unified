@@ -443,7 +443,7 @@ export default {
                 price: "$29",
                 requests: "100 generations",
                 features: [
-                  "100 AI QR generations, never expire unless you switch to Launch",
+                  "100 AI QR generations. One-time pack credits (Starter and Creator) never expire",
                   "Designed for AuthiChain signed verification (in development)",
                 ],
                 stripeLink: "https://authichain.com/checkout/starter",
@@ -453,7 +453,7 @@ export default {
                 price: "$99",
                 requests: "500 generations",
                 features: [
-                  "500 AI QR generations, never expire unless you switch to Launch",
+                  "500 AI QR generations. One-time pack credits (Starter and Creator) never expire",
                   "Best one-time value: about 20¢ per generation",
                   "Every style and preset, the same ones as the free sample",
                 ],
@@ -463,11 +463,7 @@ export default {
                 name: "EU DPP Readiness",
                 price: "$299",
                 requests: "One-time",
-                features: [
-                  "AuthiChain workspace",
-                  "Self-serve activation",
-                  "50 workspace generations",
-                ],
+                features: ["AuthiChain workspace", "Self-serve activation"],
                 stripeLink: "https://authichain.com/checkout/dpp_readiness",
               },
             ],
@@ -759,7 +755,7 @@ td{padding:12px;border-bottom:1px solid #111}
 <tr><td>StrainChain Passport</td><td style="color:#3ddc60">$49</td><td>One published genetics passport</td></tr>
 <tr><td>QRON Starter Pack</td><td style="color:#3ddc60">$29</td><td>100 AI QR generations</td></tr>
 <tr><td>QRON Creator Pack</td><td style="color:#3ddc60">$99</td><td>500 AI QR generations</td></tr>
-<tr><td>EU DPP Readiness</td><td style="color:#3ddc60">$299</td><td>AuthiChain workspace, self-serve activation, 50 workspace generations</td></tr>
+<tr><td>EU DPP Readiness</td><td style="color:#3ddc60">$299</td><td>AuthiChain workspace, self-serve activation</td></tr>
 </table>
 
 <h2>Accounts v2 (Admin)</h2>

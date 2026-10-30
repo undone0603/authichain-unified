@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 const PAY_TO = "0xabc0000000000000000000000000000000000001";
 const SEAL = "00000000-0000-4000-8000-000000000000";
