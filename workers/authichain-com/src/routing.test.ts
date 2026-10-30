@@ -100,6 +100,8 @@ test("/vs/* and /mcp/install make no Polygon contract claim (RES-162)", async ()
 });
 
 test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
+  const starterDesc =
+    "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits.";
   for (const path of ["/", "/checkout/starter"]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
@@ -108,7 +110,6 @@ test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
       "$19",
       "qron_launch",
       "Launch subscription",
-      "Starting a monthly plan replaces",
       "unless you switch to a Launch",
       "Pack credits never expire.",
     ]) {
@@ -119,13 +120,13 @@ test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
     }
   }
   const starter = await (await get("/checkout/starter")).text();
-  assert.ok(
-    starter.includes("No subscription, and one-time pack credits never expire.")
-  );
+  assert.ok(starter.includes(starterDesc));
+  assert.ok(!starter.includes("never expire"), "/checkout/starter must not say never expire");
+  assert.ok(!starter.includes("no expiry date"), "/checkout/starter must not say no expiry date");
   const home = await (await get("/")).text();
   assert.ok(
-    home.includes("No subscription, and one-time pack credits never expire."),
-    "home JSON-LD Starter offer uses the Advisor C sentence"
+    home.includes(starterDesc),
+    "home JSON-LD Starter offer uses the Research PASS FREE-PREVIEW sentence"
   );
 });
 
