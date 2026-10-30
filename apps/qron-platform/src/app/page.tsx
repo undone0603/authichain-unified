@@ -1048,8 +1048,7 @@ export default function Home() {
               className="text-base max-w-lg mx-auto"
               style={{ color: '#6b6b6b' }}
             >
-              All plans include AuthiChain Protocol verification. Credits never
-              expire.{' '}
+              All plans include AuthiChain Protocol verification.{' '}
               <a
                 href="https://authichain.com"
                 target="_blank"
@@ -1334,7 +1333,7 @@ export default function Home() {
             {[
               {
                 q: 'Do credits expire?',
-                a: 'Never. Pack credits are yours indefinitely — buy once, use whenever you need.',
+                a: 'Starter is 100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits.',
               },
               {
                 q: 'Can I scan the QR codes on any phone?',

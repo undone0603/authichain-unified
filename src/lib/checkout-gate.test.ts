@@ -509,7 +509,10 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
     expect(html).not.toContain("qron_launch");
     expect(html).not.toContain("Launch subscription");
     expect(html).not.toContain("never expire");
-    expect(html).not.toContain("no expiry date");
+    expect(html).not.toContain("never-expire");
+    expect(html).not.toContain("no expiry");
+    expect(html).not.toContain("no-expiry");
+    expect(html).not.toContain("50 workspace generations");
   });
 
   it("plans.ts Starter pricing copy uses the Advisor-GO replace-only sentence", () => {
