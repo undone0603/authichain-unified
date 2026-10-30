@@ -38,6 +38,38 @@ test("POST /api/verify without jws fails closed with decision_contract", async (
   assert.equal(body.error, "jws is required");
 });
 
+test("POST /api/verify with an empty body asks for a JWS", async () => {
+  const res = await tryHandleEstateCanonicalVerify(
+    new Request("https://qron.space/api/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "",
+    }),
+  );
+  assert.ok(res);
+  assert.equal(res!.status, 400);
+  const body = (await res!.json()) as Record<string, unknown>;
+  assert.equal(body.decision, "indeterminate");
+  assert.equal(body.decision_contract, "AuthiChain Verification Decision v1");
+  assert.equal(body.cryptographic_status, "unknown");
+  assert.equal(body.error, "jws is required");
+});
+
+test("POST /api/verify with non-JSON text is invalid_json", async () => {
+  const res = await tryHandleEstateCanonicalVerify(
+    new Request("https://qron.space/api/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "not-json",
+    }),
+  );
+  assert.ok(res);
+  assert.equal(res!.status, 400);
+  const body = (await res!.json()) as { error: string; decision_contract: string };
+  assert.equal(body.error, "invalid_json");
+  assert.equal(body.decision_contract, "AuthiChain Verification Decision v1");
+});
+
 test("blocked canonical responses stay non-success on the sister apex", async () => {
   const real = globalThis.fetch;
   globalThis.fetch = (async () =>

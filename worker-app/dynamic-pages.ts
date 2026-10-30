@@ -420,7 +420,7 @@ function verifyPromptHtml(): string {
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
       "<p>Enter a registry product ID to look up its record. On-chain verification is in development.</p>\n" +
-      "<p>The open verifier checks the published demonstration record <a href=\"/verify?id=polygon-anchor-1\">polygon-anchor-1</a>. The same check as JSON is <a href=\"/api/verify?id=polygon-anchor-1\">/api/verify</a>.</p>\n" +
+      '<p>The open verifier checks the published demonstration record <a href="/verify?id=polygon-anchor-1">polygon-anchor-1</a>. The same check as JSON is <a href="/api/verify?id=polygon-anchor-1">/api/verify</a>.</p>\n' +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
@@ -442,8 +442,7 @@ function openVerifierHtml(
         .join("") +
       "</ul>\n"
     : "";
-  const jsonHref =
-    "/api/verify?id=" + encodeURIComponent(identifier);
+  const jsonHref = "/api/verify?id=" + encodeURIComponent(identifier);
   return htmlDocument({
     title: "Open verification | AuthiChain",
     description:
@@ -575,6 +574,47 @@ function verifyNoRecordResponse(
   );
 }
 
+/** Reserved path. Not a certificate number. Matches src/app/verify/live/page.tsx. */
+function verifyLiveSealHtml(): string {
+  const mintTx =
+    "0xa07d0bbadcc958b3f6fc8d81acda16a54c4bcfdb5e86bd2ce186e27f5752ab3b";
+  const holder = "authichain.base.eth";
+  const contract = "0x34370EDA96e0C7e47f46F18e2D3a7298C241E16F";
+  return htmlDocument({
+    title: "This seal is already on Base. | AuthiChain",
+    description:
+      "Founder example. Signature check plus an on-chain anchor. This does not prove a physical object is genuine.",
+    canonicalPath: "/verify/live",
+    bodyHtml:
+      "<main>\n" +
+      "<h1>This seal is already on Base.</h1>\n" +
+      "<p>Founder example. Signature check + on-chain anchor. You can verify it without trusting us.</p>\n" +
+      "<h2>Public proof</h2>\n" +
+      "<dl>\n" +
+      "<dt>Holder</dt><dd>" +
+      escapeHtml(holder) +
+      "</dd>\n" +
+      "<dt>Contract</dt><dd>" +
+      escapeHtml(contract) +
+      "</dd>\n" +
+      '<dt>Mint tx</dt><dd><a href="https://basescan.org/tx/' +
+      mintTx +
+      '">view on BaseScan</a></dd>\n' +
+      '<dt>Open protocol</dt><dd><a href="/protocol">run the verifier yourself</a></dd>\n' +
+      "</dl>\n" +
+      "<p>What this does not prove: that any physical object is genuine. A signed record is not an inspection.</p>\n" +
+      '<p><a href="/generate">Generate your own Living QR</a> · <a href="/pricing">Buy Starter — $29</a></p>\n' +
+      "<h2>FAQ</h2>\n" +
+      "<h3>Does this prove the product is authentic?</h3>\n" +
+      "<p>No. It proves the claim was signed and the anchor hash matches what is on Base. Physical genuineness is a separate inspection.</p>\n" +
+      "<h3>Can I do this for my products?</h3>\n" +
+      "<p>Yes. Self-serve generation and the $29 Starter Pack. No call required.</p>\n" +
+      "<h3>Is the public certificate registry live?</h3>\n" +
+      "<p>In development. This page shows the live path that already exists.</p>\n" +
+      "</main>",
+  });
+}
+
 async function renderVerify(c: Context): Promise<Response> {
   const url = new URL(c.req.url);
   const idParam = url.searchParams.get("id");
@@ -594,6 +634,10 @@ async function renderVerify(c: Context): Promise<Response> {
     const pathSegment = decodeURIComponent(rawPathSegment);
     identifier = idParam || pathSegment || null;
 
+    if (!idParam && pathSegment.toLowerCase() === "live") {
+      return htmlResponse(c, verifyLiveSealHtml(), 200);
+    }
+
     if (!identifier) {
       return htmlResponse(c, verifyPromptHtml(), 200);
     }
@@ -602,11 +646,7 @@ async function renderVerify(c: Context): Promise<Response> {
     if (published) {
       const protocol = verifySubmitted(published.record, published.anchor);
       if (protocol && typeof protocol.verdict === "string") {
-        return htmlResponse(
-          c,
-          openVerifierHtml(identifier, protocol),
-          200
-        );
+        return htmlResponse(c, openVerifierHtml(identifier, protocol), 200);
       }
     }
 
@@ -793,7 +833,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "📊",
         title: "EU DPP Readiness",
-        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
+        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation.",
       },
       {
         icon: "🌍",
@@ -1117,8 +1157,13 @@ function onboardPayNowHtml(): string {
   return (
     '<section aria-label="Live checkout" class="onboard-pay">\n' +
     "<h2>Or buy now, no call needed</h2>\n" +
-    "<p>The pilot request is free.</p>\n" +
+    "<p>The pilot request is free. First paid checkout is the Starter Pack.</p>\n" +
     '<p class="onboard-pay-links">\n' +
+    catalogPaymentLinkHtml({
+      planId: "starter",
+      label: "Buy Starter Pack — $29",
+    }) +
+    "\n" +
     catalogPaymentLinkHtml({
       planId: "strainchain_passport",
       label: "StrainChain Passport — $49",
@@ -1449,13 +1494,13 @@ async function renderOnboard(c: Context): Promise<Response> {
 // deterministic reference object. That page must exist. Unknown ids 404.
 
 const LAUNCH_PROOF_PRODUCT_ID = "00000000-0000-4000-8000-000000000001";
-const LAUNCH_PROOF_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+const LAUNCH_PROOF_KID = "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ";
 
 function launchProofStoryHtml(): string {
   return htmlDocument({
     title: "AuthiChain Launch Proof — QRON / StoryMode",
     description:
-      "Deterministic production reference object. The compact JWS verifies against live JWKS.",
+      "Deterministic production reference object and its published signing key id.",
     canonicalPath: "/story/" + LAUNCH_PROOF_PRODUCT_ID,
     bodyHtml:
       "<main>\n" +
@@ -1470,9 +1515,9 @@ function launchProofStoryHtml(): string {
       '<dt>Issuer</dt><dd><a href="/protocol/issuer.json">/protocol/issuer.json</a></dd>\n' +
       "</dl>\n" +
       "<h2>Identity</h2>\n" +
-      "<p>A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation.</p>\n" +
+      "<p>A deterministic QRON reference resolves to an AuthiChain object record. A signed attestation for it is not published yet.</p>\n" +
       "<h2>Proof</h2>\n" +
-      "<p>The production attestation is independently verified against the live public JWKS using its kid. A valid signature is signed evidence — not physical authenticity.</p>\n" +
+      "<p>This page shows the signing key ID (kid) and links to the public JWKS and issuer record. It does not include a signed attestation yet, so there is nothing on this page to verify. A valid signature is signed evidence — not physical authenticity.</p>\n" +
       "<h2>Reveal</h2>\n" +
       "<p>Scanning the QRON launch code opens StoryMode. Tamper tests (altered payload, altered signature, wrong subject, revoked, stale) must reject.</p>\n" +
       '<p><a href="/verify?id=polygon-anchor-1">Open the published verification example</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
@@ -1590,13 +1635,13 @@ function authenticateHtml(): string {
   return htmlDocument({
     title: "Sign in | AuthiChain",
     description:
-      "Start with QRON Starter Pack $29 or Launch $19/mo. Onboard a pilot or open the dashboard — no app.* login host required.",
+      "Start with QRON Starter Pack $29. Onboard a pilot or open the dashboard — no app.* login host required.",
     canonicalPath: "/authenticate",
     extraHead: "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>\n",
     bodyHtml:
       "<main>\n" +
       "<h1>Sign in</h1>\n" +
-      "<p>The public console does not require a separate app host. Start with the Starter Pack at $29 or Launch at $19/mo, or open onboard / dashboard.</p>\n" +
+      "<p>The public console does not require a separate app host. Start with the Starter Pack at $29, or open onboard / dashboard.</p>\n" +
       "<ul>\n" +
       '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
       '<li><a href="/dashboard">Dashboard</a></li>\n' +
@@ -1609,9 +1654,9 @@ function authenticateHtml(): string {
         formId: "auth-starter-checkout",
         inputId: "auth-starter-email",
       }) +
-      "<p><a href=\"" +
-      escapeHtml(planPaymentLink("qron_launch") || "/checkout/qron_launch") +
-      '">Start Launch $19/mo</a> · <a href="/pricing">All pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
+      '<p><a href="' +
+      "/pricing" +
+      '">See pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
       "</main>",
   });
 }
@@ -1623,15 +1668,13 @@ function renderAuthenticate(c: Context): Response {
 // --- /generate — Living QR intake (qron.space CTA) -------------------------
 
 function generatePackLinksHtml(): string {
-  // LOOP-03 order: Starter $29 → Launch $19/mo → Creator; DPP via /pricing.
+  // LOOP-03 order: Starter $29 → Creator; DPP via /pricing.
+  // CFA-460: QRON Launch $19/mo is not offered on /generate (unlisted).
+  // The /checkout/qron_launch route and Stripe price are untouched.
   const packs = listedPlans("qron").filter(
-    p =>
-      p.id === "starter" ||
-      p.id === "qron_launch" ||
-      p.id === "creator" ||
-      p.id === "dpp_readiness"
+    p => p.id === "starter" || p.id === "creator" || p.id === "dpp_readiness"
   );
-  const order = ["starter", "qron_launch", "creator", "dpp_readiness"] as const;
+  const order = ["starter", "creator", "dpp_readiness"] as const;
   packs.sort(
     (a, b) =>
       order.indexOf(a.id as (typeof order)[number]) -
@@ -1644,9 +1687,7 @@ function generatePackLinksHtml(): string {
           ? "/pricing"
           : planPaymentLink(p.id) || "/pricing";
       const price =
-        p.price_suffix === "/month"
-          ? `$${p.price}/mo`
-          : `$${p.price}`;
+        p.price_suffix === "/month" ? `$${p.price}/mo` : `$${p.price}`;
       return (
         '<a href="' +
         escapeHtml(href) +
@@ -1661,24 +1702,16 @@ function generatePackLinksHtml(): string {
 }
 
 // The $9.99/$39.99/$99.99 credit packs were archived in the 2026-08-31
-// Stripe cleanup. Live top-ups: Starter $29, Launch $19/mo (LOOP-03 tertiary),
-// Creator $99.
+// Stripe cleanup. Live top-ups on /generate: Starter $29, Creator $99.
+// CFA-460: the Launch $19/mo button is removed here (Launch is unlisted).
 const QRON_CREDIT_LINKS = [
   PAYMENT_LINKS.qron.credits50,
-  {
-    name: "Launch",
-    price: "$19/mo",
-    url: planPaymentLink("qron_launch") || "/checkout/qron_launch",
-  },
   PAYMENT_LINKS.qron.credits250,
 ] as const;
 
 function generateCreditLinksHtml(): string {
   const buttons = QRON_CREDIT_LINKS.map(offer => {
-    const label =
-      offer.name === "Launch"
-        ? "Start Launch — " + offer.price
-        : "Buy " + offer.name + " — " + offer.price;
+    const label = "Buy " + offer.name + " — " + offer.price;
     return (
       '<a class="credit-btn" href="' +
       escapeHtml(offer.url) +
@@ -1689,12 +1722,24 @@ function generateCreditLinksHtml(): string {
   }).join("\n");
   return (
     "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
-    "<p>Sign in to use account credits. Starter Pack: 100 generations for $29, one-time; or Launch at $19/mo. A scannable QR is not an authenticity proof.</p>\n" +
+    "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
   );
 }
+
+// Starter CTA (Marketing copy variant A, as in #2047) shown after a successful generation.
+const STARTER_CHECKOUT_URL = "https://authichain.com/checkout/starter";
+const GENERATE_STARTER_CTA_HTML =
+  '<p id="generate-starter-cta" hidden>Like it? Get 100 generations for $29, paid once. No subscription. ' +
+  '<a class="credit-btn" href="' +
+  STARTER_CHECKOUT_URL +
+  '?utm_source=qron&amp;utm_medium=onsite&amp;utm_campaign=starter-cta&amp;utm_content=starter-a">Get 100 generations for $29</a> ' +
+  "Checkout on authichain.com.</p>\n";
+/** Filled by /api/generate soft-prompt when remaining credits are low (signed-in). */
+const GENERATE_LOW_CREDIT_HTML =
+  '<div id="generate-low-credit" hidden role="status"></div>\n';
 
 function generateFormHtml(
   error?: string,
@@ -1711,16 +1756,17 @@ function generateFormHtml(
     : '<p role="alert" id="generate-error" hidden></p>\n';
   return htmlDocument({
     // LOOP-03 meta (docs/growth/2026-09-28-first-dollar-loops.md).
-    title: "Living QR generator | QRON — account credits and $29 Starter Pack",
+    title:
+      "AI QR Art Generator | 5 Free, Then $29 Once, No Subscription | QRON",
     description:
-      "Generate scannable AI QR art with account credits. Starter Pack includes 100 generations for $29, one-time; or Launch at $19/mo. A QR is not an authenticity proof.",
+      "Make scannable AI QR art. 5 free generations, no card (limit 5 per visitor every 30 days, while daily samples last). Then 100 for $29, paid once. A QR is not an authenticity proof.",
     canonicalPath: "/generate",
     extraHead: "<style>" + SITE_FORM_CSS + "</style>",
     bodyHtml:
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
       statusBlock +
-      "<p>Sign in to use account credits. Starter Pack includes 100 generations for $29, one-time; or Launch at $19/mo. A scannable QR is not an authenticity proof.</p>\n" +
+      "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
       '<form id="generate-form" action="/generate" method="post">\n' +
@@ -1730,6 +1776,8 @@ function generateFormHtml(
       '<input id="prompt" name="prompt" type="text" maxlength="200" placeholder="Industrial tech aesthetic">\n' +
       '<button type="submit">Queue Living QR</button>\n' +
       "</form>\n" +
+      GENERATE_STARTER_CTA_HTML +
+      GENERATE_LOW_CREDIT_HTML +
       generateCreditLinksHtml() +
       "<p>Need a generation pack? " +
       generatePackLinksHtml() +
@@ -1742,16 +1790,29 @@ function generateFormHtml(
       "var form=document.getElementById('generate-form');\n" +
       "var err=document.getElementById('generate-error');\n" +
       "var out=document.getElementById('generate-result');\n" +
+      "var soft=document.getElementById('generate-low-credit');\n" +
       "if(!form)return;\n" +
+      "function showLowCredit(up){\n" +
+      "if(!soft||!up||typeof up.url!=='string'||up.url.indexOf('https://authichain.com/checkout/starter')!==0)return false;\n" +
+      "soft.hidden=false;soft.textContent='';\n" +
+      "var msg=document.createElement('p');msg.textContent=up.message||\"You're running low on generations. Top up any time: Starter is 100 for $29, paid once.\";soft.appendChild(msg);\n" +
+      "var a=document.createElement('a');a.href=up.url;a.className='credit-btn';a.id='low-credit-starter';a.textContent=up.button||up.label||'Add 100 generations for $29';soft.appendChild(a);\n" +
+      "var dismiss=document.createElement('button');dismiss.type='button';dismiss.id='low-credit-dismiss';dismiss.textContent=up.dismiss||'Not now';dismiss.addEventListener('click',function(){soft.hidden=true;soft.textContent='';});soft.appendChild(dismiss);\n" +
+      "if(up.small_print){var sp=document.createElement('p');sp.className='small-print';sp.textContent=up.small_print;soft.appendChild(sp);}\n" +
+      "a.focus();return true;}\n" +
       "form.addEventListener('submit',function(e){\n" +
       "e.preventDefault();\n" +
       "var targetUrl=document.getElementById('targetUrl').value.trim();\n" +
       "var prompt=document.getElementById('prompt').value.trim();\n" +
+      "var cta=document.getElementById('generate-starter-cta');if(cta)cta.hidden=true;\n" +
+      "if(soft){soft.hidden=true;soft.textContent='';}\n" +
       "err.hidden=true; out.hidden=true;\n" +
       "fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUrl:targetUrl,prompt:prompt,mode:'static'})})\n" +
       ".then(function(res){return res.json().then(function(data){return {res:res,data:data};});})\n" +
       ".then(function(r){\n" +
       "if(r.res.status===401){\n" +
+      "if(r.data&&r.data.code&&r.data.code.indexOf('FREE_SAMPLE_')===0){err.hidden=false;err.textContent=r.data.message;\n" +
+      "var up=r.data.upgrade;if(up&&typeof up.url==='string'&&up.url.indexOf('https://authichain.com/checkout/starter')===0){var a=document.createElement('a');a.href=up.url;a.className='button';a.id='sample-exhausted-starter';a.textContent=up.button||up.label||'Starter Pack: 100 generations for $29, paid once';var pp=document.createElement('p');pp.appendChild(a);err.appendChild(pp);a.focus();return;}}\n" +
       "form.submit();\n" +
       "return;\n" +
       "}\n" +
@@ -1770,8 +1831,11 @@ function generateFormHtml(
       "if(url.indexOf('data:image/')!==0&&url.indexOf('https://')!==0){err.hidden=false;err.textContent='Unexpected image URL.';return;}\n" +
       "out.hidden=false;\n" +
       'out.innerHTML=\'<img alt="Generated Living QR" src="\'+url.replace(/"/g,\'\')+\'" width="320" height="320">\';\n' +
+      // Prefer API soft-prompt (signed-in, <20 credits) over the static post-success CTA.
+      "if(showLowCredit(r.data&&r.data.upgrade)){if(cta)cta.hidden=true;}\n" +
+      "else if(cta)cta.hidden=false;\n" +
       "})\n" +
-      " .catch(function(){err.hidden=false;err.textContent='Network error. Buy the Starter pack to keep generating.';});\n" +
+      " .catch(function(){err.hidden=false;err.textContent='Network error. Please try again.';});\n" +
       "});\n" +
       "})();\n" +
       "</script>\n" +

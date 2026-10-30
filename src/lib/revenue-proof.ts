@@ -3,7 +3,12 @@
  * Do not persist a stored total.
  */
 
-import { reconstructLoop, stageOf, type LoopEventRow } from "./dpp-loop";
+import {
+  isDemoVisit,
+  reconstructLoop,
+  stageOf,
+  type LoopEventRow,
+} from "./dpp-loop";
 
 export const REVENUE_PROOF_SIGNALS = [
   "verification_requests",
@@ -18,6 +23,43 @@ export const REVENUE_PROOF_SIGNALS = [
   "failed_autonomous_actions",
 ] as const;
 
+/**
+ * What a visit is, for the purpose of counting revenue.
+ *  - demo: the loop marked it `is_demo` / `demo` (smoke checkout, demo promo).
+ *  - test: a row carries Stripe `livemode: false`.
+ *  - founder: a row carries an email on the founder list.
+ * Only `real` visits count toward any signal. One class per visit, in the
+ * order above, so the excluded counts partition the visits.
+ */
+export type VisitClass = "real" | "demo" | "test" | "founder";
+
+/** Founder entries are exact emails, or "@domain" to cover a whole domain. */
+function matchesFounder(email: unknown, founders: Set<string>): boolean {
+  const e = typeof email === "string" ? email.trim().toLowerCase() : "";
+  if (!e) return false;
+  if (founders.has(e)) return true;
+  const at = e.lastIndexOf("@");
+  return at >= 0 && founders.has(e.slice(at));
+}
+
+export function classifyVisit(
+  visitRows: LoopEventRow[],
+  founderEmails: readonly string[] = []
+): VisitClass {
+  if (isDemoVisit(visitRows)) return "demo";
+  if (visitRows.some(r => r.metadata?.livemode === false)) return "test";
+  const founders = new Set(
+    founderEmails.map(e => e.trim().toLowerCase()).filter(Boolean)
+  );
+  if (
+    founders.size > 0 &&
+    visitRows.some(r => matchesFounder(r.metadata?.email, founders))
+  ) {
+    return "founder";
+  }
+  return "real";
+}
+
 export type RevenueProof = {
   generated_at: string;
   verification_requests: number;
@@ -31,7 +73,15 @@ export type RevenueProof = {
   /** Count of payment_succeeded loop events by surface. Not Stripe cash. */
   revenue_by_surface: Record<string, number>;
   failed_autonomous_actions: number;
+  /** Visits in the window that count toward the signals above. */
   visit_count: number;
+  /** Visits left out of every count above, by reason. */
+  excluded: { demo: number; test: number; founder: number };
+};
+
+export type BuildRevenueProofOptions = {
+  /** Exact emails, or "@domain" entries. Empty means no founder exclusion. */
+  founderEmails?: readonly string[];
 };
 
 export type AttestationDecisionRow = { decision?: string | null };
@@ -41,7 +91,8 @@ export function buildRevenueProof(
   rows: LoopEventRow[],
   automationLogs: AutomationLogRow[] = [],
   attestations: AttestationDecisionRow[] = [],
-  now: Date = new Date()
+  now: Date = new Date(),
+  options: BuildRevenueProofOptions = {}
 ): RevenueProof {
   const byVisit = new Map<string, LoopEventRow[]>();
   for (const row of rows ?? []) {
@@ -61,8 +112,16 @@ export function buildRevenueProof(
   let provisioning_success = 0;
   let retained_merchants = 0;
   const revenue_by_surface: Record<string, number> = {};
+  const excluded = { demo: 0, test: 0, founder: 0 };
+  let visit_count = 0;
 
   for (const [, visitRows] of byVisit) {
+    const kind = classifyVisit(visitRows, options.founderEmails);
+    if (kind !== "real") {
+      excluded[kind] += 1;
+      continue;
+    }
+    visit_count += 1;
     const loop = reconstructLoop(visitRows);
     if (loop.reached.includes("verification")) verification_requests += 1;
     if (
@@ -107,6 +166,7 @@ export function buildRevenueProof(
     retained_merchants,
     revenue_by_surface,
     failed_autonomous_actions,
-    visit_count: byVisit.size,
+    visit_count,
+    excluded,
   };
 }

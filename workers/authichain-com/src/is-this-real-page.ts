@@ -51,7 +51,7 @@ code{background:#f3f3f3;padding:.1rem .3rem;border-radius:4px}
 <div id="paid" class="box" hidden>
   <h2>More checks</h2>
   <p>After the free checks, agents can pay per check over x402; an unpaid call returns HTTP 402 with the price. No account needed.</p>
-  <p class="small">Endpoint: <code>POST https://authichain.com/api/v1/agent-verify</code> with <code>{"sealId":"..."}</code>. An unpaid call returns HTTP 402 with the payment details. Current status: <a href="/api/x402/health">/api/x402/health</a>. Docs: <a href="/x402">/x402</a>.</p>
+  <p class="small">Endpoint: <code>POST https://authichain.com/api/v1/agent-verify</code>. An empty JSON body <code>{}</code> is the unpaid HTTP 402 with the payment details. A non-UUID sealId is HTTP 400 before payment. Current status: <a href="/api/x402/health">/api/x402/health</a>. Docs: <a href="/x402">/x402</a>.</p>
 </div>
 <p class="small">"Verified" means the seal matches a record in the AuthiChain registry. It is not a legal or forensic guarantee.</p>
 <script>
