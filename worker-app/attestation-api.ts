@@ -1,6 +1,7 @@
 import type { Hono } from "hono";
 import { importPKCS8 } from "jose";
 import {
+  canonicalize,
   evaluateAttestation,
   inspectAttestationJws,
   publicJwkFromPrivateKey,
@@ -17,12 +18,14 @@ import {
   type VerificationKey,
 } from "./jwks";
 import { authorizeIssuerRequest, type IssuerEnv } from "./issuer";
+import { getCurrentAttestationStatus, getIssuer, publishAttestationRecord, recordStatusEvent, type AttestationRegistryEnv } from "./attestation-registry";
 import { emitTrustEvent } from "../shared/trust-events";
 import { getCurrentAttestationStatus, getIssuer, recordStatusEvent, type AttestationRegistryEnv } from "./attestation-registry";
 export type AttestationRegistry = {
   getCurrentStatus: (env: AttestationRegistryEnv, attestationId: string) => ReturnType<typeof getCurrentAttestationStatus>;
   getIssuer: (env: AttestationRegistryEnv, issuerId: string) => ReturnType<typeof getIssuer>;
   recordStatusEvent: typeof recordStatusEvent;
+  publishRecord?: typeof publishAttestationRecord;
 };
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
@@ -276,6 +279,7 @@ export function registerAttestationApi<
   getCurrentStatus: getCurrentAttestationStatus,
   getIssuer,
   recordStatusEvent,
+  publishRecord: publishAttestationRecord,
 }): void {
   const rewrite = (
     c: { req: { url: string; raw: Request }; env: E },
@@ -500,6 +504,134 @@ export function registerAttestationApi<
       issuer_id: issuerId,
       reason_code: reasonCode,
     }, 200, NO_STORE);
+  });
+
+  app.post("/api/v1/attestations/publish", async c => {
+    const auth = await authorizeIssuerRequest(
+      c.req.header("authorization"),
+      c.env as IssuerEnv,
+    );
+    if (!auth.ok) {
+      return c.json({ error: auth.error }, 401, NO_STORE);
+    }
+
+    const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+    const sealId = typeof body.seal_id === "string" ? body.seal_id.trim() : "";
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sealId)) {
+      return c.json({ error: "seal_id must be a UUID for an existing registered seal" }, 400, NO_STORE);
+    }
+
+    let attestation;
+    try {
+      attestation = validateAttestation(body.attestation);
+    } catch (error) {
+      return c.json(
+        { error: error instanceof Error ? error.message : "invalid attestation" },
+        400,
+        NO_STORE,
+      );
+    }
+
+    if (
+      !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,179}$/.test(attestation.attestation_id) ||
+      attestation.issuer.id !== "https://authichain.com" ||
+      attestation.issuer.name !== "AuthiChain" ||
+      attestation.status !== "active"
+    ) {
+      return c.json({
+        error: "publication requires a bounded attestation_id, the AuthiChain issuer, and active status",
+      }, 400, NO_STORE);
+    }
+    if (!Array.isArray(attestation.evidence) || attestation.evidence.length === 0) {
+      return c.json({ error: "at least one evidence item is required for publication" }, 400, NO_STORE);
+    }
+
+    const issuerState = await registry.getIssuer(c.env as AttestationRegistryEnv, attestation.issuer.id);
+    if (!issuerState.ok) {
+      return c.json({ error: issuerState.error }, issuerState.status, NO_STORE);
+    }
+    const issuerNow = Date.now();
+    const issuerValidFrom = Date.parse(issuerState.issuer.validFrom);
+    const issuerValidUntil = issuerState.issuer.validUntil
+      ? Date.parse(issuerState.issuer.validUntil)
+      : null;
+    if (
+      issuerState.issuer.status !== "trusted" ||
+      !Number.isFinite(issuerValidFrom) ||
+      issuerValidFrom > issuerNow ||
+      (issuerValidUntil !== null &&
+        (!Number.isFinite(issuerValidUntil) || issuerValidUntil <= issuerNow))
+    ) {
+      return c.json({ error: "issuer is not currently trusted for publication" }, 403, NO_STORE);
+    }
+
+    let privateKey: Awaited<ReturnType<typeof loadPrivateKey>>["privateKey"];
+    let kid: string;
+    try {
+      const loaded = await loadPrivateKey(c.env);
+      privateKey = loaded.privateKey;
+      kid = loaded.kid;
+    } catch (error) {
+      return c.json(
+        { error: error instanceof Error ? error.message : "key unavailable" },
+        503,
+        NO_STORE,
+      );
+    }
+
+    try {
+      const jws = await signAttestation(attestation, privateKey, kid);
+      const recordHash = `sha256:${await sha256Hex(jws)}`;
+      const canonicalSubject = canonicalize(
+        attestation.subject as unknown as Parameters<typeof canonicalize>[0],
+      );
+      const subjectHash = `sha256:${await sha256Hex(canonicalSubject)}`;
+      const firstEvidence = attestation.evidence[0];
+      if (!firstEvidence?.digest) {
+        return c.json({ error: "the first evidence item must include a digest" }, 400, NO_STORE);
+      }
+      const evidenceDigest = firstEvidence.digest;
+
+      if (!registry.publishRecord) {
+        return c.json({ error: "signed-record publisher unavailable" }, 503, NO_STORE);
+      }
+      const published = await registry.publishRecord(c.env as AttestationRegistryEnv, {
+        sealId,
+        attestation,
+        issuerKid: kid,
+        jws,
+        recordHash,
+        subjectHash,
+        evidenceDigest,
+      });
+      if (!published.ok) {
+        return c.json({ error: published.error }, published.status, NO_STORE);
+      }
+
+      const recordUrl = `https://authichain.com/api/authichain/attestations?assetId=${encodeURIComponent(published.seal.id)}`;
+      return c.json({
+        contract: "AuthiChain Attestation Contract",
+        version: "0.1",
+        attestation,
+        jws,
+        kid,
+        record_hash: recordHash,
+        record_url: recordUrl,
+        seal: {
+          id: published.seal.id,
+          product_id: published.seal.product_id,
+          batch_id: published.seal.batch_id,
+          brand: published.seal.brand,
+        },
+        durable_status_event_id: published.eventId,
+        published: true,
+        already_published: published.alreadyPublished,
+        semantics: "issuer-signed claim; the signature and claim status still require verification, and this is not proof of physical authenticity by itself",
+      }, 200, NO_STORE);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "publication failed";
+      return c.json({ error: message }, 503, NO_STORE);
+    }
   });
 
   app.post("/api/v1/attestation", async c => {
