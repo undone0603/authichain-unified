@@ -24,6 +24,15 @@ pnpm exec wrangler versions list --name authichain-edge-router --config worker-a
 
 Record the active version ID(s) and traffic split, timestamp, Worker name, route ownership, and a trusted **source/build provenance association** between each version and an exact Git SHA or immutable artifact digest. A version ID without a verified source mapping is not an independently proven source revision. Do not modify routing or deploy while collecting evidence. Cloudflare Workers deployments may serve two versions simultaneously; test every serving version or refuse the proof claim.
 
+## Execution-specific staging findings (2026-10-29)
+
+- Cloudflare already has `authichain-staging` with only `APP_ENV` / `ASSETS` bindings. It has **no Stripe/Supabase test bindings**, so its existence is not a test receiver.
+- Cloudflare already has an isolated, empty `authichain-staging-db` **D1** database. That is not a substitute for the real fulfillment store: production `provisionPurchase` writes **Supabase `public.profiles`**, while the staged D1 has zero tables. Do not build an unrelated D1-only mock and claim it establishes this product path.
+- Supabase QRON-v2's existing development branch reports `MIGRATIONS_FAILED` and is not a verified usable isolated backend. Creating another branch/project may incur charges; review the cost and authorization before provision.
+- `server/webhooks/stripe.ts` treats any event whose ID starts with **`evt_test_` as a test-verification event and returns before purchase fulfillment**. For an isolated positive-payment **handler** test, use a uniquely named non-`evt_test_` fixture ID with `livemode:false`, a real local HMAC header, isolated TEST-only credentials and database, and the real handler. Never send it to the live endpoint. Dashboard `evt_test_` requests demonstrate signature acceptance at most, not fulfillment.
+- The existing `src/lib/signed-webhook-entitlement-access.proof.test.ts` calls `constructStripeEventAsync` and `provisionPurchase` **directly**, not the Hono route. It cannot detect the `evt_test_` early return or prove that the deployed handler routes into the grant code. Its detached-row mock fix is a test-fixture correction, not production credit logic.
+- On 2026-10-29 the production `authichain-edge-router` was redeployed to version `57761960-ecdf-4479-bd2a-4e2d2ed046c1` (100%, deployment `a3904926-0d37-4241-aaa6-4a963cdb4da2`). The earlier version 1989 is not current. Re-read deployment state immediately before any final test; the annotations alone do not prove immutable source provenance.
+
 ## Signed webhook -> actual persisted entitlement -> usable access
 
 Only in an isolated TEST-MODE Stripe destination, a separately authorized NON-PRODUCTION Cloudflare Worker revision, and a NON-PRODUCTION data store:
