@@ -448,10 +448,21 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     expect(r.warned).toBe(false);
   });
 
-  it("negative: unpaid session grants nothing and logs", async () => {
+  it("negative: unpaid session is held before any grant and logs the hold", async () => {
+    // ae38cf56 (2026-10-19) intercepts payment_status "unpaid" before the
+    // Starter amount fallback is reached, so the signal is the
+    // stripe_grant_held_unpaid log, not the fallback-refused warning.
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
     const r = await grantedPlan(starterSession({ payment_status: "unpaid" }));
+    const held = log.mock.calls.some(
+      c =>
+        typeof c[0] === "string" &&
+        c[0].includes('"evt":"stripe_grant_held_unpaid"')
+    );
+    log.mockRestore();
     expect(r.plan).toBeUndefined();
-    expect(r.warned).toBe(true);
+    expect(vi.mocked(provisionPurchase)).not.toHaveBeenCalled();
+    expect(held).toBe(true);
   });
 
   it("negative: non-USD 2900 grants nothing and logs", async () => {

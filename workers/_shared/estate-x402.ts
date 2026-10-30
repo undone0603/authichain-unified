@@ -5,6 +5,8 @@
  * claimed POST /api/x402; live those hosts 404'd the path. Serve the same
  * unpaid 402 v2 + PAYMENT-REQUIRED + extensions.bazaar that authichain.com
  * does, with this host as resource.url so the listing is the sister origin.
+ * A body that names a non-UUID seal, or uses productId/serial as the key,
+ * is 400 before that challenge. An empty body stays 402.
  *
  * payTo / asset / price come from the published AuthiChain rail
  * (X402_PUBLISHED_PAY_TO = 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2, Base USDC, $0.05). Do not rebind
@@ -19,6 +21,7 @@ import {
   parsePaymentHeader,
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
+  X402_RESOURCE_DESCRIPTION,
   x402HealthReport,
   x402PriceUsd,
   x402ScanFanout,
@@ -27,14 +30,26 @@ import {
   type X402HealthEnv,
   type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
+import {
+  coerceSealBody,
+  unpaidSealRefusal as refuseUnpaidSeal,
+} from "../../src/lib/agent-verify.ts";
 import { ESTATE_BRANDS } from "./estate-landing.ts";
+import {
+  guardedForward,
+  scopedReplayStore,
+  type ReplayStore,
+} from "../../src/lib/paid-seal-verify.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
 import {
   sisterBrandFromHost,
   sisterX402Catalog,
 } from "./estate-x402-catalog.ts";
 
-export type SisterX402Env = X402EnvVars;
+export type SisterX402Env = X402EnvVars & {
+  /** Optional KV for the x402 replay guard (CFA-343/356). Unbound = 503 replay_store_unavailable (CFA-363). */
+  X402_REPLAY_KV?: ReplayStore;
+};
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -181,7 +196,8 @@ function fanoutResponse(request: Request): Response {
 async function agentVerify(
   request: Request,
   env?: SisterX402Env,
-  verifyApp?: X402VerifyBinding
+  verifyApp?: X402VerifyBinding,
+  brand?: SisterDiscoveryBrand
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = publishedPayTo(env);
@@ -191,21 +207,35 @@ async function agentVerify(
     resource,
     priceUsd,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
   });
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof || !proofHeader) {
+    const refusal = await unpaidSealRefusal(request);
+    if (refusal) return json(refusal.status, refusal.body);
     return json(402, required.v2, required.headers);
   }
 
   if (verifyApp) {
-    return forwardPaidVerify(
-      verifyApp,
-      request,
+    const bodyText = await request.text();
+    let sealId: string | null = null;
+    try {
+      const b = JSON.parse(bodyText) as { sealId?: unknown };
+      sealId = typeof b?.sealId === "string" ? b.sealId : null;
+    } catch {
+      sealId = null;
+    }
+    return guardedForward({
       proofHeader,
-      await request.text()
-    );
+      replayStore: scopedReplayStore(
+        env?.X402_REPLAY_KV,
+        brand ?? sisterBrandFromHost(new URL(request.url).hostname) ?? "sister"
+      ),
+      sealId,
+      forward: () =>
+        forwardPaidVerify(verifyApp, request, proofHeader, bodyText),
+    });
   }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
@@ -216,7 +246,9 @@ async function agentVerify(
 export async function tryHandleSisterX402(
   request: Request,
   env: SisterX402Env = {},
-  verifyApp?: X402VerifyBinding
+  verifyApp?: X402VerifyBinding,
+  /** Fixed per worker; scopes replay keys. Falls back to the host's brand. */
+  brand?: SisterDiscoveryBrand
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isSisterX402Path(url.pathname)) return null;
@@ -244,7 +276,7 @@ export async function tryHandleSisterX402(
   }
 
   if (request.method === "POST" && isPaidPath(url.pathname)) {
-    return agentVerify(request, env, verifyApp);
+    return agentVerify(request, env, verifyApp, brand);
   }
 
   return json(405, { error: "method not allowed" });
