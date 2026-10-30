@@ -74,8 +74,7 @@ export async function POST(request: Request) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      payment_method_types: ["card"],
-      // Card required up front even though the trial does not charge now.
+      // A payment method is collected up front even though the trial does not charge now.
       payment_method_collection: "always",
       line_items: [{ price: trialPriceId, quantity: 1 }],
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}&trial=1`,

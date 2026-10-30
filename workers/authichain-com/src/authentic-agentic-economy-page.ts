@@ -31,8 +31,7 @@ export const AUTHENTIC_AGENTIC_ECONOMY = {
   canonicalPath: "/authentic-agentic-economy",
   canonicalUrl: "https://authichain.com/authentic-agentic-economy",
   title: "The authentic agentic economy — AuthiChain",
-  description:
-    "",
+  description: "",
 } as const;
 
 export function isAuthenticAgenticEconomyPath(pathname: string): boolean {
@@ -103,7 +102,7 @@ const JSON_LD = {
           name: "How do agents pay AuthiChain?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Funded agents verify a product for $0.05 USDC on Base via the live x402 rail — not Polygon $QRON. Unpaid POST /api/x402 returns HTTP 402. Public docs are at /x402. The human money path remains EU DPP Readiness on Stripe.",
+            text: "x402 paid verification and on-chain anchoring in development — not Polygon $QRON. Public docs are at /x402. The human money path remains EU DPP Readiness on Stripe.",
           },
         },
         {
@@ -144,8 +143,8 @@ function sources(): string {
     },
     {
       href: "https://authichain.govchain.us/x402",
-      title: "AuthiChain x402 agent pay (live)",
-      cite: "Estate capability: $0.05 USDC on Base per verification. Health at GET /api/x402/health. Unpaid POST returns HTTP 402.",
+      title: "AuthiChain x402 agent pay (in development)", // pragma: allowlist secret
+      cite: "x402 paid verification and on-chain anchoring in development. Public docs at /x402.",
     },
   ];
   const lis = items
@@ -218,9 +217,7 @@ ${estateHero({
     { href: "/onboard", label: "Onboard", primary: false },
   ],
 })}
-${estateTrust([
-  { value: "$0.05", label: "x402 per verify" },
-])}
+${estateTrust([{ value: "in development", label: "x402 paid verification" }])}
 ${estateFeatures(
   "What is live on this estate",
   "Claims limited to capabilities that already run. No invented customer logos, no promised mint that is not deployed.",
@@ -231,11 +228,11 @@ ${estateFeatures(
     },
     {
       title: "x402 agent pay",
-      body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Unpaid POST /api/x402 returns HTTP 402. Public docs at /x402.",
+      body: "Secondary money path. x402 paid verification and on-chain anchoring in development. Public docs at /x402.",
     },
     {
       title: "EU DPP Readiness",
-      body: "Primary human money path. EU DPP Readiness is $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
+      body: "Primary human money path. EU DPP Readiness is $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation.",
     },
     {
       title: "Machine-readable passports",
@@ -254,7 +251,7 @@ ${estateSteps(
     },
     {
       title: "Pay",
-      body: "If the call is metered, the edge returns HTTP 402 with the Base USDC requirement. The agent settles $0.05 and retries with X-PAYMENT.",
+      body: "x402 paid verification and on-chain anchoring in development.",
     },
     {
       title: "Act",
