@@ -36,8 +36,9 @@ describe("authentic agentic economy page", () => {
     expect(html).toContain('href="/x402"');
     expect(html).toContain('href="/onboard"');
     expect(html).toContain('href="/pricing"');
-    expect(html).toContain("$0.05");
-    expect(html).toContain("HTTP 402");
+    expect(html).not.toContain("$0.05");
+    expect(html).not.toContain("live x402");
+    expect(html).toContain("x402 paid verification and on-chain anchoring in development");
     expect(html).toContain("not Polygon $QRON");
     expect(html).not.toContain("GET /api/checkout");
     expect(html).toContain('<main id="main">');

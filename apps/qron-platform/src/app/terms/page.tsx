@@ -74,7 +74,7 @@ export default function TermsPage() {
             <ul className="list-disc pl-6 text-zinc-400 space-y-2">
               <li>Subscription plans renew automatically unless cancelled.</li>
               <li>One-time purchases are non-refundable once assets are delivered.</li>
-              <li>Credits purchased in packs never expire.</li>
+              <li>Starting a monthly plan replaces unused pack credits.</li>
             </ul>
           </section>
 
