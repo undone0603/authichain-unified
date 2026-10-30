@@ -28,7 +28,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: verify_product ───────────────────────────────────────────────────
   server.tool(
     "verify_product",
-    "Returns trust score, verification status, and provenance data.",
+    "Look up a product, serial or certificate number in the AuthiChain registry and return a Verification Decision v1 result. A registry match alone is never 'verified' and a miss is 'not_found', not counterfeit; verifying an item needs its signed attestation at /api/v1/attestation/verify.",
     {
       productId: z.string().optional().describe("Product ID or serial number"),
       imageUrl: z
@@ -123,7 +123,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: check_certificate ────────────────────────────────────────────────
   server.tool(
     "check_certificate",
-    "Look up an AuthiChain verification certificate by its certificate number. Returns the full provenance chain and verification history.",
+    "Look up an AuthiChain certificate by its number and return its registry status (not_found, revoked, expired, or indeterminate). It does not read the chain or verify the item in hand.",
     {
       certificateNumber: z
         .string()
@@ -131,10 +131,37 @@ function createMcpServer(env: Env): McpServer {
     },
     async ({ certificateNumber }) => {
       try {
+        // The backend route is POST-only; the old GET could never succeed.
         const res = await fetch(
-          `${env.BACKEND_URL}/api/internal/certificates/verify?certNumber=${encodeURIComponent(certificateNumber)}`,
-          { headers: { "X-Internal-Secret": env.INTERNAL_SECRET } }
+          `${env.BACKEND_URL}/api/internal/certificates/verify`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Internal-Secret": env.INTERNAL_SECRET,
+            },
+            body: JSON.stringify({ certNumber: certificateNumber }),
+          }
         );
+        if (res.status === 404) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(
+                  {
+                    valid: false,
+                    decision: "not_found",
+                    message:
+                      "No certificate with that number. That is not evidence the item is counterfeit.",
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+          };
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         return {
@@ -151,7 +178,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: verify_cannabis_strain ───────────────────────────────────────────
   server.tool(
     "verify_cannabis_strain",
-    "Verify a cannabis strain's authenticity using StrainChain. Checks genetics, terpene profile, lab results, and METRC compliance.",
+    "Record a cannabis strain query. It does not read lab results, genetics, terpenes or METRC, so it never returns 'verified' or 'compliant'; a rarity score is computed only from THC and CBD values you supply.",
     {
       strainName: z.string().describe("Name of the cannabis strain"),
       batchId: z
@@ -200,7 +227,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: compute_trust_score ──────────────────────────────────────────────
   server.tool(
     "compute_trust_score",
-    "Compute a composite trust score for a product based on multiple verification signals (QR decode, blockchain cert, NFC, visual match, geo-fence).",
+    "Compute an advisory score from signals you assert (QR decode, blockchain cert, NFC, visual match). The inputs are not checked, so the result is never an authenticity verdict.",
     {
       qrDecodePass: z
         .boolean()
@@ -307,7 +334,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: get_verification_analytics ───────────────────────────────────────
   server.tool(
     "get_verification_analytics",
-    "Get verification analytics and usage statistics. Shows scan counts, authenticity rates, top products, and geographic distribution.",
+    "Usage analytics. Metering is not active yet, so this currently returns zero counts and says so.",
     {
       period: z
         .enum(["today", "week", "month", "quarter"])

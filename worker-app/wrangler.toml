@@ -78,6 +78,10 @@ zone_name = "authichain.com"
 pattern = "authichain.com/protocol/launch-proof"
 zone_name = "authichain.com"
 
+[[routes]]
+pattern = "authichain.com/protocol/seal-sign"
+zone_name = "authichain.com"
+
 # More specific than authichain-com's authichain.com/* glob so genesis,
 # attestation, and the customer console are not swallowed by landing HTML.
 [[routes]]
@@ -96,19 +100,22 @@ zone_name = "authichain.com"
 pattern = "authichain.com/api/v1/attestation/*"
 zone_name = "authichain.com"
 
+# Living QR scan URL encoded in the image. More specific than the landing
+# worker's authichain.com/* so GET /qron/r/{object_id} is Decision v1, not
+# marketing 404 HTML. The handler is worker-app/index.ts app.all("/qron/r/*").
+[[routes]]
+pattern = "authichain.com/qron/r*"
+zone_name = "authichain.com"
+
 # More specific than the landing worker's /api/* glob so B2B/qron-outreach
 # check+record do not 404 on the apex if APP_WORKER is unbound.
 [[routes]]
 pattern = "authichain.com/api/guardrail/*"
 zone_name = "authichain.com"
 
-[[routes]]
-pattern = "authichain.com/api/v1/agent-verify*"
-zone_name = "authichain.com"
-
-[[routes]]
-pattern = "authichain.com/api/x402*"
-zone_name = "authichain.com"
+# agent-verify* and api/x402* (including ?query) are on authichain-com so
+# unpaid GET/HEAD/POST is 402. Do not re-add those authichain.com patterns
+# here — a deploy would steal query-string crawlers back to GET health 200.
 
 [[routes]]
 pattern = "authichain.com/api/checkout"
@@ -213,6 +220,10 @@ zone_name = "govchain.us"
 
 [[routes]]
 pattern = "authichain.govchain.us/api/v1/attestation/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/qron/r*"
 zone_name = "govchain.us"
 
 [[routes]]
@@ -376,3 +387,8 @@ new_sqlite_classes = ["RateLimiter"]
 [[services]]
 binding = "VERIFY_APP"
 service = "authichain-app"
+
+# x402 replay guard (CFA-366). Shared namespace; keys are site-scoped in code.
+[[kv_namespaces]]
+binding = "X402_REPLAY_KV"
+id = "ab391dc529884161bd84707d7627a9f0"
