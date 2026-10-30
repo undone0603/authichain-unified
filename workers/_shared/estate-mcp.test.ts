@@ -7,6 +7,7 @@ import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
 import { sisterOrigin } from "./estate-x402.ts";
 import {
   isSisterMcpPath,
+  scanSisterLivingQr,
   sisterMcpPricingDiscovery,
   tryHandleSisterMcp,
 } from "./estate-mcp.ts";
@@ -45,7 +46,10 @@ test("recognizes sister MCP paths and ignores checkout", () => {
   assert.equal(isSisterMcpPath("/api/mcp"), true);
   assert.equal(isSisterMcpPath("/.well-known/mcp.json"), true);
   assert.equal(isSisterMcpPath("/api/x402"), false);
-  assert.equal(isSisterMcpPath("https://authichain.com/checkout/dpp_readiness"), false);
+  assert.equal(
+    isSisterMcpPath("https://authichain.com/checkout/dpp_readiness"),
+    false
+  );
   assert.equal(isSisterMcpPath("/pricing"), false);
 });
 
@@ -193,8 +197,23 @@ test("JSON-RPC tools/list and get_pricing are public", async () => {
   };
   assert.deepEqual(
     listed.result.tools.map(t => t.name).sort(),
-    ["get_pricing", "verify"].sort()
+    ["get_pricing", "scan_living_qr", "verify"].sort()
   );
+  const scanTool = listed.result.tools.find(
+    t => t.name === "scan_living_qr"
+  ) as { description?: string };
+  assert.match(
+    scanTool.description ?? "",
+    /does not verify the signature/
+  );
+  assert.equal((scanTool.description ?? "").includes("/api/v1/agent-verify"), false);
+  const verify = listed.result.tools.find(t => t.name === "verify") as {
+    inputSchema?: { properties?: Record<string, { format?: string }> };
+  };
+  assert.deepEqual(Object.keys(verify.inputSchema?.properties ?? {}), [
+    "sealId",
+  ]);
+  assert.equal(verify.inputSchema?.properties?.sealId.format, "uuid");
 
   const call = await tryHandleSisterMcp(
     req("strainchain.io", "/api/mcp", {
@@ -229,7 +248,7 @@ test("tools/call verify is unpaid HTTP 402 with published payTo", async () => {
           jsonrpc: "2.0",
           id: 3,
           method: "tools/call",
-          params: { name: "verify", arguments: { serial: "AC-1" } },
+          params: { name: "verify", arguments: {} },
         }),
       }),
       brand
@@ -262,6 +281,30 @@ test("tools/call verify is unpaid HTTP 402 with published payTo", async () => {
   }
 });
 
+test("tools/call verify with a non-key argument is 400 and does not ask for payment", async () => {
+  for (const args of [{ serial: "AC-1" }, { productId: "p-1" }]) {
+    const res = await tryHandleSisterMcp(
+      req("qron.space", "/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 31,
+          method: "tools/call",
+          params: { name: "verify", arguments: args },
+        }),
+      }),
+      "qron"
+    );
+    assert.ok(res);
+    assert.equal(res.status, 400);
+    assert.equal(res.headers.get("PAYMENT-REQUIRED"), null);
+    const body = (await res.json()) as { error: string; settled: boolean };
+    assert.equal(body.settled, false);
+    assert.ok(body.error === "seal_id_required" || body.error === "seal_id_not_uuid");
+  }
+});
+
 test("tools/call verify with a payment proof is 503 and never settles", async () => {
   const orig = globalThis.fetch;
   const calls: string[] = [];
@@ -276,6 +319,7 @@ test("tools/call verify with a payment proof is 503 and never settles", async ()
         network: "base",
         payer: "0x1234567890abcdef1234567890abcdef12345678",
         amount: "50000",
+        validBefore: String(Math.floor(Date.now() / 1000) + 600),
         signature: "0xdead",
       })
     ).toString("base64");
@@ -318,7 +362,10 @@ test("HEAD /mcp is 204 and other paths are ignored", async () => {
     null
   );
   assert.equal(
-    await tryHandleSisterMcp(req("qron.space", "https://authichain.com/checkout/dpp_readiness"), "qron"),
+    await tryHandleSisterMcp(
+      req("qron.space", "https://authichain.com/checkout/dpp_readiness"),
+      "qron"
+    ),
     null
   );
   assert.equal(
@@ -356,6 +403,7 @@ test("paid MCP verify is forwarded and wrapped as JSON-RPC when VERIFY_APP is bo
       network: "base",
       payer: "0x1234567890abcdef1234567890abcdef12345678",
       amount: "50000",
+      validBefore: String(Math.floor(Date.now() / 1000) + 600),
       signature: "0xdead",
     })
   ).toString("base64");
@@ -372,7 +420,16 @@ test("paid MCP verify is forwarded and wrapped as JSON-RPC when VERIFY_APP is bo
       }),
     }),
     "qron",
-    {},
+    {
+      X402_REPLAY_KV: (() => {
+        const m = new Map<string, string>();
+        return {
+          get: async (k: string) => m.get(k) ?? null,
+          put: async (k: string, v: string) => void m.set(k, v),
+          delete: async (k: string) => void m.delete(k),
+        };
+      })(),
+    },
     {
       fetch: async (r: Request) => {
         seen.push(r);
@@ -395,4 +452,76 @@ test("paid MCP verify is forwarded and wrapped as JSON-RPC when VERIFY_APP is bo
   assert.equal(body.result.structuredContent.subject, "AC-1");
   assert.equal(seen[0].url, "https://qron.space/api/v1/agent-verify");
   assert.deepEqual(await seen[0].json(), { serial: "AC-1" });
+});
+
+test("scan_living_qr rejects a bad id without fetching", async () => {
+  let called = false;
+  const result = await scanSisterLivingQr(
+    { object_id: "https://qron.space/qron/r/qron:url:deadbeef" },
+    async () => {
+      called = true;
+      throw new Error("should not fetch");
+    }
+  );
+  assert.equal(called, false);
+  assert.equal(result.isError, true);
+  assert.equal(result.body.error, "object_id_invalid");
+  assert.equal(result.body.verifies_signature, false);
+});
+
+test("scan_living_qr reads the apex scan and drops the JWS", async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = (async (url: string) => {
+    assert.equal(url, "https://authichain.com/qron/r/qron%3Aurl%3Adeadbeef");
+    return new Response(
+      JSON.stringify({
+        valid: true,
+        decision: "verified",
+        decision_contract: "AuthiChain Verification Decision v1",
+        cryptographic_status: "valid",
+        status: "active",
+        jws: "header.payload.sig",
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  }) as typeof fetch;
+  try {
+    const res = await tryHandleSisterMcp(
+      req("qron.space", "/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 9,
+          method: "tools/call",
+          params: {
+            name: "scan_living_qr",
+            arguments: { object_id: "qron:url:deadbeef" },
+          },
+        }),
+      }),
+      "qron"
+    );
+    assert.equal(res?.status, 200);
+    const payload = (await res!.json()) as {
+      result: { isError?: boolean; content: Array<{ text: string }> };
+    };
+    assert.equal(payload.result.isError, undefined);
+    const body = JSON.parse(payload.result.content[0].text) as {
+      decision: string;
+      scan: string;
+      verifies_signature: boolean;
+      note: string;
+      jws?: string;
+    };
+    assert.equal(body.decision, "verified");
+    assert.equal(body.scan, "https://authichain.com/qron/r/qron%3Aurl%3Adeadbeef");
+    assert.equal(body.verifies_signature, false);
+    assert.match(body.note, /does not verify the signature/);
+    assert.equal(body.jws, undefined);
+    assert.equal(payload.result.content[0].text.includes("header.payload.sig"), false);
+    assert.equal(payload.result.content[0].text.includes("qron.space/qron"), false);
+  } finally {
+    globalThis.fetch = real;
+  }
 });

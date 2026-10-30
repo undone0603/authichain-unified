@@ -1,4 +1,5 @@
 import {
+  isCanonicalPositive,
   resolveCanonicalVerifyUrl,
   verifyWithCanonicalWorker,
   type CanonicalVerificationResponse,
@@ -25,6 +26,15 @@ export async function verifyVerticalAttestation(params: {
   return { vertical: params.vertical, ...result };
 }
 
-export function verticalMayActOnVerified(response: CanonicalVerificationResponse): boolean {
+/**
+ * Pass the HTTP status when you have it: a "verified" body under an error
+ * status is not positive (isCanonicalPositive). Without it only the body is
+ * judged.
+ */
+export function verticalMayActOnVerified(
+  response: CanonicalVerificationResponse,
+  httpStatus?: number,
+): boolean {
+  if (httpStatus !== undefined) return isCanonicalPositive({ httpStatus, response });
   return response.decision === "verified" && response.valid === true;
 }

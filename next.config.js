@@ -167,14 +167,12 @@ const nextConfig = {
       (process.env.CF_PAGES_URL
         ? `https://${process.env.CF_PAGES_URL}`
         : "https://authichain.com"),
-    // Build-time fallbacks: Turbopack inlines module-level instantiations,
-    // so these secrets need a non-empty value at build time to prevent
-    // constructor throws. At runtime, the real env vars take over.
-    STRIPE_SECRET_KEY:
-      process.env.STRIPE_SECRET_KEY ?? "sk_test_build_placeholder",
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? "build_placeholder",
-    SUPABASE_SERVICE_ROLE_KEY:
-      process.env.SUPABASE_SERVICE_ROLE_KEY ?? "build_placeholder",
+    // Server-only secrets (STRIPE_SECRET_KEY, OPENAI_API_KEY,
+    // SUPABASE_SERVICE_ROLE_KEY) are deliberately NOT listed here: anything in
+    // `env:` is inlined into the build output. They are read from
+    // process.env at request time (OpenNext populates it from Worker
+    // bindings/secrets). All clients that use them are constructed lazily
+    // inside handlers, so no build-time placeholder is needed.
 
     // Bridge unprefixed dashboard vars to the client bundle. Supabase/Stripe
     // public values are inlined at build time, so they must be NEXT_PUBLIC_*.

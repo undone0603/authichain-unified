@@ -54,15 +54,33 @@ describe("plan catalogue integrity", () => {
   it("wires QRON Launch $19/mo to the live Stripe price", () => {
     expect(planById("qron_launch")?.price).toBe(19);
     expect(planById("qron_launch")?.stripe_mode).toBe("subscription");
-    expect(planById("qron_launch")?.listed).not.toBe(false);
+    expect(planById("qron_launch")?.listed).toBe(false);
     expect(planByStripePriceId("price_1UJjzPGqTruSqV8TmhFSc8vh")?.id).toBe(
       "qron_launch"
     );
-    expect(planByAmountCents(1900)?.id).toBe("qron_launch");
+    // Amount fallback is Starter-only; $19 never maps by amount.
+    expect(planByAmountCents(1900)).toBeUndefined();
     expect(planPaymentLink("qron_launch")).toBe(
       "https://authichain.com/checkout/qron_launch"
     );
     expect(PLAN_CREDITS.qron_launch).toBe(100);
+  });
+
+  it("wires QRON Launch Annual $190/yr to the live Stripe price", () => {
+    expect(planById("qron_launch_annual")?.price).toBe(190);
+    expect(planById("qron_launch_annual")?.stripe_mode).toBe("subscription");
+    expect(planById("qron_launch_annual")?.generations).toBe(1200);
+    expect(planById("qron_launch_annual")?.listed).toBe(false);
+    expect(planByStripePriceId("price_1USNoSGqTruSqV8ThTIW7Ej8")?.id).toBe(
+      "qron_launch_annual"
+    );
+    expect(planByAmountCents(19000)).toBeUndefined();
+    expect(planPaymentLink("qron_launch_annual")).toBe(
+      "https://authichain.com/checkout/qron_launch_annual"
+    );
+    expect(PLAN_CREDITS.qron_launch_annual).toBe(1200);
+    expect(planUsd("dpp_readiness")).toBe(299);
+    expect(planById("dpp_readiness")?.name).toBe("EU DPP Workspace");
   });
 });
 
@@ -121,10 +139,11 @@ describe("listedPlans", () => {
     expect(strainchain).toEqual(["strainchain_passport"]);
   });
 
-  it("lists public QRON plans including Launch and hides Theater", () => {
+  it("lists public QRON plans without Launch and hides Theater", () => {
     const qron = listedPlans("qron").map(p => p.id);
     expect(qron).toContain("free");
-    expect(qron).toContain("qron_launch");
+    expect(qron).not.toContain("qron_launch");
+    expect(qron).not.toContain("qron_launch_annual");
     expect(qron).toContain("starter");
     expect(qron).toContain("creator");
     expect(qron).toContain("dpp_readiness");
@@ -142,14 +161,16 @@ describe("listedPlans", () => {
 
   it("keeps the live self-serve money path at $19 / $99 / $299", () => {
     const byId = Object.fromEntries(listedPlans("qron").map(p => [p.id, p]));
-    expect(byId.qron_launch.price).toBe(19);
+    expect(byId.qron_launch).toBeUndefined();
     expect(byId.starter?.price).toBe(29);
     expect(byId.creator.price).toBe(99);
     expect(byId.dpp_readiness.price).toBe(299);
     expect(planByStripePriceId("price_1UJjzPGqTruSqV8TmhFSc8vh")?.id).toBe(
       "qron_launch"
     );
-    expect(planByAmountCents(1900)?.id).toBe("qron_launch");
+    expect(planByAmountCents(1900)).toBeUndefined();
+    expect(planByAmountCents(9900)).toBeUndefined();
+    expect(planByAmountCents(29900)).toBeUndefined();
     expect(planByAmountCents(2900)?.id).toBe("starter");
   });
 });

@@ -107,5 +107,20 @@ describe("qron-presentation", () => {
     expect(attestation.subject.product_class).toBe("living_qr");
     expect(attestation.subject.object_id).toMatch(/^qron:url:/);
     expect(attestation.evidence[0]?.uri).toBe("https://example.com/sku");
+    expect(attestation.evidence[1]?.uri).toBe("https://cdn.example/q.png");
+  });
+
+  it("omits uri when the image is a data URL so the payload stays JSON", () => {
+    const digest =
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const payload = buildQronLivingQrAttestation({
+      destinationUrl: "https://example.com/sku",
+      imageUrl: "data:image/png;base64,abc",
+      destinationDigest: digest,
+      imageDigest: digest,
+    });
+    const image = payload.evidence.find(item => item.id === "living-qr-image");
+    expect(image && "uri" in image).toBe(false);
+    expect(JSON.parse(JSON.stringify(payload)).evidence[1].uri).toBeUndefined();
   });
 });
