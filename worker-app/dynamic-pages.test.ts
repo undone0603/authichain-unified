@@ -806,6 +806,9 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain('<form action="/onboard" method="post">');
     expect(body).toContain('name="email"');
     expect(body).toContain('name="company"');
+    // First-dollar path leads Starter; passport + DPP remain as secondary buys.
+    expect(body).toContain("Buy Starter Pack — $29");
+    expect(body).toContain('href="https://authichain.com/checkout/starter"');
     expect(body).toContain(
       'href="https://authichain.com/checkout/strainchain_passport"'
     );
@@ -814,6 +817,9 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     );
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
+    );
+    expect(body.indexOf("checkout/starter")).toBeLessThan(
+      body.indexOf("checkout/dpp_readiness")
     );
     // Retired StrainChain Basic link (no live Stripe account) must not return.
     expect(body).not.toContain("9B6cN59br5xcaCuazy1Nu1o");
@@ -1044,7 +1050,7 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     );
     expect(body).toContain("Try 5 free generations. No account, no card.");
     expect(body).toContain(
-      "100 generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof."
+      "100 generations for $29, paid once. No subscription, and one-time pack credits never expire. A scannable QR is not an authenticity proof."
     );
     expect(body).not.toContain("Launch at $19/mo");
     // CFA-460 release check: GET /generate has 0 hits for these.
@@ -1078,6 +1084,14 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("form.submit()");
     expect(body).toContain("$29");
     expect(body).not.toContain("$19/mo");
+    // Starter CTA (variant A): hidden until a generation succeeds.
+    expect(body).toContain(
+      '<p id="generate-starter-cta" hidden>Like it? Get 100 generations for $29, paid once. No subscription. '
+    );
+    expect(body).toContain(
+      'href="https://authichain.com/checkout/starter?utm_source=qron&amp;utm_medium=onsite&amp;utm_campaign=starter-cta&amp;utm_content=starter-a">Get 100 generations for $29</a>'
+    );
+    expect(body).toContain("if(cta)cta.hidden=false;");
     expect(body).toContain("$299");
     // Top-ups: Starter $29, Creator $99. Launch $19/mo is unlisted (CFA-460).
     // Retired credit bundles ($9.99/$39.99/$99.99) had no live Stripe account.
@@ -1126,6 +1140,25 @@ describe("renderDynamicPage: /generate Living QR", () => {
     );
     expect(location.searchParams.get("prompt")).toBe("neon");
   });
+
+  it("shows the API's Starter upgrade link when the free sample is used up", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain("var up=r.data.upgrade;");
+    expect(body).toContain(
+      "up.url.indexOf('https://authichain.com/checkout/starter')===0"
+    );
+    expect(body).toContain("a.id='sample-exhausted-starter'");
+  });
+
+  it("renders signed-in low-credit soft-prompt from API upgrade on success", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain('id="generate-low-credit"');
+    expect(body).toContain("function showLowCredit(up)");
+    expect(body).toContain("a.id='low-credit-starter'");
+    expect(body).toContain("showLowCredit(r.data&&r.data.upgrade)");
+  });
 });
 
 describe("renderDynamicPage: /story StoryMode", () => {
@@ -1139,8 +1172,19 @@ describe("renderDynamicPage: /story StoryMode", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("AuthiChain Launch Proof");
-    expect(body).toContain("lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE");
+    expect(body).toContain("T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ");
     expect(body).toContain("StoryMode");
+    expect(body).not.toContain("verified against the live public JWKS");
+    expect(body).toContain(
+      "This page shows the signing key ID (kid) and links to the public JWKS and issuer record. It does not include a signed attestation yet, so there is nothing on this page to verify."
+    );
+    expect(body).not.toContain("Check the attestation yourself");
+    expect(body).not.toContain(
+      "A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation."
+    );
+    expect(body).toContain(
+      "A deterministic QRON reference resolves to an AuthiChain object record. A signed attestation for it is not published yet."
+    );
   });
 
   it("returns 404 HTML for an unknown story id", async () => {

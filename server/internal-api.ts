@@ -1,7 +1,7 @@
+import { registryLookupDecision } from "../packages/verifier/src/registry-decision";
 import { timingSafeEqual } from "crypto";
 import { Router, type Request, type Response } from "express";
 import { ENV } from "./_core/env";
-import { invokeLLM, parseLLMContent } from "./_core/llm";
 import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-service";
 import { createProduct, getCertificateByNumber, getDb, getWhiteLabelByApiKey } from "./db";
 import { computeTrustScore, generateProductQRON } from "./qron-service";
@@ -38,55 +38,20 @@ export function createInternalRouter(): Router {
   // ─── POST /api/internal/verify ──────────────────────────────────────────────
   router.post("/verify", async (req: Request, res: Response) => {
     try {
-      const { identifier, productId, barcode, imageUrl } = req.body;
+      const { identifier, productId, barcode } = req.body;
       const lookupId = identifier || productId || barcode;
       if (!lookupId) return res.status(400).json({ error: "identifier, productId, or barcode required" });
 
-      // Check if it's a certificate number
-      const cert = await getCertificateByNumber(lookupId);
-      if (cert) {
-        return res.json({
-          verified: cert.status === "active",
-          type: "certificate",
-          certificate: cert,
-          trustScore: 95,
-          confidence: 0.98,
-          agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
-        });
-      }
-
-      // Prevent prompt injection — only the sanitized identifier reaches the LLM
-      const safeLookupId = String(lookupId).replace(/[^a-zA-Z0-9\-_.]/g, "").slice(0, 128);
-
-      // AI-based verification
-      const analysis = await invokeLLM({
-        messages: [
-          {
-            role: "system",
-            content: `You are AuthiChain's product verification engine. Analyze the product identifier and determine authenticity. Return JSON: { "verified": boolean, "confidence": number (0-1), "reasoning": string, "riskFlags": string[] }`,
-          },
-          {
-            role: "user",
-            content: JSON.stringify({ identifier: safeLookupId, hasImage: !!imageUrl }),
-          },
-        ],
-        responseFormat: { type: "json_object" },
-      });
-
-      let result: { verified: boolean; confidence: number; reasoning: string; riskFlags: string[] };
-      try {
-        result = parseLLMContent(analysis.choices[0].message.content);
-      } catch {
-        return res.status(500).json({ error: "Internal server error" });
-      }
+      // No LLM guess, no fixed trust score, no agent claims: an unknown
+      // identifier is not_found and a known one is a registry record only.
+      const cert = await getCertificateByNumber(String(lookupId));
+      const decision = registryLookupDecision(cert ?? null);
       res.json({
-        verified: result.verified,
-        type: "ai_analysis",
-        trustScore: Math.round(result.confidence * 100),
-        confidence: result.confidence,
-        reasoning: result.reasoning,
-        riskFlags: result.riskFlags || [],
-        agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
+        verified: decision.valid,
+        type: cert ? "certificate" : "not_found",
+        ...(cert ? { certificate: cert } : {}),
+        trustScore: null,
+        ...decision,
       });
     } catch (err: unknown) {
       console.error("[Internal API] verify error:", getErrorMessage(err));
@@ -147,26 +112,35 @@ export function createInternalRouter(): Router {
       const strain = strainName || strainId;
       if (!strain) return res.status(400).json({ error: "strainName or strainId required" });
 
-      const metadata = {
-        name: strain,
-        type: "HYBRID" as const,
-        genetics: ["Unknown"],
-        thcContent: thcPercent || 25,
-        cbdContent: cbdPercent || 1,
-        harvestDate: new Date().toISOString(),
-      };
-      const profile = { thc: thcPercent || 25, thca: (thcPercent || 25) * 1.12, cbd: cbdPercent || 1, cbda: (cbdPercent || 1) * 1.2, total: (thcPercent || 25) + (cbdPercent || 1) + 5 };
-
-      const rarity = calculateStrainRarity(metadata, profile);
-      const truthLayer = formatTruthLayerMetadata(metadata, profile);
+      const thc = typeof thcPercent === "number" ? thcPercent : null;
+      const cbd = typeof cbdPercent === "number" ? cbdPercent : null;
+      let rarityScore: number | null = null;
+      let truthLayer: unknown = null;
+      if (thc !== null && cbd !== null) {
+        const metadata = {
+          name: strain,
+          type: "HYBRID" as const,
+          genetics: ["Unknown"],
+          thcContent: thc,
+          cbdContent: cbd,
+          harvestDate: new Date().toISOString(),
+        };
+        const profile = { thc, thca: thc * 1.12, cbd, cbda: cbd * 1.2, total: thc + cbd + 5 };
+        rarityScore = calculateStrainRarity(metadata, profile);
+        truthLayer = formatTruthLayerMetadata(metadata, profile);
+      }
 
       res.json({
-        verified: true,
+        verified: false,
+        decision: "indeterminate",
+        decision_contract: "AuthiChain Verification Decision v1",
+        reasons: ["no_lab_evidence", "no_signed_attestation_presented"],
         strainName: strain,
         batchId: batchId || null,
         dispensaryId: dispensaryId || null,
-        rarityScore: rarity,
-        complianceStatus: dispensaryId ? "compliant" : "unverified",
+        complianceStatus: "not_assessed",
+        rarityScore,
+        rarity_basis: rarityScore === null ? "not_computed" : "caller_supplied_panel",
         truthLayer,
       });
     } catch (err: unknown) {
@@ -181,15 +155,21 @@ export function createInternalRouter(): Router {
       const { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk } = req.body;
 
       const score = computeTrustScore({
-        qrDecodePass: qrDecodePass ?? true,
-        blockchainCertExists: blockchainCertExists ?? false,
+        qrDecodePass: qrDecodePass === true,
+        blockchainCertExists: blockchainCertExists === true,
         communityVerified: visualMatch ? Math.round(visualMatch / 20) : 0,
         communityFlagged: 0,
-        openArtRegistered: nfcMatch ?? false,
+        openArtRegistered: nfcMatch === true,
       });
 
+      const { verdict: _heuristicVerdict, ...advisory } = score;
       res.json({
-        ...score,
+        ...advisory,
+        advisory: true,
+        verified: false,
+        decision: "indeterminate",
+        decision_contract: "AuthiChain Verification Decision v1",
+        reasons: ["caller_asserted_signals_only"],
         inputs: { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk },
       });
     } catch (err: unknown) {
@@ -208,11 +188,13 @@ export function createInternalRouter(): Router {
       // Return aggregated metrics
       res.json({
         period,
-        verifications: { total: 0, authentic: 0, counterfeit: 0 },
-        qrCodesGenerated: 0,
-        certificatesIssued: 0,
-        activeAgents: 5,
-        message: "Analytics data will be populated once usage metering is active",
+        // Nothing is metered yet. Nulls, not zeros: a zero reads as a
+        // measurement. The old activeAgents: 5 was a constant, not a count.
+        metered: false,
+        verifications: null,
+        qrCodesGenerated: null,
+        certificatesIssued: null,
+        message: "Usage metering is not active, so there are no counts to report.",
       });
     } catch (err: unknown) {
       console.error("[Internal API] analytics error:", getErrorMessage(err));

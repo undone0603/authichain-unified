@@ -29,7 +29,7 @@
     "title": "Blockchain Product Authentication | AuthiChain",
     "metaDescription": "Blockchain product authentication with signed records.",
     "h1": "Blockchain Product Authentication",
-    "bodyHtml": "<p>Product certification through verify is in development.</p><h2>Why AuthiChain</h2><ul><li>W3C Verifiable Credentials — the manufacturer holds the keys, not us</li></ul><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Workspace is $299 one-time.</p>",
+    "bodyHtml": "<p>Product certification through verify is in development.</p><h2>Why AuthiChain</h2><ul><li>W3C Verifiable Credentials — the manufacturer holds the keys, not us</li></ul><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -252,7 +252,7 @@
     "title": "AI Counterfeit Detection | AuthiChain",
     "metaDescription": "Check products against signed records. Verification starts from a single QR scan.",
     "h1": "AI-Powered Counterfeit Detection",
-    "bodyHtml": "<p>Product certification through verify is in development.</p><h2>Why AI plus blockchain</h2><ul><li>W3C Verifiable Credentials keep proofs portable and interoperable.</li></ul><p>Used across luxury, pharma (DSCSA), electronics, agriculture, art and cannabis.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Workspace is $299 one-time.</p>",
+    "bodyHtml": "<p>Product certification through verify is in development.</p><h2>Why AI plus blockchain</h2><ul><li>W3C Verifiable Credentials keep proofs portable and interoperable.</li></ul><p>Used across luxury, pharma (DSCSA), electronics, agriculture, art and cannabis.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -5846,7 +5846,7 @@
     "title": "Battery Passport For Small E-Bike Brands | AuthiChain",
     "metaDescription": "Small e-bike and e-cargo brands face the same 18 February 2027 battery passport deadline as the largest manufacturers, without a compliance team to build it.",
     "h1": "Battery Passport For Small E-Bike Brands",
-    "bodyHtml": "<p>Small e-bike and e-cargo brands face the same 18 February 2027 battery passport deadline as the largest manufacturers, without a compliance team to build it.</p><h2>Why AuthiChain</h2><ul><li>There is no SME exemption for LMT battery passports under Article 77</li><li>The first step is knowing which data you already have and which your pack supplier must provide — a written gap list, not a software platform</li><li>The $299 checkout opens an AuthiChain workspace for that product line, with self-serve activation and 50 workspace generations</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><p>Want to see a fictional walkthrough first? <a href=\"https://authichain.com/battery-passport/sample-audit\">Read the fictional e-bike walkthrough</a>.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Do small brands get more time?</h3><p>No. The 18 February 2027 date applies to every economic operator placing LMT batteries on the EU market, regardless of size.</p><h3>Do we need to buy a passport platform now?</h3><p>Not first. Establish your data gaps and supplier commitments, then choose how to publish the passport. The free readiness check is a good starting point.</p>",
+    "bodyHtml": "<p>Small e-bike and e-cargo brands face the same 18 February 2027 battery passport deadline as the largest manufacturers, without a compliance team to build it.</p><h2>Why AuthiChain</h2><ul><li>There is no SME exemption for LMT battery passports under Article 77</li><li>The first step is knowing which data you already have and which your pack supplier must provide — a written gap list, not a software platform</li><li>The $299 checkout opens an AuthiChain workspace for that product line, with self-serve activation</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><p>Want to see a fictional walkthrough first? <a href=\"https://authichain.com/battery-passport/sample-audit\">Read the fictional e-bike walkthrough</a>.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Do small brands get more time?</h3><p>No. The 18 February 2027 date applies to every economic operator placing LMT batteries on the EU market, regardless of size.</p><h3>Do we need to buy a passport platform now?</h3><p>Not first. Establish your data gaps and supplier commitments, then choose how to publish the passport. The free readiness check is a good starting point.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -5973,7 +5973,7 @@
     "title": "Blockchain QR Code For Luxury | AuthiChain",
     "metaDescription": "Attach a cryptographically-signed QR code to each luxury item so buyers can check its signed record on the shelf, in resale, or at customs. AuthiChain — EU.",
     "h1": "Blockchain QR Code For Luxury",
-    "bodyHtml": "<p>Attach a cryptographically-signed QR code to each luxury item so buyers can check its signed record on the shelf, in resale, or at customs.</p><h2>Why AuthiChain</h2><ul><li>Product certification through verify is in development</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Workspace is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Workspace is $299 one-time.</p><h2>FAQ</h2><h3>Does the QR work after resale?</h3><p>Yes — ownership and provenance transfer with the item, protecting secondary-market value.</p><h3>Can counterfeiters copy the QR?</h3><p>Copying the image is useless: verification is cryptographic and checked against the blockchain record.</p>",
+    "bodyHtml": "<p>Attach a cryptographically-signed QR code to each luxury item so buyers can check its signed record on the shelf, in resale, or at customs.</p><h2>Why AuthiChain</h2><ul><li>Product certification through verify is in development</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does the QR work after resale?</h3><p>Yes — ownership and provenance transfer with the item, protecting secondary-market value.</p><h3>Can counterfeiters copy the QR?</h3><p>Copying the image is useless: verification is cryptographic and checked against the blockchain record.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -9875,7 +9875,7 @@
     "title": "Made In America Origin Claim Substantiation | AuthiChain",
     "metaDescription": "An unqualified Made in America or Made in USA claim is a substantiation problem under the FTC Made in USA Labeling Rule (16 CFR Part 323): the seller has to.",
     "h1": "Made In America Origin Claim Substantiation",
-    "bodyHtml": "<p>An unqualified Made in America or Made in USA claim is a substantiation problem under the FTC Made in USA Labeling Rule (16 CFR Part 323): the seller has to show that all or virtually all of that specific product is US-origin, and a signed per-unit record is one way to carry that evidence.</p><h2>Why AuthiChain</h2><ul><li>Executive Order 14392 told the FTC to prioritize truthful Made in America advertising; the rule a seller is held to remains 16 CFR Part 323, the same authority behind the April 2026 sweep</li><li>A signed record ties a batch or serial to component origin and US processing steps — documentation that outlasts a label printed once at the factory</li><li>This is not a certification that the product meets the standard; it is checkable evidence a buyer or investigator can read without a sales call</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.govchain.us/made-in-america\">Read the Made in America brief</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does a signed record make a Made in USA claim legal?</h3><p>No — the claim is legal only if the product actually meets the all-or-virtually-all standard. The record is competent-and-reliable-evidence material, not a license to use the words.</p><h3>Where do we start if we already make the claim?</h3><p>EU DPP Readiness at $299 is the live self-serve checkout. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations. The Made in America brief is at https://authichain.govchain.us/made-in-america.</p>",
+    "bodyHtml": "<p>An unqualified Made in America or Made in USA claim is a substantiation problem under the FTC Made in USA Labeling Rule (16 CFR Part 323): the seller has to show that all or virtually all of that specific product is US-origin, and a signed per-unit record is one way to carry that evidence.</p><h2>Why AuthiChain</h2><ul><li>Executive Order 14392 told the FTC to prioritize truthful Made in America advertising; the rule a seller is held to remains 16 CFR Part 323, the same authority behind the April 2026 sweep</li><li>A signed record ties a batch or serial to component origin and US processing steps — documentation that outlasts a label printed once at the factory</li><li>This is not a certification that the product meets the standard; it is checkable evidence a buyer or investigator can read without a sales call</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.govchain.us/made-in-america\">Read the Made in America brief</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does a signed record make a Made in USA claim legal?</h3><p>No — the claim is legal only if the product actually meets the all-or-virtually-all standard. The record is competent-and-reliable-evidence material, not a license to use the words.</p><h3>Where do we start if we already make the claim?</h3><p>EU DPP Readiness at $299 is the live self-serve checkout. It opens an AuthiChain workspace with self-serve activation. The Made in America brief is at https://authichain.govchain.us/made-in-america.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -9923,7 +9923,7 @@
               "name": "Where do we start if we already make the claim?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "EU DPP Readiness at $299 is the live self-serve checkout. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations. The Made in America brief is at https://authichain.govchain.us/made-in-america."
+                "text": "EU DPP Readiness at $299 is the live self-serve checkout. It opens an AuthiChain workspace with self-serve activation. The Made in America brief is at https://authichain.govchain.us/made-in-america."
               }
             }
           ]
@@ -10193,7 +10193,7 @@
     "title": "Vechain Alternative Without Tokens Or Gas Fees | AuthiChain",
     "metaDescription": "VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing.",
     "h1": "Vechain Alternative Without Tokens Or Gas Fees",
-    "bodyHtml": "<p>VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing product instead, where the seal, the certificate and the public verifier are the thing you buy, and you pay in USD by card rather than holding a token.</p><h2>Why AuthiChain</h2><ul><li>No token and no gas to manage: AuthiChain plans are billed in US dollars through Stripe, so a brand never has to fund a wallet before it can issue a record</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is AuthiChain built on VeChain?</h3><p>No. VeChain is a separate L1 blockchain that other authentication vendors build on.</p><h3>What does it cost to start?</h3><p>The live self-serve entry point is the EU DPP Readiness checkout at $299. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations.</p>",
+    "bodyHtml": "<p>VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing product instead, where the seal, the certificate and the public verifier are the thing you buy, and you pay in USD by card rather than holding a token.</p><h2>Why AuthiChain</h2><ul><li>No token and no gas to manage: AuthiChain plans are billed in US dollars through Stripe, so a brand never has to fund a wallet before it can issue a record</li><li>Signing keys are published at /.well-known/jwks.json. Product certification through verify is in development.</li><li>Self-serve issuance and EU DPP export are still in development. The $299 checkout opens a workspace; it is not a readiness audit.</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is AuthiChain built on VeChain?</h3><p>No. VeChain is a separate L1 blockchain that other authentication vendors build on.</p><h3>What does it cost to start?</h3><p>The live self-serve entry point is the EU DPP Workspace checkout at $299. It opens an AuthiChain workspace with self-serve activation.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -10241,7 +10241,7 @@
               "name": "What does it cost to start?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "The live self-serve entry point is the EU DPP Readiness checkout at $299. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations."
+                "text": "The live self-serve entry point is the EU DPP Workspace checkout at $299. It opens an AuthiChain workspace with self-serve activation."
               }
             }
           ]
@@ -10257,7 +10257,7 @@
     "title": "Circularise Alternative For Smaller Brands | AuthiChain",
     "metaDescription": "Circularise is an enterprise platform for material traceability and EU Digital Product Passports aimed at large manufacturers on quoted contracts; a smaller.",
     "h1": "Circularise Alternative For Smaller Brands",
-    "bodyHtml": "<p>Circularise is an enterprise platform for material traceability and EU Digital Product Passports aimed at large manufacturers on quoted contracts; a smaller brand that needs to start its DPP work without an enterprise sales cycle can begin with AuthiChain’s $299 EU DPP Readiness audit, paid by card.</p><h2>Why AuthiChain</h2><ul><li>The $299 checkout is a one-time payment for an AuthiChain workspace, self-serve activation, and 50 workspace generations to publish a first record</li><li>AuthiChain covers anti-counterfeit authentication as well as DPP readiness, while Circularise specializes in material traceability for large supply chains</li><li>EU DPP export is still in development at AuthiChain; if you need a production passport export for a delegated act deadline today, weigh that honestly against a platform that already ships one</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does AuthiChain export an EU Digital Product Passport today?</h3><p>Not yet. DPP export is in development. The $299 checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.</p><h3>Is the $299 wasted if we later need more?</h3><p>The $299 checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.</p>",
+    "bodyHtml": "<p>Circularise is an enterprise platform for material traceability and EU Digital Product Passports aimed at large manufacturers on quoted contracts; a smaller brand that needs to start its DPP work without an enterprise sales cycle can begin with AuthiChain’s $299 EU DPP Readiness audit, paid by card.</p><h2>Why AuthiChain</h2><ul><li>The $299 checkout is a one-time payment for an AuthiChain workspace with self-serve activation to publish a first record</li><li>AuthiChain covers anti-counterfeit authentication as well as DPP readiness, while Circularise specializes in material traceability for large supply chains</li><li>EU DPP export is still in development at AuthiChain; if you need a production passport export for a delegated act deadline today, weigh that honestly against a platform that already ships one</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does AuthiChain export an EU Digital Product Passport today?</h3><p>Not yet. DPP export is in development. The $299 checkout opens an AuthiChain workspace with self-serve activation.</p><h3>Is the $299 wasted if we later need more?</h3><p>The $299 checkout opens an AuthiChain workspace with self-serve activation.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -10297,7 +10297,7 @@
               "name": "Does AuthiChain export an EU Digital Product Passport today?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Not yet. DPP export is in development. The $299 checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations."
+                "text": "Not yet. DPP export is in development. The $299 checkout opens an AuthiChain workspace with self-serve activation."
               }
             },
             {
@@ -10305,7 +10305,7 @@
               "name": "Is the $299 wasted if we later need more?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "The $299 checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations."
+                "text": "The $299 checkout opens an AuthiChain workspace with self-serve activation."
               }
             }
           ]
@@ -10573,9 +10573,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "Battery Passport Readiness Assessment Cost | AuthiChain",
-    "metaDescription": "AuthiChain’s EU DPP Readiness checkout is $299 one-time and opens an AuthiChain workspace with self-serve activation and 50 workspace generations. AuthiChain.",
+    "metaDescription": "AuthiChain’s EU DPP Readiness checkout is $299 one-time and opens an AuthiChain workspace with self-serve activation. AuthiChain.",
     "h1": "Battery Passport Readiness Assessment Cost",
-    "bodyHtml": "<p>AuthiChain’s EU DPP Readiness checkout is $299 one-time and opens an AuthiChain workspace with self-serve activation and 50 workspace generations. A fictional e-bike walkthrough of the free figure check and Annex XIII gap table is at https://authichain.com/battery-passport/sample-audit. That page is not a document the checkout sends.</p><h2>Why AuthiChain</h2><ul><li>You can read a fictional walkthrough first at https://authichain.com/battery-passport/sample-audit, worked through on a fictional 48 V e-bike pack, including a datasheet figure check and the gap table</li><li>The purchase opens an AuthiChain workspace with self-serve activation and 50 workspace generations to publish a first passport record</li><li>The checkout opens a workspace for that passport work. It is not a certification or legal opinion, and EU DPP export from AuthiChain is still in development</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><p>Want to see a fictional walkthrough first? <a href=\"https://authichain.com/battery-passport/sample-audit\">Read the fictional e-bike walkthrough</a>.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is the $299 a subscription?</h3><p>No. It is a single payment through Stripe with no recurring charge.</p><h3>Will my assessment look like the sample?</h3><p>Yes. The sample shows the same structure: a summary with the days left before the deadline, the datasheet check, the Annex XIII table and the action plan, built from your battery’s own figures.</p>",
+    "bodyHtml": "<p>AuthiChain’s EU DPP Readiness checkout is $299 one-time and opens an AuthiChain workspace with self-serve activation. A fictional e-bike walkthrough of the free figure check and Annex XIII gap table is at https://authichain.com/battery-passport/sample-audit. That page is not a document the checkout sends.</p><h2>Why AuthiChain</h2><ul><li>You can read a fictional walkthrough first at https://authichain.com/battery-passport/sample-audit, worked through on a fictional 48 V e-bike pack, including a datasheet figure check and the gap table</li><li>The purchase opens an AuthiChain workspace with self-serve activation to publish a first passport record</li><li>The checkout opens a workspace for that passport work. It is not a certification or legal opinion, and EU DPP export from AuthiChain is still in development</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><p>Want to see a fictional walkthrough first? <a href=\"https://authichain.com/battery-passport/sample-audit\">Read the fictional e-bike walkthrough</a>.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is the $299 a subscription?</h3><p>No. It is a single payment through Stripe with no recurring charge.</p><h3>Will my assessment look like the sample?</h3><p>Yes. The sample shows the same structure: a summary with the days left before the deadline, the datasheet check, the Annex XIII table and the action plan, built from your battery’s own figures.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -10586,7 +10586,7 @@
             "@type": "Brand",
             "name": "AuthiChain"
           },
-          "description": "AuthiChain’s EU DPP Readiness checkout is $299 one-time and opens an AuthiChain workspace with self-serve activation and 50 workspace generations. A fictional e-bike walkthrough of the free figure check and Annex XIII gap table is at https://authichain.com/battery-passport/sample-audit. That page is not a document the checkout sends.",
+          "description": "AuthiChain’s EU DPP Readiness checkout is $299 one-time and opens an AuthiChain workspace with self-serve activation. A fictional e-bike walkthrough of the free figure check and Annex XIII gap table is at https://authichain.com/battery-passport/sample-audit. That page is not a document the checkout sends.",
           "url": "https://authichain.com/p/battery-passport-readiness-assessment-cost"
         },
         {
@@ -11391,6 +11391,262 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "No. It identifies an item, and anyone can print one on a label. The signature on the linked record shows who made the statements about it."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "did-key-issuer-key-rotation-verifiable-credential",
+    "keyword": "did:key issuer key rotation verifiable credential",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DID:Key Issuer Key Rotation Verifiable | AuthiChain",
+    "metaDescription": "A did:key identifier is the public key itself, so an issuer cannot rotate the key behind an identifier: a new key means a new did:key, and records signed.",
+    "h1": "DID:Key Issuer Key Rotation Verifiable Credential",
+    "bodyHtml": "<p>A did:key identifier is the public key itself, so an issuer cannot rotate the key behind an identifier: a new key means a new did:key, and records signed under the old one keep verifying against the old one.</p><h2>Why AuthiChain</h2><ul><li>The verifier reads the key straight from the issuer identifier, so checking a record from before a rotation needs no lookup and no history from us</li><li>To move to a new key, issue new records under the new did:key and publish the link between the two identifiers where your customers already look for your keys</li><li>Version 0.1 of the specification has no revocation, so records signed by a retired key stay cryptographically valid; revocation via credentialStatus is planned for v0.2</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does a rotated key invalidate old records?</h3><p>No. A record verifies against the key named in its own issuer field, so old records keep verifying. If a key was compromised, rely on anchor timestamps and your own notices to separate records signed before and after the compromise.</p><h3>Can I keep one stable issuer identity across rotations?</h3><p>Not with did:key alone, because the identifier is the key. A method that resolves through a document you control, such as did:web, can keep one identifier while the key changes; the v0.1 specification defines did:key resolution only.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DID:Key Issuer Key Rotation Verifiable Credential",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "A did:key identifier is the public key itself, so an issuer cannot rotate the key behind an identifier: a new key means a new did:key, and records signed under the old one keep verifying against the old one.",
+          "url": "https://authichain.com/p/did-key-issuer-key-rotation-verifiable-credential"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DID:Key Issuer Key Rotation Verifiable Credential",
+              "item": "https://authichain.com/p/did-key-issuer-key-rotation-verifiable-credential"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a rotated key invalidate old records?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. A record verifies against the key named in its own issuer field, so old records keep verifying. If a key was compromised, rely on anchor timestamps and your own notices to separate records signed before and after the compromise."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I keep one stable issuer identity across rotations?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not with did:key alone, because the identifier is the key. A method that resolves through a document you control, such as did:web, can keep one identifier while the key changes; the v0.1 specification defines did:key resolution only."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verifiable-credential-proofvalue-multibase-base58btc-ed25519",
+    "keyword": "verifiable credential proofvalue multibase base58btc ed25519",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verifiable Credential Proofvalue Multibase | AuthiChain",
+    "metaDescription": "In an AuthiChain record, proofValue is an Ed25519 signature written as a multibase string: a leading z marks base58btc encoding, and the bytes after decoding.",
+    "h1": "Verifiable Credential Proofvalue Multibase Base58btc Ed25519",
+    "bodyHtml": "<p>In an AuthiChain record, proofValue is an Ed25519 signature written as a multibase string: a leading z marks base58btc encoding, and the bytes after decoding are the 64-byte signature defined in RFC 8032.</p><h2>Why AuthiChain</h2><ul><li>The signed input is the record with proof.proofValue removed, canonicalised per RFC 8785 and encoded as UTF-8</li><li>The same z prefix and base58btc encoding appear in the did:key identifier that carries the issuer public key, so one decoder handles both</li><li>The zero-dependency reference verifier is Apache-2.0 and short enough to read, so you can follow the decode and the signature check line by line</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>How do I check a proofValue without our verifier?</h3><p>Strip the leading z, base58btc-decode the rest to 64 bytes, canonicalise the record without proofValue per RFC 8785, and verify with any RFC 8032 Ed25519 library against the public key in the issuer did:key.</p><h3>Does a valid proofValue show the record is true?</h3><p>No. It shows who signed the record and that it is unchanged since. Whether the statements are accurate is a judgement about the issuer.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verifiable Credential Proofvalue Multibase Base58btc Ed25519",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "In an AuthiChain record, proofValue is an Ed25519 signature written as a multibase string: a leading z marks base58btc encoding, and the bytes after decoding are the 64-byte signature defined in RFC 8032.",
+          "url": "https://authichain.com/p/verifiable-credential-proofvalue-multibase-base58btc-ed25519"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credential Proofvalue Multibase Base58btc Ed25519",
+              "item": "https://authichain.com/p/verifiable-credential-proofvalue-multibase-base58btc-ed25519"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How do I check a proofValue without our verifier?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Strip the leading z, base58btc-decode the rest to 64 bytes, canonicalise the record without proofValue per RFC 8785, and verify with any RFC 8032 Ed25519 library against the public key in the issuer did:key."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a valid proofValue show the record is true?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It shows who signed the record and that it is unchanged since. Whether the statements are accurate is a judgement about the issuer."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "espr-unique-operator-identifier-facility-identifier-iso-iec-15459",
+    "keyword": "espr unique operator identifier facility identifier iso/iec 15459",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "ESPR Unique Operator Identifier Facility | AuthiChain",
+    "metaDescription": "Under the ESPR, a digital product passport is linked to a unique product identifier, and the regulation also calls for unique operator and facility.",
+    "h1": "ESPR Unique Operator Identifier Facility Identifier ISO/IEC 15459",
+    "bodyHtml": "<p>Under the ESPR, a digital product passport is linked to a unique product identifier, and the regulation also calls for unique operator and facility identifiers; the text points to ISO/IEC 15459 for their structure, and CEN/CENELEC EN 18219:2026 sets requirements for all three.</p><h2>Why AuthiChain</h2><ul><li>A record carries the product as a GS1 Digital Link URL built from a GTIN, with lot or serial where the product group needs batch or item granularity</li><li>Identifying the issuer as a did:key lets a reader check the signing key offline, separate from any registered operator identifier</li><li>Which identifier scheme your delegated act accepts is set per product group, so read the act for your product before choosing</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is a GTIN the same as a unique product identifier?</h3><p>A GTIN identifies a model. Granularity is set per product group, and batch or item level needs a lot or serial added to the identifier. Confirm the requirement in the delegated act and in EN 18219.</p><h3>Does a did:key replace an operator identifier?</h3><p>No. A did:key identifies a signing key. An operator identifier identifies an economic operator in the ESPR sense. A record can carry both.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — ESPR Unique Operator Identifier Facility Identifier ISO/IEC 15459",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Under the ESPR, a digital product passport is linked to a unique product identifier, and the regulation also calls for unique operator and facility identifiers; the text points to ISO/IEC 15459 for their structure, and CEN/CENELEC EN 18219:2026 sets requirements for all three.",
+          "url": "https://authichain.com/p/espr-unique-operator-identifier-facility-identifier-iso-iec-15459"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "ESPR Unique Operator Identifier Facility Identifier ISO/IEC 15459",
+              "item": "https://authichain.com/p/espr-unique-operator-identifier-facility-identifier-iso-iec-15459"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is a GTIN the same as a unique product identifier?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A GTIN identifies a model. Granularity is set per product group, and batch or item level needs a lot or serial added to the identifier. Confirm the requirement in the delegated act and in EN 18219."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a did:key replace an operator identifier?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. A did:key identifies a signing key. An operator identifier identifies an economic operator in the ESPR sense. A record can carry both."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "rfc-8785-json-canonicalization-signature-verification",
+    "keyword": "rfc 8785 json canonicalization signature verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "RFC 8785 Json Canonicalization Signature | AuthiChain",
+    "metaDescription": "RFC 8785 (JSON Canonicalization Scheme) fixes key order, whitespace and number formatting so two parties derive byte-identical input from the same JSON.",
+    "h1": "RFC 8785 Json Canonicalization Signature Verification",
+    "bodyHtml": "<p>RFC 8785 (JSON Canonicalization Scheme) fixes key order, whitespace and number formatting so two parties derive byte-identical input from the same JSON, which is what lets a signature made by one verify on the other.</p><h2>Why AuthiChain</h2><ul><li>The AuthiChain specification requires signing the JCS form of the record, and forbids signing a pretty-printed or key-reordered form</li><li>A record is rejected, not downgraded to a warning, if its signature does not match the bytes the verifier derives</li><li>The repository includes adversarial conformance fixtures for the reference verifier, which you can run against your own implementation</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Why not sign the JSON as stored?</h3><p>Storing, pretty-printing or re-serialising JSON can change key order or whitespace without changing its meaning, and a signature over raw bytes would then fail. Canonicalising first makes the signed bytes reproducible.</p><h3>Is JCS the only way to canonicalise a credential?</h3><p>No. RDF Dataset Canonicalization is another. AuthiChain v0.1 uses JCS, which needs no JSON-LD processing and is simple to implement in any language.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — RFC 8785 Json Canonicalization Signature Verification",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "RFC 8785 (JSON Canonicalization Scheme) fixes key order, whitespace and number formatting so two parties derive byte-identical input from the same JSON, which is what lets a signature made by one verify on the other.",
+          "url": "https://authichain.com/p/rfc-8785-json-canonicalization-signature-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "RFC 8785 Json Canonicalization Signature Verification",
+              "item": "https://authichain.com/p/rfc-8785-json-canonicalization-signature-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Why not sign the JSON as stored?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Storing, pretty-printing or re-serialising JSON can change key order or whitespace without changing its meaning, and a signature over raw bytes would then fail. Canonicalising first makes the signed bytes reproducible."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is JCS the only way to canonicalise a credential?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. RDF Dataset Canonicalization is another. AuthiChain v0.1 uses JCS, which needs no JSON-LD processing and is simple to implement in any language."
               }
             }
           ]

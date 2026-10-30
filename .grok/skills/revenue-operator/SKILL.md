@@ -12,10 +12,10 @@ Money truth is `classifyRevenue` in `scripts/revenue-operator.ts`. Founder addre
 
 ## Cycle
 
-1. `checkFarmRails` — Payment Link GET 200, Farm HEAD 204. Do not GET `/api/checkout/dpp` without `?email=`.
+1. `checkMoneyRails` — GET `/checkout/starter` 200, GET `/checkout/dpp_readiness` 200, GET the Starter `buy.stripe.com` Payment Link 200, HEAD `/api/checkout/dpp` 204. Do not GET `/api/checkout/dpp` without `?email=`. Farm is not the public money rail.
 2. `classifyRevenue` on livemode subscriptions, payouts, and charges.
 3. `decideOperatorAction`. `wait_buyer` means stop.
-4. Send only when the action is `send_one`. That requires `classifySend` (verified-inbox skill). HubSpot / Airtable / Apollo rows go through `scripts/revenue-crm.ts` first (crm-named-humans skill). They are not cash.
+4. Send only when the action is `send_one`. That requires `classifySend` (verified-inbox skill). The operator may pass `--candidates` or `--operator-selected --published` so a published_contact / apollo_verified / reacher_verified inbox can substitute for named-this-turn. Role inboxes, guesses, founders, and `.gov`/`.mil` stay refused. This module never sends mail. Live send still needs a recordable opt-out (`optout_not_recordable`) and stays frozen (`mayDispatch`). HubSpot / Airtable / Apollo rows go through `scripts/revenue-crm.ts` first (crm-named-humans skill). They are not cash.
 5. `mayDispatch` and `mayDisableOutreachApproval` stay closed on frozen workflows and `REQUIRE_OUTREACH_APPROVAL=false`. Do not run AgentZ `--mode auto`.
 6. Do not add `$QRON` to x402 `accepts[]` or run a live buyback.
 

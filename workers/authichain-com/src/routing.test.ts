@@ -104,29 +104,28 @@ test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const html = await res.text();
-    for (const banned of ["$19", "qron_launch", "Launch subscription"]) {
+    for (const banned of [
+      "$19",
+      "qron_launch",
+      "Launch subscription",
+      "Starting a monthly plan replaces",
+      "unless you switch to a Launch",
+      "Pack credits never expire.",
+    ]) {
       assert.ok(
         !html.includes(banned),
         `${path} must have 0 hits on ${banned}`
       );
     }
-    assert.ok(
-      !html.includes("never expire"),
-      `${path} must not say never expire`
-    );
   }
   const starter = await (await get("/checkout/starter")).text();
   assert.ok(
-    starter.includes(
-      "No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits."
-    )
+    starter.includes("No subscription, and one-time pack credits never expire.")
   );
   const home = await (await get("/")).text();
   assert.ok(
-    home.includes(
-      "No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits."
-    ),
-    "home JSON-LD Starter offer uses the RES-86 sentence"
+    home.includes("No subscription, and one-time pack credits never expire."),
+    "home JSON-LD Starter offer uses the Advisor C sentence"
   );
 });
 
@@ -264,22 +263,30 @@ test("/contact is a real page, not the homepage", async () => {
 });
 
 test("/privacy and /terms are the operator's pages, not a placeholder", async () => {
-  for (const [path, title, canonical] of [
+  for (const [path, title, canonical, effective] of [
     [
       "/privacy",
       "Privacy Policy — AuthiChain",
       "https://authichain.com/privacy",
+      "24 October 2026",
     ],
     [
       "/privacy/",
       "Privacy Policy — AuthiChain",
       "https://authichain.com/privacy",
+      "24 October 2026",
     ],
-    ["/terms", "Terms of Service — AuthiChain", "https://authichain.com/terms"],
+    [
+      "/terms",
+      "Terms of Service — AuthiChain",
+      "https://authichain.com/terms",
+      "16 October 2026",
+    ],
     [
       "/terms/",
       "Terms of Service — AuthiChain",
       "https://authichain.com/terms",
+      "16 October 2026",
     ],
   ] as const) {
     const res = await get(path);
@@ -301,7 +308,7 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
       /not affiliated with, endorsed by, or acting on behalf of any government agency/,
       path
     );
-    assert.match(html, /Effective 24 October 2026/, path);
+    assert.match(html, new RegExp(`Effective ${effective}`), path);
     assert.doesNotMatch(html, /privacy@authichain\.com/, path);
     assert.doesNotMatch(html, /legal@authichain\.com/, path);
     assert.doesNotMatch(html, /Vercel/, path);
@@ -417,7 +424,7 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   const terms = await (await get("/terms")).text();
   assert.match(terms, /not a GS1 Conformant Resolver/);
   assert.match(terms, /not a legal opinion/);
-  assert.match(terms, /0\.05 USDC/);
+  assert.match(terms, /charged in USDC on Base/);
   assert.match(terms, /\$QRON token is not accepted as payment/);
   assert.match(terms, /State of Michigan/);
   assert.match(terms, /href="\/privacy"/);
@@ -798,17 +805,26 @@ test("GET /api/x402/listing and /api/x402/growth are answered here", async () =>
   assert.match(growthBody.listing ?? "", /\/api\/x402\/listing$/);
 });
 
-test("GET /api/x402, /health, and /api/v1/agent-verify are answered here", async () => {
-  for (const path of [
-    "/api/x402",
-    "/api/x402/health",
-    "/api/v1/agent-verify",
-  ]) {
-    const res = await get(path);
-    assert.equal(res.status, 200, path);
-    const body = (await res.json()) as { status: string; catalog?: string };
-    assert.equal(body.status, "not_configured", path);
-    assert.equal(body.catalog, "/api/x402/catalog", path);
+test("GET /api/x402/health is 200; GET paid aliases are 402 with payTo", async () => {
+  const health = await get("/api/x402/health");
+  assert.equal(health.status, 200);
+  const healthBody = (await health.json()) as {
+    status: string;
+    catalog?: string;
+  };
+  assert.equal(healthBody.status, "not_configured");
+  assert.equal(healthBody.catalog, "/api/x402/catalog");
+
+  const env = {
+    ...ENV,
+    X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+  } as unknown as Env;
+  for (const path of ["/api/x402", "/api/v1/agent-verify"]) {
+    const res = await get(path, env);
+    assert.equal(res.status, 402, path);
+    const body = (await res.json()) as { x402Version: number };
+    assert.equal(body.x402Version, 2, path);
+    assert.ok(res.headers.get("PAYMENT-REQUIRED"), path);
   }
 });
 
@@ -938,6 +954,35 @@ test("GET /.well-known/x402 is the x402scan fan-out, not the catalog", async () 
     "https://authichain.com/api/x402",
   ]);
   assert.equal(body.protocol, undefined);
+});
+
+test("GET /.well-known/agent-card.json is the A2A Agent Card", async () => {
+  for (const path of [
+    "/.well-known/agent-card.json",
+    "/.well-known/agent.json",
+  ]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const body = (await res.json()) as {
+      name: string;
+      skills?: Array<{ id: string }>;
+      x402?: { scheme?: string };
+    };
+    assert.equal(body.name, "AuthiChain", path);
+    assert.ok(
+      body.skills?.some(s => s.id === "paid-evidence-check"),
+      path
+    );
+    assert.equal(body.x402?.scheme, "exact", path);
+  }
+});
+
+test("GET /.well-known/lumi-monitor.txt is the Lumi domain proof", async () => {
+  const res = await get("/.well-known/lumi-monitor.txt");
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") || "", /text\/plain/);
+  const text = await res.text();
+  assert.match(text, /lumi-monitor-verify=/);
 });
 
 test("GET /openapi.json declares x-payment-info for unpaid POST /api/x402", async () => {

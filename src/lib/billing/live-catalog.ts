@@ -32,16 +32,38 @@ export const FOUNDER_EMAILS = [
 
 export type PublicPlanId = (typeof PUBLIC_PLAN_IDS)[number];
 
-export const LIVE_PRICE_MAP: Record<
-  Exclude<PublicPlanId, "free">,
-  {
-    priceId: string;
-    productId: string;
-    mode: "payment" | "subscription";
-    grant: number;
-    stripeLink?: string;
-  }
-> = {
+type LivePriceRow = {
+  priceId: string;
+  productId: string;
+  mode: "payment" | "subscription";
+  grant: number;
+  stripeLink?: string;
+};
+
+/**
+ * Price-id-only rows that carry a tier but are not a PlanId. Matched by
+ * price id BEFORE the $29.00 Starter amount fallback, so they never
+ * resolve to Starter.
+ */
+type LiveTierRow = {
+  priceId: string;
+  productId: string;
+  tier: "pro";
+  catalogLimit: number;
+  grant: 0;
+};
+
+export const LIVE_PRICE_MAP: Record<Exclude<PublicPlanId, "free">, LivePriceRow> & {
+  storepilot_pro: LiveTierRow;
+} = {
+  /** StorePilot Pro (prod_VIMWy4q5ImqEkm): tier=pro, catalog_limit=200. Never Starter. */
+  storepilot_pro: {
+    priceId: "price_1UTxvpGqTruSqV8TQu5gkqyc",
+    productId: "prod_VIMWy4q5ImqEkm",
+    tier: "pro",
+    catalogLimit: 200,
+    grant: 0,
+  },
   qron_launch: {
     priceId: "price_1UJjzPGqTruSqV8TmhFSc8vh",
     productId: "prod_UVdvzB03BvV4CU",
@@ -130,6 +152,30 @@ export function publicPlanOrNull(id: string): PlanId | null {
   return isPublicPlanId(id) ? id : null;
 }
 
+/** Tier for a price-id-only LIVE_PRICE_MAP row (StorePilot Pro), else null. */
+export function liveTierForPriceId(
+  priceId: string | null | undefined
+): "pro" | null {
+  if (!priceId) return null;
+  return priceId === LIVE_PRICE_MAP.storepilot_pro.priceId
+    ? LIVE_PRICE_MAP.storepilot_pro.tier
+    : null;
+}
+
+/**
+ * Entitlement for a tier-only price, keyed to the normalized checkout email
+ * (same key as other plan grants). Null without a known price or an email.
+ */
+export function liveTierGrantForPriceId(
+  priceId: string | null | undefined,
+  email: string | null | undefined
+): { email: string; tier: "pro"; catalog_limit: number } | null {
+  const tier = liveTierForPriceId(priceId);
+  const key = email?.toLowerCase().trim() || "";
+  if (!tier || !key) return null;
+  return { email: key, tier, catalog_limit: LIVE_PRICE_MAP.storepilot_pro.catalogLimit };
+}
+
 export function isUnlistedSmokePrice(priceId: string | null | undefined): boolean {
   return Boolean(priceId && UNLISTED_PRICE_SET.has(priceId));
 }
@@ -200,6 +246,9 @@ export function resolveCheckoutPlanId(input: {
   if (input.plan === "strainchain_farm") return "strainchain_farm";
   const granted = grantForPriceId(input.priceId);
   if (granted) return granted.planId;
+  // Known tier-only price (StorePilot Pro, tier=pro): matched before the
+  // $29.00 Starter fallback so it can never resolve to Starter.
+  if (liveTierForPriceId(input.priceId)) return null;
   if (!input.allowAmountFallback) return null;
   if (input.amountTotal !== STARTER_FALLBACK_AMOUNT_CENTS) return null;
   const byAmount = planByAmountCents(input.amountTotal);
@@ -210,7 +259,8 @@ export function resolveCheckoutPlanId(input: {
 
 export function liveBypassLink(id: PlanId): string | undefined {
   const row = LIVE_PRICE_MAP[id as keyof typeof LIVE_PRICE_MAP];
-  return row?.stripeLink ?? planById(id)?.stripe_payment_link;
+  const link = row && "stripeLink" in row ? row.stripeLink : undefined;
+  return link ?? planById(id)?.stripe_payment_link;
 }
 
 export function publicCheckoutHref(id: PublicPlanId): string {
