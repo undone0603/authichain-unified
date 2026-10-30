@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 import { exportPKCS8, generateKeyPair, calculateJwkThumbprint, exportJWK } from "jose";
+import { verifyAttestationJws } from "../packages/verifier/src/index";
 
 vi.mock("./jwks", async () => {
   const actual = await vi.importActual<typeof import("./jwks")>("./jwks");
@@ -56,6 +57,10 @@ describe("bindQronGenerateAttestation", () => {
     expect(bound!.kid).toBe(kid);
     expect(bound!.jwks_url).toContain("protocol/jwks.json");
     expect(bound!.jws.split(".")).toHaveLength(3);
+    const verified = await verifyAttestationJws(bound!.jws, { ...publicJwk, kid });
+    const image = verified.evidence.find(item => item.id === "living-qr-image");
+    expect(image?.digest.startsWith("sha256:")).toBe(true);
+    expect(image?.uri).toBeUndefined();
     expect(recordStatusEvent).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({

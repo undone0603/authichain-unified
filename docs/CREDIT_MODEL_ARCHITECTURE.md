@@ -102,7 +102,8 @@ ALTER TABLE profiles ADD COLUMN (
   generations_used INTEGER DEFAULT 0,
   subscription_plan VARCHAR(50),
   subscription_status VARCHAR(50),
-  subscribed_at TIMESTAMP,
+  -- subscribed_at is not a column on live public.profiles.
+  -- Writing it makes PostgREST reject the whole grant update.
   last_payment_at TIMESTAMP,
   stripe_customer_id VARCHAR(128),
   stripe_subscription_id VARCHAR(128)
