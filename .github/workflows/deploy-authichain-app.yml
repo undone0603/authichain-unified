@@ -24,8 +24,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
-    # Same self-hosted WSL runner as deploy-first-dollar-desk.yml / deploy-authichain-com.yml.
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    # Publish runner only: authichain-wsl, same as deploy-authichain-com.yml.
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 45
     env:
       NODE_OPTIONS: --max-old-space-size=4096
