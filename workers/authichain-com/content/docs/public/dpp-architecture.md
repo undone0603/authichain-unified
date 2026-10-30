@@ -35,12 +35,12 @@ identity → carrier → resolver → passport → evidence → verification →
 
 Confirm against the legal texts. This is orientation, not advice.
 
-| Instrument | What it is |
-|---|---|
-| Regulation (EU) 2024/1781 (ESPR) | Ecodesign framework. DPPs for designated product groups. |
-| Regulation (EU) 2023/1542 | Batteries. Certain industrial, EV, and LMT batteries need a passport from 18 February 2027. |
-| Implementing Regulation (EU) 2026/1778 | DPP registry rules, adopted 16 July 2026. |
-| Commission working plan / delegated acts | Which product groups and which data fields, on which date. |
+| Instrument                               | What it is                                                                                  |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Regulation (EU) 2024/1781 (ESPR)         | Ecodesign framework. DPPs for designated product groups.                                    |
+| Regulation (EU) 2023/1542                | Batteries. Certain industrial, EV, and LMT batteries need a passport from 18 February 2027. |
+| Implementing Regulation (EU) 2026/1778   | DPP registry rules, adopted 16 July 2026.                                                   |
+| Commission working plan / delegated acts | Which product groups and which data fields, on which date.                                  |
 
 A resolvable unique product identifier on a data carrier is part of the design. GS1 Digital Link is the common implementation of that identifier. It is not the only one. See [GS1 Digital Link](/docs/gs1-digital-link).
 
@@ -65,7 +65,7 @@ Live and citeable:
 - Agent verification at [/x402](/x402) — $0.05 USDC per call on Base. Unpaid `POST /api/x402` returns HTTP 402.
 - Human commercial path: EU DPP Readiness, $299 one-time.
 
-EU DPP Readiness opens an AuthiChain workspace, with self-serve activation and 50 generations to publish a first passport. Checkout is on [/pricing](/pricing).
+EU DPP Readiness opens an AuthiChain workspace with self-serve activation, so you can publish a first passport. Checkout is on [/pricing](/pricing).
 
 ## What is in development
 
@@ -103,15 +103,15 @@ Worked request that is live today (agent rail, not a DPP registry call):
 ```bash
 curl -sS -i -X POST https://authichain.com/api/x402 \
   -H 'content-type: application/json' \
-  -d '{"sealId":"demo"}'
+  -d '{}'
 ```
 
-Expect HTTP 402 and a payment requirement. That is how a machine starts a verification. It is not a registry filing.
+An empty body is the unpaid HTTP 402 and a payment requirement. A non-UUID sealId is HTTP 400 before payment. That challenge is how a machine learns the price. It is not a registry filing.
 
 Human path that is live today:
 
 1. [/dpp-check](/dpp-check?utm_source=docs&utm_medium=authority&utm_campaign=dpp-architecture) — score the gaps.
-2. [/checkout/dpp_readiness](/checkout/dpp_readiness?utm_source=docs&utm_medium=authority&utm_campaign=dpp-architecture) — $299 if you want the workspace and 50 generations.
+2. [/checkout/dpp_readiness](/checkout/dpp_readiness?utm_source=docs&utm_medium=authority&utm_campaign=dpp-architecture) — $299 if you want the workspace.
 3. [/onboard](/onboard?utm_source=docs&utm_medium=authority&utm_campaign=dpp-architecture) — pilot seal, work email, no call.
 
 ## Implementation guidance
@@ -126,13 +126,13 @@ Human path that is live today:
 
 ## Failure cases
 
-| Shortcut | Failure |
-|---|---|
-| PDF behind a QR | Agents and border systems cannot query it |
-| QR present, no signature | Anyone can reprint the carrier |
-| Signature, no published JWKS | Third parties cannot verify offline |
-| “Certificate NFT = official DPP” | False capability |
-| Thin sector landing with no fixture | Crawl budget spent, no citation |
+| Shortcut                            | Failure                                   |
+| ----------------------------------- | ----------------------------------------- |
+| PDF behind a QR                     | Agents and border systems cannot query it |
+| QR present, no signature            | Anyone can reprint the carrier            |
+| Signature, no published JWKS        | Third parties cannot verify offline       |
+| “Certificate NFT = official DPP”    | False capability                          |
+| Thin sector landing with no fixture | Crawl budget spent, no citation           |
 
 ## Security considerations
 
@@ -162,4 +162,4 @@ Certain batteries from 18 February 2027 under Regulation (EU) 2023/1542. Confirm
 No. A QR is a carrier. The passport is the record behind it, plus the ability to verify who signed which claim.
 
 **Is the $299 an official certification?**
-No. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations. Not legal advice. Not a notified-body certification. Not an EU registry filing.
+No. It opens an AuthiChain workspace with self-serve activation. Not legal advice. Not a notified-body certification. Not an EU registry filing.
