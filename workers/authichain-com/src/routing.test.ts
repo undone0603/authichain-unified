@@ -372,7 +372,7 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   assert.match(privacy, /We do not sell personal information/);
   assert.match(privacy, /Stripe/);
   assert.match(privacy, /do not receive your card number/);
-  assert.match(privacy, /0\.05 USDC/);
+  assert.match(privacy, /x402 paid verification and on-chain anchoring are in development/);
   assert.match(privacy, /\$QRON token is not a way to pay/);
   assert.match(privacy, /simulated/);
   assert.match(privacy, /id="outbound"/);
