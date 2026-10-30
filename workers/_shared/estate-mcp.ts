@@ -3,13 +3,17 @@
  * Agents that probe `{origin}/mcp` the way they do on authichain.com get
  * nothing.
  *
- * GET is free discovery: Payment Links from plans.ts (Passport, DPP;
- * QRON also Starter+Creator). Farm is not a public checkout link. tools/call verify is
+ * GET is free discovery: Payment Links from plans.ts for every paid plan.
+ * tools/call verify is
  * the same unpaid 402 as estate-x402.ts. Catalog stays on authichain.com
  * (#1171 owns sister catalog). Do not tell agents to GET /api/checkout.
  * Do not invent Stripe links. Do not list theater.
  */
-import { planPaymentLink, planUsd } from "../../src/lib/plans.ts";
+import {
+  catalogOffers,
+  planPaymentLink,
+  planUsd,
+} from "../../src/lib/plans.ts";
 import {
   BASE_USDC_ASSET,
   X402_PUBLISHED_PAY_TO,
@@ -155,6 +159,7 @@ export function sisterMcpPricingDiscovery(brand: SisterDiscoveryBrand) {
     farmUsd: planUsd("strainchain_farm"),
     passportPaymentLink: PASSPORT_LINK,
     dppPaymentLink: DPP_LINK,
+    offers: catalogOffers(),
     emailCapture: {
       passport: "https://authichain.com/passport",
       dpp: "https://authichain.com/dpp",

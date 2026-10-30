@@ -7,15 +7,16 @@
  * unpaid 402 itself is served by estate-x402.ts. Do not tell them to GET
  * /api/checkout.
  */
-import { planPaymentLink, planUsd } from "../../src/lib/plans.ts";
+import {
+  catalogOffers,
+  planPaymentLink,
+  planUsd,
+} from "../../src/lib/plans.ts";
 import { x402PriceUsd } from "../../src/lib/x402.ts";
 import { ESTATE_BRANDS, type EstateBrandId } from "./estate-landing.ts";
 
 const PASSPORT_LINK = planPaymentLink("strainchain_passport") ?? "";
 const DPP_LINK = planPaymentLink("dpp_readiness") ?? "";
-
-const STARTER_LINK = planPaymentLink("starter") ?? "";
-const CREATOR_LINK = planPaymentLink("creator") ?? "";
 const X402_USD = x402PriceUsd();
 
 const LLMS_PATHS = new Set([
@@ -62,15 +63,11 @@ export function isEstateAgentDiscoveryPath(pathname: string): boolean {
 function humanCheckoutLines(brand: SisterDiscoveryBrand): string[] {
   const lines = [
     "## Human checkout (Stripe Payment Links)",
-    `- EU DPP Readiness $${planUsd("dpp_readiness")}: ${DPP_LINK}`,
-    `- StrainChain Passport $${planUsd("strainchain_passport")}: ${PASSPORT_LINK}`,
+    ...catalogOffers().map(offer => {
+      const suffix = offer.priceSuffix ?? "";
+      return `- ${offer.name} $${offer.usd}${suffix}: ${offer.checkout}`;
+    }),
   ];
-  if (brand === "qron") {
-    lines.push(
-      `- QRON Starter $${planUsd("starter")}: ${STARTER_LINK}`,
-      `- QRON Creator $${planUsd("creator")}: ${CREATOR_LINK}`
-    );
-  }
   lines.push(
     `- Pricing: https://${brand === "qron" ? "qron.space" : brand === "strainchain" ? "strainchain.io" : "govchain.us"}/pricing`,
     "- Canonical catalogue: https://authichain.com/pricing"

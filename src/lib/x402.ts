@@ -21,7 +21,12 @@
  */
 
 import { BASE_USDC, TOKENOMICS_PAY_TO } from "../../scripts/lib/evm-chains";
-import { planPaymentLink, planUsd } from "./plans";
+import {
+  catalogOffers,
+  planPaymentLink,
+  planUsd,
+  type CatalogOffer,
+} from "./plans";
 
 export interface PaymentRequirement {
   scheme: "exact";
@@ -1102,9 +1107,14 @@ export type X402CatalogBody = {
     passportUsd: number;
     dppUsd: number;
     farmUsd: number;
+    starterUsd: number;
+    creatorUsd: number;
     passportPaymentLink?: string;
     dppPaymentLink?: string;
     farmPaymentLink?: string;
+    starterPaymentLink?: string;
+    creatorPaymentLink?: string;
+    offers: CatalogOffer[];
     source: string;
   };
   discovery: {
@@ -1218,8 +1228,14 @@ export async function x402Catalog(
       passportUsd: planUsd("strainchain_passport"),
       dppUsd: planUsd("dpp_readiness"),
       farmUsd: planUsd("strainchain_farm"),
+      starterUsd: planUsd("starter"),
+      creatorUsd: planUsd("creator"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
+      farmPaymentLink: planPaymentLink("strainchain_farm"),
+      starterPaymentLink: planPaymentLink("starter"),
+      creatorPaymentLink: planPaymentLink("creator"),
+      offers: catalogOffers(),
       source: "src/lib/plans.ts",
     },
     discovery: {
@@ -1287,9 +1303,7 @@ export async function x402AgentCard(
   const paid = catalog.endpoints.filter(e => e.paid);
   const resources = [
     ...new Set(
-      paid
-        .map(e => e.url || e.resource)
-        .filter((u): u is string => Boolean(u))
+      paid.map(e => e.url || e.resource).filter((u): u is string => Boolean(u))
     ),
   ];
   const accepts = paid.find(e => e.accepts && e.accepts.length > 0)?.accepts;
@@ -1462,7 +1476,9 @@ export async function x402OpenApiDocument(
           description:
             "E-bike and other light means of transport (LMT) batteries, plus industrial and EV batteries over 2 kWh, need a battery passport from 18 February 2027 under Regulation (EU) 2023/1542. This page is that gap map, with a worked example on a fictional e-bike pack at /battery-passport/sample-audit.",
           responses: {
-            "200": { description: "HTML gap map. Not an x402 payment endpoint." },
+            "200": {
+              description: "HTML gap map. Not an x402 payment endpoint.",
+            },
           },
         },
       },

@@ -340,7 +340,10 @@ export const PLANS: Plan[] = [
     listed: false,
     adjustable_quantity: { minimum: 1, maximum: 20 },
     return_path: "/battery-passport",
-    features: ["One extra battery model per unit", "Choose 1 to 20 at checkout"],
+    features: [
+      "One extra battery model per unit",
+      "Choose 1 to 20 at checkout",
+    ],
     cta: "Add a model — $350",
   },
   {
@@ -410,6 +413,32 @@ export function planPaymentLink(id: PlanId): string | undefined {
   if (!plan || !(plan.stripe_price_id || plan.stripe_payment_link))
     return undefined;
   return gatedCheckoutUrl(id);
+}
+
+export type CatalogOffer = {
+  id: PlanId;
+  name: string;
+  usd: number;
+  priceSuffix: string | null;
+  checkout: string;
+};
+
+/** Every paid plan that has a gated checkout. Free is not an offer. */
+export function catalogOffers(): CatalogOffer[] {
+  return PLANS.flatMap(plan => {
+    if (plan.price <= 0) return [];
+    const checkout = planPaymentLink(plan.id);
+    if (!checkout) return [];
+    return [
+      {
+        id: plan.id,
+        name: plan.name,
+        usd: plan.price,
+        priceSuffix: plan.price_suffix ?? null,
+        checkout,
+      },
+    ];
+  });
 }
 
 export function planStripePaymentLink(id: PlanId): string | undefined {

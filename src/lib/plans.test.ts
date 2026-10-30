@@ -8,6 +8,7 @@ import {
   planByAmountCents,
   planById,
   planByStripePriceId,
+  catalogOffers,
   planPaymentLink,
   planUsd,
 } from "./plans";
@@ -28,6 +29,24 @@ describe("plan catalogue integrity", () => {
   it("caps free at 5 generations", () => {
     expect(planById("free")?.generations).toBe(5);
     expect(PLAN_CREDITS.free).toBe(5);
+  });
+
+  it("offers a gated checkout for every paid plan", () => {
+    const offers = catalogOffers();
+    const paid = PLANS.filter(
+      plan =>
+        plan.price > 0 && (plan.stripe_price_id || plan.stripe_payment_link)
+    );
+    expect(offers.map(offer => offer.id).sort()).toEqual(
+      paid.map(plan => plan.id).sort()
+    );
+    for (const offer of offers) {
+      expect(offer.checkout).toBe(planPaymentLink(offer.id));
+      expect(offer.checkout).not.toContain("/api/checkout");
+    }
+    expect(offers.some(offer => offer.id === "free")).toBe(false);
+    expect(offers.some(offer => offer.id === "starter")).toBe(true);
+    expect(offers.some(offer => offer.id === "creator")).toBe(true);
   });
 
   it("exposes live Payment Links for Passport, DPP, Farm, and hidden Theater", () => {
