@@ -95,8 +95,7 @@ function ActivateForm() {
           Activation saved
         </h1>
         <p className="mt-4 text-zinc-400">
-          This workspace includes self-serve activation and 50 workspace
-          generations
+          This workspace includes self-serve activation
           {profileId ? ` (profile ${profileId.slice(0, 8)}…)` : ""}. It does not
           include a written assessment or a scheduled call.
         </p>
@@ -143,8 +142,7 @@ function ActivateForm() {
       </h1>
       <p className="mt-3 text-zinc-400">
         Complete this once. This records merchant activation for this workspace.
-        It includes 50 workspace generations. It does not include a written
-        assessment or a scheduled call.
+        It does not include a written assessment or a scheduled call.
       </p>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-5">
