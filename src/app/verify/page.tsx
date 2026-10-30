@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { QrScanner, validateAndExtract } from "./scanner";
 
-const STARTER_SUB_URL = "/checkout/starter-subscription";
+const STARTER_SUB_URL = "https://buy.stripe.com/9B67sL87n7Fkh0SgXW1NE04";
 const STARTER_ONE_TIME_URL = "/checkout/starter";
 const DPP_URL = "/checkout/dpp_readiness";
 
