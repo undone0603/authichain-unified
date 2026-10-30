@@ -71,7 +71,7 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run lint and prettier
-        run: pnpm run lint:ci
+        run: pnpm run --dir "${GITHUB_WORKSPACE}" lint:ci
 
       - name: Check for structural cannot-fail patterns in workflows
         run: node scripts/check-workflow-cannot-fail.mjs
