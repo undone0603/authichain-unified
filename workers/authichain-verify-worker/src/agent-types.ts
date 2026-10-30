@@ -4,9 +4,40 @@ export const AGENT_CAPABILITIES = [
   "CREATE_AUDIT_RECORD",
   "PROPOSE_LIFECYCLE_ACTION",
   "RESOLVE_IDENTIFIER",
+  "DISCOVER_PROSPECT",
+  "SCORE_PROSPECT",
+  "DRAFT_OUTBOUND",
+  "SEND_OUTBOUND",
+  "READ_INBOUND",
+  "MANAGE_CONVERSATION",
+  "CREATE_OPPORTUNITY",
+  "PROPOSE_OFFER",
   // Show one offer. It does not authorize sending, registering, or certifying.
   "PRESENT_ONE_OFFER",
 ] as const;
+
+/** Explicit grants. No role receives every capability. */
+export const SCOUT_CAPABILITIES = [
+  "DISCOVER_PROSPECT",
+  "READ_EVIDENCE",
+  "SCORE_PROSPECT",
+  "CREATE_OPPORTUNITY",
+] as const satisfies readonly AgentCapability[];
+
+export const AGENTZ_SALES_CAPABILITIES = [
+  "READ_EVIDENCE",
+  "DRAFT_OUTBOUND",
+  "SEND_OUTBOUND",
+  "READ_INBOUND",
+  "MANAGE_CONVERSATION",
+  "PROPOSE_OFFER",
+] as const satisfies readonly AgentCapability[];
+
+export const GUARDIAN_CAPABILITIES = [
+  "VERIFY_ATTESTATION",
+  "READ_EVIDENCE",
+  "CREATE_AUDIT_RECORD",
+] as const satisfies readonly AgentCapability[];
 
 export type AgentCapability = (typeof AGENT_CAPABILITIES)[number];
 
@@ -14,7 +45,9 @@ export function isAgentCapability(cap: string): cap is AgentCapability {
   return (AGENT_CAPABILITIES as readonly string[]).includes(cap);
 }
 
-export function normalizeCapabilities(capabilities: string[]): AgentCapability[] {
+export function normalizeCapabilities(
+  capabilities: string[]
+): AgentCapability[] {
   const set = new Set<AgentCapability>();
   for (const cap of capabilities) {
     if (!isAgentCapability(cap)) {
@@ -98,7 +131,7 @@ export interface AgentMessageVerificationResult {
 export interface AgentIdentityResolver {
   resolve(
     agentId: string,
-    attestationId: string,
+    attestationId: string
   ): Promise<AgentIdentityAttestation | null>;
   isRevoked(attestationId: string): Promise<boolean>;
   getIssuerPublicKey(issuerId: string): Promise<string | null>;
@@ -116,9 +149,7 @@ export interface AgentReplayRecordParams {
 }
 
 export interface AgentReplayStore {
-  recordMessageNonce(
-    params: AgentReplayRecordParams,
-  ): Promise<{
+  recordMessageNonce(params: AgentReplayRecordParams): Promise<{
     success: boolean;
     reason?: "MESSAGE_REPLAYED" | "MESSAGE_ID_CONFLICT";
   }>;

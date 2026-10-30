@@ -259,7 +259,7 @@ export async function verifyAgentMessage(
 
   let normalizedMessageCaps: AgentCapability[] = [];
   try {
-    if (!message.capabilities.every((cap): cap is string => typeof cap === "string")) {
+    if (!message.capabilities.every((cap) => typeof cap === "string")) {
       throw new TypeError("Invalid capability type");
     }
     normalizedMessageCaps = normalizeCapabilities(message.capabilities);

@@ -32,7 +32,7 @@
   // (og:url, sitemap, MCP icon, PUBLIC_MIRRORS). Do not flip to false without
   // changing that first.
   "workers_dev": true,
-  "preview_urls": true,
+  "preview_urls": false,
 
   // Live: 20 zone routes, 0 custom domains.
   "routes": [
