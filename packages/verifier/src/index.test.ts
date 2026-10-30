@@ -3,12 +3,15 @@
 // environment they fail its `instanceof Uint8Array` check.
 import { describe, expect, it } from "vitest";
 import { generateKeyPair, exportJWK } from "jose";
+import { CompactSign } from "jose";
 import {
   parseJws,
   verifyAttestationJws,
   validateAttestation,
   canonicalize,
+  parseAttestationPayload,
   signAttestation,
+  AUTHICHAIN_ATTESTATION_TYP,
 } from ".";
 import fixture from "../../../fixtures/attestation-v0.1-valid.json";
 import jwks from "../../../fixtures/attestation-v0.1-jwks.json";
@@ -70,6 +73,46 @@ describe("AuthiChain Attestation Contract v0.1", () => {
     await expect(
       verifyAttestationJws(parts.join("."), jwks.keys[0])
     ).rejects.toThrow();
+  });
+
+  it("omits undefined object fields so the payload stays JSON", () => {
+    const encoded = canonicalize({ a: 1, b: undefined, c: "x" } as never);
+    expect(encoded).toBe('{"a":1,"c":"x"}');
+    expect(JSON.parse(encoded)).toEqual({ a: 1, c: "x" });
+  });
+
+  it("reads a signed payload that stored an omitted uri as the token undefined", async () => {
+    const { privateKey, publicKey } = await generateKeyPair("Ed25519");
+    const publicJwk = await exportJWK(publicKey);
+    publicJwk.kid = "proof-test-kid";
+    const digest = `sha256:${"a".repeat(64)}`;
+    const good = canonicalize({
+      ...fixture,
+      evidence: [
+        {
+          digest,
+          id: "living-qr-image",
+          type: "living_qr_image",
+        },
+      ],
+    } as never);
+    const bad = good.replace(
+      '"type":"living_qr_image"',
+      '"type":"living_qr_image","uri":undefined'
+    );
+    expect(() => JSON.parse(bad)).toThrow();
+    const jws = await new CompactSign(new TextEncoder().encode(bad))
+      .setProtectedHeader({
+        alg: "EdDSA",
+        kid: "proof-test-kid",
+        typ: AUTHICHAIN_ATTESTATION_TYP,
+      })
+      .sign(privateKey);
+    const parsed = await verifyAttestationJws(jws, publicJwk);
+    expect(parsed.evidence[0]?.uri).toBeUndefined();
+    expect(parseAttestationPayload(new TextEncoder().encode(bad))).toMatchObject({
+      evidence: [{ id: "living-qr-image", digest }],
+    });
   });
 
   it("rejects a valid signature paired with the wrong key id", async () => {

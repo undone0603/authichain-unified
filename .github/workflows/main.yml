@@ -2,6 +2,9 @@ name: CI Main
 
 # Required quality gate: install, typecheck, lint, test, production build.
 # Schema/AgentZ extras live in ci.yml so this job is not duplicated there.
+# Concurrency: one group per PR branch and one group for main. A newer
+# commit cancels the superseded CI Main run so the runner is not stacked
+# behind stale SHAs. Deploy workflows keep cancel-in-progress false (PM-328).
 
 on:
   push:
@@ -16,19 +19,25 @@ on:
   workflow_dispatch:
 
 concurrency:
-  # PRs: one active CI Main run per source branch; a newer commit supersedes
-  # an older run even when GitHub opened a new PR for the same feature branch.
-  # Pushes to main: one group PER COMMIT (CFA-123). GitHub keeps at most one
-  # pending run per group and cancels the older pending one when a newer run
-  # queues, whatever cancel-in-progress says; with a shared main group that
-  # cancelled the 5cd3f6de run at 9:22 AM ET on Oct 9 before it started.
-  # Rollback: restore `group: ci-main-${{ github.head_ref || github.ref }}`.
-  group: ci-main-${{ github.event_name == 'push' && github.sha || github.head_ref || github.ref }}
-  # Only PR runs are superseded; a push to main must never cancel a running
-  # deploy/check mid-way (PM-328). With per-commit push groups, main runs
-  # never queue behind or cancel each other.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # PRs: one active CI Main run per source branch.
+  # Pushes to main: one shared group so only the tip runs. check-deploy-invariants
+  # requires this (no github.sha in the group, cancel-in-progress: true).
+  # Deploy workflows stay on cancel-in-progress false (PM-328).
+  # Rollback: group: ci-main-${{ github.event_name == 'push' && github.sha || github.head_ref || github.ref }}
+  # and cancel-in-progress: ${{ github.event_name == 'pull_request' }}.
+  group: ci-main-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
+# Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
+# Flip to 'false' once the runner is verified; the skip step warns visibly.
+env:
+  SKIP_PLAYWRIGHT_ON_SELF_HOSTED: "true"
+  PLAYWRIGHT_BROWSERS_PATH: "/home/zac/.cache/ms-playwright"
+  TURBO_CACHE_DIR: "/home/zac/.cache/turbo"
+
+# Least privilege (self-hosted CI move). Jobs that need more set it per job.
+permissions:
+  contents: read
 jobs:
   # GB-26 fix 1: the old single "Main quality gate" job ran typecheck, lint,
   # tests (~314 s) and the production build (~218 s) one after another. They
@@ -39,22 +48,50 @@ jobs:
   # Rollback: git revert <merge sha> (restores the single serial job).
   quality:
     name: Typecheck and lint
-    runs-on: ubuntu-latest
+    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
+    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+      # Self-hosted WSL already has pnpm. action-setup@v6 with version
+      # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
+      # (CI Main run 40865371118). GitHub-hosted still uses the pin.
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        if: runner.environment != 'self-hosted'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
+          if [ -x "$pin/pnpm" ]; then
+            echo "$pin" >> "$GITHUB_PATH"
+            export PATH="$pin:$PATH"
+          fi
+          command -v pnpm
+          actual="$(pnpm --version)"
+          if [ "$actual" != "10.28.2" ]; then
+            echo "ERROR: expected pinned pnpm 10.28.2 on self-hosted runner, got $actual" >&2
+            exit 1
+          fi
+          echo "Verified runner pnpm version: $actual"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
-          cache: "pnpm"
+          # Self-hosted runners keep a persistent pnpm store. Uploading it
+          # through actions/cache packs ~1 GB and stalls the runner.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
@@ -73,6 +110,17 @@ jobs:
       - name: Lint
         run: pnpm lint:ci
 
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
+
   test:
     # The workspace suites mix Vitest, node:test and tsx --test, so
     # `vitest --shard` cannot split them. Shards split turbo's package graph
@@ -80,7 +128,9 @@ jobs:
     # `pnpm test` is `turbo test --filter=!.`, so the two shards together
     # equal the old run (and check-node-test-runners still sees `pnpm test`).
     name: Tests (shard ${{ matrix.shard }}/2)
-    runs-on: ubuntu-latest
+    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
+    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -89,42 +139,89 @@ jobs:
           - shard: 1
             filter: "--filter=./workers/*"
           - shard: 2
-            filter: "--filter=!./workers/*"
+            filter: "--filter=!./workers/* --filter=!*worker*"
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+      # Self-hosted WSL already has pnpm. action-setup@v6 with version
+      # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
+      # (CI Main run 40865371118). GitHub-hosted still uses the pin.
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        if: runner.environment != 'self-hosted'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
+          if [ -x "$pin/pnpm" ]; then
+            echo "$pin" >> "$GITHUB_PATH"
+            export PATH="$pin:$PATH"
+          fi
+          command -v pnpm
+          actual="$(pnpm --version)"
+          if [ "$actual" != "10.28.2" ]; then
+            echo "ERROR: expected pinned pnpm 10.28.2 on self-hosted runner, got $actual" >&2
+            exit 1
+          fi
+          echo "Verified runner pnpm version: $actual"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
-          cache: "pnpm"
+          # Self-hosted runners keep a persistent pnpm store. Uploading it
+          # through actions/cache packs ~1 GB and stalls the runner.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: "Skipped on self-hosted: Playwright browser install"
+        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED == 'true' && matrix.shard == 2
+        run: |
+          if [ -d "$PLAYWRIGHT_BROWSERS_PATH" ] && [ "$(ls -A "$PLAYWRIGHT_BROWSERS_PATH" 2>/dev/null)" ]; then
+            echo "Using pre-cached Playwright browsers at $PLAYWRIGHT_BROWSERS_PATH"
+          else
+            echo "::warning title=Skipped on self-hosted::Playwright Chromium install not run (needs apt/sudo and ARM64 Chromium). Browser-dependent tests in shard 2 may fail or be absent. Not a pass."
+          fi
 
       # GB-26 fix 2: cache the Chromium download (~26 s); system deps still
       # install on a hit. Keyed on the lockfile, so a Playwright bump misses.
       - name: Cache Playwright browsers
         id: pw-cache
-        if: matrix.shard == 2
-        uses: actions/cache@v6
+        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && (matrix.shard == 2)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright browsers
-        if: matrix.shard == 2 && steps.pw-cache.outputs.cache-hit != 'true'
-        run: pnpm --filter agent-browser exec playwright install --with-deps chromium
+        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && matrix.shard == 2 && steps.pw-cache.outputs.cache-hit != 'true'
+        run: |
+          # --with-deps needs passwordless sudo. The self-hosted runner does not
+          # have it; its system libraries are already installed.
+          if sudo -n true 2>/dev/null; then
+            pnpm --filter agent-browser exec playwright install --with-deps chromium
+          else
+            pnpm --filter agent-browser exec playwright install chromium
+          fi
 
       - name: Install Playwright system deps (cache hit)
-        if: matrix.shard == 2 && steps.pw-cache.outputs.cache-hit == 'true'
-        run: pnpm --filter agent-browser exec playwright install-deps chromium
+        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && matrix.shard == 2 && steps.pw-cache.outputs.cache-hit == 'true'
+        run: |
+          if sudo -n true 2>/dev/null; then
+            pnpm --filter agent-browser exec playwright install-deps chromium
+          else
+            echo "No passwordless sudo; using the libraries already on this runner."
+          fi
 
       # turbo.json's test task dependsOn build, so each shard builds the
       # workspace apps it tests. One retry for the next/font/google fetch
@@ -133,55 +230,113 @@ jobs:
       # running after one fails; turbo still exits non-zero.
       - name: Run tests
         run: |
-          if pnpm test ${{ matrix.filter }} --continue=dependencies-successful; then
+          if pnpm test ${{ matrix.filter }} --log-order=stream --continue=dependencies-successful; then
             exit 0
           fi
           echo "Tests failed; retrying once for a possible next/font fetch flake in a workspace build"
           sleep 15
-          pnpm test ${{ matrix.filter }} --continue=dependencies-successful
+          pnpm test ${{ matrix.filter }} --log-order=stream --continue=dependencies-successful
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
 
   build:
     name: Production build
-    runs-on: ubuntu-latest
+    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
+    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+      # Self-hosted WSL already has pnpm. action-setup@v6 with version
+      # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
+      # (CI Main run 40865371118). GitHub-hosted still uses the pin.
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        if: runner.environment != 'self-hosted'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
+          if [ -x "$pin/pnpm" ]; then
+            echo "$pin" >> "$GITHUB_PATH"
+            export PATH="$pin:$PATH"
+          fi
+          command -v pnpm
+          actual="$(pnpm --version)"
+          if [ "$actual" != "10.28.2" ]; then
+            echo "ERROR: expected pinned pnpm 10.28.2 on self-hosted runner, got $actual" >&2
+            exit 1
+          fi
+          echo "Verified runner pnpm version: $actual"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
-          cache: "pnpm"
+          # Self-hosted runners keep a persistent pnpm store. Uploading it
+          # through actions/cache packs ~1 GB and stalls the runner.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      # next/font/google sometimes 404s mid-build (null CSS parse at
-      # google/loader.js:122 on Public_Sans); one retry. Second `pnpm build`
-      # keeps the step's exit code. 4096 MB heap kept from the serial job
-      # (next build --webpack aborted with exit 134 under the ~2 GB cap).
+      # Next build is ~218s. The baseline lists roots Next does not compile
+      # (.github, docs, workers). A diff that stays inside them skips the
+      # build. Any other path, a missing base, or workflow_dispatch still
+      # runs pnpm build. A bad baseline fails this step.
+      - name: Build baseline
+        id: baseline
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/ci/build-baseline.mjs --ci
+
+      # Retries live in scripts/build-with-retry.sh, which holds the
+      # machine-wide build lock for the whole attempt loop. A second
+      # invocation here would drop that lock during the pause.
+      # 4096 MB heap: next build --webpack aborted with exit 134 under ~2 GB.
       - name: Production build
+        if: steps.baseline.outputs.skip != 'true'
         env:
           NODE_OPTIONS: --max-old-space-size=4096
+        run: pnpm build
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
         run: |
-          if pnpm build; then
-            exit 0
-          fi
-          echo "Production build failed; retrying once for next/font fetch flake"
-          sleep 15
-          pnpm build
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
 
   ci:
     name: Main quality gate
     needs: [quality, test, build]
     if: always()
-    runs-on: ubuntu-latest
+    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
+    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 5
     steps:
       - name: All CI Main jobs passed
@@ -196,25 +351,60 @@ jobs:
             fi
           done
 
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
+
   production-proof:
     name: Production launch proof
     if: github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 20
     permissions:
       contents: read
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+      # Self-hosted WSL already has pnpm. action-setup@v6 with version
+      # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
+      # (CI Main run 40865371118). GitHub-hosted still uses the pin.
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        if: runner.environment != 'self-hosted'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
+          if [ -x "$pin/pnpm" ]; then
+            echo "$pin" >> "$GITHUB_PATH"
+            export PATH="$pin:$PATH"
+          fi
+          command -v pnpm
+          actual="$(pnpm --version)"
+          if [ "$actual" != "10.28.2" ]; then
+            echo "ERROR: expected pinned pnpm 10.28.2 on self-hosted runner, got $actual" >&2
+            exit 1
+          fi
+          echo "Verified runner pnpm version: $actual"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
 
@@ -250,10 +440,21 @@ jobs:
 
       - name: Upload launch proof
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: authichain-production-launch-proof
           path: |
             artifacts/production-launch-proof.json
             artifacts/launch-proof-qron.png
           if-no-files-found: warn
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +

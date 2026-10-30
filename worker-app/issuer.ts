@@ -12,6 +12,15 @@ import {
 
 export type IssuerEnv = AttestationEnv & {
   CRON_SECRET?: string;
+  /**
+   * Optional one-time bearer for the free local seeding path (no GitHub
+   * Actions). CF Deploy sets it with `wrangler secret put`, runs the seed
+   * script, then deletes it. Never logged or returned.
+   */
+  SEAL_SEED_TOKEN?: string;
+  SUPABASE_URL?: string;
+  NEXT_PUBLIC_SUPABASE_URL?: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
 };
 
 const ISSUER_HEADERS = {
@@ -52,6 +61,46 @@ function timingSafeTokenEquals(provided: string, expected: string): boolean {
   }
 }
 
+function readEnv(env: IssuerEnv | undefined, name: keyof IssuerEnv): string | undefined {
+  const proc = typeof process !== "undefined" ? process.env : undefined;
+  const v = (env?.[name] as string | undefined) || proc?.[name as string];
+  return v ? v.trim() : undefined;
+}
+
+/** AuthiChain's own seals only: product_id must be authichain-<slug>. */
+export const OWN_SEAL_PRODUCT = /^authichain-[a-z0-9][a-z0-9-]{1,80}$/;
+
+export type SealRow = {
+  id: string;
+  product_id: string;
+  batch_id: string | null;
+  brand: string;
+  qr_payload: string;
+  label: string;
+  signing_kid: string;
+  signature_jws: string;
+};
+
+export type SealInserter = (row: SealRow, env?: IssuerEnv) => Promise<{ ok: boolean; error?: string }>;
+
+/** Insert via PostgREST with the worker's own service-role secret. */
+export const insertSealRow: SealInserter = async (row, env) => {
+  const url = (readEnv(env, "SUPABASE_URL") || readEnv(env, "NEXT_PUBLIC_SUPABASE_URL") || "").replace(/\/$/, "");
+  const key = readEnv(env, "SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) return { ok: false, error: "registry not configured" };
+  const res = await fetch(`${url}/rest/v1/auth_seals`, {
+    method: "POST",
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify(row),
+  });
+  return res.ok ? { ok: true } : { ok: false, error: `insert ${res.status}` };
+};
+
 function bearerToken(header: string | undefined): string | null {
   if (!header) return null;
   const parts = header.split(" ");
@@ -71,13 +120,17 @@ export function isAllowedGithubOidcPayload(
 export async function authorizeIssuerRequest(
   authorization: string | undefined,
   env?: IssuerEnv,
-): Promise<{ ok: true; via: "cron" | "github-oidc" } | { ok: false; error: string }> {
+): Promise<{ ok: true; via: "cron" | "github-oidc" | "seed-token" } | { ok: false; error: string }> {
   const token = bearerToken(authorization);
   if (!token) return { ok: false, error: "missing bearer token" };
 
   const cron = readCronSecret(env);
   if (cron && timingSafeTokenEquals(token, cron)) {
     return { ok: true, via: "cron" };
+  }
+  const seed = readEnv(env, "SEAL_SEED_TOKEN");
+  if (seed && seed.length >= 32 && timingSafeTokenEquals(token, seed)) {
+    return { ok: true, via: "seed-token" };
   }
 
   try {
@@ -140,7 +193,86 @@ function parseLaunchBody(input: unknown): LaunchBody {
 export function registerIssuerRoutes<
   E extends IssuerEnv,
   V extends Record<string, unknown> = Record<string, never>,
->(app: Hono<{ Bindings: E; Variables: V }>): void {
+>(
+  app: Hono<{ Bindings: E; Variables: V }>,
+  opts: { insertSeal?: SealInserter } = {},
+): void {
+  const insertSeal = opts.insertSeal ?? insertSealRow;
+
+  /**
+   * POST /protocol/seal-sign — sign one AuthiChain-owned seal with the
+   * worker's Ed25519 attestation key and append it to auth_seals. The key
+   * never leaves the worker; only the JWS and kid are returned.
+   * Body: { product_id: "authichain-<slug>", label: string, batch_id? }.
+   */
+  app.post("/protocol/seal-sign", async (c) => {
+    const auth = await authorizeIssuerRequest(c.req.header("authorization"), c.env);
+    if (!auth.ok) return c.json({ error: auth.error }, 401, NO_STORE);
+
+    let body: Record<string, unknown> = {};
+    try {
+      body = (await c.req.json()) as Record<string, unknown>;
+    } catch {
+      return c.json({ error: "invalid JSON body" }, 400, NO_STORE);
+    }
+    const productId = typeof body.product_id === "string" ? body.product_id.trim() : "";
+    const label = typeof body.label === "string" ? body.label.trim().slice(0, 200) : "";
+    const batchId = typeof body.batch_id === "string" ? body.batch_id.trim().slice(0, 80) : null;
+    if (!OWN_SEAL_PRODUCT.test(productId)) {
+      return c.json({ error: "product_id must be authichain-<slug> (AuthiChain-owned seals only)" }, 400, NO_STORE);
+    }
+    if (!label) return c.json({ error: "label is required" }, 400, NO_STORE);
+
+    const resolved = await resolveAttestationKey(c.env);
+    if (!resolved.ok || !resolved.key.privatePem) {
+      return c.json({ error: "attestation signing key unavailable" }, 503, NO_STORE);
+    }
+
+    const sealId = crypto.randomUUID();
+    const qrPayload = `https://authichain.com/verify?id=${sealId}`;
+    const digest = await sha256Hex(`${sealId}|${productId}|${batchId ?? ""}|${label}`);
+    const attestation: AuthiChainAttestationV01 = {
+      version: "0.1",
+      attestation_id: `urn:authichain:attestation:v01:seal-${sealId}`,
+      issuer: { id: ISSUER_ID, name: "AuthiChain" },
+      subject: { object_id: `urn:authichain:seal:${sealId}`, serial: productId },
+      decision: "verified",
+      status: "active",
+      issued_at: new Date().toISOString(),
+      expires_at: "2027-12-31T00:00:00Z",
+      evidence: [{ id: "authichain-own-seal", type: "issuer-seal", digest: `sha256:${digest}` }],
+    };
+
+    let jws: string;
+    try {
+      const privateKey = await importPKCS8(resolved.key.privatePem, "EdDSA");
+      jws = await signAttestation(attestation, privateKey, resolved.key.kid);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "sign failed";
+      return c.json({ error: "seal sign failed", detail: message }, 500, NO_STORE);
+    }
+
+    const row: SealRow = {
+      id: sealId,
+      product_id: productId,
+      batch_id: batchId,
+      brand: "authichain.com",
+      qr_payload: qrPayload,
+      label,
+      signing_kid: resolved.key.kid,
+      signature_jws: jws,
+    };
+    const stored = await insertSeal(row, c.env);
+    if (!stored.ok) {
+      return c.json({ error: "seal not stored", detail: stored.error }, 502, NO_STORE);
+    }
+    return c.json(
+      { seal_id: sealId, kid: resolved.key.kid, jws, verify: `https://authichain.com/api/verify?id=${sealId}`, via: auth.via },
+      201,
+      NO_STORE,
+    );
+  });
+
   app.get("/protocol/issuer.json", async (c) => {
     const resolved = await resolveAttestationKey(c.env);
     if (!resolved.ok) {
