@@ -18,6 +18,7 @@ import {
   deliverDppCheckoutStarted,
 } from "./checkout-growth";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
+import { tryHandleCertificateRegistry } from "./certificate-registry";
 import { tryHandleMcp } from "./mcp-routes";
 import { tryHandleMcpFree } from "./mcp-free-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
@@ -184,7 +185,7 @@ const SEO = {
     },
     {
       q: 'What is EU DPP Readiness?',
-      a: 'A one-time checkout that opens an AuthiChain workspace, with self-serve activation and 50 workspace generations to publish a first Digital Product Passport.',
+      a: 'A one-time checkout that opens an AuthiChain workspace with self-serve activation, so you can publish a first Digital Product Passport.',
     },
     {
       q: 'What else is live in the estate?',
@@ -2368,7 +2369,7 @@ function techStack() {
     "What AuthiChain already does",
     "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations." },
+      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. The checkout opens an AuthiChain workspace with self-serve activation." },
       { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
     "technology",
@@ -2445,7 +2446,7 @@ function marketReality() {
   <div class="wrap">
     <p class="section-tag">Regulatory context</p>
     <h2>EU Digital Product Passport</h2>
-    <p class="section-sub">EU ESPR requires a machine-readable product passport for goods sold in Europe, phased in by category. The $299 checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations. It does not issue a certificate.</p>
+    <p class="section-sub">EU ESPR requires a machine-readable product passport for goods sold in Europe, phased in by category. The $299 checkout opens an AuthiChain workspace with self-serve activation. It does not issue a certificate.</p>
     <div class="estate-actions">
       ${checkoutEmailFormHtml({
         action: "https://authichain.com/checkout/dpp_readiness",
@@ -3622,6 +3623,10 @@ async function handleAuthichainCom(
     if (checkoutGate) return checkoutGate;
     // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
+    // The public registry has to be intercepted on the landing Worker: /api/*
+    // otherwise proxies to APP_WORKER, whose route table does not own this path.
+    const certificateRegistry = await tryHandleCertificateRegistry(request, env);
+    if (certificateRegistry) return certificateRegistry;
     const x402 = await tryHandleX402(request, env, env.VERIFY_APP);
     if (x402) return x402;
     // /mcp/free: free-only sibling for the marketplace plugin (Advisor ruling B).

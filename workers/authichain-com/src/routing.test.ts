@@ -104,29 +104,28 @@ test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const html = await res.text();
-    for (const banned of ["$19", "qron_launch", "Launch subscription"]) {
+    for (const banned of [
+      "$19",
+      "qron_launch",
+      "Launch subscription",
+      "Starting a monthly plan replaces",
+      "unless you switch to a Launch",
+      "Pack credits never expire.",
+    ]) {
       assert.ok(
         !html.includes(banned),
         `${path} must have 0 hits on ${banned}`
       );
     }
-    assert.ok(
-      !html.includes("never expire"),
-      `${path} must not say never expire`
-    );
   }
   const starter = await (await get("/checkout/starter")).text();
   assert.ok(
-    starter.includes(
-      "No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits."
-    )
+    starter.includes("No subscription, and one-time pack credits never expire.")
   );
   const home = await (await get("/")).text();
   assert.ok(
-    home.includes(
-      "No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits."
-    ),
-    "home JSON-LD Starter offer uses the RES-86 sentence"
+    home.includes("No subscription, and one-time pack credits never expire."),
+    "home JSON-LD Starter offer uses the Advisor C sentence"
   );
 });
 
@@ -317,36 +316,95 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
   assert.match(privacy, /\$QRON token is not a way to pay/);
   assert.match(privacy, /simulated/);
   assert.match(privacy, /id="outbound"/);
-  assert.match(privacy, /Zachary J Kietzman d\/b\/a AuthiChain \(sole proprietor\)/);
+  assert.match(
+    privacy,
+    /Zachary J Kietzman d\/b\/a AuthiChain \(sole proprietor\)/
+  );
   assert.match(privacy, /authichain@mail\.grokbot\.com/);
-  assert.match(privacy, /we will email you on the basis of your consent \(GDPR Art\. 6\(1\)\(a\)\)/);
-  assert.match(privacy, /You will be able to withdraw consent at any time through the unsubscribe link/);
-  assert.match(privacy, /Legal basis: legitimate interest \(GDPR Art\. 6\(1\)\(f\)\)/);
-  assert.match(privacy, /Where we got your data\.<\/strong> Opt-in sequence: from you\. 1-to-1 business emails: public sources \(such as your company's website\) or Apollo\.io/);
-  assert.match(privacy, /Resend, for the opt-in sequence; Google \(Gmail\), which Zachary uses to send and receive 1-to-1 emails with business contacts at US brands;/);
-  assert.match(privacy, /and Supabase, which stores the contact records for business contacts at US brands\./);
-  assert.match(privacy, /We got your work contact details from public sources or Apollo\.io\./);
-  assert.doesNotMatch(privacy, /We have two email streams|If we start, there will be two kinds|No outbound marketing email sends are active yet|if we start them|will store the contact records/);
-  assert.match(privacy, /Resend and Google process data in the United States; we have not yet confirmed their transfer safeguards on this page\./);
-  assert.match(privacy, /Reply 'stop' \(or tell us in any words\) and we won't email you again/);
-  assert.match(privacy, /reply 'stop' \(or tell us in any words\) to our email/);
-  assert.doesNotMatch(privacy, /If we start emailing businesses|Any future outreach/);
-  assert.match(privacy, /and, if we start it, the DPP readiness email sequence to people who confirmed a double opt-in/);
-  assert.equal(privacy.split("No automated marketing email sequence is active yet. Zachary does send individual 1-to-1 emails to business contacts at US brands, which you can stop by replying 'stop'. If we start the automated sequence, it will go only to recipients in the United States who confirmed a double opt-in, and every message will carry an unsubscribe link.").length - 1, 2);
+  assert.match(
+    privacy,
+    /we will email you on the basis of your consent \(GDPR Art\. 6\(1\)\(a\)\)/
+  );
+  assert.match(
+    privacy,
+    /You will be able to withdraw consent at any time through the unsubscribe link/
+  );
+  assert.match(
+    privacy,
+    /Legal basis: legitimate interest \(GDPR Art\. 6\(1\)\(f\)\)/
+  );
+  assert.match(
+    privacy,
+    /Where we got your data\.<\/strong> Opt-in sequence: from you\. 1-to-1 business emails: public sources \(such as your company's website\) or Apollo\.io/
+  );
+  assert.match(
+    privacy,
+    /Resend, for the opt-in sequence; Google \(Gmail\), which Zachary uses to send and receive 1-to-1 emails with business contacts at US brands;/
+  );
+  assert.match(
+    privacy,
+    /and Supabase, which stores the contact records for business contacts at US brands\./
+  );
+  assert.match(
+    privacy,
+    /We got your work contact details from public sources or Apollo\.io\./
+  );
+  assert.doesNotMatch(
+    privacy,
+    /We have two email streams|If we start, there will be two kinds|No outbound marketing email sends are active yet|if we start them|will store the contact records/
+  );
+  assert.match(
+    privacy,
+    /Resend and Google process data in the United States; we have not yet confirmed their transfer safeguards on this page\./
+  );
+  assert.match(
+    privacy,
+    /Reply 'stop' \(or tell us in any words\) and we won't email you again/
+  );
+  assert.match(
+    privacy,
+    /reply 'stop' \(or tell us in any words\) to our email/
+  );
+  assert.doesNotMatch(
+    privacy,
+    /If we start emailing businesses|Any future outreach/
+  );
+  assert.match(
+    privacy,
+    /and, if we start it, the DPP readiness email sequence to people who confirmed a double opt-in/
+  );
+  assert.equal(
+    privacy.split(
+      "No automated marketing email sequence is active yet. Zachary does send individual 1-to-1 emails to business contacts at US brands, which you can stop by replying 'stop'. If we start the automated sequence, it will go only to recipients in the United States who confirmed a double opt-in, and every message will carry an unsubscribe link."
+    ).length - 1,
+    2
+  );
   assert.doesNotMatch(privacy, /If we start sending marketing email/);
-  assert.match(privacy, /We keep your subscriber data until you unsubscribe, then delete it within 30 days, except your email address, kept on a suppression list only to honour your unsubscribe\./);
+  assert.match(
+    privacy,
+    /We keep your subscriber data until you unsubscribe, then delete it within 30 days, except your email address, kept on a suppression list only to honour your unsubscribe\./
+  );
   assert.match(privacy, /12 months after our last contact/);
   assert.match(privacy, /do not claim one is in place/);
   assert.match(privacy, /AgentMail/);
   assert.match(privacy, /Amazon SES/);
   assert.match(privacy, /section 12\.1/);
-  assert.match(privacy, /No automated marketing email sequence is active yet\./);
-  assert.doesNotMatch(privacy, /We send marketing email only|people who opted in|we email you on the basis of your consent/);
+  assert.match(
+    privacy,
+    /No automated marketing email sequence is active yet\./
+  );
+  assert.doesNotMatch(
+    privacy,
+    /We send marketing email only|people who opted in|we email you on the basis of your consent/
+  );
   assert.doesNotMatch(privacy, /not a newsletter/i);
   assert.match(privacy, /receive-only/);
   assert.match(privacy, /None appointed/);
   assert.doesNotMatch(privacy, /Resend[^<]*(marketing|EU contacts)/);
-  assert.doesNotMatch(privacy, /(sends|sent by|sender)[^<.]*(AgentMail|Resend)|(AgentMail|Resend)[^<.]*sends our/i);
+  assert.doesNotMatch(
+    privacy,
+    /(sends|sent by|sender)[^<.]*(AgentMail|Resend)|(AgentMail|Resend)[^<.]*sends our/i
+  );
   assert.doesNotMatch(privacy, /pending legal check|\[EU representative/);
   assert.doesNotMatch(privacy, /@gmail\.com/);
   assert.doesNotMatch(privacy, /POSTAL ADDRESS|street address/i);
@@ -1314,7 +1372,9 @@ test("sitemap does not list /checkout/qron_launch after it closed to new buyers 
   assert.equal(res.status, 200);
   const xml = await res.text();
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
-  assert.ok(!xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>"));
+  assert.ok(
+    !xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
+  );
   assert.ok(!xml.includes("/checkout/qron_launch"));
 });
 
@@ -1579,12 +1639,18 @@ test("vs pages and the scantrust page carry no unbacked 'Tamper-Proof by Design'
 
 // CFA-629: the dpp-check sub-routes must be reachable through the Worker's fetch.
 test("GET /dpp-check/product returns 200 through the Worker fetch", async () => {
-  const res = await worker.fetch(new Request("https://authichain.com/dpp-check/product"), ENV);
+  const res = await worker.fetch(
+    new Request("https://authichain.com/dpp-check/product"),
+    ENV
+  );
   assert.equal(res.status, 200);
 });
 
 test("GET /dpp/scan returns 301 to /dpp-check through the Worker fetch", async () => {
-  const res = await worker.fetch(new Request("https://authichain.com/dpp/scan"), ENV);
+  const res = await worker.fetch(
+    new Request("https://authichain.com/dpp/scan"),
+    ENV
+  );
   assert.equal(res.status, 301);
   assert.match(res.headers.get("Location") ?? "", /\/dpp-check$/);
 });

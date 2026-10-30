@@ -316,7 +316,7 @@ describe("tryHandleGatedCheckout — POST", () => {
     const success = body.get("success_url") || "";
     const cancel = body.get("cancel_url") || "";
 
-    // /dpp/thanks names a DPP workspace and 50 generations; Starter grants 100.
+    // /dpp/thanks names a DPP workspace; Starter grants 100.
     expect(success).not.toContain("/dpp/thanks");
     expect(success).toContain("https://authichain.com/generate?paid=1");
     expect(cancel).toContain("https://authichain.com/generate?cancelled=1");
@@ -494,7 +494,7 @@ describe("tryHandleGatedCheckout — POST", () => {
 });
 
 describe("CFA-460: /checkout/starter confirm copy", () => {
-  it("shows the RES-86 sentence and no Launch $19 copy", async () => {
+  it("shows the RES-86c option C sentence and no Launch $19 copy", async () => {
     const res = await tryHandleGatedCheckout(
       new Request("https://authichain.com/checkout/starter"),
       {}
@@ -503,17 +503,21 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
     expect(res!.status).toBe(200);
     const html = await res!.text();
     expect(html).toContain(
-      "100 AI QR generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits."
+      "100 AI QR generations for $29, paid once. No subscription, and one-time pack credits never expire."
     );
     expect(html).not.toContain("$19");
     expect(html).not.toContain("qron_launch");
     expect(html).not.toContain("Launch subscription");
-    expect(html).not.toContain("never expire");
+    expect(html).not.toContain("Starting a monthly plan replaces");
+    expect(html).not.toContain("Pack credits never expire.");
   });
 
-  it("display override only: plans.ts Starter description is unchanged", () => {
+  it("plans.ts Starter pricing copy uses the Advisor C qualifier", () => {
     expect(planById("starter")?.description).toContain(
-      "Pack credits never expire unless you switch to a Launch subscription."
+      "One-time pack credits (Starter and Creator) never expire."
+    );
+    expect(planById("starter")?.features).toContain(
+      "One-time pack credits (Starter and Creator) never expire"
     );
   });
 });
@@ -811,30 +815,74 @@ describe("retired /checkout/qron_launch (RES-86c)", () => {
 
 describe("wording sweep 2026-10-16: gap report and gov pilot gated SKUs", () => {
   it("resolves /checkout/<id> to the approved live prices", () => {
-    expect(planFromGatedPath("/checkout/battery_gap_report")?.stripe_price_id).toBe("price_1UREvgGqTruSqV8TMMYXVF69");
-    expect(planFromGatedPath("/checkout/battery_gap_report_extra")?.stripe_price_id).toBe("price_1UREviGqTruSqV8T04Pr9DR1");
-    expect(planFromGatedPath("/checkout/gov_provenance_pilot")?.stripe_price_id).toBe("price_1UREvjGqTruSqV8TzUZ4fxya");
-    for (const id of ["battery_gap_report", "battery_gap_report_extra", "gov_provenance_pilot"] as const) {
+    expect(
+      planFromGatedPath("/checkout/battery_gap_report")?.stripe_price_id
+    ).toBe("price_1UREvgGqTruSqV8TMMYXVF69");
+    expect(
+      planFromGatedPath("/checkout/battery_gap_report_extra")?.stripe_price_id
+    ).toBe("price_1UREviGqTruSqV8T04Pr9DR1");
+    expect(
+      planFromGatedPath("/checkout/gov_provenance_pilot")?.stripe_price_id
+    ).toBe("price_1UREvjGqTruSqV8TzUZ4fxya");
+    for (const id of [
+      "battery_gap_report",
+      "battery_gap_report_extra",
+      "gov_provenance_pilot",
+    ] as const) {
       expect(planPaymentLink(id)).toBe(`https://authichain.com/checkout/${id}`);
       expect(planById(id)?.stripe_payment_link).toBeUndefined();
       expect(planById(id)?.listed).toBe(false);
     }
   });
   it("extra model enables adjustable quantity 1-20; others do not", () => {
-    const extra = buildGatedSessionBody({ plan: planById("battery_gap_report_extra")!, email: "a@b.co", fields: new URLSearchParams() });
-    expect(extra.get("line_items[0][adjustable_quantity][enabled]")).toBe("true");
+    const extra = buildGatedSessionBody({
+      plan: planById("battery_gap_report_extra")!,
+      email: "a@b.co",
+      fields: new URLSearchParams(),
+    });
+    expect(extra.get("line_items[0][adjustable_quantity][enabled]")).toBe(
+      "true"
+    );
     expect(extra.get("line_items[0][adjustable_quantity][minimum]")).toBe("1");
     expect(extra.get("line_items[0][adjustable_quantity][maximum]")).toBe("20");
-    const report = buildGatedSessionBody({ plan: planById("battery_gap_report")!, email: "a@b.co", fields: new URLSearchParams() });
-    expect(report.get("line_items[0][adjustable_quantity][enabled]")).toBeNull();
+    const report = buildGatedSessionBody({
+      plan: planById("battery_gap_report")!,
+      email: "a@b.co",
+      fields: new URLSearchParams(),
+    });
+    expect(
+      report.get("line_items[0][adjustable_quantity][enabled]")
+    ).toBeNull();
     expect(report.get("line_items[0][quantity]")).toBe("1");
   });
   it("service SKUs return to their offer page, not the DPP workspace page", () => {
-    const gov = buildGatedSessionBody({ plan: planById("gov_provenance_pilot")!, email: "a@b.co", fields: new URLSearchParams() });
-    expect(gov.get("success_url")).toMatch(/^https:\/\/authichain\.com\/made-in-america\?paid=1/);
-    expect(gov.get("cancel_url")).toMatch(/^https:\/\/authichain\.com\/made-in-america\?cancelled=1/);
-    const rep = buildGatedSessionBody({ plan: planById("battery_gap_report")!, email: "a@b.co", fields: new URLSearchParams() });
+    const gov = buildGatedSessionBody({
+      plan: planById("gov_provenance_pilot")!,
+      email: "a@b.co",
+      fields: new URLSearchParams(),
+    });
+    expect(gov.get("success_url")).toMatch(
+      /^https:\/\/authichain\.com\/made-in-america\?paid=1/
+    );
+    expect(gov.get("cancel_url")).toMatch(
+      /^https:\/\/authichain\.com\/made-in-america\?cancelled=1/
+    );
+    const rep = buildGatedSessionBody({
+      plan: planById("battery_gap_report")!,
+      email: "a@b.co",
+      fields: new URLSearchParams(),
+    });
     expect(rep.get("success_url")).not.toContain("/dpp/thanks");
-    expect(rep.get("success_url")).toMatch(/^https:\/\/authichain\.com\/battery-passport\?paid=1/);
+    expect(rep.get("success_url")).toMatch(
+      /^https:\/\/authichain\.com\/battery-passport\?paid=1/
+    );
+  });
+  it("gap-report confirm page uses email/no-call delivery, not 10 business days", () => {
+    const html = renderCheckoutConfirmPage({
+      plan: planById("battery_gap_report")!,
+    });
+    expect(html).toContain("arrives by email as a written document. No call.");
+    expect(html).not.toContain("10 business days");
+    expect(html).toContain("$950");
   });
 });

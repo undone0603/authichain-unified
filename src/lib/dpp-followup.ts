@@ -101,7 +101,7 @@ export function buildDppFollowup(r: DppOptInResult): DppFollowupEmail {
     "",
     `Your gaps and the sources behind them are on the check page, ready to reopen: ${DPP_CHECK_URL}?category=${encodeURIComponent(r.category)}&sells_in_eu=yes`,
     "",
-    `If you want to try AuthiChain itself, the ${name} is a one-time $${price}: a self-serve workspace with ${generations} workspace generations. ${DPP_CHECKOUT_URL}`,
+    `If you want to try AuthiChain itself, the ${name} is a one-time $${price}: a self-serve workspace. ${DPP_CHECKOUT_URL}`,
     "It is not an audit, not a certification and not legal advice, and it does not register a product in EUDAMED.",
     "",
     "This is the only follow-up we will send. Replies go to hello@authichain.com.",

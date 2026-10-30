@@ -21,73 +21,10 @@ import {
 } from "./reconcile.mjs";
 import { checkFulfilment } from "./revenue-watch.mjs";
 
-export const PROBES = [
-  { name: "authichain.com", url: "https://authichain.com/", expect: [200] },
-  {
-    name: "authichain.com pricing",
-    url: "https://authichain.com/pricing",
-    expect: [200],
-  },
-  {
-    name: "authichain.com API health",
-    url: "https://authichain.com/api/health",
-    expect: [200],
-  },
-  {
-    name: "authichain.com real 404",
-    url: "https://authichain.com/__pulse_missing__",
-    expect: [404],
-  },
-  { name: "qron.space", url: "https://qron.space/", expect: [200] },
-  { name: "strainchain.io", url: "https://strainchain.io/", expect: [200] },
-  { name: "govchain.us", url: "https://govchain.us/", expect: [200] },
-  {
-    name: "govchain.us opportunities",
-    url: "https://govchain.us/opportunities",
-    expect: [200],
-  },
-];
+import { PROBES, runProbes } from "./probes.mjs";
+export { PROBES, runProbes };
 
 const MARKER = "<!-- ops-pulse-signature:";
-
-/** Probes each URL; a failure is retried once after retryDelayMs so a single blip never pages anyone. */
-export async function runProbes(
-  probes = PROBES,
-  { fetchImpl = fetch, timeoutMs = 15_000, retryDelayMs = 5_000 } = {}
-) {
-  const first = await probeAll(probes, { fetchImpl, timeoutMs });
-  const failed = first.filter(r => !r.ok);
-  if (!failed.length) return first;
-  await new Promise(r => setTimeout(r, retryDelayMs));
-  const retried = new Map(
-    (await probeAll(failed, { fetchImpl, timeoutMs })).map(r => [r.url, r])
-  );
-  return first.map(r => retried.get(r.url) ?? r);
-}
-
-async function probeAll(probes, { fetchImpl, timeoutMs }) {
-  return Promise.all(
-    probes.map(async p => {
-      const t0 = Date.now();
-      try {
-        const res = await fetchImpl(p.url, {
-          redirect: "manual",
-          signal: AbortSignal.timeout(timeoutMs),
-        });
-        const ok = p.expect.includes(res.status);
-        return { ...p, status: res.status, ms: Date.now() - t0, ok };
-      } catch (e) {
-        return {
-          ...p,
-          status: 0,
-          ms: Date.now() - t0,
-          ok: false,
-          error: String(e.message ?? e),
-        };
-      }
-    })
-  );
-}
 
 /**
  * Pure. True when a workflow's only trigger is `workflow_call`. Its jobs run
@@ -185,6 +122,13 @@ export function evaluateWorkflows(
 }
 
 /**
+ * Public-safe reason the fulfilment check could not run. The alert issue is in
+ * a public repo, so only the upstream and HTTP status survive, never a body.
+ */
+export function blindReason(error) {
+  const msg = String(error?.message ?? error ?? "");
+  const m = msg.match(/^(Stripe checkout sessions|Supabase stripe_events) -> (\d{3})/);
+  return m ? `${m[1]} answered HTTP ${m[2]}` : "the check failed before it could read Stripe and Supabase";
  * Read-only monitoring must fail closed. Never put exception messages (which
  * could contain tokens or customer details) in a public ops-alert issue.
  * This checks webhook receipt only, not entitlement or activation.
@@ -224,6 +168,7 @@ export function signature(report) {
     ...report.probes.filter(p => !p.ok).map(p => `probe:${p.name}`),
     ...report.workflows.map(w => `wf:${w.file}:${w.kind}`),
     ...(report.revenue ?? []).map(r => `pay:${r.session}`),
+    ...(report.fulfilmentBlind ? ["watchdog:fulfilment"] : []),
     ...(report.monitoring ?? []).map(m => `monitor:${m.name}:${m.kind}`),
   ].sort();
   return keys.join("|");
@@ -260,6 +205,13 @@ export function renderReport(report) {
       lines.push(
         `- Checkout \`${r.session}\` paid ${r.paid_at}: ${r.reason}. Check the customer received what they bought, then replay the event from the Stripe dashboard.`
       );
+  }
+  if (report.fulfilmentBlind) {
+    lines.push(
+      "",
+      "#### Fulfilment watchdog cannot see",
+      `- ${report.fulfilmentBlind}. Until this is fixed nobody is checking that paying customers received what they bought.`
+    );
   }
   lines.push(
     "",
@@ -394,6 +346,38 @@ async function main() {
     );
   }
 
+  const stripeKey =
+    process.env.STRIPE_READ_KEY || process.env.STRIPE_SECRET_KEY;
+  // A watchdog that could not look is not a green watchdog. Before this, a
+  // missing key or a Stripe 401 logged "skipped" and the pulse stayed green.
+  const missing = [
+    !stripeKey && "STRIPE_READ_KEY/STRIPE_SECRET_KEY",
+    !process.env.SUPABASE_URL && "SUPABASE_URL",
+    !process.env.SUPABASE_SERVICE_ROLE_KEY && "SUPABASE_SERVICE_ROLE_KEY",
+  ].filter(Boolean);
+  if (missing.length) {
+    report.fulfilmentBlind = `not configured: ${missing.join(", ")} unset`;
+    console.log(`fulfilment check blind: ${report.fulfilmentBlind}`);
+  } else {
+    try {
+      const f = await checkFulfilment({
+        stripeKey,
+        supabaseUrl: process.env.SUPABASE_URL,
+        supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        founderEmails: [
+          ...(manifest.founder_emails ?? []),
+          ...(process.env.FOUNDER_EMAILS ?? "").split(","),
+        ],
+      });
+      report.revenue = f.problems;
+      console.log(
+        `fulfilment: ${f.checked} paid checkouts checked, ${f.problems.length} unfulfilled`
+      );
+    } catch (e) {
+      report.fulfilmentBlind = blindReason(e);
+      console.log(`fulfilment check blind: ${report.fulfilmentBlind}`);
+    }
+  }
   const f = await monitorFulfilment({
     stripeKey: process.env.STRIPE_READ_KEY || process.env.STRIPE_SECRET_KEY,
     supabaseUrl: process.env.SUPABASE_URL,
