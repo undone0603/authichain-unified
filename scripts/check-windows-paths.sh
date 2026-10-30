@@ -49,7 +49,9 @@ for p in "${PATHS[@]:-}"; do
       bad=1
       break
     fi
-    upper=$(printf '%s' "$part" | tr '[:lower:]' '[:upper:]')
+    # Builtin case conversion: a $(… | tr) subshell per path segment forked
+    # ~18k processes over the whole index, which takes minutes on Git Bash.
+    upper=${part^^}
     stem=${upper%%.*}
     case "$stem" in
       CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])

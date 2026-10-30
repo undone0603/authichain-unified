@@ -56,7 +56,7 @@ describe("loop identity stays in lockstep with src/lib/growth/loops.ts", () => {
   });
 
   it("returns null for plans with no loop", () => {
-    for (const plan of ["creator", "qron_launch", "strainchain_farm", "free", ""]) {
+    for (const plan of ["creator", "qron_launch", "qron_launch_annual", "strainchain_farm", "free", ""]) {
       expect(loopForPlan(plan)).toBeNull();
     }
     expect(loopForPlan(null)).toBeNull();
@@ -85,6 +85,17 @@ describe("founder list stays in lockstep with live-catalog.ts", () => {
 });
 
 describe("an unmapped price must never look like a starter purchase", () => {
+  it("grants Launch Annual 1,200 generations by price id, not by amount", () => {
+    expect(grantForPrice("price_1USNoSGqTruSqV8ThTIW7Ej8")).toEqual({
+      plan: "qron_launch_annual",
+      brand: "qron",
+      generations: 1200,
+      refillOnInvoicePaid: true,
+    });
+    expect(grantForCheckout({ amountTotal: 19000 })).toBeNull();
+    expect(loopForPlan("qron_launch_annual")).toBeNull();
+  });
+
   it("grantForPrice returns null for a price outside the map", () => {
     expect(grantForPrice("price_does_not_exist")).toBeNull();
     expect(grantForPrice(null)).toBeNull();

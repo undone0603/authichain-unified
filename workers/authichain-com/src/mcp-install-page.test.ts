@@ -8,9 +8,10 @@ import {
   VSCODE_CLIENT_CONFIG,
   VSCODE_COMMAND,
   isMcpInstallPath,
+  mcpInstallMetaDescription,
   renderMcpInstallPage,
 } from "./mcp-install-page";
-import { TOOLS, isMcpPath } from "./mcp-routes";
+import { TOOLS, isMcpPath, mcpPaidVerifyStatus, tryHandleMcp } from "./mcp-routes";
 import { DPP_CATEGORIES } from "../../../src/lib/dpp-readiness.ts";
 import manifest from "../../../content/microsites/manifest.json" with { type: "json" };
 
@@ -146,5 +147,61 @@ describe("showcase seeding is honest", () => {
     ]) {
       expect(page.includes(secret), secret).toBe(false);
     }
+  });
+});
+
+describe("install page agrees with get_pricing on paid-verify binding (RES-75)", () => {
+  async function pricingStatus(env: Record<string, string>): Promise<string> {
+    const res = await tryHandleMcp(
+      new Request("https://authichain.com/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: { name: "get_pricing" },
+        }),
+      }),
+      env
+    );
+    const body = (await res!.json()) as { result: { content: Array<{ text: string }> } };
+    return (JSON.parse(body.result.content[0].text) as { legacySealVerify: { status: string } })
+      .legacySealVerify.status;
+  }
+
+  for (const [label, env, bound] of [
+    ["with X402_PAID_VERIFY_PATH=seal_lookup", { X402_PAID_VERIFY_PATH: "seal_lookup" }, true],
+    ["without X402_PAID_VERIFY_PATH", {}, false],
+  ] as const) {
+    it(label, async () => {
+      const status = await pricingStatus({ ...env });
+      expect(status).toBe(mcpPaidVerifyStatus({ ...env }).status);
+      expect(status).toBe(bound ? "bound" : "registry_not_bound");
+
+      const html = renderMcpInstallPage({ ...env });
+      const meta = mcpInstallMetaDescription({ ...env });
+      expect(html).toContain(`<meta name="description" content="${meta}">`);
+      expect(html).not.toMatch(/in development/i);
+      if (bound) {
+        expect(meta).toContain("Paid seal verify over x402 is live");
+        expect(html).not.toContain("registry_not_bound");
+      } else {
+        expect(meta).toContain("not answering yet");
+        expect(html).toContain("registry_not_bound");
+      }
+    });
+  }
+});
+
+describe("install page never says pricing is on hold (RES-75 gate)", () => {
+  it("has no 'on hold' text, with or without a paid-verify path", () => {
+    for (const env of [{}, { X402_PAID_VERIFY_PATH: "seal_lookup" }]) {
+      expect(renderMcpInstallPage(env)).not.toMatch(/on hold/i);
+    }
+    const pricing = SHOWCASES.find(s => s.call.tool === "get_pricing");
+    expect(pricing?.returns).toBe(
+      "Verification is free: no API key, no payment header, no account. Returns the free tool list, the x402 per-call price, and the one-time plans listed on /pricing."
+    );
   });
 });

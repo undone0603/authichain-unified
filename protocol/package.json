@@ -1,7 +1,7 @@
 {
   "name": "authichain-verify",
   "version": "0.1.1",
-  "description": "Offline reference verifier for the AuthiChain Verification Specification v0.1.0. Zero dependencies, runs without contacting any AuthiChain server.",
+  "description": "Offline verifier for AuthiChain provenance records and Ed25519 attestation seals (JWS + JWKS). Zero dependencies, runs without contacting any AuthiChain server.",
   "type": "module",
   "license": "Apache-2.0",
   "author": "Zachary Kietzman (AuthiChain)",
@@ -17,12 +17,24 @@
   "keywords": [
     "authichain",
     "verifier",
+    "offline-verification",
     "provenance",
+    "product-authentication",
+    "anti-counterfeiting",
     "verifiable-credentials",
     "did-key",
     "ed25519",
+    "eddsa",
+    "jws",
+    "jwks",
+    "jcs",
+    "rfc8785",
     "digital-product-passport",
-    "gs1"
+    "dpp",
+    "gs1",
+    "gs1-digital-link",
+    "supply-chain",
+    "cli"
   ],
   "engines": {
     "node": ">=18"
@@ -46,6 +58,9 @@
     "bin/authichain-verify.mjs",
     "examples/record.json",
     "examples/polygon-anchor-1.record.json",
+    "examples/attestation-fixture.jws",
+    "examples/attestation-fixture-tampered.jws",
+    "examples/attestation-fixture.jwks.json",
     "examples/polygon-anchor-1.anchor.json",
     "SPEC.md",
     "README.md",
@@ -55,6 +70,8 @@
   "sideEffects": false,
   "scripts": {
     "conformance": "node conformance/run.mjs --strict -- node verifier.mjs",
-    "prepublishOnly": "node conformance/run.mjs --strict -- node verifier.mjs"
+    "prepublishOnly": "node conformance/run.mjs --strict -- node verifier.mjs",
+    "test": "cd .. && vitest run --environment node protocol/verifier.test.mjs protocol/jws.test.mjs protocol/conformance/conformance.test.mjs",
+    "test:python": "cd python && PYTHONPATH=src python3 -m unittest discover -s tests && cd .. && PYTHONPATH=python/src node conformance/run.mjs --strict -- python3 -m authichain_verify"
   }
 }

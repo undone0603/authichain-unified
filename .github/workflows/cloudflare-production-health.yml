@@ -15,7 +15,8 @@ permissions:
 jobs:
   health:
     name: Public edge + Workers inventory
-    runs-on: ubuntu-latest
+    # Self-hosted WSL runner label authichain-ops (public-repo: no PR jobs on this host).
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7

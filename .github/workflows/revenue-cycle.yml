@@ -4,8 +4,8 @@ name: Revenue Cycle
 
 on:
   schedule:
-    # Weekly dry-run report only (Mondays 15:00 UTC)
-    - cron: "0 15 * * 1"
+    # Weekly dry-run report only (Mondays 15:20 UTC). The opportunity digest stays at 15:00.
+    - cron: "20 15 * * 1"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -50,7 +50,8 @@ jobs:
     # Scheduled runs are always dry-run report. Manual live requires both
     # inputs.live and the repository kill-switch variable.
     if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
-    runs-on: ubuntu-latest
+    # Self-hosted WSL runner label authichain-ops (public-repo: no PR jobs on this host).
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 20
 
     steps:
