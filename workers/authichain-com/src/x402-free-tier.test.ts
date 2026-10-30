@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { tryHandleX402 } from "./x402-routes";
+import { tryHandleX402, x402FreeCallsHealth } from "./x402-routes";
 import type { FreeTierStore } from "../../../src/lib/x402-free-tier";
+import { X402_DISCOVERY_EXAMPLE_SEAL_ID } from "../../../src/lib/x402";
 
 const SEAL = "11111111-2222-4333-8444-555555555555";
 const ENV = {
@@ -43,6 +44,135 @@ function call(ip = "203.0.113.7") {
 afterEach(() => {
   delete process.env.X402_PAY_TO;
   delete process.env.X402_FREE_DAILY_CALLS;
+});
+
+describe("x402 health freeCalls", () => {
+  it("arms only with a service-role key, a salt, and a positive limit", () => {
+    expect(x402FreeCallsHealth(ENV)).toEqual({
+      armed: true,
+      limit: 3,
+      window: "utc_day",
+      requires: "sealId UUID",
+    });
+    expect(x402FreeCallsHealth({ ...ENV, X402_FREE_DAILY_CALLS: "1" }).limit).toBe(1);
+    expect(x402FreeCallsHealth({ ...ENV, X402_FREE_DAILY_CALLS: "0" })).toMatchObject({
+      armed: false,
+      limit: 0,
+    });
+    expect(x402FreeCallsHealth({ ...ENV, X402_FREE_IP_SALT: "  " }).armed).toBe(false);
+    expect(
+      x402FreeCallsHealth({
+        ...ENV,
+        SUPABASE_SERVICE_ROLE_KEY: undefined,
+        SUPABASE_ANON_KEY: "anon-test",
+      }).armed
+    ).toBe(false);
+  });
+
+  it("GET /api/x402/health reports freeCalls and does not echo the salt or key", async () => {
+    const res = await tryHandleX402(new Request("https://authichain.com/api/x402/health"), ENV);
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as { freeCalls: { armed: boolean; limit: number } };
+    expect(body.freeCalls).toEqual({
+      armed: true,
+      limit: 3,
+      window: "utc_day",
+      requires: "sealId UUID",
+    });
+    const text = JSON.stringify(body);
+    expect(text).not.toContain(ENV.X402_FREE_IP_SALT);
+    expect(text).not.toContain(ENV.SUPABASE_SERVICE_ROLE_KEY);
+  });
+});
+
+describe("unpaid body that cannot be a seal", () => {
+  it("returns 402 for quote JSON without sealId and 400 for a non-UUID sealId", async () => {
+    const pay = { X402_PAY_TO: ENV.X402_PAY_TO };
+    for (const body of [{ probe: "suggestions" }, { productId: "p-1" }]) {
+      const res = await tryHandleX402(
+        new Request("https://authichain.com/api/v1/agent-verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+        pay
+      );
+      expect(res!.status).toBe(402);
+      expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+    }
+    const bad = await tryHandleX402(
+      new Request("https://authichain.com/api/v1/agent-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sealId: "AC-DEMO-001" }),
+      }),
+      pay
+    );
+    expect(bad!.status).toBe(400);
+    expect(bad!.headers.get("PAYMENT-REQUIRED")).toBeNull();
+    const json = (await bad!.json()) as { error: string; settled: boolean };
+    expect(json.settled).toBe(false);
+    expect(json.error).toBe("seal_id_not_uuid");
+  });
+
+  it("keeps an empty unpaid POST on the 402 challenge", async () => {
+    const res = await tryHandleX402(
+      new Request("https://authichain.com/api/v1/agent-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      }),
+      { X402_PAY_TO: ENV.X402_PAY_TO }
+    );
+    expect(res!.status).toBe(402);
+    expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+  });
+
+  it("keeps the stale PayAI sample `demo` on the 402 challenge", async () => {
+    const res = await tryHandleX402(
+      new Request("https://authichain.com/api/v1/agent-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "http",
+          method: "POST",
+          bodyType: "json",
+          body: { sealId: "demo" },
+        }),
+      }),
+      { X402_PAY_TO: ENV.X402_PAY_TO }
+    );
+    expect(res!.status).toBe(402);
+    expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+  });
+
+  it("does not grant a free 200 for the bazaar discovery example UUID", async () => {
+    const store = memStore();
+    const now = new Date("2026-10-16T15:00:00Z");
+    const res = (await tryHandleX402(
+      new Request("https://authichain.com/api/x402", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "CF-Connecting-IP": "203.0.113.7",
+        },
+        body: JSON.stringify({ sealId: X402_DISCOVERY_EXAMPLE_SEAL_ID }),
+      }),
+      ENV,
+      undefined,
+      { freeStore: store, now, fetchImpl: sealFetch }
+    ))!;
+    expect(res.status).toBe(402);
+    expect(res.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+    expect(store.rows).toHaveLength(0);
+    const real = (await tryHandleX402(call(), ENV, undefined, {
+      freeStore: store,
+      now,
+      fetchImpl: sealFetch,
+    }))!;
+    expect(real.status).toBe(200);
+    expect(store.rows).toHaveLength(1);
+  });
 });
 
 describe("x402 free daily calls", () => {
