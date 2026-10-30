@@ -174,6 +174,27 @@ describe("listedPlans", () => {
     expect(planByAmountCents(2900)?.id).toBe("starter");
   });
 
+  it("CFA-758: catalogue copy has no 50-workspace-generation or never-expire claims", () => {
+    const banned = [
+      "50 workspace generations",
+      "50 workspace generation",
+      "never expire",
+      "never-expire",
+      "no expiry",
+      "no-expiry",
+    ];
+    for (const p of PLANS) {
+      const blob = [p.description, ...(p.features ?? []), p.cta, p.name]
+        .join("\n")
+        .toLowerCase();
+      for (const phrase of banned) {
+        expect(blob, `${p.id} must not contain ${phrase}`).not.toContain(
+          phrase
+        );
+      }
+    }
+  });
+
   it("gap-report SKU copy is email delivery, not a 10-business-day SLA", () => {
     const report = planById("battery_gap_report")!;
     expect(report.price).toBe(950);
