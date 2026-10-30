@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import {
@@ -194,11 +195,14 @@ describe("email opt-in", () => {
       }),
     };
     const statuses: number[] = [];
+    // RATE_PURGE_SQL uses datetime('now'); a frozen clock older than 1 day
+    // deletes the rate row after every write, so hits never accumulate.
+    const now = new Date();
     for (let i = 1; i <= RATE_MAX + 1; i++) {
       const r = await tryHandleEmailOptin(
         post({ email: `u${i}@b.co`, consent: "yes" }),
         { DB: db, IP_HASH_SALT: SALT },
-        new Date("2026-10-25T12:00:00Z")
+        now
       );
       statuses.push(r!.status);
     }
