@@ -193,27 +193,6 @@ function fanoutResponse(request: Request): Response {
   return json(200, { version: 1 as const, resources });
 }
 
-function parseJsonObject(text: string): Record<string, unknown> {
-  if (!text.trim()) return {};
-  try {
-    const value = JSON.parse(text) as unknown;
-    return value && typeof value === "object" && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : {};
-  } catch {
-    return {};
-  }
-}
-
-/** 400 when the body cannot be a registry key. Null keeps the 402 challenge. */
-async function unpaidSealRefusal(
-  request: Request
-): Promise<{ status: number; body: unknown } | null> {
-  return refuseUnpaidSeal(
-    coerceSealBody(parseJsonObject(await request.clone().text()))
-  );
-}
-
 async function agentVerify(
   request: Request,
   env?: SisterX402Env,
