@@ -1,12 +1,15 @@
 // @vitest-environment node
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 const cli = fileURLToPath(new URL("./qron-studio.ts", import.meta.url));
+// Vitest's module runner does not implement import.meta.resolve.
+const tsxLoader = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
 const payload = "https://authichain.com/qron/r/qron-studio-demo";
 const directories: string[] = [];
 
@@ -23,7 +26,7 @@ function outputDirectory(): string {
 function runCli(out: string, args: string[] = []) {
   const result = spawnSync(
     process.execPath,
-    ["--import", import.meta.resolve("tsx"), cli, "--payload", payload, "--count", "1", "--seed", "1", "--quiet", "--out", out, ...args],
+    ["--import", tsxLoader, cli, "--payload", payload, "--count", "1", "--seed", "1", "--quiet", "--out", out, ...args],
     {
       encoding: "utf8",
       timeout: 60_000,
