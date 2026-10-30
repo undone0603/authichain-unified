@@ -877,4 +877,12 @@ describe("wording sweep 2026-10-16: gap report and gov pilot gated SKUs", () => 
       /^https:\/\/authichain\.com\/battery-passport\?paid=1/
     );
   });
+  it("gap-report confirm page uses email/no-call delivery, not 10 business days", () => {
+    const html = renderCheckoutConfirmPage({
+      plan: planById("battery_gap_report")!,
+    });
+    expect(html).toContain("arrives by email as a written document. No call.");
+    expect(html).not.toContain("10 business days");
+    expect(html).toContain("$950");
+  });
 });

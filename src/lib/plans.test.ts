@@ -173,4 +173,22 @@ describe("listedPlans", () => {
     expect(planByAmountCents(29900)).toBeUndefined();
     expect(planByAmountCents(2900)?.id).toBe("starter");
   });
+
+  it("gap-report SKU copy is email delivery, not a 10-business-day SLA", () => {
+    const report = planById("battery_gap_report")!;
+    expect(report.price).toBe(950);
+    expect(report.cta).toBe("Order the gap report — $950");
+    expect(report.description).toContain(
+      "arrives by email as a written document. No call."
+    );
+    expect(report.features).toContain(
+      "It arrives by email as a written document. No call."
+    );
+    expect(report.description).not.toContain("10 business days");
+    expect(report.features.join("\n")).not.toContain("10 business days");
+    expect(planById("battery_gap_report_extra")?.price).toBe(350);
+    expect(planById("battery_gap_report_extra")?.cta).toBe(
+      "Add a model — $350"
+    );
+  });
 });

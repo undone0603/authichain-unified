@@ -311,7 +311,7 @@ export const PLANS: Plan[] = [
     price: 950,
     price_suffix: " first model",
     description:
-      "Written readiness assessment of one battery model against Annex XIII, in 10 business days. Readiness only: not a conformity assessment, not legal advice, not an issued passport.",
+      "Written readiness assessment of one battery model against Annex XIII. It arrives by email as a written document. No call. Readiness only: not a conformity assessment, not legal advice, not an issued passport.",
     generations: 0,
     stripe_price_id: "price_1UREvgGqTruSqV8TMMYXVF69",
     stripe_mode: "payment",
@@ -320,7 +320,7 @@ export const PLANS: Plan[] = [
     return_path: "/battery-passport",
     features: [
       "Written gap report for one battery model",
-      "Delivered in 10 business days",
+      "It arrives by email as a written document. No call.",
       "Readiness only, not legal advice",
     ],
     cta: "Order the gap report — $950",
