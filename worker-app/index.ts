@@ -9,6 +9,7 @@ import { timingSafeEqual as cryptoTimingSafeEqual } from "node:crypto";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 import { getSessionCookieOptions } from "../server/_core/cookies";
 import { products, certificates } from "../drizzle/schema";
+import { registryLookupDecision } from "../packages/verifier/src/registry-decision";
 import { eq } from "drizzle-orm";
 import { checkRateLimit, refundRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
@@ -1323,6 +1324,7 @@ app.post("/api/gpt/verify", async c => {
       .from(certificates)
       .where(eq(certificates.productId, product.id))
       .limit(1);
+    const decision = registryLookupDecision(cert ?? { status: "uncertified" });
     return c.json({
       ...passportVerdict(product, cert ?? null),
       productName: product.name,
@@ -1472,6 +1474,10 @@ app.post("/api/internal/verify", async c => {
         400
       );
 
+    // This used to ask an LLM whether an unknown identifier was authentic and
+    // return its guess as `verified`, with a fixed trustScore of 95 and five
+    // agents listed for any certificate. A guess is not evidence: an unknown
+    // identifier is not_found, and a known one is a registry record only.
     const db = getHyperdriveDb(c.env);
     const {
       getCertificateByNumber,
