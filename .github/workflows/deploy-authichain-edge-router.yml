@@ -61,9 +61,11 @@ jobs:
           # AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 / KEY_ID / PUBLIC_JWK /
           # RETIRED_PUBLIC_JWKS here (Oct 9 overwrite).
           # wrangler 4.153.0 hung 11–16 min on the 8.8 MiB POST then
-          # "fetch failed" (runs 41242803187, 41246493823). 4.83.0 is the
-          # last versions-upload that completed on this runner.
-          npx --yes wrangler@4.83.0 versions upload --minify --keep-vars --config wrangler.toml \
+          # "fetch failed" (41242803187, 41246493823). 4.83.0 rejects
+          # --keep-vars on versions upload (41248692011). 4.149.0 has
+          # --keep-vars and is the last release before 4.150 source-map
+          # uploads (extra POST size).
+          npx --yes wrangler@4.149.0 versions upload --minify --keep-vars --config wrangler.toml \
             2>&1 | tee /tmp/er-versions-upload.log
           vid=$(node ../scripts/ci/parse-wrangler-version-id.mjs /tmp/er-versions-upload.log)
           echo "uploaded authichain-edge-router version $vid"
