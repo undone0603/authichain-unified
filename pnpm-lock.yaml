@@ -884,6 +884,8 @@ importers:
 
   workers/harvestchain-io: {}
 
+  workers/license-checkout: {}
+
   workers/luxechain-io: {}
 
   workers/manufacturer-status:
