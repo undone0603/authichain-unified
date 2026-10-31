@@ -132,7 +132,9 @@ describe("activateDppMerchant", () => {
       amount_total: 0,
       currency: "usd",
       metadata: { plan: "dpp_readiness", is_demo: "true" },
-      line_items: { data: [{}] },
+      line_items: {
+        data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+      },
     });
     const from = vi.fn();
     const { activateDppMerchant } = await import("./dpp-activate");
