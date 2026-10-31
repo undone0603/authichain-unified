@@ -24,9 +24,8 @@ function ThanksContent() {
         Workspace opened
       </h1>
       <p className="mt-4 text-zinc-400">
-        Your payment opens an AuthiChain workspace with self-serve activation
-        and 50 workspace generations. Activate it below. The same link is in
-        the confirmation email.
+        Your payment opens an AuthiChain workspace with self-serve activation.
+        Activate it below. The same link is in the confirmation email.
       </p>
       <Link
         href={activateHref}
