@@ -39,3 +39,14 @@ test("x402 bind stays on authichain-com and skips edge-router", () => {
   assert.match(bind, /secret put X402_PAY_TO --name authichain-com/);
   assert.doesNotMatch(bind, /secret put X402_PAY_TO --name authichain-edge-router/);
 });
+
+test("authichain-com package.json is valid JSON with one test script", () => {
+  const pkgPath = path.join(ROOT, "workers/authichain-com/package.json");
+  const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
+  assert.equal(pkg.name, "authichain-com-worker");
+  assert.equal(typeof pkg.scripts.test, "string");
+  assert.match(pkg.scripts.test, /generation-check\.test\.ts/);
+  assert.match(pkg.scripts.test, /email-optin\.test\.ts/);
+  assert.match(pkg.scripts.test, /bot-identity-routes\.test\.ts/);
+});
+
