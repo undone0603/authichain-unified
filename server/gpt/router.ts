@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "../db";
 import { products, certificates } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { registryLookupDecision } from "../../packages/verifier/src/registry-decision";
 
 const router = Router();
 
@@ -18,25 +19,19 @@ router.post("/verify", async (req, res) => {
       return res.status(400).json({ error: "productId required" });
     }
     const [product] = await db.select().from(products).where(eq(products.id, productId)).limit(1);
+    // Same contract as worker-app/index.ts: a registry lookup never verifies.
     if (!product) {
-      return res.json({
-        verified: false,
-        trustScore: 0,
-        message: "Product not found. This item may be counterfeit.",
-        blockchain: null,
-      });
+      return res.json({ verified: false, trustScore: null, ...registryLookupDecision(null) });
     }
     const [cert] = await db.select().from(certificates).where(eq(certificates.productId, product.id)).limit(1);
+    const decision = registryLookupDecision(cert ?? { status: "uncertified" });
     return res.json({
-      verified: !!cert,
-      trustScore: cert ? 95 : 20,
+      verified: decision.valid,
+      trustScore: null,
       productName: product.name,
       brand: product.brand ?? null,
       certificateId: cert?.id ?? null,
-      blockchain: cert ? { status: "SECURED", network: "Polygon" } : null,
-      message: cert
-        ? `VERIFIED AUTHENTIC: ${product.name} - Blockchain secured.`
-        : `UNVERIFIED: ${product.name} lacks blockchain certificate.`,
+      ...decision,
     });
   } catch (err) {
     console.error("[GPT /verify]", err);
@@ -68,14 +63,8 @@ router.get("/certificates/verify", async (req, res) => {
     if (!certNumber) return res.status(400).json({ error: "certNumber required" });
     if (String(certNumber).length > 64) return res.status(400).json({ error: "certNumber too long" });
     const [cert] = await db.select().from(certificates).where(eq(certificates.certificateNumber, String(certNumber))).limit(1);
-    if (!cert) return res.json({ valid: false, message: "Certificate not found" });
-    return res.json({
-      valid: true,
-      certificateId: cert.id,
-      issuedAt: cert.issuedAt,
-      blockchain: { status: "SECURED", network: "Polygon" },
-      message: "Certificate is valid and blockchain-secured.",
-    });
+    if (!cert) return res.json(registryLookupDecision(null));
+    return res.json({ certificateId: cert.id, issuedAt: cert.issuedAt, ...registryLookupDecision(cert) });
   } catch (err) {
     console.error("[GPT /certificates/verify]", err);
     res.status(500).json({ error: "Certificate check failed" });
@@ -92,15 +81,13 @@ router.post("/cannabis/verify", async (req, res) => {
     const [product] = strainName
       ? await db.select().from(products).where(eq(products.name, strainName)).limit(1)
       : [];
+    const decision = registryLookupDecision(product ? { status: "name_match" } : null);
     return res.json({
-      verified: !!product,
-      strainName: strainName || "Unknown",
+      verified: decision.valid,
+      strainName: strainName || null,
       batchId: batchId || null,
-      metrcCompliant: !!product,
-      blockchain: product ? { status: "SECURED", network: "Polygon" } : null,
-      message: product
-        ? `VERIFIED: ${product.name} - METRC compliant, blockchain secured.`
-        : "Strain not found in AuthiChain registry.",
+      metrc_compliance: "not_assessed",
+      ...decision,
     });
   } catch (err) {
     console.error("[GPT /cannabis/verify]", err);
@@ -114,16 +101,12 @@ router.post("/trust-score", async (req, res) => {
     const { productId } = req.body;
     if (!productId) return res.status(400).json({ error: "productId required" });
     const [product] = await db.select().from(products).where(eq(products.id, productId)).limit(1);
-    if (!product) return res.json({ trustScore: 0, verdict: "UNKNOWN", message: "Product not found" });
+    if (!product) return res.json({ trustScore: null, ...registryLookupDecision(null) });
     const [cert] = await db.select().from(certificates).where(eq(certificates.productId, product.id)).limit(1);
-    const baseScore = cert ? 85 : 15;
-    const trustScore = Math.min(100, baseScore);
-    const verdict = trustScore >= 80 ? "TRUSTED" : trustScore >= 50 ? "MODERATE" : "SUSPICIOUS";
     return res.json({
-      trustScore,
-      verdict,
-      breakdown: { blockchainCert: cert ? 85 : 0 },
-      message: `Trust score for ${product.name}: ${trustScore}/100 — ${verdict}`,
+      trustScore: null,
+      productName: product.name,
+      ...registryLookupDecision(cert ?? { status: "uncertified" }),
     });
   } catch (err) {
     console.error("[GPT /trust-score]", err);

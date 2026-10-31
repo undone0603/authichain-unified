@@ -55,6 +55,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
       # Self-hosted WSL already has pnpm. action-setup@v6 with version
       # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
       # (CI Main run 40865371118). GitHub-hosted still uses the pin.
@@ -123,6 +129,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
       # Self-hosted WSL already has pnpm. action-setup@v6 with version
       # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
       # (CI Main run 40865371118). GitHub-hosted still uses the pin.
@@ -217,6 +229,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
       # Self-hosted WSL already has pnpm. action-setup@v6 with version
       # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
       # (CI Main run 40865371118). GitHub-hosted still uses the pin.
@@ -273,7 +291,9 @@ jobs:
   ci:
     name: Main quality gate
     needs: [quality, test, build]
-    if: always()
+    # Report failed dependencies, but let cancellation release the workflow's
+    # concurrency group instead of queueing a finalizer on the busy runner.
+    if: ${{ !cancelled() }}
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
     runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
@@ -313,6 +333,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
       # Self-hosted WSL already has pnpm. action-setup@v6 with version
       # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
       # (CI Main run 40865371118). GitHub-hosted still uses the pin.

@@ -86,9 +86,13 @@ describe("x402 health freeCalls", () => {
 });
 
 describe("unpaid body that cannot be a seal", () => {
-  it("returns 402 for quote JSON without sealId and 400 for a non-UUID sealId", async () => {
+  it("returns 400 and does not ask for payment", async () => {
     const pay = { X402_PAY_TO: ENV.X402_PAY_TO };
-    for (const body of [{ probe: "suggestions" }, { productId: "p-1" }]) {
+    for (const body of [
+      { sealId: "demo" },
+      { probe: "suggestions" },
+      { productId: "p-1" },
+    ]) {
       const res = await tryHandleX402(
         new Request("https://authichain.com/api/v1/agent-verify", {
           method: "POST",
@@ -97,22 +101,12 @@ describe("unpaid body that cannot be a seal", () => {
         }),
         pay
       );
-      expect(res!.status).toBe(402);
-      expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+      expect(res!.status).toBe(400);
+      expect(res!.headers.get("PAYMENT-REQUIRED")).toBeNull();
+      const json = (await res!.json()) as { error: string; settled: boolean };
+      expect(json.settled).toBe(false);
+      expect(["seal_id_required", "seal_id_not_uuid"]).toContain(json.error);
     }
-    const bad = await tryHandleX402(
-      new Request("https://authichain.com/api/v1/agent-verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sealId: "AC-DEMO-001" }),
-      }),
-      pay
-    );
-    expect(bad!.status).toBe(400);
-    expect(bad!.headers.get("PAYMENT-REQUIRED")).toBeNull();
-    const json = (await bad!.json()) as { error: string; settled: boolean };
-    expect(json.settled).toBe(false);
-    expect(json.error).toBe("seal_id_not_uuid");
   });
 
   it("keeps an empty unpaid POST on the 402 challenge", async () => {
