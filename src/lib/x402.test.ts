@@ -95,6 +95,18 @@ describe("buildPaymentRequired", () => {
     expect(r.body.extensions.bazaar.info.input.body.sealId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     );
+    expect(
+      isDiscoveryExampleSealId(r.body.extensions.bazaar.info.input.body.sealId)
+    ).toBe(true);
+    expect(x402BazaarDiscovery().bazaar.info.input.body.sealId).toBe(
+      X402_DISCOVERY_EXAMPLE_SEAL_ID
+    );
+    expect(
+      isDiscoveryExampleSealId("11111111-2222-4333-8444-555555555555")
+    ).toBe(false);
+    expect(isDiscoveryExampleSealId("demo")).toBe(true);
+    expect(isDiscoveryExampleSealId("DEMO")).toBe(true);
+    expect(isDiscoveryExampleSealId("probe")).toBe(false);
     expect(r.body.accepts[0].outputSchema).toEqual(
       r.body.extensions.bazaar.info
     );
@@ -145,7 +157,9 @@ describe("buildPaymentRequired", () => {
     expect(r.v2.resource.tags).toEqual(
       expect.arrayContaining(["verification", "authenticity", "evidence"])
     );
-    expect(JSON.stringify(r.v2).toLowerCase()).not.toContain("authenticityscore");
+    expect(JSON.stringify(r.v2).toLowerCase()).not.toContain(
+      "authenticityscore"
+    );
     expect(r.v2.accepts[0].amount).toBe("50000");
     expect(r.v2.accepts[0].payTo).toBe(
       "0xabc0000000000000000000000000000000000001"
@@ -744,7 +758,21 @@ describe("x402Catalog", () => {
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
       planPaymentLink("dpp_readiness")
     );
-    expect(catalog.humanCheckout.farmPaymentLink).toBeUndefined();
+    expect(catalog.humanCheckout.farmPaymentLink).toBe(
+      planPaymentLink("strainchain_farm")
+    );
+    expect(catalog.humanCheckout.starterPaymentLink).toBe(
+      planPaymentLink("starter")
+    );
+    expect(catalog.humanCheckout.creatorPaymentLink).toBe(
+      planPaymentLink("creator")
+    );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).toContain(
+      "starter"
+    );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).toContain(
+      "musa_audit_bundle"
+    );
     expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
     expect(JSON.stringify(catalog)).not.toContain("/api/checkout");
     expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
@@ -763,7 +791,9 @@ describe("x402Catalog", () => {
     expect(paid.length).toBeGreaterThan(0);
     for (const e of paid) {
       const url = e.url || e.resource;
-      expect(url).toMatch(/^https:\/\/authichain\.com\/api\/|^https:\/\/authichain\.com\/mcp$/);
+      expect(url).toMatch(
+        /^https:\/\/authichain\.com\/api\/|^https:\/\/authichain\.com\/mcp$/
+      );
       expect(e.accepts?.length).toBeGreaterThan(0);
       for (const a of e.accepts ?? []) {
         expect(a.scheme).toBe("exact");
@@ -793,7 +823,9 @@ describe("x402AgentCard", () => {
     const card = await x402AgentCard(env);
     expect(card.name).toBe("AuthiChain");
     expect(card.description.toLowerCase()).toContain("evidence");
-    expect(card.description).toContain("A valid signature is not real-world truth");
+    expect(card.description).toContain(
+      "A valid signature is not real-world truth"
+    );
     expect(card.provider.url).toBe("https://authichain.com");
     expect(card.documentationUrl).toBe("https://authichain.com/x402");
     expect(card.url).toBe("https://authichain.com/mcp");
