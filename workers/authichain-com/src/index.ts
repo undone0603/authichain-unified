@@ -1,7 +1,6 @@
 import { isVerifyLivePath, renderVerifyLivePage } from "./verify-live-page.ts";
 import { isIsThisRealPath, renderIsThisRealPage } from "./is-this-real-page.ts";
 import { handleSalesInquiry } from './routes/sales';
-import mcpServer from './mcp-server';
 // The DPP regulatory timeline is shared with the Next.js page rather than
 // duplicated here: content/dpp/regulatory-timeline.json is the single source of
 // truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild
