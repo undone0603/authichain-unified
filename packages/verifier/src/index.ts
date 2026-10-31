@@ -433,3 +433,10 @@ export {
   verifyWithCanonicalWorker,
   type CanonicalVerificationResponse,
 } from "./canonical-worker-client";
+export {
+  CANONICAL_VERIFY_PATH,
+  REGISTRY_DECISION_CONTRACT,
+  registryLookupDecision,
+  type RegistryDecision,
+  type RegistryRecord,
+} from "./registry-decision";
