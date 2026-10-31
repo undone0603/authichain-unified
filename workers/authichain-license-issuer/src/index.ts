@@ -5,6 +5,8 @@ import { licenseRevoke } from "./routes/license-revoke";
 import { licenseHealth } from "./routes/health";
 
 export interface Env {
+  /** Plain var. DPP report price id; sessions for it are skipped (unlocked only by authichain.com). */
+  DPP_REPORT_PRICE_ID?: string;
   // Stripe
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
