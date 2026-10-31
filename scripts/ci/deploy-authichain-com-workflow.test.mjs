@@ -50,3 +50,11 @@ test("authichain-com package.json is valid JSON with one test script", () => {
   assert.match(pkg.scripts.test, /bot-identity-routes\.test\.ts/);
 });
 
+test("agent-verify exports coerceSealBody and listedSealId for the worker bundle", () => {
+  const src = readFileSync(path.join(ROOT, "src/lib/agent-verify.ts"), "utf8");
+  assert.match(src, /export function coerceSealBody/);
+  assert.match(src, /export function listedSealId/);
+  assert.match(yml, /src\/lib\/agent-verify\.ts/);
+  assert.match(yml, /src\/lib\/paid-seal-verify\.ts/);
+});
+

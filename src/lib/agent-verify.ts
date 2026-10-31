@@ -15,6 +15,32 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Bazaar discovery example. It matches the UUID shape and is not a registry row. */
 const NIL_SEAL_ID = "00000000-0000-4000-8000-000000000000";
 
+/**
+ * PayAI/Bazaar crawlers sometimes POST `outputSchema.input` (`type` +
+ * `method` + `bodyType` + `body`) as the JSON body. Unwrap that so the
+ * inner `sealId` is what we parse.
+ */
+export function coerceSealBody(
+  raw: Record<string, unknown>
+): Record<string, unknown> {
+  const nested = raw.body;
+  if (
+    raw.type === "http" &&
+    nested &&
+    typeof nested === "object" &&
+    !Array.isArray(nested)
+  ) {
+    return nested as Record<string, unknown>;
+  }
+  return raw;
+}
+
+export function listedSealId(raw: Record<string, unknown>): string {
+  const body = coerceSealBody(raw);
+  const v = body.sealId ?? body.seal_id;
+  return typeof v === "string" ? v.trim() : "";
+}
+
 export type SealRequest =
   | { ok: true; sealId: string }
   | {
