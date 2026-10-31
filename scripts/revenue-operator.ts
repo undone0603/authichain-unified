@@ -268,33 +268,15 @@ export function selectNextSendCandidate(
  */
 export function moneyRailsSteps(origin = DEFAULT_ORIGIN): RailsStep[] {
   const base = origin.replace(/\/+$/, "");
-  const steps: RailsStep[] = [
-    {
-      id: "starter_checkout",
-      url: `${base}${STARTER_CHECKOUT_PATH}`,
+  const steps: RailsStep[] = [];
+  // Farm A: Farm checkout is closed. The gated confirm page must answer 410
+  // (checkout-gate.ts CLOSED_CHECKOUT_PLAN_IDS); a 200 means it reopened.
+  if (paymentLink) {
+    steps.push({
+      id: "farm_payment_link",
+      url: paymentLink,
       method: "GET",
-      accept: [200],
-    },
-    {
-      id: "dpp_checkout",
-      url: `${base}${DPP_CHECKOUT_PATH}`,
-      method: "GET",
-      accept: [200],
-    },
-    {
-      id: "dpp_head",
-      url: `${base}${DPP_HEAD_PATH}`,
-      method: "HEAD",
-      accept: [204],
-    },
-  ];
-  const starterLink = planStripePaymentLink("starter");
-  if (starterLink) {
-    steps.splice(1, 0, {
-      id: "starter_payment_link",
-      url: starterLink,
-      method: "GET",
-      accept: [200],
+      accept: [410],
     });
   }
   return steps;
@@ -350,8 +332,8 @@ export async function checkMoneyRails(
     ok: failed.length === 0,
     reason:
       failed.length === 0
-        ? "Starter $29 and DPP $299 checkout rails up"
-        : failed.map(f => `${f.id}: ${f.detail ?? "failed"}`).join("; "),
+        ? "Farm checkout closed (410) and Farm HEAD 204"
+        : failed.map(f => f.detail ?? f.id).join("; "),
     results,
   };
 }

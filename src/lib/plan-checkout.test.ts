@@ -126,16 +126,32 @@ describe("createPlanCheckoutSession", () => {
     expect(create.mock.calls[0][0].customer_email).toBe("mike@example.com");
   });
 
-  it("does not set customer_creation on Farm Plan subscription checkout", async () => {
+  it("refuses Farm Plan checkout with 410 and never calls Stripe (Farm A)", async () => {
+    const result = await createPlanCheckoutSession({
+      request: new Request("https://authichain.com/api/checkout", {
+        method: "POST",
+      }),
+      body: { planId: "strainchain_farm", email: "grower@farm.com" },
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(result).toEqual({
+      ok: false,
+      status: 410,
+      error: "checkout_closed",
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("does not set customer_creation on subscription checkout", async () => {
     create.mockResolvedValue({
-      url: "https://checkout.stripe.com/c/pay/cs_test_farm",
+      url: "https://checkout.stripe.com/c/pay/cs_test_sub",
     });
     const result = await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.govchain.us/api/checkout/plan/strainchain_farm",
+        "https://authichain.govchain.us/api/checkout/plan/qron_launch",
         { method: "GET" }
       ),
-      body: { planId: "strainchain_farm" },
+      body: { planId: "qron_launch" },
       stripeSecretKey: "sk_test_x",
     });
     expect(result.ok).toBe(true);
@@ -180,13 +196,13 @@ describe("createPlanCheckoutSession", () => {
     });
     const result = await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.govchain.us/api/checkout/plan/strainchain_farm",
+        "https://authichain.govchain.us/api/checkout/plan/qron_launch",
         {
           method: "GET",
           headers: { cookie: "aff_ref=AFF-COOKIE; ref_code=USER-456" },
         }
       ),
-      body: { planId: "strainchain_farm" },
+      body: { planId: "qron_launch" },
       stripeSecretKey: "sk_test_x",
     });
     expect(result.ok).toBe(true);
@@ -236,10 +252,10 @@ describe("createPlanCheckoutSession", () => {
     });
     await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.govchain.us/api/checkout/plan/strainchain_farm",
+        "https://authichain.govchain.us/api/checkout/plan/qron_launch",
         { method: "GET", headers: { cookie: "aff_ref=AFF-COOKIE" } }
       ),
-      body: { planId: "strainchain_farm", affiliateCode: "AFF-EXPLICIT" },
+      body: { planId: "qron_launch", affiliateCode: "AFF-EXPLICIT" },
       stripeSecretKey: "sk_test_x",
     });
     expect(create.mock.calls[0][0].metadata.affiliate_code).toBe(
@@ -249,9 +265,13 @@ describe("createPlanCheckoutSession", () => {
 
   it("tags the $29 Starter PaymentIntent with plan + stripe_price_id (#1890 parity)", async () => {
     const { planById } = await import("./plans");
-    create.mockResolvedValue({ url: "https://checkout.stripe.com/c/pay/cs_test_starter" });
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_starter",
+    });
     const result = await createPlanCheckoutSession({
-      request: new Request("https://authichain.com/api/checkout", { method: "POST" }),
+      request: new Request("https://authichain.com/api/checkout", {
+        method: "POST",
+      }),
       body: { planId: "starter", email: "ops@brand.com" },
       stripeSecretKey: "sk_test_x",
     });
@@ -267,9 +287,13 @@ describe("createPlanCheckoutSession", () => {
   });
 
   it("does not add Starter PaymentIntent metadata to other plans", async () => {
-    create.mockResolvedValue({ url: "https://checkout.stripe.com/c/pay/cs_test_p" });
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_p",
+    });
     await createPlanCheckoutSession({
-      request: new Request("https://authichain.com/api/checkout", { method: "POST" }),
+      request: new Request("https://authichain.com/api/checkout", {
+        method: "POST",
+      }),
       body: { planId: "strainchain_passport", email: "ops@brand.com" },
       stripeSecretKey: "sk_test_x",
     });

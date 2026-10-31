@@ -50,6 +50,32 @@ const PLAN_ALIASES: Record<string, PlanId> = {
   launch: "qron_launch",
 };
 
+/**
+ * Farm A (Oct 2026): plans whose checkout is closed. /checkout/<id|alias>
+ * answers 410 with a "not open for new checkouts" page on every method and
+ * never calls Stripe; POST /api/checkout refuses them too (plan-checkout.ts).
+ * The plan stays in plans.ts and in the webhook grant table
+ * (billing/live-catalog.ts) so an already-paid Farm subscription still maps.
+ * Rollback: empty this set.
+ */
+export const CLOSED_CHECKOUT_PLAN_IDS: ReadonlySet<PlanId> = new Set<PlanId>([
+  "strainchain_farm",
+]);
+
+export function isCheckoutClosedPlan(id: string | null | undefined): boolean {
+  return Boolean(id && CLOSED_CHECKOUT_PLAN_IDS.has(id as PlanId));
+}
+
+/** `/checkout/<id|alias>` → the closed plan it names, else undefined. */
+export function closedPlanFromGatedPath(pathname: string): Plan | undefined {
+  const p = pathname.replace(/\/+$/, "");
+  const m = p.match(/^\/checkout\/([A-Za-z0-9_-]+)$/);
+  if (!m) return undefined;
+  const slug = m[1].toLowerCase();
+  const id = (PLAN_ALIASES[slug] ?? slug) as PlanId;
+  return isCheckoutClosedPlan(id) ? planById(id) : undefined;
+}
+
 /** Query/form keys carried from the landing into Stripe metadata. */
 export const CHECKOUT_CARRY_KEYS = [
   "visit_id",
@@ -89,13 +115,17 @@ export function isGatedCheckoutPath(pathname: string): boolean {
   return p === "/checkout" || /^\/checkout\/[A-Za-z0-9_-]+$/.test(p);
 }
 
-/** `/checkout/<id|alias>` → purchasable catalogue plan, else undefined. */
+/**
+ * `/checkout/<id|alias>` → purchasable catalogue plan, else undefined.
+ * Closed plans (CLOSED_CHECKOUT_PLAN_IDS) are not purchasable here.
+ */
 export function planFromGatedPath(pathname: string): Plan | undefined {
   const p = pathname.replace(/\/+$/, "");
   const m = p.match(/^\/checkout\/([A-Za-z0-9_-]+)$/);
   if (!m) return undefined;
   const slug = m[1].toLowerCase();
   const id = (PLAN_ALIASES[slug] ?? slug) as PlanId;
+  if (isCheckoutClosedPlan(id)) return undefined;
   const plan = planById(id);
   if (!plan || !plan.stripe_price_id || !plan.stripe_mode) return undefined;
   return plan;
@@ -326,6 +356,14 @@ export function renderCheckoutChooserPage(
   );
 }
 
+/** 410 page for a plan whose checkout is closed. No price, no Stripe link. */
+export function renderCheckoutClosedPage(plan: Plan): string {
+  return pageShell(
+    "Checkout closed — AuthiChain",
+    `<h1>${esc(plan.name)}</h1><p class="desc">This plan is not open for new checkouts. Choose another plan, or contact us if you already subscribe.</p><div class="links"><a href="/checkout">All plans</a><a href="/pricing">Pricing</a><a href="/contact">Contact</a></div>`
+  );
+}
+
 function htmlResponse(html: string, status = 200): Response {
   return new Response(html, { status, headers: HTML_HEADERS });
 }
@@ -479,6 +517,8 @@ export async function createGatedCheckoutSession(opts: {
   recordSession?: typeof recordCheckoutSession;
   fetchImpl?: typeof fetch;
 }): Promise<GatedSessionResult> {
+  if (isCheckoutClosedPlan(opts.plan.id))
+    return { ok: false, status: 410, error: "checkout_closed" };
   const key = (opts.stripeSecretKey || "").trim();
   if (!key)
     return { ok: false, status: 500, error: "Stripe is not configured" };
@@ -634,6 +674,14 @@ export async function tryHandleGatedCheckout(
       : htmlResponse(html);
   }
 
+  // Farm A: a closed plan answers 410 on every method and never reaches Stripe.
+  const closed = closedPlanFromGatedPath(p);
+  if (closed) {
+    return method === "HEAD"
+      ? new Response(null, { status: 410, headers: HTML_HEADERS })
+      : htmlResponse(renderCheckoutClosedPage(closed), 410);
+  }
+
   const plan = planFromGatedPath(p);
   if (!plan) {
     const html = renderCheckoutChooserPage(url.searchParams);
@@ -653,7 +701,7 @@ export async function tryHandleGatedCheckout(
   }
 
   // Report a loop event, if this plan belongs to a loop that declares it.
-  // Silent no-op otherwise: strainchain_farm and the unlisted smoke SKUs have
+  // Silent no-op otherwise: the unlisted smoke SKUs have
   // no loop, and LOOP-02 captures email as dpp_check_email_captured instead.
   const report = (event: GrowthEvent, email?: string): void => {
     const sink = deps.onEvent;

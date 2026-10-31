@@ -6,13 +6,13 @@
 import { getBrandIdFromRequest } from "./brand-billing";
 import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
-import { checkoutReturnOrigin } from "./checkout-gate";
+import { checkoutReturnOrigin, isCheckoutClosedPlan } from "./checkout-gate";
 import { PLANS, type PlanId } from "./plans";
 
 export type PlanCheckoutOk = { ok: true; url: string; planId: string };
 export type PlanCheckoutErr = {
   ok: false;
-  status: 400 | 500 | 303;
+  status: 400 | 410 | 500 | 303;
   error: string;
   detail?: string;
   url?: string;
@@ -48,6 +48,10 @@ export async function createPlanCheckoutSession(opts: {
   const plan = PLANS.find(p => p.id === (planId as PlanId));
   if (!plan) {
     return { ok: false, status: 400, error: "Unknown plan" };
+  }
+  // Farm A: closed plans never start a Stripe session (checkout-gate.ts).
+  if (isCheckoutClosedPlan(plan.id)) {
+    return { ok: false, status: 410, error: "checkout_closed" };
   }
   if (!plan.stripe_price_id || !plan.stripe_mode) {
     return {

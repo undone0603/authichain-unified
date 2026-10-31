@@ -7,6 +7,8 @@ import {
   checkoutReturnOrigin,
   isAllowedPostOrigin,
   isAutomatedCheckoutRequest,
+  closedPlanFromGatedPath,
+  isCheckoutClosedPlan,
   planFromGatedPath,
   renderCheckoutChooserPage,
   renderCheckoutConfirmPage,
@@ -206,8 +208,8 @@ describe("tryHandleGatedCheckout — POST", () => {
   it("creates one session with customer_email and catalogue price, then 303s to Stripe", async () => {
     const fetchImpl = stripeOk();
     const res = await tryHandleGatedCheckout(
-      post("/checkout/strainchain_farm", {
-        email: "grower@farm.com",
+      post("/checkout/qron_launch", {
+        email: "buyer@brand.com",
         utm_source: "mail",
         visit_id: "v_1",
         checkout_key: "12345678-1234-4234-8234-123456789abc",
@@ -228,14 +230,12 @@ describe("tryHandleGatedCheckout — POST", () => {
     const body = new URLSearchParams(String(init.body));
     expect(body.get("mode")).toBe("subscription");
     expect(body.get("line_items[0][price]")).toBe(
-      planById("strainchain_farm")!.stripe_price_id
+      planById("qron_launch")!.stripe_price_id
     );
-    expect(body.get("customer_email")).toBe("grower@farm.com");
-    expect(body.get("metadata[plan]")).toBe("strainchain_farm");
+    expect(body.get("customer_email")).toBe("buyer@brand.com");
+    expect(body.get("metadata[plan]")).toBe("qron_launch");
     expect(body.get("metadata[checkout_gate]")).toBe("confirm_post");
-    expect(body.get("subscription_data[metadata][plan]")).toBe(
-      "strainchain_farm"
-    );
+    expect(body.get("subscription_data[metadata][plan]")).toBe("qron_launch");
     expect(body.get("metadata[utm_source]")).toBe("mail");
     expect(body.get("client_reference_id")).toBe("v_1");
     expect(body.get("after_expiration[recovery][enabled]")).toBe("true");
@@ -529,367 +529,97 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
   });
 });
 
-describe("Launch Annual cadence", () => {
-  it("shows $190/yr on the confirm page and the plan chooser", () => {
-    const annual = planById("qron_launch_annual");
-    const monthly = planById("qron_launch");
-    expect(annual).toBeTruthy();
-    expect(monthly).toBeTruthy();
-    const confirm = renderCheckoutConfirmPage({ plan: annual! });
-    expect(confirm).toContain("$190/yr");
-    expect(confirm).not.toContain("$190/mo");
-    expect(renderCheckoutConfirmPage({ plan: monthly! })).toContain("$19/mo");
-    const chooser = renderCheckoutChooserPage();
-    // Launch plans are unlisted, so the chooser no longer offers them.
-    expect(chooser).not.toContain("$190/yr");
-    expect(chooser).not.toContain("$19/mo");
-  });
+describe("Farm A — Farm checkout route is closed", () => {
+  const env = { STRIPE_SECRET_KEY: "sk_test_x" };
 
-  it("opens a subscription session for the annual price", () => {
-    const plan = planById("qron_launch_annual")!;
-    const body = buildGatedSessionBody({
-      plan,
-      email: "a@b.co",
-      fields: new URLSearchParams(),
-    });
-    expect(body.get("mode")).toBe("subscription");
-    expect(body.get("line_items[0][price]")).toBe(plan.stripe_price_id);
-  });
-
-  it("lands generation buyers on /generate, not the DPP thanks page", () => {
-    for (const id of [
-      "qron_launch",
-      "qron_launch_annual",
-      "creator",
-    ] as const) {
-      const body = buildGatedSessionBody({
-        plan: planById(id)!,
-        email: "a@b.co",
-        fields: new URLSearchParams({ visit_id: "v1" }),
-        successOrigin: "https://authichain.com",
-      });
-      const success = body.get("success_url") || "";
-      expect(success, id).toContain("https://authichain.com/generate?paid=1");
-      expect(success, id).not.toContain("/dpp/thanks");
-    }
-  });
-});
-
-function mintTestQronToken(
-  secret: string,
-  nonce = "testnonce01",
-  expiresAt = Math.floor(Date.now() / 1000) + 3600
-): string {
-  const payload = `QRON-${nonce}.${expiresAt}`;
-  const sig = createHmac("sha256", secret).update(payload).digest("hex");
-  return `${payload}.${sig}`;
-}
-
-describe("QRON Interdiction Gate (qron_launch)", () => {
-  const secret = "test_qron_interdiction_secret_key_2026";
-  const validToken = mintTestQronToken(secret, "unit_00012345");
-
-  it("verifies a valid HMAC-SHA256 QRON attestation token and rejects tampered tokens", async () => {
-    expect(await verifyQronAttestationToken(validToken, secret)).toBe(true);
-    expect(await verifyQronAttestationToken("QRON-spoofed", secret)).toBe(
-      false
+  it("marks only Farm closed and keeps it out of planFromGatedPath", () => {
+    expect(isCheckoutClosedPlan("strainchain_farm")).toBe(true);
+    expect(isCheckoutClosedPlan("starter")).toBe(false);
+    expect(planFromGatedPath("/checkout/strainchain_farm")).toBeUndefined();
+    expect(planFromGatedPath("/checkout/farm")).toBeUndefined();
+    expect(closedPlanFromGatedPath("/checkout/farm")?.id).toBe(
+      "strainchain_farm"
     );
-    expect(
-      await verifyQronAttestationToken(
-        validToken.slice(0, -2) + (validToken.endsWith("00") ? "ff" : "00"),
-        secret
-      )
-    ).toBe(false);
-    expect(await verifyQronAttestationToken("", secret)).toBe(false);
-    expect(await verifyQronAttestationToken(validToken, "")).toBe(false);
+    expect(closedPlanFromGatedPath("/checkout/starter")).toBeUndefined();
+    expect(planFromGatedPath("/checkout/starter")?.id).toBe("starter");
   });
 
-  it("renders a visible qron_attestation input on the qron_launch confirm page without duplicating it as hidden", () => {
-    const plan = planById("qron_launch")!;
-    const params = new URLSearchParams({
-      email: "buyer@example.com",
-      qron_attestation: validToken,
-    });
-    const html = renderCheckoutConfirmPage({ plan, params });
-
-    expect(html).toContain('id="checkout-confirm-attestation"');
-    expect(html).toContain(`value="${validToken}"`);
-    expect(html).not.toContain('<input type="hidden" name="qron_attestation"');
-  });
-
-  // Both QRON gated plans are retired (RES-86c follow-up): the retired check
-  // runs before the attestation gate, so POSTs 303 to /pricing.
-  it("retired: POST /checkout/qron_launch_annual with an unsigned attestation 303s to /pricing", async () => {
-    const body = new URLSearchParams({
-      email: "founder@authichain.com",
-      qron_attestation: "QRON-spoofed",
-    });
-    const req = new Request(
-      "https://authichain.com/checkout/qron_launch_annual",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": HUMAN_UA,
-          Origin: "https://authichain.com",
-        },
-        body: body.toString(),
-      }
-    );
-
-    const res = await tryHandleGatedCheckout(req, {
-      STRIPE_SECRET_KEY: "sk_test_mock",
-      QRON_INTERDICTION_SECRET: secret,
-    });
-
-    expect(res?.status).toBe(303);
-    expect(res?.headers.get("location")).toBe("/pricing");
-    expect(await res!.text()).not.toContain("<form");
-  });
-
-  it("retired: POST /checkout/qron_launch_annual with a valid signed token never calls Stripe", async () => {
-    let capturedStripeBody = null as URLSearchParams | null;
-    const body = new URLSearchParams({
-      email: "founder@authichain.com",
-      qron_attestation: validToken,
-      checkout_key: "11111111-2222-3333-4444-555555555555",
-    });
-    const req = new Request(
-      "https://authichain.com/checkout/qron_launch_annual",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": HUMAN_UA,
-          Origin: "https://authichain.com",
-        },
-        body: body.toString(),
-      }
-    );
-
-    const res = await tryHandleGatedCheckout(
-      req,
-      {
-        STRIPE_SECRET_KEY: "sk_test_mock",
-        QRON_INTERDICTION_SECRET: secret,
-      },
-      {
-        claimCheckout: async () => ({ allowed: true }),
-        recordSession: async () => true,
-        fetchImpl: async (_url, init) => {
-          capturedStripeBody = new URLSearchParams(String(init?.body ?? ""));
-          return new Response(
-            JSON.stringify({
-              url: "https://checkout.stripe.com/c/pay/cs_test_qron",
-            }),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          );
-        },
-      }
-    );
-
-    expect(res?.status).toBe(303);
-    expect(res?.headers.get("Location")).toBe("/pricing");
-    expect(capturedStripeBody).toBeNull();
-  });
-});
-
-describe("QRON Interdiction Gate hardening", () => {
-  const secret = "test_qron_interdiction_secret_key_2026";
-
-  function postCheckout(planId: string, attestation?: string) {
-    const body = new URLSearchParams({
-      email: "founder@authichain.com",
-      checkout_key: "11111111-2222-3333-4444-555555555555",
-    });
-    if (attestation) body.set("qron_attestation", attestation);
-    return new Request(`https://authichain.com/checkout/${planId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": HUMAN_UA,
-        Origin: "https://authichain.com",
-      },
-      body: body.toString(),
-    });
-  }
-
-  it("rejects an expired token and accepts it only before its signed expiry", async () => {
-    const expiresAt = Math.floor(Date.now() / 1000) + 60;
-    const token = mintTestQronToken(secret, "expiry_test_01", expiresAt);
-    expect(await verifyQronAttestationToken(token, secret)).toBe(true);
-    expect(
-      await verifyQronAttestationToken(token, secret, (expiresAt + 1) * 1000)
-    ).toBe(false);
-    const past = mintTestQronToken(
-      secret,
-      "expiry_test_02",
-      Math.floor(Date.now() / 1000) - 10
-    );
-    expect(await verifyQronAttestationToken(past, secret)).toBe(false);
-  });
-
-  it("rejects a token whose expiry was edited after signing", async () => {
-    const expiresAt = Math.floor(Date.now() / 1000) - 10;
-    const token = mintTestQronToken(secret, "expiry_test_03", expiresAt);
-    const extended = token.replace(`.${expiresAt}.`, `.${expiresAt + 86400}.`);
-    expect(await verifyQronAttestationToken(extended, secret)).toBe(false);
-  });
-
-  it("keeps qron_launch_annual QRON-gated but retired, so POSTs never reach Stripe", async () => {
-    expect(isQronGatedPlan("qron_launch")).toBe(true);
-    expect(isQronGatedPlan("qron_launch_annual")).toBe(true);
-    expect(isQronGatedPlan("starter")).toBe(false);
-
-    const denied = await tryHandleGatedCheckout(
-      postCheckout("qron_launch_annual"),
-      { STRIPE_SECRET_KEY: "sk_test_mock", QRON_INTERDICTION_SECRET: secret }
-    );
-    expect(denied?.status).toBe(303);
-    expect(denied?.headers.get("location")).toBe("/pricing");
-
-    const fetchImpl = vi.fn(
-      async () =>
-        new Response(
-          JSON.stringify({
-            url: "https://checkout.stripe.com/c/pay/cs_test_annual",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        )
-    );
-    const allowed = await tryHandleGatedCheckout(
-      postCheckout(
-        "qron_launch_annual",
-        mintTestQronToken(secret, "annual_test_01")
-      ),
-      { STRIPE_SECRET_KEY: "sk_test_mock", QRON_INTERDICTION_SECRET: secret },
-      {
-        claimCheckout: async () => ({ allowed: true }),
-        recordSession: async () => true,
-        fetchImpl,
-      }
-    );
-    expect(allowed?.status).toBe(303);
-    expect(allowed?.headers.get("location")).toBe("/pricing");
-    expect(fetchImpl).not.toHaveBeenCalled();
-  });
-
-  it("redirects the retired qron_launch_annual confirm page to /pricing", async () => {
-    const res = await tryHandleGatedCheckout(
-      new Request("https://authichain.com/checkout/qron_launch_annual"),
-      {}
-    );
-    expect(res!.status).toBe(303);
-    expect(res!.headers.get("location")).toBe("/pricing");
-  });
-});
-describe("retired /checkout/qron_launch (RES-86c)", () => {
-  it("no longer renders the confirm form for any method", async () => {
-    for (const method of ["GET", "HEAD", "POST"]) {
+  it("GET /checkout/strainchain_farm and /checkout/farm answer 410 closed, no Stripe link", async () => {
+    for (const path of ["/checkout/strainchain_farm", "/checkout/farm"]) {
       const res = await tryHandleGatedCheckout(
-        new Request("https://authichain.com/checkout/qron_launch?ref=x", {
-          method,
-          headers: {
-            origin: "https://authichain.com",
-            "content-type": "application/x-www-form-urlencoded",
-          },
-          body: method === "POST" ? "email=a%40b.co" : undefined,
+        new Request(`https://authichain.com${path}`, {
+          headers: { "user-agent": HUMAN_UA },
         }),
-        { STRIPE_SECRET_KEY: "sk_test_unused" }
+        env
       );
-      expect(res!.status, method).toBe(303);
-      expect(res!.headers.get("location"), method).toBe("/pricing");
+      expect(res!.status).toBe(410);
       const html = await res!.text();
-      expect(html, method).not.toContain("<form");
+      expect(html).toContain("not open for new checkouts");
+      expect(html).not.toContain("<form");
+      expect(html).not.toContain("buy.stripe.com");
+      expect(html).not.toContain("$149");
     }
   });
 
-  it("leaves the plan itself intact for existing subscribers", () => {
-    expect(planById("qron_launch")?.stripe_price_id).toBeTruthy();
-    expect(isQronGatedPlan("qron_launch")).toBe(true);
+  it("HEAD /checkout/strainchain_farm answers 410", async () => {
+    const res = await tryHandleGatedCheckout(
+      new Request("https://authichain.com/checkout/strainchain_farm", {
+        method: "HEAD",
+      }),
+      env
+    );
+    expect(res!.status).toBe(410);
   });
 
-  it("redirects the retired annual plan to /pricing with no form", async () => {
+  it("POST /checkout/strainchain_farm answers 410 and never calls Stripe", async () => {
+    const fetchImpl = stripeOk();
+    const claimCheckout = vi.fn(async () => ({ allowed: true as const }));
     const res = await tryHandleGatedCheckout(
-      new Request("https://authichain.com/checkout/qron_launch_annual"),
-      {}
+      post("/checkout/strainchain_farm", {
+        email: "grower@farm.com",
+        checkout_key: "12345678-1234-4234-8234-123456789abc",
+      }),
+      env,
+      { fetchImpl, claimCheckout, recordSession: protection.recordSession }
+    );
+    expect(res!.status).toBe(410);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(claimCheckout).not.toHaveBeenCalled();
+  });
+
+  it("Starter checkout still works: GET 200 confirm form, POST 303 to Stripe", async () => {
+    const get = await tryHandleGatedCheckout(
+      new Request("https://authichain.com/checkout/starter", {
+        headers: { "user-agent": HUMAN_UA },
+      }),
+      env
+    );
+    expect(get!.status).toBe(200);
+    expect(await get!.text()).toContain("<form");
+
+    const fetchImpl = stripeOk();
+    const res = await tryHandleGatedCheckout(
+      post("/checkout/starter", {
+        email: "ops@brand.com",
+        checkout_key: "12345678-1234-4234-8234-123456789abd",
+      }),
+      env,
+      { fetchImpl, ...protection }
     );
     expect(res!.status).toBe(303);
-    expect(res!.headers.get("location")).toBe("/pricing");
-    expect(await res!.text()).not.toContain("<form");
-  });
-});
-
-describe("wording sweep 2026-10-16: gap report and gov pilot gated SKUs", () => {
-  it("resolves /checkout/<id> to the approved live prices", () => {
-    expect(
-      planFromGatedPath("/checkout/battery_gap_report")?.stripe_price_id
-    ).toBe("price_1UREvgGqTruSqV8TMMYXVF69");
-    expect(
-      planFromGatedPath("/checkout/battery_gap_report_extra")?.stripe_price_id
-    ).toBe("price_1UREviGqTruSqV8T04Pr9DR1");
-    expect(
-      planFromGatedPath("/checkout/gov_provenance_pilot")?.stripe_price_id
-    ).toBe("price_1UREvjGqTruSqV8TzUZ4fxya");
-    for (const id of [
-      "battery_gap_report",
-      "battery_gap_report_extra",
-      "gov_provenance_pilot",
-    ] as const) {
-      expect(planPaymentLink(id)).toBe(`https://authichain.com/checkout/${id}`);
-      expect(planById(id)?.stripe_payment_link).toBeUndefined();
-      expect(planById(id)?.listed).toBe(false);
-    }
-  });
-  it("extra model enables adjustable quantity 1-20; others do not", () => {
-    const extra = buildGatedSessionBody({
-      plan: planById("battery_gap_report_extra")!,
-      email: "a@b.co",
-      fields: new URLSearchParams(),
-    });
-    expect(extra.get("line_items[0][adjustable_quantity][enabled]")).toBe(
-      "true"
+    expect(res!.headers.get("location")).toBe(
+      "https://checkout.stripe.com/c/pay/cs_test_gate"
     );
-    expect(extra.get("line_items[0][adjustable_quantity][minimum]")).toBe("1");
-    expect(extra.get("line_items[0][adjustable_quantity][maximum]")).toBe("20");
-    const report = buildGatedSessionBody({
-      plan: planById("battery_gap_report")!,
-      email: "a@b.co",
-      fields: new URLSearchParams(),
-    });
-    expect(
-      report.get("line_items[0][adjustable_quantity][enabled]")
-    ).toBeNull();
-    expect(report.get("line_items[0][quantity]")).toBe("1");
-  });
-  it("service SKUs return to their offer page, not the DPP workspace page", () => {
-    const gov = buildGatedSessionBody({
-      plan: planById("gov_provenance_pilot")!,
-      email: "a@b.co",
-      fields: new URLSearchParams(),
-    });
-    expect(gov.get("success_url")).toMatch(
-      /^https:\/\/authichain\.com\/made-in-america\?paid=1/
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    const body = new URLSearchParams(
+      String(
+        (fetchImpl.mock.calls[0] as unknown as [string, { body: unknown }])[1]
+          .body
+      )
     );
-    expect(gov.get("cancel_url")).toMatch(
-      /^https:\/\/authichain\.com\/made-in-america\?cancelled=1/
+    expect(body.get("line_items[0][price]")).toBe(
+      planById("starter")!.stripe_price_id
     );
-    const rep = buildGatedSessionBody({
-      plan: planById("battery_gap_report")!,
-      email: "a@b.co",
-      fields: new URLSearchParams(),
-    });
-    expect(rep.get("success_url")).not.toContain("/dpp/thanks");
-    expect(rep.get("success_url")).toMatch(
-      /^https:\/\/authichain\.com\/battery-passport\?paid=1/
-    );
-  });
-  it("gap-report confirm page uses email/no-call delivery, not 10 business days", () => {
-    const html = renderCheckoutConfirmPage({
-      plan: planById("battery_gap_report")!,
-    });
-    expect(html).toContain("arrives by email as a written document. No call.");
-    expect(html).not.toContain("10 business days");
-    expect(html).toContain("$950");
+    expect(body.get("metadata[plan]")).toBe("starter");
   });
 });

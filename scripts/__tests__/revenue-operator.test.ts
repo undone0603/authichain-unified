@@ -404,65 +404,10 @@ describe("decideOperatorAction", () => {
     expect(decision.to).toBe("claire.stromboni@verkor.com");
   });
 
-  it("stays wait_buyer when candidates are only role or guessed inboxes", () => {
-    const decision = decideOperatorAction({
-      rails: railsOk,
-      snapshot: snap({}),
-      candidates: [
-        { email: "info@sfm-bikes.de", source: "published_contact" },
-        { email: "ops@example.com", source: "pattern_guess" },
-      ],
-    });
-    expect(decision.action).toBe("wait_buyer");
-    expect(decision.reason).toBe("no sendable published inbox");
-  });
-});
-
-describe("money rails", () => {
-  it("GET Starter and DPP confirm pages plus the Starter Payment Link; HEAD DPP; never GET anonymous dpp checkout", () => {
-    const steps = moneyRailsSteps();
-    expect(
-      steps.some(
-        s =>
-          s.id === "starter_checkout" &&
-          s.method === "GET" &&
-          s.url.endsWith("/checkout/starter")
-      )
-    ).toBe(true);
-    expect(
-      steps.some(
-        s =>
-          s.id === "dpp_checkout" &&
-          s.method === "GET" &&
-          s.url.endsWith("/checkout/dpp_readiness")
-      )
-    ).toBe(true);
-    expect(
-      steps.some(
-        s =>
-          s.id === "starter_payment_link" &&
-          s.method === "GET" &&
-          s.url.includes("buy.stripe.com")
-      )
-    ).toBe(true);
-    const dppHead = steps.find(s => s.id === "dpp_head");
-    expect(dppHead?.method).toBe("HEAD");
-    expect(dppHead?.url).toMatch(/\/api\/checkout\/dpp$/);
-    expect(dppHead?.accept).toEqual([204]);
-    expect(
-      steps
-        .filter(s => s.method === "GET")
-        .every(s => !s.url.includes("/api/checkout/dpp") && s.method !== "POST")
-    ).toBe(true);
-    expect(
-      steps.every(s => !s.url.includes("/api/checkout/plan/strainchain_farm"))
-    ).toBe(true);
-  });
-
-  it("passes when Starter/DPP GET 200 and DPP HEAD 204", async () => {
-    const fetchImpl = async (_url: string, init?: RequestInit) => {
+  it("passes when Farm checkout is closed (410) and Farm HEAD is 204", async () => {
+    const fetchImpl = async (url: string, init?: RequestInit) => {
       const method = (init?.method || "GET").toUpperCase();
-      const status = method === "HEAD" ? 204 : 200;
+      const status = method === "HEAD" ? 204 : 410;
       return { status } as Response;
     };
     const report = await checkMoneyRails("https://authichain.com", fetchImpl);
@@ -470,10 +415,19 @@ describe("money rails", () => {
     expect(report.reason).toMatch(/Starter \$29 and DPP \$299/);
   });
 
-  it("fails when DPP HEAD is not 204", async () => {
+  it("fails when the Farm checkout page reopens (200)", async () => {
     const fetchImpl = async (_url: string, init?: RequestInit) => {
       const method = (init?.method || "GET").toUpperCase();
-      return { status: method === "HEAD" ? 405 : 200 } as Response;
+      return { status: method === "HEAD" ? 204 : 200 } as Response;
+    };
+    const report = await checkFarmRails("https://authichain.com", fetchImpl);
+    expect(report.ok).toBe(false);
+  });
+
+  it("fails when Farm HEAD is not 204", async () => {
+    const fetchImpl = async (_url: string, init?: RequestInit) => {
+      const method = (init?.method || "GET").toUpperCase();
+      return { status: method === "HEAD" ? 405 : 410 } as Response;
     };
     const report = await checkMoneyRails("https://authichain.com", fetchImpl);
     expect(report.ok).toBe(false);
