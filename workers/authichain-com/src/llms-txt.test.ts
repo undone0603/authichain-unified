@@ -18,6 +18,9 @@ describe("llms.txt", () => {
     expect(text).toContain(
       "An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment."
     );
+    expect(text).toContain(
+      "Our goal: a reader can tell an unpaid empty body from a free seal answer and from a settled receipt."
+    );
     expect(text).toContain("https://authichain.com/api/x402/catalog");
     expect(text).toContain("https://authichain.com/.well-known/x402.json");
     expect(text).toContain("https://authichain.com/.well-known/x402");

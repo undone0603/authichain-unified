@@ -207,6 +207,11 @@ export function renderX402DocsPage(): string {
       label: "Facilitator",
       value: "PayAI, reachable (URL is not republished here)",
     },
+    {
+      label: "Free allowance",
+      value:
+        "health.freeCalls — a free answer has free: true, verified: false, settlement: null",
+    },
     { label: "Daily cap", value: `${p.dailyCapUsd} per payer` },
   ];
 
@@ -225,7 +230,7 @@ export function renderX402DocsPage(): string {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>x402 agent pay — AuthiChain</title>
-<meta name="description" content="AuthiChain x402 agent verification micropayments: ${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}. Health at /api/x402/health. Unpaid POST returns HTTP 402.">
+<meta name="description" content="AuthiChain x402 agent verification micropayments: ${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}. An empty body is the unpaid HTTP 402. A free answer is not a paid receipt.">
 <link rel="canonical" href="${esc(p.canonicalUrl)}">
 <link rel="alternate" type="application/json" href="${esc(p.catalogUrl)}" title="x402 catalog">
 <link rel="describedby" href="${esc(p.wellKnownUrl)}">
@@ -233,7 +238,7 @@ export function renderX402DocsPage(): string {
 <meta name="theme-color" content="#4F46E5">
 <meta property="og:type" content="website">
 <meta property="og:title" content="x402 agent pay — AuthiChain">
-<meta property="og:description" content="${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)} per agent verification. Discover the live rail, then POST unpaid for a 402 challenge.">
+<meta property="og:description" content="${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}. An empty body is the unpaid HTTP 402. A free answer is not a paid receipt.">
 <meta property="og:url" content="${esc(p.canonicalUrl)}">
 <meta property="og:image" content="https://authichain.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -299,7 +304,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
       <p class="kicker"><i aria-hidden="true"></i> Live · x402 · ${esc(p.priceUsd)} USDC</p>
       <h1 id="x402-title">Agent verification, paid per call.</h1>
       <p class="lede">AuthiChain exposes an <strong>x402</strong> micropayment rail so a funded agent can verify a product without a contract, an API key, or a human in the runtime loop.</p>
-      <p>An unpaid <code>POST</code> receives <code>HTTP 402 Payment Required</code> with the exact scheme, asset, and receiving address. The agent settles ${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}, retries with an <code>X-PAYMENT</code> proof, and the edge verifies settlement before answering.</p>
+      <p>An empty unpaid <code>POST</code> receives <code>HTTP 402 Payment Required</code> with the exact scheme, asset, and receiving address. While <code>freeCalls</code> on <a href="${esc(p.healthUrl)}"><code>GET /api/x402/health</code></a> is armed, a seal UUID can be answered without payment. That JSON has <code>free: true</code>, <code>verified: false</code>, and <code>settlement: null</code>. It is not a paid receipt. After the allowance, the agent settles ${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}, retries with an <code>X-PAYMENT</code> proof, and the edge verifies settlement before answering.</p>
       <div class="cta">
         <a class="btn btn-primary" href="${esc(p.healthUrl)}">GET /api/x402/health</a>
         <a class="btn" href="${esc(p.catalogUrl)}">GET /api/x402/catalog</a>
@@ -318,11 +323,11 @@ ${CHECKOUT_EMAIL_FORM_CSS}
       <h2 id="flow-title">Unpaid POST → 402</h2>
       <ol>
         <li>Agent <code>POST</code>s ${esc(p.payUrl)} (or the agent-verify alias) with a JSON body and no payment header.</li>
-        <li>The edge answers <code>402</code> with <code>x402Version: 2</code> JSON (<code>resource</code> object, <code>accepts[].amount</code>, CAIP-2 <code>eip155:8453</code>, plus EIP-712 extra for Circle USDC) and the same envelope in the <code>PAYMENT-REQUIRED</code> header. Both declare <code>extensions.bazaar</code> and <code>accepts[0].outputSchema.input</code> (<code>type</code> + <code>method</code>) so discovery clients can catalog the skill. <code>accepts[0].outputSchema.output</code> is the unwrapped HTTP 200 body sample (not the bazaar <code>{type, example}</code> wrapper). PayAI settle still uses the v1 requirement internally.</li>
+        <li>When the call is not inside the free allowance, the edge answers <code>402</code> with <code>x402Version: 2</code> JSON (<code>resource</code> object, <code>accepts[].amount</code>, CAIP-2 <code>eip155:8453</code>, plus EIP-712 extra for Circle USDC) and the same envelope in the <code>PAYMENT-REQUIRED</code> header. Both declare <code>extensions.bazaar</code> and <code>accepts[0].outputSchema.input</code> (<code>type</code> + <code>method</code>) so discovery clients can catalog the skill. <code>accepts[0].outputSchema.output</code> is the unwrapped HTTP 200 body sample (not the bazaar <code>{type, example}</code> wrapper). PayAI settle still uses the v1 requirement internally.</li>
         <li>The agent settles through a compatible x402 client, then retries the same POST with <code>X-PAYMENT</code> (v1) or <code>PAYMENT-SIGNATURE</code> (v2).</li>
         <li>A valid settlement returns <code>200</code> JSON. A missing or invalid proof returns another <code>402</code>.</li>
       </ol>
-      <p>Do not send private keys to AuthiChain. Settlement happens in the agent’s wallet. This page only shows the unpaid challenge.</p>
+      <p>An empty body is always the 402 challenge. A seal UUID uses the health <code>freeCalls</code> allowance first. Our goal: a reader can tell a free seal answer (free: true, verified: false, settlement: null) from a settled receipt. The free answer is not a paid receipt. Do not send private keys to AuthiChain. Settlement happens in the agent’s wallet.</p>
     </section>
   </div>
 

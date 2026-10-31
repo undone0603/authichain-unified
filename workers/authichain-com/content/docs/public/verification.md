@@ -215,7 +215,7 @@ The statement was signed by that key and the hash matches the anchor. A false st
 A scan-graph anomaly (repo resolver). Investigate. Do not treat it as a counterfeit conviction.
 
 **Can an agent verify without an API key?**
-Yes. `POST https://authichain.com/api/x402` with an empty body returns HTTP 402 with the Base USDC requirement. A body that is not a seal UUID is HTTP 400 before payment. Health: `GET /api/x402/health`.
+Yes. `GET https://authichain.com/api/verify?id=polygon-anchor-1` returns the published demonstration record with no API key and no payment. Our goal: an agent can run the published free check on the demonstration record, and the page keeps saying that record is not a customer product. That record is not a customer product and not a physical inspection. The human page does not itself read the anchor transaction. `POST https://authichain.com/api/x402` with an empty body returns HTTP 402 with the Base USDC requirement. A seal UUID inside the daily free allowance is HTTP 200 with `free: true`, `verified: false`, and `settlement: null`, and is not a paid receipt. A body that is not a seal UUID is HTTP 400 before payment. Health: `GET /api/x402/health`.
 
 **How does an agent scan a Living QR?**
 `GET https://authichain.com/qron/r/{object_id}` with `Accept: application/json`. The apex verifies the signature. qron.space, strainchain.io, and govchain.us proxy that GET and do not verify it.

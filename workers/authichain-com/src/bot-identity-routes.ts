@@ -8,9 +8,11 @@
  *   /agents/<slug>/agent-card.json  A2A-style agent card (identity only, no task endpoint)
  *   /agents/<slug>/identity.json  the two signed records
  *   /.well-known/did.json         did:web:authichain.com (the agent issuer key)
- *   /.well-known/agent-card.json  identity-only card for the AuthiChain agent team
- *   /.well-known/agent.json       same card, at the older path
+ *   /agents/agent-card.json       identity-only card for the AuthiChain agent team
  *   /.well-known/http-message-signatures-directory  public Ed25519 keys as a JWKS
+ *
+ * /.well-known/agent-card.json and /.well-known/agent.json stay on the x402
+ * A2A card. This handler does not take those paths.
  *     (RFC 9421 key directory format). Publishing keys only: our bots do not
  *     sign HTTP requests yet, and this response is not itself signed.
  *
@@ -226,7 +228,7 @@ export function tryHandleBotIdentity(request: Request): Response | null {
   if (request.method !== "GET" && request.method !== "HEAD") return null;
   const path = new URL(request.url).pathname.replace(/\/$/, "") || "/";
   if (path === "/.well-known/did.json") return json(issuerDidDocument(), { "Content-Type": "application/did+json" });
-  if (path === "/.well-known/agent-card.json" || path === "/.well-known/agent.json") return json(teamAgentCard());
+  if (path === "/agents/agent-card.json") return json(teamAgentCard());
   if (path === "/.well-known/http-message-signatures-directory") {
     return json(keyDirectory(), { "Content-Type": "application/http-message-signatures-directory+json" });
   }

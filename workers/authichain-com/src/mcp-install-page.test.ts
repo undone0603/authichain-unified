@@ -12,7 +12,7 @@ import {
 } from "./mcp-install-page";
 import { TOOLS, isMcpPath } from "./mcp-routes";
 import { DPP_CATEGORIES } from "../../../src/lib/dpp-readiness.ts";
-import manifest from "../../../content/microsites/manifest.json" with { type: "json" };
+import manifest from "../../../content/microsites/manifest.json";
 
 describe("mcp install routing", () => {
   it("claims only the install paths and never the agent endpoint", () => {
@@ -43,12 +43,22 @@ describe("mcp install page", () => {
     expect(html).toContain('<link rel="canonical"');
     expect(html).toContain("width=device-width");
     expect(html).toContain("</html>");
-  });
-
-  it("describes honest live x402 $0.05, not an in-development rail", () => {
+    expect(html).toContain("Give your agent the published checks.");
+    expect(html).toContain("A signed record is not a physical inspection.");
     expect(html).toContain(
-      "Agents can pay $0.05 USDC on Base per verification via x402."
+      "Our goal: an agent runs the published checks and is told a signed record is not a physical inspection."
     );
+    expect(html).toContain("Legacy x402 verify answers HTTP 402.");
+    expect(html).not.toContain(
+      "Our goal: the install page names the legacy verify route as HTTP 402, not as a rail that is in development."
+    );
+    const meta = html.match(/<meta name="description" content="([^"]*)"/);
+    expect(meta?.[1]).toContain("A signed record is not a physical inspection.");
+    expect(meta?.[1]).toContain("Legacy x402 verify answers HTTP 402.");
+    expect(meta?.[1]).not.toContain("Our goal");
+    expect((meta?.[1] ?? "").length).toBeLessThanOrEqual(160);
+    expect(html).toContain("<title>Install the AuthiChain MCP server | AuthiChain</title>");
+    expect(html).not.toContain("check what's real");
     expect(html).not.toContain(
       "x402 paid verification and on-chain anchoring in development"
     );

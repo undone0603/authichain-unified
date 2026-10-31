@@ -221,12 +221,31 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /Signed QR seals for real products\./);
   assert.doesNotMatch(html, /Agent consensus/);
   assert.match(html, /Public certificate registry: in development\./);
-  assert.match(html, /not a customer product/);
-  assert.match(html, /not a physical inspection/);
-  assert.match(html, /does not itself read the anchor transaction/);
-  assert.ok(html.includes('href="/api/verify?id=polygon-anchor-1"'));
-  assert.ok(html.includes('href="/verify?id=polygon-anchor-1"'));
-  assert.equal(html.includes("polygonscan.com"), false);
+  assert.match(html, /Our goal: anyone can check an AuthiChain certificate with its ID\./);
+  assert.match(html, /The public certificate registry is in development\./);
+  assert.match(
+    html,
+    /The manufacturer role history and the published demonstration record are live/
+  );
+  assert.doesNotMatch(
+    html,
+    /Our goal: show the admin-set manufacturerVerified flag/
+  );
+  assert.match(html, /Our goal: log every scan against the serial\./);
+  assert.match(html, /That camera scan is not live on this page\./);
+  assert.match(
+    html,
+    /Our goal: a reader can check a signed record and is told, in the same breath, that the check is not a physical inspection\./
+  );
+  assert.match(html, /A signed record is not a physical inspection\./);
+  assert.match(
+    html,
+    /Public certificate lookup for people and agents is in development\./
+  );
+  assert.doesNotMatch(html, /Public verification is in development/);
+  assert.doesNotMatch(html, /Authentic product/);
+  assert.doesNotMatch(html, /acVerify\(/);
+  assert.doesNotMatch(html, /confirm authenticity/);
   const starterFirst = planPaymentLink("starter") ?? "";
   const auditLater = planPaymentLink("dpp_readiness") ?? "";
   assert.ok(starterFirst.length > 0 && auditLater.length > 0);
@@ -701,6 +720,56 @@ test("homepage and /dpp link to /docs and /x402", async () => {
     /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
   );
   assert.match(dpp, /id="dpp-cancelled-banner"/);
+});
+
+test("/dpp does not claim DSCSA, METRC, or BioTrack compliance", async () => {
+  for (const path of ["/dpp", "/digital-product-passport"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.match(html, /This page does not establish DSCSA compliance/, path);
+    assert.match(html, /Not a DSCSA certification/, path);
+    assert.match(html, /Not a METRC or BioTrack connection/, path);
+    assert.doesNotMatch(html, /One-click compliance exports/, path);
+    assert.doesNotMatch(html, /FDA DSCSA \+ DPP/, path);
+    assert.doesNotMatch(html, /INDUSTRIES SERVED/, path);
+    assert.match(html, /Not a product inspection/, path);
+    assert.match(html, /Start DPP readiness checkout/, path);
+    assert.match(html, /Passport tooling, not a certification\./, path);
+    assert.match(
+      html,
+      /Our goal: export one unit in a form a CSRD, EUDR, DSCSA, USMCA, or ISO 22005 filing could attach\./,
+      path
+    );
+    assert.match(
+      html,
+      /Our goal: a pharmacist compares one unit's signed record to shipment history\./,
+      path
+    );
+    assert.match(
+      html,
+      /Our goal: a licensee compares a local record to a package identifier they already hold\./,
+      path
+    );
+    assert.match(html, /Goal: counterfeit detection for luxury goods\./, path);
+    assert.match(
+      html,
+      /Our goal: checkout stays a DPP readiness workspace for the product line\./,
+      path
+    );
+    assert.match(
+      html,
+      /Our goal: the heading stays passport tooling, and the page does not call that tooling a certification\./,
+      path
+    );
+    const pharma = html.slice(html.indexOf("Pharmaceuticals"), html.indexOf("Electronics"));
+    assert.equal(pharma.includes("Our goal: a licensee compares a local record"), false, path);
+    const cannabisAt = html.indexOf("🌿 Cannabis");
+    const cannabis = html.slice(cannabisAt, html.indexOf("</section>", cannabisAt));
+    assert.equal(cannabis.includes("Our goal: a pharmacist compares"), false, path);
+    assert.doesNotMatch(html, /Product authenticity \+ DPP/, path);
+    assert.doesNotMatch(html, /Start DPP Compliance Today/, path);
+  }
 });
 
 test("/authentic-agentic-economy is a real positioning page", async () => {
@@ -1415,7 +1484,8 @@ test("hung APP_WORKER /verify lookup 404s with HTML instead of throwing (1101)",
     assert.equal(res.status, 404);
     assert.match(res.headers.get("content-type") ?? "", /text\/html/);
     const html = await res.text();
-    assert.match(html, /No record found/);
+    assert.match(html, /Lookup did not finish/);
+    assert.doesNotMatch(html, /No record found/);
     assert.match(html, /name="robots" content="noindex"/);
     assert.equal(/on-chain|blockchain|polygon/i.test(html), false);
   }

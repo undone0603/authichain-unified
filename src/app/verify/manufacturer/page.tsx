@@ -7,7 +7,7 @@ const ENDPOINT = '/api/manufacturer-status'; // proxy or full Worker URL
 const CONTRACT = '0x4da4D2675e52374639C9c954f4f653887A9972BE';
 
 type HistoryItem = {
-  type: 'granted' | 'revoked';
+  type: 'granted' | 'revoked' | 'manufacturer_verified' | 'manufacturer_revoked';
   block: string;
   tx: string;
   role: string;
@@ -19,7 +19,7 @@ type Response = {
   address: string;
   contract: string;
   chainId: number;
-  currentBlock: string;
+  currentBlock: string | null;
   history: HistoryItem[];
   polygonscan: {
     contract: string;
@@ -29,6 +29,14 @@ type Response = {
   disclaimer: string;
   source: string;
   error?: string;
+  historyError?: string;
+  current?: {
+    admin: boolean;
+    minter: boolean;
+    updater: boolean;
+    pauser: boolean;
+    manufacturerVerified: boolean;
+  };
 };
 
 export default function ManufacturerStatus() {
@@ -71,7 +79,7 @@ export default function ManufacturerStatus() {
       <header>
         <h1 className="text-2xl font-semibold">Manufacturer Role History</h1>
         <p className="text-sm text-neutral-500 mt-1">
-          Public on-chain RoleGranted / RoleRevoked trail for AuthiChainProduct (ACPT) on Polygon.
+          Role and manufacturer events for AuthiChainNFT on Polygon, limited to the latest 10,000 blocks the free RPC will return. manufacturerVerified is an admin-set contract flag, not a certificate.
         </p>
       </header>
 
@@ -104,7 +112,7 @@ export default function ManufacturerStatus() {
           <div className="border rounded p-4 space-y-1 font-mono">
             <div>Address: {data.address}</div>
             <div>Contract: {data.contract}</div>
-            <div>Current block: {data.currentBlock}</div>
+            <div>Current block: {data.currentBlock ?? 'unavailable'}</div>
             <div>
               <a href={data.polygonscan.contract} target="_blank" rel="noreferrer" className="underline">
                 PolygonScan contract
@@ -120,34 +128,59 @@ export default function ManufacturerStatus() {
             </div>
           </div>
 
+          {data.current && (
+            <div className="border rounded p-4 space-y-1">
+              <h2 className="font-medium">Current roles</h2>
+              <div>Admin: {data.current.admin ? 'yes' : 'no'}</div>
+              <div>Minter: {data.current.minter ? 'yes' : 'no'}</div>
+              <div>Updater: {data.current.updater ? 'yes' : 'no'}</div>
+              <div>Pauser: {data.current.pauser ? 'yes' : 'no'}</div>
+              <div>Manufacturer verified: {data.current.manufacturerVerified ? 'yes' : 'no'}</div>
+            </div>
+          )}
+
           <div>
             <h2 className="font-medium mb-2">Role history ({data.history.length})</h2>
-            {data.history.length === 0 ? (
-              <p className="text-neutral-500">No RoleGranted or RoleRevoked events found for this address.</p>
-            ) : (
+            {data.historyError && (
+              <p className="text-neutral-500">The event list for this window was not available{data.historyError === 'log_range_rejected' || data.historyError === 'log_query_failed' ? ` (${data.historyError})` : ''}. Current role flags above still come from the contract.</p>
+            )}
+            {!data.historyError && data.history.length === 0 ? (
+              <p className="text-neutral-500">No role or manufacturer events in the latest 10,000 blocks. That does not mean the address holds no role.</p>
+            ) : data.history.length > 0 ? (
               <ul className="space-y-2">
-                {data.history.map((item, i) => (
+                {data.history.map((item, i) => {
+                  const tx = /^0x[a-fA-F0-9]{64}$/.test(item.tx) ? item.tx : '';
+                  return (
                   <li key={i} className="border rounded p-3 font-mono text-xs">
-                    <div className={item.type === 'granted' ? 'text-green-700' : 'text-red-700'}>
-                      {item.type.toUpperCase()} · block {item.block}
+                    <div className={item.type === 'granted' || item.type === 'manufacturer_verified' ? 'text-green-700' : 'text-red-700'}>
+                      {item.type === 'manufacturer_verified'
+                        ? 'MANUFACTURER VERIFIED'
+                        : item.type === 'manufacturer_revoked'
+                          ? 'MANUFACTURER REVOKED'
+                          : item.type.toUpperCase()}{' '}
+                      · block {item.block}
                     </div>
-                    <div>Role: {item.role}</div>
-                    <div>Sender: {item.sender}</div>
+                    {item.role ? <div>Role: {item.role}</div> : null}
+                    {item.sender ? <div>Sender: {item.sender}</div> : null}
+                    {item.timestamp ? <div>Contract timestamp: {item.timestamp}</div> : null}
+                    {tx ? (
                     <div>
                       Tx:{' '}
                       <a
-                        href={`https://polygonscan.com/tx/${item.tx}`}
+                        href={`https://polygonscan.com/tx/${tx}`}
                         target="_blank"
                         rel="noreferrer"
                         className="underline"
                       >
-                        {item.tx.slice(0, 10)}…{item.tx.slice(-8)}
+                        {tx.slice(0, 10)}…{tx.slice(-8)}
                       </a>
                     </div>
+                    ) : null}
                   </li>
-                ))}
+                  );
+                })}
               </ul>
-            )}
+            ) : null}
           </div>
 
           <div className="text-xs text-neutral-500 border-t pt-3">
@@ -155,26 +188,14 @@ export default function ManufacturerStatus() {
           </div>
           <div className="text-xs text-neutral-400">{data.source}</div>
 
-          <div className="pt-4 border-t">
-            <p className="text-sm mb-2">
-              Manufacturer role is publicly queryable. Request the role for your brand — $49 one-time, self-serve, auto-granted after payment.
-            </p>
-            <button
-              className="bg-blue-600 text-white px-4 py-2 rounded text-sm"
-              onClick={() => {
-                console.log(JSON.stringify({ event: 'role_request_cta_click' }));
-                // Wire to Stripe Checkout or /onboard
-                window.location.href = '/onboard?intent=manufacturer-role';
-              }}
-            >
-              Request Verified Manufacturer Role — $49
-            </button>
-          </div>
+          <p className="pt-4 border-t text-xs text-neutral-500">
+            A role event is an access-control log for this NFT contract. It is not a product passport, and this page does not take payment.
+          </p>
         </div>
       )}
 
       <footer className="text-xs text-neutral-400">
-        Contract: {CONTRACT} · No account required · Results are live eth_getLogs
+        Contract: {CONTRACT} · No account required · Results are live contract reads
       </footer>
     </div>
   );

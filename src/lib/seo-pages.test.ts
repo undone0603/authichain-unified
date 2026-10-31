@@ -47,7 +47,33 @@ describe("seo-pages loader", () => {
     expect(page).not.toBeNull();
     expect(page?.title).toBe("Authentic Agentic Economy | AuthiChain");
     expect(page?.jsonLd["@type"]).toBe("Article");
+    expect(page?.metaDescription).toBe(
+      "The authentic agentic economy: signed seals, MCP, and x402. A signed record is not a physical inspection."
+    );
+    expect(page?.metaDescription).not.toContain("trust physical products");
     expect(page?.bodyHtml).toContain("authentic agentic economy");
+    expect(page?.bodyHtml).toContain("not a physical inspection");
+    expect(page?.bodyHtml).toContain(
+      "Our goal: an agent checks a signed seal and is told the seal is not a physical inspection."
+    );
+    expect(page?.bodyHtml).not.toContain(
+      "Our goal: a reader can tell the unpaid empty body from a free seal answer and from a settled receipt."
+    );
+    expect(page?.metaDescription).not.toContain("Our goal");
+    expect(page?.title).not.toContain("Our goal");
+    expect(page?.h1).not.toContain("Our goal");
+    expect(page?.bodyHtml).toContain("empty JSON body is the unpaid HTTP 402");
+    expect(page?.bodyHtml).toContain("not a paid receipt");
+    expect(page?.bodyHtml).toContain("/api/verify?id=polygon-anchor-1");
+    expect(page?.bodyHtml).toContain("not a product");
+    expect(page?.bodyHtml).toContain(
+      "does not itself read the anchor transaction"
+    );
+    expect(page?.bodyHtml).not.toContain("unpaid POST returns HTTP 402");
+    expect(page?.bodyHtml).not.toContain("physical-world authenticity");
+    expect(page?.bodyHtml).not.toContain("verify authenticity");
+    expect(page?.bodyHtml).not.toContain("polygonscan.com");
+    expect(JSON.stringify(page?.jsonLd)).not.toContain("trust physical products");
     expect(page?.bodyHtml).toContain(
       'action="https://authichain.com/checkout/dpp_readiness"'
     );
@@ -73,7 +99,7 @@ describe("seo-pages loader", () => {
   });
 });
 
-const GENERATED_HOW_IT_WORKS =
+const OLD_HOW_IT_WORKS =
   "Issue a unique identifier per unit and link it to a signed record";
 
 // Mirrors scripts/gen-seo-pages.cjs PROTECTED_SEED_SLUGS — hand-authored pages
@@ -115,9 +141,7 @@ const PROTECTED_SEED_MARKERS: Record<string, string> = {
 describe("generated SEO money-path CTAs", () => {
   it("places a live checkout or pricing CTA after How it works and before FAQ", () => {
     const generated = listSeoPages().filter(
-      p =>
-        p.bodyHtml.includes(GENERATED_HOW_IT_WORKS) &&
-        !PROTECTED_SEED_SLUGS.has(p.slug)
+      (p) => !PROTECTED_SEED_SLUGS.has(p.slug)
     );
     expect(generated.length).toBeGreaterThan(0);
 
@@ -125,10 +149,18 @@ describe("generated SEO money-path CTAs", () => {
       const how = p.bodyHtml.indexOf("<h2>How it works</h2>");
       const cta = p.bodyHtml.indexOf("<h2>Get started</h2>");
       const faq = p.bodyHtml.indexOf("<h2>FAQ</h2>");
-      expect(how).toBeGreaterThan(-1);
-      expect(cta).toBeGreaterThan(how);
+      expect(how, p.slug).toBeGreaterThan(-1);
+      expect(cta, p.slug).toBeGreaterThan(how);
       // A page with no FAQs (e.g. the noindex QFS explainer) omits the section.
-      if (faq !== -1) expect(faq).toBeGreaterThan(cta);
+      if (faq !== -1) expect(faq, p.slug).toBeGreaterThan(cta);
+      expect(p.bodyHtml, p.slug).not.toContain(OLD_HOW_IT_WORKS);
+    }
+  });
+
+  it("does not promise 50 workspace generations on a generated page", () => {
+    for (const page of listSeoPages()) {
+      const blob = `${page.metaDescription}\n${page.bodyHtml}\n${JSON.stringify(page.jsonLd)}`;
+      expect(blob, page.slug).not.toContain("50 workspace generations");
     }
   });
 
@@ -169,6 +201,216 @@ describe("generated SEO money-path CTAs", () => {
     expect(batteries?.bodyHtml).toContain(
       'href="https://authichain.com/dpp-check"'
     );
+  });
+
+  it("does not say a scan proves a medicine is genuine", () => {
+    for (const slug of [
+      "blockchain-qr-code-for-pharma",
+      "anti-counterfeit-pharmaceutical",
+    ]) {
+      const page = getSeoPageBySlug(slug);
+      expect(page).not.toBeNull();
+      const blob = `${page?.metaDescription}\n${page?.bodyHtml}\n${JSON.stringify(page?.jsonLd)}`;
+      expect(blob).toContain(
+        "A scan is not, by itself, proof a medicine is genuine."
+      );
+      expect(blob).toContain("Confirm obligations against the statute.");
+      expect(blob).not.toContain("blockchain-verified");
+      expect(blob).not.toContain("DSCSA-aligned");
+      expect(blob).not.toContain("verify authenticity by scan");
+      expect(blob).not.toContain("medicine is genuine and unexpired");
+      expect(page!.metaDescription.length).toBeLessThanOrEqual(160);
+    }
+  });
+
+  it("does not say a scan proves an electronics, sneaker, or cosmetic product is genuine", () => {
+    for (const slug of [
+      "product-authentication-for-electronics",
+      "anti-counterfeit-sneakers",
+      "anti-counterfeit-cosmetics",
+      "blockchain-qr-code-for-electronics",
+      "blockchain-qr-code-for-cosmetics",
+    ]) {
+      const page = getSeoPageBySlug(slug);
+      expect(page).not.toBeNull();
+      const blob = `${page?.metaDescription}\n${page?.bodyHtml}\n${JSON.stringify(page?.jsonLd)}`;
+      expect(blob).toContain(
+        "A scan is not, by itself, proof the product is genuine."
+      );
+      expect(blob).toContain(
+        "Product certification through verify is in development."
+      );
+      expect(blob).toContain(
+        "Issuing a customer product certificate is in development."
+      );
+      expect(blob).not.toContain("blockchain-verified");
+      expect(blob).not.toContain("that proves");
+      expect(blob).not.toContain("Yes —");
+      expect(blob).not.toContain("on-chain");
+      expect(blob).not.toContain("polygon-anchor-1");
+      expect(blob).not.toContain("polygonscan.com");
+      expect(page!.metaDescription.length).toBeLessThanOrEqual(160);
+    }
+  });
+
+  it("does not say a scan proves wine, parts, cannabis, or a battery passport", () => {
+    const product = [
+      "anti-counterfeit-wine",
+      "anti-counterfeit-spirits",
+      "anti-counterfeit-luxury-handbags",
+      "product-authentication-for-collectibles",
+      "blockchain-qr-code-for-automotive",
+      "supply-chain-traceability-automotive",
+      "blockchain-qr-code-for-jewelry",
+      "supply-chain-traceability-food-safety",
+      "blockchain-qr-code-for-food",
+      "product-authentication-for-luxury-goods",
+      "blockchain-qr-code-for-luxury",
+      "product-authentication-for-medical-devices",
+    ];
+    const cannabis = [
+      "cannabis-blockchain-provenance",
+      "cannabis-coa-verification-blockchain",
+      "biotrack-integration-blockchain-provenance",
+      "metrc-compliance-blockchain",
+      "dispensary-qr-provenance-scanning",
+      "blockchain-qr-code-for-cannabis",
+      "product-authentication-for-cannabis-dispensary",
+    ];
+    const government = [
+      "blockchain-qr-code-for-defense",
+      "supply-chain-traceability-defense",
+      "product-authentication-for-government-supply-chain",
+    ];
+    const checks: Array<[string[], string]> = [
+      [product, "A scan is not, by itself, proof the product is genuine."],
+      [cannabis, "A scan is not, by itself, proof a cannabis product is genuine."],
+      [government, "On-chain government records are in development."],
+      [
+        ["eu-digital-product-passport-batteries"],
+        "A scan is not, by itself, proof a battery is genuine.",
+      ],
+      [
+        ["supply-chain-traceability-pharmaceutical"],
+        "A scan is not, by itself, proof a medicine is genuine.",
+      ],
+      [
+        ["blockchain-qr-code-for-aerospace", "supply-chain-traceability-aerospace"],
+        "This page does not establish airworthiness.",
+      ],
+    ];
+    for (const [slugs, sentence] of checks) {
+      for (const slug of slugs) {
+        const page = getSeoPageBySlug(slug);
+        expect(page, slug).not.toBeNull();
+        const blob = `${page?.metaDescription}\n${page?.bodyHtml}\n${JSON.stringify(page?.jsonLd)}`;
+        expect(blob, slug).toContain(sentence);
+        expect(blob, slug).not.toContain("$199");
+        expect(blob, slug).not.toContain("StrainChain Basic");
+        expect(blob, slug).not.toContain("anchored on-chain");
+        expect(blob, slug).not.toContain("DSCSA-aligned");
+        expect(blob, slug).not.toContain("FAR-aligned");
+        expect(blob, slug).not.toContain("polygon-anchor-1");
+        expect(blob, slug).not.toContain("polygonscan.com");
+        expect(page!.metaDescription.length, slug).toBeLessThanOrEqual(160);
+      }
+    }
+    const battery = getSeoPageBySlug("eu-digital-product-passport-batteries");
+    expect(battery?.bodyHtml).toContain("This page is not a battery passport");
+    expect(battery?.bodyHtml).toContain("not a physical inspection");
+    expect(battery?.bodyHtml).not.toContain("only published demonstration record");
+    const pharma = getSeoPageBySlug("supply-chain-traceability-pharmaceutical");
+    expect(pharma?.bodyHtml).toContain("This page does not establish DSCSA compliance.");
+  });
+
+  it("puts one scan, seal, or battery goal in the body and not the title", () => {
+    const cases: Array<[string, string]> = [
+      [
+        "blockchain-qr-code-for-pharma",
+        "Our goal: a pharmacist checks one unit's signed record.",
+      ],
+      [
+        "product-authentication-for-electronics",
+        "Our goal: a scan checks a signed record for that unit.",
+      ],
+      [
+        "blockchain-qr-code-for-cannabis",
+        "Our goal: a scan checks a signed record for that unit.",
+      ],
+      [
+        "blockchain-qr-code-for-defense",
+        "Our goal: one signed record a contracting officer can read offline.",
+      ],
+      [
+        "supply-chain-traceability-aerospace",
+        "Our goal: a signed record lists a part identifier an airworthiness file could cite.",
+      ],
+      [
+        "eu-digital-product-passport-batteries",
+        "Our goal: issue one battery passport record for a single pack, with carbon-footprint, state-of-health, and material-recovery fields.",
+      ],
+    ];
+    for (const [slug, goal] of cases) {
+      const page = getSeoPageBySlug(slug);
+      expect(page, slug).not.toBeNull();
+      expect(page!.bodyHtml, slug).toContain(goal);
+      expect(page!.title, slug).not.toContain("Our goal");
+      expect(page!.h1, slug).not.toContain("Our goal");
+      expect(page!.metaDescription, slug).not.toContain("Our goal");
+    }
+  });
+
+  it("does not title a hub as a METRC, BioTrack, COA, DSCSA, or recall connection", () => {
+    const cases: Array<[string, string, string]> = [
+      [
+        "metrc-compliance-blockchain",
+        "This page does not connect to METRC",
+        "strainchain_passport",
+      ],
+      [
+        "biotrack-integration-blockchain-provenance",
+        "This page does not connect to BioTrack",
+        "strainchain_passport",
+      ],
+      [
+        "cannabis-coa-verification-blockchain",
+        "Lab certificates are not linked here",
+        "strainchain_passport",
+      ],
+      [
+        "dscsa-compliance-blockchain-serialization",
+        "This page does not establish DSCSA compliance",
+        "dpp_readiness",
+      ],
+      [
+        "cannabis-product-recall-traceability",
+        "This page does not connect to METRC or BioTrack",
+        "strainchain_passport",
+      ],
+    ];
+    const banned = [
+      "Turn METRC Compliance Into Consumer Trust",
+      "METRC Compliance on the Blockchain",
+      "DSCSA-Ready",
+      "A QR scan returns an authenticity result",
+      "Blockchain-Verified Cannabis",
+      "BioTrack + Blockchain",
+      "BioTrack Integration",
+      "ties each unit to its METRC",
+      "shows recall status",
+    ];
+    for (const [slug, sentence, plan] of cases) {
+      const page = getSeoPageBySlug(slug);
+      expect(page, slug).not.toBeNull();
+      const blob = `${page?.title}\n${page?.h1}\n${page?.metaDescription}\n${page?.bodyHtml}\n${JSON.stringify(page?.jsonLd)}`;
+      expect(blob, slug).toContain(sentence);
+      expect(blob, slug).toContain(
+        `action="https://authichain.com/checkout/${plan}"`
+      );
+      for (const phrase of banned) {
+        expect(blob, `${slug} ${phrase}`).not.toContain(phrase);
+      }
+    }
   });
 
   it("links Made in USA / origin-claim hubs to DPP checkout and the Made in America brief", () => {
@@ -390,6 +632,60 @@ describe("generated SEO money-path CTAs", () => {
     expect(p?.bodyHtml).toContain("Signed records are in development.");
     expect(p?.bodyHtml).toContain("a Commission study on footwear due by the end of 2027.</p>");
     expect(p?.metaDescription.endsWith("by the end of 2027.")).toBe(true);
+  });
+
+  it("keeps heading order when goal pages drop the default how-it-works sentence", () => {
+    for (const slug of [
+      "dscsa-unit-level-traceability-2026",
+      "dscsa-saleable-returns-verification-requirement",
+      "dscsa-epcis-interoperable-data-exchange-requirement",
+      "epcis-2-0-blockchain-anchoring",
+      "right-to-repair-spare-parts-verification",
+      "eu-digital-product-passport-textiles",
+      "eu-digital-product-passport-registry",
+      "espr-priority-product-list-timeline",
+      "eu-digital-product-passport-furniture",
+      "eu-digital-product-passport-electronics",
+      "eu-digital-product-passport-steel",
+      "eu-digital-product-passport-tyres",
+      "eu-digital-product-passport-aluminium",
+      "eu-digital-product-passport-toys",
+      "eu-digital-product-passport-detergents",
+      "kimberley-process-diamond-certification-blockchain-2026",
+      "qr-code-phishing-product-packaging-security",
+      "ppwr-packaging-qr-code-labeling-requirements",
+      "eu-digital-product-passport-chemicals-scope-study",
+      "uk-product-regulation-metrology-act-digital-labelling",
+      "espr-recycled-content-recyclability-electronics-2029",
+      "eu-textile-labelling-regulation-digital-label-revision",
+      "seafood-import-monitoring-program-traceability",
+      "shop-safe-act-marketplace-seller-verification",
+      "eudamed-udi-medical-device-registration-2026",
+      "forced-labor-supply-chain-traceability-verification",
+    ]) {
+      const page = getSeoPageBySlug(slug);
+      expect(page, slug).not.toBeNull();
+      const how = page!.bodyHtml.indexOf("<h2>How it works</h2>");
+      const cta = page!.bodyHtml.indexOf("<h2>Get started</h2>");
+      const faq = page!.bodyHtml.indexOf("<h2>FAQ</h2>");
+      expect(how, slug).toBeGreaterThan(-1);
+      expect(cta, slug).toBeGreaterThan(how);
+      expect(faq, slug).toBeGreaterThan(cta);
+      const howChunk = page!.bodyHtml.slice(how, cta);
+      expect(howChunk, slug).toBe(
+        "<h2>How it works</h2><p>That issuance is not live on this page. EU DPP Readiness is $299 one-time.</p>"
+      );
+      expect(page!.bodyHtml, slug).not.toContain(
+        "Issuing a customer product certificate is in development."
+      );
+      expect(page!.bodyHtml, slug).not.toContain(
+        "Issue a unique identifier per unit and link it to a signed record"
+      );
+      expect(page!.title, slug).not.toContain("Our goal");
+      expect(page!.h1, slug).not.toContain("Our goal");
+      expect(page!.metaDescription, slug).not.toContain("Our goal");
+      expect(page!.metaDescription.length, slug).toBeLessThanOrEqual(160);
+    }
   });
 
   it("RES-103: no page claims records are already issuing or offers proof of origin", () => {
