@@ -345,7 +345,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
           <pre><code>curl -sS -i -X POST https://authichain.com/api/x402 \\
   -H 'content-type: application/json' \\
   -d '{}'</code></pre>
-          <p>An empty body is the unpaid HTTP 402. The 402 response lists the asset, payTo, and EIP-712 extra. A non-UUID sealId is HTTP 400 before payment. No wallet, key, or <code>X-PAYMENT</code> header is required for this probe.</p>
+          <p>An empty body is the unpaid HTTP 402. The 402 response lists the asset, payTo, and EIP-712 extra. A non-UUID sealId is HTTP 400 before payment. The all-zero discovery example is HTTP 400 before payment. No wallet, key, or <code>X-PAYMENT</code> header is required for this probe.</p>
         </figure>
         <figure>
           <figcaption>curl — catalog</figcaption>
@@ -358,7 +358,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
   -H 'content-type: application/json' \\
   -H 'X-PAYMENT: &lt;base64-x402-payload&gt;' \\
   -d '{"sealId":"&lt;seal-uuid&gt;"}'</code></pre>
-          <p>After an x402 client pays the 402 <code>accepts[]</code> requirement to the published payTo, retry the same POST with <code>X-PAYMENT</code> and a seal UUID. A non-UUID body is HTTP 400 before payment. Do not send private keys here. Facilitator URL is not republished on this page.</p>
+          <p>After an x402 client pays the 402 <code>accepts[]</code> requirement to the published payTo, retry the same POST with <code>X-PAYMENT</code> and a seal UUID. A non-UUID body is HTTP 400 before payment. The all-zero discovery example is HTTP 400 before payment. Do not send private keys here. Facilitator URL is not republished on this page.</p>
         </figure>
       </div>
     </div>
