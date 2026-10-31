@@ -35,12 +35,28 @@ zone_name = "authichain.com"
 pattern = "authichain.com/api/x402/"
 zone_name = "authichain.com"
 
+# Query strings miss the exact routes above and were served by the edge
+# router's authichain.com/api/x402* wildcard as GET health 200. Keep the
+# wildcard here so GET/HEAD/POST /api/x402?query is the unpaid 402 quote.
+# health, catalog, listing, and growth stay on their more specific routes.
+[[routes]]
+pattern = "authichain.com/api/x402*"
+zone_name = "authichain.com"
+
 [[routes]]
 pattern = "authichain.com/api/v1/agent-verify"
 zone_name = "authichain.com"
 
 [[routes]]
 pattern = "authichain.com/api/v1/agent-verify/"
+zone_name = "authichain.com"
+
+# Query-string GETs do not match the exact routes above. Edge used to own
+# agent-verify* and answered 200 health, so GET-first crawlers saw no paywall.
+# Keep this wildcard on the landing worker (GET/HEAD 402). Live CF route id
+# 936e5446f2f1456c84f11be9649d7fc0 was pointed here 2026-10-28.
+[[routes]]
+pattern = "authichain.com/api/v1/agent-verify*"
 zone_name = "authichain.com"
 
 [[routes]]
@@ -151,6 +167,8 @@ service = "authichain-api"
 
 # Secrets (set at deploy from GitHub): STRIPE_SECRET_KEY, optional STRIPE_PRICE_ID.
 # DPP_SMOKE_SECRET (16+ chars) gates the $0 DPP-SMOKE-E2E session. Unset fails closed.
+# IP_HASH_SALT (optional): wrangler secret put IP_HASH_SALT --name authichain-com
+# Unset or empty fails closed: 503, no write.
 
 # VERIFY_APP: service binding to the Next app worker `authichain-app`
 # (wrangler.app.jsonc). Paid verify prefers the Supabase read below. This
@@ -178,3 +196,11 @@ binding = "MYBROWSER"
 [[kv_namespaces]]
 binding = "X402_REPLAY_KV"
 id = "ab391dc529884161bd84707d7627a9f0"
+
+# Optional email opt-in from the free checks (email_optins, migrations/0001 + 0002 country/unsub).
+# Existing AuthiChain-owned D1, $0. Rollback: delete this block.
+[[d1_databases]]
+binding = "DB"
+database_name = "authichain-db"
+database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
+migrations_dir = "migrations"
