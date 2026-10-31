@@ -19,8 +19,10 @@ import {
 } from "../../_shared/estate-landing.ts";
 
 export const DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
-export const CLAIM_FILE_CHECKOUT = "https://authichain.com/checkout/musa_claim_file";
-export const PASSPORT_CHECKOUT_PATH = "https://authichain.com/checkout/strainchain_passport";
+export const CLAIM_FILE_CHECKOUT =
+  "https://authichain.com/checkout/musa_claim_file";
+export const PASSPORT_CHECKOUT_PATH =
+  "https://authichain.com/checkout/strainchain_passport";
 
 const TRUMARK_PATHS = new Set(["/trumark", "/trumark/"]);
 const MADE_IN_AMERICA_PATHS = new Set([
@@ -180,7 +182,7 @@ export function renderTrumarkPage(): string {
       },
       {
         title: "EU DPP Readiness — $299",
-        body: "AuthiChain workspace, self-serve activation, and 50 workspace generations. $299 on the published Stripe Payment Link, or enter a work email for recoverable checkout.",
+        body: "AuthiChain workspace and self-serve activation. $299 on the published Stripe Payment Link, or enter a work email for recoverable checkout.",
       },
     ],
     "positioning"
@@ -207,7 +209,8 @@ ${surfaceFooter()}`,
 }
 
 /** Gov provenance pilot, gated confirm page (Zac approved $7,500, 2026-10-16). */
-export const GOV_PILOT_LINK = "https://authichain.com/checkout/gov_provenance_pilot";
+export const GOV_PILOT_LINK =
+  "https://authichain.com/checkout/gov_provenance_pilot";
 
 export function renderMadeInAmericaPage(): string {
   return pageShell({
@@ -228,10 +231,18 @@ export function renderMadeInAmericaPage(): string {
       label: "Start my claim file — $299",
     },
     actions: [
-      { href: "/made-in-usa-claim-file", label: "What's in the claim file", primary: false },
+      {
+        href: "/made-in-usa-claim-file",
+        label: "What's in the claim file",
+        primary: false,
+      },
       { href: "/partners/brief", label: "Partner brief", primary: false },
       { href: "/pricing", label: "View pricing", primary: false },
-      { href: GOV_PILOT_LINK, label: "Federal buyers: 60-day provenance pilot — $7,500 fixed", primary: false },
+      {
+        href: GOV_PILOT_LINK,
+        label: "Federal buyers: 60-day provenance pilot — $7,500 fixed",
+        primary: false,
+      },
     ],
   })}
   ${estateSteps(

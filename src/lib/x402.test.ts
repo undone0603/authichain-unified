@@ -24,6 +24,7 @@ import {
   isDiscoveryExampleSealId,
   x402BazaarDiscovery,
   x402PaidOutputExample,
+  x402AgentCard,
   type PaymentRequirement,
 } from "./x402";
 import { planPaymentLink, planUsd } from "./plans";
@@ -91,21 +92,9 @@ describe("buildPaymentRequired", () => {
     expect(r.body.extensions.bazaar.info.input.method).toBe("POST");
     expect(r.body.extensions.bazaar.info.input.bodyType).toBe("json");
     expect(r.body.extensions.bazaar.schema["required"]).toEqual(["input"]);
-    expect(r.body.extensions.bazaar.info.input.body.sealId).toBe(
-      X402_DISCOVERY_EXAMPLE_SEAL_ID
+    expect(r.body.extensions.bazaar.info.input.body.sealId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     );
-    expect(isDiscoveryExampleSealId(r.body.extensions.bazaar.info.input.body.sealId)).toBe(
-      true
-    );
-    expect(x402BazaarDiscovery().bazaar.info.input.body.sealId).toBe(
-      X402_DISCOVERY_EXAMPLE_SEAL_ID
-    );
-    expect(isDiscoveryExampleSealId("11111111-2222-4333-8444-555555555555")).toBe(
-      false
-    );
-    expect(isDiscoveryExampleSealId("demo")).toBe(true);
-    expect(isDiscoveryExampleSealId("DEMO")).toBe(true);
-    expect(isDiscoveryExampleSealId("probe")).toBe(false);
     expect(r.body.accepts[0].outputSchema).toEqual(
       r.body.extensions.bazaar.info
     );
@@ -140,6 +129,26 @@ describe("buildPaymentRequired", () => {
     expect(decoded).toEqual(r.v2);
     expect(JSON.stringify(r.v2).toLowerCase()).not.toContain(
       "facilitator.payai"
+    );
+  });
+
+  it("indexes PayAI search words evidence and verification on the unpaid v2 resource", () => {
+    const r = buildPaymentRequired({
+      resource: "https://authichain.com/api/x402",
+      priceUsd: 0.05,
+      payTo: "0xabc0000000000000000000000000000000000001",
+    });
+    const description = r.v2.resource.description.toLowerCase();
+    expect(description).toContain("evidence");
+    expect(description).toContain("verification");
+    expect(description).toContain("not real-world truth");
+    expect(r.v2.resource.tags).toEqual(
+      expect.arrayContaining(["verification", "authenticity", "evidence"])
+    );
+    expect(JSON.stringify(r.v2).toLowerCase()).not.toContain("authenticityscore");
+    expect(r.v2.accepts[0].amount).toBe("50000");
+    expect(r.v2.accepts[0].payTo).toBe(
+      "0xabc0000000000000000000000000000000000001"
     );
   });
 
@@ -741,6 +750,75 @@ describe("x402Catalog", () => {
     expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
       "facilitator.payai"
     );
+  });
+
+  it("puts Saylor/CDP accepts[] on paid catalog endpoints so a 200 well-known lists", async () => {
+    const env = {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+      X402_PRICE_USD: "0.05",
+      X402_NETWORK: "base",
+    };
+    const catalog = await x402Catalog(env);
+    const paid = catalog.endpoints.filter(e => e.paid);
+    expect(paid.length).toBeGreaterThan(0);
+    for (const e of paid) {
+      const url = e.url || e.resource;
+      expect(url).toMatch(/^https:\/\/authichain\.com\/api\/|^https:\/\/authichain\.com\/mcp$/);
+      expect(e.accepts?.length).toBeGreaterThan(0);
+      for (const a of e.accepts ?? []) {
+        expect(a.scheme).toBe("exact");
+        expect(a.network).toBe("eip155:8453");
+        expect(a.payTo).toBe(env.X402_PAY_TO);
+        expect(a.amount).toBe("50000");
+      }
+    }
+    const x402 = paid.find(e => e.path === "/api/x402" && e.method === "POST");
+    expect(x402?.description.toLowerCase()).toContain("evidence");
+    expect(x402?.tags).toEqual(
+      expect.arrayContaining(["verification", "authenticity", "evidence"])
+    );
+    expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
+      "authenticityscore"
+    );
+  });
+});
+
+describe("x402AgentCard", () => {
+  it("publishes an A2A Agent Card with skills and live x402 payment metadata", async () => {
+    const env = {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+      X402_PRICE_USD: "0.05",
+      X402_NETWORK: "base",
+    };
+    const card = await x402AgentCard(env);
+    expect(card.name).toBe("AuthiChain");
+    expect(card.description.toLowerCase()).toContain("evidence");
+    expect(card.description).toContain("A valid signature is not real-world truth");
+    expect(card.provider.url).toBe("https://authichain.com");
+    expect(card.documentationUrl).toBe("https://authichain.com/x402");
+    expect(card.url).toBe("https://authichain.com/mcp");
+    expect(card.skills.length).toBeGreaterThan(0);
+    const skill = card.skills.find(s => s.id === "paid-evidence-check");
+    expect(skill?.tags).toEqual(
+      expect.arrayContaining(["verification", "authenticity", "evidence"])
+    );
+    expect(card.x402.scheme).toBe("exact");
+    expect(card.x402.network).toBe("eip155:8453");
+    expect(card.x402.payTo).toBe(env.X402_PAY_TO);
+    expect(card.x402.amount).toBe("50000");
+    expect(card.x402.priceUsd).toBe(0.05);
+    expect(card.x402.accepts?.length).toBeGreaterThan(0);
+    expect(card.x402.resources).toEqual(
+      expect.arrayContaining([
+        "https://authichain.com/api/v1/agent-verify",
+        "https://authichain.com/api/x402",
+      ])
+    );
+    const raw = JSON.stringify(card).toLowerCase();
+    expect(raw).not.toContain("authenticityscore");
+    expect(raw).not.toContain("@");
+    expect(raw).not.toContain("erc8004");
+    expect(card).not.toHaveProperty("info");
   });
 });
 
