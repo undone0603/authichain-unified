@@ -2,13 +2,9 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "com.authichain/authichain",
   "title": "AuthiChain",
-  "description": "Verification of signed records, plus an EU DPP check.",
-  "version": "1.4.0",
+  "description": "Authenticity tools for agents: signed-record checks, EU DPP readiness, x402 seal verify on Base.",
+  "version": "1.3.3",
   "websiteUrl": "https://authichain.com",
-  "repository": {
-    "url": "https://github.com/undone0603/authichain-unified",
-    "source": "github"
-  },
   "remotes": [
     {
       "type": "streamable-http",
