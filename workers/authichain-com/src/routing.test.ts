@@ -548,6 +548,39 @@ test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
   assert.match(examplesHtml, /empty body is the unpaid HTTP 402/);
   assert.equal(examplesHtml.includes('{"sealId":"demo"}'), false);
   assert.equal(examplesHtml.includes("freeCalls"), false);
+  assert.match(examplesHtml, /not a customer product/);
+  assert.match(examplesHtml, /not a physical inspection/);
+  assert.match(examplesHtml, /not a battery passport/);
+  assert.match(examplesHtml, /does not itself read the anchor transaction/);
+  assert.match(examplesHtml, /not a counterfeit finding/);
+  const exampleLinks = [...examplesHtml.matchAll(/href="([^"]+)"/g)].map(
+    (m) => new URL(m[1], "https://authichain.com")
+  );
+  assert.ok(!exampleLinks.some((u) => u.hostname === "polygonscan.com"));
+  assert.ok(
+    exampleLinks.some(
+      (u) =>
+        u.pathname === "/api/verify" &&
+        u.searchParams.get("id") === "polygon-anchor-1"
+    )
+  );
+  assert.ok(
+    exampleLinks.some(
+      (u) =>
+        u.pathname === "/verify" &&
+        u.searchParams.get("id") === "polygon-anchor-1"
+    )
+  );
+  assert.ok(
+    exampleLinks.some(
+      (u) => u.pathname === "/protocol/examples/polygon-anchor-1.record.json"
+    )
+  );
+  assert.ok(
+    exampleLinks.some(
+      (u) => u.pathname === "/protocol/examples/polygon-anchor-1.anchor.json"
+    )
+  );
 
   const architecture = await get("/docs/dpp-architecture");
   const architectureHtml = await architecture.text();
@@ -932,6 +965,19 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
     assert.match(text, /POST https:\/\/authichain\.com\/api\/x402/);
     assert.match(text, /18 February 2027/);
     assert.match(text, /battery-passport/);
+    assert.match(
+      text,
+      /GET https:\/\/authichain\.com\/api\/verify\?id=polygon-anchor-1/
+    );
+    assert.match(
+      text,
+      /https:\/\/authichain\.com\/protocol\/examples\/polygon-anchor-1\.record\.json/
+    );
+    assert.match(
+      text,
+      /https:\/\/authichain\.com\/protocol\/examples\/polygon-anchor-1\.anchor\.json/
+    );
+    assert.equal(text.includes("polygonscan.com"), false);
     assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
     assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
     assert.doesNotMatch(text, /GET \/api\/checkout/);
@@ -1643,7 +1689,40 @@ test("/protocol links the anchored demonstration record and the MCP tool", async
         u.searchParams.get("id") === "polygon-anchor-1"
     )
   );
+  assert.ok(
+    links.some(
+      u => u.pathname === "/protocol/examples/polygon-anchor-1.record.json"
+    )
+  );
+  assert.ok(
+    links.some(
+      u => u.pathname === "/protocol/examples/polygon-anchor-1.anchor.json"
+    )
+  );
   assert.match(html, /verify_record/);
+});
+
+test("polygon-anchor-1 files are served before the /protocol app proxy", async () => {
+  const record = await get("/protocol/examples/polygon-anchor-1");
+  assert.equal(record.status, 200);
+  assert.match(record.headers.get("content-type") ?? "", /application\/json/);
+  const body = (await record.json()) as { credentialSubject?: { id?: string } };
+  assert.equal(
+    body.credentialSubject?.id,
+    "https://authichain.com/protocol/examples/polygon-anchor-1"
+  );
+
+  const anchor = await get("/protocol/examples/polygon-anchor-1.anchor.json");
+  assert.equal(anchor.status, 200);
+  const anchorBody = (await anchor.json()) as { recordHash?: string };
+  assert.equal(
+    anchorBody.recordHash,
+    "sha256:5ee3e5e7e8b2c32c8f096b77cc41baece9dd2555d5af24d73f8880484ed6b1e1"
+  );
+
+  const other = await get("/protocol/examples/not-published");
+  assert.equal(other.status, 200);
+  assert.equal(await other.text(), "app");
 });
 
 test("/manifest.webmanifest is a record lookup, not an offline verify cache", async () => {
