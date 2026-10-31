@@ -84,7 +84,7 @@ export const LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0];
  * mcp-routes.test.ts asserts the two match, so the next bump has to touch
  * both or CI fails.
  */
-export const SERVER_VERSION = "1.3.2";
+export const SERVER_VERSION = "1.4.0";
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -121,16 +121,32 @@ export const TOOLS = [
   {
     name: "query_provenance",
     description:
-      "Free public lookup for an assetId / seal / QR token. Never attests. Resolves the published packs (" +
-      PUBLISHED_PACKS.map(p => p.slug).join(", ") +
-      "); any other id returns status unknown, because the certificates registry does not answer yet. " +
-      "For free signature and anchor verification use verify_record.",
+      "Free public lookup for an assetId / seal / QR token. Reads matching rows from the canonical auth_seals registry when public Supabase configuration is available, and also resolves published packs. A registry match means registered only; it does not verify a signature or prove a physical item is genuine. Use verify_attestation for a published v0.1 JWS; verify_record is the separate reference-protocol verifier.",
     inputSchema: {
       type: "object",
       properties: {
         assetId: {
           type: "string",
           description: "Seal, serial, or QR token identifier",
+        },
+      },
+      required: ["assetId"],
+    },
+  },
+  {
+    name: "verify_attestation",
+    description:
+      "Free. Fetch the exact published AuthiChain v0.1 JWS from the signed-record registry and pass it to the canonical edge-router verifier. Checks signature, issuer trust, durable revocation/status, expiry, and signed decision. Supply expectedObjectId to bind the record to a scanned object identifier. A valid signed claim alone does not prove physical authenticity.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        assetId: {
+          type: "string",
+          description: "Unique attestation ID or exact seal/product identifier",
+        },
+        expectedObjectId: {
+          type: "string",
+          description: "Optional independently observed object ID to compare with the signed subject",
         },
       },
       required: ["assetId"],
@@ -224,18 +240,45 @@ export const DEMONSTRATION_SIGNER_DID =
 export const DEMONSTRATION_RECORD_HASH =
   "5ee3e5e7e8b2c32c8f096b77cc41baece9dd2555d5af24d73f8880484ed6b1e1";
 /**
- * Production attestation issuer: kid lue84w… published at /protocol/jwks.json
+ * Production attestation issuer: kid T3AL7c4w… (RFC 7638 thumbprint, CFA-462) published at /protocol/jwks.json
  * and /.well-known/jwks.json (authichain-edge-router,
  * AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64). did:key is derived from that JWK's x.
  * The authichain-api certificate key (kid A_qAn4…) is deliberately not listed.
  */
 export const PRODUCTION_ISSUER_KID =
-  "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+  "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ";
 export const PRODUCTION_ISSUER_DID =
+  "did:key:z6MkjoaFgNbVQfsk2Tuiza2RT2vXTWpy7CNwuWv74nj7Sb2c";
+/**
+ * RETIRED issuer (Advisor ruling, Oct 17 2026, CFA-462): the pre-Oct-9 key
+ * (x=mJx2TLqU…j7k, kid lue84w… = its RFC 7638 thumbprint). Its private half was
+ * overwritten by deploy-cloudflare.yml at 2026-10-09T05:12:01Z, so it can never
+ * sign again. Accepted ONLY for records whose validFrom is before that instant;
+ * never used for new signing.
+ */
+export const RETIRED_ISSUER_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+export const RETIRED_ISSUER_DID =
   "did:key:z6MkpizPezaS2HsKKWghbcNp8ns7C98fYmypaFHWQyfcVA8G";
+export const RETIRED_ISSUER_RETIRED_AT = "2026-10-09T05:12:01Z";
 type AllowedSigner =
-  | { role: "demonstration"; kid: null; recordHash: string }
-  | { role: "production_issuer"; kid: string; recordHash: null };
+  | {
+      role: "demonstration";
+      kid: null;
+      recordHash: string;
+      retiredAt?: undefined;
+    }
+  | {
+      role: "production_issuer";
+      kid: string;
+      recordHash: null;
+      retiredAt?: undefined;
+    }
+  | {
+      role: "retired_issuer";
+      kid: string;
+      recordHash: null;
+      retiredAt: string;
+    };
 const ALLOWED_SIGNERS: Record<string, AllowedSigner> = {
   // Demonstration signer, not the production issuer. Valid for polygon-anchor-1 only.
   [DEMONSTRATION_SIGNER_DID]: {
@@ -247,6 +290,13 @@ const ALLOWED_SIGNERS: Record<string, AllowedSigner> = {
     role: "production_issuer",
     kid: PRODUCTION_ISSUER_KID,
     recordHash: null,
+  },
+  // Retired: verify-only for records issued before the Oct 9 key replacement.
+  [RETIRED_ISSUER_DID]: {
+    role: "retired_issuer",
+    kid: RETIRED_ISSUER_KID,
+    recordHash: null,
+    retiredAt: RETIRED_ISSUER_RETIRED_AT,
   },
 };
 /** Sender (and recipient, self-send) of demo anchor tx 0x2491…10b7. */
@@ -310,6 +360,14 @@ export async function verifyRecordTool(
   ) {
     allowed = undefined;
     trustReasons.push("demonstration_signer_not_valid_for_this_record");
+  } else if (entry.retiredAt) {
+    const vf = Date.parse(
+      String((record as { validFrom?: unknown })?.validFrom ?? "")
+    );
+    if (!(vf < Date.parse(entry.retiredAt))) {
+      allowed = undefined;
+      trustReasons.push("retired_issuer_not_valid_after_retirement");
+    }
   }
   if (anchor) {
     if (!chain.onChain)
@@ -466,10 +524,11 @@ function queryProvenance(assetIdRaw: unknown) {
    * live public page — the tool was answering "no" to a question the
    * estate could already answer "yes" to.
    *
-   * This resolves against published packs only. It does NOT stand in for
-   * the certificates registry, which still 404s (see
-   * docs/strategy/mcp-app-roadmap.md, G1): an id that is not a published
-   * pack still returns unknown, because there is nothing real to say.
+   * This is the no-network fallback for published packs and explicitly
+   * labeled samples. The async queryProvenanceWithRegistry wrapper below
+   * performs the canonical auth_seals lookup when public Supabase settings
+   * are available. Neither a published pack nor a registry row is by itself
+   * a cryptographic or physical-authenticity verdict.
    */
   const pack = findPublishedPack(assetId);
   return {
@@ -513,8 +572,8 @@ function queryProvenance(assetIdRaw: unknown) {
     },
     registry: {
       certificatesApi: "https://authichain.com/api/authichain/certificates",
-      state: "404",
-      note: "Public count stays — until this endpoint answers.",
+      state: "lookup_required",
+      note: "This is a published-pack/sample fallback, not a live certificate lookup. MCP checks auth_seals when registry credentials are configured.",
     },
     jwks: "https://authichain.com/.well-known/jwks.json",
     paidVerify: "POST /mcp tools/call verify",
@@ -523,11 +582,477 @@ function queryProvenance(assetIdRaw: unknown) {
   };
 }
 
+
+type AuthSealRegistryRow = {
+  id?: unknown;
+  product_id?: unknown;
+  batch_id?: unknown;
+  brand?: unknown;
+  polygon_tx?: unknown;
+  created_at?: unknown;
+};
+
+type AuthSealLookup =
+  | { kind: "found"; row: AuthSealRegistryRow }
+  | { kind: "not_found" | "not_configured" | "unavailable" | "invalid_identifier" };
+
+const SAFE_REGISTRY_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,179}$/;
+
+/**
+ * Read the canonical auth_seals registry using only the public Supabase key.
+ * A missing setting, HTTP error, schema error, or timeout is never converted
+ * into "not registered". This lookup is registration evidence only; it does
+ * not fetch or attest a signed record and must never set verified=true.
+ */
+async function lookupAuthSeal(
+  assetId: string,
+  env?: X402Env,
+): Promise<AuthSealLookup> {
+  const baseUrl = (env?.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const anonKey = (env?.SUPABASE_ANON_KEY || "").trim();
+  if (!baseUrl || !/^https:\/\//i.test(baseUrl) || !anonKey) {
+    return { kind: "not_configured" };
+  }
+  if (!SAFE_REGISTRY_IDENTIFIER.test(assetId)) {
+    return { kind: "invalid_identifier" };
+  }
+
+  const query = new URLSearchParams({
+    select: "id,product_id,batch_id,brand,polygon_tx,created_at",
+    limit: "1",
+    or: `(id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId},qr_payload.eq.${assetId})`,
+  });
+  try {
+    const response = await fetch(
+      `${baseUrl}/rest/v1/auth_seals?${query.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!response.ok) return { kind: "unavailable" };
+    const rows: unknown = await response.json();
+    if (!Array.isArray(rows)) return { kind: "unavailable" };
+    if (rows.length === 0) return { kind: "not_found" };
+    const row = rows[0] as AuthSealRegistryRow;
+    if (!row || typeof row !== "object" || typeof row.id !== "string" || !row.id) {
+      return { kind: "unavailable" };
+    }
+    return { kind: "found", row };
+  } catch {
+    return { kind: "unavailable" };
+  }
+}
+
+
+type PublishedAttestationRegistryRow = {
+  attestation_id?: unknown;
+  seal_id?: unknown;
+  product_id?: unknown;
+  batch_id?: unknown;
+  brand?: unknown;
+  object_id?: unknown;
+  product_class?: unknown;
+  gtin?: unknown;
+  serial?: unknown;
+  lot?: unknown;
+  issuer_id?: unknown;
+  issuer_kid?: unknown;
+  decision?: unknown;
+  payload?: unknown;
+  jws?: unknown;
+  record_hash?: unknown;
+  published_at?: unknown;
+};
+
+type PublishedAttestationLookup =
+  | { kind: "found"; row: PublishedAttestationRegistryRow }
+  | { kind: "not_found" | "not_configured" | "unavailable" | "invalid_identifier" | "ambiguous"; candidates?: PublishedAttestationRegistryRow[] };
+
+/** Resolve an exact identifier against published signed records only. */
+async function lookupPublishedAttestation(
+  assetId: string,
+  env?: X402Env,
+): Promise<PublishedAttestationLookup> {
+  const baseUrl = (env?.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const anonKey = (env?.SUPABASE_ANON_KEY || "").trim();
+  if (!baseUrl || !/^https:\/\//i.test(baseUrl) || !anonKey) {
+    return { kind: "not_configured" };
+  }
+  if (!SAFE_REGISTRY_IDENTIFIER.test(assetId)) {
+    return { kind: "invalid_identifier" };
+  }
+
+  const query = new URLSearchParams({
+    select: "attestation_id,seal_id,product_id,batch_id,brand,object_id,product_class,gtin,serial,lot,issuer_id,issuer_kid,decision,payload,jws,record_hash,published_at",
+    published: "eq.true",
+    limit: "2",
+    or: `(attestation_id.eq.${assetId},seal_id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId},object_id.eq.${assetId},gtin.eq.${assetId},serial.eq.${assetId},lot.eq.${assetId})`,
+  });
+  try {
+    const response = await fetch(
+      `${baseUrl}/rest/v1/authichain_attestation_records?${query.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!response.ok) return { kind: "unavailable" };
+    const rows: unknown = await response.json();
+    if (!Array.isArray(rows)) return { kind: "unavailable" };
+    if (rows.length === 0) return { kind: "not_found" };
+    if (rows.length > 1) return { kind: "ambiguous", candidates: rows as PublishedAttestationRegistryRow[] };
+    const row = rows[0] as PublishedAttestationRegistryRow;
+    if (
+      !row || typeof row !== "object" ||
+      typeof row.attestation_id !== "string" ||
+      typeof row.jws !== "string" ||
+      typeof row.record_hash !== "string" ||
+      !row.payload || typeof row.payload !== "object" ||
+      row.issuer_id !== "https://authichain.com"
+    ) {
+      return { kind: "unavailable" };
+    }
+    return { kind: "found", row };
+  } catch {
+    return { kind: "unavailable" };
+  }
+}
+
+/** Registry-backed MCP lookup; all answers remain explicitly non-verified. */
+async function queryProvenanceWithRegistry(
+  assetIdRaw: unknown,
+  env?: X402Env,
+) {
+  const assetId = String(assetIdRaw ?? "").trim();
+  const fallback = queryProvenance(assetId);
+  if (!assetId) return fallback;
+
+  const signedLookup = await lookupPublishedAttestation(assetId, env);
+  if (signedLookup.kind === "found") {
+    const row = signedLookup.row;
+    return {
+      ...fallback,
+      status: "published_attestation",
+      registered: true,
+      verified: false,
+      authenticityScore: 0,
+      product: {
+        id: typeof row.product_id === "string" ? row.product_id : assetId,
+        sealId: typeof row.seal_id === "string" ? row.seal_id : null,
+        batchId: typeof row.batch_id === "string" ? row.batch_id : null,
+        brand: typeof row.brand === "string" ? row.brand : null,
+        source: "authichain_attestation_records",
+      },
+      signedRecord: {
+        attestation_id: row.attestation_id,
+        issuer_id: row.issuer_id,
+        issuer_kid: row.issuer_kid,
+        decision: row.decision,
+        payload: row.payload,
+        jws: row.jws,
+        record_hash: row.record_hash,
+        published_at: row.published_at,
+        source: "authichain_attestation_records",
+      },
+      registry: {
+        ...fallback.registry,
+        state: "published_record_found",
+        source: "authichain_attestation_records",
+        semantics: "published issuer-signed claim; not proof of physical authenticity",
+        note: "A published JWS is retrieved, not verified by this lookup. Use verify_attestation to check signature, issuer trust, lifecycle, and expiry.",
+      },
+      verification: {
+        signature: "not_checked",
+        issuerTrust: "not_checked",
+        revocation: "not_checked",
+        physicalBinding: "not_checked",
+      },
+    };
+  }
+  if (signedLookup.kind === "ambiguous") {
+    return {
+      ...fallback,
+      status: "ambiguous_identifier",
+      verified: false,
+      registry: {
+        ...fallback.registry,
+        state: "ambiguous",
+        source: "authichain_attestation_records",
+        note: "This identifier matches multiple published attestations; retry with a unique attestation ID or seal ID.",
+      },
+      candidates: (signedLookup.candidates ?? []).map(row => ({
+        attestation_id: typeof row.attestation_id === "string" ? row.attestation_id : null,
+        seal_id: typeof row.seal_id === "string" ? row.seal_id : null,
+        product_id: typeof row.product_id === "string" ? row.product_id : null,
+        batch_id: typeof row.batch_id === "string" ? row.batch_id : null,
+      })),
+    };
+  }
+
+  const lookup = await lookupAuthSeal(assetId, env);
+  if (signedLookup.kind === "unavailable") {
+    if (lookup.kind !== "found") {
+      return {
+        ...fallback,
+        status: "registry_unavailable",
+        verified: false,
+        registry: {
+          ...fallback.registry,
+          state: "signed_record_registry_unavailable",
+          note: "The signed-record registry could not be read. No conclusion about signed-record existence or verification was reached.",
+        },
+      };
+    }
+  }
+  if (lookup.kind === "not_configured") {
+    return {
+      ...fallback,
+      registry: {
+        ...fallback.registry,
+        state: "not_configured",
+        note: "No public Supabase registry configuration was supplied; this result uses only published-pack/sample fallback data.",
+      },
+    };
+  }
+  if (lookup.kind === "invalid_identifier") {
+    return {
+      ...fallback,
+      registry: {
+        ...fallback.registry,
+        state: "invalid_identifier",
+        note: "This identifier contains unsupported characters for an exact registry lookup; no registry query was made.",
+      },
+    };
+  }
+  if (lookup.kind === "unavailable") {
+    return {
+      ...fallback,
+      status: fallback.status === "published_pack" || fallback.status === "desk_sample"
+        ? fallback.status
+        : "registry_unavailable",
+      verified: false,
+      registry: {
+        ...fallback.registry,
+        state: "unavailable",
+        note: "The canonical auth_seals registry could not be read. No conclusion about registration was reached.",
+      },
+    };
+  }
+
+  if (lookup.kind === "found") {
+    const row = lookup.row;
+    const registered = {
+      id: typeof row.product_id === "string" && row.product_id
+        ? row.product_id
+        : String(row.id),
+      sealId: String(row.id),
+      batchId: typeof row.batch_id === "string" ? row.batch_id : null,
+      brand: typeof row.brand === "string" ? row.brand : null,
+      registeredAt: typeof row.created_at === "string" ? row.created_at : null,
+      anchorTransaction: typeof row.polygon_tx === "string" ? row.polygon_tx : null,
+      source: "auth_seals",
+    };
+    return {
+      ...fallback,
+      status: "registered",
+      registered: true,
+      verified: false,
+      authenticityScore: 0,
+      product: registered,
+      registry: {
+        ...fallback.registry,
+        state: "available",
+        source: "auth_seals",
+        semantics: "registered only; no signature or physical-authenticity verdict",
+        note: signedLookup.kind === "unavailable" ? "A seal is registered, but the signed-record registry is unavailable. This is not an authenticity verdict." : signedLookup.kind === "not_found" ? "A matching auth_seals row proves registration only; no published signed attestation was found." : "A matching auth_seals row proves registration only; signed-record status remains unverified.",
+      },
+      verification: {
+        signature: "not_checked",
+        revocation: "not_checked",
+        physicalBinding: "not_checked",
+      },
+    };
+  }
+
+  if (fallback.status === "published_pack" || fallback.status === "desk_sample") {
+    return {
+      ...fallback,
+      registry: {
+        ...fallback.registry,
+        state: "checked_no_matching_seal",
+        source: "auth_seals",
+        note: "This published pack/sample did not match an auth_seals row. Published status is not a cryptographic attestation.",
+      },
+    };
+  }
+
+  if (signedLookup.kind === "unavailable") {
+    return {
+      ...fallback,
+      status: "registry_unavailable",
+      registered: false,
+      verified: false,
+      registry: {
+        ...fallback.registry,
+        state: "signed_record_registry_unavailable",
+        note: "The signed-record registry could not be read. No conclusion about the signed record was reached.",
+      },
+    };
+  }
+  return {
+    ...fallback,
+    status: "not_registered",
+    registered: false,
+    verified: false,
+    registry: {
+      ...fallback.registry,
+      state: "available",
+      source: "auth_seals",
+      signedRecordState: signedLookup.kind,
+      note: "No matching published signed attestation or auth_seals row was found. This is a registry lookup result, not a cryptographic verification result.",
+    },
+  };
+}
+
 /**
  * Echo the client's protocolVersion when this endpoint speaks it, else
  * answer with the newest one it does. Per the spec the client then either
  * proceeds on that version or disconnects.
  */
+
+type CanonicalAttestationVerifierBinding = {
+  fetch(request: Request): Promise<Response>;
+};
+
+async function verifyPublishedAttestation(
+  assetIdRaw: unknown,
+  expectedObjectIdRaw: unknown,
+  env?: X402Env,
+): Promise<Record<string, unknown>> {
+  const assetId = String(assetIdRaw ?? "").trim();
+  if (!assetId) {
+    return { verified: false, status: "invalid_identifier", error: "assetId is required" };
+  }
+  const expectedObjectId = typeof expectedObjectIdRaw === "string"
+    ? expectedObjectIdRaw.trim()
+    : "";
+  if (expectedObjectIdRaw !== undefined && (
+    !expectedObjectId || expectedObjectId.length > 240
+  )) {
+    return { verified: false, status: "invalid_identifier", error: "expectedObjectId must contain 1–240 characters" };
+  }
+
+  const lookup = await lookupPublishedAttestation(assetId, env);
+  if (lookup.kind !== "found") {
+    const statusByKind: Record<string, string> = {
+      not_found: "not_found",
+      not_configured: "not_configured",
+      unavailable: "registry_unavailable",
+      invalid_identifier: "invalid_identifier",
+      ambiguous: "ambiguous_identifier",
+    };
+    return {
+      verified: false,
+      status: statusByKind[lookup.kind] ?? "registry_unavailable",
+      registry: "authichain_attestation_records",
+      error: lookup.kind === "ambiguous"
+        ? "Identifier matches multiple published attestations; use a unique attestation ID or seal ID."
+        : lookup.kind === "not_found"
+          ? "No matching published signed attestation was found."
+          : lookup.kind === "not_configured"
+            ? "Public signed-record registry configuration is missing."
+            : lookup.kind === "invalid_identifier"
+              ? "Identifier contains unsupported characters."
+              : "Published signed-record registry is unavailable; no verification conclusion was reached.",
+      candidates: lookup.kind === "ambiguous"
+        ? (lookup.candidates ?? []).map(row => ({
+            attestation_id: typeof row.attestation_id === "string" ? row.attestation_id : null,
+            seal_id: typeof row.seal_id === "string" ? row.seal_id : null,
+            product_id: typeof row.product_id === "string" ? row.product_id : null,
+          }))
+        : undefined,
+      physical_authenticity: "not_proven",
+    };
+  }
+
+  const binding = (env as unknown as { APP_WORKER?: CanonicalAttestationVerifierBinding } | undefined)?.APP_WORKER;
+  if (!binding || typeof binding.fetch !== "function") {
+    return {
+      verified: false,
+      status: "verifier_not_configured",
+      error: "Canonical edge-router APP_WORKER service binding is missing; the retrieved JWS was not verified.",
+      attestation_id: lookup.row.attestation_id,
+      physical_authenticity: "not_proven",
+    };
+  }
+
+  const body: Record<string, unknown> = { jws: lookup.row.jws };
+  if (expectedObjectId) body.expected_object_id = expectedObjectId;
+  try {
+    const response = await binding.fetch(new Request(
+      "https://authichain-edge-router/api/v1/attestation/verify",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    ));
+    const result: unknown = await response.json();
+    if (!result || typeof result !== "object" || Array.isArray(result)) {
+      return {
+        verified: false,
+        status: "verifier_unavailable",
+        error: "Canonical verifier returned an invalid response.",
+        attestation_id: lookup.row.attestation_id,
+        physical_authenticity: "not_proven",
+      };
+    }
+    const decision = result as Record<string, unknown>;
+    const verified = response.status === 200 && decision.valid === true;
+    return {
+      verified,
+      status: verified ? "verified_signed_claim" : "not_verified",
+      attestation_id: lookup.row.attestation_id,
+      product_id: lookup.row.product_id,
+      seal_id: lookup.row.seal_id,
+      record_hash: lookup.row.record_hash,
+      verification: {
+        valid: decision.valid === true,
+        decision: decision.decision ?? null,
+        cryptographic_status: decision.cryptographic_status ?? null,
+        issuer_status: decision.issuer_status ?? null,
+        claim_status: decision.claim_status ?? null,
+        reasons: Array.isArray(decision.reasons) ? decision.reasons : [],
+        expected_object_id_checked: Boolean(expectedObjectId),
+      },
+      physicalBinding: expectedObjectId
+        ? decision.valid === true ? "matched_by_canonical_verifier" : "not_confirmed"
+        : "not_checked",
+      physical_authenticity: "not_proven",
+      semantics: "The canonical verifier evaluated the issuer-signed claim and lifecycle. This does not prove the physical item is genuine or that a label/QR has not been copied.",
+    };
+  } catch {
+    return {
+      verified: false,
+      status: "verifier_unavailable",
+      error: "The canonical edge-router verifier could not be reached; no verification conclusion was reached.",
+      attestation_id: lookup.row.attestation_id,
+      physical_authenticity: "not_proven",
+    };
+  }
+}
+
 export function negotiateProtocolVersion(params: unknown): string {
   const asked = (params as { protocolVersion?: unknown } | undefined)
     ?.protocolVersion;
@@ -686,11 +1211,7 @@ async function handleRpc(
       capabilities: { tools: { listChanged: false } },
       serverInfo: { name: "authichain", version: SERVER_VERSION },
       instructions:
-        "AuthiChain verification is free. verify_record checks an Ed25519 " +
-        "signed provenance record. scan_living_qr reads a stored Living QR " +
-        "as AuthiChain Verification Decision v1. dpp_readiness_check " +
-        "scores EU Digital Product Passport readiness. None of these inspects " +
-        "a physical product, and none is legal advice.",
+        "AuthiChain verification is free. verify_attestation fetches a published v0.1 JWS and delegates signature, issuer trust, lifecycle, and expiry checks to the canonical verifier. query_provenance is registration-only; verify_record checks the separate reference protocol. No tool proves physical authenticity. dpp_readiness_check scores EU Digital Product Passport readiness and is not legal advice.",
     });
   }
 
@@ -736,9 +1257,21 @@ async function handleRpc(
         content: [
           {
             type: "text",
-            text: JSON.stringify(queryProvenance(assetId), null, 2),
+            text: JSON.stringify(await queryProvenanceWithRegistry(assetId, env), null, 2),
           },
         ],
+      });
+    }
+    if (name === "verify_attestation") {
+      const args = params.arguments ?? {};
+      const result = await verifyPublishedAttestation(
+        args.assetId ?? args.sealId ?? args.id,
+        args.expectedObjectId,
+        env,
+      );
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        ...("verified" in result && result.verified !== true ? { isError: true } : {}),
       });
     }
     if (name === "verify_record") {
@@ -791,7 +1324,7 @@ async function handleRpc(
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use verify_record (free), scan_living_qr (free), get_pricing (free), dpp_readiness_check (free), query_provenance (free, not an attestation), or verify (legacy x402 seal verify).",
+          text: "Unknown tool. Use verify_attestation (free, published signed JWS), verify_record (free reference protocol), get_pricing (free), dpp_readiness_check (free), query_provenance (free registration lookup), or verify (legacy x402).",
         },
       ],
       isError: true,
