@@ -33,6 +33,9 @@ jobs:
     runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     needs: secret-scan
     timeout-minutes: 20
+    # A skipped deployment is not evidence of a new live Worker revision.
+    outputs:
+      edge_deployed: ${{ steps.publish_edge.outcome == 'success' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -73,24 +76,48 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      # CFA-462 / CFA-464 (P1): this step only CHECKS that the attestation JWKS
-      # is live. It never generates, installs or rotates a signing key, and it
-      # never re-sets AUTHICHAIN_ATTESTATION_KEY_ID (the kid is derived from the
-      # public key's RFC 7638 thumbprint in worker-app/jwks.ts). On 2026-10-09 a
-      # non-200 probe here silently replaced the production key.
-      - name: Check attestation JWKS on authichain-edge-router (no key changes)
-        if: steps.secrets_check.outputs.skip != 'true'
-        shell: bash
+      # Recovery for #2114. No edge deploy occurs unless the existing owner
+      # Cloudflare release switch is explicitly enabled. No secrets are
+      # created, rotated or printed here; existing Worker bindings persist.
+      - name: Require credentials for owner-enabled edge deploy
+        if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' && steps.secrets_check.outputs.skip == 'true' }}
         run: |
-          set -euo pipefail
-          JWKS_CODE="$(curl -sS -o /tmp/jwks-probe.json -w '%{http_code}' \
-            https://authichain.com/protocol/jwks.json || echo 000)"
-          if [ "$JWKS_CODE" != "200" ]; then
-            echo "::error::JWKS returned $JWKS_CODE; refusing to generate, install or rotate the signing key. Investigate by hand."
-            exit 1
-          fi
-          echo "JWKS live ($JWKS_CODE); no key changes made"
+          echo "::error::Edge deploy enabled but Cloudflare credentials are missing"
+          exit 1
+
+      - name: Build canonical edge router (owner-gated)
+        if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' && steps.secrets_check.outputs.skip != 'true' }}
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: pnpm build
+
+      - name: Publish canonical edge router (owner-gated)
+        id: publish_edge
+        if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' && steps.secrets_check.outputs.skip != 'true' }}
+        working-directory: worker-app
+        run: npx wrangler deploy --minify --keep-vars --config wrangler.toml
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Deploy skipped notice
         if: steps.secrets_check.outputs.skip == 'true'
         run: echo "::notice::Cloudflare deploy skipped — set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID in repo secrets to enable."
+
+  post-deploy-smoke:
+    name: Post-deploy smoke (blocking; owner-gated edge publish only)
+    needs: deploy
+    if: ${{ needs.deploy.result == 'success' && needs.deploy.outputs.edge_deployed == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Setup Node 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Smoke public money and protocol surfaces
+        run: node scripts/ci/post-deploy-smoke.mjs
