@@ -103,9 +103,27 @@ function fakeSupabase(opts?: {
           Object.assign(profile, patch);
           profileUpdates.push(patch);
         }
-        return {
-          eq: async () => result,
+        // provisioning.ts writes the entitlement as a compare-and-set update
+        // (ef4d083e, CFA-346): update().eq("id").is()/eq()...select("id").
+        // The chain must stay awaitable at every step, and the conditional
+        // form must report one matched row, or provisioning treats it as a
+        // concurrent-update conflict.
+        const settled = opts?.updateError
+          ? { ...result, data: null }
+          : { ...result, data: [{ id: profileId }] };
+        const chain: {
+          eq: () => typeof chain;
+          is: () => typeof chain;
+          select: () => typeof chain;
+          then: Promise<typeof settled>["then"];
+        } = {
+          eq: () => chain,
+          is: () => chain,
+          select: () => chain,
+          then: (onFulfilled, onRejected) =>
+            Promise.resolve(settled).then(onFulfilled, onRejected),
         };
+        return chain;
       },
       select: () => builder,
       eq: (col: string, val: unknown) => {
@@ -318,13 +336,66 @@ describe("fulfillDppPaidSession", () => {
     });
   });
 
-  it("writes provisioned with skip_reason when there is no buyer identity", async () => {
+  it("throws for a real paid session with no buyer identity and does not record provisioned", async () => {
+    const { supabase, rows } = fakeSupabase({ profileId: null });
+    await expect(
+      fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        customer_details: null,
+        customer_email: null,
+        metadata: { ...paidSession.metadata, user_id: undefined },
+      })
+    ).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+      message: expect.stringMatching(/^DPP provision failed: no_identity/),
+    });
+    expect(rows.map(r => r.event_type)).toEqual(["dpp_loop:payment_succeeded"]);
+  });
+
+  it("emits fulfillment.started then fulfillment.failed, never entitlement.granted, when nothing was granted", async () => {
+    const { supabase } = fakeSupabase({ profileId: null });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      await fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        customer_details: null,
+        customer_email: null,
+        metadata: { ...paidSession.metadata, user_id: undefined },
+      }).catch(() => undefined);
+      const events = log.mock.calls
+        .map(c => String(c[0]))
+        .filter(l => l.includes("authichain.trust-event/1"))
+        .map(l => JSON.parse(l).event);
+      expect(events).toEqual(["fulfillment.started", "fulfillment.failed"]);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("emits entitlement.granted and fulfillment.completed for a granted session, with no buyer address", async () => {
+    const { supabase } = fakeSupabase();
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      await fulfillDppPaidSession(supabase, paidSession);
+      const lines = log.mock.calls.map(c => String(c[0])).filter(l => l.includes("authichain.trust-event/1"));
+      expect(lines.map(l => JSON.parse(l).event)).toEqual([
+        "fulfillment.started",
+        "entitlement.granted",
+        "fulfillment.completed",
+      ]);
+      expect(lines.join(String.fromCharCode(10))).not.toContain("buyer@example.com");
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("a demo session with no buyer identity still records provisioned with skip_reason", async () => {
     const { supabase, rows } = fakeSupabase({ profileId: null });
     const result = await fulfillDppPaidSession(supabase, {
       ...paidSession,
       customer_details: null,
       customer_email: null,
-      metadata: { ...paidSession.metadata, user_id: undefined },
+      metadata: { ...paidSession.metadata, user_id: undefined, is_demo: "true" },
     });
     expect(result).toEqual({
       handled: true,

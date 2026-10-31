@@ -86,7 +86,7 @@ function getLandingContent(brandId: BrandId): LandingContent {
         {
           icon: "📊",
           title: "EU DPP Readiness",
-          desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
+          desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation.",
         },
         {
           icon: "🌍",
@@ -109,7 +109,10 @@ function getLandingContent(brandId: BrandId): LandingContent {
         { value: "x402", label: "Agent micropayments" },
       ],
       closingLine: "Start EU DPP Readiness on the live checkout path.",
-      primaryCta: { label: "Start DPP checkout", href: "https://authichain.com/checkout/dpp_readiness" },
+      primaryCta: {
+        label: "Start DPP checkout",
+        href: "https://authichain.com/checkout/dpp_readiness",
+      },
       secondaryCta: { label: "View pricing", href: "/pricing" },
     },
     qron: {
@@ -210,7 +213,8 @@ function getLandingContent(brandId: BrandId): LandingContent {
     },
     govchain: {
       eyebrow: "Government Blockchain",
-      headline: "GovChain: federal contracting tools for US small businesses, in development.",
+      headline:
+        "GovChain: federal contracting tools for US small businesses, in development.",
       subhead:
         "Verifiable government data. Compliance reporting, procurement transparency, and public accountability with cryptographic proof.",
       features: [
