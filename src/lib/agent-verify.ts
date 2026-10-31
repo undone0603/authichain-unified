@@ -10,8 +10,7 @@
 
 import { isDiscoveryExampleSealId } from "./x402";
 
-const UUID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Bazaar discovery example. It matches the UUID shape and is not a registry row. */
 const NIL_SEAL_ID = "00000000-0000-4000-8000-000000000000";
@@ -28,7 +27,8 @@ export function parseSealRequest(input: Record<string, unknown>): SealRequest {
   const raw = input.sealId ?? input.seal_id;
   const sealId = typeof raw === "string" ? raw.trim() : "";
   if (!sealId) {
-    const aliasOnly = input.productId !== undefined || input.serial !== undefined;
+    const aliasOnly =
+      input.productId !== undefined || input.serial !== undefined;
     return {
       ok: false,
       status: 400,
@@ -69,14 +69,20 @@ export function parseSealRequest(input: Record<string, unknown>): SealRequest {
 }
 
 /**
- * Unpaid calls with a body that cannot be a registry key are 400.
- * An empty object stays null so the caller can still return the 402
- * price challenge. A real seal UUID also stays null. The all-zero
- * discovery example is 400.
+ * Unpaid 400 only when the caller sent a sealId that cannot exist.
+ * Quote crawlers (Lumi, others) POST probe JSON with url/resource/probe
+ * and no sealId; HTTP 400 is classified as needs_different_request and
+ * they never buy. Empty objects, listing samples (`demo` / bazaar UUID),
+ * valid UUIDs, and no-sealId probe JSON stay null so the caller returns 402.
+ * MCP verify applies a second check: a non-empty argument that is not a
+ * seal UUID is 400 before payment. That check is not this function.
  */
 export function unpaidSealRefusal(
   raw: Record<string, unknown>
-): { status: number; body: Extract<SealRequest, { ok: false }>["body"] } | null {
+): {
+  status: number;
+  body: Extract<SealRequest, { ok: false }>["body"];
+} | null {
   const body = coerceSealBody(raw);
   const listed = listedSealId(body);
   if (!listed) return null;
