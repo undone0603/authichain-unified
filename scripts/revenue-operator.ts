@@ -14,6 +14,9 @@ import { planStripePaymentLink } from "../src/lib/plans";
 export const DEFAULT_FOUNDER_EMAILS = [
   "undone.k@gmail.com",
   "authichain@gmail.com",
+  // Same contract as src/lib/billing/live-catalog.ts and autonomy.json:
+  // an "@domain" entry covers every alias on that domain.
+  "@authichain.com",
 ] as const;
 
 export const FROZEN_DISPATCH = [
@@ -36,6 +39,8 @@ export type RevenueSubscription = {
   id: string;
   status?: string | null;
   customerEmail?: string | null;
+  /** False means Stripe test mode. Missing means the caller already filtered. */
+  livemode?: boolean | null;
 };
 
 export type RevenuePayout = {
@@ -48,6 +53,8 @@ export type RevenueCharge = {
   id: string;
   amount: number;
   paid: boolean;
+  /** False means Stripe test mode. Missing means the caller already filtered. */
+  livemode?: boolean | null;
   email?: string | null;
 };
 
@@ -128,7 +135,17 @@ export function isFounderEmail(
 ): boolean {
   if (!email) return false;
   const needle = email.trim().toLowerCase();
-  return founderEmails.some(item => item.trim().toLowerCase() === needle);
+  if (founderEmails.some(item => item.trim().toLowerCase() === needle)) {
+    return true;
+  }
+  const at = needle.lastIndexOf("@");
+  if (at < 0) return false;
+  const domainEntry = needle.slice(at);
+  return founderEmails.some(item => item.trim().toLowerCase() === domainEntry);
+}
+
+function countsAsLive<T extends { livemode?: boolean | null }>(row: T): boolean {
+  return row.livemode !== false;
 }
 
 function isStrangerEmail(
@@ -145,6 +162,7 @@ export function classifyRevenue(
 ): RevenueVerdict {
   let sawAnonymous = false;
   for (const sub of snapshot.subscriptions) {
+    if (!countsAsLive(sub)) continue;
     if (!ACTIVE.has((sub.status ?? "active").toLowerCase())) continue;
     if (!sub.customerEmail) {
       sawAnonymous = true;
@@ -457,6 +475,7 @@ export function snapshotFromStripeLike(input: unknown): RevenueSnapshot {
         rec.customer_email,
         rec.email
       ),
+      livemode: typeof rec.livemode === "boolean" ? rec.livemode : null,
     };
   });
   const payouts = listOf(root.payouts).map((item, index) => {
@@ -481,6 +500,7 @@ export function snapshotFromStripeLike(input: unknown): RevenueSnapshot {
         rec.receiptEmail,
         billing?.email
       ),
+      livemode: typeof rec.livemode === "boolean" ? rec.livemode : null,
     };
   });
   return { subscriptions, payouts, charges };
