@@ -2,8 +2,16 @@ import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 export type CheckoutClaimResult =
-  | { allowed: true }
-  | { allowed: false; reason: string; retryAfter?: number };
+  { allowed: true } | { allowed: false; reason: string; retryAfter?: number };
+
+/**
+ * Supabase URL for the checkout-protection RPCs. Next.js sets
+ * NEXT_PUBLIC_SUPABASE_URL; the authichain-com Worker only binds SUPABASE_URL,
+ * so without this fallback every gated checkout POST there returned 503.
+ */
+export function checkoutProtectionSupabaseUrl(): string | undefined {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+}
 
 export async function claimCheckoutAttempt(opts: {
   checkoutKey: string;
@@ -11,9 +19,10 @@ export async function claimCheckoutAttempt(opts: {
   planId: string;
   request: Request;
 }): Promise<CheckoutClaimResult> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = checkoutProtectionSupabaseUrl();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return { allowed: false, reason: "Checkout protection unavailable" };
+  if (!url || !key)
+    return { allowed: false, reason: "Checkout protection unavailable" };
 
   const hash = (value: string) =>
     createHash("sha256").update(value).digest("hex");
@@ -51,7 +60,7 @@ export async function recordCheckoutSession(
   checkoutKey: string,
   sessionUrl: string
 ): Promise<boolean> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = checkoutProtectionSupabaseUrl();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return false;
   const supabase = createClient(url, key);

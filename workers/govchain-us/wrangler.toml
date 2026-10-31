@@ -38,3 +38,8 @@ SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 [[services]]
 binding = "VERIFY_APP"
 service = "authichain-app"
+
+# x402 replay guard (CFA-343/356). Shared namespace; keys are site-scoped in code.
+[[kv_namespaces]]
+binding = "X402_REPLAY_KV"
+id = "ab391dc529884161bd84707d7627a9f0"
