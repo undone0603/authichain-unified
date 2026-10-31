@@ -7,12 +7,12 @@ packages:
 allowBuilds:
   '@clerk/shared': true
   agent-browser: false
-  bufferutil: true
+  bufferutil: false
   esbuild: true
   keccak: true
   sharp: true
   unrs-resolver: true
-  utf-8-validate: true
+  utf-8-validate: false
   workerd: true
 minimumReleaseAgeExclude:
   - miniflare@4.20260701.0

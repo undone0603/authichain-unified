@@ -17,9 +17,15 @@ export const PUBLIC_PROBES = [
     method: "HEAD",
   },
   {
-    id: "checkout_launch_head",
-    url: `${ORIGIN}/api/checkout/launch`,
-    accept: [204],
+    // Confirm page of an offered Launch plan. HEAD never calls Stripe (see
+    // src/lib/checkout-gate.ts). It uses the canonical /checkout/<planId> path
+    // because aliases such as /checkout/launch answer 301, and the annual plan
+    // because monthly Launch is off sale (PR #1905). The earlier probe of
+    // /api/checkout/launch hit a route that does not exist (404) and failed the
+    // scheduled pipeline on 2026-10-22.
+    id: "checkout_launch_annual_confirm_head",
+    url: `${ORIGIN}/checkout/qron_launch_annual`,
+    accept: [200],
     method: "HEAD",
   },
 ];
