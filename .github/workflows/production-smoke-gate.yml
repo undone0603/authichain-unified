@@ -36,7 +36,7 @@ jobs:
       github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success' ||
       github.event.workflow_run.conclusion == 'failure'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
