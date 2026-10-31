@@ -7,8 +7,14 @@
  * or a privacy@ / legal@ mailbox.
  */
 
-/** Shown at the top of both pages. Change it when the text changes. */
+/** Shown at the top of /privacy. Change it when that page's text changes. */
 export const LEGAL_EFFECTIVE = "24 October 2026";
+
+/**
+ * Shown at the top of /terms only.
+ * Set to the authichain-com go-live day just before deploy.
+ */
+export const TERMS_EFFECTIVE = "30 October 2026";
 
 const OPERATOR =
   "Zachary Kietzman, a sole proprietor in Michigan, USA, using the brand AuthiChain. AuthiChain is a brand, not a corporation. The SAM legal entity is ZACHARY KIETZMAN.";
@@ -125,7 +131,7 @@ export function renderPrivacyPage(): string {
 </ul>
 <h2>Card payments and agent payments</h2>
 <p>Card payments happen on Stripe. You review the total on Stripe before you pay. We keep the result Stripe sends back (paid or not), the email, the amount, and the plan. We do not store card numbers.</p>
-<p>A paid agent call is a transfer of 0.05 USDC on Base (Circle USDC), unless the live description at <a href="/x402">/x402</a> or <a href="/.well-known/x402">/.well-known/x402</a> states a different figure. The live description controls. The transaction is public on Base. The facilitator published on that page checks the payment proof. We do not receive bank details for that payment. The $QRON token is not a way to pay for AuthiChain services.</p>
+<p>x402 paid verification and on-chain anchoring are in development. See <a href="/x402">/x402</a>. We do not receive bank details for agent payments. The $QRON token is not a way to pay for AuthiChain services. <!-- pragma: allowlist secret --></p>
 <h2>Public records</h2>
 <p>A record we publish, and a transaction we send to a public chain such as Polygon (product anchors) or Base (USDC payments), can be read by anyone. We cannot delete it. Do not put a person's private information in a field you intend to publish or anchor.</p>
 <p>A signature check reports whether a signature and an anchor match the rules of the open verifier. It does not, by itself, prove that a physical product is genuine, legal, or compliant.</p>
@@ -151,10 +157,10 @@ export function renderPrivacyPage(): string {
 <li><strong>What data.</strong> Your name, job title or role, work email address, company name, and company details (domain, headquarters country, product category). We do not process sensitive data about you.</li>
 <li><strong>Why, and on what legal basis: opt-in sequence.</strong> If we start the opt-in sequence and you sign up through our double opt-in (for example at /dpp-check), we will email you on the basis of your consent (GDPR Art. 6(1)(a)). We will get your email address from you. You will be able to withdraw consent at any time through the unsubscribe link in those emails.</li>
 <li><strong>Why, and on what legal basis: 1-to-1 business emails.</strong> If you are a business contact at a US brand, Zachary may email you personally. We got your work contact details from public sources or Apollo.io. Legal basis: legitimate interest (GDPR Art. 6(1)(f)) in offering EU DPP readiness tools to businesses whose products fall under the DPP rules. Reply 'stop' (or tell us in any words) and we won't email you again.</li>
-<li><strong>Recipients.</strong> Apollo.io, as the source of the data; Resend, for the opt-in sequence; Google (Gmail), which Zachary uses to send and receive 1-to-1 emails with business contacts at US brands; AgentMail, which hosts the receive-only reply inbox at authichain@mail.grokbot.com, with Amazon SES (Amazon Web Services) as its sub-processor; and Supabase, which stores the contact records for business contacts at US brands. We do not sell your data.</li>
+<li><strong>Recipients.</strong> Apollo.io, as the source of the data; Resend, for the opt-in sequence; Google (Gmail), which Zachary uses to send and receive 1-to-1 emails with business contacts at US brands; AgentMail, which hosts the receive-only reply inbox at authichain@mail.grokbot.com, with Amazon SES (Amazon Web Services) as its sub-processor; Supabase, which stores the contact records for business contacts at US brands and sign-ups from /is-this-real; and Cloudflare, which stores email opt-in sign-ups in its D1 database. We do not sell your data.</li>
 <li><strong>Transfers outside the EU.</strong> Your data is processed in the United States. Zenleads Inc. (dba Apollo.io) is listed as active under the EU-U.S. Data Privacy Framework. Supabase's data processing agreement provides Standard Contractual Clauses for transfers (Supabase DPA section 12.1). Open item: we have no data processing agreement with AgentMail (the reply-inbox provider) or with Apollo.io, and we do not claim one is in place. Resend and Google process data in the United States; we have not yet confirmed their transfer safeguards on this page.</li>
 <li><strong>How long we keep it: 1-to-1 business emails.</strong> We delete your contact data 12 months after our last contact with you if you have not replied. If you opt out, we keep only your email address on a suppression list for as long as needed to honour your opt-out.</li>
-<li><strong>How long we keep it: opt-in sequence.</strong> We keep your subscriber data until you unsubscribe, then delete it within 30 days, except your email address, kept on a suppression list only to honour your unsubscribe.</li>
+<li><strong>How long we keep it: opt-in sequence.</strong> We keep your sign-up (email, country if given, when you agreed, and whether you confirmed) in AuthiChain's Cloudflare D1 database until you unsubscribe. When you unsubscribe, we delete your country right away and keep only your email address, when you agreed, and a random unsubscribe code, on a suppression list used only to honour your unsubscribe. To limit abuse, we also keep a salted hash of the IP address used to sign up for about a day; we never store the IP address itself.</li>
 <li><strong>No automated decisions.</strong> We make no automated decisions and do no profiling about you that has legal or similarly significant effects.</li>
 </ul>
 <p><strong>Your right to object.</strong> You can object at any time to the use of your data for direct marketing: reply 'stop' (or tell us in any words) to our email, or email <a href="mailto:authichain@mail.grokbot.com">authichain@mail.grokbot.com</a>. We will then stop processing it for that purpose.</p>
@@ -183,7 +189,7 @@ export function renderTermsPage(): string {
       "The terms for using AuthiChain checkout, the open verifier, and paid agent verification. Zachary Kietzman, sole proprietor.",
     canonical: "https://authichain.com/terms",
     body: `<h1>Terms of Service</h1>
-<p class="meta">Effective ${LEGAL_EFFECTIVE}. This is the current agreement. The date changes when the text changes.</p>
+<p class="meta">Effective ${TERMS_EFFECTIVE}. This is the current agreement. The date changes when the text changes.</p>
 <h2>The agreement</h2>
 <p>These terms are between you and ${OPERATOR} "We" means that person and brand.</p>
 <p>${NONAFFILIATION}</p>
@@ -206,7 +212,7 @@ export function renderTermsPage(): string {
 <p>The price is the price shown on the checkout page before you continue to Stripe. <a href="/pricing">/pricing</a> lists the public plans. You review the total on Stripe before a card is charged. Stripe's terms apply to the card payment.</p>
 <p>A plan that the checkout page describes as a one-time charge is charged once. A plan that the checkout page describes as renewing will renew on that schedule until you cancel. Email <a href="mailto:support@authichain.com">support@authichain.com</a> to cancel. Cancellation stops the next renewal. It does not erase a record that was already published.</p>
 <p>Email support@authichain.com if you were charged and did not receive what the checkout page described. We do not refund a digital record that was delivered as described, or a USDC transfer that completed. Nothing in this paragraph limits a right that the law where you live says cannot be waived.</p>
-<p>Paid agent verification costs 0.05 USDC per call on Base, sent to the address published at <a href="/x402">/x402</a>, unless that page or <a href="/.well-known/x402">/.well-known/x402</a> states a different figure. The live description controls. Network fees are yours. A proof that does not match is rejected and is not treated as paid. The $QRON token is not accepted as payment.</p>
+<p>Paid agent verification is charged in USDC on Base at the price quoted in the payment request, to the address in that request, before you pay. Network fees are yours. A proof that does not match is rejected and is not treated as paid. The $QRON token is not accepted as payment.</p>
 <h2>Delivery</h2>
 <p>What you bought is what the pricing page and the checkout page describe: access, a file, a published record, or a paid verification, as that page states. Delivery of a digital good is complete when we send the access email or publish the record you paid for.</p>
 <h2>Disclaimers</h2>

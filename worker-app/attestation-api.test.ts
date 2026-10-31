@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it, afterEach } from "vitest";
+import { describe, expect, it, afterEach, vi } from "vitest";
 import { Hono } from "hono";
 import { exportPKCS8, generateKeyPair } from "jose";
 import {
@@ -107,6 +107,126 @@ describe("registerAttestationApi", () => {
     ).toString("base64");
     process.env.AUTHICHAIN_ATTESTATION_KEY_ID = "attest-api-kid";
   }
+
+  it("POST signed-record publication requires issuer authorization", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerAttestationApi(app, mockRegistry());
+    const res = await app.request("/api/v1/attestations/publish", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        seal_id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+        attestation: {
+          ...SAMPLE,
+          issuer: { id: "https://authichain.com", name: "AuthiChain" },
+          subject: { object_id: "SKU-123", lot: "LOT-2026-A" },
+        },
+      }),
+    });
+    expect(res.status).toBe(401);
+    expect(await res.json()).toMatchObject({ error: "missing bearer token" });
+  });
+
+  it("POST signed-record publication signs and persists a record linked to an existing seal", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const publishRecord: NonNullable<AttestationRegistry["publishRecord"]> = async (_env, input) => ({
+      ok: true,
+      eventId: "urn:authichain:event:v01:published-test",
+      alreadyPublished: false,
+      seal: {
+        id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+        product_id: "SKU-123",
+        batch_id: "LOT-2026-A",
+        brand: "Example Brand",
+      },
+    });
+    const publisher = vi.fn(publishRecord);
+    const app = new Hono();
+    registerJwksRoute(app);
+    registerAttestationApi(app, { ...mockRegistry(), publishRecord: publisher });
+    const attestation = {
+      ...SAMPLE,
+      attestation_id: "urn:authichain:attestation:v01:SKU-123",
+      issuer: { id: "https://authichain.com", name: "AuthiChain" },
+      subject: { object_id: "SKU-123", lot: "LOT-2026-A" },
+    };
+    const res = await app.request("/api/v1/attestations/publish", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
+      body: JSON.stringify({
+        seal_id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+        attestation,
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      jws: string;
+      record_hash: string;
+      record_url: string;
+      published: boolean;
+      already_published: boolean;
+      durable_status_event_id: string;
+      seal: { product_id: string; batch_id: string; brand: string };
+      semantics: string;
+    };
+    expect(body.jws).toBeTruthy();
+    expect(body.record_hash).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(body.record_url).toContain("/api/authichain/attestations?assetId=");
+    expect(body.published).toBe(true);
+    expect(body.already_published).toBe(false);
+    expect(body.durable_status_event_id).toBe("urn:authichain:event:v01:published-test");
+    expect(body.seal).toMatchObject({
+      product_id: "SKU-123",
+      batch_id: "LOT-2026-A",
+      brand: "Example Brand",
+    });
+    expect(body.semantics).toContain("not proof of physical authenticity");
+    expect(publisher).toHaveBeenCalledTimes(1);
+    expect(publisher.mock.calls[0][1]).toMatchObject({
+      sealId: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+      issuerKid: "attest-api-kid",
+      attestation,
+    });
+    const verify = await app.request("/api/v1/attestation/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jws: body.jws, expected_object_id: "SKU-123" }),
+    });
+    expect(verify.status).toBe(200);
+    expect(await verify.json()).toMatchObject({ valid: true, cryptographic_status: "valid" });
+  });
+
+  it("POST signed-record publication refuses an attestation for a different registered product", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const publisher = vi.fn();
+    const app = new Hono();
+    registerAttestationApi(app, { ...mockRegistry(), publishRecord: publisher as unknown as NonNullable<AttestationRegistry["publishRecord"]> });
+    const res = await app.request("/api/v1/attestations/publish", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
+      body: JSON.stringify({
+        seal_id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+        attestation: {
+          ...SAMPLE,
+          issuer: { id: "https://authichain.com", name: "AuthiChain" },
+          subject: { object_id: "DIFFERENT-SKU", lot: "LOT-2026-A" },
+        },
+      }),
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: "attestation object_id does not match the registered product_id" });
+    expect(publisher).not.toHaveBeenCalled();
+  });
 
   it("POST signing requires issuer authorization", async () => {
     await bindKey();

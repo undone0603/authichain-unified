@@ -218,9 +218,7 @@ ${estateHero({
     { href: "/onboard", label: "Onboard", primary: false },
   ],
 })}
-${estateTrust([
-  { value: "$0.05", label: "x402 per verify" },
-])}
+${estateTrust([{ value: "in development", label: "x402 paid verification" }])}
 ${estateFeatures(
   "What is live on this estate",
   "Claims limited to capabilities that already run. No invented customer logos, no promised mint that is not deployed.",
@@ -235,7 +233,7 @@ ${estateFeatures(
     },
     {
       title: "EU DPP Readiness",
-      body: "Primary human money path. EU DPP Readiness is $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
+      body: "Primary human money path. EU DPP Readiness is $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation.",
     },
     {
       title: "Machine-readable passports",

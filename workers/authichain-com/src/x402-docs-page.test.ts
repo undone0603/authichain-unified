@@ -14,7 +14,7 @@ function httpsUrl(raw: string): URL {
 }
 
 describe("x402 public docs page", () => {
-  it("matches the published live rail (payTo, Base USDC, $0.05)", () => {
+  it("does not publish a live $0.05 x402 price", () => {
     expect(X402_PUBLIC.payTo).toBe(X402_PUBLISHED_PAY_TO);
     expect(X402_PUBLIC.payTo.toLowerCase()).not.toBe(
       "0xaebfa6b08fb25b59748c93273ab8880e20ffe437" // pragma: allowlist secret
@@ -26,7 +26,8 @@ describe("x402 public docs page", () => {
       "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d"
     );
     expect(X402_PUBLIC.chainId).toBe("8453");
-    expect(X402_PUBLIC.priceUsd).toBe("$0.05");
+    expect(X402_PUBLIC.priceUsd).toBe("in development");
+    expect(X402_PUBLIC.priceUsd).not.toBe("$0.05");
     expect(X402_PUBLIC.healthUrl).toBe(
       "https://authichain.com/api/x402/health"
     );
@@ -57,6 +58,10 @@ describe("x402 public docs page", () => {
     const html = renderX402DocsPage();
     expect(html).toContain("<title>x402 agent pay — AuthiChain</title>");
     expect(html).toContain(X402_PUBLIC.payTo);
+    expect(html).not.toContain("$0.05");
+    expect(html).not.toContain("Live · x402");
+    expect(html).not.toContain("Agent pay is live");
+    expect(html).toContain("x402 paid verification and on-chain anchoring in development");
     expect(html).toContain(X402_PUBLIC.asset);
     expect(html).toContain("curl -sS https://authichain.com/api/x402/health");
     expect(html).toContain("curl -sS https://authichain.com/api/x402/catalog");
