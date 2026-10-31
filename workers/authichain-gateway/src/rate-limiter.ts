@@ -13,7 +13,8 @@ export interface RateLimitResult {
  */
 export async function checkRateLimit(
   env: Env,
-  tenantId: number,
+  /** A tenant id, or a string key such as "mcp:ip:<addr>" for anonymous callers. */
+  tenantId: number | string,
   limits: { rpm: number; rpd: number }
 ): Promise<RateLimitResult> {
   const now = Date.now();
