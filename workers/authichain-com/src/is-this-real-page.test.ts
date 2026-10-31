@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isIsThisRealPath, renderIsThisRealPage, IS_THIS_REAL_SOURCE } from "./is-this-real-page";
+import {
+  isIsThisRealPath,
+  renderIsThisRealPage,
+  IS_THIS_REAL_SOURCE,
+} from "./is-this-real-page";
 
 describe("/is-this-real", () => {
   const html = renderIsThisRealPage();
@@ -37,7 +41,9 @@ describe("/is-this-real", () => {
     expect(html).toContain("/api/v1/agent-verify");
   });
   it("makes no live, customer or metric claims", () => {
-    const text = html.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ");
+    const text = html
+      .replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/g, "")
+      .replace(/<[^>]+>/g, " ");
     expect(text).not.toMatch(/\blive\b|customers|trusted by|\d+%/i);
   });
 });

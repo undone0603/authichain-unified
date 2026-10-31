@@ -191,8 +191,9 @@ describe("tryHandleGatedCheckout — GET/HEAD never call Stripe", () => {
       new Request("https://authichain.com/checkout/launch"),
       {}
     );
-    expect(launch!.status).toBe(301);
-    expect(launch!.headers.get("location")).toBe("/checkout/qron_launch");
+    // qron_launch is retired for new buyers (RES-86c): alias goes to /pricing.
+    expect(launch!.status).toBe(303);
+    expect(launch!.headers.get("location")).toBe("/pricing");
     const unknown = await tryHandleGatedCheckout(
       new Request("https://authichain.com/checkout/nope"),
       {}
@@ -315,7 +316,7 @@ describe("tryHandleGatedCheckout — POST", () => {
     const success = body.get("success_url") || "";
     const cancel = body.get("cancel_url") || "";
 
-    // /dpp/thanks names a DPP workspace and 50 generations; Starter grants 100.
+    // /dpp/thanks names a DPP workspace; Starter grants 100.
     expect(success).not.toContain("/dpp/thanks");
     expect(success).toContain("https://authichain.com/generate?paid=1");
     expect(cancel).toContain("https://authichain.com/generate?cancelled=1");
@@ -493,7 +494,7 @@ describe("tryHandleGatedCheckout — POST", () => {
 });
 
 describe("CFA-460: /checkout/starter confirm copy", () => {
-  it("shows the RES-86 sentence and no Launch $19 copy", async () => {
+  it("shows the Research PASS FREE-PREVIEW sentence and no Launch $19 copy", async () => {
     const res = await tryHandleGatedCheckout(
       new Request("https://authichain.com/checkout/starter"),
       {}
@@ -502,17 +503,28 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
     expect(res!.status).toBe(200);
     const html = await res!.text();
     expect(html).toContain(
-      "100 AI QR generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits."
+      "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits."
     );
     expect(html).not.toContain("$19");
     expect(html).not.toContain("qron_launch");
     expect(html).not.toContain("Launch subscription");
     expect(html).not.toContain("never expire");
+    expect(html).not.toContain("never-expire");
+    expect(html).not.toContain("no expiry");
+    expect(html).not.toContain("no-expiry");
+    expect(html).not.toContain("50 workspace generations");
   });
 
-  it("display override only: plans.ts Starter description is unchanged", () => {
-    expect(planById("starter")?.description).toContain(
-      "Pack credits never expire unless you switch to a Launch subscription."
+  it("plans.ts Starter pricing copy uses the Advisor-GO replace-only sentence", () => {
+    expect(planById("starter")?.description).toBe(
+      "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits."
+    );
+    expect(planById("starter")?.features).toContain(
+      "Starting a monthly plan replaces unused pack credits"
+    );
+    expect(planById("starter")?.description).not.toContain("never expire");
+    expect(planById("starter")?.features?.join(" ")).not.toContain(
+      "never expire"
     );
   });
 });
@@ -528,9 +540,9 @@ describe("Launch Annual cadence", () => {
     expect(confirm).not.toContain("$190/mo");
     expect(renderCheckoutConfirmPage({ plan: monthly! })).toContain("$19/mo");
     const chooser = renderCheckoutChooserPage();
-    expect(chooser).toContain("$190/yr");
-    expect(chooser).not.toContain("$190/mo");
-    expect(chooser).toContain("$19/mo");
+    // Launch plans are unlisted, so the chooser no longer offers them.
+    expect(chooser).not.toContain("$190/yr");
+    expect(chooser).not.toContain("$19/mo");
   });
 
   it("opens a subscription session for the annual price", () => {
@@ -545,7 +557,11 @@ describe("Launch Annual cadence", () => {
   });
 
   it("lands generation buyers on /generate, not the DPP thanks page", () => {
-    for (const id of ["qron_launch", "qron_launch_annual", "creator"] as const) {
+    for (const id of [
+      "qron_launch",
+      "qron_launch_annual",
+      "creator",
+    ] as const) {
       const body = buildGatedSessionBody({
         plan: planById(id)!,
         email: "a@b.co",
@@ -575,7 +591,9 @@ describe("QRON Interdiction Gate (qron_launch)", () => {
 
   it("verifies a valid HMAC-SHA256 QRON attestation token and rejects tampered tokens", async () => {
     expect(await verifyQronAttestationToken(validToken, secret)).toBe(true);
-    expect(await verifyQronAttestationToken("QRON-spoofed", secret)).toBe(false);
+    expect(await verifyQronAttestationToken("QRON-spoofed", secret)).toBe(
+      false
+    );
     expect(
       await verifyQronAttestationToken(
         validToken.slice(0, -2) + (validToken.endsWith("00") ? "ff" : "00"),
@@ -599,49 +617,55 @@ describe("QRON Interdiction Gate (qron_launch)", () => {
     expect(html).not.toContain('<input type="hidden" name="qron_attestation"');
   });
 
-  it("returns 403 on POST /checkout/qron_launch when qron_attestation is missing or unsigned", async () => {
+  // Both QRON gated plans are retired (RES-86c follow-up): the retired check
+  // runs before the attestation gate, so POSTs 303 to /pricing.
+  it("retired: POST /checkout/qron_launch_annual with an unsigned attestation 303s to /pricing", async () => {
     const body = new URLSearchParams({
       email: "founder@authichain.com",
       qron_attestation: "QRON-spoofed",
     });
-    const req = new Request("https://authichain.com/checkout/qron_launch", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": HUMAN_UA,
-        Origin: "https://authichain.com",
-      },
-      body: body.toString(),
-    });
+    const req = new Request(
+      "https://authichain.com/checkout/qron_launch_annual",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": HUMAN_UA,
+          Origin: "https://authichain.com",
+        },
+        body: body.toString(),
+      }
+    );
 
     const res = await tryHandleGatedCheckout(req, {
       STRIPE_SECRET_KEY: "sk_test_mock",
       QRON_INTERDICTION_SECRET: secret,
     });
 
-    expect(res?.status).toBe(403);
-    const html = await res!.text();
-    expect(html).toContain(
-      "QRON Interdiction: Valid signed attestation token required for provisioning."
-    );
+    expect(res?.status).toBe(303);
+    expect(res?.headers.get("location")).toBe("/pricing");
+    expect(await res!.text()).not.toContain("<form");
   });
 
-  it("proceeds to Stripe 303 redirect on POST /checkout/qron_launch with a valid signed token and forwards metadata", async () => {
+  it("retired: POST /checkout/qron_launch_annual with a valid signed token never calls Stripe", async () => {
     let capturedStripeBody = null as URLSearchParams | null;
     const body = new URLSearchParams({
       email: "founder@authichain.com",
       qron_attestation: validToken,
       checkout_key: "11111111-2222-3333-4444-555555555555",
     });
-    const req = new Request("https://authichain.com/checkout/qron_launch", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": HUMAN_UA,
-        Origin: "https://authichain.com",
-      },
-      body: body.toString(),
-    });
+    const req = new Request(
+      "https://authichain.com/checkout/qron_launch_annual",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": HUMAN_UA,
+          Origin: "https://authichain.com",
+        },
+        body: body.toString(),
+      }
+    );
 
     const res = await tryHandleGatedCheckout(
       req,
@@ -655,7 +679,9 @@ describe("QRON Interdiction Gate (qron_launch)", () => {
         fetchImpl: async (_url, init) => {
           capturedStripeBody = new URLSearchParams(String(init?.body ?? ""));
           return new Response(
-            JSON.stringify({ url: "https://checkout.stripe.com/c/pay/cs_test_qron" }),
+            JSON.stringify({
+              url: "https://checkout.stripe.com/c/pay/cs_test_qron",
+            }),
             { status: 200, headers: { "Content-Type": "application/json" } }
           );
         },
@@ -663,10 +689,8 @@ describe("QRON Interdiction Gate (qron_launch)", () => {
     );
 
     expect(res?.status).toBe(303);
-    expect(res?.headers.get("Location")).toBe(
-      "https://checkout.stripe.com/c/pay/cs_test_qron"
-    );
-    expect(capturedStripeBody?.get("metadata[qron_attestation]")).toBe(validToken);
+    expect(res?.headers.get("Location")).toBe("/pricing");
+    expect(capturedStripeBody).toBeNull();
   });
 });
 
@@ -708,14 +732,11 @@ describe("QRON Interdiction Gate hardening", () => {
   it("rejects a token whose expiry was edited after signing", async () => {
     const expiresAt = Math.floor(Date.now() / 1000) - 10;
     const token = mintTestQronToken(secret, "expiry_test_03", expiresAt);
-    const extended = token.replace(
-      `.${expiresAt}.`,
-      `.${expiresAt + 86400}.`
-    );
+    const extended = token.replace(`.${expiresAt}.`, `.${expiresAt + 86400}.`);
     expect(await verifyQronAttestationToken(extended, secret)).toBe(false);
   });
 
-  it("gates qron_launch_annual the same way as qron_launch", async () => {
+  it("keeps qron_launch_annual QRON-gated but retired, so POSTs never reach Stripe", async () => {
     expect(isQronGatedPlan("qron_launch")).toBe(true);
     expect(isQronGatedPlan("qron_launch_annual")).toBe(true);
     expect(isQronGatedPlan("starter")).toBe(false);
@@ -724,13 +745,17 @@ describe("QRON Interdiction Gate hardening", () => {
       postCheckout("qron_launch_annual"),
       { STRIPE_SECRET_KEY: "sk_test_mock", QRON_INTERDICTION_SECRET: secret }
     );
-    expect(denied?.status).toBe(403);
+    expect(denied?.status).toBe(303);
+    expect(denied?.headers.get("location")).toBe("/pricing");
 
-    const fetchImpl = vi.fn(async () =>
-      new Response(
-        JSON.stringify({ url: "https://checkout.stripe.com/c/pay/cs_test_annual" }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      )
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            url: "https://checkout.stripe.com/c/pay/cs_test_annual",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        )
     );
     const allowed = await tryHandleGatedCheckout(
       postCheckout(
@@ -745,14 +770,126 @@ describe("QRON Interdiction Gate hardening", () => {
       }
     );
     expect(allowed?.status).toBe(303);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(allowed?.headers.get("location")).toBe("/pricing");
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("renders the attestation input on the qron_launch_annual confirm page", () => {
-    const html = renderCheckoutConfirmPage({
-      plan: planById("qron_launch_annual")!,
-      params: new URLSearchParams(),
+  it("redirects the retired qron_launch_annual confirm page to /pricing", async () => {
+    const res = await tryHandleGatedCheckout(
+      new Request("https://authichain.com/checkout/qron_launch_annual"),
+      {}
+    );
+    expect(res!.status).toBe(303);
+    expect(res!.headers.get("location")).toBe("/pricing");
+  });
+});
+describe("retired /checkout/qron_launch (RES-86c)", () => {
+  it("no longer renders the confirm form for any method", async () => {
+    for (const method of ["GET", "HEAD", "POST"]) {
+      const res = await tryHandleGatedCheckout(
+        new Request("https://authichain.com/checkout/qron_launch?ref=x", {
+          method,
+          headers: {
+            origin: "https://authichain.com",
+            "content-type": "application/x-www-form-urlencoded",
+          },
+          body: method === "POST" ? "email=a%40b.co" : undefined,
+        }),
+        { STRIPE_SECRET_KEY: "sk_test_unused" }
+      );
+      expect(res!.status, method).toBe(303);
+      expect(res!.headers.get("location"), method).toBe("/pricing");
+      const html = await res!.text();
+      expect(html, method).not.toContain("<form");
+    }
+  });
+
+  it("leaves the plan itself intact for existing subscribers", () => {
+    expect(planById("qron_launch")?.stripe_price_id).toBeTruthy();
+    expect(isQronGatedPlan("qron_launch")).toBe(true);
+  });
+
+  it("redirects the retired annual plan to /pricing with no form", async () => {
+    const res = await tryHandleGatedCheckout(
+      new Request("https://authichain.com/checkout/qron_launch_annual"),
+      {}
+    );
+    expect(res!.status).toBe(303);
+    expect(res!.headers.get("location")).toBe("/pricing");
+    expect(await res!.text()).not.toContain("<form");
+  });
+});
+
+describe("wording sweep 2026-10-16: gap report and gov pilot gated SKUs", () => {
+  it("resolves /checkout/<id> to the approved live prices", () => {
+    expect(
+      planFromGatedPath("/checkout/battery_gap_report")?.stripe_price_id
+    ).toBe("price_1UREvgGqTruSqV8TMMYXVF69");
+    expect(
+      planFromGatedPath("/checkout/battery_gap_report_extra")?.stripe_price_id
+    ).toBe("price_1UREviGqTruSqV8T04Pr9DR1");
+    expect(
+      planFromGatedPath("/checkout/gov_provenance_pilot")?.stripe_price_id
+    ).toBe("price_1UREvjGqTruSqV8TzUZ4fxya");
+    for (const id of [
+      "battery_gap_report",
+      "battery_gap_report_extra",
+      "gov_provenance_pilot",
+    ] as const) {
+      expect(planPaymentLink(id)).toBe(`https://authichain.com/checkout/${id}`);
+      expect(planById(id)?.stripe_payment_link).toBeUndefined();
+      expect(planById(id)?.listed).toBe(false);
+    }
+  });
+  it("extra model enables adjustable quantity 1-20; others do not", () => {
+    const extra = buildGatedSessionBody({
+      plan: planById("battery_gap_report_extra")!,
+      email: "a@b.co",
+      fields: new URLSearchParams(),
     });
-    expect(html).toContain('id="checkout-confirm-attestation"');
+    expect(extra.get("line_items[0][adjustable_quantity][enabled]")).toBe(
+      "true"
+    );
+    expect(extra.get("line_items[0][adjustable_quantity][minimum]")).toBe("1");
+    expect(extra.get("line_items[0][adjustable_quantity][maximum]")).toBe("20");
+    const report = buildGatedSessionBody({
+      plan: planById("battery_gap_report")!,
+      email: "a@b.co",
+      fields: new URLSearchParams(),
+    });
+    expect(
+      report.get("line_items[0][adjustable_quantity][enabled]")
+    ).toBeNull();
+    expect(report.get("line_items[0][quantity]")).toBe("1");
+  });
+  it("service SKUs return to their offer page, not the DPP workspace page", () => {
+    const gov = buildGatedSessionBody({
+      plan: planById("gov_provenance_pilot")!,
+      email: "a@b.co",
+      fields: new URLSearchParams(),
+    });
+    expect(gov.get("success_url")).toMatch(
+      /^https:\/\/authichain\.com\/made-in-america\?paid=1/
+    );
+    expect(gov.get("cancel_url")).toMatch(
+      /^https:\/\/authichain\.com\/made-in-america\?cancelled=1/
+    );
+    const rep = buildGatedSessionBody({
+      plan: planById("battery_gap_report")!,
+      email: "a@b.co",
+      fields: new URLSearchParams(),
+    });
+    expect(rep.get("success_url")).not.toContain("/dpp/thanks");
+    expect(rep.get("success_url")).toMatch(
+      /^https:\/\/authichain\.com\/battery-passport\?paid=1/
+    );
+  });
+  it("gap-report confirm page uses email/no-call delivery, not 10 business days", () => {
+    const html = renderCheckoutConfirmPage({
+      plan: planById("battery_gap_report")!,
+    });
+    expect(html).toContain("arrives by email as a written document. No call.");
+    expect(html).not.toContain("10 business days");
+    expect(html).toContain("$950");
   });
 });
