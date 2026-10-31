@@ -1788,7 +1788,15 @@ test("/manifest.webmanifest is a record lookup, not an offline verify cache", as
   };
   assert.equal(manifest.start_url, "/verify");
   assert.equal(manifest.display, "browser");
-  assert.match(manifest.description, /On-chain verification is in development/);
+  assert.match(
+    manifest.description,
+    /A product certificate is not an on-chain check/
+  );
+  assert.match(
+    manifest.description,
+    /\/api\/verify\?id=polygon-anchor-1/
+  );
+  assert.equal(manifest.description.includes("polygonscan.com"), false);
   assert.doesNotMatch(JSON.stringify(manifest), /authenticity/i);
   const sw = await get("/sw.js");
   assert.notEqual(sw.status, 200);

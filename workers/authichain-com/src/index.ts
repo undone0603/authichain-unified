@@ -276,7 +276,7 @@ function assetResponse(svg: string): Response {
 const VERIFY_MANIFEST = JSON.stringify({
   name: 'AuthiChain',
   short_name: 'AuthiChain',
-  description: 'Look up an AuthiChain record. On-chain verification is in development.',
+  description: 'Look up an AuthiChain certificate. A product certificate is not an on-chain check. One published demonstration record has a JSON verdict at /api/verify?id=polygon-anchor-1.',
   start_url: '/verify',
   scope: '/',
   display: 'browser',
