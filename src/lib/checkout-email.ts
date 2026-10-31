@@ -37,6 +37,16 @@ export function checkoutRedirectResponse(url: string): Response {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Buy links Stripe has deleted. Old mail and docs still contain them.
+ * Rewrite them to the gated confirm page for the same public plan.
+ */
+const RETIRED_PAYMENT_LINKS: Record<string, PlanId> = {
+  "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c": "dpp_readiness",
+  // Deactivated in Stripe (found by the checkout watchdog, 2026-10-08).
+  "https://buy.stripe.com/cNi4gzgDTf7McKCePO1ND44": "dpp_readiness",
+};
+
 export function looksLikeCheckoutEmail(value: string): boolean {
   const email = value.trim();
   return email.length >= 3 && email.length <= 254 && EMAIL_RE.test(email);
@@ -266,7 +276,10 @@ export function rewriteCheckoutHref(href: string): string | undefined {
       const host = url.hostname.toLowerCase();
       if (host === "buy.stripe.com") {
         const slug = url.toString().split("?")[0];
-        const plan = PLANS.find(p => p.stripe_payment_link === slug);
+        const retired = RETIRED_PAYMENT_LINKS[slug];
+        const plan =
+          PLANS.find(p => p.stripe_payment_link === slug) ??
+          (retired ? planById(retired) : undefined);
         if (!plan) return undefined;
         const email = pickCheckoutEmail(
           url.searchParams.get("prefilled_email"),

@@ -68,7 +68,7 @@ overrides:
   # GHSA: qs prototype pollution.
   'qs@>=6.11.1 <=6.15.1': 6.15.2
   # GHSA: shell-quote newline-escaping bypass, latest advisory supersedes earlier ceiling.
-  'shell-quote@<=1.8.4': 1.9.0
+  'shell-quote@<1.11.0': 1.11.0  # PM-324 critical, Dependabot #1898-#1900
   # GHSA: smol-toml parser DoS.
   'smol-toml@<1.6.1': 1.6.1
   # GHSA: undici — request-smuggling-adjacent bug, 6.x line.

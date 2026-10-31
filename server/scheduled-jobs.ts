@@ -328,7 +328,7 @@ registerJob({
 registerJob({
   name: "weekly-analytics-digest",
   description: "Compile weekly platform stats and notify owner",
-  schedule: "0 8 * * 1",
+  schedule: "0 9 * * 1",
   enabled: true,
   handler: async (): Promise<JobResult> => {
     const db = await getDb();
@@ -509,7 +509,7 @@ registerJob({
 registerJob({
   name: "fraud-detection-sweep",
   description: "Detect suspicious authentication patterns and flag potential fraud",
-  schedule: "0 */6 * * *",
+  schedule: "0 1,10,16,22 * * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
     const db = await getDb();

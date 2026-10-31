@@ -2,8 +2,8 @@ name: SEO Page Generation
 
 # Generates programmatic SEO pages from the data table in gen-seo-pages.cjs.
 # Deterministic, idempotent, no external credentials needed. Runs weekly
-# and commits the output to content/seo/pages.json.
-# Open-source, zero-cost solution for programmatic SEO.
+# and opens a pull request for content/seo/pages.json. Main rejects a
+# direct push (ruleset: pull request plus Main quality gate).
 
 on:
   schedule:
@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   generate:
@@ -36,11 +37,29 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Commit changes
+      - name: Open pull request
         if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B chore/seo-pages-auto
           git add content/seo/pages.json content/seo/sitemap-slugs.json
-          git commit -m "chore(seo): regenerate programmatic SEO pages [skip ci]"
-          git push
+          git commit -m "chore(seo): regenerate programmatic SEO pages"
+          git fetch origin chore/seo-pages-auto:refs/remotes/origin/chore/seo-pages-auto || true
+          if git rev-parse --verify --quiet refs/remotes/origin/chore/seo-pages-auto >/dev/null; then
+            expect="$(git rev-parse refs/remotes/origin/chore/seo-pages-auto)"
+            git push --force-with-lease="refs/heads/chore/seo-pages-auto:${expect}" \
+              -u origin HEAD:chore/seo-pages-auto
+          else
+            git push -u origin HEAD:chore/seo-pages-auto
+          fi
+          if gh pr view chore/seo-pages-auto --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Updated the existing SEO pages pull request"
+          else
+            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head chore/seo-pages-auto \
+              --title "chore(seo): regenerate programmatic SEO pages" \
+              --body "Weekly generator output. Main rejects a direct push, so this opens a pull request instead."
+          fi

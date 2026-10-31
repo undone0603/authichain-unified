@@ -2,9 +2,9 @@
  * Edge checkout for the $299 DPP audit.
  * GET /protocol/checkout/dpp — 303 to the click-to-confirm page
  * https://authichain.com/checkout/dpp_readiness (a GET never opens a Stripe
- * session). Only the DPP-SMOKE-E2E $0 demo still creates a session on GET.
+ * session). DPP-SMOKE-E2E creates a $0 session only when the
+ * x-dpp-smoke-secret header matches DPP_SMOKE_SECRET.
  * Uses STRIPE_SECRET_KEY on authichain-com (bound from GitHub secrets at deploy).
- * Promo DPP-SMOKE-E2E creates a $0 one-time session (no live $299 charge).
  */
 import { applyHostedCheckoutRecovery } from "../../../src/lib/checkout-recovery";
 import {
@@ -15,7 +15,11 @@ import {
   planIdFromCheckoutAction,
 } from "../../../src/lib/checkout-email";
 import { DPP_OFFER_KEY } from "../../../src/lib/plans";
-import { DPP_SMOKE_PROMO, isDppSmokePromo } from "../../../src/lib/dpp-loop";
+import {
+  DPP_SMOKE_PROMO,
+  dppSmokeRequestAuthorized,
+  isDppSmokePromo,
+} from "../../../src/lib/dpp-loop";
 import { gatedConfirmUrl } from "../../../src/lib/checkout-gate";
 
 export const DPP_PRICE_ID = "price_1TwmD8GqTruSqV8TpAF8dfyA";
@@ -24,6 +28,8 @@ export const APP_ORIGIN = "https://authichain.govchain.us";
 export type CheckoutEnv = {
   STRIPE_SECRET_KEY?: string;
   STRIPE_PRICE_ID?: string;
+  /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
+  DPP_SMOKE_SECRET?: string;
 };
 
 const JSON_HEADERS = {
@@ -79,9 +85,15 @@ export async function tryHandleProtocolCheckout(
   const referrer = pick(params, "referrer", 512);
   const source = utmSource || pick(params, "source", 64) || "direct";
   const smoke = isDppSmokePromo(pick(params, "promo", 32));
-  if (!smoke) {
-    // Click-to-confirm: GET (even with ?email=) renders the confirm page;
-    // only its POST form creates the session. Scanners never POST.
+  const smokeAuthorized =
+    smoke &&
+    dppSmokeRequestAuthorized(
+      request.headers.get("x-dpp-smoke-secret"),
+      env.DPP_SMOKE_SECRET
+    );
+  if (!smokeAuthorized) {
+    // Click-to-confirm: GET (even with ?email= or a public promo) renders
+    // the confirm page; only its POST form creates the paid session.
     return checkoutRedirectResponse(gatedConfirmUrl("dpp_readiness", params));
   }
   const key = (env.STRIPE_SECRET_KEY || "").trim();
@@ -96,7 +108,7 @@ export async function tryHandleProtocolCheckout(
     body.set("line_items[0][price_data][currency]", "usd");
     body.set(
       "line_items[0][price_data][product_data][name]",
-      "EU DPP Readiness Audit (smoke)"
+      "EU DPP Workspace (smoke)"
     );
     body.set("line_items[0][price_data][unit_amount]", "0");
     body.set("line_items[0][quantity]", "1");
@@ -158,7 +170,8 @@ export async function tryHandleProtocolCheckout(
  * GET /api/checkout/* used to open a Stripe session (anonymous, or with
  * ?email=), so link scanners and previews created unpaid carts. Every GET
  * now 303s to the click-to-confirm page /checkout/<plan> carrying email and
- * attribution. HEAD stays 204. Only DPP-SMOKE-E2E ($0 demo) falls through.
+ * attribution. HEAD stays 204. DPP-SMOKE-E2E falls through only when
+ * x-dpp-smoke-secret matches DPP_SMOKE_SECRET.
  */
 export function isApiCheckoutPath(pathname: string): boolean {
   const p = pathname.replace(/\/+$/, "") || "/";
@@ -166,7 +179,8 @@ export function isApiCheckoutPath(pathname: string): boolean {
 }
 
 export function tryHandleApiCheckoutEmailGate(
-  request: Request
+  request: Request,
+  env?: { DPP_SMOKE_SECRET?: string }
 ): Response | null {
   const url = new URL(request.url);
   if (!isApiCheckoutPath(url.pathname)) return null;
@@ -177,8 +191,16 @@ export function tryHandleApiCheckoutEmailGate(
     });
   }
   if (request.method !== "GET") return null;
-  const smoke = isDppSmokePromo(url.searchParams.get("promo"));
-  if (smoke && planIdFromCheckoutAction(url.pathname) === "dpp_readiness") {
+  const smoke =
+    isDppSmokePromo(url.searchParams.get("promo")) &&
+    planIdFromCheckoutAction(url.pathname) === "dpp_readiness";
+  if (
+    smoke &&
+    dppSmokeRequestAuthorized(
+      request.headers.get("x-dpp-smoke-secret"),
+      env?.DPP_SMOKE_SECRET
+    )
+  ) {
     return null;
   }
   const planId = planIdFromCheckoutAction(url.pathname);

@@ -28,7 +28,7 @@ export function StrainchainHome() {
         {
           icon: <ClipboardCheck className="h-6 w-6" />,
           title: 'Compliance-Grade Records',
-          desc: 'METRC and BioTrack integration keeps state reporting in sync automatically, with an immutable on-chain backstop for every entry.',
+          desc: 'METRC and BioTrack integration keeps state reporting in sync automatically.',
         },
         {
           icon: <FlaskConical className="h-6 w-6" />,

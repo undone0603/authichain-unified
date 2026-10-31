@@ -26,6 +26,7 @@ def test_local_timeout(monkeypatch, raw, expected):
 def test_local_clients_use_the_timeout(monkeypatch):
     monkeypatch.setenv("LOCAL_MODEL_TIMEOUT", "30")
     monkeypatch.setenv("LOCAL_MODEL_URL", "http://127.0.0.1:58303")
+    monkeypatch.setenv("LOCAL_MODEL_ID_FALLBACK", "google/gemma-4-e4b")
     llm = LimitProofLLM()
     for client in (llm._get_lmstudio(), llm._get_lmstudio_fallback()):
         assert client.request_timeout == 30.0

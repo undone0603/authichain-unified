@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
+import estate from '../../../config/estate.json';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 60;
@@ -45,12 +46,18 @@ export default async function Dashboard() {
         {[
           { label: 'Total QR Codes', value: stats ? stats.totalQr.toLocaleString() : '—', color: 'text-blue-400' },
           { label: 'Registered Users', value: stats ? stats.totalUsers.toLocaleString() : '—', color: 'text-green-400' },
-          { label: 'Active Edge Nodes', value: '300+', color: 'text-purple-400' },
-          { label: 'Uptime (30d)', value: '99.97%', color: 'text-emerald-400' },
-        ].map(({ label, value, color }) => (
+          // Real count from the Cloudflare estate ledger, dated. This tile
+          // used to claim "300+" edge nodes, which is Cloudflare's network,
+          // not ours.
+          { label: 'Cloudflare Workers', value: String(estate.snapshot.workers), color: 'text-purple-400', note: `Estate snapshot ${estate.snapshot.taken}` },
+          // Nothing measures uptime yet, so this is shown as the target it
+          // is. It used to display "99.97%" as if it were measured.
+          { label: 'Uptime goal (30d)', value: '99.97%', color: 'text-zinc-400', note: 'Target. Not measured yet.' },
+        ].map(({ label, value, color, note }: { label: string; value: string; color: string; note?: string }) => (
           <div key={label} className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
             <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">{label}</p>
             <p className={`text-2xl font-black ${color}`}>{value}</p>
+            {note && <p className="mt-1 text-[11px] text-zinc-500">{note}</p>}
           </div>
         ))}
       </div>
@@ -82,16 +89,6 @@ export default async function Dashboard() {
             <iframe
               src="https://www.youtube.com/embed/mfckohgDrNk?rel=0&modestbranding=1"
               title="QRON Overview"
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              loading="lazy"
-            />
-          </div>
-          <div className="rounded-lg overflow-hidden aspect-video">
-            <iframe
-              src="https://www.youtube.com/embed/70KG5d2fFUo?rel=0&modestbranding=1"
-              title="QRON Token Economy"
               className="w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen

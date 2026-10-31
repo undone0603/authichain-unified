@@ -5,11 +5,14 @@ name: npm publish authichain-verify
 # otherwise npm trusted publishing (OIDC). npm only accepts a trusted publisher
 # for a package that already exists, so the very first publish needs NPM_TOKEN.
 # Without either, the run logs a notice and stays green.
+#
+# MANUAL ONLY (AE-20261002-CFD-13). A publish is a public release (Tier 2), so
+# it needs the owner's explicit yes. This workflow no longer runs on push to
+# main: merging a protocol/package.json version bump does NOT publish. To
+# publish, the owner runs it by hand: Actions > "npm publish authichain-verify"
+# > Run workflow (branch main), or `gh workflow run npm-publish-verify.yml`.
 
 on:
-  push:
-    branches: [main]
-    paths: [protocol/**]
   workflow_dispatch: {}
 
 permissions:

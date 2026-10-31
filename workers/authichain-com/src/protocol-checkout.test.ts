@@ -61,7 +61,20 @@ describe("tryHandleProtocolCheckout", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("honors DPP-SMOKE-E2E as a $0 demo session", async () => {
+  it("refuses public DPP-SMOKE-E2E when the smoke secret is unset", async () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const res = await tryHandleProtocolCheckout(
+      req("/protocol/checkout/dpp?visit_id=dpp_smoke&promo=DPP-SMOKE-E2E"),
+      { STRIPE_SECRET_KEY: "sk_test_x" }
+    );
+    expect(res!.status).toBe(303);
+    expect(res!.headers.get("location")).toBe(
+      "https://authichain.com/checkout/dpp_readiness?visit_id=dpp_smoke"
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("honors DPP-SMOKE-E2E as a $0 demo session when the secret matches", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -78,8 +91,10 @@ describe("tryHandleProtocolCheckout", () => {
       )
     );
     const res = await tryHandleProtocolCheckout(
-      req("/protocol/checkout/dpp?visit_id=dpp_smoke&promo=DPP-SMOKE-E2E"),
-      { STRIPE_SECRET_KEY: "sk_test_x" }
+      req("/protocol/checkout/dpp?visit_id=dpp_smoke&promo=DPP-SMOKE-E2E", {
+        headers: { "x-dpp-smoke-secret": "smoke-secret-value" },
+      }),
+      { STRIPE_SECRET_KEY: "sk_test_x", DPP_SMOKE_SECRET: "smoke-secret-value" }
     );
     expect(res!.status).toBe(303);
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
@@ -135,9 +150,28 @@ describe("tryHandleApiCheckoutEmailGate", () => {
     }
   });
 
-  it("only DPP-SMOKE-E2E falls through to APP_WORKER", () => {
+  it("public DPP-SMOKE-E2E 303s to the confirm page", () => {
+    const res = tryHandleApiCheckoutEmailGate(
+      req("/api/checkout/dpp?promo=DPP-SMOKE-E2E")
+    );
+    expect(res?.status).toBe(303);
+    expect(res?.headers.get("location")).toBe(
+      "https://authichain.com/checkout/dpp_readiness"
+    );
+  });
+
+  it("DPP-SMOKE-E2E falls through only with the smoke secret", () => {
+    const secret = "smoke-secret-value";
+    const request = req("/api/checkout/dpp?promo=DPP-SMOKE-E2E", {
+      headers: { "x-dpp-smoke-secret": secret },
+    });
     expect(
-      tryHandleApiCheckoutEmailGate(req("/api/checkout/dpp?promo=DPP-SMOKE-E2E"))
+      tryHandleApiCheckoutEmailGate(request, { DPP_SMOKE_SECRET: secret })
     ).toBeNull();
+    expect(
+      tryHandleApiCheckoutEmailGate(request, {
+        DPP_SMOKE_SECRET: "other-secret-value",
+      })?.status
+    ).toBe(303);
   });
 });

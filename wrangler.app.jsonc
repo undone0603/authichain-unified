@@ -7,6 +7,16 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "authichain-app",
+  // CFA-142: no public *.workers.dev address. authichain-app is reached only
+  // through service bindings (govchain-us VERIFY_APP, authichain-com,
+  // qron-space, strainchain-io, edge-router), which don't use workers.dev.
+  // Disabled live Oct 9 2026 1:04 PM ET; this keeps a later deploy from
+  // turning it back on. Rollback: delete this line.
+  "workers_dev": false,
+  // CFA-144: also keep per-version preview URLs (<version>-authichain-app.
+  // undone-k.workers.dev) off; they were turned off live Oct 9 2026 with
+  // workers.dev. Rollback: delete this line.
+  "preview_urls": false,
   // Thin wrapper around .open-next/worker.js that also exports RateLimiter.
   // See app-worker-entry.ts for why (Cloudflare error 10064).
   "main": "app-worker-entry.ts",

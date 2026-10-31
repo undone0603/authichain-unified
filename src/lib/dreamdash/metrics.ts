@@ -92,10 +92,13 @@ export function nextAction(lead: Lead): string {
   return "Log a touch";
 }
 
-export function closePriority(lead: Lead) {
+// `now` is explicit (defaulting to the clock) so the stale bonus is testable:
+// with an implicit clock, a fixture lead silently turned stale a week after
+// the test was written and the ranking test started failing on its own.
+export function closePriority(lead: Lead, now = Date.now()) {
   let p = lead.score;
   if (lead.draftPending) p += 18;
-  if (isStale(lead)) p += 14;
+  if (isStale(lead, now)) p += 14;
   if (lead.stage === "signed") p += 28;
   if (lead.stage === "contracted") p += 24;
   if (lead.stage === "demoed") p += 12;
@@ -103,10 +106,10 @@ export function closePriority(lead: Lead) {
   return p;
 }
 
-export function closeOrder(leads: Lead[], limit = 3) {
+export function closeOrder(leads: Lead[], limit = 3, now = Date.now()) {
   return [...leads]
     .filter(isOpen)
-    .sort((a, b) => closePriority(b) - closePriority(a) || b.value - a.value)
+    .sort((a, b) => closePriority(b, now) - closePriority(a, now) || b.value - a.value)
     .slice(0, limit);
 }
 
@@ -215,7 +218,7 @@ export function compileDigest(leads: Lead[], events: HeartbeatEvent[]) {
 export function draftFor(lead: Lead) {
   const first = lead.name.split(" ")[0] || lead.name || "there";
   const lines: Record<Domain, string> = {
-    authichain: `Subject: American Seal — authenticate ${lead.company} goods in under 2s\n\n${first} —\n\nAuthiChain issues Ed25519-signed seals on Polygon so a customer can prove a product is real in about 2.1 seconds. We are running founder-led pilots for luxury, medical, and packaging lines at ~$0.004/seal.\n\nHappy to walk ${lead.company} through a 14-day American Seal pilot (single SKU, public verify page, chain-of-custody log).`,
+    authichain: `Subject: American Seal — authenticate ${lead.company} goods\n\n${first} —\n\nWe are running founder-led pilots for luxury, medical, and packaging lines at ~$0.004/seal.\n\nHappy to walk ${lead.company} through a 14-day American Seal pilot (single SKU, public verify page, chain-of-custody log).`,
     qron: `Subject: Living QR codes for ${lead.company}\n\n${first} —\n\nQRON turns a scannable code into artwork with an on-chain certificate. Collectors dwell ~3.5 minutes; scan rates run ~78% above static QR.\n\nThe QRON Card / pack path starts at $299. I can generate a signed sample against ${lead.company}'s URL this week.`,
     strainchain: `Subject: METRC-aligned provenance for ${lead.company}\n\n${first} —\n\nStrainChain anchors seed-to-sale lots on-chain and issues scannable seals that sit beside METRC — anti-diversion without replacing the state system. Michigan MSO pilots are open.\n\nI can demo a lot seal + dispensary verify flow for ${lead.company} on a 20-minute call.`,
     govchain: `Subject: Public verification for ${lead.company} credentials\n\n${first} —\n\nGovChain authenticates licenses, deeds, and procurement records with originals on-prem and a public <2s verify. Built toward NIST 800-53 / FedRAMP-ready controls.\n\nI can map ${lead.company}'s highest-risk document type to a TruMark seal and a public verify page.`,

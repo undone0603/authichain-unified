@@ -33,6 +33,9 @@ describe("sample battery readiness assessment", () => {
     expect(html).toContain("not legal advice");
     expect(html).not.toContain("has not been altered.");
     expect(html).toContain("This sample is not that passport.");
+    // PM-378: the demonstration-record / mined Polygon anchor line is cut.
+    expect(html).not.toContain("polygon-anchor-1");
+    expect(html).not.toMatch(/mined Polygon anchor/i);
   });
 
   it("derives every figure from the gap map and the readiness score", () => {
@@ -57,9 +60,15 @@ describe("sample battery readiness assessment", () => {
     expect(request).toMatch(/chemistry/);
   });
 
-  it("sells the existing $299 plan through the gated checkout, tagged by campaign", () => {
+  it("sells the workspace grant through the gated checkout, tagged by campaign", () => {
     expect(html).toContain(`$${plan.price}`);
-    for (const f of plan.features) expect(html).toContain(f);
+    expect(html).toContain("AuthiChain workspace");
+    expect(html).toContain("Self-serve activation");
+    expect(html).not.toContain("50 workspace generations");
+    expect(html).not.toContain("Written EU DPP readiness assessment");
+    expect(html).not.toContain("$299 credited toward AuthiChain Basic");
+    expect(html).not.toMatch(/written document/i);
+    expect(html).not.toMatch(/No call/i);
     expect(html).toContain(
       'action="https://authichain.com/checkout/dpp_readiness"'
     );

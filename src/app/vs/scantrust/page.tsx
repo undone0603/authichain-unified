@@ -9,15 +9,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'AuthiChain vs Scantrust — Product Authentication Compared',
     description:
-      'Blockchain-anchored authentication with transparent pricing and sub-day onboarding vs Scantrust. Full feature comparison.',
+      'Authentication with transparent pricing and sub-day onboarding vs Scantrust. Full feature comparison.',
     url: 'https://authichain.com/vs/scantrust',
     images: ['/og?title=AuthiChain%20vs%20Scantrust&brand=authichain'],
   },
 };
 
 const rows: ComparisonRow[] = [
-  { feature: 'On-chain cryptographic anchoring', authichain: 'Certificate contract live on Polygon', competitor: 'Has shipped blockchain integrations (Cardano, Hyperledger)' },
-  { feature: 'AI image analysis (5-agent consensus)', authichain: 'In development', competitor: '—' },
   { feature: 'EU Digital Product Passport export', authichain: 'In development', competitor: true },
   { feature: 'Self-serve onboarding < 1 day', authichain: 'In development', competitor: 'Yes (self-serve signup)' },
   { feature: 'NFT certificates of authenticity', authichain: 'In development', competitor: '—' },
@@ -27,8 +25,8 @@ const rows: ComparisonRow[] = [
 
 const reasons = [
   {
-    title: 'Tamper-Proof by Design',
-    desc: 'AuthiChain\'s certificate contract is live on Polygon. Signed, publicly verifiable certificates are in development.',
+    title: '',
+    desc: 'Signed, publicly verifiable certificates are in development.',
   },
   {
     title: 'Live in a Day, Not a Quarter',

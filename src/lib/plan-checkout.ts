@@ -6,6 +6,7 @@
 import { getBrandIdFromRequest } from "./brand-billing";
 import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
+import { checkoutReturnOrigin } from "./checkout-gate";
 import { PLANS, type PlanId } from "./plans";
 
 export type PlanCheckoutOk = { ok: true; url: string; planId: string };
@@ -89,11 +90,12 @@ export async function createPlanCheckoutSession(opts: {
       : "";
   const source =
     typeof body.source === "string" ? body.source.trim().slice(0, 64) : "";
-  const brand = plan.brand ?? getBrandIdFromRequest(request);
-  const origin =
-    request.headers.get("origin") ||
-    new URL(request.url).origin ||
-    "https://authichain.govchain.us";
+  // "musa" only groups the pricing page; it is not a checkout brand.
+  const brand =
+    plan.brand && plan.brand !== "musa"
+      ? plan.brand
+      : getBrandIdFromRequest(request);
+  const origin = checkoutReturnOrigin(request);
 
   if (!stripeSecretKey) {
     return { ok: false, status: 500, error: "Stripe is not configured" };
@@ -105,16 +107,25 @@ export async function createPlanCheckoutSession(opts: {
     const session = await stripe.checkout.sessions.create({
       mode: plan.stripe_mode,
       ...hostedCheckoutRecoveryParams(plan.stripe_mode),
-      payment_method_types: ["card"],
       line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
-      success_url: `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}${
+      success_url: `${origin}${
+        plan.id === "starter" ||
+        plan.id === "creator" ||
+        plan.id === "qron_launch" ||
+        plan.id === "qron_launch_annual"
+          ? "/generate?paid=1&"
+          : "/dpp/thanks?"
+      }session_id={CHECKOUT_SESSION_ID}${
         prospectId ? `&prospect_id=${encodeURIComponent(prospectId)}` : ""
-      }${source ? `&utm_source=${encodeURIComponent(source)}` : ""}`,
+      }${source ? `&utm_source=${encodeURIComponent(source)}` : ""}&plan=${encodeURIComponent(plan.id)}`,
       cancel_url: `${origin}/#pricing`,
       ...(email ? { customer_email: email } : {}),
       metadata: {
         plan: plan.id,
         brand,
+        ...(plan.stripe_price_id
+          ? { stripe_price_id: plan.stripe_price_id }
+          : {}),
         ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
         ...(refCode ? { ref_code: refCode } : {}),
         ...(prospectId ? { prospect_id: prospectId } : {}),
@@ -126,10 +137,23 @@ export async function createPlanCheckoutSession(opts: {
               metadata: {
                 plan: plan.id,
                 brand,
+                stripe_price_id: plan.stripe_price_id,
                 ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
                 ...(refCode ? { ref_code: refCode } : {}),
                 ...(prospectId ? { prospect_id: prospectId } : {}),
                 ...(source ? { source } : {}),
+              },
+            },
+          }
+        : {}),
+      // #1890 parity: tag the $29 Starter PaymentIntent with the plan so the
+      // webhook never has to guess Starter from the amount.
+      ...(plan.id === "starter" && plan.stripe_mode === "payment"
+        ? {
+            payment_intent_data: {
+              metadata: {
+                plan: plan.id,
+                stripe_price_id: plan.stripe_price_id,
               },
             },
           }
@@ -141,6 +165,20 @@ export async function createPlanCheckoutSession(opts: {
         status: 500,
         error: "Stripe did not return a checkout URL",
       };
+    }
+    // Instrument QRON Launch Annual checkout start
+    if (plan.id === "qron_launch_annual") {
+      console.log(
+        JSON.stringify({
+          evt: "checkout_start_qron_annual",
+          plan_id: "qron_launch_annual",
+          session_id: session.id,
+          amount_usd: 190,
+          generations: 1200,
+          brand,
+          ts: Date.now(),
+        })
+      );
     }
     return { ok: true, url: session.url, planId: plan.id };
   } catch (error: unknown) {

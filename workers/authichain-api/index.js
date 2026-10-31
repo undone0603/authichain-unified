@@ -5,8 +5,11 @@
  * v3.0 queries REAL Supabase backend for verify/classify/register/analytics.
  * This is what RapidAPI subscribers pay for.
  *
- * Plans: Free (10/hr), Basic ($9/mo, 100/day), Pro ($29/mo, 1000/day), Ultra ($99/mo, 10000/day)
- * Auth: X-RapidAPI-Key, X-API-Key, or Authorization Bearer
+ * Public catalog is the free meter plus https://authichain.com/pricing.
+ * basic/pro/ultra/enterprise below are rate-limit buckets, not products for sale.
+ * Auth: X-API-Key or Authorization Bearer (looked up in Supabase), or a
+ *       RapidAPI proxy request whose X-RapidAPI-Proxy-Secret matches
+ *       RAPIDAPI_PROXY_SECRET. Anything else gets 401 (fail closed).
  *
  * Routes:
  *   GET  /health, /api/v1/health          → status
@@ -24,6 +27,12 @@
  *
  * Secrets / vars (service-worker globals):
  *   SUPABASE_ANON_KEY           (secret, required)
+ *   SUPABASE_SERVICE_ROLE_KEY  (secret, optional) used only for
+ *                               authichain_api_create_key and
+ *                               authichain_api_capture_lead. Other calls stay
+ *                               on the anon key. Falls back to anon until the
+ *                               secret is bound; do not revoke anon execute
+ *                               on those two functions before that.
  *   CERT_SIGNING_KEY            (secret, optional) Ed25519 private key; enables
  *                               signed verification certificates + JWKS
  *   CERT_SIGNING_KEY_ID         (optional) kid override; default RFC 7638 thumbprint
@@ -31,6 +40,11 @@
  *   ANCHOR_CONTRACT_ADDRESSES   (optional) comma list; default the AuthiChain contract
  *   ALLOW_UNREGISTERED_SELF_SERVE_KEYS ("true" to keep accepting unsaved
  *                               ac_live_ keys issued before key persistence)
+ *   RAPIDAPI_PROXY_SECRET       (secret, optional) the RapidAPI provider proxy
+ *                               secret. Requests carrying X-RapidAPI-Key are
+ *                               accepted only when X-RapidAPI-Proxy-Secret
+ *                               matches it (constant-time). Unset = every
+ *                               X-RapidAPI-Key request is rejected.
  */
 
 const SUPA_URL = "https://nhdnkzhtadfkkluiulhs.supabase.co";
@@ -38,27 +52,13 @@ const SUPA_URL = "https://nhdnkzhtadfkkluiulhs.supabase.co";
 // (service-worker syntax). Set via: wrangler secret put SUPABASE_ANON_KEY --name authichain-api
 
 const PLANS = {
-  free: { name: "Free", price: "$0", dailyLimit: 100, hourlyLimit: 10 },
-  basic: { name: "Basic", price: "$9/mo", dailyLimit: 100, hourlyLimit: 100 },
-  pro: { name: "Pro", price: "$29/mo", dailyLimit: 1000, hourlyLimit: 1000 },
-  ultra: {
-    name: "Ultra",
-    price: "$99/mo",
-    dailyLimit: 10000,
-    hourlyLimit: 10000,
-  },
-  enterprise: {
-    name: "Enterprise",
-    price: "Custom",
-    dailyLimit: 999999,
-    hourlyLimit: 999999,
-  },
+  free: { name: "Free", dailyLimit: 100, hourlyLimit: 10 },
+  basic: { name: "API", dailyLimit: 100, hourlyLimit: 100 },
+  pro: { name: "API", dailyLimit: 1000, hourlyLimit: 1000 },
+  ultra: { name: "API", dailyLimit: 10000, hourlyLimit: 10000 },
+  enterprise: { name: "API", dailyLimit: 999999, hourlyLimit: 999999 },
 };
-
-const DEMO_KEYS = {
-  demo_test_key_2026: { plan: "free", name: "Demo User", isDemo: true },
-  rapidapi_test_2026: { plan: "basic", name: "RapidAPI Test", isDemo: true },
-};
+const PRODUCTS_URL = "https://authichain.com/pricing";
 
 const INDUSTRIES = {
   cannabis: {
@@ -249,13 +249,20 @@ function j(data, status, extraHeaders) {
 // NOTE: products has no tenant_id column (the 20260829_add_tenant_isolation
 // migration was never applied to the live database — see
 // supabase/REMOTE_APPLIED_VERSIONS.txt). Do not filter on it.
-function supaHeaders(prefer) {
+function supaHeaders(prefer, key) {
+  var token = key || SUPABASE_ANON_KEY;
   return {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: "Bearer " + SUPABASE_ANON_KEY,
+    apikey: token,
+    Authorization: "Bearer " + token,
     "Content-Type": "application/json",
     Prefer: prefer || "return=representation",
   };
+}
+
+// Service role only for the two SECURITY DEFINER writers. Every other
+// Supabase call keeps the anon key so RLS still applies.
+function privilegedWriteKey() {
+  return envVar("SUPABASE_SERVICE_ROLE_KEY") || SUPABASE_ANON_KEY;
 }
 
 async function supaGet(table, params) {
@@ -295,10 +302,10 @@ async function supaPost(table, body) {
 
 // SECURITY DEFINER functions from
 // supabase/migrations/20260925180000_authichain_api_self_serve_keys.sql.
-async function supaRpc(fn, args) {
+async function supaRpc(fn, args, key) {
   const res = await fetch(SUPA_URL + "/rest/v1/rpc/" + fn, {
     method: "POST",
-    headers: supaHeaders(),
+    headers: supaHeaders(undefined, key),
     body: JSON.stringify(args || {}),
   });
   let data = null;
@@ -635,13 +642,53 @@ function pickMatch(rows, candidates) {
 }
 
 // ── Auth & Tenant Resolution ──────────────────────────────────────────────────
+// Fail closed: no hard-coded keys, and X-RapidAPI-Key is never trusted on its
+// own (any value used to be accepted as the basic plan). A RapidAPI request is
+// accepted only when the proxy secret RapidAPI adds on its side matches the
+// RAPIDAPI_PROXY_SECRET secret; if that secret is not bound, it is rejected.
+
+// Constant-time string compare: hash both sides to a fixed 32 bytes, then
+// compare every byte, so neither length nor the first mismatch leaks.
+async function timingSafeEqualStr(a, b) {
+  const enc = new TextEncoder();
+  const [da, db] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(String(a))),
+    crypto.subtle.digest("SHA-256", enc.encode(String(b))),
+  ]);
+  const x = new Uint8Array(da);
+  const y = new Uint8Array(db);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
+async function isVerifiedRapidApiRequest(req) {
+  const expected = envVar("RAPIDAPI_PROXY_SECRET");
+  if (!expected) return false;
+  const got = req.headers.get("X-RapidAPI-Proxy-Secret");
+  if (!got) return false;
+  return timingSafeEqualStr(got, expected);
+}
+
 async function resolveKey(req) {
+  // RapidAPI path: only a verified proxy request counts. An unverified
+  // X-RapidAPI-Key is rejected outright rather than falling through.
+  if (req.headers.get("X-RapidAPI-Key")) {
+    if (!(await isVerifiedRapidApiRequest(req))) return null;
+    return {
+      valid: true,
+      plan: "basic",
+      limit: 100,
+      name: "RapidAPI User",
+      isDemo: false,
+      rapidapi: true,
+    };
+  }
+
   const key =
-    req.headers.get("X-RapidAPI-Key") ||
     req.headers.get("X-API-Key") ||
     (req.headers.get("Authorization") || "").replace("Bearer ", "").trim();
   if (!key) return null;
-  if (DEMO_KEYS[key]) return { valid: true, ...DEMO_KEYS[key] };
 
   // Provisioned tenants and self-serve keys both live in white_label_clients.
   // That table has RLS enabled with no anon policies, so a direct anon SELECT
@@ -684,17 +731,6 @@ async function resolveKey(req) {
       name: "Self-Serve User",
       isDemo: false,
       degraded: true,
-    };
-  }
-
-  // RapidAPI keys pass through — trust the proxy
-  if (req.headers.get("X-RapidAPI-Key")) {
-    return {
-      valid: true,
-      plan: "basic",
-      limit: 100,
-      name: "RapidAPI User",
-      isDemo: false,
     };
   }
 
@@ -787,16 +823,15 @@ async function handleRequest(req) {
   if (path === "/api/v1/pricing") {
     return j({
       success: true,
-      plans: Object.entries(PLANS).map(function (e) {
-        return {
-          id: e[0],
-          name: e[1].name,
-          price: e[1].price,
-          requests: e[0] === "free" ? "10/hour" : e[1].dailyLimit + "/day",
-        };
-      }),
-      subscribe:
-        "https://rapidapi.com/authichain-authichain-default/api/authichain-api",
+      plans: [
+        {
+          id: "free",
+          name: "Free",
+          price: "$0",
+          requests: "10/hour",
+        },
+      ],
+      products: PRODUCTS_URL,
     });
   }
 
@@ -845,11 +880,15 @@ async function handleRequest(req) {
     // swallowed, so keys and leads were never saved. Persist through the
     // SECURITY DEFINER function instead (stores only a sha256 of the key and
     // upserts the lead) and refuse to hand out a key that was not saved.
-    var saved = await supaRpc("authichain_api_create_key", {
-      p_email: email,
-      p_api_key: apiKey,
-      p_name: bk.name ? String(bk.name).slice(0, 200) : null,
-    }).catch(function () {
+    var saved = await supaRpc(
+      "authichain_api_create_key",
+      {
+        p_email: email,
+        p_api_key: apiKey,
+        p_name: bk.name ? String(bk.name).slice(0, 200) : null,
+      },
+      privilegedWriteKey()
+    ).catch(function () {
       return { ok: false, status: 0, data: null };
     });
     if (!saved.ok) {
@@ -891,13 +930,12 @@ async function handleRequest(req) {
   if (!kd) {
     return j(
       {
-        error: "Missing API key",
+        error: "Invalid or missing API key",
         message:
-          "Include your key in X-RapidAPI-Key, X-API-Key, or Authorization Bearer header.",
+          "Include a valid key in the X-API-Key or Authorization Bearer header.",
         get_free_key:
           'POST /api/v1/keys/create with {"email":"you@example.com"}',
-        subscribe:
-          "https://rapidapi.com/authichain-authichain-default/api/authichain-api",
+        products: PRODUCTS_URL,
       },
       401
     );
@@ -1319,11 +1357,14 @@ async function handleRequest(req) {
           limit: kd.limit,
           name: kd.name || "API User",
           isDemo: kd.isDemo || false,
-          planDetails: PLANS[kd.plan] || PLANS.free,
-          upgrade:
-            kd.plan !== "ultra"
-              ? "https://rapidapi.com/authichain-authichain-default/api/authichain-api"
-              : null,
+          planDetails: {
+            name: (PLANS[kd.plan] || PLANS.free).name,
+            requests:
+              kd.plan === "free"
+                ? "10/hour"
+                : (PLANS[kd.plan] || PLANS.free).dailyLimit + "/day",
+          },
+          upgrade: PRODUCTS_URL,
         },
         200,
         rateHeaders
@@ -1373,12 +1414,16 @@ async function handleRequest(req) {
       });
       if (!b5.email) return j({ error: "email required" }, 400);
       // Anon inserts into leads are rejected by RLS; use the lead RPC.
-      var leadResult = await supaRpc("authichain_api_capture_lead", {
-        p_email: String(b5.email).trim().toLowerCase(),
-        p_source: b5.source ? String(b5.source).slice(0, 100) : "api",
-        p_name: b5.name ? String(b5.name).slice(0, 200) : null,
-        p_company: b5.company ? String(b5.company).slice(0, 200) : null,
-      }).catch(function () {
+      var leadResult = await supaRpc(
+        "authichain_api_capture_lead",
+        {
+          p_email: String(b5.email).trim().toLowerCase(),
+          p_source: b5.source ? String(b5.source).slice(0, 100) : "api",
+          p_name: b5.name ? String(b5.name).slice(0, 200) : null,
+          p_company: b5.company ? String(b5.company).slice(0, 200) : null,
+        },
+        privilegedWriteKey()
+      ).catch(function () {
         return { ok: false };
       });
       if (!leadResult.ok)

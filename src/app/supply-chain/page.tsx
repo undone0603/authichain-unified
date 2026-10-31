@@ -27,7 +27,7 @@ export default function SupplyChainPage() {
         {
           icon: <Boxes className="h-6 w-6" />,
           title: 'End-to-End Custody',
-          desc: 'Record every hand-off — cultivation, processing, transport, retail — as an immutable, QR-anchored chain of custody.',
+          desc: 'Record every hand-off — cultivation, processing, transport, retail — as a QR-anchored chain of custody.',
         },
         {
           icon: <MapPin className="h-6 w-6" />,

@@ -7,6 +7,7 @@
 import { evaluate } from "./evaluate";
 import { libraryPageFor, lookupFixture } from "./fixtures";
 import { verifySubmitted, readAnchorOnChain } from "./protocol-verify.mjs";
+import { publishedRecord } from "./published-record.mjs";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -22,7 +23,7 @@ const CORS_HEADERS = {
 };
 
 const JWKS_URL = "https://authichain.com/.well-known/jwks.json";
-const POLYGON_CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
+// polygon.contract is null: no one has shown AuthiChain controls that address (RES-145).
 
 function json(body: unknown, status = 200, extra?: Record<string, string>): Response {
   return Response.json(body, {
@@ -112,7 +113,7 @@ function kernelEnvelope(
     qron_id: identifier,
     anchored,
     polygon: {
-      contract: POLYGON_CONTRACT,
+      contract: null,
       queried: false,
       status: anchored ? "hash_accepted_tx_not_queried" : "in_development",
     },
@@ -164,7 +165,12 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
   const submitted = await parseSubmission(request, url);
   if (submitted.invalid) return json({ error: "Invalid JSON body" }, 400);
 
-  const protocol = verifySubmitted(submitted.record, submitted.anchor);
+  const published = submitted.record ? null : publishedRecord(submitted.raw);
+  const record = submitted.record ?? published?.record ?? null;
+  const anchor = submitted.anchor ?? published?.anchor ?? null;
+  const source = published ? published.source : "submitted_record";
+
+  const protocol = verifySubmitted(record, anchor);
   if (protocol) {
     const identifier = submitted.raw.trim()
       ? deriveInputIdentifier(submitted.raw)
@@ -181,12 +187,13 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
       revocation: "clear" as const,
       freshness: "unknown" as const,
     };
-    const chainName = String(submitted.anchor?.chain || "");
+    const chainName = String(anchor?.chain || "");
     const polygonChain = chainName === "polygon:137" || chainName === "eip155:137";
-    const chain = await readAnchorOnChain(submitted.record, submitted.anchor, {
+    const chain = await readAnchorOnChain(record, anchor, {
       rpcUrl: polygonChain ? env.POLYGON_RPC_URL : undefined,
     });
-    console.log(JSON.stringify({ evt: "verify", identifier, decision: protocol.decision, source: "submitted_record", chain: chain.status }));
+    const subject = isRecord(record?.credentialSubject) ? record.credentialSubject : null;
+    console.log(JSON.stringify({ evt: "verify", identifier, decision: protocol.decision, source, chain: chain.status }));
     return json(
       {
         verdict: protocol.verdict,
@@ -204,7 +211,7 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
         anchorOnChain: chain.onChain,
         anchorChainStatus: chain.status,
         polygon: {
-          contract: POLYGON_CONTRACT,
+          contract: null,
           queried: chain.queried,
           status: chain.status,
           block: chain.block ?? null,
@@ -212,7 +219,11 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
         jwks: { url: JWKS_URL, live: keysLive },
         verifiedAt: new Date().toISOString(),
         input: submitted.raw,
-        source: "submitted_record",
+        source,
+        demonstration: source === "published_example",
+        subject: subject
+          ? { id: subject.id ?? null, name: subject.name ?? null }
+          : null,
         product: null,
         tokenId: null,
       },
@@ -345,3 +356,16 @@ export default {
     return new Response("Not found", { status: 404, headers: CORS_HEADERS });
   },
 };
+
+
+// Canonical Agent Trust contracts and verification
+export * from "./agent-types";
+export * from "./agent-message";
+export * from "./agent-store";
+export * from "./agent-verifier";
+export * from "./agent-issuer";
+export * from "./outbound-types";
+export * from "./acquisition-ledger";
+export * from "./outbound-gate";
+export * from "./scout";
+export * from "./agent-dogfood";

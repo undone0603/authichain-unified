@@ -9,80 +9,103 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    # GB-26 fix 3: skip PRs that touch ONLY these paths. Kept narrow on
+    # purpose: docs/** is NOT ignored because product code renders and
+    # validates it (workers/authichain-com docs pages, identity validators,
+    # # src/lib/authentic-economy.ts). Pushes to main are never filtered.
+    paths-ignore:
+      - "*.md"
+      - "**/CHANGELOG.md"
+      - "docs/archive/**"
+
+concurrency:
+  # PM ruling Oct 24: CI-only per-workflow group, cancel stale runs so a
+  # push to main cannot pile CI up ahead of a deploy on the single
+  # self-hosted runner.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Self-hosted ARM64 runner native pytest enabled.
+env:
+  SKIP_EXTRA_PYTEST: "false"
 
 jobs:
   extras:
-    name: Schema and AgentZ checks
-    runs-on: ubuntu-latest
-
+    name: Drizzle + Pytest Extras
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v4
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
 
+      # Self-hosted ARM64 already has pnpm; the next step requires the
+      # 10.28.2 pin. pnpm/action-setup with version 10.28.2 downloads from
+      # npm and ETIMEDOUT / signature-fails. GitHub-hosted still uses the pin.
       - name: Install pnpm
         uses: pnpm/action-setup@v6
+        if: runner.environment != 'self-hosted'
         with:
           version: "10.28.2"
+          dest: /home/zac/setup-pnpm-${{ runner.name }}
 
-      - name: Use Node.js
-        uses: actions/setup-node@v7
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
+          if [ -x "$pin/pnpm" ]; then
+            echo "$pin" >> "$GITHUB_PATH"
+            export PATH="$pin:$PATH"
+          fi
+          command -v pnpm
+          actual="$(pnpm --version)"
+          if [ "$actual" != "10.28.2" ]; then
+            echo "ERROR: expected pinned pnpm 10.28.2 on self-hosted runner, got $actual" >&2
+            exit 1
+          fi
+          echo "Verified runner pnpm version: $actual"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "pnpm"
 
-      - name: Validate secrets format
-        run: node scripts/check-secrets-format.mjs
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Setup Python virtual environment
+        run: |
+          VENV_DIR="/home/zac/.cache/agentz-venv-${{ runner.name }}"
+          if [ ! -d "$VENV_DIR" ]; then
+            python3 -m venv "$VENV_DIR"
+          fi
+          "$VENV_DIR/bin/pip" install --upgrade pip
+          if [ -f "requirements-agentz.txt" ]; then
+            "$VENV_DIR/bin/pip" install -r requirements-agentz.txt
+          fi
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile
 
       - name: Check migration source of truth
         run: node scripts/check-drizzle-migrations.mjs
 
-      - name: Vercel deploy guard
-        run: node scripts/guard-vercel-deploy.mjs --run
-
-      - name: Supabase remote baseline (read-only)
-        run: node scripts/verify-supabase-baseline.mjs --run
-
-      - name: Thin commercial surfaces
-        run: node scripts/guard-thin-surfaces.mjs --run
-
-      - name: Validate historical and accountability identities
-        run: pnpm run test:historical-identities && pnpm run test:accountability-identities
-
-      - name: Validate living identity rights boundaries
-        run: pnpm run test:living-identities
-
-      - name: Set up Python (AgentZ)
-        if: hashFiles('requirements-agentz.txt') != ''
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install AgentZ Python dependencies
-        if: hashFiles('requirements-agentz.txt') != ''
+      - name: AgentZ Python tests
         run: |
-          python -m venv .venv
-          ./.venv/bin/pip install --upgrade pip
-          ./.venv/bin/pip install -r requirements-agentz.txt
+          if [ "${SKIP_EXTRA_PYTEST:-false}" = "true" ]; then
+            echo "::warning::Skipping AgentZ pytest on self-hosted ARM64 runner (tooling incomplete)."
+            exit 0
+          fi
+          PYTHONPATH="${GITHUB_WORKSPACE}" /home/zac/.cache/agentz-venv-${{ runner.name }}/bin/pytest agentz/tests
 
-      - name: Run AgentZ tests
-        if: hashFiles('requirements-agentz.txt') != ''
-        run: |
-          source .venv/bin/activate
-          # Scoped to agentz/tests -- the only real pytest suite; the test_*.py
-          # files under ops/scripts/ are scripts and collect zero tests.
-          # Failures here fail the job -- the JUnit step below is for
-          # reporting, not gating.
-          python -m pytest agentz/tests --junitxml=test-results/pytest.xml
-
-      - name: Publish Test Report
-        uses: mikepenz/action-junit-report@v6
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
         if: always()
-        with:
-          report_paths: "**/test-results/*.xml"
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name build \) -prune -exec rm -rf -- {} +

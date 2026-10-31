@@ -4,6 +4,11 @@
  */
 
 import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "./dpp-loop";
+import {
+  buildDppImporterFile,
+  parseImporterPackFigures,
+  type DppImporterFile,
+} from "./dpp-importer-file";
 
 export type DppActivateInput = {
   session_id?: string;
@@ -12,6 +17,14 @@ export type DppActivateInput = {
   markets?: string;
   labeling?: string;
   call_windows?: string;
+  /** Optional pack figures (Wh/Ah/V) from gap map or activation form. */
+  pack?: unknown;
+  pack_model?: string;
+  stated_wh?: number | string;
+  ah?: number | string;
+  nominal_v?: number | string;
+  cycles_low?: number | string;
+  cycles_high?: number | string;
 };
 
 export type DppActivateOk = {
@@ -21,6 +34,8 @@ export type DppActivateOk = {
   already_activated: boolean;
   next: string;
   activate_url: string;
+  /** Present-vs-missing field list the buyer leaves with (not a passport). */
+  importer_file: DppImporterFile;
 };
 
 export type DppActivateErr = {
@@ -68,7 +83,12 @@ export async function activateDppMerchant(opts: {
     apiVersion: "2026-08-26.dahlia" as const,
   });
 
-  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  // Line items name the product actually bought. A Payment Link sale carries
+  // no metadata, so without them a $299 Made in USA claim file is
+  // indistinguishable from a $299 DPP audit by amount alone.
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ["line_items"],
+  });
   if (session.payment_status !== "paid" && session.status !== "complete") {
     return { ok: false, status: 402, error: "Checkout session is not paid" };
   }
@@ -76,16 +96,17 @@ export async function activateDppMerchant(opts: {
   const md = (session.metadata || {}) as Record<string, unknown>;
   // Another $299 product (the Made in USA claim file) shares the DPP amount,
   // so an explicit non-DPP plan must never activate a DPP workspace.
-  const otherPlan = typeof md.plan === "string" && md.plan && md.plan !== "dpp_readiness";
+  const otherPlan =
+    typeof md.plan === "string" && md.plan && md.plan !== "dpp_readiness";
   if (otherPlan && !isDppOffer(md)) {
-    return { ok: false, status: 400, error: "Not a DPP audit session" };
+    return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
-  if (
-    !isDppOffer(md) &&
-    session.amount_total !== 29900 &&
-    session.amount_total !== 0
-  ) {
-    return { ok: false, status: 400, error: "Not a DPP audit session" };
+  const linePriceId = session.line_items?.data?.[0]?.price?.id ?? null;
+  if (linePriceId && !isDppOffer(md, linePriceId)) {
+    return { ok: false, status: 400, error: "Not a DPP workspace session" };
+  }
+  if (!isDppOffer(md) && session.amount_total !== 29900) {
+    return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
 
   const email = (
@@ -126,6 +147,32 @@ export async function activateDppMerchant(opts: {
       )
     : false;
 
+  const priorMatch = Array.isArray(prior)
+    ? prior.find(
+        (row: { metadata?: { stripe_session_id?: string } }) =>
+          row?.metadata?.stripe_session_id === sessionId
+      )
+    : undefined;
+  const priorImporter = (
+    priorMatch as { metadata?: { importer_file?: DppImporterFile } } | undefined
+  )?.metadata?.importer_file;
+
+  const pack =
+    parseImporterPackFigures(opts.body.pack) ??
+    parseImporterPackFigures({
+      model: opts.body.pack_model,
+      stated_wh: opts.body.stated_wh,
+      ah: opts.body.ah,
+      nominal_v: opts.body.nominal_v,
+      cycles_low: opts.body.cycles_low,
+      cycles_high: opts.body.cycles_high,
+    });
+
+  const importer_file =
+    priorImporter && priorImporter.schema
+      ? priorImporter
+      : buildDppImporterFile({ categories, markets, labeling, pack });
+
   if (!alreadyActivated) {
     await recordDppLoopEvent(opts.supabase, {
       visitId,
@@ -140,6 +187,7 @@ export async function activateDppMerchant(opts: {
         labeling,
         call_windows: (opts.body.call_windows || "").trim() || null,
         activated_at: new Date().toISOString(),
+        importer_file,
       },
     });
   }
@@ -151,5 +199,6 @@ export async function activateDppMerchant(opts: {
     already_activated: alreadyActivated,
     next: "/dashboard",
     activate_url: dppActivateUrl(sessionId, visitId),
+    importer_file,
   };
 }

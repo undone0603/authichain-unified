@@ -2,9 +2,17 @@ name = "authichain-edge-router"
 main = "index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
+# PM-330: no public *.workers.dev address. This Worker serves authichain.com
+# through the routes below; wrangler 4 already resolves a missing value to
+# false when routes exist (live check Oct 9 2026: 404), so this is explicit,
+# not a behaviour change. scripts/ci/check-deploy-invariants.mjs enforces it.
+# Rollback: delete this line.
+workers_dev = false
 
 # Secrets (wrangler secret put --name authichain-edge-router, not committed):
-# STRIPE_SECRET_KEY is required for GET /api/checkout/dpp.
+# STRIPE_SECRET_KEY is required for an authorized DPP smoke checkout.
+# DPP_SMOKE_SECRET (16+ chars) gates GET /api/checkout/dpp?promo=DPP-SMOKE-E2E
+# via the x-dpp-smoke-secret header. Unset fails closed to the confirm page.
 # Live Dashboard endpoint we_1UGTCSGqTruSqV8ThM9bXVWp posts here. Bind the
 # current Reveal signing secret as STRIPE_WEBHOOK_AUTHICHAIN_SECRET (and
 # STRIPE_WEBHOOK_SECRET as fallback). GitHub Actions deploy-cloudflare.yml
@@ -15,17 +23,12 @@ compatibility_flags = ["nodejs_compat"]
 # Optional x402: X402_FACILITATOR_URL + X402_PAY_TO. Unset is the $0 path —
 # GET /api/x402/health returns 200 ready when payTo + facilitator are bound.
 # Optional QRON_WORKER_URL for POST /api/generate (defaults to
-# https://qron-image-gen.undone-k.workers.dev). Optional
-# NEXT_PUBLIC_SUPABASE_ANON_KEY to resolve generate sessions.
+# https://qron-image-gen.undone-k.workers.dev). Generate credits need
+# SUPABASE_SERVICE_ROLE_KEY. SUPABASE_ANON_KEY is the paid seal read only.
 
-# NOTE: services/worker-app/wrangler.toml declares the same worker name and
-# KV/Hyperdrive/Durable Object bindings as this file (only the assets
-# directory and alias differ). Keep the [[kv_namespaces]], [[hyperdrive]],
-# [[durable_objects.bindings]] and [[migrations]] blocks below in sync with
-# that file — a divergence here previously caused the RateLimiter Durable
-# Object migration to use new_classes in one file and new_sqlite_classes in
-# the other. scripts/check-wrangler-durable-objects.mjs (run in CI) will
-# catch a `new_classes` regression in either file.
+# Durable Object migrations must use new_sqlite_classes (free plan).
+# scripts/check-wrangler-durable-objects.mjs (run in CI) catches a
+# `new_classes` regression here.
 
 [observability]
 enabled = true
@@ -93,19 +96,22 @@ zone_name = "authichain.com"
 pattern = "authichain.com/api/v1/attestation/*"
 zone_name = "authichain.com"
 
+# Living QR scan URL encoded in the image. More specific than the landing
+# worker's authichain.com/* so GET /qron/r/{object_id} is Decision v1, not
+# marketing 404 HTML. The handler is worker-app/index.ts app.all("/qron/r/*").
+[[routes]]
+pattern = "authichain.com/qron/r*"
+zone_name = "authichain.com"
+
 # More specific than the landing worker's /api/* glob so B2B/qron-outreach
 # check+record do not 404 on the apex if APP_WORKER is unbound.
 [[routes]]
 pattern = "authichain.com/api/guardrail/*"
 zone_name = "authichain.com"
 
-[[routes]]
-pattern = "authichain.com/api/v1/agent-verify*"
-zone_name = "authichain.com"
-
-[[routes]]
-pattern = "authichain.com/api/x402*"
-zone_name = "authichain.com"
+# agent-verify* and api/x402* (including ?query) are on authichain-com so
+# unpaid GET/HEAD/POST is 402. Do not re-add those authichain.com patterns
+# here — a deploy would steal query-string crawlers back to GET health 200.
 
 [[routes]]
 pattern = "authichain.com/api/checkout"
@@ -131,9 +137,6 @@ zone_name = "authichain.com"
 pattern = "authichain.com/api/stripe/webhook"
 zone_name = "authichain.com"
 
-[[routes]]
-pattern = "authichain.com/api/webhooks/stripe"
-zone_name = "authichain.com"
 
 [[routes]]
 pattern = "authichain.com/api/attest"
@@ -213,6 +216,10 @@ zone_name = "govchain.us"
 
 [[routes]]
 pattern = "authichain.govchain.us/api/v1/attestation/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/qron/r*"
 zone_name = "govchain.us"
 
 [[routes]]
@@ -342,11 +349,11 @@ new_sqlite_classes = ["RateLimiter"]
 #   "0 6 * * *",   # subscription-health-check — in-app expiry notices, marks past-due, resets quotas (internal)
 #   "0 7 * * *",   # certificate-expiry-check — notifies cert owners of expiry (transactional)
 #   "0 8 * * *",   # dunning-escalation — transactional payment-failed/past-due emails to affected customers (standard billing recovery)
-#   "0 8 * * 1",   # weekly-analytics-digest — Monday internal stats report to the owner
+#   "0 9 * * 1",   # weekly-analytics-digest — Monday internal stats report, off the 08:00 dunning tick
 #   "0 11 * * *",  # live-systems-check — read-only ping of Stripe/HubSpot/Gmail/PostHog/GA4 liveness
 #   "0 12 * * *",  # token-metrics — read-only on-chain $QRON supply/gas snapshot
 #   "0 13 * * *",  # ecosystem-health — read-only external uptime check across product domains
-#   "0 */6 * * *", # fraud-detection-sweep — inserts fraud_alerts flags only (defensive; no revocation/outreach)
+#   "0 1,10,16,22 * * *", # fraud-detection-sweep — fraud_alerts flags only; off the maintenance hours
 # ]
 #
 # ── GROUP B — HELD: do NOT enable without an explicit, per-job decision ──────
@@ -368,10 +375,16 @@ new_sqlite_classes = ["RateLimiter"]
 # ]
 
 # VERIFY_APP: service binding to the Next app worker `authichain-app`
-# (wrangler.app.jsonc), which owns the auth_seals lookup behind
-# POST /api/v1/agent-verify. Paid x402 / MCP verify calls are forwarded to it;
-# without this binding they are refused 503 registry_not_bound before
-# settlement. wrangler deploy fails if `authichain-app` is not deployed.
+# (wrangler.app.jsonc). Paid verify reads public auth_seals when SUPABASE_URL
+# and a key are set. This binding is the fallback only when that URL and both
+# keys are absent. Without either path the call is refused 503
+# registry_not_bound before settlement. wrangler deploy fails if
+# `authichain-app` is not deployed.
 [[services]]
 binding = "VERIFY_APP"
 service = "authichain-app"
+
+# x402 replay guard (CFA-366). Shared namespace; keys are site-scoped in code.
+[[kv_namespaces]]
+binding = "X402_REPLAY_KV"
+id = "ab391dc529884161bd84707d7627a9f0"

@@ -17,8 +17,6 @@ export const metadata: Metadata = {
 
 const rows: ComparisonRow[] = [
   { feature: 'Turnkey product (no dev team required)', authichain: true, competitor: 'Via ToolChain or partners' },
-  { feature: 'On-chain anchoring', authichain: 'Certificate contract live on Polygon', competitor: true },
-  { feature: 'AI image analysis (5-agent consensus)', authichain: 'In development', competitor: '—' },
   { feature: 'EU Digital Product Passport export', authichain: 'In development', competitor: 'Via partners' },
   { feature: 'Self-serve onboarding < 1 day', authichain: 'In development', competitor: '—' },
   { feature: 'Starts at', authichain: 'Contact for pricing', competitor: '—' },
@@ -35,7 +33,7 @@ const reasons = [
   },
   {
     title: 'AI + Multi-Chain Assurance',
-    desc: 'Our goal: multi-agent AI verification before each certificate is anchored on Polygon.',
+    desc: 'On-chain anchoring is in development.',
   },
 ];
 

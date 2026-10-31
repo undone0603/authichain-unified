@@ -48,6 +48,7 @@ async function runSync() {
   const lines = content.split("\n").slice(1); // Skip header
 
   let syncedCount = 0;
+  let failedCount = 0;
   for (const line of lines) {
     if (!line.trim()) continue;
     
@@ -65,16 +66,20 @@ async function runSync() {
 
       if (result && result.success) {
         syncedCount++;
-        console.log(`✅ Synced: ${email}`);
+        const already = "alreadyExisted" in result && result.alreadyExisted;
+        console.log(already ? `Already in CRM: ${email}` : `✅ Synced: ${email}`);
       } else {
-        console.error(`✗ Failed: ${email} - ${result?.error || 'Unknown error'}`);
+        failedCount++;
+        console.error(`✗ Failed: ${email} - ${result?.error || "Unknown error"}`);
       }
     } catch (e: any) {
+      failedCount++;
       console.error(`✗ Error syncing ${email}: ${e.message}`);
     }
   }
 
   console.log(`\n✨ HubSpot Sync Complete. Total leads synced: ${syncedCount}`);
+  if (failedCount > 0) process.exitCode = 1;
 }
 
 runSync().catch(console.error);

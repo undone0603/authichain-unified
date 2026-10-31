@@ -1,0 +1,25 @@
+name: Honest launch gate
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: honest-launch-gate-${{ github.ref }}
+  # Only PR runs are superseded; a push to main must never cancel a running
+  # deploy/check mid-way (PM-328). Newer main runs queue behind it instead.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Claim regression; live probes only on the schedule
+        env:
+          HONEST_GATE_LIVE: ${{ github.event_name == 'schedule' && '1' || '0' }}
+        run: node scripts/launch/honest-launch-gate.mjs

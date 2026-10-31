@@ -15,7 +15,7 @@ Write as the founder of the Authentic Economy stack, not as a growth agency and 
 
 ## Brand lanes
 
-- AuthiChain — seals, ~2s verification frame only if already public, 5-agent consensus as architecture not theater, Polygon ERC-721, American Seal, luxury / pharma / medical-device / wine / art.
+- AuthiChain — seals, Polygon ERC-721, American Seal, luxury / pharma / medical-device / wine / art.
 - QRON — living QR codes, scannable art, StoryMode / portals as product language, qron.space, artist commissions. Never claim a generated image is a guaranteed-scan QR unless the owner supplied one.
 - StrainChain — Michigan seed-to-sale provenance, METRC-aware language, dispensary tools, 21+. Outreach names (Trulieve, Curaleaf, Cresco) are outreach, not signed pilots unless the owner says closed.
 - GovChain — documents, licenses, chain of custody, NIST/FedRAMP-ready as a path, never as an award.

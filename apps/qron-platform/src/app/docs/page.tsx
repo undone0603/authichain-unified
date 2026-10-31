@@ -88,8 +88,7 @@ export default function DeveloperDocs() {
               <div>
                 <h2 className="text-3xl font-black uppercase tracking-tight mb-4">Authentication</h2>
                 <p className="text-zinc-400 text-lg leading-relaxed">
-                  AuthiChain uses industrial-grade **Ed25519** signature verification. 
-                  Every API request must be signed with your private key or include your platform-issued API Key.
+                  Every API request must include your platform-issued API Key.
                 </p>
               </div>
 

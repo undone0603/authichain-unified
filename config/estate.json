@@ -14,16 +14,6 @@
     "unknown": "Source not found anywhere. Owner decides: snapshot or retire."
   },
   "off_repo_workers": {
-    "first-dollar-desk": {
-      "disposition": "archive",
-      "archive": "docs/archive/cf-workers/first-dollar-desk.js",
-      "note": "Live money path: Stripe payment links, Base USDC ledger in KV first-dollar-ledger, /mcp and /api/agent/verify. Highest-priority source to restore."
-    },
-    "authichain-agentz-webhook": {
-      "disposition": "archive",
-      "archive": "docs/archive/cf-workers/authichain-agentz-webhook.js",
-      "note": "Receives agentz-orchestration.yml events (x-agentz-secret) into KV with a 90-day TTL."
-    },
     "gmail-relay-z": {
       "disposition": "archive",
       "archive": "docs/archive/cf-workers/gmail-relay-z.js",
@@ -64,12 +54,12 @@
       "note": "Last modified 2026-06-18; stripe-webhook (workers/stripe-webhook) is the live handler."
     },
     "qron-edge": {
-      "disposition": "unknown",
-      "note": "Last modified 2026-06-22. apps/qron-platform/wrangler.toml deploys qron-edge-fleet, not qron-edge."
+      "disposition": "retire",
+      "note": "Decision 2026-10-21 (reversible): superseded by qron-edge-fleet, which is source-controlled in apps/qron-platform (src/edge.ts, canonical verify adapter test in src/edge.test.ts, bundle in docs/archive/cf-workers/qron-edge-fleet.js). qron-edge itself has no source in the repo and was last modified 2026-06-22. Before deleting it the owner confirms in the Cloudflare dashboard (Settings > Domains & Routes, and Metrics) that nothing routes to it and it has served no traffic recently. config/cloudflare-estate.json still says import-after-route-consumer-audit; if the audit finds a live consumer, switch this back and import the source instead."
     },
     "storepilot": {
-      "disposition": "unknown",
-      "note": "StorePilot is hidden in src/lib/plans.ts. Billing tables exist in supabase/migrations/20260920143338_storepilot_billing_tables.sql."
+      "disposition": "retire",
+      "note": "Decision 2026-10-21 (reversible): retire the Worker, keep the data. The repo has no source for it, StorePilot is hidden in src/lib/plans.ts, pricing copy says it is not sold (docs/growth/PRICING_FREEZE_COPY.md), and the revenue brief records zero pay or subscribe hits on its inbox. Keep the applied Supabase billing tables (supabase/migrations/20260920143338_storepilot_billing_tables.sql; do not invent a second migration). If merchant billing UX is wanted later, rebuild it in-repo as a thin surface over the shared Stripe webhook (docs/architecture/THIN_COMMERCIAL_SURFACES.md). The owner confirms nothing routes to the Worker before deleting it."
     },
     "esktop": {
       "disposition": "retire",

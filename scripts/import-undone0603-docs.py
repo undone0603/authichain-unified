@@ -123,7 +123,7 @@ def polish_scrub_artifacts(text: str) -> str:
     )
     text = re.sub(
         rf"^{re.escape(QRON_PRICING)}: (Premium \(Cosmic Nebula, Aurora Dreams\))",
-        rf"- **Premium styles** (Cosmic Nebula, Aurora Dreams) — {QRON_PRICING}",
+        rf"- Every style and preset, the same ones as the free sample — {QRON_PRICING}",
         text,
         flags=re.M,
     )
@@ -141,7 +141,7 @@ def polish_scrub_artifacts(text: str) -> str:
     )
     text = re.sub(
         rf"^{re.escape(QRON_PRICING)}: (Premium \(Cosmic, Aurora\))",
-        rf"- **Premium styles** (Cosmic, Aurora) — {QRON_PRICING}",
+        rf"- Every style and preset, the same ones as the free sample — {QRON_PRICING}",
         text,
         flags=re.M,
     )
@@ -152,7 +152,7 @@ def polish_scrub_artifacts(text: str) -> str:
         f"{QRON_PRICING}\n\n"
         "- **Core styles:** Neon Glitch, Matrix, Teal Pulse\n"
         "- **Signature styles:** Holographic, Prism, Bioluminescent\n"
-        "- **Premium styles:** Cosmic Nebula, Aurora Dreams",
+        "- Every style and preset, the same ones as the free sample",
         text,
     )
     return text

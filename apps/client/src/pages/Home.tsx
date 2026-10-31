@@ -264,47 +264,10 @@ export default function Home() {
                     <p className="text-sm text-muted-foreground">Encryption standards compliant with federal regulations and W3C Verifiable Credentials.</p>
                   </div>
                 </div>
-                <div className="flex gap-4">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold mb-1">Ed25519 Signing</h4>
-                    <p className="text-sm text-muted-foreground">High-performance cryptographic signing for instant, unforgeable verification.</p>
-                  </div>
-                </div>
               </div>
             </div>
             
             <div className="relative">
-              <div className="glass-card p-8 rounded-2xl border-primary/20 bg-background/50 backdrop-blur-xl">
-                <div className="flex items-center gap-3 mb-6">
-                  <Shield className="h-6 w-6 text-primary" />
-                  <span className="font-bold tracking-tight">SECURITY AUDIT — PASSED</span>
-                </div>
-                <div className="space-y-4 font-mono text-[11px]">
-                  <div className="flex justify-between border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Blockchain Anchor</span>
-                    <span className="text-primary">Polygon PoS (Mainnet)</span>
-                  </div>
-                  <div className="flex justify-between border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Encryption Algorithm</span>
-                    <span className="text-primary">Ed25519 / Curve25519</span>
-                  </div>
-                  <div className="flex justify-between border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">VC Compliance</span>
-                    <span className="text-primary">W3C Standard v1.1</span>
-                  </div>
-                  <div className="flex justify-between border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Privacy Protection</span>
-                    <span className="text-primary">Zero-Knowledge Proofs</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">AI Consensus</span>
-                    <span className="text-primary">5-Agent Verification</span>
-                  </div>
-                </div>
-              </div>
               <div className="absolute -bottom-6 -right-6 h-32 w-32 bg-primary/20 blur-3xl rounded-full" />
               <div className="absolute -top-6 -left-6 h-32 w-32 bg-yellow-500/10 blur-3xl rounded-full" />
             </div>
@@ -350,8 +313,8 @@ export default function Home() {
                 <div className="protocol-badge mb-4">The AI Security Council</div>
                 <h2 className="text-3xl md:text-4xl font-bold mb-6">Deploy Your Protocol Agents</h2>
                 <p className="text-muted-foreground mb-8 leading-relaxed">
-                  Join the network by creating your own Protocol Agent. Guardians, Archivists, and Sentinels 
-                  work together to reach consensus on authenticity, earning <strong>$QRON</strong> rewards for every scan.
+                  Join the network by creating your own Protocol Agent. Guardians, Archivists, and Sentinels
+                  work together to reach consensus on authenticity.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   {["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"].map(a => (
@@ -400,8 +363,7 @@ export default function Home() {
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto mb-8 leading-relaxed">
               QRON is the consumer-facing creative studio built on the AuthiChain Protocol.
-              Generate AI-powered QR art — every code cryptographically signed with Ed25519 and
-              verifiable against the AuthiChain blockchain anchor.
+              Generate AI-powered QR art.
             </p>
             <a
               href="https://qron.space"
@@ -429,7 +391,7 @@ export default function Home() {
             </div>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Start authenticating today. Every plan includes Ed25519 signing, blockchain anchoring, and AI analysis.
+              Start authenticating today.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">

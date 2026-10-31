@@ -1,11 +1,17 @@
+// @vitest-environment node
+// jose signs Uint8Arrays from Node's realm; under the suite's default jsdom
+// environment they fail its `instanceof Uint8Array` check.
 import { describe, expect, it } from "vitest";
 import { generateKeyPair, exportJWK } from "jose";
+import { CompactSign } from "jose";
 import {
   parseJws,
   verifyAttestationJws,
   validateAttestation,
   canonicalize,
+  parseAttestationPayload,
   signAttestation,
+  AUTHICHAIN_ATTESTATION_TYP,
 } from ".";
 import fixture from "../../../fixtures/attestation-v0.1-valid.json";
 import jwks from "../../../fixtures/attestation-v0.1-jwks.json";
@@ -29,14 +35,15 @@ async function signVariant(
   variant: Record<string, unknown>,
   keyId = "proof-test-kid"
 ) {
-  const { privateKey } = await generateKeyPair("Ed25519");
+  const { privateKey, publicKey } = await generateKeyPair("Ed25519");
   const jws = await signAttestation(
     structuredClone(variant) as typeof fixture,
     privateKey,
     keyId
   );
-  const publicJwk = await exportJWK(privateKey);
-  delete (publicJwk as Record<string, unknown>).d;
+  // jose 6 private keys are non-extractable by default; public keys always
+  // export, and carry no `d` to strip.
+  const publicJwk = await exportJWK(publicKey);
   publicJwk.kid = keyId;
   return { jws, publicJwk };
 }
@@ -58,11 +65,54 @@ describe("AuthiChain Attestation Contract v0.1", () => {
 
   it("rejects an altered signature", async () => {
     const parts = validJws.split(".");
-    parts[2] =
-      parts[2].slice(0, -1) + (parts[2].endsWith("A") ? "B" : "A");
+    // Flip a bit in the decoded bytes; editing the last base64url character
+    // can leave the signature unchanged (it carries only 2 bits).
+    const sig = Buffer.from(parts[2], "base64url");
+    sig[0] ^= 0x01;
+    parts[2] = sig.toString("base64url");
     await expect(
       verifyAttestationJws(parts.join("."), jwks.keys[0])
     ).rejects.toThrow();
+  });
+
+  it("omits undefined object fields so the payload stays JSON", () => {
+    const encoded = canonicalize({ a: 1, b: undefined, c: "x" } as never);
+    expect(encoded).toBe('{"a":1,"c":"x"}');
+    expect(JSON.parse(encoded)).toEqual({ a: 1, c: "x" });
+  });
+
+  it("reads a signed payload that stored an omitted uri as the token undefined", async () => {
+    const { privateKey, publicKey } = await generateKeyPair("Ed25519");
+    const publicJwk = await exportJWK(publicKey);
+    publicJwk.kid = "proof-test-kid";
+    const digest = `sha256:${"a".repeat(64)}`;
+    const good = canonicalize({
+      ...fixture,
+      evidence: [
+        {
+          digest,
+          id: "living-qr-image",
+          type: "living_qr_image",
+        },
+      ],
+    } as never);
+    const bad = good.replace(
+      '"type":"living_qr_image"',
+      '"type":"living_qr_image","uri":undefined'
+    );
+    expect(() => JSON.parse(bad)).toThrow();
+    const jws = await new CompactSign(new TextEncoder().encode(bad))
+      .setProtectedHeader({
+        alg: "EdDSA",
+        kid: "proof-test-kid",
+        typ: AUTHICHAIN_ATTESTATION_TYP,
+      })
+      .sign(privateKey);
+    const parsed = await verifyAttestationJws(jws, publicJwk);
+    expect(parsed.evidence[0]?.uri).toBeUndefined();
+    expect(parseAttestationPayload(new TextEncoder().encode(bad))).toMatchObject({
+      evidence: [{ id: "living-qr-image", digest }],
+    });
   });
 
   it("rejects a valid signature paired with the wrong key id", async () => {

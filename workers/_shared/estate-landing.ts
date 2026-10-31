@@ -697,7 +697,9 @@ export function estateFooter(
   columns: Array<{ heading: string; links: EstateLink[] }>,
   note: string,
   /** Replaces "<brand tagline>. Part of the AuthiChain estate." when set. */
-  tagline?: string
+  tagline?: string,
+  /** Optional plain-text legal line under the note (escaped). */
+  disclaimer?: string
 ): string {
   const b = ESTATE_BRANDS[brand];
   const taglineText = tagline ?? `${b.tagline}. Part of the AuthiChain estate.`;
@@ -720,6 +722,7 @@ export function estateFooter(
   <div class="estate-legal">
     <p>© 2026 ${esc(b.name)}</p>
     ${note ? `<p>${note}</p>` : ""}
+    ${disclaimer ? `<p>${esc(disclaimer)}</p>` : ""}
   </div>
 </footer>`;
 }

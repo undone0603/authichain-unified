@@ -25,6 +25,9 @@ import { tryHandleGovGift } from "./gov-gift.ts";
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
 import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
+import { tryHandleEstateCanonicalVerify } from "../../_shared/estate-canonical-verify";
+import { tryHandleEstateProtocolDiscovery } from "../../_shared/estate-protocol-discovery";
+import { tryHandleEstateQronResolve } from "../../_shared/estate-qron-resolve";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -64,7 +67,6 @@ const OG_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 
   <text x="240" y="390" font-family="Arial,sans-serif" font-size="96" font-weight="800" letter-spacing="2" fill="#f0f9ff">GOVCHAIN</text>
   <line x1="240" y1="416" x2="520" y2="416" stroke="#3b82f6" stroke-width="3"/>
   <text x="240" y="472" font-family="Arial,sans-serif" font-size="32" font-weight="300" fill="#7e93b8">Federal Contract Intelligence</text>
-  <text x="240" y="516" font-family="Arial,sans-serif" font-size="22" fill="#4b6080">AI Fit-Scoring · On-Chain Provenance · Made-in-USA Compliance</text>
   <text x="1160" y="598" text-anchor="end" font-family="monospace" font-size="20" letter-spacing="3" fill="#3b82f6">GOVCHAIN.US</text>
 </svg>`;
 
@@ -2284,7 +2286,20 @@ export default {
     if (gift) return gift;
     const pricing = tryHandleGovchainPricing(request);
     if (pricing) return pricing;
-    const x402 = await tryHandleSisterX402(request, env, env?.VERIFY_APP);
+    // Canonical attestation verify — before x402/MCP so protocol truth is not
+    // confused with paid agent verify credit settlement.
+    const protocolDiscovery = await tryHandleEstateProtocolDiscovery(request, env);
+    if (protocolDiscovery) return protocolDiscovery;
+    const qronResolve = await tryHandleEstateQronResolve(request, env);
+    if (qronResolve) return qronResolve;
+    const canonicalVerify = await tryHandleEstateCanonicalVerify(request, env);
+    if (canonicalVerify) return canonicalVerify;
+    const x402 = await tryHandleSisterX402(
+      request,
+      env,
+      env?.VERIFY_APP,
+      "govchain"
+    );
     if (x402) return x402;
     const mcp = await tryHandleSisterMcp(
       request,
@@ -2300,6 +2315,31 @@ export default {
     // The homepage already fetches both of these endpoints; until now they fell
     // through to the marketing HTML, so the live feed's JSON.parse always threw
     // and the stats bar always read "temporarily unavailable".
+    if (p === '/api/govchain/grants') {
+      if (!env?.VERIFY_APP) {
+        return jsonResponse({ error: 'app_not_bound' }, 503, 'no-store');
+      }
+      const upstreamUrl = new URL(
+        `${url.pathname}${url.search}`,
+        'https://authichain-app.internal',
+      );
+      const proxied = new Request(upstreamUrl, {
+        method: request.method,
+        headers: request.headers,
+        body: request.method === 'GET' || request.method === 'HEAD' ? null : request.body,
+        redirect: 'manual',
+      });
+      proxied.headers.set('X-Forwarded-Host', url.host);
+      proxied.headers.set('X-Forwarded-Proto', 'https');
+      const res = await env.VERIFY_APP.fetch(proxied);
+      const headers = new Headers(res.headers);
+      headers.set('x-served-by', 'govchain-us-proxy');
+      return new Response(res.body, {
+        status: res.status,
+        statusText: res.statusText,
+        headers,
+      });
+    }
     if (p === '/api/govchain/opportunities') {
       if (!supabaseConfigured(env)) {
         return jsonResponse({ error: 'supabase_not_configured', opportunities: [] }, 503, 'no-store');
@@ -2308,6 +2348,7 @@ export default {
         const opportunities = await fetchOpportunities(env, {
           minFit: Number(url.searchParams.get('min_fit') ?? 70),
           limit: Number(url.searchParams.get('limit') ?? 12),
+          q: url.searchParams.get('q') ?? undefined,
         });
         return jsonResponse({ opportunities });
       } catch {
@@ -2340,11 +2381,11 @@ export default {
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GovChain — Federal Contract Intelligence & Public Provenance</title>
-<meta name="description" content="GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).">
+<meta name="description" content="GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="GovChain">
 <meta property="og:title" content="GovChain — Federal Contract Intelligence &amp; Public Provenance">
-<meta property="og:description" content="AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).">
+<meta property="og:description" content="AI fit-scoring, auto-drafted capability statements.">
 <meta property="og:url" content="https://govchain.us/">
 <meta property="og:image" content="https://govchain.us/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -2354,7 +2395,7 @@ export default {
 <meta name="theme-color" content="#1d4ed8">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 ${ESTATE_FONTS_LINK}
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"GovChain","url":"https://govchain.us","logo":"https://govchain.us/favicon.svg","description":"GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).","sameAs":["https://authichain.govchain.us"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"GovChain","url":"https://govchain.us","logo":"https://govchain.us/favicon.svg","description":"GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements.","sameAs":["https://authichain.govchain.us"]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"GovChain","url":"https://govchain.us","description":"Federal Contract Intelligence and Public Provenance powered by AuthiChain Protocol."}</script>
 <style>
 ${estateCssVars("govchain")}
@@ -2375,7 +2416,7 @@ ${estateNav(
 ${estateHero({
   eyebrow: "Federal contract intelligence",
   title: "Win more federal work. Prove every claim.",
-  lede: "GovChain turns SAM.gov into pursue-ready intelligence — AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).",
+  lede: "GovChain turns SAM.gov into pursue-ready intelligence — AI fit-scoring, auto-drafted capability statements.",
   actions: [
     { href: "/onboard", label: "Request access", primary: true },
     { href: "/opportunities", label: "Browse opportunities", primary: false },
@@ -2404,7 +2445,7 @@ ${estateTrust([
       <div class="step"><div class="step-num">01</div><h3>SAM.gov ingestion</h3><p>Live ingestion of federal and state notices by NAICS, agency, and keyword.</p></div>
       <div class="step"><div class="step-num">02</div><h3>AI fit-scoring</h3><p>Each opportunity scored 0–100 against your capabilities with a pursue / monitor / skip call.</p></div>
       <div class="step"><div class="step-num">03</div><h3>Capability drafting</h3><p>High-fit opportunities get an AI-drafted capability statement ready for review.</p></div>
-      <div class="step"><div class="step-num">04</div><h3>On-chain anchoring (in development)</h3><p>Contract deployed on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>; hash-anchoring of claims is in development.</p></div>
+      <div class="step"><div class="step-num">04</div><h3>On-chain anchoring (in development)</h3><p>Hash-anchoring of claims is in development.</p></div>
     </div>
   </div>
 </section>
@@ -2431,7 +2472,6 @@ ${estateFeatures(
       <div class="audit-layer"><div class="audit-name">SAM.gov</div><div class="audit-desc">Authoritative federal opportunity and entity source</div></div>
       <div class="audit-layer"><div class="audit-name">Supabase</div><div class="audit-desc">Scored opportunities, proposals, and certifications</div></div>
       <div class="audit-layer"><div class="audit-name">IPFS</div><div class="audit-desc">Content-addressed evidence storage</div></div>
-      <div class="audit-layer"><div class="audit-name">Polygon</div><div class="audit-desc">Contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> · anchoring in development</div></div>
     </div>
   </div>
 </section>
@@ -2443,7 +2483,6 @@ ${estateFeatures(
     <div class="compliance-grid">
       <div class="compliance-card"><h3>FAR / DFARS</h3><p>Evidence mapping for Federal Acquisition Regulation and defense supplement clauses.</p></div>
       <div class="compliance-card"><h3>NIST SP 800-171</h3><p>Controlled Unclassified Information control tracking with an audit-ready evidence trail.</p></div>
-      <div class="compliance-card"><h3>Buy American / Made in USA</h3><p>Cryptographic domestic-origin provenance for FTC MUSA and EO 14392 questions.</p></div>
       <div class="compliance-card"><h3>Section 889 / supply chain</h3><p>Prohibited-source screening and supply-chain provenance for prime and sub assurance.</p></div>
     </div>
   </div>
@@ -2495,6 +2534,8 @@ ${estateFooter(
     },
   ],
   "Powered by AuthiChain · onboard is the conversion path",
+  undefined,
+  "GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency.",
 )}
 <script>
 (function(){

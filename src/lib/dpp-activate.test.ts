@@ -34,4 +34,130 @@ describe("activateDppMerchant", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.status).toBe(400);
   });
+
+  it("rejects a paid $299 session whose line item is another product", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      metadata: {},
+      line_items: {
+        data: [{ price: { id: "price_1UL0vVGqTruSqV8T5WYjrq6i" } }],
+      },
+    });
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_musa",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from: vi.fn() },
+    });
+    expect(retrieve).toHaveBeenCalledWith("cs_musa", {
+      expand: ["line_items"],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(400);
+      expect(result.error).toMatch(/Not a DPP workspace session/);
+    }
+  });
+
+  it("rejects a $0 session that is not a DPP offer", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 0,
+      metadata: {},
+      line_items: { data: [{}] },
+    });
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_zero",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from: vi.fn() },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(400);
+      expect(result.error).toMatch(/Not a DPP workspace session/);
+    }
+  });
+
+  it("returns and persists an importer_file on first paid DPP activation", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      metadata: { plan: "dpp_readiness", visit_id: "visit_1", source: "seo" },
+      customer_details: { email: "buyer@example.com" },
+      line_items: {
+        data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+      },
+    });
+
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    const from = vi.fn((table: string) => {
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: { id: "prof_1" }, error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === "funnel_events") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                order: () => ({
+                  limit: async () => ({ data: [], error: null }),
+                }),
+              }),
+            }),
+          }),
+          insert,
+        };
+      }
+      return { insert };
+    });
+
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const { DPP_IMPORTER_FILE_SCHEMA } = await import("./dpp-importer-file");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_dpp",
+        categories: "LMT e-bike",
+        markets: "DE",
+        labeling: "Wh on label",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.already_activated).toBe(false);
+    expect(result.importer_file.schema).toBe(DPP_IMPORTER_FILE_SCHEMA);
+    expect(result.importer_file.summary.present).toBe(3);
+    expect(result.importer_file.qr.status).toBe("not_issued");
+    expect(insert).toHaveBeenCalled();
+    const inserted = insert.mock.calls[0]?.[0];
+    expect(inserted?.metadata?.importer_file?.schema).toBe(
+      DPP_IMPORTER_FILE_SCHEMA
+    );
+    expect(inserted?.metadata?.importer_file?.product?.categories).toBe(
+      "LMT e-bike"
+    );
+  });
 });

@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - "workers/authichain-com/**"
+      - "src/lib/generation-seal.ts"
+      - "src/lib/plans.ts"
+      - "src/lib/checkout-gate.ts"
       - "content/microsites/**"
       - "scripts/sync-microsite-packs.mjs"
       - ".github/workflows/deploy-authichain-com.yml"
@@ -12,29 +15,61 @@ permissions:
   contents: read
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    timeout-minutes: 15
+    # Publish runner only: authichain-wsl. CI stays on authichain-ops (laptop).
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 30
+    env:
+      # WSL has no IPv6. Node 22 Happy Eyeballs races AAAA (ENETUNREACH) with
+      # Cloudflare anycast A records and aborts in ~1.6s (wrangler fetch failed
+      # on 40874574341). ipv4first alone still tries AAAA. This flag makes
+      # undici connect IPv4-only. Proven on runner node v22.23.4: default
+      # fetch fail 1596ms, this combo HTTP 400 (unauthenticated verify) 4415ms.
+      NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
     steps:
       - uses: actions/checkout@v7
+      # Self-hosted WSL already has pnpm (11.x). pnpm/action-setup@v6 with
+      # version 10.28.2 downloads from npm and ETIMEDOUT / signature-fails
+      # (runs 40865371006). GitHub-hosted still uses the pin.
       - uses: pnpm/action-setup@v6
+        if: runner.environment != 'self-hosted'
         with:
           version: "10.28.2"
           run_install: false
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          command -v pnpm
+          pnpm --version
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: "pnpm"
+          # Self-hosted runners already keep a local pnpm store. Saving it
+          # through actions/cache packs ~1 GB and the post-step fails the
+          # deploy after wrangler publish has already succeeded.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install node-gyp (native builds)
+        run: npm i -g node-gyp@11
       - name: Install
+        env:
+          # bufferutil/utf-8-validate are optional ws speedups; ws falls back to JS.
+          # Skip their native builds here instead of installing toolchains on the runner.
+          npm_config_build_from_source: "false"
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Embed microsite HTML
         run: node scripts/sync-microsite-packs.mjs
+      - name: Apply D1 migrations (authichain-db, email_optins)
+        working-directory: workers/authichain-com
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 migrations apply authichain-db --remote --config wrangler.toml
       - name: Publish authichain-com
         working-directory: workers/authichain-com
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler deploy --minify --config wrangler.toml
+        run: npx wrangler deploy --minify --keep-vars --config wrangler.toml
       - name: Bind STRIPE_SECRET_KEY from GitHub secrets
         working-directory: workers/authichain-com
         env:

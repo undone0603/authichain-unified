@@ -1,4 +1,22 @@
+<!-- repo-audit-integrate:canonical:start -->
 # AuthiChain Network Map
+
+Refreshed by `repo_audit_integrate`. This banner is the deploy authority for this file. The July 15, 2026 inventory below is historical.
+
+| Surface | Authority |
+|---|---|
+| Code | `undone0603/authichain-unified` |
+| Runtime | Cloudflare Workers. See `docs/ESTATE.md`, `docs/operations/CLOUDFLARE_FIRST_BASELINE.md`, and `config/cloudflare-estate.json`. |
+| Deploys | `deploy-workers.yml` (`workers/**`), `deploy-cloudflare.yml`, `deploy-edge-worker.yml`, `deploy-authichain-com.yml`, `deploy-verifier-web.yml`. `deploy-qron-ai-api.yml` is manual. |
+| Not a deploy | Vercel. `scripts/guard-vercel-deploy.mjs` fails a workflow that adds a Vercel deploy step. |
+| Data | Drizzle migrations into Supabase Postgres. D1 is not a second product schema. |
+| Workspace | `pnpm-workspace.yaml` includes `apps/*`, `packages/*`, `workers/*`, `worker`, and `mcp`. |
+| This agent | `python -m agentz.cli run repo_audit_integrate --mode dry-run` |
+
+Moving the repo to `AuthiChain2026/authichain-unified` is optional hygiene, not a launch gate. Worker retirement stays a dashboard decision after `node scripts/cloudflare/audit-estate.mjs`.
+<!-- repo-audit-integrate:canonical:end -->
+
+## Historical inventory (2026-07-15)
 
 _As of 2026-07-15. One repo = the whole network. Update when deploy targets change._
 _Consolidation spec: docs/superpowers/specs/2026-07-15-network-consolidation-design.md_

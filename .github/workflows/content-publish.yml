@@ -140,11 +140,15 @@ jobs:
           # platform using connections authorised once in that tool's UI.
           SOCIAL_WEBHOOK_URL: ${{ secrets.SOCIAL_WEBHOOK_URL }}
           SOCIAL_WEBHOOK_TOKEN: ${{ secrets.SOCIAL_WEBHOOK_TOKEN }}
+          # Free-text dispatch input. Keep it in the environment so a bundle
+          # path cannot be parsed as shell.
+          BUNDLE: ${{ inputs.bundle }}
+          DRY_RUN: ${{ steps.mode.outputs.dry_run }}
         run: |
-          ARGS=""
-          if [ "${{ steps.mode.outputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
-          if [ -n "${{ inputs.bundle }}" ]; then ARGS="$ARGS --bundle ${{ inputs.bundle }}"; fi
-          python3 scripts/publish-social-bundle.py $ARGS
+          ARGS=()
+          if [ "$DRY_RUN" = "true" ]; then ARGS+=(--dry-run); fi
+          if [ -n "$BUNDLE" ]; then ARGS+=(--bundle "$BUNDLE"); fi
+          python3 scripts/publish-social-bundle.py "${ARGS[@]}"
 
       - name: Record what was published
         if: steps.mode.outputs.dry_run != 'true'

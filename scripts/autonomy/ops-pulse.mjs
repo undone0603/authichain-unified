@@ -12,87 +12,86 @@
 // Env: GITHUB_TOKEN (issues:write, actions:read), GITHUB_REPOSITORY,
 //      PULSE_DRY_RUN=true to print instead of touching issues.
 
-import { appendFileSync } from "node:fs";
-import { loadManifest, flatten } from "./reconcile.mjs";
+import { appendFileSync, readFileSync } from "node:fs";
+import {
+  loadManifest,
+  flatten,
+  fetchRemoteWorkflows,
+  operatorHold,
+} from "./reconcile.mjs";
 import { checkFulfilment } from "./revenue-watch.mjs";
 
-export const PROBES = [
-  { name: "authichain.com", url: "https://authichain.com/", expect: [200] },
-  {
-    name: "authichain.com pricing",
-    url: "https://authichain.com/pricing",
-    expect: [200],
-  },
-  {
-    name: "authichain.com API health",
-    url: "https://authichain.com/api/health",
-    expect: [200],
-  },
-  {
-    name: "authichain.com real 404",
-    url: "https://authichain.com/__pulse_missing__",
-    expect: [404],
-  },
-  { name: "qron.space", url: "https://qron.space/", expect: [200] },
-  { name: "strainchain.io", url: "https://strainchain.io/", expect: [200] },
-  { name: "govchain.us", url: "https://govchain.us/", expect: [200] },
-  {
-    name: "govchain.us opportunities",
-    url: "https://govchain.us/opportunities",
-    expect: [200],
-  },
-];
+import { PROBES, runProbes } from "./probes.mjs";
+export { PROBES, runProbes };
 
 const MARKER = "<!-- ops-pulse-signature:";
 
-/** Probes each URL; a failure is retried once after retryDelayMs so a single blip never pages anyone. */
-export async function runProbes(
-  probes = PROBES,
-  { fetchImpl = fetch, timeoutMs = 15_000, retryDelayMs = 5_000 } = {}
-) {
-  const first = await probeAll(probes, { fetchImpl, timeoutMs });
-  const failed = first.filter(r => !r.ok);
-  if (!failed.length) return first;
-  await new Promise(r => setTimeout(r, retryDelayMs));
-  const retried = new Map(
-    (await probeAll(failed, { fetchImpl, timeoutMs })).map(r => [r.url, r])
-  );
-  return first.map(r => retried.get(r.url) ?? r);
-}
-
-async function probeAll(probes, { fetchImpl, timeoutMs }) {
-  return Promise.all(
-    probes.map(async p => {
-      const t0 = Date.now();
-      try {
-        const res = await fetchImpl(p.url, {
-          redirect: "manual",
-          signal: AbortSignal.timeout(timeoutMs),
-        });
-        const ok = p.expect.includes(res.status);
-        return { ...p, status: res.status, ms: Date.now() - t0, ok };
-      } catch (e) {
-        return {
-          ...p,
-          status: 0,
-          ms: Date.now() - t0,
-          ok: false,
-          error: String(e.message ?? e),
-        };
-      }
-    })
-  );
+/**
+ * Pure. True when a workflow's only trigger is `workflow_call`. Its jobs run
+ * inside the caller's run, so its own run list holds only stale standalone
+ * runs from before it became reusable, and the caller's run is the real signal.
+ */
+export function isCallOnly(yamlText) {
+  const block = /^on:\s*\n((?:[ \t]+.*\n?|\s*\n)*)/m.exec(yamlText)?.[1] ?? "";
+  const triggers = [...block.matchAll(/^ {2}([a-z_]+):/gm)].map(m => m[1]);
+  return triggers.length === 1 && triggers[0] === "workflow_call";
 }
 
 /**
  * Pure. manifestRows: flatten(manifest). remote: [{id,path,state}].
  * latestRuns: Map(file -> {conclusion, html_url, created_at}) for runs on the default branch.
+ * callOnly: Set of files that only run via workflow_call (no run history of their own).
  */
-export function evaluateWorkflows(manifestRows, remote, latestRuns) {
+/**
+ * Newest completed run whose head branch is the default branch.
+ *
+ * Do not ask the Actions API for `?branch=main`, and do not combine
+ * `?status=completed` with `per_page` greater than 1. On this repo both
+ * queries return a stale page: `branch=main` still pointed at August and
+ * September failures on 2026-10-05, and `status=completed&per_page=5`
+ * returned that same old page while `per_page=1` and the unfiltered list
+ * showed a later success on main. Filter the unfiltered page here.
+ */
+/**
+ * `runs` stays untyped on purpose. A PulseRun return makes the existing
+ * caller `picked.html_url` two new errors, and the ratchet is already at
+ * its baseline. Only `skip` is typed, so the test callback is not `any`.
+ *
+ * @param {any} runs
+ * @param {string} [branch]
+ * @param {(run: { id?: number }) => boolean} [skip]
+ */
+export function pickLatestCompletedRun(runs, branch = "main", skip) {
+  let best = null;
+  for (const run of runs ?? []) {
+    if (!run || run.head_branch !== branch || !run.conclusion) continue;
+    if (typeof skip === "function" && skip(run)) continue;
+    if (!best || String(run.created_at) > String(best.created_at)) best = run;
+  }
+  return best;
+}
+
+/** A run whose jobs were all cancelled before any step started. Not a product failure. */
+export function isQueuedCancellation(jobs) {
+  if (!Array.isArray(jobs) || jobs.length === 0) return false;
+  return jobs.every(job => {
+    const steps = job?.steps ?? [];
+    return job?.conclusion === "cancelled" && steps.length === 0;
+  });
+}
+
+export function evaluateWorkflows(
+  manifestRows,
+  remote,
+  latestRuns,
+  callOnly = new Set(),
+  hold = new Set()
+) {
   const byFile = new Map(remote.map(w => [w.path.split("/").pop(), w]));
   const problems = [];
   for (const r of manifestRows) {
     if (!r.managed || r.desired !== "on" || r.lane === "ship") continue;
+    if (hold.has(r.file)) continue;
     const w = byFile.get(r.file);
     if (w && w.state !== "active") {
       problems.push({
@@ -104,8 +103,10 @@ export function evaluateWorkflows(manifestRows, remote, latestRuns) {
       continue;
     }
     const run = latestRuns.get(r.file);
+    if (run?.queued_cancellation) continue;
     if (
       run &&
+      !callOnly.has(r.file) &&
       ["failure", "timed_out", "startup_failure"].includes(run.conclusion)
     ) {
       problems.push({
@@ -120,11 +121,58 @@ export function evaluateWorkflows(manifestRows, remote, latestRuns) {
   return problems;
 }
 
+/**
+ * Public-safe reason the fulfilment check could not run. The alert issue is in
+ * a public repo, so only the upstream and HTTP status survive, never a body.
+ */
+export function blindReason(error) {
+  const msg = String(error?.message ?? error ?? "");
+  const m = msg.match(/^(Stripe checkout sessions|Supabase stripe_events) -> (\d{3})/);
+  return m ? `${m[1]} answered HTTP ${m[2]}` : "the check failed before it could read Stripe and Supabase";
+}
+
+/**
+ * Read-only monitoring must fail closed. Never put exception messages (which
+ * could contain tokens or customer details) in a public ops-alert issue.
+ * This checks webhook receipt only, not entitlement or activation.
+ */
+export async function monitorFulfilment({
+  stripeKey,
+  supabaseUrl,
+  supabaseKey,
+  founderEmails = [],
+  check = checkFulfilment,
+} = {}) {
+  if (!stripeKey || !supabaseUrl || !supabaseKey)
+    return {
+      checked: 0,
+      problems: [],
+      monitoring: [{ name: "fulfilment", kind: "credentials_missing" }],
+    };
+  try {
+    const result = await check({
+      stripeKey,
+      supabaseUrl,
+      supabaseKey,
+      founderEmails,
+    });
+    return { checked: result.checked, problems: result.problems, monitoring: [] };
+  } catch {
+    return {
+      checked: 0,
+      problems: [],
+      monitoring: [{ name: "fulfilment", kind: "read_failed" }],
+    };
+  }
+}
+
 export function signature(report) {
   const keys = [
     ...report.probes.filter(p => !p.ok).map(p => `probe:${p.name}`),
     ...report.workflows.map(w => `wf:${w.file}:${w.kind}`),
     ...(report.revenue ?? []).map(r => `pay:${r.session}`),
+    ...(report.fulfilmentBlind ? ["watchdog:fulfilment"] : []),
+    ...(report.monitoring ?? []).map(m => `monitor:${m.name}:${m.kind}`),
   ].sort();
   return keys.join("|");
 }
@@ -147,12 +195,26 @@ export function renderReport(report) {
         `- \`${w.file}\` (${w.lane}): ${w.detail}${w.url ? ` - [run](${w.url})` : ""}`
       );
   }
+  if (report.monitoring?.length) {
+    lines.push("", "#### Fulfilment monitoring unavailable");
+    for (const m of report.monitoring)
+      lines.push(
+        `- ${m.name}: ${m.kind === "credentials_missing" ? "required read credentials are missing" : "Stripe/Supabase read failed"}. No conclusion about paid checkout delivery or activation is possible.`
+      );
+  }
   if (report.revenue?.length) {
     lines.push("", "#### Paid but not fulfilled");
     for (const r of report.revenue)
       lines.push(
         `- Checkout \`${r.session}\` paid ${r.paid_at}: ${r.reason}. Check the customer received what they bought, then replay the event from the Stripe dashboard.`
       );
+  }
+  if (report.fulfilmentBlind) {
+    lines.push(
+      "",
+      "#### Fulfilment watchdog cannot see",
+      `- ${report.fulfilmentBlind}. Until this is fixed nobody is checking that paying customers received what they bought.`
+    );
   }
   lines.push(
     "",
@@ -203,15 +265,38 @@ async function latestRunsFor(repo, token, files) {
     files.map(async f => {
       try {
         const d = await gh(
-          `/repos/${repo}/actions/workflows/${f}/runs?branch=main&status=completed&per_page=1`,
+          `/repos/${repo}/actions/workflows/${f}/runs?per_page=100`,
           { token }
         );
-        const r = d.workflow_runs?.[0];
+        const runs = d.workflow_runs ?? [];
+        const skipped = new Set();
+        for (const candidate of runs) {
+          if (!candidate?.id) continue;
+          if (
+            candidate.conclusion !== "failure" &&
+            candidate.conclusion !== "cancelled"
+          ) {
+            continue;
+          }
+          try {
+            const jobs = await gh(
+              `/repos/${repo}/actions/runs/${candidate.id}/jobs?per_page=100`,
+              { token }
+            );
+            if (isQueuedCancellation(jobs.jobs)) skipped.add(candidate.id);
+          } catch {
+            /* keep the run; a real failure must still page */
+          }
+        }
+        const r = pickLatestCompletedRun(runs, "main", run =>
+          skipped.has(run.id)
+        );
         if (r)
           map.set(f, {
             conclusion: r.conclusion,
             html_url: r.html_url,
             created_at: r.created_at,
+            queued_cancellation: false,
           });
       } catch {
         /* workflow not registered yet */
@@ -240,44 +325,46 @@ async function main() {
   };
 
   if (token && repo) {
-    const remote = (
-      await gh(`/repos/${repo}/actions/workflows?per_page=100`, { token })
-    ).workflows;
+    // Paginated: the repo registers ~100 workflows, so a single page would
+    // silently drop some from the "not active" check.
+    const remote = await fetchRemoteWorkflows({ repo, token });
     const files = rows
       .filter(r => r.managed && r.desired === "on" && r.lane !== "ship")
       .map(r => r.file);
+    const callOnly = new Set(
+      files.filter(f => {
+        try {
+          return isCallOnly(readFileSync(`.github/workflows/${f}`, "utf8"));
+        } catch {
+          return false;
+        }
+      })
+    );
     report.workflows = evaluateWorkflows(
       rows,
       remote,
-      await latestRunsFor(repo, token, files)
+      await latestRunsFor(repo, token, files),
+      callOnly,
+      operatorHold(manifest)
     );
   }
 
-  const stripeKey =
-    process.env.STRIPE_READ_KEY || process.env.STRIPE_SECRET_KEY;
-  if (
-    stripeKey &&
-    process.env.SUPABASE_URL &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  ) {
-    try {
-      const f = await checkFulfilment({
-        stripeKey,
-        supabaseUrl: process.env.SUPABASE_URL,
-        supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-        founderEmails: [
-          ...(manifest.founder_emails ?? []),
-          ...(process.env.FOUNDER_EMAILS ?? "").split(","),
-        ],
-      });
-      report.revenue = f.problems;
-      console.log(
-        `fulfilment: ${f.checked} paid checkouts checked, ${f.problems.length} unfulfilled`
-      );
-    } catch (e) {
-      console.log(`fulfilment check skipped: ${e.message}`);
-    }
-  }
+  const f = await monitorFulfilment({
+    stripeKey: process.env.STRIPE_READ_KEY || process.env.STRIPE_SECRET_KEY,
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    founderEmails: [
+      ...(manifest.founder_emails ?? []),
+      ...(process.env.FOUNDER_EMAILS ?? "").split(","),
+    ],
+  });
+  report.revenue = f.problems;
+  report.monitoring = f.monitoring;
+  console.log(
+    f.monitoring.length
+      ? `fulfilment: UNVERIFIED (${f.monitoring[0].kind})`
+      : `fulfilment: ${f.checked} chargeable paid checkouts checked, ${f.problems.length} missing webhook receipts`
+  );
 
   const sig = signature(report);
   out(

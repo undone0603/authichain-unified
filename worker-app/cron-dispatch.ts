@@ -46,11 +46,11 @@ export const CLEARED_JOBS: ClearedJob[] = [
   { name: "subscription-health-check", schedule: "0 6 * * *", rationale: "in-app expiry notices, marks past-due, resets quotas (internal)" },
   { name: "certificate-expiry-check", schedule: "0 7 * * *", rationale: "notifies cert owners of expiry (transactional)" },
   { name: "dunning-escalation", schedule: "0 8 * * *", rationale: "transactional payment-failed emails to affected customers" },
-  { name: "weekly-analytics-digest", schedule: "0 8 * * 1", rationale: "Monday internal stats report to the owner" },
+  { name: "weekly-analytics-digest", schedule: "0 9 * * 1", rationale: "Monday internal stats report to the owner, off the 08:00 dunning tick" },
   { name: "live-systems-check", schedule: "0 11 * * *", rationale: "read-only liveness ping of Stripe/HubSpot/Gmail/PostHog/GA4" },
   { name: "token-metrics", schedule: "0 12 * * *", rationale: "read-only on-chain $QRON supply/gas snapshot" },
   { name: "ecosystem-health", schedule: "0 13 * * *", rationale: "read-only external uptime check across product domains" },
-  { name: "fraud-detection-sweep", schedule: "0 */6 * * *", rationale: "inserts fraud_alerts flags only (defensive)" },
+  { name: "fraud-detection-sweep", schedule: "0 1,10,16,22 * * *", rationale: "inserts fraud_alerts flags only (defensive); off the maintenance hours" },
 ];
 
 /** The single trigger registered in wrangler.toml. */

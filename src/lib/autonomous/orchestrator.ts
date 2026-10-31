@@ -43,7 +43,7 @@ const rules: Array<{ circumstance: Circumstance; terms: string[]; offer: string;
   { circumstance: "textile", terms: ["textile", "fashion", "apparel", "garment", "clothing"], offer: "EU Textile DPP Readiness Audit", agents: ["research", "evidence", "fit", "revenue"], tools: ["rag", "web", "hubspot", "stripe"] },
   { circumstance: "authentication", terms: ["counterfeit", "counterfeiting", "authenticity", "authentication", "provenance"], offer: "AuthiChain Product Authentication Pilot", agents: ["research", "evidence", "fit", "revenue"], tools: ["web", "hubspot", "stripe"] },
   { circumstance: "government", terms: ["government", "municipal", "federal", "procurement", "grant", "sbir"], offer: "AuthiChain Government Traceability Pilot", agents: ["research", "evidence", "fit", "revenue"], tools: ["web", "hubspot"] },
-  { circumstance: "dpp", terms: ["dpp", "digital product passport", "espr", "product passport"], offer: "EU DPP Readiness Audit", agents: ["research", "evidence", "fit", "revenue"], tools: ["rag", "web", "hubspot", "stripe"] },
+  { circumstance: "dpp", terms: ["dpp", "digital product passport", "espr", "product passport"], offer: "EU DPP Workspace", agents: ["research", "evidence", "fit", "revenue"], tools: ["rag", "web", "hubspot", "stripe"] },
 ];
 
 function scoreMatch(text: string, terms: string[]): number {

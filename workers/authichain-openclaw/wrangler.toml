@@ -17,6 +17,9 @@ zone_name = "authichain.com"
 #                          trycloudflare). Secret-only: a [vars] entry with
 #                          this name makes `wrangler secret put` fail 10053.
 #   AGENTZ_API_KEY       — same value as AgentZ AGENT_SECRET
+#   CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET — Access service token
+#     for agentz.authichain.com. Sent only when both are set, so a missing
+#     bind does not attach an empty pair. Not a bypass of the bearer check.
 #   SLACK_SIGNING_SECRET  — if using the Slack channel webhook
 #
 # Run: npx wrangler secret put AGENTZ_API_URL --name authichain-openclaw

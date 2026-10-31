@@ -42,12 +42,11 @@ function useAnimCounter(target: number, suffix = "", prefix = "") {
 const stats = [
   { value: "Made in USA", label: "Sovereign Verification" },
   { value: "ITAR-Ready", label: "Compliance Grade" },
-  { value: "Ed25519", label: "Cryptographic Signing" },
   { value: "Zero Trust", label: "Architecture" },
 ];
 
 const features = [
-  { icon: Flag, title: "Made in USA Verification", desc: "Authenticate domestic manufacturers with blockchain-anchored provenance. Every component traced from foundry to final assembly." },
+  { icon: Flag, title: "Made in USA Verification", desc: "Authenticate domestic manufacturers with provenance. Every component traced from foundry to final assembly." },
   { icon: FileCheck2, title: "Document Authentication", desc: "Cryptographically sign government documents, permits, and certificates. Tamper-proof verification accessible to any authorized scanner." },
   { icon: Building2, title: "Manufacturer Registry", desc: "Sovereign registry of verified domestic manufacturers with real-time compliance status, facility audits, and supply chain mapping." },
   { icon: Lock, title: "ITAR Compliance", desc: "International Traffic in Arms Regulations compliance tracking with automated export control screening and audit trail generation." },
@@ -61,7 +60,7 @@ const features = [
 const stack = [
   { num: "01", title: "Entity Registration", desc: "Manufacturers and contractors register with verified credentials — CAGE codes, DUNS numbers, SAM.gov profiles — all cryptographically anchored." },
   { num: "02", title: "Compliance Verification", desc: "Automated screening against ITAR, EAR, BAA/TAA, and debarment lists. Continuous monitoring with instant alerts on status changes." },
-  { num: "03", title: "QRON Issuance", desc: "AuthiChain-verified QR codes generated for each certified entity and product. Embedded with Ed25519 signatures and compliance metadata." },
+  { num: "03", title: "QRON Issuance", desc: "AuthiChain-verified QR codes generated for each certified entity and product." },
   { num: "04", title: "Field Verification", desc: "Inspectors and contracting officers scan QRONs in the field to instantly verify provenance, certifications, and compliance posture." },
 ];
 
@@ -154,7 +153,7 @@ export default function GovChainHome() {
               <span className="gov-gradient animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(220 60% 55%), hsl(40 60% 55%), hsl(210 50% 45%), hsl(220 60% 55%))", backgroundSize: "200% 200%" }}>Made in USA.</span>
             </h1>
             <p className="hero-enter hero-enter-delay-2 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-              Blockchain-anchored verification for government procurement, defense manufacturing, and domestic origin authentication &mdash; built on zero-trust architecture with Ed25519 cryptographic signing.
+              Verification for government procurement, defense manufacturing, and domestic origin authentication.
             </p>
             <div className="hero-enter hero-enter-delay-3 flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="text-base px-8 h-12 bg-[hsl(220,60%,55%)] hover:bg-[hsl(220,60%,45%)] text-white gov-pulse" onClick={() => go("/supply-chain")}>

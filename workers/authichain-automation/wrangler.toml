@@ -2,6 +2,8 @@ name = "authichain-automation"
 main = "index.js"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
+# PM-322 containment (Oct 9 2026): keep the public workers.dev address off. Rollback: set true.
+workers_dev = false
 
 [vars]
 ENVIRONMENT = "production"

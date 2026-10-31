@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Shield, BookOpen, Eye, Compass, Scale, Check, Star, Zap, ChevronRight, ShoppingBag, Map } from "lucide-react";
+import { Loader2, Sparkles, Shield, BookOpen, Eye, Compass, Scale, Check, Zap, ChevronRight, ShoppingBag, Map } from "lucide-react";
 
 const ARCHETYPES = [
   { key: "guardian" as const, name: "Guardian", icon: Shield, color: "from-blue-500 to-blue-700", description: "Protects brand integrity and product authenticity", abilities: ["Verify", "Protect", "Alert"] },
@@ -335,10 +335,6 @@ export default function CharacterCreate() {
                     <Shield className="w-4 h-4 text-emerald-400" />
                     <span className="text-gray-300">Reputation: <span className="text-white font-mono">100</span></span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Star className="w-4 h-4 text-amber-400" />
-                    <span className="text-gray-300">QRON Rewards: <span className="text-white font-mono">0.50 per verification</span></span>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -369,8 +365,8 @@ export default function CharacterCreate() {
               Agent Deployed!
             </h2>
             <p className="text-gray-400">
-              Your protocol agent <span className="text-white font-semibold">{agentName}</span> is now active on the AuthiChain verification network. 
-              Start verifying products to earn QRON rewards.
+              Your protocol agent <span className="text-white font-semibold">{agentName}</span> is now active on the AuthiChain verification network.
+              Start verifying products.
             </p>
             <div className="flex gap-3 justify-center">
               <Button asChild className="bg-blue-600 hover:bg-blue-700">

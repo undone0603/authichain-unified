@@ -57,11 +57,6 @@ export default function EnterprisePage() {
                   desc: 'Real-time event streaming for ERP and supply chain management integrations.',
                   icon: Zap 
                 },
-                { 
-                  title: 'Cryptographic Sovereignty', 
-                  desc: 'Every asset signed with hardware-backed Ed25519 keys for non-repudiation.',
-                  icon: Shield 
-                }
               ].map(feat => (
                 <div key={feat.title} className="flex gap-6">
                   <div className="w-12 h-12 rounded-2xl bg-zinc-950 border border-zinc-900 flex items-center justify-center shrink-0 text-gold">

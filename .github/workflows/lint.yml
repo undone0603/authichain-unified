@@ -3,33 +3,103 @@ name: Lint
 on:
   pull_request:
     branches: [main]
+    # GB-26 fix 3: skip PRs that touch ONLY these paths. Kept narrow on
+    # purpose: docs/** is NOT ignored because product code renders and
+    # validates it (workers/authichain-com docs pages, identity validators,
+    # src/lib/authentic-economy.ts). Pushes to main are never filtered.
+    paths-ignore:
+      - "*.md"
+      - "**/CHANGELOG.md"
+      - "docs/archive/**"
   push:
     branches: [main]
 
+concurrency:
+  # PM ruling Oct 24: CI-only per-workflow group, cancel stale runs so a
+  # push to main cannot pile CI up ahead of a deploy on the single
+  # self-hosted runner. Never a deploy group name.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
+# Flip to 'false' once the runner is verified; the skip step warns visibly.
+env:
+  SKIP_HARDHAT_ON_SELF_HOSTED: "true"
+
+# Least privilege (self-hosted CI move). Jobs that need more set it per job.
+permissions:
+  contents: read
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
+    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
-
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        if: runner.environment != 'self-hosted'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
+          dest: ~/setup-pnpm
 
-      - uses: actions/setup-node@v7
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
+          if [ -x "$pin/pnpm" ]; then
+            echo "$pin" >> "$GITHUB_PATH"
+            export PATH="$pin:$PATH"
+          fi
+          command -v pnpm
+          actual="$(pnpm --version)"
+          if [ "$actual" != "10.28.2" ]; then
+            echo "ERROR: expected pinned pnpm 10.28.2 on self-hosted runner, got $actual" >&2
+            exit 1
+          fi
+          echo "Verified runner pnpm version: $actual"
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
-          cache: "pnpm"
+          # Self-hosted runners keep a persistent pnpm store. Uploading it
+          # through actions/cache packs ~1 GB and stalls the runner.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
+
+      # CFA-737: node --check one file at a time. `node --check a.mjs b.mjs`
+      # only parses the first argument, which is how a SyntaxError in
+      # ops-pulse.mjs reached main after #1865 / #1867.
+      - name: Syntax-check autonomy scripts
+        run: |
+          set -euo pipefail
+          for f in scripts/autonomy/*.mjs; do
+            node --check "$f"
+          done
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run lint and prettier
-        run: pnpm run lint:ci
+        run: pnpm run --dir "${GITHUB_WORKSPACE}" lint:ci
 
       - name: Check for structural cannot-fail patterns in workflows
         run: node scripts/check-workflow-cannot-fail.mjs
+
+      # PM-330: workers_dev must be an explicit false on authichain-automation
+      # and authichain-edge-router, and no push-to-main deploy workflow may set
+      # cancel-in-progress: true. Read-only, offline.
+      - name: Check deploy invariants (workers_dev off, no deploy cancels)
+        run: node scripts/ci/check-deploy-invariants.mjs
+
+      - name: Check every node:test file has a CI runner
+        run: node scripts/ci/check-node-test-runners.mjs
 
       - name: Check openclaw AGENT_SECRET bind skip ($0 Deploy Workers)
         run: pnpm exec vitest run scripts/__tests__/bind-openclaw-agentz-secrets.test.ts
@@ -43,5 +113,53 @@ jobs:
       - name: Check autonomy manifest, reconciler, breaker and pulse
         run: pnpm exec vitest run scripts/__tests__/autonomy.test.ts
 
+      # The root package's suites (src, server, worker-app, packages, scripts,
+      # client, workers) are outside `turbo test --filter=!.`, so no other job
+      # runs them. node:test files are excluded by vitest.config.ts and run on
+      # their workspace runners, or in the next step when they have none.
+      - name: Root Vitest suite
+        run: pnpm exec vitest run
+
+      # node:test files that no workspace `test` script runs. Named, not
+      # globbed, past scripts/ci: scripts/lib and worker-app also hold Vitest
+      # suites, which node --test cannot run.
+      - name: Check node:test suites with no workspace runner
+        run: >-
+          node --experimental-strip-types --test
+          scripts/autonomy/*.test.mjs
+          scripts/ci/*.test.mjs
+          protocol/qfs/envelope.test.mjs
+          scripts/lib/b2b-send-policy.test.ts
+          src/lib/generation-seal.test.ts
+          worker-app/cron-dispatch.test.ts
+          workers/authichain-verify-worker/src/protocol-verify.test.mjs
+          workers/authichain-verify-worker/src/published-record.test.mjs
+
+      # node:test suites outside scripts/autonomy and scripts/ci that no other
+      # job ran: the QFS envelope, the B2B send policy and the cron dispatcher.
+      - name: Check other node:test suites
+        run: pnpm exec tsx --test protocol/qfs/envelope.test.mjs scripts/lib/b2b-send-policy.test.ts worker-app/cron-dispatch.test.ts workers/authichain-verify-worker/src/agent-d1-concurrency.node-test.mjs
+
+      # Hardhat contract tests (test/AuthiChainLedger.test.ts). Hardhat fetches
+      # solc 0.8.19 on first run; no other job ran these.
+      - name: Contract tests (Hardhat)
+        if: env.SKIP_HARDHAT_ON_SELF_HOSTED != 'true'
+        run: pnpm test:contracts
+
+      - name: "Skipped on self-hosted: Hardhat contract tests"
+        if: env.SKIP_HARDHAT_ON_SELF_HOSTED == 'true'
+        run: echo "::warning title=Skipped on self-hosted::Hardhat contract tests (pnpm test:contracts) not run - solc 0.8.19 fetch/ARM64 binary unverified on the runner. Not a pass."
+
       - name: Check wrangler.toml Durable Object migrations
         run: node scripts/check-wrangler-durable-objects.mjs
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +

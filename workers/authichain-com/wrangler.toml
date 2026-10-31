@@ -9,6 +9,104 @@ workers_dev = false
 # Apex + www — the wildcard covers all paths including static assets.
 # The separate per-asset routes were redundant (the /* wildcard already
 # matched them) and only added deploy-time registration overhead.
+# More specific than authichain-edge-router's authichain.com/api/x402*.
+# That wildcard wins over authichain.com/*. Listing and growth are exact
+# routes because the edge router answered them {"error":"Not found"}.
+# These paths, including a trailing slash, are implemented here.
+# Exact /api/x402, /api/x402/health, /api/x402/catalog, and
+# /api/v1/agent-verify (plus trailing slash) live here so #1882's free tier
+# is reachable. llms.txt sends agents to GET /api/x402/health first. The edge
+# wildcard authichain.com/api/x402* is more specific than authichain.com/*
+# and the edge router has no free tier, so /api/x402/health used to omit
+# freeCalls. Catalog is here too, so its seal wording matches this worker.
+# authichain.govchain.us /api/x402 and /api/x402/health stay on the edge:
+# that host does not grant the free tier, and its health must not say it does.
+# Routes match path, not method, so GET and paid POST on the exact /api/x402
+# and /api/v1/agent-verify paths are served here.
+# settle and every other /api/x402/* path stay on the edge router, as do
+# /api/stripe/webhook and /api/checkout*.
+# Rollback of the original exact x402 routes:
+# npx wrangler rollback 1ef83048-3e1f-4065-83d2-b098e9fb15af --name authichain-com
+[[routes]]
+pattern = "authichain.com/api/x402"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/"
+zone_name = "authichain.com"
+
+# Query strings miss the exact routes above and were served by the edge
+# router's authichain.com/api/x402* wildcard as GET health 200. Keep the
+# wildcard here so GET/HEAD/POST /api/x402?query is the unpaid 402 quote.
+# health, catalog, listing, and growth stay on their more specific routes.
+[[routes]]
+pattern = "authichain.com/api/x402*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/v1/agent-verify"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/v1/agent-verify/"
+zone_name = "authichain.com"
+
+# Query-string GETs do not match the exact routes above. Edge used to own
+# agent-verify* and answered 200 health, so GET-first crawlers saw no paywall.
+# Keep this wildcard on the landing worker (GET/HEAD 402). Live CF route id
+# 936e5446f2f1456c84f11be9649d7fc0 was pointed here 2026-10-28.
+[[routes]]
+pattern = "authichain.com/api/v1/agent-verify*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/health"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/health/"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/catalog"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/catalog/"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/listing"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/growth"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/listing/"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/growth/"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/x402/listing"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/x402/growth"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/x402/listing/"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/x402/growth/"
+zone_name = "govchain.us"
+
 [[routes]]
 pattern = "authichain.com/*"
 zone_name = "authichain.com"
@@ -62,7 +160,15 @@ fallthrough = true
 binding = "APP_WORKER"
 service = "authichain-edge-router"
 
-# Secrets (set at deploy from GitHub): STRIPE_SECRET_KEY, optional STRIPE_PRICE_ID
+# API_WORKER: service binding to authichain-api for the public /api/v1 endpoints.
+[[services]]
+binding = "API_WORKER"
+service = "authichain-api"
+
+# Secrets (set at deploy from GitHub): STRIPE_SECRET_KEY, optional STRIPE_PRICE_ID.
+# DPP_SMOKE_SECRET (16+ chars) gates the $0 DPP-SMOKE-E2E session. Unset fails closed.
+# IP_HASH_SALT (optional): wrangler secret put IP_HASH_SALT --name authichain-com
+# Unset or empty fails closed: 503, no write.
 
 # VERIFY_APP: service binding to the Next app worker `authichain-app`
 # (wrangler.app.jsonc). Paid verify prefers the Supabase read below. This
@@ -78,3 +184,23 @@ service = "authichain-app"
 [vars]
 SUPABASE_URL = "https://nhdnkzhtadfkkluiulhs.supabase.co"
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oZG5remh0YWRma2tsdWl1bGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MzgyNTUsImV4cCI6MjA4OTUxNDI1NX0.akaWgxRilnjavzpsLqU149nBJqxDjbYOnRdAqrwz4J8"
+# Paid verify reads auth_seals here (SUPABASE_URL + key above, VERIFY_APP
+# fallback), so discovery reports paidVerify bound. Rollback: delete this line.
+X402_PAID_VERIFY_PATH = "seal_lookup"
+
+[browser]
+binding = "MYBROWSER"
+
+# x402 replay guard (CFA-343/351). Namespace created 2026-10-16 (PM-approved);
+# delete it if #1900 does not ship.
+[[kv_namespaces]]
+binding = "X402_REPLAY_KV"
+id = "ab391dc529884161bd84707d7627a9f0"
+
+# Optional email opt-in from the free checks (email_optins, migrations/0001 + 0002 country/unsub).
+# Existing AuthiChain-owned D1, $0. Rollback: delete this block.
+[[d1_databases]]
+binding = "DB"
+database_name = "authichain-db"
+database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
+migrations_dir = "migrations"

@@ -76,7 +76,7 @@ function getLandingContent(brandId: BrandId): LandingContent {
         {
           icon: "🔐",
           title: "Signed seals",
-          desc: "Cryptographically signed seals anchored on Polygon. Tamper-evident and publicly verifiable.",
+          desc: "Cryptographically signed seals. Tamper-evident and publicly verifiable.",
         },
         {
           icon: "📱",
@@ -86,7 +86,7 @@ function getLandingContent(brandId: BrandId): LandingContent {
         {
           icon: "📊",
           title: "EU DPP Readiness",
-          desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. Credited toward AuthiChain Basic on conversion.",
+          desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation.",
         },
         {
           icon: "🌍",
@@ -105,12 +105,14 @@ function getLandingContent(brandId: BrandId): LandingContent {
         },
       ],
       stats: [
-        { value: "Ed25519", label: "Signed seals" },
         { value: "$299", label: "EU DPP Readiness" },
         { value: "x402", label: "Agent micropayments" },
       ],
       closingLine: "Start EU DPP Readiness on the live checkout path.",
-      primaryCta: { label: "Start DPP checkout", href: "https://authichain.com/checkout/dpp_readiness" },
+      primaryCta: {
+        label: "Start DPP checkout",
+        href: "https://authichain.com/checkout/dpp_readiness",
+      },
       secondaryCta: { label: "View pricing", href: "/pricing" },
     },
     qron: {
@@ -179,7 +181,7 @@ function getLandingContent(brandId: BrandId): LandingContent {
         {
           icon: "✅",
           title: "Batch Testing",
-          desc: "Lab results, COA management, potency tracking. Immutable testing records.",
+          desc: "Lab results, COA management, potency tracking.",
         },
         {
           icon: "📱",
@@ -211,15 +213,11 @@ function getLandingContent(brandId: BrandId): LandingContent {
     },
     govchain: {
       eyebrow: "Government Blockchain",
-      headline: "Public Records on Blockchain. Transparent & Auditable.",
+      headline:
+        "GovChain: federal contracting tools for US small businesses, in development.",
       subhead:
         "Verifiable government data. Compliance reporting, procurement transparency, and public accountability with cryptographic proof.",
       features: [
-        {
-          icon: "🏛️",
-          title: "Public Records",
-          desc: "Government data on blockchain. Immutable, auditable, and publicly verifiable.",
-        },
         {
           icon: "📊",
           title: "Procurement Tracking",
@@ -229,11 +227,6 @@ function getLandingContent(brandId: BrandId): LandingContent {
           icon: "✅",
           title: "Compliance Exports",
           desc: "FCPA, FAR, SAM.gov integration. Automated reporting saves audit time.",
-        },
-        {
-          icon: "🔐",
-          title: "Digital Signatures",
-          desc: "Legally binding signatures on blockchain. Meets eSign Act requirements.",
         },
         {
           icon: "📈",
@@ -249,7 +242,6 @@ function getLandingContent(brandId: BrandId): LandingContent {
       stats: [
         { value: "100%", label: "Transparent" },
         { value: "Real-Time", label: "Reporting" },
-        { value: "Blockchain", label: "Immutable" },
       ],
       closingLine: "Make government data public. Build trust with blockchain.",
       primaryCta: { label: "Request access", href: "/onboard" },

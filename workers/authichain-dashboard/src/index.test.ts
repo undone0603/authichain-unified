@@ -3,6 +3,7 @@ import worker, {
   ago,
   esc,
   joinLoops,
+  runsOnBranch,
   maskEmail,
   renderPage,
   summarizeMoney,
@@ -83,6 +84,16 @@ describe("command center helpers", () => {
     expect(m.mrr).toBe(14900);
     expect(m.openCheckouts7d).toBe(2);
     expect(m.available).toBe(931);
+  });
+
+  it("keeps runs on the default branch", () => {
+    expect(
+      runsOnBranch([
+        { id: 1, head_branch: "main" },
+        { id: 2, head_branch: "feat" },
+        null,
+      ])
+    ).toEqual([{ id: 1, head_branch: "main" }]);
   });
 
   it("joins manifest, workflow state and latest run; skips ship and manual lanes", () => {

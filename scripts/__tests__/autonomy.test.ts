@@ -3,19 +3,29 @@ import {
   flatten,
   listWorkflowFiles,
   loadManifest,
+  operatorHold,
   planReconcile,
   validateManifest,
 } from "../autonomy/reconcile.mjs";
-import { evaluate } from "../autonomy/deliverability-breaker.mjs";
+import {
+  evaluate,
+  outreachSenders,
+} from "../autonomy/deliverability-breaker.mjs";
 import {
   MAX_WINDOW_DAYS,
   launchMode,
   validateLaunchMode,
 } from "../autonomy/launch-mode.mjs";
 import {
+  blindReason,
   decideIssueAction,
   evaluateWorkflows,
+  isCallOnly,
+  isQueuedCancellation,
+  pickLatestCompletedRun,
   runProbes,
+  monitorFulfilment,
+  renderReport,
   signature,
 } from "../autonomy/ops-pulse.mjs";
 
@@ -43,9 +53,9 @@ describe("autonomy manifest", () => {
     expect(validateManifest(loadManifest(), listWorkflowFiles())).toEqual([]);
   });
 
-  it("has cold outreach switched on (owner, 2026-09-23), a cap, and a strict breaker", () => {
+  it("has cold outreach switched off (containment, 2026-10-09), a cap, and a strict breaker", () => {
     const co = loadManifest().cold_outreach;
-    expect(co.enabled).toBe(true);
+    expect(co.enabled).toBe(false);
     expect(co.max_new_prospects_per_day).toBeLessThanOrEqual(10);
     expect(co.breaker.max_bounce_rate).toBeLessThanOrEqual(0.03);
     expect(co.breaker.max_complaints).toBe(0);
@@ -167,6 +177,35 @@ describe("launch mode", () => {
   it("the real manifest's launch window is within bounds", () => {
     expect(validateLaunchMode(loadManifest())).toEqual([]);
   });
+
+  it("holds the 2026-10-08 manual disables and still classifies every file", () => {
+    const manifest = loadManifest();
+    expect([...(manifest.operator_hold?.workflows ?? [])].sort()).toEqual([
+      "b2b-outreach.yml",
+      "content-publish.yml",
+      "gov-mint.yml",
+      "marketing-autonomous.yml",
+      "pipeline-tick.yml",
+    ]);
+    expect(validateManifest(manifest, listWorkflowFiles())).toEqual([]);
+  });
+
+  it("keeps the CFA-150 containment set off in the manifest, not only via operator_hold", () => {
+    const desired = new Map(
+      flatten(loadManifest()).map(r => [r.file, r.desired])
+    );
+    for (const f of [
+      "autonomy-reconcile.yml",
+      "content-routine-pr.yml",
+      "b2b-outreach.yml",
+      "content-publish.yml",
+      "gov-mint.yml",
+      "marketing-autonomous.yml",
+      "pipeline-tick.yml",
+    ]) {
+      expect([f, desired.get(f)]).toEqual([f, "off"]);
+    }
+  });
 });
 
 describe("planReconcile", () => {
@@ -191,6 +230,14 @@ describe("planReconcile", () => {
       { file: "b.yml", id: 3, lane: "growth", from: "active", to: "disable" },
     ]);
     expect(unknownRemote).toEqual(["ghost.yml"]);
+  });
+
+  it("does not re-enable a workflow on the operator hold", () => {
+    const manifest = { ...mini(), operator_hold: { workflows: ["a.yml"] } };
+    const held = remote.map(w =>
+      w.id === 3 ? { ...w, state: "disabled_manually" } : w
+    );
+    expect(planReconcile(manifest, held).changes).toEqual([]);
   });
 
   it("is a no-op when GitHub already matches", () => {
@@ -266,6 +313,35 @@ describe("deliverability breaker", () => {
     expect(v.stats.sent).toBe(12);
     expect(v.tripped).toBe(false);
   });
+
+  it("counts each Resend email id once when both keys return it", () => {
+    const rows = Array.from({ length: 10 }, (_, i) => ({
+      id: `em_${i}`,
+      created_at: new Date(now - 86_400_000).toISOString(),
+      last_event: i === 0 ? "bounced" : "delivered",
+      from: "hello@authichain.com",
+    }));
+    const v = evaluate([...rows, ...rows], cfg, { now });
+    expect(v.stats.sent).toBe(10);
+    expect(v.stats.bounces).toBe(1);
+  });
+
+  it("uses OUTREACH_SENDERS, else the per-segment outreach from-addresses", () => {
+    expect(
+      outreachSenders({
+        OUTREACH_SENDERS: " a@x.test , ",
+        OUTREACH_FROM_QRON: "q@x.test",
+      })
+    ).toEqual(["a@x.test"]);
+    expect(
+      outreachSenders({
+        OUTREACH_FROM_GOVCHAIN: "g@x.test",
+        OUTREACH_FROM_STRAINCHAIN: "",
+        OUTREACH_FROM_QRON: "q@x.test",
+      })
+    ).toEqual(["g@x.test", "q@x.test"]);
+    expect(outreachSenders({})).toEqual([]);
+  });
 });
 
 describe("ops pulse", () => {
@@ -289,6 +365,157 @@ describe("ops pulse", () => {
     expect(
       evaluateWorkflows(rows, disabled, new Map()).map(p => p.kind)
     ).toEqual(["disabled"]);
+    expect(
+      evaluateWorkflows(
+        rows,
+        disabled,
+        new Map(),
+        new Set(),
+        new Set(["a.yml"])
+      )
+    ).toEqual([]);
+    expect(operatorHold({ operator_hold: { workflows: ["a.yml"] } })).toEqual(
+      new Set(["a.yml"])
+    );
+  });
+
+  it("keeps the newest completed run on main when the branch query is stale", () => {
+    const picked = pickLatestCompletedRun([
+      {
+        head_branch: "feat",
+        conclusion: "failure",
+        created_at: "2026-10-05T00:00:00Z",
+        html_url: "pr",
+      },
+      {
+        head_branch: "main",
+        conclusion: "success",
+        created_at: "2026-10-04T15:59:22Z",
+        html_url: "new",
+      },
+      {
+        head_branch: "main",
+        conclusion: "failure",
+        created_at: "2026-09-01T13:20:33Z",
+        html_url: "old",
+      },
+    ]);
+    expect(picked.html_url).toBe("new");
+    expect(picked.conclusion).toBe("success");
+    expect(pickLatestCompletedRun([])).toBeNull();
+  });
+
+  it("does not page when the only jobs were cancelled before they started", () => {
+    const runs = new Map([
+      [
+        "a.yml",
+        {
+          conclusion: "failure",
+          html_url: "u",
+          created_at: "",
+          queued_cancellation: true,
+        },
+      ],
+    ]);
+    expect(evaluateWorkflows(rows, remote, runs)).toEqual([]);
+    expect(
+      isQueuedCancellation([
+        { conclusion: "cancelled", steps: [] },
+        { conclusion: "cancelled" },
+      ])
+    ).toBe(true);
+    expect(
+      isQueuedCancellation([{ conclusion: "failure", steps: [{ name: "x" }] }])
+    ).toBe(false);
+    expect(isQueuedCancellation([])).toBe(false);
+  });
+
+  it("skips a queued cancellation and keeps the older real run", () => {
+    const picked = pickLatestCompletedRun(
+      [
+        {
+          id: 2,
+          head_branch: "main",
+          conclusion: "failure",
+          created_at: "2026-10-06T00:00:00Z",
+          html_url: "cancelled",
+        },
+        {
+          id: 1,
+          head_branch: "main",
+          conclusion: "success",
+          created_at: "2026-10-05T00:00:00Z",
+          html_url: "ok",
+        },
+      ],
+      "main",
+      run => run.id === 2
+    );
+    expect(picked?.html_url).toBe("ok");
+  });
+
+  it("skips the stale run history of reusable (workflow_call-only) loops", () => {
+    const runs = new Map([
+      ["a.yml", { conclusion: "failure", html_url: "u", created_at: "" }],
+    ]);
+    expect(evaluateWorkflows(rows, remote, runs, new Set(["a.yml"]))).toEqual(
+      []
+    );
+    expect(
+      isCallOnly(
+        "name: x\non:\n  workflow_call:\n    inputs:\n      a:\n        type: string\njobs:\n  j: {}\n"
+      )
+    ).toBe(true);
+    expect(
+      isCallOnly("on:\n  workflow_dispatch:\n  workflow_call:\njobs: {}\n")
+    ).toBe(false);
+    expect(isCallOnly('on:\n  schedule:\n    - cron: "0 6 * * *"\n')).toBe(
+      false
+    );
+  });
+
+  it("alerts when fulfilment read credentials are absent instead of silently skipping", async () => {
+    const f = await monitorFulfilment({
+      stripeKey: "",
+      supabaseUrl: "https://example.test",
+      supabaseKey: "read-only-key",
+    });
+    expect(f).toEqual({
+      checked: 0,
+      problems: [],
+      monitoring: [{ name: "fulfilment", kind: "credentials_missing" }],
+    });
+    const report = { at: "t", probes: [], workflows: [], ...f };
+    expect(signature(report)).toBe("monitor:fulfilment:credentials_missing");
+    expect(decideIssueAction(null, report).action).toBe("create");
+    expect(renderReport(report)).toContain("required read credentials are missing");
+  });
+
+  it("redacts monitoring read failures and only clears alert after a successful read", async () => {
+    const config = {
+      stripeKey: "stripe-read-key",
+      supabaseUrl: "https://example.test",
+      supabaseKey: "supabase-read-key",
+    };
+    const failed = await monitorFulfilment({
+      ...config,
+      check: async () => {
+        throw new Error("secret-token customer@example.test");
+      },
+    });
+    const redReport = { at: "t", probes: [], workflows: [], ...failed };
+    expect(signature(redReport)).toBe("monitor:fulfilment:read_failed");
+    expect(renderReport(redReport)).toContain("Stripe/Supabase read failed");
+    expect(renderReport(redReport)).not.toContain("secret-token");
+    expect(renderReport(redReport)).not.toContain("customer@example.test");
+    const ok = await monitorFulfilment({
+      ...config,
+      check: async () => ({ checked: 0, problems: [] }),
+    });
+    expect(ok.monitoring).toEqual([]);
+    const greenReport = { at: "t", probes: [], workflows: [], ...ok };
+    expect(signature(greenReport)).toBe("");
+    expect(decideIssueAction({ number: 1, body: renderReport(redReport) }, greenReport).action).toBe("close");
   });
 
   const red = {
@@ -338,7 +565,7 @@ describe("ops pulse", () => {
 });
 
 describe("fulfilment watchdog", async () => {
-  const { findUnfulfilled } = await import("../autonomy/revenue-watch.mjs");
+  const { findUnfulfilled, checkFulfilment } = await import("../autonomy/revenue-watch.mjs");
   const now = Date.parse("2026-09-23T12:00:00Z");
   const s = (
     id: string,
@@ -348,6 +575,7 @@ describe("fulfilment watchdog", async () => {
     id,
     status: "complete",
     payment_status: "paid",
+    amount_total: 29900,
     created: Math.floor((now - minsAgo * 60_000) / 1000),
     customer_details: { email: `${id}@buyer.com` },
     ...extra,
@@ -361,6 +589,8 @@ describe("fulfilment watchdog", async () => {
       s("cs_fresh", 5),
       s("cs_founder", 60, { customer_details: { email: "Me@Founder.com" } }),
       s("cs_unpaid", 60, { payment_status: "unpaid" }),
+      s("cs_zero", 60, { amount_total: 0 }),
+      s("cs_no_payment_required", 60, { payment_status: "no_payment_required" }),
       s("cs_demo", 60, { metadata: { is_demo: "true" } }),
       s("cs_smoke", 60, {
         customer_details: { email: "smoke+dpp@authichain.com" },
@@ -397,6 +627,81 @@ describe("fulfilment watchdog", async () => {
     ]);
   });
 
+  it("excludes free completed checkouts without hiding unknown-amount payments", () => {
+    const out = findUnfulfilled(
+      [
+        s("cs_chargeable", 60, { amount_total: 2900 }),
+        s("cs_free", 60, { amount_total: 0 }),
+        s("cs_no_payment", 60, { payment_status: "no_payment_required" }),
+        s("cs_unknown", 60, { amount_total: null }),
+      ],
+      [],
+      { now }
+    );
+    expect(out.map((p: { session: string }) => p.session)).toEqual([
+      "cs_chargeable",
+      "cs_unknown",
+    ]);
+  });
+
+  it("paginates completed sessions before claiming healthy webhook delivery", async () => {
+    const first = Array.from({ length: 100 }, (_, i) =>
+      s(`cs_free_${i}`, 60, { amount_total: 0 })
+    );
+    const pages = [
+      { data: first, has_more: true },
+      { data: [s("cs_paid_second_page", 60)], has_more: false },
+    ];
+    const stripeUrls: string[] = [];
+    const result = await checkFulfilment({
+      stripeKey: "test-only",
+      supabaseUrl: "https://example.test",
+      supabaseKey: "test-only",
+      fetchImpl: async (url: string) => {
+        if (url.startsWith("https://api.stripe.com/")) {
+          stripeUrls.push(url);
+          return { ok: true, json: async () => pages.shift() };
+        }
+        if (url.includes("/rest/v1/stripe_events?"))
+          return { ok: true, json: async () => [] };
+        throw new Error("unexpected URL");
+      },
+    });
+    expect(stripeUrls).toHaveLength(2);
+    expect(stripeUrls[1]).toContain("starting_after=cs_free_99");
+    expect(result.checked).toBe(1);
+    expect(result.problems.map((p: { session: string }) => p.session)).toEqual([
+      "cs_paid_second_page",
+    ]);
+  });
+
+  it("fails closed when Stripe reports more results without a cursor", async () => {
+    await expect(
+      checkFulfilment({
+        stripeKey: "test-only",
+        supabaseUrl: "https://example.test",
+        supabaseKey: "test-only",
+        fetchImpl: async () => ({
+          ok: true,
+          json: async () => ({ data: [], has_more: true }),
+        }),
+      })
+    ).rejects.toThrow("missing page cursor");
+  });
+
+  it("fails closed when Stripe omits or corrupts the pagination flag", async () => {
+    for (const page of [{ data: [] }, { data: [], has_more: "false" }]) {
+      await expect(
+        checkFulfilment({
+          stripeKey: "test-only",
+          supabaseUrl: "https://example.test",
+          supabaseKey: "test-only",
+          fetchImpl: async () => ({ ok: true, json: async () => page }),
+        })
+      ).rejects.toThrow("invalid pagination flag");
+    }
+  });
+
   it("puts unfulfilled payments into the alert signature", () => {
     const report = {
       at: "t",
@@ -409,10 +714,39 @@ describe("fulfilment watchdog", async () => {
       "Paid but not fulfilled"
     );
   });
+
+  it("a watchdog that could not look is red, not green", () => {
+    const report = {
+      at: "t",
+      probes: [],
+      workflows: [],
+      revenue: [],
+      fulfilmentBlind: blindReason(
+        new Error("Stripe checkout sessions -> 401")
+      ),
+    };
+    expect(report.fulfilmentBlind).toBe(
+      "Stripe checkout sessions answered HTTP 401"
+    );
+    expect(signature(report)).toBe("watchdog:fulfilment");
+    const action = decideIssueAction(null, report);
+    expect(action.action).toBe("create");
+    expect(action.body).toContain("Fulfilment watchdog cannot see");
+  });
+
+  it("never copies an upstream error body into the public alert", () => {
+    expect(
+      blindReason(new Error("Supabase stripe_events -> 500 {\"hint\":\"secret\"}"))
+    ).toBe("Supabase stripe_events answered HTTP 500");
+    expect(blindReason(new Error("fetch failed: getaddrinfo api.stripe.com"))).toBe(
+      "the check failed before it could read Stripe and Supabase"
+    );
+  });
 });
 
 describe("approval queue", async () => {
-  const { decide, latchHeld } = await import("../autonomy/approvals.mjs");
+  const { decide, latchHeld, latchSearchQuery } =
+    await import("../autonomy/approvals.mjs");
   const issue = (labels: string[]) => ({
     labels: labels.map(name => ({ name })),
   });
@@ -447,6 +781,17 @@ describe("approval queue", async () => {
     expect(latchHeld(["approved"])).toBe(false);
     expect(latchHeld(["approved", "pending"])).toBe(true);
     expect(latchHeld(["denied"])).toBe(true);
+  });
+
+  it("still finds a decided latch after approval-needed is removed", () => {
+    const q = latchSearchQuery(
+      "undone0603/authichain-unified",
+      "cold-outreach-resume"
+    );
+    expect(q).toContain("is:issue");
+    expect(q).toContain("is:open");
+    expect(q).toContain('in:body "approval-key:cold-outreach-resume"');
+    expect(q).not.toContain("label:approval-needed");
   });
 });
 
@@ -712,6 +1057,14 @@ describe("owner digest scoreboard", async () => {
         visitors: 120,
         checkouts: 2,
         campaigns: { "battery-passport": { started: 1, paid: 0 } },
+        starterFunnel: {
+          views: 25,
+          unauthenticated: 4,
+          sessions: 2,
+          abandoned: 1,
+          purchases: 1,
+        },
+        checkoutWebhookFailures: 0,
         replies: 1,
         failing: [{ title: "AgentZ", url: "u" }],
       },
@@ -722,6 +1075,10 @@ describe("owner digest scoreboard", async () => {
     expect(full).toContain(
       "battery-passport page: 1 checkouts started, 0 paid"
     );
+    expect(full).toContain(
+      "QRON Starter funnel, last 7 days: 25 views, 4 unauthenticated attempts, 2 checkout sessions, 1 abandoned, 1 non-founder fulfilled purchase"
+    );
+    expect(full).toContain("Checkout webhook failures, last 7 days: 0");
     expect(full).toContain("Paid by customers: $49.00");
     expect(full).toContain("Replies received: 1");
     expect(full).toContain("Systems failing: 1");
@@ -729,6 +1086,8 @@ describe("owner digest scoreboard", async () => {
     expect(empty).toContain("Unique visitors: not connected");
     expect(empty).toContain("Paid by customers: not connected");
     expect(empty).toContain("battery-passport page: not connected");
+    expect(empty).toContain("QRON Starter funnel events: not connected");
+    expect(empty).toContain("Checkout webhook failures: not connected");
     expect(empty).toContain("Systems failing: not connected");
   });
 });
@@ -777,7 +1136,18 @@ describe("stripe webhook reconcile", async () => {
     const hooks = loadManifest().stripe_webhooks;
     expect(hooks[0]).toMatchObject({
       url: "https://authichain.com/api/stripe/webhook",
-      ensure_events: ["checkout.session.expired"],
+      ensure_events: [
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+        "checkout.session.expired",
+        "invoice.paid",
+        "invoice.payment_failed",
+        "invoice.voided",
+        "charge.refunded",
+        "customer.subscription.deleted",
+        "customer.subscription.updated",
+        "customer.subscription.trial_will_end",
+      ],
     });
   });
 });

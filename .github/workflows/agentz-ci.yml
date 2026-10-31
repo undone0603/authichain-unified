@@ -1,0 +1,61 @@
+name: AgentZ Autonomous CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# One check per PR revision. The old push + PR pair accumulated obsolete
+# jobs on the single ops runner and delayed the required quality gate.
+concurrency:
+  group: ci-agentz-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-heal:
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+
+      - name: Compile AgentZ Python sources
+        run: python3 -m compileall -q agentz
+
+      - name: Install AgentZ Python deps
+        run: |
+          if [ "${{ runner.environment }}" = "self-hosted" ]; then
+            VENV="/home/zac/.cache/agentz-venv-${{ runner.name }}"
+          else
+            VENV="${GITHUB_WORKSPACE}/.venv-agentz"
+          fi
+          if [ ! -x "$VENV/bin/python" ]; then
+            python3 -m venv "$VENV"
+          fi
+          "$VENV/bin/pip" install -r requirements-agentz.txt
+          echo "AGENTZ_VENV=$VENV" >> "$GITHUB_ENV"
+
+      - name: Run AgentZ control-plane tests
+        run: PYTHONPATH="${GITHUB_WORKSPACE}" "$AGENTZ_VENV/bin/python" -m unittest discover -s agentz/tests -p 'test_*.py'
+
+      - name: Confirm the web-client stub is not sold as an ABI
+        run: |
+          # apps/web-client.ts is an unused stub. Nothing imports AuthTokenABI.
+          # Failing on the word "Placeholder" only triggered agentz/healing/auto-fix.js,
+          # which then died on a missing @modelcontextprotocol/sdk install and, when
+          # it ran, wrote { status: "secure" } and opened a pull request. That object
+          # is not an ABI. Do not treat this file as a contract.
+          test -f apps/web-client.ts
+          if grep -q 'status: "secure"' apps/web-client.ts; then
+            echo "web-client.ts must not claim a secure ABI that is not wired"
+            exit 1
+          fi
+          echo "web-client.ts is a stub. No contract ABI is wired."

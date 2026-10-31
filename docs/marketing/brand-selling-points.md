@@ -1,3 +1,5 @@
+RETIRED 2026-10-02 - do not use for outbound, pages, or prompts
+
 # Brand Selling Points & Use Cases — Master Reference
 
 Consolidated from a year of repo docs (TECHNICAL_COMPETITIVE_SUPERIORITY, REVENUE_STRATEGY,
@@ -68,12 +70,9 @@ lab certs anchored to Bitcoin Ordinals.
   the document is unchanged, the provenance becomes immutable.
 - **Verification = a 2-second QR scan** — no login, no database lookup, no phone call to the agency;
   works **offline** via hash validation.
-- Decentralized/tamper-evident — no central authority needed (ideal for SBIR/SVIP proposals).
 
 **Use cases / pipeline**
 - Federal agencies lose ~$2.3B/year to document fraud → direct value prop.
-- Eligible: DHS SVIP Focus Area 4 (Digital Identity), DoD SBIR Topic N26-A001.
-- Go-to-market: propose → pilot → statewide contract; active conversations w/ 3 Michigan agencies.
 
 ---
 
@@ -95,5 +94,5 @@ lab certs anchored to Bitcoin Ordinals.
 
 ## Cross-sell map
 - **Cannabis brand** → StrainChain (provenance) + QRON (consumer-scannable art) + AuthiChain (authentication stack).
-- **Gov/defense** → GovChain (docs) + AuthiChain (CAGE/UEI, SBIR/SVIP).
+- **Gov/defense** → GovChain (docs) + AuthiChain (CAGE/UEI).
 - **Luxury/pharma/electronics** → AuthiChain core + QRON engagement layer.

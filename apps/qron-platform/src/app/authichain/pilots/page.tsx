@@ -45,7 +45,7 @@ export default function AuthichainPilots() {
                         <span className="px-2 py-1 rounded bg-green-500/10 text-green-400 text-[10px] font-black uppercase tracking-widest">Active</span>
                     </div>
                     <p className="text-zinc-500 text-sm leading-relaxed font-medium">
-                        Eliminating 14-day physical battery quarantine delays using Edge Cryptography. High-voltage battery packs are verified at the source using Ed25519 signatures, enabling frictionless cross-border transfer.
+                        Eliminating 14-day physical battery quarantine delays using Edge Cryptography.
                     </p>
                 </div>
             </div>

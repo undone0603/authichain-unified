@@ -1,0 +1,20 @@
+name: Repo audit integrate
+
+# Manual audit only. dry-run writes nothing. Do not schedule this.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Audit the checkout
+        run: python -m agentz.workflows.runner --handler repo_audit_integrate --mode dry-run

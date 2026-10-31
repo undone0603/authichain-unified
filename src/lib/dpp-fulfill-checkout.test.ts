@@ -3,7 +3,9 @@ import { DPP_OFFER_KEY } from "./plans";
 import { DPP_PRICE_ID } from "./dpp-loop";
 
 vi.mock("./email", () => ({
-  sendEmail: vi.fn().mockResolvedValue(undefined),
+  sendEmail: vi
+    .fn()
+    .mockResolvedValue({ ok: true, provider: "resend", status: 200 }),
 }));
 vi.mock("./billing-emails", () => ({
   renderBillingEmail: vi.fn().mockReturnValue({
@@ -15,17 +17,65 @@ vi.mock("./billing-emails", () => ({
 }));
 
 const { sendEmail } = await import("./email");
-const { fulfillDppPaidSession } = await import("./dpp-fulfill-checkout");
+const { fulfillDppPaidSession, redactForLog } =
+  await import("./dpp-fulfill-checkout");
+const { stageOf } = await import("./dpp-loop");
 
 function fakeSupabase(opts?: {
   profileId?: string | null;
   existingProfile?: boolean;
   insertError?: { message: string } | null;
+  updateError?: { message: string } | null;
 }) {
   const rows: Array<Record<string, unknown>> = [];
+  const profileUpdates: Array<Record<string, unknown>> = [];
   const profileId = opts?.profileId === undefined ? "prof_1" : opts.profileId;
   const existingProfile = opts?.existingProfile ?? profileId != null;
+  const profile: { id: string; last_grant_session_id?: string } | null =
+    existingProfile && profileId ? { id: profileId } : null;
+  const continuity = new Map<string, Record<string, unknown>[]>();
   const from = (table: string) => {
+    if (
+      table === "founder_exit_actions" ||
+      table === "founder_exit_side_effects"
+    ) {
+      const bucket = continuity.get(table) ?? [];
+      continuity.set(table, bucket);
+      const filters: Array<[string, unknown]> = [];
+      const builder = {
+        select: () => builder,
+        eq: (col: string, val: unknown) => {
+          filters.push([col, val]);
+          return builder;
+        },
+        maybeSingle: async () => {
+          const found =
+            bucket.find(row =>
+              filters.every(([col, val]) => row[col] === val)
+            ) ?? null;
+          return { data: found, error: null };
+        },
+        insert: async (row: Record<string, unknown>) => {
+          if (
+            bucket.some(
+              existing => existing.idempotency_key === row.idempotency_key
+            )
+          ) {
+            return { error: { code: "23505" } };
+          }
+          bucket.push({ ...row });
+          return { error: null };
+        },
+        update: (patch: Record<string, unknown>) => ({
+          eq: async (col: string, val: unknown) => {
+            const found = bucket.find(row => row[col] === val);
+            if (found) Object.assign(found, patch);
+            return { error: null };
+          },
+        }),
+      };
+      return builder;
+    }
     const filters: Array<[string, unknown]> = [];
     const builder: Record<string, unknown> = {
       insert: (row: Record<string, unknown>) => {
@@ -45,7 +95,36 @@ function fakeSupabase(opts?: {
         }
         return Promise.resolve({ error: null });
       },
-      update: () => builder,
+      update: (patch: Record<string, unknown>) => {
+        const result = opts?.updateError
+          ? { error: opts.updateError }
+          : { error: null };
+        if (table === "profiles" && profile && !opts?.updateError) {
+          Object.assign(profile, patch);
+          profileUpdates.push(patch);
+        }
+        // provisioning.ts writes the entitlement as a compare-and-set update
+        // (ef4d083e, CFA-346): update().eq("id").is()/eq()...select("id").
+        // The chain must stay awaitable at every step, and the conditional
+        // form must report one matched row, or provisioning treats it as a
+        // concurrent-update conflict.
+        const settled = opts?.updateError
+          ? { ...result, data: null }
+          : { ...result, data: [{ id: profileId }] };
+        const chain: {
+          eq: () => typeof chain;
+          is: () => typeof chain;
+          select: () => typeof chain;
+          then: Promise<typeof settled>["then"];
+        } = {
+          eq: () => chain,
+          is: () => chain,
+          select: () => chain,
+          then: (onFulfilled, onRejected) =>
+            Promise.resolve(settled).then(onFulfilled, onRejected),
+        };
+        return chain;
+      },
       select: () => builder,
       eq: (col: string, val: unknown) => {
         filters.push([col, val]);
@@ -54,7 +133,7 @@ function fakeSupabase(opts?: {
       maybeSingle: async () => {
         if (table === "profiles") {
           return {
-            data: existingProfile && profileId ? { id: profileId } : null,
+            data: profile,
             error: null,
           };
         }
@@ -67,7 +146,7 @@ function fakeSupabase(opts?: {
     };
     return builder;
   };
-  return { supabase: { from }, rows };
+  return { supabase: { from }, rows, profileUpdates, continuity };
 }
 
 const paidSession = {
@@ -88,13 +167,100 @@ describe("fulfillDppPaidSession", () => {
     vi.mocked(sendEmail).mockClear();
   });
 
+  it("records a failed status and logs no address when the provider rejects the send", async () => {
+    vi.mocked(sendEmail).mockResolvedValueOnce({
+      ok: false,
+      provider: "resend",
+      status: 422,
+      error: "Invalid `to` field: buyer@example.com",
+    } as never);
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { supabase, rows } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+    const logged = errSpy.mock.calls
+      .map(c => c.map(String).join(" "))
+      .join("\n");
+    errSpy.mockRestore();
+
+    expect(result).toEqual({
+      handled: true,
+      profileId: "prof_1",
+      activationEmail: "failed",
+    });
+    expect(logged).toContain("[dpp-fulfill] activation email failed");
+    expect(logged).toContain("session=cs_live_smoke_check");
+    expect(logged).toContain("status=422");
+    expect(logged).not.toContain("buyer@example.com");
+    expect(logged).not.toMatch(/[^\s@]+@[^\s@]+\.[a-z]{2,}/i);
+
+    const failed = rows.filter(
+      r => r.event_type === "dpp_activation_email:failed"
+    );
+    expect(failed).toHaveLength(1);
+    expect(failed[0]).toMatchObject({
+      prospect_id: "smoke_check_1",
+      stage: "complete_checkout",
+    });
+    expect(failed[0].metadata).toMatchObject({
+      activation_email_status: "failed",
+      stripe_session_id: "cs_live_smoke_check",
+      profile_id: "prof_1",
+      provider: "resend",
+      http_status: 422,
+    });
+    expect(JSON.stringify(failed[0])).not.toContain("buyer@example.com");
+    // Not a loop event: loop reconstruction and stall reports are unchanged.
+    expect(stageOf(failed[0] as never)).toBeNull();
+  });
+
+  it("records a failed status when the send throws instead of swallowing it", async () => {
+    vi.mocked(sendEmail).mockRejectedValueOnce(
+      new Error("connect ETIMEDOUT for buyer@example.com")
+    );
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { supabase, rows } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+    const logged = errSpy.mock.calls
+      .map(c => c.map(String).join(" "))
+      .join("\n");
+    errSpy.mockRestore();
+
+    expect(result.activationEmail).toBe("failed");
+    expect(logged).toContain("ETIMEDOUT");
+    expect(logged).not.toContain("buyer@example.com");
+    expect(
+      rows.filter(r => r.event_type === "dpp_activation_email:failed")
+    ).toHaveLength(1);
+  });
+
+  it("writes no failure row when the send succeeds", async () => {
+    const { supabase, rows } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+    expect(result.activationEmail).toBe("sent");
+    expect(rows.some(r => r.event_type === "dpp_activation_email:failed")).toBe(
+      false
+    );
+  });
+
+  it("redactForLog strips addresses and caps length", () => {
+    expect(redactForLog("bad to: a.b+c@sub.example.co.uk, retry")).toBe(
+      "bad to: [redacted], retry"
+    );
+    expect(redactForLog(undefined)).toBe("unknown");
+    expect(redactForLog("x".repeat(500))).toHaveLength(200);
+  });
+
   it("no-ops when the session is not a DPP offer", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, {
       id: "cs_other",
       metadata: { plan: "starter" },
     });
-    expect(result).toEqual({ handled: false, profileId: null });
+    expect(result).toEqual({
+      handled: false,
+      profileId: null,
+      activationEmail: "skipped",
+    });
     expect(rows).toHaveLength(0);
   });
 
@@ -154,7 +320,11 @@ describe("fulfillDppPaidSession", () => {
   it("writes payment_succeeded before provision on a $0 promo session", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);
-    expect(result).toEqual({ handled: true, profileId: "prof_1" });
+    expect(result).toEqual({
+      handled: true,
+      profileId: "prof_1",
+      activationEmail: "sent",
+    });
     expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({
       prospect_id: "smoke_check_1",
@@ -166,15 +336,72 @@ describe("fulfillDppPaidSession", () => {
     });
   });
 
-  it("writes provisioned with skip_reason when there is no buyer identity", async () => {
+  it("throws for a real paid session with no buyer identity and does not record provisioned", async () => {
+    const { supabase, rows } = fakeSupabase({ profileId: null });
+    await expect(
+      fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        customer_details: null,
+        customer_email: null,
+        metadata: { ...paidSession.metadata, user_id: undefined },
+      })
+    ).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+      message: expect.stringMatching(/^DPP provision failed: no_identity/),
+    });
+    expect(rows.map(r => r.event_type)).toEqual(["dpp_loop:payment_succeeded"]);
+  });
+
+  it("emits fulfillment.started then fulfillment.failed, never entitlement.granted, when nothing was granted", async () => {
+    const { supabase } = fakeSupabase({ profileId: null });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      await fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        customer_details: null,
+        customer_email: null,
+        metadata: { ...paidSession.metadata, user_id: undefined },
+      }).catch(() => undefined);
+      const events = log.mock.calls
+        .map(c => String(c[0]))
+        .filter(l => l.includes("authichain.trust-event/1"))
+        .map(l => JSON.parse(l).event);
+      expect(events).toEqual(["fulfillment.started", "fulfillment.failed"]);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("emits entitlement.granted and fulfillment.completed for a granted session, with no buyer address", async () => {
+    const { supabase } = fakeSupabase();
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      await fulfillDppPaidSession(supabase, paidSession);
+      const lines = log.mock.calls.map(c => String(c[0])).filter(l => l.includes("authichain.trust-event/1"));
+      expect(lines.map(l => JSON.parse(l).event)).toEqual([
+        "fulfillment.started",
+        "entitlement.granted",
+        "fulfillment.completed",
+      ]);
+      expect(lines.join(String.fromCharCode(10))).not.toContain("buyer@example.com");
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("a demo session with no buyer identity still records provisioned with skip_reason", async () => {
     const { supabase, rows } = fakeSupabase({ profileId: null });
     const result = await fulfillDppPaidSession(supabase, {
       ...paidSession,
       customer_details: null,
       customer_email: null,
-      metadata: { ...paidSession.metadata, user_id: undefined },
+      metadata: { ...paidSession.metadata, user_id: undefined, is_demo: "true" },
     });
-    expect(result).toEqual({ handled: true, profileId: null });
+    expect(result).toEqual({
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+    });
     expect(rows.map(r => r.event_type)).toEqual([
       "dpp_loop:payment_succeeded",
       "dpp_loop:provisioned",
@@ -183,6 +410,19 @@ describe("fulfillDppPaidSession", () => {
       loop_stage: "provisioned",
       skip_reason: "no_identity",
     });
+  });
+
+  it("throws when the entitlement update fails and does not record provisioned", async () => {
+    const { supabase, rows } = fakeSupabase({
+      updateError: {
+        message:
+          "Could not find the 'subscribed_at' column of 'profiles' in the schema cache",
+      },
+    });
+    await expect(fulfillDppPaidSession(supabase, paidSession)).rejects.toThrow(
+      /subscribed_at/
+    );
+    expect(rows.map(r => r.event_type)).toEqual(["dpp_loop:payment_succeeded"]);
   });
 
   it("throws on guest profile insert failure so Stripe retries; does not write provisioned", async () => {
@@ -230,7 +470,11 @@ describe("fulfillDppPaidSession", () => {
         promo: "DPP-SMOKE-E2E",
       },
     });
-    expect(result).toEqual({ handled: true, profileId: "prof_guest" });
+    expect(result).toEqual({
+      handled: true,
+      profileId: "prof_guest",
+      activationEmail: "skipped",
+    });
     expect(rows.map(r => r.event_type)).toEqual([
       "dpp_loop:payment_succeeded",
       "dpp_loop:provisioned",
@@ -244,7 +488,7 @@ describe("fulfillDppPaidSession", () => {
   });
 
   it("does not double-count payment or provision on webhook replay", async () => {
-    const { supabase, rows } = fakeSupabase();
+    const { supabase, rows, profileUpdates, continuity } = fakeSupabase();
     await fulfillDppPaidSession(supabase, paidSession);
     await fulfillDppPaidSession(supabase, paidSession);
     expect(
@@ -253,5 +497,18 @@ describe("fulfillDppPaidSession", () => {
     expect(
       rows.filter(r => r.event_type === "dpp_loop:provisioned")
     ).toHaveLength(1);
+    expect(
+      profileUpdates.filter(patch => patch.generations_used === 0)
+    ).toHaveLength(1);
+    expect(profileUpdates[0]).toMatchObject({
+      generations_limit: 50,
+      generations_used: 0,
+      last_grant_session_id: paidSession.id,
+    });
+    expect(sendEmail).toHaveBeenCalledOnce();
+    const actions = continuity.get("founder_exit_actions") ?? [];
+    expect(actions).toHaveLength(1);
+    expect(actions[0]?.state).toBe("succeeded");
+    expect(continuity.get("founder_exit_side_effects")).toHaveLength(1);
   });
 });

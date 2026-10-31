@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import { listSeoPages, listSeoSlugs, getSeoPageBySlug } from "./seo-pages";
+import { planById } from "./plans";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null
@@ -58,23 +61,20 @@ describe("seo-pages loader", () => {
     );
   });
 
-  it("cannabis CoA hub offers Farm $149 as well as Passport $49", () => {
+  it("cannabis CoA hub offers Passport and not Farm checkout", () => {
     const page = getSeoPageBySlug("cannabis-coa-verification-blockchain");
     expect(page).not.toBeNull();
     expect(page?.bodyHtml).toContain(
       'action="https://authichain.com/checkout/strainchain_passport"'
     );
-    expect(page?.bodyHtml).toContain(
-      'action="https://authichain.com/checkout/strainchain_farm"'
-    );
-    expect(page?.bodyHtml).toContain(
+    expect(page?.bodyHtml).not.toContain(
       "https://authichain.com/checkout/strainchain_farm"
     );
   });
 });
 
 const GENERATED_HOW_IT_WORKS =
-  "Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence";
+  "Issue a unique identifier per unit and link it to a signed record";
 
 // Mirrors scripts/gen-seo-pages.cjs PROTECTED_SEED_SLUGS — hand-authored pages
 // that must not be rewritten when the generator runs.
@@ -107,7 +107,7 @@ const PROTECTED_SEED_SLUGS = new Set([
 ]);
 
 const PROTECTED_SEED_MARKERS: Record<string, string> = {
-  "blockchain-product-authentication": "Built for every vertical",
+  "blockchain-product-authentication": "the manufacturer holds the keys, not us",
   "cannabis-blockchain-provenance": "What you get",
   "what-is-a-digital-product-passport": "What a DPP contains",
 };
@@ -127,7 +127,25 @@ describe("generated SEO money-path CTAs", () => {
       const faq = p.bodyHtml.indexOf("<h2>FAQ</h2>");
       expect(how).toBeGreaterThan(-1);
       expect(cta).toBeGreaterThan(how);
-      expect(faq).toBeGreaterThan(cta);
+      // A page with no FAQs (e.g. the noindex QFS explainer) omits the section.
+      if (faq !== -1) expect(faq).toBeGreaterThan(cta);
+    }
+  });
+
+  it("does not sell the $299 checkout as a written assessment or a Basic credit", () => {
+    const banned = [
+      "sample $299 battery assessment",
+      "credited toward AuthiChain Basic",
+      "written readiness assessment",
+      "written EU DPP readiness assessment",
+      "written plan for your product line",
+      "Want to see the deliverable first?",
+    ];
+    for (const page of listSeoPages()) {
+      const blob = `${page.bodyHtml}\n${JSON.stringify(page.jsonLd)}`;
+      for (const phrase of banned) {
+        expect(blob, `${page.slug} ${phrase}`).not.toContain(phrase);
+      }
     }
   });
 
@@ -268,15 +286,117 @@ describe("generated SEO money-path CTAs", () => {
     expect(qron?.bodyHtml).not.toContain("/api/checkout/");
   });
 
+  it("no page advertises a price or chain that is not real", () => {
+    // $49/mo was never an AuthiChain SKU and nothing anchors to Bitcoin L1.
+    // Workers serve pages.json verbatim, so this guards the data itself.
+    for (const p of listSeoPages()) {
+      const blob = JSON.stringify(p);
+      expect(blob, p.slug).not.toMatch(/\$49\s*\/\s*mo/i);
+      expect(blob, p.slug).not.toContain("Bitcoin L1");
+    }
+  });
+
+  it("every stated DPP Readiness price matches src/lib/plans.ts", () => {
+    const price = planById("dpp_readiness")?.price;
+    expect(price).toBeGreaterThan(0);
+    for (const p of listSeoPages()) {
+      for (const m of p.bodyHtml.matchAll(
+        /EU DPP Readiness is \$(\d+) one-time/g
+      )) {
+        expect(Number(m[1]), p.slug).toBe(price);
+      }
+    }
+  });
+
+  it("RES-12: no AuthiChain or GovChain page claims Polygon anchoring or offline operation", () => {
+    for (const p of listSeoPages()) {
+      const text = JSON.stringify(p);
+      if (p.brand === "AuthiChain") {
+        expect(text, p.slug).not.toMatch(
+          /anchored (on|to) Polygon|anchors (certificates|unit-level verification) on Polygon|Polygon anchoring/i
+        );
+      }
+      if (p.brand === "GovChain") {
+        expect(text, p.slug).not.toMatch(
+          /works? offline|offline-capable|without connectivity|low-connectivity/i
+        );
+      }
+    }
+  });
+
+  it("RES-13: no page claims Polygon or blockchain anchoring in the present tense", () => {
+    for (const p of listSeoPages()) {
+      const text = JSON.stringify(p);
+      expect(text, p.slug).not.toMatch(
+        /anchored (on|to) Polygon|Polygon-anchored|Polygon anchoring|blockchain-anchored|hashes and anchors/i
+      );
+      expect(text, p.slug).not.toMatch(/offline-verification problem GovChain/i);
+    }
+  });
+
+  it("CFA-155: no SEO page claims a contract live or deployed on Polygon, or links 0x4da4", () => {
+    const banned = /(live|deployed) on Polygon|0x4da4/i;
+    for (const p of listSeoPages()) {
+      expect(JSON.stringify(p), p.slug).not.toMatch(banned);
+    }
+    for (const slug of [
+      "blockchain-product-authentication",
+      "counterfeit-detection-with-ai",
+      "blockchain-qr-code-for-luxury",
+      "vechain-alternative-without-tokens-or-gas-fees",
+    ]) {
+      const page = getSeoPageBySlug(slug);
+      expect(page, slug).toBeTruthy();
+      expect(JSON.stringify(page), slug).not.toMatch(banned);
+    }
+  });
+
+  it("CFA-155: the generator data files do not carry the Polygon contract claim", () => {
+    const dir = path.join(process.cwd(), "scripts", "seo-data");
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith(".cjs"));
+    expect(files.length).toBeGreaterThan(0);
+    const sources = [
+      ...files.map((f) => path.join(dir, f)),
+      path.join(process.cwd(), "scripts", "gen-seo-pages.cjs"),
+    ];
+    for (const f of sources) {
+      expect(fs.readFileSync(f, "utf8"), f).not.toMatch(
+        /(live|deployed) on Polygon|0x4da4/i
+      );
+    }
+  });
+
   it("DPP explainer seed does not advertise $49/mo or Bitcoin L1", () => {
     const dpp = getSeoPageBySlug("what-is-a-digital-product-passport");
     expect(dpp?.bodyHtml).toContain("What a DPP contains");
     expect(dpp?.bodyHtml).toContain("EU DPP Readiness is $299 one-time.");
-    expect(dpp?.bodyHtml).toContain("Ed25519-signed and anchored on Polygon");
+    expect(dpp?.bodyHtml).not.toContain("Ed25519-signed");
+    expect(dpp?.bodyHtml).not.toContain("anchored on Polygon");
     expect(dpp?.bodyHtml).not.toContain("$49/mo");
     expect(dpp?.bodyHtml).not.toContain("Bitcoin L1");
     expect(dpp?.jsonLd.url).toBe(
       "https://authichain.com/p/what-is-a-digital-product-passport"
     );
+  });
+  it("RES-100: footwear page has no unsourced forecasts or live-issuance claims", () => {
+    const p = getSeoPageBySlug("eu-digital-product-passport-footwear");
+    expect(p).not.toBeNull();
+    const text = JSON.stringify(p);
+    expect(text).not.toMatch(/feasibility/i);
+    expect(text).not.toMatch(/follow the textiles/i);
+    expect(text).not.toMatch(/can even be proposed/i);
+    expect(text).not.toMatch(/link it to a signed record/i);
+    expect(text).not.toMatch(/signed record published now/i);
+    expect(p?.bodyHtml).toContain("Signed records are in development.");
+    expect(p?.bodyHtml).toContain("a Commission study on footwear due by the end of 2027.</p>");
+    expect(p?.metaDescription.endsWith("by the end of 2027.")).toBe(true);
+  });
+
+  it("RES-103: no page claims records are already issuing or offers proof of origin", () => {
+    for (const p of listSeoPages()) {
+      const text = JSON.stringify(p);
+      expect(text, p.slug).not.toMatch(/already issuing/i);
+      expect(text, p.slug).not.toMatch(/proof of origin/i);
+    }
   });
 });

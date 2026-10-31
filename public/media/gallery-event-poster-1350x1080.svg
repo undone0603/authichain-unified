@@ -92,5 +92,5 @@
   <rect x="0" y="950" width="1350" height="130" fill="#0a0800"/>
   <line x1="0" y1="950" x2="1350" y2="950" stroke="#c9a22766" stroke-width="1"/>
   <text x="675" y="1002" text-anchor="middle" font-family="system-ui,sans-serif" font-size="22" font-weight="700" fill="#c9a227">Ticket Authentication Powered by QRON</text>
-  <text x="675" y="1038" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#666" letter-spacing="2">qron.space | AuthiChain Protocol | Ed25519 Cryptographic Signing</text>
+  <text x="675" y="1038" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#666" letter-spacing="2">qron.space | AuthiChain Protocol</text>
 </svg>

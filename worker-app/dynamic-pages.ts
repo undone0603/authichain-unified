@@ -36,7 +36,9 @@
 
 import type { Context } from "hono";
 import { eq, sql } from "drizzle-orm";
-import { getHyperdriveDb } from "../server/db";
+import { publishedRecord } from "../workers/authichain-verify-worker/src/published-record.mjs";
+import { verifySubmitted } from "../workers/authichain-verify-worker/src/protocol-verify.mjs";
+import { createHyperdriveRequestDb, getHyperdriveDb } from "../server/db";
 import {
   getCertificateByNumber,
   getProductById,
@@ -45,6 +47,7 @@ import { getQronById } from "../server/identity-db-helpers";
 import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
+import { reportGrowthEvent } from "./growth-record";
 import { listedPlans, planPaymentLink } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
 import {
@@ -52,7 +55,11 @@ import {
   catalogPaymentLinkHtml,
   emailCheckoutWithPaymentLinkHtml,
 } from "../src/lib/checkout-email";
-import { getSeoPageBySlug, type SeoPage } from "../src/lib/seo-pages";
+import {
+  getSeoPageBySlug,
+  renderSeoHubDocument,
+  type SeoPage,
+} from "../src/lib/seo-pages";
 
 // --- Shared helpers --------------------------------------------------------
 
@@ -129,35 +136,16 @@ function htmlDocument(opts: {
 }
 
 function renderSeoHubHtml(page: SeoPage, pathname: string): string {
-  const canonical =
-    typeof page.jsonLd.url === "string" ? page.jsonLd.url : pathname;
   // bodyHtml is committed in content/seo/pages.json and stripped of <script>
   // at generation (src/lib/seo-pages.test.ts). Same contract as the Next
-  // /p/[serial] page.
-  return htmlDocument({
-    title: page.title,
-    description: page.metaDescription,
-    canonicalPath: canonical,
-    extraHead:
-      '<script type="application/ld+json">' +
-      JSON.stringify(page.jsonLd) +
-      "</script>\n" +
-      "<style>" +
-      CHECKOUT_EMAIL_FORM_CSS +
-      "</style>\n",
-    bodyHtml:
-      "<main>\n<h1>" +
-      escapeHtml(page.h1) +
-      "</h1>\n" +
-      page.bodyHtml +
-      "\n</main>",
-  });
+  // /p/[serial] page. The apex worker serves this same document.
+  return renderSeoHubDocument(page, pathname);
 }
 
 function htmlResponse(
   c: Context,
   body: string,
-  status: 200 | 400 | 404 | 500
+  status: 200 | 400 | 404 | 500 | 503
 ): Response {
   return c.html(body, status);
 }
@@ -271,8 +259,7 @@ function certStatusLabel(cert: { status?: string | null } | null | undefined): {
   verified: boolean;
 } {
   if (!cert) return { label: "Pending Verification", verified: false };
-  if (cert.status === "active")
-    return { label: "Verified Authentic", verified: true };
+  if (cert.status === "active") return { label: "", verified: true };
   if (cert.status === "revoked")
     return { label: "Certification Revoked", verified: false };
   return { label: "Pending Verification", verified: false };
@@ -280,6 +267,7 @@ function certStatusLabel(cert: { status?: string | null } | null | undefined): {
 
 async function renderProductPassport(c: Context): Promise<Response> {
   const { pathname } = new URL(c.req.url);
+  let dbHandle: ReturnType<typeof createHyperdriveRequestDb> | undefined;
 
   try {
     // Extraction+decode lives inside the try: decodeURIComponent throws
@@ -304,6 +292,7 @@ async function renderProductPassport(c: Context): Promise<Response> {
 
     const seoPage = getSeoPageBySlug(serial);
     if (seoPage) {
+      if (seoPage.noindex) c.header("X-Robots-Tag", "noindex");
       return htmlResponse(c, renderSeoHubHtml(seoPage, pathname), 200);
     }
 
@@ -345,19 +334,16 @@ async function renderProductPassport(c: Context): Promise<Response> {
     const { label, verified } = certStatusLabel(cert);
     const title = product.name + " -- Product Passport | AuthiChain";
     const description =
-      label +
-      ": " +
+      (label ? label + ": " : "") +
       product.name +
       (product.brand ? " by " + product.brand : "") +
       ". AuthiChain digital product passport and certification status.";
 
     const body =
       "<main>\n" +
-      '<p data-verified="' +
-      verified +
-      '">' +
-      escapeHtml(label) +
-      "</p>\n" +
+      (label
+        ? '<p data-verified="' + verified + '">' + escapeHtml(label) + "</p>\n"
+        : "") +
       "<h1>" +
       escapeHtml(product.name) +
       "</h1>\n" +
@@ -379,9 +365,7 @@ async function renderProductPassport(c: Context): Promise<Response> {
           escapeHtml(cert.certificateNumber) +
           "</dd>\n"
         : "") +
-      "<dt>Status</dt><dd>" +
-      escapeHtml(label) +
-      "</dd>\n" +
+      (label ? "<dt>Status</dt><dd>" + escapeHtml(label) + "</dd>\n" : "") +
       "</dl>\n" +
       "</main>";
 
@@ -396,19 +380,36 @@ async function renderProductPassport(c: Context): Promise<Response> {
       200
     );
   } catch (err) {
-    console.error("[dynamic-pages] /p lookup failed", err);
-    if (err instanceof Error && err.message === "passport-lookup-timeout") {
-      return htmlResponse(
-        c,
-        notFoundHtml(
-          "Product Not Found",
-          "The registry lookup timed out. Publish a StrainChain passport from the live Payment Link on /pricing.",
-          pathname
-        ),
-        404
-      );
+    const e = err as { message?: string; cause?: { code?: string } };
+    const detail = {
+      message: e?.message ?? String(err),
+      causeCode: e?.cause?.code ?? null,
+    };
+    const timedOut =
+      err instanceof Error && err.message === "VERIFY_LOOKUP_TIMEOUT";
+    if (timedOut) {
+      console.warn("[dynamic-pages] /p lookup timed out", detail);
+    } else {
+      console.error("[dynamic-pages] /p lookup failed", detail);
     }
-    return serveSpaShell(c);
+    // Malformed percent-encoding is bad input, not a backend failure.
+    if (err instanceof URIError) return serveSpaShell(c);
+    // Timeout or connection/query error: we don't know whether the record
+    // exists, so answer a retryable 503 (404 only when the lookup succeeded
+    // and found nothing).
+    c.header("Retry-After", "30");
+    c.header("Cache-Control", "no-store");
+    return htmlResponse(
+      c,
+      notFoundHtml(
+        "Registry Temporarily Unavailable",
+        "The AuthiChain registry lookup did not complete. Please try again in a moment.",
+        pathname
+      ),
+      503
+    );
+  } finally {
+    if (dbHandle) closeVerifyDb(c, dbHandle);
   }
 }
 
@@ -423,12 +424,14 @@ function verifyPromptHtml(): string {
   return htmlDocument({
     title: "Verify a Product | AuthiChain",
     description:
-      "Look up an AuthiChain-registered product or certificate to check its authenticity status.",
+      "Look up an AuthiChain record. On-chain verification is in development.",
     canonicalPath: "/verify",
+    extraHead: '<link rel="manifest" href="/manifest.webmanifest">\n',
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      "<p>Enter a product ID to look up its record. Verification against AuthiChain's Polygon certificate contract <a href=\"https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE\" target=\"_blank\" rel=\"noopener\">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p>\n" +
+      "<p>Enter a registry product ID to look up its record. On-chain verification is in development.</p>\n" +
+      '<p>The open verifier checks the published demonstration record <a href="/verify?id=polygon-anchor-1">polygon-anchor-1</a>. The same check as JSON is <a href="/api/verify?id=polygon-anchor-1">/api/verify</a>.</p>\n' +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
@@ -438,27 +441,232 @@ function verifyPromptHtml(): string {
   });
 }
 
+function openVerifierHtml(
+  identifier: string,
+  protocol: { verdict: string; reasons?: string[] }
+): string {
+  const reasons = Array.isArray(protocol.reasons) ? protocol.reasons : [];
+  const reasonList = reasons.length
+    ? "<ul>\n" +
+      reasons
+        .map(reason => "<li>" + escapeHtml(String(reason)) + "</li>\n")
+        .join("") +
+      "</ul>\n"
+    : "";
+  const jsonHref = "/api/verify?id=" + encodeURIComponent(identifier);
+  return htmlDocument({
+    title: "Open verification | AuthiChain",
+    description:
+      "Published demonstration record. Verdict " +
+      protocol.verdict +
+      ". Not a customer product and not a physical inspection.",
+    canonicalPath: "/verify",
+    extraHead: '<meta name="robots" content="noindex">\n',
+    bodyHtml:
+      "<main>\n" +
+      "<h1>Open verification</h1>\n" +
+      '<p data-source="published_example">Published demonstration record. Not a customer product. Not a physical inspection.</p>\n' +
+      '<p data-verdict="' +
+      escapeHtml(protocol.verdict) +
+      '">Verdict: ' +
+      escapeHtml(protocol.verdict) +
+      "</p>\n" +
+      reasonList +
+      "<p>Unknown: physical binding was not inspected. This page did not read the anchor transaction.</p>\n" +
+      '<p><a href="' +
+      escapeHtml(jsonHref) +
+      '">JSON verifier</a></p>\n' +
+      '<p><a href="/verify">Look up another ID</a></p>\n' +
+      "</main>",
+  });
+}
+
+function certificateIssuedLine(cert: {
+  issuedAt?: Date | string | null;
+  createdAt?: Date | string | null;
+}): string {
+  const raw = cert?.issuedAt ?? cert?.createdAt ?? null;
+  const when = raw ? new Date(raw) : null;
+  const dateClause =
+    when && !Number.isNaN(when.getTime())
+      ? " on " +
+        when.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          timeZone: "UTC",
+        })
+      : "";
+  return (
+    "Issued by AuthiChain" +
+    dateClause +
+    ". On-chain verification is in development."
+  );
+}
+
+// Lookups must finish inside the apex worker's 4s APP_WORKER budget
+// (workers/authichain-com proxyAppWorker); otherwise the apex throws and the
+// visitor sees Cloudflare error 1101. Unknown certificate numbers were
+// observed hanging on Hyperdrive (2026-10-09, /verify?id=test123), same as
+// unknown /p/<serial> lookups did.
+const VERIFY_LOOKUP_TIMEOUT_MS = 2500;
+
+// One 2.5s deadline for the whole lookup (connect + every query), not 2.5s
+// per step: three sequential steps at 2.5s each could add up to 7.5s and
+// still blow the apex's 4s budget.
+function makeVerifyDeadline(): <T>(work: PromiseLike<T>) => Promise<T> {
+  const deadline = Date.now() + VERIFY_LOOKUP_TIMEOUT_MS;
+  return function withVerifyTimeout<T>(work: PromiseLike<T>): Promise<T> {
+    const remaining = Math.max(0, deadline - Date.now());
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    return Promise.race([
+      Promise.resolve(work),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("VERIFY_LOOKUP_TIMEOUT")),
+          remaining
+        );
+      }),
+    ]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
+  };
+}
+
+// Release the per-request pg.Client after the response without delaying it.
+// waitUntil keeps the isolate alive for the socket close; c.executionCtx
+// throws when there is no ExecutionContext (tests), so fall back to void.
+function closeVerifyDb(
+  c: Context,
+  handle: { close: () => Promise<void> }
+): void {
+  const work = handle.close().catch(err => {
+    console.warn("[dynamic-pages] /verify db close failed", err);
+  });
+  try {
+    c.executionCtx.waitUntil(work);
+  } catch {
+    void work;
+  }
+}
+
+// One page for "no record" and for "lookup failed": both answer 404 HTML so
+// nothing crashes and nothing gets indexed. The failure variant only adds a
+// retry hint; it never implies a record exists.
+function verifyNoRecordResponse(
+  c: Context,
+  identifier: string,
+  lookupFailed: boolean
+): Response {
+  const message = lookupFailed
+    ? 'We could not complete the lookup for "' +
+      identifier +
+      '" just now, so no record can be shown. Please try again in a minute.'
+    : 'No record was found on the AuthiChain registry for "' +
+      identifier +
+      '". Check the ID and try again.';
+  return htmlResponse(
+    c,
+    htmlDocument({
+      title: "No record found | AuthiChain",
+      description: message,
+      canonicalPath: "/verify",
+      extraHead: '<meta name="robots" content="noindex">\n',
+      bodyHtml:
+        "<main>\n" +
+        "<h1>No record found</h1>\n" +
+        "<p>" +
+        escapeHtml(message) +
+        "</p>\n" +
+        '<p><a href="/verify">Look up another ID</a></p>\n' +
+        "</main>",
+    }),
+    404
+  );
+}
+
+/** Reserved path. Not a certificate number. Matches src/app/verify/live/page.tsx. */
+function verifyLiveSealHtml(): string {
+  const mintTx =
+    "0xa07d0bbadcc958b3f6fc8d81acda16a54c4bcfdb5e86bd2ce186e27f5752ab3b";
+  const holder = "authichain.base.eth";
+  const contract = "0x34370EDA96e0C7e47f46F18e2D3a7298C241E16F";
+  return htmlDocument({
+    title: "This seal is already on Base. | AuthiChain",
+    description:
+      "Founder example. Signature check plus an on-chain anchor. This does not prove a physical object is genuine.",
+    canonicalPath: "/verify/live",
+    bodyHtml:
+      "<main>\n" +
+      "<h1>This seal is already on Base.</h1>\n" +
+      "<p>Founder example. Signature check + on-chain anchor. You can verify it without trusting us.</p>\n" +
+      "<h2>Public proof</h2>\n" +
+      "<dl>\n" +
+      "<dt>Holder</dt><dd>" +
+      escapeHtml(holder) +
+      "</dd>\n" +
+      "<dt>Contract</dt><dd>" +
+      escapeHtml(contract) +
+      "</dd>\n" +
+      '<dt>Mint tx</dt><dd><a href="https://basescan.org/tx/' +
+      mintTx +
+      '">view on BaseScan</a></dd>\n' +
+      '<dt>Open protocol</dt><dd><a href="/protocol">run the verifier yourself</a></dd>\n' +
+      "</dl>\n" +
+      "<p>What this does not prove: that any physical object is genuine. A signed record is not an inspection.</p>\n" +
+      '<p><a href="/generate">Generate your own Living QR</a> · <a href="/pricing">Buy Starter — $29</a></p>\n' +
+      "<h2>FAQ</h2>\n" +
+      "<h3>Does this prove the product is authentic?</h3>\n" +
+      "<p>No. It proves the claim was signed and the anchor hash matches what is on Base. Physical genuineness is a separate inspection.</p>\n" +
+      "<h3>Can I do this for my products?</h3>\n" +
+      "<p>Yes. Self-serve generation and the $29 Starter Pack. No call required.</p>\n" +
+      "<h3>Is the public certificate registry live?</h3>\n" +
+      "<p>In development. This page shows the live path that already exists.</p>\n" +
+      "</main>",
+  });
+}
+
 async function renderVerify(c: Context): Promise<Response> {
   const url = new URL(c.req.url);
+  const idParam = url.searchParams.get("id");
+  const rawPathSegment = url.pathname
+    .replace(/^\/verify\/?/, "")
+    .replace(/\/+$/, "");
+  // Fallback label for the error page if decoding below throws.
+  let identifier: string | null = idParam || rawPathSegment || null;
+  let dbHandle: ReturnType<typeof createHyperdriveRequestDb> | undefined;
 
   try {
     // Extraction+decode lives inside the try: decodeURIComponent throws
     // URIError on malformed percent-encoding (e.g. /verify/%zz), and that
-    // should degrade like any other lookup failure (caught below -> SPA
-    // shell) rather than 500. Also strip a trailing slash (e.g.
+    // should degrade like any other lookup failure (caught below -> the
+    // 404 "No record found" page) rather than 500. Also strip a trailing slash (e.g.
     // /verify/CERT-001/) so it resolves the same as the non-slash form.
-    const idParam = url.searchParams.get("id");
-    const rawPathSegment = url.pathname
-      .replace(/^\/verify\/?/, "")
-      .replace(/\/+$/, "");
     const pathSegment = decodeURIComponent(rawPathSegment);
-    const identifier = idParam || pathSegment || null;
+    identifier = idParam || pathSegment || null;
+
+    if (!idParam && pathSegment.toLowerCase() === "live") {
+      return htmlResponse(c, verifyLiveSealHtml(), 200);
+    }
 
     if (!identifier) {
       return htmlResponse(c, verifyPromptHtml(), 200);
     }
 
-    const db = getHyperdriveDb(c.env as any);
+    const published = publishedRecord(identifier);
+    if (published) {
+      const protocol = verifySubmitted(published.record, published.anchor);
+      if (protocol && typeof protocol.verdict === "string") {
+        return htmlResponse(c, openVerifierHtml(identifier, protocol), 200);
+      }
+    }
+
+    // Hyperdrive-recommended pattern: one pg.Client for this request,
+    // connected inside the lookup budget, closed after the response.
+    const withVerifyTimeout = makeVerifyDeadline();
+    dbHandle = createHyperdriveRequestDb(c.env as any);
+    await withVerifyTimeout(dbHandle.connect());
+    const db = dbHandle.db;
 
     let product: any = null;
     const numericId = Number(idParam);
@@ -467,50 +675,84 @@ async function renderVerify(c: Context): Promise<Response> {
       Number.isFinite(numericId) &&
       String(numericId) === idParam
     ) {
-      product = await getProductById(db, numericId);
+      try {
+        product = await withVerifyTimeout(getProductById(db, numericId));
+      } catch (err) {
+        // products.id is a uuid, so Postgres rejects a numeric id with
+        // 22P02 (invalid_text_representation). That means "no such record",
+        // not "lookup failed". Anything else (timeouts, connection errors)
+        // still goes to the retry page. drizzle may wrap the pg error in .cause.
+        const e = err as { code?: string; cause?: { code?: string } };
+        if (e?.code !== "22P02" && e?.cause?.code !== "22P02") throw err;
+        product = null;
+      }
     } else {
-      const cert = await getCertificateByNumber(db, identifier);
-      if (cert) product = await getProductById(db, cert.productId);
+      const lookupId: string = identifier;
+      const cert = await withVerifyTimeout(
+        getCertificateByNumber(db, lookupId)
+      );
+      if (cert) {
+        product = await withVerifyTimeout(getProductById(db, cert.productId));
+      }
     }
 
     if (!product) {
-      return htmlResponse(
-        c,
-        notFoundHtml(
-          "Verification Failed",
-          'No product was found on the AuthiChain registry for "' +
-            identifier +
-            '".',
-          "/verify"
-        ),
-        404
-      );
+      return verifyNoRecordResponse(c, identifier, false);
     }
 
-    const [cert] = await db
-      .select()
-      .from(certificates)
-      .where(eq(certificates.productId, product.id))
-      .limit(1);
-    const verified = !!cert;
-    const status = verified
-      ? "Authentic Product Verified"
-      : "Product Found -- No Certificate on Record";
+    const [cert] = await withVerifyTimeout(
+      db
+        .select()
+        .from(certificates)
+        .where(eq(certificates.productId, product.id))
+        .limit(1)
+    );
+    // A revoked row is not "on record": say it was revoked and nothing else
+    // (no issued line, no verdict). certificates.status is the only revoked
+    // state in the data.
+    const revoked = !!cert && cert.status === "revoked";
+    const onRecord = !!cert && !revoked;
+    const certificateState = revoked
+      ? "revoked"
+      : onRecord
+        ? "on-record"
+        : "none";
+    const status = revoked
+      ? "This certificate has been revoked."
+      : onRecord
+        ? "Certificate on record"
+        : "Product Found -- No Certificate on Record";
+    // RES-97: a certificate row is a record, not an authenticity verdict.
+    // The date comes from the row itself (issued_at, else created_at); if
+    // neither parses, the date clause is left out rather than guessed.
+    const issuedLine = onRecord ? certificateIssuedLine(cert) : "";
     const title = product.name + " -- Verification | AuthiChain";
-    const description =
-      status +
-      ": " +
-      product.name +
-      (product.brand ? " by " + product.brand : "") +
-      ".";
+    const description = revoked
+      ? product.name +
+        (product.brand ? " by " + product.brand : "") +
+        ": " +
+        status
+      : status +
+        ": " +
+        product.name +
+        (product.brand ? " by " + product.brand : "") +
+        "." +
+        (issuedLine ? " " + issuedLine : "");
 
+    // No data-verified attribute: this page states what is on record, not a
+    // verification verdict.
     const body =
       "<main>\n" +
-      '<p data-verified="' +
-      verified +
+      '<p data-certificate-state="' +
+      certificateState +
       '">' +
       escapeHtml(status) +
       "</p>\n" +
+      (issuedLine
+        ? '<p data-certificate-issued="true">' +
+          escapeHtml(issuedLine) +
+          "</p>\n"
+        : "") +
       "<h1>" +
       escapeHtml(product.name) +
       "</h1>\n" +
@@ -547,7 +789,9 @@ async function renderVerify(c: Context): Promise<Response> {
     );
   } catch (err) {
     console.error("[dynamic-pages] /verify lookup failed", err);
-    return serveSpaShell(c);
+    return verifyNoRecordResponse(c, identifier ?? "", true);
+  } finally {
+    if (dbHandle) closeVerifyDb(c, dbHandle);
   }
 }
 
@@ -590,7 +834,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "🔐",
         title: "Signed seals",
-        desc: "Cryptographically signed seals anchored on Polygon. Tamper-evident and publicly verifiable.",
+        desc: "Cryptographically signed seals. Tamper-evident and publicly verifiable.",
       },
       {
         icon: "📱",
@@ -600,7 +844,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "📊",
         title: "EU DPP Readiness",
-        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. Credited toward AuthiChain Basic on conversion.",
+        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation.",
       },
       {
         icon: "🌍",
@@ -624,7 +868,10 @@ const LANDING_CONTENT: Record<
       { value: "x402", label: "Agent micropayments" },
     ],
     closingLine: "Start EU DPP Readiness on the live checkout path.",
-    primaryCta: { label: "Start DPP checkout", href: "https://authichain.com/checkout/dpp_readiness" },
+    primaryCta: {
+      label: "Start DPP checkout",
+      href: "https://authichain.com/checkout/dpp_readiness",
+    },
     secondaryCta: { label: "View pricing", href: "/pricing" },
   },
   qron: {
@@ -692,7 +939,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "✅",
         title: "Batch Testing",
-        desc: "Lab results, COA management, potency tracking. Immutable testing records.",
+        desc: "Lab results, COA management, potency tracking.",
       },
       {
         icon: "📱",
@@ -724,15 +971,11 @@ const LANDING_CONTENT: Record<
   },
   govchain: {
     eyebrow: "Government Blockchain",
-    headline: "Public Records on Blockchain. Transparent & Auditable.",
+    headline:
+      "GovChain: federal contracting tools for US small businesses, in development.",
     subhead:
       "Verifiable government data. Compliance reporting, procurement transparency, and public accountability with cryptographic proof.",
     features: [
-      {
-        icon: "🏛️",
-        title: "Public Records",
-        desc: "Government data on blockchain. Immutable, auditable, and publicly verifiable.",
-      },
       {
         icon: "📊",
         title: "Procurement Tracking",
@@ -742,11 +985,6 @@ const LANDING_CONTENT: Record<
         icon: "✅",
         title: "Compliance Exports",
         desc: "FCPA, FAR, SAM.gov integration. Automated reporting saves audit time.",
-      },
-      {
-        icon: "🔐",
-        title: "Digital Signatures",
-        desc: "Legally binding signatures on blockchain. Meets eSign Act requirements.",
       },
       {
         icon: "📈",
@@ -762,13 +1000,16 @@ const LANDING_CONTENT: Record<
     stats: [
       { value: "100%", label: "Transparent" },
       { value: "Real-Time", label: "Reporting" },
-      { value: "Blockchain", label: "Immutable" },
     ],
     closingLine: "Make government data public. Build trust with blockchain.",
     primaryCta: { label: "Get Started", href: "/dashboard" },
     secondaryCta: { label: "Contact Us", href: "mailto:hello@govchain.us" },
   },
 };
+
+/** RES-209: non-affiliation line from the Oct 3 Research review. */
+const GOVCHAIN_NON_AFFILIATION =
+  "GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency.";
 
 function landingNotFoundHtml(brandId: string): string {
   return notFoundHtml(
@@ -824,7 +1065,9 @@ function renderLanding(c: Context): Response {
     )
     .join("\n");
 
-  const primaryIsCheckout = /\/api\/checkout\/|\/checkout\//.test(content.primaryCta.href);
+  const primaryIsCheckout = /\/api\/checkout\/|\/checkout\//.test(
+    content.primaryCta.href
+  );
   const primaryHtml = primaryIsCheckout
     ? emailCheckoutWithPaymentLinkHtml({
         action: content.primaryCta.href,
@@ -884,6 +1127,9 @@ function renderLanding(c: Context): Response {
     "<p>&copy; 2026 " +
     escapeHtml(brand.displayName) +
     " &middot; part of the AuthiChain Protocol</p>\n" +
+    (brandId === "govchain"
+      ? "<p>" + escapeHtml(GOVCHAIN_NON_AFFILIATION) + "</p>\n"
+      : "") +
     "</footer>\n" +
     "</main>";
 
@@ -922,21 +1168,21 @@ function onboardPayNowHtml(): string {
   return (
     '<section aria-label="Live checkout" class="onboard-pay">\n' +
     "<h2>Or buy now, no call needed</h2>\n" +
-    "<p>The pilot request is free.</p>\n" +
+    "<p>The pilot request is free. First paid checkout is the Starter Pack.</p>\n" +
     '<p class="onboard-pay-links">\n' +
+    catalogPaymentLinkHtml({
+      planId: "starter",
+      label: "Buy Starter Pack — $29",
+    }) +
+    "\n" +
     catalogPaymentLinkHtml({
       planId: "strainchain_passport",
       label: "StrainChain Passport — $49",
     }) +
     "\n" +
     catalogPaymentLinkHtml({
-      planId: "strainchain_farm",
-      label: "StrainChain Farm Plan — $149/mo",
-    }) +
-    "\n" +
-    catalogPaymentLinkHtml({
       planId: "dpp_readiness",
-      label: "EU DPP Readiness Audit — $299",
+      label: "EU DPP Workspace — $299",
     }) +
     "\n" +
     "</p>\n" +
@@ -947,7 +1193,10 @@ function onboardPayNowHtml(): string {
 /** Per-site /onboard title. The estate apexes proxy here with X-Forwarded-Host. */
 export function onboardTitle(host: string): string {
   const h = host.toLowerCase().replace(/:\d+$/, "");
-  if (h === "govchain.us" || (h.endsWith(".govchain.us") && h !== "authichain.govchain.us"))
+  if (
+    h === "govchain.us" ||
+    (h.endsWith(".govchain.us") && h !== "authichain.govchain.us")
+  )
     return "Request access | GovChain";
   if (h === "strainchain.io" || h.endsWith(".strainchain.io"))
     return "Request a pilot | StrainChain";
@@ -968,7 +1217,7 @@ function onboardFormHtml(error?: string, host = ""): string {
   return htmlDocument({
     title: onboardTitle(host),
     description:
-      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal. Or pay Passport $49 / Farm $149 / DPP $299 / Basic $199.",
+      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal. Or pay Passport $49 or EU DPP Workspace $299.",
     canonicalPath: "/onboard",
     extraHead:
       "<style>" +
@@ -1079,12 +1328,19 @@ async function handleOnboardPost(c: Context): Promise<Response> {
       .trim()
       .slice(0, 40);
   } catch {
-    return htmlResponse(c, onboardFormHtml("Could not read the form.", onboardHost(c)), 400);
+    return htmlResponse(
+      c,
+      onboardFormHtml("Could not read the form.", onboardHost(c)),
+      400
+    );
   }
   if (!company || !contactName || !productName) {
     return htmlResponse(
       c,
-      onboardFormHtml("Company, contact, and first product are required.", onboardHost(c)),
+      onboardFormHtml(
+        "Company, contact, and first product are required.",
+        onboardHost(c)
+      ),
       400
     );
   }
@@ -1098,7 +1354,11 @@ async function handleOnboardPost(c: Context): Promise<Response> {
   if (
     !ONBOARD_VERTICALS.includes(vertical as (typeof ONBOARD_VERTICALS)[number])
   ) {
-    return htmlResponse(c, onboardFormHtml("Unknown vertical.", onboardHost(c)), 400);
+    return htmlResponse(
+      c,
+      onboardFormHtml("Unknown vertical.", onboardHost(c)),
+      400
+    );
   }
   const refBytes = await crypto.subtle.digest(
     "SHA-256",
@@ -1123,7 +1383,10 @@ async function handleOnboardPost(c: Context): Promise<Response> {
     console.error("[onboard] lead_captures insert failed", err);
     return htmlResponse(
       c,
-      onboardFormHtml("Could not record the pilot request. Try again.", onboardHost(c)),
+      onboardFormHtml(
+        "Could not record the pilot request. Try again.",
+        onboardHost(c)
+      ),
       500
     );
   }
@@ -1208,7 +1471,7 @@ function renderOnboardReceived(c: Context): Response {
       inputId: "onboard-dpp-email",
     }) +
     "<ul>\n" +
-    '<li><a href="/verify">Verify a seal (in development)</a></li>\n' +
+    '<li><a href="/verify?id=polygon-anchor-1">Open the published verification example</a></li>\n' +
     '<li><a href="/story/00000000-0000-4000-8000-000000000001">Launch-proof StoryMode</a></li>\n' +
     "</ul>\n" +
     "</main>";
@@ -1242,19 +1505,18 @@ async function renderOnboard(c: Context): Promise<Response> {
 // deterministic reference object. That page must exist. Unknown ids 404.
 
 const LAUNCH_PROOF_PRODUCT_ID = "00000000-0000-4000-8000-000000000001";
-const LAUNCH_PROOF_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+const LAUNCH_PROOF_KID = "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ";
 
 function launchProofStoryHtml(): string {
   return htmlDocument({
     title: "AuthiChain Launch Proof — QRON / StoryMode",
     description:
-      "Deterministic production reference object. The compact JWS verifies against live JWKS.",
+      "Deterministic production reference object and its published signing key id.",
     canonicalPath: "/story/" + LAUNCH_PROOF_PRODUCT_ID,
     bodyHtml:
       "<main>\n" +
       "<p>StoryMode</p>\n" +
       "<h1>AuthiChain Launch Proof — QRON / StoryMode</h1>\n" +
-      '<p data-verified="true">Production issuer signing</p>\n' +
       "<dl>\n" +
       "<dt>Object</dt><dd>authi:authichain:SN-001</dd>\n" +
       "<dt>kid</dt><dd><code>" +
@@ -1264,12 +1526,12 @@ function launchProofStoryHtml(): string {
       '<dt>Issuer</dt><dd><a href="/protocol/issuer.json">/protocol/issuer.json</a></dd>\n' +
       "</dl>\n" +
       "<h2>Identity</h2>\n" +
-      "<p>A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation.</p>\n" +
+      "<p>A deterministic QRON reference resolves to an AuthiChain object record. A signed attestation for it is not published yet.</p>\n" +
       "<h2>Proof</h2>\n" +
-      "<p>The production attestation is independently verified against the live public JWKS using its kid. A valid signature is signed evidence — not physical authenticity.</p>\n" +
+      "<p>This page shows the signing key ID (kid) and links to the public JWKS and issuer record. It does not include a signed attestation yet, so there is nothing on this page to verify. A valid signature is signed evidence — not physical authenticity.</p>\n" +
       "<h2>Reveal</h2>\n" +
       "<p>Scanning the QRON launch code opens StoryMode. Tamper tests (altered payload, altered signature, wrong subject, revoked, stale) must reject.</p>\n" +
-      '<p><a href="/verify">Verify a seal (in development)</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
+      '<p><a href="/verify?id=polygon-anchor-1">Open the published verification example</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
       "</main>",
   });
 }
@@ -1367,7 +1629,7 @@ function dashboardHtml(): string {
       "<p>The authentic economy console. Pay or smoke-pay, then activate — no login code required for the public intake.</p>\n" +
       "<ul>\n" +
       '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
-      '<li><a href="/verify">Verify a seal (in development)</a></li>\n' +
+      '<li><a href="/verify?id=polygon-anchor-1">Open the published verification example</a></li>\n' +
       '<li><a href="/generate">Generate a Living QR</a></li>\n' +
       '<li><a href="/protocol">Protocol</a></li>\n' +
       '<li><a href="/.well-known/jwks.json">JWKS</a></li>\n' +
@@ -1384,24 +1646,28 @@ function authenticateHtml(): string {
   return htmlDocument({
     title: "Sign in | AuthiChain",
     description:
-      "Public authentic-economy console. Onboard a pilot or open the dashboard — no app.* login host required.",
+      "Start with QRON Starter Pack $29. Onboard a pilot or open the dashboard — no app.* login host required.",
     canonicalPath: "/authenticate",
     extraHead: "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>\n",
     bodyHtml:
       "<main>\n" +
       "<h1>Sign in</h1>\n" +
-      "<p>The public console does not require a separate app host. Start a pilot or open the dashboard.</p>\n" +
+      "<p>The public console does not require a separate app host. Start with the Starter Pack at $29, or open onboard / dashboard.</p>\n" +
       "<ul>\n" +
       '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
       '<li><a href="/dashboard">Dashboard</a></li>\n' +
+      '<li><a href="/generate">Generate Living QR</a></li>\n' +
       '<li><a href="/dpp">EU DPP audit</a></li>\n' +
       "</ul>\n" +
       emailCheckoutWithPaymentLinkHtml({
-        action: "https://authichain.com/checkout/dpp_readiness",
-        label: "Start DPP checkout — $299",
-        formId: "auth-dpp-checkout",
-        inputId: "auth-dpp-email",
+        action: "https://authichain.com/checkout/starter",
+        label: "Buy Starter Pack — $29",
+        formId: "auth-starter-checkout",
+        inputId: "auth-starter-email",
       }) +
+      '<p><a href="' +
+      "/pricing" +
+      '">See pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
       "</main>",
   });
 }
@@ -1413,8 +1679,17 @@ function renderAuthenticate(c: Context): Response {
 // --- /generate — Living QR intake (qron.space CTA) -------------------------
 
 function generatePackLinksHtml(): string {
+  // LOOP-03 order: Starter $29 → Creator; DPP via /pricing.
+  // CFA-460: QRON Launch $19/mo is not offered on /generate (unlisted).
+  // The /checkout/qron_launch route and Stripe price are untouched.
   const packs = listedPlans("qron").filter(
     p => p.id === "starter" || p.id === "creator" || p.id === "dpp_readiness"
+  );
+  const order = ["starter", "creator", "dpp_readiness"] as const;
+  packs.sort(
+    (a, b) =>
+      order.indexOf(a.id as (typeof order)[number]) -
+      order.indexOf(b.id as (typeof order)[number])
   );
   return packs
     .map(p => {
@@ -1422,13 +1697,15 @@ function generatePackLinksHtml(): string {
         p.id === "dpp_readiness"
           ? "/pricing"
           : planPaymentLink(p.id) || "/pricing";
+      const price =
+        p.price_suffix === "/month" ? `$${p.price}/mo` : `$${p.price}`;
       return (
         '<a href="' +
         escapeHtml(href) +
         '">' +
         escapeHtml(p.name) +
-        " — $" +
-        p.price +
+        " — " +
+        price +
         "</a>"
       );
     })
@@ -1436,7 +1713,8 @@ function generatePackLinksHtml(): string {
 }
 
 // The $9.99/$39.99/$99.99 credit packs were archived in the 2026-08-31
-// Stripe cleanup; the live top-ups are the catalogue Starter and Creator packs.
+// Stripe cleanup. Live top-ups on /generate: Starter $29, Creator $99.
+// CFA-460: the Launch $19/mo button is removed here (Launch is unlisted).
 const QRON_CREDIT_LINKS = [
   PAYMENT_LINKS.qron.credits50,
   PAYMENT_LINKS.qron.credits250,
@@ -1444,39 +1722,62 @@ const QRON_CREDIT_LINKS = [
 
 function generateCreditLinksHtml(): string {
   const buttons = QRON_CREDIT_LINKS.map(offer => {
+    const label = "Buy " + offer.name + " — " + offer.price;
     return (
       '<a class="credit-btn" href="' +
       escapeHtml(offer.url) +
-      '" target="_blank" rel="noopener">Buy ' +
-      escapeHtml(offer.name) +
-      " — " +
-      escapeHtml(offer.price) +
+      '" target="_blank" rel="noopener">' +
+      escapeHtml(label) +
       "</a>"
     );
   }).join("\n");
   return (
     "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
-    "<p>5 free, then 100 for $29, no subscription. A scannable QR is not an authenticity proof.</p>\n" +
+    "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
   );
 }
 
-function generateFormHtml(error?: string): string {
+// Starter CTA (Marketing copy variant A, as in #2047) shown after a successful generation.
+const STARTER_CHECKOUT_URL = "https://authichain.com/checkout/starter";
+const GENERATE_STARTER_CTA_HTML =
+  '<p id="generate-starter-cta" hidden>Like it? Get 100 generations for $29, paid once. No subscription. ' +
+  '<a class="credit-btn" href="' +
+  STARTER_CHECKOUT_URL +
+  '?utm_source=qron&amp;utm_medium=onsite&amp;utm_campaign=starter-cta&amp;utm_content=starter-a">Get 100 generations for $29</a> ' +
+  "Checkout on authichain.com.</p>\n";
+/** Filled by /api/generate soft-prompt when remaining credits are low (signed-in). */
+const GENERATE_LOW_CREDIT_HTML =
+  '<div id="generate-low-credit" hidden role="status"></div>\n';
+
+function generateFormHtml(
+  error?: string,
+  paid = false,
+  cancelled = false
+): string {
+  const statusBlock = paid
+    ? '<p role="alert" id="generate-paid">Payment received</p>\n'
+    : cancelled
+      ? '<p role="alert" id="generate-cancelled">Checkout cancelled.</p>\n'
+      : "";
   const errorBlock = error
     ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
     : '<p role="alert" id="generate-error" hidden></p>\n';
   return htmlDocument({
-    title: "Generate a Living QR | $QRON",
+    // LOOP-03 meta (docs/growth/2026-09-28-first-dollar-loops.md).
+    title:
+      "AI QR Art Generator | 5 Free, Then $29 Once, No Subscription | QRON",
     description:
-      "Generate a scannable Living QR. Five free, then 100 for $29. A QR is not an authenticity proof.",
+      "Make scannable AI QR art. 5 free generations, no card (limit 5 per visitor every 30 days, while daily samples last). Then 100 for $29, paid once. A QR is not an authenticity proof.",
     canonicalPath: "/generate",
     extraHead: "<style>" + SITE_FORM_CSS + "</style>",
     bodyHtml:
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
-      "<p>Five generations are free. The next 100 are $29, no subscription. A scannable QR is not an authenticity proof.</p>\n" +
+      statusBlock +
+      "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
       '<form id="generate-form" action="/generate" method="post">\n' +
@@ -1486,28 +1787,43 @@ function generateFormHtml(error?: string): string {
       '<input id="prompt" name="prompt" type="text" maxlength="200" placeholder="Industrial tech aesthetic">\n' +
       '<button type="submit">Queue Living QR</button>\n' +
       "</form>\n" +
+      GENERATE_STARTER_CTA_HTML +
+      GENERATE_LOW_CREDIT_HTML +
       generateCreditLinksHtml() +
       "<p>Need a generation pack? " +
       generatePackLinksHtml() +
       ' · <a href="/pricing">All pricing</a></p>\n' +
       // Absolute: qron.space proxies this page, and qron.space/dashboard and
       // /login do not exist (404). Account links stay hidden until they do.
-      '<p><a href="https://authichain.com/onboard">Request a free pilot</a></p>\n' +
+      "" +
       "<script>\n" +
       "(function(){\n" +
       "var form=document.getElementById('generate-form');\n" +
       "var err=document.getElementById('generate-error');\n" +
       "var out=document.getElementById('generate-result');\n" +
+      "var soft=document.getElementById('generate-low-credit');\n" +
       "if(!form)return;\n" +
+      "function showLowCredit(up){\n" +
+      "if(!soft||!up||typeof up.url!=='string'||up.url.indexOf('https://authichain.com/checkout/starter')!==0)return false;\n" +
+      "soft.hidden=false;soft.textContent='';\n" +
+      "var msg=document.createElement('p');msg.textContent=up.message||\"You're running low on generations. Top up any time: Starter is 100 for $29, paid once.\";soft.appendChild(msg);\n" +
+      "var a=document.createElement('a');a.href=up.url;a.className='credit-btn';a.id='low-credit-starter';a.textContent=up.button||up.label||'Add 100 generations for $29';soft.appendChild(a);\n" +
+      "var dismiss=document.createElement('button');dismiss.type='button';dismiss.id='low-credit-dismiss';dismiss.textContent=up.dismiss||'Not now';dismiss.addEventListener('click',function(){soft.hidden=true;soft.textContent='';});soft.appendChild(dismiss);\n" +
+      "if(up.small_print){var sp=document.createElement('p');sp.className='small-print';sp.textContent=up.small_print;soft.appendChild(sp);}\n" +
+      "a.focus();return true;}\n" +
       "form.addEventListener('submit',function(e){\n" +
       "e.preventDefault();\n" +
       "var targetUrl=document.getElementById('targetUrl').value.trim();\n" +
       "var prompt=document.getElementById('prompt').value.trim();\n" +
+      "var cta=document.getElementById('generate-starter-cta');if(cta)cta.hidden=true;\n" +
+      "if(soft){soft.hidden=true;soft.textContent='';}\n" +
       "err.hidden=true; out.hidden=true;\n" +
       "fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUrl:targetUrl,prompt:prompt,mode:'static'})})\n" +
       ".then(function(res){return res.json().then(function(data){return {res:res,data:data};});})\n" +
       ".then(function(r){\n" +
       "if(r.res.status===401){\n" +
+      "if(r.data&&r.data.code&&r.data.code.indexOf('FREE_SAMPLE_')===0){err.hidden=false;err.textContent=r.data.message;\n" +
+      "var up=r.data.upgrade;if(up&&typeof up.url==='string'&&up.url.indexOf('https://authichain.com/checkout/starter')===0){var a=document.createElement('a');a.href=up.url;a.className='button';a.id='sample-exhausted-starter';a.textContent=up.button||up.label||'Starter Pack: 100 generations for $29, paid once';var pp=document.createElement('p');pp.appendChild(a);err.appendChild(pp);a.focus();return;}}\n" +
       "form.submit();\n" +
       "return;\n" +
       "}\n" +
@@ -1526,8 +1842,11 @@ function generateFormHtml(error?: string): string {
       "if(url.indexOf('data:image/')!==0&&url.indexOf('https://')!==0){err.hidden=false;err.textContent='Unexpected image URL.';return;}\n" +
       "out.hidden=false;\n" +
       'out.innerHTML=\'<img alt="Generated Living QR" src="\'+url.replace(/"/g,\'\')+\'" width="320" height="320">\';\n' +
+      // Prefer API soft-prompt (signed-in, <20 credits) over the static post-success CTA.
+      "if(showLowCredit(r.data&&r.data.upgrade)){if(cta)cta.hidden=true;}\n" +
+      "else if(cta)cta.hidden=false;\n" +
       "})\n" +
-      ".catch(function(){err.hidden=false;err.textContent='Network error. Queuing onboard instead.';form.submit();});\n" +
+      " .catch(function(){err.hidden=false;err.textContent='Network error. Please try again.';});\n" +
       "});\n" +
       "})();\n" +
       "</script>\n" +
@@ -1554,11 +1873,9 @@ async function handleGeneratePost(c: Context): Promise<Response> {
       400
     );
   }
-  const dest = new URL("/onboard", c.req.url);
-  dest.searchParams.set("vertical", "qron");
-  dest.searchParams.set("productName", "Living QR");
-  dest.searchParams.set("sku", prompt || "generate");
-  dest.searchParams.set("serial", targetUrl.slice(0, 40));
+  const dest = new URL("https://authichain.com/checkout/starter");
+  dest.searchParams.set("targetUrl", targetUrl);
+  if (prompt) dest.searchParams.set("prompt", prompt);
   return c.redirect(dest.pathname + dest.search, 303);
 }
 
@@ -1566,7 +1883,16 @@ async function renderGenerate(c: Context): Promise<Response> {
   if (c.req.method === "POST") {
     return handleGeneratePost(c);
   }
-  return htmlResponse(c, generateFormHtml(), 200);
+  const url = new URL(c.req.url);
+  return htmlResponse(
+    c,
+    generateFormHtml(
+      undefined,
+      url.searchParams.get("paid") === "1",
+      url.searchParams.get("cancelled") === "1"
+    ),
+    200
+  );
 }
 
 // --- Dispatcher --------------------------------------------------------------
@@ -1610,6 +1936,11 @@ export async function renderDynamicPage(c: Context): Promise<Response> {
     return renderAuthenticate(c);
   }
   if (pathname === "/generate" || pathname.startsWith("/generate/")) {
+    // LOOP-03 top of funnel. GET only; unauthenticated POST attempts are
+    // recorded as generate_submit_anon by the /api/generate handler.
+    if (c.req.method === "GET") {
+      reportGrowthEvent(c, { event: "generate_view", sku: "starter" });
+    }
     return renderGenerate(c);
   }
 

@@ -8,7 +8,7 @@
  *
  * The 0.05 QRON figure coinciding with x402's $0.05 USDC is not the same rail.
  * Do not add $QRON to x402 accepts[]. Do not rebind X402_PAY_TO away from the
- * owner-authorized treasury 0xaebf…e437.
+ * owner-authorized treasury 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2.
  * Runtime x402 still reads env X402_PAY_TO — published payTo here is identity,
  * not a 503/402 fallback.
  */
@@ -135,7 +135,7 @@ export function agentPricingDiscovery() {
       docs: "https://authichain.com/x402",
       tokenomics: AGENT_TOKENOMICS_DOC,
       identity: WEB3_IDENTITY_DOC,
-      note: "Prefer GET catalog/health for live payTo and price. Runtime payTo is env X402_PAY_TO. Unpaid POST returns HTTP 402; pay Base USDC and retry with X-PAYMENT. Do not use Polygon or $QRON on this rail.",
+      note: "Prefer GET catalog/health for live payTo and price. Runtime payTo is env X402_PAY_TO. An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment. After settlement, retry with X-PAYMENT and a seal UUID. Do not use Polygon or $QRON on this rail.",
     },
     humanCheckout: {
       rail: MONEY_RAILS.stripe.rail,

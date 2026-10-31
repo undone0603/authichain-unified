@@ -4,9 +4,21 @@ import { Hono } from "hono";
 // Node-safe mocking (mirrors worker-app/routes.test.ts's pattern): mock
 // getHyperdriveDb + the specific db helpers dynamic-pages.ts calls, so this
 // suite never touches a real Postgres/Hyperdrive connection or workerd.
-vi.mock("../server/db", () => ({
-  getHyperdriveDb: vi.fn().mockReturnValue({}),
-}));
+vi.mock("../server/db", () => {
+  const getHyperdriveDb = vi.fn().mockReturnValue({});
+  return {
+    getHyperdriveDb,
+    // /verify uses the per-request pg.Client handle. Its db is whatever
+    // getHyperdriveDb is stubbed to return, so existing stubs keep working.
+    createHyperdriveRequestDb: vi.fn(() => ({
+      db: getHyperdriveDb(),
+      connect: verifyDbConnect,
+      close: verifyDbClose,
+    })),
+  };
+});
+const verifyDbConnect = vi.fn();
+const verifyDbClose = vi.fn();
 
 vi.mock("../server/content-db-helpers", () => ({
   getCertificateByNumber: vi.fn(),
@@ -23,7 +35,8 @@ vi.mock("./onboard-notify", () => ({
 
 const { renderDynamicPage } = await import("./dynamic-pages");
 const { notifyPilotIntake } = await import("./onboard-notify");
-const { getHyperdriveDb } = await import("../server/db");
+const { getHyperdriveDb, createHyperdriveRequestDb } =
+  await import("../server/db");
 const { getCertificateByNumber, getProductById } =
   await import("../server/content-db-helpers");
 const { getQronById } = await import("../server/identity-db-helpers");
@@ -90,6 +103,8 @@ function mockLeadInsert(execute = vi.fn().mockResolvedValue({})) {
 beforeEach(() => {
   vi.clearAllMocks();
   (getHyperdriveDb as any).mockReturnValue({});
+  verifyDbConnect.mockReset().mockResolvedValue(undefined);
+  verifyDbClose.mockReset().mockResolvedValue(undefined);
 });
 
 describe("renderDynamicPage: /s/<shortcode> shortlink redirect", () => {
@@ -260,7 +275,9 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("What a DPP contains");
     expect(body).toContain("<h2>Get started</h2>");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(body).toContain(
+      'action="https://authichain.com/checkout/dpp_readiness"'
+    );
     expect(body).not.toContain('href="/api/checkout');
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
@@ -268,6 +285,31 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain('type="application/ld+json"');
     expect(getCertificateByNumber).not.toHaveBeenCalled();
     expect(getHyperdriveDb).not.toHaveBeenCalled();
+  });
+
+  it("serves a noindex SEO hub with a robots meta and X-Robots-Tag", async () => {
+    const res = await app.request(
+      "/p/quantum-financial-system-real-or-myth",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Robots-Tag")).toBe("noindex");
+    expect(body).toContain('<meta name="robots" content="noindex">');
+  });
+
+  it("leaves indexable SEO hubs without a robots noindex", async () => {
+    const res = await app.request(
+      "/p/what-is-a-digital-product-passport",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.headers.get("X-Robots-Tag")).toBeNull();
+    expect(body).not.toContain('name="robots"');
   });
 
   it("routes a cannabis SEO hub to live StrainChain passport checkout", async () => {
@@ -299,6 +341,34 @@ describe("renderDynamicPage: /verify verification landing", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("Verify a Product");
+    expect(body).toContain("On-chain verification is in development.");
+    expect(body).toContain('href="/verify?id=polygon-anchor-1"');
+    expect(body).toContain(
+      '<link rel="manifest" href="/manifest.webmanifest">'
+    );
+    expect(body).not.toContain("serviceWorker");
+    expect(body).not.toContain("authenticity status");
+    expect(getProductById).not.toHaveBeenCalled();
+  });
+
+  it("shows the open verifier verdict for the published demonstration record", async () => {
+    const res = await app.request(
+      "/verify?id=polygon-anchor-1",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain('data-source="published_example"');
+    expect(body).toContain('data-verdict="verified"');
+    expect(body).toContain("Verdict: verified");
+    expect(body).toContain("physical binding was not inspected");
+    expect(body).toContain('href="/api/verify?id=polygon-anchor-1"');
+    expect(body).not.toContain("No record found");
+    expect(body).not.toContain("COUNTERFEIT");
+    expect(body).not.toContain("counterfeit");
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
     expect(getProductById).not.toHaveBeenCalled();
   });
 
@@ -311,7 +381,13 @@ describe("renderDynamicPage: /verify verification landing", () => {
     });
     (getHyperdriveDb as any).mockReturnValue(
       makeDbSelectStub([
-        { id: 99, productId: 7, status: "active", certificateNumber: "C-99" },
+        {
+          id: 99,
+          productId: 7,
+          status: "active",
+          certificateNumber: "C-99",
+          issuedAt: new Date("2026-10-01T12:00:00Z"),
+        },
       ])
     );
 
@@ -320,16 +396,283 @@ describe("renderDynamicPage: /verify verification landing", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("Verified Sneaker");
-    expect(body).toContain("Authentic Product Verified");
+    expect(body).toContain("Certificate on record");
+    expect(body).toContain(
+      "Issued by AuthiChain on October 1, 2026. On-chain verification is in development."
+    );
+    expect(body).toMatch(
+      /<meta name="description" content="Certificate on record: Verified Sneaker by Nike-ish\. Issued by AuthiChain on October 1, 2026\. On-chain verification is in development\."/
+    );
+    expect(body).not.toContain("Authentic Product Verified");
   });
 
-  it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {
-    const res = await app.request("/verify/%zz", {}, makeEnv() as any);
+  it("leaves out the date clause when the certificate row has no usable date", async () => {
+    (getProductById as any).mockResolvedValue({ id: 8, name: "Undated Item" });
+    (getHyperdriveDb as any).mockReturnValue(
+      makeDbSelectStub([
+        { id: 100, productId: 8, status: "active", certificateNumber: "C-100" },
+      ])
+    );
+
+    const res = await app.request("/verify?id=8", {}, makeEnv() as any);
     const body = await res.text();
 
     expect(res.status).toBe(200);
-    expect(body).toBe("SPA-SHELL");
+    expect(body).toContain("Certificate on record");
+    expect(body).toContain(
+      "Issued by AuthiChain. On-chain verification is in development."
+    );
+  });
+
+  it("says only that a revoked certificate was revoked (no 'on record', no issued line, no data-verified)", async () => {
+    (getProductById as any).mockResolvedValue({
+      id: 9,
+      name: "Revoked Bag",
+      brand: "Brandco",
+    });
+    (getHyperdriveDb as any).mockReturnValue(
+      makeDbSelectStub([
+        {
+          id: 101,
+          productId: 9,
+          status: "revoked",
+          certificateNumber: "C-101",
+          issuedAt: new Date("2026-10-01T12:00:00Z"),
+        },
+      ])
+    );
+
+    const res = await app.request("/verify?id=9", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("Revoked Bag");
+    expect(body).toContain(
+      '<p data-certificate-state="revoked">This certificate has been revoked.</p>'
+    );
+    expect(body).toMatch(
+      /<meta name="description" content="Revoked Bag by Brandco: This certificate has been revoked\."/
+    );
+    expect(body).not.toContain("Certificate on record");
+    expect(body).not.toContain("Issued by AuthiChain");
+    expect(body).not.toContain("data-certificate-issued");
+    expect(body).not.toContain("data-verified");
+    expect(body).not.toMatch(/Verified|Authentic/);
+  });
+
+  it("marks an active certificate as on record without a data-verified attribute", async () => {
+    (getProductById as any).mockResolvedValue({ id: 10, name: "Active Item" });
+    (getHyperdriveDb as any).mockReturnValue(
+      makeDbSelectStub([
+        {
+          id: 102,
+          productId: 10,
+          status: "active",
+          certificateNumber: "C-102",
+        },
+      ])
+    );
+
+    const res = await app.request("/verify?id=10", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain(
+      '<p data-certificate-state="on-record">Certificate on record</p>'
+    );
+    expect(body).not.toContain("data-verified");
+  });
+
+  it("shows 'No Certificate on Record' with no data-verified attribute when the product has no certificate", async () => {
+    (getProductById as any).mockResolvedValue({ id: 11, name: "Bare Item" });
+    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+
+    const res = await app.request("/verify?id=11", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain(
+      '<p data-certificate-state="none">Product Found -- No Certificate on Record</p>'
+    );
+    expect(body).not.toContain("Certificate on record");
+    expect(body).not.toContain("data-verified");
+  });
+
+  it("does not 500 on malformed percent-encoding (404 no-record page)", async () => {
+    const res = await app.request("/verify/%zz", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("No record found");
     expect(getProductById).not.toHaveBeenCalled();
+  });
+
+  it("serves /verify/live as the founder seal page, not a record lookup", async () => {
+    const res = await app.request("/verify/live", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("This seal is already on Base.");
+    expect(body).toContain("authichain.base.eth");
+    expect(body).toContain("0x34370EDA96e0C7e47f46F18e2D3a7298C241E16F");
+    expect(body).toContain(
+      "basescan.org/tx/0xa07d0bbadcc958b3f6fc8d81acda16a54c4bcfdb5e86bd2ce186e27f5752ab3b"
+    );
+    expect(body).toContain("What this does not prove");
+    expect(body).not.toContain("No record found");
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
+    expect(getProductById).not.toHaveBeenCalled();
+  });
+
+  it("returns a clean 404 'No record found' page for an unknown id", async () => {
+    (getCertificateByNumber as any).mockResolvedValue(undefined);
+    (getHyperdriveDb as any).mockReturnValue({});
+
+    const res = await app.request("/verify?id=test123", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(res.headers.get("content-type") ?? "").toMatch(/html/i);
+    expect(body).toContain("<h1>No record found</h1>");
+    expect(body).toContain("&quot;test123&quot;");
+    expect(body).toContain('name="robots" content="noindex"');
+    expect(body).not.toMatch(/on-chain|blockchain|polygon/i);
+  });
+
+  it("escapes the id on the no-record page", async () => {
+    (getCertificateByNumber as any).mockResolvedValue(undefined);
+    const res = await app.request(
+      "/verify?id=" + encodeURIComponent("<script>x</script>"),
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+    expect(res.status).toBe(404);
+    expect(body).not.toContain("<script>x</script>");
+    expect(body).toContain("&lt;script&gt;");
+  });
+
+  it("treats Postgres 22P02 (numeric id vs uuid products.id) as 'No record found', not 'try again'", async () => {
+    const pgErr = Object.assign(
+      new Error('invalid input syntax for type uuid: "1"'),
+      { code: "22P02" }
+    );
+    (getProductById as any).mockRejectedValueOnce(
+      Object.assign(new Error("Failed query"), { cause: pgErr })
+    );
+    const res = await app.request("/verify?id=1", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("<h1>No record found</h1>");
+    expect(body).toContain("No record was found on the AuthiChain registry");
+    expect(body).not.toContain("try again in a minute");
+  });
+
+  it("keeps the retry page for other numeric-id lookup errors", async () => {
+    (getProductById as any).mockRejectedValueOnce(
+      Object.assign(new Error("connection reset"), { code: "ECONNRESET" })
+    );
+    const res = await app.request("/verify?id=1", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("try again in a minute");
+  });
+
+  it("fails gracefully (404 HTML, no throw) when the lookup errors", async () => {
+    (getCertificateByNumber as any).mockRejectedValue(new Error("db down"));
+    const res = await app.request("/verify?id=test123", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("No record found");
+    expect(body).toContain("try again in a minute");
+  });
+
+  it("fails gracefully when the lookup hangs past the budget", async () => {
+    vi.useFakeTimers();
+    try {
+      (getCertificateByNumber as any).mockReturnValue(new Promise(() => {}));
+      const pending = app.request("/verify?id=test123", {}, makeEnv() as any);
+      await vi.advanceTimersByTimeAsync(3000);
+      const res = await pending;
+      const body = await res.text();
+      expect(res.status).toBe(404);
+      expect(body).toContain("No record found");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("opens one Hyperdrive client per request and closes it after a found record", async () => {
+    (getProductById as any).mockResolvedValue({ id: 7, name: "Sneaker" });
+    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+
+    const res = await app.request("/verify?id=7", {}, makeEnv() as any);
+
+    expect(res.status).toBe(200);
+    expect(createHyperdriveRequestDb).toHaveBeenCalledTimes(1);
+    expect(verifyDbConnect).toHaveBeenCalledTimes(1);
+    expect(verifyDbClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes the client when the lookup fails", async () => {
+    (getCertificateByNumber as any).mockRejectedValue(new Error("db down"));
+    const res = await app.request("/verify?id=test123", {}, makeEnv() as any);
+
+    expect(res.status).toBe(404);
+    expect(verifyDbClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not open a client for the bare prompt", async () => {
+    await app.request("/verify", {}, makeEnv() as any);
+    expect(createHyperdriveRequestDb).not.toHaveBeenCalled();
+  });
+
+  it("answers the retry 404 when connecting through Hyperdrive hangs", async () => {
+    vi.useFakeTimers();
+    try {
+      verifyDbConnect.mockReturnValue(new Promise(() => {}));
+      const pending = app.request("/verify?id=test123", {}, makeEnv() as any);
+      await vi.advanceTimersByTimeAsync(2600);
+      const res = await pending;
+      const body = await res.text();
+      expect(res.status).toBe(404);
+      expect(body).toContain("try again in a minute");
+      expect(getCertificateByNumber).not.toHaveBeenCalled();
+      expect(verifyDbClose).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("uses one 2.5s budget for the whole lookup, not 2.5s per step", async () => {
+    vi.useFakeTimers();
+    try {
+      // Certificate lookup takes 2s, then the product lookup hangs. With a
+      // per-step timer this would answer at ~4.5s, past the apex's 4s budget.
+      (getCertificateByNumber as any).mockReturnValue(
+        new Promise(resolve =>
+          setTimeout(() => resolve({ productId: "p-1" }), 2000)
+        )
+      );
+      (getProductById as any).mockReturnValue(new Promise(() => {}));
+      let settled = false;
+      const pending = app
+        .request("/verify?id=CERT-1", {}, makeEnv() as any)
+        .then(r => {
+          settled = true;
+          return r;
+        });
+      await vi.advanceTimersByTimeAsync(2600);
+      expect(settled).toBe(true);
+      const res = await pending;
+      expect(res.status).toBe(404);
+      expect(await res.text()).toContain("try again in a minute");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -344,6 +687,45 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     expect(body).toContain("11 AI Styles");
     expect(body).toContain('href="/qr-codes"');
     expect(body).toContain('rel="canonical"');
+  });
+
+  it("RES-177: /landing/govchain does not claim a certificate contract live on Polygon", async () => {
+    const res = await app.request("/landing/govchain", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain(
+      "GovChain: federal contracting tools for US small businesses, in development."
+    );
+    expect(body).not.toMatch(/(live|deployed) on Polygon|0x4da4/i);
+  });
+
+  it("RES-208/209: /landing/govchain drops the eSign card and old H1, carries the non-affiliation footer", async () => {
+    const res = await app.request("/landing/govchain", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    for (const banned of [
+      /eSign Act/i,
+      /legally binding/i,
+      /Public Records on Blockchain/i,
+      /anchored on Polygon/i,
+    ]) {
+      expect(body).not.toMatch(banned);
+    }
+    expect(body).toContain(
+      "GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency."
+    );
+  });
+
+  it("RES-177: no brand landing config in dynamic-pages.ts carries the Polygon contract claim", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const src = fs.readFileSync(
+      path.join(import.meta.dirname, "dynamic-pages.ts"),
+      "utf8"
+    );
+    expect(src).not.toMatch(/(live|deployed) on Polygon|0x4da4/i);
   });
 
   it("returns 404 HTML for an unconfigured brand id", async () => {
@@ -369,7 +751,9 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     expect(res.status).toBe(200);
     expect(body).toContain("Signed QR seals for real products.");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(body).toContain(
+      'action="https://authichain.com/checkout/dpp_readiness"'
+    );
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
     );
@@ -405,14 +789,20 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain('<form action="/onboard" method="post">');
     expect(body).toContain('name="email"');
     expect(body).toContain('name="company"');
+    // First-dollar path leads Starter; passport + DPP remain as secondary buys.
+    expect(body).toContain("Buy Starter Pack — $29");
+    expect(body).toContain('href="https://authichain.com/checkout/starter"');
     expect(body).toContain(
       'href="https://authichain.com/checkout/strainchain_passport"'
     );
-    expect(body).toContain(
+    expect(body).not.toContain(
       'href="https://authichain.com/checkout/strainchain_farm"'
     );
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
+    );
+    expect(body.indexOf("checkout/starter")).toBeLessThan(
+      body.indexOf("checkout/dpp_readiness")
     );
     // Retired StrainChain Basic link (no live Stripe account) must not return.
     expect(body).not.toContain("9B6cN59br5xcaCuazy1Nu1o");
@@ -547,7 +937,9 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain("abcd1234");
     expect(body).toContain("Trulieve");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(body).toContain(
+      'action="https://authichain.com/checkout/dpp_readiness"'
+    );
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
     );
@@ -576,10 +968,22 @@ describe("renderDynamicPage: /login and /authenticate", () => {
       expect(body).toContain("Sign in");
       expect(body).toContain("/onboard");
       expect(body).toContain("/dashboard");
+      expect(body).toContain("/generate");
       expect(body).toContain('name="email"');
-      expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+      // LOOP-03: email checkout leads Starter; Launch + DPP remain as links.
+      expect(body).toContain(
+        'action="https://authichain.com/checkout/starter"'
+      );
+      expect(body).toContain("Buy Starter Pack — $29");
+      expect(body).toContain('<a href="/pricing">See pricing</a>');
+      expect(body).not.toContain("$19/mo");
+      expect(body).not.toContain("$190/yr");
+      expect(body).not.toContain("qron_launch");
       expect(body).toContain(
         'href="https://authichain.com/checkout/dpp_readiness"'
+      );
+      expect(body).not.toContain(
+        'action="https://authichain.com/checkout/dpp_readiness"'
       );
       expect(body).not.toContain("app.authichain.com/login");
     }
@@ -611,8 +1015,9 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     expect(body).not.toContain("not a placeholder");
     expect(body).toContain("Or buy now, no call needed");
     expect(body).toContain("StrainChain Passport — $49");
-    expect(body).toContain("StrainChain Farm Plan — $149/mo");
-    expect(body).toContain("EU DPP Readiness Audit — $299");
+    expect(body).not.toContain("StrainChain Farm Plan — $149/mo");
+    expect(body).not.toContain("Basic $199");
+    expect(body).toContain("EU DPP Workspace — $299");
     expect(body).not.toContain('href="/verify"');
     expect(body).toContain('href="https://authichain.com/contact"');
     expect(body).toContain("min-height:44px");
@@ -623,7 +1028,20 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     const body = await res.text();
     expect(body).toContain("min-height:44px");
     expect(body).toContain('<label for="targetUrl">Product URL</label>');
-    expect(body).toContain("5 free, then 100 for $29, no subscription.");
+    expect(body).toContain(
+      "Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts."
+    );
+    expect(body).toContain("Try 5 free generations. No account, no card.");
+    expect(body).toContain(
+      "100 generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof."
+    );
+    expect(body).not.toContain("never expire");
+    expect(body).not.toContain("Launch at $19/mo");
+    // CFA-460 release check: GET /generate has 0 hits for these.
+    expect(body).not.toContain("$19");
+    expect(body).not.toContain("qron_launch");
+    expect(body).not.toContain("Launch subscription");
+    expect(body).not.toContain("Five generations are free");
     expect(body).toContain("not an authenticity proof");
     expect(body).not.toContain("<code>POST /api/generate</code>");
     expect(body).not.toContain("/dashboard");
@@ -636,7 +1054,11 @@ describe("renderDynamicPage: /generate Living QR", () => {
     const res = await app.request("/generate", {}, makeEnv() as any);
     const body = await res.text();
     expect(res.status).toBe(200);
+    expect(body).toContain(
+      "<title>AI QR Art Generator | 5 Free, Then $29 Once, No Subscription | QRON</title>"
+    );
     expect(body).toContain("Generate a Living QR");
+    expect(body).not.toContain("$QRON");
     expect(body).toContain(
       '<form id="generate-form" action="/generate" method="post">'
     );
@@ -645,16 +1067,25 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("if(r.res.status===401)");
     expect(body).toContain("form.submit()");
     expect(body).toContain("$29");
-    expect(body).toContain("$99");
+    expect(body).not.toContain("$19/mo");
+    // Starter CTA (variant A): hidden until a generation succeeds.
+    expect(body).toContain(
+      '<p id="generate-starter-cta" hidden>Like it? Get 100 generations for $29, paid once. No subscription. '
+    );
+    expect(body).toContain(
+      'href="https://authichain.com/checkout/starter?utm_source=qron&amp;utm_medium=onsite&amp;utm_campaign=starter-cta&amp;utm_content=starter-a">Get 100 generations for $29</a>'
+    );
+    expect(body).toContain("if(cta)cta.hidden=false;");
     expect(body).toContain("$299");
-    // Top-ups are the live Starter/Creator packs; the retired credit bundles
-    // ($9.99/$39.99/$99.99) had links on no live Stripe account.
-    expect(body).toContain(
-      'href="https://authichain.com/checkout/starter"'
+    // Top-ups: Starter $29, Creator $99. Launch $19/mo is unlisted (CFA-460).
+    // Retired credit bundles ($9.99/$39.99/$99.99) had no live Stripe account.
+    expect(body).toContain('href="https://authichain.com/checkout/starter"');
+    expect(body).not.toContain(
+      'href="https://authichain.com/checkout/qron_launch"'
     );
-    expect(body).toContain(
-      'href="https://authichain.com/checkout/creator"'
-    );
+    expect(body).toContain('href="https://authichain.com/checkout/creator"');
+    expect(body).not.toContain("Start Launch — $19/mo");
+    expect(body).toContain("Starter Pack — $29");
     expect(body).not.toContain("$9.99");
     expect(body).not.toContain("$39.99");
     expect(
@@ -663,13 +1094,15 @@ describe("renderDynamicPage: /generate Living QR", () => {
         .slice(1)
         .some(rest => rest.slice(0, 40).includes("1Nu"))
     ).toBe(false);
-    expect(body).toContain("5 free, then 100 for $29");
+    expect(body).toContain("Try 5 free generations. No account, no card.");
+    expect(body).not.toContain("Five generations are free");
     expect(body).not.toContain("buy.stripe.com");
     expect(body).not.toContain("Those 5 are signed");
     expect(body).not.toContain("Those 5 are signed");
   });
 
-  it("303s a valid URL to /onboard", async () => {
+  // The no-JS submit goes to the starter checkout (the generate wall, #1388).
+  it("sends an unauthenticated generation attempt to the Starter checkout", async () => {
     const res = await app.request(
       "/generate",
       {
@@ -681,9 +1114,34 @@ describe("renderDynamicPage: /generate Living QR", () => {
       makeEnv() as any
     );
     expect(res.status).toBe(303);
-    const location = res.headers.get("location") || "";
-    expect(location).toContain("/onboard");
-    expect(location).toContain("vertical=qron");
+    const location = new URL(
+      res.headers.get("location") || "",
+      "https://example.test"
+    );
+    expect(location.pathname).toBe("/checkout/starter");
+    expect(location.searchParams.get("targetUrl")).toBe(
+      "https://example.com/sku"
+    );
+    expect(location.searchParams.get("prompt")).toBe("neon");
+  });
+
+  it("shows the API's Starter upgrade link when the free sample is used up", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain("var up=r.data.upgrade;");
+    expect(body).toContain(
+      "up.url.indexOf('https://authichain.com/checkout/starter')===0"
+    );
+    expect(body).toContain("a.id='sample-exhausted-starter'");
+  });
+
+  it("renders signed-in low-credit soft-prompt from API upgrade on success", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain('id="generate-low-credit"');
+    expect(body).toContain("function showLowCredit(up)");
+    expect(body).toContain("a.id='low-credit-starter'");
+    expect(body).toContain("showLowCredit(r.data&&r.data.upgrade)");
   });
 });
 
@@ -698,8 +1156,19 @@ describe("renderDynamicPage: /story StoryMode", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("AuthiChain Launch Proof");
-    expect(body).toContain("lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE");
+    expect(body).toContain("T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ");
     expect(body).toContain("StoryMode");
+    expect(body).not.toContain("verified against the live public JWKS");
+    expect(body).toContain(
+      "This page shows the signing key ID (kid) and links to the public JWKS and issuer record. It does not include a signed attestation yet, so there is nothing on this page to verify."
+    );
+    expect(body).not.toContain("Check the attestation yourself");
+    expect(body).not.toContain(
+      "A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation."
+    );
+    expect(body).toContain(
+      "A deterministic QRON reference resolves to an AuthiChain object record. A signed attestation for it is not published yet."
+    );
   });
 
   it("returns 404 HTML for an unknown story id", async () => {

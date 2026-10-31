@@ -19,6 +19,7 @@ describe("x402ListingPack", () => {
       asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       ready: true,
       status: "ready",
+      paidVerify: { bound: true, status: "bound" },
     });
     expect(pack.wallet).toBe(LIVE_PAY_TO);
     expect(pack.payapi.form.wallet).toBe(LIVE_PAY_TO);
@@ -29,6 +30,18 @@ describe("x402ListingPack", () => {
     expect(pack.tools).toBe(3);
     expect(JSON.stringify(pack)).not.toContain(STALE_PAY_TO);
     expect(pack.ready).toBe(true);
+  });
+
+  it("is not ready while the paid verify route is unbound", () => {
+    const pack = x402ListingPack({
+      payTo: LIVE_PAY_TO,
+      ready: true,
+      status: "ready",
+      paidVerify: { bound: false, status: "unbound" },
+    });
+    expect(pack.wallet).toBe(LIVE_PAY_TO);
+    expect(pack.ready).toBe(false);
+    expect(pack.paidVerify).toBe("unbound");
   });
 
   it("leaves wallet null when health has no payTo", () => {

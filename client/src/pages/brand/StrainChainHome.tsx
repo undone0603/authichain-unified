@@ -42,19 +42,17 @@ function useAnimCounter(target: number, suffix = "", prefix = "") {
 const stats = [
   { value: "Seed\u2192Sale", label: "Full Provenance" },
   { value: "METRC", label: "Compliance Ready" },
-  { value: "Ed25519", label: "Cryptographic Signing" },
-  { value: "$QRON", label: "Scan-to-Earn Rewards" },
 ];
 
 const features = [
   { icon: FileCheck2, title: "Seed-to-Sale Compliance", desc: "METRC and BioTrack integration for cultivators, processors, and dispensaries. Every gram hashed on-chain with tamper-proof provenance." },
   { icon: Leaf, title: "Strain NFTs", desc: "ERC-721 strain identities with THC/CBD basis points, terpene profiles, and lab-cert hashes. Own the genetics, not just the jar." },
-  { icon: Package, title: "Bagiez Package Art", desc: "Vintage packaging art NFTs with territory licensing \u2014 70% artist / 20% platform / 10% community treasury on primary sale." },
+  { icon: Package, title: "Bagiez Package Art", desc: "Vintage packaging art NFTs with territory licensing." },
   { icon: Truck, title: "Dispensary SaaS", desc: "POS-grade inventory management, lab-result QR codes at every SKU, and tamper-evident chain-of-custody for buyers." },
-  { icon: Gem, title: "Royalties That Route", desc: "Secondary-sale royalties split automatically between artist, platform, and community treasury via Solidity splitter contracts." },
+  { icon: Gem, title: "Royalties That Route", desc: "Secondary-sale royalties split automatically via Solidity splitter contracts." },
   { icon: FlaskConical, title: "Lab Verification", desc: "Cryptographically signed lab results anchored to the blockchain. Consumers scan once and see the full COA instantly." },
   { icon: Scan, title: "QRON Authentication", desc: "Every product gets a unique AI-generated QRON code \u2014 beautiful enough for shelf display, powerful enough for forensic verification." },
-  { icon: Shield, title: "Anti-Counterfeit", desc: "Blockchain-anchored provenance eliminates gray-market diversion. Each scan event is logged immutably for compliance auditing." },
+  { icon: Shield, title: "Anti-Counterfeit", desc: "Provenance eliminates gray-market diversion. Each scan event is logged immutably for compliance auditing." },
   { icon: BarChart3, title: "Analytics Dashboard", desc: "Real-time scan analytics, geographic heatmaps, consumer engagement metrics, and compliance reporting in one pane." },
 ];
 
@@ -62,7 +60,7 @@ const stack = [
   { num: "01", title: "METRC Integration", desc: "Direct API integration with state-mandated track-and-trace systems. Automatic manifest sync, transfer reconciliation, and compliance reporting." },
   { num: "02", title: "Strain Identity Protocol", desc: "ERC-721 standard with custom metadata schema for cannabinoid profiles, terpene arrays, and cultivation provenance hashing." },
   { num: "03", title: "QRON Smart Labels", desc: "AuthiChain-verified QR codes generated per-batch with embedded lab results, chain-of-custody data, and consumer verification portal." },
-  { num: "04", title: "Royalty Splitter", desc: "Solidity smart contract that automatically routes secondary-sale royalties between artists, platform, and community treasury." },
+  { num: "04", title: "Royalty Splitter", desc: "Solidity smart contract that automatically routes secondary-sale royalties." },
 ];
 
 const ecosystem = [
@@ -154,7 +152,7 @@ export default function StrainChainHome() {
               <span className="strain-gradient animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(142 71% 45%), hsl(40 60% 55%), hsl(160 60% 40%), hsl(142 71% 45%))", backgroundSize: "200% 200%" }}>On-Chain</span>
             </h1>
             <p className="hero-enter hero-enter-delay-2 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-              Blockchain-anchored provenance for every gram. METRC-compliant tracking, strain NFTs, and cryptographic lab verification \u2014 built for the legal cannabis industry.
+              Provenance for every gram. METRC-compliant tracking, strain NFTs, and cryptographic lab verification \u2014 built for the legal cannabis industry.
             </p>
             <div className="hero-enter hero-enter-delay-3 flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="text-base px-8 h-12 bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-black strain-pulse" onClick={() => go("/supply-chain")}>
@@ -320,7 +318,7 @@ export default function StrainChainHome() {
               Every Gram,{" "}
               <span className="strain-gradient animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(142 71% 45%), hsl(40 60% 55%), hsl(160 60% 40%), hsl(142 71% 45%))", backgroundSize: "200% 200%" }}>Verified.</span>
             </h2>
-            <p className="text-muted-foreground text-lg mb-8 max-w-lg mx-auto">Blockchain-anchored provenance for the legal cannabis industry. Start verifying today.</p>
+            <p className="text-muted-foreground text-lg mb-8 max-w-lg mx-auto">Provenance for the legal cannabis industry. Start verifying today.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="text-base px-8 h-12 bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-black strain-pulse" onClick={() => go("/supply-chain")}>
                 Launch StrainChain <Leaf className="ml-2 h-5 w-5" />

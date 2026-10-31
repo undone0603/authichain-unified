@@ -112,7 +112,7 @@ Write a ${sequence === 1 ? '3-4 sentence intro email' : '2-3 sentence follow-up'
 Return JSON: { "subject": "...", "body": "..." }`;
 
   let subject = subjectFallback;
-  let body = `Hi ${payload.leadName ?? 'there'},\\n\\nI’m reaching out because AuthiChain helps brands verify product authenticity with QR-based cryptographic provenance and AI-assisted counterfeit detection. For ${payload.leadOrg ?? 'your organization'}, I can show a concise StoryMode proof and a practical path from scan to verification.\\n\\n${segment === 'LUXURY' ? 'Would a 10-minute demonstration be useful?' : 'Reply with interest and I’ll send the reference proof.'}\\n\\nBest,\\nAuthiChain`;
+  let body = `Hi ${payload.leadName ?? 'there'},\n\nI’m reaching out because AuthiChain helps brands verify product authenticity with QR-based cryptographic provenance and AI-assisted counterfeit detection. For ${payload.leadOrg ?? 'your organization'}, I can show a concise StoryMode proof and a practical path from scan to verification.\n\n${segment === 'LUXURY' ? 'Would a 10-minute demonstration be useful?' : 'Reply with interest and I’ll send the reference proof.'}\n\nBest,\nAuthiChain`;
 
   try {
     const result = await invokeLLM({

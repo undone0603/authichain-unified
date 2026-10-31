@@ -40,6 +40,30 @@ describe("classifyRepair", () => {
     ).toBe(false);
   });
 
+  it("allows a prettier fix to .github JSON manifests under the Lint job", () => {
+    const result = classifyRepair({
+      files: [".github/autonomy.json", ".github/founder-business.json"],
+      jobName: "Lint",
+    });
+    expect(result.safe).toBe(true);
+  });
+
+  it("refuses repair diffs that touch workflow files", () => {
+    expect(
+      classifyRepair({
+        files: [".github/workflows/ci.yml"],
+        jobName: "Lint",
+      }).safe
+    ).toBe(false);
+  });
+
+  it("escalates instead of repairing more than 20 files", () => {
+    const files = Array.from({ length: 21 }, (_, i) => `src/lib/f${i}.ts`);
+    const result = classifyRepair({ files, jobName: "Lint" });
+    expect(result.safe).toBe(false);
+    expect(result.reason).toMatch(/escalate/);
+  });
+
   it("refuses wrangler deploy in the repair diff", () => {
     expect(
       classifyRepair({

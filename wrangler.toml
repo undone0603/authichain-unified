@@ -23,6 +23,11 @@ id = "7c8e9466e57843199f6f768615e42a5c"
 binding = "MICROSITES_KV"
 id = "a992900da1db4b998af1cdf4eccf550a"
 
+# General AuthiChain KV (already provisioned; checklist name AUTHICHAIN_KV)
+[[kv_namespaces]]
+binding = "AUTHICHAIN_KV"
+id = "c098141f2f4345daa353c753783d4d9c"
+
 # D1 database
 [[d1_databases]]
 binding = "DB"
@@ -34,7 +39,31 @@ database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 binding = "MICROSITES_BUCKET"
 bucket_name = "authichain-microsites"
 
-# Free Cloudflare cron → laptop job runner via Tunnel + Access
-# Free plan allows only 5 cron triggers account-wide; use one hourly schedule.
+# Primary assets bucket (already provisioned)
+[[r2_buckets]]
+binding = "ASSETS_BUCKET"
+bucket_name = "authichain-assets"
+
+# Queues (already provisioned; 0 producers/consumers until workers bind them)
+[[queues.producers]]
+binding = "SCAN_PIPELINE"
+queue = "authichain-scan-pipeline"
+
+[[queues.producers]]
+binding = "WEBHOOK_DELIVERY"
+queue = "authichain-webhook-delivery"
+
+# No cron. worker/index.ts exports a Hono app (fetch only) with no scheduled()
+# handler, so the hourly "0 * * * *" trigger failed every run with "Handler does
+# not export a scheduled() function". The intent was never wired up: #954 added
+# this block with the note "Free Cloudflare cron -> laptop job runner via
+# Tunnel + Access" in the same PR that added worker/outreach-loop.ts (an
+# autonomous Gmail outreach loop that index.ts does not import). Neither target
+# is clear enough, or safe enough, to switch on as a config default.
+# `crons = []` (not deleting the block) is what makes `wrangler deploy` remove
+# the live trigger; deleting the block would leave it in place. It also frees
+# one of the Free plan's five account-wide cron slots.
+# Live trigger already removed via API 2026-10-02 08:38 ET (AE-20261002-CFD-11).
+# Rollback: crons = ["0 * * * *"] (live schedule recorded 2026-09-29).
 [triggers]
-crons = ["0 * * * *"]
+crons = []

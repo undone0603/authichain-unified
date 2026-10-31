@@ -7,7 +7,6 @@ import Link from "next/link";
 import { CHECKOUT_EMAIL_FORM_CSS } from "@/lib/checkout-email";
 import { getSeoPageBySlug, listSeoSlugs } from "@/lib/seo-pages";
 import {
-  ShieldCheck,
   ShieldAlert,
   Clock,
   Package,
@@ -99,7 +98,6 @@ export default async function CertificationPage({ params }: PageProps) {
     .eq("certification_id", cert.id)
     .single();
 
-  const isValid = cert.status === "approved";
   const isRevoked = cert.status === "revoked";
   const isPending = cert.status === "pending";
 
@@ -108,12 +106,6 @@ export default async function CertificationPage({ params }: PageProps) {
       <div className="max-w-4xl mx-auto px-6 py-12">
         {/* Status Header */}
         <div className="text-center mb-12">
-          {isValid && (
-            <div className="inline-flex items-center gap-2 bg-green-500/10 text-green-400 border border-green-500/20 px-8 py-4 rounded-full font-black uppercase tracking-widest animate-gold-pulse">
-              <ShieldCheck className="w-6 h-6" />
-              Verified Authentic
-            </div>
-          )}
           {isRevoked && (
             <div className="inline-flex items-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20 px-8 py-4 rounded-full font-black uppercase tracking-widest">
               <ShieldAlert className="w-6 h-6" />
@@ -165,7 +157,7 @@ export default async function CertificationPage({ params }: PageProps) {
           </div>
           <div className="bg-zinc-100 py-4 text-center">
             <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">
-              AuthiChain Protocol &bull; Ed25519 Signed
+              AuthiChain Protocol
             </p>
           </div>
         </div>
@@ -405,10 +397,6 @@ export default async function CertificationPage({ params }: PageProps) {
                 Registry Status
               </h3>
               <div className="space-y-4">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-zinc-500 font-bold">Network</span>
-                  <span className="font-mono text-zinc-200">Polygon POS</span>
-                </div>
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-zinc-500 font-bold">Standard</span>
                   <span className="font-mono text-zinc-200">ERC-721</span>

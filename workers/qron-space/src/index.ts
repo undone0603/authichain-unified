@@ -18,6 +18,9 @@ import {
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
 import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
+import { tryHandleEstateCanonicalVerify } from "../../_shared/estate-canonical-verify";
+import { tryHandleEstateProtocolDiscovery } from "../../_shared/estate-protocol-discovery";
+import { tryHandleEstateQronResolve } from "../../_shared/estate-qron-resolve";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -49,10 +52,9 @@ const OG_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 
   <rect x="0" y="624" width="1200" height="6" fill="#06b6d4"/>
   <polygon points="120,80 170,108 170,164 120,192 70,164 70,108" fill="none" stroke="#06b6d4" stroke-width="3" opacity="0.6"/>
   <text x="120" y="148" text-anchor="middle" font-family="monospace" font-size="56" font-weight="700" fill="#06b6d4">Q</text>
-  <text x="240" y="390" font-family="Arial,sans-serif" font-size="108" font-weight="800" letter-spacing="4" fill="#e2e8f0">$QRON</text>
+  <text x="240" y="390" font-family="Arial,sans-serif" font-size="108" font-weight="800" letter-spacing="4" fill="#e2e8f0">QRON</text>
   <line x1="240" y1="416" x2="460" y2="416" stroke="#06b6d4" stroke-width="3"/>
-  <text x="240" y="472" font-family="Arial,sans-serif" font-size="36" font-weight="300" fill="#94a3b8">Stake · Govern · Bridge</text>
-  <text x="240" y="516" font-family="Arial,sans-serif" font-size="22" fill="#64748b">ERC-20 on Polygon PoS · not a payment rail</text>
+  <text x="240" y="472" font-family="Arial,sans-serif" font-size="36" font-weight="300" fill="#94a3b8">Living QR generation</text>
   <text x="1160" y="598" text-anchor="end" font-family="monospace" font-size="20" letter-spacing="3" fill="#06b6d4">QRON.SPACE</text>
 </svg>`;
 
@@ -2019,6 +2021,9 @@ function decodeXml(s: string): string {
     .replace(/&amp;/g, '&');
 }
 
+// RES-47 #4 / MKT-78 X16: keep token-economy videos off qron.space.
+const HIDDEN_VIDEO_IDS = new Set(['70KG5d2fFUo']);
+
 async function fetchLatestVideos(limit = 6): Promise<YtVideo[]> {
   try {
     const res = await fetch(
@@ -2033,7 +2038,7 @@ async function fetchLatestVideos(limit = 6): Promise<YtVideo[]> {
       const id = e.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)?.[1];
       const title = decodeXml(e.match(/<title>([^<]*)<\/title>/)?.[1] ?? '');
       const published = e.match(/<published>([^<]+)<\/published>/)?.[1] ?? '';
-      if (id) out.push({ id, title, published });
+      if (id && !HIDDEN_VIDEO_IDS.has(id)) out.push({ id, title, published });
     }
     return out;
   } catch {
@@ -2088,7 +2093,7 @@ function notFound(pathname: string): Response {
   const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>404 — Not Found · $QRON</title>
+<title>404 — Not Found</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -2118,6 +2123,10 @@ type Env = {
   APP_ORIGIN?: string;
   /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
   VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
+  /** Optional override; defaults to https://authichain.com/api/v1/attestation/verify */
+  AUTHICHAIN_CANONICAL_VERIFY_URL?: string;
+  /** Optional override; defaults to https://authichain.com for issuer/JWKS proxy */
+  AUTHICHAIN_PROTOCOL_ORIGIN?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -2131,6 +2140,34 @@ function stripTrailingSlashes(value: string): string {
   let end = value.length;
   while (end > 0 && value.charCodeAt(end - 1) === 47) end--;
   return value.slice(0, end);
+}
+
+async function redirectAnonymousGenerate(request: Request): Promise<Response> {
+  let targetUrl = "";
+  let prompt = "";
+  try {
+    const form = await request.formData();
+    targetUrl = String(form.get("targetUrl") || "").trim();
+    prompt = String(form.get("prompt") || "").trim().slice(0, 200);
+  } catch {
+    return new Response("Could not read the form.", {
+      status: 400,
+      headers: { "cache-control": "no-store" },
+    });
+  }
+  if (!/^https?:\/\//i.test(targetUrl) || targetUrl.length > 500) {
+    return new Response("A valid http(s) URL is required.", {
+      status: 400,
+      headers: { "cache-control": "no-store" },
+    });
+  }
+  const dest = new URL("https://authichain.com/checkout/starter");
+  dest.searchParams.set("targetUrl", targetUrl);
+  if (prompt) dest.searchParams.set("prompt", prompt);
+  return new Response(null, {
+    status: 303,
+    headers: { location: dest.toString(), "cache-control": "no-store" },
+  });
 }
 
 async function proxyToApp(request: Request, url: URL, origin: string): Promise<Response> {
@@ -2161,10 +2198,15 @@ export default {
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "qron.space", ts: Date.now() });
     }
+    if (request.method === "POST" && /^\/generate\/?$/.test(url.pathname)) {
+      // The app behind APP_ORIGIN still answers this POST with /onboard.
+      // Loop 2 is the $29 Starter checkout on authichain.com.
+      return redirectAnonymousGenerate(request);
+    }
     if (
       // /onboard is linked from /generate ("Request a free pilot"); it used
       // to 404 here. Same app intake govchain.us and strainchain.io proxy.
-      /^\/(?:generate|api\/generate|onboard)(?:\/|$)/.test(url.pathname) ||
+      /^\/(?:generate(?:\/|$)|api\/generate(?:\/|$)|onboard(?:\/|$)|starmap(?:\/|$)|sky(?:\/|$)|api\/starmap(?:\/|$))/.test(url.pathname) ||
       isSeoPassportPath(url.pathname)
     ) {
       if (!env?.APP_ORIGIN) {
@@ -2207,7 +2249,20 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "qron");
     if (pricing) return pricing;
-    const x402 = await tryHandleSisterX402(request, env, env?.VERIFY_APP);
+    // Canonical attestation verify — before x402/MCP so protocol truth is not
+    // confused with paid agent verify credit settlement.
+    const protocolDiscovery = await tryHandleEstateProtocolDiscovery(request, env);
+    if (protocolDiscovery) return protocolDiscovery;
+    const qronResolve = await tryHandleEstateQronResolve(request, env);
+    if (qronResolve) return qronResolve;
+    const canonicalVerify = await tryHandleEstateCanonicalVerify(request, env);
+    if (canonicalVerify) return canonicalVerify;
+    const x402 = await tryHandleSisterX402(
+      request,
+      env,
+      env?.VERIFY_APP,
+      "qron"
+    );
     if (x402) return x402;
     const mcp = await tryHandleSisterMcp(
       request,
@@ -2228,11 +2283,11 @@ export default {
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>QRON — Living QR codes that scan</title>
-<meta name="description" content="Generate a Living QR for packaging and labels, scannable from any camera. In development: Ed25519-signed codes anchored to AuthiChain's certificate contract on Polygon.">
+<meta name="description" content="Generate a Living QR for packaging and labels, scannable from any camera. In development: Ed25519-signed codes.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="QRON">
 <meta property="og:title" content="QRON — Living QR codes that scan">
-<meta property="og:description" content="Generate a Living QR for packaging and labels, scannable from any camera. In development: Ed25519-signed codes anchored to AuthiChain's certificate contract on Polygon.">
+<meta property="og:description" content="Generate a Living QR for packaging and labels, scannable from any camera. In development: Ed25519-signed codes.">
 <meta property="og:url" content="https://qron.space/">
 <meta property="og:image" content="https://qron.space/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -2274,7 +2329,6 @@ ${estateHero({
 ${estateTrust([
   { value: "Ed25519", label: "Signed payload (in development)" },
   { value: "Scannable", label: "Any camera app" },
-  { value: "Polygon", label: "Contract deployed" },
   { value: "Editable", label: "Redirects, no reprint" },
 ])}
 ${estateFeatures(
@@ -2283,10 +2337,8 @@ ${estateFeatures(
   [
     { title: "Living QR generation", body: "Create a signed QR that can change its destination later, so packaging does not need a reprint when a campaign URL changes." },
     { title: "Scannable AI art", body: "Illusion-diffusion styles that remain readable by a standard phone camera. Art is the surface; the payload is the product." },
-    { title: "Estate verification (in development)", body: "QRON codes will link to an AuthiChain certificate on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. Scan-to-verify is in development." },
+    { title: "Estate verification (in development)", body: "Scan-to-verify is in development." },
     { title: "Packaging and labels", body: "Export print-ready art for jars, cards, and cartons. The generate path is the same one production already proxies." },
-    { title: "Utility token, not the CTA", body: "$QRON is the estate utility token on Polygon. Staking and governance are secondary; generation is how you start." },
-    { title: "Public contract", body: "Staking contract 0xAebf…E437 is published on Polygonscan. Inspect it there — we do not invent vote counts or APY theater on this page." },
   ],
   "features",
 )}
@@ -2294,7 +2346,7 @@ ${estateFeatures(
 <section class="estate-section" id="pricing">
   <div class="wrap">
     <h2>Products and pricing</h2>
-    <p class="section-sub">Figures from the published AuthiChain plan catalogue. Starter and Creator use Stripe Payment Links. EU DPP Readiness uses live checkout on authichain.com.</p>
+    <p class="section-sub">Figures from the published AuthiChain plan catalogue. Start with Starter Pack $29. Creator and EU DPP Readiness stay on the grid.</p>
     ${estatePricingGrid("qron")}
     <p class="section-sub" style="margin-top:20px"><a href="/pricing">Open the full pricing page</a></p>
   </div>
@@ -2304,8 +2356,12 @@ ${videosHtml}
 
 ${estateCtaBand({
   title: "Generate a Living QR",
-  lede: "The generate form is proxied to the AuthiChain app. That is the conversion path for qron.space.",
-  actions: [{ href: "/generate", label: "Generate Living QR", primary: true }],
+  lede: "The generate form is proxied to the AuthiChain app. That is the conversion path for qron.space — Starter $29.",
+  actions: [
+    { href: "/generate", label: "Generate Living QR", primary: true },
+    { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29", primary: false },
+    { href: "/pricing", label: "See pricing", primary: false },
+  ],
 })}
 </main>
 ${estateFooter(
@@ -2316,7 +2372,7 @@ ${estateFooter(
       links: [
         { href: "/generate", label: "Generate Living QR" },
         { href: "/pricing", label: "Pricing" },
-        { href: "https://authichain.com/pricing", label: "DPP checkout" },
+        { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29" },
       ],
     },
     {
@@ -2325,12 +2381,6 @@ ${estateFooter(
         { href: "https://authichain.com/dashboard", label: "AuthiChain dashboard" },
         { href: "https://govchain.us/onboard", label: "GovChain onboard" },
         { href: "https://strainchain.io/onboard", label: "StrainChain onboard" },
-      ],
-    },
-    {
-      heading: "Contract",
-      links: [
-        { href: "https://polygonscan.com/address/0xAebfA6b08fb25b59748c93273aB8880e20FfE437", label: "Polygonscan" },
       ],
     },
   ],

@@ -67,7 +67,7 @@ def run(ctx: ExecutionContext) -> Optional[str]:
                 issue = lead["issue"]
                 
                 # Draft a message that mentions the SPECIFIC issue found during scouting
-                topic = f"Risk Alert for {company}: We've detected {issue}. AuthiChain can stop this with AI-consensus provenance."
+                topic = f"Risk Alert for {company}: We've detected {issue}."
                 
                 invitation = asyncio.run(generate_social_post(topic, "Hyper-Personalized Risk Alert"))
                 

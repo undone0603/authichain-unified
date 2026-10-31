@@ -2,6 +2,8 @@
  * DPP paid-session fulfillment: loop events + provisionPurchase + activate email.
  * Shared by the Next Stripe webhook and server/webhooks/stripe.ts so apex
  * checkout.session.completed actually grants access.
+ *
+ * The $299 charge opens a workspace with 50 generations. It is not an audit.
  */
 
 import { provisionPurchase } from "./provisioning";
@@ -14,6 +16,12 @@ import {
   isDppOffer,
   recordDppLoopEventOnce,
 } from "./dpp-loop";
+import {
+  beginProvisionContinuity,
+  finishProvisionContinuity,
+} from "./founder-exit/supabase-log";
+import { markRetryableFulfillment } from "./retryable-fulfillment";
+import { emitTrustEvent } from "../../shared/trust-events";
 
 type SupabaseLike = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,29 +51,48 @@ export async function fulfillDppPaidSession(
   supabase: SupabaseLike,
   session: DppCheckoutSessionLike,
   priceId?: string | null
-): Promise<{ handled: boolean; profileId: string | null }> {
+): Promise<DppFulfillResult> {
+  try {
+    const result = await fulfillDppPaidSessionOnce(supabase, session, priceId);
+    if (result.handled) {
+      emitTrustEvent("fulfillment.completed", {
+        session_id: session.id,
+        profile_id: result.profileId,
+        plan: session.metadata?.plan || "dpp_readiness",
+        outcome: `activation_email_${result.activationEmail}`,
+      });
+    }
+    return result;
+  } catch (err) {
+    emitTrustEvent("fulfillment.failed", {
+      session_id: session.id,
+      plan: session.metadata?.plan || "dpp_readiness",
+      error_class: err instanceof Error ? err.name : "Error",
+      outcome: "stripe_will_retry",
+    });
+    throw err;
+  }
+}
+
+async function fulfillDppPaidSessionOnce(
+  supabase: SupabaseLike,
+  session: DppCheckoutSessionLike,
+  priceId?: string | null
+): Promise<DppFulfillResult> {
   const md = session.metadata || {};
   const linePriceId =
     (typeof priceId === "string" && priceId) ||
     (typeof md.stripe_price_id === "string" ? md.stripe_price_id : null);
-  // $0 / DPP-SMOKE / is_demo / smoke_* visit ids are not filtered. A paid
-  // smoke session (payment_status=paid, amount_total=0) must still write
-  // payment_succeeded + provisioned. isDppOffer is the only offer gate.
   if (!isDppOffer(md, linePriceId)) {
-    return { handled: false, profileId: null };
+    return { handled: false, profileId: null, activationEmail: "skipped" };
   }
 
-  // Fulfillment-collision guard (shared by both webhook endpoints): DPP
-  // readiness is a one-time audit. A subscription-mode / recurring Session —
-  // mode=subscription, a subscription id, or an unknown recurring price with
-  // no PLANS entry — must never be granted DPP credits. Fail closed without
-  // throwing: an unfulfillable recurring object can never succeed on retry.
   const subscriptionId = toId(session.subscription);
   if (session.mode === "subscription" || subscriptionId) {
     console.error(
       `[dpp-fulfill] refusing DPP grant for recurring checkout: session=${session.id} mode=${session.mode ?? "unknown"}`
     );
-    return { handled: false, profileId: null };
+    return { handled: false, profileId: null, activationEmail: "skipped" };
   }
 
   const visitId =
@@ -80,6 +107,7 @@ export async function fulfillDppPaidSession(
   const brand = getBrandIdFromMetadata(md);
   const plan = md.plan || "dpp_readiness";
   const demo = isDppDemoSession(md);
+  emitTrustEvent("fulfillment.started", { session_id: session.id, plan, demo });
   const loopMeta = {
     plan,
     brand,
@@ -99,6 +127,17 @@ export async function fulfillDppPaidSession(
     });
   }
 
+  try {
+    await beginProvisionContinuity(supabase, {
+      sessionId: session.id,
+      amountCents: session.amount_total ?? null,
+      isDemo: demo,
+      plan,
+    });
+  } catch (err) {
+    throw markRetryableFulfillment(err);
+  }
+
   const prov = await provisionPurchase(supabase, {
     email: email || null,
     userId: md.user_id || null,
@@ -106,7 +145,54 @@ export async function fulfillDppPaidSession(
     brand,
     stripeCustomerId: toId(session.customer),
     stripeSubscriptionId: toId(session.subscription),
+    sessionId: session.id,
   });
+
+  // A resolved profile id does not mean the entitlement write succeeded.
+  // Recording provisioned here would make a failed grant look done, and
+  // Stripe would not retry.
+  if (prov.status === "upsert_failed") {
+    throw markRetryableFulfillment(
+      new Error(
+        `DPP provision failed: ${prov.error || "profiles upsert failed"}`
+      )
+    );
+  }
+
+  // A real buyer paid and there is nobody to grant to. Acknowledging that as
+  // handled told Stripe to stop retrying, closed the continuity record and
+  // wrote `provisioned`, so the watchdog and the stall report both saw a
+  // fulfilled sale. Fail like any other ungranted payment instead: no
+  // `provisioned`, Stripe keeps the event red, and once the paid stage
+  // outlives its retry budget runDppExceptionsReport escalates it.
+  if (prov.status === "no_identity" && !demo) {
+    throw markRetryableFulfillment(
+      new Error(
+        `DPP provision failed: no_identity (paid session ${session.id} has no buyer email or user id)`
+      )
+    );
+  }
+
+  if (prov.profileId && !prov.skippedIdempotent) {
+    emitTrustEvent("entitlement.granted", {
+      session_id: session.id,
+      profile_id: prov.profileId,
+      plan,
+      demo,
+    });
+  }
+
+  try {
+    await finishProvisionContinuity(supabase, {
+      sessionId: session.id,
+      amountCents: session.amount_total ?? null,
+      isDemo: demo,
+      plan,
+      grantAlreadyPresent: prov.skippedIdempotent === true,
+    });
+  } catch (err) {
+    throw markRetryableFulfillment(err);
+  }
 
   if (visitId && prov.profileId) {
     await recordDppLoopEventOnce(supabase, {
@@ -124,9 +210,6 @@ export async function fulfillDppPaidSession(
       },
     });
   } else if (visitId && prov.status === "no_identity") {
-    // Retry cannot invent a buyer. Write provisioned with skip_reason so ops
-    // can tell a completed smoke from a half-fulfill. is_demo does not skip
-    // access grant — only Resend email noise.
     await recordDppLoopEventOnce(supabase, {
       visitId: String(visitId),
       stage: "provisioned",
@@ -140,28 +223,136 @@ export async function fulfillDppPaidSession(
         ...(demo ? { is_demo: true } : {}),
       },
     });
-  } else if (prov.status === "upsert_failed") {
-    // Do not write dpp_loop:provisioned here — session-id dedupe would hide a
-    // later successful retry. Throw so Stripe Resend / retries can grant access.
-    throw new Error(
-      `DPP provision failed: ${prov.error || "profiles upsert failed"}`
-    );
   }
 
-  // Demo/smoke may skip Resend noise. Access grant + funnel writes already ran.
-  if (prov.profileId && email && !demo) {
+  let activationEmail: ActivationEmailStatus = "skipped";
+  if (prov.profileId && email && !demo && !prov.skippedIdempotent) {
     const mail = renderBillingEmail("dpp_audit_provisioned", brand, {
-      planName: "EU DPP Readiness Audit",
+      planName: "EU DPP Workspace",
       activateUrl: dppActivateUrl(session.id, visitId ? String(visitId) : null),
     });
-    await sendEmail({
-      to: email,
-      from: mail.from,
-      subject: mail.subject,
-      html: mail.html,
-      text: mail.text,
-    }).catch(() => {});
+    // A paid buyer who never gets this email has no way into the workspace, so
+    // a failed send must be visible (log + funnel_events row), never swallowed.
+    // The payment and the grant above are already done; we do not throw here,
+    // because a Stripe retry would re-run provisioning, not just the email.
+    let result: {
+      ok: boolean;
+      provider?: string;
+      status?: number;
+      error?: string;
+    };
+    try {
+      result = await sendEmail({
+        to: email,
+        from: mail.from,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+      });
+    } catch (err) {
+      result = {
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+    if (result && result.ok) {
+      activationEmail = "sent";
+    } else {
+      activationEmail = "failed";
+      const reason = redactForLog(result?.error ?? "no send result");
+      // No recipient address in logs: session and profile ids are enough to
+      // find the buyer from the service side.
+      console.error(
+        `[dpp-fulfill] activation email failed: session=${session.id} profile=${prov.profileId} provider=${result?.provider ?? "unknown"} status=${result?.status ?? "n/a"} reason=${reason}`
+      );
+      await recordActivationEmailFailed(supabase, {
+        prospectId: visitId ? String(visitId) : session.id,
+        source: md.source || "direct",
+        stripeSessionId: session.id,
+        profileId: prov.profileId,
+        provider: result?.provider ?? null,
+        httpStatus: result?.status ?? null,
+        reason,
+      });
+    }
   }
 
-  return { handled: true, profileId: prov.profileId };
+  return { handled: true, profileId: prov.profileId, activationEmail };
+}
+
+export type ActivationEmailStatus = "sent" | "failed" | "skipped";
+
+export type DppFulfillResult = {
+  handled: boolean;
+  profileId: string | null;
+  /** Outcome of the activation email: skipped = not attempted (no email, demo, or not a DPP grant). */
+  activationEmail: ActivationEmailStatus;
+};
+
+const EMAIL_LIKE = /[^\s@<>"'(),;:]+@[^\s@<>"'(),;:]+\.[^\s@<>"'(),;:]+/g;
+
+/** Strip anything address-shaped from a provider error and cap its length. */
+export function redactForLog(message: string | undefined | null): string {
+  if (!message) return "unknown";
+  return message
+    .replace(EMAIL_LIKE, "[redacted]")
+    .replace(/\s+/g, " ")
+    .slice(0, 200);
+}
+
+/**
+ * Durable failed-status record for a dead activation email. Deliberately not a
+ * dpp_loop:* event and no metadata.loop_stage, so loop reconstruction and stall
+ * reports are unchanged. No email address is stored. Never throws.
+ */
+async function recordActivationEmailFailed(
+  supabase: SupabaseLike,
+  input: {
+    prospectId: string;
+    source: string;
+    stripeSessionId: string;
+    profileId: string | null;
+    provider: string | null;
+    httpStatus: number | null;
+    reason: string;
+  }
+): Promise<void> {
+  try {
+    const { error } = await supabase.from("funnel_events").insert({
+      prospect_id: input.prospectId,
+      stage: "complete_checkout",
+      source: [
+        "seo",
+        "direct",
+        "email",
+        "affiliate",
+        "linkedin_post",
+        "reddit_post",
+        "gov_engine",
+      ].includes(input.source)
+        ? input.source
+        : "direct",
+      event_type: "dpp_activation_email:failed",
+      metadata: {
+        activation_email_status: "failed",
+        stripe_session_id: input.stripeSessionId,
+        ...(input.profileId ? { profile_id: input.profileId } : {}),
+        ...(input.provider ? { provider: input.provider } : {}),
+        ...(input.httpStatus != null ? { http_status: input.httpStatus } : {}),
+        reason: input.reason,
+      },
+      timestamp: new Date().toISOString(),
+    });
+    if (error) {
+      console.error(
+        `[dpp-fulfill] could not record activation email failure: session=${input.stripeSessionId}`,
+        error?.message ?? error
+      );
+    }
+  } catch (err) {
+    console.error(
+      `[dpp-fulfill] could not record activation email failure: session=${input.stripeSessionId}`,
+      err instanceof Error ? err.message : err
+    );
+  }
 }

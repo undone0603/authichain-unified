@@ -11,14 +11,14 @@ Secret **names** only. No values.
 
 ## Scores (0–5)
 
-| #   | Surface                           |   Score | One-line                                                                                                                                                                                                                                                                                                           |
-| --- | --------------------------------- | ------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| (a) | First Stripe / DPP smoke purchase | **4.0** | `GET /api/checkout/dpp` **303** to `checkout.stripe.com` (live). Smoke buyer owner-attested. Gap: Dashboard must hit `/api/stripe/webhook` (legacy URL 404/410); `/api/funnel` was 404 (fixed in this PR, needs deploy).                                                                                           |
-| (b) | B2B / email live-send reliability | **1.5** | Workflows **active**, `OWNER_LIVE_SEND` attested true, scripts fail-closed. **Guardrail API 404s** on apex; client defaults to `app.authichain.com`. Parallel: _Unblock B2B outreach + guardrail_.                                                                                                                 |
-| (c) | AgentZ ↔ claw productionization   | **3.5** | Tunnel `/health` 200 sovereign; claw `agentz_api: configured`. Chat `run` now sends `?mode=` + JSON; FastAPI honors both. Architect / `*email*` stay dry-run unless explicit `live`. Access service token still owner. Do not invent `OPENCLAW_GATEWAY_URL`.                                                       |
-| (d) | x402 agent payments               | **4.5** | **Ready (not `not_configured`).** Live `GET /api/x402/health` → 200 `ready` / `trustless`; payTo `0xaebf…e437`, Base 8453, Circle USDC, $0.05/call, PayAI reachable. `POST /api/x402` → 402 + EIP-712 extra. Public docs `https://authichain.com/x402`. Do not rebind secrets away from the owner-authorized treasury. // pragma: allowlist secret |
-| (e) | app.* / brand surfaces            | **4.0** | Four apex + estate `/onboard`/`/generate` **200**. `app.authichain.com/dashboard` **200**. `app.authichain.com/` **302 → /dashboard** (#1068). Vertical `*chain-io` routes mostly commented.                                                                                                                       |
-| (f) | Autonomous revenue loops          | **3.5** | Checkout + genesis + `/api/funnel` live. Schedule `DRY_RUN` fail-closed (orchestration + content-publish). Claw/AgentZ mode honored. `ghost-traffic` does real light probes. Funnel accepts `dpp_published` / `verification` / `retained` aliases. Next `/api/dpp/publish` + `/verify` still not on edge.          |
+| #   | Surface                           |   Score | One-line                                                                                                                                                                                                                                                                                                                                           |
+| --- | --------------------------------- | ------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| (a) | First Stripe / DPP smoke purchase | **4.0** | `GET /api/checkout/dpp` **303** to `checkout.stripe.com` (live). Smoke buyer owner-attested. Gap: Dashboard must hit `/api/stripe/webhook` (legacy URL 404/410); `/api/funnel` was 404 (fixed in this PR, needs deploy).                                                                                                                           |
+| (b) | B2B / email live-send reliability | **1.5** | Workflows **active**, `OWNER_LIVE_SEND` attested true, scripts fail-closed. **Guardrail API 404s** on apex; client defaults to `app.authichain.com`. Parallel: _Unblock B2B outreach + guardrail_.                                                                                                                                                 |
+| (c) | AgentZ ↔ claw productionization   | **3.5** | Tunnel `/health` 200 sovereign; claw `agentz_api: configured`. Chat `run` now sends `?mode=` + JSON; FastAPI honors both. Architect / `*email*` stay dry-run unless explicit `live`. Access service token still owner. Do not invent `OPENCLAW_GATEWAY_URL`.                                                                                       |
+| (d) | x402 agent payments               | **4.5** | **Ready (not `not_configured`).** Live `GET /api/x402/health` → 200 `ready` / `trustless`; payTo `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2`, Base 8453, Circle USDC, $0.05/call, PayAI reachable. `POST /api/x402` → 402 + EIP-712 extra. Public docs `https://authichain.com/x402`. Do not rebind secrets away from the owner-authorized treasury. // pragma: allowlist secret |
+| (e) | app.* / brand surfaces            | **4.0** | Four apex + estate `/onboard`/`/generate` **200**. `app.authichain.com/dashboard` **200**. `app.authichain.com/` **302 → /dashboard** (#1068). Vertical `*chain-io` routes mostly commented.                                                                                                                                                       |
+| (f) | Autonomous revenue loops          | **3.5** | Checkout + genesis + `/api/funnel` live. Schedule `DRY_RUN` fail-closed (orchestration + content-publish). Claw/AgentZ mode honored. `ghost-traffic` does real light probes. Funnel accepts `dpp_published` / `verification` / `retained` aliases. Next `/api/dpp/publish` + `/verify` still not on edge.                                          |
 
 ---
 
@@ -86,7 +86,7 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 | Checkout HEAD 204 = broken                                               | Intentional. **GET** is 303.                                                                                                   |
 | `claw` health `agentz_api: configured` = AgentZ reachable                | Env var present only; no live probe, no Access service-token headers in repo.                                                  |
 | `OPENCLAW_GATEWAY_URL` missing is a code bug                             | Owner-set. Health correctly reports `not_set`. Do not invent a URL.                                                            |
-| Dual `worker-app/` vs `services/worker-app/`                             | CI deploys `worker-app/` only. Hygiene, not a launch blocker.                                                                  |
+| Dual `worker-app/` vs `services/worker-app/`                             | Resolved 2026-10-02: `services/` removed. CI deploys `worker-app/` only.                                                       |
 | Vertical `*chain-io` workers without `[[routes]]`                        | Not customer-facing. CTAs use apex `/dapp`.                                                                                    |
 | `authichain-telegram` still in deploy matrix                             | Archived product. CI noise only (`passport-demo` flake is the known red).                                                      |
 | `isDppOffer` metadata-only on edge                                       | Primary CTA sets `metadata.offer` in `createDppCheckoutSession`. PriceId align is Payment Link defense (this PR).              |
@@ -171,7 +171,7 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 
 ### P1-2. x402 on the edge — **ready (not `not_configured`)**
 
-- **Shipped:** Landing + edge `GET /api/x402/health` / `GET /api/x402` (#1068). Bind #1072/#1074/#1076 (payTo / tokenomics EOA + PayAI + Base USDC). Live health: `ready`, `trustless`, $0.05, payTo `0xaebf…e437`. Unpaid POST → 402 + EIP-712 extra. Public docs `/x402`. Identity: `docs/strategy/WEB3_IDENTITY.md`.
+- **Shipped:** Landing + edge `GET /api/x402/health` / `GET /api/x402` (#1068). Bind #1072/#1074/#1076 (payTo / tokenomics EOA + PayAI + Base USDC). Live health: `ready`, `trustless`, $0.05, payTo `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2`. Unpaid POST → 402 + EIP-712 extra. Public docs `/x402`. Identity: `docs/strategy/WEB3_IDENTITY.md`.
 - **Do not:** rebind payTo or facilitator; invent a new receiving address; dispatch another live settle unless verifying a deploy regression.
 - **Remaining:** third-party discovery (this docs page) and first _external_ agent payment — not owner plumbing.
 
@@ -267,7 +267,7 @@ curl -s https://agentz.authichain.com/health              # sovereign / Polygon
 curl -s https://claw.authichain.com/health                # agentz_api configured; gateway not_set OK
 curl -s https://authichain.com/api/x402/health            # 200 ready / trustless
 curl -sI https://authichain.com/x402                      # 200 HTML docs
-curl -sS -i -X POST https://authichain.com/api/x402 -H 'content-type: application/json' -d '{"sealId":"demo"}'  # 402
+curl -sS -i -X POST https://authichain.com/api/x402 -H 'content-type: application/json' -d '{}'  # empty body 402; a non-UUID sealId is 400
 curl -sI https://app.authichain.com/                      # 302 → /dashboard
 curl -sI -X POST https://authichain.com/api/guardrail/check  # mounted (not 404) after B2B agent
 ```

@@ -1,10 +1,73 @@
 // @vitest-environment node
-import { describe, expect, it, afterEach } from "vitest";
+import { describe, expect, it, afterEach, vi } from "vitest";
 import { Hono } from "hono";
 import { exportPKCS8, generateKeyPair } from "jose";
-import { registerAttestationApi } from "./attestation-api";
+import {
+  registerAttestationApi,
+  type AttestationRegistry,
+} from "./attestation-api";
 import { registerJwksRoute } from "./jwks";
 import { validateAttestation } from "../packages/verifier/src/index";
+
+function mockRegistry(): AttestationRegistry {
+  const statuses = new Map<
+    string,
+    {
+      attestationId: string;
+      claimStatus: "active" | "revoked" | "expired" | "superseded";
+      effectiveAt: string;
+      reasonCode?: string;
+      issuerId: string;
+      eventId: string;
+    }
+  >();
+  const idempotency = new Map<string, string>();
+  let eventSequence = 0;
+  return {
+    getCurrentStatus: async (_env, attestationId) => ({
+      ok: true as const,
+      status: statuses.get(attestationId) ?? null,
+    }),
+    getIssuer: async (_env, issuerId) => ({
+      ok: true as const,
+      issuer: {
+        issuerId,
+        organization: "AuthiChain",
+        issuerType: "service" as const,
+        jwksUri: "https://authichain.com/protocol/jwks.json",
+        status: "trusted" as const,
+        validFrom: "2026-01-01T00:00:00Z",
+      },
+    }),
+    recordStatusEvent: async (_env, input) => {
+      const idempotencyKey = input.idempotencyKey;
+      if (idempotencyKey) {
+        const existing = idempotency.get(input.issuerId + ":" + idempotencyKey);
+        if (existing) return { ok: true as const, eventId: existing };
+      }
+      const eventId = "urn:authichain:event:v01:test-" + ++eventSequence;
+      if (idempotencyKey)
+        idempotency.set(input.issuerId + ":" + idempotencyKey, eventId);
+      const claimStatus =
+        input.eventType === "attestation.revoked"
+          ? ("revoked" as const)
+          : input.eventType === "attestation.expired"
+            ? ("expired" as const)
+            : input.eventType === "attestation.superseded"
+              ? ("superseded" as const)
+              : ("active" as const);
+      statuses.set(input.attestationId, {
+        attestationId: input.attestationId,
+        claimStatus,
+        effectiveAt: new Date().toISOString(),
+        ...(input.reasonCode ? { reasonCode: input.reasonCode } : {}),
+        issuerId: input.issuerId,
+        eventId,
+      });
+      return { ok: true as const, eventId };
+    },
+  };
+}
 
 const SAMPLE = {
   version: "0.1",
@@ -29,6 +92,7 @@ describe("registerAttestationApi", () => {
     delete process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64;
     delete process.env.AUTHICHAIN_ATTESTATION_KEY_ID;
     delete process.env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK;
+    delete process.env.CRON_SECRET;
   });
 
   async function bindKey() {
@@ -44,21 +108,176 @@ describe("registerAttestationApi", () => {
     process.env.AUTHICHAIN_ATTESTATION_KEY_ID = "attest-api-kid";
   }
 
-  it("POST signs a valid attestation and PUT verifies it", async () => {
+  it("POST signed-record publication requires issuer authorization", async () => {
     await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerAttestationApi(app, mockRegistry());
+    const res = await app.request("/api/v1/attestations/publish", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        seal_id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+        attestation: {
+          ...SAMPLE,
+          issuer: { id: "https://authichain.com", name: "AuthiChain" },
+          subject: { object_id: "SKU-123", lot: "LOT-2026-A" },
+        },
+      }),
+    });
+    expect(res.status).toBe(401);
+    expect(await res.json()).toMatchObject({ error: "missing bearer token" });
+  });
+
+  it("POST signed-record publication signs and persists a record linked to an existing seal", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const publishRecord: NonNullable<AttestationRegistry["publishRecord"]> = async (_env, input) => ({
+      ok: true,
+      eventId: "urn:authichain:event:v01:published-test",
+      alreadyPublished: false,
+      seal: {
+        id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+        product_id: "SKU-123",
+        batch_id: "LOT-2026-A",
+        brand: "Example Brand",
+      },
+    });
+    const publisher = vi.fn(publishRecord);
     const app = new Hono();
     registerJwksRoute(app);
+    registerAttestationApi(app, { ...mockRegistry(), publishRecord: publisher });
+    const attestation = {
+      ...SAMPLE,
+      attestation_id: "urn:authichain:attestation:v01:SKU-123",
+      issuer: { id: "https://authichain.com", name: "AuthiChain" },
+      subject: { object_id: "SKU-123", lot: "LOT-2026-A" },
+    };
+    const res = await app.request("/api/v1/attestations/publish", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
+      body: JSON.stringify({
+        seal_id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+        attestation,
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      jws: string;
+      record_hash: string;
+      record_url: string;
+      published: boolean;
+      already_published: boolean;
+      durable_status_event_id: string;
+      seal: { product_id: string; batch_id: string; brand: string };
+      semantics: string;
+    };
+    expect(body.jws).toBeTruthy();
+    expect(body.record_hash).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(body.record_url).toContain("/api/authichain/attestations?assetId=");
+    expect(body.published).toBe(true);
+    expect(body.already_published).toBe(false);
+    expect(body.durable_status_event_id).toBe("urn:authichain:event:v01:published-test");
+    expect(body.seal).toMatchObject({
+      product_id: "SKU-123",
+      batch_id: "LOT-2026-A",
+      brand: "Example Brand",
+    });
+    expect(body.semantics).toContain("not proof of physical authenticity");
+    expect(publisher).toHaveBeenCalledTimes(1);
+    expect(publisher.mock.calls[0][1]).toMatchObject({
+      sealId: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+      issuerKid: "attest-api-kid",
+      attestation,
+    });
+    const verify = await app.request("/api/v1/attestation/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jws: body.jws, expected_object_id: "SKU-123" }),
+    });
+    expect(verify.status).toBe(200);
+    expect(await verify.json()).toMatchObject({ valid: true, cryptographic_status: "valid" });
+  });
+
+  it("POST signed-record publication refuses an attestation for a different registered product", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const publisher = vi.fn();
+    const app = new Hono();
+    registerAttestationApi(app, { ...mockRegistry(), publishRecord: publisher as unknown as NonNullable<AttestationRegistry["publishRecord"]> });
+    const res = await app.request("/api/v1/attestations/publish", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
+      body: JSON.stringify({
+        seal_id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+        attestation: {
+          ...SAMPLE,
+          issuer: { id: "https://authichain.com", name: "AuthiChain" },
+          subject: { object_id: "DIFFERENT-SKU", lot: "LOT-2026-A" },
+        },
+      }),
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: "attestation object_id does not match the registered product_id" });
+    expect(publisher).not.toHaveBeenCalled();
+  });
+
+  it("POST signing requires issuer authorization", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerAttestationApi(app, mockRegistry());
+    const res = await app.request("/api/v1/attestation", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(SAMPLE),
+    });
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "missing bearer token" });
+  });
+
+  it("POST signing accepts the existing CRON_SECRET issuer credential", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
     registerAttestationApi(app);
+    const res = await app.request("/api/v1/attestation", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
+      body: JSON.stringify(SAMPLE),
+    });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { jws: string }).jws).toBeTruthy();
+  });
+
+  it("POST signs a valid attestation and PUT verifies it", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerJwksRoute(app);
+    registerAttestationApi(app, mockRegistry());
 
     const signed = await app.request("/api/v1/attestation", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
       body: JSON.stringify(SAMPLE),
     });
     expect(signed.status).toBe(200);
     const body = (await signed.json()) as { jws: string; kid: string };
     expect(body.jws).toBeTruthy();
-    expect(body.kid).toBe("attest-api-kid");
+    expect(body.kid).toMatch(/^[A-Za-z0-9_-]{43}$/); // CFA-462: kid = RFC 7638 thumbprint, configured kid ignored
     expect(validateAttestation(SAMPLE).attestation_id).toBe(
       SAMPLE.attestation_id
     );
@@ -71,6 +290,241 @@ describe("registerAttestationApi", () => {
     expect(verified.status).toBe(200);
     const check = (await verified.json()) as { valid: boolean };
     expect(check.valid).toBe(true);
+  });
+
+  it("durable revocation makes a previously valid JWS invalid", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerJwksRoute(app);
+    registerAttestationApi(app, mockRegistry());
+
+    const signed = await app.request("/api/v1/attestation", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
+      body: JSON.stringify(SAMPLE),
+    });
+    expect(signed.status).toBe(200);
+    const { jws } = (await signed.json()) as { jws: string };
+
+    const before = await app.request("/api/v1/attestations/test/status");
+    expect(before.status).toBe(200);
+    expect(
+      ((await before.json()) as { claim_status: string }).claim_status
+    ).toBe("active");
+
+    const revoke = await app.request(
+      `/api/v1/attestations/${encodeURIComponent(SAMPLE.attestation_id)}/revoke`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer issuer-test-secret",
+        },
+        body: JSON.stringify({ jws, reason_code: "test_revoke" }),
+      }
+    );
+    expect(revoke.status).toBe(200);
+    expect(
+      ((await revoke.json()) as { claim_status: string }).claim_status
+    ).toBe("revoked");
+
+    const verify = await app.request("/api/v1/attestation/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jws }),
+    });
+    expect(verify.status).toBe(409);
+    expect(await verify.json()).toMatchObject({
+      valid: false,
+      status: "revoked",
+      reasons: ["durable_status_revoked"],
+    });
+  });
+
+  it("revoke is idempotent for the same issuer-scoped key", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerJwksRoute(app);
+    registerAttestationApi(app, mockRegistry());
+    const signed = await app.request("/api/v1/attestation", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
+      body: JSON.stringify(SAMPLE),
+    });
+    const { jws } = (await signed.json()) as { jws: string };
+    const path =
+      "/api/v1/attestations/" +
+      encodeURIComponent(SAMPLE.attestation_id) +
+      "/revoke";
+    const headers = {
+      "content-type": "application/json",
+      authorization: "Bearer issuer-test-secret",
+      "Idempotency-Key": "revoke-1",
+    };
+    const first = await app.request(path, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ jws, reason_code: "test_revoke" }),
+    });
+    const second = await app.request(path, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ jws, reason_code: "test_revoke" }),
+    });
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(((await first.json()) as { event_id: string }).event_id).toBe(
+      ((await second.json()) as { event_id: string }).event_id
+    );
+  });
+
+  it("a refused lifecycle write is a 409, never a reported revocation", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerJwksRoute(app);
+    const registry = mockRegistry();
+    registerAttestationApi(app, {
+      ...registry,
+      recordStatusEvent: async () => ({
+        ok: false as const,
+        status: 409,
+        error: "idempotency key already used for a different lifecycle event",
+      }),
+    });
+    const signed = await app.request("/api/v1/attestation", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
+      body: JSON.stringify(SAMPLE),
+    });
+    const { jws } = (await signed.json()) as { jws: string };
+    const res = await app.request(
+      "/api/v1/attestations/" + encodeURIComponent(SAMPLE.attestation_id) + "/revoke",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer issuer-test-secret",
+          "Idempotency-Key": SAMPLE.attestation_id,
+        },
+        body: JSON.stringify({ jws }),
+      },
+    );
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.claim_status).toBeUndefined();
+    expect(body.error).toMatch(/idempotency key/);
+  });
+
+  it("supersedes an attestation with a differently identified replacement from the same issuer", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerJwksRoute(app);
+    registerAttestationApi(app, mockRegistry());
+    const sign = async (attestationId: string) => {
+      const res = await app.request("/api/v1/attestation", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer issuer-test-secret",
+        },
+        body: JSON.stringify({ ...SAMPLE, attestation_id: attestationId }),
+      });
+      expect(res.status).toBe(200);
+      return ((await res.json()) as { jws: string }).jws;
+    };
+    const originalId = SAMPLE.attestation_id;
+    const replacementId = "urn:authichain:attestation:v01:test-replacement";
+    const jws = await sign(originalId);
+    const replacementJws = await sign(replacementId);
+    const res = await app.request(
+      "/api/v1/attestations/" + encodeURIComponent(originalId) + "/supersede",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer issuer-test-secret",
+          "Idempotency-Key": "supersede-1",
+        },
+        body: JSON.stringify({ jws, replacement_jws: replacementJws }),
+      }
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      attestation_id: originalId,
+      claim_status: "superseded",
+      supersedes_attestation_id: replacementId,
+    });
+
+    // Superseded original must not remain authorized through verify.
+    const verify = await app.request("/api/v1/attestation/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jws }),
+    });
+    expect(verify.status).toBe(409);
+    expect(await verify.json()).toMatchObject({
+      valid: false,
+      decision: "risk",
+      claim_status: "superseded",
+      decision_contract: "AuthiChain Verification Decision v1",
+      reasons: ["durable_status_superseded"],
+      trust: { policy: { authorized: false } },
+    });
+  });
+
+  it("rejects verification under the wrong signing key", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerJwksRoute(app);
+    registerAttestationApi(app, mockRegistry());
+    const signed = await app.request("/api/v1/attestation", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
+      body: JSON.stringify(SAMPLE),
+    });
+    const { jws } = (await signed.json()) as { jws: string };
+
+    const { privateKey: other } = await generateKeyPair("EdDSA", {
+      crv: "Ed25519",
+      extractable: true,
+    });
+    process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 = Buffer.from(
+      await exportPKCS8(other),
+      "utf8"
+    ).toString("base64");
+    process.env.AUTHICHAIN_ATTESTATION_KEY_ID = "other-kid";
+    const otherApp = new Hono();
+    registerJwksRoute(otherApp);
+    registerAttestationApi(otherApp, mockRegistry());
+    const res = await otherApp.request("/api/v1/attestation/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jws }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()) as { valid: boolean }).toMatchObject({
+      valid: false,
+      decision: "indeterminate",
+      decision_contract: "AuthiChain Verification Decision v1",
+      cryptographic_status: "invalid",
+    });
   });
 
   it("GET /api/v1/attestation and aliases return the contract index", async () => {
@@ -98,8 +552,13 @@ describe("registerAttestationApi", () => {
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { valid: boolean };
-    expect(body.valid).toBe(false);
+    expect(await res.json()).toMatchObject({
+      valid: false,
+      decision: "indeterminate",
+      decision_contract: "AuthiChain Verification Decision v1",
+      error: "jws is required",
+      cryptographic_status: "unknown",
+    });
   });
 });
 
@@ -110,6 +569,7 @@ describe("verification reports the issuer's decision (docs/attestation/v0.1.md)"
   });
 
   async function appWithKey() {
+    process.env.CRON_SECRET = "issuer-test-secret";
     const { privateKey } = await generateKeyPair("EdDSA", {
       crv: "Ed25519",
       extractable: true,
@@ -121,11 +581,14 @@ describe("verification reports the issuer's decision (docs/attestation/v0.1.md)"
     process.env.AUTHICHAIN_ATTESTATION_KEY_ID = "decision-kid";
     const app = new Hono();
     registerJwksRoute(app);
-    registerAttestationApi(app);
+    registerAttestationApi(app, mockRegistry());
     const sign = async (overrides: Record<string, unknown>) => {
       const res = await app.request("/api/v1/attestation", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer issuer-test-secret",
+        },
         body: JSON.stringify({ ...SAMPLE, ...overrides }),
       });
       expect(res.status).toBe(200);
@@ -158,6 +621,10 @@ describe("verification reports the issuer's decision (docs/attestation/v0.1.md)"
       decision: "verified",
       status: "active",
       reasons: [],
+      cryptographic_status: "valid",
+      issuer_status: "trusted",
+      claim_status: "active",
+      overall_valid: true,
     });
   });
 
@@ -186,7 +653,45 @@ describe("verification reports the issuer's decision (docs/attestation/v0.1.md)"
     expect(r.body).toMatchObject({
       valid: false,
       status: "revoked",
-      decision: "blocked",
+      // Durable/signed lifecycle revocation is a lifecycle decision, not a
+      // counterfeit verdict and not the issuer's signed blocked decision.
+      decision: "revoked",
+      decision_contract: "AuthiChain Verification Decision v1",
+      reasons: ["durable_status_revoked"],
+    });
+  });
+
+  it("verified responses expose the structured trust decision contract", async () => {
+    const { sign, verify } = await appWithKey();
+    const r = await verify(await sign({}));
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({
+      decision_contract: "AuthiChain Verification Decision v1",
+      trust: {
+        evidence: { cryptographic_status: "valid", signature: "valid" },
+        lifecycle: { claim_status: "active", expired: false },
+        risk: { flagged: false },
+        policy: { authorized: true },
+        decision: { code: "verified", valid: true, reasons: [] },
+      },
+    });
+  });
+
+  it("risk signals keep a cryptographically valid claim unauthorized", async () => {
+    const { sign, verify } = await appWithKey();
+    const r = await verify(await sign({}), "/api/v1/attestation/verify", {
+      risk_signals: ["scan_velocity"],
+    });
+    expect(r.status).toBe(409);
+    expect(r.body).toMatchObject({
+      valid: false,
+      decision: "risk",
+      decision_contract: "AuthiChain Verification Decision v1",
+      reasons: ["risk_scan_velocity"],
+      trust: {
+        risk: { flagged: true, signals: ["scan_velocity"] },
+        policy: { authorized: false },
+      },
     });
   });
 
@@ -209,7 +714,13 @@ describe("verification reports the issuer's decision (docs/attestation/v0.1.md)"
   it("a tampered signature is 400, not a decision", async () => {
     const { sign, verify } = await appWithKey();
     const [h, p, sig] = (await sign({})).split(".");
-    const flipped = sig.slice(0, -2) + (sig.endsWith("A") ? "BB" : "AA");
+    // Flip a real signature bit. Rewriting the trailing base64url characters
+    // can leave the decoded 64-byte Ed25519 signature unchanged (they carry
+    // padding bits); measured over 1,500 sign/verify runs it still verified
+    // ~7% of the time, which made this test fail at random.
+    const bytes = Buffer.from(sig, "base64url");
+    bytes[0] ^= 0x01;
+    const flipped = bytes.toString("base64url");
     const r = await verify([h, p, flipped].join("."));
     expect(r.status).toBe(400);
     expect(r.body.valid).toBe(false);

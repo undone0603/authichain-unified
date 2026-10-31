@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "version",
+    "authority",
+    "rule",
+    "workers"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer"
+    },
+    "authority": {
+      "type": "string"
+    },
+    "rule": {
+      "type": "string"
+    },
+    "workers": {
+      "type": "object"
+    }
+  }
+}

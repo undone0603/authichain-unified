@@ -78,6 +78,7 @@ describe("createPlanCheckoutSession", () => {
     });
     const arg = create.mock.calls[0][0];
     expect(arg.mode).toBe("payment");
+    expect(arg.payment_method_types).toBeUndefined();
     expect(arg.line_items[0].price).toBe("price_1UHjCZGqTruSqV8T35M6AmoJ");
     expect(arg.after_expiration.recovery).toEqual({
       enabled: true,
@@ -140,9 +141,37 @@ describe("createPlanCheckoutSession", () => {
     expect(result.ok).toBe(true);
     const arg = create.mock.calls[0][0];
     expect(arg.mode).toBe("subscription");
+    expect(arg.success_url).toContain("/dpp/thanks?session_id=");
     expect(arg.after_expiration.recovery.enabled).toBe(true);
     expect(arg.allow_promotion_codes).toBeUndefined();
     expect(arg.customer_creation).toBeUndefined();
+  });
+
+  it("lands Launch monthly and annual on /generate", async () => {
+    for (const planId of ["qron_launch", "qron_launch_annual"] as const) {
+      create.mockResolvedValue({
+        url: "https://checkout.stripe.com/c/pay/cs_test_launch",
+      });
+      const result = await createPlanCheckoutSession({
+        request: new Request(
+          `https://authichain.govchain.us/api/checkout/plan/${planId}`,
+          { method: "GET" }
+        ),
+        body: { planId },
+        stripeSecretKey: "sk_test_x",
+      });
+      expect(result.ok).toBe(true);
+      const success = create.mock.calls[0][0].success_url as string;
+      expect(success, planId).toContain("/generate?paid=1&session_id=");
+      expect(success, planId).not.toContain("/dpp/thanks");
+      expect(success.split("?").length, planId).toBe(2);
+      const session = create.mock.calls.at(-1)?.[0];
+      expect(session.metadata.plan, planId).toBe(planId);
+      expect(session.metadata.stripe_price_id, planId).toBeTruthy();
+      expect(session.subscription_data.metadata.stripe_price_id, planId).toBe(
+        session.metadata.stripe_price_id
+      );
+    }
   });
 
   it("carries aff_ref + ref_code cookies into session and subscription metadata", async () => {
@@ -168,6 +197,39 @@ describe("createPlanCheckoutSession", () => {
     expect(arg.subscription_data.metadata.ref_code).toBe("USER-456");
   });
 
+  it("ignores a foreign Origin on Stripe return URLs", async () => {
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_origin",
+    });
+    await createPlanCheckoutSession({
+      request: new Request("https://authichain.govchain.us/api/checkout", {
+        method: "POST",
+        headers: {
+          origin: "https://evil.example",
+          "user-agent": "Mozilla/5.0",
+        },
+      }),
+      body: {
+        planId: "strainchain_passport",
+        email: "ops@brand.com",
+        prospectId: "p 1",
+        source: "mail",
+      },
+      stripeSecretKey: "sk_test_x",
+    });
+    const arg = create.mock.calls[0][0];
+    expect(arg.success_url.startsWith("https://authichain.govchain.us/")).toBe(
+      true
+    );
+    expect(arg.cancel_url.startsWith("https://authichain.govchain.us/")).toBe(
+      true
+    );
+    expect(arg.success_url).not.toContain("evil.example");
+    expect(arg.cancel_url).not.toContain("evil.example");
+    expect(arg.success_url).toContain("prospect_id=p%201");
+    expect(arg.success_url).toContain("utm_source=mail");
+  });
+
   it("prefers an explicit affiliateCode over the cookie", async () => {
     create.mockResolvedValue({
       url: "https://checkout.stripe.com/c/pay/cs_test_farm_aff2",
@@ -183,5 +245,34 @@ describe("createPlanCheckoutSession", () => {
     expect(create.mock.calls[0][0].metadata.affiliate_code).toBe(
       "AFF-EXPLICIT"
     );
+  });
+
+  it("tags the $29 Starter PaymentIntent with plan + stripe_price_id (#1890 parity)", async () => {
+    const { planById } = await import("./plans");
+    create.mockResolvedValue({ url: "https://checkout.stripe.com/c/pay/cs_test_starter" });
+    const result = await createPlanCheckoutSession({
+      request: new Request("https://authichain.com/api/checkout", { method: "POST" }),
+      body: { planId: "starter", email: "ops@brand.com" },
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(result.ok).toBe(true);
+    const arg = create.mock.calls[0][0];
+    expect(arg.metadata.plan).toBe("starter");
+    expect(arg.payment_intent_data).toEqual({
+      metadata: {
+        plan: "starter",
+        stripe_price_id: planById("starter")?.stripe_price_id,
+      },
+    });
+  });
+
+  it("does not add Starter PaymentIntent metadata to other plans", async () => {
+    create.mockResolvedValue({ url: "https://checkout.stripe.com/c/pay/cs_test_p" });
+    await createPlanCheckoutSession({
+      request: new Request("https://authichain.com/api/checkout", { method: "POST" }),
+      body: { planId: "strainchain_passport", email: "ops@brand.com" },
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(create.mock.calls[0][0].payment_intent_data).toBeUndefined();
   });
 });

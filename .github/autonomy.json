@@ -14,8 +14,8 @@
     "label": "ops-alert"
   },
   "cold_outreach": {
-    "$comment": "Master switch for autonomous first-touch email. Live send needs BOTH this flag AND repo variable OWNER_LIVE_SEND=true, a clear breaker, and no pending breaker-latch approval. Switched on by the owner 2026-09-23.",
-    "enabled": true,
+    "$comment": "Master switch for autonomous first-touch email. Live send needs BOTH this flag AND repo variable OWNER_LIVE_SEND=true, a clear breaker, and no pending breaker-latch approval. Switched on by the owner 2026-09-23. Switched off 2026-10-09 as containment (PM-420, approved by Projects Manager and Admin); turning it back on needs the owner.",
+    "enabled": false,
     "max_new_prospects_per_day": 10,
     "max_followups_per_prospect": 1,
     "segments": ["qron", "strainchain", "govchain"],
@@ -36,15 +36,50 @@
     {
       "id": "we_1UGTCSGqTruSqV8ThM9bXVWp",
       "url": "https://authichain.com/api/stripe/webhook",
-      "ensure_events": ["checkout.session.expired"],
+      "ensure_events": [
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+        "checkout.session.expired",
+        "invoice.paid",
+        "invoice.payment_failed",
+        "invoice.voided",
+        "charge.refunded",
+        "customer.subscription.deleted",
+        "customer.subscription.updated",
+        "customer.subscription.trial_will_end"
+      ],
       "$comment": "Re-added after audit writes became fail-open (the 400s that caused the 2026-09-23 pause)."
     }
   ],
+  "operator_hold": {
+    "$comment": "Left disabled_manually on 2026-10-08. Ops pulse does not page these, and autonomy-reconcile does not re-enable them. Remove a name here before turning that loop back on. Cold outreach, social publish, gov mint, and the direct pipeline tick stay off.",
+    "workflows": [
+      "b2b-outreach.yml",
+      "content-publish.yml",
+      "gov-mint.yml",
+      "marketing-autonomous.yml",
+      "pipeline-tick.yml"
+    ]
+  },
+  "merge_autopilot": {
+    "$comment": "Merges trusted PRs into main once every check is green and GitHub reports clean; merges main into branches that fall behind so CI re-runs first (never rebases). Owner decision 2026-10-02, narrowed 2026-10-13: PRs touching RESTRICTED_PATHS or changing RESTRICTED_SYMBOLS (payments, fulfilment, sending, secrets, migrations, deploys, autonomy controls; lists in the script) are skipped and wait for the owner. Set enabled=false, or add the label 'hold' to one PR, to stop the merge. A held branch that falls behind main is still updated. Script: scripts/autonomy/merge-autopilot.mjs. SAFETY: CODEOWNERS requires @undone0603 on billing/Stripe/auth/schema/contracts/workflows. Held workflows must stay off. Never bypass required status checks.",
+    "enabled": true,
+    "trusted_authors": ["undone0603", "dependabot[bot]"],
+    "hold_labels": [
+      "hold",
+      "do-not-merge",
+      "hold:research",
+      "hold:stacked",
+      "hold:price",
+      "hold:wip"
+    ]
+  },
   "lanes": {
     "ship": {
       "purpose": "Push/PR-triggered build, test, security and deploy. Always on.",
       "managed": true,
       "workflows": {
+        "agentz-ci.yml": "on",
         "ci.yml": "on",
         "main.yml": "on",
         "lint.yml": "on",
@@ -61,16 +96,21 @@
         "deploy-cloudflare.yml": "on",
         "deploy-edge-worker.yml": "on",
         "deploy-workers.yml": "on",
+        "build-workers.yml": "on",
         "deploy-verifier-web.yml": "on",
-        "content-routine-pr.yml": "on",
+        "deploy-first-dollar-desk.yml": "on",
+        "content-routine-pr.yml": "off",
         "dependabot-auto-merge.yml": "off",
         "automerge-dependabot.yml": "off",
+        "merge-autopilot.yml": "on",
         "node-pnpm-setup.yml": "on",
         "reusable-deploy.yml": "on",
         "autonomy-reconcile.yml": "on",
         "stripe-webhook-reconcile.yml": "on",
         "mcp-registry-publish.yml": "on",
-        "npm-publish-verify.yml": "on"
+        "npm-publish-verify.yml": "on",
+        "cloudflare-estate-audit.yml": "on",
+        "contract-tests.yml": "on"
       }
     },
     "health": {
@@ -78,6 +118,7 @@
       "managed": true,
       "workflows": {
         "ops-pulse.yml": "on",
+        "honest-launch-gate.yml": "on",
         "cloudflare-production-health.yml": "on",
         "production-smoke-gate.yml": "on",
         "checkout-watchdog.yml": "on",
@@ -88,10 +129,12 @@
         "social-credentials-check.yml": "on",
         "repo-maintenance.yml": "off",
         "branch-hygiene.yml": "on",
-        "pipeline-tick.yml": "on",
+        "pipeline-tick.yml": "off",
         "genesis-cron.yml": "on",
+        "gs1-conformance-pulse.yml": "on",
         "trust-lab.yml": "on",
-        "estate-drift.yml": "on"
+        "estate-drift.yml": "on",
+        "launch-gates.yml": "on"
       }
     },
     "revenue": {
@@ -106,8 +149,10 @@
         "gov-score.yml": "on",
         "gov-proposals.yml": "on",
         "gov-notify.yml": "on",
-        "gov-mint.yml": "on",
-        "owner-digest.yml": "on"
+        "gov-mint.yml": "off",
+        "owner-digest.yml": "on",
+        "founder-business-pulse.yml": "on",
+        "affiliate-payouts.yml": "off"
       }
     },
     "growth": {
@@ -115,12 +160,13 @@
       "managed": true,
       "workflows": {
         "gen-seo-pages.yml": "on",
-        "content-publish.yml": "on",
-        "marketing-autonomous.yml": "on",
+        "indexnow-submit.yml": "on",
+        "content-publish.yml": "off",
+        "marketing-autonomous.yml": "off",
         "reddit-monitor.yml": "on",
         "buyer-signals.yml": "on",
         "ghost-traffic.yml": "on",
-        "b2b-outreach.yml": "on",
+        "b2b-outreach.yml": "off",
         "weekly-video.yml": "off"
       }
     },
@@ -142,6 +188,7 @@
       "purpose": "One-shot operator tools (secret binding, backfills, manual sends). Run by hand only; state is not managed.",
       "managed": false,
       "workflows": {
+        "self-hosted-ops-smoke.yml": "manual",
         "agentz-manual-post.yml": "manual",
         "agentz-tunnel-bringup.yml": "manual",
         "authichain-ledger-reconstruction.yml": "manual",
@@ -154,10 +201,14 @@
         "d1-license-migrate.yml": "manual",
         "deploy-qron-ai-api.yml": "manual",
         "deploy-govchain-nft-base.yml": "manual",
+        "deploy-manufacturer-status.yml": "manual",
+        "deploy-authichain-app.yml": "manual",
+        "dpp-followup.yml": "manual",
         "dpp-outreach-trigger.yml": "manual",
         "guardrail-digest.yml": "manual",
         "outreach-trigger.yml": "manual",
         "purge-cloudflare-cache.yml": "manual",
+        "repo-audit-integrate.yml": "manual",
         "set-agentz-claw-secrets.yml": "manual",
         "set-authichain-resend-txt.yml": "manual",
         "set-github-secrets.yml": "manual",

@@ -65,7 +65,6 @@ A second common shortcut: treat “the QR resolved” as “the product is authe
 Live and citeable today:
 
 - The [open verification protocol](/protocol) uses GS1 Digital Link as the item-identity convention, alongside W3C Verifiable Credentials 2.0, CAIP-2 chain identifiers, and RFC 8785 canonicalization.
-- Public verification keys are at [/.well-known/jwks.json](https://authichain.com/.well-known/jwks.json) (Ed25519, kid `lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE`).
 
 Present in the repo, **not** a live public demo:
 

@@ -43,33 +43,34 @@ export async function issueSovereignPassport(data: {
     }
   };
 
-  // Proof generation would happen here using the FIPS-compliant crypto module
-  // For now, we simulate the proof metadata
-  vc.proof = {
-    type: "Ed25519Signature2020",
-    created: new Date().toISOString(),
-    proofPurpose: "assertionMethod",
-    verificationMethod: `${data.issuerDid}#key-1`,
-    jws: "eyJhbGciOiJFZERTQSIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..simulated_signature"
-  };
+  // No proof is attached. There is no issuer signing key yet, so the
+  // credential is returned unsigned rather than with a placeholder jws that
+  // could be mistaken for a real signature.
 
   return vc;
 }
 
+export const SIGNATURE_CHECK_UNAVAILABLE = "Signature checking is not available yet";
+
 /**
- * Verifies the integrity and authenticity of a Verifiable Credential.
+ * Verifies a Verifiable Credential.
+ *
+ * Fails closed. No issuer key can be resolved for did:authichain issuers and
+ * issueSovereignPassport() does not produce a real signature, so no credential
+ * can be verified against a real key today. Every credential, including one
+ * carrying a made-up jws, returns valid:false. Claims and issuer are not echoed
+ * back, so an unverified credential's contents never appear in a "verify" result.
  */
-export async function verifySovereignPassport(vc: VerifiableCredential): Promise<{
-  valid: boolean;
-  claims: Record<string, any>;
-  issuer: string;
+export async function verifySovereignPassport(_vc: unknown): Promise<{
+  valid: false;
+  claims: null;
+  issuer: null;
+  message: string;
 }> {
-  // In production, this would verify the Ed25519 signature and check revocation status
-  const isValid = vc.proof?.jws !== undefined;
-  
   return {
-    valid: isValid,
-    claims: vc.credentialSubject,
-    issuer: vc.issuer
+    valid: false,
+    claims: null,
+    issuer: null,
+    message: SIGNATURE_CHECK_UNAVAILABLE,
   };
 }

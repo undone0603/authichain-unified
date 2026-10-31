@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { reportGrowthEvent } from "./growth-record";
 import { trpcServer } from "@hono/trpc-server";
 import { appRouter } from "../server/routers";
 import { createWorkersContext } from "../server/_core/context.workers";
@@ -8,13 +9,15 @@ import { timingSafeEqual as cryptoTimingSafeEqual } from "node:crypto";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 import { getSessionCookieOptions } from "../server/_core/cookies";
 import { products, certificates } from "../drizzle/schema";
+import { registryLookupDecision } from "../packages/verifier/src/registry-decision";
 import { eq } from "drizzle-orm";
-import { checkRateLimit } from "./rate-limiter";
+import { checkRateLimit, refundRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
 import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
 import { registerIssuerRoutes } from "./issuer";
 import { registerAttestationApi } from "./attestation-api";
+import { registerComplianceEvaluate } from "./compliance-evaluate";
 import { registerX402Routes } from "./x402-routes";
 import { registerUnsubscribeRoutes } from "./unsubscribe-routes";
 import { registerInboundRoutes } from "./inbound-routes";
@@ -28,6 +31,7 @@ import {
   CHECKOUT_REDIRECT_HEADERS,
   checkoutRedirectResponse,
 } from "../src/lib/checkout-email";
+import { isRetryableFulfillment } from "../src/lib/retryable-fulfillment";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
@@ -54,6 +58,8 @@ type Env = {
   /** Key of the Resend account that owns the receiving domain; falls back to RESEND_API_KEY. */
   RESEND_INBOUND_API_KEY?: string;
   RESEND_API_KEY?: string;
+  /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
+  DPP_SMOKE_SECRET?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -68,15 +74,25 @@ type Env = {
   SUPABASE_ANON_KEY?: string;
 };
 
+function generateServiceKey(env?: Env): string | undefined {
+  return (
+    env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
+
 function hydrateProcessEnv(env?: Env) {
   if (!env) return;
   const copy: Array<[string, string | undefined]> = [
     ["STRIPE_SECRET_KEY", env.STRIPE_SECRET_KEY],
     ["STRIPE_WEBHOOK_SECRET", env.STRIPE_WEBHOOK_SECRET],
     ["STRIPE_WEBHOOK_AUTHICHAIN_SECRET", env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET],
-    ["NEXT_PUBLIC_SUPABASE_URL", env.NEXT_PUBLIC_SUPABASE_URL],
+    [
+      "NEXT_PUBLIC_SUPABASE_URL",
+      env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL,
+    ],
     ["SUPABASE_URL", env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL],
     ["SUPABASE_SERVICE_ROLE_KEY", env.SUPABASE_SERVICE_ROLE_KEY],
+    ["DPP_SMOKE_SECRET", env.DPP_SMOKE_SECRET],
     ["CRON_SECRET", env.CRON_SECRET],
     ["INTERNAL_API_SECRET", env.INTERNAL_API_SECRET],
     [
@@ -223,12 +239,16 @@ function isAppHostname(host: string): boolean {
   return h.startsWith("app.");
 }
 
+// Paths the app host links to but only the apex serves; see the catch-all.
+const APEX_ONLY_PATHS = new Set(["/pricing", "/protocol", "/api/verify"]);
+
 // ─── DPP $299 + catalogue plan checkout (GET = click-to-confirm) ────────────
 // A GET never opens a Stripe session: link scanners, email security gateways
 // and chat previews were creating ~28 unpaid sessions/day. Every GET 303s to
 // https://authichain.com/checkout/<plan> (authichain-com), whose confirm form
-// POSTs to create the session. Only DPP-SMOKE-E2E (a $0 demo session used by
-// production-smoke-gate) still creates a session on GET.
+// POSTs to create the session. DPP-SMOKE-E2E still creates a $0 session on
+// GET only when x-dpp-smoke-secret matches DPP_SMOKE_SECRET. A public promo
+// 303s to the confirm page and does not open a session.
 app.get("/api/checkout/dpp", async c => {
   if (c.req.method === "HEAD") {
     for (const [key, value] of Object.entries(CHECKOUT_REDIRECT_HEADERS)) {
@@ -238,8 +258,15 @@ app.get("/api/checkout/dpp", async c => {
   }
   const search = new URL(c.req.url).searchParams;
   const { gatedConfirmUrl } = await import("../src/lib/checkout-gate");
-  const { isDppSmokePromo } = await import("../src/lib/dpp-loop");
-  if (!isDppSmokePromo(search.get("promo"))) {
+  const { dppSmokeRequestAuthorized, isDppSmokePromo } =
+    await import("../src/lib/dpp-loop");
+  const smokeAuthorized =
+    isDppSmokePromo(search.get("promo")) &&
+    dppSmokeRequestAuthorized(
+      c.req.header("x-dpp-smoke-secret"),
+      c.env?.DPP_SMOKE_SECRET || process.env.DPP_SMOKE_SECRET
+    );
+  if (!smokeAuthorized) {
     return checkoutRedirectResponse(gatedConfirmUrl("dpp_readiness", search));
   }
   try {
@@ -261,6 +288,7 @@ app.get("/api/checkout/dpp", async c => {
       searchParams: search,
       stripeSecretKey,
       supabase,
+      smokeAuthorized: true,
     });
     if (!result.ok) {
       if (result.status === 303 && result.url) {
@@ -310,8 +338,10 @@ app.get("/api/checkout", c => {
   return c.json({
     ok: true,
     methods: ["POST"],
-    smoke: "GET /api/checkout/dpp?promo=DPP-SMOKE-E2E",
-    confirm: "GET https://authichain.com/checkout/<plan> (POST form creates the session)",
+    smoke:
+      "GET /api/checkout/dpp?promo=DPP-SMOKE-E2E requires x-dpp-smoke-secret",
+    confirm:
+      "GET https://authichain.com/checkout/<plan> (POST form creates the session)",
     webhook: "POST /api/stripe/webhook",
     thanks: "/dpp/thanks",
     activate: "/dpp/activate",
@@ -319,7 +349,8 @@ app.get("/api/checkout", c => {
 });
 
 app.post("/api/checkout", async c => {
-  const { isAutomatedCheckoutRequest } = await import("../src/lib/checkout-gate");
+  const { isAutomatedCheckoutRequest } =
+    await import("../src/lib/checkout-gate");
   if (isAutomatedCheckoutRequest(c.req.raw)) {
     c.header("Cache-Control", "private, no-store");
     return c.json({ error: "automated_request_blocked" }, 403);
@@ -373,13 +404,7 @@ app.get("/api/generate", async c => {
     c.env?.SUPABASE_URL ||
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
     process.env.SUPABASE_URL;
-  const supabaseKey =
-    c.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    c.env?.SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    c.env?.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseKey = generateServiceKey(c.env);
   return c.json(
     generateHealthBody(c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL, {
       authConfigured: Boolean(supabaseUrl && supabaseKey),
@@ -417,6 +442,10 @@ app.post("/api/generate", async c => {
       supabaseUrl,
       supabaseKey,
     });
+    const { bindQronGenerateAttestation } =
+      await import("./qron-generate-bind");
+    const { qronPresentationKvKey } = await import("../src/lib/qron-resolve");
+    const sessions = c.env?.SESSIONS;
     const result = await handleGeneratePost({
       body,
       userId,
@@ -429,7 +458,53 @@ app.post("/api/generate", async c => {
           style: args.style,
           workerUrl: c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL,
         }),
+      bindAttestation: args => bindQronGenerateAttestation(c.env, args),
+      claimFreeSample: async () => {
+        // Fail closed: no limiter binding or no client IP = no free sample.
+        const ns = c.env?.RATE_LIMITER;
+        const ip = c.req.header("cf-connecting-ip");
+        if (!ns || !ip) return { ok: false, reason: "paused" as const };
+        const {
+          FREE_SAMPLE_GENERATIONS,
+          FREE_SAMPLE_WINDOW_MS,
+          FREE_SAMPLE_GLOBAL_DAILY_CAP,
+        } = await import("../src/lib/generate-api");
+        const { claimFreeSampleSlot } = await import("../src/lib/generate-api");
+        const ipKey = `free-sample:${ip}`;
+        return claimFreeSampleSlot({
+          claimIp: () =>
+            checkRateLimit(
+              ns,
+              ipKey,
+              FREE_SAMPLE_GENERATIONS,
+              FREE_SAMPLE_WINDOW_MS
+            ),
+          claimDaily: () =>
+            checkRateLimit(
+              ns,
+              "free-sample:global",
+              FREE_SAMPLE_GLOBAL_DAILY_CAP,
+              24 * 60 * 60_000
+            ),
+          refundIp: () => refundRateLimit(ns, ipKey),
+        });
+      },
+      rememberPresentation: async record => {
+        if (!sessions) return;
+        await sessions.put(
+          qronPresentationKvKey(record.object_id),
+          JSON.stringify(record)
+        );
+      },
     });
+    // LOOP-03: a 401 here is a stranger whose free sample is used up (or the
+    // limiter was unavailable), sent on to the Starter checkout.
+    if (result.status === 200 && (result.body as any).free_sample) {
+      reportGrowthEvent(c, { event: "free_gen_granted", sku: "starter" });
+    }
+    if (result.status === 401) {
+      reportGrowthEvent(c, { event: "generate_submit_anon", sku: "starter" });
+    }
     c.header("Cache-Control", "private, no-store");
     return c.json(result.body, result.status as 200 | 400 | 401 | 403 | 502);
   } catch (err: any) {
@@ -438,9 +513,110 @@ app.post("/api/generate", async c => {
   }
 });
 
+// Living QR scan target. The image encodes https://authichain.com/qron/r/{object_id}.
+// GET loads the stored JWS and returns AuthiChain Verification Decision v1.
+app.all("/qron/r/*", async c => {
+  const {
+    handleQronResolve,
+    qronPresentationKvKey,
+    QronPresentationMalformed,
+    QronStoreUnavailable,
+  } = await import("../src/lib/qron-resolve");
+  const kv = c.env?.SESSIONS;
+  const response = await handleQronResolve(c.req.raw, {
+    // Same-worker HTTP to the public verify URL fails across zones
+    // (authichain.govchain.us → authichain.com) with verify_unreachable.
+    // Dispatch the route in-process instead.
+    verify: async (jws, objectId) => {
+      const url = new URL(c.req.url);
+      url.pathname = "/api/v1/attestation/verify";
+      url.search = "";
+      const res = await app.fetch(
+        new Request(url.toString(), {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json",
+          },
+          body: JSON.stringify({
+            jws,
+            expected_object_id: objectId,
+          }),
+        }),
+        c.env,
+      );
+      const parsed = await res.json().catch(() => null);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return {
+          status: 502,
+          body: {
+            valid: false,
+            decision: "indeterminate",
+            decision_contract: "AuthiChain Verification Decision v1",
+            error: "verify_unreachable",
+          },
+        };
+      }
+      return {
+        status: res.status,
+        body: parsed as Record<string, unknown>,
+      };
+    },
+    load: async objectId => {
+      if (!kv) throw new QronStoreUnavailable();
+      const raw = await kv.get(qronPresentationKvKey(objectId));
+      if (!raw) return null;
+      let parsed: {
+        object_id?: string;
+        destination_url?: string;
+        resolve_url?: string;
+        jws?: string;
+        kid?: string;
+        jwks_url?: string;
+      };
+      try {
+        parsed = JSON.parse(raw) as typeof parsed;
+      } catch {
+        throw new QronPresentationMalformed();
+      }
+      if (
+        parsed.object_id !== objectId ||
+        typeof parsed.destination_url !== "string" ||
+        typeof parsed.resolve_url !== "string" ||
+        typeof parsed.jws !== "string" ||
+        !parsed.jws ||
+        typeof parsed.kid !== "string" ||
+        typeof parsed.jwks_url !== "string"
+      ) {
+        throw new QronPresentationMalformed();
+      }
+      return {
+        object_id: parsed.object_id,
+        destination_url: parsed.destination_url,
+        resolve_url: parsed.resolve_url,
+        jws: parsed.jws,
+        kid: parsed.kid,
+        jwks_url: parsed.jwks_url,
+      };
+    },
+  });
+  if (!response) {
+    return c.json(
+      {
+        valid: false,
+        decision: "indeterminate",
+        decision_contract: "AuthiChain Verification Decision v1",
+        error: "presentation_not_found",
+      },
+      404
+    );
+  }
+  return response;
+});
+
 // ─── Funnel events (DPP attributed_visit + outreach) ────────────────────────
-// Landing JS on /dpp POSTs here. Next src/app/api/funnel is not on this worker;
-// unregistered /api/* falls through to ASSETS (404) and drops the first loop stage.
+// Landing JS on /dpp POSTs here. The framework-agnostic funnel recorder is
+// mounted directly on this worker so the first loop stage cannot fall through to ASSETS.
 app.post("/api/funnel", async c => {
   try {
     hydrateProcessEnv(c.env);
@@ -496,7 +672,7 @@ app.post("/api/funnel", async c => {
 // ─── Stripe Webhook ─────────────────────────────────────────────────────────
 // handleStripeWebhook(db, rawBody, sig) is a framework-agnostic plain
 // function (server/webhooks/stripe.ts) — just a new call site here.
-app.on("GET", ["/api/stripe/webhook", "/api/webhooks/stripe"], c => {
+app.get("/api/stripe/webhook", c => {
   c.header("Cache-Control", "private, no-store");
   return c.json({
     ok: true,
@@ -526,12 +702,32 @@ async function stripeWebhookPost(c: {
     return c.json(result);
   } catch (err: any) {
     console.error(`[Stripe Webhook] Error: ${err.message}`);
+    // PM-338: a down duplicate guard, or a paid fulfillment failure, must be
+    // 500 so Stripe retries. A bad signature stays 400.
+    if (
+      err?.name === "StripeEventClaimUnavailableError" ||
+      isRetryableFulfillment(err)
+    ) {
+      return c.json({ error: "Temporarily unavailable; retry" }, 500);
+    }
     return c.json({ error: err.message }, 400);
   }
 }
 
-app.post("/api/webhooks/stripe", c => stripeWebhookPost(c));
 app.post("/api/stripe/webhook", c => stripeWebhookPost(c));
+
+// Retired alias (#1406). Answer 410 rather than falling through to ASSETS'
+// 404, so a Stripe endpoint still pointed here reads as retired, not missing.
+app.post("/api/webhooks/stripe", c => {
+  c.header("Cache-Control", "private, no-store");
+  return c.json(
+    {
+      error: "Retired. Stripe webhooks go to /api/stripe/webhook.",
+      deprecated: true,
+    },
+    410
+  );
+});
 
 app.post("/api/dpp/activate", async c => {
   try {
@@ -593,8 +789,8 @@ function edgeSupabase(env?: Env) {
   );
 }
 
-// Next src/app/api/dpp/publish and /verify are not on this worker; unregistered
-// /api/* falls through to ASSETS 404 and the loop never records dpp_published.
+// DPP publish/verify share the framework-agnostic logic in src/lib so the
+// apex checkout origin can complete the publish → verify loop on this worker.
 app.post("/api/dpp/publish", async c => {
   try {
     hydrateProcessEnv(c.env);
@@ -1120,29 +1316,24 @@ app.post("/api/gpt/verify", async c => {
       .from(products)
       .where(eq(products.id, Number(productId)))
       .limit(1);
+    // A registry lookup never verifies (docs/attestation/verification-decision.md):
+    // not found is not counterfeit, and a matching row is not authentic.
     if (!product) {
-      return c.json({
-        verified: false,
-        trustScore: 0,
-        message: "Product not found. This item may be counterfeit.",
-        blockchain: null,
-      });
+      return c.json({ verified: false, trustScore: null, ...registryLookupDecision(null) });
     }
     const [cert] = await db
       .select()
       .from(certificates)
       .where(eq(certificates.productId, product.id))
       .limit(1);
+    const decision = registryLookupDecision(cert ?? { status: "uncertified" });
     return c.json({
-      verified: !!cert,
-      trustScore: cert ? 95 : 20,
+      verified: decision.valid,
+      trustScore: null,
       productName: product.name,
       brand: product.brand ?? null,
       certificateId: cert?.id ?? null,
-      blockchain: cert ? { status: "SECURED", network: "Polygon" } : null,
-      message: cert
-        ? `VERIFIED AUTHENTIC: ${product.name} - Blockchain secured.`
-        : `UNVERIFIED: ${product.name} lacks blockchain certificate.`,
+      ...decision,
     });
   } catch (err) {
     console.error("[GPT /verify]", err);
@@ -1181,14 +1372,11 @@ app.get("/api/gpt/certificates/verify", async c => {
       .from(certificates)
       .where(eq(certificates.certificateNumber, certNumber))
       .limit(1);
-    if (!cert)
-      return c.json({ valid: false, message: "Certificate not found" });
+    if (!cert) return c.json(registryLookupDecision(null));
     return c.json({
-      valid: true,
       certificateId: cert.id,
       issuedAt: cert.issuedAt,
-      blockchain: { status: "SECURED", network: "Polygon" },
-      message: "Certificate is valid and blockchain-secured.",
+      ...registryLookupDecision(cert),
     });
   } catch (err) {
     console.error("[GPT /certificates/verify]", err);
@@ -1212,15 +1400,14 @@ app.post("/api/gpt/cannabis/verify", async c => {
           .where(eq(products.name, strainName))
           .limit(1)
       : [];
+    // A name match is not a lab result and says nothing about METRC.
+    const decision = registryLookupDecision(product ? { status: "name_match" } : null);
     return c.json({
-      verified: !!product,
-      strainName: strainName || "Unknown",
+      verified: decision.valid,
+      strainName: strainName || null,
       batchId: batchId || null,
-      metrcCompliant: !!product,
-      blockchain: product ? { status: "SECURED", network: "Polygon" } : null,
-      message: product
-        ? `VERIFIED: ${product.name} - METRC compliant, blockchain secured.`
-        : "Strain not found in AuthiChain registry.",
+      metrc_compliance: "not_assessed",
+      ...decision,
     });
   } catch (err) {
     console.error("[GPT /cannabis/verify]", err);
@@ -1240,30 +1427,18 @@ app.post("/api/gpt/trust-score", async c => {
       .from(products)
       .where(eq(products.id, Number(productId)))
       .limit(1);
-    if (!product)
-      return c.json({
-        trustScore: 0,
-        verdict: "UNKNOWN",
-        message: "Product not found",
-      });
+    if (!product) return c.json({ trustScore: null, ...registryLookupDecision(null) });
     const [cert] = await db
       .select()
       .from(certificates)
       .where(eq(certificates.productId, product.id))
       .limit(1);
-    const baseScore = cert ? 85 : 15;
-    const trustScore = Math.min(100, baseScore);
-    const verdict =
-      trustScore >= 80
-        ? "TRUSTED"
-        : trustScore >= 50
-          ? "MODERATE"
-          : "SUSPICIOUS";
+    // The old 85/15 score was a constant keyed on "a certificate row exists"
+    // and labelled products without one SUSPICIOUS. No score is computed here.
     return c.json({
-      trustScore,
-      verdict,
-      breakdown: { blockchainCert: cert ? 85 : 0 },
-      message: `Trust score for ${product.name}: ${trustScore}/100 — ${verdict}`,
+      trustScore: null,
+      productName: product.name,
+      ...registryLookupDecision(cert ?? { status: "uncertified" }),
     });
   } catch (err) {
     console.error("[GPT /trust-score]", err);
@@ -1287,7 +1462,7 @@ app.use("/api/internal/*", async (c, next) => {
 app.post("/api/internal/verify", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
-    const { identifier, productId, barcode, imageUrl } = body ?? {};
+    const { identifier, productId, barcode } = body ?? {};
     const lookupId = identifier || productId || barcode;
     if (!lookupId)
       return c.json(
@@ -1295,63 +1470,21 @@ app.post("/api/internal/verify", async c => {
         400
       );
 
+    // This used to ask an LLM whether an unknown identifier was authentic and
+    // return its guess as `verified`, with a fixed trustScore of 95 and five
+    // agents listed for any certificate. A guess is not evidence: an unknown
+    // identifier is not_found, and a known one is a registry record only.
     const db = getHyperdriveDb(c.env);
     const { getCertificateByNumber } =
       await import("../server/content-db-helpers");
-    const cert = await getCertificateByNumber(db, lookupId);
-    if (cert) {
-      return c.json({
-        verified: cert.status === "active",
-        type: "certificate",
-        certificate: cert,
-        trustScore: 95,
-        confidence: 0.98,
-        agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
-      });
-    }
-
-    // Prevent prompt injection — only the sanitized identifier reaches the LLM
-    const safeLookupId = String(lookupId)
-      .replace(/[^a-zA-Z0-9\-_.]/g, "")
-      .slice(0, 128);
-
-    const { invokeLLM, parseLLMContent } = await import("../server/_core/llm");
-    const analysis = await invokeLLM({
-      messages: [
-        {
-          role: "system",
-          content: `You are AuthiChain's product verification engine. Analyze the product identifier and determine authenticity. Return JSON: { "verified": boolean, "confidence": number (0-1), "reasoning": string, "riskFlags": string[] }`,
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            identifier: safeLookupId,
-            hasImage: !!imageUrl,
-          }),
-        },
-      ],
-      responseFormat: { type: "json_object" },
-    });
-
-    let result: {
-      verified: boolean;
-      confidence: number;
-      reasoning: string;
-      riskFlags: string[];
-    };
-    try {
-      result = parseLLMContent(analysis.choices[0].message.content);
-    } catch {
-      return c.json({ error: "Internal server error" }, 500);
-    }
+    const cert = await getCertificateByNumber(db, String(lookupId));
+    const decision = registryLookupDecision(cert ?? null);
     return c.json({
-      verified: result.verified,
-      type: "ai_analysis",
-      trustScore: Math.round(result.confidence * 100),
-      confidence: result.confidence,
-      reasoning: result.reasoning,
-      riskFlags: result.riskFlags || [],
-      agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
+      verified: decision.valid,
+      type: cert ? "certificate" : "not_found",
+      ...(cert ? { certificate: cert } : {}),
+      trustScore: null,
+      ...decision,
     });
   } catch (err: any) {
     console.error("[Internal API] verify error:", err.message);
@@ -1430,34 +1563,47 @@ app.post("/api/internal/cannabis/verify", async c => {
     if (!strain)
       return c.json({ error: "strainName or strainId required" }, 400);
 
-    const metadata = {
-      name: strain,
-      type: "HYBRID" as const,
-      genetics: ["Unknown"],
-      thcContent: thcPercent || 25,
-      cbdContent: cbdPercent || 1,
-      harvestDate: new Date().toISOString(),
-    };
-    const profile = {
-      thc: thcPercent || 25,
-      thca: (thcPercent || 25) * 1.12,
-      cbd: cbdPercent || 1,
-      cbda: (cbdPercent || 1) * 1.2,
-      total: (thcPercent || 25) + (cbdPercent || 1) + 5,
-    };
-
-    const { calculateStrainRarity, formatTruthLayerMetadata } =
-      await import("../server/cannabis-service");
-    const rarity = calculateStrainRarity(metadata, profile);
-    const truthLayer = formatTruthLayerMetadata(metadata, profile);
+    // This returned verified:true for any strain name, filled a missing
+    // panel with THC 25 / CBD 1, and called any request with a dispensaryId
+    // "compliant". Nothing here reads a lab result, so nothing is verified,
+    // and a rarity score is only computed from numbers the caller supplied.
+    const thc = typeof thcPercent === "number" ? thcPercent : null;
+    const cbd = typeof cbdPercent === "number" ? cbdPercent : null;
+    let rarityScore: number | null = null;
+    let truthLayer: unknown = null;
+    if (thc !== null && cbd !== null) {
+      const metadata = {
+        name: strain,
+        type: "HYBRID" as const,
+        genetics: ["Unknown"],
+        thcContent: thc,
+        cbdContent: cbd,
+        harvestDate: new Date().toISOString(),
+      };
+      const profile = {
+        thc,
+        thca: thc * 1.12,
+        cbd,
+        cbda: cbd * 1.2,
+        total: thc + cbd + 5,
+      };
+      const { calculateStrainRarity, formatTruthLayerMetadata } =
+        await import("../server/cannabis-service");
+      rarityScore = calculateStrainRarity(metadata, profile);
+      truthLayer = formatTruthLayerMetadata(metadata, profile);
+    }
 
     return c.json({
-      verified: true,
+      verified: false,
+      decision: "indeterminate",
+      decision_contract: "AuthiChain Verification Decision v1",
+      reasons: ["no_lab_evidence", "no_signed_attestation_presented"],
       strainName: strain,
       batchId: batchId || null,
       dispensaryId: dispensaryId || null,
-      rarityScore: rarity,
-      complianceStatus: dispensaryId ? "compliant" : "unverified",
+      complianceStatus: "not_assessed",
+      rarityScore,
+      rarity_basis: rarityScore === null ? "not_computed" : "caller_supplied_panel",
       truthLayer,
     });
   } catch (err: any) {
@@ -1480,15 +1626,23 @@ app.post("/api/internal/trust-score", async c => {
 
     const { computeTrustScore } = await import("../server/qron-service");
     const score = computeTrustScore({
-      qrDecodePass: qrDecodePass ?? true,
-      blockchainCertExists: blockchainCertExists ?? false,
+      qrDecodePass: qrDecodePass === true,
+      blockchainCertExists: blockchainCertExists === true,
       communityVerified: visualMatch ? Math.round(visualMatch / 20) : 0,
       communityFlagged: 0,
-      openArtRegistered: nfcMatch ?? false,
+      openArtRegistered: nfcMatch === true,
     });
 
+    // Every input here is asserted by the caller, so the score is advisory.
+    // It never becomes an authenticity verdict.
+    const { verdict: _heuristicVerdict, ...advisory } = score;
     return c.json({
-      ...score,
+      ...advisory,
+      advisory: true,
+      verified: false,
+      decision: "indeterminate",
+      decision_contract: "AuthiChain Verification Decision v1",
+      reasons: ["caller_asserted_signals_only"],
       inputs: {
         qrDecodePass,
         blockchainCertExists,
@@ -1514,11 +1668,13 @@ app.get("/api/internal/analytics", async c => {
 
     return c.json({
       period,
-      verifications: { total: 0, authentic: 0, counterfeit: 0 },
-      qrCodesGenerated: 0,
-      certificatesIssued: 0,
-      activeAgents: 5,
-      message: "Analytics data will be populated once usage metering is active",
+      // Nothing is metered yet. Nulls, not zeros: a zero reads as a
+      // measurement. The old activeAgents: 5 was a constant, not a count.
+      metered: false,
+      verifications: null,
+      qrCodesGenerated: null,
+      certificatesIssued: null,
+      message: "Usage metering is not active, so there are no counts to report.",
     });
   } catch (err: any) {
     console.error("[Internal API] analytics error:", err.message);
@@ -1741,6 +1897,7 @@ app.post("/generate/", c => renderDynamicPage(c));
 registerJwksRoute(app);
 registerIssuerRoutes(app);
 registerAttestationApi(app);
+registerComplianceEvaluate(app);
 registerX402Routes(app);
 registerUnsubscribeRoutes(app);
 registerInboundRoutes(app);
@@ -1780,6 +1937,12 @@ app.get("*", async c => {
     c.req.header("x-forwarded-host") ?? c.req.header("host") ?? "";
   if ((rawPathname === "/" || rawPathname === "") && isAppHostname(appHost)) {
     return c.redirect("/dashboard", 302);
+  }
+  // The dashboard SPA links to these with relative hrefs, but they are only
+  // served on the apex (authichain-com worker), so on app.* they 404'd.
+  if (isAppHostname(appHost) && APEX_ONLY_PATHS.has(rawPathname)) {
+    const { search } = new URL(c.req.url);
+    return c.redirect(`https://authichain.com${rawPathname}${search}`, 301);
   }
   // Normalize a trailing slash (except root "/") so /about/ resolves the same
   // as /about; otherwise the exact-match marketing lookup misses and the page

@@ -8,7 +8,6 @@ import {
   Leaf,
   FileText,
   Zap,
-  Lock,
   CheckCircle,
   Sparkles,
 } from 'lucide-react';
@@ -16,17 +15,17 @@ import {
 export const metadata: Metadata = {
   title: 'EU Digital Product Passport Compliance | GovChain',
   description:
-    'Blockchain-anchored Digital Product Passports, with signed records in development. No enterprise contract.',
+    'Digital Product Passports, with signed records in development. No enterprise contract.',
   openGraph: {
     title: 'EU Digital Product Passport Compliance | GovChain',
     description:
-      'Blockchain-anchored Digital Product Passports, with signed records in development. No enterprise contract.',
+      'Digital Product Passports, with signed records in development. No enterprise contract.',
     url: 'https://govchain.us/eu-dpp',
   },
   twitter: {
     title: 'EU Digital Product Passport Compliance | GovChain',
     description:
-      'Blockchain-anchored Digital Product Passports, with signed records in development. No enterprise contract.',
+      'Digital Product Passports, with signed records in development. No enterprise contract.',
   },
 };
 
@@ -38,11 +37,6 @@ const FEATURES = [
     icon: ShieldCheck,
     title: 'Built on Regulation (EU) 2024/1781',
     desc: 'Data model maps directly to the EU DPP framework — unique identifier, carbon footprint, material composition, and repairability scores in our data model.',
-  },
-  {
-    icon: Lock,
-    title: 'Polygon-Anchored Integrity',
-    desc: 'Every passport is hashed and anchored on-chain. Customs officers and auditors verify authenticity in one scan — no vendor call required.',
   },
   {
     icon: Zap,
@@ -86,7 +80,7 @@ const FAQ: FaqItem[] = [
   {
     question: 'How does AuthiChain implement EU DPP?',
     answer:
-      'AuthiChain (via its GovChain compliance layer) maps your product data directly to the EU DPP framework — unique identifier, material bill of materials, carbon footprint, and repairability score. Every passport is hashed and anchored on Polygon for tamper-proof integrity, and we auto-generate the EPCIS 2.0 and JSON-LD payloads required for EU registry submission. No manual data entry, no compliance consultant.',
+      'AuthiChain (via its GovChain compliance layer) maps your product data directly to the EU DPP framework — unique identifier, material bill of materials, carbon footprint, and repairability score. We auto-generate the EPCIS 2.0 and JSON-LD payloads required for EU registry submission. No manual data entry, no compliance consultant.',
   },
   {
     question: 'What is the cost of EU DPP compliance?',
@@ -125,7 +119,7 @@ export default function EuDppPage() {
           </h1>
 
           <p className="max-w-2xl mx-auto text-zinc-400 text-base md:text-lg font-medium leading-relaxed mb-10">
-            GovChain issues blockchain-anchored DPPs that meet Regulation (EU) 2024/1781.
+            GovChain issues DPPs that meet Regulation (EU) 2024/1781.
             No enterprise contract. Start with a scoped pilot.
           </p>
 
@@ -153,7 +147,6 @@ export default function EuDppPage() {
         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-zinc-900">
           {[
             { value: 'EU 2024/1781', label: 'Regulation' },
-            { value: 'Polygon', label: 'Anchored On-Chain' },
             { value: 'EPCIS 2.0', label: 'Export Format' },
             { value: 'In Development', label: 'Guided Onboarding' },
           ].map((s) => (
@@ -266,7 +259,7 @@ export default function EuDppPage() {
               {
                 step: '02',
                 title: 'Issue Passports',
-                desc: 'Each product gets a unique DPP — hashed and anchored on Polygon in seconds (Ed25519-signed records are in development). Your QR code is ready to print.',
+                desc: 'Each product gets a unique DPP (Ed25519-signed records are in development). Your QR code is ready to print.',
               },
               {
                 step: '03',
@@ -343,7 +336,7 @@ export default function EuDppPage() {
           </Link>
         </div>
         <ul className="mx-auto mt-12 flex max-w-2xl flex-wrap justify-center gap-x-8 gap-y-3">
-          {['No enterprise contract', 'Guided onboarding in development', 'Polygon-anchored', 'EPCIS 2.0 export'].map((t) => (
+          {['No enterprise contract', 'Guided onboarding in development', 'EPCIS 2.0 export'].map((t) => (
             <li
               key={t}
               className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-zinc-500"
@@ -357,7 +350,7 @@ export default function EuDppPage() {
 
       <footer className="px-6 py-12">
         <p className="text-center text-[10px] font-bold uppercase tracking-widest text-zinc-700">
-          GovChain · part of the AuthiChain Protocol · EU DPP Compliance · Polygon Anchored
+          GovChain · part of the AuthiChain Protocol · EU DPP Compliance
         </p>
       </footer>
     </div>

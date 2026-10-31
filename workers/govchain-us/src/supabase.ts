@@ -28,6 +28,10 @@ export interface SupabaseEnv {
   APP_ORIGIN?: string;
   /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
   VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
+  /** Optional override; defaults to https://authichain.com/api/v1/attestation/verify */
+  AUTHICHAIN_CANONICAL_VERIFY_URL?: string;
+  /** Optional override; defaults to https://authichain.com for issuer/JWKS proxy */
+  AUTHICHAIN_PROTOCOL_ORIGIN?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -132,15 +136,20 @@ async function restGet(
  */
 export async function fetchOpportunities(
   env: SupabaseEnv,
-  opts: { minFit?: number; limit?: number } = {}
+  opts: { minFit?: number; limit?: number; q?: string } = {}
 ): Promise<GovOpportunity[]> {
   const minFit = Number.isFinite(opts.minFit) ? Number(opts.minFit) : 70;
   const limit = Math.min(Math.max(Number(opts.limit) || 12, 1), 100);
+  const q = typeof opts.q === "string" ? opts.q.trim() : "";
+  const search = q
+    ? `or=(title.ilike.*${encodeURIComponent(q)}*,agency.ilike.*${encodeURIComponent(q)}*,notice_id.ilike.*${encodeURIComponent(q)}*)`
+    : "";
   const today = new Date().toISOString().slice(0, 10);
   const query = [
     `select=${LIST_COLUMNS}`,
     `fit_score=gte.${minFit}`,
     `or=(deadline.gte.${today},deadline.is.null)`,
+    search,
     "order=deadline.asc.nullslast",
     `limit=${limit}`,
   ].join("&");

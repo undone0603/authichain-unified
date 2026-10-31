@@ -19,7 +19,7 @@ import {
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import tls from "node:tls";
-import { Pool } from "pg";
+import { Client, Pool } from "pg";
 import {
   abTests,
   activityLog,
@@ -2444,6 +2444,46 @@ export function getHyperdriveDb(env: {
     connectionString: env.HYPERDRIVE.connectionString,
   });
   return drizzle(workersPool);
+}
+
+// Cloudflare's current Hyperdrive guidance for node-postgres + Drizzle
+// (developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/ and
+// .../postgres-drivers-and-libraries/drizzle-orm/, checked 2026-10-09):
+// create ONE `pg.Client` per request, `await client.connect()`, and pass it
+// to drizzle(). Hyperdrive holds the real connection pool, so a per-request
+// Client is cheap. Do NOT cache a client or Pool across requests in module
+// scope: Workers forbid reusing I/O objects from another request ("Cannot
+// perform I/O on behalf of a different request" / "Connection terminated").
+//
+// Unlike getHyperdriveDb() (a fresh pg.Pool per call that is never ended),
+// this makes the connect step explicit so callers can put it inside their
+// timeout budget, and gives them close() to release the socket afterwards.
+export type HyperdriveRequestDb = {
+  // Same query surface as getHyperdriveDb(); only the hidden $client differs
+  // (Client vs Pool), and no caller touches $client.
+  db: ReturnType<typeof getHyperdriveDb>;
+  connect: () => Promise<void>;
+  close: () => Promise<void>;
+};
+
+export function createHyperdriveRequestDb(env: {
+  HYPERDRIVE: { connectionString: string };
+}): HyperdriveRequestDb {
+  const client = new Client({
+    connectionString: env.HYPERDRIVE.connectionString,
+  });
+  let closed = false;
+  return {
+    db: drizzle(client) as unknown as ReturnType<typeof getHyperdriveDb>,
+    connect: async () => {
+      await client.connect();
+    },
+    close: async () => {
+      if (closed) return;
+      closed = true;
+      await client.end();
+    },
+  };
 }
 
 // Node-singleton counterpart of server/_core/db-helpers.ts's Db-parameterized

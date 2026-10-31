@@ -1,6 +1,8 @@
-# GS1 Conformant Resolver — gap analysis
+# GS1 Conformant Resolver: status
 
-**Date:** 2026-09-11 · **Status:** not conformant, deliberately declared as such.
+**Updated:** 2026-09-30 · **Status:** resolution behaviour implemented and
+tested locally against the suite's checks. **Not yet run against GS1's hosted
+test suite, so no conformance is claimed anywhere.**
 
 ## Why this matters
 
@@ -13,73 +15,91 @@ Conformance is worth pursuing because it is a credential _someone else issues_.
 conformant-resolver test suite" is not. See decision D4 in
 `docs/strategy/strainchain-genetics-passport.md`.
 
-## What was found
+## Where the criteria came from
 
-`workers/gs1-resolver` parses GS1 Digital Link URIs and answers a verification
-question about the identifier. It implements **none** of Digital Link's
-resolution behaviour:
+The 2026-09-11 version of this doc stopped because `gs1.org`, `ref.gs1.org`
+and `gs1.github.io` are blocked from the build environment. The criteria are
+also on GitHub, which is reachable:
 
-| Behaviour                                      | Present |
-| ---------------------------------------------- | ------- |
-| `linkType` query parameter                     | no      |
-| `linkType=all` returning a linkset             | no      |
-| `Link` HTTP header exposing the linkset        | no      |
-| `307` redirect to a linked resource            | no      |
-| `application/linkset+json` content negotiation | no      |
-| `/.well-known/gs1resolver` description file    | yes     |
-| CORS on JSON responses                         | yes     |
+- `github.com/gs1/GS1DL-resolver-testsuite`: `Conformance1_2.txt` (the 18
+  v1.2 statements) and `GS1DigitalLinkResolverTestSuite.js` (exactly what the
+  hosted suite checks, last updated 2026-08-07).
+- `github.com/gs1/linkset`: `gs1-linkset-schema.json`, the schema the suite
+  validates linksets against. Our linkset validates against it (checked with
+  ajv).
+- The suite's own `GS1DigitalLinkToolkit.js` (Apache 2.0) is vendored at
+  `workers/gs1-resolver/src/vendor/`, so URI validation and decompression agree
+  with the suite rather than with our reading of the standard.
 
-Until 2026-09-11 the description file nevertheless called the service a
-"GS1 Conformant Resolver" and advertised `supportedLinkType` of `gs1:pip`,
-`gs1:certificationInfo` and `gs1:epcis` — three link types nothing here can
-serve. A machine reading a description file is entitled to act on it, so that
-was a false capability assertion, and on a product whose whole proposition is
-not overclaiming it was the worst possible place to have one.
+The description-file schema (`ref.gs1.org/standards/resolver/description-file-schema`)
+is **not** on GitHub and was not checked. The description file follows GS1's
+Resolver Community Edition example instead. If the hosted suite fails `rdFile`,
+that is the first place to look.
 
-The document now reports `gs1ConformantResolver: false`, an empty
-`supportedLinkType`, and a note saying what the service actually does. An empty
-list is a true statement; the previous list was not.
+## How the resolver behaves now
 
-## What conformance would require
+`workers/gs1-resolver`, for `/01/{gtin}[/22/…][/10/…][/21/…]` and compressed
+Digital Link URIs:
 
-From secondary sources (the normative spec was unreachable — see below):
+| Suite check                             | Behaviour                                                                               |
+| --------------------------------------- | --------------------------------------------------------------------------------------- |
+| `methodsCheck`, `corsCheck`             | GET, HEAD, OPTIONS; `access-control-allow-origin: *` everywhere                         |
+| `reportWith400`, `noErrorWith200`       | Bad syntax, wrong check digit or out-of-order qualifier: 400                            |
+| `trailingSlash`                         | Stripped before parsing; identical response                                             |
+| `defaultTarget`                         | 307 to the one `gs1:defaultLink`                                                        |
+| `qsPassedOn`                            | The request's query string is appended to every redirect                                |
+| `legacyLinkHeaders`                     | `Link` carries only `rel="linkset"` (and `owl:sameAs` if compressed)                    |
+| `ltLinksetNoRedirect`, `ltAcceptHeader` | `linkType=linkset`, `linkType=all` or `Accept: application/linkset+json`: 200 linkset   |
+| `validLinkset`, `declaredContentType`   | RFC 9264 linkset, `application/linkset+json`                                            |
+| `linksetJsonldCheck`                    | `Link` to the JSON-LD context on linkset responses                                      |
+| `defaultLinkExists`, `singleDefaulLink` | Exactly one default link per level, `href` and `title` only                             |
+| `loFor…`                                | `linkType=gs1:certificationInfo` (CURIE or URI): 307 to the passport                    |
+| `specificLinkTypeNotFound`              | Unknown link type: 404                                                                  |
+| `basicWalkUp`                           | Unknown lot or variant walks up to the GTIN                                             |
+| `linkTypesDefined`                      | Only `defaultLink` and `certificationInfo`, both ratified                               |
+| Compression (statements 4 and 5)        | Decompressed; uncompressed URI in `Link` as `owl:sameAs` (the suite does not test this) |
 
-1. A Resolver Description File at `/.well-known/gs1resolver` validating against
-   the JSON schema at `ref.gs1.org/standards/resolver/description-file-schema`.
-2. `linkType` accepting a URI, a CURIE, or the literal `all`, with a **307**
-   redirect to the matching link when one exists.
-3. The linkset exposed in the HTTP `Link` header.
-4. Content negotiation, including `application/linkset+json`.
-5. Whatever else the standard requires. This list is not known to be complete.
+Each row has a test in `workers/gs1-resolver/src/conformance.test.ts`.
 
-## Why this is not implemented yet
+### Links served
 
-**The normative specification is unreachable from this environment.** The egress
-policy blocks `gs1.org`, `ref.gs1.org` and `gs1.github.io`, so the standard, the
-description-file JSON schema, and the conformance test suite cannot be read or
-run here.
+- **Registered item** (serial, lot or GTIN-level seal): `gs1:defaultLink` goes
+  to `/verify/01/…`, the verification result, which records the scan on GET.
+  `gs1:certificationInfo` goes to the passport at `authichain.com/passport/{certId}`,
+  which records nothing.
+- **GTIN with registered items**: `gs1:defaultLink` goes to `/verify/01/{gtin}`,
+  a page that says what is registered under the GTIN and that it verifies no
+  single item.
 
-Implementing a standard from secondary summaries would produce something that
-_looks_ conformant and has not been checked against the specification — which,
-on a conformance claim, is worse than declaring non-conformance. So the
-declaration was corrected and the implementation was left alone.
+### Deliberate choices
 
-## To proceed
+- **Resolving never records a scan.** Only a GET on the `/verify` target does.
+  A HEAD, a linkset request, a crawler, or the test suite probing the URI
+  cannot move a seal toward `clone_suspected`. Before this change a HEAD on a
+  Digital Link path counted as a scan.
+- **An unregistered serial does not walk up.** It stays `not_found` (404). The
+  standard says a resolver supports all key qualifiers by walking up, but
+  walking an unknown serial up to the GTIN would put someone holding a
+  possibly counterfeit serial on a page for the genuine product. The suite's
+  walk-up check uses a lot (`/10/KL8G`), which does walk up.
+- `/cert/{id}` stays as it was: not a Digital Link, verifies directly.
 
-Either add `gs1.org`, `ref.gs1.org` and `gs1.github.io` to the environment's
-egress allowlist, or supply the standard and the description-file schema
-directly. With the spec in hand the work is:
+## To finish
 
-1. Validate the description file against the published schema.
-2. Implement `linkType` handling with 307 redirects, `linkType=all`, and the
-   `Link` header.
-3. Run GS1's conformance test suite and fix what it reports.
-4. Flip `gs1ConformantResolver` to true **only** after the suite passes.
-
-Step 4 is the only one that may not be taken on judgement.
+1. Deploy `gs1-resolver` (it deploys with the workers workflow) and attach
+   the custom domain `id.authichain.com` to it in the Cloudflare dashboard.
+   Production D1 has no seals yet (checked 2026-09-30), so issue one real seal
+   through `POST /issue` first. The suite needs a Digital Link that resolves.
+2. Run `ref.gs1.org/test-suites/resolver/` against that seal's Digital Link,
+   e.g. `https://id.authichain.com/01/{gtin}/21/{serial}`.
+3. Fix what it reports, and record the result and date here.
+4. Only after a clean pass may any page or the description file say
+   "GS1-Conformant". `BANNED_COPY` in `workers/authichain-com/src/docs-pages.ts`
+   blocks the phrase until then; remove it in the same change as the evidence.
 
 ## Sources
 
-- <https://ref.gs1.org/standards/resolver/> (blocked here; cited from search results)
-- <https://gs1.eu/activities/digital-product-passport/>
-- <https://www.gs1.org/standards/gs1-digital-link> (blocked here)
+- <https://github.com/gs1/GS1DL-resolver-testsuite>
+- <https://github.com/gs1/linkset>
+- <https://github.com/gs1/GS1_DigitalLink_Resolver_CE> (description file shape)
+- <https://ref.gs1.org/standards/resolver/> (blocked here)

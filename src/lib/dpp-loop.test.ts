@@ -3,6 +3,7 @@ import {
   DPP_PRICE_ID,
   dppActivateUrl,
   fetchAllLoopEvents,
+  dppSmokeRequestAuthorized,
   isDppDemoSession,
   isDppOffer,
   isDemoVisit,
@@ -63,6 +64,16 @@ describe("dpp-loop", () => {
     expect(isDppOffer({ plan: "dpp_readiness" })).toBe(true);
     expect(isDppOffer({}, DPP_PRICE_ID)).toBe(true);
     expect(isDppOffer({ plan: "starter" })).toBe(false);
+  });
+
+  it("authorizes the smoke promo only with a matching secret", () => {
+    const secret = "smoke-secret-value";
+    expect(dppSmokeRequestAuthorized(secret, secret)).toBe(true);
+    expect(dppSmokeRequestAuthorized("smoke-secret-other", secret)).toBe(false);
+    expect(dppSmokeRequestAuthorized(secret, "short")).toBe(false);
+    expect(dppSmokeRequestAuthorized(secret, "")).toBe(false);
+    expect(dppSmokeRequestAuthorized(secret, null)).toBe(false);
+    expect(dppSmokeRequestAuthorized(null, secret)).toBe(false);
   });
 
   it("detects demo/smoke metadata without treating it as a non-offer", () => {
@@ -479,6 +490,86 @@ describe("dpp-loop", () => {
     expect(
       stored.filter(r => r.event_type === "dpp_loop:retained")
     ).toHaveLength(2);
+  });
+});
+
+describe("economic state", () => {
+  function loopRow(
+    visit: string,
+    stage: string,
+    metadata: Record<string, unknown> = {}
+  ): LoopEventRow {
+    return {
+      prospect_id: visit,
+      event_type: `dpp_loop:${stage}`,
+      timestamp: "2026-10-01T00:00:00.000Z",
+      metadata: { loop_stage: stage, ...metadata },
+    };
+  }
+
+  it("reports the highest evidenced state and does not invent churn", async () => {
+    const { economicStateOf, reconstructLoop } = await import("./dpp-loop");
+    const paid = reconstructLoop([
+      loopRow("v", "attributed_visit"),
+      loopRow("v", "checkout_started"),
+      loopRow("v", "payment_succeeded"),
+    ]);
+    expect(economicStateOf(paid)).toBe("PAID");
+    expect(economicStateOf(reconstructLoop([]))).toBeNull();
+    const published = reconstructLoop([
+      loopRow("v", "dpp_published"),
+      loopRow("v", "verification"),
+    ]);
+    expect(economicStateOf(published)).toBe("FIRST_VALUE");
+  });
+
+  it("names the largest drop and leaves demos out", async () => {
+    const { countEconomicStates } = await import("./dpp-loop");
+    const report = countEconomicStates([
+      loopRow("a", "attributed_visit"),
+      loopRow("b", "attributed_visit"),
+      loopRow("b", "checkout_started"),
+      loopRow("c", "attributed_visit"),
+      loopRow("c", "checkout_started"),
+      loopRow("c", "payment_succeeded"),
+      loopRow("demo", "attributed_visit", { demo: true }),
+      loopRow("demo", "payment_succeeded", { demo: true }),
+    ]);
+    expect(report.visits).toBe(3);
+    expect(report.demoVisits).toBe(1);
+    expect(report.reached.VISITOR).toBe(3);
+    expect(report.reached.CHECKOUT_STARTED).toBe(2);
+    expect(report.reached.PAID).toBe(1);
+    expect(report.reached.RETAINED).toBe(0);
+    expect(report.leak).toEqual({
+      from: "PAID",
+      to: "PROVISIONED",
+      entered: 1,
+      continued: 0,
+      drop: 1,
+    });
+  });
+
+  it("keeps a larger top-of-funnel drop ahead of a smaller paid drop", async () => {
+    const { largestFunnelLeak } = await import("./dpp-loop");
+    expect(
+      largestFunnelLeak({
+        VISITOR: 10,
+        CHECKOUT_STARTED: 2,
+        PAID: 1,
+        PROVISIONED: 1,
+        ACTIVATED: 1,
+        FIRST_VALUE: 1,
+        RETAINED: 1,
+      })
+    ).toEqual({
+      from: "VISITOR",
+      to: "CHECKOUT_STARTED",
+      entered: 10,
+      continued: 2,
+      drop: 8,
+    });
+    expect(largestFunnelLeak({})).toBeNull();
   });
 });
 

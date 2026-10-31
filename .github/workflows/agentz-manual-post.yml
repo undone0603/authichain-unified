@@ -36,6 +36,8 @@ jobs:
     timeout-minutes: 20
     env:
       AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
       WORKFLOW_ID: ${{ inputs.workflow_id }}
       LIVE: ${{ inputs.live }}
       PAYLOAD: ${{ inputs.payload }}
@@ -52,17 +54,17 @@ jobs:
             exit 1
           fi
 
-          if [ -z "${PAYLOAD:-}" ]; then
-            PAYLOAD='{}'
-          fi
           python3 - <<'PY'
           import json, os, sys
-          raw = os.environ.get("PAYLOAD", "{}")
+          raw = os.environ.get("PAYLOAD") or "{}"
           try:
-              json.loads(raw)
+              parsed = json.loads(raw)
           except Exception as exc:
               print(f"::error::payload is not valid JSON: {exc}", file=sys.stderr)
               sys.exit(1)
+          # Never expand the payload in the shell: "$(...)" inside it would run.
+          with open("/tmp/agentz-payload.json", "w", encoding="utf-8") as fh:
+              json.dump(parsed, fh)
           PY
 
           LIVE_Q="false"
@@ -74,11 +76,19 @@ jobs:
 
           URL="https://agentz.authichain.com/workflows/${WORKFLOW_ID}/run?live=${LIVE_Q}&mode=${MODE_Q}"
           echo "POST ${URL}"
+          ACCESS_HEADERS=()
+          if [ -n "${CF_ACCESS_CLIENT_ID:-}" ] && [ -n "${CF_ACCESS_CLIENT_SECRET:-}" ]; then
+            ACCESS_HEADERS+=(
+              -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}"
+              -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}"
+            )
+          fi
           HTTP=$(curl -sS -o /tmp/agentz-manual-post.json -w "%{http_code}" \
             -X POST \
             -H "Authorization: Bearer ${AGENT_SECRET}" \
             -H "Content-Type: application/json" \
-            -d "${PAYLOAD}" \
+            "${ACCESS_HEADERS[@]}" \
+            --data-binary @/tmp/agentz-payload.json \
             "${URL}") || true
 
           echo "HTTP ${HTTP}"

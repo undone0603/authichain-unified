@@ -1,16 +1,31 @@
+import { isVerifyLivePath, renderVerifyLivePage } from "./verify-live-page.ts";
+import { isIsThisRealPath, renderIsThisRealPage } from "./is-this-real-page.ts";
+import { handleSalesInquiry } from './routes/sales';
+import mcpServer from './mcp-server';
 // The DPP regulatory timeline is shared with the Next.js page rather than
 // duplicated here: content/dpp/regulatory-timeline.json is the single source of
 // truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild
 // inlines it at build time, so the worker stays self-contained at runtime.
 import { tryHandleDppRoute } from "./dpp-routes";
+import { tryHandleAgentPresentation } from "./agent-present-page";
+import { tryHandleBotIdentity } from "./bot-identity-routes";
 import {
   tryHandleApiCheckoutEmailGate,
   tryHandleProtocolCheckout,
 } from "./protocol-checkout";
-import { tryHandleGatedCheckout } from "../../../src/lib/checkout-gate";
+import { displayPlanDescription, tryHandleGatedCheckout } from "../../../src/lib/checkout-gate";
+import {
+  deliverCheckoutGateEvent,
+  deliverDppCheckoutStarted,
+} from "./checkout-growth";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
+import { tryHandleCertificateRegistry } from "./certificate-registry";
 import { tryHandleMcp } from "./mcp-routes";
+import { tryHandleMcpFree } from "./mcp-free-routes";
+import { tryHandleApiV1 } from "./api-v1-routes";
+import { tryHandleProtocolExample } from "./protocol-example-route";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
+import { isMcpInstallPath, renderMcpInstallPage } from "./mcp-install-page";
 import { docsRedirect, isDocsHub, isDocsPage } from "./docs-pages";
 import { docsCtaClickEvent, docsViewEvent } from "./docs-events";
 import { renderDocsPage } from "./docs-render";
@@ -22,6 +37,8 @@ import { APP_PREFIXES } from "./app-prefixes";
 import { tryHandleGeneticsRoutes } from "./genetics-routes";
 import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
 import { renderContactPage } from "./contact-page.ts";
+import { legalRoute } from "./legal-pages.ts";
+import { seoPassportResponse } from "../../../src/lib/seo-pages";
 import {
   isMadeInAmericaPath,
   isTrumarkPath,
@@ -33,6 +50,9 @@ import {
   tryHandleTelegramMiniApp,
 } from "./telegram-miniapp.ts";
 import { DESK_SITEMAP, tryHandleDesk } from "./desk.ts";
+import { tryHandleGeneration } from "./generation-check";
+// Extensionless on purpose. tsconfig.workers.json counts each ".ts" import.
+import { attestationSchemaResponse } from "./attestation-schema";
 import { tryHandleLlmsTxt } from "./llms-txt.ts";
 import { tryHandle402IndexVerify } from "./index402-verify.ts";
 import {
@@ -58,13 +78,14 @@ import {
   dppCheckoutClickEvent,
   isDppCheckPath,
   renderDppCheckPage,
+  tryHandleDppCheck,
 } from "./dpp-check-page.ts";
 import {
   micrositeSitemapUrls,
   tryHandleMicrosite,
 } from "./microsite-routes.ts";
 import { icpSeoSitemapUrls } from "./icp-seo-sitemap.ts";
-import { withApolloTracker } from "./apollo-tracker.ts";
+import { withHtmlEgress } from "./apollo-tracker.ts";
 import {
   listMilestones,
   milestoneStatus,
@@ -90,6 +111,7 @@ import {
   estateTrust,
   tryHandleEstateIndexNow,
 } from '../../_shared/estate-landing.ts';
+import { isEmailOptinPath, tryHandleEmailOptin, type D1Like } from './email-optin.ts';
 import { tryHandleEstatePricing } from '../../_shared/estate-pricing.ts';
 import { tryRedirectSeoRootCanonical } from '../../_shared/seo-hub-routes.ts';
 
@@ -148,29 +170,25 @@ const FONTS_LINK = ESTATE_FONTS_LINK;
 // structured-data blocks (Organization, WebSite, FAQPage).
 const SEO = {
   description:
-    'AuthiChain: product seals, EU DPP Readiness on Stripe checkout, and x402 pay-per-call for agents. In development: signed, publicly verifiable certificates and 5-agent consensus verification.',
+    'AuthiChain: QRON Starter Pack $29 on Stripe, Living QR generation, and x402 pay-per-call for agents. EU DPP Readiness is $299 when you need the battery passport path.',
   keywords:
-    'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain',
+    'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain, Starter Pack',
   ogTitle: 'AuthiChain — The authentic agentic economy',
   ogDescription:
-    'Agents can pay. They still need to know if it is real. Signed seals, MCP tools, x402 at $0.05 USDC, and EU DPP Readiness on live Stripe checkout.',
+    'Start with QRON Starter at $29. Signed seals, MCP tools, x402 at $0.05 USDC. EU DPP Readiness is $299 on live Stripe checkout when you need it.',
   twitterTitle: 'AuthiChain — The authentic agentic economy',
   twitterDescription:
-    'The authenticity layer for the agentic economy. Issue → Bind → Verify. x402 for agents. DPP Readiness for humans.',
+    'Starter Pack $29. Issue → Bind → Verify. x402 for agents. EU DPP Readiness $299 when you need the passport path.',
   ogImage: 'https://authichain.com/og-image.png',
   themeColor: '#4F46E5',
   faqs: [
-    {
-      q: 'How does AuthiChain verify a product?',
-      a: 'Issue a cryptographically signed seal, bind it to the physical item, then verify from any camera against the on-chain record.',
-    },
     {
       q: 'How much does AuthiChain cost?',
       a: `The first checkout is QRON Starter at $29 at ${planPaymentLink("starter") ?? ""}. StrainChain Passport is $49 at ${planPaymentLink("strainchain_passport") ?? ""}. EU DPP Readiness stays $299 at ${planPaymentLink("dpp_readiness") ?? ""} (or enter a work email so Stripe can recover that cart). Creator is $99 at ${planPaymentLink("creator") ?? ""}. See /pricing.`,
     },
     {
       q: 'What is EU DPP Readiness?',
-      a: 'A one-time readiness audit with self-serve activation and 50 workspace generations to publish a first Digital Product Passport. The $299 is credited toward AuthiChain Basic on conversion.',
+      a: 'A one-time checkout that opens an AuthiChain workspace with self-serve activation, so you can publish a first Digital Product Passport.',
     },
     {
       q: 'What else is live in the estate?',
@@ -178,7 +196,7 @@ const SEO = {
     },
     {
       q: 'What is the authentic agentic economy?',
-      a: 'Agents can already pay and call tools. They still need a machine-verifiable check that a physical product is real. AuthiChain is that check — signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call verification.',
+      a: 'Agents can already pay and call tools. They still need a machine-verifiable check that a physical product is real.',
     },
   ],
 };
@@ -235,7 +253,7 @@ const OG_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 
   <text x="110" y="385" font-family="'Bebas Neue','Helvetica Neue',Arial,sans-serif" font-size="104" font-weight="700" letter-spacing="6" fill="#f8fafc">AUTHICHAIN</text>
   <line x1="110" y1="412" x2="280" y2="412" stroke="#d4af37" stroke-width="3"/>
   <text x="110" y="468" font-family="'Outfit','Helvetica Neue',Arial,sans-serif" font-size="32" font-weight="300" fill="#94a3b8">The authentic agentic economy</text>
-  <text x="110" y="510" font-family="'Outfit','Helvetica Neue',Arial,sans-serif" font-size="19" font-weight="300" fill="#94a3b8" opacity="0.75">Product seals and EU DPP readiness · Certificate contract live on Polygon · Multi-agent verification on our roadmap</text>
+  <text x="110" y="510" font-family="'Outfit','Helvetica Neue',Arial,sans-serif" font-size="19" font-weight="300" fill="#94a3b8" opacity="0.75">Product seals and EU DPP readiness · Multi-agent verification on our roadmap</text>
   <text x="1160" y="595" text-anchor="end" font-family="'JetBrains Mono','Courier New',monospace" font-size="20" letter-spacing="3" fill="#d4af37">AUTHICHAIN.COM</text>
 </svg>`;
 
@@ -248,6 +266,21 @@ function assetResponse(svg: string): Response {
     },
   });
 }
+
+// No service worker. /verify must not be cached: a stored page can show a
+// record that has since been revoked. This file is not a contract ABI and
+// the lookup is not an authenticity verdict.
+const VERIFY_MANIFEST = JSON.stringify({
+  name: 'AuthiChain',
+  short_name: 'AuthiChain',
+  description: 'Look up an AuthiChain record. On-chain verification is in development.',
+  start_url: '/verify',
+  scope: '/',
+  display: 'browser',
+  background_color: '#0c0c0d',
+  theme_color: '#0c0c0d',
+  icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+});
 
 // __OG_PNG_B64_START__
 const OG_IMAGE_PNG_B64 =
@@ -2173,7 +2206,7 @@ function catalogJsonLdOffer(id: PlanId) {
   return {
     '@type': 'Offer' as const,
     name: plan.name,
-    description: plan.description,
+    description: displayPlanDescription(plan),
     price: plan.price,
     priceCurrency: 'USD',
     url: offerUrl,
@@ -2290,7 +2323,6 @@ function communityHub(_brand: keyof typeof BRANDS) {
     "Ecosystem utilities",
     "QRON sits beside AuthiChain certificates when you need a living QR. Bitcoin Ordinals provenance for high-value certificates is in development.",
     [
-      { title: "$QRON token", body: "Polygon ERC-20 (1B supply). Speculative utility — not a payment rail. Live agent pay is $0.05 Circle USDC on Base. Living QR packs are Stripe on qron.space." },
       { title: "Bitcoin Ordinals", body: "On our roadmap: Bitcoin Ordinals inscriptions for certificates." },
       { title: "Living QR", body: "Generate a signed, redirectable QR on qron.space when packaging needs a scannable identity." },
     ],
@@ -2304,7 +2336,7 @@ function foundersVision() {
   <div class="wrap" style="max-width:760px">
     <p class="section-tag">What is live</p>
     <h2>Realized capability, not a pitch deck</h2>
-    <p class="section-sub">AuthiChain is building seals that bind to products and log every scan against the serial. Public verification is in development. The money path is EU DPP Readiness.</p>
+    <p class="section-sub">One founder. Agents draft and check. Money, mail, and deploy wait for the founder. AuthiChain is building seals that bind to products and log every scan against the serial. One published demonstration record can be checked now at <a href="/api/verify?id=polygon-anchor-1">/api/verify?id=polygon-anchor-1</a>. The human page is <a href="/verify?id=polygon-anchor-1">/verify?id=polygon-anchor-1</a>. It is not a customer product and not a physical inspection. The human page does not itself read the anchor transaction. Product seals and the public certificate registry remain in development. The money path is EU DPP Readiness.</p>
   </div>
 </section>`;
 }
@@ -2314,7 +2346,7 @@ function howItWorks() {
     "How it works",
     "Three steps that already exist on this estate. No new product surface.",
     [
-      { title: "Issue", body: "Issue a seal for the product. AuthiChain's certificate contract is live on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. In development: Ed25519-signed certificates anchored to that contract." },
+      { title: "Issue", body: "Issue a seal for the product. In development: Ed25519-signed certificates." },
       { title: "Bind", body: "Bind the seal to the physical item — a Living QR, a passport, or a package label that can change destination without a reprint." },
       { title: "Verify", body: "Our goal: log every scan against the serial. Our goal: anyone with a camera can confirm authenticity against the public on-chain record. Goal: flag duplicate scans, cloned or copied seals, and unexpected scan locations for a serial." },
     ],
@@ -2340,8 +2372,7 @@ function techStack() {
     "What AuthiChain already does",
     "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "Signed seals", body: "Digital seals backed by AuthiChain's certificate contract, live on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. Our goal: tamper-evident seals with a signed certificate anyone can verify." },
-      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. Credited toward AuthiChain Basic on conversion." },
+      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. The checkout opens an AuthiChain workspace with self-serve activation." },
       { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
     "technology",
@@ -2375,12 +2406,12 @@ function originMoneySurfaces() {
       </article>
       <article class="estate-card card">
         <h3>Made in America</h3>
-        <p>Our goal: signed, per-unit origin records behind Made in USA labels. Read the brief, or start today with the $299 EU DPP Readiness Audit.</p>
+        <p>Our goal: signed, per-unit origin records behind Made in USA labels. Read the brief, or open the $299 EU DPP Workspace.</p>
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/made-in-america">Made in USA brief</a>
           ${checkoutEmailFormHtml({
             action: "https://authichain.com/checkout/dpp_readiness",
-            label: "Start EU DPP Readiness Audit — $299",
+            label: "Open EU DPP Workspace — $299",
             inputId: "origin-musa-email",
             formId: "origin-musa-checkout",
           })}
@@ -2418,7 +2449,7 @@ function marketReality() {
   <div class="wrap">
     <p class="section-tag">Regulatory context</p>
     <h2>EU Digital Product Passport</h2>
-    <p class="section-sub">EU ESPR requires a machine-readable product passport for goods sold in Europe, phased in by category. AuthiChain issues the certificate and the DPP audit path without claiming another company's logo as a customer.</p>
+    <p class="section-sub">EU ESPR requires a machine-readable product passport for goods sold in Europe, phased in by category. The $299 checkout opens an AuthiChain workspace with self-serve activation. It does not issue a certificate.</p>
     <div class="estate-actions">
       ${checkoutEmailFormHtml({
         action: "https://authichain.com/checkout/dpp_readiness",
@@ -2431,7 +2462,7 @@ function marketReality() {
         label: "Pay $299 on Stripe",
       })}
       <a class="btn btn-outline" href="/digital-product-passport">Read the DPP brief</a>
-      <a class="btn btn-outline" href="/anchor">Anchor a product</a>
+      <a class="btn btn-outline" href="/anchor">Fingerprint a product</a>
     </div>
   </div>
 </section>`;
@@ -2462,6 +2493,8 @@ function ecosystemFooter() {
         heading: "Company",
         links: [
           { href: "/contact", label: "Contact" },
+          { href: "/privacy", label: "Privacy" },
+          { href: "/terms", label: "Terms" },
           { href: "/trumark", label: "TruMark" },
           { href: "/made-in-america", label: "Made in America" },
           { href: "/passport", label: "Genetics passport" },
@@ -2474,7 +2507,7 @@ function ecosystemFooter() {
         ],
       },
     ],
-    'Polygon · ERC-721 contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> · EU DPP',
+    'EU DPP',
   );
 }
 
@@ -2496,7 +2529,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   ${estateSkipLink()}
-  <div class="banner">The first checkout is the $29 signed pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy the $29 pack</a>. EU DPP Readiness stays on the form below.</div>
+  <div class="banner">The first checkout is the $29 Starter Pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy Starter — $29</a>. EU DPP Workspace stays $299 further down.</div>
   ${estateNav(
     "authichain",
     [
@@ -2508,30 +2541,28 @@ const HTML = `<!DOCTYPE html>
       { href: "/x402", label: "x402" },
       { href: "/contact", label: "Contact" },
     ],
-    { href: "/pricing", label: "View pricing" },
+    { href: planPaymentLink("starter") ?? "/checkout/starter", label: "Buy Starter" },
   )}
   <main id="main">
   ${estateHero({
     eyebrow: "The authentic agentic economy",
     title: "Signed QR seals for real products.",
-    lede: "The first checkout on this page is the $29 signed pack. EU DPP Readiness remains $299 on the form below, or enter a work email so Stripe can recover that cart.",
+    lede: "Start with the Starter Pack at $29. EU DPP Workspace is $299 when you need the battery passport path. Add a work email so Stripe can recover the cart.",
     lead: {
       href: planPaymentLink("starter") ?? "#hero",
       label: "Buy a QRON Starter Pack — $29",
     },
     emailCheckout: {
-      action: "https://authichain.com/checkout/dpp_readiness",
-      label: "Start DPP checkout — $299",
+      action: "https://authichain.com/checkout/starter",
+      label: "Buy Starter Pack — $29",
     },
     actions: [
       { href: "/pricing", label: "View pricing", primary: false },
-      { href: "/onboard", label: "Onboard", primary: false },
+      { href: "/generate", label: "Generate Living QR", primary: false },
     ],
   })}
   ${estateTrust([
-    { value: "Ed25519", label: "Signed seals" },
-    { value: "Polygon", label: "Contract deployed" },
-    { value: "$299", label: "EU DPP Readiness" },
+    { value: "$29", label: "Starter Pack" },
     { value: "x402", label: "Agent micropayments" },
   ])}
 
@@ -2577,11 +2608,10 @@ const HTML = `<!DOCTYPE html>
   ${howItWorks()}
   ${estateFeatures(
     "The authentic agentic economy",
-    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base. In development: 5-agent consensus verification.",
+    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
-      { title: "Identity", body: "Every product gets a seal. AuthiChain's certificate contract is deployed on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; public certificate lookup for people and agents is in development." },
-      { title: "Verification", body: "Our goal: five agents reach weighted consensus in under 2.1 seconds. MCP tools will expose that check to any model that can call AuthiChain." },
-      { title: "Settlement", body: "Humans enroll EU DPP Readiness on Stripe. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
+      { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
+      { title: "Settlement", body: "Humans start with Starter $29 on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
   )}
@@ -2592,11 +2622,11 @@ const HTML = `<!DOCTYPE html>
   ${communityHub(BRAND)}
   ${marketReality()}
   ${estateCtaBand({
-    title: "Start EU DPP Readiness",
-    lede: "Enter a work email so abandoned-checkout recovery can reach you. Onboard and dashboard stay available. x402 is the secondary agent-pay rail.",
+    title: "Buy the Starter Pack",
+    lede: "$29, one time — 100 AI QR generations. Enter a work email so abandoned-checkout recovery can reach you.",
     emailCheckout: {
-      action: "https://authichain.com/checkout/dpp_readiness",
-      label: "Start DPP checkout",
+      action: "https://authichain.com/checkout/starter",
+      label: "Buy Starter Pack",
     },
     actions: [
       { href: "/pricing", label: "View pricing", primary: false },
@@ -2613,12 +2643,12 @@ const ANCHOR_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Anchor a Product — AuthiChain</title>
-<meta name="description" content="Anchor any physical product to the blockchain in 30 seconds. Free, no account required. SHA-256 fingerprint + permanent certificate.">
+<title>Product Fingerprint — AuthiChain</title>
+<meta name="description" content="Compute a SHA-256 fingerprint of a product description in your browser. Nothing is sent or stored. Signed AuthiChain records are checkable with the open verifier.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="theme-color" content="#c9a227">
-<meta property="og:title" content="Anchor a Product — AuthiChain">
-<meta property="og:description" content="Blockchain certificate in 30 seconds. Free. No account.">
+<meta property="og:title" content="Product Fingerprint — AuthiChain">
+<meta property="og:description" content="A SHA-256 fingerprint of a product description, computed in your browser. Nothing is sent or stored.">
 <meta property="og:image" content="https://authichain.com/og-image.png">
 <meta property="og:url" content="https://authichain.com/anchor">
 <meta name="twitter:card" content="summary_large_image">
@@ -2664,17 +2694,11 @@ textarea{resize:vertical;min-height:80px}
 <body>
 <nav class="nav">
   <a href="/" class="nav-logo">AUTHI<span>CHAIN</span></a>
-  <a href="/onboard" style="font-size:.85rem;padding:.45rem 1rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:.4rem;color:#c9a227;font-weight:600">Sign In</a>
+  <a href="/protocol" style="font-size:.85rem;padding:.45rem 1rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:.4rem;color:#c9a227;font-weight:600">Open verifier</a>
 </nav>
 <div class="wrap">
-  <h1>Anchor a Product to the <span>Blockchain</span></h1>
-  <p class="sub">Generate a cryptographic certificate of authenticity in 30 seconds. Free, permanent, no account required. Your data is hashed in-browser before being sent.</p>
-
-  <div class="steps">
-    <div class="step active" id="s1"><span class="step-num">1</span> Enter details</div>
-    <div class="step" id="s2"><span class="step-num">2</span> Hash &amp; sign</div>
-    <div class="step" id="s3"><span class="step-num">3</span> Certificate issued</div>
-  </div>
+  <h1>Product <span>Fingerprint</span></h1>
+  <p class="sub">Compute a SHA-256 fingerprint of a product description, in your browser. Free, no account. Nothing you type leaves this page.</p>
 
   <div class="card">
     <div class="row">
@@ -2687,213 +2711,80 @@ textarea{resize:vertical;min-height:80px}
         <input id="f-brand" type="text" placeholder="e.g. Nike" maxlength="100">
       </div>
     </div>
-    <div class="row">
-      <div>
-        <label>SKU / Serial</label>
-        <input id="f-sku" type="text" placeholder="Optional" maxlength="100">
-      </div>
-      <div>
-        <label>Industry</label>
-        <select id="f-industry">
-          <option value="general">General</option>
-          <option value="luxury">Luxury Goods</option>
-          <option value="fashion">Fashion &amp; Apparel</option>
-          <option value="electronics">Electronics</option>
-          <option value="pharma">Pharmaceuticals</option>
-          <option value="food">Food &amp; Beverage</option>
-          <option value="art">Art &amp; Collectibles</option>
-          <option value="sports">Sports Memorabilia</option>
-          <option value="cosmetics">Cosmetics &amp; Beauty</option>
-          <option value="auto">Automotive Parts</option>
-          <option value="cannabis">Cannabis &amp; Hemp</option>
-        </select>
-      </div>
-    </div>
+    <label>SKU / Serial</label>
+    <input id="f-sku" type="text" placeholder="Optional" maxlength="100">
     <label>Description</label>
     <textarea id="f-desc" placeholder="Optional — color, size, edition, condition…" maxlength="2000"></textarea>
-    <div id="hash-row" style="display:none">
-      <label>SHA-256 Fingerprint (generated in-browser)</label>
-      <div class="hash-preview" id="hash-display"></div>
-    </div>
     <div class="err" id="f-err"></div>
     <div class="privacy">
-      Your product details are hashed in your browser using SHA-256 before being sent. Only the fingerprint + your chosen metadata is stored. We do not collect personal data.
+      <strong style="color:#f8fafc">What this does:</strong> hashes <code>name|brand|sku|description</code> with SHA-256 in your browser.
+      <strong style="color:#f8fafc">What it does not do:</strong> it does not store anything, issue a certificate, or write to a blockchain.
+      The same input always gives the same fingerprint, so you can recompute it later to show a description has not changed.
     </div>
-    <button class="btn" id="anchor-btn" onclick="doAnchor()" style="margin-top:1.5rem">Generate Certificate &rarr;</button>
+    <button class="btn" id="anchor-btn" onclick="doFingerprint()" style="margin-top:1.5rem">Compute Fingerprint &rarr;</button>
   </div>
 
   <div class="result" id="result">
-    <div style="font-size:2rem;margin-bottom:.5rem">&#x2705;</div>
-    <div style="font-weight:700;font-size:1.15rem;margin-bottom:.25rem">Certificate Anchored</div>
-    <div class="cert-id" id="cert-id-display"></div>
-    <div class="qr-wrap"><img id="qr-img" src="" alt="QR code" width="160" height="160"></div>
-    <div>
-      <a class="cert-link" id="cert-link" href="#">View Certificate &rarr;</a>
-    </div>
+    <div style="font-weight:700;font-size:1.15rem;margin-bottom:.75rem">SHA-256 fingerprint</div>
+    <div class="hash-preview" id="hash-display" style="margin:0 0 1rem"></div>
     <div class="note">
-      This certificate ID is permanent and publicly verifiable at<br>
-      <strong style="color:#f8fafc">authichain.com/cert/&lt;ID&gt;</strong><br><br>
-      Share the QR code with buyers, customs agents, or insurers. Anyone who scans it can instantly verify your product.
+      This fingerprint is not stored and not anchored. Product certification through verify is in development. Self-serve anchoring from this page is not live yet.
     </div>
   </div>
 </div>
 
 <script>
-async function doAnchor() {
-  var btn = document.getElementById('anchor-btn');
+async function doFingerprint() {
   var err = document.getElementById('f-err');
   var name = document.getElementById('f-name').value.trim();
   var brand = document.getElementById('f-brand').value.trim();
   var desc = document.getElementById('f-desc').value.trim();
   var sku = document.getElementById('f-sku').value.trim();
-  var industry = document.getElementById('f-industry').value;
 
   err.style.display = 'none';
   if (!name) { err.textContent = 'Product name is required.'; err.style.display = 'block'; return; }
   if (!brand) { err.textContent = 'Brand is required.'; err.style.display = 'block'; return; }
 
-  btn.disabled = true;
-  btn.textContent = 'Generating fingerprint…';
-  document.getElementById('s1').classList.remove('active');
-  document.getElementById('s2').classList.add('active');
-
-  try {
-    var payload = name + '|' + brand + '|' + (sku || '') + '|' + (desc || '');
-    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
-    var hash = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
-    document.getElementById('hash-display').textContent = hash;
-    document.getElementById('hash-row').style.display = 'block';
-
-    btn.textContent = 'Anchoring to blockchain…';
-    document.getElementById('s2').classList.remove('active');
-    document.getElementById('s2').classList.add('done');
-    document.getElementById('s3').classList.add('active');
-
-    var res = await fetch('https://api.authichain.com/api/v1/anchor', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({name:name,brand:brand,description:desc,sku:sku,industry:industry,hash:hash})
-    });
-    var data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.error || 'Anchor failed');
-
-    document.getElementById('s3').classList.remove('active');
-    document.getElementById('s3').classList.add('done');
-
-    var certId = data.id;
-    var certUrl = data.certUrl || ('https://authichain.govchain.us/cert/' + certId);
-    document.getElementById('cert-id-display').textContent = certId;
-    document.getElementById('cert-link').href = certUrl;
-    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(certUrl);
-    document.getElementById('qr-img').src = qrUrl;
-    document.getElementById('result').style.display = 'block';
-    document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});
-    btn.textContent = 'Anchored! Generate Another →';
-    btn.disabled = false;
-    btn.onclick = function(){ location.reload(); };
-  } catch(e) {
-    err.textContent = e.message || 'Something went wrong. Please try again.';
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'Generate Certificate →';
-    document.getElementById('s2').classList.remove('active','done');
-    document.getElementById('s1').classList.add('active');
-    document.getElementById('s3').classList.remove('active','done');
-  }
+  var payload = name + '|' + brand + '|' + (sku || '') + '|' + (desc || '');
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
+  var hash = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+  document.getElementById('hash-display').textContent = hash;
+  document.getElementById('result').style.display = 'block';
+  document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});
 }
 </script>
 </body>
 </html>`;
 
+// /cert/AC-xxxxxxxx ids were handed out by the old /anchor page, which posted to
+// the demo api.authichain.com gateway. That gateway has no storage bound, so no
+// id was ever saved and none was ever on a blockchain. Say so instead of
+// fetching a record that cannot exist.
 function certPage(certId: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Certificate \${certId} — AuthiChain</title>
-<meta name="description" content="Verify blockchain certificate \${certId} on AuthiChain. Cryptographic proof of product authenticity.">
+<meta name="robots" content="noindex">
+<title>Certificate ${certId} — AuthiChain</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<meta name="theme-color" content="#c9a227">
-<meta property="og:title" content="AuthiChain Certificate \${certId}">
-<meta property="og:description" content="Blockchain-anchored product certificate. Verify authenticity instantly.">
-<meta property="og:image" content="https://authichain.com/og-image.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#050507;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
-a{color:#c9a227;text-decoration:none}
-.nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid rgba(201,162,39,.15)}
-.nav-logo{font-size:1.1rem;font-weight:700;letter-spacing:.05em;color:#f8fafc}
-.nav-logo span{color:#c9a227}
-.wrap{max-width:600px;margin:0 auto;padding:3rem 1.5rem 6rem;text-align:center}
-.cert-card{background:#0a0a0f;border:2px solid rgba(201,162,39,.35);border-radius:1.25rem;padding:2.5rem;text-align:left;position:relative;overflow:hidden}
-.cert-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#c9a227,#00ffd1)}
-.cert-badge{display:inline-flex;align-items:center;gap:.4rem;background:rgba(34,197,94,.1);border:1px solid #22c55e;border-radius:2rem;padding:.3rem .9rem;font-size:.8rem;font-weight:600;color:#22c55e;margin-bottom:1.5rem}
-.cert-id{font-family:monospace;font-size:1.5rem;font-weight:700;color:#c9a227;letter-spacing:.08em;margin-bottom:1.5rem}
-.field{margin-bottom:1.1rem}
-.field-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:.25rem}
-.field-value{font-size:.95rem;color:#f8fafc;word-break:break-word}
-.hash{font-family:monospace;font-size:.72rem;color:#94a3b8;word-break:break-all}
-.divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin:1.5rem 0}
-.qr-section{text-align:center;margin-top:1.5rem}
-.qr-section img{border-radius:.5rem;border:3px solid #fff}
-.actions{display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;margin-top:2rem}
-.btn-outline{padding:.6rem 1.4rem;border:1px solid rgba(201,162,39,.4);border-radius:.5rem;color:#c9a227;font-weight:600;font-size:.9rem}
-.btn-outline:hover{background:rgba(201,162,39,.1)}
-.status-loading{padding:4rem;text-align:center;color:#94a3b8}
-.status-err{padding:4rem;text-align:center}
-.ts{font-size:.75rem;color:#555}
+a{color:#c9a227}
+.wrap{max-width:600px;margin:0 auto;padding:4rem 1.5rem;line-height:1.6}
+h1{font-size:1.5rem;margin-bottom:1rem}
+code{font-family:monospace;color:#c9a227}
+p{color:#94a3b8;margin-bottom:1rem}
 </style>
 </head>
 <body>
-<nav class="nav">
-  <a href="/" class="nav-logo">AUTHI<span>CHAIN</span></a>
-  <a href="/anchor" style="font-size:.85rem;padding:.45rem 1rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:.4rem;color:#c9a227;font-weight:600">Anchor a Product</a>
-</nav>
 <div class="wrap">
-  <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:.5rem">Product Certificate</h1>
-  <p style="color:#94a3b8;margin-bottom:2rem;font-size:.9rem">Blockchain-anchored proof of authenticity</p>
-  <div id="main"><div class="status-loading">Fetching certificate…</div></div>
+  <h1>This certificate is not on record</h1>
+  <p><code>${certId}</code> was issued by an earlier demo of the /anchor page. That demo did not store certificates or write them to a blockchain, so this id cannot be verified.</p>
+  <p>To check a signed provenance record, use the <a href="/protocol">open verifier</a>. To fingerprint a product description, use <a href="/anchor">/anchor</a>.</p>
 </div>
-<script>
-(function(){
-  var id = \${JSON.stringify(certId)};
-  var el = document.getElementById('main');
-  function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-  fetch('https://api.authichain.com/api/v1/cert/'+encodeURIComponent(id))
-    .then(function(r){return r.json()})
-    .then(function(data){
-      if(!data.success||!data.certificate){
-        el.innerHTML='<div class="status-err"><div style="font-size:3rem;margin-bottom:1rem">&#x26A0;</div><div style="font-size:1.1rem;font-weight:700;margin-bottom:.5rem">Certificate Not Found</div><div style="color:#94a3b8;margin-bottom:1.5rem">'+esc(id)+'</div><a href="/anchor" style="color:#c9a227;border:1px solid rgba(201,162,39,.4);border-radius:.5rem;padding:.6rem 1.4rem;font-weight:600">Anchor a Product</a></div>';
-        return;
-      }
-      var c=data.certificate;
-      var certUrl='https://authichain.govchain.us/cert/'+esc(id);
-      var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=140x140&data='+encodeURIComponent('https://authichain.govchain.us/cert/'+id);
-      var ts=c.ts?new Date(c.ts).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}):'';
-      el.innerHTML='<div class="cert-card">'
-        +'<div class="cert-badge">&#x2714; Anchored &amp; Verified</div>'
-        +'<div class="cert-id">'+esc(c.id)+'</div>'
-        +(c.name?'<div class="field"><div class="field-label">Product</div><div class="field-value">'+esc(c.name)+'</div></div>':'')
-        +(c.brand?'<div class="field"><div class="field-label">Brand</div><div class="field-value">'+esc(c.brand)+'</div></div>':'')
-        +(c.sku?'<div class="field"><div class="field-label">SKU / Serial</div><div class="field-value">'+esc(c.sku)+'</div></div>':'')
-        +(c.industry&&c.industry!=='general'?'<div class="field"><div class="field-label">Industry</div><div class="field-value" style="text-transform:capitalize">'+esc(c.industry)+'</div></div>':'')
-        +(c.description?'<div class="field"><div class="field-label">Description</div><div class="field-value">'+esc(c.description)+'</div></div>':'')
-        +'<hr class="divider">'
-        +'<div class="field"><div class="field-label">SHA-256 Fingerprint</div><div class="hash">'+esc(c.hash||'')+'</div></div>'
-        +(ts?'<div class="field" style="margin-top:.75rem"><div class="field-label">Anchored</div><div class="ts">'+esc(ts)+'</div></div>':'')
-        +'<div class="qr-section"><img src="'+qrUrl+'" alt="QR code" width="140" height="140"><div style="font-size:.75rem;color:#94a3b8;margin-top:.6rem">Scan to verify</div></div>'
-        +'</div>'
-        +'<div class="actions">'
-        +'<a class="btn-outline" href="/anchor">Anchor Another</a>'
-        +'<a class="btn-outline" href="/onboard" style="border-color:rgba(0,255,209,.3);color:#00ffd1">Get Full Certificate</a>'
-        +'</div>';
-    })
-    .catch(function(e){
-      el.innerHTML='<div class="status-err"><div style="font-size:3rem;margin-bottom:1rem">&#x26A0;</div><div style="font-size:1.1rem;font-weight:700;color:#ef4444">Failed to load</div><div style="color:#94a3b8;margin-top:.5rem">'+esc(e.message)+'</div></div>';
-    });
-})();
-<\/script>
 </body>
 </html>`;
 }
@@ -2944,7 +2835,7 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
 </style>
 </head>
 <body>
-<nav class="nav"><a class="nav-logo" href="/">AUTHI<span>CHAIN</span></a><a href="/anchor">Anchor a product</a></nav>
+<nav class="nav"><a class="nav-logo" href="/">AUTHI<span>CHAIN</span></a><a href="/anchor">Fingerprint a product</a></nav>
 <div class="wrap">
   <div class="badge">Apache-2.0 &middot; v0.1.0 draft</div>
   <h1>Verify it yourself.</h1>
@@ -2958,9 +2849,9 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   <p>Zero dependencies &mdash; Node builtins only. It checks an Ed25519 signature over a JCS-canonicalised W3C Verifiable Credential, then checks that the record&rsquo;s hash matches what was committed on-chain.</p>
 
   <div class="cta">
-    <a class="btn primary" href="https://github.com/undone0603/authichain-unified/tree/main/protocol">Read the spec</a>
-    <a class="btn" href="https://github.com/undone0603/authichain-unified/blob/main/protocol/verifier.mjs">Run the verifier</a>
-    <a class="btn" href="https://github.com/undone0603/authichain-unified/blob/main/protocol/LICENSE">View the license</a>
+    <a class="btn primary" href="https://unpkg.com/authichain-verify/SPEC.md">Read the spec</a>
+    <a class="btn" href="https://www.npmjs.com/package/authichain-verify">Run the verifier (npx authichain-verify)</a>
+    <a class="btn" href="https://www.apache.org/licenses/LICENSE-2.0">View the license (Apache-2.0)</a>
   </div>
 
   <h2>Three verdicts. No partial credit.</h2>
@@ -2970,6 +2861,14 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
     <li><code>invalid</code> &mdash; any required check failed</li>
   </ul>
   <p>There is deliberately no score in this layer. A score is a product feature; a verdict is what a verifier owes you.</p>
+
+  <h2>One demonstration record</h2>
+  <p>It is a demonstration, not a product.</p>
+  <ul>
+    <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
+    <li>Files: <a href="/protocol/examples/polygon-anchor-1.record.json">record JSON</a> and <a href="/protocol/examples/polygon-anchor-1.anchor.json">anchor JSON</a>. The same files ship in the npm package (<code>examples/polygon-anchor-1.*.json</code>).</li>
+    <li>For agents: MCP tool <code>verify_record</code> at <code>https://authichain.com/mcp</code>, free</li>
+  </ul>
 
   <h2>Two rules we learned the hard way</h2>
   <p>Both exist because this codebase shipped violations of them, and both are enforced by tests you can read:</p>
@@ -3015,7 +2914,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="EU Digital Product Passport | AuthiChain">
   <meta name="twitter:description" content="EU DPP readiness tooling. On our roadmap: offline verification with no account required.">
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.com/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport readiness tooling for brands and is building toward passport certificates on its Polygon contract.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.com"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.com/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport readiness tooling for brands.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.com"}}</script>
   ${FONTS_LINK}
   <style>
     ${cssVars(BRAND)}
@@ -3062,7 +2961,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <a class="nav-link" href="/battery-passport">Battery example</a>
       <a class="nav-link" href="/docs">Docs</a>
       <a class="nav-link" href="/x402">Agent pay</a>
-      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Start DPP Audit — $299</a>
+      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Open EU DPP Workspace — $299</a>
     </div>
   </nav>
 
@@ -3084,18 +2983,17 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         })}
         ${checkoutEmailFormHtml({
           action: "/protocol/checkout/dpp",
-          label: "Start Your DPP Readiness Audit — $299",
+          label: "Open EU DPP Workspace — $299",
           formId: "dpp-checkout-form",
           inputId: "dpp-email",
           buttonClass: "btn btn-outline",
         })}
         <a class="btn btn-outline" href="/battery-passport">See a battery passport example</a>
-        <a class="btn btn-outline" href="/battery-passport/sample-audit">See a sample assessment</a>
+        <a class="btn btn-outline" href="/battery-passport/sample-audit">See a fictional walkthrough</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
-        Pay once → automatic provisioning → self-serve activation → publish your first DPP.
-        The $299 is credited in full toward AuthiChain Basic if you move forward.
-        Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the gaps the $299 audit covers.
+        Pay once. Self-serve activation opens your workspace.
+        Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the public gaps.
       </p>
     </div>
   </section>
@@ -3211,13 +3109,13 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="container">
       <div class="section-label">THE AUTHICHAIN SOLUTION</div>
       <h2 class="section-title">One Integration. Every Standard.</h2>
-      <p class="section-sub">AuthiChain is building passport tooling on its certificate contract, live on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. Our goal: the certificate NFT serves as the passport, with no retrofitting or middleware.</p>
+      <p class="section-sub">AuthiChain is building passport tooling. Our goal: the certificate NFT serves as the passport, with no retrofitting or middleware.</p>
 
       <div class="feature-row">
         <div class="feature-item">
           <div class="feature-icon">🔗</div>
           <div class="feature-title">ERC-721 certificates (in development)</div>
-          <div class="feature-desc">The certificate contract is live on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. We're building per-product certificates that carry passport data such as materials, carbon footprint, recycled content, supplier chain, and repair information.</div>
+          <div class="feature-desc">We're building per-product certificates that carry passport data such as materials, carbon footprint, recycled content, supplier chain, and repair information.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">📱</div>
@@ -3237,7 +3135,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         <div class="feature-item">
           <div class="feature-icon">🤖</div>
           <div class="feature-title">AI provenance verification (in development)</div>
-          <div class="feature-desc">Our goal: 5-agent consensus (Guardian, Archivist, Sentinel, Scout, Arbiter) that will verify authenticity in under 2.1 seconds. Goal: counterfeit detection built into every verification.</div>
+          <div class="feature-desc">Goal: counterfeit detection built into every verification.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">🌍</div>
@@ -3266,7 +3164,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <section class="section cta-section" style="background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); text-align:center">
     <div class="container" style="max-width:700px">
       <h2 class="section-title">Start DPP Compliance Today</h2>
-      <p class="section-sub">Start with a written readiness assessment for your product line. Checkout is self-serve.</p>
+      <p class="section-sub">Checkout opens an AuthiChain workspace for your product line. It is self-serve.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
         ${catalogPaymentLinkHtml({
           planId: "dpp_readiness",
@@ -3275,7 +3173,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         })}
         ${checkoutEmailFormHtml({
           action: "/protocol/checkout/dpp",
-          label: "Start DPP Readiness Audit — $299",
+          label: "Open EU DPP Workspace — $299",
           formId: "dpp-checkout-form-footer",
           inputId: "dpp-email-footer",
           buttonClass: "btn btn-outline",
@@ -3311,10 +3209,14 @@ interface Env {
   APP_WORKER?: { fetch: (request: Request) => Promise<Response> };
   /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
   VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
+  /** authichain-api Worker: public /api/v1/* REST endpoints (api-v1-routes.ts). */
+  API_WORKER?: { fetch: (request: Request) => Promise<Response> };
   /** Test-only override. Live default is 4000ms. */
   APP_WORKER_TIMEOUT_MS?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_PRICE_ID?: string;
+  /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
+  DPP_SMOKE_SECRET?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -3326,6 +3228,13 @@ interface Env {
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
+  /** authichain-db (D1): email_optins table only. */
+  DB?: D1Like;
+  /** "true" turns on the opt-in confirmation email (also needs RESEND_API_KEY). Default off. */
+  EMAIL_OPTIN_SEND_ENABLED?: string;
+  RESEND_API_KEY?: string;
+  /** Optional secret name only. Unset or empty: 503 before any write (fail closed). */
+  IP_HASH_SALT?: string;
 }
 
 const APP_WORKER_TIMEOUT_MS_DEFAULT = 4000;
@@ -3372,10 +3281,39 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
 }
 
 /**
+ * /verify lookups that outlive the APP_WORKER budget used to rethrow, which
+ * surfaced as Cloudflare error 1101 (2026-10-09, /verify?id=test123). Answer
+ * a plain 404 "No record found" page instead; it never implies a record exists.
+ */
+function verifyLookupTimeoutResponse(): Response {
+  const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>No record found · AuthiChain</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Inter',system-ui,sans-serif;line-height:1.6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center}
+h1{font-size:1.25rem;font-weight:800;text-transform:uppercase;letter-spacing:-.01em;margin:.75rem 0 .5rem}
+p{color:#a1a1aa;margin-bottom:1rem}
+a.btn{display:inline-block;padding:.75rem 1.75rem;border-radius:.75rem;font-size:.7rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;background:transparent;border:1px solid #27272a;color:#fff;text-decoration:none}
+</style></head><body><main>
+<h1>No record found</h1>
+<p>We could not complete this lookup just now, so no record can be shown. Please try again in a minute.</p>
+<a class="btn" href="/verify">Look up another ID</a>
+</main></body></html>`;
+  return new Response(html, {
+    status: 404,
+    headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
+/**
  * Proxy APP_WORKER and rewrite stale one-click checkout <a href> to the
  * published Payment Links. GET /api/checkout without email is already
  * bounced; this covers HTML that still points at those URLs
- * (/p SEO hubs, /landing/*) until edge-router deploys.
+ * (/p/<serial> and /landing/*). Known SEO hubs are rendered here and
+ * do not pass through this proxy.
  */
 async function proxyAppWorker(request: Request, env: Env): Promise<Response> {
   if (!env.APP_WORKER) {
@@ -3398,6 +3336,9 @@ async function proxyAppWorker(request: Request, env: Env): Promise<Response> {
   } catch (err) {
     if (pathname === "/p" || pathname.startsWith("/p/")) {
       return passportLookupTimeoutResponse(pathname);
+    }
+    if (pathname === "/verify" || pathname.startsWith("/verify/")) {
+      return verifyLookupTimeoutResponse();
     }
     throw err;
   } finally {
@@ -3458,7 +3399,11 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
   });
 }
 
-async function handleAuthichainCom(request: Request, env: Env) {
+async function handleAuthichainCom(
+  request: Request,
+  env: Env,
+  ctx?: { waitUntil?: (promise: Promise<unknown>) => void }
+) {
     const url = new URL(request.url);
     // Canonical hub is authichain.com. www.authichain.com 301s to the apex;
     // authichain.govchain.us stays a working fallback host and serves the
@@ -3472,6 +3417,10 @@ async function handleAuthichainCom(request: Request, env: Env) {
     const appHost = tryHandleAppHost(request);
     if (appHost) return appHost;
     const p = url.pathname;
+    if (isEmailOptinPath(p)) {
+      const optin = await tryHandleEmailOptin(request, env);
+      if (optin) return optin;
+    }
     const docsClick = docsCtaClickEvent(request.method, url);
     if (docsClick) console.log(JSON.stringify(docsClick));
     if (p === '/og-image.png' || p === '/og.png') {
@@ -3482,6 +3431,15 @@ async function handleAuthichainCom(request: Request, env: Env) {
     }
     if (p === '/favicon.svg' || p === '/favicon.ico' || p === '/favicon.png') {
       return assetResponse(FAVICON_SVG);
+    }
+    if (p === '/manifest.webmanifest') {
+      return new Response(VERIFY_MANIFEST, {
+        headers: {
+          'content-type': 'application/manifest+json; charset=utf-8',
+          'cache-control': 'public, max-age=3600',
+          'x-content-type-options': 'nosniff',
+        },
+      });
     }
     if (p === '/apple-touch-icon.svg' || p === '/apple-touch-icon.png' || p === '/apple-touch-icon-precomposed.png') {
       return assetResponse(FAVICON_SVG);
@@ -3496,8 +3454,13 @@ async function handleAuthichainCom(request: Request, env: Env) {
         { loc: 'https://authichain.com/', freq: 'weekly', pri: '1.0' },
         { loc: 'https://authichain.com/pricing', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/onboard', freq: 'weekly', pri: '0.95' },
+        // First-dollar LOOP-03 paths (live 200; generate proxies to APP_WORKER).
+        { loc: 'https://authichain.com/generate', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/checkout/starter', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/checkout/creator', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/verify/live', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/digital-product-passport', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/genetics', freq: 'weekly', pri: '0.85' },
@@ -3521,10 +3484,13 @@ async function handleAuthichainCom(request: Request, env: Env) {
         { loc: 'https://authichain.com/authentic-agentic-economy', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/llms.txt', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/mcp', freq: 'weekly', pri: '0.7' },
+        { loc: 'https://authichain.com/mcp/install', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/openapi.json', freq: 'weekly', pri: '0.65' },
         { loc: MINIAPP_CANONICAL, freq: 'weekly', pri: '0.8' },
         ...DESK_SITEMAP.map((path) => ({ loc: `https://authichain.com${path}`, freq: 'weekly' as const, pri: '0.8' })),
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
+        { loc: 'https://authichain.com/privacy', freq: 'yearly', pri: '0.4' },
+        { loc: 'https://authichain.com/terms', freq: 'yearly', pri: '0.4' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...staticUrls, ...vs]
@@ -3558,10 +3524,20 @@ async function handleAuthichainCom(request: Request, env: Env) {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
     }
+    if (isIsThisRealPath(p)) {
+      return new Response(renderIsThisRealPage(), {
+        headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
     if (isBatteryPassportPath(p)) {
       return new Response(renderBatteryPassportPage(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
+    }
+    // CFA-629: /dpp-check/product and the /dpp/scan 301 live in tryHandleDppCheck.
+    if (!isDppCheckPath(p)) {
+      const dppCheck = tryHandleDppCheck(request);
+      if (dppCheck) return dppCheck;
     }
     if (isDppCheckPath(p)) {
       const done = request.method === 'GET' ? dppCheckCompleteEvent(url) : null;
@@ -3607,6 +3583,9 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (microsite) return microsite;
     const miniapp = tryHandleTelegramMiniApp(request);
     if (miniapp) return miniapp;
+    const generation = tryHandleGeneration(request);
+    if (generation) return generation;
+
     const desk = tryHandleDesk(request);
     if (desk) return desk;
 
@@ -3619,6 +3598,11 @@ async function handleAuthichainCom(request: Request, env: Env) {
     // the editor. Page markup is semantic; tokens live in x402-docs-page.ts.
     if (isX402DocsPath(p)) {
       return new Response(renderX402DocsPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    // /mcp/install is the human install surface. It must be checked before
+    // tryHandleMcp, which owns the agent-facing /mcp JSON-RPC endpoint.
+    if (isMcpInstallPath(p)) {
+      return new Response(renderMcpInstallPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     const docsDest = docsRedirect(p);
     if (docsDest) return Response.redirect(new URL(docsDest, url.origin).href, 301);
@@ -3634,23 +3618,47 @@ async function handleAuthichainCom(request: Request, env: Env) {
     // (confirm page) never call Stripe; only the confirm form's POST does.
     const dppClick = await dppCheckoutClickEvent(request);
     if (dppClick) console.log(JSON.stringify(dppClick));
-    const gated = await tryHandleGatedCheckout(request, env);
+    const gated = await tryHandleGatedCheckout(request, env, {
+      onEvent: (event) => deliverCheckoutGateEvent(env, ctx, event),
+      onSessionStarted: (info) =>
+        deliverDppCheckoutStarted(env, ctx, info),
+    });
     if (gated) return gated;
     const dppPage = tryHandleDppRoute(request);
     if (dppPage) return dppPage;
+    const agentPage = await tryHandleAgentPresentation(request);
+    if (agentPage) return agentPage;
+    const botIdentity = tryHandleBotIdentity(request);
+    if (botIdentity) return botIdentity;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
     // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the
     // click-to-confirm page, so a stale APP_WORKER never sees a GET that
     // could open a Stripe session.
-    const checkoutGate = tryHandleApiCheckoutEmailGate(request);
+    const checkoutGate = tryHandleApiCheckoutEmailGate(request, env);
     if (checkoutGate) return checkoutGate;
     // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
+    // The public registry has to be intercepted on the landing Worker: /api/*
+    // otherwise proxies to APP_WORKER, whose route table does not own this path.
+    const certificateRegistry = await tryHandleCertificateRegistry(request, env);
+    if (certificateRegistry) return certificateRegistry;
     const x402 = await tryHandleX402(request, env, env.VERIFY_APP);
     if (x402) return x402;
+    // /mcp/free: free-only sibling for the marketplace plugin (Advisor ruling B).
+    const mcpFree = await tryHandleMcpFree(request, env);
+    if (mcpFree) return mcpFree;
     const mcp = await tryHandleMcp(request, env, env.VERIFY_APP);
     if (mcp) return mcp;
+    const apiV1 = await tryHandleApiV1(request, env);
+    if (apiV1) return apiV1;
+    // Before APP_PREFIXES. /protocol/* otherwise proxies, and the credential
+    // subject URL 404s on the edge router.
+    const publishedExample = tryHandleProtocolExample(request);
+    if (publishedExample) return publishedExample;
+    if (p === '/api/sales') {
+      return handleSalesInquiry(request, env);
+    }
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
@@ -3678,6 +3686,13 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (p === '/contact') {
       return new Response(renderContactPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
+    const legal = legalRoute(p);
+    if (legal?.kind === 'redirect') {
+      return Response.redirect(new URL(legal.to, url).toString(), 301);
+    }
+    if (legal?.kind === 'html') {
+      return new Response(legal.html, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
     if (p === '/vs' || p === '/vs/') {
       return new Response(renderVsIndex(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
@@ -3690,17 +3705,56 @@ async function handleAuthichainCom(request: Request, env: Env) {
       // invented slug would answer 200 and the sitemap would be unfalsifiable.
       return notFound(p);
     }
+    // Committed SEO hubs are served here. /p/<serial> that is not a slug still
+    // falls through to APP_WORKER. The deployed edge router is behind
+    // content/seo/pages.json, so those sitemap URLs were 404 "Product Not Found".
+    const seoPassport = seoPassportResponse(p);
+    if (seoPassport) {
+      return new Response(seoPassport.html, {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          'Content-Type': 'text/html; charset=utf-8',
+          ...(seoPassport.noindex ? { 'X-Robots-Tag': 'noindex' } : {}),
+        },
+      });
+    }
+    // /verify/live is a reserved founder page, not a certificate id. The edge
+    // router would look up the id "live" and 404. A real id still proxies.
+    if (isVerifyLivePath(p) && !url.searchParams.get("id")) {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response("method not allowed", {
+          status: 405,
+          headers: { Allow: "GET, HEAD", "Cache-Control": "no-store" },
+        });
+      }
+      return new Response(renderVerifyLivePage(), {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, max-age=300",
+        },
+      });
+    }
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
       return proxyAppWorker(request, env);
     }
     const seoRedirect = tryRedirectSeoRootCanonical(request);
     if (seoRedirect) return seoRedirect;
+    const attestationSchema = attestationSchemaResponse(p);
+    if (attestationSchema) return attestationSchema;
     if (p !== '/') return notFound(p);
     return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
 }
 
 export default {
-  async fetch(request: Request, env: Env) {
-    return withApolloTracker(request, await handleAuthichainCom(request, env));
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx?: { waitUntil?: (promise: Promise<unknown>) => void }
+  ) {
+    return withHtmlEgress(
+      request,
+      await handleAuthichainCom(request, env, ctx)
+    );
   },
 };

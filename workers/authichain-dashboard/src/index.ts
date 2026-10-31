@@ -331,6 +331,11 @@ interface Loops {
   ship: { conclusion: string | null; at: string | null };
 }
 
+/** Unfiltered Actions pages only. `?branch=main` is stale on this repo. */
+export function runsOnBranch(runs: any[] | undefined, branch = "main") {
+  return (runs ?? []).filter(run => run?.head_branch === branch);
+}
+
 export function joinLoops(
   manifest: any,
   workflows: any[],
@@ -385,7 +390,7 @@ async function loops(env: Env): Promise<Result<Loops>> {
             h
           ),
           getJson(
-            `https://api.github.com/repos/${repo}/actions/runs?branch=main&per_page=100`,
+            `https://api.github.com/repos/${repo}/actions/runs?per_page=100`,
             h
           ),
           getJson(
@@ -393,7 +398,7 @@ async function loops(env: Env): Promise<Result<Loops>> {
             h
           ),
         ]);
-        const allRuns = runs.workflow_runs ?? [];
+        const allRuns = runsOnBranch(runs.workflow_runs);
         const shipRun = allRuns.find(
           (r: any) =>
             String(r.path).endsWith("/main.yml") && r.status === "completed"

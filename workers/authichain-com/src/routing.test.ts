@@ -10,9 +10,11 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { planPaymentLink } from "../../../src/lib/plans.ts";
+import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
+import { TERMS_EFFECTIVE } from "./legal-pages.ts";
 import worker from "./index.ts";
+import { VS_PAGES } from "./vs-pages.ts";
 
 type Env = Parameters<typeof worker.fetch>[1];
 
@@ -22,7 +24,10 @@ const ENV = {
 } as unknown as Env;
 
 async function get(path: string, env: Env = ENV) {
-  return worker.fetch(new Request(`https://authichain.govchain.us${path}`), env);
+  return worker.fetch(
+    new Request(`https://authichain.govchain.us${path}`),
+    env
+  );
 }
 
 test("an unknown path is a 404, not the homepage at 200", async () => {
@@ -49,18 +54,152 @@ test("unknown 404s still offer catalogue Payment Links", async () => {
     html.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
   assert.equal(html.includes('href="/api/checkout'), false);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
+  );
   assert.match(html, /name="robots" content="noindex"/);
+});
+
+// RES-162 (sibling of CFA-147 in #1706): the /vs/* comparison pages and
+// /mcp/install make no "certificate contract live/deployed on Polygon" claim
+// and show no 0x4da4 contract address until wallet ownership is proven.
+// RES-167: also no "Polygon mainnet" anchored-record card and no
+// "Certificate contract on Polygon" footer. RES-209: "anchored on Polygon"
+// is now cut from /vs/vechain too and banned on every /vs/* page.
+test("/vs/* and /mcp/install make no Polygon contract claim (RES-162)", async () => {
+  const paths = ["/vs", "/mcp/install", ...VS_PAGES.map(d => `/vs/${d.slug}`)];
+  assert.ok(paths.length > 2, "expected at least one /vs/* page");
+  for (const path of paths) {
+    const res = await get(path);
+    assert.equal(res.status, 200, `${path} should be 200`);
+    const body = await res.text();
+    for (const banned of [
+      /live on Polygon/i,
+      /deployed on Polygon/i,
+      /0x4da4/i,
+      // RES-167
+      /Certificate contract on Polygon/i,
+      // The cut "Polygon mainnet" anchored-record showcase card.
+      /class="eyebrow">\s*Polygon mainnet/i,
+      // RES-172: the /mcp/install meta now uses the registry line.
+      /Polygon-anchored/i,
+      // RES-209
+      /anchored on Polygon/i,
+    ]) {
+      assert.doesNotMatch(body, banned, `${path} must not contain ${banned}`);
+    }
+    // RES-171: the verify_record tool description and the /mcp/install
+    // opening no longer name Polygon mainnet, so the bare phrase is banned
+    // on /mcp/install as well as /vs/*.
+    assert.doesNotMatch(
+      body,
+      /Polygon\s+mainnet/i,
+      `${path} must not contain Polygon mainnet`
+    );
+  }
+});
+
+test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
+  const starterDesc =
+    "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits.";
+  for (const path of ["/", "/checkout/starter"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    for (const banned of [
+      "$19",
+      "qron_launch",
+      "Launch subscription",
+      "unless you switch to a Launch",
+      "Pack credits never expire.",
+    ]) {
+      assert.ok(
+        !html.includes(banned),
+        `${path} must have 0 hits on ${banned}`
+      );
+    }
+  }
+  const starter = await (await get("/checkout/starter")).text();
+  assert.ok(starter.includes(starterDesc));
+  assert.ok(
+    !starter.includes("never expire"),
+    "/checkout/starter must not say never expire"
+  );
+  assert.ok(
+    !starter.includes("never-expire"),
+    "/checkout/starter must not say never-expire"
+  );
+  assert.ok(
+    !starter.includes("no expiry"),
+    "/checkout/starter must not say no expiry"
+  );
+  assert.ok(
+    !starter.includes("no-expiry"),
+    "/checkout/starter must not say no-expiry"
+  );
+  assert.ok(
+    !starter.includes("50 workspace generations"),
+    "/checkout/starter must not say 50 workspace generations"
+  );
+  const home = await (await get("/")).text();
+  assert.ok(
+    home.includes(starterDesc),
+    "home JSON-LD Starter offer uses the Research PASS FREE-PREVIEW sentence"
+  );
+});
+
+test("CFA-758: money routes have no 50-workspace-generation or never-expire pack claims", async () => {
+  const banned = [
+    "50 workspace generations",
+    "50 workspace generation",
+    "never expire",
+    "never-expire",
+    "no expiry",
+    "no-expiry",
+  ];
+  for (const path of [
+    "/",
+    "/pricing",
+    "/checkout/starter",
+    "/checkout/creator",
+    "/checkout/dpp_readiness",
+    "/dpp",
+    "/battery-passport",
+    "/trumark",
+    "/docs/dpp-architecture",
+  ]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    for (const phrase of banned) {
+      assert.equal(
+        html.toLowerCase().includes(phrase),
+        false,
+        `${path} must have 0 hits on ${phrase}`
+      );
+    }
+  }
 });
 
 test("the apex still renders the homepage", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
   const html = await res.text();
+  // LOOP-03: share/search snippets lead Starter, not only DPP.
+  // CFA-460: Launch $19/mo is unlisted, so snippets name Starter only.
+  assert.match(html, /QRON Starter Pack \$29 on Stripe/);
+  assert.match(
+    html,
+    /property="og:description" content="Start with QRON Starter at \$29\. /
+  );
   assert.match(html, /href="\/dashboard"/);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
   assert.ok(
     html.includes('href="https://authichain.com/checkout/dpp_readiness"')
@@ -75,10 +214,19 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/passport"/);
   assert.doesNotMatch(html, /\/m\/mendo|Mendo/);
   assert.match(html, /href="\/partners\/brief"/);
+  // LOOP-03: hero + bottom email checkout lead Starter $29; DPP stays lower.
+  assert.match(html, /Buy Starter Pack/);
+  assert.doesNotMatch(html, /Start Launch/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Signed QR seals for real products\./);
   assert.doesNotMatch(html, /Agent consensus/);
   assert.match(html, /Public certificate registry: in development\./);
+  assert.match(html, /not a customer product/);
+  assert.match(html, /not a physical inspection/);
+  assert.match(html, /does not itself read the anchor transaction/);
+  assert.ok(html.includes('href="/api/verify?id=polygon-anchor-1"'));
+  assert.ok(html.includes('href="/verify?id=polygon-anchor-1"'));
+  assert.equal(html.includes("polygonscan.com"), false);
   const starterFirst = planPaymentLink("starter") ?? "";
   const auditLater = planPaymentLink("dpp_readiness") ?? "";
   assert.ok(starterFirst.length > 0 && auditLater.length > 0);
@@ -87,18 +235,24 @@ test("the apex still renders the homepage", async () => {
     "the $29 link has to appear before the $299 audit"
   );
   assert.match(html, /Buy a QRON Starter Pack — \$29/);
-  // Held pending decision: the $29 banner stays as it is.
-  assert.match(html, /The first checkout is the \$29 signed pack\./);
+  assert.match(html, /The first checkout is the \$29 Starter Pack\./);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
-  assert.match(html, /The authentic agentic economy/);
-  assert.ok(html.includes("6ab2b3b358b37e000c06b0fa"));
-  assert.ok(html.includes("tracker.iife.js"));
-  assert.ok(
-    (res.headers.get("content-security-policy") ?? "").includes(
-      "https://assets.apollo.io"
-    )
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/starter"/);
+  // DPP email form remains on the EU compliance section.
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
   );
+  assert.match(html, /The authentic agentic economy/);
+  // AE-20261002-CFD-09: no Apollo visitor tracker anywhere on authichain.com.
+  assert.ok(!html.includes("6ab2b3b358b37e000c06b0fa"));
+  assert.ok(!html.includes("tracker.iife.js"));
+  assert.ok(!html.toLowerCase().includes("apollo"));
+  assert.ok(
+    !(res.headers.get("content-security-policy") ?? "").includes("apollo")
+  );
+  // The homepage Made in America card rewrite (same wrapper) still applies.
+  assert.match(html, /https:\/\/authichain\.com\/checkout\/musa_claim_file/);
   const faqStart = html.indexOf('"@type":"FAQPage"');
   assert.ok(faqStart > 0, "homepage JSON-LD should include FAQPage");
   const faqSlice = html.slice(faqStart, faqStart + 4000);
@@ -119,7 +273,7 @@ test("the apex still renders the homepage", async () => {
   assert.equal(orgSlice.includes(`"url":"${creatorPay}"`), true);
   assert.equal(orgSlice.includes("/api/checkout"), false);
   assert.match(html, /href="\/authentic-agentic-economy"/);
-  assert.match(html, /not a payment rail/);
+  assert.doesNotMatch(html, /\$QRON token|Speculative utility/);
   assert.doesNotMatch(html, /GET \/api\/checkout/);
   assert.doesNotMatch(
     html,
@@ -140,7 +294,12 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.doesNotMatch(html, /AuthiChain Starter/);
   assert.doesNotMatch(html, /28E8wP0EVf7M6mefTS1Nu1p/);
   assert.match(html, /\$299/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  // LOOP-03: /pricing hero email checkout is Starter; DPP stays on the grid.
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/starter"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
   assert.ok(
     html.includes('href="https://authichain.com/checkout/dpp_readiness"')
@@ -158,6 +317,203 @@ test("/contact is a real page, not the homepage", async () => {
   const html = await res.text();
   assert.match(html, /hello@authichain\.com/);
   assert.match(html, /<title>Contact AuthiChain<\/title>/);
+  assert.match(html, /href="\/privacy"/);
+  assert.match(html, /href="\/terms"/);
+});
+
+test("/privacy and /terms are the operator's pages, not a placeholder", async () => {
+  for (const [path, title, canonical, effective] of [
+    [
+      "/privacy",
+      "Privacy Policy — AuthiChain",
+      "https://authichain.com/privacy",
+      "24 October 2026",
+    ],
+    [
+      "/privacy/",
+      "Privacy Policy — AuthiChain",
+      "https://authichain.com/privacy",
+      "24 October 2026",
+    ],
+    [
+      "/terms",
+      "Terms of Service — AuthiChain",
+      "https://authichain.com/terms",
+      TERMS_EFFECTIVE,
+    ],
+    [
+      "/terms/",
+      "Terms of Service — AuthiChain",
+      "https://authichain.com/terms",
+      TERMS_EFFECTIVE,
+    ],
+  ] as const) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    assert.match(res.headers.get("content-type") ?? "", /text\/html/, path);
+    const html = await res.text();
+    assert.match(html, new RegExp(`<title>${title}</title>`), path);
+    assert.match(
+      html,
+      new RegExp(`<link rel="canonical" href="${canonical}">`),
+      path
+    );
+    assert.match(html, /Zachary Kietzman/, path);
+    assert.match(html, /sole proprietor/, path);
+    assert.match(html, /hello@authichain\.com/, path);
+    assert.match(html, /support@authichain\.com/, path);
+    assert.match(
+      html,
+      /not affiliated with, endorsed by, or acting on behalf of any government agency/,
+      path
+    );
+    assert.match(html, new RegExp(`Effective ${effective}`), path);
+    assert.doesNotMatch(html, /privacy@authichain\.com/, path);
+    assert.doesNotMatch(html, /legal@authichain\.com/, path);
+    assert.doesNotMatch(html, /Vercel/, path);
+    assert.doesNotMatch(html, /AuthiChain Inc/i, path);
+    assert.doesNotMatch(html, /Bitcoin/, path);
+  }
+
+  const privacy = await (await get("/privacy")).text();
+  assert.match(privacy, /We do not sell personal information/);
+  assert.match(privacy, /Stripe/);
+  assert.match(privacy, /do not receive your card number/);
+  assert.match(privacy, /0\.05 USDC/);
+  assert.match(privacy, /\$QRON token is not a way to pay/);
+  assert.match(privacy, /simulated/);
+  assert.match(privacy, /id="outbound"/);
+  assert.match(
+    privacy,
+    /Zachary J Kietzman d\/b\/a AuthiChain \(sole proprietor\)/
+  );
+  assert.match(privacy, /authichain@mail\.grokbot\.com/);
+  assert.match(
+    privacy,
+    /we will email you on the basis of your consent \(GDPR Art\. 6\(1\)\(a\)\)/
+  );
+  assert.match(
+    privacy,
+    /You will be able to withdraw consent at any time through the unsubscribe link/
+  );
+  assert.match(
+    privacy,
+    /Legal basis: legitimate interest \(GDPR Art\. 6\(1\)\(f\)\)/
+  );
+  assert.match(
+    privacy,
+    /Where we got your data\.<\/strong> Opt-in sequence: from you\. 1-to-1 business emails: public sources \(such as your company's website\) or Apollo\.io/
+  );
+  assert.match(
+    privacy,
+    /Resend, for the opt-in sequence; Google \(Gmail\), which Zachary uses to send and receive 1-to-1 emails with business contacts at US brands;/
+  );
+  assert.match(
+    privacy,
+    /Supabase, which stores the contact records for business contacts at US brands and sign-ups from \/is-this-real; and Cloudflare, which stores email opt-in sign-ups in its D1 database\. We do not sell your data\./
+  );
+  assert.match(
+    privacy,
+    /We got your work contact details from public sources or Apollo\.io\./
+  );
+  assert.doesNotMatch(
+    privacy,
+    /We have two email streams|If we start, there will be two kinds|No outbound marketing email sends are active yet|if we start them|will store the contact records/
+  );
+  assert.match(
+    privacy,
+    /Resend and Google process data in the United States; we have not yet confirmed their transfer safeguards on this page\./
+  );
+  assert.match(
+    privacy,
+    /Reply 'stop' \(or tell us in any words\) and we won't email you again/
+  );
+  assert.match(
+    privacy,
+    /reply 'stop' \(or tell us in any words\) to our email/
+  );
+  assert.doesNotMatch(
+    privacy,
+    /If we start emailing businesses|Any future outreach/
+  );
+  assert.match(
+    privacy,
+    /and, if we start it, the DPP readiness email sequence to people who confirmed a double opt-in/
+  );
+  assert.equal(
+    privacy.split(
+      "No automated marketing email sequence is active yet. Zachary does send individual 1-to-1 emails to business contacts at US brands, which you can stop by replying 'stop'. If we start the automated sequence, it will go only to recipients in the United States who confirmed a double opt-in, and every message will carry an unsubscribe link."
+    ).length - 1,
+    2
+  );
+  assert.doesNotMatch(privacy, /If we start sending marketing email/);
+  assert.match(
+    privacy,
+    /To limit abuse, we also keep a salted hash of the IP address used to sign up for about a day; we never store the IP address itself\./
+  );
+  assert.match(
+    privacy,
+    /We keep your sign-up \(email, country if given, when you agreed, and whether you confirmed\) in AuthiChain's Cloudflare D1 database until you unsubscribe\. When you unsubscribe, we delete your country right away and keep only your email address, when you agreed, and a random unsubscribe code, on a suppression list used only to honour your unsubscribe\./
+  );
+  assert.match(privacy, /12 months after our last contact/);
+  assert.match(privacy, /do not claim one is in place/);
+  assert.match(privacy, /AgentMail/);
+  assert.match(privacy, /Amazon SES/);
+  assert.match(privacy, /section 12\.1/);
+  assert.match(
+    privacy,
+    /No automated marketing email sequence is active yet\./
+  );
+  assert.doesNotMatch(
+    privacy,
+    /We send marketing email only|people who opted in|we email you on the basis of your consent/
+  );
+  assert.doesNotMatch(privacy, /not a newsletter/i);
+  assert.match(privacy, /receive-only/);
+  assert.match(privacy, /None appointed/);
+  assert.doesNotMatch(privacy, /Resend[^<]*(marketing|EU contacts)/);
+  assert.doesNotMatch(
+    privacy,
+    /(sends|sent by|sender)[^<.]*(AgentMail|Resend)|(AgentMail|Resend)[^<.]*sends our/i
+  );
+  assert.doesNotMatch(privacy, /pending legal check|\[EU representative/);
+  assert.doesNotMatch(privacy, /@gmail\.com/);
+  assert.doesNotMatch(privacy, /POSTAL ADDRESS|street address/i);
+
+  const terms = await (await get("/terms")).text();
+  assert.match(terms, /not a GS1 Conformant Resolver/);
+  assert.match(terms, /not a legal opinion/);
+  assert.match(terms, /charged in USDC on Base/);
+  assert.match(terms, /\$QRON token is not accepted as payment/);
+  assert.match(terms, /State of Michigan/);
+  assert.match(terms, /href="\/privacy"/);
+
+  for (const [from, to] of [
+    ["/privacy-policy", "/privacy"],
+    ["/legal/privacy", "/privacy"],
+    ["/terms-of-service", "/terms"],
+    ["/tos", "/terms"],
+    ["/legal/terms", "/terms"],
+  ] as const) {
+    const res = await get(from);
+    assert.equal(res.status, 301, from);
+    assert.equal(
+      new URL(res.headers.get("location") ?? "", "https://authichain.com")
+        .pathname,
+      to,
+      from
+    );
+  }
+
+  const confirm = await get("/checkout/dpp_readiness");
+  assert.equal(confirm.status, 200);
+  const confirmHtml = await confirm.text();
+  assert.match(
+    confirmHtml,
+    /By continuing you agree to the <a href="\/terms">Terms of Service<\/a>/
+  );
+  assert.match(confirmHtml, /href="\/privacy"/);
+  assert.match(confirmHtml, /No newsletter/);
 });
 
 test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
@@ -167,6 +523,15 @@ test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
   assert.match(hubHtml, /AuthiChain Docs/);
   assert.match(hubHtml, /not a GS1 Conformant Resolver/);
   assert.doesNotMatch(hubHtml, /Bitcoin L1/);
+  assert.match(hubHtml, /authichain\.com\/qron\/r\//);
+  assert.match(hubHtml, /presentation_not_found/);
+  assert.match(hubHtml, /This host verifies the signature/);
+  assert.match(hubHtml, /Not a customer product/);
+  assert.match(hubHtml, /Not a battery passport/);
+  assert.match(hubHtml, /does not itself read the anchor transaction/);
+  assert.ok(hubHtml.includes('href="/api/verify?id=polygon-anchor-1"'));
+  assert.ok(hubHtml.includes('href="/verify?id=polygon-anchor-1"'));
+  assert.equal(hubHtml.includes("polygonscan.com"), false);
 
   for (const path of [
     "/docs/gs1-digital-link",
@@ -179,25 +544,95 @@ test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
     assert.match(res.headers.get("content-type") ?? "", /text\/html/, path);
   }
 
+  const verification = await get("/docs/verification");
+  const verificationHtml = await verification.text();
+  assert.match(verificationHtml, /authichain\.com\/qron\/r\//);
+  assert.match(verificationHtml, /presentation_not_found/);
+  assert.match(verificationHtml, /does not verify the signature/);
+  assert.equal(verificationHtml.includes("freeCalls"), false);
+
+  const examples = await get("/docs/examples");
+  const examplesHtml = await examples.text();
+  assert.match(examplesHtml, /authichain\.com\/qron\/r\//);
+  assert.match(examplesHtml, /presentation_not_found/);
+  assert.match(examplesHtml, /This host verifies the signature/);
+  assert.match(examplesHtml, /does not verify the signature/);
+  assert.match(examplesHtml, /empty body is the unpaid HTTP 402/);
+  assert.equal(examplesHtml.includes('{"sealId":"demo"}'), false);
+  assert.equal(examplesHtml.includes("freeCalls"), false);
+  assert.match(examplesHtml, /not a customer product/);
+  assert.match(examplesHtml, /not a physical inspection/);
+  assert.match(examplesHtml, /not a battery passport/);
+  assert.match(examplesHtml, /does not itself read the anchor transaction/);
+  assert.match(examplesHtml, /not a counterfeit finding/);
+  const exampleLinks = [...examplesHtml.matchAll(/href="([^"]+)"/g)].map(
+    (m) => new URL(m[1], "https://authichain.com")
+  );
+  assert.ok(!exampleLinks.some((u) => u.hostname === "polygonscan.com"));
+  assert.ok(
+    exampleLinks.some(
+      (u) =>
+        u.pathname === "/api/verify" &&
+        u.searchParams.get("id") === "polygon-anchor-1"
+    )
+  );
+  assert.ok(
+    exampleLinks.some(
+      (u) =>
+        u.pathname === "/verify" &&
+        u.searchParams.get("id") === "polygon-anchor-1"
+    )
+  );
+  assert.ok(
+    exampleLinks.some(
+      (u) => u.pathname === "/protocol/examples/polygon-anchor-1.record.json"
+    )
+  );
+  assert.ok(
+    exampleLinks.some(
+      (u) => u.pathname === "/protocol/examples/polygon-anchor-1.anchor.json"
+    )
+  );
+
+  const architecture = await get("/docs/dpp-architecture");
+  const architectureHtml = await architecture.text();
+  assert.match(architectureHtml, /empty body is the unpaid HTTP 402/);
+  assert.match(architectureHtml, /non-UUID sealId is HTTP 400/);
+  assert.equal(architectureHtml.includes('{"sealId":"demo"}'), false);
+
   const alias = await get("/docs/resolver");
   assert.equal(alias.status, 301);
   assert.equal(
-    new URL(alias.headers.get("location") ?? "", "https://authichain.com").pathname,
+    new URL(alias.headers.get("location") ?? "", "https://authichain.com")
+      .pathname,
     "/docs/gs1-digital-link"
   );
 
   const protocol = await get("/docs/protocol");
   assert.equal(protocol.status, 301);
   assert.equal(
-    new URL(protocol.headers.get("location") ?? "", "https://authichain.com").pathname,
+    new URL(protocol.headers.get("location") ?? "", "https://authichain.com")
+      .pathname,
     "/protocol"
   );
 
-  for (const path of ["/onboard", "/verify", "/pricing", "/checkout/dpp_readiness"]) {
+  for (const path of [
+    "/onboard",
+    "/verify",
+    "/pricing",
+    "/checkout/dpp_readiness",
+  ]) {
     const res = await get(path);
     const body = await res.text();
-    assert.doesNotMatch(body, /AuthiChain Docs — verification infrastructure/, path);
-    assert.ok(res.status === 200 || res.status === 302 || res.status === 303, `${path} ${res.status}`);
+    assert.doesNotMatch(
+      body,
+      /AuthiChain Docs — verification infrastructure/,
+      path
+    );
+    assert.ok(
+      res.status === 200 || res.status === 302 || res.status === 303,
+      `${path} ${res.status}`
+    );
   }
 });
 
@@ -213,9 +648,14 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
     assert.ok(html.includes(X402_PUBLISHED_PAY_TO), path);
     assert.match(html, /0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913/);
     assert.match(html, /\$0\.05/);
-    const urls = (html.match(/https:\/\/[^\s"'<>]+/g) ?? []).map(u => new URL(u));
+    const urls = (html.match(/https:\/\/[^\s"'<>]+/g) ?? []).map(
+      u => new URL(u)
+    );
     for (const p of ["/api/x402/health", "/api/x402/catalog"]) {
-      assert.ok(urls.some(u => u.hostname === "authichain.com" && u.pathname === p), `${path} ${p}`);
+      assert.ok(
+        urls.some(u => u.hostname === "authichain.com" && u.pathname === p),
+        `${path} ${p}`
+      );
     }
     assert.match(html, /curl -sS https:\/\/authichain\.com\/api\/x402\/health/);
     assert.match(
@@ -237,7 +677,11 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
     const farmPay = planPaymentLink("strainchain_farm") ?? "";
     assert.ok(farmPay, `${path} Farm Payment Link must exist in plans.ts`);
     assert.equal(new URL(farmPay).hostname, "authichain.com");
-    assert.ok(html.includes(`href="${farmPay}"`), `${path} must list Farm`);
+    assert.equal(
+      html.includes(`href="${farmPay}"`),
+      false,
+      `${path} must not list Farm`
+    );
     assert.doesNotMatch(html, /href=["']\/api\/checkout/);
     assert.doesNotMatch(html, /GET \/api\/checkout/);
   }
@@ -252,7 +696,10 @@ test("homepage and /dpp link to /docs and /x402", async () => {
   assert.match(dpp, /href="\/x402"/);
   assert.match(dpp, /href="\/battery-passport"/);
   assert.match(dpp, /name="email"/);
-  assert.match(dpp, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    dpp,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.match(dpp, /id="dpp-cancelled-banner"/);
 });
 
@@ -273,7 +720,10 @@ test("/authentic-agentic-economy is a real positioning page", async () => {
       html,
       /Agents can pay\. They still need to know if it is real\./
     );
-    assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+    assert.match(
+      html,
+      /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+    );
     assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
     assert.match(html, /href="\/x402"/);
     assert.doesNotMatch(html, /GET \/api\/checkout/);
@@ -287,7 +737,13 @@ test("/authentic-agentic-economy is a real positioning page", async () => {
 });
 
 test("every comparison page renders, including the restored pilot pages", async () => {
-  for (const slug of ["scantrust", "circularise", "vechain", "everledger", "strainsecure"]) {
+  for (const slug of [
+    "scantrust",
+    "circularise",
+    "vechain",
+    "everledger",
+    "strainsecure",
+  ]) {
     const res = await get(`/vs/${slug}`);
     assert.equal(res.status, 200, `/vs/${slug} should render`);
     const html = await res.text();
@@ -301,16 +757,35 @@ test("every comparison page renders, including the restored pilot pages", async 
   assert.doesNotMatch(scantrust, /can be altered or lost|hides pricing/);
   for (const slug of ["everledger", "strainsecure"]) {
     const html = await (await get(`/vs/${slug}`)).text();
-    assert.ok(html.includes(`href="/onboard?ref=vs-${slug}"`), `/vs/${slug} asks for a pilot`);
-    assert.ok(html.includes('href="/verify"'), `/vs/${slug} links the verifier`);
-    if (dppPay) assert.ok(!html.includes(dppPay), `/vs/${slug} must not carry the DPP checkout`);
-    assert.doesNotMatch(html, /Start Free Trial|\bcertified\b|METRC (?:sync|integration) (?:is )?live/i);
+    assert.ok(
+      html.includes(`href="/onboard?ref=vs-${slug}"`),
+      `/vs/${slug} asks for a pilot`
+    );
+    assert.ok(
+      html.includes('href="/verify"'),
+      `/vs/${slug} links the verifier`
+    );
+    if (dppPay)
+      assert.ok(
+        !html.includes(dppPay),
+        `/vs/${slug} must not carry the DPP checkout`
+      );
+    assert.doesNotMatch(
+      html,
+      /Start Free Trial|\bcertified\b|METRC (?:sync|integration) (?:is )?live/i
+    );
   }
 });
 
 test("the /vs index lists every comparison", async () => {
   const html = await (await get("/vs")).text();
-  for (const name of ["Scantrust", "Circularise", "VeChain", "Everledger", "StrainSecure"]) {
+  for (const name of [
+    "Scantrust",
+    "Circularise",
+    "VeChain",
+    "Everledger",
+    "StrainSecure",
+  ]) {
     assert.match(html, new RegExp(name));
   }
 });
@@ -333,18 +808,61 @@ test("/thanks and /success serve the DPP thanks page", async () => {
   }
 });
 
-test("anchor Sign In stays on an apex path, not app.login", async () => {
-  const html = await (await get("/anchor")).text();
-  assert.equal((await get("/anchor")).status, 200);
+/** Absolute URLs in a page, parsed, so tests compare hosts exactly. */
+function urlsIn(html: string): URL[] {
+  const out: URL[] = [];
+  for (const m of html.matchAll(/https?:\/\/[^\s"'<>()]+/g)) {
+    try {
+      out.push(new URL(m[0]));
+    } catch {
+      // not a URL
+    }
+  }
+  return out;
+}
+
+const ANCHOR_TX =
+  "0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7";
+
+test("anchor is an in-browser fingerprint that claims no anchoring", async () => {
+  const res = await get("/anchor");
+  assert.equal(res.status, 200);
+  const html = await res.text();
   assert.ok(!html.includes("app.authichain.com/login"));
-  assert.match(html, /href="\/onboard"/);
+  // The demo gateway stored nothing and wrote nothing on-chain; the page must
+  // not call it or claim a certificate was anchored.
+  assert.ok(!urlsIn(html).some(u => u.hostname === "api.authichain.com"));
+  assert.ok(
+    !/Certificate Anchored|Anchoring to blockchain|permanent and publicly verifiable/.test(
+      html
+    )
+  );
+  assert.match(
+    html,
+    /does not store anything, issue a certificate, or write to a blockchain/
+  );
+  // PM-372: wallet ownership of the Polygon anchor is not proven, so the page
+  // must not cite a polygonscan link or the anchor transaction.
+  assert.ok(!urlsIn(html).some(u => u.hostname === "polygonscan.com"));
+  assert.ok(!html.includes(ANCHOR_TX));
+  assert.match(html, /Self-serve anchoring from this page is not live yet/);
+});
+
+test("a demo certificate id says it is not on record, without fetching the demo gateway", async () => {
+  const html = await (await get("/cert/AC-1234ABCD")).text();
+  assert.match(html, /not on record/);
+  assert.match(html, /noindex/);
+  assert.ok(!urlsIn(html).some(u => u.hostname === "api.authichain.com"));
 });
 
 test("DPP landing collects email before protocol checkout", async () => {
   const html = await (await get("/digital-product-passport")).text();
   const dppPay = planPaymentLink("dpp_readiness") ?? "";
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.match(html, /id="dpp-cancelled-banner"/);
   assert.match(html, /params.get\('visit_id'\)/);
   assert.doesNotMatch(html, /href="\/protocol\/checkout\/dpp"/);
@@ -363,20 +881,48 @@ test("DPP landing collects email before protocol checkout", async () => {
 test("/dapp redirects to /dashboard (estate CTA)", async () => {
   const res = await get("/dapp");
   assert.equal(res.status, 302);
-  assert.equal(res.headers.get("location"), "https://authichain.govchain.us/dashboard");
+  assert.equal(
+    res.headers.get("location"),
+    "https://authichain.govchain.us/dashboard"
+  );
 });
 
-test("GET /api/x402, /health, and /api/v1/agent-verify are answered here", async () => {
-  for (const path of [
-    "/api/x402",
-    "/api/x402/health",
-    "/api/v1/agent-verify",
-  ]) {
-    const res = await get(path);
-    assert.equal(res.status, 200, path);
-    const body = (await res.json()) as { status: string; catalog?: string };
-    assert.equal(body.status, "not_configured", path);
-    assert.equal(body.catalog, "/api/x402/catalog", path);
+test("GET /api/x402/listing and /api/x402/growth are answered here", async () => {
+  const listing = await get("/api/x402/listing");
+  assert.equal(listing.status, 200);
+  const listingBody = (await listing.json()) as {
+    protocol?: string;
+    listing?: string;
+  };
+  assert.equal(listingBody.protocol, "x402");
+  assert.match(listingBody.listing ?? "", /\/api\/x402\/listing$/);
+
+  const growth = await get("/api/x402/growth");
+  assert.equal(growth.status, 200);
+  const growthBody = (await growth.json()) as { listing?: string };
+  assert.match(growthBody.listing ?? "", /\/api\/x402\/listing$/);
+});
+
+test("GET /api/x402/health is 200; GET paid aliases are 402 with payTo", async () => {
+  const health = await get("/api/x402/health");
+  assert.equal(health.status, 200);
+  const healthBody = (await health.json()) as {
+    status: string;
+    catalog?: string;
+  };
+  assert.equal(healthBody.status, "not_configured");
+  assert.equal(healthBody.catalog, "/api/x402/catalog");
+
+  const env = {
+    ...ENV,
+    X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+  } as unknown as Env;
+  for (const path of ["/api/x402", "/api/v1/agent-verify"]) {
+    const res = await get(path, env);
+    assert.equal(res.status, 402, path);
+    const body = (await res.json()) as { x402Version: number };
+    assert.equal(body.x402Version, 2, path);
+    assert.ok(res.headers.get("PAYMENT-REQUIRED"), path);
   }
 });
 
@@ -391,17 +937,23 @@ test("GET /.well-known/402index-verify.txt is the 402 Index hash and nothing els
   );
   assert.equal(text.length, 64);
   const head = await worker.fetch(
-    new Request("https://authichain.govchain.us/.well-known/402index-verify.txt", {
-      method: "HEAD",
-    }),
+    new Request(
+      "https://authichain.govchain.us/.well-known/402index-verify.txt",
+      {
+        method: "HEAD",
+      }
+    ),
     ENV
   );
   assert.equal(head.status, 200);
   assert.equal(await head.text(), "");
   const posted = await worker.fetch(
-    new Request("https://authichain.govchain.us/.well-known/402index-verify.txt", {
-      method: "POST",
-    }),
+    new Request(
+      "https://authichain.govchain.us/.well-known/402index-verify.txt",
+      {
+        method: "POST",
+      }
+    ),
     ENV
   );
   assert.equal(posted.status, 404);
@@ -425,13 +977,26 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
     assert.match(text, /POST https:\/\/authichain\.com\/api\/x402/);
     assert.match(text, /18 February 2027/);
     assert.match(text, /battery-passport/);
+    assert.match(
+      text,
+      /GET https:\/\/authichain\.com\/api\/verify\?id=polygon-anchor-1/
+    );
+    assert.match(
+      text,
+      /https:\/\/authichain\.com\/protocol\/examples\/polygon-anchor-1\.record\.json/
+    );
+    assert.match(
+      text,
+      /https:\/\/authichain\.com\/protocol\/examples\/polygon-anchor-1\.anchor\.json/
+    );
+    assert.equal(text.includes("polygonscan.com"), false);
     assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
     assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
     assert.doesNotMatch(text, /GET \/api\/checkout/);
   }
 });
 
-test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
+test("/mcp and /api/mcp discovery says verify is free, with no Payment Links or x402 price", async () => {
   for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
@@ -439,36 +1004,28 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
       protocol: string;
       pay: { x402: string };
       pricing: {
-        humanCheckout: {
-          passportPaymentLink?: string;
-          dppPaymentLink?: string;
-          farmPaymentLink?: string;
-        };
+        verify: { price: string; mcpTool: string };
+        paidPlans: { status: string };
+        humanCheckout?: unknown;
       };
     };
     assert.equal(body.protocol, "mcp", path);
     assert.equal(body.pay.x402, "POST https://authichain.com/api/x402", path);
-    assert.equal(
-      body.pricing.humanCheckout.dppPaymentLink,
-      planPaymentLink("dpp_readiness"),
-      path
-    );
-    assert.equal(
-      body.pricing.humanCheckout.passportPaymentLink,
-      planPaymentLink("strainchain_passport"),
-      path
-    );
-    assert.equal(
-      body.pricing.humanCheckout.farmPaymentLink,
-      planPaymentLink("strainchain_farm"),
-      path
-    );
-    assert.equal(
-      new URL(body.pricing.humanCheckout.farmPaymentLink ?? "").hostname,
-      "authichain.com",
-      path
-    );
-    assert.equal(JSON.stringify(body).includes("/api/checkout"), false, path);
+    assert.equal(body.pricing.verify.price, "free", path);
+    assert.equal(body.pricing.verify.mcpTool, "verify_record", path);
+    assert.equal(body.pricing.paidPlans.status, "on_hold", path);
+    assert.equal(body.pricing.humanCheckout, undefined, path);
+    const text = JSON.stringify(body);
+    assert.equal(text.includes("$0.05"), false, path);
+    for (const plan of [
+      "dpp_readiness",
+      "strainchain_passport",
+      "strainchain_farm",
+    ] as const) {
+      const link = planPaymentLink(plan);
+      if (link) assert.equal(text.includes(link), false, `${path} ${plan}`);
+    }
+    assert.equal(text.includes("/api/checkout"), false, path);
   }
 });
 
@@ -485,14 +1042,10 @@ test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async
     assert.equal(body.protocol, "x402", path);
     assert.equal(body.catalog, "/api/x402/catalog", path);
     assert.equal(body.health, "/api/x402/health", path);
+    assert.equal(body.humanCheckout?.farmPaymentLink, undefined, path);
     assert.equal(
-      body.humanCheckout?.farmPaymentLink,
-      planPaymentLink("strainchain_farm"),
-      path
-    );
-    assert.equal(
-      new URL(body.humanCheckout?.farmPaymentLink ?? "").hostname,
-      "authichain.com",
+      body.humanCheckout?.farmUsd,
+      planUsd("strainchain_farm"),
       path
     );
   }
@@ -507,8 +1060,40 @@ test("GET /.well-known/x402 is the x402scan fan-out, not the catalog", async () 
     protocol?: string;
   };
   assert.equal(body.version, 1);
-  assert.deepEqual(body.resources, ["https://authichain.com/api/x402"]);
+  assert.deepEqual(body.resources, [
+    "https://authichain.com/api/v1/agent-verify",
+    "https://authichain.com/api/x402",
+  ]);
   assert.equal(body.protocol, undefined);
+});
+
+test("GET /.well-known/agent-card.json is the A2A Agent Card", async () => {
+  for (const path of [
+    "/.well-known/agent-card.json",
+    "/.well-known/agent.json",
+  ]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const body = (await res.json()) as {
+      name: string;
+      skills?: Array<{ id: string }>;
+      x402?: { scheme?: string };
+    };
+    assert.equal(body.name, "AuthiChain", path);
+    assert.ok(
+      body.skills?.some(s => s.id === "paid-evidence-check"),
+      path
+    );
+    assert.equal(body.x402?.scheme, "exact", path);
+  }
+});
+
+test("GET /.well-known/lumi-monitor.txt is the Lumi domain proof", async () => {
+  const res = await get("/.well-known/lumi-monitor.txt");
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") || "", /text\/plain/);
+  const text = await res.text();
+  assert.match(text, /lumi-monitor-verify=/);
 });
 
 test("GET /openapi.json declares x-payment-info for unpaid POST /api/x402", async () => {
@@ -530,8 +1115,12 @@ test("GET /openapi.json declares x-payment-info for unpaid POST /api/x402", asyn
     "x402",
   ]);
   assert.ok(spec.paths["/api/x402"].post.responses["402"]);
-  assert.equal(JSON.stringify(spec).includes("/api/checkout"), false);
-  assert.match(JSON.stringify(spec), /\/battery-passport/);
+  const raw = JSON.stringify(spec);
+  assert.equal(raw.includes("/api/checkout"), false);
+  assert.match(raw, /\/qron\/r\/\{object_id\}/);
+  assert.match(raw, /This host verifies the signature/);
+  assert.equal(raw.includes("does not verify the signature"), false);
+  assert.match(raw, /\/battery-passport/);
   assert.match(JSON.stringify(spec), /18 February 2027/);
   assert.match(JSON.stringify(spec), /LMT/);
 });
@@ -571,13 +1160,19 @@ test("GET /api/checkout/* (with or without email) bounces to the confirm page, n
 test("/demo sends buyers to /pricing, not the legacy SPA /subscriptions catalogue", async () => {
   const res = await get("/demo");
   assert.equal(res.status, 302);
-  assert.equal(res.headers.get("location"), "https://authichain.govchain.us/pricing");
+  assert.equal(
+    res.headers.get("location"),
+    "https://authichain.govchain.us/pricing"
+  );
 });
 
 test("/demo/strainchain lands on the TruMark money surface", async () => {
   const res = await get("/demo/strainchain");
   assert.equal(res.status, 302);
-  assert.equal(res.headers.get("location"), "https://authichain.govchain.us/trumark");
+  assert.equal(
+    res.headers.get("location"),
+    "https://authichain.govchain.us/trumark"
+  );
 });
 
 test("/gov-gift and /apex-packet send APEX to the GovChain packet", async () => {
@@ -615,10 +1210,7 @@ test("/telegram and /miniapp serve the Passport Mini App", async () => {
       html,
       /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
     );
-    assert.doesNotMatch(
-      html,
-      /href="(?:https:\/\/[^"]*)?\/api\/checkout\//
-    );
+    assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
     assert.match(html, /Publish Passport — \$49/);
     assert.match(html, /telegram\.org\/js\/telegram-web-app\.js/);
     assert.doesNotMatch(html, /calendly/i);
@@ -668,7 +1260,10 @@ test("TruMark and Made in America pages are live with checkout CTAs", async () =
     trumarkHtml,
     /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
   );
-  assert.match(trumarkHtml, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    trumarkHtml,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.doesNotMatch(trumarkHtml, /href="\/api\/checkout/);
   assert.doesNotMatch(trumarkHtml, /calendly/i);
   assert.doesNotMatch(trumarkHtml, /schedule a (call|demo)/i);
@@ -677,7 +1272,11 @@ test("TruMark and Made in America pages are live with checkout CTAs", async () =
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const html = await res.text();
-    assert.match(html, /action="https:\/\/authichain\.com\/checkout\/musa_claim_file"/, path);
+    assert.match(
+      html,
+      /action="https:\/\/authichain\.com\/checkout\/musa_claim_file"/,
+      path
+    );
     assert.doesNotMatch(html, /href="\/api\/checkout/, path);
     assert.doesNotMatch(html, /calendly/i);
     assert.doesNotMatch(html, /schedule a (call|demo)/i);
@@ -710,6 +1309,26 @@ test("/dashboard and /generate are proxied to the app", async () => {
       `${path} should come from APP_WORKER`
     );
   }
+});
+
+test("committed /p SEO hubs are served here, not a product-not-found proxy", async () => {
+  for (const path of [
+    "/p/battery-passport-readiness-assessment-cost",
+    "/p/verify-a-product-record-offline-without-a-vendor-account",
+    "/p/battery-passport-readiness-assessment-cost/",
+  ]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.notEqual(html, "app", path);
+    assert.match(html, /<h1>/, path);
+    assert.doesNotMatch(html, /Product Not Found/, path);
+  }
+  const cost = await (
+    await get("/p/battery-passport-readiness-assessment-cost")
+  ).text();
+  assert.match(cost, /Battery Passport Readiness Assessment Cost/);
+  assert.match(cost, /not a certification or legal opinion/);
 });
 
 test("/p and /p/<serial> are proxied to the app, not marketing 404", async () => {
@@ -747,6 +1366,61 @@ test("hung APP_WORKER /p lookup 404s with Payment Links instead of hanging", asy
   assert.match(html, /name="robots" content="noindex"/);
 });
 
+test("/verify/live is the founder seal, not an app lookup for the id live", async () => {
+  const seen: string[] = [];
+  const env = {
+    APP_WORKER: {
+      fetch: async (r: Request) => {
+        seen.push(new URL(r.url).pathname);
+        return new Response("app", { status: 200 });
+      },
+    },
+  } as unknown as Env;
+  for (const path of ["/verify/live", "/verify/live/", "/verify/LIVE"]) {
+    const res = await get(path, env);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.match(html, /This seal is already on Base\./);
+    assert.match(html, /authichain\.base\.eth/);
+    assert.match(html, /0x34370EDA96e0C7e47f46F18e2D3a7298C241E16F/);
+    assert.match(
+      html,
+      /basescan\.org\/tx\/0xa07d0bbadcc958b3f6fc8d81acda16a54c4bcfdb5e86bd2ce186e27f5752ab3b/
+    );
+    assert.match(html, /What this does not prove/);
+    assert.doesNotMatch(html, /No record found/);
+    assert.notEqual(html, "app");
+  }
+  assert.deepEqual(seen, []);
+  const other = await get("/verify/not-a-real-record", env);
+  assert.equal(await other.text(), "app");
+  const withId = await get("/verify/live?id=polygon-anchor-1", env);
+  assert.equal(await withId.text(), "app");
+  const posted = await worker.fetch(
+    new Request("https://authichain.govchain.us/verify/live", {
+      method: "POST",
+    }),
+    env
+  );
+  assert.equal(posted.status, 405);
+});
+
+test("hung APP_WORKER /verify lookup 404s with HTML instead of throwing (1101)", async () => {
+  const env = {
+    APP_WORKER_TIMEOUT_MS: "40",
+    APP_WORKER: { fetch: () => new Promise(() => {}) },
+  } as unknown as Env;
+  for (const path of ["/verify?id=test123", "/verify/CERT-001"]) {
+    const res = await get(path, env);
+    assert.equal(res.status, 404);
+    assert.match(res.headers.get("content-type") ?? "", /text\/html/);
+    const html = await res.text();
+    assert.match(html, /No record found/);
+    assert.match(html, /name="robots" content="noindex"/);
+    assert.equal(/on-chain|blockchain|polygon/i.test(html), false);
+  }
+});
+
 test("stale APP_WORKER checkout anchors become catalogue Payment Links", async () => {
   const dpp = planPaymentLink("dpp_readiness") ?? "";
   const passport = planPaymentLink("strainchain_passport") ?? "";
@@ -765,18 +1439,21 @@ test("stale APP_WORKER checkout anchors become catalogue Payment Links", async (
         ),
     },
   } as unknown as Env;
-  for (const path of [
-    "/p/what-is-a-digital-product-passport",
-    "/landing/authichain",
-  ]) {
+  // Known /p/<slug> hubs are rendered on this worker, so the rewrite only
+  // runs for a serial that still proxies and for /landing/*.
+  for (const path of ["/p/CERT-001", "/landing/authichain"]) {
     const html = await (await get(path, env)).text();
     assert.ok(html.includes(`href="${dpp}"`), path);
     assert.ok(html.includes(`href="${passport}"`), path);
     assert.equal(html.includes('href="/api/checkout/dpp"'), false, path);
-    const linkHosts = [...html.matchAll(/(?:href|action)="(https?:\/\/[^"]+)"/g)].map(
-      m => new URL(m[1].replace(/&amp;/g, "&")).hostname
+    const linkHosts = [
+      ...html.matchAll(/(?:href|action)="(https?:\/\/[^"]+)"/g),
+    ].map(m => new URL(m[1].replace(/&amp;/g, "&")).hostname);
+    assert.equal(
+      linkHosts.some(h => h === "buy.stripe.com"),
+      false,
+      path
     );
-    assert.equal(linkHosts.some(h => h === "buy.stripe.com"), false, path);
     assert.ok(html.includes('action="/api/checkout/dpp"'), path);
   }
 });
@@ -813,6 +1490,17 @@ test("the 404 escapes the path, so a hostile URL cannot inject markup", async ()
   );
 });
 
+test("sitemap does not list /checkout/qron_launch after it closed to new buyers (#2020)", async () => {
+  const res = await get("/sitemap.xml");
+  assert.equal(res.status, 200);
+  const xml = await res.text();
+  assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
+  assert.ok(
+    !xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
+  );
+  assert.ok(!xml.includes("/checkout/qron_launch"));
+});
+
 test("the sitemap no longer lists pages that do not exist", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   for (const gone of [
@@ -829,6 +1517,14 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   }
   assert.ok(xml.includes("<loc>https://authichain.com/contact</loc>"));
   assert.equal(
+    xml.split("<loc>https://authichain.com/privacy</loc>").length - 1,
+    1
+  );
+  assert.equal(
+    xml.split("<loc>https://authichain.com/terms</loc>").length - 1,
+    1
+  );
+  assert.equal(
     xml.split("<loc>https://authichain.com/telegram</loc>").length - 1,
     1,
     "canonical Mini App loc once — not also via micrositeSitemapUrls"
@@ -839,6 +1535,14 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   );
   assert.ok(xml.includes("<loc>https://authichain.com/pricing</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/onboard</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/generate</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
+  // Retired plans 303 to /pricing, so they are no longer sitemap pages.
+  assert.ok(
+    !xml.includes("/checkout/qron_launch"),
+    "/checkout/qron_launch is closed to new buyers (#2020); sitemap must not list it"
+  );
+  assert.ok(xml.includes("<loc>https://authichain.com/checkout/creator</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/genetics</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/passport</loc>"));
@@ -851,6 +1555,7 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/m/bat-2026-001</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/partners/brief</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/verify</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/verify/live</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/x402</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/.well-known/x402</loc>"));
   assert.ok(
@@ -893,7 +1598,10 @@ test("EU DPP manufacturer article is a public page with live checkout CTA", asyn
       html,
       /Why AuthiChain is built for the next generation of product trust/
     );
-    assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+    assert.match(
+      html,
+      /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+    );
     assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
     assert.match(html, /Start DPP checkout/);
     assert.doesNotMatch(html, /AuthiChain Inc/i);
@@ -935,4 +1643,170 @@ test("every URL the sitemap claims actually resolves", async () => {
       `sitemap lists ${path} but it answered ${res.status}`
     );
   }
+});
+
+test("api-v1 endpoints use API_WORKER while unrelated /api paths keep APP_WORKER", async () => {
+  const seen: string[] = [];
+  const api = {
+    fetch: async (r: Request) => {
+      seen.push("api:" + new URL(r.url).pathname);
+      return new Response("api", { status: 200 });
+    },
+  };
+  const app = {
+    fetch: async (r: Request) => {
+      seen.push("app:" + new URL(r.url).pathname);
+      return new Response("app", { status: 200 });
+    },
+  };
+  const env = { API_WORKER: api, APP_WORKER: app } as unknown as Env;
+
+  const jwks = await worker.fetch(
+    new Request("https://authichain.com/api/v1/.well-known/jwks.json"),
+    env
+  );
+  assert.equal(jwks.status, 200);
+  assert.equal(await jwks.text(), "api");
+
+  const leads = await worker.fetch(
+    new Request("https://authichain.com/api/leads/capture", {
+      method: "POST",
+      body: "{}",
+    }),
+    env
+  );
+  assert.equal(leads.status, 200);
+  assert.equal(await leads.text(), "app");
+
+  assert.deepEqual(seen, [
+    "api:/api/v1/.well-known/jwks.json",
+    "app:/api/leads/capture",
+  ]);
+});
+
+test("/protocol links the anchored demonstration record and the MCP tool", async () => {
+  const html = await (await get("/protocol")).text();
+  // Parse links and compare exactly (CodeQL flags URL-shaped regexes).
+  const links = [...html.matchAll(/href="([^"]+)"/g)].map(
+    m => new URL(m[1], "https://authichain.com")
+  );
+  // PM-374: wallet ownership of the anchor is not proven, so /protocol must
+  // not link the anchor transaction on polygonscan.
+  assert.ok(!links.some(u => u.hostname === "polygonscan.com"));
+  assert.ok(
+    links.some(
+      u =>
+        u.hostname === "authichain.com" &&
+        u.pathname === "/api/verify" &&
+        u.searchParams.get("id") === "polygon-anchor-1"
+    )
+  );
+  assert.ok(
+    links.some(
+      u => u.pathname === "/protocol/examples/polygon-anchor-1.record.json"
+    )
+  );
+  assert.ok(
+    links.some(
+      u => u.pathname === "/protocol/examples/polygon-anchor-1.anchor.json"
+    )
+  );
+  assert.match(html, /verify_record/);
+});
+
+test("polygon-anchor-1 files are served before the /protocol app proxy", async () => {
+  const record = await get("/protocol/examples/polygon-anchor-1");
+  assert.equal(record.status, 200);
+  assert.match(record.headers.get("content-type") ?? "", /application\/json/);
+  const body = (await record.json()) as { credentialSubject?: { id?: string } };
+  assert.equal(
+    body.credentialSubject?.id,
+    "https://authichain.com/protocol/examples/polygon-anchor-1"
+  );
+
+  const anchor = await get("/protocol/examples/polygon-anchor-1.anchor.json");
+  assert.equal(anchor.status, 200);
+  const anchorBody = (await anchor.json()) as { recordHash?: string };
+  assert.equal(
+    anchorBody.recordHash,
+    "sha256:5ee3e5e7e8b2c32c8f096b77cc41baece9dd2555d5af24d73f8880484ed6b1e1"
+  );
+
+  const other = await get("/protocol/examples/not-published");
+  assert.equal(other.status, 200);
+  assert.equal(await other.text(), "app");
+});
+
+test("/manifest.webmanifest is a record lookup, not an offline verify cache", async () => {
+  const res = await get("/manifest.webmanifest");
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") ?? "", /manifest\+json/);
+  const manifest = (await res.json()) as {
+    start_url: string;
+    display: string;
+    description: string;
+  };
+  assert.equal(manifest.start_url, "/verify");
+  assert.equal(manifest.display, "browser");
+  assert.match(manifest.description, /On-chain verification is in development/);
+  assert.doesNotMatch(JSON.stringify(manifest), /authenticity/i);
+  const sw = await get("/sw.js");
+  assert.notEqual(sw.status, 200);
+});
+
+// CFA-147 / PM-349 / PM-393: no "certificate contract live/deployed on Polygon"
+// claim and no 0x4da4 contract link until wallet ownership is proven.
+test("home, /anchor, /dpp and the OG image make no Polygon contract claim (CFA-147)", async () => {
+  for (const path of [
+    "/",
+    "/anchor",
+    "/dpp",
+    "/digital-product-passport",
+    "/og-image.svg",
+  ]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, `${path} should be 200`);
+    const body = await res.text();
+    for (const banned of [
+      /live on Polygon/i,
+      /deployed on Polygon/i,
+      /0x4da4/i,
+    ]) {
+      assert.doesNotMatch(body, banned, `${path} must not contain ${banned}`);
+    }
+  }
+});
+
+test("vs pages and the scantrust page carry no unbacked 'Tamper-Proof by Design' claim", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { renderVsPage, renderVsIndex } = await import("./vs-pages.ts");
+  const banned = /Tamper-Proof by Design/i;
+  assert.doesNotMatch(renderVsIndex(), banned);
+  for (const def of VS_PAGES) {
+    assert.doesNotMatch(renderVsPage(def), banned, `/vs/${def.slug}`);
+    assert.doesNotMatch(JSON.stringify(def), banned, `/vs/${def.slug} data`);
+  }
+  const scantrust = readFileSync(
+    new URL("../../../src/app/vs/scantrust/page.tsx", import.meta.url),
+    "utf8"
+  );
+  assert.doesNotMatch(scantrust, banned, "src/app/vs/scantrust/page.tsx");
+});
+
+// CFA-629: the dpp-check sub-routes must be reachable through the Worker's fetch.
+test("GET /dpp-check/product returns 200 through the Worker fetch", async () => {
+  const res = await worker.fetch(
+    new Request("https://authichain.com/dpp-check/product"),
+    ENV
+  );
+  assert.equal(res.status, 200);
+});
+
+test("GET /dpp/scan returns 301 to /dpp-check through the Worker fetch", async () => {
+  const res = await worker.fetch(
+    new Request("https://authichain.com/dpp/scan"),
+    ENV
+  );
+  assert.equal(res.status, 301);
+  assert.match(res.headers.get("Location") ?? "", /\/dpp-check$/);
 });

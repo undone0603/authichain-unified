@@ -1,6 +1,6 @@
 import ARHousingViewer from '@/components/ARHousingViewer';
 import AgenticCloser from '@/components/AgenticCloser';
-import { ShieldCheck, Cpu, Link as LinkIcon } from 'lucide-react';
+import { ShieldCheck, Cpu } from 'lucide-react';
 
 export default function SandboxPage() {
   return (
@@ -29,18 +29,13 @@ export default function SandboxPage() {
               <h4 className="text-white font-bold mb-1">WebXR Native</h4>
               <p className="text-sm text-zinc-500">Built on @react-three/fiber. Ready for Zapbox physical tracking.</p>
             </div>
-            <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
-              <LinkIcon className="w-6 h-6 text-zinc-400 mb-2" />
-              <h4 className="text-white font-bold mb-1">On-Chain Data</h4>
-              <p className="text-sm text-zinc-500">Anchored to Polygon. Immutable material verification.</p>
-            </div>
           </div>
         </div>
         <div className="lg:col-span-5 relative">
           <div className="sticky top-24 space-y-6">
             <div>
               <h2 className="text-2xl font-bold text-white mb-2">Initialize Integration</h2>
-              <p className="text-sm text-zinc-400">Skip the sales call. Speak directly with AgentZ to review API documentation, request the Zappar integration specs, or initialize a $199 Single-Project Pilot immediately.</p>
+              <p className="text-sm text-zinc-400">Skip the sales call. Speak directly with AgentZ to review API documentation, request the Zappar integration specs, or start from the plans on the pricing page.</p>
             </div>
             <AgenticCloser />
             <div className="text-center"><p className="text-xs text-zinc-600 font-mono">Powered by AuthiChain Autonomous Logic</p></div>

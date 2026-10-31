@@ -1,12 +1,22 @@
 /**
  * GET/POST /api/dpp/verify — records the `verification` loop stage.
  *
+ * DPP publication remains a resolution fact. When a signed attestation is
+ * supplied, the response also carries the actual canonical worker decision;
+ * this prevents a published passport from being presented as proof of the
+ * physical item.
+ *
  * Logic lives in src/lib/dpp-verify.ts so worker-app can mount the same
  * handler on authichain-edge-router.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyDpp } from "@/lib/dpp-verify";
+import {
+  isCanonicalPositive,
+  resolveCanonicalVerifyUrl,
+  verifyWithCanonicalWorker,
+} from "../../../../../packages/verifier/src/canonical-worker-client";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +27,19 @@ function getSupabase() {
   return createClient(url, key);
 }
 
-async function handle(dppId: string, visitId: string | null, source: string) {
+async function canonicalVerification(jws: string | null, expectedObjectId?: string) {
+  if (!jws) return null;
+  const endpoint = resolveCanonicalVerifyUrl();
+  return verifyWithCanonicalWorker(endpoint, jws, expectedObjectId);
+}
+
+async function handle(
+  dppId: string,
+  visitId: string | null,
+  source: string,
+  jws: string | null = null,
+  expectedObjectId?: string,
+) {
   const result = await verifyDpp({
     dppId,
     visitId,
@@ -34,6 +56,9 @@ async function handle(dppId: string, visitId: string | null, source: string) {
           proves: result.proves,
           doesNotProve: result.doesNotProve,
           event_recorded: false,
+          // Identifier/passport absence is not a counterfeit verdict.
+          decision: "not_found",
+          decision_contract: "AuthiChain Verification Decision v1",
         },
         { status: 404 },
       );
@@ -46,7 +71,39 @@ async function handle(dppId: string, visitId: string | null, source: string) {
       { status: result.status },
     );
   }
-  return NextResponse.json(result);
+
+  try {
+    const verification = await canonicalVerification(jws, expectedObjectId);
+    if (!verification) return NextResponse.json(result);
+
+    const protocolVerification = verification.response;
+    // A published passport is not a positive protocol decision. Never let the
+    // DPP adapter return HTTP 200 for a blocked, invalid, or indeterminate JWS.
+    const canonicalPositive = isCanonicalPositive(verification);
+    const status = canonicalPositive
+      ? 200
+      : verification.httpStatus >= 400
+        ? verification.httpStatus
+        : 409;
+
+    return NextResponse.json(
+      { ...result, protocol_verification: protocolVerification },
+      { status },
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ...result,
+        protocol_verification: {
+          valid: false,
+          decision: "indeterminate",
+          reasons: ["canonical_verification_unavailable"],
+          error: error instanceof Error ? error.message : "canonical verification failed",
+        },
+      },
+      { status: 502 },
+    );
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -55,6 +112,8 @@ export async function GET(req: NextRequest) {
     String(url.searchParams.get("dpp_id") || "").trim(),
     String(url.searchParams.get("visit_id") || "").trim() || null,
     String(url.searchParams.get("source") || "direct"),
+    String(url.searchParams.get("jws") || "").trim() || null,
+    String(url.searchParams.get("expected_object_id") || "").trim() || undefined,
   );
 }
 
@@ -65,6 +124,10 @@ export async function POST(req: NextRequest) {
       String(body.dpp_id || "").trim(),
       String(body.visit_id || "").trim() || null,
       String(body.source || "direct"),
+      typeof body.jws === "string" && body.jws.trim() ? body.jws.trim() : null,
+      typeof body.expected_object_id === "string"
+        ? body.expected_object_id.trim() || undefined
+        : undefined,
     );
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });

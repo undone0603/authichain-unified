@@ -5,6 +5,8 @@
  * activate POST are not handled here — they fall through to APP_PREFIXES.
  */
 
+import { PLANS, PLAN_CREDITS } from "../../../src/lib/plans";
+
 const HTML_HEADERS: Record<string, string> = {
   "Cache-Control": "private, no-store, no-cache, must-revalidate",
   "CDN-Cache-Control": "no-store",
@@ -37,15 +39,73 @@ function pageShell(title: string, body: string): string {
 </html>`;
 }
 
-function thanksHtml(sessionId: string, visitId: string): string {
+function esc(value: unknown): string {
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    c =>
+      (
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        }) as Record<string, string>
+      )[c] as string
+  );
+}
+
+/**
+ * The thanks page names a product, so it has to know which one was bought.
+ * `plan` comes from the checkout success_url; it only selects copy (the real
+ * entitlement is granted by the Stripe webhook), so a tampered value cannot
+ * grant anything. No `plan` means a link issued before this param existed:
+ * those keep the original DPP copy unchanged.
+ */
+function thanksHtml(
+  sessionId: string,
+  visitId: string,
+  planId: string
+): string {
   const qs = new URLSearchParams({ session_id: sessionId });
   if (visitId) qs.set("visit_id", visitId);
+
+  if (planId && planId !== "dpp_readiness") {
+    const plan = PLANS.find(p => p.id === planId);
+    const credits = plan ? PLAN_CREDITS[plan.id] : 0;
+    const name = plan ? plan.name : "";
+
+    if (plan && credits > 0) {
+      const generateQs = new URLSearchParams({ paid: "1" });
+      if (sessionId) generateQs.set("session_id", sessionId);
+      if (visitId) generateQs.set("visit_id", visitId);
+      return pageShell(
+        `Payment received | AuthiChain`,
+        `<p class="kicker">Payment received</p>
+     <h1>${esc(name)} is ready</h1>
+     <p>Your payment added ${credits} generations to this account. Open the generator to use them.</p>
+     <a class="btn" href="/generate?${generateQs.toString()}">Open the generator</a>
+     <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email is also on the way.</p>`
+      );
+    }
+
+    // Known plan with no generation credits, or an id this worker does not
+    // recognise. Confirm the payment without claiming a product.
+    return pageShell(
+      "Payment received | AuthiChain",
+      `<p class="kicker">Payment received</p>
+     <h1>Payment received</h1>
+     <p>${name ? `Your ${esc(name)} purchase is confirmed. ` : ""}A confirmation email with your next steps is on the way.</p>
+     <a class="btn" href="/">Back to AuthiChain</a>`
+    );
+  }
+
   return pageShell(
     "Payment received | AuthiChain",
     `<p class="kicker">Payment received</p>
-     <h1>DPP audit provisioned</h1>
-     <p>Your workspace access is being granted automatically. Activate now to complete merchant setup — no need to wait for an email reply.</p>
-     <a class="btn" href="/dpp/activate?${qs.toString()}">Activate merchant</a>
+     <h1>Workspace opened</h1>
+     <p>Your payment opens an AuthiChain workspace with self-serve activation. Activate it below. The same link is in the confirmation email.</p>
+     <a class="btn" href="/dpp/activate?${qs.toString()}">Activate workspace</a>
      <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email with the same link is also on the way.</p>`
   );
 }
@@ -60,10 +120,10 @@ function activateHtml(sessionId: string, visitId: string): string {
     );
   }
   return pageShell(
-    "Activate DPP audit | AuthiChain",
+    "Activate workspace | AuthiChain",
     `<p class="kicker">Self-serve activation</p>
-     <h1>Activate your DPP audit</h1>
-     <p>Complete this once. Humans are only notified for exceptions — routine fulfillment is automatic.</p>
+     <h1>Activate your workspace</h1>
+     <p>Complete this once. This records merchant activation for this workspace. It does not include a written assessment or a scheduled call. After it saves, you can download a field file of what you typed and what is still missing. That file is not a battery passport, not a certificate, and not EU registry filing.</p>
      <form id="f">
        <label>Product categories / SKU families in scope
          <textarea name="categories" rows="3" required></textarea></label>
@@ -71,9 +131,12 @@ function activateHtml(sessionId: string, visitId: string): string {
          <textarea name="markets" rows="2" required></textarea></label>
        <label>Current labeling / QR / NFC setup (or "none")
          <textarea name="labeling" rows="2" required></textarea></label>
-       <label>Preferred call windows (optional)
-         <textarea name="call_windows" rows="2" placeholder="Timezone + 2–3 options"></textarea></label>
-       <button class="btn" type="submit">Activate</button>
+       <p style="margin:1rem 0 0.5rem;color:#94a3b8;font-size:0.9rem">Optional pack figures (same as the free /battery-passport gap map). Leave blank if unknown.</p>
+       <label>Pack model <input name="pack_model" type="text" /></label>
+       <label>Stated energy (Wh) <input name="stated_wh" type="number" step="any" min="0" /></label>
+       <label>Rated capacity (Ah) <input name="ah" type="number" step="any" min="0" /></label>
+       <label>Nominal voltage (V) <input name="nominal_v" type="number" step="any" min="0" /></label>
+       <button class="btn" type="submit">Activate workspace</button>
        <p id="msg" style="margin-top:1rem"></p>
      </form>
      <script>
@@ -92,13 +155,25 @@ function activateHtml(sessionId: string, visitId: string): string {
                categories: fd.get('categories'),
                markets: fd.get('markets'),
                labeling: fd.get('labeling'),
-               call_windows: fd.get('call_windows')
+               pack_model: fd.get('pack_model') || undefined,
+               stated_wh: fd.get('stated_wh') || undefined,
+               ah: fd.get('ah') || undefined,
+               nominal_v: fd.get('nominal_v') || undefined
              })
            });
            var data = await res.json().catch(function () { return {}; });
            if (!res.ok) throw new Error(data.error || data.detail || ('HTTP ' + res.status));
-           msg.textContent = 'Activated. Opening dashboard…';
-           location.href = data.next || '/dashboard';
+           msg.textContent = 'Activated.';
+           if (data.importer_file) {
+             var blob = new Blob([JSON.stringify(data.importer_file, null, 2)], { type: 'application/json' });
+             var url = URL.createObjectURL(blob);
+             var a = document.createElement('a');
+             a.href = url;
+             a.download = 'authichain-dpp-importer-file.json';
+             a.textContent = 'Download field file (JSON)';
+             msg.appendChild(document.createElement('br'));
+             msg.appendChild(a);
+           }
          } catch (err) {
            msg.textContent = err.message || 'Activation failed';
          }
@@ -127,7 +202,8 @@ export function tryHandleDppRoute(request: Request): Response | null {
     return html(
       thanksHtml(
         url.searchParams.get("session_id") || "",
-        url.searchParams.get("visit_id") || ""
+        url.searchParams.get("visit_id") || "",
+        url.searchParams.get("plan") || ""
       )
     );
   }

@@ -392,6 +392,120 @@ export function reconstructLoop(rows: LoopEventRow[]): LoopReconstruction {
 }
 
 /**
+ * Economic states that a DPP loop event can evidence.
+ *
+ * PROSPECT, QUALIFIED, EXPANDED, and CHURNED are not in this list. No loop
+ * event distinguishes them from a visit or from silence, so they are not
+ * inferred.
+ */
+export const ECONOMIC_STATES = [
+  "VISITOR",
+  "CHECKOUT_STARTED",
+  "PAID",
+  "PROVISIONED",
+  "ACTIVATED",
+  "FIRST_VALUE",
+  "RETAINED",
+] as const;
+
+export type EconomicState = (typeof ECONOMIC_STATES)[number];
+
+const STATE_FOR_STAGE: Record<DppLoopStage, EconomicState> = {
+  attributed_visit: "VISITOR",
+  checkout_started: "CHECKOUT_STARTED",
+  payment_succeeded: "PAID",
+  provisioned: "PROVISIONED",
+  merchant_activated: "ACTIVATED",
+  dpp_published: "FIRST_VALUE",
+  verification: "FIRST_VALUE",
+  retained: "RETAINED",
+};
+
+/** Highest state the events actually reached. A later stage does not fill gaps. */
+export function economicStateOf(
+  loop: LoopReconstruction
+): EconomicState | null {
+  let best: EconomicState | null = null;
+  let rank = -1;
+  for (const stage of loop.reached) {
+    const state = STATE_FOR_STAGE[stage];
+    const next = ECONOMIC_STATES.indexOf(state);
+    if (next > rank) {
+      best = state;
+      rank = next;
+    }
+  }
+  return best;
+}
+
+export type FunnelLeak = {
+  from: EconomicState;
+  to: EconomicState;
+  entered: number;
+  continued: number;
+  drop: number;
+};
+
+/**
+ * Largest drop between adjacent evidenced states.
+ *
+ * Counts are "reached at least this state", not furthest-bucket counts.
+ * A later state without the earlier one is a hole, not a negative leak.
+ */
+export function largestFunnelLeak(
+  counts: Partial<Record<EconomicState, number>>
+): FunnelLeak | null {
+  let best: FunnelLeak | null = null;
+  for (let i = 0; i < ECONOMIC_STATES.length - 1; i++) {
+    const from = ECONOMIC_STATES[i]!;
+    const to = ECONOMIC_STATES[i + 1]!;
+    const entered = counts[from] ?? 0;
+    const continued = counts[to] ?? 0;
+    if (entered <= 0 || continued > entered) continue;
+    const drop = entered - continued;
+    // Equal drops keep the later state. One unpaid provision is worth more
+    // than one visitor who never reached checkout.
+    if (!best || drop >= best.drop) {
+      best = { from, to, entered, continued, drop };
+    }
+  }
+  return best && best.drop > 0 ? best : null;
+}
+
+export function countEconomicStates(rows: LoopEventRow[]): {
+  visits: number;
+  demoVisits: number;
+  reached: Record<EconomicState, number>;
+  leak: FunnelLeak | null;
+} {
+  const reached = Object.fromEntries(
+    ECONOMIC_STATES.map(state => [state, 0])
+  ) as Record<EconomicState, number>;
+  const byVisit = new Map<string, LoopEventRow[]>();
+  for (const row of rows || []) {
+    const id = row.prospect_id?.trim();
+    if (!id) continue;
+    const list = byVisit.get(id) || [];
+    list.push(row);
+    byVisit.set(id, list);
+  }
+  let visits = 0;
+  let demoVisits = 0;
+  for (const visitRows of byVisit.values()) {
+    if (isDemoVisit(visitRows)) {
+      demoVisits += 1;
+      continue;
+    }
+    visits += 1;
+    const loop = reconstructLoop(visitRows);
+    const seen = new Set<EconomicState>();
+    for (const stage of loop.reached) seen.add(STATE_FOR_STAGE[stage]);
+    for (const state of seen) reached[state] += 1;
+  }
+  return { visits, demoVisits, reached, leak: largestFunnelLeak(reached) };
+}
+
+/**
  * Record a stage at most once per (visit, stage, dedupeKey).
  *
  * Returns whether it wrote. Provisioning and webhooks can fire more than once;
@@ -711,6 +825,31 @@ export const DPP_SMOKE_PROMO = "DPP-SMOKE-E2E";
 
 export function isDppSmokePromo(value: string | null | undefined): boolean {
   return (value || "").trim().toUpperCase() === DPP_SMOKE_PROMO;
+}
+
+const DPP_SMOKE_SECRET_MIN = 16;
+
+function timingSafeEqual(a: string, b: string): boolean {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < len; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
+/**
+ * True only when `configured` is a real secret and `provided` matches it.
+ * Fail closed when the secret is missing or shorter than 16 characters.
+ * Callers pass the `x-dpp-smoke-secret` header, never a query parameter.
+ */
+export function dppSmokeRequestAuthorized(
+  provided: string | null | undefined,
+  configured: string | null | undefined
+): boolean {
+  const secret = (configured ?? "").trim();
+  if (secret.length < DPP_SMOKE_SECRET_MIN) return false;
+  return timingSafeEqual((provided ?? "").trim(), secret);
 }
 
 /**

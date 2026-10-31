@@ -103,6 +103,17 @@ test("the apex still renders the marketing page", async () => {
   assert.match(html, /--bg: #ffffff/);
 });
 
+test("RES-209: the apex footer carries the non-affiliation line", async () => {
+  const html = await (await get("/")).text();
+  assert.ok(
+    html.includes("GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency."),
+    "govchain.us footer must carry the non-affiliation line"
+  );
+  for (const banned of [/eSign Act/i, /legally binding/i, /Public Records on Blockchain/i]) {
+    assert.doesNotMatch(html, banned);
+  }
+});
+
 test("the sitemap lists only real URLs and no fragments", async () => {
   const res = await get("/sitemap.xml");
   const xml = await res.text();
@@ -222,7 +233,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
     );
     assert.equal(
       body.pricing.humanCheckout.farmPaymentLink,
-      planPaymentLink("strainchain_farm"),
+      undefined,
       path
     );
     assert.equal(
@@ -259,7 +270,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
   assert.equal(required.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
 });
 
-test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async () => {
+test("GET /api/x402/catalog publishes Passport and DPP links, not Farm", async () => {
   const res = await get("/api/x402/catalog");
   assert.equal(res.status, 200);
   const body = (await res.json()) as {
@@ -272,10 +283,7 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
     };
   };
   assert.equal(body.catalog, "/api/x402/catalog");
-  assert.equal(
-    new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-    "authichain.com"
-  );
+  assert.equal(body.humanCheckout.farmPaymentLink, undefined);
   assert.equal(
     new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
     "authichain.com"
@@ -442,6 +450,64 @@ test("/onboard is proxied to the app, not answered with a 404", async () => {
   }
 });
 
+test("/api/govchain/grants proxies the canonical JSON handler", async () => {
+  const calls: Request[] = [];
+  const env = {
+    ...ENV,
+    VERIFY_APP: {
+      fetch: async (request: Request) => {
+        calls.push(request);
+        return Response.json(
+          { grants: [{ program: "Small Business Innovation Research", agency: "GSA" }], total: 1, limit: 20, offset: 0 },
+          { status: 200 },
+        );
+      },
+    },
+  } as typeof ENV;
+  const res = await worker.fetch(
+    new Request("https://govchain.us/api/govchain/grants?agency=GSA"),
+    env,
+  );
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") ?? "", /application\/json/);
+  assert.equal(res.headers.get("x-served-by"), "govchain-us-proxy");
+  assert.equal(calls.length, 1);
+  assert.equal(new URL(calls[0].url).pathname, "/api/govchain/grants");
+  assert.equal(new URL(calls[0].url).search, "?agency=GSA");
+  assert.equal(calls[0].headers.get("X-Forwarded-Host"), "govchain.us");
+  const body = (await res.json()) as { grants: StubRow[]; total: number };
+  assert.equal(body.total, 1);
+  assert.equal(body.grants[0].agency, "GSA");
+});
+
+test("/api/govchain/grants fails closed when the app binding is absent", async () => {
+  const res = await get("/api/govchain/grants");
+  assert.equal(res.status, 503);
+  assert.deepEqual(await res.json(), { error: "app_not_bound" });
+});
+
+test("/api/govchain/opportunities applies the search query", async () => {
+  const f = stubSupabase([ROW]);
+  try {
+    const res = await get("/api/govchain/opportunities?min_fit=70&limit=6&q=Cyber%20support");
+    assert.equal(res.status, 200);
+    assert.ok(
+      f.calls[0].includes("title.ilike.*Cyber%20support*"),
+      "q reaches PostgREST title search"
+    );
+    assert.ok(
+      f.calls[0].includes("agency.ilike.*Cyber%20support*"),
+      "q reaches PostgREST agency search"
+    );
+    assert.ok(
+      f.calls[0].includes("notice_id.ilike.*Cyber%20support*"),
+      "q reaches PostgREST notice search"
+    );
+  } finally {
+    f.restore();
+  }
+});
+
 test("/api/govchain/opportunities returns JSON the homepage can parse", async () => {
   const f = stubSupabase([ROW]);
   try {
@@ -556,4 +622,16 @@ test("reads go through the public views, never the base tables", async () => {
   } finally {
     f.restore();
   }
+});
+
+// CFA-147 / PM-349 / PM-393: no "Contract deployed on Polygon" claim and no
+// 0x4da4 contract link until wallet ownership is proven.
+test("the apex makes no Polygon contract claim (CFA-147)", async () => {
+  const res = await get("/");
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  for (const banned of [/live on Polygon/i, /deployed on Polygon/i, /0x4da4/i]) {
+    assert.doesNotMatch(html, banned, `/ must not contain ${banned}`);
+  }
+  assert.match(html, /Hash-anchoring of claims is in development\./);
 });

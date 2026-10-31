@@ -33,7 +33,7 @@ export default async function QronSeoPage({ params }: { params: Promise<{ slug: 
       <p className="mt-6 max-w-2xl text-xl leading-8 opacity-75">{page.description}</p>
       <div className="mt-10 flex flex-wrap gap-4">
         <Link className="rounded-full bg-black px-6 py-3 font-medium text-white" href="/starmap">Create your Nightstamp</Link>
-        <Link className="rounded-full border px-6 py-3 font-medium" href="/order?preset=starmap">See Nightstamp options</Link>
+        <Link className="rounded-full border px-6 py-3 font-medium" href="/starmap">See Nightstamp options</Link>
       </div>
       <section className="mt-16 grid gap-6 md:grid-cols-3">
         <article><h2 className="font-semibold">Real sky</h2><p className="mt-2 opacity-70">Date, time, latitude, longitude, and timezone determine the star field.</p></article>

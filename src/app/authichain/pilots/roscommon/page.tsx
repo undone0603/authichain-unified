@@ -34,7 +34,7 @@ const stampSheet = [
     theme: 'Cybersecurity & Data',
     price: '$2.00',
     img: '/media/samples/01-neon-glitch.png',
-    sub: 'Ed25519 in print',
+    sub: '',
   },
 ] as const;
 
@@ -149,9 +149,11 @@ export default function RoscommonPilotPage() {
               <p className="text-[10px] font-black uppercase tracking-widest text-zinc-300 mt-2">
                 {s.theme}
               </p>
-              <p className="text-[9px] font-medium text-zinc-500 mt-1 leading-snug">
-                {s.sub}
-              </p>
+              {s.sub && (
+                <p className="text-[9px] font-medium text-zinc-500 mt-1 leading-snug">
+                  {s.sub}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -215,7 +217,6 @@ export default function RoscommonPilotPage() {
             {[
               { stat: '3', label: 'Revenue tiers per stamp' },
               { stat: '~25%', label: 'Scan lift vs plain QR' },
-              { stat: 'Ed25519', label: 'Cryptographic provenance' },
             ].map((s) => (
               <div
                 key={s.label}

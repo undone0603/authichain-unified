@@ -6,33 +6,55 @@ name: Typecheck ratchet
 
 on:
   pull_request:
+    # GB-26 fix 3: skip PRs that touch ONLY these paths. Kept narrow on
+    # purpose: docs/** is NOT ignored because product code renders and
+    # validates it (workers/authichain-com docs pages, identity validators,
+    # src/lib/authentic-economy.ts). Pushes to main are never filtered.
+    paths-ignore:
+      - "*.md"
+      - "**/CHANGELOG.md"
+      - "docs/archive/**"
   push:
     branches: [main]
 
 concurrency:
-  group: typecheck-ratchet-${{ github.ref }}
+  # PM ruling Oct 24: CI-only per-workflow group, cancel stale runs so a
+  # push to main cannot pile CI up ahead of a deploy on the single
+  # self-hosted runner. Never a deploy group name.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
-
 jobs:
   ratchet:
     name: Typecheck ratchet
-    runs-on: ubuntu-latest
+    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
+    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
-
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
       - name: Install pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
+          # action-setup deletes dest on every job. A shared ~/setup-pnpm
+          # races when both self-hosted runners install pnpm together.
+          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
-          cache: "pnpm"
+          # Self-hosted runners keep a persistent pnpm store. Uploading it
+          # through actions/cache packs ~1 GB and stalls the runner.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -42,3 +64,14 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=8192
         run: node scripts/typecheck-ratchet.mjs
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +

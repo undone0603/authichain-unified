@@ -549,7 +549,6 @@ export function ecosystemFooter(currentBrand: keyof typeof BRANDS) {
       <div class="footer-col-title">Protocol</div>
       <div class="footer-col-links">
         <a href="https://authichain.com/api">API Gateway</a>
-        <a href="https://polygonscan.com/address/0xc3143254997d48fdc9983d618fb2e10067673eb5" target="_blank">Verify Contract</a>
         <a href="#">Staking</a>
       </div>
     </div>

@@ -167,7 +167,6 @@ export default function DemoGalleryPage() {
             <div className="flex gap-8 text-[9px] font-bold uppercase">
                 <span>Terms</span>
                 <span>Privacy</span>
-                <span>DAO</span>
             </div>
         </div>
       </footer>

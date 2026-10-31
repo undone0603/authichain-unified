@@ -34,7 +34,6 @@ export function proxy(request: NextRequest) {
     url.pathname.startsWith('/success') ||
     url.pathname.startsWith('/terms') ||
     url.pathname.startsWith('/privacy') ||
-    url.pathname.startsWith('/governance') ||
     url.pathname.startsWith('/digital-product-passport') ||
     url.pathname.startsWith('/authichain') ||
     url.pathname.startsWith('/p/') || 
@@ -48,12 +47,6 @@ export function proxy(request: NextRequest) {
   // Rewrite the ROOT path ('/') and all sub-paths for branded domains.
   const hostname = host.toLowerCase().split(':')[0];
   
-  // GovChain.us
-  if (hostname.includes('govchain.us')) {
-    const path = url.pathname === '/' ? '/governance' : `/governance${url.pathname}`;
-    return NextResponse.rewrite(new URL(path, request.url));
-  }
-
   // StrainChain.io
   if (hostname.includes('strainchain.io')) {
     const path = url.pathname === '/' ? '/digital-product-passport' : `/digital-product-passport${url.pathname}`;

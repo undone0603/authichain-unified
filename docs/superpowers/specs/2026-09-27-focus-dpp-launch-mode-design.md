@@ -83,7 +83,8 @@ Runs on push to `main` touching `server.json`, and on dispatch.
 ### B3. npm `authichain-verify`
 
 Workflow `npm-publish-verify.yml` publishes `protocol/` when its version is
-not yet on npm. Uses `NPM_TOKEN` if set, otherwise npm trusted publishing
+not yet on npm. It runs on manual dispatch only (AE-20261002-CFD-13): merging a
+version bump to `main` does not publish. Uses `NPM_TOKEN` if set, otherwise npm trusted publishing
 (OIDC). With neither, it logs a notice and exits green. The first publish of a
 new package needs `NPM_TOKEN` once (npm does not allow a trusted publisher
 before the package exists).

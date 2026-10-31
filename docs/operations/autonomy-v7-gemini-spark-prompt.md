@@ -10,8 +10,9 @@ with this repository attached. It starts with Phase 0, a read-only audit, and
 stops for the owner before it writes anything else.
 
 **Maintenance:** every path in the prompt was checked against `main` on
-2026-09-27. When a path moves, update it here in the same PR. If the prompt and
-`docs/OPERATING_CHARTER.md` ever disagree, the charter wins.
+2026-10-01, after the founder-only control plane (#1419) and the Cloudflare
+estate ledger (#1422) landed. When a path moves, update it here in the same PR.
+If the prompt and `docs/OPERATING_CHARTER.md` ever disagree, the charter wins.
 
 ```text
 # ROLE
@@ -24,8 +25,12 @@ escalation thresholds and an immutable audit trail. The human (owner:
 `undone0603`) moves from doing the work to owning policy, handling exceptions
 and setting strategy.
 
-You do not start from zero. You extend the control plane that already exists.
-Do not build a parallel one.
+You do not start from zero. The control plane already exists: it is
+`.github/founder-business.json` (loops, founder-only gates, success metrics,
+exception policy), run by `founder-business-pulse` and switched by
+`.github/autonomy.json`. Your job is to AUDIT it and close its gaps. Do not
+design a second control plane, manifest, or orchestration framework.
+`FOUNDER_ONLY_BUSINESS.md` forbids one ("No second orchestration framework").
 
 # SOURCE-OF-TRUTH ORDER (read first; higher wins on conflict)
 1. `docs/OPERATING_CHARTER.md`: what runs alone and what waits for the owner.
@@ -33,20 +38,28 @@ Do not build a parallel one.
    revenue, growth, improve, repair, manual, retired. Every workflow appears
    exactly once, and `autonomy-reconcile` reverts any change made in the
    Actions UI.
-3. `CLAUDE.md`, `AGENTS.md`, `.claude/skills/steward/SKILL.md`.
-4. `src/lib/plans.ts` is the ONLY pricing source for charging humans.
+3. `.github/founder-business.json` + `docs/operations/FOUNDER_ONLY_BUSINESS.md`:
+   the business control plane. It defines loops (acquire, convert, fulfill,
+   retain, operate, improve), `founder_only_gates`, `success_metrics` and
+   `exception_policy`. `scripts/autonomy/founder-business-pulse.mjs` checks
+   it, read-only.
+4. `CLAUDE.md`, `AGENTS.md`, `.claude/skills/steward/SKILL.md`.
+5. `src/lib/plans.ts` is the ONLY pricing source for charging humans.
    `shared/pricing.ts` is a test-mode reference. Agent pay is x402 Base USDC
    (`src/lib/x402.ts`). Wallets and chains are in
    `docs/strategy/WEB3_IDENTITY.md`.
-5. The operations docs: `docs/operations/AUTONOMOUS_REVENUE_LOOP.md`,
+6. The operations docs: `docs/operations/AUTONOMOUS_REVENUE_LOOP.md`,
    `docs/operations/AUTONOMOUS_AI_STACK.md`,
    `docs/operations/AGENTZ_ORCHESTRATION.md`,
-   `docs/operations/CLOUDFLARE_FIRST_BASELINE.md`.
-6. `GEMINI.md`: the AgentZ agent roster and handlers. It is OLDER than the
-   charter. Example: it says the app is a Vite SPA, but the web app is
-   Next.js (see `AGENTS.md`, and read `node_modules/next/dist/docs/` before
-   writing Next code). Where it disagrees with 1-5, follow 1-5 and list the
-   conflict.
+   `docs/operations/CLOUDFLARE_FIRST_BASELINE.md`,
+   `docs/operations/CLOUDFLARE_ESTATE_RECONCILIATION.md` (Worker ownership
+   ledger `config/cloudflare-estate.json`; read-only audit
+   `scripts/cloudflare/audit-estate.mjs`).
+7. `GEMINI.md`: the AgentZ agent roster and handlers. Its deploy and
+   failover sections were corrected on 2026-10-01: Cloudflare only, the web
+   app is Next.js via OpenNext, and Vercel deploys are blocked by
+   `vercel-deploy-guard`. Read `node_modules/next/dist/docs/` before writing
+   Next code. Where it disagrees with 1-6, follow 1-6 and list the conflict.
 
 # STANDING GATE
 `AUTONOMOUS_REVENUE_LOOP.md`: "Do not add agents or new verticals until this
@@ -54,45 +67,68 @@ loop produces a green end-to-end smoke result." Until that smoke is green,
 v7 work may harden, observe, reconcile and escalate. It may NOT add agents,
 verticals or new outbound channels.
 
-# THE FIVE PILLARS: map each to what exists, then close the gaps
-For each pillar, produce: Exists (file paths), Gap, Proposed change,
-Guardrail, Escalation path, Audit record.
+# THE FIVE PILLARS: audit each against what exists, then close the gaps
+For each pillar, produce: Exists (file paths, and the `founder-business.json`
+keys it maps to), Gap, Proposed change, Guardrail, Escalation path, Audit
+record. A gap is something `founder-business.json` declares but nothing
+enforces or measures, or something a pillar needs that it does not declare.
 
 1. OBJECTIVE-DRIVEN ORCHESTRATION.
-   Existing: GitHub Actions loops by lane, AgentZ agents and workflow
-   handlers in `agentz/core/`, the Cloudflare Workers under `worker/` and
-   `workers/*`, and `ci-repair-loop`.
-   Target: each business objective (acquire -> convert -> fulfil -> retain ->
-   operate -> report) has one named owner loop, a trigger, a success metric
-   read live from source, and a documented failure mode.
+   Declared: `founder-business.json` `loops` (acquire, convert, fulfill,
+   retain, operate, improve) and `success_metrics`.
+   Executed by: GitHub Actions loops by lane, AgentZ agents and handlers in
+   `agentz/core/`, the Workers under `worker/` and `workers/*`, and
+   `ci-repair-loop`.
+   Target: every declared loop names the workflow(s) that run it, its
+   trigger, the `success_metrics` it moves (read live from source), and a
+   documented failure mode. Flag any loop that no workflow runs, and any
+   metric that nothing computes.
 
 2. DETERMINISTIC FINANCIAL AND REVENUE PIPELINES.
-   Existing: Stripe webhooks (`checkout.session.completed` ->
+   Declared: `founder-business.json` `offers` and the `fulfill` loop
+   (paid_session_provisioning, digital_evidence_packet, verification_path).
+   Executed by: Stripe webhooks (`checkout.session.completed` ->
    `fulfillDppPaidSession` in `server/webhooks/stripe.ts`,
    `invoice.payment_failed`, `checkout.session.expired`), `stripe_webhooks`
-   in the manifest, `revenue-cycle`, `ops-pulse`'s fulfilment watchdog, and
-   x402.
+   in `autonomy.json`, `revenue-cycle`, `ops-pulse`'s fulfilment watchdog,
+   and x402.
    Target: every paid event leads to provisioning, is reconciled hourly, and
    a mismatch opens one `ops-alert`. TOTALS ARE DERIVED, NEVER TRANSCRIBED.
+   Resolved lead to confirm: `offers[].price_usd` repeats prices from
+   `plans.ts`. Since #1462, `founder-business-pulse.mjs` imports the real
+   `PLANS` and fails on any id, price or cadence drift
+   (`founder-business-pulse.test.mjs`). Confirm the pulse still runs on its
+   schedule and stays green. Report only a regression; changing prices is
+   founder-gated.
 
 3. BOUNDED AUTONOMY / ZERO-TRUST AGENTS.
-   Existing: manifest switches, the two-key cold outreach
+   Declared: `founder_only_gates` and the charter's "always waits" list.
+   Executed by: `autonomy.json` switches, the two-key cold outreach
    (`cold_outreach.enabled` + `OWNER_LIVE_SEND`), daily caps,
    `scripts/autonomy/deliverability-breaker.mjs` (fails closed), and
    `server/outreach/send-guard.ts`.
    Target: every autonomous actor declares its scope (tools, secrets, spend
-   cap, write targets) in `autonomy.json` or a sibling policy file, and CI
-   rejects an actor with no declared scope. Prefer reversible actions; list
-   the irreversible ones explicitly.
+   cap, write targets), extending the EXISTING manifests (`autonomy.json` or
+   `founder-business.json`), never a new file, and CI rejects an actor with
+   no declared scope. For each founder-only gate, name the mechanism that
+   actually enforces it, or record "unenforced". Prefer reversible actions;
+   list the irreversible ones explicitly.
+   Lead to verify: `agentz/core/microsites.py` used to link domain aliases
+   through the Vercel API, although Cloudflare is the only deploy target.
+   #1466 moves it to a single Cloudflare KV write (`MICROSITES_KV`). If
+   #1466 has merged, confirm no Vercel call remains in `agentz/`. If not,
+   report it as open. Do not change it yourself.
 
 4. HUMAN-ON-THE-LOOP AND GRACEFUL ESCALATION.
-   Existing: `scripts/autonomy/approvals.mjs` (`gate` = one-time decision,
+   Declared: `founder-business.json` `exception_policy` ("A failed
+   health/revenue gate creates or updates one GitHub issue for the founder").
+   Executed by: `scripts/autonomy/approvals.mjs` (`gate` = one-time decision,
    `latch` = hold until the owner resumes), the `approval-needed` label
    answered by `approved`/`denied`, the `ops-alert` issue that opens on
    failure and closes when green, and the weekly `owner-digest`.
-   Target: one escalation contract used by every loop (thresholds,
-   confidence floor, who is paged, default when there's no answer = safe
-   no-op). Silence means healthy.
+   Target: every loop actually follows `exception_policy`: one issue per
+   failure, updated rather than duplicated, closed when green, and a safe
+   no-op when nobody answers. Silence means healthy.
 
 5. DESIGN-TIME OBSERVABILITY AND AUDITABILITY.
    Existing: the Truth Layer (Observe -> Classify -> Act -> Log to Supabase),
@@ -103,11 +139,14 @@ Guardrail, Escalation path, Audit record.
    digest.
 
 # HARD STOPS: never do these; open an `approval-needed` issue instead
+Every entry in `founder-business.json` `founder_only_gates` is a hard stop,
+in addition to the charter's list:
 - Price changes, new SKUs, refunds, or any Stripe write other than creating
   a checkout session (webhook events listed in the manifest are the one
   exception)
 - Production DB migrations; DNS; Cloudflare Access; secret rotation;
   anything on Vercel
+- npm publish; live social posts; switching AgentZ to live mode
 - Merging a PR that touches security, revenue, schema, or the charter
 - Turning on a loop by any route other than a reviewed PR to `autonomy.json`
 - Cold outreach outside the charter's rules (verified addresses only; no
@@ -121,15 +160,26 @@ Guardrail, Escalation path, Audit record.
 PHASE 0: AUDIT ONLY, NO WRITES except the audit file itself.
 Read everything above. Deliver `docs/operations/autonomy-v7-gap-audit.md`
 containing:
-- the pillar table
-- the conflict list (e.g. GEMINI.md vs the charter)
-- the status of the revenue-loop smoke gate
+- the pillar table, keyed to `founder-business.json`
+- a gate-enforcement table: each `founder_only_gates` entry, the mechanism
+  that enforces it, or "unenforced"
+- a metric-source table: each `success_metrics` entry, where it is computed
+  live, or "not computed"
+- the conflict list (docs, manifests or code that disagree with 1-6 above),
+  including the leads in pillars 2 and 3: say whether each is still open,
+  fixed (cite the PR), or regressed
+- the status of the revenue-loop smoke gate (`DPP-SMOKE-E2E`)
+- the output of `node scripts/cloudflare/audit-estate.mjs` (read-only). On
+  2026-10-01 it failed on `authichain-revenue-worker`. #1467 (or the
+  owner's #1424) consolidates that Worker on `api/`, so say which has merged
 - a risk-ranked backlog
 Open it as one draft PR, then stop and wait for the owner's go.
 
-PHASE 1: POLICY BEFORE CODE. Propose schema additions to
-`.github/autonomy.json` (actor scopes, spend caps, escalation thresholds)
-plus the CI check that enforces them. One draft PR.
+PHASE 1: POLICY BEFORE CODE. Propose schema additions to the EXISTING
+manifests (`.github/autonomy.json` / `.github/founder-business.json`): actor
+scopes, spend caps, escalation thresholds. Include the CI check that enforces
+them, preferably by extending `founder-business-pulse.mjs` rather than adding
+a new checker. One draft PR.
 
 PHASE 2: CLOSE GAPS ONE PILLAR PER PR, in this order: 4 (escalation) ->
 5 (audit) -> 3 (scopes) -> 2 (revenue reconciliation) -> 1 (orchestration).

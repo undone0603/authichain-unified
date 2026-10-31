@@ -51,9 +51,104 @@ export async function POST(request: Request) {
 
   const admin = getAdmin();
   const stripe = getStripe();
-  const day = new Date().toISOString().slice(0, 10);
+  const processedClaims = new Set<string>();
+  let paid = 0,
+    needsReview = 0,
+    heldMinimum = 0,
+    failed = 0;
+  const errors: string[] = [];
 
-  // Affiliates with money owed
+  const processClaim = async (claim: {
+    id: string;
+    affiliate_id: string;
+    affiliate_user_id: string;
+    amount_cents: number;
+    destination_account: string;
+    idempotency_key: string;
+  }) => {
+    processedClaims.add(claim.id);
+    const amount = Number(claim.amount_cents) / 100;
+    try {
+      const transfer = await stripe.transfers.create(
+        {
+          amount: Number(claim.amount_cents),
+          currency: "usd",
+          destination: claim.destination_account,
+          metadata: {
+            affiliate_table_id: claim.affiliate_id,
+            payout_claim_id: claim.id,
+            source: "authichain_affiliate",
+          },
+        },
+        { idempotencyKey: claim.idempotency_key }
+      );
+
+      const { error: auditError } = await admin
+        .from("affiliate_payouts")
+        .upsert(
+          {
+            affiliate_id: claim.affiliate_user_id,
+            amount,
+            currency: "usd",
+            status: "paid",
+            stripe_transfer_id: transfer.id,
+            idempotency_key: claim.idempotency_key,
+            paid_at: new Date().toISOString(),
+            metadata: {
+              affiliate_table_id: claim.affiliate_id,
+              payout_claim_id: claim.id,
+            },
+          },
+          { onConflict: "idempotency_key" }
+        );
+      if (auditError) throw new Error(`Payout audit write failed: ${auditError.message}`);
+
+      const { data: completed, error: completeError } = await admin.rpc(
+        "complete_affiliate_payout",
+        {
+          p_claim_id: claim.id,
+          p_stripe_transfer_id: transfer.id,
+        }
+      );
+      if (completeError || completed !== true) {
+        throw new Error(
+          `Payout claim completion failed: ${completeError?.message || "claim not completed"}`
+        );
+      }
+      paid++;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const { error: claimError } = await admin
+        .from("affiliate_payout_claims")
+        .update({ error_message: msg.slice(0, 1000) })
+        .eq("id", claim.id)
+        .eq("status", "processing");
+      if (claimError) {
+        console.error("[affiliate-payout] Failed to annotate claim:", claimError);
+      }
+      failed++;
+      errors.push(`affiliate ${claim.affiliate_id}: ${msg}`);
+    }
+  };
+
+  // A claim left processing after an ambiguous Stripe/API/database failure is
+  // retried with the same Stripe idempotency key before new balances are paid.
+  const { data: outstanding, error: outstandingError } = await admin
+    .from("affiliate_payout_claims")
+    .select(
+      "id, affiliate_id, affiliate_user_id, amount_cents, destination_account, idempotency_key"
+    )
+    .eq("status", "processing")
+    .limit(100);
+  if (outstandingError) {
+    return NextResponse.json({ error: outstandingError.message }, { status: 500 });
+  }
+  for (const claim of outstanding || []) {
+    await processClaim(claim);
+  }
+
+  // Affiliates with new money owed. The RPC locks the affiliate row and moves
+  // the amount into one durable payout claim before any Stripe request occurs.
   const { data: owed, error: fetchErr } = await admin
     .from("affiliates")
     .select(
@@ -76,104 +171,92 @@ export async function POST(request: Request) {
   if (!owed || owed.length === 0) {
     return NextResponse.json({
       ok: true,
-      processed: 0,
+      processed: paid + failed,
       message: "No affiliates with pending payout",
     });
   }
-
-  let paid = 0,
-    needsReview = 0,
-    heldMinimum = 0,
-    failed = 0;
-  const errors: string[] = [];
 
   for (const a of owed) {
     const amount = parseFloat(a.pending_payout as unknown as string);
     const amountCents = Math.round(amount * 100);
 
     // Resolve the affiliate's connected Stripe account from their profile
-    const { data: profile } = await admin
+    const { data: profile, error: profileError } = await admin
       .from("profiles")
       .select("stripe_account_id, email")
       .eq("id", a.user_id)
       .maybeSingle();
+    if (profileError) {
+      failed++;
+      errors.push(`affiliate ${a.id}: profile lookup failed: ${profileError.message}`);
+      continue;
+    }
     const stripeAccountId = (profile as { stripe_account_id?: string } | null)
       ?.stripe_account_id;
 
     if (!stripeAccountId) {
-      await admin.from("affiliate_payouts").insert({
-        affiliate_id: String(a.user_id),
-        amount,
-        currency: "usd",
-        status: "needs_review",
-        metadata: {
-          affiliate_table_id: a.id,
-          affiliatecode: a.affiliatecode,
-          reason: "no_stripe_account",
+      const { error: auditError } = await admin.from("affiliate_payouts").upsert(
+        {
+          affiliate_id: String(a.user_id),
+          amount,
+          currency: "usd",
+          status: "needs_review",
+          idempotency_key: `affreview_${a.id}_${amountCents}`,
+          metadata: {
+            affiliate_table_id: a.id,
+            affiliatecode: a.affiliatecode,
+            reason: "no_stripe_account",
+          },
         },
-      });
+        { onConflict: "idempotency_key" }
+      );
+      if (auditError) {
+        failed++;
+        errors.push(`affiliate ${a.id}: needs-review write failed: ${auditError.message}`);
+      }
       needsReview++;
       continue;
     }
 
     if (amountCents < 100) {
-      // Stripe minimum transfer is $1
       heldMinimum++;
       continue;
     }
 
-    try {
-      const transfer = await stripe.transfers.create(
-        {
-          amount: amountCents,
-          currency: "usd",
-          destination: stripeAccountId,
-          metadata: {
-            affiliate_table_id: String(a.id),
-            user_id: String(a.user_id),
-            source: "authichain_affiliate",
-          },
-        },
-        { idempotencyKey: `affpayout_${a.id}_${amountCents}_${day}` }
-      );
-
-      await admin.from("affiliate_payouts").insert({
-        affiliate_id: String(a.user_id),
-        amount,
-        currency: "usd",
-        status: "paid",
-        stripe_transfer_id: transfer.id,
-        paid_at: new Date().toISOString(),
-        metadata: { affiliate_table_id: a.id, affiliatecode: a.affiliatecode },
-      });
-
-      // Reset pending_payout, guarded on the exact amount we just paid so a
-      // concurrent accrual isn't lost.
-      await admin
-        .from("affiliates")
-        .update({
-          pending_payout: 0,
-          total_earnings:
-            parseFloat((a.total_earnings as unknown as string) || "0") + amount,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", a.id)
-        .eq("pending_payout", a.pending_payout);
-
-      paid++;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      await admin.from("affiliate_payouts").insert({
-        affiliate_id: String(a.user_id),
-        amount,
-        currency: "usd",
-        status: "failed",
-        error_message: msg,
-        metadata: { affiliate_table_id: a.id },
-      });
+    const { data: claimData, error: claimError } = await admin.rpc(
+      "claim_affiliate_payout",
+      {
+        p_affiliate_id: String(a.id),
+        p_destination_account: stripeAccountId,
+      }
+    );
+    if (claimError) {
       failed++;
-      errors.push(`affiliate ${a.id}: ${msg}`);
+      errors.push(`affiliate ${a.id}: payout claim failed: ${claimError.message}`);
+      continue;
     }
+    const claim = claimData as {
+      claimed?: boolean;
+      reason?: string;
+      id?: string;
+      affiliate_id?: string;
+      affiliate_user_id?: string;
+      amount_cents?: number;
+      destination_account?: string;
+      idempotency_key?: string;
+    } | null;
+    if (!claim?.claimed || !claim.id || !claim.amount_cents || !claim.idempotency_key) {
+      if (claim?.reason === "below_minimum_or_unconnected") heldMinimum++;
+      continue;
+    }
+    await processClaim({
+      id: claim.id,
+      affiliate_id: String(a.id),
+      affiliate_user_id: String(a.user_id),
+      amount_cents: claim.amount_cents,
+      destination_account: claim.destination_account || stripeAccountId,
+      idempotency_key: claim.idempotency_key,
+    });
   }
 
   const status = failed > 0 && paid === 0 ? "failure" : "success";

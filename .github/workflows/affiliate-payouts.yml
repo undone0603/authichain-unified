@@ -1,0 +1,70 @@
+name: Affiliate payouts
+
+# Monthly run of the affiliate payout processor (POST /api/affiliate/payout on
+# the Next app). Commission accrues on paid checkouts and renewals
+# (src/lib/affiliate-accrual.ts); until this runs, nothing pays it out.
+#
+# The route itself is the safety layer: it does nothing unless
+# STRIPE_CONNECT_ENABLED=true, holds balances under the $1 Stripe minimum,
+# records affiliates without a connected account as needs_review instead of
+# paying them, and uses a per-affiliate, per-amount, per-day idempotency key
+# so a second run on the same day cannot transfer twice.
+#
+# Switched in .github/autonomy.json (revenue lane). Added "off" on 2026-09-30;
+# the owner turns it on by changing that line to "on" and merging.
+
+on:
+  schedule:
+    - cron: "0 15 1 * *" # 1st of each month, 15:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: affiliate-payouts
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
+
+jobs:
+  payout:
+    name: Run affiliate payout processor
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require INTERNAL_API_SECRET
+        env:
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+        run: |
+          if [ -z "${INTERNAL_API_SECRET}" ]; then
+            echo "::error::INTERNAL_API_SECRET repo secret is not set; the payout route would refuse the call."
+            exit 1
+          fi
+
+      - name: Call payout processor
+        env:
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+        run: |
+          set -euo pipefail
+          status=$(curl -sS -o resp.json -w "%{http_code}" -X POST \
+            -H "x-internal-secret: ${INTERNAL_API_SECRET}" \
+            -H "content-type: application/json" \
+            "${APP_URL}/api/affiliate/payout")
+          echo "HTTP ${status}"
+          cat resp.json
+          {
+            echo "### Affiliate payouts"
+            echo ""
+            echo "HTTP ${status}"
+            echo ""
+            echo '```json'
+            cat resp.json
+            echo ""
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${status}" -lt 200 ] || [ "${status}" -ge 300 ]; then
+            echo "::error::Payout processor returned HTTP ${status}"
+            exit 1
+          fi

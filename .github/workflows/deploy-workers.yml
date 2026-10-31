@@ -16,6 +16,13 @@ on:
         required: false
         type: boolean
         default: false
+concurrency:
+  # Prevent overlapping worker deployments from concurrent pushes/dispatches.
+  group: deploy-workers-${{ github.head_ref || github.ref }}
+  # Only PR runs are superseded; a push to main must never cancel a running
+  # deploy/check mid-way (PM-328). Newer main runs queue behind it instead.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
   id-token: write
@@ -23,37 +30,62 @@ permissions:
 jobs:
   secret-scan:
     name: Secret scan
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: Scan for secrets
-        uses: gitleaks/gitleaks-action@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ENABLE_COMMENTS: "false"
-          GITLEAKS_CONFIG: .gitleaks.toml
+      - name: Scan the tree being deployed
+        run: |
+          # Tree scan only. Removed keys in old commits were failing a
+          # history scan and skipping every deploy.
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_arm64.tar.gz -o gitleaks.tgz
+          tar --no-same-owner -xzf gitleaks.tgz gitleaks
+          ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
 
   # GitHub evaluates jobs.<id>.if BEFORE strategy expands, so a job-level
   # `if: matrix.worker != 'authichain-agentz'` fails the entire workflow graph
   # (Unrecognized named-value: 'matrix', 0 jobs, "This workflow graph cannot
   # be shown."). Build the list here instead: $0 default omits agentz;
   # workflow_dispatch + deploy_agentz_containers=true appends it (Workers Paid).
+  #
+  # This job now also runs on a plain push (CLOUDFLARE_DEPLOY_ENABLED off,
+  # not workflow_dispatch) to narrow `workers` down to whichever
+  # AUTO_DEPLOY_ALLOWLIST worker(s) actually changed -- or to `[]` if none
+  # did, or if the diff step below hits any error (a shallow-clone edge
+  # case, a force-push, anything). An allow-listed worker earns its place by
+  # having its own local test suite covering an external judge's checks
+  # (gs1-resolver's is workers/gs1-resolver/src/conformance.test.ts,
+  # mirroring GS1's hosted suite) -- not just CI type/lint, which every
+  # worker already has. `deploy` below consumes whatever this outputs
+  # unchanged: a full list (CLOUDFLARE_DEPLOY_ENABLED, or blank
+  # workflow_dispatch), a single-worker list (workflow_dispatch with
+  # inputs.worker set), a narrowed one-or-few-worker list (auto-deploy),
+  # or an empty one (a plain push touching no allow-listed worker) --
+  # so no per-step gating anywhere below this job needs to change, and no
+  # *other* worker's bind step can ever run on the auto-deploy path, because
+  # no other worker is ever in that path's matrix.
   deploy-matrix:
     name: Build worker matrix
-    runs-on: ubuntu-latest
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     timeout-minutes: 5
     outputs:
       workers: ${{ steps.build.outputs.workers }}
     steps:
-      - name: Select workers ($0 default; AgentZ opt-in)
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Select workers ($0 default; AgentZ opt-in; auto-deploy narrows on a plain push)
         id: build
         env:
           DEPLOY_AGENTZ: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_agentz_containers == 'true' }}
+          CLOUDFLARE_DEPLOY_ENABLED: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED }}
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_WORKER: ${{ github.event.inputs.worker }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           # Keep this list aligned with workers/* that should auto-deploy on
@@ -108,17 +140,58 @@ jobs:
           if [ "${DEPLOY_AGENTZ}" = "true" ]; then
             workers=$(jq -nc --argjson w "${workers}" '$w + ["authichain-agentz"]')
           fi
-          echo "workers=${workers}" >> "${GITHUB_OUTPUT}"
-          if [ "${DEPLOY_AGENTZ}" = "true" ]; then
-            echo "deploy matrix (agentz opt-in): ${workers}"
-          else
-            echo "deploy matrix (\$0 default, agentz omitted): ${workers}"
+
+          if [ "${CLOUDFLARE_DEPLOY_ENABLED}" = "true" ] || [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            # workflow_dispatch with a specific worker must not expand the
+            # full ~40-job matrix (install + checkout per skipped row).
+            # Validate against the known list, then emit a one-element matrix.
+            target="${DISPATCH_WORKER:-}"
+            target="${target#"${target%%[![:space:]]*}"}"
+            target="${target%"${target##*[![:space:]]}"}"
+            if [ -n "${target}" ]; then
+              if ! echo "${workers}" | jq -e --arg t "${target}" 'index($t) != null' >/dev/null; then
+                echo "::error::Unknown worker '${target}'. Pass a directory under workers/ from the deploy matrix (or leave blank for all)."
+                exit 1
+              fi
+              workers=$(jq -nc --arg t "${target}" '[$t]')
+              echo "workers=${workers}" >> "${GITHUB_OUTPUT}"
+              echo "deploy matrix (workflow_dispatch single worker): ${workers}"
+              exit 0
+            fi
+            echo "workers=${workers}" >> "${GITHUB_OUTPUT}"
+            if [ "${DEPLOY_AGENTZ}" = "true" ]; then
+              echo "deploy matrix (agentz opt-in): ${workers}"
+            else
+              echo "deploy matrix (\$0 default, agentz omitted): ${workers}"
+            fi
+            exit 0
           fi
 
+          # Auto-deploy path: CLOUDFLARE_DEPLOY_ENABLED is off and this
+          # isn't a workflow_dispatch, so only an explicitly allow-listed
+          # worker (see the job comment above and
+          # scripts/ci/select-autodeploy-workers.mjs, which owns the
+          # allowlist and is unit-tested) may deploy, and only if it
+          # actually changed in this push. That script never throws -- a
+          # shallow clone missing PUSH_BEFORE, a force-push, anything falls
+          # back to an empty matrix, "nothing auto-deploys this round",
+          # never a job failure that could be confused with a real deploy
+          # problem -- so no `|| true` / `2>/dev/null` fallback is needed
+          # here.
+          eligible=$(node scripts/ci/select-autodeploy-workers.mjs)
+          echo "workers=${eligible}" >> "${GITHUB_OUTPUT}"
+          echo "deploy matrix (auto-deploy, narrowed to changed allow-listed workers): ${eligible}"
+
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
+    timeout-minutes: 45
     needs: [secret-scan, deploy-matrix]
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    # GitHub fails the whole workflow when `strategy.matrix` expands to an
+    # empty array, even if the job is then shown as skipped. The selector
+    # prints `[]` on a plain push that changed no allow-listed worker
+    # (CLOUDFLARE_DEPLOY_ENABLED stays off). Skip this job before strategy
+    # expansion in that case. A non-empty list still deploys.
+    if: ${{ needs.deploy-matrix.outputs.workers != '[]' && needs.deploy-matrix.outputs.workers != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -134,9 +207,12 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: "pnpm"
+          # Skip the Actions cache on the self-hosted publish runner. The hosted agentz job
+          # still caches. A self-hosted save packs ~1 GB and can fail the job
+          # after the worker is already published.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile
 
       # Cloudflare Containers (wrangler.jsonc "containers") need a Docker
       # builder on the runner. Without Buildx, authichain-agentz fails mid-deploy
@@ -191,7 +267,10 @@ jobs:
           else
             CONFIG=wrangler.toml
           fi
-          npx wrangler deploy --minify --config "$CONFIG"
+          # --keep-vars leaves dashboard vars in place. Without it, a full
+          # matrix deploy replaces them with the file and drops Stripe and
+          # x402 vars that are not in wrangler.toml.
+          npx wrangler deploy --minify --keep-vars --config "$CONFIG"
         working-directory: workers/${{ matrix.worker }}
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -302,6 +381,36 @@ jobs:
           fi
           echo "bound STRIPE_SECRET_KEY on authichain-com from GitHub secrets"
 
+      # ISSUE_SECRET is never generated or rotated here -- only propagated
+      # from a value the owner set by hand (gh secret set
+      # GS1_RESOLVER_ISSUE_SECRET). docs/OPERATING_CHARTER.md: secrets
+      # rotation always waits for the owner; this step performs no rotation,
+      # only a mechanical bind of an existing value, same as the Stripe/X402
+      # binds above. ISSUE_SECRET is currently set directly in the Cloudflare
+      # dashboard (rotated 2026-09-30) -- POST /issue works today against
+      # that value regardless of whether this step ever runs. Setting
+      # GS1_RESOLVER_ISSUE_SECRET here will OVERWRITE that dashboard value on
+      # the next deploy -- once set, rotate it with `gh secret set`, not in
+      # the dashboard, or the two will drift.
+      - name: Bind ISSUE_SECRET on gs1-resolver
+        if: |
+          matrix.worker == 'gs1-resolver' &&
+          env.CLOUDFLARE_ACCOUNT_ID != '' &&
+          (github.event.inputs.worker == '' || github.event.inputs.worker == 'gs1-resolver')
+        working-directory: workers/gs1-resolver
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ISSUE_SECRET: ${{ secrets.GS1_RESOLVER_ISSUE_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ISSUE_SECRET:-}" ]; then
+            echo "skip ISSUE_SECRET (GitHub secret GS1_RESOLVER_ISSUE_SECRET not set -- dashboard-set value stays in place)"
+            exit 0
+          fi
+          printf '%s' "$ISSUE_SECRET" | npx wrangler secret put ISSUE_SECRET --name gs1-resolver
+          echo "bound ISSUE_SECRET on gs1-resolver"
+
       # Same values as bind-x402-secrets.yml / deploy-authichain-com.yml.
       # Sisters 402 without this secret; /settle stays closed (dead listing).
       # Do not invent a facilitator URL. Do not print values.
@@ -326,3 +435,26 @@ jobs:
           printf '%s' "$FACILITATOR" | npx wrangler secret put X402_FACILITATOR_URL --name "$NAME"
           printf '%s' "$USDC_ASSET" | npx wrangler secret put X402_USDC_ASSET --name "$NAME"
           echo "bound X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET on ${NAME} (values not logged)"
+
+  # PM-330 item 6: blocking post-deploy smoke, AFTER the deploy job. Fails the
+  # run if a public money/protocol surface is down, answers the wrong code
+  # (unsigned Stripe webhook must 400, unpaid /api/x402 must 402), or redirects
+  # to cloudflareaccess.com. Read-only: HEAD on checkout, nothing signed.
+  # Rollback: delete this job.
+  post-deploy-smoke:
+    name: Post-deploy smoke (blocking)
+    needs: [deploy]
+    if: ${{ needs.deploy.result == 'success' }}
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Setup Node 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Smoke public surfaces after deploy
+        run: node scripts/ci/post-deploy-smoke.mjs

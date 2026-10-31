@@ -46,7 +46,7 @@ export default function Whitepapers() {
         {
           "@type": "TechArticle",
           "headline": "AuthiChain: The Truth Protocol for Industrial Supply Chains",
-          "description": "Technical specification for the world's first Hybrid AI-Blockchain Provenance Protocol using Ed25519-Signed QRONs.",
+          "description": "Technical specification for the world's first Hybrid AI-Blockchain Provenance Protocol.",
           "author": { "@type": "Organization", "name": "AuthiChain Intelligence Council" },
           "datePublished": "2026-05-18",
           "keywords": "Blockchain, Supply Chain, AI, Provenance, Ed25519, QRON, Digital Twin",
@@ -121,7 +121,7 @@ export default function Whitepapers() {
               <WhitepaperCard 
                 title="Industrial Supply Chain Protocol"
                 subtitle="The Truth Protocol for High-Value Assets"
-                desc="A deep dive into Ed25519-Signed QRONs and our 5-Agent AI Consensus model for industrial provenance."
+                desc="A deep dive into our 5-Agent AI Consensus model for industrial provenance."
                 icon={Cpu}
                 badge="NSF SBIR v1.2"
                 date="May 18, 2026"

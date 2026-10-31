@@ -344,7 +344,7 @@ export interface CultivarView {
   parentEdges: LineageEdge[];
   childEdges: LineageEdge[];
   openQuestions: OpenQuestion[];
-  thcvRank: number;
+  thcvRank: number | null;
   totalCultivars: number;
 }
 
@@ -367,15 +367,28 @@ export function getCultivar(
     .filter(c => cultivar.coa_ids.includes(c.coa_id))
     .sort((a, b) => b.collected.localeCompare(a.collected));
 
+  const peakByCultivar = new Map(
+    d.cultivars.map(c => {
+      const peaks = d.certificates
+        .filter(cert => c.coa_ids.includes(cert.coa_id))
+        .map(cert => cert.derived.totalThcvPct)
+        .filter((n): n is number => n != null);
+      return [c.id, peaks.length ? Math.max(...peaks) : null] as const;
+    })
+  );
   const peaks = certificates
-    .map(c => c.derived.totalThcvPct ?? c.totals_pct.thcv ?? null)
+    .map(c => c.derived.totalThcvPct)
     .filter((n): n is number => n != null);
   const ratios = certificates
-    .map(c => c.derived.ratio ?? c.ratio_thcv_thc ?? null)
+    .map(c => c.derived.ratio)
     .filter((n): n is number => n != null);
 
-  const ranked = [...d.cultivars].sort(
-    (a, b) => (b.peak_total_thcv_pct ?? -1) - (a.peak_total_thcv_pct ?? -1)
+  const ranked = [...peakByCultivar.entries()].sort(
+    ([aId, aPeak], [bId, bPeak]) => {
+      if (aPeak == null) return bPeak == null ? aId.localeCompare(bId) : 1;
+      if (bPeak == null) return -1;
+      return bPeak - aPeak;
+    }
   );
 
   const q = d.openQuestions.filter(
@@ -391,7 +404,10 @@ export function getCultivar(
     parentEdges: d.lineage.filter(e => e.child === cultivar.id),
     childEdges: d.lineage.filter(e => edgeParents(e).includes(cultivar.id)),
     openQuestions: q,
-    thcvRank: ranked.findIndex(c => c.id === cultivar.id) + 1,
+    thcvRank:
+      peakByCultivar.get(cultivar.id) == null
+        ? null
+        : ranked.findIndex(([id]) => id === cultivar.id) + 1,
     totalCultivars: d.cultivars.length,
   };
 }

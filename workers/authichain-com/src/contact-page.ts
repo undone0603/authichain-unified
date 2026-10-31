@@ -91,8 +91,8 @@ footer{border-top:1px solid #e2e8f0;padding:3rem 1.5rem;text-align:left;color:#6
   <p class="lede">Email reaches a person. Pick the address that matches what you need and we will route it from there.</p>
 </section>
 <div class="grid">${cards}</div>
-<div class="note"><strong>Verifying a product?</strong> You do not need us for that — scan the code on the item, or check a certificate directly at <a href="/anchor">authichain.com/anchor</a>. Verification is public and needs no account.</div>
+<div class="note"><strong>Verifying a product?</strong> You do not need us for that — scan the code on the item, or check a signed record with the open verifier at <a href="/protocol">authichain.com/protocol</a>. Verification is public and needs no account.</div>
 </div>
-<footer>AuthiChain &middot; Blockchain Product Authentication &middot; EU DPP Compliant &middot; Polygon &amp; Bitcoin Anchored</footer>
+<footer>AuthiChain is a brand. The SAM legal entity is ZACHARY KIETZMAN (sole proprietor; AuthiChain is not a corporation).<br><a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a></footer>
 </body></html>`;
 }

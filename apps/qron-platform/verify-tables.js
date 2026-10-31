@@ -2,7 +2,9 @@
 const postgres = require('postgres');
 require('dotenv').config();
 
-const sql = postgres('postgresql://postgres.nhdnkzhtadfkkluiulhs:QronOps2026!@aws-1-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require');
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) throw new Error('DATABASE_URL is required');
+const sql = postgres(databaseUrl);
 
 async function checkTables() {
   console.log('Verifying table existence...');

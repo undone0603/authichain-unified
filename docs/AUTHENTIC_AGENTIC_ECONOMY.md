@@ -24,7 +24,7 @@ A seal proves the record the issuer published has not been altered since it was 
 
 Apex product CTAs stay `/onboard`, `/dapp`, `/verify`. Never a `*.vercel.app` URL.
 
-Footnotes, not heroes: StrainChain Farm $149/mo and AuthiChain Basic $149/mo after the first paid seal.
+StrainChain Farm and AuthiChain Basic are not public offers.
 
 ## Hidden this pass (Stripe products stay live)
 
@@ -86,7 +86,7 @@ Wine, pharma packaging, auto parts, luxury receipts, diplomas, tickets are field
 - Mechanism: HTTP 402 + $0.05 USDC on Base → retry with `X-PAYMENT`
 - CVR estimate: unknown. Daily cap $10/payer already set.
 - Events: `x402_challenge`, `x402_settled`, `agent_verify_ok`
-- Kill: facilitator down 48h or payTo drift from `0xaebf…e437`
+- Kill: facilitator down 48h or payTo drift from `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2`
 
 Do not run outreach-trigger, b2b-outreach, ghost-traffic, or brand-pitch microsites as acquisition. Historical result: 0 replies.
 

@@ -44,7 +44,9 @@ tags = ["key", "openai"]
 [[rules]]
 id = "resend-key"
 description = "Resend API Key"
-regex = '''(?:^|["'=:\s])re_[a-zA-Z0-9]{20,}\b'''
+# Current keys are re_<8>_<24+>; the first alternative alone missed them because
+# of the inner underscore (one sat in agentz/workflows/registry.yaml unflagged).
+regex = '''(?:^|["'=:\s(`])re_(?:[a-zA-Z0-9]{20,}|[a-zA-Z0-9]{8}_[a-zA-Z0-9]{20,})\b'''
 tags = ["key", "resend"]
 
 [[rules]]
@@ -61,6 +63,10 @@ tags = ["token", "telegram"]
 
 [[rules]]
 id = "supabase-jwt"
-description = "Supabase JWT (anon or service_role)"
-regex = '''eyJ[a-zA-Z0-9_-]{50,}\.[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}'''
+description = "Supabase service_role JWT"
+# Matches a JWT whose payload carries "service_role" at any of the three base64
+# alignments. The previous pattern demanded a 50+ char header, but a standard
+# Supabase header is 36 chars, so a committed service_role key went unflagged.
+# Anon keys are public by design (shipped to browsers) and are not matched.
+regex = '''eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]*(?:c2VydmljZV9yb2xl|NlcnZpY2Vfcm9s|zZXJ2aWNlX3Jv)[A-Za-z0-9_-]*\.[A-Za-z0-9_-]{10,}'''
 tags = ["key", "supabase"]

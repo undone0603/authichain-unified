@@ -15,13 +15,12 @@ import {
   estatePricingGrid,
   tryHandleEstatePricing,
 } from "../../_shared/estate-pricing.ts";
-import { planPaymentLink } from "../../../src/lib/plans.ts";
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
-
-/** Recurring StrainChain path. Replaced the dead StrainChain Basic link on 2026-09-23. */
-const FARM_PLAN_LINK = planPaymentLink("strainchain_farm") ?? "/pricing";
 import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
+import { tryHandleEstateCanonicalVerify } from "../../_shared/estate-canonical-verify";
+import { tryHandleEstateProtocolDiscovery } from "../../_shared/estate-protocol-discovery";
+import { tryHandleEstateQronResolve } from "../../_shared/estate-qron-resolve";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -1805,6 +1804,10 @@ type Env = {
   APP_ORIGIN?: string;
   /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
   VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
+  /** Optional override; defaults to https://authichain.com/api/v1/attestation/verify */
+  AUTHICHAIN_CANONICAL_VERIFY_URL?: string;
+  /** Optional override; defaults to https://authichain.com for issuer/JWKS proxy */
+  AUTHICHAIN_PROTOCOL_ORIGIN?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -1827,6 +1830,7 @@ const APP_PATHS = [
   /^\/genetics(?:\/|$)/,
   /^\/passport(?:\/|$)/,
   /^\/onboard(?:\/|$)/,
+  /^\/api\/strainchain\/stats$/,
 ];
 
 /**
@@ -1974,7 +1978,20 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "strainchain");
     if (pricing) return pricing;
-    const x402 = await tryHandleSisterX402(request, env, env?.VERIFY_APP);
+    // Canonical attestation verify — before x402/MCP so protocol truth is not
+    // confused with paid agent verify credit settlement.
+    const protocolDiscovery = await tryHandleEstateProtocolDiscovery(request, env);
+    if (protocolDiscovery) return protocolDiscovery;
+    const qronResolve = await tryHandleEstateQronResolve(request, env);
+    if (qronResolve) return qronResolve;
+    const canonicalVerify = await tryHandleEstateCanonicalVerify(request, env);
+    if (canonicalVerify) return canonicalVerify;
+    const x402 = await tryHandleSisterX402(
+      request,
+      env,
+      env?.VERIFY_APP,
+      "strainchain"
+    );
     if (x402) return x402;
     const mcp = await tryHandleSisterMcp(
       request,
@@ -2030,7 +2047,7 @@ ${estateNav(
 ${estateHero({
   eyebrow: "Cannabis supply chain",
   title: "Genetics passports for every cultivar.",
-  lede: "Publish a genetics passport for one cultivar from your existing CoAs for $49, or cover every cultivar with the Farm Plan at $149/mo. On our roadmap: seed-to-shelf tracking and METRC compliance reporting.",
+  lede: "Publish a genetics passport for one cultivar from your existing CoAs for $49. On our roadmap: seed-to-shelf tracking and METRC compliance reporting.",
   emailCheckout: {
     action: "https://authichain.com/checkout/strainchain_passport",
     label: "Buy a StrainChain Passport — $49",
@@ -2060,7 +2077,7 @@ fetch('https://strainchain.io/api/strainchain/stats')
     <h2>From seed to shelf</h2>
     <p class="section-sub">Every touch-point recorded. No gaps, no tampering, regulator-ready access.</p>
     <div class="steps">
-      <div class="step"><div class="step-num">01</div><h3>Seed registration</h3><p>Cultivar data recorded in a genetics passport. Minting to AuthiChain's ERC-721 contract on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p></div>
+      <div class="step"><div class="step-num">01</div><h3>Seed registration</h3><p>Cultivar data recorded in a genetics passport.</p></div>
       <div class="step"><div class="step-num">02</div><h3>Cultivation tracking</h3><p>Custody events linked to the batch record. On our roadmap: anchoring sensor and custody events to the batch on-chain.</p></div>
       <div class="step"><div class="step-num">03</div><h3>Lab testing</h3><p>The COA panel is linked to the passport, and discrepancies are surfaced, not smoothed over. Hashing COAs on-chain is in development.</p></div>
       <div class="step"><div class="step-num">04</div><h3>Retail verification</h3><p>A QR code on packaging opens the passport. Our goal: consumers and regulators can verify it against the on-chain record in under a second.</p></div>
@@ -2104,7 +2121,6 @@ ${estateFeatures(
       <div class="audit-layer"><div class="audit-name">Airtable</div><div class="audit-desc">Operational records and staff-facing data entry</div></div>
       <div class="audit-layer"><div class="audit-name">Supabase</div><div class="audit-desc">Structured store and real-time subscriptions</div></div>
       <div class="audit-layer"><div class="audit-name">IPFS / Pinata</div><div class="audit-desc">Content-addressed file storage</div></div>
-      <div class="audit-layer"><div class="audit-name">Polygon</div><div class="audit-desc">Contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> · anchoring in development</div></div>
     </div>
   </div>
 </section>
@@ -2129,7 +2145,7 @@ ${estateFeatures(
 <section class="estate-section" id="pricing">
   <div class="wrap">
     <h2>Pricing</h2>
-    <p class="section-sub">Passport and Farm Plan prices come from the published catalogue with live Stripe checkout.</p>
+    <p class="section-sub">The public StrainChain offer is the $49 passport. Farm is not a public offer.</p>
     ${estatePricingGrid("strainchain")}
     <p class="section-sub" style="margin-top:20px"><a href="/pricing">Open the full pricing page</a></p>
   </div>
@@ -2138,9 +2154,9 @@ ${estateFeatures(
 <section class="estate-section" id="start">
   <div class="wrap">
     <h2>Start on the live path</h2>
-    <p class="section-sub">Publish one cultivar for $49, or start the $149/mo Farm Plan on the published Payment Link. Onboard stays the demo intake.</p>
+    <p class="section-sub">Publish one cultivar for $49. Onboard stays the demo intake.</p>
     <div class="estate-actions">
-      <a class="btn btn-primary" href="${FARM_PLAN_LINK}" target="_blank" rel="noopener">Farm Plan $149/mo</a>
+      <a class="btn btn-primary" href="https://authichain.com/checkout/strainchain_passport">Passport checkout — $49</a>
       <a class="btn btn-outline" href="/pricing">View pricing</a>
       <a class="btn btn-outline" href="/onboard">Request demo</a>
     </div>
@@ -2149,17 +2165,12 @@ ${estateFeatures(
 
 ${estateCtaBand({
   title: "Publish one cultivar passport",
-  lede: "Enter a work email so Stripe can recover the cart. Farm Plan is the $149/mo Payment Link. Onboard stays the demo intake.",
+  lede: "Enter a work email so Stripe can recover the cart. Onboard stays the demo intake.",
   emailCheckout: {
     action: "https://authichain.com/checkout/strainchain_passport",
     label: "Passport checkout — $49",
   },
   actions: [
-    {
-      href: FARM_PLAN_LINK,
-      label: "Farm Plan $149/mo",
-      primary: false,
-    },
     { href: "/onboard", label: "Request demo", primary: false },
   ],
 })}
@@ -2190,7 +2201,7 @@ ${estateFooter(
       ],
     },
   ],
-  "Powered by AuthiChain · Farm Plan is the live recurring Payment Link",
+  "Powered by AuthiChain · Passport is the public StrainChain offer",
 )}
 </body></html>`;
     return new Response(html, { headers: { ...HTML_SECURITY_HEADERS, "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public,max-age=300" } });

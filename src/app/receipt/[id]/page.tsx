@@ -55,7 +55,7 @@ function formatDate(iso: string | null): string {
 }
 
 const STATUS_COPY: Record<Receipt["status"], { label: string; tone: string }> = {
-  anchored: { label: "Anchored on Polygon", tone: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" },
+  anchored: { label: "Anchored", tone: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" },
   reversed: { label: "Reversed (refunded or voided)", tone: "text-amber-400 border-amber-500/30 bg-amber-500/10" },
   pending: { label: "Anchor pending", tone: "text-sky-400 border-sky-500/30 bg-sky-500/10" },
   failed: { label: "Anchor failed — retry queued", tone: "text-rose-400 border-rose-500/30 bg-rose-500/10" },

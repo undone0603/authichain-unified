@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, onTestFinished } from "vitest";
 
 vi.mock("../server/webhooks/stripe", () => ({
   handleStripeWebhook: vi.fn().mockResolvedValue({ received: true }),
@@ -52,6 +52,7 @@ describe("GET /api/checkout/dpp", () => {
   beforeEach(() => {
     dppCreate.mockReset();
     delete process.env.STRIPE_SECRET_KEY;
+    delete process.env.DPP_SMOKE_SECRET;
   });
 
   it("HEAD does not create a Stripe session", async () => {
@@ -84,13 +85,27 @@ describe("GET /api/checkout/dpp", () => {
     expect(dppCreate).not.toHaveBeenCalled();
   });
 
-  it("DPP-SMOKE-E2E still creates the $0 demo session on GET", async () => {
+  it("public DPP-SMOKE-E2E 303s to the confirm page", async () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_dpp";
+    const res = await app.request(
+      "/api/checkout/dpp?visit_id=dpp_smoke&promo=DPP-SMOKE-E2E"
+    );
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe(
+      "https://authichain.com/checkout/dpp_readiness?visit_id=dpp_smoke"
+    );
+    expect(dppCreate).not.toHaveBeenCalled();
+  });
+
+  it("DPP-SMOKE-E2E creates the $0 session when the header matches", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_dpp";
+    process.env.DPP_SMOKE_SECRET = "smoke-secret-value";
     dppCreate.mockResolvedValue({
       url: "https://checkout.stripe.com/c/pay/cs_test_smoke",
     });
     const res = await app.request(
-      "/api/checkout/dpp?visit_id=dpp_smoke&promo=DPP-SMOKE-E2E"
+      "/api/checkout/dpp?visit_id=dpp_smoke&promo=DPP-SMOKE-E2E",
+      { headers: { "x-dpp-smoke-secret": "smoke-secret-value" } }
     );
     expect(res.status).toBe(303);
     expect(res.headers.get("location")).toBe(
@@ -130,7 +145,9 @@ describe("GET /api/checkout/plan/:planId", () => {
       "https://authichain.com/checkout/strainchain_passport?email=ops%40brand.com&utm_source=pricing"
     );
     const unknown = await app.request("/api/checkout/plan/nope");
-    expect(unknown.headers.get("location")).toBe("https://authichain.com/checkout");
+    expect(unknown.headers.get("location")).toBe(
+      "https://authichain.com/checkout"
+    );
     expect(dppCreate).not.toHaveBeenCalled();
   });
 });
@@ -141,7 +158,9 @@ describe("GET /api/checkout", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
-    expect(body.smoke).toBe("GET /api/checkout/dpp?promo=DPP-SMOKE-E2E");
+    expect(body.smoke).toBe(
+      "GET /api/checkout/dpp?promo=DPP-SMOKE-E2E requires x-dpp-smoke-secret"
+    );
     expect(body.webhook).toBe("POST /api/stripe/webhook");
   });
 });
@@ -190,9 +209,117 @@ describe("GET /api/generate", () => {
     expect(body.status).toBe("ok");
     expect(body.methods).toContain("POST");
     expect(body.auth).toBe(false);
+    expect(body.presentation.schema).toBe("AuthiChain QRON Presentation v0");
+    expect(body.presentation.verify.decision_contract).toBe(
+      "AuthiChain Verification Decision v1"
+    );
+    expect(body.presentation.scan).toEqual({
+      method: "GET",
+      url_template: "https://authichain.com/qron/r/{object_id}",
+      missing: "presentation_not_found",
+    });
     expect(body.packs.some((p: { price: number }) => p.price === 29)).toBe(
       true
     );
+    expect(body.packs.some((p: { price: number }) => p.price === 99)).toBe(
+      true
+    );
+  });
+});
+
+describe("GET /qron/r/:objectId", () => {
+  it("returns indeterminate when the presentation store is not bound", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const json = await app.request(path, {
+      headers: { accept: "application/json" },
+    });
+    expect(json.status).toBe(503);
+    const body = await json.json();
+    expect(body.decision).toBe("indeterminate");
+    expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
+    expect(body.error).toBe("qron_store_unavailable");
+    expect(JSON.stringify(body)).not.toContain("counterfeit");
+  });
+
+  it("returns Decision v1 indeterminate when the presentation is not stored", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const env = {
+      SESSIONS: {
+        get: async () => null,
+        put: async () => undefined,
+      },
+    };
+    const json = await app.request(
+      path,
+      { headers: { accept: "application/json" } },
+      env
+    );
+    expect(json.status).toBe(404);
+    expect(json.headers.get("content-type")).toMatch(/json/);
+    const body = await json.json();
+    expect(body.decision).toBe("indeterminate");
+    expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
+    expect(body.error).toBe("presentation_not_found");
+    expect(body.decision).not.toBe("counterfeit");
+
+    const html = await app.request(
+      path,
+      { headers: { accept: "text/html" } },
+      env
+    );
+    expect(html.status).toBe(404);
+    expect(html.headers.get("content-type")).toMatch(/html/);
+    const page = await html.text();
+    expect(page).toContain("<h1>indeterminate</h1>");
+    expect(page).not.toContain("counterfeit");
+  });
+
+  it("verifies a stored presentation in-process on a sister host", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const stored = JSON.stringify({
+      object_id: objectId,
+      destination_url: "https://authichain.com/protocol",
+      resolve_url: `https://authichain.govchain.us${path}`,
+      jws: "a.b.c",
+      kid: "kid",
+      jwks_url: "https://authichain.com/protocol/jwks.json",
+    });
+    const res = await app.request(
+      `https://authichain.govchain.us${path}`,
+      { headers: { accept: "application/json" } },
+      {
+        SESSIONS: {
+          get: async () => stored,
+          put: async () => undefined,
+        },
+      }
+    );
+    const body = await res.json();
+    expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
+    expect(body.error).not.toBe("verify_unreachable");
+    expect(res.status).not.toBe(502);
+  });
+
+  it("returns indeterminate when the stored presentation is malformed", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const res = await app.request(
+      path,
+      { headers: { accept: "application/json" } },
+      {
+        SESSIONS: {
+          get: async () => "{",
+          put: async () => undefined,
+        },
+      }
+    );
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.decision).toBe("indeterminate");
+    expect(body.error).toBe("presentation_malformed");
   });
 });
 
@@ -209,7 +336,8 @@ describe("POST /api/generate", () => {
     expect(res.status).toBe(401);
     expect(res.headers.get("content-type")).toMatch(/json/);
     const body = await res.json();
-    expect(body.message).toMatch(/Authentication required/i);
+    // No RATE_LIMITER binding in tests: the free sample fails closed as paused.
+    expect(body.code).toBe("FREE_SAMPLE_PAUSED");
     expect(Array.isArray(body.packs)).toBe(true);
   });
 });
@@ -225,15 +353,16 @@ describe("GET /api/stripe/webhook", () => {
 });
 
 describe("POST /api/webhooks/stripe", () => {
-  it("aliases to the canonical webhook handler", async () => {
+  it("returns 410 because the endpoint is retired", async () => {
     const res = await app.request("/api/webhooks/stripe", {
       method: "POST",
       body: "raw-stripe-payload",
       headers: { "stripe-signature": "t=123,v1=fake" },
     });
-    expect(res.status).toBe(200);
-    const { handleStripeWebhook } = await import("../server/webhooks/stripe");
-    expect(handleStripeWebhook).toHaveBeenCalled();
+    expect(res.status).toBe(410);
+    const body = await res.json();
+    expect(body.deprecated).toBe(true);
+    expect(body.error).toMatch(/\/api\/stripe\/webhook/);
   });
 });
 
@@ -245,6 +374,30 @@ describe("app host /", () => {
     });
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/dashboard");
+  });
+
+  it.each([
+    ["/pricing", "https://authichain.com/pricing"],
+    ["/protocol", "https://authichain.com/protocol"],
+    [
+      "/api/verify?id=polygon-anchor-1",
+      "https://authichain.com/api/verify?id=polygon-anchor-1",
+    ],
+  ])("301s app.authichain.com%s to the apex", async (path, location) => {
+    const res = await app.request(path, {
+      headers: { host: "app.authichain.com" },
+      redirect: "manual",
+    });
+    expect(res.status).toBe(301);
+    expect(res.headers.get("location")).toBe(location);
+  });
+
+  it("leaves /pricing alone on the apex host", async () => {
+    const res = await app.request("/pricing", {
+      headers: { host: "authichain.com" },
+      redirect: "manual",
+    });
+    expect(res.status).not.toBe(301);
   });
 });
 
@@ -854,5 +1007,101 @@ describe("tRPC routes are handled by the tRPC middleware, not the * SPA fallback
     if (body.result) {
       expect(body.result.data.json).toEqual({ ok: true });
     }
+  });
+});
+
+describe("GET /api/generate requires the service role", () => {
+  const keys = [
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ] as const;
+  const saved: Partial<Record<(typeof keys)[number], string | undefined>> = {};
+  beforeEach(() => {
+    for (const key of keys) saved[key] = process.env[key];
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_ANON_KEY = "anon-test";
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  });
+  afterEach(() => {
+    for (const key of keys)
+      saved[key] === undefined
+        ? delete process.env[key]
+        : (process.env[key] = saved[key]!);
+  });
+  it("does not report auth from the anon key", async () => {
+    const res = await app.request("/api/generate");
+    expect((await res.json()).auth).toBe(false);
+  });
+  it("stays 401 for a bearer token when credit checks cannot run", async () => {
+    // The bearer token goes to Supabase Auth at SUPABASE_URL. Without this stub
+    // that was a real request to example.supabase.co, which timed out CI at 5s.
+    // Unreachable auth must still fail closed.
+    const authFetch = vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    });
+    vi.stubGlobal("fetch", authFetch);
+    onTestFinished(() => vi.unstubAllGlobals());
+    const res = await app.request("/api/generate", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer eyJhbGciOiJub3Q",
+      },
+      body: JSON.stringify({
+        targetUrl: "https://example.com",
+        prompt: "neon",
+      }),
+    });
+    expect(res.status).toBe(401);
+    expect(authFetch).toHaveBeenCalled();
+    expect(String(authFetch.mock.calls[0]?.[0])).toContain("example.supabase.co/auth/");
+  });
+});
+
+describe("POST /api/stripe/webhook — claim unavailable (PM-338)", () => {
+  it("answers 500 so Stripe retries when the duplicate guard is down", async () => {
+    const { handleStripeWebhook } = await import("../server/webhooks/stripe");
+    const err = Object.assign(new Error("claim unavailable"), {
+      name: "StripeEventClaimUnavailableError",
+    });
+    (handleStripeWebhook as any).mockRejectedValueOnce(err);
+    const res = await app.request("/api/stripe/webhook", {
+      method: "POST",
+      body: "raw-stripe-payload",
+      headers: { "stripe-signature": "t=123,v1=fake" },
+    });
+    expect(res.status).toBe(500);
+  });
+
+  it("answers 500 when paid fulfillment fails so Stripe retries", async () => {
+    const { handleStripeWebhook } = await import("../server/webhooks/stripe");
+    const err = new Error("continuity_insert_failed");
+    err.name = "RetryableFulfillmentError";
+    (handleStripeWebhook as any).mockRejectedValueOnce(err);
+    const res = await app.request("/api/stripe/webhook", {
+      method: "POST",
+      body: "raw-stripe-payload",
+      headers: { "stripe-signature": "t=123,v1=fake" },
+    });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe("Temporarily unavailable; retry");
+    expect(JSON.stringify(body)).not.toContain("continuity_insert_failed");
+  });
+
+  it("still answers 400 for other handler errors (bad signature)", async () => {
+    const { handleStripeWebhook } = await import("../server/webhooks/stripe");
+    (handleStripeWebhook as any).mockRejectedValueOnce(
+      new Error("No signatures found matching the expected signature")
+    );
+    const res = await app.request("/api/stripe/webhook", {
+      method: "POST",
+      body: "raw-stripe-payload",
+      headers: { "stripe-signature": "t=123,v1=fake" },
+    });
+    expect(res.status).toBe(400);
   });
 });

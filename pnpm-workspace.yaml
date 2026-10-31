@@ -7,12 +7,12 @@ packages:
 allowBuilds:
   '@clerk/shared': true
   agent-browser: false
-  bufferutil: true
+  bufferutil: false
   esbuild: true
   keccak: true
   sharp: true
   unrs-resolver: true
-  utf-8-validate: true
+  utf-8-validate: false
   workerd: true
 minimumReleaseAgeExclude:
   - miniflare@4.20260701.0
@@ -49,4 +49,14 @@ overrides:
   # affects 4.3.1 itself -- caught by re-auditing after landing the 4.3.1
   # pin below, same day (recuyUrMAPEEwQIr1). 4.3.2 fixes both.
   'js-yaml@>=4.0.0 <4.3.2': 4.3.2
+  # Runtime floor bumps requested 2026-10-07 (Zac, project thread).
+  # proxy-addr (via express) and fast-uri (via ajv) resolve in range; the
+  # floors stop a future re-resolution from landing back on the old patch.
+  'proxy-addr@<2.0.8': 2.0.8
+  'fast-uri@<3.1.7': 3.1.8
+  # GHSA critical (Dependabot #1901, 2026-10-09 PM-324): shell-quote <1.11.0.
+  'shell-quote@<1.11.0': 1.11.0
+  # sharp: next allows ^0.35.4, but miniflare pins exactly 0.35.4, so a
+  # lockfile update alone leaves two copies. Patch-level, same libvips ABI.
+  'sharp@>=0.35.0 <0.35.5': 0.35.5
 verifyDepsBeforeRun: false

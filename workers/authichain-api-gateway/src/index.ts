@@ -8,276 +8,522 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
     const cors = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key'
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
     };
 
-    if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
+    if (request.method === "OPTIONS")
+      return new Response(null, { headers: cors });
 
     // Documentation page
-    if (path === '/' || path === '/docs') return new Response(DOCS_HTML, { headers: { ...cors, ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    if (path === "/" || path === "/docs")
+      return new Response(DOCS_HTML, {
+        headers: {
+          ...cors,
+          ...HTML_SECURITY_HEADERS,
+          "Content-Type": "text/html; charset=utf-8",
+        },
+      });
 
     // Health check
-    if (path === '/health') return json({ status: 'ok', mode: 'demo', version: '1.0.0', timestamp: new Date().toISOString(), notice: 'Demo mode — returns simulated responses' }, cors);
+    if (path === "/health")
+      return json(
+        {
+          status: "ok",
+          mode: "demo",
+          version: "1.0.0",
+          timestamp: new Date().toISOString(),
+          notice: "Demo mode — returns simulated responses",
+        },
+        cors
+      );
 
     // v2 endpoints use X-Admin-Key, not demo API keys — handle before API key gate
-    if (path.startsWith('/api/v2/')) {
+    if (path.startsWith("/api/v2/")) {
       return handleV2(request, path, url, env, cors);
     }
 
     // ── Public endpoints — no API key required ────────────────────────────
-    if (path === '/api/v1/anchor' && request.method === 'POST') {
+    if (path === "/api/v1/anchor" && request.method === "POST") {
       const body: any = await request.json().catch(() => ({}));
       const { name, brand, description, sku, industry, hash } = body;
       if (!name || !brand || !hash) {
-        return json({ error: 'name, brand, and hash are required' }, cors, 400);
+        return json({ error: "name, brand, and hash are required" }, cors, 400);
       }
       if (!/^[0-9a-f]{64}$/i.test(hash)) {
-        return json({ error: 'hash must be a 64-character hex SHA-256 digest' }, cors, 400);
+        return json(
+          { error: "hash must be a 64-character hex SHA-256 digest" },
+          cors,
+          400
+        );
       }
-      const id = 'AC-' + hash.slice(0, 8).toUpperCase();
+      const id = "AC-" + hash.slice(0, 8).toUpperCase();
       const ts = new Date().toISOString();
       const cert = {
         id,
         name: String(name).slice(0, 200),
         brand: String(brand).slice(0, 100),
-        description: String(description || '').slice(0, 2000),
-        sku: String(sku || '').slice(0, 100),
-        industry: String(industry || 'general').slice(0, 50),
+        description: String(description || "").slice(0, 2000),
+        sku: String(sku || "").slice(0, 100),
+        industry: String(industry || "general").slice(0, 50),
         hash: hash.toLowerCase(),
         ts,
         anchored: true,
         version: 1,
       };
       if (env.RATE_LIMITS) {
-        await env.RATE_LIMITS.put('cert:' + id, JSON.stringify(cert));
+        await env.RATE_LIMITS.put("cert:" + id, JSON.stringify(cert));
       }
-      return json({
-        success: true,
-        id,
-        hash: hash.toLowerCase(),
-        ts,
-        certUrl: 'https://authichain.com/cert/' + id,
-        certificate: cert,
-      }, cors, 201);
+      return json(
+        {
+          success: true,
+          id,
+          hash: hash.toLowerCase(),
+          ts,
+          certUrl: "https://authichain.com/cert/" + id,
+          certificate: cert,
+        },
+        cors,
+        201
+      );
     }
 
-    if (path.startsWith('/api/v1/cert/') && request.method === 'GET') {
-      const certId = path.slice('/api/v1/cert/'.length).toUpperCase();
+    if (path.startsWith("/api/v1/cert/") && request.method === "GET") {
+      const certId = path.slice("/api/v1/cert/".length).toUpperCase();
       if (!certId || !/^AC-[0-9A-F]{8}$/.test(certId)) {
-        return json({ error: 'Invalid certificate ID — expected format: AC-XXXXXXXX' }, cors, 400);
+        return json(
+          { error: "Invalid certificate ID — expected format: AC-XXXXXXXX" },
+          cors,
+          400
+        );
       }
       if (!env.RATE_LIMITS) {
-        return json({ error: 'Storage unavailable' }, cors, 503);
+        return json({ error: "Storage unavailable" }, cors, 503);
       }
-      const stored = await env.RATE_LIMITS.get('cert:' + certId);
+      const stored = await env.RATE_LIMITS.get("cert:" + certId);
       if (!stored) {
-        return json({ error: 'Certificate not found', id: certId }, cors, 404);
+        return json({ error: "Certificate not found", id: certId }, cors, 404);
       }
       return json({ success: true, certificate: JSON.parse(stored) }, cors);
     }
 
     // API key validation
-    const apiKey = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!apiKey) return json({ error: 'Missing API key.' }, cors, 401);
+    const apiKey =
+      request.headers.get("X-API-Key") ||
+      request.headers.get("Authorization")?.replace("Bearer ", "");
+    if (!apiKey) return json({ error: "Missing API key." }, cors, 401);
 
     // Rate Limiting Logic (KV-backed)
     if (env.RATE_LIMITS) {
       const limitKey = `usage:${apiKey}:${new Date().getUTCHours()}`;
-      const currentUsage = await env.RATE_LIMITS.get(limitKey) || "0";
+      const currentUsage = (await env.RATE_LIMITS.get(limitKey)) || "0";
       const limit = apiKey.includes("demo") ? 10 : 5000;
 
       if (parseInt(currentUsage) >= limit) {
-        return json({ error: 'Rate limit exceeded for this hour.', tier: apiKey.includes("demo") ? 'Free' : 'Pro' }, cors, 429);
+        return json(
+          {
+            error: "Rate limit exceeded for this hour.",
+            tier: apiKey.includes("demo") ? "Free" : "Pro",
+          },
+          cors,
+          429
+        );
       }
-      await env.RATE_LIMITS.put(limitKey, (parseInt(currentUsage) + 1).toString(), { expirationTtl: 3600 });
+      await env.RATE_LIMITS.put(
+        limitKey,
+        (parseInt(currentUsage) + 1).toString(),
+        { expirationTtl: 3600 }
+      );
     }
 
     // Derive tier info from the API key for demo responses
     const keyData = {
-      name: apiKey.includes('demo') ? 'Free' : 'Pro',
-      plan: apiKey.includes('demo') ? 'free' : 'pro',
-      limit: apiKey.includes('demo') ? 10 : 5000,
+      name: apiKey.includes("demo") ? "Free" : "Pro",
+      plan: apiKey.includes("demo") ? "free" : "pro",
+      limit: apiKey.includes("demo") ? 10 : 5000,
     };
 
     // Route handling
     try {
-      if (path === '/api/v1/classify' && request.method === 'POST') {
+      if (path === "/api/v1/classify" && request.method === "POST") {
         const body: any = await request.json();
-        return json({
-          success: true,
-          mode: 'demo',
-          notice: 'Demo mode — returns simulated responses',
-          classification: {
-            name: body.name || 'Sample Product',
-            category: body.category || 'Electronics',
-            brand: body.brand || 'Unknown',
-            industryId: 'electronics',
-            industry: 'Electronics & Technology',
-            confidence: 95,
-            features: ['AI-classified', 'Blockchain-ready'],
-            authenticityFeatures: ['Serial number validation', 'Firmware signature', 'Component check'],
-            workflow: [
-              { id: 'source', name: 'Component Sourcing', icon: '&#9881;', duration: '30-60 days' },
-              { id: 'assemble', name: 'Assembly', icon: '&#128295;', duration: '5-10 days' },
-              { id: 'test', name: 'Quality Testing', icon: '&#9989;', duration: '2-5 days' },
-              { id: 'certify', name: 'Certification', icon: '&#128272;', duration: '1-3 days' },
-              { id: 'ship', name: 'Shipping', icon: '&#128230;', duration: '3-7 days' }
-            ],
-            story: 'This product was manufactured using verified components from certified suppliers, assembled in an ISO-9001 facility, and authenticated on the AuthiChain blockchain.'
+        return json(
+          {
+            success: true,
+            mode: "demo",
+            notice: "Demo mode — returns simulated responses",
+            classification: {
+              name: body.name || "Sample Product",
+              category: body.category || "Electronics",
+              brand: body.brand || "Unknown",
+              industryId: "electronics",
+              industry: "Electronics & Technology",
+              confidence: 95,
+              features: ["AI-classified", "Blockchain-ready"],
+              authenticityFeatures: [
+                "Serial number validation",
+                "Firmware signature",
+                "Component check",
+              ],
+              workflow: [
+                {
+                  id: "source",
+                  name: "Component Sourcing",
+                  icon: "&#9881;",
+                  duration: "30-60 days",
+                },
+                {
+                  id: "assemble",
+                  name: "Assembly",
+                  icon: "&#128295;",
+                  duration: "5-10 days",
+                },
+                {
+                  id: "test",
+                  name: "Quality Testing",
+                  icon: "&#9989;",
+                  duration: "2-5 days",
+                },
+                {
+                  id: "certify",
+                  name: "Certification",
+                  icon: "&#128272;",
+                  duration: "1-3 days",
+                },
+                {
+                  id: "ship",
+                  name: "Shipping",
+                  icon: "&#128230;",
+                  duration: "3-7 days",
+                },
+              ],
+              story:
+                "This product was manufactured using verified components from certified suppliers, assembled in an ISO-9001 facility, and authenticated on the AuthiChain blockchain.",
+            },
+            plan: keyData.name,
+            usage: { remaining: keyData.limit - 1 },
           },
-          plan: keyData.name,
-          usage: { remaining: keyData.limit - 1 }
-        }, cors);
+          cors
+        );
       }
 
-      if (path === '/api/v1/verify' && request.method === 'POST') {
+      if (path === "/api/v1/verify" && request.method === "POST") {
         const body: any = await request.json();
-        const productId = body.productId || body.truemarkId || body.qrCode || 'UNKNOWN';
-        return json({
-          success: true,
-          mode: 'demo',
-          notice: 'Demo mode — hash is simulated, not a real blockchain transaction',
-          result: 'authentic',
-          product: {
-            id: productId,
-            name: 'Verified Product',
-            brand: 'AuthiChain Verified',
-            registeredAt: '2026-01-15T10:30:00Z',
-            blockchainTxHash: 'demo_simulated_hash'
+        const productId =
+          body.productId || body.truemarkId || body.qrCode || "UNKNOWN";
+        return json(
+          {
+            success: true,
+            mode: "demo",
+            notice:
+              "Demo mode — hash is simulated, not a real blockchain transaction",
+            result: "authentic",
+            product: {
+              id: productId,
+              name: "Verified Product",
+              brand: "AuthiChain Verified",
+              registeredAt: "2026-01-15T10:30:00Z",
+              blockchainTxHash: "demo_simulated_hash",
+            },
+            confidence: 0.98,
+            trustScore: 96,
+            qronId:
+              "QRON-" + Math.random().toString(36).substr(2, 8).toUpperCase(),
+            actions: ["view_certificate", "share_verification", "report_issue"],
+            plan: "Pro",
           },
-          confidence: 0.98,
-          trustScore: 96,
-          qronId: 'QRON-' + Math.random().toString(36).substr(2, 8).toUpperCase(),
-          actions: ['view_certificate', 'share_verification', 'report_issue'],
-          plan: 'Pro'
-        }, cors);
+          cors
+        );
       }
 
-      if (path === '/api/v1/forensic-scan' && request.method === 'POST') {
+      if (path === "/api/v1/forensic-scan" && request.method === "POST") {
         const body: any = await request.json();
         // Simulated Magic Eye depth-shift analysis logic
         const hasForensicPattern = body.image || body.qrCode;
-        return json({
-          success: true,
-          mode: 'demo',
-          forensicStatus: hasForensicPattern ? 'MATCH' : 'NOT_FOUND',
-          depthShiftScore: hasForensicPattern ? 0.94 : 0,
-          authenticity: hasForensicPattern ? 'CONFIRMED_ARTIFIACT' : 'UNVERIFIED_COPY',
-          notice: 'Magic Eye technology detected the underlying cryptographic depth map.'
-        }, cors);
-      }
-
-      if (path === '/api/v1/storymode' && request.method === 'POST') {
-        const body: any = await request.json();
-        return json({
-          success: true,
-          mode: 'demo',
-          story: {
-            title: body.productName + " Journey",
-            chapters: [
-              { stage: "Origin", content: "The raw materials were sourced under the AuthiChain Truth Protocol." },
-              { stage: "Curation", content: "AI AutoFlow classified the assembly as High-Fidelity Artisanal." },
-              { stage: "Sealing", content: "The TrueMark seal was applied, anchoring the item to the global economy." }
-            ],
-            visualAesthetic: "Cinematic Glassmorphism",
-            nftStatus: "MINT_READY"
-          }
-        }, cors);
-      }
-
-      if (path === '/api/v1/mint-nft' && request.method === 'POST') {
-        if (keyData.plan === 'free') return json({ error: 'NFT minting requires Starter plan or above', upgrade: 'https://authichain.com/pricing', mode: 'demo', notice: 'Demo mode — returns simulated responses' }, cors, 403);
-        const body: any = await request.json();
-        return json({
-          success: true,
-          mode: 'demo',
-          notice: 'Demo mode — no actual NFT is minted. Blockchain integration planned for Q3 2026.',
-          nft: {
-            tokenId: Math.floor(Math.random() * 1000000),
-            contractAddress: 'demo_simulated',
-            chain: 'demo_simulated',
-            metadata: {
-              name: body.name || 'AuthiChain Certificate',
-              description: 'Simulated product authentication certificate (demo mode)',
-              image: 'https://authichain-api.undone-k.workers.dev/placeholder.png',
-              attributes: [
-                { trait_type: 'Confidence', value: 98 },
-                { trait_type: 'Industry', value: body.industry || 'General' },
-                { trait_type: 'Rarity', value: 'Verified' }
-              ]
-            }
+        return json(
+          {
+            success: true,
+            mode: "demo",
+            forensicStatus: hasForensicPattern ? "MATCH" : "NOT_FOUND",
+            depthShiftScore: hasForensicPattern ? 0.94 : 0,
+            authenticity: hasForensicPattern
+              ? "CONFIRMED_ARTIFIACT"
+              : "UNVERIFIED_COPY",
+            notice:
+              "Magic Eye technology detected the underlying cryptographic depth map.",
           },
-          plan: keyData.name
-        }, cors);
+          cors
+        );
       }
 
-      if (path === '/api/v1/industries') {
-        return json({
-          success: true,
-          mode: 'demo',
-          notice: 'Demo mode — returns simulated responses',
-          industries: [
-            { id: 'cannabis', name: 'Cannabis & Hemp', icon: '&#127807;', marketSize: '$30B' },
-            { id: 'luxury', name: 'Luxury Goods', icon: '&#128142;', marketSize: '$340B' },
-            { id: 'electronics', name: 'Electronics', icon: '&#128241;', marketSize: '$1.5T' },
-            { id: 'pharma', name: 'Pharmaceuticals', icon: '&#128138;', marketSize: '$1.4T' },
-            { id: 'fashion', name: 'Fashion & Apparel', icon: '&#128084;', marketSize: '$1.7T' },
-            { id: 'auto', name: 'Automotive Parts', icon: '&#128663;', marketSize: '$400B' },
-            { id: 'food', name: 'Food & Beverage', icon: '&#127863;', marketSize: '$8.5T' },
-            { id: 'art', name: 'Art & Collectibles', icon: '&#127912;', marketSize: '$65B' },
-            { id: 'cosmetics', name: 'Cosmetics & Beauty', icon: '&#128132;', marketSize: '$511B' },
-            { id: 'sports', name: 'Sports Equipment', icon: '&#9917;', marketSize: '$180B' }
+      if (path === "/api/v1/storymode" && request.method === "POST") {
+        const body: any = await request.json();
+        return json(
+          {
+            success: true,
+            mode: "demo",
+            story: {
+              title: body.productName + " Journey",
+              chapters: [
+                {
+                  stage: "Origin",
+                  content:
+                    "The raw materials were sourced under the AuthiChain Truth Protocol.",
+                },
+                {
+                  stage: "Curation",
+                  content:
+                    "AI AutoFlow classified the assembly as High-Fidelity Artisanal.",
+                },
+                {
+                  stage: "Sealing",
+                  content:
+                    "The TrueMark seal was applied, anchoring the item to the global economy.",
+                },
+              ],
+              visualAesthetic: "Cinematic Glassmorphism",
+              nftStatus: "MINT_READY",
+            },
+          },
+          cors
+        );
+      }
+
+      if (path === "/api/v1/mint-nft" && request.method === "POST") {
+        if (keyData.plan === "free")
+          return json(
+            {
+              error: "NFT minting requires Starter plan or above",
+              upgrade: "https://authichain.com/pricing",
+              mode: "demo",
+              notice: "Demo mode — returns simulated responses",
+            },
+            cors,
+            403
+          );
+        const body: any = await request.json();
+        return json(
+          {
+            success: true,
+            mode: "demo",
+            notice:
+              "Demo mode — no actual NFT is minted. Blockchain integration planned for Q3 2026.",
+            nft: {
+              tokenId: Math.floor(Math.random() * 1000000),
+              contractAddress: "demo_simulated",
+              chain: "demo_simulated",
+              metadata: {
+                name: body.name || "AuthiChain Certificate",
+                description:
+                  "Simulated product authentication certificate (demo mode)",
+                image:
+                  "https://authichain-api.undone-k.workers.dev/placeholder.png",
+                attributes: [
+                  { trait_type: "Confidence", value: 98 },
+                  { trait_type: "Industry", value: body.industry || "General" },
+                  { trait_type: "Rarity", value: "Verified" },
+                ],
+              },
+            },
+            plan: keyData.name,
+          },
+          cors
+        );
+      }
+
+      if (path === "/api/v1/industries") {
+        return json(
+          {
+            success: true,
+            mode: "demo",
+            notice: "Demo mode — returns simulated responses",
+            industries: [
+              {
+                id: "cannabis",
+                name: "Cannabis & Hemp",
+                icon: "&#127807;",
+                marketSize: "$30B",
+              },
+              {
+                id: "luxury",
+                name: "Luxury Goods",
+                icon: "&#128142;",
+                marketSize: "$340B",
+              },
+              {
+                id: "electronics",
+                name: "Electronics",
+                icon: "&#128241;",
+                marketSize: "$1.5T",
+              },
+              {
+                id: "pharma",
+                name: "Pharmaceuticals",
+                icon: "&#128138;",
+                marketSize: "$1.4T",
+              },
+              {
+                id: "fashion",
+                name: "Fashion & Apparel",
+                icon: "&#128084;",
+                marketSize: "$1.7T",
+              },
+              {
+                id: "auto",
+                name: "Automotive Parts",
+                icon: "&#128663;",
+                marketSize: "$400B",
+              },
+              {
+                id: "food",
+                name: "Food & Beverage",
+                icon: "&#127863;",
+                marketSize: "$8.5T",
+              },
+              {
+                id: "art",
+                name: "Art & Collectibles",
+                icon: "&#127912;",
+                marketSize: "$65B",
+              },
+              {
+                id: "cosmetics",
+                name: "Cosmetics & Beauty",
+                icon: "&#128132;",
+                marketSize: "$511B",
+              },
+              {
+                id: "sports",
+                name: "Sports Equipment",
+                icon: "&#9917;",
+                marketSize: "$180B",
+              },
+            ],
+            totalTAM: "$14T+",
+          },
+          cors
+        );
+      }
+
+      if (path === "/api/v1/pricing") {
+        return json(
+          {
+            success: true,
+            mode: "demo",
+            notice: "Demo mode — returns simulated responses",
+            plans: [
+              {
+                name: "Free",
+                price: "$0",
+                requests: 10,
+                features: [
+                  "Classification API",
+                  "Verification API",
+                  "Community support",
+                ],
+              },
+              // Live plans.ts SKUs. The previous StrainChain Basic/Pro/Enterprise and
+              // QRON Single/Brand Pack/Enterprise links belonged to no live Stripe
+              // account (products archived in the 2026-08-31 cleanup).
+              {
+                name: "StrainChain Passport",
+                price: "$49",
+                requests: "One-time",
+                features: [
+                  "One published genetics passport",
+                  "Totals recomputed from the source CoA panel",
+                  "QR code and shareable link",
+                ],
+                stripeLink:
+                  "https://authichain.com/checkout/strainchain_passport",
+              },
+              {
+                name: "QRON Starter Pack",
+                price: "$29",
+                requests: "100 generations",
+                features: [
+                  "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits",
+                  "Designed for AuthiChain signed verification (in development)",
+                ],
+                stripeLink: "https://authichain.com/checkout/starter",
+              },
+              {
+                name: "QRON Creator Pack",
+                price: "$99",
+                requests: "500 generations",
+                features: [
+                  "500 AI QR generations — best value",
+                  "Best one-time value: about 20¢ per generation",
+                  "Every style and preset, the same ones as the free sample",
+                ],
+                stripeLink: "https://authichain.com/checkout/creator",
+              },
+              {
+                name: "EU DPP Readiness",
+                price: "$299",
+                requests: "One-time",
+                features: ["AuthiChain workspace", "Self-serve activation"],
+                stripeLink: "https://authichain.com/checkout/dpp_readiness",
+              },
+            ],
+          },
+          cors
+        );
+      }
+
+      return json(
+        {
+          error: "Not found",
+          endpoints: [
+            "/api/v1/classify",
+            "/api/v1/verify",
+            "/api/v1/mint-nft",
+            "/api/v1/industries",
+            "/api/v1/pricing",
+            "/api/v2/accounts (POST)",
+            "/api/v2/accounts/:id (GET)",
           ],
-          totalTAM: '$14T+'
-        }, cors);
-      }
-
-      if (path === '/api/v1/pricing') {
-        return json({
-          success: true,
-          mode: 'demo',
-          notice: 'Demo mode — returns simulated responses',
-          plans: [
-            { name: 'Free', price: '$0', requests: 10, features: ['Classification API', 'Verification API', 'Community support'] },
-            // Live plans.ts SKUs. The previous StrainChain Basic/Pro/Enterprise and
-            // QRON Single/Brand Pack/Enterprise links belonged to no live Stripe
-            // account (products archived in the 2026-08-31 cleanup).
-            { name: 'StrainChain Passport', price: '$49', requests: 'One-time', features: ['One published genetics passport', 'Totals recomputed from the source CoA panel', 'QR code and shareable link'], stripeLink: 'https://authichain.com/checkout/strainchain_passport' },
-            { name: 'StrainChain Farm Plan', price: '$149/mo', requests: 'Unlimited cultivars', features: ['Unlimited cultivars and passports', 'Auto-updates on every new CoA', 'Lineage and batch history'], stripeLink: 'https://authichain.com/checkout/strainchain_farm' },
-            { name: 'QRON Starter Pack', price: '$29', requests: '100 generations', features: ['100 AI QR generations, never expire', 'Holographic & Memory modes', 'Designed for AuthiChain signed verification (in development)'], stripeLink: 'https://authichain.com/checkout/starter' },
-            { name: 'QRON Creator Pack', price: '$99', requests: '500 generations', features: ['500 AI QR generations, never expire', 'All Pro modes and premium styles', 'Priority generation queue'], stripeLink: 'https://authichain.com/checkout/creator' },
-            { name: 'EU DPP Readiness Audit', price: '$299', requests: 'One-time', features: ['Written EU DPP readiness assessment', '50 workspace generations', 'Credited toward AuthiChain Basic'], stripeLink: 'https://authichain.com/checkout/dpp_readiness' },
-            { name: 'Theater 3: Elite', price: '$1,499/mo', requests: 'Unlimited', features: ['Unlimited industrial artifacts', 'Custom AI model training', 'Real-time security webhooks'], stripeLink: 'https://authichain.com/checkout/theater_3' },
-          ]
-        }, cors);
-      }
-
-      return json({ error: 'Not found', endpoints: ['/api/v1/classify', '/api/v1/verify', '/api/v1/mint-nft', '/api/v1/industries', '/api/v1/pricing', '/api/v2/accounts (POST)', '/api/v2/accounts/:id (GET)'], mode: 'demo', notice: 'Demo mode — returns simulated responses' }, cors, 404);
+          mode: "demo",
+          notice: "Demo mode — returns simulated responses",
+        },
+        cors,
+        404
+      );
     } catch (e: any) {
-      return json({ error: 'Internal error', message: e.message, mode: 'demo', notice: 'Demo mode — returns simulated responses' }, cors, 500);
+      return json(
+        {
+          error: "Internal error",
+          message: e.message,
+          mode: "demo",
+          notice: "Demo mode — returns simulated responses",
+        },
+        cors,
+        500
+      );
     }
-  }
+  },
 };
 
 function json(data: any, cors: any, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
-    headers: { ...cors, 'Content-Type': 'application/json' }
+    headers: { ...cors, "Content-Type": "application/json" },
   });
 }
 
 const HTML_SECURITY_HEADERS: Record<string, string> = {
-  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-ancestors 'none'",
-  'X-Frame-Options': 'DENY',
-  'X-Content-Type-Options': 'nosniff',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  "Content-Security-Policy":
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-ancestors 'none'",
+  "X-Frame-Options": "DENY",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
 };
 
 function timingSafeEqual(a: string, b: string): boolean {
   const enc = new TextEncoder();
-  const ab = enc.encode(a), bb = enc.encode(b);
+  const ab = enc.encode(a),
+    bb = enc.encode(b);
   const len = Math.max(ab.length, bb.length);
   let diff = ab.length ^ bb.length;
   for (let i = 0; i < len; i++) diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
@@ -286,67 +532,100 @@ function timingSafeEqual(a: string, b: string): boolean {
 
 // ── Stripe Accounts v2 (admin-gated) ────────────────────
 
-async function handleV2(request: Request, path: string, url: URL, env: any, cors: any) {
-  const adminKey = request.headers.get('X-Admin-Key') ?? '';
+async function handleV2(
+  request: Request,
+  path: string,
+  url: URL,
+  env: any,
+  cors: any
+) {
+  const adminKey = request.headers.get("X-Admin-Key") ?? "";
   if (!env.ADMIN_SECRET || !timingSafeEqual(adminKey, env.ADMIN_SECRET)) {
-    return json({ error: 'Forbidden. Admin key required for v2 endpoints.' }, cors, 403);
+    return json(
+      { error: "Forbidden. Admin key required for v2 endpoints." },
+      cors,
+      403
+    );
   }
 
   try {
-    if (path === '/api/v2/accounts' && request.method === 'POST') {
+    if (path === "/api/v2/accounts" && request.method === "POST") {
       const body: any = await request.json();
       if (!body.email) {
-        return json({ error: 'email is required' }, cors, 400);
+        return json({ error: "email is required" }, cors, 400);
       }
       const stripeBody = {
         identity: {
           email: body.email,
-          ...(body.country && { country: body.country })
+          ...(body.country && { country: body.country }),
         },
         configuration: { customer: {} },
         ...(body.display_name && { display_name: body.display_name }),
-        ...(body.entity_type && { defaults: { entity_type: body.entity_type } }),
-        metadata: { source: 'authichain-api', created_via: 'api-gateway' }
+        ...(body.entity_type && {
+          defaults: { entity_type: body.entity_type },
+        }),
+        metadata: { source: "authichain-api", created_via: "api-gateway" },
       };
-      const stripeRes = await fetch('https://api.stripe.com/v2/core/accounts', {
-        method: 'POST',
+      const stripeRes = await fetch("https://api.stripe.com/v2/core/accounts", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`,
-          'Content-Type': 'application/json',
-          'Stripe-Version': '2026-03-25.dahlia'
+          Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+          "Content-Type": "application/json",
+          "Stripe-Version": "2026-03-25.dahlia",
         },
-        body: JSON.stringify(stripeBody)
+        body: JSON.stringify(stripeBody),
       });
       const stripeData = await stripeRes.json();
       if (!stripeRes.ok) {
-        return json({ error: 'Stripe API error', detail: stripeData }, cors, stripeRes.status);
+        return json(
+          { error: "Stripe API error", detail: stripeData },
+          cors,
+          stripeRes.status
+        );
       }
       return json({ success: true, account: stripeData }, cors, 201);
     }
 
-    if (path.startsWith('/api/v2/accounts/') && request.method === 'GET') {
-      const accountId = path.replace('/api/v2/accounts/', '');
+    if (path.startsWith("/api/v2/accounts/") && request.method === "GET") {
+      const accountId = path.replace("/api/v2/accounts/", "");
       if (!accountId) {
-        return json({ error: 'Account ID is required' }, cors, 400);
+        return json({ error: "Account ID is required" }, cors, 400);
       }
-      const includeParams = url.searchParams.getAll('include[]').map(i => `include[]=${encodeURIComponent(i)}`).join('&');
-      const qs = includeParams ? `?${includeParams}` : '';
-      const stripeRes = await fetch(`https://api.stripe.com/v2/core/accounts/${accountId}${qs}`, {
-        headers: {
-          'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`,
-          'Stripe-Version': '2026-03-25.dahlia'
+      const includeParams = url.searchParams
+        .getAll("include[]")
+        .map(i => `include[]=${encodeURIComponent(i)}`)
+        .join("&");
+      const qs = includeParams ? `?${includeParams}` : "";
+      const stripeRes = await fetch(
+        `https://api.stripe.com/v2/core/accounts/${accountId}${qs}`,
+        {
+          headers: {
+            Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+            "Stripe-Version": "2026-03-25.dahlia",
+          },
         }
-      });
+      );
       const stripeData = await stripeRes.json();
       if (!stripeRes.ok) {
-        return json({ error: 'Stripe API error', detail: stripeData }, cors, stripeRes.status);
+        return json(
+          { error: "Stripe API error", detail: stripeData },
+          cors,
+          stripeRes.status
+        );
       }
       return json({ success: true, account: stripeData }, cors);
     }
 
-    return json({ error: 'Not found', v2_endpoints: ['POST /api/v2/accounts', 'GET /api/v2/accounts/:id'] }, cors, 404);
+    return json(
+      {
+        error: "Not found",
+        v2_endpoints: ["POST /api/v2/accounts", "GET /api/v2/accounts/:id"],
+      },
+      cors,
+      404
+    );
   } catch (e: any) {
-    return json({ error: 'Internal error', message: e.message }, cors, 500);
+    return json({ error: "Internal error", message: e.message }, cors, 500);
   }
 }
 
@@ -412,7 +691,7 @@ td{padding:12px;border-bottom:1px solid #111}
 <div class="demo-notice">
   <strong>Demo Mode</strong>
   This API operates in demo mode. All responses are simulated. Production blockchain integration is planned for Q3 2026.
-  Use the demo key <code style="color:#d4af37">demo_test_key_2026</code> to explore all endpoints.
+  Get a free key with <code style="color:#d4af37">POST /api/v1/keys/create</code> to explore all endpoints.
 </div>
 
 <div class="demo-notice" style="border-left-color: #3ddc60; background: #0a1a0f; color: #a3f7bf">
@@ -434,21 +713,21 @@ td{padding:12px;border-bottom:1px solid #111}
   <span style="color:#555">or</span><br>
   <span class="key">Authorization:</span> <span class="str">Bearer your_api_key_here</span>
 </div>
-<p>Test with the demo key: <code>demo_test_key_2026</code> (10 requests/hour)</p>
+<p>Get a free key (10 requests/hour): <code>POST /api/v1/keys/create</code> with <code>{"email":"you@example.com"}</code></p>
 
 <h2>Endpoints</h2>
 
 <h3><span class="method post">POST</span> /api/v1/classify</h3>
 <p>Classify a product into one of 10 industries with confidence scoring and workflow generation (demo mode).</p>
 <pre><span class="key">curl</span> -X POST https://authichain-api.undone-k.workers.dev/api/v1/classify \\
-  -H <span class="str">"X-API-Key: demo_test_key_2026"</span> \\
+  -H <span class="str">"X-API-Key: YOUR_API_KEY"</span> \\
   -H <span class="str">"Content-Type: application/json"</span> \\
   -d <span class="str">'{"name":"iPhone 16 Pro","category":"Electronics","brand":"Apple"}'</span></pre>
 
 <h3><span class="method post">POST</span> /api/v1/verify</h3>
 <p>Simulate product authenticity verification. Returns trust score, confidence, and simulated hash (demo mode).</p>
 <pre><span class="key">curl</span> -X POST https://authichain-api.undone-k.workers.dev/api/v1/verify \\
-  -H <span class="str">"X-API-Key: demo_test_key_2026"</span> \\
+  -H <span class="str">"X-API-Key: YOUR_API_KEY"</span> \\
   -H <span class="str">"Content-Type: application/json"</span> \\
   -d <span class="str">'{"productId":"PROD-12345"}'</span></pre>
 
@@ -462,32 +741,21 @@ td{padding:12px;border-bottom:1px solid #111}
 <h3><span class="method get">GET</span> /api/v1/industries</h3>
 <p>List all 10 supported industries with market sizes.</p>
 <pre><span class="key">curl</span> https://authichain-api.undone-k.workers.dev/api/v1/industries \\
-  -H <span class="str">"X-API-Key: demo_test_key_2026"</span></pre>
+  -H <span class="str">"X-API-Key: YOUR_API_KEY"</span></pre>
 
 <h3><span class="method get">GET</span> /api/v1/pricing</h3>
 <p>Get current product and pricing information.</p>
 
 <h2>Products &amp; Pricing</h2>
+<p>These are the live checkout plans. Archived StrainChain Basic/Pro/Enterprise and QRON Single/Brand Pack prices are not offered.</p>
 
 <table>
 <tr><th>Plan</th><th>Price</th><th>Details</th></tr>
 <tr><td>Free (API Demo)</td><td style="color:#3ddc60">$0</td><td>10 requests/hour, classification + verification</td></tr>
-</table>
-
-<h3 style="margin-top:32px;color:#8b5cf6">StrainChain <span class="product-note">Cannabis Compliance</span></h3>
-<table>
-<tr><th>Plan</th><th>Price</th><th>Details</th></tr>
-<tr><td>Basic</td><td style="color:#3ddc60">$199/mo</td><td>Cannabis compliance tracking, basic analytics</td></tr>
-<tr><td>Pro</td><td style="color:#3ddc60">$499/mo</td><td>Advanced analytics, priority support, API access</td></tr>
-<tr><td>Enterprise</td><td style="color:#3ddc60">$999/mo</td><td>White-label, SLA, dedicated support, custom integrations</td></tr>
-</table>
-
-<h3 style="margin-top:32px;color:#8b5cf6">QRON <span class="product-note">QR Code Generation</span></h3>
-<table>
-<tr><th>Plan</th><th>Price</th><th>Details</th></tr>
-<tr><td>Single</td><td style="color:#3ddc60">$49</td><td>One-time, single QR code</td></tr>
-<tr><td>Brand Pack</td><td style="color:#3ddc60">$199</td><td>One-time, multiple QR codes + brand customization</td></tr>
-<tr><td>Enterprise</td><td style="color:#3ddc60">$999/mo</td><td>Unlimited QR codes, full brand suite, API access</td></tr>
+<tr><td>StrainChain Passport</td><td style="color:#3ddc60">$49</td><td>One published genetics passport</td></tr>
+<tr><td>QRON Starter Pack</td><td style="color:#3ddc60">$29</td><td>100 AI QR generations</td></tr>
+<tr><td>QRON Creator Pack</td><td style="color:#3ddc60">$99</td><td>500 AI QR generations</td></tr>
+<tr><td>EU DPP Readiness</td><td style="color:#3ddc60">$299</td><td>AuthiChain workspace, self-serve activation</td></tr>
 </table>
 
 <h2>Accounts v2 (Admin)</h2>
@@ -511,7 +779,7 @@ td{padding:12px;border-bottom:1px solid #111}
 <pre><span class="key">const</span> response = <span class="key">await</span> fetch(<span class="str">'https://authichain-api.undone-k.workers.dev/api/v1/verify'</span>, {
   method: <span class="str">'POST'</span>,
   headers: {
-    <span class="str">'X-API-Key'</span>: <span class="str">'demo_test_key_2026'</span>,
+    <span class="str">'X-API-Key'</span>: <span class="str">'YOUR_API_KEY'</span>,
     <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>
   },
   body: JSON.stringify({ productId: <span class="str">'PROD-12345'</span> })

@@ -203,7 +203,7 @@ Live endpoint: `we_1UGTCS…` → `https://authichain.com/api/stripe/webhook` (e
    ```
    If `session_id` / `status` columns are missing, the handler still wrote `event_id` + `event_type` + `processed_at` (migration `20260920000001` is optional).
 
-Or start a new smoke: `GET https://authichain.com/api/checkout/dpp?visit_id=dpp_smoke_<unix>&promo=DPP-SMOKE-E2E`. After checkout, expect `payment_succeeded` **and** `provisioned` (with `profile_id` or `skip_reason`).
+Or start a new smoke: `GET https://authichain.com/api/checkout/dpp?visit_id=dpp_smoke_<unix>&promo=DPP-SMOKE-E2E` with header `x-dpp-smoke-secret` set to the worker secret `DPP_SMOKE_SECRET`. A public GET without that header 303s to `https://authichain.com/checkout/dpp_readiness` and does not open a session. After an authorized checkout, expect `payment_succeeded` **and** `provisioned` (with `profile_id` or `skip_reason`).
 
 Optional: add `checkout.session.async_payment_succeeded` on `we_1UGTCS…` (Klarna / delayed wallets; not required for $0 card/promo).
 

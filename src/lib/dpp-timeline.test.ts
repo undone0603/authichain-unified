@@ -105,14 +105,36 @@ describe('formatMilestoneDate', () => {
     expect(formatMilestoneDate(registry())).toBe('Jul 2026');
   });
 
-  it('renders a quarter range', () => {
+  it('renders a year range (electronics)', () => {
     const electronics = listMilestones().find((m) => m.id === 'electronics')!;
-    expect(formatMilestoneDate(electronics)).toBe('Q3–Q4 2027');
+    expect(formatMilestoneDate(electronics)).toBe('2030–2031');
   });
 
-  it('renders a year range', () => {
-    const textiles = listMilestones().find((m) => m.id === 'textiles')!;
-    expect(formatMilestoneDate(textiles)).toBe('2028–2029');
+  it('renders a quarter range (construction)', () => {
+    const c = listMilestones().find((m) => m.id === 'construction')!;
+    expect(formatMilestoneDate(c)).toBe('Q2 2027');
+  });
+
+  it('textiles is a year floor, labelled indicative, with no countdown', () => {
+    const t = listMilestones().find((m) => m.id === 'textiles')!;
+    expect(formatMilestoneDate(t)).toBe('2029');
+    expect(t.detail).toContain('2029 at the earliest (estimate)');
+    expect(t.label).toContain('(indicative)');
+  });
+
+  it('every indicative entry hides its countdown/status and says so in its label or detail', () => {
+    for (const m of listMilestones().filter((m) => m.indicative)) {
+      expect(m.hideStatus).toBe(true);
+    }
+    for (const id of ['furniture', 'textiles', 'electronics']) {
+      expect(listMilestones().find((m) => m.id === id)!.label).toContain('(indicative)');
+    }
+  });
+
+  it('battery label does not apply >2 kWh to EV batteries', () => {
+    const b = listMilestones().find((m) => m.id === 'batteries')!;
+    expect(b.label).toBe('LMT, EV and industrial (>2 kWh) batteries');
+    expect(b.detail).toContain('apply later, on their own dates');
   });
 });
 
@@ -135,8 +157,8 @@ describe('countdownLabel', () => {
   });
 
   it('summarises distant milestones in years', () => {
-    const construction = listMilestones().find((m) => m.id === 'construction')!;
-    expect(countdownLabel(construction, AUG_2026)).toMatch(/years out/);
+    const electronics = listMilestones().find((m) => m.id === 'electronics')!;
+    expect(countdownLabel(electronics, AUG_2026)).toMatch(/years out/);
   });
 });
 
@@ -146,11 +168,28 @@ describe('nextDeadline / mostRecentInForce', () => {
   });
 
   it('moves on once the battery mandate lands', () => {
-    expect(nextDeadline(MAR_2027)?.id).toBe('electronics');
+    expect(nextDeadline(MAR_2027)?.id).toBe('construction');
     expect(mostRecentInForce(MAR_2027)?.id).toBe('batteries');
   });
 
   it('reports the registry as the live milestone in Aug 2026', () => {
     expect(mostRecentInForce(AUG_2026)?.id).toBe('central-registry');
+  });
+});
+
+describe('regulatory-timeline.json gate (Research, 2026-10-24)', () => {
+  it('every non-battery, non-registry entry is indicative and sourced to the EC DPP page', () => {
+    for (const m of listMilestones()) {
+      if (m.id === 'batteries' || m.id === 'central-registry') continue;
+      expect(m.indicative).toBe(true);
+      expect(m.source).toBe('https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en');
+    }
+  });
+  it('uses >2 kWh, the 2026/1778 ELI link, and splits construction from furniture', () => {
+    const all = listMilestones();
+    expect(all.find((m) => m.id === 'batteries')!.label).toContain('>2 kWh');
+    expect(all.find((m) => m.id === 'central-registry')!.source).toBe('https://eur-lex.europa.eu/eli/reg_impl/2026/1778/oj');
+    expect(all.find((m) => m.id === 'construction')!.label).not.toMatch(/furniture/i);
+    expect(all.some((m) => m.id === 'furniture')).toBe(true);
   });
 });

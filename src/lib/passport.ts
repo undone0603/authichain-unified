@@ -48,6 +48,12 @@ export interface PassportPayload {
     contract: string | null;
     txHash: string | null;
   } | null;
+  fingerprint: {
+    digest: string;
+    source: "issuer_supplied";
+    verified: false;
+    caveat: string;
+  } | null;
   history: {
     scanCount: number;
     firstCountry: string | null;

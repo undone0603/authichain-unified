@@ -21,6 +21,8 @@ jobs:
       - name: Sync cookies to AgentZ
         env:
           AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           LINKEDIN_SESSION_COOKIE: ${{ secrets.LINKEDIN_SESSION_COOKIE }}
           LINKEDIN_JSESSIONID: ${{ secrets.LINKEDIN_JSESSIONID }}
           AGENTZ_URL: https://agentz.authichain.com
@@ -45,10 +47,18 @@ jobs:
           open("/tmp/cred.key","w").write(sys.argv[1])
           PY
             local http
+            local -a access_headers=()
+            if [ -n "${CF_ACCESS_CLIENT_ID:-}" ] && [ -n "${CF_ACCESS_CLIENT_SECRET:-}" ]; then
+              access_headers+=(
+                -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}"
+                -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}"
+              )
+            fi
             http=$(curl -sS -o /tmp/cred.out -w '%{http_code}' \
               -X POST "${AGENTZ_URL}/credentials/$(cat /tmp/cred.key)" \
               -H "Authorization: Bearer ${AGENT_SECRET}" \
               -H "Content-Type: application/json" \
+              "${access_headers[@]}" \
               --data-binary @/tmp/cred.json)
             echo "POST /credentials/$(cat /tmp/cred.key) → HTTP ${http}"
             if [ "$http" != "200" ]; then
@@ -67,6 +77,13 @@ jobs:
           fi
 
           # Status only (no values)
-          curl -sS -H "Authorization: Bearer ${AGENT_SECRET}" \
+          STATUS_HEADERS=(-H "Authorization: Bearer ${AGENT_SECRET}")
+          if [ -n "${CF_ACCESS_CLIENT_ID:-}" ] && [ -n "${CF_ACCESS_CLIENT_SECRET:-}" ]; then
+            STATUS_HEADERS+=(
+              -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}"
+              -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}"
+            )
+          fi
+          curl -sS "${STATUS_HEADERS[@]}" \
             "${AGENTZ_URL}/credentials/linkedin_session/status"
           echo

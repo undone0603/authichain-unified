@@ -22,7 +22,10 @@ export default {
     }
 
     // Webhook: Lead capture from portfolio contact forms
-    if (url.pathname === '/webhook/lead' && request.method === 'POST') {
+    // The only public route is the zone route qron.space/autoflow/*, which keeps the
+    // /autoflow prefix. Accept that exact path too (workers.dev is off). Only this
+    // one path is aliased, so /autoflow/run/* and /autoflow/dashboard stay unmatched.
+    if ((url.pathname === '/webhook/lead' || url.pathname === '/autoflow/webhook/lead') && request.method === 'POST') {
       try {
         const data: any = await request.json();
         const leadInfo = {
@@ -42,11 +45,20 @@ export default {
         }
 
         // Send notification email via Resend relay
-        await sendEmail(env, {
+        const sent = await sendEmail(env, {
           to: 'authichain@gmail.com',
           subject: `🔥 New QRON Lead: ${leadInfo.name} (${leadInfo.company})`,
           body: `New lead captured!\n\nName: ${leadInfo.name}\nEmail: ${leadInfo.email}\nCompany: ${leadInfo.company}\nStyle Interest: ${leadInfo.style}\nMessage: ${leadInfo.message}\nSource: ${leadInfo.source}\nTime: ${leadInfo.timestamp}\n\nReply ASAP — first responder wins.`
         });
+
+        // LEADS isn't bound, so the alert email is the only record of the lead.
+        // If it didn't go out, say so, and the form shows its "email us" fallback.
+        if (!sent) {
+          return new Response(JSON.stringify({ success: false, message: 'Lead not delivered' }), {
+            status: 502,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
 
         return new Response(JSON.stringify({ success: true, message: 'Lead captured' }), {
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -129,12 +141,16 @@ export default {
 };
 
 // ============ UPTIME MONITOR ============
-const MONITORED_URLS = [
-  { name: 'QRON Portfolio', url: 'https://qron-portfolio.undone-k.workers.dev/' },
-  { name: 'AuthiChain API', url: 'https://authichain-api.undone-k.workers.dev/' },
-  { name: 'AuthiChain Dashboard', url: 'https://authichain-dashboard.undone-k.workers.dev/' },
-  { name: 'StrainChain', url: 'https://strainchain.undone-k.workers.dev/' },
-  { name: 'QRON SEO Engine', url: 'https://qron-seo-engine.undone-k.workers.dev/' },
+// Same-account *.workers.dev hosts can't be fetched from a Worker (error 1042),
+// so Workers on this account are checked through a service binding (`binding`,
+// see wrangler.toml). `url` is still the label and the request URL; with a
+// binding it never leaves the account. `upStatuses` lists extra statuses that
+// mean "running" (the dashboard answers an unauthenticated GET / with its 401
+// login page).
+const MONITORED_URLS: { name: string; url: string; binding?: string; upStatuses?: number[] }[] = [
+  { name: 'QRON Portfolio', url: 'https://qron-portfolio.undone-k.workers.dev/', binding: 'QRON_PORTFOLIO' },
+  { name: 'AuthiChain API', url: 'https://authichain-api.undone-k.workers.dev/', binding: 'AUTHICHAIN_API' },
+  { name: 'AuthiChain Dashboard', url: 'https://authichain-dashboard.undone-k.workers.dev/', binding: 'AUTHICHAIN_DASHBOARD', upStatuses: [401] },
   { name: 'QRON Gallery', url: 'https://qron.space' },
 ];
 
@@ -145,14 +161,22 @@ async function runUptimeCheck(env: any) {
   for (const site of MONITORED_URLS) {
     const start = Date.now();
     try {
-      const resp = await fetch(site.url, {
+      const init: RequestInit = {
         method: 'GET',
         headers: { 'User-Agent': 'QRON-Uptime-Monitor/1.0' },
         redirect: 'follow'
-      });
+      };
+      let resp: Response;
+      if (site.binding) {
+        const svc = env && env[site.binding];
+        if (!svc) throw new Error(`service binding ${site.binding} not configured`);
+        resp = await svc.fetch(site.url, init);
+      } else {
+        resp = await fetch(site.url, init);
+      }
       const latency = Date.now() - start;
       const status = resp.status;
-      const ok = status >= 200 && status < 400;
+      const ok = (status >= 200 && status < 400) || (site.upStatuses ?? []).includes(status);
 
       results.push({ name: site.name, url: site.url, status, latency: `${latency}ms`, ok });
 
@@ -275,7 +299,7 @@ LEAD PIPELINE: ${leadCount} leads captured (last 90 days)
 ACTIVE ASSETS:
   • Portfolio: https://qron-portfolio.undone-k.workers.dev/
   • API Docs: https://authichain-api.undone-k.workers.dev/
-  • Dashboard: https://authichain-dashboard.undone-k.workers.dev/?key=authichain2026
+  • Dashboard: https://authichain-dashboard.undone-k.workers.dev/
   • SEO Engine: https://qron-seo-engine.undone-k.workers.dev/
 
 TODAY'S PRIORITIES:
@@ -303,9 +327,20 @@ Automated by QRON Automation Worker
 // ============ EMAIL VIA MAILCHANNELS (FREE ON CF) ============
 async function sendEmail(env: any, { to, subject, body }: any) {
   try {
-    const resp = await fetch('https://resend-relay.undone-k.workers.dev/emails', {
+    // resend-relay is reached through the RELAY service binding (wrangler.toml),
+    // not its workers.dev URL: that URL is off and is blocked (1042) from
+    // same-account Workers anyway. The hostname below is never resolved.
+    if (!env || !env.RELAY) {
+      console.log(`Email error: RELAY service binding not configured (${subject})`);
+      return false;
+    }
+    if (!env.RELAY_SHARED_SECRET) {
+      console.log(`Email error: RELAY_SHARED_SECRET not set (${subject})`);
+      return false;
+    }
+    const resp = await env.RELAY.fetch('https://resend-relay/emails', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Relay-Key': env.RELAY_SHARED_SECRET },
       body: JSON.stringify({
         to: to,
         subject: subject,

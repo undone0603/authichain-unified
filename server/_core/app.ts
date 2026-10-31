@@ -108,6 +108,10 @@ export function createApp() {
     } catch (err: unknown) {
       const message = getErrorMessage(err);
       console.error(`[Stripe Webhook] Error: ${message}`);
+      // PM-338: duplicate guard unavailable -> 500 so Stripe retries.
+      if ((err as { name?: string } | null)?.name === "StripeEventClaimUnavailableError") {
+        return res.status(500).json({ error: "Temporarily unavailable; retry" });
+      }
       res.status(400).json({ error: message });
     }
   });

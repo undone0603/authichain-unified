@@ -3,8 +3,12 @@ from supabase import create_client
 import json
 
 # Setup
-URL = 'https://nhdnkzhtadfkkluiulhs.supabase.co'
-KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oZG5remh0YWRma2tsdWl1bGhzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzkzODI1NSwiZXhwIjoyMDg5NTE0MjU1fQ.w7DTVFFSdKWsyE1MVCKWwes_mP9S51Y0CY-8-hPlxaE'
+# Credentials come from the environment only. A service-role key was once
+# committed here; it must be treated as leaked and rotated.
+URL = os.environ.get('SUPABASE_URL')
+KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+if not URL or not KEY:
+    raise SystemExit('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the environment.')
 supabase = create_client(URL, KEY)
 
 # Remediation data to be added to root of metadata

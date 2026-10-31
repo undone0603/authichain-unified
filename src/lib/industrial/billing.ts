@@ -1,27 +1,9 @@
-import Stripe from "stripe";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+// Relative, not "@/…": tsconfig.worker.json has no @/ alias for server/.
+import { getStripe } from "../../../server/config/stripe";
 
-// Lazy singletons — avoid build-time throw when env vars are absent.
-let _stripe: Stripe | null = null;
-
-function getStripe(): Stripe {
-  if (!_stripe) {
-    const key = process.env.STRIPE_SECRET_KEY;
-    if (!key) throw new Error("STRIPE_SECRET_KEY not set");
-    // Pinned to legacy API version because subscriptionItems.createUsageRecord
-    // is only available on pre-meterEvents Stripe API versions.
-    // Stripe continues to honor this server-side version; the current SDK's
-    // latest-version-only type must therefore be narrowed intentionally.
-
-    _stripe = new Stripe(key, {
-      apiVersion: "2026-07-29.dahlia" as unknown as Stripe.LatestApiVersion,
-    });
-  }
-  return _stripe;
-}
-
-let _admin: SupabaseClient<any> | null = null;
-function getAdmin(): SupabaseClient<any> {
+let _admin: SupabaseClient | null = null;
+function getAdmin(): SupabaseClient {
   if (!_admin) {
     _admin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,89 +22,86 @@ function automationLogs(): AutomationLogWriter {
 }
 
 /**
- * BILLING CONFIGURATION
- * Defines the metered pricing for AI agent tool calls.
+ * Meter units per AI agent tool call. The price of a unit is whatever metered
+ * price the owner attaches to the Stripe Meter; nothing here sets it.
  */
 export const METERED_PRICING = {
-  verify_product: 1, // 1 unit = $0.05
-  register_product: 10, // 10 units = $0.50
-  check_eu_dpp: 100, // 100 units = $5.00
-  mint_certificate: 20, // 20 units = $1.00
+  verify_product: 1,
+  register_product: 10,
+  check_eu_dpp: 100,
+  mint_certificate: 20,
 };
 
+export type MeteredTool = keyof typeof METERED_PRICING;
+
+const ENTITLED_STATUSES = new Set(["active", "trialing"]);
+
 /**
- * Reports usage to Stripe Metered Billing.
- * Part of the "Stripe for AI Agents" autonomous revenue stream.
+ * The Stripe Billing Meter event name for agent tool calls, from
+ * STRIPE_AGENT_METER_EVENT. Unset means metering is off and nothing is sent
+ * to Stripe. Set it only after the Meter exists and a metered price on the
+ * customer's subscription is attached to it; until then Stripe rejects the
+ * event and the call is logged as a failure.
+ */
+export function agentMeterEventName(): string | null {
+  const name = process.env.STRIPE_AGENT_METER_EVENT?.trim();
+  return name ? name : null;
+}
+
+/**
+ * Report one agent tool call to Stripe as a Billing Meter event.
  *
- * @param userId The ID of the user/agency owning the agent
- * @param toolName The tool that was called
+ * Replaces subscriptionItems.createUsageRecord, which the current Stripe SDK
+ * does not have: every call threw, was caught and logged, and nothing was
+ * ever billed. Same meterEvents call as server/tenant-billing.ts.
+ *
+ * Bills only an entitled customer (profiles.subscription_status active or
+ * trialing, with a stripe_customer_id). Never throws: usage reporting must
+ * not fail the tool call.
  */
 export async function reportAgentUsage(
   userId: string,
-  toolName: keyof typeof METERED_PRICING
-) {
-  try {
-    console.log(`[Billing] Reporting usage for ${userId}: ${toolName}`);
+  toolName: MeteredTool
+): Promise<void> {
+  const eventName = agentMeterEventName();
+  if (!eventName) return;
 
-    // 1. Get the user's active metered subscription item
-    const { data: profileRow } = await getAdmin()
+  try {
+    const { data: profileRow, error } = await getAdmin()
       .from("profiles")
-      .select("stripe_subscription_id, tier")
+      .select("stripe_customer_id, subscription_status")
       .eq("user_id", userId)
-      .single();
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
     const profile = profileRow as {
-      stripe_subscription_id: string | null;
-      tier: string;
+      stripe_customer_id: string | null;
+      subscription_status: string | null;
     } | null;
 
-    if (!profile || !profile.stripe_subscription_id) {
+    if (
+      !profile?.stripe_customer_id ||
+      !ENTITLED_STATUSES.has(profile.subscription_status ?? "")
+    ) {
       console.warn(
-        `[Billing] No active subscription for ${userId} - skipping reporting`
+        `[Billing] No entitled Stripe customer for ${userId}; ${toolName} not metered`
       );
       return;
     }
 
-    // Skip reporting for free tier or if not enterprise (unless we want to bill everyone)
-    if (profile.tier === "free") return;
-
-    // 2. Find the metered subscription item
-    const subscription = await getStripe().subscriptions.retrieve(
-      profile.stripe_subscription_id
-    );
-    const meteredItem = subscription.items.data.find(
-      item => item.price.recurring?.usage_type === "metered"
-    );
-
-    if (!meteredItem) {
-      console.error(
-        `[Billing] No metered item found in subscription ${profile.stripe_subscription_id}`
-      );
-      return;
-    }
-
-    // 3. Report usage units based on tool value
-    const quantity = METERED_PRICING[toolName] || 1;
-
-    const legacyStripe = getStripe() as unknown as {
-      subscriptionItems: {
-        createUsageRecord: (
-          id: string,
-          params: {
-            quantity: number;
-            timestamp: number;
-            action: "increment" | "set";
-          }
-        ) => Promise<unknown>;
-      };
-    };
-
-    await legacyStripe.subscriptionItems.createUsageRecord(meteredItem.id, {
-      quantity,
-      timestamp: Math.floor(Date.now() / 1000),
-      action: "increment",
+    const quantity = METERED_PRICING[toolName];
+    // Stripe dedupes meter events by identifier, so a retried request
+    // cannot bill the same call twice.
+    const identifier = globalThis.crypto.randomUUID();
+    await getStripe().billing.meterEvents.create({
+      event_name: eventName,
+      identifier,
+      payload: {
+        stripe_customer_id: profile.stripe_customer_id,
+        value: String(quantity),
+      },
     });
 
-    // 4. Log to DB for internal analytics
     await automationLogs().insert({
       workflow_name: "metered_usage_reported",
       trigger_type: "event",
@@ -131,13 +110,10 @@ export async function reportAgentUsage(
         userId,
         toolName,
         quantity,
-        subscriptionId: subscription.id,
+        eventName,
+        identifier,
       }),
     });
-
-    console.log(
-      `[Billing] Successfully reported ${quantity} units for ${toolName}`
-    );
   } catch (err) {
     console.error("[Billing] Reporting failed:", err);
     // Non-blocking log

@@ -69,13 +69,13 @@ def run(ctx: ExecutionContext) -> str:
     
         if ctx.mode == Mode.DRY_RUN:
             site_url = f"https://{lead.get('slug', 'demo')}.authichain.com"
-            ctx.step(f"Deploy Vercel microsite for {lead['name']} (Dry-run)")
+            ctx.step(f"Publish Cloudflare microsite for {lead['name']} (Dry-run)")
         else:
             site_url = ctx.step(
-                f"Deploy Vercel microsite for {lead['name']}",
+                f"Publish Cloudflare microsite for {lead['name']}",
                 action=lambda l=lead: asyncio.run(deploy_sales_microsite(l))
             )
-        ctx.step(f"Microsite Live at: {site_url}")
+        ctx.step(f"Microsite Live at: {site_url}" if site_url else "Microsite not published.")
     
         # 5. Oracle Logistics Integration
         ctx.step(f"Updating product timeline via Logistics Oracle for {product_id_sample}...")

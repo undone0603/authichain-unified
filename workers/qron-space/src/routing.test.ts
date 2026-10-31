@@ -152,6 +152,62 @@ test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST 
   assert.equal(JSON.stringify(spec).includes("/api/checkout"), false);
 });
 
+test("POST /api/verify fails closed with the canonical decision contract", async () => {
+  const res = await worker.fetch(
+    new Request("https://qron.space/api/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    }),
+  );
+  assert.equal(res.status, 400);
+  assert.equal(res.headers.get("cache-control"), "no-store");
+  const body = (await res.json()) as Record<string, unknown>;
+  assert.equal(body.valid, false);
+  assert.equal(body.decision, "indeterminate");
+  assert.equal(body.decision_contract, "AuthiChain Verification Decision v1");
+  assert.equal(body.error, "jws is required");
+  // Must not be the HTML 404 page.
+  assert.equal(res.headers.get("content-type"), "application/json");
+});
+
+test("POST /api/verify forwards a blocked canonical decision as non-success", async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    assert.match(url, /attestation\/verify/);
+    return new Response(
+      JSON.stringify({
+        valid: false,
+        decision: "blocked",
+        decision_contract: "AuthiChain Verification Decision v1",
+        reasons: ["decision_blocked"],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  }) as typeof fetch;
+  try {
+    const res = await worker.fetch(
+      new Request("https://qron.space/api/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jws: "signed-attestation" }),
+      }),
+    );
+    assert.equal(res.status, 409);
+    const body = (await res.json()) as {
+      valid: boolean;
+      decision: string;
+      reasons: string[];
+    };
+    assert.equal(body.valid, false);
+    assert.equal(body.decision, "blocked");
+    assert.ok(body.reasons.includes("canonical_response_not_positive"));
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
 test("unpaid POST /api/x402 is 402 v2 with published payTo; GET health is 200", async () => {
   const unpaid = await worker.fetch(
     new Request("https://qron.space/api/x402", { method: "POST" })
@@ -212,7 +268,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
     );
     assert.equal(
       body.pricing.humanCheckout.farmPaymentLink,
-      planPaymentLink("strainchain_farm"),
+      undefined,
       path
     );
     assert.equal(
@@ -248,7 +304,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
   assert.equal(required.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
 });
 
-test("GET /api/x402/catalog is 200 with Farm+Passport+DPP+QRON Payment Links", async () => {
+test("GET /api/x402/catalog publishes Passport, DPP, and QRON links, not Farm", async () => {
   const res = await get("/api/x402/catalog");
   assert.equal(res.status, 200);
   const body = (await res.json()) as {
@@ -262,10 +318,7 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP+QRON Payment Links", a
     };
   };
   assert.equal(body.catalog, "/api/x402/catalog");
-  assert.equal(
-    new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-    "authichain.com"
-  );
+  assert.equal(body.humanCheckout.farmPaymentLink, undefined);
   assert.equal(
     new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
     "authichain.com"
@@ -331,6 +384,33 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);
+});
+
+test("POST /generate sends an anonymous submit to the $29 Starter checkout", async () => {
+  const real = globalThis.fetch;
+  let called = false;
+  globalThis.fetch = (async () => {
+    called = true;
+    return new Response("should not proxy", { status: 500 });
+  }) as typeof fetch;
+  try {
+    const res = await worker.fetch(
+      new Request("https://qron.space/generate", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "targetUrl=https%3A%2F%2Fexample.com%2Fsku&prompt=neon",
+      }),
+      { APP_ORIGIN: "https://app.example.com" }
+    );
+    assert.equal(res.status, 303);
+    assert.equal(called, false);
+    const location = new URL(res.headers.get("location") || "");
+    assert.equal(location.origin + location.pathname, "https://authichain.com/checkout/starter");
+    assert.equal(location.searchParams.get("targetUrl"), "https://example.com/sku");
+    assert.equal(location.searchParams.get("prompt"), "neon");
+  } finally {
+    globalThis.fetch = real;
+  }
 });
 
 test("/generate is proxied to the app, not answered with a 404", async () => {
@@ -432,4 +512,80 @@ test("the 404 escapes the path, so a hostile URL cannot inject markup", async ()
     !html.includes("<script>alert(1)</script>"),
     "path must be escaped"
   );
+});
+
+
+test("Nightstamp pages and APIs are proxied to the app worker", async () => {
+  const real = globalThis.fetch;
+  const calls: Request[] = [];
+  globalThis.fetch = (async (
+    input: Request | string | URL,
+    init?: RequestInit
+  ) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    calls.push(req);
+    return new Response("nightstamp", { status: 200 });
+  }) as typeof fetch;
+  try {
+    const paths = [
+      ["/starmap", "GET"],
+      ["/sky/nightstamp-123", "GET"],
+      ["/api/starmap/generate", "POST"],
+      ["/api/starmap/checkout", "POST"],
+      ["/api/starmap/image/nightstamp-123", "GET"],
+      ["/api/starmap/marketing", "POST"],
+    ] as const;
+    for (const [pathname, method] of paths) {
+      calls.length = 0;
+      const res = await worker.fetch(
+        new Request("https://qron.space" + pathname, { method }),
+        { APP_ORIGIN: "https://app.example.com" }
+      );
+      assert.equal(res.status, 200, pathname);
+      assert.equal(res.headers.get("x-served-by"), "qron-space-proxy", pathname);
+      assert.equal(calls.length, 1, pathname);
+      assert.equal(new URL(calls[0].url).pathname, pathname);
+      assert.equal(calls[0].method, method);
+    }
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test("qron.space carries no $QRON token, staking, or governance copy (PM-375)", async () => {
+  const real = globalThis.fetch;
+  const feed =
+    "<feed>" +
+    "<entry><yt:videoId>70KG5d2fFUo</yt:videoId><title>The $QRON Token Economy Incentivizing Truth</title><published>2026-01-01T00:00:00Z</published></entry>" +
+    "<entry><yt:videoId>PdCibPadCxE</yt:videoId><title>Validating Origin with QRON</title><published>2026-01-02T00:00:00Z</published></entry>" +
+    "</feed>";
+  globalThis.fetch = (async () =>
+    new Response(feed, { status: 200, headers: { "content-type": "application/xml" } })) as typeof fetch;
+  try {
+    const html = await (await get("/")).text();
+    assert.doesNotMatch(html, /\$QRON|[Ss]taking|[Gg]overnance|0xAebfA6b08fb25b59748c93273aB8880e20FfE437/);
+    assert.doesNotMatch(html, /70KG5d2fFUo/);
+    assert.match(html, /PdCibPadCxE/);
+  } finally {
+    globalThis.fetch = real;
+  }
+  const notFound = await (await get("/nope-xyz123")).text();
+  assert.match(notFound, /<title>404 — Not Found<\/title>/);
+  const og = await (await get("/og-image.svg")).text();
+  assert.doesNotMatch(og, /\$QRON|Stake|Govern|ERC-20/);
+  assert.match(og, />QRON<\/text>/);
+});
+
+test("qron.space home meta no longer claims a Polygon certificate contract (PM-437, CFA-164)", async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response("<feed></feed>", { status: 200, headers: { "content-type": "application/xml" } })) as typeof fetch;
+  try {
+    const html = await (await get("/")).text();
+    assert.doesNotMatch(html, /certificate contract on Polygon/i);
+    assert.doesNotMatch(html, /anchored to AuthiChain/i);
+    assert.match(html, /<meta name="description" content="[^"]+">/);
+  } finally {
+    globalThis.fetch = real;
+  }
 });

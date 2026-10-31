@@ -8,17 +8,18 @@
     "types": "wrangler types"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.30.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260926.1",
+    "@cloudflare/workers-types": "^5.20261008.1",
     "typescript": "^6.0.3",
-    "wrangler": "^4.141.0"
+    "wrangler": "^4.153.0"
   },
   "pnpm": {
     "overrides": {
-      "ws": ">=8.20.1"
+      "ws": ">=8.20.1",
+      "proxy-addr@<2.0.8": "2.0.8"
     }
   }
 }

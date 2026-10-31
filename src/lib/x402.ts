@@ -10,9 +10,9 @@
  * `$QRON` and any governance token stay off this rail (see
  * docs/strategy/AGENT_TOKENOMICS_x402.md). Wallets vs rails:
  * docs/strategy/WEB3_IDENTITY.md. Do not rebind X402_PAY_TO away from
- * the owner-authorized treasury 0xaebf…e437.
+ * the owner-authorized treasury 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2.
  * Do not rebind X402_FACILITATOR_URL or X402_USDC_ASSET. payTo is the
- * tokenomics EOA (0xaebf…e437), not the $QRON holder EOA (0x5db5…), not
+ * owner's tokenomics EOA (0x5db511706FB6317cd23A7655F67450c5AC6e6AA2, also the $QRON holder), not
  * the NFT deployer EOA (0xbad4…), and not the Coinbase Smart Wallet.
  *
  * Pure helpers here are fully unit-tested; settlement verification has a single
@@ -38,6 +38,45 @@ export interface PaymentRequirement {
   outputSchema?: X402BazaarInfo;
 }
 
+/**
+ * HTTP 200 body after a paid missing-seal check (the advertised bazaar
+ * example UUID). Crawlers that walk `accepts[0].outputSchema.output` as
+ * the response template compare these keys to the JSON they paid for.
+ * Never include `authenticityScore`. A valid signature is not claimed.
+ */
+export type X402PaidHttpBodyExample = {
+  registered: boolean;
+  status: string;
+  checks: {
+    registry: string;
+    signature: string;
+    revocation: string;
+  };
+  details: {
+    verdict: string;
+    reasons: string[];
+  };
+  verified: false;
+  baseline: {
+    version: "1";
+    scope: "signature-and-validity";
+    checkedAt: string;
+    verdict: string;
+    reasons: string[];
+    checks: Record<string, unknown>;
+    evidence: { record: null; anchor: null };
+    unknowns: string[];
+  };
+  subject: string;
+  settlement: {
+    payer: string;
+    amountAtomic: string;
+    txHash: string;
+    trustless: boolean;
+  };
+  timestamp: string;
+};
+
 /** Bazaar discovery `info` (HTTP POST skill). Schema must validate this object. */
 export type X402BazaarInfo = {
   input: {
@@ -46,25 +85,23 @@ export type X402BazaarInfo = {
     bodyType: "json";
     body: {
       sealId: string;
-      productId?: string;
-      serial?: string;
     };
   };
   output: {
     type: "json";
-    example: {
-      verified: boolean;
-      authenticityScore: number;
-      subject: string | null;
-      details: Record<string, unknown>;
-      settlement: {
-        payer: string;
-        amountAtomic: string;
-        txHash: string;
-        trustless: boolean;
-      };
-    };
+    example: X402PaidHttpBodyExample;
   };
+};
+
+/**
+ * v2 `accepts[0].outputSchema`. Keep `input` so PayAI can catalog the
+ * skill. Put the unwrapped HTTP body on `output` so field-check crawlers
+ * (Settled `basis=example`) do not treat bazaar `{type, example}` wrapper
+ * keys as promised response fields.
+ */
+export type X402V2OutputSchema = {
+  input: X402BazaarInfo["input"];
+  output: X402PaidHttpBodyExample;
 };
 
 export type X402BazaarExtension = {
@@ -73,6 +110,81 @@ export type X402BazaarExtension = {
     schema: Record<string, unknown>;
   };
 };
+
+/**
+ * Placeholder UUID in 402 bazaar/example bodies. Discovery crawlers POST this
+ * as the listing example. It is not a real seal and must not take the free
+ * daily allowance — a 200 on this UUID is classified as payability=free.
+ */
+export const X402_DISCOVERY_EXAMPLE_SEAL_ID =
+  "00000000-0000-4000-8000-000000000000";
+
+/**
+ * PayAI still lists `/api/v1/agent-verify` with `sealId: "demo"` (cached
+ * 2026-10-17). Crawlers POST that body and treat HTTP 400 as "POST does not
+ * pay". Accept it as a listing sample only: unpaid 402, paid missing-seal
+ * evidence, never a free 200. Do not advertise `demo` on new 402s.
+ */
+export const X402_STALE_DISCOVERY_SEAL_ID = "demo";
+
+/** Lumi Watch-trial domain proof. Public verification string, not a secret. */
+export const LUMI_MONITOR_VERIFY_LINE =
+  "lumi-monitor-verify=a3d5185455e49db093ba4e9b37f7e460";
+
+export function isDiscoveryExampleSealId(sealId: string): boolean {
+  const id = sealId.trim().toLowerCase();
+  return (
+    id === X402_DISCOVERY_EXAMPLE_SEAL_ID || id === X402_STALE_DISCOVERY_SEAL_ID
+  );
+}
+
+/** Stable ISO-ms timestamp in the advertised sample (length matches live). */
+export const X402_PAID_OUTPUT_EXAMPLE_CHECKED_AT = "2026-01-01T00:00:00.000Z";
+
+/**
+ * Paid missing-seal JSON the Worker actually returns (plus settlement
+ * receipt). Used as bazaar `output.example` and as v2 `outputSchema.output`.
+ */
+export function x402PaidOutputExample(): X402PaidHttpBodyExample {
+  return {
+    registered: false,
+    status: "not_registered",
+    checks: {
+      registry: "not_found",
+      signature: "not_checked",
+      revocation: "not_available",
+    },
+    details: {
+      verdict: "unsigned",
+      reasons: ["seal_not_found"],
+    },
+    verified: false,
+    baseline: {
+      version: "1",
+      scope: "signature-and-validity",
+      checkedAt: X402_PAID_OUTPUT_EXAMPLE_CHECKED_AT,
+      verdict: "unsigned",
+      reasons: ["seal_not_found"],
+      checks: {},
+      evidence: { record: null, anchor: null },
+      unknowns: [
+        "issuer_identity_not_authenticated",
+        "registry_subject_binding_not_verified",
+        "revocation_not_checked",
+        "anchor_not_queried",
+        "physical_authenticity_not_inspected",
+      ],
+    },
+    subject: X402_DISCOVERY_EXAMPLE_SEAL_ID,
+    settlement: {
+      payer: "0x0000000000000000000000000000000000000000",
+      amountAtomic: "50000",
+      txHash: "0x",
+      trustless: true,
+    },
+    timestamp: X402_PAID_OUTPUT_EXAMPLE_CHECKED_AT,
+  };
+}
 
 /**
  * Discovery metadata for PayAI / x402 Bazaar. Declared on the unpaid 402 so a
@@ -85,14 +197,14 @@ export function x402BazaarDiscovery(): X402BazaarExtension {
       type: "http",
       method: "POST",
       bodyType: "json",
-      body: { sealId: "demo" },
+      body: { sealId: "00000000-0000-4000-8000-000000000000" },
     },
     output: {
       type: "json",
       example: {
         verified: false,
         authenticityScore: 0,
-        subject: "demo",
+        subject: "00000000-0000-4000-8000-000000000000",
         details: {},
         settlement: {
           payer: "0x0000000000000000000000000000000000000000",
@@ -131,10 +243,10 @@ export function x402BazaarDiscovery(): X402BazaarExtension {
                 properties: {
                   sealId: {
                     type: "string",
-                    description: "Optional seal id to verify",
+                    format: "uuid",
+                    description:
+                      "Required seal UUID. productId and serial are not registry keys.",
                   },
-                  productId: { type: "string" },
-                  serial: { type: "string" },
                 },
               },
             },
@@ -169,8 +281,8 @@ export const BASE_USDC_ASSET = BASE_USDC;
 
 /**
  * Live published X402_PAY_TO — owner-authorized treasury / tokenomics EOA
- * 0xaebf…e437. Distinct from the $QRON
- * holder EOA (0x5db5…) and the NFT deployer EOA (0xbad4…). Canonical map:
+ * 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2. Never the $QRON
+ * ERC-20 contract (0xAebf…E437) or the NFT deployer EOA (0xbad4…). Canonical map:
  * docs/strategy/WEB3_IDENTITY.md. Do not rebind away from this address.
  * Runtime health still reads the Worker/env binding; this constant
  * documents the live value. It is NOT a fallback when X402_PAY_TO is
@@ -244,8 +356,8 @@ export type PaymentRequiredV2 = {
     payTo: string;
     maxTimeoutSeconds: number;
     extra?: { name?: string; version?: string };
-    /** PayAI / CDP Bazaar catalog the skill from the unpaid 402 accepts row. */
-    outputSchema: X402BazaarInfo;
+    /** PayAI catalogs `input`; Settled walks `output` as the HTTP body sample. */
+    outputSchema: X402V2OutputSchema;
   }>;
   extensions: X402BazaarExtension;
 };
@@ -288,6 +400,16 @@ export function readPaymentProofHeader(
   return raw && raw.trim() ? raw.trim() : null;
 }
 
+/** PayAI Bazaar indexes description + tags. Keep "evidence" so search matches. */
+export const X402_RESOURCE_DESCRIPTION =
+  "Paid evidence check for agents: signed record, machine-readable verification result, explicit unknowns, and a settlement receipt. A valid signature is not real-world truth.";
+
+export const X402_RESOURCE_TAGS = [
+  "verification",
+  "authenticity",
+  "evidence",
+] as const;
+
 function buildPaymentRequiredV2(opts: {
   resource: string;
   description: string;
@@ -306,7 +428,7 @@ function buildPaymentRequiredV2(opts: {
       description: opts.description,
       mimeType: "application/json",
       serviceName: "AuthiChain",
-      tags: ["verification", "authenticity"],
+      tags: [...X402_RESOURCE_TAGS],
     },
     accepts: [
       {
@@ -316,7 +438,10 @@ function buildPaymentRequiredV2(opts: {
         asset: opts.asset,
         payTo: opts.payTo,
         maxTimeoutSeconds: X402_MAX_TIMEOUT_SECONDS,
-        outputSchema: opts.extensions.bazaar.info,
+        outputSchema: {
+          input: opts.extensions.bazaar.info.input,
+          output: x402PaidOutputExample(),
+        },
         ...(opts.extra ? { extra: opts.extra } : {}),
       },
     ],
@@ -331,7 +456,9 @@ function buildPaymentRequiredV2(opts: {
  * `x402Version`; a v1 body is rejected as "expected 2"). The unpaid
  * `accepts[0]` carries `outputSchema.input` (`type` + `method`) so Bazaar
  * can catalog from the 402 body, not only from a later `/settle`.
- * `body` stays the v1 requirement PayAI `/settle` still posts.
+ * v2 `outputSchema.output` is the unwrapped paid HTTP body sample.
+ * `body` stays the v1 requirement PayAI `/settle` still posts
+ * (`outputSchema` = bazaar.info, including `{type, example}`).
  * Do not rebind `X402_FACILITATOR_URL` to chase CDP listing.
  */
 export function buildPaymentRequired(opts: {
@@ -355,7 +482,7 @@ export function buildPaymentRequired(opts: {
   const asset = resolveX402Asset(network, opts.asset);
   const extra = requirementExtra(network, asset);
   const extensions = x402BazaarDiscovery();
-  const description = opts.description ?? "AuthiChain verification";
+  const description = opts.description ?? X402_RESOURCE_DESCRIPTION;
   const amountAtomic = usdToAtomic(opts.priceUsd);
   const requirement: PaymentRequirement = {
     scheme: "exact",
@@ -658,6 +785,11 @@ export const X402_REGISTRY_NOT_BOUND = {
  */
 export const X402_PAID_VERIFY_BOUND: boolean = false;
 
+/** True only for the two registry paths the paid route really implements. */
+export function x402PaidVerifyPathBound(path?: string): boolean {
+  return path === "seal_lookup" || path === "verify_app";
+}
+
 export type X402PaidVerifyStatus = {
   bound: boolean;
   status: "bound" | "registry_not_bound";
@@ -780,6 +912,12 @@ export type X402HealthEnv = {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  /**
+   * Runtime-derived, never a configured secret: the worker sets this per
+   * request to "seal_lookup" or "verify_app" when it actually holds a registry
+   * path for paid verify. Absent = registry_not_bound.
+   */
+  X402_PAID_VERIFY_PATH?: string;
   // Index signature so Node's ProcessEnv (the default arg) stays assignable.
   // Types-only: no runtime behavior change.
   [key: string]: string | undefined;
@@ -892,7 +1030,9 @@ export async function x402HealthReport(
   if (facilitator.configured && !facilitator.reachable) {
     warnings.push("Facilitator configured but unreachable.");
   }
-  const paidVerify = x402PaidVerifyStatus();
+  const paidVerify = x402PaidVerifyStatus(
+    X402_PAID_VERIFY_BOUND || x402PaidVerifyPathBound(env.X402_PAID_VERIFY_PATH)
+  );
   if (!paidVerify.bound) warnings.push(paidVerify.detail);
 
   return {
@@ -920,6 +1060,15 @@ export async function x402HealthReport(
   };
 }
 
+export type X402CatalogAccept = {
+  scheme: "exact";
+  network: string;
+  payTo: string;
+  asset: string;
+  amount: string;
+  extra?: { name?: string; version?: string };
+};
+
 export type X402CatalogEndpoint = {
   method: "GET" | "POST";
   path: string;
@@ -929,6 +1078,11 @@ export type X402CatalogEndpoint = {
   priceAtomic: string | null;
   unpaidStatus?: number;
   answersPaidCalls?: boolean;
+  /** Absolute URL so Saylor/CDP well-known parsers can list this endpoint. */
+  url?: string;
+  resource?: string;
+  accepts?: X402CatalogAccept[];
+  tags?: string[];
 };
 
 export type X402CatalogBody = {
@@ -982,18 +1136,42 @@ export async function x402Catalog(
 ): Promise<X402CatalogBody> {
   const health = await x402HealthReport(env);
   const bound = health.paidVerify.bound;
-  const paid = (path: string, description: string): X402CatalogEndpoint => ({
-    method: "POST",
-    path,
-    paid: true,
-    description: bound
-      ? description
-      : `${description}. Not answering yet: a paid call is refused with 503 registry_not_bound before settlement; no payment is taken.`,
-    priceUsd: health.pricePerCall.usd,
-    priceAtomic: health.pricePerCall.atomic,
-    unpaidStatus: 402,
-    answersPaidCalls: bound,
-  });
+  const origin = "https://authichain.com";
+  const paid = (
+    path: string,
+    description: string,
+    method: "GET" | "POST" = "POST"
+  ): X402CatalogEndpoint => {
+    const url = `${origin}${path}`;
+    const accepts: X402CatalogAccept[] | undefined = health.payTo
+      ? [
+          {
+            scheme: "exact",
+            network: x402Caip2Network(health.network),
+            payTo: health.payTo,
+            asset: health.asset,
+            amount: health.pricePerCall.atomic,
+            extra: { name: "USD Coin", version: "2" },
+          },
+        ]
+      : undefined;
+    return {
+      method,
+      path,
+      paid: true,
+      description: bound
+        ? description
+        : `${description}. Not answering yet: a paid call is refused with 503 registry_not_bound before settlement; no payment is taken.`,
+      priceUsd: health.pricePerCall.usd,
+      priceAtomic: health.pricePerCall.atomic,
+      unpaidStatus: 402,
+      answersPaidCalls: bound,
+      url,
+      resource: url,
+      accepts,
+      tags: [...X402_RESOURCE_TAGS],
+    };
+  };
   const free = (path: string, description: string): X402CatalogEndpoint => ({
     method: "GET",
     path,
@@ -1027,20 +1205,22 @@ export async function x402Catalog(
     mode: health.mode,
     endpoints: [
       free("/api/x402/health", "Public rail health (no secrets)"),
-      free("/api/x402", "Health alias"),
       free("/api/x402/catalog", "Paid-endpoint catalog for agents and MCP"),
       free("/.well-known/x402.json", "Well-known catalog document"),
       free("/.well-known/x402", "x402scan fan-out (version + resources)"),
       free("/openapi.json", "OpenAPI 3.1 with x-payment-info for x402scan"),
-      free(
-        "/api/v1/agent-verify",
-        "Health alias on GET; POST is the paid skill"
+      paid(
+        "/api/x402",
+        `${X402_RESOURCE_DESCRIPTION} Unpaid GET is 402.`,
+        "GET"
       ),
-      paid("/api/x402", "AuthiChain agent verification (seal / product)"),
       paid(
         "/api/v1/agent-verify",
-        "AuthiChain agent verification (seal / product)"
+        `${X402_RESOURCE_DESCRIPTION} Unpaid GET is 402.`,
+        "GET"
       ),
+      paid("/api/x402", X402_RESOURCE_DESCRIPTION),
+      paid("/api/v1/agent-verify", X402_RESOURCE_DESCRIPTION),
       paid("/mcp", "MCP tools/call verify (GET is free discovery)"),
       paid("/api/mcp", "MCP tools/call verify alias"),
     ],
@@ -1051,7 +1231,6 @@ export async function x402Catalog(
       farmUsd: planUsd("strainchain_farm"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
-      farmPaymentLink: planPaymentLink("strainchain_farm"),
       source: "src/lib/plans.ts",
     },
     discovery: {
@@ -1061,6 +1240,124 @@ export async function x402Catalog(
       paymentRequiredHeader: true,
     },
     timestamp: health.timestamp,
+  };
+}
+
+export type X402AgentCardSkill = {
+  id: string;
+  name: string;
+  description: string;
+  tags: string[];
+  examples?: string[];
+};
+
+export type X402AgentCard = {
+  name: "AuthiChain";
+  description: string;
+  url: string;
+  version: string;
+  documentationUrl: string;
+  provider: { organization: "AuthiChain"; url: string };
+  capabilities: {
+    streaming: false;
+    pushNotifications: false;
+    extendedAgentCard: false;
+  };
+  defaultInputModes: string[];
+  defaultOutputModes: string[];
+  supportedInterfaces: Array<{
+    url: string;
+    protocolBinding: string;
+    protocolVersion: string;
+  }>;
+  additionalInterfaces: Array<{ url: string; transport: string }>;
+  skills: X402AgentCardSkill[];
+  x402: {
+    scheme: "exact";
+    network: string;
+    payTo: string | null;
+    asset: string;
+    amount: string;
+    priceUsd: number;
+    extra: { name: "USD Coin"; version: "2" };
+    accepts?: X402CatalogAccept[];
+    resources: string[];
+  };
+};
+
+/**
+ * A2A Agent Card at `/.well-known/agent-card.json`.
+ * Identity + skills + x402 payment metadata for Trust Passport probes.
+ * This host has no A2A JSON-RPC and no ERC-8004 registration — do not claim either.
+ * A valid signature is not real-world truth. Do not add contact email.
+ */
+export async function x402AgentCard(
+  env: X402HealthEnv = process.env
+): Promise<X402AgentCard> {
+  const catalog = await x402Catalog(env);
+  const paid = catalog.endpoints.filter(e => e.paid);
+  const resources = [
+    ...new Set(
+      paid
+        .map(e => e.url || e.resource)
+        .filter((u): u is string => Boolean(u))
+    ),
+  ];
+  const accepts = paid.find(e => e.accepts && e.accepts.length > 0)?.accepts;
+  return {
+    name: "AuthiChain",
+    description: X402_RESOURCE_DESCRIPTION,
+    url: "https://authichain.com/mcp",
+    version: "1.3.2",
+    documentationUrl: "https://authichain.com/x402",
+    provider: {
+      organization: "AuthiChain",
+      url: "https://authichain.com",
+    },
+    capabilities: {
+      streaming: false,
+      pushNotifications: false,
+      extendedAgentCard: false,
+    },
+    defaultInputModes: ["application/json"],
+    defaultOutputModes: ["application/json"],
+    supportedInterfaces: [
+      {
+        url: "https://authichain.com/mcp",
+        protocolBinding: "HTTP",
+        protocolVersion: "2025-03-26",
+      },
+    ],
+    additionalInterfaces: [
+      { url: "https://authichain.com/mcp", transport: "HTTP+JSON" },
+      {
+        url: "https://authichain.com/api/v1/agent-verify",
+        transport: "HTTP+JSON",
+      },
+    ],
+    skills: [
+      {
+        id: "paid-evidence-check",
+        name: "Paid evidence check",
+        description: X402_RESOURCE_DESCRIPTION,
+        tags: [...X402_RESOURCE_TAGS],
+        examples: [
+          "POST https://authichain.com/api/v1/agent-verify with an X-PAYMENT header",
+          "Run the independent verifier on the signed record; leftover unknowns stay unknown",
+        ],
+      },
+    ],
+    x402: {
+      scheme: "exact",
+      network: catalog.network,
+      payTo: catalog.payTo,
+      asset: catalog.asset,
+      amount: catalog.pricePerCall.atomic,
+      priceUsd: catalog.pricePerCall.usd,
+      extra: { name: "USD Coin", version: "2" },
+      accepts,
+      resources,
+    },
   };
 }
 
@@ -1080,7 +1377,7 @@ export function x402ScanFanout(
   const base = origin.replace(/\/+$/, "") || "https://authichain.com";
   return {
     version: 1,
-    resources: [`${base}/api/x402`],
+    resources: [`${base}/api/v1/agent-verify`, `${base}/api/x402`],
   };
 }
 
@@ -1094,6 +1391,9 @@ type X402OpenApiDocument = {
 /**
  * OpenAPI-first discovery for x402scan. Price comes from the same health
  * report as the catalog — never a second schedule. Do not list GET checkout.
+ * GET /api/x402 and GET /api/v1/agent-verify are the paid paywall (HTTP 402);
+ * free health is GET /api/x402/health. The Living QR scan is a free Decision
+ * v1 GET and has no x-payment-info.
  */
 export async function x402OpenApiDocument(
   env: X402HealthEnv = process.env,
@@ -1108,10 +1408,29 @@ export async function x402OpenApiDocument(
   const jsonBody = {
     type: "object",
     properties: {
-      sealId: { type: "string" },
-      productId: { type: "string" },
-      serial: { type: "string" },
+      sealId: {
+        type: "string",
+        format: "uuid",
+        description:
+          "Required seal UUID. productId and serial are not registry keys.",
+      },
     },
+  };
+  const paidResponses = {
+    "402": { description: "Payment required (x402)" },
+    ...(health.paidVerify.bound
+      ? { "200": { description: "Paid verification result" } }
+      : {
+          "503": {
+            description:
+              "registry_not_bound: a paid call is refused before settlement; no payment is taken",
+          },
+        }),
+  };
+  const paidGet = {
+    summary: "AuthiChain agent verification",
+    "x-payment-info": paymentInfo,
+    responses: paidResponses,
   };
   const paidPost = {
     operationId: "agentVerify",
@@ -1122,15 +1441,11 @@ export async function x402OpenApiDocument(
       content: { "application/json": { schema: jsonBody } },
     },
     responses: {
-      "402": { description: "Payment required (x402)" },
-      ...(health.paidVerify.bound
-        ? { "200": { description: "Paid verification result" } }
-        : {
-            "503": {
-              description:
-                "registry_not_bound: a paid call is refused before settlement; no payment is taken",
-            },
-          }),
+      "400": {
+        description:
+          "A sealId that is not a UUID is refused before payment. Quote JSON without sealId is HTTP 402.",
+      },
+      ...paidResponses,
     },
   };
   return {
@@ -1139,23 +1454,17 @@ export async function x402OpenApiDocument(
       title: "AuthiChain x402",
       version: "1.0.0",
       description: health.paidVerify.bound
-        ? "Agent verification on Base USDC. Unpaid POST returns HTTP 402. Human SKUs are Stripe Payment Links on /pricing."
-        : `Agent verification on Base USDC. Unpaid POST returns HTTP 402. ${health.paidVerify.detail} Human SKUs are Stripe Payment Links on /pricing.`,
+        ? "Canonical paid verify is POST /api/v1/agent-verify. sealId must be a UUID. An empty body or quote JSON without sealId is HTTP 402. A sealId that is not a UUID is HTTP 400 before payment. Human SKUs are Stripe Payment Links on /pricing."
+        : `Canonical paid verify is POST /api/v1/agent-verify. sealId must be a UUID. An empty body or quote JSON without sealId is HTTP 402. A sealId that is not a UUID is HTTP 400 before payment. ${health.paidVerify.detail} Human SKUs are Stripe Payment Links on /pricing.`,
     },
     servers: [{ url: origin.replace(/\/+$/, "") || "https://authichain.com" }],
     paths: {
       "/api/x402": {
-        get: {
-          summary: "Rail health (free)",
-          responses: { "200": { description: "Health" } },
-        },
+        get: { ...paidGet, operationId: "agentVerifyGet" },
         post: paidPost,
       },
       "/api/v1/agent-verify": {
-        get: {
-          summary: "Rail health alias (free)",
-          responses: { "200": { description: "Health" } },
-        },
+        get: { ...paidGet, operationId: "agentVerifyGetAlias" },
         post: { ...paidPost, operationId: "agentVerifyAlias" },
       },
       "/battery-passport": {
@@ -1165,6 +1474,30 @@ export async function x402OpenApiDocument(
             "E-bike and other light means of transport (LMT) batteries, plus industrial and EV batteries over 2 kWh, need a battery passport from 18 February 2027 under Regulation (EU) 2023/1542. This page is that gap map, with a worked example on a fictional e-bike pack at /battery-passport/sample-audit.",
           responses: {
             "200": { description: "HTML gap map. Not an x402 payment endpoint." },
+          },
+        },
+      },
+      "/qron/r/{object_id}": {
+        get: {
+          operationId: "livingQrScan",
+          summary:
+            "Living QR Decision v1. This host verifies the signature. Not an x402 payment endpoint.",
+          parameters: [
+            {
+              name: "object_id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description:
+                "Stored presentation id. Canonical form is qron:url: plus 8 hex characters.",
+            },
+          ],
+          responses: {
+            "200": {
+              description:
+                "AuthiChain Verification Decision v1 when the presentation verifies.",
+            },
+            "404": { description: "presentation_not_found" },
           },
         },
       },

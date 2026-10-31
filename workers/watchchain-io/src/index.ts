@@ -141,14 +141,6 @@ const HTML = `<!DOCTYPE html>
       </div>
     </div>
 
-    <div class="tile col-2">
-      <div class="tile-content">
-        <div class="tile-tag">Ecosystem</div>
-        <div class="tile-title">UNIFIED BACKEND</div>
-        <p class="tile-desc">Seamless integration with the AuthiChain treasury and governance.</p>
-        <a href="https://authichain.com" class="btn-sq" style="background: #fff; color: #000;">Powered by AuthiChain</a>
-      </div>
-    </div>
   </div>
 
   <footer style="text-align: center; padding: 100px 24px; opacity: 0.5; font-size: 10px; letter-spacing: 2px; font-weight: 900; text-transform: uppercase;">

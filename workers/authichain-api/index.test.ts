@@ -277,7 +277,77 @@ describe("authichain-api keys", () => {
     const body = await res.json();
     const call = w.calls.find((c) => c.url.includes("authichain_api_create_key"));
     expect(call?.body).toEqual({ p_email: "a@example.com", p_api_key: body.api_key, p_name: "Ann" });
+    expect(call?.headers.get("authorization")).toBe("Bearer anon");
     expect(w.calls.some((c) => c.url.includes("/rest/v1/white_label_clients"))).toBe(false);
+  });
+
+  it("uses the service-role key only for create_key when it is bound", async () => {
+    const w = loadWorker(
+      { SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "service-role" },
+      supabase({})
+    );
+    const res = await w.request("/api/v1/keys/create", {
+      method: "POST",
+      body: JSON.stringify({ email: "a@example.com" }),
+    });
+    expect(res.status).toBe(201);
+    const call = w.calls.find((c) => c.url.includes("authichain_api_create_key"));
+    expect(call?.headers.get("authorization")).toBe("Bearer service-role");
+    expect(call?.headers.get("apikey")).toBe("service-role");
+  });
+
+  it("resolves keys with the anon key even when a service role is bound", async () => {
+    const w = loadWorker(
+      { SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "service-role" },
+      supabase({ resolve: [] })
+    );
+    const res = await w.request("/api/v1/me", { headers: { "X-API-Key": KEY } });
+    expect(res.status).toBe(401);
+    const call = w.calls.find((c) => c.url.includes("authichain_api_resolve_key"));
+    expect(call?.headers.get("authorization")).toBe("Bearer anon");
+  });
+
+  it("captures a lead with the service-role key and still resolves with anon", async () => {
+    const w = loadWorker(
+      { SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "service-role" },
+      (call) => {
+        const path = new URL(call.url).pathname;
+        if (path === "/rest/v1/rpc/authichain_api_resolve_key") {
+          return json([
+            {
+              id: "c1",
+              billing_plan: "pro",
+              company_name: "Acme",
+              api_call_limit: 1000,
+              user_id: null,
+            },
+          ]);
+        }
+        if (path === "/rest/v1/rpc/authichain_api_capture_lead") return json(null, 200);
+        return undefined;
+      }
+    );
+    const res = await w.request("/api/v1/leads", {
+      method: "POST",
+      headers: { "X-API-Key": KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "Buyer@Example.com",
+        source: "site",
+        name: "Bo",
+        company: "Co",
+      }),
+    });
+    expect(res.status).toBe(201);
+    const lead = w.calls.find((c) => c.url.includes("authichain_api_capture_lead"));
+    const resolve = w.calls.find((c) => c.url.includes("authichain_api_resolve_key"));
+    expect(lead?.headers.get("authorization")).toBe("Bearer service-role");
+    expect(lead?.body).toEqual({
+      p_email: "buyer@example.com",
+      p_source: "site",
+      p_name: "Bo",
+      p_company: "Co",
+    });
+    expect(resolve?.headers.get("authorization")).toBe("Bearer anon");
   });
 
   it("does not hand out a key that was not saved", async () => {
@@ -311,9 +381,104 @@ describe("authichain-api keys", () => {
     expect(body.plan).toBe("pro");
   });
 
+  it("rejects the removed hard-coded demo keys", async () => {
+    for (const k of ["demo_test_key_2026", "rapidapi_test_2026"]) {
+      const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({ resolve: [] }));
+      const res = await w.request("/api/v1/me", { headers: { "X-API-Key": k } });
+      expect(res.status).toBe(401);
+      const bearer = await w.request("/api/v1/me", {
+        headers: { Authorization: "Bearer " + k },
+      });
+      expect(bearer.status).toBe(401);
+    }
+    expect(SOURCE).not.toMatch(/demo_test_key_2026|rapidapi_test_2026/);
+  });
+
+  it("returns 401 for a missing key without calling Supabase", async () => {
+    const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({}));
+    const res = await w.request("/api/v1/me");
+    expect(res.status).toBe(401);
+    expect(w.calls.length).toBe(0);
+  });
+
+  it("rejects any X-RapidAPI-Key when no proxy secret is configured", async () => {
+    const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({}));
+    const res = await w.request("/api/v1/me", {
+      headers: { "X-RapidAPI-Key": "anything", "X-RapidAPI-Proxy-Secret": "anything" },
+    });
+    expect(res.status).toBe(401);
+    // Not looked up as a tenant key and not granted the basic plan.
+    expect(w.calls.some((c) => c.url.includes("authichain_api_resolve_key"))).toBe(false);
+  });
+
+  it("rejects a RapidAPI request with a missing or wrong proxy secret", async () => {
+    const w = loadWorker(
+      { SUPABASE_ANON_KEY: "anon", RAPIDAPI_PROXY_SECRET: "proxy-secret-1" },
+      supabase({})
+    );
+    const missing = await w.request("/api/v1/me", {
+      headers: { "X-RapidAPI-Key": "rk" },
+    });
+    expect(missing.status).toBe(401);
+    const wrong = await w.request("/api/v1/me", {
+      headers: { "X-RapidAPI-Key": "rk", "X-RapidAPI-Proxy-Secret": "proxy-secret-2" },
+    });
+    expect(wrong.status).toBe(401);
+    const prefix = await w.request("/api/v1/me", {
+      headers: { "X-RapidAPI-Key": "rk", "X-RapidAPI-Proxy-Secret": "proxy-secret" },
+    });
+    expect(prefix.status).toBe(401);
+  });
+
+  it("does not let an unverified X-RapidAPI-Key ride along with a valid key", async () => {
+    const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({}));
+    const res = await w.request("/api/v1/me", {
+      headers: { "X-RapidAPI-Key": "anything", "X-API-Key": KEY },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("accepts a RapidAPI request whose proxy secret matches", async () => {
+    const w = loadWorker(
+      { SUPABASE_ANON_KEY: "anon", RAPIDAPI_PROXY_SECRET: "proxy-secret-1" },
+      supabase({})
+    );
+    const res = await w.request("/api/v1/me", {
+      headers: { "X-RapidAPI-Key": "rk", "X-RapidAPI-Proxy-Secret": "proxy-secret-1" },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.plan).toBe("basic");
+    expect(body.isDemo).toBe(false);
+  });
+
   it("JWKS returns 503 when no signing key is configured", async () => {
     const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({}));
     const res = await w.request("/api/v1/.well-known/jwks.json");
     expect(res.status).toBe(503);
+  });
+});
+
+describe("authichain-api public pricing", () => {
+  it("lists only the free meter and the live product page", async () => {
+    const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({}));
+    const res = await w.request("/api/v1/pricing");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const text = JSON.stringify(body);
+    expect(body.plans).toEqual([
+      { id: "free", name: "Free", price: "$0", requests: "10/hour" },
+    ]);
+    expect(body.products).toBe("https://authichain.com/pricing");
+    expect(text).not.toMatch(/\$9|\$29|\$99|Basic|Ultra|rapidapi\.com/);
+  });
+
+  it("does not send a missing key to a RapidAPI checkout", async () => {
+    const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({}));
+    const res = await w.request("/api/v1/verify", { method: "POST" });
+    expect(res.status).toBe(401);
+    const text = JSON.stringify(await res.json());
+    expect(text).not.toMatch(/rapidapi\.com|\$9\/mo/);
+    expect(text).toContain("https://authichain.com/pricing");
   });
 });

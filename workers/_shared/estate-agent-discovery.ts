@@ -13,7 +13,7 @@ import { ESTATE_BRANDS, type EstateBrandId } from "./estate-landing.ts";
 
 const PASSPORT_LINK = planPaymentLink("strainchain_passport") ?? "";
 const DPP_LINK = planPaymentLink("dpp_readiness") ?? "";
-const FARM_LINK = planPaymentLink("strainchain_farm") ?? "";
+
 const STARTER_LINK = planPaymentLink("starter") ?? "";
 const CREATOR_LINK = planPaymentLink("creator") ?? "";
 const X402_USD = x402PriceUsd();
@@ -64,7 +64,6 @@ function humanCheckoutLines(brand: SisterDiscoveryBrand): string[] {
     "## Human checkout (Stripe Payment Links)",
     `- EU DPP Readiness $${planUsd("dpp_readiness")}: ${DPP_LINK}`,
     `- StrainChain Passport $${planUsd("strainchain_passport")}: ${PASSPORT_LINK}`,
-    `- StrainChain Farm Plan $${planUsd("strainchain_farm")}/mo: ${FARM_LINK}`,
   ];
   if (brand === "qron") {
     lines.push(
@@ -87,7 +86,10 @@ export function renderEstateLlmsTxt(brand: SisterDiscoveryBrand): string {
     "",
     "## Agent pay (x402)",
     `- Unpaid POST ${ESTATE_BRANDS[brand].url}/api/x402 returns HTTP 402 ($${X402_USD} USDC on Base)`,
+    "- An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment.",
     "- Canonical rail: https://authichain.com/api/x402",
+    "- Canonical paid verify: POST https://authichain.com/api/v1/agent-verify",
+    "- Read https://authichain.com/api/x402/health first. paidVerify.bound false means HTTP 503 before settlement and no payment is taken.",
     "- Catalog: https://authichain.com/api/x402/catalog",
     "- Well-known catalog: https://authichain.com/.well-known/x402.json",
     "- x402scan fan-out: https://authichain.com/.well-known/x402",
@@ -95,6 +97,17 @@ export function renderEstateLlmsTxt(brand: SisterDiscoveryBrand): string {
     `- MCP: GET ${ESTATE_BRANDS[brand].url}/mcp (get_pricing free; tools/call verify is unpaid HTTP 402)`,
     "- Canonical MCP: GET https://authichain.com/mcp",
     "- Docs: https://authichain.com/x402",
+    "",
+    "## Protocol (one issuer, this host proxies discovery)",
+    `- Issuer: ${ESTATE_BRANDS[brand].url}/protocol/issuer.json`,
+    `- JWKS: ${ESTATE_BRANDS[brand].url}/protocol/jwks.json`,
+    `- Well-known JWKS: ${ESTATE_BRANDS[brand].url}/.well-known/jwks.json`,
+    `- Decision v1 verify: POST ${ESTATE_BRANDS[brand].url}/api/verify`,
+    `- Living QR scan: GET ${ESTATE_BRANDS[brand].url}/qron/r/{object_id}`,
+    "- Canonical scan: GET https://authichain.com/qron/r/{object_id}",
+    "- This host proxies the scan and does not verify the signature.",
+    "- Canonical issuer: https://authichain.com/protocol/issuer.json",
+    "- Canonical verify: POST https://authichain.com/api/v1/attestation/verify",
     "",
     ...humanCheckoutLines(brand),
     "",
@@ -113,10 +126,10 @@ export type EstateOpenApiDocument = {
       source: "src/lib/plans.ts";
       passportUsd: number;
       dppUsd: number;
-      farmUsd: number;
       passportPaymentLink: string;
       dppPaymentLink: string;
-      farmPaymentLink: string;
+      farmUsd?: number;
+      farmPaymentLink?: string;
     };
   };
   servers: Array<{ url: string }>;
@@ -133,7 +146,7 @@ export function renderEstateOpenApi(
     info: {
       title: `${meta.title} agent pay (AuthiChain rails)`,
       version: "1.0.0",
-      description: `Unpaid POST ${origin}/api/x402 returns HTTP 402. Human SKUs are Stripe Payment Links from src/lib/plans.ts. Canonical spec: https://authichain.com/openapi.json.`,
+      description: `Unpaid POST ${origin}/api/x402 returns HTTP 402. An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment. Human SKUs are Stripe Payment Links from src/lib/plans.ts. Canonical paid verify is POST https://authichain.com/api/v1/agent-verify (this host does not serve that path). Canonical spec: https://authichain.com/openapi.json.`,
       "x-human-checkout": {
         source: "src/lib/plans.ts",
         passportUsd: planUsd("strainchain_passport"),
@@ -141,7 +154,6 @@ export function renderEstateOpenApi(
         farmUsd: planUsd("strainchain_farm"),
         passportPaymentLink: PASSPORT_LINK,
         dppPaymentLink: DPP_LINK,
-        farmPaymentLink: FARM_LINK,
       },
     },
     servers: [{ url: origin }],
@@ -162,9 +174,79 @@ export function renderEstateOpenApi(
               amount: String(X402_USD),
             },
           },
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    sealId: {
+                      type: "string",
+                      format: "uuid",
+                      description:
+                        "Required seal UUID. productId and serial are not registry keys.",
+                    },
+                  },
+                },
+              },
+            },
+          },
           responses: {
+            "400": {
+              description:
+                "A body that cannot be a seal UUID is refused before payment.",
+            },
             "402": { description: "Payment required (x402)" },
             "200": { description: "Paid verification result" },
+          },
+        },
+      },
+      "/protocol/issuer.json": {
+        get: {
+          summary: "Canonical AuthiChain issuer document (proxied)",
+          responses: { "200": { description: "Issuer JSON" } },
+        },
+      },
+      "/protocol/jwks.json": {
+        get: {
+          summary: "Canonical AuthiChain JWKS (proxied, not a second issuer)",
+          responses: { "200": { description: "JWKS" } },
+        },
+      },
+      "/.well-known/jwks.json": {
+        get: {
+          summary: "Same canonical JWKS at the well-known path",
+          responses: { "200": { description: "JWKS" } },
+        },
+      },
+      "/api/verify": {
+        post: {
+          operationId: "estateCanonicalVerify",
+          summary:
+            "AuthiChain Verification Decision v1. Forwards to authichain.com. Not the paid x402 rail.",
+          responses: {
+            "200": { description: "Decision verified" },
+            "400": { description: "Fail-closed indeterminate" },
+            "409": { description: "Decision not verified" },
+          },
+        },
+      },
+      "/qron/r/{object_id}": {
+        get: {
+          summary:
+            "Living QR Decision v1. Proxies GET https://authichain.com/qron/r/{object_id}. This host does not verify the signature.",
+          parameters: [
+            {
+              name: "object_id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          responses: {
+            "200": { description: "Decision verified" },
+            "404": { description: "presentation_not_found" },
           },
         },
       },

@@ -1,8 +1,22 @@
 // app/api/email/welcome/route.ts
 import { Resend } from "resend";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireInternalSecret } from "../../../../lib/require-internal-secret";
 
-export async function POST(request: Request) {
+function esc(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// Service-to-service only: unauthenticated, this sent mail from
+// hello@authichain.com to any address with caller-controlled HTML.
+export async function POST(request: NextRequest) {
+  const denied = requireInternalSecret(request);
+  if (denied) return denied;
+
   try {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
@@ -26,7 +40,7 @@ export async function POST(request: Request) {
       from: "AuthiChain Team <hello@authichain.com>", // Ensure this is a verified domain in Resend
       to: [to],
       subject: "Welcome aboard AuthiChain",
-      html: `<h1>Welcome, ${firstName || "valued partner"}!</h1><p>Your workspace is ready.</p>`,
+      html: `<h1>Welcome, ${esc(typeof firstName === "string" && firstName ? firstName : "valued partner")}!</h1><p>Your workspace is ready.</p>`,
     });
 
     if (error) {

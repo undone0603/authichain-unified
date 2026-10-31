@@ -4,14 +4,27 @@ on:
   push:
     branches: ["main"]
   pull_request:
+    # GB-26 fix 3: CodeQL does not analyze Markdown, so a PR that changes
+    # ONLY .md/.mdx files is skipped. Any code change still runs all
+    # languages; pushes to main and the weekly schedule are never filtered.
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.mdx"
   schedule:
     - cron: "30 1 * * 0" # Sundays 01:30 UTC
   workflow_dispatch:
 
+# GB-26 fix 4: a newer commit on the same PR cancels the older run. Pushes to
+# main, schedules and dispatches get one group per commit and are never
+# cancelled (PM-328).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 360
     permissions:
       security-events: write
@@ -42,15 +55,24 @@ jobs:
               - apps
               - docs/archive
               - scripts/ops
+              # Third-party code vendored unmodified (GS1's Apache-2.0 Digital
+              # Link toolkit); findings belong upstream, like node_modules.
+              - workers/gs1-resolver/src/vendor
+      # Queries still run. This private repo has no GitHub Code Security
+      # license, and the code-scanning upload returns 403 ("Advanced
+      # security has not been purchased"), which failed the job.
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+          upload: never
+          upload-database: false
+          wait-for-processing: false
 
   CodeQL:
     name: CodeQL
     needs: analyze
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'self-hosted' || 'ubuntu-24.04' }}
     if: always()
     permissions: {}
     steps:

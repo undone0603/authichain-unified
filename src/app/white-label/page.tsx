@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { 
-  ShieldCheck, 
   Printer,
   Code,
   DollarSign,
@@ -13,7 +12,7 @@ import {
 
 export const metadata: Metadata = {
   title: 'White-Label SDK | AuthiChain Protocol for Print Shops',
-  description: 'Embed the AuthiChain verification protocol directly into your label printing workflow. Turn static packaging into scannable, blockchain-anchored digital assets.',
+  description: 'Embed the AuthiChain verification protocol directly into your label printing workflow. Turn static packaging into scannable digital assets.',
 };
 
 export default function WhiteLabelPage() {
@@ -35,12 +34,12 @@ export default function WhiteLabelPage() {
           </h1>
           
           <p className="max-w-2xl mx-auto text-zinc-400 text-lg md:text-xl font-medium mb-12 leading-relaxed">
-            Upgrade your print shop offerings overnight. Integrate the AuthiChain White-Label SDK to generate AI-powered, blockchain-anchored QR codes for your clients directly from your existing dashboard.
+            Upgrade your print shop offerings overnight. Integrate the AuthiChain White-Label SDK to generate AI-powered QR codes for your clients directly from your existing dashboard.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/dashboard" className="bg-blue-600 hover:bg-blue-500 text-white px-12 py-5 rounded-xl font-black uppercase tracking-widest text-xs transition-colors">
-              Become a Reseller ($299/mo)
+              Become a Reseller
             </Link>
             <Link href="/docs" className="btn-outline-gold border-zinc-800 text-zinc-300 px-12 py-5 font-black uppercase tracking-widest text-xs">
               View API Docs
@@ -56,7 +55,7 @@ export default function WhiteLabelPage() {
             { 
               icon: Code, 
               title: 'Drop-In SDK', 
-              desc: 'Integrate our REST API into your print management software in hours. Generate unique Ed25519-signed QRONs in bulk.' 
+              desc: 'Integrate our REST API into your print management software in hours.' 
             },
             { 
               icon: Layers, 
@@ -67,11 +66,6 @@ export default function WhiteLabelPage() {
               icon: DollarSign,
               title: 'New Revenue Streams',
               desc: 'Charge your clients a premium for "Smart Labels." You pay fractions of a cent per scan, you keep the margin.'
-            },
-            {
-              icon: ShieldCheck,
-              title: 'Compliance Built-In',
-              desc: 'Ed25519 signatures and Polygon anchors give your clients audit-ready proof for FTC MUSA, EU DPP, and ISO traceability claims.'
             },
             {
               icon: Zap,

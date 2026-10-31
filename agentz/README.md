@@ -19,6 +19,12 @@ The `agentz/` directory contains the control-plane layer for autonomous operatio
 
 `run` defaults to `--mode confirm` and goes through the registry runner (credential preflight + audit log). `run --all --mode auto` is refused.
 
+Repo integration audit (writes nothing in dry-run; `auto` refreshes only `docs/NETWORK.md` and `docs/operations/REPO-INTEGRATION-AUDIT.md`):
+
+```bash
+python -m agentz.cli run repo_audit_integrate --mode dry-run
+```
+
 See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and workflow details.
 
 ## Running the API
@@ -37,3 +43,10 @@ See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and 
   Anything missing leaves the signature `not_checked` and the scan unverified.
 - `$QRON` rewards on `/scan` and redemptions on `/redeem` are simulated and say
   so (`simulated: true`); nothing is minted or burned on-chain.
+
+
+## Control plane
+
+The read-only deployment control plane is available at `GET /control-plane/state` and returns normalized GitHub, GitLab, Vercel, and optionally Cloudflare Workers/Pages state. It correlates provider commits to the authoritative GitHub `main` commit and emits a conservative release gate: `deploy_eligible`, `blocked`, or `observe_only`.
+
+Cloudflare Worker deployment APIs expose the active deployment and version IDs; Cloudflare Pages deployments expose the trigger branch and commit hash. These APIs are observation-only here. Provider mutations remain in the existing governed workflows.

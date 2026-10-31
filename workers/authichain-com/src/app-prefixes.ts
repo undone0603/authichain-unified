@@ -3,8 +3,23 @@ export const APP_PREFIXES = [
   "/dashboard",
   "/dapp",
   "/generate",
+  // Living QR scan target. worker-app answers GET /qron/r/{object_id} with
+  // Decision v1. Without this prefix the apex serves marketing 404 HTML.
+  "/qron",
   "/api",
   "/verify",
+  // Public dynamic pages served by worker-app/dynamic-pages.ts. These must
+  // cross the apex landing worker; otherwise authichain.com answers them with
+  // marketing HTML/404 instead of the canonical dynamic handler.
+  "/status",
+  "/grants",
+  "/gallery",
+  "/reveal",
+  "/s",
+  "/brand/qron/artwork",
+  // AE-20261023-AED-27 marketplace logo, served from client/public via edge-router ASSETS.
+  "/brand/authichain-logo-1024.png",
+  "/landing",
   // Product passport GET /p/<serial> — worker-app/dynamic-pages.ts.
   // Without this prefix the apex answered marketing 404 HTML for /p and /p/*.
   "/p",

@@ -42,7 +42,6 @@ const stats = [
   { value: "~25%", label: "Scan Lift vs Plain QR" },
   { value: "100%", label: "Scan Guarantee" },
   { value: "<3s", label: "Generation Time" },
-  { value: "Ed25519", label: "Cryptographic Signing" },
 ];
 
 const modes = [
@@ -57,18 +56,17 @@ const modes = [
 const steps = [
   { num: "01", title: "Enter URL + Prompt", desc: "Paste your destination URL and describe the visual you want. Choose a style preset or go fully custom." },
   { num: "02", title: "AI Generation", desc: "Fal.ai\u2019s illusion-diffusion model renders your QR art, optimizing for both visual impact and scan reliability." },
-  { num: "03", title: "Cryptographic Signing", desc: "AuthiChain signs your QRON with an Ed25519 key pair. The signature is embedded in the QR payload itself." },
-  { num: "04", title: "Deploy Anywhere", desc: "Download as high-res PNG. Print on packaging, share on social, embed in emails \u2014 your QRON works everywhere." },
+  { num: "03", title: "Deploy Anywhere", desc: "Download as high-res PNG. Print on packaging, share on social, embed in emails \u2014 your QRON works everywhere." },
 ];
 
 const ecosystem = [
   { name: "AuthiChain", href: "https://authichain.com", desc: "The truth layer. Blockchain-verified product authentication with AI-powered image analysis.", live: true },
-  { name: "StrainChain", href: "https://strainchain.io", desc: "Cannabis provenance. Seed-to-sale verification with NFT certificates and $QRON rewards.", live: true },
+  { name: "StrainChain", href: "https://strainchain.io", desc: "Cannabis provenance. Seed-to-sale verification with NFT certificates.", live: true },
   { name: "GovChain", href: "https://govchain.us", desc: "Sovereign verification. Made in USA manufacturer authentication for government and defense.", live: true },
 ];
 
 const pricing = [
-  { name: "Single QRON", price: "$5", period: "/code", features: ["One AI-generated QR code", "Ed25519 cryptographic signing", "High-res PNG download", "Unlimited scans", "Basic style presets"] },
+  { name: "Single QRON", price: "$5", period: "/code", features: ["One AI-generated QR code", "High-res PNG download", "Unlimited scans", "Basic style presets"] },
   { name: "Creator Pack", price: "$29", period: "/mo", features: ["25 QRONs per month", "All visual modes", "Custom prompt engine", "Brand color matching", "Priority generation queue", "Gallery listing"], highlighted: true },
   { name: "Enterprise", price: "$199", period: "/mo", features: ["Unlimited QRONs", "Batch generation API", "White-label output", "Brand template system", "Analytics dashboard", "Dedicated support"] },
 ];
@@ -174,7 +172,7 @@ export default function QronHome() {
               <span className="qron-gradient animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(271 81% 56%), hsl(187 92% 41%), hsl(280 70% 45%), hsl(271 81% 56%))", backgroundSize: "200% 200%" }}>Demand Attention</span>
             </h1>
             <p className="hero-enter hero-enter-delay-2 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-              Transform boring QR codes into cryptographically signed AI art. Every QRON is a scannable masterpiece backed by Ed25519 cryptographic proof.
+              Transform boring QR codes into AI art. Every QRON is a scannable masterpiece.
             </p>
             <div className="hero-enter hero-enter-delay-3 flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="text-base px-8 h-12 bg-[hsl(271,81%,56%)] hover:bg-[hsl(271,81%,46%)] qron-pulse" onClick={() => go("/qr-codes")}>

@@ -1,20 +1,62 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { classifyIndustry } from "../../shared/industries";
-import { getCertificateByNumber, getProductById } from "../db";
 import { agentPricingDiscovery } from "../../src/lib/authentic-economy";
+import { parseSealRequest } from "../../src/lib/agent-verify";
 
 /**
  * AuthiChain MCP Server
  * Exposes our trust engine to the global AI agent ecosystem.
  */
+/** Unpaid verify_paid text. A non-UUID is 400 and does not name productId. */
+export function verifyPaidUnpaidReply(subject: string): string {
+  const parsed = parseSealRequest({ sealId: subject });
+  if (!parsed.ok) {
+    return JSON.stringify({ status: parsed.status, ...parsed.body });
+  }
+  return JSON.stringify({
+    status: 402,
+    x402Version: 2,
+    message: "Payment required for metered verification.",
+    pay: {
+      endpoint: "POST /api/v1/agent-verify",
+      network: "base",
+      chainId: "8453",
+      amount: "$0.05 USDC",
+      catalog: "https://authichain.com/api/x402/catalog",
+      identity:
+        "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
+    },
+    then: `Retry POST /api/v1/agent-verify with header X-PAYMENT: <base64 proof> and body { "sealId": "${parsed.sealId}" }.`,
+  });
+}
+
 const server = new McpServer({
   name: "AuthiChain Trust Engine",
   version: "1.0.0",
 });
 
-// Tool: Verify Authenticity
+// The four tools below are in development. Their replies must never read as a
+// verdict: no authenticity status, no blockchain/minting status, no origin or
+// country-of-origin claim and no confidence value (PM-348, ADM-114, RES-106).
+// Tool names and input schemas stay as they are so agent clients don't break.
+export const STUB_TOOL_REPLY =
+  "Not available yet: this tool returns no verification result.";
+
+export const STUB_TOOL_NAMES = [
+  "verify_authenticity",
+  "mint_certificate",
+  "classify_product",
+  "verify_sovereign_deal",
+] as const;
+
+export function stubToolReply() {
+  return {
+    content: [{ type: "text" as const, text: STUB_TOOL_REPLY }],
+  };
+}
+
+// Tool: Verify Authenticity (in development, no verdict)
 server.tool(
   "verify_authenticity",
   {
@@ -22,31 +64,10 @@ server.tool(
       .string()
       .describe("The unique AuthiChain certificate ID"),
   },
-  async ({ certificateNumber }) => {
-    const cert = await getCertificateByNumber(certificateNumber);
-    if (!cert)
-      return {
-        content: [
-          {
-            type: "text",
-            text: "Certificate not found. This product is UNVERIFIED.",
-          },
-        ],
-      };
-
-    const product = await getProductById(cert.productId);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `VERIFIED AUTHENTIC: ${product?.name} (${product?.brand}). Certificate issued on ${cert.createdAt}. Blockchain status: SECURED.`,
-        },
-      ],
-    };
-  }
+  async () => stubToolReply()
 );
 
-// Tool: Mint Trust Certificate
+// Tool: Mint Trust Certificate (in development, no verdict)
 server.tool(
   "mint_certificate",
   {
@@ -59,20 +80,10 @@ server.tool(
         "Optional speculative $QRON trust bounty (not x402 settlement; $QRON is not a payment rail)"
       ),
   },
-  async ({ productId }) => {
-    // This calls our internal DB/Blockchain logic
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Minting process initiated for Product ID: ${productId}. Awaiting 5-agent consensus.`,
-        },
-      ],
-    };
-  }
+  async () => stubToolReply()
 );
 
-// Tool: Classify Product Vertical
+// Tool: Classify Product Vertical (in development, no verdict)
 server.tool(
   "classify_product",
   {
@@ -82,46 +93,16 @@ server.tool(
       .optional()
       .describe("Description or physical attributes"),
   },
-  async ({ name, description }) => {
-    const industry = await classifyIndustry(name, description || "");
-    return {
-      content: [
-        {
-          type: "text",
-          text: `CLASSIFIED: Product mapped to industry vertical: ${industry.name}. Confidence: HIGH. Suggested workflow: ${industry.workflow.map((w: { name: string }) => w.name).join(" -> ")}`,
-        },
-      ],
-    };
-  }
+  async () => stubToolReply()
 );
 
-// Tool: Verify Sovereign Deal
+// Tool: Verify Sovereign Deal (in development, no verdict, no origin field)
 server.tool(
   "verify_sovereign_deal",
   {
     truemarkId: z.string().describe("The TrueMark ID of the deal to verify"),
   },
-  async ({ truemarkId }) => {
-    const cert = await getCertificateByNumber(truemarkId);
-    if (!cert)
-      return {
-        content: [
-          {
-            type: "text",
-            text: "NOT FOUND: This TrueMark ID does not exist in the sovereign ledger.",
-          },
-        ],
-      };
-    const product = await getProductById(cert.productId);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `VERIFIED: Deal Authenticity Confirmed. Manufacturer: ${product?.brand}. Status: SEALED. Origin: Made in USA.`,
-        },
-      ],
-    };
-  }
+  async () => stubToolReply()
 );
 
 // Tool: Get pricing (lets autonomous agents discover what they can buy + the metered API)
@@ -138,9 +119,7 @@ server.tool("get_pricing", {}, async () => ({
 server.tool(
   "verify_paid",
   {
-    subject: z
-      .string()
-      .describe("Product ID, serial, or certificate to verify"),
+    subject: z.string().describe("Seal UUID to verify"),
     payment: z
       .string()
       .optional()
@@ -149,43 +128,34 @@ server.tool(
       ),
   },
   async ({ subject, payment }) => {
-    if (!payment) {
+    const parsed = parseSealRequest({ sealId: subject });
+    if (!parsed.ok) {
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify({
-              status: 402,
-              x402Version: 2,
-              message: "Payment required for metered verification.",
-              pay: {
-                endpoint: "POST /api/v1/agent-verify",
-                network: "base",
-                chainId: "8453",
-                amount: "$0.05 USDC",
-                catalog: "https://authichain.com/api/x402/catalog",
-                identity:
-                  "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
-              },
-              then:
-                'Retry POST /api/v1/agent-verify with header X-PAYMENT: <base64 proof> and body { productId: "' +
-                subject +
-                '" }.',
-            }),
+            text: JSON.stringify({ status: parsed.status, ...parsed.body }),
           },
         ],
+      };
+    }
+    if (!payment) {
+      return {
+        content: [{ type: "text", text: verifyPaidUnpaidReply(subject) }],
       };
     }
     return {
       content: [
         {
           type: "text",
-          text: `Payment proof received for "${subject}". Submit POST /api/v1/agent-verify (header X-PAYMENT) for settlement + a 0-100 authenticity score.`,
+          text: `Payment proof received for seal ${parsed.sealId}. Submit POST /api/v1/agent-verify with header X-PAYMENT and body { "sealId": "${parsed.sealId}" }.`,
         },
       ],
     };
   }
 );
+
+export { server as mcpServer };
 
 export async function startMcpServer() {
   const transport = new StdioServerTransport();

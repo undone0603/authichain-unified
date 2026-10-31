@@ -4,6 +4,9 @@ config();
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const NEXT_PUBLIC_APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
 const WEBHOOK_URL = `${NEXT_PUBLIC_APP_URL}/api/telegram`;
+// Telegram echoes this in X-Telegram-Bot-Api-Secret-Token; /api/telegram
+// refuses every update without it (src/lib/telegram-webhook-auth.ts).
+const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
 
 async function registerWebhook() {
   console.log(`🤖 Initializing Telegram Bot Webhook Registration...`);
@@ -11,6 +14,11 @@ async function registerWebhook() {
   if (!TELEGRAM_BOT_TOKEN) {
     console.error('❌ ERROR: TELEGRAM_BOT_TOKEN is not set in your .env file.');
     console.error('Please obtain a token from @BotFather on Telegram and set it before running this script.');
+    process.exit(1);
+  }
+
+  if (!TELEGRAM_WEBHOOK_SECRET) {
+    console.error('❌ ERROR: TELEGRAM_WEBHOOK_SECRET is not set. Use the same value the app has.');
     process.exit(1);
   }
 
@@ -24,6 +32,7 @@ async function registerWebhook() {
       },
       body: JSON.stringify({
         url: WEBHOOK_URL,
+        secret_token: TELEGRAM_WEBHOOK_SECRET,
       }),
     });
 

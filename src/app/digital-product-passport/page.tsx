@@ -23,7 +23,6 @@ import {
   ArrowRight,
   Sparkles,
   Zap,
-  Lock,
   Activity,
   CheckCircle,
   Database,
@@ -157,8 +156,6 @@ export default function DPPPage() {
                  check. "Aligned with" rather than "compliant": conformance is
                  assessed per product, not asserted by a vendor. */}
             <div className="flex items-center gap-6 text-[9px] font-black uppercase tracking-[0.4em] text-zinc-700 mb-8">
-              <span>Polygon contract live</span>
-              <div className="w-1 h-1 rounded-full bg-zinc-800" />
               <span>Ed25519 signing in development</span>
               <div className="w-1 h-1 rounded-full bg-zinc-800" />
               <a
@@ -238,16 +235,6 @@ export default function DPPPage() {
                       2. State Hash Compute
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 opacity-60">
-                    <Lock
-                      className={`w-4 h-4 ${simStep >= 3 ? "text-gold" : "text-zinc-700"}`}
-                    />
-                    <span
-                      className={`text-[10px] font-black uppercase ${simStep >= 3 ? "text-white" : "text-zinc-800"}`}
-                    >
-                      3. Polygon Anchor
-                    </span>
-                  </div>
                 </div>
 
                 <div className="md:col-span-2 bg-black rounded-2xl p-6 font-mono text-[10px] leading-loose border border-zinc-900">
@@ -260,11 +247,6 @@ export default function DPPPage() {
                   {simStep >= 2 && (
                     <p className="text-zinc-400">
                       &gt; GENERATING STATE HASH: 0x7a2d...8c9d
-                    </p>
-                  )}
-                  {simStep >= 3 && (
-                    <p className="text-gold">
-                      &gt; ANCHORING SUCCESSFUL: BLOCK #4,102,884
                     </p>
                   )}
                   {simStep === 4 && (
@@ -384,11 +366,6 @@ export default function DPPPage() {
                 exclusive: false,
               },
               {
-                label: "Verifiable",
-                desc: "Ed25519 cryptographic signature on every data record — mathematically provable, no central trust required.",
-                exclusive: false,
-              },
-              {
                 label: "Tamper-evident (goal)",
                 desc: "Our goal: every passport hashed and anchored on Polygon, so any alteration shows up on-chain.",
                 exclusive: false,
@@ -466,7 +443,7 @@ export default function DPPPage() {
             {
               icon: BarChart3,
               title: "Unique Identity",
-              desc: "Serialized identifiers for every unit, linked to an immutable blockchain record.",
+              desc: "Serialized identifiers for every unit.",
             },
             {
               icon: Leaf,
@@ -486,7 +463,7 @@ export default function DPPPage() {
             {
               icon: Truck,
               title: "Supply Chain",
-              desc: "Auditable chain of custody from source to shelf, anchored on the Polygon network.",
+              desc: "Auditable chain of custody from source to shelf.",
             },
             {
               icon: Leaf,

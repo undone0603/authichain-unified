@@ -7,19 +7,52 @@ import {
   type LeadEnv,
 } from "./lead-routes";
 
-const { inserts, upserts } = vi.hoisted(() => ({
+const { inserts, upserts, db } = vi.hoisted(() => ({
   inserts: [] as Array<{ table: string; row: unknown }>,
   upserts: [] as Array<{ table: string; row: unknown }>,
+  db: { formColumnsMissing: false, insertFails: false, upsertFails: false },
 }));
 
 vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
     from: (table: string) => ({
       insert: async (row: unknown) => {
+        if (db.insertFails && table === "lead_captures") {
+          return {
+            error: {
+              code: "23502",
+              message:
+                'null value in column "email" of relation "lead_captures"',
+            },
+          };
+        }
+        if (
+          db.formColumnsMissing &&
+          table === "lead_captures" &&
+          row &&
+          typeof row === "object" &&
+          "company" in row
+        ) {
+          return {
+            error: {
+              code: "PGRST204",
+              message:
+                "Could not find the 'battery_categories' column of 'lead_captures' in the schema cache",
+            },
+          };
+        }
         inserts.push({ table, row });
         return { error: null };
       },
       upsert: async (row: unknown) => {
+        if (db.upsertFails && table === "leads") {
+          return {
+            error: {
+              code: "23502",
+              message: 'null value in column "email" of relation "leads"',
+            },
+          };
+        }
         upserts.push({ table, row });
         return { error: null };
       },
@@ -66,6 +99,9 @@ function hubspotCalls() {
 }
 
 beforeEach(() => {
+  db.formColumnsMissing = false;
+  db.insertFails = false;
+  db.upsertFails = false;
   inserts.length = 0;
   upserts.length = 0;
   fetchCalls = [];
@@ -112,6 +148,34 @@ describe("POST /api/book", () => {
     );
   });
 
+  it("does not report success or notify when the booking row is not stored", async () => {
+    db.upsertFails = true;
+    const res = await makeApp().request(
+      "/api/book",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Ada Lovelace",
+          email: "ada@acme.com",
+          company: "Acme",
+        }),
+      },
+      {
+        ...env,
+        RESEND_API_KEY: "re_test",
+        SALES_NOTIFY_EMAIL: "sales@example.com",
+      } as LeadEnv
+    );
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Could not store the request" });
+    expect(upserts).toHaveLength(0);
+    expect(hubspotCalls()).toHaveLength(0);
+    expect(fetchCalls.some(call => call.url.includes("api.resend.com"))).toBe(
+      false
+    );
+  });
+
   it("drops a honeypot submission with a 200 and writes nothing", async () => {
     const res = await post("/api/book", {
       name: "Bot",
@@ -147,6 +211,162 @@ describe("POST /api/lead-capture and /api/leads/capture", () => {
   it("requires an email", async () => {
     const res = await post("/api/lead-capture", { name: "No Email" });
     expect(res.status).toBe(400);
+  });
+
+  it("never sends the lead to Apollo, even with an Apollo key bound", async () => {
+    const prev = process.env.APOLLO_API_KEY;
+    process.env.APOLLO_API_KEY = "apollo-test";
+    try {
+      const res = await makeApp().request(
+        "/api/leads/capture",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "buyer@acme.com",
+            source: "battery-passport-page",
+          }),
+        },
+        { ...env, APOLLO_API_KEY: "apollo-test" } as LeadEnv
+      );
+      expect(res.status).toBe(200);
+      const hosts = fetchCalls.map(c => new URL(c.url).hostname);
+      expect(
+        hosts.some(h => h === "api.apollo.io" || h.endsWith(".apollo.io"))
+      ).toBe(false);
+      expect(hubspotCalls().length).toBeGreaterThan(0);
+    } finally {
+      if (prev === undefined) delete process.env.APOLLO_API_KEY;
+      else process.env.APOLLO_API_KEY = prev;
+    }
+  });
+
+  it("stores company, role, categories, target date and message", async () => {
+    const res = await post("/api/leads/capture", {
+      email: "lead@cells.example",
+      name: "Ada Lovelace",
+      source: "battery-passport-page",
+      company: "Example Cells",
+      role: "Compliance lead",
+      categories: ["LMT (e-bikes, scooters)", "EV"],
+      target_date: "Q1 2027",
+      message: "Two models",
+    });
+    expect(res.status).toBe(200);
+    const row = inserts.find(i => i.table === "lead_captures")!.row as Record<
+      string,
+      unknown
+    >;
+    expect(row).toMatchObject({
+      email: "lead@cells.example",
+      source: "battery-passport-page",
+      company: "Example Cells",
+      role: "Compliance lead",
+      battery_categories: ["LMT (e-bikes, scooters)", "EV"],
+      target_date: "Q1 2027",
+      message: "Two models",
+    });
+    const contact = hubspotCalls().find(c =>
+      c.url.endsWith("/crm/v3/objects/contacts")
+    )!;
+    const sent = JSON.parse(String(contact.init!.body)).properties;
+    expect(sent.company).toBe("Example Cells");
+    expect(sent.jobtitle).toBe("Compliance lead");
+    expect(sent.firstname).toBe("Ada");
+    expect(sent.lastname).toBe("Lovelace");
+  });
+
+  it("does not report success or sync HubSpot when the lead row is not stored", async () => {
+    db.insertFails = true;
+    const res = await post("/api/leads/capture", {
+      email: "buyer@acme.com",
+      source: "battery-passport-page",
+    });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body).toEqual({ error: "Could not store the request" });
+    expect(inserts.some(i => i.table === "lead_captures")).toBe(false);
+    expect(hubspotCalls()).toHaveLength(0);
+  });
+
+  it("keeps the lead when the form-field migration is not applied yet", async () => {
+    db.formColumnsMissing = true;
+    const res = await post("/api/leads/capture", {
+      email: "lead@cells.example",
+      company: "Example Cells",
+      categories: "EV, Home storage",
+    });
+    expect(res.status).toBe(200);
+    const rows = inserts.filter(i => i.table === "lead_captures");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].row).toMatchObject({ email: "lead@cells.example" });
+    expect(rows[0].row).not.toHaveProperty("company");
+  });
+});
+
+describe("lead capture Apollo enrichment guard (CFD-125)", () => {
+  const apolloEnv: LeadEnv = { ...env, APOLLO_API_KEY: "apollo-test-key" };
+  let savedFlag: string | undefined;
+  let savedKey: string | undefined;
+
+  function apolloCalls() {
+    return fetchCalls.filter(
+      call => new URL(call.url).hostname === "api.apollo.io"
+    );
+  }
+
+  function capture(path: string, body: unknown) {
+    return makeApp().request(
+      path,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+      apolloEnv
+    );
+  }
+
+  beforeEach(() => {
+    savedFlag = process.env.LEAD_APOLLO_ENRICH;
+    savedKey = process.env.APOLLO_API_KEY;
+    delete process.env.LEAD_APOLLO_ENRICH;
+  });
+
+  afterEach(() => {
+    if (savedFlag === undefined) delete process.env.LEAD_APOLLO_ENRICH;
+    else process.env.LEAD_APOLLO_ENRICH = savedFlag;
+    if (savedKey === undefined) delete process.env.APOLLO_API_KEY;
+    else process.env.APOLLO_API_KEY = savedKey;
+    vi.restoreAllMocks();
+  });
+
+  it.each(["/api/lead-capture", "/api/leads/capture"])(
+    "%s with LEAD_APOLLO_ENRICH unset stores the lead and never calls api.apollo.io, even with APOLLO_API_KEY bound",
+    async path => {
+      const logSpy = vi.spyOn(console, "log");
+      const res = await capture(path, {
+        email: "buyer@acme.com",
+        source: "cfd125-test",
+      });
+      expect(res.status).toBe(200);
+      expect(inserts.some(i => i.table === "lead_captures")).toBe(true);
+      expect(process.env.APOLLO_API_KEY).toBe("apollo-test-key");
+      expect(apolloCalls()).toHaveLength(0);
+      const logged = logSpy.mock.calls.flat().map(String).join("\n");
+      expect(logged).not.toContain("buyer@acme.com");
+    }
+  );
+
+  it("still calls api.apollo.io when LEAD_APOLLO_ENRICH is explicitly on (control)", async () => {
+    process.env.LEAD_APOLLO_ENRICH = "on";
+    const res = await capture("/api/leads/capture", {
+      email: "buyer@acme.com",
+      source: "cfd125-test",
+    });
+    expect(res.status).toBe(200);
+    expect(inserts.some(i => i.table === "lead_captures")).toBe(true);
+    expect(apolloCalls()).toHaveLength(1);
   });
 });
 
@@ -189,5 +409,12 @@ describe("syncContactToHubSpot", () => {
       "pat-test"
     );
     expect(result).toEqual({ ok: true, existed: true });
+  });
+});
+
+import { NO_OUTBOUND_SOURCE } from "./lead-routes";
+describe("is-this-real lead source", () => {
+  it("is the source the /is-this-real page sends", () => {
+    expect(NO_OUTBOUND_SOURCE).toBe("is-this-real");
   });
 });

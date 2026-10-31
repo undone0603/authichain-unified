@@ -1,62 +1,23 @@
 'use server';
 
+import { ANCHORING_UNAVAILABLE } from '@/lib/anchoring-status';
 import { anchorEdgeHash } from '@/lib/blockchain';
 import { createClient } from '@/utils/supabase/server';
 import { logAutomation, formatErr } from '@/lib/automation';
 import { revalidatePath } from 'next/cache';
 
 /**
- * Server Action: Anchors a QRON Edge hash to Polygon.
- * Part of Phase 2: Blockchain Transition.
+ * Server Action: QRON on-chain anchoring.
+ *
+ * Contained (P1): refuses every write and never calls the chain. The previous
+ * version anchored a placeholder hash (the QR content or keccak256 of the id),
+ * not a signature. Turning on-chain writes back on is Zac's call.
  */
-export async function anchorQRONAction(qronId: string, edgeHash: string) {
-  const workflowName = 'qron_anchoring';
-  try {
-    const supabase = await createClient();
-    
-    // 1. Auth check
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error('Unauthorized');
-
-    console.log(`[Action] Initiating anchor for QRON ${qronId}`);
-
-    // 2. Perform Anchoring
-    const result = await anchorEdgeHash(edgeHash, `qron:${qronId}`);
-
-    // 3. Update Database with transaction reference in the metadata column
-    const { error: updateError } = await supabase
-      .from('qrons')
-      .update({
-        metadata: {
-          blockchain: 'polygon',
-          tx_hash: result.txHash,
-          anchor_id: result.anchorId,
-          anchored_at: new Date().toISOString()
-        }
-      })
-      .eq('id', qronId);
-
-    if (updateError) throw updateError;
-
-    await logAutomation(workflowName, 'manual', 'success', { qronId, txHash: result.txHash });
-
-    revalidatePath('/dashboard');
-    revalidatePath(`/dashboard/qron/${qronId}`);
-
-    return {
-      success: true,
-      txHash: result.txHash,
-      anchorId: result.anchorId
-    };
-
-  } catch (err: unknown) {
-    console.error('[Action] QRON Anchoring failed:', err);
-    await logAutomation(workflowName, 'manual', 'failure', { qronId }, formatErr(err));
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : 'Blockchain anchoring failed'
-    };
-  }
+export async function anchorQRONAction(
+  _qronId: string,
+  _edgeHash: string
+): Promise<{ success: false; error: string; txHash?: undefined }> {
+  return { success: false, error: ANCHORING_UNAVAILABLE };
 }
 
 /**
