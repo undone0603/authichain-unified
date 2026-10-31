@@ -174,10 +174,11 @@ function main() {
     console.log("[build] no workers to compile");
     return;
   }
-  if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID) {
-    console.error(
-      "::error::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is empty. Refusing a hollow pass."
-    );
+  // `wrangler deploy --dry-run` compiles locally, without production
+  // Cloudflare credentials. Keep the job's real exit status as the gate.
+  // A production token must never reach a PR-executing self-hosted runner.
+  if (process.env.CLOUDFLARE_API_TOKEN) {
+    console.error("::error::Refusing production Cloudflare credentials in a compile-only job.");
     process.exit(1);
   }
 
