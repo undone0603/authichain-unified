@@ -296,14 +296,25 @@ async function renderProductPassport(c: Context): Promise<Response> {
       return htmlResponse(c, renderSeoHubHtml(seoPage, pathname), 200);
     }
 
-    // Same per-request pg.Client pattern as /verify: connect + every query
-    // share one 2.5s deadline, and the client is closed in finally.
-    const withLookupTimeout = makeVerifyDeadline();
-    dbHandle = createHyperdriveRequestDb(c.env as any);
-    await withLookupTimeout(dbHandle.connect());
-    const result = await withLookupTimeout(
-      findPassportBySerial(dbHandle.db, serial)
-    );
+    const db = getHyperdriveDb(c.env as any);
+    const result = await new Promise<
+      Awaited<ReturnType<typeof findPassportBySerial>>
+    >((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("passport-lookup-timeout")),
+        4000
+      );
+      findPassportBySerial(db, serial).then(
+        value => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        err => {
+          clearTimeout(timer);
+          reject(err);
+        }
+      );
+    });
 
     if (!result) {
       return htmlResponse(
