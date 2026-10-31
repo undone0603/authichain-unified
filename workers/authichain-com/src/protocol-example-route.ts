@@ -3,8 +3,8 @@
  * credential. /protocol is an APP_PREFIXES proxy, so this must run first.
  * The files are the public example. They are not a product passport.
  */
-import anchor from "../../../protocol/examples/polygon-anchor-1.anchor.json" with { type: "json" };
-import record from "../../../protocol/examples/polygon-anchor-1.record.json" with { type: "json" };
+import anchor from "../../../protocol/examples/polygon-anchor-1.anchor.json";
+import record from "../../../protocol/examples/polygon-anchor-1.record.json";
 
 const RECORD_PATHS = new Set([
   "/protocol/examples/polygon-anchor-1",

@@ -124,7 +124,7 @@ app.get('/:address/history', async (c) => {
     ]);
 
     const blockOf = (value: bigint | null | undefined) => value?.toString() ?? 'unknown';
-    const indexOf = (value: bigint | null | undefined) => value?.toString() ?? '';
+    const indexOf = (value: bigint | number | null | undefined) => value?.toString() ?? '';
     const history = [
       ...granted.map((log) => ({
         type: 'granted' as const,
