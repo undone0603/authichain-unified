@@ -32,6 +32,7 @@ Cite these. Do not infer the rest.
 | Surface | What it is |
 |---|---|
 | [/protocol](/protocol) | Open verifier. Verdicts: `verified`, `valid-unanchored`, `invalid` |
+| [Demonstration record](/api/verify?id=polygon-anchor-1) | `polygon-anchor-1`. One Ed25519 record. Not a customer product. Not a physical inspection. Not a battery passport. [Human page](/verify?id=polygon-anchor-1) shows the verdict and does not itself read the anchor transaction. |
 | [/x402](/x402) | Agent micropayments. Unpaid `POST /api/x402` returns HTTP 402 |
 | [/dpp-check](/dpp-check?utm_source=docs&utm_medium=authority&utm_campaign=docs-hub) | Free EU DPP readiness check |
 | [/battery-passport](/battery-passport) | E-bike / LMT gap map. Battery passport from 18 February 2027. |

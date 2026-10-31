@@ -3,6 +3,8 @@ import { resolveTenant, type TenantContext } from "./auth";
 import { checkRateLimit } from "./rate-limiter";
 import { recordUsage, flushUsageBuffer } from "./metering";
 
+export const MCP_ANON_LIMITS = { rpm: 10, rpd: 100 };
+
 export interface Env {
   RATE_LIMITS: KVNamespace;
   TENANT_CACHE: KVNamespace;
@@ -125,8 +127,19 @@ export default {
       });
     }
 
-    // MCP endpoint (ChatGPT Apps SDK)
+    // MCP endpoint (ChatGPT Apps SDK). It is anonymous but carries
+    // INTERNAL_SECRET to the backend, and generate_qr_art starts paid image
+    // generation, so every caller address gets its own small budget.
     if (url.pathname === "/mcp" || url.pathname.startsWith("/mcp/")) {
+      const addr = request.headers.get("cf-connecting-ip") || "unknown";
+      const limited = await checkRateLimit(env, `mcp:ip:${addr}`, MCP_ANON_LIMITS);
+      if (!limited.allowed) {
+        return json(
+          { error: "Rate limit exceeded", retryAfter: limited.retryAfter },
+          429,
+          { "Retry-After": String(limited.retryAfter || 60) }
+        );
+      }
       return handleMcp(request, env, ctx);
     }
 

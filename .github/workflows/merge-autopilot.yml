@@ -10,14 +10,21 @@
 name: Merge autopilot
 
 on:
-  # Throttled 2026-10-06: this sweep ran ~65x/day (the 20-minute cron plus a
-  # run per completed PR check and per PR event) and helped exhaust the
-  # account's Actions minutes on the now-private repo within six days.
-  # Event-driven triggers removed; the 4-hourly schedule plus post-merge
-  # sweeps still merge green PRs promptly (each merge triggers a follow-up
-  # sweep) and update branches that fall behind. Restore workflow_run /
-  # check_suite / pull_request_target triggers only when a bigger minutes
-  # budget (Pro plan, self-hosted runner, or public repo) exists.
+  # The control job now uses the existing ops runner. Check completions wake
+  # the default-branch sweep; it never checks out or executes the PR branch.
+  workflow_run:
+    workflows:
+      [
+        "CI Main",
+        "CI",
+        "Lint",
+        "CodeQL",
+        "Typecheck ratchet",
+        "Security Scan",
+        "Contract Tests (Hardhat)",
+        "Worker builds",
+      ]
+    types: [completed]
   # A merge to main makes every other PR behind; sweep to update them.
   push:
     branches: [main]
@@ -48,7 +55,11 @@ permissions:
 jobs:
   sweep:
     name: Merge autopilot
-    runs-on: ubuntu-latest
+    if: >-
+      github.repository == 'undone0603/authichain-unified' &&
+      (github.event_name != 'workflow_run' ||
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
