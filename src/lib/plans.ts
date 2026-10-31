@@ -76,7 +76,7 @@ export const PLANS: Plan[] = [
     name: "Starter Pack",
     price: 29,
     description:
-      "100 AI QR generations for $29, paid once. No subscription. Pack credits never expire unless you switch to a Launch subscription.",
+      "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits.",
     generations: 100,
     stripe_price_id: "price_1UIoEVGqTruSqV8T61lp48wB",
     stripe_payment_link: "https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E",
@@ -85,7 +85,7 @@ export const PLANS: Plan[] = [
     features: [
       "100 generations for $29, paid once",
       "No subscription, no renewal",
-      "Pack credits never expire unless you switch to Launch",
+      "Starting a monthly plan replaces unused pack credits",
     ],
     cta: "Get 100 generations for $29",
     listed: true,
@@ -196,7 +196,7 @@ export const PLANS: Plan[] = [
     name: "EU DPP Workspace",
     price: 299,
     description:
-      "One-time checkout that opens an AuthiChain workspace with 50 generations. Not an audit, not a certification, not legal advice.",
+      "One-time checkout that opens an AuthiChain workspace. Not an audit, not a certification, not legal advice.",
     generations: 50,
     stripe_price_id: "price_1TwmD8GqTruSqV8TpAF8dfyA",
     stripe_mode: "payment",
@@ -204,7 +204,6 @@ export const PLANS: Plan[] = [
     features: [
       "AuthiChain workspace",
       "Self-serve activation",
-      "50 workspace generations",
       "Not an audit and not a legal opinion",
       "Does not register a product in EUDAMED",
     ],
@@ -312,7 +311,7 @@ export const PLANS: Plan[] = [
     price: 950,
     price_suffix: " first model",
     description:
-      "Written readiness assessment of one battery model against Annex XIII, in 10 business days. Readiness only: not a conformity assessment, not legal advice, not an issued passport.",
+      "Written readiness assessment of one battery model against Annex XIII. It arrives by email as a written document. No call. Readiness only: not a conformity assessment, not legal advice, not an issued passport.",
     generations: 0,
     stripe_price_id: "price_1UREvgGqTruSqV8TMMYXVF69",
     stripe_mode: "payment",
@@ -321,7 +320,7 @@ export const PLANS: Plan[] = [
     return_path: "/battery-passport",
     features: [
       "Written gap report for one battery model",
-      "Delivered in 10 business days",
+      "It arrives by email as a written document. No call.",
       "Readiness only, not legal advice",
     ],
     cta: "Order the gap report — $950",
@@ -340,7 +339,10 @@ export const PLANS: Plan[] = [
     listed: false,
     adjustable_quantity: { minimum: 1, maximum: 20 },
     return_path: "/battery-passport",
-    features: ["One extra battery model per unit", "Choose 1 to 20 at checkout"],
+    features: [
+      "One extra battery model per unit",
+      "Choose 1 to 20 at checkout",
+    ],
     cta: "Add a model — $350",
   },
   {
