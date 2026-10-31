@@ -27,8 +27,8 @@ The installer downloads GitHub Actions Runner v2.338.2, verifies the ARM64 archi
 ## Verify and release
 
 1. On the repository [runner settings page](https://github.com/undone0603/authichain-unified/settings/actions/runners), verify two distinct runner names/IDs: publisher `wsl-zac-arm64` and CI `authichain-ci-arm64-01`. CI must have `authichain-ci-isolated`; publisher must **not**.
-2. Merge this CI-targeting PR only after code review of workflow routing and security controls. Prior PR CI jobs targeting the old `authichain-ops` label will **not** automatically migrate; rerun or update their exact-head checks.
-3. Manually run [self-hosted ops smoke](https://github.com/undone0603/authichain-unified/actions/workflows/self-hosted-ops-smoke.yml) after this PR is merged. Verify `runner_name=authichain-ci-arm64-01`, the Identity step passes, and no publisher runner ID is used.
+2. From the [self-hosted ops smoke](https://github.com/undone0603/authichain-unified/actions/workflows/self-hosted-ops-smoke.yml) **Run workflow** dropdown, select branch `fix/isolated-authichain-ci-runner-20261031` (which contains the new isolated selector), not `main` yet. Run smoke and verify `runner_name=authichain-ci-arm64-01`, the Identity step passes, and runner ID differs from production publisher ID 21. The previous Smoke #2 targeting the old label is not proof.
+3. Review this CI-targeting PR and require its full validation on the new host before merging. Prior PR CI jobs targeting the old `authichain-ops` label will **not** automatically migrate; rerun or update their exact-head checks after merge.
 4. Re-run PR #2222 DPP fulfillment and PR #2223 outbound checks. Require green Typecheck/lint, worker build, and test shards on their exact current commits before merging.
 5. Use the existing `deploy-workers.yml` targeted dispatches for `stripe-webhook` and `authichain-verify-worker` on the publisher only, then confirm live Cloudflare deployment IDs and read-only smoke checks. No payment or external email is authorized solely by a green smoke.
 
