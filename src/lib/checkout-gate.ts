@@ -63,7 +63,6 @@ export const CHECKOUT_CARRY_KEYS = [
   "referrer",
   "ref",
   "affiliate_code",
-  "qron_attestation",
 ] as const;
 
 export const CHECKOUT_SUCCESS_ORIGIN = "https://authichain.govchain.us";
@@ -271,26 +270,15 @@ export function renderCheckoutConfirmPage(opts: {
   const { plan } = opts;
   const params = opts.params ?? new URLSearchParams();
   const email = pickCheckoutEmail(params.get("email"));
-  const isQronGated = isQronGatedPlan(plan.id);
-  const attestation = (params.get("qron_attestation") || "")
-    .trim()
-    .slice(0, 256);
   const submittedCheckoutKey = params.get("checkout_key") || "";
   const checkoutKey = /^[\w-]{36}$/.test(submittedCheckoutKey)
     ? submittedCheckoutKey
     : crypto.randomUUID();
-  const hidden = CHECKOUT_CARRY_KEYS.filter(
-    key => !(isQronGated && key === "qron_attestation")
-  )
-    .map(key => {
+  const hidden = CHECKOUT_CARRY_KEYS.map(key => {
       const v = (params.get(key) || "").trim().slice(0, 256);
       return v ? `<input type="hidden" name="${key}" value="${esc(v)}">` : "";
     })
     .join("");
-  const attestationField = isQronGated
-    ? `<label for="checkout-confirm-attestation" style="margin-top:12px">QRON attestation token
-<input id="checkout-confirm-attestation" name="qron_attestation" type="text" required maxlength="256" autocomplete="off" spellcheck="false" placeholder="QRON-<nonce>.<expiry>.<signature>" value="${esc(attestation)}"></label>`
-    : "";
   const action = `/checkout/${plan.id}`;
   const err = opts.error
     ? `<div class="err" role="alert">${esc(opts.error)}</div>`
@@ -303,7 +291,6 @@ export function renderCheckoutConfirmPage(opts: {
 ${err}<form method="post" action="${esc(action)}" id="checkout-confirm">
 <label for="checkout-confirm-email">Work email
 <input id="checkout-confirm-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com" value="${esc(email)}"></label>
-${attestationField}
 <div class="hp" aria-hidden="true"><label>Leave empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
 ${hidden}<input type="hidden" name="checkout_key" value="${esc(checkoutKey)}"><button type="submit">Continue to secure Stripe checkout</button>
 <p class="hint">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter. You will review the total on Stripe before paying.</p>
@@ -496,8 +483,6 @@ export function buildGatedSessionBody(opts: {
   if (referrer) meta.referrer = referrer;
   if (affiliateCode) meta.affiliate_code = affiliateCode;
   if (refCode) meta.ref_code = refCode;
-  const qronAttestation = f("qron_attestation", 256);
-  if (qronAttestation) meta.qron_attestation = qronAttestation;
   for (const [k, v] of Object.entries(meta)) body.set(`metadata[${k}]`, v);
   if (mode === "subscription") {
     for (const [k, v] of Object.entries(meta)) {
@@ -726,12 +711,12 @@ async function readFormFields(request: Request): Promise<URLSearchParams> {
  *   GET/HEAD → confirm page (200) or chooser; unknown plan 404. Never Stripe.
  *   POST     → validate (email, honeypot, origin, bot/prefetch) → 303 Stripe.
  */
-/** Plans whose /checkout/<plan> page is closed to new buyers. */
-// TODO: inject gated/retired plan lists so the 403 + Stripe hand-off stay unit-testable with every QRON plan retired.
-export const RETIRED_GATED_PLAN_IDS: readonly PlanId[] = [
-  "qron_launch",
-  "qron_launch_annual",
-];
+/**
+ * Direct checkout for qron_launch and qron_launch_annual is open.
+ * Both stay unlisted, so the chooser and the generate page do not grow buy buttons.
+ * A buyer still has to submit the confirm form. QRON attestation stays required.
+ */
+export const RETIRED_GATED_PLAN_IDS: readonly PlanId[] = [];
 
 export async function tryHandleGatedCheckout(
   request: Request,
@@ -763,9 +748,6 @@ export async function tryHandleGatedCheckout(
       ? new Response(null, { status: 404, headers: HTML_HEADERS })
       : htmlResponse(html, 404);
   }
-  // Retired for new buyers (Advisor RES-86c, Oct 17 2026): no confirm form
-  // and no session for any method. Existing subscribers are unaffected;
-  // billing, webhooks and plan lookups do not use this route.
   if (RETIRED_GATED_PLAN_IDS.includes(plan.id)) {
     return new Response(null, {
       status: 303,
@@ -846,28 +828,6 @@ export async function tryHandleGatedCheckout(
     );
   }
   report("checkout_email_captured", email);
-
-  // --- QRON Interdiction Gate ---
-  if (isQronGatedPlan(plan.id)) {
-    const attestationToken = fields.get("qron_attestation");
-    const secret = env.QRON_INTERDICTION_SECRET;
-    const validAttestation = await verifyQronAttestationToken(
-      attestationToken,
-      secret
-    );
-    if (!validAttestation) {
-      return htmlResponse(
-        renderCheckoutConfirmPage({
-          plan,
-          params: fields,
-          error:
-            "QRON Interdiction: Valid signed attestation token required for provisioning.",
-        }),
-        403
-      );
-    }
-  }
-  // ------------------------------
 
   const result = await createGatedCheckoutSession({
     plan,
