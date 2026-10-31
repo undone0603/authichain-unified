@@ -26,7 +26,8 @@ export class AgentZContainer extends Container<Env> {
   pingEndpoint = "localhost/health";
 
   constructor(ctx: DurableObjectState, env: Env) {
-    super(ctx, env);
+    // The containers package types this argument as DurableObjectState<{}>.
+    super(ctx as DurableObjectState<{}>, env);
     this.envVars = containerEnvFromBindings(env);
   }
 }
