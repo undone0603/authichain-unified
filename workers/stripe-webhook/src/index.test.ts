@@ -58,6 +58,7 @@ function sessionEvent(opts: {
 function installFetch(opts?: {
   selectStatus?: number;
   prior?: string | null;
+  grantLimit?: number;
   upsertOk?: boolean;
   updateOk?: boolean;
 }) {
@@ -73,7 +74,7 @@ function installFetch(opts?: {
           return new Response("no", { status: opts?.selectStatus ?? 500 });
         }
         const row =
-          opts?.prior === undefined ? [] : [{ last_grant_session_id: opts.prior }];
+          opts?.prior === undefined ? [] : [{ last_grant_session_id: opts.prior, generations_limit: opts.grantLimit ?? 0 }];
         return new Response(JSON.stringify(opts?.prior === undefined ? [] : row), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -191,7 +192,7 @@ describe("stripe-webhook checkout grant", () => {
     expect(await res.json()).toEqual({ error: "grant lookup failed" });
   });
 
-  it("does not stamp a session id or zero generations for a DPP human hold", async () => {
+  it("DPP release retries until the canonical 50-credit grant is persisted", async () => {
     state.event = sessionEvent({ price: DPP, id: "cs_dpp" });
     const calls = installFetch({ prior: null });
     const res = await worker.fetch(
@@ -202,12 +203,40 @@ describe("stripe-webhook checkout grant", () => {
       }),
       env
     );
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "canonical DPP entitlement pending" });
+    expect(patches(calls)).toEqual([]);
+  });
+
+  it("DPP release acknowledges a verified canonical grant without double-granting", async () => {
+    state.event = sessionEvent({ price: DPP, id: "cs_dpp" });
+    const calls = installFetch({ prior: "cs_dpp", grantLimit: 50 });
+    const res = await worker.fetch(
+      new Request("https://worker.test/stripe", {
+        method: "POST",
+        body: "{}",
+        headers: { "stripe-signature": "t=1,v1=ok" },
+      }),
+      env
+    );
     expect(res.status).toBe(200);
     expect(patches(calls)).toEqual([]);
-    expect(calls.some(c => c.method === "GET")).toBe(false);
-    expect(
-      calls.filter(c => c.method === "POST" && c.url.includes("/profiles"))
-    ).toHaveLength(1);
+    expect(calls.some(c => c.method === "GET")).toBe(true);
+  });
+
+  it("DPP does not acknowledge a matching session with no credits", async () => {
+    state.event = sessionEvent({ price: DPP, id: "cs_dpp" });
+    const calls = installFetch({ prior: "cs_dpp", grantLimit: 0 });
+    const res = await worker.fetch(
+      new Request("https://worker.test/stripe", {
+        method: "POST",
+        body: "{}",
+        headers: { "stripe-signature": "t=1,v1=ok" },
+      }),
+      env
+    );
+    expect(res.status).toBe(500);
+    expect(patches(calls)).toEqual([]);
   });
 
   it("does not grant a checkout session that is still unpaid", async () => {
