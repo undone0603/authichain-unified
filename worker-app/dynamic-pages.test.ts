@@ -358,7 +358,8 @@ describe("renderDynamicPage: /verify verification landing", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("Verify a Product");
-    expect(body).toContain("On-chain verification is in development.");
+    expect(body).toContain("That certificate is not an on-chain check.");
+    expect(body).not.toContain("On-chain verification is in development.");
     expect(body).toContain('href="/verify?id=polygon-anchor-1"');
     expect(body).toContain(
       '<link rel="manifest" href="/manifest.webmanifest">'
