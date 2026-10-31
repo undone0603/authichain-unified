@@ -655,6 +655,26 @@ describe("fulfilment watchdog", async () => {
     ]);
   });
 
+  it("does not accept a duplicate-only checkout receipt as successful delivery", () => {
+    const sessions = [s("cs_duplicate_only", 60), s("cs_verified", 60)];
+    const events = [
+      {
+        session_id: "cs_duplicate_only",
+        event_type: "checkout.session.completed",
+        status: "duplicate",
+      },
+      {
+        session_id: "cs_verified",
+        event_type: "checkout.session.completed",
+        status: "success",
+      },
+    ];
+    const out = findUnfulfilled(sessions, events, { now });
+    expect(
+      out.map((p: { session: string; reason: string }) => `${p.session}:${p.reason}`)
+    ).toEqual(["cs_duplicate_only:webhook ran but did not succeed"]);
+  });
+
   it("excludes free completed checkouts without hiding unknown-amount payments", () => {
     const out = findUnfulfilled(
       [
