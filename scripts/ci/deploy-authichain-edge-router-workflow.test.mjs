@@ -24,7 +24,7 @@ test("Publish uses versions upload + API promote, not wrangler deploy", () => {
   assert.match(publish, /parse-wrangler-version-id\.mjs/);
   assert.match(publish, /promote-worker-version\.mjs authichain-edge-router/);
   // Every successful promotion must leave a traceable GitHub-run/source/version record.
-  assert.match(publish, /promotion=\\$\\(node .*promote-worker-version/);
+  assert.match(publish, /promotion=\$\(node .*promote-worker-version/);
   assert.match(publish, /GITHUB_SHA/);
   assert.match(publish, /GITHUB_RUN_ID/);
   assert.match(publish, /GITHUB_RUN_ATTEMPT/);
