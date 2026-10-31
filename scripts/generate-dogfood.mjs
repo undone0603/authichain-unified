@@ -1,78 +1,67 @@
-import { generateKeyPairSync, randomBytes, sign as edSign } from "node:crypto";
-import { writeFileSync, mkdirSync } from "node:fs";
+/**
+ * Release attestation for this repository, signed with AuthiChain's own protocol.
+ *
+ *   node scripts/generate-dogfood.mjs [--artifact <path>]...   write docs/execution/AUTHICHAIN_DOGFOOD_RECORD.json
+ *   node scripts/generate-dogfood.mjs --verify <record.json>   check a record against this checkout
+ *
+ * Generate exits 1 (and writes nothing) unless the new record checks out against the tree
+ * it was made from. Verify exits 0 only for `bound`; 3 for `no-record` (nothing to check,
+ * which is not evidence of a forgery); 1 for stale, mismatch and invalid.
+ * What a record does and does not prove: scripts/lib/dogfood-release.mjs.
+ */
+
 import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { runDogfood, verifyRecordFile } from "./lib/dogfood-release.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
-function b58encode(buf) {
-  let n = BigInt("0x" + (Buffer.from(buf).toString("hex") || "0"));
-  let out = "";
-  while (n > 0n) { out = B58[Number(n % 58n)] + out; n /= 58n; }
-  for (const b of buf) { if (b !== 0) break; out = "1" + out; }
+function parseArgs(argv) {
+  const out = { artifacts: [], verify: undefined, bad: undefined };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--artifact" && argv[i + 1]) out.artifacts.push(argv[++i]);
+    else if (a === "--verify" && argv[i + 1]) out.verify = argv[++i];
+    else out.bad = a;
+  }
   return out;
 }
 
-function jcs(v) {
-  if (v === null || typeof v !== "object") return JSON.stringify(v);
-  if (Array.isArray(v)) return `[${v.map(jcs).join(",")}]`;
-  return `{${Object.keys(v).sort().filter((k) => v[k] !== undefined).map((k) => `${JSON.stringify(k)}:${jcs(v[k])}`).join(",")}}`;
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (args.bad !== undefined) {
+    console.error(`unknown or incomplete argument: ${args.bad}`);
+    console.error(
+      "usage: generate-dogfood.mjs [--artifact <path>]... | --verify <record.json>"
+    );
+    return 2;
+  }
+
+  if (args.verify) {
+    const result = verifyRecordFile({
+      root: ROOT,
+      file: join(process.cwd(), args.verify),
+    });
+    console.log(JSON.stringify(result, null, 2));
+    if (result.verdict === "bound") return 0;
+    return result.verdict === "no-record" ? 3 : 1;
+  }
+
+  const result = runDogfood({ root: ROOT, extraArtifacts: args.artifacts });
+  if (!result.ok) {
+    console.error(
+      JSON.stringify(
+        { ok: false, error: result.error, check: result.check },
+        null,
+        2
+      )
+    );
+    return 1;
+  }
+  console.log(
+    `Wrote release attestation to ${result.outFile} (${result.check.verdict}; protocol ${result.check.protocol.verdict})`
+  );
+  return 0;
 }
 
-function signingBytes(record) {
-  const { proof, ...rest } = record;
-  const { proofValue, ...proofRest } = proof ?? {};
-  return Buffer.from(jcs({ ...rest, proof: proofRest }), "utf8");
-}
-
-function newKey() {
-  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
-  const raw = publicKey.export({ format: "der", type: "spki" }).subarray(-32);
-  const did = "did:key:z" + b58encode(Buffer.concat([Buffer.from([0xed, 0x01]), raw]));
-  return { privateKey, did };
-}
-
-async function main() {
-  const key = newKey();
-  const now = new Date();
-  const tag = `DOGFOOD-${randomBytes(4).toString("hex").toUpperCase()}`;
-  
-  const rec = {
-    "@context": ["https://www.w3.org/ns/credentials/v2", "https://authichain.com/protocol/v1"],
-    type: ["VerifiableCredential", "ProvenanceRecord"],
-    issuer: key.did,
-    validFrom: new Date(now.getTime() - 3600000).toISOString(),
-    credentialSubject: {
-      id: `https://id.gs1.org/01/09506000134352/21/${tag}`,
-      gtin: "09506000134352",
-      serial: tag,
-      name: "AuthiChain Reference Demonstration",
-      economicOperator: "GLN:09506000134352",
-      circularityProfile: {
-        materialComposition: "100% Recycled PLA",
-        repairabilityScore: "8.5/10"
-      }
-    },
-    proof: {
-      type: "Ed25519Signature2020",
-      created: now.toISOString(),
-      verificationMethod: `${key.did}#key-1`,
-      proofPurpose: "assertionMethod",
-    },
-  };
-  rec.proof.proofValue = "z" + b58encode(edSign(null, signingBytes(rec), key.privateKey));
-  
-  const verifierUrl = pathToFileURL(join(ROOT, "protocol", "verifier.mjs")).href;
-  const verifier = await import(verifierUrl);
-  const verdict = verifier.verifyRecord(rec, null, { now: now.toISOString() });
-  
-  const outDir = join(ROOT, "docs", "execution");
-  mkdirSync(outDir, { recursive: true });
-  const outFile = join(outDir, "AUTHICHAIN_DOGFOOD_RECORD.json");
-  
-  writeFileSync(outFile, JSON.stringify({ record: rec, verification: verdict }, null, 2));
-  console.log("Wrote dogfood record to", outFile);
-}
-
-main().catch(console.error);
+process.exitCode = main();

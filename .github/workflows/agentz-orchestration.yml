@@ -43,7 +43,7 @@ env:
 jobs:
   resolve-mode:
     name: Resolve dry-run / ping
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     outputs:
       dry_run: ${{ steps.mode.outputs.dry_run }}
       ping_agentz: ${{ steps.mode.outputs.ping_agentz }}
@@ -93,7 +93,7 @@ jobs:
   # ── Phase 0: Live claw + AgentZ (health; architect dry-run if keyed) ────────
   ping-claw-agentz:
     name: Ping claw + AgentZ
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     needs: resolve-mode
     if: needs.resolve-mode.outputs.ping_agentz == 'true'
     outputs:
@@ -134,7 +134,7 @@ jobs:
 
   preflight:
     name: Verify live-operation prerequisites
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     outputs:
       ready: ${{ steps.check.outputs.ready }}
     env:
@@ -166,7 +166,7 @@ jobs:
   # ── Phase 1: Qualify inbound leads ──────────────────────────────────────────
   qualify-leads:
     name: Qualify Leads
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     needs: [preflight, resolve-mode]
     if: needs.preflight.outputs.ready == 'true'
     steps:
@@ -195,7 +195,7 @@ jobs:
   # ── Phase 2: Sync MI cannabis leads to HubSpot ──────────────────────────────
   sync-mi-leads:
     name: Sync Michigan Leads → HubSpot
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     needs: [qualify-leads, resolve-mode]
     # sync-mi-leads-hubspot.ts does not honor DRY_RUN — skip on dry-run.
     if: needs.resolve-mode.outputs.dry_run != 'true'
@@ -223,7 +223,7 @@ jobs:
   # ── Phase 3: Funnel health report ───────────────────────────────────────────
   funnel-report:
     name: Funnel Report
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     needs: [qualify-leads, resolve-mode]
     if: always() && needs.qualify-leads.result != 'cancelled'
     steps:
@@ -246,7 +246,7 @@ jobs:
   # ── Phase 4: Notify AgentZ webhook ──────────────────────────────────────────
   notify-webhook:
     name: Notify AgentZ Webhook
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     needs:
       [
         resolve-mode,

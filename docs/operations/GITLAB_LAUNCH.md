@@ -101,8 +101,9 @@ Not connected on purpose:
 - Outreach, revenue, autopilot, telegram, agent and payout workers. `authichain-automation` still builds from GitHub.
 - If the two CI/CD variables are added later, `deploy_authichain_com` would deploy authichain-com a second time on the same push; disable one of the two.
 
-GitLab trial: the Ultimate trial ends 2026-11-20. Pull mirroring is a paid GitLab feature, so after that GitHub merges stop reaching GitLab.
-Before then, upgrade GitLab or reconnect the Workers Builds triggers to GitHub.
+GitLab trial: the Ultimate trial ends 2026-11-20. Pull mirroring is a paid GitLab feature (Premium and Ultimate), so after that GitHub merges stop reaching GitLab.
+GitLab's mirroring page labels push mirroring as available in Free, Premium and Ultimate, so merges made on GitLab should keep reaching GitHub; check the push mirror's last run after the trial ends.
+Because GitLab is now the working source of truth, losing the pull mirror stops only the GitHub-to-GitLab direction. It does not affect Workers Builds, which deploy from GitLab `main`. Merge on GitLab, not on GitHub.
 
 ## Rollback
 

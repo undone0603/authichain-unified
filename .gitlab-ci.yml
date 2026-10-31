@@ -57,6 +57,11 @@ before_script:
 .heavy:
   interruptible: true
   rules:
+    # A weekly schedule sets RUN_HEAVY=true so the launch CI gate gets fresh
+    # evidence without a human pressing play. Daily schedules leave it unset to
+    # protect the free-minute budget.
+    - if: '$RUN_HEAVY == "true" && $CI_PIPELINE_SOURCE == "schedule"'
+      when: on_success
     - if: '$CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "merge_request_event"'
       when: never
     - when: manual
@@ -327,6 +332,24 @@ build_gate:
       when: manual
       allow_failure: true
 
+# Autonomous launch gates (tracking: work item #1987). Decides every gate from
+# evidence with no human approval. FAIL CLOSED. Opens/closes one issue per
+# failing gate when CI/CD variable GITLAB_API_TOKEN (masked, project access
+# token, scope api) exists; otherwise it only writes the report artifact.
+# Stop everything with kill_switch in config/launch-gates.json.
+launch_gates:
+  extends: .launch_check
+  resource_group: launch-gates
+  script:
+    # Gates first, so the report and gate issues exist even if a unit test fails.
+    - node scripts/autonomy/launch-gates.mjs
+    - node --test scripts/autonomy/launch-gates.test.mjs scripts/autonomy/protocol-gates.test.mjs scripts/autonomy/estate-gate.test.mjs
+  artifacts:
+    when: always
+    paths:
+      - launch-gates-report.json
+    expire_in: 14 days
+
 launch_gate:
   extends: .launch_check
   script:
@@ -401,3 +424,29 @@ deploy_authichain_com:
     - node scripts/sync-microsite-packs.mjs
     - cd workers/authichain-com
     - npx wrangler deploy --minify --keep-vars --config wrangler.toml
+
+# -----------------------------------------------------------------------------
+# Agent task ledger (scripts/autonomy/gitlab-task-ledger.mjs): turns failed jobs
+# from recent pipelines into one deduplicated, attempt-capped GitLab issue each,
+# so a failure becomes a durable task instead of a red icon. It records and
+# escalates only: it cannot edit code, merge, close or delete anything.
+#
+# Inert until both exist: a pipeline schedule that sets AGENT_LOOP=1, and the
+# masked CI/CD variable GITLAB_AGENT_TOKEN (a project access token with the
+# Reporter role and the api scope). Without them this job never runs. Kill
+# switch: set AGENT_LOOP_OFF=1 (or GATE_OFF=1). No pnpm install: the script has
+# no dependencies, so a run costs seconds of the shared-runner budget.
+# -----------------------------------------------------------------------------
+agent_task_ledger:
+  stage: verify
+  image: node:22-alpine
+  needs: []
+  interruptible: false
+  timeout: 5m
+  before_script: []
+  rules:
+    - if: '$AGENT_LOOP_OFF == "1" || $GATE_OFF == "1"'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $AGENT_LOOP == "1" && $GITLAB_AGENT_TOKEN'
+  script:
+    - node scripts/autonomy/gitlab-task-ledger.mjs

@@ -102,12 +102,8 @@ test("unpaid POST /api/x402 is 402 v2 with published payTo and sister resource",
   }
 });
 
-test("a body that cannot be a seal is 400 and does not ask for payment", async () => {
-  for (const body of [
-    { sealId: "demo" },
-    { probe: "suggestions" },
-    { productId: "p-1" },
-  ]) {
+test("quote JSON without sealId is unpaid 402; a non-UUID sealId is 400", async () => {
+  for (const body of [{ probe: "suggestions" }, { productId: "p-1" }]) {
     const res = await tryHandleSisterX402(
       req("qron.space", "/api/x402", {
         method: "POST",
@@ -116,12 +112,22 @@ test("a body that cannot be a seal is 400 and does not ask for payment", async (
       })
     );
     assert.ok(res);
-    assert.equal(res.status, 400);
-    assert.equal(res.headers.get("PAYMENT-REQUIRED"), null);
-    const json = (await res.json()) as { error: string; settled: boolean };
-    assert.equal(json.settled, false);
-    assert.ok(json.error === "seal_id_required" || json.error === "seal_id_not_uuid");
+    assert.equal(res.status, 402);
+    assert.ok(res.headers.get("PAYMENT-REQUIRED"));
   }
+  const badId = await tryHandleSisterX402(
+    req("qron.space", "/api/x402", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sealId: "AC-DEMO-001" }),
+    })
+  );
+  assert.ok(badId);
+  assert.equal(badId.status, 400);
+  assert.equal(badId.headers.get("PAYMENT-REQUIRED"), null);
+  const badJson = (await badId.json()) as { error: string; settled: boolean };
+  assert.equal(badJson.settled, false);
+  assert.equal(badJson.error, "seal_id_not_uuid");
   const empty = await tryHandleSisterX402(
     req("qron.space", "/api/x402", {
       method: "POST",
