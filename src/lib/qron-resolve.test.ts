@@ -233,6 +233,12 @@ describe("handleQronResolve", () => {
     expect(html).toContain("AuthiChain Verification Decision v1");
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");
+    expect(html).toContain(
+      '<a href="https://qron.space/generate?utm_source=qron&amp;utm_medium=resolve_footer">Create your own Living QR — free to try</a>'
+    );
+    expect(html).toContain(
+      '<a href="https://authichain.com/checkout/starter?src=resolve_footer&amp;utm_content=low-starter-a">Starter Pack: 100 generations for $29, paid once</a>'
+    );
   });
 
   it("rejects non-GET methods with indeterminate JSON", async () => {
