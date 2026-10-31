@@ -104,7 +104,7 @@ function thanksHtml(
     "Payment received | AuthiChain",
     `<p class="kicker">Payment received</p>
      <h1>Workspace opened</h1>
-     <p>Your payment opens an AuthiChain workspace with self-serve activation and 50 workspace generations. Activate it below. The same link is in the confirmation email.</p>
+     <p>Your payment opens an AuthiChain workspace with self-serve activation. Activate it below. The same link is in the confirmation email.</p>
      <a class="btn" href="/dpp/activate?${qs.toString()}">Activate workspace</a>
      <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email with the same link is also on the way.</p>`
   );
@@ -123,7 +123,7 @@ function activateHtml(sessionId: string, visitId: string): string {
     "Activate workspace | AuthiChain",
     `<p class="kicker">Self-serve activation</p>
      <h1>Activate your workspace</h1>
-     <p>Complete this once. This records merchant activation for this workspace. It includes 50 workspace generations. It does not include a written assessment or a scheduled call. After it saves, you can download a field file of what you typed and what is still missing. That file is not a battery passport, not a certificate, and not EU registry filing.</p>
+     <p>Complete this once. This records merchant activation for this workspace. It does not include a written assessment or a scheduled call. After it saves, you can download a field file of what you typed and what is still missing. That file is not a battery passport, not a certificate, and not EU registry filing.</p>
      <form id="f">
        <label>Product categories / SKU families in scope
          <textarea name="categories" rows="3" required></textarea></label>
@@ -163,7 +163,7 @@ function activateHtml(sessionId: string, visitId: string): string {
            });
            var data = await res.json().catch(function () { return {}; });
            if (!res.ok) throw new Error(data.error || data.detail || ('HTTP ' + res.status));
-           msg.textContent = 'Activated. This workspace includes 50 workspace generations.';
+           msg.textContent = 'Activated.';
            if (data.importer_file) {
              var blob = new Blob([JSON.stringify(data.importer_file, null, 2)], { type: 'application/json' });
              var url = URL.createObjectURL(blob);
