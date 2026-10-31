@@ -33,6 +33,8 @@ export type Milestone = {
   badge?: string;
   /** Hide the live countdown/status line for this milestone. */
   hideStatus?: boolean;
+  /** Commission indicative date (estimate, not adopted law). */
+  indicative?: boolean;
 };
 
 /** `in-force` once the date has passed; `imminent` within a year; else `upcoming`. */

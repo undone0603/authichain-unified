@@ -165,3 +165,20 @@ describe('nextDeadline / mostRecentInForce', () => {
     expect(mostRecentInForce(AUG_2026)?.id).toBe('central-registry');
   });
 });
+
+describe('regulatory-timeline.json gate (Research, 2026-10-24)', () => {
+  it('every non-battery, non-registry entry is indicative and sourced to the EC DPP page', () => {
+    for (const m of listMilestones()) {
+      if (m.id === 'batteries' || m.id === 'central-registry') continue;
+      expect(m.indicative).toBe(true);
+      expect(m.source).toBe('https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en');
+    }
+  });
+  it('uses >2 kWh, the 2026/1778 ELI link, and splits construction from furniture', () => {
+    const all = listMilestones();
+    expect(all.find((m) => m.id === 'batteries')!.label).toContain('>2 kWh');
+    expect(all.find((m) => m.id === 'central-registry')!.source).toBe('https://eur-lex.europa.eu/eli/reg_impl/2026/1778/oj');
+    expect(all.find((m) => m.id === 'construction')!.label).not.toMatch(/furniture/i);
+    expect(all.some((m) => m.id === 'furniture')).toBe(true);
+  });
+});
