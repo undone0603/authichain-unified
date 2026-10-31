@@ -238,7 +238,7 @@ type PricingPage = {
   navLabel?: string;
   footerTagline?: string;
   footerNote?: string;
-  secondary: EstateCta;
+  secondary?: EstateCta;
   plansNote: string;
   ctaTitle: string;
   ctaLede: string;
@@ -341,7 +341,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       brand: "authichain",
       title: "Pricing — AuthiChain",
       description:
-        "Start with the Starter Pack: $29 one-time for 100 generations.",
+        "Live AuthiChain prices from the published plan catalogue. Start with the Starter Pack at $29.",
       canonical: "https://authichain.com/pricing",
       themeColor: "#4F46E5",
       primary: {
@@ -359,11 +359,6 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       heroLede:
         "Start with the Starter Pack at $29. The EU DPP Workspace is $299 when you need the battery passport path. Every paid plan below checks out on Stripe.",
       navLabel: "Buy Starter",
-      secondary: {
-        href: "/pricing",
-        label: "See pricing",
-        primary: false,
-      },
       plansNote:
         "Generation packs first, then the EU DPP Workspace. E-bike and other LMT batteries need a passport from 18 February 2027.",
       ctaTitle: "Buy the Starter Pack",
@@ -402,21 +397,14 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     heroTitle: "QRON prices that already charge.",
     heroLede:
       "Start with Starter Pack at $29. Generate a Living QR, or buy a pack on the Stripe Payment Link printed on the card. EU DPP Readiness is $299 when you need the passport path.",
-    secondary: {
-      href: "/pricing",
-      label: "See pricing",
-      primary: false,
-    },
-    plansNote: "Only plans with a Stripe price or Payment Link are listed.",
+    plansNote:
+      "Only plans with a Stripe price or Payment Link are listed.",
     ctaTitle: "Generate a Living QR",
     ctaLede:
       "qron.space/generate is proxied to the AuthiChain app. That is the first-dollar path for this brand — Starter $29.",
     footerStart: [
       { href: "/generate", label: "Generate Living QR" },
-      {
-        href: "https://authichain.com/checkout/starter",
-        label: "Buy Starter $29",
-      },
+      { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29" },
     ],
     footerMore: [
       { href: "https://authichain.com/x402", label: "x402 agent pay" },
@@ -477,10 +465,10 @@ ${estateHero({
       }
     : undefined,
   actions: checkoutPrimary
-    ? [page.secondary]
+    ? (page.secondary ? [page.secondary] : [])
     : [
         { href: page.primary.href, label: page.primary.label, primary: true },
-        page.secondary,
+        ...(page.secondary ? [page.secondary] : []),
       ],
 })}
 <section class="estate-section" id="pricing">

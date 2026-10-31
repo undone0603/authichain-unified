@@ -20,7 +20,7 @@ function toBase64Url(value: string): string {
 }
 
 describe("generateCreditPacks", () => {
-  it("exposes Starter, Creator, then DPP (Launch unlisted)", () => {
+  it("exposes Starter → Creator → DPP with Launch unlisted", () => {
     const packs = generateCreditPacks();
     const byId = Object.fromEntries(packs.map(p => [p.id, p]));
     expect(byId.starter.price).toBe(29);
@@ -32,7 +32,6 @@ describe("generateCreditPacks", () => {
       "dpp_readiness",
     ]);
     expect(byId.qron_launch).toBeUndefined();
-    expect(byId.qron_launch_annual).toBeUndefined();
   });
 });
 
@@ -234,7 +233,7 @@ describe("handleGeneratePost", () => {
       label: "Starter Pack: 100 generations for $29, paid once",
     });
     expect(String(result.body.message)).toMatch(
-      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription\. Starting a monthly plan replaces unused pack credits\.$/
+      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and pack credits never expire unless you start a subscription\.$/
     );
     expect(String(result.body.message)).not.toContain("never expire");
     expect(generateImage).not.toHaveBeenCalled();

@@ -2360,7 +2360,6 @@ ${estateCtaBand({
   actions: [
     { href: "/generate", label: "Generate Living QR", primary: true },
     { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29", primary: false },
-    { href: "/pricing", label: "See pricing", primary: false },
   ],
 })}
 </main>

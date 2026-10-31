@@ -26,7 +26,8 @@ describe("llms.txt", () => {
     expect(text).toContain("https://authichain.com/battery-passport");
     expect(text).toContain("18 February 2027");
     expect(text).toContain("e-bike / LMT");
-    expect(text).not.toContain("/checkout/qron_launch");
+    // QRON Launch is unlisted.
+    expect(text).not.toContain(planPaymentLink("qron_launch"));
     expect(text).not.toContain("QRON Launch");
     expect(text).toContain(planPaymentLink("starter"));
     expect(text).toContain(planPaymentLink("creator"));
