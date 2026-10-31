@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { cell, decide, isGitHubRateLimit, loadConfig } from "./merge-autopilot.mjs";
+import {
+  cell,
+  decide,
+  isGitHubRateLimit,
+  listCheckRuns,
+  loadConfig,
+  restrictedChange,
+} from "./merge-autopilot.mjs";
 
 const cfg = loadConfig({
   owner: "undone0603",
@@ -23,8 +30,15 @@ const pr = (over = {}) => ({
   mergeable_state: "clean",
   ...over,
 });
-const ok = name => ({ name, status: "completed", conclusion: "success" });
+const ok = name => ({
+  name,
+  status: "completed",
+  conclusion: "success",
+  head_sha: "abc",
+  app: { slug: "github-actions" },
+});
 const GREEN = [
+  ok("Main quality gate"),
   ok("lint"),
   ok("CI"),
   { ...ok("Production launch proof"), conclusion: "skipped" },
@@ -34,6 +48,27 @@ const NO_STATUS = { state: "pending", total_count: 0 };
 describe("merge autopilot decide()", () => {
   it("merges a green, clean, up-to-date PR from a trusted author", () => {
     assert.equal(decide(pr(), GREEN, NO_STATUS, 0, cfg).action, "merge");
+  });
+
+  it("requires successful Actions quality evidence on this exact PR head", () => {
+    const otherChecks = GREEN.filter(r => r.name !== "Main quality gate");
+    for (const gate of [
+      null,
+      { ...ok("Main quality gate"), conclusion: "skipped" },
+      { ...ok("Main quality gate"), conclusion: "neutral" },
+      { ...ok("Main quality gate"), status: "in_progress", conclusion: null },
+      { ...ok("Main quality gate"), head_sha: "old-head" },
+      { ...ok("Main quality gate"), app: { slug: "another-app" } },
+    ]) {
+      const checks = gate ? [...otherChecks, gate] : otherChecks;
+      assert.equal(decide(pr(), checks, NO_STATUS, 0, cfg).action, "wait");
+    }
+  });
+
+  it("does not merge when its token cannot trigger downstream deployment", () => {
+    const result = decide(pr(), GREEN, NO_STATUS, 0, cfg, { canUpdate: false });
+    assert.equal(result.action, "wait");
+    assert.match(result.reason, /no PAT/);
   });
 
   it("updates a branch that is behind main instead of merging it", () => {
@@ -183,6 +218,109 @@ describe("merge autopilot decide()", () => {
   });
 });
 
+describe("merge autopilot restricted changes", () => {
+  const file = (filename, patch = "@@ -1 +1 @@\n-a\n+b", over = {}) => ({
+    filename,
+    status: "modified",
+    patch,
+    ...over,
+  });
+  const check = files => restrictedChange(files, files.length);
+  const NO_PATCH = null;
+
+  it("lets ordinary changes through", () => {
+    assert.equal(
+      check([
+        file("src/app/pricing/page.tsx"),
+        file("docs/INDEX.md", NO_PATCH),
+      ]),
+      null
+    );
+  });
+
+  for (const path of [
+    ".github/autonomy.json",
+    ".github/workflows/merge-autopilot.yml",
+    ".github/workflows/main.yml",
+    ".github/workflows/autonomy-reconcile.yml",
+    ".github/workflows/deploy-workers.yml",
+    ".github/workflows/b2b-outreach.yml",
+    ".github/workflows/set-outreach-secret.yml",
+    "scripts/autonomy/merge-autopilot.mjs",
+    "scripts/autonomy/launch-mode.mjs",
+    "config/launch-gates.json",
+    "docs/OPERATING_CHARTER.md",
+    "CLAUDE.md",
+    "src/lib/plans.ts",
+    "src/lib/stripe-construct-event.ts",
+    "src/lib/dpp-fulfill-checkout.ts",
+    "src/app/api/stripe/webhook/route.ts",
+    "server/webhooks/stripe.ts",
+    "server/outreach/send-guard.ts",
+    "workers/stripe-webhook/src/index.ts",
+    "apps/qron-platform/workers/stripe-webhook/src/index.ts",
+    "apps/qron-platform/src/app/api/stripe/webhook/route.ts",
+    "workers/dpp-fulfillment/src/index.ts",
+    "workers/qron-outreach/index.js",
+    "workers/resend-relay/src/index.ts",
+    "supabase/migrations/20261013000000_x.sql",
+  ]) {
+    it(`holds ${path}`, () => {
+      assert.match(check([file(path)]), /restricted path/);
+    });
+  }
+
+  it("holds a rename out of a restricted path", () => {
+    const f = file("src/lib/old-plans.ts", "", {
+      status: "renamed",
+      previous_filename: "src/lib/plans.ts",
+    });
+    assert.match(check([f]), /restricted path src\/lib\/plans\.ts/);
+  });
+
+  it("does not let * cross a directory", () => {
+    assert.equal(check([file("src/lib/stripe/helpers/format.ts")]), null);
+    assert.equal(check([file("docs/CLAUDE.md")]), null);
+  });
+
+  it("holds router edits that change a restricted call", () => {
+    const patch =
+      "@@ -10,3 +10,3 @@\n context\n-  await fulfillDppPaidSession(env, s);\n+  void fulfillDppPaidSession(env, s);";
+    assert.match(
+      check([file("worker-app/index.ts", patch)]),
+      /changes fulfillDppPaidSession in worker-app\/index\.ts/
+    );
+    assert.match(
+      check([
+        file(
+          "worker/index.ts",
+          "@@\n+const sig = req.headers.get('Stripe-Signature')"
+        ),
+      ]),
+      /stripe-signature/i
+    );
+  });
+
+  it("ignores restricted names on unchanged context lines", () => {
+    const patch =
+      "@@ -10,3 +10,3 @@\n   await fulfillDppPaidSession(env, s);\n-const a = 1;\n+const a = 2;";
+    assert.equal(check([file("worker-app/index.ts", patch)]), null);
+  });
+
+  it("fails closed on unreadable code diffs and incomplete lists", () => {
+    assert.match(
+      check([file("worker-app/index.ts", NO_PATCH)]),
+      /not readable/
+    );
+    assert.match(restrictedChange([file("a.ts")], 2), /incomplete \(1 of 2\)/);
+    assert.match(restrictedChange(undefined, 1), /unavailable/);
+  });
+
+  it("does not block a lockfile with no patch", () => {
+    assert.equal(check([file("pnpm-lock.yaml", NO_PATCH)]), null);
+  });
+});
+
 describe("merge autopilot config", () => {
   it("is off unless enabled is exactly true", () => {
     assert.equal(loadConfig({ owner: "o" }).enabled, false);
@@ -210,8 +348,57 @@ describe("merge autopilot rate limit", () => {
       isGitHubRateLimit(403, "API rate limit exceeded for installation"),
       true
     );
-    assert.equal(isGitHubRateLimit(429, "You have exceeded a secondary rate limit"), true);
-    assert.equal(isGitHubRateLimit(403, "Resource not accessible by integration"), false);
+    assert.equal(
+      isGitHubRateLimit(429, "You have exceeded a secondary rate limit"),
+      true
+    );
+    assert.equal(
+      isGitHubRateLimit(403, "Resource not accessible by integration"),
+      false
+    );
     assert.equal(isGitHubRateLimit(404, "rate limit"), false);
+  });
+});
+
+describe("merge autopilot complete CI evidence", () => {
+  it("observes a failure after the first 100 checks", async () => {
+    const requests = [];
+    const checks = await listCheckRuns(
+      "owner/repo",
+      "abc",
+      "test-token",
+      async path => {
+        requests.push(path);
+        return {
+          check_runs:
+            requests.length === 1
+              ? Array.from({ length: 100 }, (_, n) => ok(`check-${n}`))
+              : [
+                  ok("Main quality gate"),
+                  { ...ok("late security check"), conclusion: "failure" },
+                ],
+        };
+      }
+    );
+    assert.equal(requests.length, 2);
+    assert.match(requests[0], /filter=latest&per_page=100&page=1$/);
+    assert.match(requests[1], /page=2$/);
+    assert.match(
+      decide(pr(), checks, NO_STATUS, 0, cfg).reason,
+      /late security check/
+    );
+  });
+
+  it("rejects unreadable or truncated evidence", async () => {
+    await assert.rejects(
+      listCheckRuns("o/r", "abc", "test-token", async () => ({})),
+      /unavailable/
+    );
+    await assert.rejects(
+      listCheckRuns("o/r", "abc", "test-token", async () => ({
+        check_runs: Array.from({ length: 100 }, () => ok("check")),
+      })),
+      /pagination limit/
+    );
   });
 });

@@ -36,6 +36,12 @@ jobs:
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     steps:
       - uses: actions/checkout@v4
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
 
       # Self-hosted ARM64 already has pnpm; the next step requires the
       # 10.28.2 pin. pnpm/action-setup with version 10.28.2 downloads from
@@ -50,6 +56,11 @@ jobs:
       - name: Use runner pnpm (self-hosted)
         if: runner.environment == 'self-hosted'
         run: |
+          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
+          if [ -x "$pin/pnpm" ]; then
+            echo "$pin" >> "$GITHUB_PATH"
+            export PATH="$pin:$PATH"
+          fi
           command -v pnpm
           actual="$(pnpm --version)"
           if [ "$actual" != "10.28.2" ]; then
