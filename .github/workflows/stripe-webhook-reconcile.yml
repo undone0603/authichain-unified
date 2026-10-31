@@ -1,22 +1,18 @@
-# Adds the Stripe webhook events declared in .github/autonomy.json once the
-# handler that serves them is live (after an existing public-router deploy
-# succeeds on main). Add-only; never removes events or touches undeclared endpoints.
+# Audits the Stripe webhook events declared in .github/autonomy.json after a
+# related deployment. These workflows do not publish the canonical handler
+# (worker-app / authichain-edge-router), so workflow_run is always plan-only.
+# Explicit manual apply is reserved for a verified handler deployment.
 name: Stripe webhook reconcile
 
 on:
   workflow_run:
-    workflows:
-      [
-        "Deploy to Cloudflare",
-        "Deploy authichain-com",
-        "Deploy Cloudflare Edge Worker",
-      ]
+    workflows: ["Deploy to Cloudflare"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
     inputs:
       plan:
-        description: "Show what would change without writing"
+        description: "Plan only; set false only after verifying the canonical handler deployment"
         type: boolean
         default: true
 
@@ -49,5 +45,5 @@ jobs:
       - name: Reconcile
         env:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-          PLAN: ${{ github.event_name == 'workflow_dispatch' && inputs.plan && '--plan' || '' }}
+          PLAN: ${{ (github.event_name != 'workflow_dispatch' || inputs.plan) && '--plan' || '' }}
         run: node scripts/autonomy/stripe-webhooks.mjs $PLAN
