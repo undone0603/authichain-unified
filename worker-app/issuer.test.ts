@@ -20,8 +20,10 @@ describe("registerIssuerRoutes", () => {
       extractable: true,
     });
     const pem = await exportPKCS8(privateKey);
-    process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 =
-      Buffer.from(pem, "utf8").toString("base64");
+    process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 = Buffer.from(
+      pem,
+      "utf8"
+    ).toString("base64");
     process.env.AUTHICHAIN_ATTESTATION_KEY_ID = "issuer-test-kid";
     process.env.CRON_SECRET = "cron-test-secret";
   }
@@ -50,7 +52,7 @@ describe("registerIssuerRoutes", () => {
     };
     expect(body.ready).toBe(true);
     expect(body.signing).toBe(true);
-    expect(body.kid).toBe("issuer-test-kid");
+    expect(body.kid).toMatch(/^[A-Za-z0-9_-]{43}$/); // CFA-462: kid = RFC 7638 thumbprint, configured kid ignored
     expect(body.alg).toBe("EdDSA");
   });
 
@@ -68,7 +70,10 @@ describe("registerIssuerRoutes", () => {
     registerIssuerRoutes(app);
     const res = await app.request("/protocol/launch-proof", {
       method: "POST",
-      headers: { authorization: "Bearer wrong", "content-type": "application/json" },
+      headers: {
+        authorization: "Bearer wrong",
+        "content-type": "application/json",
+      },
       body: JSON.stringify({ subject: { object_id: "authi:ref" } }),
     });
     expect(res.status).toBe(401);
@@ -103,7 +108,7 @@ describe("registerIssuerRoutes", () => {
       source: string;
       via: string;
     };
-    expect(body.kid).toBe("issuer-test-kid");
+    expect(body.kid).toMatch(/^[A-Za-z0-9_-]{43}$/); // CFA-462: kid = RFC 7638 thumbprint, configured kid ignored
     expect(body.source).toBe("authichain-edge-router");
     expect(body.via).toBe("cron");
     expect(body.jws.split(".")).toHaveLength(3);
@@ -119,7 +124,7 @@ describe("registerIssuerRoutes", () => {
     expect(verified.decision).toBe("verified");
     expect(verified.status).toBe("active");
     expect(verified.attestation_id).toBe(
-      "urn:authichain:attestation:v01:launch-35404665209",
+      "urn:authichain:attestation:v01:launch-35404665209"
     );
   });
 
