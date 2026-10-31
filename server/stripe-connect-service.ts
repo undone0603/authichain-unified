@@ -139,7 +139,6 @@ export async function createVendorCheckoutSession(
         },
       ],
       mode: "payment",
-      payment_method_types: ["card"],
       payment_intent_data: {
         application_fee_amount: Math.round(amountCents * 0.1), // 10% Platform Fee
       },
