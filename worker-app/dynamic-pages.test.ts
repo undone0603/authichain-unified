@@ -33,7 +33,7 @@ vi.mock("./onboard-notify", () => ({
   notifyPilotIntake: vi.fn().mockResolvedValue(undefined),
 }));
 
-const { renderDynamicPage } = await import("./dynamic-pages");
+const { renderDynamicPage, sanitizeGenerateCarry } = await import("./dynamic-pages");
 const { notifyPilotIntake } = await import("./onboard-notify");
 const { getHyperdriveDb, createHyperdriveRequestDb } =
   await import("../server/db");
@@ -1142,23 +1142,47 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(location.searchParams.get("prompt")).toBe("neon");
   });
 
-  it("shows the API's Starter upgrade link when the free sample is used up", async () => {
-    const res = await app.request("/generate", {}, makeEnv() as any);
-    const body = await res.text();
-    expect(body).toContain("var up=r.data.upgrade;");
-    expect(body).toContain(
-      "up.url.indexOf('https://authichain.com/checkout/starter')===0"
+  it("forwards sanitized ref and utm params from /generate to Starter checkout", async () => {
+    const page = await app.request(
+      "/generate?ref=partner_1&utm_source=x&utm_campaign=launch-wk&utm_term=%3Cscript%3E",
+      {},
+      makeEnv() as any
     );
-    expect(body).toContain("a.id='sample-exhausted-starter'");
+    const html = await page.text();
+    expect(html).toContain("/checkout/starter?ref=partner_1&amp;utm_source=x&amp;utm_campaign=launch-wk");
+    expect(html).toContain('<input type="hidden" name="ref" value="partner_1">');
+    expect(html).not.toContain("utm_term");
+    expect(html).not.toContain("<script>\"");
+
+    const res = await app.request(
+      "/generate",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body:
+          "targetUrl=https%3A%2F%2Fexample.com%2Fsku&ref=partner_1&utm_medium=email&utm_content=" +
+          "a".repeat(200),
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+    expect(res.status).toBe(303);
+    const location = new URL(res.headers.get("location") || "", "https://example.test");
+    expect(location.pathname).toBe("/checkout/starter");
+    expect(location.searchParams.get("ref")).toBe("partner_1");
+    expect(location.searchParams.get("utm_medium")).toBe("email");
+    expect(location.searchParams.get("utm_content")).toBeNull();
   });
 
-  it("renders signed-in low-credit soft-prompt from API upgrade on success", async () => {
-    const res = await app.request("/generate", {}, makeEnv() as any);
-    const body = await res.text();
-    expect(body).toContain('id="generate-low-credit"');
-    expect(body).toContain("function showLowCredit(up)");
-    expect(body).toContain("a.id='low-credit-starter'");
-    expect(body).toContain("showLowCredit(r.data&&r.data.upgrade)");
+  it("sanitizeGenerateCarry allowlists characters and caps length", () => {
+    const out = sanitizeGenerateCarry(
+      new URLSearchParams({ ref: "ok-1.2_x~", utm_source: "bad value", utm_medium: "a&b", foo: "x" })
+    );
+    expect(out.get("ref")).toBe("ok-1.2_x~");
+    expect(out.get("utm_source")).toBeNull();
+    expect(out.get("utm_medium")).toBeNull();
+    expect(out.get("foo")).toBeNull();
+    expect(sanitizeGenerateCarry(new URLSearchParams({ ref: "r".repeat(65) })).get("ref")).toBeNull();
   });
 });
 
