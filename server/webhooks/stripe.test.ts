@@ -1396,6 +1396,28 @@ describe("handleStripeWebhook — Starter amount fallback gate (#1890 parity, ed
     expect(starterCalls().length).toBe(0);
   });
 
+  it.each([
+    ["Starter metadata", { metadata: { plan: "starter" } }],
+    ["Creator metadata", { metadata: { plan: "creator" } }],
+    ["known Starter price", { metadata: { stripe_price_id: "price_1UIoEVGqTruSqV8T61lp48wB" } }],
+  ])("zero-total paid %s checkout never grants catalog credits", async (label, over) => {
+    await run(`gate_zero_${String(label).replace(/\W+/g, "_")}`, {
+      amount_total: 0,
+      amount_subtotal: 0,
+      ...over,
+    });
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(growthRecordRpc).not.toHaveBeenCalled();
+  });
+
+  it("unknown total with explicit Starter metadata never grants credits", async () => {
+    await run("gate_null_total", {
+      amount_total: null,
+      metadata: { plan: "starter" },
+    });
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
   it("explicit metadata.plan=starter still grants in test mode", async () => {
     await run("gate_meta", { livemode: false, metadata: { plan: "starter" } });
     expect(starterCalls().length).toBe(1);
