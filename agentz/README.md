@@ -43,3 +43,10 @@ See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and 
   Anything missing leaves the signature `not_checked` and the scan unverified.
 - `$QRON` rewards on `/scan` and redemptions on `/redeem` are simulated and say
   so (`simulated: true`); nothing is minted or burned on-chain.
+
+
+## Control plane
+
+The read-only deployment control plane is available at `GET /control-plane/state` and returns normalized GitHub, GitLab, Vercel, and optionally Cloudflare Workers/Pages state. It correlates provider commits to the authoritative GitHub `main` commit and emits a conservative release gate: `deploy_eligible`, `blocked`, or `observe_only`.
+
+Cloudflare Worker deployment APIs expose the active deployment and version IDs; Cloudflare Pages deployments expose the trigger branch and commit hash. These APIs are observation-only here. Provider mutations remain in the existing governed workflows.
