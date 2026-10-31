@@ -23,6 +23,7 @@ router.post("/verify", async (req, res) => {
     const product = byId ?? (await db.select().from(products).where(eq(products.serialNumber, id)).limit(1))[0];
     if (!product) return res.json(passportVerdict(null, null));
     const [cert] = await db.select().from(certificates).where(eq(certificates.productId, product.id)).limit(1);
+    const decision = registryLookupDecision(cert ?? { status: "uncertified" });
     return res.json({
       ...passportVerdict(product, cert ?? null),
       productName: product.name,
@@ -86,6 +87,7 @@ router.post("/cannabis/verify", async (req, res) => {
     const [product] = strainName
       ? await db.select().from(products).where(eq(products.name, strainName)).limit(1)
       : [];
+    const decision = registryLookupDecision(product ? { status: "name_match" } : null);
     return res.json({
       ...passportVerdict(product, null),
       strainName: strainName || "Unknown",
