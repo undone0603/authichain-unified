@@ -615,6 +615,30 @@ function verifyLiveSealHtml(): string {
   });
 }
 
+/**
+ * Reserved path. Not a certificate number. The Next page at
+ * src/app/verify/manufacturer/page.tsx never runs on this host because
+ * /verify/* is owned here. The history reader is a separate route and may
+ * be absent; this page does not invent a role when it is.
+ */
+function verifyManufacturerHistoryHtml(): string {
+  return htmlDocument({
+    title: "Manufacturer role history | AuthiChain",
+    description:
+      "This path is not a certificate number. It does not look up a product and it does not grant a manufacturer role.",
+    canonicalPath: "/verify/manufacturer",
+    extraHead: '<meta name="robots" content="noindex">\n',
+    bodyHtml:
+      "<main>\n" +
+      "<h1>Manufacturer role history</h1>\n" +
+      "<p>This path is not a certificate number. Nothing was looked up in the product registry.</p>\n" +
+      "<p>RoleGranted and RoleRevoked events for one address are read from <code>GET /api/manufacturer-status/{address}/history</code>. This page does not call that reader and does not invent a role when the reader is absent.</p>\n" +
+      "<p>An empty history is not proof that an address holds no role. A role event is not proof that a product is genuine. This page does not sell a role.</p>\n" +
+      '<p><a href="/verify">Look up a certificate</a></p>\n' +
+      "</main>",
+  });
+}
+
 async function renderVerify(c: Context): Promise<Response> {
   const url = new URL(c.req.url);
   const idParam = url.searchParams.get("id");
@@ -636,6 +660,10 @@ async function renderVerify(c: Context): Promise<Response> {
 
     if (!idParam && pathSegment.toLowerCase() === "live") {
       return htmlResponse(c, verifyLiveSealHtml(), 200);
+    }
+
+    if (!idParam && pathSegment.toLowerCase() === "manufacturer") {
+      return htmlResponse(c, verifyManufacturerHistoryHtml(), 200);
     }
 
     if (!identifier) {

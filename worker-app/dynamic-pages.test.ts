@@ -541,6 +541,26 @@ describe("renderDynamicPage: /verify verification landing", () => {
     expect(getProductById).not.toHaveBeenCalled();
   });
 
+  it("serves /verify/manufacturer as role-history copy, not a certificate lookup", async () => {
+    const res = await app.request(
+      "/verify/manufacturer/",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("<h1>Manufacturer role history</h1>");
+    expect(body).toContain("This path is not a certificate number.");
+    expect(body).toContain("GET /api/manufacturer-status/{address}/history");
+    expect(body).toContain("does not invent a role");
+    expect(body).toContain("does not sell a role");
+    expect(body).not.toContain("No record found");
+    expect(body).not.toContain("$49");
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
+    expect(getProductById).not.toHaveBeenCalled();
+  });
+
   it("returns a clean 404 'No record found' page for an unknown id", async () => {
     (getCertificateByNumber as any).mockResolvedValue(undefined);
     (getHyperdriveDb as any).mockReturnValue({});

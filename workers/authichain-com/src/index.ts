@@ -1,4 +1,8 @@
 import { isVerifyLivePath, renderVerifyLivePage } from "./verify-live-page.ts";
+import {
+  isVerifyManufacturerPath,
+  renderVerifyManufacturerPage,
+} from "./verify-manufacturer-page.ts";
 import { isIsThisRealPath, renderIsThisRealPage } from "./is-this-real-page.ts";
 import { handleSalesInquiry } from './routes/sales';
 // The DPP regulatory timeline is shared with the Next.js page rather than
@@ -3731,6 +3735,22 @@ async function handleAuthichainCom(
           ...HTML_SECURITY_HEADERS,
           "Content-Type": "text/html; charset=utf-8",
           "Cache-Control": "public, max-age=300",
+        },
+      });
+    }
+    // /verify/manufacturer is a reserved role-history page, not a certificate id.
+    if (isVerifyManufacturerPath(p) && !url.searchParams.get("id")) {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response("method not allowed", {
+          status: 405,
+          headers: { Allow: "GET, HEAD", "Cache-Control": "no-store" },
+        });
+      }
+      return new Response(renderVerifyManufacturerPage(), {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store",
         },
       });
     }
