@@ -75,13 +75,32 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          # wrangler deploy on 40895854176 uploaded 1707 KiB then fetch-failed
-          # ~6.5 min later while listing bindings. versions upload --keep-vars
-          # stores the bundle; Cloudflare API POST deployments promotes it
-          # (same path as edge-router 1989 / authichain-com 1ee6d701).
-          # Do not rotate AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64.
-          npx wrangler versions upload --minify --keep-vars --config wrangler.toml \
-            2>&1 | tee /tmp/ac-versions-upload.log
+          # The versions POST waits for response headers. A stalled upload hits
+          # undici UND_ERR_HEADERS_TIMEOUT (~5 min) and wrangler retries it
+          # until the job dies (41238614490). Cut each attempt at 150s, which
+          # is longer than the upload that succeeded on 41216710598, and try
+          # three times. Do not rotate AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64.
+          uploaded=0
+          for attempt in 1 2 3; do
+            echo "versions upload attempt ${attempt}"
+            set +e
+            timeout --signal=TERM 150s \
+              npx wrangler versions upload --minify --keep-vars --config wrangler.toml \
+              > /tmp/ac-versions-upload.log 2>&1
+            code=$?
+            set -e
+            cat /tmp/ac-versions-upload.log
+            if [ "$code" -eq 0 ]; then
+              uploaded=1
+              break
+            fi
+            echo "attempt ${attempt} exited ${code}"
+            sleep 5
+          done
+          if [ "$uploaded" -ne 1 ]; then
+            echo "::error::wrangler versions upload failed"
+            exit 1
+          fi
           vid=$(node ../../scripts/ci/parse-wrangler-version-id.mjs /tmp/ac-versions-upload.log)
           echo "uploaded authichain-com version $vid"
           node ../../scripts/ci/promote-worker-version.mjs authichain-com "$vid"
