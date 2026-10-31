@@ -1,10 +1,10 @@
-import type { Metadata } from 'next';
-import Link from 'next/link';
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | QRON by AuthiChain',
+  title: "Terms of Service | QRON by AuthiChain",
   description:
-    'Terms of Service for QRON (qron.space), the AI-powered QR code generation platform operated by Zachary Kietzman, doing business as AuthiChain.',
+    "Terms of Service for QRON (qron.space), the AI-powered QR code generation platform operated by Zachary Kietzman, doing business as AuthiChain.",
 };
 
 export default function TermsPage() {
@@ -18,7 +18,8 @@ export default function TermsPage() {
           Effective Date: April 12, 2026
         </p>
         <p className="text-zinc-600 text-xs font-medium uppercase tracking-tighter">
-          QRON is operated by Zachary Kietzman, doing business as AuthiChain, Michigan, USA
+          QRON is operated by Zachary Kietzman, doing business as AuthiChain,
+          Michigan, USA
         </p>
       </section>
 
@@ -29,12 +30,13 @@ export default function TermsPage() {
               1. Acceptance of Terms
             </h2>
             <p className="text-zinc-400 leading-relaxed">
-              By accessing or using QRON at qron.space (the &quot;Service&quot;),
-              you agree to be bound by these Terms of Service (&quot;Terms&quot;).
-              If you do not agree to these Terms, you may not use the Service.
-              These Terms constitute a legally binding agreement between you and
-              Zachary Kietzman, doing business as AuthiChain (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or
-              &quot;our&quot;).
+              By accessing or using QRON at qron.space (the
+              &quot;Service&quot;), you agree to be bound by these Terms of
+              Service (&quot;Terms&quot;). If you do not agree to these Terms,
+              you may not use the Service. These Terms constitute a legally
+              binding agreement between you and Zachary Kietzman, doing business
+              as AuthiChain (&quot;Company,&quot; &quot;we,&quot;
+              &quot;us,&quot; or &quot;our&quot;).
             </p>
           </section>
 
@@ -43,7 +45,8 @@ export default function TermsPage() {
               2. Description of Service
             </h2>
             <p className="text-zinc-400 leading-relaxed mb-4">
-              QRON is an AI-powered QR code generation platform. Features include:
+              QRON is an AI-powered QR code generation platform. Features
+              include:
             </p>
             <ul className="list-disc pl-6 text-zinc-400 space-y-2">
               <li>AI-generated QR code art from text prompts and URLs</li>
@@ -58,9 +61,10 @@ export default function TermsPage() {
               3. User Accounts
             </h2>
             <p className="text-zinc-400 leading-relaxed">
-              You are responsible for maintaining the confidentiality of your account credentials. 
-              You must be at least 13 years of age to create an account. 
-              We reserve the right to suspend or terminate accounts that violate these Terms.
+              You are responsible for maintaining the confidentiality of your
+              account credentials. You must be at least 13 years of age to
+              create an account. We reserve the right to suspend or terminate
+              accounts that violate these Terms.
             </p>
           </section>
 
@@ -84,10 +88,13 @@ export default function TermsPage() {
               5. Intellectual Property
             </h2>
             <p className="text-zinc-400 leading-relaxed">
-              <strong className="text-zinc-200">Your content:</strong> You retain ownership of the QR code art generated using your prompts.
+              <strong className="text-zinc-200">Your content:</strong> You
+              retain ownership of the QR code art generated using your prompts.
             </p>
             <p className="text-zinc-400 leading-relaxed mt-4">
-              <strong className="text-zinc-200">Our platform:</strong> All rights in the QRON platform, branding, and algorithms remain the exclusive property of AuthiChain.
+              <strong className="text-zinc-200">Our platform:</strong> All
+              rights in the QRON platform, branding, and algorithms remain the
+              exclusive property of AuthiChain.
             </p>
           </section>
 
@@ -96,16 +103,24 @@ export default function TermsPage() {
               6. Limitation of Liability
             </h2>
             <p className="text-zinc-400 leading-relaxed uppercase text-xs font-bold border-l-2 border-gold/20 pl-4 py-2 italic">
-              The service is provided &quot;as is&quot;. AuthiChain shall not be liable for any indirect, incidental, or special damages arising from your use of the service.
+              The service is provided &quot;as is&quot;. AuthiChain shall not be
+              liable for any indirect, incidental, or special damages arising
+              from your use of the service.
             </p>
           </section>
 
           <div className="pt-12 border-t border-zinc-900 flex flex-col sm:flex-row justify-between items-center gap-6">
             <div className="flex gap-6">
-              <Link href="/privacy" className="text-xs font-black uppercase text-gold hover:opacity-80 transition-opacity">
+              <Link
+                href="/privacy"
+                className="text-xs font-black uppercase text-gold hover:opacity-80 transition-opacity"
+              >
                 Privacy Policy
               </Link>
-              <Link href="/" className="text-xs font-black uppercase text-zinc-500 hover:text-white transition-colors">
+              <Link
+                href="/"
+                className="text-xs font-black uppercase text-zinc-500 hover:text-white transition-colors"
+              >
                 Back to Home
               </Link>
             </div>

@@ -64,8 +64,12 @@ describe("x402 public docs page", () => {
       "curl -sS -i -X POST https://authichain.com/api/x402"
     );
     expect(html).toContain("HTTP 402");
+    expect(html).toContain("An empty body is the unpaid HTTP 402");
+    expect(html).toContain("A non-UUID sealId is HTTP 400 before payment");
+    expect(html).not.toContain('{"sealId":"demo"}');
     expect(html).toContain("extensions.bazaar");
     expect(html).toContain("accepts[0].outputSchema.input");
+    expect(html).toContain("accepts[0].outputSchema.output");
     expect(html).toContain("PAYMENT-REQUIRED");
     expect(html).toContain("x402Version: 2");
     expect(html).toContain("application/ld+json");

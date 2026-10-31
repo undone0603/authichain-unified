@@ -28,6 +28,19 @@ export interface VerifyAgentMessageOptions {
    * using the message up. A public page must use inspect. An action must not.
    */
   mode?: "authorize" | "inspect";
+  /**
+   * The capability the action behind this call needs. A message that does not
+   * present it (granted by its attestation) is refused. Required in authorize
+   * mode: being able to reach an endpoint is not authority to act there, so a
+   * caller that uses a message up must say what that message is allowed to do.
+   */
+  requiredCapability?: AgentCapability;
+  /**
+   * When set, the signed intent must equal it, so a message signed for one
+   * action cannot be redirected to another endpoint that happens to accept the
+   * same capability.
+   */
+  expectedIntent?: string;
 }
 
 function base64ToUint8Array(base64: string): Uint8Array {
@@ -246,7 +259,7 @@ export async function verifyAgentMessage(
 
   let normalizedMessageCaps: AgentCapability[] = [];
   try {
-    if (!message.capabilities.every((cap): cap is string => typeof cap === "string")) {
+    if (!message.capabilities.every((cap) => typeof cap === "string")) {
       throw new TypeError("Invalid capability type");
     }
     normalizedMessageCaps = normalizeCapabilities(message.capabilities);
@@ -259,6 +272,18 @@ export async function verifyAgentMessage(
     }
   } catch {
     reasons.push("CAPABILITY_NOT_GRANTED");
+  }
+
+  const mode = options.mode ?? "authorize";
+  if (options.requiredCapability !== undefined) {
+    if (!normalizedMessageCaps.includes(options.requiredCapability)) {
+      reasons.push("CAPABILITY_NOT_GRANTED");
+    }
+  } else if (mode === "authorize") {
+    reasons.push("CAPABILITY_REQUIREMENT_MISSING");
+  }
+  if (options.expectedIntent !== undefined && message.intent !== options.expectedIntent) {
+    reasons.push("INTENT_MISMATCH");
   }
 
   let digest: string | undefined;
@@ -283,7 +308,9 @@ export async function verifyAgentMessage(
 
   if (reasons.length !== 0 || !digest) {
     await emitAudit(options.auditSink, {
-      event_type: reasons.includes("CAPABILITY_NOT_GRANTED")
+      event_type:
+        reasons.includes("CAPABILITY_NOT_GRANTED") ||
+        reasons.includes("CAPABILITY_REQUIREMENT_MISSING")
         ? "CAPABILITY_DENIED"
         : reasons.includes("ISSUER_SIGNATURE_INVALID")
           ? "ISSUER_SIGNATURE_INVALID"

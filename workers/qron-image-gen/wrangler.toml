@@ -6,4 +6,8 @@ account_id = "4c1869b90f13f86940aa3747839bf420"
 [vars]
 WORKER_VERSION = "1.0.0"
 
-# Secret: HF_TOKEN (set via wrangler secret put HF_TOKEN)
+# Workers AI. Binding name is env.AI. Requires this script to be an ES module.
+[ai]
+binding = "AI"
+
+# Optional secret: HF_TOKEN (wrangler secret put). Generation does not require it.
