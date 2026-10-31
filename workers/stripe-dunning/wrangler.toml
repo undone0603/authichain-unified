@@ -1,0 +1,34 @@
+name = "stripe-dunning"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+workers_dev = false
+
+# Activation is explicit. An ordinary build or merge cannot charge invoices.
+[vars]
+STRIPE_MODE = "live"
+DUNNING_ENABLED = "false"
+DUNNING_LIVE_ENABLED = "false"
+
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "authichain-db"
+database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
+migrations_dir = "migrations"
+
+[[queues.producers]]
+binding = "DUNNING_QUEUE"
+queue = "stripe-dunning"
+
+[[queues.consumers]]
+queue = "stripe-dunning"
+max_batch_size = 10
+max_batch_timeout = 5
+max_retries = 5
+dead_letter_queue = "stripe-dunning-dlq"
+
+[observability]
+enabled = true
+head_sampling_rate = 1
