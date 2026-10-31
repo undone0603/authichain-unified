@@ -21,6 +21,7 @@ import {
   parsePaymentHeader,
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
+  X402_RESOURCE_DESCRIPTION,
   x402HealthReport,
   x402PriceUsd,
   x402ScanFanout,
@@ -29,7 +30,10 @@ import {
   type X402HealthEnv,
   type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
-import { parseSealRequest } from "../../src/lib/agent-verify.ts";
+import {
+  coerceSealBody,
+  unpaidSealRefusal as refuseUnpaidSeal,
+} from "../../src/lib/agent-verify.ts";
 import { ESTATE_BRANDS } from "./estate-landing.ts";
 import {
   guardedForward,
@@ -205,11 +209,9 @@ function parseJsonObject(text: string): Record<string, unknown> {
 async function unpaidSealRefusal(
   request: Request
 ): Promise<{ status: number; body: unknown } | null> {
-  const raw = parseJsonObject(await request.clone().text());
-  if (Object.keys(raw).length === 0) return null;
-  const parsed = parseSealRequest(raw);
-  if (parsed.ok) return null;
-  return { status: parsed.status, body: parsed.body };
+  return refuseUnpaidSeal(
+    coerceSealBody(parseJsonObject(await request.clone().text()))
+  );
 }
 
 async function agentVerify(
@@ -226,7 +228,7 @@ async function agentVerify(
     resource,
     priceUsd,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
   });
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);

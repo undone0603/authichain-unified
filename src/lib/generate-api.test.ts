@@ -5,6 +5,7 @@ import {
   generateCreditPacks,
   generateHealthBody,
   handleGeneratePost,
+  lowCreditUpgrade,
   proxyQronImageGen,
 } from "./generate-api";
 import { qronObjectIdForDestination } from "./qron-presentation";
@@ -19,28 +20,19 @@ function toBase64Url(value: string): string {
 }
 
 describe("generateCreditPacks", () => {
-  it("exposes Starter, Launch monthly, Launch annual, Creator, then DPP", () => {
+  it("exposes Starter, Creator, then DPP (Launch unlisted)", () => {
     const packs = generateCreditPacks();
     const byId = Object.fromEntries(packs.map(p => [p.id, p]));
     expect(byId.starter.price).toBe(29);
-    expect(byId.qron_launch.price).toBe(19);
     expect(byId.creator.price).toBe(99);
     expect(byId.dpp_readiness.price).toBe(299);
     expect(packs.map(p => p.id)).toEqual([
       "starter",
-      "qron_launch",
-      "qron_launch_annual",
       "creator",
       "dpp_readiness",
     ]);
-    expect(byId.qron_launch.checkout).toBe(
-      "https://authichain.com/checkout/qron_launch"
-    );
-    expect(byId.qron_launch_annual.price).toBe(190);
-    expect(byId.qron_launch_annual.checkout).toBe(
-      "https://authichain.com/checkout/qron_launch_annual"
-    );
-    expect(byId.qron_launch.cta).toMatch(/Launch/i);
+    expect(byId.qron_launch).toBeUndefined();
+    expect(byId.qron_launch_annual).toBeUndefined();
   });
 });
 
@@ -190,7 +182,7 @@ describe("handleGeneratePost", () => {
     expect(result.body.message).toMatch(/Authentication required/i);
     expect(Array.isArray(result.body.packs)).toBe(true);
     const packs = result.body.packs as Array<{ id: string }>;
-    expect(packs.map(p => p.id)).toContain("qron_launch");
+    expect(packs.map(p => p.id)).not.toContain("qron_launch");
     expect(packs.map(p => p.id)).toContain("starter");
     expect(generateImage).not.toHaveBeenCalled();
     expect(checkCredit).not.toHaveBeenCalled();
@@ -236,9 +228,15 @@ describe("handleGeneratePost", () => {
     });
     expect(result.status).toBe(401);
     expect(result.body.code).toBe("FREE_SAMPLE_USED");
+    expect(result.body.upgrade).toEqual({
+      url: "https://authichain.com/checkout/starter?src=sample_exhausted",
+      plan: "starter",
+      label: "Starter Pack: 100 generations for $29, paid once",
+    });
     expect(String(result.body.message)).toMatch(
-      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription, and pack credits have no expiry date\. Starting a monthly plan replaces unused pack credits\.$/
+      /^You.ve used your 5 free generations\. .*\$29, paid once\. No subscription\. Starting a monthly plan replaces unused pack credits\.$/
     );
+    expect(String(result.body.message)).not.toContain("never expire");
     expect(generateImage).not.toHaveBeenCalled();
   });
 
@@ -256,8 +254,9 @@ describe("handleGeneratePost", () => {
     expect(result.status).toBe(401);
     expect(result.body.code).toBe("FREE_SAMPLE_PAUSED");
     expect(String(result.body.message)).toMatch(
-      /^Free samples are paused for today\./
+      /^Free samples are paused right now\. Try again later, or get Starter now: 100 generations for \$29, paid once\. No subscription\. Starting a monthly plan replaces unused pack credits\.$/
     );
+    expect(String(result.body.message)).not.toContain("never expire");
     expect(generateImage).not.toHaveBeenCalled();
   });
 
@@ -397,6 +396,40 @@ describe("handleGeneratePost", () => {
     );
   });
 
+  it("attaches Starter upgrade when remaining credits are below 20", async () => {
+    deductCredit.mockResolvedValueOnce({ ok: true, remaining: 19 });
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: "user_1",
+      checkCredit,
+      deductCredit,
+      generateImage,
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.remaining_credits).toBe(19);
+    const upgrade = result.body.upgrade as Record<string, unknown>;
+    expect(upgrade.url).toBe(
+      "https://authichain.com/checkout/starter?src=low_credit&utm_content=low-starter-a"
+    );
+    expect(upgrade.plan).toBe("starter");
+    expect(upgrade.button).toBe("Add 100 generations for $29");
+  });
+
+  it("omits upgrade when remaining credits are at or above 20", async () => {
+    checkCredit.mockResolvedValueOnce({ ok: true, remaining: 21 });
+    deductCredit.mockResolvedValueOnce({ ok: true, remaining: 20 });
+    const result = await handleGeneratePost({
+      body: { targetUrl: "https://example.com", prompt: "neon" },
+      userId: "user_1",
+      checkCredit,
+      deductCredit,
+      generateImage,
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.remaining_credits).toBe(20);
+    expect(result.body.upgrade).toBeUndefined();
+  });
+
   it("binds attestation when bindAttestation returns jws/kid/jwks", async () => {
     const bindAttestation = vi.fn(async () => ({
       jws: "a.b.c",
@@ -499,6 +532,22 @@ describe("handleGeneratePost", () => {
     expect((result.body.presentation as { status: string }).status).toBe(
       "image_issued"
     );
+  });
+});
+
+describe("lowCreditUpgrade", () => {
+  it("19 left => Starter-only prompt with low_credit link", () => {
+    const u = lowCreditUpgrade(19).upgrade as Record<string, unknown>;
+    expect(u.url).toBe(
+      "https://authichain.com/checkout/starter?src=low_credit&utm_content=low-starter-a"
+    );
+    expect(u.plan).toBe("starter");
+    expect(u.button).toBe("Add 100 generations for $29");
+  });
+
+  it("20 left or non-number => no prompt", () => {
+    expect(lowCreditUpgrade(20)).toEqual({});
+    expect(lowCreditUpgrade(undefined)).toEqual({});
   });
 });
 

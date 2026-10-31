@@ -94,8 +94,38 @@ export function publicKeyFromDidKey(did) {
   return createPublicKey({ key: spki, format: 'der', type: 'spki' });
 }
 
+/** base58btc encode (inverse of base58Decode). */
+export function base58Encode(bytes) {
+  const buf = Buffer.from(bytes);
+  let num = BigInt('0x' + (buf.toString('hex') || '0'));
+  let out = '';
+  while (num > 0n) {
+    out = B58[Number(num % 58n)] + out;
+    num /= 58n;
+  }
+  for (const b of buf) {
+    if (b !== 0) break;
+    out = '1' + out;
+  }
+  return out;
+}
+
+/**
+ * did:key for an Ed25519 public JWK ({ kty: 'OKP', crv: 'Ed25519', x }).
+ * Lets you pin a record's signer to a key published in a JWKS.
+ */
+export function didKeyFromJwk(jwk) {
+  if (jwk?.kty !== 'OKP' || jwk?.crv !== 'Ed25519' || typeof jwk?.x !== 'string') {
+    throw new Error('not an Ed25519 OKP JWK');
+  }
+  const raw = Buffer.from(jwk.x, 'base64url');
+  if (raw.length !== 32) throw new Error('Ed25519 JWK x must be 32 bytes');
+  return 'did:key:z' + base58Encode(Buffer.concat([Buffer.from([0xed, 0x01]), raw]));
+}
+
 /**
  * Verify a record, and an anchor if supplied.
+ * Pass opts.jwks to also require that the signer is a key in that JWKS.
  * Returns { verdict, reasons[], checks{} } — verdict is exactly one of
  * 'verified' | 'valid-unanchored' | 'invalid' (SPEC §5.1).
  */
@@ -126,6 +156,20 @@ export function verifyRecord(record, anchor = null, opts = {}) {
   } catch (err) {
     checks.signature = false;
     reasons.push(`signature_unverifiable:${err.message}`);
+  }
+
+  // Optional: pin the signer to a key in a JWKS the caller already holds.
+  if (opts.jwks) {
+    const signer = String(record.proof.verificationMethod ?? record.issuer).split('#')[0];
+    const pinned = (Array.isArray(opts.jwks.keys) ? opts.jwks.keys : []).some((k) => {
+      try {
+        return didKeyFromJwk(k) === signer;
+      } catch {
+        return false;
+      }
+    });
+    checks.issuerInJwks = pinned;
+    if (!pinned) reasons.push('issuer_not_in_jwks');
   }
 
   // 4. Validity window.
@@ -174,6 +218,85 @@ export function verifyRecord(record, anchor = null, opts = {}) {
 
   if (reasons.length) return { verdict: 'invalid', reasons, checks };
   return { verdict: 'verified', reasons, checks };
+}
+
+/** JWS `typ` for AuthiChain attestation seals (docs/attestation/v0.1.md). */
+export const ATTESTATION_TYP = 'AC-ATTESTATION+JWS';
+
+function b64urlDecode(part) {
+  if (typeof part !== 'string' || !/^[A-Za-z0-9_-]*$/.test(part)) {
+    throw new Error('not base64url');
+  }
+  return Buffer.from(part, 'base64url');
+}
+
+/**
+ * Verify a compact-JWS attestation seal offline against a JWKS you already
+ * hold (for example a saved copy of https://authichain.com/protocol/jwks.json).
+ *
+ * Checks: the header is EdDSA with typ AC-ATTESTATION+JWS, the `kid` is in
+ * the JWKS as an Ed25519 OKP key, the signature verifies, the payload has not
+ * expired, and the issuer signed `decision: verified` with `status: active`.
+ *
+ * It does NOT check live revocation or supersession: that status lives in the
+ * issuer's registry and needs a network call. A valid signature proves the
+ * issuer signed this payload; it does not by itself prove the physical item in
+ * hand is the one the payload names (docs/attestation/v0.1.md, rule 5).
+ *
+ * Returns { verdict: 'valid-offline' | 'invalid', reasons[], checks{}, header, payload }.
+ */
+export function verifyAttestationJws(jws, jwks, opts = {}) {
+  const reasons = [];
+  const checks = {};
+  const now = opts.now ? new Date(opts.now) : new Date();
+  let header = null;
+  let payload = null;
+
+  const parts = String(jws ?? '').trim().split('.');
+  if (parts.length !== 3) {
+    return { verdict: 'invalid', reasons: ['jws_malformed'], checks, header, payload };
+  }
+  try {
+    header = JSON.parse(b64urlDecode(parts[0]).toString('utf8'));
+    payload = JSON.parse(b64urlDecode(parts[1]).toString('utf8'));
+  } catch {
+    return { verdict: 'invalid', reasons: ['jws_malformed'], checks, header, payload };
+  }
+
+  if (header?.alg !== 'EdDSA') reasons.push(`alg_unsupported:${header?.alg}`);
+  if (header?.typ !== ATTESTATION_TYP) reasons.push(`typ_unexpected:${header?.typ}`);
+
+  const keys = Array.isArray(jwks?.keys) ? jwks.keys : [];
+  const jwk = typeof header?.kid === 'string' ? keys.find((k) => k && k.kid === header.kid) : undefined;
+  checks.kid = Boolean(jwk);
+  if (!jwk) {
+    reasons.push('kid_not_in_jwks');
+  } else if (jwk.kty !== 'OKP' || jwk.crv !== 'Ed25519' || typeof jwk.x !== 'string') {
+    reasons.push('jwk_not_ed25519');
+  } else if (reasons.length === 0) {
+    try {
+      const key = createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: jwk.x }, format: 'jwk' });
+      const ok = edVerify(null, Buffer.from(`${parts[0]}.${parts[1]}`, 'ascii'), key, b64urlDecode(parts[2]));
+      checks.signature = ok;
+      if (!ok) reasons.push('signature_invalid');
+    } catch (err) {
+      checks.signature = false;
+      reasons.push(`signature_unverifiable:${err.message}`);
+    }
+  }
+  if (checks.signature !== true) {
+    return { verdict: 'invalid', reasons, checks, header, payload };
+  }
+
+  if (payload?.expires_at !== undefined) {
+    const exp = new Date(payload.expires_at);
+    if (Number.isNaN(exp.getTime())) reasons.push('expires_at_malformed');
+    else if (exp <= now) reasons.push('expired');
+  }
+  if (payload?.decision !== 'verified') reasons.push(`decision:${payload?.decision}`);
+  if (payload?.status !== 'active') reasons.push(`status:${payload?.status}`);
+
+  return { verdict: reasons.length ? 'invalid' : 'valid-offline', reasons, checks, header, payload };
 }
 
 // CLI

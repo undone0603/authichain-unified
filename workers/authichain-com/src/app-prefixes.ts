@@ -17,6 +17,8 @@ export const APP_PREFIXES = [
   "/reveal",
   "/s",
   "/brand/qron/artwork",
+  // AE-20261023-AED-27 marketplace logo, served from client/public via edge-router ASSETS.
+  "/brand/authichain-logo-1024.png",
   "/landing",
   // Product passport GET /p/<serial> — worker-app/dynamic-pages.ts.
   // Without this prefix the apex answered marketing 404 HTML for /p and /p/*.
