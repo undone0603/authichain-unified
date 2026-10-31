@@ -20,7 +20,7 @@ function step(title) {
 
 test("Publish uses versions upload + API promote, not wrangler deploy", () => {
   const publish = step("Publish authichain-com");
-  assert.match(publish, /wrangler versions upload --minify --keep-vars/);
+  assert.match(publish, /wrangler@4\.83\.0 versions upload --minify --keep-vars/);
   assert.match(publish, /parse-wrangler-version-id\.mjs/);
   assert.match(publish, /promote-worker-version\.mjs authichain-com/);
   assert.doesNotMatch(publish, /npx wrangler deploy /);
