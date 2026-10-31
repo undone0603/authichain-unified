@@ -78,7 +78,9 @@ describe("buildDppFollowup", () => {
     expect(subject).toBe("Your EU DPP readiness result: 40/100");
     expect(body).toContain(plan.name);
     expect(body).toContain(`$${plan.price}`);
-    expect(body).toContain(`${plan.generations} workspace generations`);
+    expect(body).toContain("a self-serve workspace.");
+    expect(body).not.toContain("50 workspace generations");
+    expect(body).not.toContain(`${plan.generations} workspace generations`);
     expect(body).toContain(DPP_CHECKOUT_URL);
     expect(body).toContain(
       "not an audit, not a certification and not legal advice"
