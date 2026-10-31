@@ -8,6 +8,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import {
+  logUpgradePromptClick,
   tryHandleGatedCheckout,
   type CheckoutGateEvent,
 } from "./checkout-gate";
@@ -301,5 +302,36 @@ describe("analytics can never break checkout", () => {
       { fetchImpl: stripeOk(), ...protection }
     );
     expect(res!.status).toBe(303);
+  });
+});
+
+describe("upgrade_prompt_click", () => {
+  it("logs once when /checkout/starter is opened from the sample-exhausted link", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const s = sink();
+    const res = await tryHandleGatedCheckout(
+      new Request("https://authichain.com/checkout/starter?src=sample_exhausted", {
+        headers: { "user-agent": HUMAN_UA },
+      }),
+      ENV,
+      { fetchImpl: vi.fn(), onEvent: s.onEvent }
+    );
+    expect(res!.status).toBe(200);
+    const lines = log.mock.calls.map(c => String(c[0])).filter(l => l.includes("upgrade_prompt_click"));
+    expect(lines).toEqual([
+      JSON.stringify({ event: "upgrade_prompt_click", sku: "starter", src: "sample_exhausted" }),
+    ]);
+    expect(s.seen).toEqual([{ event: "checkout_starter_view", sku: "starter", email: undefined }]);
+    log.mockRestore();
+  });
+
+  it("ignores unknown src values, other plans and no src", () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    expect(logUpgradePromptClick("starter", "<script>")).toBe(false);
+    expect(logUpgradePromptClick("creator", "sample_exhausted")).toBe(false);
+    expect(logUpgradePromptClick("starter", null)).toBe(false);
+    expect(log).not.toHaveBeenCalled();
+    expect(logUpgradePromptClick("starter", "low_credit")).toBe(true);
+    log.mockRestore();
   });
 });
