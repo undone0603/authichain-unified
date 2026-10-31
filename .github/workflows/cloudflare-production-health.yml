@@ -9,13 +9,19 @@ on:
     - cron: "20 6 * * *"
   workflow_dispatch:
 
+# These probes are read-only: a new main revision supersedes older probes.
+concurrency:
+  group: cloudflare-production-health-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   health:
     name: Public edge + Workers inventory
-    runs-on: ubuntu-latest
+    # Self-hosted WSL runner label authichain-ops (public-repo: no PR jobs on this host).
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7

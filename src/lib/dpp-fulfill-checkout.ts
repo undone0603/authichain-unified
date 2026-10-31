@@ -21,6 +21,7 @@ import {
   finishProvisionContinuity,
 } from "./founder-exit/supabase-log";
 import { markRetryableFulfillment } from "./retryable-fulfillment";
+import { emitTrustEvent } from "../../shared/trust-events";
 
 type SupabaseLike = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,6 +48,33 @@ function toId(
 }
 
 export async function fulfillDppPaidSession(
+  supabase: SupabaseLike,
+  session: DppCheckoutSessionLike,
+  priceId?: string | null
+): Promise<DppFulfillResult> {
+  try {
+    const result = await fulfillDppPaidSessionOnce(supabase, session, priceId);
+    if (result.handled) {
+      emitTrustEvent("fulfillment.completed", {
+        session_id: session.id,
+        profile_id: result.profileId,
+        plan: session.metadata?.plan || "dpp_readiness",
+        outcome: `activation_email_${result.activationEmail}`,
+      });
+    }
+    return result;
+  } catch (err) {
+    emitTrustEvent("fulfillment.failed", {
+      session_id: session.id,
+      plan: session.metadata?.plan || "dpp_readiness",
+      error_class: err instanceof Error ? err.name : "Error",
+      outcome: "stripe_will_retry",
+    });
+    throw err;
+  }
+}
+
+async function fulfillDppPaidSessionOnce(
   supabase: SupabaseLike,
   session: DppCheckoutSessionLike,
   priceId?: string | null
@@ -79,6 +107,7 @@ export async function fulfillDppPaidSession(
   const brand = getBrandIdFromMetadata(md);
   const plan = md.plan || "dpp_readiness";
   const demo = isDppDemoSession(md);
+  emitTrustEvent("fulfillment.started", { session_id: session.id, plan, demo });
   const loopMeta = {
     plan,
     brand,
@@ -128,6 +157,29 @@ export async function fulfillDppPaidSession(
         `DPP provision failed: ${prov.error || "profiles upsert failed"}`
       )
     );
+  }
+
+  // A real buyer paid and there is nobody to grant to. Acknowledging that as
+  // handled told Stripe to stop retrying, closed the continuity record and
+  // wrote `provisioned`, so the watchdog and the stall report both saw a
+  // fulfilled sale. Fail like any other ungranted payment instead: no
+  // `provisioned`, Stripe keeps the event red, and once the paid stage
+  // outlives its retry budget runDppExceptionsReport escalates it.
+  if (prov.status === "no_identity" && !demo) {
+    throw markRetryableFulfillment(
+      new Error(
+        `DPP provision failed: no_identity (paid session ${session.id} has no buyer email or user id)`
+      )
+    );
+  }
+
+  if (prov.profileId && !prov.skippedIdempotent) {
+    emitTrustEvent("entitlement.granted", {
+      session_id: session.id,
+      profile_id: prov.profileId,
+      plan,
+      demo,
+    });
   }
 
   try {
