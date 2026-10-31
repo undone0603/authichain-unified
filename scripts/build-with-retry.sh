@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# One heavy build per machine. Re-exec under the lock once; the lock fd
+# stays open across exec, including this script's own retries.
+if [[ -z "${AUTHICHAIN_BUILD_LOCK_HELD:-}" ]]; then
+  export AUTHICHAIN_BUILD_LOCK_HELD=1
+  here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+  exec "$here/with-build-lock.sh" "$here/build-with-retry.sh" "$@"
+fi
+
 # Self-healing production build for authichain-unified.
 # Handles known flakes: next/font/google 404s and heap OOM (exit 134).
 # Matches CI behavior in .github/workflows/main.yml.

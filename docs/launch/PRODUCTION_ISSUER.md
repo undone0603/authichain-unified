@@ -8,7 +8,7 @@ Updated 2026-09-19: public `/onboard` and `/story` are real dynamic handlers.
   "contract": "AuthiChain Attestation Contract v0.1",
   "alg": "EdDSA",
   "crv": "Ed25519",
-  "kid": "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE",
+  "kid": "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ",
   "issuer": "https://authichain.com",
   "jwks": "https://authichain.com/protocol/jwks.json",
   "ready": true,
