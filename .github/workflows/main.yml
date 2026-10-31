@@ -333,7 +333,9 @@ jobs:
   ci:
     name: Main quality gate
     needs: [quality, test, build]
-    if: always()
+    # Report failed dependencies, but let cancellation release the workflow's
+    # concurrency group instead of queueing a finalizer on the busy runner.
+    if: ${{ !cancelled() }}
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
     runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
