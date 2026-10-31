@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  checkFarmRails,
+  checkMoneyRails,
   classifyRevenue,
   classifySend,
   decideOperatorAction,
-  farmRailsSteps,
+  selectNextSendCandidate,
+  moneyRailsSteps,
   mayDisableOutreachApproval,
   mayDispatch,
   mayRunAgentzAuto,
@@ -268,14 +269,64 @@ describe("classifySend", () => {
       }).allowed
     ).toBe(true);
   });
+
+  it("allows an operator-selected published inbox without named-this-turn", () => {
+    const verdict = classifySend({
+      namedInboxThisTurn: null,
+      operatorSelectedInbox: "claire.stromboni@verkor.com",
+      source: "published_contact",
+    });
+    expect(verdict.allowed).toBe(true);
+    expect(verdict.to).toBe("claire.stromboni@verkor.com");
+    expect(verdict.reason).toContain("operator-selected");
+  });
+
+  it("still refuses operator-selected guesses and role inboxes", () => {
+    expect(
+      classifySend({
+        namedInboxThisTurn: null,
+        operatorSelectedInbox: "ops@example.com",
+        source: "pattern_guess",
+      }).allowed
+    ).toBe(false);
+    expect(
+      classifySend({
+        namedInboxThisTurn: null,
+        operatorSelectedInbox: "info@sfm-bikes.de",
+        source: "published_contact",
+      }).allowed
+    ).toBe(false);
+  });
+});
+
+describe("selectNextSendCandidate", () => {
+  it("skips guesses and role inboxes, then picks the first published human", () => {
+    const verdict = selectNextSendCandidate([
+      { email: "info@guessed.com", source: "pattern_guess" },
+      { email: "sales@ironfishdistillery.com", source: "published_contact" },
+      { email: "claire.stromboni@verkor.com", source: "published_contact" },
+      { email: "second@verkor.com", source: "published_contact" },
+    ]);
+    expect(verdict.allowed).toBe(true);
+    expect(verdict.to).toBe("claire.stromboni@verkor.com");
+  });
+
+  it("returns no sendable published inbox when the list is only untrusted", () => {
+    expect(
+      selectNextSendCandidate([
+        { email: "undone.k@gmail.com", source: "published_contact" },
+        { email: "info@sfm-bikes.de", source: "published_contact" },
+      ]).reason
+    ).toBe("no sendable published inbox");
+  });
 });
 
 describe("decideOperatorAction", () => {
-  const railsOk = { ok: true, reason: "Farm rails ok" };
+  const railsOk = { ok: true, reason: "Starter $29 and DPP $299 checkout rails up" };
 
   it("returns fix_rails before anything else", () => {
     const decision = decideOperatorAction({
-      rails: { ok: false, reason: "Farm HEAD 500" },
+      rails: { ok: false, reason: "DPP HEAD 500" },
       snapshot: snap({
         subscriptions: [
           {
@@ -339,43 +390,105 @@ describe("decideOperatorAction", () => {
     });
     expect(refused.action).toBe("refuse_send");
   });
-});
 
-describe("farm rails", () => {
-  it("GET the Payment Link and HEAD Farm checkout, never GET dpp", () => {
-    const steps = farmRailsSteps();
-    expect(
-      steps.some(s => s.id === "farm_payment_link" && s.method === "GET")
-    ).toBe(true);
-    expect(steps.some(s => s.id === "farm_head" && s.method === "HEAD")).toBe(
-      true
-    );
-    expect(
-      steps.every(
-        s => !s.url.includes("/api/checkout/dpp") && s.method !== "POST"
-      )
-    ).toBe(true);
-    const farm = steps.find(s => s.id === "farm_head");
-    expect(farm?.accept).toEqual([204]);
+  it("selects one published candidate when no inbox was named this turn", () => {
+    const decision = decideOperatorAction({
+      rails: railsOk,
+      snapshot: snap({}),
+      candidates: [
+        { email: "info@sfm-bikes.de", source: "published_contact" },
+        { email: "claire.stromboni@verkor.com", source: "published_contact" },
+      ],
+    });
+    expect(decision.action).toBe("send_one");
+    expect(decision.to).toBe("claire.stromboni@verkor.com");
   });
 
-  it("passes when Payment Link is 200 and Farm HEAD is 204", async () => {
-    const fetchImpl = async (url: string, init?: RequestInit) => {
+  it("stays wait_buyer when candidates are only role or guessed inboxes", () => {
+    const decision = decideOperatorAction({
+      rails: railsOk,
+      snapshot: snap({}),
+      candidates: [
+        { email: "info@sfm-bikes.de", source: "published_contact" },
+        { email: "ops@example.com", source: "pattern_guess" },
+      ],
+    });
+    expect(decision.action).toBe("wait_buyer");
+    expect(decision.reason).toBe("no sendable published inbox");
+  });
+});
+
+describe("money rails", () => {
+  it("GET Starter and DPP confirm pages plus the Starter Payment Link; HEAD DPP; never GET anonymous dpp checkout", () => {
+    const steps = moneyRailsSteps();
+    expect(
+      steps.some(
+        s =>
+          s.id === "starter_checkout" &&
+          s.method === "GET" &&
+          s.url.endsWith("/checkout/starter")
+      )
+    ).toBe(true);
+    expect(
+      steps.some(
+        s =>
+          s.id === "dpp_checkout" &&
+          s.method === "GET" &&
+          s.url.endsWith("/checkout/dpp_readiness")
+      )
+    ).toBe(true);
+    expect(
+      steps.some(
+        s =>
+          s.id === "starter_payment_link" &&
+          s.method === "GET" &&
+          s.url.includes("buy.stripe.com")
+      )
+    ).toBe(true);
+    const dppHead = steps.find(s => s.id === "dpp_head");
+    expect(dppHead?.method).toBe("HEAD");
+    expect(dppHead?.url).toMatch(/\/api\/checkout\/dpp$/);
+    expect(dppHead?.accept).toEqual([204]);
+    expect(
+      steps
+        .filter(s => s.method === "GET")
+        .every(s => !s.url.includes("/api/checkout/dpp") && s.method !== "POST")
+    ).toBe(true);
+    expect(
+      steps.every(s => !s.url.includes("/api/checkout/plan/strainchain_farm"))
+    ).toBe(true);
+  });
+
+  it("passes when Starter/DPP GET 200 and DPP HEAD 204", async () => {
+    const fetchImpl = async (_url: string, init?: RequestInit) => {
       const method = (init?.method || "GET").toUpperCase();
       const status = method === "HEAD" ? 204 : 200;
       return { status } as Response;
     };
-    const report = await checkFarmRails("https://authichain.com", fetchImpl);
+    const report = await checkMoneyRails("https://authichain.com", fetchImpl);
     expect(report.ok).toBe(true);
+    expect(report.reason).toMatch(/Starter \$29 and DPP \$299/);
   });
 
-  it("fails when Farm HEAD is not 204", async () => {
+  it("fails when DPP HEAD is not 204", async () => {
     const fetchImpl = async (_url: string, init?: RequestInit) => {
       const method = (init?.method || "GET").toUpperCase();
       return { status: method === "HEAD" ? 405 : 200 } as Response;
     };
-    const report = await checkFarmRails("https://authichain.com", fetchImpl);
+    const report = await checkMoneyRails("https://authichain.com", fetchImpl);
     expect(report.ok).toBe(false);
+  });
+
+  it("fails when Starter confirm is not 200", async () => {
+    const fetchImpl = async (url: string, init?: RequestInit) => {
+      const method = (init?.method || "GET").toUpperCase();
+      if (method === "HEAD") return { status: 204 } as Response;
+      if (url.endsWith("/checkout/starter")) return { status: 500 } as Response;
+      return { status: 200 } as Response;
+    };
+    const report = await checkMoneyRails("https://authichain.com", fetchImpl);
+    expect(report.ok).toBe(false);
+    expect(report.reason).toMatch(/starter_checkout/);
   });
 });
 
@@ -403,10 +516,84 @@ describe("snapshotFromStripeLike", () => {
           id: "ch_live",
           amount: 14900,
           paid: true,
+          livemode: true,
           billing_details: { email: "ops@example.com" },
         },
       ],
     });
     expect(snapshot.charges[0].email).toBe("ops@example.com");
+    expect(snapshot.charges[0].livemode).toBe(true);
+  });
+
+  it("keeps livemode false so a test-mode subscription cannot qualify", () => {
+    const snapshot = snapshotFromStripeLike({
+      subscriptions: [
+        {
+          id: "sub_test",
+          status: "active",
+          customer_email: "buyer@example.com",
+          livemode: false,
+        },
+      ],
+    });
+    expect(snapshot.subscriptions[0].livemode).toBe(false);
+    expect(classifyRevenue(snapshot).qualifying).toBe(false);
+  });
+});
+
+describe("founder domain and test mode", () => {
+  it("does not count an @authichain.com alias as a stranger subscription", () => {
+    const verdict = classifyRevenue({
+      subscriptions: [
+        {
+          id: "sub_ops",
+          status: "active",
+          customerEmail: "ops@authichain.com",
+        },
+      ],
+      payouts: [],
+      charges: [],
+    });
+    expect(verdict.qualifying).toBe(false);
+  });
+
+  it("does not let a test-mode paid charge unlock a payout", () => {
+    const snapshot = snapshotFromStripeLike({
+      payouts: [{ id: "po_test", amount: 2900, status: "paid" }],
+      charges: [
+        {
+          id: "ch_test",
+          amount: 2900,
+          paid: true,
+          livemode: false,
+          billing_details: { email: "buyer@example.com" },
+        },
+      ],
+    });
+    expect(classifyRevenue(snapshot).qualifying).toBe(false);
+  });
+});
+
+describe("manual desk addresses", () => {
+  const desks = [
+    "crew@canyon.com",
+    "us@canyon.com",
+    "webshop@sfm-bikes.de",
+    "hi@northvolt.com",
+    "dpo@verkor.com",
+    "service.ebike@yamaha-ebike-systems.com",
+  ];
+
+  it("refuses published desk addresses unless allowRoleInbox is set", () => {
+    for (const email of desks) {
+      const refused = classifySend({
+        namedInboxThisTurn: null,
+        operatorSelectedInbox: email,
+        source: "published_contact",
+        allowRoleInbox: false,
+      });
+      expect(refused.allowed, email).toBe(false);
+      expect(refused.reason, email).toContain("role_inbox");
+    }
   });
 });
