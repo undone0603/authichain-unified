@@ -1533,7 +1533,7 @@ async function renderOnboard(c: Context): Promise<Response> {
 // deterministic reference object. That page must exist. Unknown ids 404.
 
 const LAUNCH_PROOF_PRODUCT_ID = "00000000-0000-4000-8000-000000000001";
-const LAUNCH_PROOF_KID = "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ";
+const LAUNCH_PROOF_KID = "jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM";
 
 function launchProofStoryHtml(): string {
   return htmlDocument({

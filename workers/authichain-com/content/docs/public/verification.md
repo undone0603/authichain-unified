@@ -90,7 +90,7 @@ Representation: compact JWS, protected header `typ=AC-ATTESTATION+JWS`, algorith
 GET https://authichain.com/.well-known/jwks.json
 ```
 
-kid `T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ`, `kty=OKP`, `crv=Ed25519`, `alg=EdDSA`.
+Current kid `jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM`, `kty=OKP`, `crv=Ed25519`, `alg=EdDSA`. Retired kid `T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ` remains in JWKS for attestations it signed before `2026-10-31T20:38:07Z`.
 
 v0.1 has no live status list. The status in the signed payload is the status at issuance.
 
@@ -113,13 +113,13 @@ Accept: application/json
 
 The object id form is `qron:url:` plus 8 hex characters.
 
-| HTTP | `decision` | Meaning |
-|---|---|---|
-| 200 | `verified` | Signature valid, issuer trusted, presentation active and unexpired |
-| 409 | `warning`, `blocked`, `revoked`, `expired`, `risk`, or `indeterminate` | Signature valid, but the presentation is not verified |
-| 400 | `indeterminate` with `cryptographic_status: "invalid"` | The signature or object id check failed |
-| 404 | `indeterminate` with `error: "presentation_not_found"` | No stored presentation for that id |
-| 422, 502, or 503 | `indeterminate` | The check did not finish |
+| HTTP             | `decision`                                                             | Meaning                                                            |
+| ---------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 200              | `verified`                                                             | Signature valid, issuer trusted, presentation active and unexpired |
+| 409              | `warning`, `blocked`, `revoked`, `expired`, `risk`, or `indeterminate` | Signature valid, but the presentation is not verified              |
+| 400              | `indeterminate` with `cryptographic_status: "invalid"`                 | The signature or object id check failed                            |
+| 404              | `indeterminate` with `error: "presentation_not_found"`                 | No stored presentation for that id                                 |
+| 422, 502, or 503 | `indeterminate`                                                        | The check did not finish                                           |
 
 qron.space, strainchain.io, and govchain.us each proxy that GET. Each host does not verify the signature. Their responses set `x-qron-resolve-origin: https://authichain.com`.
 
@@ -178,14 +178,14 @@ See [examples](/docs/examples).
 
 ## Failure cases
 
-| Input | Expected |
-|---|---|
-| Tampered payload, original signature | protocol `invalid` / HTTP 400 on attestation verify |
-| Expired `expires_at` | trust `expired` or attestation `valid=false` with status `expired` |
-| Revoked status in payload | `valid=false`, cryptographically inspectable |
-| Unknown object | `not_found` |
-| Living QR id with no stored presentation | HTTP 404 `presentation_not_found` |
-| Scan graph burst | `anomaly` (kernel) or `clone_suspected` (resolver, when live) |
+| Input                                    | Expected                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------ |
+| Tampered payload, original signature     | protocol `invalid` / HTTP 400 on attestation verify                |
+| Expired `expires_at`                     | trust `expired` or attestation `valid=false` with status `expired` |
+| Revoked status in payload                | `valid=false`, cryptographically inspectable                       |
+| Unknown object                           | `not_found`                                                        |
+| Living QR id with no stored presentation | HTTP 404 `presentation_not_found`                                  |
+| Scan graph burst                         | `anomaly` (kernel) or `clone_suspected` (resolver, when live)      |
 
 ## Security considerations
 
