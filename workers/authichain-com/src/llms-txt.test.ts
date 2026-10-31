@@ -15,6 +15,9 @@ describe("llms.txt", () => {
     const text = renderLlmsTxt();
     expect(text).toContain("# AuthiChain");
     expect(text).toContain("POST https://authichain.com/api/x402");
+    expect(text).toContain(
+      "An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment."
+    );
     expect(text).toContain("https://authichain.com/api/x402/catalog");
     expect(text).toContain("https://authichain.com/.well-known/x402.json");
     expect(text).toContain("https://authichain.com/.well-known/x402");
@@ -23,13 +26,18 @@ describe("llms.txt", () => {
     expect(text).toContain("https://authichain.com/battery-passport");
     expect(text).toContain("18 February 2027");
     expect(text).toContain("e-bike / LMT");
-    expect(text).toContain(planPaymentLink("qron_launch"));
-    expect(text).toContain(planPaymentLink("qron_launch_annual"));
+    expect(text).not.toContain("/checkout/qron_launch");
+    expect(text).not.toContain("QRON Launch");
     expect(text).toContain(planPaymentLink("starter"));
     expect(text).toContain(planPaymentLink("creator"));
     expect(text).toContain("https://authichain.com/generate");
+    expect(text).toContain("EU DPP Workspace $299");
     expect(text).toContain(planPaymentLink("dpp_readiness"));
+    expect(text).not.toContain("EU DPP Readiness $");
     expect(text).toContain(planPaymentLink("strainchain_passport"));
+    expect(text).toContain(
+      "Made in USA Claim File $299 per SKU: https://authichain.com/made-in-usa-claim-file"
+    );
     expect(text).not.toContain(planPaymentLink("strainchain_farm"));
     expect(text).not.toContain("GET /api/checkout");
     expect(text.toLowerCase()).not.toContain("facilitator.payai");
@@ -71,5 +79,15 @@ describe("llms.txt", () => {
     expect(text).toContain("This host verifies the signature");
     expect(text).not.toContain("does not verify the signature");
     expect(text).not.toContain("freeCalls");
+    expect(text).toContain(
+      "Published demonstration record, not a customer product: GET https://authichain.com/api/verify?id=polygon-anchor-1"
+    );
+    expect(text).toContain(
+      "https://authichain.com/protocol/examples/polygon-anchor-1.record.json"
+    );
+    expect(text).toContain(
+      "https://authichain.com/protocol/examples/polygon-anchor-1.anchor.json"
+    );
+    expect(text).not.toContain("polygonscan.com");
   });
 });

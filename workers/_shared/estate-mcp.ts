@@ -181,8 +181,8 @@ export function sisterMcpPricingDiscovery(brand: SisterDiscoveryBrand) {
       mcp: `${origin}/mcp`,
       docs: "https://authichain.com/x402",
       note: x402PaidVerifyStatus().bound
-        ? "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402; pay Base USDC and retry with X-PAYMENT."
-        : "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402 for discovery, but a paid call is refused with 503 registry_not_bound before settlement until the registry lookup is bound. No payment is taken.",
+        ? "An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment. Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402; pay Base USDC and retry with X-PAYMENT and a seal UUID."
+        : "An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment. Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402 for discovery, but a paid call is refused with 503 registry_not_bound before settlement until the registry lookup is bound. No payment is taken.",
       paidVerify: x402PaidVerifyStatus(),
     },
     humanCheckout,
