@@ -4,7 +4,7 @@ import { DOCS_PAGES } from "./docs-pages";
 import { renderDocsPage } from "./docs-render";
 
 test("rendered docs HTML passes the claim guard", () => {
-  const pages = ["/docs", ...DOCS_PAGES.map((slug) => `/docs/${slug}`)];
+  const pages = ["/docs", ...DOCS_PAGES.map(slug => `/docs/${slug}`)];
   for (const path of pages) {
     const html = renderDocsPage(path);
     assert.ok(html.includes("<title>"), path);
@@ -14,6 +14,10 @@ test("rendered docs HTML passes the claim guard", () => {
     assert.equal(html.includes("id.authichain.com/01/"), false, path);
   }
   const hub = renderDocsPage("/docs");
+  assert.ok(hub.includes('href="/api/verify?id=polygon-anchor-1"'));
+  assert.ok(hub.includes('href="/verify?id=polygon-anchor-1"'));
+  assert.ok(hub.includes("Not a customer product"));
+  assert.equal(hub.includes("polygonscan.com"), false);
   assert.ok(hub.includes("utm_source=docs"));
   assert.ok(hub.includes("utm_campaign=docs-hub"));
   assert.ok(hub.includes("/battery-passport"));
@@ -24,7 +28,8 @@ test("rendered docs HTML passes the claim guard", () => {
   assert.equal(architecture.includes("written assessment"), false);
   assert.equal(architecture.includes("written readiness assessment"), false);
   assert.equal(architecture.includes("AuthiChain Basic"), false);
-  assert.ok(architecture.includes("50 workspace generations"));
+  assert.ok(architecture.includes("with self-serve activation"));
+  assert.equal(architecture.includes("50 workspace generations"), false);
   assert.ok(architecture.includes("Not legal advice"));
 });
 
@@ -53,14 +58,16 @@ test("an unknown docs slug is not a rendered article", () => {
 });
 
 test("docs links keep query strings escaped exactly once", () => {
-  const pages = ["/docs", ...DOCS_PAGES.map((slug) => `/docs/${slug}`)];
+  const pages = ["/docs", ...DOCS_PAGES.map(slug => `/docs/${slug}`)];
   for (const path of pages) {
     const html = renderDocsPage(path);
     assert.equal(html.includes("&amp;amp;"), false, path);
   }
   const hub = renderDocsPage("/docs");
   assert.ok(
-    hub.includes('href="/dpp-check?utm_source=docs&amp;utm_medium=authority&amp;utm_campaign=docs-hub"'),
+    hub.includes(
+      'href="/dpp-check?utm_source=docs&amp;utm_medium=authority&amp;utm_campaign=docs-hub"'
+    )
   );
 });
 

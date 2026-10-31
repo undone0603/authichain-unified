@@ -1,3 +1,4 @@
+import { isVerifyLivePath, renderVerifyLivePage } from "./verify-live-page.ts";
 import { isIsThisRealPath, renderIsThisRealPage } from "./is-this-real-page.ts";
 import { handleSalesInquiry } from './routes/sales';
 import mcpServer from './mcp-server';
@@ -7,6 +8,7 @@ import mcpServer from './mcp-server';
 // inlines it at build time, so the worker stays self-contained at runtime.
 import { tryHandleDppRoute } from "./dpp-routes";
 import { tryHandleAgentPresentation } from "./agent-present-page";
+import { tryHandleBotIdentity } from "./bot-identity-routes";
 import {
   tryHandleApiCheckoutEmailGate,
   tryHandleProtocolCheckout,
@@ -17,7 +19,9 @@ import {
   deliverDppCheckoutStarted,
 } from "./checkout-growth";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
+import { tryHandleCertificateRegistry } from "./certificate-registry";
 import { tryHandleMcp } from "./mcp-routes";
+import { tryHandleMcpFree } from "./mcp-free-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
 import { tryHandleManufacturerStatus } from "./manufacturer-status-route";
 import { tryHandleLiveSeal } from "./live-seal-route";
@@ -48,6 +52,7 @@ import {
   tryHandleTelegramMiniApp,
 } from "./telegram-miniapp.ts";
 import { DESK_SITEMAP, tryHandleDesk } from "./desk.ts";
+import { tryHandleGeneration } from "./generation-check";
 // Extensionless on purpose. tsconfig.workers.json counts each ".ts" import.
 import { attestationSchemaResponse } from "./attestation-schema";
 import { tryHandleLlmsTxt } from "./llms-txt.ts";
@@ -75,6 +80,7 @@ import {
   dppCheckoutClickEvent,
   isDppCheckPath,
   renderDppCheckPage,
+  tryHandleDppCheck,
 } from "./dpp-check-page.ts";
 import {
   micrositeSitemapUrls,
@@ -107,6 +113,7 @@ import {
   estateTrust,
   tryHandleEstateIndexNow,
 } from '../../_shared/estate-landing.ts';
+import { isEmailOptinPath, tryHandleEmailOptin, type D1Like } from './email-optin.ts';
 import { tryHandleEstatePricing } from '../../_shared/estate-pricing.ts';
 import { tryRedirectSeoRootCanonical } from '../../_shared/seo-hub-routes.ts';
 
@@ -183,7 +190,7 @@ const SEO = {
     },
     {
       q: 'What is EU DPP Readiness?',
-      a: 'A one-time checkout that opens an AuthiChain workspace, with self-serve activation and 50 workspace generations to publish a first Digital Product Passport.',
+      a: 'A one-time checkout that opens an AuthiChain workspace with self-serve activation, so you can publish a first Digital Product Passport.',
     },
     {
       q: 'What else is live in the estate?',
@@ -2367,7 +2374,7 @@ function techStack() {
     "What AuthiChain already does",
     "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations." },
+      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. The checkout opens an AuthiChain workspace with self-serve activation." },
       { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
     "technology",
@@ -2444,7 +2451,7 @@ function marketReality() {
   <div class="wrap">
     <p class="section-tag">Regulatory context</p>
     <h2>EU Digital Product Passport</h2>
-    <p class="section-sub">EU ESPR requires a machine-readable product passport for goods sold in Europe, phased in by category. The $299 checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations. It does not issue a certificate.</p>
+    <p class="section-sub">EU ESPR requires a machine-readable product passport for goods sold in Europe, phased in by category. The $299 checkout opens an AuthiChain workspace with self-serve activation. It does not issue a certificate.</p>
     <div class="estate-actions">
       ${checkoutEmailFormHtml({
         action: "https://authichain.com/checkout/dpp_readiness",
@@ -2524,7 +2531,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   ${estateSkipLink()}
-  <div class="banner">The first checkout is the $29 Starter Pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy Starter — $29</a>. EU DPP Readiness stays $299 further down.</div>
+  <div class="banner">The first checkout is the $29 Starter Pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy Starter — $29</a>. EU DPP Workspace stays $299 further down.</div>
   ${estateNav(
     "authichain",
     [
@@ -2542,7 +2549,7 @@ const HTML = `<!DOCTYPE html>
   ${estateHero({
     eyebrow: "The authentic agentic economy",
     title: "Signed QR seals for real products.",
-    lede: "Start with the Starter Pack at $29. EU DPP Readiness is $299 when you need the battery passport path. Add a work email so Stripe can recover the cart.",
+    lede: "Start with the Starter Pack at $29. EU DPP Workspace is $299 when you need the battery passport path. Add a work email so Stripe can recover the cart.",
     lead: {
       href: planPaymentLink("starter") ?? "#hero",
       label: "Buy a QRON Starter Pack — $29",
@@ -2927,7 +2934,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <a class="nav-link" href="/battery-passport">Battery example</a>
       <a class="nav-link" href="/docs">Docs</a>
       <a class="nav-link" href="/x402">Agent pay</a>
-      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Start DPP Audit — $299</a>
+      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Open EU DPP Workspace — $299</a>
     </div>
   </nav>
 
@@ -3195,6 +3202,13 @@ interface Env {
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
+  /** authichain-db (D1): email_optins table only. */
+  DB?: D1Like;
+  /** "true" turns on the opt-in confirmation email (also needs RESEND_API_KEY). Default off. */
+  EMAIL_OPTIN_SEND_ENABLED?: string;
+  RESEND_API_KEY?: string;
+  /** Optional secret name only. Unset or empty: 503 before any write (fail closed). */
+  IP_HASH_SALT?: string;
 }
 
 const APP_WORKER_TIMEOUT_MS_DEFAULT = 4000;
@@ -3378,6 +3392,10 @@ async function handleAuthichainCom(
     const appHost = tryHandleAppHost(request);
     if (appHost) return appHost;
     const p = url.pathname;
+    if (isEmailOptinPath(p)) {
+      const optin = await tryHandleEmailOptin(request, env);
+      if (optin) return optin;
+    }
     const docsClick = docsCtaClickEvent(request.method, url);
     if (docsClick) console.log(JSON.stringify(docsClick));
     if (p === '/og-image.png' || p === '/og.png') {
@@ -3414,10 +3432,10 @@ async function handleAuthichainCom(
         // First-dollar LOOP-03 paths (live 200; generate proxies to APP_WORKER).
         { loc: 'https://authichain.com/generate', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/checkout/starter', freq: 'weekly', pri: '0.95' },
-        { loc: 'https://authichain.com/checkout/qron_launch', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/checkout/creator', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/verify/live', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/digital-product-passport', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/genetics', freq: 'weekly', pri: '0.85' },
@@ -3491,6 +3509,11 @@ async function handleAuthichainCom(
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
     }
+    // CFA-629: /dpp-check/product and the /dpp/scan 301 live in tryHandleDppCheck.
+    if (!isDppCheckPath(p)) {
+      const dppCheck = tryHandleDppCheck(request);
+      if (dppCheck) return dppCheck;
+    }
     if (isDppCheckPath(p)) {
       const done = request.method === 'GET' ? dppCheckCompleteEvent(url) : null;
       if (done) console.log(JSON.stringify(done));
@@ -3535,6 +3558,9 @@ async function handleAuthichainCom(
     if (microsite) return microsite;
     const miniapp = tryHandleTelegramMiniApp(request);
     if (miniapp) return miniapp;
+    const generation = tryHandleGeneration(request);
+    if (generation) return generation;
+
     const desk = tryHandleDesk(request);
     if (desk) return desk;
 
@@ -3577,6 +3603,8 @@ async function handleAuthichainCom(
     if (dppPage) return dppPage;
     const agentPage = await tryHandleAgentPresentation(request);
     if (agentPage) return agentPage;
+    const botIdentity = tryHandleBotIdentity(request);
+    if (botIdentity) return botIdentity;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
     // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the
@@ -3586,8 +3614,15 @@ async function handleAuthichainCom(
     if (checkoutGate) return checkoutGate;
     // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
+    // The public registry has to be intercepted on the landing Worker: /api/*
+    // otherwise proxies to APP_WORKER, whose route table does not own this path.
+    const certificateRegistry = await tryHandleCertificateRegistry(request, env);
+    if (certificateRegistry) return certificateRegistry;
     const x402 = await tryHandleX402(request, env, env.VERIFY_APP);
     if (x402) return x402;
+    // /mcp/free: free-only sibling for the marketplace plugin (Advisor ruling B).
+    const mcpFree = await tryHandleMcpFree(request, env);
+    if (mcpFree) return mcpFree;
     const mcp = await tryHandleMcp(request, env, env.VERIFY_APP);
     if (mcp) return mcp;
     const apiV1 = await tryHandleApiV1(request, env);
@@ -3659,6 +3694,23 @@ async function handleAuthichainCom(
           ...HTML_SECURITY_HEADERS,
           'Content-Type': 'text/html; charset=utf-8',
           ...(seoPassport.noindex ? { 'X-Robots-Tag': 'noindex' } : {}),
+        },
+      });
+    }
+    // /verify/live is a reserved founder page, not a certificate id. The edge
+    // router would look up the id "live" and 404. A real id still proxies.
+    if (isVerifyLivePath(p) && !url.searchParams.get("id")) {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response("method not allowed", {
+          status: 405,
+          headers: { Allow: "GET, HEAD", "Cache-Control": "no-store" },
+        });
+      }
+      return new Response(renderVerifyLivePage(), {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, max-age=300",
         },
       });
     }
