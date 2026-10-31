@@ -675,6 +675,35 @@ describe("fulfilment watchdog", async () => {
     ).toEqual(["cs_duplicate_only:webhook ran but did not succeed"]);
   });
 
+  it("does not mistake test-mode paid checkouts for live webhook failures", async () => {
+    const sessions = [
+      s("cs_test_mode", 60, { livemode: false }),
+      s("cs_live_mode", 60, { livemode: true }),
+    ];
+    expect(
+      findUnfulfilled(sessions, [], { now }).map(
+        (p: { session: string }) => p.session
+      )
+    ).toEqual(["cs_live_mode"]);
+
+    const result = await checkFulfilment({
+      stripeKey: "test-only",
+      supabaseUrl: "https://example.test",
+      supabaseKey: "test-only",
+      fetchImpl: async (url: string) => {
+        if (url.startsWith("https://api.stripe.com/"))
+          return { ok: true, json: async () => ({ data: sessions, has_more: false }) };
+        if (url.includes("/rest/v1/stripe_events?"))
+          return { ok: true, json: async () => [] };
+        throw new Error("unexpected URL");
+      },
+    });
+    expect(result.checked).toBe(1);
+    expect(result.problems.map((p: { session: string }) => p.session)).toEqual([
+      "cs_live_mode",
+    ]);
+  });
+
   it("excludes free completed checkouts without hiding unknown-amount payments", () => {
     const out = findUnfulfilled(
       [
