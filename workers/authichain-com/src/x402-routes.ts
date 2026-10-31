@@ -6,23 +6,16 @@
  * authichain-edge-router, whose unmounted GET /api/* falls through to ASSETS
  * and answers an empty 404.
  *
- * GET  /api/x402/health → 200 health (not_configured is OK — GET must not
- *      404). `freeCalls` says whether the daily UUID allowance is armed. It
- *      never includes the salt or keys.
- * GET  /api/x402 + /api/v1/agent-verify → 402 advertisement when unpaid.
- *      GET-first crawlers treat a 200 here as "free" and never buy. Health
- *      stays on /api/x402/health. GET never consumes the free UUID allowance.
- *      A GET that already carries a payment proof is settled the same as
- *      POST (empty body → missing-seal evidence). Otherwise GET-paying
- *      scouts retry with a proof and receive the same 402.
- * HEAD /api/x402 + /api/v1/agent-verify → 402 with the same PAYMENT-REQUIRED
- *      header as unpaid GET and an empty body. PayAI probes HEAD first and
- *      only GET on 404/405; HEAD 204 looked alive with no paywall.
- *      Other x402 paths keep HEAD 204.
+ * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → 200 health
+ *      (not_configured is OK — GET must not 404). `freeCalls` says whether
+ *      the daily UUID allowance is armed. It never includes the salt or keys.
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
  * GET  /api/x402/listing → PayAPI-ready pack copied from health
  * GET  /api/x402/growth → directories + skills + sisters
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
+ * GET  /.well-known/agent-card.json (+ agent.json) → A2A Agent Card
+ *      with skills and x402 payment metadata. No contact email. No ERC-8004.
+ * GET  /.well-known/lumi-monitor.txt → Lumi Watch-trial domain proof.
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
  * POST /api/x402 + /api/v1/agent-verify → 402 challenge when unpaid. A paid
  *      call reads auth_seals on this worker when SUPABASE_URL and a key are
@@ -43,7 +36,10 @@ import {
   parsePaymentHeader,
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
+  X402_RESOURCE_DESCRIPTION,
   isDiscoveryExampleSealId,
+  LUMI_MONITOR_VERIFY_LINE,
+  x402AgentCard,
   x402Catalog,
   x402HealthReport,
   x402OpenApiDocument,
@@ -130,6 +126,9 @@ export function isX402Path(pathname: string): boolean {
     p === "/api/v1/agent-verify" ||
     p === "/.well-known/x402" ||
     p === "/.well-known/x402.json" ||
+    p === "/.well-known/agent-card.json" ||
+    p === "/.well-known/agent.json" ||
+    p === "/.well-known/lumi-monitor.txt" ||
     p === "/openapi.json"
   );
 }
@@ -153,6 +152,30 @@ function isGrowthPath(pathname: string): boolean {
 
 function isFanoutPath(pathname: string): boolean {
   return normalizePath(pathname) === "/.well-known/x402";
+}
+
+function isAgentCardPath(pathname: string): boolean {
+  const p = normalizePath(pathname);
+  return p === "/.well-known/agent-card.json" || p === "/.well-known/agent.json";
+}
+
+function isLumiMonitorPath(pathname: string): boolean {
+  return normalizePath(pathname) === "/.well-known/lumi-monitor.txt";
+}
+
+function lumiMonitorResponse(method: string): Response {
+  const headers = {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "private, no-store",
+    "CDN-Cache-Control": "no-store",
+  };
+  if (method.toUpperCase() === "HEAD") {
+    return new Response(null, { status: 200, headers });
+  }
+  return new Response(`${LUMI_MONITOR_VERIFY_LINE}\n`, {
+    status: 200,
+    headers,
+  });
 }
 
 function isOpenApiPath(pathname: string): boolean {
@@ -248,6 +271,11 @@ function fanoutResponse(): Response {
   return json(200, x402ScanFanout());
 }
 
+async function agentCardResponse(env?: X402Env): Promise<Response> {
+  hydrateX402(env);
+  return json(200, await x402AgentCard(healthEnv(env)));
+}
+
 async function openApiResponse(env?: X402Env): Promise<Response> {
   hydrateX402(env);
   return json(200, await x402OpenApiDocument(healthEnv(env)));
@@ -274,28 +302,21 @@ async function tryFreeCall(
   env: X402Env | undefined,
   opts: X402Options | undefined
 ): Promise<{ response: Response | null; remaining: number | null }> {
-  const raw = coerceSealBody(parseJsonObject(await request.clone().text()));
-  const refusal = unpaidSealRefusal(raw);
-  if (refusal) {
-    return { response: json(refusal.status, refusal.body), remaining: null };
-  }
+  const raw = parseJsonObject(await request.clone().text());
   const parsed = parseSealRequest(raw);
   if (!parsed.ok) {
-    // Empty body or listing sample (`demo` / bazaar UUID): 402 so a scanner
-    // can read the price. An empty body with a valid payment is settled as
-    // missing-seal evidence.
-    return { response: null, remaining: null };
-  }
-  // Listing example UUID: crawlers POST this body. A free 200 is classified
-  // as payability=free so they never buy. Do not consume the real-UUID
-  // allowance. Paid lookup of this id is still missing-seal evidence.
-  if (isDiscoveryExampleSealId(parsed.sealId)) {
+    // No body: 402 so a scanner can read the price. A named seal that cannot
+    // exist, or productId/serial used as the key, is refused here. The paid
+    // path does the same before settlement. This runs before the registry
+    // credential check so a bad id is not a payment challenge.
+    if (Object.keys(raw).length > 0) {
+      return { response: json(parsed.status, parsed.body), remaining: null };
+    }
     return { response: null, remaining: null };
   }
   const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);
   const creds = sealLookupCredentials(env);
-  if (!creds || limit <= 0)
-    return { response: null, remaining: limit <= 0 ? 0 : null };
+  if (!creds || limit <= 0) return { response: null, remaining: limit <= 0 ? 0 : null };
   const fetchImpl = opts?.fetchImpl ?? fetch;
   const store =
     opts && "freeStore" in opts
@@ -359,7 +380,7 @@ function unpaidQuote(request: Request, env?: X402Env): Response {
     resource,
     priceUsd,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
   });
   return json(402, required.v2, required.headers);
 }
@@ -386,7 +407,7 @@ async function agentVerify(
     resource,
     priceUsd,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
   });
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
@@ -409,7 +430,7 @@ async function agentVerify(
     resource,
     priceUsd,
     payTo,
-    description: "AuthiChain agent verification",
+    description: X402_RESOURCE_DESCRIPTION,
     env,
     fetchImpl: opts?.fetchImpl,
     replayStore:
@@ -445,6 +466,13 @@ export async function tryHandleX402(
   const url = new URL(request.url);
   if (!isX402Path(url.pathname)) return null;
 
+  if (isLumiMonitorPath(url.pathname)) {
+    if (request.method === "GET" || request.method === "HEAD") {
+      return lumiMonitorResponse(request.method);
+    }
+    return json(405, { error: "method not allowed" });
+  }
+
   if (request.method === "HEAD") {
     if (isPaidPath(url.pathname)) {
       const quote = unpaidQuote(request, env);
@@ -476,6 +504,10 @@ export async function tryHandleX402(
 
   if (request.method === "GET" && isFanoutPath(url.pathname)) {
     return fanoutResponse();
+  }
+
+  if (request.method === "GET" && isAgentCardPath(url.pathname)) {
+    return agentCardResponse(env);
   }
 
   if (request.method === "GET" && isOpenApiPath(url.pathname)) {

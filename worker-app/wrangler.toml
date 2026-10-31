@@ -109,13 +109,9 @@ zone_name = "authichain.com"
 pattern = "authichain.com/api/guardrail/*"
 zone_name = "authichain.com"
 
-[[routes]]
-pattern = "authichain.com/api/v1/agent-verify*"
-zone_name = "authichain.com"
-
-[[routes]]
-pattern = "authichain.com/api/x402*"
-zone_name = "authichain.com"
+# agent-verify* and api/x402* (including ?query) are on authichain-com so
+# unpaid GET/HEAD/POST is 402. Do not re-add those authichain.com patterns
+# here — a deploy would steal query-string crawlers back to GET health 200.
 
 [[routes]]
 pattern = "authichain.com/api/checkout"

@@ -165,6 +165,17 @@ function jwkX(exported: ArrayBuffer | JsonWebKey, missing: string): string {
   return exported.x;
 }
 
+/** @cloudflare/workers-types types every exportKey format as ArrayBuffer | JsonWebKey. */
+function ed25519RawFromExport(exported: ArrayBuffer | JsonWebKey, missing: string): Uint8Array {
+  if (exported instanceof ArrayBuffer || typeof exported.x !== "string" || exported.x.length === 0) {
+    throw new Error(missing);
+  }
+  return Uint8Array.from(
+    atob(exported.x.replace(/-/g, "+").replace(/_/g, "/")),
+    c => c.charCodeAt(0)
+  );
+}
+
 export async function importIssuer(pkcs8B64: string): Promise<CryptoKeyPair> {
   const der = Uint8Array.from(atob(pkcs8B64), c => c.charCodeAt(0));
   const privateKey = await crypto.subtle.importKey(
