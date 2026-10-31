@@ -1,0 +1,21 @@
+name: Self-hosted ops smoke
+# Proves the WSL authichain-ops runner is picking up jobs.
+# No secrets, no deploy, no checkout of untrusted PR code.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    timeout-minutes: 5
+    steps:
+      - name: Identity
+        run: |
+          set -euo pipefail
+          echo "runner_ok=1"
+          uname -a
+          echo "github_ref=${GITHUB_REF}"
+          echo "event=${GITHUB_EVENT_NAME}"

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { planPaymentLink } from "../../../src/lib/plans.ts";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
@@ -16,14 +16,17 @@ import {
   SERVER_VERSION,
   PRODUCTION_ISSUER_DID,
   PRODUCTION_ISSUER_KID,
+  RETIRED_ISSUER_DID,
+  RETIRED_ISSUER_KID,
+  RETIRED_ISSUER_RETIRED_AT,
   isMcpPath,
   scanLivingQr,
   tryHandleMcp,
   verifyRecordTool,
 } from "./mcp-routes";
-import anchorJson from "../../../protocol/examples/polygon-anchor-1.anchor.json" with { type: "json" };
-import recordJson from "../../../protocol/examples/polygon-anchor-1.record.json" with { type: "json" };
-import serverManifest from "../../../server.json" with { type: "json" };
+import anchorJson from "../../../protocol/examples/polygon-anchor-1.anchor.json";
+import recordJson from "../../../protocol/examples/polygon-anchor-1.record.json";
+import serverManifest from "../../../server.json";
 
 // CFA-363: paid paths need a replay store; an in-memory stub for these tests.
 function kvStub() {
@@ -106,7 +109,7 @@ describe("mcp discovery", () => {
       result: { tools: Array<{ name: string }> };
     };
     expect(listed.result.tools.map(t => t.name)).toEqual(
-      expect.arrayContaining(["get_pricing", "verify", "query_provenance"])
+      expect.arrayContaining(["get_pricing", "verify", "query_provenance", "verify_attestation"])
     );
 
     const call = await tryHandleMcp(
@@ -233,7 +236,11 @@ describe("mcp discovery", () => {
   });
 
   it("tools/call verify with a non-key argument is 400 and does not ask for payment", async () => {
-    for (const args of [{ serial: "AC-1" }, { sealId: "demo" }, { productId: "p-1" }]) {
+    for (const args of [
+      { serial: "AC-1" },
+      { sealId: "demo" },
+      { productId: "p-1" },
+    ]) {
       const res = await tryHandleMcp(
         req("/mcp", {
           method: "POST",
@@ -396,7 +403,308 @@ describe("mcp discovery", () => {
         verified: boolean;
       };
       expect(data.verified).toBe(false);
-      expect(calls).toEqual([]);
+      // A free provenance lookup may perform a read-only registry lookup, but
+      // the payment header must never trigger settlement or spend-ledger writes.
+      expect(calls).toHaveLength(2);
+      const paths = calls.map(call => new URL(call).pathname);
+      expect(paths).toContain("/rest/v1/authichain_attestation_records");
+      const registryUrl = new URL(calls.find(call => new URL(call).pathname === "/rest/v1/auth_seals")!);
+      expect(registryUrl.searchParams.get("or")).toContain("product_id.eq.NOPE-XYZ");
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("query_provenance reads auth_seals and never labels registration as verified", async () => {
+    const orig = globalThis.fetch;
+    const calls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(String(input));
+      const url = new URL(String(input));
+      expect(url.searchParams.get("or")).toContain("product_id.eq.PRODUCT-123");
+      expect(init?.method ?? "GET").toBe("GET");
+      const headers = new Headers(init?.headers);
+      expect(headers.get("apikey")).toBe("anon-test");
+      expect(headers.get("authorization")).toBe("Bearer anon-test");
+      if (url.pathname === "/rest/v1/authichain_attestation_records") {
+        expect(url.searchParams.get("published")).toBe("eq.true");
+        return new Response("[]", { status: 200 });
+      }
+      expect(url.pathname).toBe("/rest/v1/auth_seals");
+      return new Response(JSON.stringify([{
+        id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+        product_id: "PRODUCT-123",
+        batch_id: "batch-2026-A",
+        brand: "Example Brand",
+        polygon_tx: null,
+        created_at: "2026-10-01T12:00:00.000Z",
+      }]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 20,
+            method: "tools/call",
+            params: {
+              name: "query_provenance",
+              arguments: { assetId: "PRODUCT-123" },
+            },
+          }),
+        }),
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
+      );
+      expect(res?.status).toBe(200);
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }> };
+      };
+      const data = JSON.parse(body.result.content[0].text) as {
+        status: string;
+        registered: boolean;
+        verified: boolean;
+        product: { id: string; sealId: string; batchId: string; brand: string; source: string };
+        registry: { state: string; source: string; semantics: string };
+        verification: { signature: string; revocation: string; physicalBinding: string };
+      };
+      expect(data.status).toBe("registered");
+      expect(data.registered).toBe(true);
+      expect(data.verified).toBe(false);
+      expect(data.product).toMatchObject({
+        id: "PRODUCT-123",
+        sealId: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+        batchId: "batch-2026-A",
+        brand: "Example Brand",
+        source: "auth_seals",
+      });
+      expect(data.registry).toMatchObject({
+        state: "available",
+        source: "auth_seals",
+      });
+      expect(data.registry.semantics).toContain("registered only");
+      expect(data.verification).toEqual({
+        signature: "not_checked",
+        revocation: "not_checked",
+        physicalBinding: "not_checked",
+      });
+      expect(calls).toHaveLength(2);
+      expect(body.result.content[0].text).not.toContain('"verified": true');
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("query_provenance returns the published JWS but never claims it was verified", async () => {
+    const orig = globalThis.fetch;
+    const row = {
+      attestation_id: "urn:authichain:attestation:v01:SKU-123",
+      seal_id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+      product_id: "SKU-123",
+      batch_id: "LOT-2026-A",
+      brand: "Example Brand",
+      object_id: "SKU-123",
+      issuer_id: "https://authichain.com",
+      issuer_kid: "test-kid",
+      decision: "verified",
+      payload: { version: "0.1", subject: { object_id: "SKU-123" } },
+      jws: "header.payload.signature",
+      record_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      published_at: "2026-10-16T00:00:00.000Z",
+    };
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      expect(url.pathname).toBe("/rest/v1/authichain_attestation_records");
+      expect(url.searchParams.get("published")).toBe("eq.true");
+      return new Response(JSON.stringify([row]), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 31,
+            method: "tools/call",
+            params: { name: "query_provenance", arguments: { assetId: "SKU-123" } },
+          }),
+        }),
+        { SUPABASE_URL: "https://example.supabase.co", SUPABASE_ANON_KEY: "anon-test" },
+      );
+      const body = await res!.json() as { result: { content: Array<{ text: string }> } };
+      const data = JSON.parse(body.result.content[0].text) as {
+        status: string; verified: boolean; signedRecord: { jws: string; record_hash: string };
+        verification: { signature: string; issuerTrust: string; revocation: string; physicalBinding: string };
+      };
+      expect(data.status).toBe("published_attestation");
+      expect(data.verified).toBe(false);
+      expect(data.signedRecord).toMatchObject({ jws: row.jws, record_hash: row.record_hash });
+      expect(data.verification).toEqual({
+        signature: "not_checked",
+        issuerTrust: "not_checked",
+        revocation: "not_checked",
+        physicalBinding: "not_checked",
+      });
+      expect(body.result.content[0].text).not.toContain('"verified": true');
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("verify_attestation calls the canonical verifier and distinguishes signature verification from physical authenticity", async () => {
+    const orig = globalThis.fetch;
+    const row = {
+      attestation_id: "urn:authichain:attestation:v01:SKU-123",
+      seal_id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+      product_id: "SKU-123",
+      batch_id: "LOT-2026-A",
+      brand: "Example Brand",
+      object_id: "SKU-123",
+      issuer_id: "https://authichain.com",
+      issuer_kid: "test-kid",
+      decision: "verified",
+      payload: { version: "0.1", subject: { object_id: "SKU-123" } },
+      jws: "header.payload.signature",
+      record_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      published_at: "2026-10-16T00:00:00.000Z",
+    };
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      expect(url.pathname).toBe("/rest/v1/authichain_attestation_records");
+      return new Response(JSON.stringify([row]), { status: 200 });
+    }) as typeof fetch;
+    const verifyFetch = vi.fn(async (request: Request) => {
+      const url = new URL(request.url);
+      expect(url.pathname).toBe("/api/v1/attestation/verify");
+      const body = await request.json() as { jws: string; expected_object_id?: string };
+      expect(body.jws).toBe(row.jws);
+      expect(body.expected_object_id).toBe("SKU-123");
+      return new Response(JSON.stringify({
+        valid: true,
+        decision: "verified",
+        cryptographic_status: "valid",
+        issuer_status: "trusted",
+        claim_status: "active",
+        reasons: [],
+      }), { status: 200 });
+    });
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 32,
+            method: "tools/call",
+            params: {
+              name: "verify_attestation",
+              arguments: { assetId: "SKU-123", expectedObjectId: "SKU-123" },
+            },
+          }),
+        }),
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+          APP_WORKER: { fetch: verifyFetch },
+        } as unknown as NonNullable<Parameters<typeof tryHandleMcp>[1]>,
+      );
+      const body = await res!.json() as { result: { content: Array<{ text: string }>; isError?: boolean } };
+      const data = JSON.parse(body.result.content[0].text) as {
+        verified: boolean; status: string; physicalBinding: string; physical_authenticity: string;
+      };
+      expect(verifyFetch).toHaveBeenCalledTimes(1);
+      expect(data).toMatchObject({
+        verified: true,
+        status: "verified_signed_claim",
+        physicalBinding: "matched_by_canonical_verifier",
+        physical_authenticity: "not_proven",
+      });
+      expect(body.result.isError).toBeUndefined();
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("verify_attestation remains unverified when the canonical verifier binding is missing", async () => {
+    const orig = globalThis.fetch;
+    const row = {
+      attestation_id: "att-123",
+      seal_id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+      product_id: "SKU-123",
+      issuer_id: "https://authichain.com",
+      payload: { subject: { object_id: "SKU-123" } },
+      jws: "header.payload.signature",
+      record_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    };
+    globalThis.fetch = (async () => new Response(JSON.stringify([row]), { status: 200 })) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 33,
+            method: "tools/call",
+            params: { name: "verify_attestation", arguments: { assetId: "SKU-123" } },
+          }),
+        }),
+        { SUPABASE_URL: "https://example.supabase.co", SUPABASE_ANON_KEY: "anon-test" },
+      );
+      const body = await res!.json() as { result: { content: Array<{ text: string }>; isError?: boolean } };
+      const data = JSON.parse(body.result.content[0].text) as { verified: boolean; status: string };
+      expect(data.verified).toBe(false);
+      expect(data.status).toBe("verifier_not_configured");
+      expect(body.result.isError).toBe(true);
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("does not turn a registry outage into a false not_registered result", async () => {
+    const orig = globalThis.fetch;
+    globalThis.fetch = (async () => new Response("unavailable", { status: 503 })) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 21,
+            method: "tools/call",
+            params: {
+              name: "query_provenance",
+              arguments: { assetId: "PRODUCT-123" },
+            },
+          }),
+        }),
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
+      );
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }> };
+      };
+      const data = JSON.parse(body.result.content[0].text) as {
+        status: string;
+        verified: boolean;
+        registry: { state: string; note: string };
+      };
+      expect(data.status).toBe("registry_unavailable");
+      expect(data.verified).toBe(false);
+      expect(data.registry.state).toBe("signed_record_registry_unavailable");
+      expect(data.registry.note).toContain("No conclusion about signed-record existence");
     } finally {
       globalThis.fetch = orig;
     }
@@ -768,7 +1076,7 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
     expect(sha256Hex(signingBytes(recordJson))).toBe(DEMONSTRATION_RECORD_HASH);
   });
 
-  it("production issuer did:key matches JWKS kid lue84w… (RFC 7638)", () => {
+  it("production issuer did:key matches JWKS kid T3AL7c4w… (RFC 7638)", () => {
     const jwk = publicKeyFromDidKey(PRODUCTION_ISSUER_DID).export({
       format: "jwk",
     }) as { crv: string; kty: string; x: string };
@@ -776,6 +1084,45 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
       .update(JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x }))
       .digest("base64url");
     expect(thumb).toBe(PRODUCTION_ISSUER_KID);
+    expect(PRODUCTION_ISSUER_KID).toBe(
+      "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ"
+    );
+    expect(jwk.x).toBe("T36jnq2kRJRxGBhtyGG3PSboG_Vb6f-l8TixLr95vG0");
+  });
+
+  it("retired issuer did:key matches its RFC 7638 kid lue84w… (pre-Oct-9 key)", () => {
+    const jwk = publicKeyFromDidKey(RETIRED_ISSUER_DID).export({
+      format: "jwk",
+    }) as { crv: string; kty: string; x: string };
+    const thumb = createHash("sha256")
+      .update(JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x }))
+      .digest("base64url");
+    expect(thumb).toBe(RETIRED_ISSUER_KID);
+    expect(jwk.x).toBe("mJx2TLqUmUnxAJW_L-EQ1f28M8B6t9x-9VJPjJxbj7k");
+    expect(RETIRED_ISSUER_DID).not.toBe(PRODUCTION_ISSUER_DID);
+    expect(RETIRED_ISSUER_RETIRED_AT).toBe("2026-10-09T05:12:01Z");
+  });
+
+  it("retired issuer is allowlisted only for records issued before Oct 9", async () => {
+    const vm = RETIRED_ISSUER_DID + "#" + RETIRED_ISSUER_DID.slice(8);
+    const mk = (validFrom: string) => ({
+      ...forgedRecord().record,
+      issuer: RETIRED_ISSUER_DID,
+      validFrom,
+      proof: { ...forgedRecord().record.proof, verificationMethod: vm },
+    });
+    const before = (await verifyRecordTool({
+      record: mk("2026-10-01T00:00:00Z"),
+    })) as any;
+    expect(before.signer).toMatchObject({
+      allowlisted: true,
+      role: "retired_issuer",
+      productionIssuer: false,
+    });
+    const after = (await verifyRecordTool({
+      record: mk("2026-10-10T00:00:00Z"),
+    })) as any;
+    expect(after.signer).toMatchObject({ allowlisted: false, role: null });
   });
 
   it("RES-42 repro: random key + made-up tx is not verified", async () => {
@@ -1098,9 +1445,7 @@ describe("scan_living_qr", () => {
       jws?: string;
     };
     expect(body.decision).toBe("verified");
-    expect(body.decision_contract).toBe(
-      "AuthiChain Verification Decision v1"
-    );
+    expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
     expect(body.http_status).toBe(200);
     expect(body.jws).toBeUndefined();
     expect(payload.result.content[0].text).not.toContain("header.payload.sig");
