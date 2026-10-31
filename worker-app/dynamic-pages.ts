@@ -47,6 +47,14 @@ import { getQronById } from "../server/identity-db-helpers";
 import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
+import {
+  MODE_DISPLAY_NAMES,
+  MODE_SLUGS,
+  SELECTABLE_MODE_IDS,
+  STARTER_CHECKOUT_URL,
+  parseSelectableMode,
+  type SelectableModeId,
+} from "../src/lib/qron-modes";
 import { reportGrowthEvent } from "./growth-record";
 import { listedPlans, planPaymentLink } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
@@ -1729,22 +1737,30 @@ function generateCreditLinksHtml(): string {
   );
 }
 
-// Starter CTA (Marketing copy variant A, as in #2047) shown after a successful generation.
-const STARTER_CHECKOUT_URL = "https://authichain.com/checkout/starter";
-const GENERATE_STARTER_CTA_HTML =
-  '<p id="generate-starter-cta" hidden>Like it? Get 100 generations for $29, paid once. No subscription. ' +
-  '<a class="credit-btn" href="' +
-  STARTER_CHECKOUT_URL +
-  '?utm_source=qron&amp;utm_medium=onsite&amp;utm_campaign=starter-cta&amp;utm_content=starter-a">Get 100 generations for $29</a> ' +
+function generateModeSelectHtml(selected: SelectableModeId | null): string {
+  const opts = SELECTABLE_MODE_IDS.map(id =>
+    '<option value="' + MODE_SLUGS[id] + '"' + (id === selected ? " selected" : "") + ">" +
+    escapeHtml(MODE_DISPLAY_NAMES[id]) + "</option>"
+  ).join("");
+  return (
+    '<label for="mode">Mode</label>\n' +
+    '<select id="mode" name="mode"><option value="">None</option>' + opts + "</select>\n" +
+    "<p>Uses your normal credits. (1 generation = 1 credit)</p>\n"
+  );
+}
+
+// Advisor 2026-10-24: Starter CTA (Marketing copy variant A) after a mode generation.
+const MODE_STARTER_CTA_HTML =
+  '<p id="mode-starter-cta" hidden>Like it? Get 100 generations for $29, paid once. No subscription. ' +
+  '<a class="credit-btn" href="' + STARTER_CHECKOUT_URL +
+  '?utm_source=qron&amp;utm_medium=onsite&amp;utm_campaign=qron-modes&amp;utm_content=starter-a">Get 100 generations for $29</a> ' +
   "Checkout on authichain.com.</p>\n";
-/** Filled by /api/generate soft-prompt when remaining credits are low (signed-in). */
-const GENERATE_LOW_CREDIT_HTML =
-  '<div id="generate-low-credit" hidden role="status"></div>\n';
 
 function generateFormHtml(
   error?: string,
   paid = false,
-  cancelled = false
+  cancelled = false,
+  selectedMode: SelectableModeId | null = null
 ): string {
   const statusBlock = paid
     ? '<p role="alert" id="generate-paid">Payment received</p>\n'
@@ -1774,10 +1790,10 @@ function generateFormHtml(
       '<input id="targetUrl" name="targetUrl" type="url" required maxlength="500" placeholder="https://">\n' +
       '<label for="prompt">Style prompt (optional)</label>\n' +
       '<input id="prompt" name="prompt" type="text" maxlength="200" placeholder="Industrial tech aesthetic">\n' +
+      generateModeSelectHtml(selectedMode) +
       '<button type="submit">Queue Living QR</button>\n' +
       "</form>\n" +
-      GENERATE_STARTER_CTA_HTML +
-      GENERATE_LOW_CREDIT_HTML +
+      MODE_STARTER_CTA_HTML +
       generateCreditLinksHtml() +
       "<p>Need a generation pack? " +
       generatePackLinksHtml() +
@@ -1804,10 +1820,10 @@ function generateFormHtml(
       "e.preventDefault();\n" +
       "var targetUrl=document.getElementById('targetUrl').value.trim();\n" +
       "var prompt=document.getElementById('prompt').value.trim();\n" +
-      "var cta=document.getElementById('generate-starter-cta');if(cta)cta.hidden=true;\n" +
-      "if(soft){soft.hidden=true;soft.textContent='';}\n" +
+      "var modeEl=document.getElementById('mode');var modeSlug=modeEl?modeEl.value:'';\n" +
+      "var cta=document.getElementById('mode-starter-cta');if(cta)cta.hidden=true;\n" +
       "err.hidden=true; out.hidden=true;\n" +
-      "fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUrl:targetUrl,prompt:prompt,mode:'static'})})\n" +
+      "fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(modeSlug?{targetUrl:targetUrl,prompt:prompt,mode:'static',modeId:modeSlug}:{targetUrl:targetUrl,prompt:prompt,mode:'static'})})\n" +
       ".then(function(res){return res.json().then(function(data){return {res:res,data:data};});})\n" +
       ".then(function(r){\n" +
       "if(r.res.status===401){\n" +
@@ -1831,9 +1847,7 @@ function generateFormHtml(
       "if(url.indexOf('data:image/')!==0&&url.indexOf('https://')!==0){err.hidden=false;err.textContent='Unexpected image URL.';return;}\n" +
       "out.hidden=false;\n" +
       'out.innerHTML=\'<img alt="Generated Living QR" src="\'+url.replace(/"/g,\'\')+\'" width="320" height="320">\';\n' +
-      // Prefer API soft-prompt (signed-in, <20 credits) over the static post-success CTA.
-      "if(showLowCredit(r.data&&r.data.upgrade)){if(cta)cta.hidden=true;}\n" +
-      "else if(cta)cta.hidden=false;\n" +
+      "if(modeSlug&&cta)cta.hidden=false;\n" +
       "})\n" +
       " .catch(function(){err.hidden=false;err.textContent='Network error. Please try again.';});\n" +
       "});\n" +
@@ -1878,7 +1892,8 @@ async function renderGenerate(c: Context): Promise<Response> {
     generateFormHtml(
       undefined,
       url.searchParams.get("paid") === "1",
-      url.searchParams.get("cancelled") === "1"
+      url.searchParams.get("cancelled") === "1",
+      parseSelectableMode(url.searchParams.get("mode"))
     ),
     200
   );

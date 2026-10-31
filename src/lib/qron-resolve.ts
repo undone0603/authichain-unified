@@ -1,3 +1,4 @@
+import { modeGenerateUrl, parseSelectableMode } from "./qron-modes";
 /**
  * Living QR scan target. The QR encodes this URL. A scan loads the stored
  * attestation and returns AuthiChain Verification Decision v1.
@@ -20,6 +21,8 @@ export type StoredQronPresentation = {
   jws: string;
   kid: string;
   jwks_url: string;
+  /** Selectable mode used at generation (qron-modes.ts), when any. */
+  mode_id?: string;
 };
 
 export function qronResolvePath(objectId: string): string {
@@ -99,25 +102,24 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export const QRON_RESOLVE_FOOTER_TEXT = "Create your own Living QR — free to try";
-export const QRON_RESOLVE_FOOTER_URL =
-  "https://qron.space/generate?utm_source=qron&utm_medium=resolve_footer";
-export const QRON_RESOLVE_STARTER_TEXT =
-  "Starter Pack: 100 generations for $29, paid once";
-export const QRON_RESOLVE_STARTER_URL = `${gatedCheckoutUrl("starter")}?src=resolve_footer&utm_content=low-starter-a`;
+export const QRON_MODE_FOOTER_TEXT = "Create your own Living QR — free to try";
 
-function resolveFooterHtml(): string {
-  return (
-    "<footer>" +
-    `<p><a href="${escapeHtml(QRON_RESOLVE_FOOTER_URL)}">${QRON_RESOLVE_FOOTER_TEXT}</a></p>` +
-    `<p><a href="${escapeHtml(QRON_RESOLVE_STARTER_URL)}">${QRON_RESOLVE_STARTER_TEXT}</a></p>` +
-    "</footer>"
-  );
+/** Footer for resolve pages of QRs made with a selectable mode; "" otherwise. */
+export function qronModeFooterHtml(modeId?: string): string {
+  const id = parseSelectableMode(modeId);
+  if (!id) return "";
+  const href = modeGenerateUrl(id, {
+    source: "qron",
+    medium: "resolve_footer",
+    campaign: "modes",
+  });
+  return `<footer><p><a href="${escapeHtml(href)}">${QRON_MODE_FOOTER_TEXT}</a></p></footer>`;
 }
 
 function htmlDecision(
   body: Record<string, unknown>,
-  destination?: string
+  destination?: string,
+  modeId?: string
 ): string {
   const decision = escapeHtml(String(body.decision || "indeterminate"));
   const contract = escapeHtml(
@@ -127,7 +129,7 @@ function htmlDecision(
     destination && /^https?:\/\//i.test(destination)
       ? `<p><a href="${escapeHtml(destination)}">Open destination</a></p>`
       : "";
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${decision}</title></head><body><h1>${decision}</h1><p>${contract}</p>${dest}${resolveFooterHtml()}</body></html>`;
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${decision}</title></head><body><h1>${decision}</h1><p>${contract}</p>${dest}${qronModeFooterHtml(modeId)}</body></html>`;
 }
 
 export async function handleQronResolve(
@@ -224,7 +226,7 @@ export async function handleQronResolve(
       headers: { ...headers, "content-type": "application/json" },
     });
   }
-  return new Response(htmlDecision(body, stored?.destination_url), {
+  return new Response(htmlDecision(body, stored?.destination_url, stored?.mode_id), {
     status,
     headers: { ...headers, "content-type": "text/html; charset=utf-8" },
   });

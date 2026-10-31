@@ -5,6 +5,7 @@ import { deductCredit } from '@/lib/business-tier';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { generateLivingQR } from '@/lib/hf-generation';
 import { logAutomation } from '@/lib/automation';
+import { applyMode, parseSelectableMode } from '@/lib/qron-modes';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
@@ -45,6 +46,7 @@ interface GenerateBody {
   targetUrl?: string;
   prompt?: string;
   mode?: string;
+  modeId?: string;
   presetId?: string;
 }
 
@@ -67,7 +69,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Invalid JSON.' }, { status: 400 });
     }
 
-    const { targetUrl, prompt, presetId, mode = 'static' } = body;
+    const { targetUrl, prompt, presetId } = body;
+    // Selectable mode (qron-modes.ts): valid id/slug in modeId or mode. Invalid/missing = unchanged.
+    const modeId = parseSelectableMode(body.modeId) ?? parseSelectableMode(body.mode);
+    const mode = !modeId && body.mode ? body.mode : 'static';
 
     // â”€â”€ Rate Limiting check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const rateLimit = await checkRateLimit(session.user.id, 5, 1);
@@ -130,6 +135,10 @@ export async function POST(request: Request) {
         { message: 'Could not resolve prompt.' },
         { status: 400 }
       );
+    if (modeId) {
+      finalPrompt = applyMode(finalPrompt, modeId);
+      void logAutomation('mode_select', 'event', 'success', { modeId, userId: session.user.id });
+    }
 
     // â”€â”€ Generate via Hugging Face Inference API (Phase 3) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let imageUrl = '';
@@ -152,6 +161,9 @@ export async function POST(request: Request) {
 
     if (!imageUrl)
       return NextResponse.json({ message: 'No image returned' }, { status: 502 });
+    if (modeId) {
+      void logAutomation('gen_with_mode', 'event', 'success', { modeId, userId: session.user.id });
+    }
 
     // â”€â”€ Store generation in Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const admin = createAdminClient(
