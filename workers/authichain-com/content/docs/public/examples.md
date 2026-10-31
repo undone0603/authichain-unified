@@ -48,6 +48,20 @@ curl -sS -i -H 'Accept: application/json' \
 
 JWKS kid in production (RFC 7638 thumbprint, corrected 2026-10-17): `T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ`.
 
+## Published demonstration record
+
+`polygon-anchor-1` is one Ed25519 signed record. It is a demonstration, not a customer product, and not a physical inspection. Physical binding was not inspected. It is not a battery passport.
+
+```bash
+curl -sS "https://authichain.com/api/verify?id=polygon-anchor-1"
+```
+
+- [JSON verdict](/api/verify?id=polygon-anchor-1). This is the check that reports whether the anchor transaction carries the record hash.
+- [Human page](/verify?id=polygon-anchor-1). It shows the verdict. It does not itself read the anchor transaction.
+- [Record JSON](/protocol/examples/polygon-anchor-1.record.json) and [anchor JSON](/protocol/examples/polygon-anchor-1.anchor.json).
+
+The same files ship in the npm package as `examples/polygon-anchor-1.record.json` and `examples/polygon-anchor-1.anchor.json`.
+
 ## Repo fixtures
 
 In `undone0603/authichain-unified`:
@@ -63,9 +77,9 @@ These fixtures contain no production secrets.
 
 ## What is not published here
 
-Repository demo identifiers are not listed on this page. An unknown resolver id returns `status: "not_found"` with `reason: "unknown_seal"`. That is not a working product scan and is not a counterfeit finding.
+The published demonstration record above is the one public example on this page. Other repository demo identifiers are not listed here. An unknown resolver id returns `status: "not_found"` with `reason: "unknown_seal"`. That is not a working product scan and is not a counterfeit finding.
 
-Cite the well-known file, JWKS, protocol verifier, the empty-body unpaid x402 402, the Living QR scan, and the repo fixtures. Do not treat a resolver 404 as a live demo. A Living QR id with no stored presentation is HTTP 404 with `decision: "indeterminate"` and `error: "presentation_not_found"`. That is not a verdict and not a counterfeit finding.
+Cite the well-known file, JWKS, protocol verifier, the published demonstration record, the empty-body unpaid x402 402, the Living QR scan, and the repo fixtures. Do not treat a resolver 404 as a live demo. A Living QR id with no stored presentation is HTTP 404 with `decision: "indeterminate"` and `error: "presentation_not_found"`. That is not a verdict and not a counterfeit finding.
 
 ## Human path
 
