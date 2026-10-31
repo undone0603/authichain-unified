@@ -201,18 +201,7 @@ export function x402BazaarDiscovery(): X402BazaarExtension {
     },
     output: {
       type: "json",
-      example: {
-        verified: false,
-        authenticityScore: 0,
-        subject: "00000000-0000-4000-8000-000000000000",
-        details: {},
-        settlement: {
-          payer: "0x0000000000000000000000000000000000000000",
-          amountAtomic: "50000",
-          txHash: "0x",
-          trustless: true,
-        },
-      },
+      example: x402PaidOutputExample(),
     },
   };
   return {
