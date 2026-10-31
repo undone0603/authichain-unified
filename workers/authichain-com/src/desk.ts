@@ -39,7 +39,8 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
   {
     surface: "Cloudflare apex",
     state: "live",
-    detail: "Canonical host is https://authichain.com (#1258). authichain.govchain.us is a fallback. Money path is not Vercel. #1138 on main.",
+    detail:
+      "Canonical host is https://authichain.com (#1258). authichain.govchain.us is a fallback. Money path is not Vercel. #1138 on main.",
   },
   {
     surface: "EU DPP checkout",
@@ -54,8 +55,8 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
   },
   {
     surface: "x402 agent pay",
-    state: "live",
-    detail: "$0.05 USDC on Base. PayTo is the tokenomics EOA. Do not rebind.",
+    state: "pending",
+    detail: "x402 paid verification and on-chain anchoring in development. PayTo is the tokenomics EOA. Do not rebind.",
   },
   {
     surface: "SEO hubs /p",
@@ -168,14 +169,16 @@ const DESK_SEALS: DeskSeal[] = [
     product: "Michigan METRC sample",
     holder: "Self-serve desk seed",
     origin: "Michigan",
-    finding:
-      "Not a live METRC filing and not a cryptographic attestation.",
+    finding: "Not a live METRC filing and not a cryptographic attestation.",
     disclaimer: SAMPLE_NOTE,
     plan: "strainchain_passport",
     fields: [
       { label: "Source", value: "Desk seed · AC-7C2A91E4" },
       { label: "Protocol", value: "AuthiChain attestation 0.1" },
-      { label: "MCP", value: "query_provenance status desk_sample, verified false" },
+      {
+        label: "MCP",
+        value: "query_provenance status desk_sample, verified false",
+      },
     ],
   },
   {
@@ -204,7 +207,8 @@ const DESK_SEALS: DeskSeal[] = [
     product: "Sample cultivar genetics passport",
     holder: "Sun-grown Michigan cultivar desk",
     origin: "Northern Lower Peninsula, MI",
-    finding: "Genetics passport matches the sample CoA hash. Not a METRC filing.",
+    finding:
+      "Genetics passport matches the sample CoA hash. Not a METRC filing.",
     disclaimer: SAMPLE_NOTE,
     plan: "strainchain_passport",
     fields: [
@@ -231,7 +235,10 @@ const DESK_SEALS: DeskSeal[] = [
       { label: "Agency", value: "DLA Aviation · Philadelphia" },
       { label: "Fit", value: "From mint calldata, not an award" },
       { label: "Mint", value: "No government NFT. No SBIR win claimed." },
-      { label: "Origin brief", value: "FTC 16 CFR Part 323 · EO 14392 context" },
+      {
+        label: "Origin brief",
+        value: "FTC 16 CFR Part 323 · EO 14392 context",
+      },
       { label: "Packet", value: "govchain.us/gift · free DoD packet" },
     ],
   },
@@ -242,8 +249,7 @@ const DESK_SEALS: DeskSeal[] = [
     product: "Harbor-3 LFP industrial pack · clone attempt",
     holder: "Unknown presenter",
     origin: "Claimed Grand Rapids, MI",
-    finding:
-      "The original pack still verifies. This mark does not.",
+    finding: "The original pack still verifies. This mark does not.",
     disclaimer: SAMPLE_NOTE,
     plan: "dpp_readiness",
     fields: [
@@ -286,7 +292,6 @@ function lookupDeskSeal(raw: string): DeskSeal {
     ],
   };
 }
-
 
 type StoryChapter = { phase: string; title: string; body: string };
 
@@ -566,7 +571,7 @@ function home(): string {
     "/desk",
     `<p class="kicker">Self-serve desk</p>
      <h1 style="font-size:clamp(2.2rem,6vw,3.6rem);margin:.4rem 0 1rem">Issue. Bind. Verify.</h1>
-     <p class="muted" style="max-width:36rem">AuthiChain is the truth layer for physical products. Humans pay Stripe. Agents pay $0.05 USDC on Base.</p>
+     <p class="muted" style="max-width:36rem">AuthiChain is the truth layer for physical products. Humans pay Stripe. x402 paid verification and on-chain anchoring in development.</p> <!-- pragma: allowlist secret -->
      <div class="row">${dppForm}
        <p style="align-self:end">${catalogPaymentLinkHtml({
          planId: "dpp_readiness",
@@ -585,7 +590,7 @@ function home(): string {
      <div class="grid g3" style="margin-top:2.5rem">
        <div class="card"><p class="kicker">TruMark</p><p>Scan seal. Not a SKU.</p><a href="/trumark">Open TruMark</a></div>
        <div class="card"><p class="kicker">Mini App</p><p>Passport $49. Sitemap loc is live.</p><a href="/telegram">Open /telegram</a></div>
-       <div class="card"><p class="kicker">x402</p><p>$0.05 USDC · Base 8453</p><a href="/x402">Agent docs</a></div>
+       <div class="card"><p class="kicker">x402</p><p>x402 paid verification and on-chain anchoring in development</p><a href="/x402">Agent docs</a></div>
      </div>
      <div class="grid g2" style="margin-top:1rem">
        <div class="card"><span class="badge">Public registry</span><p class="price" style="margin:.5rem 0">—</p><p class="muted">Certificates issued (API 404)</p></div>
@@ -644,7 +649,7 @@ function pricing(): string {
      <div class="grid g2" style="margin-top:1.5rem">
        <div class="card"><p class="kicker">Passport</p><p class="price">$49</p><p class="muted">One cultivar. StrainChain, not an AuthiChain desk fee. Farm is not a public offer.</p>${passport}
          <p style="margin-top:.75rem"><a href="/telegram">Telegram Mini App</a></p></div>
-       <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Opens an AuthiChain workspace with self-serve activation and 50 workspace generations.</p>${dpp}</div>
+       <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Opens an AuthiChain workspace with self-serve activation.</p>${dpp}</div>
      </div>
      <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only. Theater is not listed. Farm is not a public offer.</p>`
   );
@@ -687,7 +692,7 @@ function token(): string {
     `<h1>Payment rails</h1>
      <div class="grid" style="margin-top:1rem">
        <div class="card"><p class="kicker">Stripe · humans</p><p>Passport $49 · DPP $299 · QRON packs. Stripe acct, not these wallets.</p></div>
-       <div class="card"><p class="kicker">x402 · agents</p><p>$0.05 Circle USDC on Base 8453. Health ready. Do not rebind PayTo.</p>
+       <div class="card"><p class="kicker">x402 · agents</p><p>x402 paid verification and on-chain anchoring in development. Do not rebind PayTo.</p>
          <p class="mono">${PAYTO}</p><p class="mono">USDC ${USDC}</p><a href="/x402">authichain.com/x402</a></div>
      </div>
      <div class="card" style="margin-top:1rem">

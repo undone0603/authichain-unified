@@ -47,15 +47,5 @@ export async function handleInline(
   }
 
   // Default: help prompt
-  return telegram.answerInlineQuery(inlineQueryId, [
-    {
-      type: 'article',
-      id: 'help',
-      title: '🛡️ AuthiChain Product Verification',
-      description: 'Type a TrueMark™ ID (e.g. TM-1234567890-ABCD1234) to verify',
-      input_message_content: {
-        message_text: '🛡️ Use @AuthiChainBot followed by a TrueMark™ ID to verify product authenticity.',
-      },
-    },
-  ])
+  return telegram.answerInlineQuery(inlineQueryId, [])
 }

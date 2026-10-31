@@ -6,9 +6,34 @@ permissions:
 
 jobs:
   verify-and-heal:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+
+      - name: Compile AgentZ Python sources
+        run: python3 -m compileall -q agentz
+
+      - name: Install AgentZ Python deps
+        run: |
+          if [ "${{ runner.environment }}" = "self-hosted" ]; then
+            VENV="/home/zac/.cache/agentz-venv-${{ runner.name }}"
+          else
+            VENV="${GITHUB_WORKSPACE}/.venv-agentz"
+          fi
+          if [ ! -x "$VENV/bin/python" ]; then
+            python3 -m venv "$VENV"
+          fi
+          "$VENV/bin/pip" install -r requirements-agentz.txt
+          echo "AGENTZ_VENV=$VENV" >> "$GITHUB_ENV"
+
+      - name: Run AgentZ control-plane tests
+        run: PYTHONPATH="${GITHUB_WORKSPACE}" "$AGENTZ_VENV/bin/python" -m unittest discover -s agentz/tests -p 'test_*.py'
 
       - name: Confirm the web-client stub is not sold as an ABI
         run: |

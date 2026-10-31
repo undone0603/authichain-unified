@@ -14,7 +14,12 @@
  * belonged to no live Stripe account, and the 2026-08-31 Stripe cleanup had
  * archived those products. Every card here is now a `plans.ts` SKU.
  */
-import { gatedCheckoutUrl, listedPlans, planPaymentLink, type Plan } from "../../src/lib/plans.ts";
+import {
+  gatedCheckoutUrl,
+  listedPlans,
+  planPaymentLink,
+  type Plan,
+} from "../../src/lib/plans.ts";
 import {
   CHECKOUT_NEED_EMAIL_BANNER_HTML,
   CHECKOUT_NEED_EMAIL_DECORATE_JS,
@@ -67,6 +72,8 @@ function attributedCheckoutCta(
     action: cta.href,
     label: cta.label,
     buttonClass: featured ? "btn btn-primary" : "btn btn-outline",
+    formId: `${plan.id}-checkout-form`,
+    inputId: `${plan.id}-checkout-email`,
   });
   const pay = catalogPaymentLinkHtml({
     planId: plan.id,
@@ -104,7 +111,11 @@ export function planCheckoutCta(
   }
   if (plan.stripe_payment_link) {
     // Gated confirm page — a bare buy.stripe.com GET opens a Stripe session.
-    return { href: gatedCheckoutUrl(plan.id), label: plan.cta, external: origin !== "authichain" };
+    return {
+      href: gatedCheckoutUrl(plan.id),
+      label: plan.cta,
+      external: origin !== "authichain",
+    };
   }
   if (plan.stripe_price_id) {
     return {
@@ -122,7 +133,9 @@ export function planCheckoutCta(
   }
   return {
     href:
-      origin === "authichain" ? "/contact" : "https://authichain.govchain.us/contact",
+      origin === "authichain"
+        ? "/contact"
+        : "https://authichain.govchain.us/contact",
     label: "Contact",
     external: origin !== "authichain",
   };
@@ -131,11 +144,16 @@ export function planCheckoutCta(
 /** The pricing card links the fictional walkthrough. The checkout does not send that page. */
 function sampleAuditLink(origin: PricingOrigin): string {
   const base = origin === "authichain" ? "" : "https://authichain.com";
-  return `<p class="section-sub" style="margin-top:12px">E-bike and other LMT batteries need a passport from 18 February 2027. <a href="${base}/battery-passport">See the gap map</a> and <a href="${base}/battery-passport/sample-audit">a fictional walkthrough</a> on a fictional e-bike pack.</p>`;
+  return `<p class="section-sub" style="margin-top:12px">E-bike and other LMT batteries need a passport from 18 February 2027. <a href="${base}/battery-passport">See the gap map</a> and <a href="${base}/battery-passport/sample-audit">a fictional walkthrough</a> on a fictional e-bike pack. Want it written for you? <a href="${base}/battery-passport#gap-report">Written gap report, $950 first model, $350 each extra</a> (readiness only, not legal advice).</p>`;
 }
 
 /** Plans sold as QRON products in Stripe ("QRON Starter Pack" etc.). */
-const QRON_TITLED_PLANS = new Set(["starter", "creator", "theater_1", "theater_3"]);
+const QRON_TITLED_PLANS = new Set([
+  "starter",
+  "creator",
+  "theater_1",
+  "theater_3",
+]);
 /** Plain-language Theater 1 button; the price matches the card. */
 const THEATER_1_BUTTON = "Subscribe — $499/mo";
 
@@ -323,7 +341,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       brand: "authichain",
       title: "Pricing — AuthiChain",
       description:
-        "Live AuthiChain prices from the published plan catalogue. Start with QRON Launch at $19/mo or Starter Pack at $29.",
+        "Start with the Starter Pack: $29 one-time for 100 generations.",
       canonical: "https://authichain.com/pricing",
       themeColor: "#4F46E5",
       primary: {
@@ -339,23 +357,22 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       eyebrow: "Pricing",
       heroTitle: "Plans and prices",
       heroLede:
-        "Start with Launch at $19/mo or the Starter Pack at $29. The EU DPP Workspace is $299 when you need the battery passport path. Every paid plan below checks out on Stripe.",
+        "Start with the Starter Pack at $29. The EU DPP Workspace is $299 when you need the battery passport path. Every paid plan below checks out on Stripe.",
       navLabel: "Buy Starter",
       secondary: {
-        href: "https://authichain.com/checkout/qron_launch",
-        label: "Start Launch $19/mo",
+        href: "/pricing",
+        label: "See pricing",
         primary: false,
       },
       plansNote:
-        "QRON Launch and generation packs first, then the EU DPP Workspace. E-bike and other LMT batteries need a passport from 18 February 2027.",
+        "Generation packs first, then the EU DPP Workspace. E-bike and other LMT batteries need a passport from 18 February 2027.",
       ctaTitle: "Buy the Starter Pack",
       ctaLede:
-        "$29, one time — 100 AI QR generations. Or Launch at $19/mo. Add a work email first so we can send your receipt.",
+        "$29, one time — 100 AI QR generations. Add a work email first so we can send your receipt.",
       footerTagline: "AuthiChain, QRON, GovChain and StrainChain.",
       footerNote: "",
       footerStart: [
         { href: "/checkout/starter", label: "Starter checkout" },
-        { href: "/checkout/qron_launch", label: "Launch $19/mo" },
         { href: "/pricing", label: "Pricing" },
       ],
       footerMore: [
@@ -370,7 +387,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     brand: "qron",
     title: "Pricing — QRON",
     description:
-      "Live QRON prices from the published plan catalogue. Start with Starter Pack $29 or Launch $19/mo. Creator and EU DPP Readiness stay on the grid.",
+      "Live QRON prices from the published plan catalogue. Start with Starter Pack $29. Creator and EU DPP Readiness stay on the grid.",
     canonical: "https://qron.space/pricing",
     themeColor: "#b45309",
     primary: { href: "/generate", label: "Generate Living QR" },
@@ -384,28 +401,29 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     ],
     heroTitle: "QRON prices that already charge.",
     heroLede:
-      "Start with Starter Pack at $29 or Launch at $19/mo. Generate a Living QR, or buy a pack on the Stripe Payment Link printed on the card. EU DPP Readiness is $299 when you need the passport path.",
+      "Start with Starter Pack at $29. Generate a Living QR, or buy a pack on the Stripe Payment Link printed on the card. EU DPP Readiness is $299 when you need the passport path.",
     secondary: {
-      href: "https://authichain.com/checkout/qron_launch",
-      label: "Start Launch $19/mo",
+      href: "/pricing",
+      label: "See pricing",
       primary: false,
     },
-    plansNote:
-      "Only plans with a Stripe price or Payment Link are listed.",
+    plansNote: "Only plans with a Stripe price or Payment Link are listed.",
     ctaTitle: "Generate a Living QR",
     ctaLede:
-      "qron.space/generate is proxied to the AuthiChain app. That is the first-dollar path for this brand — Starter $29 or Launch $19/mo.",
+      "qron.space/generate is proxied to the AuthiChain app. That is the first-dollar path for this brand — Starter $29.",
     footerStart: [
       { href: "/generate", label: "Generate Living QR" },
-      { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29" },
       {
-        href: "https://authichain.com/checkout/qron_launch",
-        label: "Launch $19/mo",
+        href: "https://authichain.com/checkout/starter",
+        label: "Buy Starter $29",
       },
     ],
     footerMore: [
       { href: "https://authichain.com/x402", label: "x402 agent pay" },
-      { href: "https://authichain.com/checkout/dpp_readiness", label: "EU DPP $299" },
+      {
+        href: "https://authichain.com/checkout/dpp_readiness",
+        label: "EU DPP $299",
+      },
     ],
     offers,
   };
@@ -414,7 +432,9 @@ function pricingPage(origin: PricingOrigin): PricingPage {
 export function renderEstatePricingPage(origin: PricingOrigin): string {
   const page = pricingPage(origin);
   const brand: EstateBrandId = page.brand;
-  const checkoutPrimary = /\/api\/checkout\/|\/checkout\//.test(page.primary.href);
+  const checkoutPrimary = /\/api\/checkout\/|\/checkout\//.test(
+    page.primary.href
+  );
   const navPrimary = checkoutPrimary
     ? { href: "#pricing", label: page.navLabel ?? page.primary.label }
     : page.primary;
@@ -542,7 +562,8 @@ export function tryHandleEstatePricing(
 }
 
 /** Live AuthiChain DPP checkout — absolute so it works off govchain.us. */
-export const GOVCHAIN_DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
+export const GOVCHAIN_DPP_CHECKOUT =
+  "https://authichain.com/checkout/dpp_readiness";
 
 /**
  * GovChain has no self-serve SKU. /pricing must not invent one and must not
@@ -671,14 +692,20 @@ ${estateFooter(
       heading: "Start",
       links: [
         { href: "/onboard", label: "Onboard" },
-        { href: "https://authichain.govchain.us/pricing", label: "DPP checkout" },
+        {
+          href: "https://authichain.govchain.us/pricing",
+          label: "DPP checkout",
+        },
         { href: "/pricing", label: "Pricing" },
       ],
     },
     {
       heading: "Estate",
       links: [
-        { href: "https://authichain.govchain.us/pricing", label: "AuthiChain pricing" },
+        {
+          href: "https://authichain.govchain.us/pricing",
+          label: "AuthiChain pricing",
+        },
         { href: "https://qron.space/generate", label: "QRON generate" },
         {
           href: "https://strainchain.io/onboard",

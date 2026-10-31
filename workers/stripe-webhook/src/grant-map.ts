@@ -23,6 +23,12 @@ export const GRANT_BY_PRICE: Record<string, Grant> = {
     generations: 100,
     refillOnInvoicePaid: true,
   },
+  price_1USNoSGqTruSqV8ThTIW7Ej8: {
+    plan: "qron_launch_annual",
+    brand: "qron",
+    generations: 1200,
+    refillOnInvoicePaid: true,
+  },
   price_1UIoEVGqTruSqV8T61lp48wB: {
     plan: "starter",
     brand: "qron",

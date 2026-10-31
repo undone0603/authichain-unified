@@ -43,7 +43,6 @@ export async function createSubscriptionCheckout(
 
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
-    payment_method_types: ["card"],
     allow_promotion_codes: true,
     client_reference_id: params.userId.toString(),
     customer_email: params.stripeCustomerId ? undefined : params.userEmail,
@@ -107,7 +106,6 @@ export async function createPaymentCheckout(
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
-    payment_method_types: ["card"],
     allow_promotion_codes: true,
     client_reference_id: params.userId.toString(),
     customer_email: params.stripeCustomerId ? undefined : params.userEmail,
