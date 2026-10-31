@@ -111,7 +111,7 @@ import {
   estateTrust,
   tryHandleEstateIndexNow,
 } from '../../_shared/estate-landing.ts';
-import { isEmailOptinPath, tryHandleEmailOptin, type D1Like } from './email-optin.ts';
+import { EMAIL_OPTIN_PATH, runEmailOptinCleanup, runIsThisRealLeadPurge, tryHandleEmailOptin, type D1Like } from './email-optin.ts';
 import { tryHandleEstatePricing } from '../../_shared/estate-pricing.ts';
 import { tryRedirectSeoRootCanonical } from '../../_shared/seo-hub-routes.ts';
 
@@ -3233,7 +3233,7 @@ interface Env {
   /** "true" turns on the opt-in confirmation email (also needs RESEND_API_KEY). Default off. */
   EMAIL_OPTIN_SEND_ENABLED?: string;
   RESEND_API_KEY?: string;
-  /** Optional secret name only. Unset or empty: 503 before any write (fail closed). */
+  /** Secret: HMAC salt for the opt-in rate-limit IP hash. Unset = rate limit off. */
   IP_HASH_SALT?: string;
 }
 
@@ -3417,7 +3417,7 @@ async function handleAuthichainCom(
     const appHost = tryHandleAppHost(request);
     if (appHost) return appHost;
     const p = url.pathname;
-    if (isEmailOptinPath(p)) {
+    if (p.startsWith(EMAIL_OPTIN_PATH)) {
       const optin = await tryHandleEmailOptin(request, env);
       if (optin) return optin;
     }
@@ -3756,5 +3756,14 @@ export default {
       request,
       await handleAuthichainCom(request, env, ctx)
     );
+  },
+  /** Daily cron (wrangler.toml [triggers]): email opt-in retention cleanup only. */
+  async scheduled(
+    _event: unknown,
+    env: Env,
+    ctx?: { waitUntil?: (promise: Promise<unknown>) => void }
+  ) {
+    const p = Promise.all([runEmailOptinCleanup(env.DB), runIsThisRealLeadPurge(env)]);
+    if (ctx?.waitUntil) ctx.waitUntil(p); else await p;
   },
 };

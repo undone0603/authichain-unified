@@ -45,8 +45,6 @@ code{background:#f3f3f3;padding:.1rem .3rem;border-radius:4px}
   <input type="text" id="seal" name="sealId" required maxlength="128" placeholder="e.g. polygon-anchor-1">
   <label for="email">Email (optional)</label>
   <input type="email" id="email" name="email" maxlength="254" autocomplete="email">
-  <label for="country">Country (optional, 2-letter code, e.g. US)</label>
-  <input type="text" id="country" name="country" maxlength="2" pattern="[A-Za-z]{2}" autocomplete="country" style="text-transform:uppercase">
   <label class="small"><input type="checkbox" id="consent" name="consent" value="yes"> ${EMAIL_OPTIN_CONSENT_TEXT}</label>
   <p class="small">${EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL}</p>
   <button type="submit" id="go">Check</button>
@@ -82,7 +80,7 @@ code{background:#f3f3f3;padding:.1rem .3rem;border-radius:4px}
         if(!lr.ok){st.textContent="We could not save your details. Please try again.";return}
         captured=true;
         fetch("${EMAIL_OPTIN_PATH}",{method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({email:email,country:f.country.value.trim().toUpperCase(),consent:"yes"})}).catch(function(){});
+          body:JSON.stringify({email:email,consent:"yes"})}).catch(function(){});
       }
       var r=await fetch("/api/verify?id="+encodeURIComponent(seal));
       var j=await r.json().catch(function(){return {}});

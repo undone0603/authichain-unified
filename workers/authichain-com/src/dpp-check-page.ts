@@ -29,11 +29,6 @@ import {
   type DppReadinessResult,
 } from "../../../src/lib/dpp-readiness";
 
-import {
-  isDppProductScanPath,
-  renderDppProductScanPage,
-} from "./dpp-product-scan-page.ts";
-
 import { emailOptinBlock } from "./email-optin.ts";
 export const DPP_CHECK_PATH = "/dpp-check";
 export const DPP_CHECK_CANONICAL = `https://authichain.com${DPP_CHECK_PATH}`;
@@ -188,6 +183,7 @@ function resultHtml(r: DppReadinessResult, price: number): string {
     ${cta}
     ${r.inScope ? optInForm(r, price) : emailOptinBlock("dpp-email-optin")}
     <p class="bp-note">${esc(r.disclaimer)}</p>
+    ${emailOptinBlock("dpp-email-optin")}
   </div>
 </section>`;
 }
