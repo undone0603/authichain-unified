@@ -30,13 +30,16 @@
 // Token: with the default Actions token, GitHub does not start workflows for
 // the commits it creates. A merge would not trigger the push-to-main deploys,
 // and an update-branch commit would never get CI. So in "default" mode the
-// autopilot never updates branches (behind PRs wait) and says so in the
+// autopilot never merges or updates branches and says so in the
 // summary. Give it a PAT as MERGE_AUTOPILOT_TOKEN for the full loop.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const GREEN = new Set(["success", "neutral", "skipped"]);
+// Require positive CI evidence even when main requires zero human reviews.
+// A skipped gate or a check with the same name from another app is not proof.
+export const REQUIRED_CHECKS = ["Main quality gate"];
 
 // Fixed here, not read from the manifest: every value that reaches a GitHub
 // API URL or request body is a constant or comes from GitHub itself.
@@ -51,12 +54,14 @@ export const RESTRICTED_PATHS = [
   ".github/autonomy.json",
   ".github/CODEOWNERS",
   ".github/workflows/merge-autopilot.yml",
+  ".github/workflows/autonomy-reconcile.yml",
   ".github/workflows/deploy-*.yml",
   ".github/workflows/bind-*.yml",
   ".github/workflows/set-*.yml",
   ".github/workflows/*outreach*.yml",
   ".github/workflows/stripe-webhook-reconcile.yml",
   "scripts/autonomy/**",
+  "config/launch-gates.json",
   "docs/OPERATING_CHARTER.md",
   "CLAUDE.md",
   "src/lib/plans.ts",
@@ -91,7 +96,8 @@ export const RESTRICTED_SYMBOLS =
 
 const CODE_FILE = /\.(m?[jt]sx?|cjs|py|json|ya?ml|toml|sql|sh)$/;
 // GitHub omits the patch for huge lockfile diffs; they hold no call sites.
-const LOCKFILE = /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|poetry\.lock)$/;
+const LOCKFILE =
+  /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|poetry\.lock)$/;
 
 const globToRegExp = glob =>
   new RegExp(
@@ -217,6 +223,25 @@ export function decide(pr, checkRuns, status, behindBy, cfg, opts = {}) {
   const runs = checkRuns.filter(r => !cfg.ignoreChecks.includes(r.name));
   if (runs.length === 0)
     return { action: "wait", reason: "no checks reported yet" };
+  for (const name of REQUIRED_CHECKS) {
+    const evidence = runs.filter(
+      r => r.name === name && r.app?.slug === "github-actions"
+    );
+    if (
+      evidence.length === 0 ||
+      evidence.some(
+        r =>
+          r.head_sha !== pr.head.sha ||
+          r.status !== "completed" ||
+          r.conclusion !== "success"
+      )
+    ) {
+      return {
+        action: "wait",
+        reason: `required check not successful: ${name}`,
+      };
+    }
+  }
   const pending = runs.find(r => r.status !== "completed");
   if (pending) return { action: "wait", reason: `pending: ${pending.name}` };
   const red = runs.find(r => !GREEN.has(r.conclusion));
@@ -229,6 +254,11 @@ export function decide(pr, checkRuns, status, behindBy, cfg, opts = {}) {
   // through. "blocked" (required review), "unstable" and "has_hooks" wait.
   if (pr.mergeable_state !== "clean")
     return { action: "wait", reason: `mergeable_state ${pr.mergeable_state}` };
+  if (!canUpdate)
+    return {
+      action: "wait",
+      reason: "no PAT: a merge would not trigger deployment workflows",
+    };
 
   return { action: "merge", reason: "green, clean, up to date" };
 }
@@ -302,6 +332,27 @@ async function listFiles(repo, n, token) {
   return files;
 }
 
+// Read every latest check, including red/pending results beyond the first
+// page. An incomplete response must never become permission to merge.
+export async function listCheckRuns(repo, sha, token, request = gh) {
+  const checks = [];
+  for (let page = 1; page <= 10; page++) {
+    const result = await request(
+      `/repos/${repo}/commits/${sha}/check-runs?filter=latest&per_page=100&page=${page}`,
+      { token }
+    );
+    if (!Array.isArray(result.check_runs))
+      throw new Error(
+        "Check runs unavailable; refusing incomplete CI evidence"
+      );
+    checks.push(...result.check_runs);
+    if (result.check_runs.length < 100) return checks;
+  }
+  throw new Error(
+    "Check run pagination limit reached; refusing incomplete CI evidence"
+  );
+}
+
 async function main() {
   const manifest = JSON.parse(
     readFileSync(resolve(process.cwd(), ".github/autonomy.json"), "utf8")
@@ -323,7 +374,7 @@ async function main() {
     throw new Error("GITHUB_TOKEN and GITHUB_REPOSITORY are required");
   if (!canUpdate)
     lines.push(
-      "> Running on the default Actions token. Behind branches are not updated, and merges made with it do not trigger push-to-main deploys. Add a `MERGE_AUTOPILOT_TOKEN` secret (fine-grained PAT: contents + pull requests read/write on this repo).",
+      "> Running on the default Actions token. Merges and branch updates wait because they would not trigger downstream workflows. Add a `MERGE_AUTOPILOT_TOKEN` secret (fine-grained PAT: contents + pull requests read/write on this repo).",
       ""
     );
 
@@ -357,11 +408,11 @@ async function main() {
       const pr = await gh(`/repos/${repo}/pulls/${n}`, { token });
       const sha = pr.head.sha;
       const [checks, status, cmp] = await Promise.all([
-        gh(`/repos/${repo}/commits/${sha}/check-runs?per_page=100`, { token }),
+        listCheckRuns(repo, sha, token),
         gh(`/repos/${repo}/commits/${sha}/status`, { token }),
         gh(`/repos/${repo}/compare/${BASE_BRANCH}...${sha}`, { token }),
       ]);
-      decision = decide(pr, checks.check_runs, status, cmp.behind_by, cfg, {
+      decision = decide(pr, checks, status, cmp.behind_by, cfg, {
         canUpdate,
       });
       if (decision.action === "merge") {
