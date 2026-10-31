@@ -280,6 +280,45 @@ describe("tryHandleGatedCheckout — POST", () => {
     }
   });
 
+  it("both Launch plans reach Stripe with no attestation token on the form", async () => {
+    // Regression: qron_launch used to 403 unless a `qron_attestation` field was
+    // posted, but the confirm page never rendered it and nothing issues tokens.
+    for (const id of ["qron_launch", "qron_launch_annual"] as const) {
+      const fetchImpl = stripeOk();
+      const res = await tryHandleGatedCheckout(
+        post(`/checkout/${id}`, {
+          email: "buyer@example.com",
+          checkout_key: "12345678-1234-4234-8234-123456789abc",
+        }),
+        { STRIPE_SECRET_KEY: "sk_test_x" },
+        { fetchImpl, ...protection }
+      );
+      expect(res!.status).toBe(303);
+      expect(res!.headers.get("location")).toBe(
+        "https://checkout.stripe.com/c/pay/cs_test_gate"
+      );
+      expect(fetchImpl).toHaveBeenCalledOnce();
+      const [, init] = fetchImpl.mock.calls[0] as unknown as [
+        string,
+        { body: URLSearchParams },
+      ];
+      const body = new URLSearchParams(String(init.body));
+      expect(body.get("mode")).toBe("subscription");
+      expect(body.get("line_items[0][price]")).toBe(
+        planById(id)!.stripe_price_id
+      );
+      expect(body.get("metadata[plan]")).toBe(id);
+    }
+  });
+
+  it("the Launch confirm page does not ask for an attestation token", () => {
+    const html = renderCheckoutConfirmPage({
+      plan: planById("qron_launch")!,
+      params: new URLSearchParams(),
+    });
+    expect(html).not.toContain("qron_attestation");
+  });
+
   it("lets Checkout choose payment methods for Launch Annual", () => {
     const body = buildGatedSessionBody({
       plan: planById("qron_launch_annual")!,
