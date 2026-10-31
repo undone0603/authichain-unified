@@ -627,6 +627,34 @@ describe("fulfilment watchdog", async () => {
     ]);
   });
 
+  it("never treats an expired-checkout receipt as paid-checkout delivery", () => {
+    const sessions = [
+      s("cs_expired_receipt", 60),
+      s("cs_async_paid", 60),
+    ];
+    const events = [
+      {
+        session_id: "cs_expired_receipt",
+        event_type: "checkout.session.expired",
+        status: "success",
+      },
+      {
+        session_id: "cs_async_paid",
+        event_type: "checkout.session.async_payment_succeeded",
+        status: "success",
+      },
+    ];
+    const out = findUnfulfilled(sessions, events, { now });
+    expect(out).toEqual([
+      {
+        session: "cs_expired_receipt",
+        reason: "no webhook record",
+        paid_at: new Date(sessions[0].created * 1000).toISOString(),
+        livemode: undefined,
+      },
+    ]);
+  });
+
   it("excludes free completed checkouts without hiding unknown-amount payments", () => {
     const out = findUnfulfilled(
       [
