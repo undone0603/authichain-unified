@@ -60,7 +60,10 @@ jobs:
           # deployments promotes it. Do not wrangler deploy. Do not secret-put
           # AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 / KEY_ID / PUBLIC_JWK /
           # RETIRED_PUBLIC_JWKS here (Oct 9 overwrite).
-          npx wrangler versions upload --minify --keep-vars --config wrangler.toml \
+          # wrangler 4.153.0 hung 11–16 min on the 8.8 MiB POST then
+          # "fetch failed" (runs 41242803187, 41246493823). 4.83.0 is the
+          # last versions-upload that completed on this runner.
+          npx --yes wrangler@4.83.0 versions upload --minify --keep-vars --config wrangler.toml \
             2>&1 | tee /tmp/er-versions-upload.log
           vid=$(node ../scripts/ci/parse-wrangler-version-id.mjs /tmp/er-versions-upload.log)
           echo "uploaded authichain-edge-router version $vid"
