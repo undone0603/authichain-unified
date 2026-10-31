@@ -1,3 +1,4 @@
+import { registryLookupDecision } from "../packages/verifier/src/registry-decision";
 import { timingSafeEqual } from "crypto";
 import { Router, type Request, type Response } from "express";
 import { ENV } from "./_core/env";
