@@ -12,6 +12,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
+import { TERMS_EFFECTIVE } from "./legal-pages.ts";
 import worker from "./index.ts";
 import { VS_PAGES } from "./vs-pages.ts";
 
@@ -332,13 +333,13 @@ test("/privacy and /terms are the operator's pages, not a placeholder", async ()
       "/terms",
       "Terms of Service — AuthiChain",
       "https://authichain.com/terms",
-      "16 October 2026",
+      TERMS_EFFECTIVE,
     ],
     [
       "/terms/",
       "Terms of Service — AuthiChain",
       "https://authichain.com/terms",
-      "16 October 2026",
+      TERMS_EFFECTIVE,
     ],
   ] as const) {
     const res = await get(path);
