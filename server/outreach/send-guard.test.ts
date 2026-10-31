@@ -92,6 +92,14 @@ describe("assessRecipient (provenance guard)", () => {
     expect(isRoleInboxEmail("hello@pufcreativ.com")).toBe(true);
     expect(isRoleInboxEmail("fitzpatricks@nemcworks.org")).toBe(false);
     expect(isRoleInboxEmail("helpteam@oakleysign.com")).toBe(false);
+    expect(isRoleInboxEmail("crew@canyon.com")).toBe(true);
+    expect(isRoleInboxEmail("us@canyon.com")).toBe(true);
+    expect(isRoleInboxEmail("webshop@sfm-bikes.de")).toBe(true);
+    expect(isRoleInboxEmail("hi@northvolt.com")).toBe(true);
+    expect(isRoleInboxEmail("dpo@verkor.com")).toBe(true);
+    expect(isRoleInboxEmail("service.ebike@yamaha-ebike-systems.com")).toBe(
+      true
+    );
   });
 
   it("rejects malformed addresses", () => {

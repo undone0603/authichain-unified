@@ -11,7 +11,7 @@ on:
       - main
   pull_request:
   schedule:
-    - cron: "0 12 * * 1" # Mondays 12:00 UTC
+    - cron: "10 12 * * 1" # Mondays 12:10 UTC, after the weekday genesis tick at 12:00
   workflow_dispatch:
 
 # GB-26 fix 4: a newer commit on the same PR cancels the older run. Pushes to
