@@ -157,6 +157,13 @@ describe("generated SEO money-path CTAs", () => {
     }
   });
 
+  it("does not promise 50 workspace generations on a generated page", () => {
+    for (const page of listSeoPages()) {
+      const blob = `${page.metaDescription}\n${page.bodyHtml}\n${JSON.stringify(page.jsonLd)}`;
+      expect(blob, page.slug).not.toContain("50 workspace generations");
+    }
+  });
+
   it("does not sell the $299 checkout as a written assessment or a Basic credit", () => {
     const banned = [
       "sample $299 battery assessment",
