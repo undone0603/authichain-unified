@@ -42,9 +42,18 @@ permissions:
 jobs:
   check:
     name: Manifest covers every workflow
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ci-isolated"]') || 'ubuntu-24.04' }}
     timeout-minutes: 5
     steps:
+      - name: Assert dedicated CI runner identity
+        if: runner.environment == 'self-hosted'
+        env:
+          EXPECTED_RUNNER: ${{ runner.name }}
+        run: |
+          if [ "$EXPECTED_RUNNER" != "authichain-ci-arm64-01" ]; then
+            echo "::error::CI is not running on the isolated host."
+            exit 1
+          fi
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
@@ -55,7 +64,7 @@ jobs:
     name: Reconcile GitHub to manifest
     needs: check
     if: github.repository == 'undone0603/authichain-unified' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 5
     permissions:
       actions: write
