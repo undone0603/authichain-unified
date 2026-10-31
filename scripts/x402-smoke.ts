@@ -61,6 +61,25 @@ export async function runX402Smoke(): Promise<void> {
   const rpc = process.env.X402_RPC || DEFAULT_RPC;
   const sealId = validSmokeSealId(process.env.X402_SEAL_ID);
   if (!sealId) fail("X402_SEAL_ID must be a real registered UUID");
+  // Require a published, issuer-signed record BEFORE signing a spendable
+  // EIP-3009 authorization. A registered URL or guessed UUID is insufficient.
+  const origin = new URL(endpoint).origin;
+  const registryUrl = `${origin}/api/authichain/attestations?assetId=${encodeURIComponent(sealId)}`;
+  const registryResponse = await fetch(registryUrl, {
+    headers: { accept: "application/json" },
+  });
+  if (!registryResponse.ok) fail(`published_attestation_unavailable http=${registryResponse.status}`);
+  const registry = (await jsonOrText(registryResponse)) as {
+    source?: string;
+    record?: { seal_id?: string; jws?: string };
+  };
+  if (
+    registry.source !== "authichain_attestation_records" ||
+    registry.record?.seal_id?.toLowerCase() !== sealId ||
+    !registry.record?.jws
+  ) {
+    fail("published_attestation_invalid");
+  }
   const healthUrl = `${endpoint}/health`;
 
   const healthRes = await fetch(healthUrl, {
