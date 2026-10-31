@@ -214,6 +214,17 @@ describe("POST /api/x402", () => {
     expect(json.error).toBe("seal_id_not_uuid");
   });
 
+  it("unpaid POST /api/x402 itself returns 402 for 50000 on Base 8453 (Phase 3 PR-D)", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    const res = await app().request("/api/x402", { method: "POST" });
+    expect(res.status).toBe(402);
+    const body = (await res.json()) as {
+      accepts: Array<{ amount?: string; network?: string }>;
+    };
+    expect(body.accepts[0].amount).toBe("50000");
+    expect(body.accepts[0].network).toBe("eip155:8453");
+  });
+
   it("keeps an empty unpaid POST on the 402 challenge", async () => {
     process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
     const res = await app().request("/api/v1/agent-verify", {
