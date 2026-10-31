@@ -205,7 +205,7 @@ export const PLANS: Plan[] = [
       "AuthiChain workspace",
       "Self-serve activation",
       "Not an audit and not a legal opinion",
-      "Does not register a product in EUDAMED",
+      "Does not register a product in the EU DPP registry.",
     ],
     cta: "Open DPP workspace — $299",
   },

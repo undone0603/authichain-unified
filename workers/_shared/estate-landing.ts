@@ -723,6 +723,7 @@ export function estateFooter(
     <p>© 2026 ${esc(b.name)}</p>
     ${note ? `<p>${note}</p>` : ""}
     ${disclaimer ? `<p>${esc(disclaimer)}</p>` : ""}
+    ${brand === "authichain" ? `<p>Not affiliated with or endorsed by the European Commission.</p>` : ""}
   </div>
 </footer>`;
 }

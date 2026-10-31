@@ -28,11 +28,16 @@ describe('data integrity', () => {
     const milestones = listMilestones();
     expect(milestones.length).toBeGreaterThan(0);
     for (const m of milestones) {
-      expect(m.date, m.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      if (m.precision === 'tbd') {
+        expect(m.date, m.id).toBeNull();
+        expect(m.endDate, m.id).toBeUndefined();
+      } else {
+        expect(m.date, m.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      }
       expect(m.label, m.id).toBeTruthy();
       expect(m.detail, m.id).toBeTruthy();
       expect(m.source, m.id).toMatch(/^https:\/\//);
-      if (m.endDate) expect(m.endDate.localeCompare(m.date)).toBeGreaterThan(0);
+      if (m.endDate) expect(m.endDate.localeCompare(m.date!)).toBeGreaterThan(0);
     }
   });
 
@@ -105,36 +110,12 @@ describe('formatMilestoneDate', () => {
     expect(formatMilestoneDate(registry())).toBe('Jul 2026');
   });
 
-  it('renders a year range (electronics)', () => {
-    const electronics = listMilestones().find((m) => m.id === 'electronics')!;
-    expect(formatMilestoneDate(electronics)).toBe('2030–2031');
-  });
-
-  it('renders a quarter range (construction)', () => {
-    const c = listMilestones().find((m) => m.id === 'construction')!;
-    expect(formatMilestoneDate(c)).toBe('Q2 2027');
-  });
-
-  it('textiles is a year floor, labelled indicative, with no countdown', () => {
-    const t = listMilestones().find((m) => m.id === 'textiles')!;
-    expect(formatMilestoneDate(t)).toBe('2029');
-    expect(t.detail).toContain('2029 at the earliest (estimate)');
-    expect(t.label).toContain('(indicative)');
-  });
-
-  it('every indicative entry hides its countdown/status and says so in its label or detail', () => {
-    for (const m of listMilestones().filter((m) => m.indicative)) {
-      expect(m.hideStatus).toBe(true);
+  it('renders no date for undated (tbd) milestones', () => {
+    for (const id of ['electronics', 'textiles', 'construction']) {
+      const m = listMilestones().find((x) => x.id === id)!;
+      expect(m.date).toBeNull();
+      expect(formatMilestoneDate(m)).toBe('');
     }
-    for (const id of ['furniture', 'textiles', 'electronics']) {
-      expect(listMilestones().find((m) => m.id === id)!.label).toContain('(indicative)');
-    }
-  });
-
-  it('battery label does not apply >2 kWh to EV batteries', () => {
-    const b = listMilestones().find((m) => m.id === 'batteries')!;
-    expect(b.label).toBe('LMT, EV and industrial (>2 kWh) batteries');
-    expect(b.detail).toContain('apply later, on their own dates');
   });
 });
 
@@ -156,9 +137,17 @@ describe('countdownLabel', () => {
     expect(countdownLabel(battery(), new Date(Date.UTC(2027, 1, 17)))).toBe('1 day to comply');
   });
 
-  it('summarises distant milestones in years', () => {
-    const electronics = listMilestones().find((m) => m.id === 'electronics')!;
-    expect(countdownLabel(electronics, AUG_2026)).toMatch(/years out/);
+  it('gives no countdown for undated milestones', () => {
+    const construction = listMilestones().find((m) => m.id === 'construction')!;
+    expect(countdownLabel(construction, AUG_2026)).toBe('Date not set');
+  });
+});
+
+describe('undated milestones', () => {
+  it('sort after every dated milestone', () => {
+    const ids = listMilestones().map((m) => m.id);
+    expect(ids.slice(0, 2)).toEqual(['central-registry', 'batteries']);
+    expect(ids.slice(2).sort()).toEqual(['construction', 'electronics', 'textiles']);
   });
 });
 
@@ -168,7 +157,7 @@ describe('nextDeadline / mostRecentInForce', () => {
   });
 
   it('moves on once the battery mandate lands', () => {
-    expect(nextDeadline(MAR_2027)?.id).toBe('construction');
+    expect(nextDeadline(MAR_2027)).toBeNull();
     expect(mostRecentInForce(MAR_2027)?.id).toBe('batteries');
   });
 

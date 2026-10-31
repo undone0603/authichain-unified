@@ -2449,7 +2449,7 @@ function marketReality() {
   <div class="wrap">
     <p class="section-tag">Regulatory context</p>
     <h2>EU Digital Product Passport</h2>
-    <p class="section-sub">EU ESPR requires a machine-readable product passport for goods sold in Europe, phased in by category. The $299 checkout opens an AuthiChain workspace with self-serve activation. It does not issue a certificate.</p>
+    <p class="section-sub">ESPR will require a passport for product groups the EU designates in delegated acts. The $299 checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations. It does not issue a certificate.</p>
     <div class="estate-actions">
       ${checkoutEmailFormHtml({
         action: "https://authichain.com/checkout/dpp_readiness",
@@ -2890,7 +2890,7 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
 
   <p>Independent implementations are the point. If a fixture looks wrong, that is more valuable to find than a bug in a verifier &mdash; open an issue.</p>
 </div>
-<footer>&copy; 2026 AuthiChain &middot; The protocol is Apache-2.0; the platform is not. <a href="/">Home</a></footer>
+<footer>&copy; 2026 AuthiChain &middot; The protocol is Apache-2.0; the platform is not. Not affiliated with or endorsed by the European Commission. <a href="/">Home</a></footer>
 </body>
 </html>`;
 
@@ -2899,22 +2899,22 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EU Digital Product Passport Compliance | AuthiChain</title>
+  <title>EU Digital Product Passport Readiness | AuthiChain</title>
   <meta name="description" content="AuthiChain EU Digital Product Passport readiness tooling. Our goal: one integration for ESPR, EUDR, and CSRD.">
-  <meta name="keywords" content="EU Digital Product Passport, DPP compliance, digital product passport 2026, DPP blockchain, ESPR regulation, EU battery regulation, supply chain compliance, product passport">
+  <meta name="keywords" content="EU Digital Product Passport, digital product passport 2026, DPP blockchain, ESPR regulation, EU battery regulation, product passport">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <link rel="canonical" href="https://authichain.com/digital-product-passport">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <meta name="theme-color" content="#c9a227">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="EU Digital Product Passport Compliance | AuthiChain">
+  <meta property="og:title" content="EU Digital Product Passport Readiness | AuthiChain">
   <meta property="og:description" content="EU DPP readiness tooling. On our roadmap: offline verification with no account required.">
   <meta property="og:url" content="https://authichain.com/digital-product-passport">
   <meta property="og:image" content="https://authichain.com/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="EU Digital Product Passport | AuthiChain">
   <meta name="twitter:description" content="EU DPP readiness tooling. On our roadmap: offline verification with no account required.">
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.com/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport readiness tooling for brands.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.com"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Readiness","url":"https://authichain.com/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport readiness tooling for brands.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.com"}}</script>
   ${FONTS_LINK}
   <style>
     ${cssVars(BRAND)}
@@ -3084,13 +3084,13 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="container">
       <div class="section-label">REGULATION TIMELINE</div>
       <h2 class="section-title">When Does Your Industry Need DPP?</h2>
-      <p class="section-sub">ESPR rolls out in phases. ${nextDeadline(now) ? `Next: ${escHtml(nextDeadline(now)!.label)} — ${escHtml(countdownLabel(nextDeadline(now)!, now))}.` : 'All published deadlines are now in force.'} Reviewed ${escHtml(timelineUpdatedAt())}.</p>
+      <p class="section-sub">ESPR rolls out in phases. ${nextDeadline(now) ? `Next: ${escHtml(nextDeadline(now)!.label)}.` : 'All published deadlines are now in force.'} Reviewed ${escHtml(timelineUpdatedAt())}.</p>
 
       <div class="dpp-timeline" style="margin-top:48px">
         ${listMilestones().map((m) => {
           const status = milestoneStatus(m, now);
           const cls = status === 'in-force' ? 'live' : (status === 'imminent' && m.urgent ? 'urgent' : '');
-          const [head, tail] = formatMilestoneDate(m).split(/,\s|–/);
+          const [head, tail] = (formatMilestoneDate(m) || '').split(/,\s|–/);
           return `
         <div class="dpp-phase ${cls}">
           <div class="dpp-date">${escHtml(head.toUpperCase())}${tail ? `<br>${escHtml(tail)}` : ''}</div>
@@ -3123,11 +3123,6 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
           <div class="feature-desc">A QR code on the label links to the product's passport record, and our goal is to log every scan against the serial. Also our goal: consumers, regulators, and resellers all see the same on-chain record.</div>
         </div>
         <div class="feature-item">
-          <div class="feature-icon">📊</div>
-          <div class="feature-title">Audit-Ready Exports</div>
-          <div class="feature-desc">One-click compliance exports for EU CSRD, EUDR, FDA DSCSA, USMCA, and ISO 22005. Formatted for EU customs authorities and DPP registry submission.</div>
-        </div>
-        <div class="feature-item">
           <div class="feature-icon">⛓️</div>
           <div class="feature-title">Supply chain events</div>
           <div class="feature-desc">Provenance events from manufacturing to retail receipt. On our roadmap: anchoring all 22 supply-chain events on Polygon.</div>
@@ -3151,19 +3146,17 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <div class="section-label">INDUSTRIES SERVED</div>
       <h2 class="section-title">Industries we're building for</h2>
       <div class="industries">
-        <div class="industry-card"><div class="industry-name">⚡ EV Batteries</div><div class="industry-deadline">Mandatory ${escHtml(formatMilestoneDate(listMilestones().find((m) => m.id === 'batteries') ?? listMilestones()[0]))}</div></div>
-        <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Mandatory 2028–29</div></div>
-        <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">FDA DSCSA + DPP</div></div>
-        <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">Mandatory 2027</div></div>
-        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Product authenticity + DPP</div><div class="industry-deadline">Goal: counterfeit detection for luxury goods</div></div>
-        <div class="industry-card"><div class="industry-name">🌿 Cannabis</div><div class="industry-deadline">State + EU compliance</div></div>
+        <div class="industry-card"><div class="industry-name">⚡ EV Batteries</div><div class="industry-deadline">EV, LMT and industrial batteries over 2 kWh</div></div>
+        <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Date not set</div></div>
+        <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">Date not set</div></div>
+        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Product authenticity</div><div class="industry-deadline">Goal: counterfeit detection for luxury goods</div></div>
       </div>
     </div>
   </section>
 
   <section class="section cta-section" style="background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); text-align:center">
     <div class="container" style="max-width:700px">
-      <h2 class="section-title">Start DPP Compliance Today</h2>
+      <h2 class="section-title"><a href="https://authichain.com/dpp-check" style="color:inherit">Check your DPP readiness</a></h2>
       <p class="section-sub">Checkout opens an AuthiChain workspace for your product line. It is self-serve.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
         ${catalogPaymentLinkHtml({

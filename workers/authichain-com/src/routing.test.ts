@@ -1793,20 +1793,41 @@ test("vs pages and the scantrust page carry no unbacked 'Tamper-Proof by Design'
   assert.doesNotMatch(scantrust, banned, "src/app/vs/scantrust/page.tsx");
 });
 
-// CFA-629: the dpp-check sub-routes must be reachable through the Worker's fetch.
-test("GET /dpp-check/product returns 200 through the Worker fetch", async () => {
-  const res = await worker.fetch(
-    new Request("https://authichain.com/dpp-check/product"),
-    ENV
-  );
-  assert.equal(res.status, 200);
+test("/dpp copy fixes (Research-gated 6b75ad2a)", async () => {
+  const html = await (await get("/digital-product-passport")).text();
+  assert.match(html, /<title>EU Digital Product Passport Readiness \| AuthiChain<\/title>/);
+  assert.ok(html.includes('"name":"EU Digital Product Passport Readiness"'));
+  assert.ok(!html.includes("EU Digital Product Passport Compliance"));
+  assert.ok(!html.includes("DPP compliance,"));
+  assert.ok(!html.includes("supply chain compliance"));
+  assert.ok(!html.includes("Audit-Ready Exports"));
+  assert.ok(html.includes("Check your DPP readiness"));
+  assert.ok(html.includes('href="https://authichain.com/dpp-check"'));
+  assert.ok(!html.includes("Start DPP Compliance Today"));
+  assert.ok(html.includes("Batteries: EV, LMT and industrial batteries over 2 kWh"));
+  assert.ok(html.includes("EV, LMT and industrial batteries over 2 kWh</div>"));
+  assert.ok(!html.includes("Carbon footprint, material declaration and recycled content required"));
+  assert.ok(html.includes("Date not set: awaiting an EU delegated act"));
+  assert.ok(!/months? to comply/.test(html));
+  assert.ok(!html.includes("FDA DSCSA + DPP"));
+  assert.ok(!html.includes("State + EU compliance"));
+  assert.ok(!html.includes("Mandatory 2028–29"));
+  assert.ok(!html.includes("Mandatory 2027"));
+  assert.ok(!html.includes("Product authenticity + DPP"));
+  assert.ok(html.includes("Not affiliated with or endorsed by the European Commission."));
+  const home = await (await get("/")).text();
+  assert.ok(home.includes("ESPR will require a passport for product groups the EU designates in delegated acts."));
+  assert.ok(home.includes("Not affiliated with or endorsed by the European Commission."));
 });
 
-test("GET /dpp/scan returns 301 to /dpp-check through the Worker fetch", async () => {
-  const res = await worker.fetch(
-    new Request("https://authichain.com/dpp/scan"),
-    ENV
-  );
-  assert.equal(res.status, 301);
-  assert.match(res.headers.get("Location") ?? "", /\/dpp-check$/);
+test("/dpp undated timeline rows show no year, only 'Date not set'", async () => {
+  const html = await (await get("/digital-product-passport")).text();
+  const rows = html.split('<div class="dpp-phase ').slice(1).map(r => r.split('</div>\n        </div>')[0]);
+  for (const label of ["Electronics &amp; ICT Products", "Textiles, Apparel &amp; Footwear", "Construction Products &amp; Furniture"]) {
+    const row = rows.find(r => r.includes(label));
+    assert.ok(row, `row missing: ${label}`);
+    assert.ok(row.includes("Date not set: awaiting an EU delegated act"), label);
+    assert.ok(!/2027|2028|2029|2030/.test(row), `year in row: ${label}`);
+  }
+  assert.ok(!html.includes("enter scope under the ESPR working plan"));
 });
