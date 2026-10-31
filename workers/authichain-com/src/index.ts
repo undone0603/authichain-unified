@@ -8,6 +8,7 @@ import mcpServer from './mcp-server';
 // inlines it at build time, so the worker stays self-contained at runtime.
 import { tryHandleDppRoute } from "./dpp-routes";
 import { tryHandleAgentPresentation } from "./agent-present-page";
+import { tryHandleBotIdentity } from "./bot-identity-routes";
 import {
   tryHandleApiCheckoutEmailGate,
   tryHandleProtocolCheckout,
@@ -22,6 +23,7 @@ import { tryHandleCertificateRegistry } from "./certificate-registry";
 import { tryHandleMcp } from "./mcp-routes";
 import { tryHandleMcpFree } from "./mcp-free-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
+import { tryHandleProtocolExample } from "./protocol-example-route";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import { isMcpInstallPath, renderMcpInstallPage } from "./mcp-install-page";
 import { docsRedirect, isDocsHub, isDocsPage } from "./docs-pages";
@@ -2334,7 +2336,7 @@ function foundersVision() {
   <div class="wrap" style="max-width:760px">
     <p class="section-tag">What is live</p>
     <h2>Realized capability, not a pitch deck</h2>
-    <p class="section-sub">One founder. Agents draft and check. Money, mail, and deploy wait for the founder. AuthiChain is building seals that bind to products and log every scan against the serial. Public verification is in development. The money path is EU DPP Readiness.</p>
+    <p class="section-sub">One founder. Agents draft and check. Money, mail, and deploy wait for the founder. AuthiChain is building seals that bind to products and log every scan against the serial. One published demonstration record can be checked now at <a href="/api/verify?id=polygon-anchor-1">/api/verify?id=polygon-anchor-1</a>. The human page is <a href="/verify?id=polygon-anchor-1">/verify?id=polygon-anchor-1</a>. It is not a customer product and not a physical inspection. The human page does not itself read the anchor transaction. Product seals and the public certificate registry remain in development. The money path is EU DPP Readiness.</p>
   </div>
 </section>`;
 }
@@ -2864,7 +2866,7 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   <p>It is a demonstration, not a product.</p>
   <ul>
     <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
-    <li>Files: record and anchor JSON ship in the npm package (<code>examples/polygon-anchor-1.*.json</code>), to run with the verifier above</li>
+    <li>Files: <a href="/protocol/examples/polygon-anchor-1.record.json">record JSON</a> and <a href="/protocol/examples/polygon-anchor-1.anchor.json">anchor JSON</a>. The same files ship in the npm package (<code>examples/polygon-anchor-1.*.json</code>).</li>
     <li>For agents: MCP tool <code>verify_record</code> at <code>https://authichain.com/mcp</code>, free</li>
   </ul>
 
@@ -3626,6 +3628,8 @@ async function handleAuthichainCom(
     if (dppPage) return dppPage;
     const agentPage = await tryHandleAgentPresentation(request);
     if (agentPage) return agentPage;
+    const botIdentity = tryHandleBotIdentity(request);
+    if (botIdentity) return botIdentity;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
     // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the
@@ -3648,6 +3652,10 @@ async function handleAuthichainCom(
     if (mcp) return mcp;
     const apiV1 = await tryHandleApiV1(request, env);
     if (apiV1) return apiV1;
+    // Before APP_PREFIXES. /protocol/* otherwise proxies, and the credential
+    // subject URL 404s on the edge router.
+    const publishedExample = tryHandleProtocolExample(request);
+    if (publishedExample) return publishedExample;
     if (p === '/api/sales') {
       return handleSalesInquiry(request, env);
     }
