@@ -861,7 +861,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "📊",
         title: "EU DPP Readiness",
-        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
+        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation.",
       },
       {
         icon: "🌍",
@@ -1522,13 +1522,13 @@ async function renderOnboard(c: Context): Promise<Response> {
 // deterministic reference object. That page must exist. Unknown ids 404.
 
 const LAUNCH_PROOF_PRODUCT_ID = "00000000-0000-4000-8000-000000000001";
-const LAUNCH_PROOF_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+const LAUNCH_PROOF_KID = "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ";
 
 function launchProofStoryHtml(): string {
   return htmlDocument({
     title: "AuthiChain Launch Proof — QRON / StoryMode",
     description:
-      "Deterministic production reference object. The compact JWS verifies against live JWKS.",
+      "Deterministic production reference object and its published signing key id.",
     canonicalPath: "/story/" + LAUNCH_PROOF_PRODUCT_ID,
     bodyHtml:
       "<main>\n" +
@@ -1543,9 +1543,9 @@ function launchProofStoryHtml(): string {
       '<dt>Issuer</dt><dd><a href="/protocol/issuer.json">/protocol/issuer.json</a></dd>\n' +
       "</dl>\n" +
       "<h2>Identity</h2>\n" +
-      "<p>A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation.</p>\n" +
+      "<p>A deterministic QRON reference resolves to an AuthiChain object record. A signed attestation for it is not published yet.</p>\n" +
       "<h2>Proof</h2>\n" +
-      "<p>The production attestation is independently verified against the live public JWKS using its kid. A valid signature is signed evidence — not physical authenticity.</p>\n" +
+      "<p>This page shows the signing key ID (kid) and links to the public JWKS and issuer record. It does not include a signed attestation yet, so there is nothing on this page to verify. A valid signature is signed evidence — not physical authenticity.</p>\n" +
       "<h2>Reveal</h2>\n" +
       "<p>Scanning the QRON launch code opens StoryMode. Tamper tests (altered payload, altered signature, wrong subject, revoked, stale) must reject.</p>\n" +
       '<p><a href="/verify?id=polygon-anchor-1">Open the published verification example</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
@@ -1750,7 +1750,7 @@ function generateCreditLinksHtml(): string {
   }).join("\n");
   return (
     "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
-    "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof.</p>\n" +
+    "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
@@ -1761,7 +1761,8 @@ function generateCreditLinksHtml(): string {
 const STARTER_CHECKOUT_URL = "https://authichain.com/checkout/starter";
 const GENERATE_STARTER_CTA_HTML =
   '<p id="generate-starter-cta" hidden>Like it? Get 100 generations for $29, paid once. No subscription. ' +
-  '<a class="credit-btn" href="' + STARTER_CHECKOUT_URL +
+  '<a class="credit-btn" href="' +
+  STARTER_CHECKOUT_URL +
   '?utm_source=qron&amp;utm_medium=onsite&amp;utm_campaign=starter-cta&amp;utm_content=starter-a">Get 100 generations for $29</a> ' +
   "Checkout on authichain.com.</p>\n";
 /** Filled by /api/generate soft-prompt when remaining credits are low (signed-in). */
@@ -1793,7 +1794,7 @@ function generateFormHtml(
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
       statusBlock +
-      "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof.</p>\n" +
+      "<p>Try 5 free generations. No account, no card. Limit 5 per visitor every 30 days, while the daily sample limit lasts. Then Starter Pack: 100 generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits. A scannable QR is not an authenticity proof.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
       '<form id="generate-form" action="/generate" method="post">\n' +
