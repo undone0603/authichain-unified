@@ -11,7 +11,6 @@ import {
 } from "../../_shared/estate-landing.ts";
 import { DPP_CATEGORIES } from "../../../src/lib/dpp-readiness";
 import {
-  STOREPILOT_PRO_LINK,
   DPP_NOT_EC_DISCLAIMER,
   DPP_QR_DISCLAIMER,
   parseProductScanInput,
@@ -67,7 +66,6 @@ function resultHtml(r: ProductScanResult): string {
   <h2>Data score: ${r.score}/100</h2>
   <ul class="dc-gaps">${rows}</ul>
   <p>${esc(r.readiness.category.label)}: ${esc(r.readiness.nextStep)}</p>
-  <p class="dc-cta"><a class="btn btn-primary" href="${STOREPILOT_PRO_LINK}">Scan up to 200 products: StorePilot Pro, $29 one-time</a></p>
   <p class="bp-note">${esc(r.disclaimer)} ${DPP_NOT_EC_DISCLAIMER} ${DPP_QR_DISCLAIMER}</p>
 </section>`;
 }

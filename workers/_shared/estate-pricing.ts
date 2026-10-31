@@ -144,7 +144,7 @@ export function planCheckoutCta(
 /** The pricing card links the fictional walkthrough. The checkout does not send that page. */
 function sampleAuditLink(origin: PricingOrigin): string {
   const base = origin === "authichain" ? "" : "https://authichain.com";
-  return `<p class="section-sub" style="margin-top:12px">E-bike and other LMT batteries need a passport from 18 February 2027. <a href="${base}/battery-passport">See the gap map</a> and <a href="${base}/battery-passport/sample-audit">a fictional walkthrough</a> on a fictional e-bike pack.</p>`;
+  return `<p class="section-sub" style="margin-top:12px">E-bike and other LMT batteries need a passport from 18 February 2027. <a href="${base}/battery-passport">See the gap map</a> and <a href="${base}/battery-passport/sample-audit">a fictional walkthrough</a> on a fictional e-bike pack. Want it written for you? <a href="${base}/battery-passport#gap-report">Written gap report, $950 first model, $350 each extra</a> (readiness only, not legal advice).</p>`;
 }
 
 /** Plans sold as QRON products in Stripe ("QRON Starter Pack" etc.). */

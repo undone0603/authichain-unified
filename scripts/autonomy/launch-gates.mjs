@@ -48,6 +48,8 @@ export const GATE_TYPES = [
   "verify_roundtrip",
   "protocol_conformance",
   "estate_inventory",
+  "live_verify",
+  "public_trust",
   "pending",
 ];
 const DAY = 86_400_000;
@@ -109,6 +111,28 @@ export function validateManifest(m) {
           errors.push(`${id}: probe expect_status must be an integer`);
         if (!(p?.max_ms > 0)) errors.push(`${id}: probe max_ms must be > 0`);
       }
+    }
+    if (g.type === "public_trust") {
+      if (!Array.isArray(g.probes) || g.probes.length === 0)
+        errors.push(`${id}: probes must be a non-empty array`);
+      for (const p of g.probes ?? []) {
+        if (typeof p?.url !== "string" || !p.url.startsWith("https://"))
+          errors.push(`${id}: probe url must start with https://`);
+        if (!Number.isInteger(p?.expect_status))
+          errors.push(`${id}: probe expect_status must be an integer`);
+        if (!(p?.max_ms > 0)) errors.push(`${id}: probe max_ms must be > 0`);
+        if (typeof p?.includes !== "string" || p.includes === "")
+          errors.push(`${id}: probe includes must be a non-empty string`);
+      }
+    }
+    if (g.type === "live_verify") {
+      if (typeof g.url !== "string" || !g.url.startsWith("https://"))
+        errors.push(`${id}: url must start with https://`);
+      if (!(g.max_ms > 0)) errors.push(`${id}: max_ms must be > 0`);
+      if (typeof g.record !== "string" || g.record === "")
+        errors.push(`${id}: record path required`);
+      if (typeof g.anchor !== "string" || g.anchor === "")
+        errors.push(`${id}: anchor path required`);
     }
   }
   return errors;
@@ -230,6 +254,52 @@ export function evaluateProbes(results, probes, forbidRedirectHost) {
   return reasons.length ? failed(reasons, { results }) : passed({ results });
 }
 
+/** Pure. Live verify response plus the shipped example the verifier checked. */
+export function evaluateLiveVerify(evidence) {
+  if (!evidence || typeof evidence !== "object") return failed("no live verify evidence");
+  const reasons = [];
+  if (evidence.error) reasons.push(evidence.error);
+  if (evidence.status !== 200)
+    reasons.push(`verify endpoint got ${String(evidence.status)}, expected 200`);
+  if (evidence.verdict !== "verified")
+    reasons.push(`live verdict ${String(evidence.verdict)}, expected verified`);
+  if (evidence.source !== "published_example")
+    reasons.push(`live source ${String(evidence.source)}, expected published_example`);
+  if (!(typeof evidence.ms === "number" && evidence.ms <= evidence.max_ms))
+    reasons.push(`verify took ${String(evidence.ms)}ms over ${String(evidence.max_ms)}ms`);
+  if (evidence.recordVerdict !== "verified")
+    reasons.push(`shipped example verdict ${String(evidence.recordVerdict)}`);
+  if (!evidence.subjectId || evidence.subjectId !== evidence.recordSubjectId)
+    reasons.push("live subject does not match the shipped example");
+  return reasons.length ? failed(reasons, evidence) : passed(evidence);
+}
+
+/** Pure. Each public artifact must be reachable and contain its marker. */
+export function evaluatePublicTrust(evidence, probes) {
+  if (!Array.isArray(evidence?.results) || evidence.results.length === 0)
+    return failed("no public-trust evidence collected");
+  if (!Array.isArray(probes) || probes.length === 0)
+    return failed("public-trust probes missing");
+  const reasons = [];
+  for (const p of probes) {
+    const r = evidence.results.find((x) => x?.url === p.url);
+    if (!r) {
+      reasons.push(`${p.url}: no result`);
+      continue;
+    }
+    if (r.error) {
+      reasons.push(`${p.url}: ${r.error}`);
+      continue;
+    }
+    if (r.status !== p.expect_status)
+      reasons.push(`${p.url}: got ${r.status}, expected ${p.expect_status}`);
+    if (!(r.ms <= p.max_ms))
+      reasons.push(`${p.url}: ${r.ms}ms over ${p.max_ms}ms budget`);
+    if (r.includes !== true) reasons.push(`${p.url}: body missing ${p.includes}`);
+  }
+  return reasons.length ? failed(reasons, evidence) : passed(evidence);
+}
+
 /** Pure. Decide one gate from its evidence. Anything unexpected FAILS. */
 export function evaluateGate(gate, evidence, now = new Date()) {
   try {
@@ -262,6 +332,9 @@ export function evaluateGate(gate, evidence, now = new Date()) {
         gate.probes,
         gate.forbid_redirect_host
       );
+    if (gate.type === "live_verify") return evaluateLiveVerify(evidence);
+    if (gate.type === "public_trust")
+      return evaluatePublicTrust(evidence, gate.probes);
     return failed(`unknown gate type ${String(gate.type)}`);
   } catch (err) {
     return failed(`evaluator error: ${err?.message ?? err}`);
@@ -428,7 +501,75 @@ async function collect(gate, manifest, env) {
   if (gate.type === "estate_inventory") return collectEstateEvidence();
   if (gate.type === "http_probe")
     return { results: await Promise.all(gate.probes.map(probeOne)) };
+  if (gate.type === "live_verify") return collectLiveVerify(gate);
+  if (gate.type === "public_trust") return collectPublicTrust(gate);
   return undefined;
+}
+
+async function collectLiveVerify(gate) {
+  const verifier = await import(
+    pathToFileURL(join(ROOT, "protocol", "verifier.mjs")).href
+  );
+  const record = JSON.parse(readFileSync(join(ROOT, gate.record), "utf8"));
+  const anchor = JSON.parse(readFileSync(join(ROOT, gate.anchor), "utf8"));
+  const checked = verifier.verifyRecord(record, anchor);
+  const t0 = Date.now();
+  let status = 0;
+  let body = {};
+  let error;
+  try {
+    const res = await fetch(gate.url, {
+      method: "GET",
+      redirect: "manual",
+      signal: AbortSignal.timeout(10_000),
+      headers: { "user-agent": "authichain-launch-gates/1.0" },
+    });
+    status = res.status;
+    body = await res.json().catch(() => ({}));
+  } catch (err) {
+    error = err?.message ?? String(err);
+  }
+  return {
+    status,
+    ms: Date.now() - t0,
+    max_ms: gate.max_ms,
+    verdict: body.verdict ?? null,
+    source: body.source ?? null,
+    subjectId: body.subject?.id ?? null,
+    recordVerdict: checked.verdict,
+    recordSubjectId: record.credentialSubject?.id ?? null,
+    ...(error ? { error } : {}),
+  };
+}
+
+async function collectPublicTrust(gate) {
+  const results = [];
+  for (const p of gate.probes) {
+    const t0 = Date.now();
+    try {
+      const res = await fetch(p.url, {
+        method: "GET",
+        redirect: "manual",
+        signal: AbortSignal.timeout(10_000),
+        headers: { "user-agent": "authichain-launch-gates/1.0" },
+      });
+      const text = await res.text();
+      results.push({
+        url: p.url,
+        status: res.status,
+        ms: Date.now() - t0,
+        includes: text.includes(p.includes),
+      });
+    } catch (err) {
+      results.push({
+        url: p.url,
+        error: err?.message ?? String(err),
+        ms: Date.now() - t0,
+        includes: false,
+      });
+    }
+  }
+  return { results };
 }
 
 // --------------------------------------------------------------- issue sync
