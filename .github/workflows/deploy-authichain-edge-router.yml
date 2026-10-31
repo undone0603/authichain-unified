@@ -1,0 +1,93 @@
+name: Deploy authichain-edge-router
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "worker-app/**"
+      - ".github/workflows/deploy-authichain-edge-router.yml"
+      - "scripts/ci/parse-wrangler-version-id.mjs"
+      - "scripts/ci/promote-worker-version.mjs"
+permissions:
+  contents: read
+# Queue behind an in-flight publish. PM-328 forbids cancelling a
+# push-to-main deploy that is already uploading.
+concurrency:
+  group: deploy-authichain-edge-router-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  deploy:
+    # Publish runner only: authichain-wsl. CI stays on authichain-ops (laptop).
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 30
+    env:
+      # WSL has no IPv6. Node 22 Happy Eyeballs races AAAA (ENETUNREACH) with
+      # Cloudflare anycast A records and aborts in ~1.6s. ipv4first alone still
+      # tries AAAA. Proven on runner node v22.23.4 with this combo.
+      NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        if: runner.environment != 'self-hosted'
+        with:
+          version: "10.28.2"
+          run_install: false
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          command -v pnpm
+          pnpm --version
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install node-gyp (native builds)
+        run: npm i -g node-gyp@11
+      - name: Install
+        env:
+          npm_config_build_from_source: "false"
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+      - name: Publish authichain-edge-router
+        working-directory: worker-app
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          # versions upload --keep-vars stores the bundle and keeps Worker
+          # secrets (including AUTHICHAIN_ATTESTATION_*). Cloudflare API POST
+          # deployments promotes it. Do not wrangler deploy. Do not secret-put
+          # AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 / KEY_ID / PUBLIC_JWK /
+          # RETIRED_PUBLIC_JWKS here (Oct 9 overwrite).
+          # wrangler 4.153.0 hung 11–16 min on the 8.8 MiB POST then
+          # "fetch failed" (runs 41242803187, 41246493823). 4.83.0 is the
+          # last versions-upload that completed on this runner.
+          npx --yes wrangler@4.83.0 versions upload --minify --keep-vars --config wrangler.toml \
+            2>&1 | tee /tmp/er-versions-upload.log
+          vid=$(node ../scripts/ci/parse-wrangler-version-id.mjs /tmp/er-versions-upload.log)
+          echo "uploaded authichain-edge-router version $vid"
+          # Record the checkout SHA and promoted version for later source/runtime audit.
+          # This is provenance metadata, not proof of successful paid fulfillment.
+          promotion=$(node ../scripts/ci/promote-worker-version.mjs authichain-edge-router "$vid")
+          printf '%s\n' "$promotion"
+          {
+            echo '### authichain-edge-router deployment provenance'
+            echo "- Source commit: ${GITHUB_SHA}"
+            echo "- GitHub run: ${GITHUB_RUN_ID} (attempt ${GITHUB_RUN_ATTEMPT})"
+            echo "- Worker version: ${vid}"
+            echo "- Promotion: ${promotion}"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Smoke JWKS current + retired kids
+        run: |
+          set -euo pipefail
+          CURRENT='jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM'
+          RETIRED='T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ'
+          jwks=$(curl -sS --max-time 20 -H 'Cache-Control: no-cache' \
+            https://authichain.com/protocol/jwks.json)
+          echo "$jwks" | grep -F "$CURRENT"
+          echo "$jwks" | grep -F "$RETIRED"
+          issuer=$(curl -sS --max-time 20 -H 'Cache-Control: no-cache' \
+            https://authichain.com/protocol/issuer.json)
+          echo "$issuer" | grep -F "$CURRENT"
+          echo "$issuer" | grep -F '"signing":true'
