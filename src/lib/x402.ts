@@ -21,7 +21,12 @@
  */
 
 import { BASE_USDC, TOKENOMICS_PAY_TO } from "../../scripts/lib/evm-chains";
-import { planPaymentLink, planUsd } from "./plans";
+import {
+  catalogOffers,
+  planPaymentLink,
+  planUsd,
+  type CatalogOffer,
+} from "./plans";
 
 export interface PaymentRequirement {
   scheme: "exact";
@@ -201,18 +206,7 @@ export function x402BazaarDiscovery(): X402BazaarExtension {
     },
     output: {
       type: "json",
-      example: {
-        verified: false,
-        authenticityScore: 0,
-        subject: "00000000-0000-4000-8000-000000000000",
-        details: {},
-        settlement: {
-          payer: "0x0000000000000000000000000000000000000000",
-          amountAtomic: "50000",
-          txHash: "0x",
-          trustless: true,
-        },
-      },
+      example: x402PaidOutputExample(),
     },
   };
   return {
@@ -1128,9 +1122,14 @@ export type X402CatalogBody = {
     passportUsd: number;
     dppUsd: number;
     farmUsd: number;
+    starterUsd: number;
+    creatorUsd: number;
     passportPaymentLink?: string;
     dppPaymentLink?: string;
     farmPaymentLink?: string;
+    starterPaymentLink?: string;
+    creatorPaymentLink?: string;
+    offers: CatalogOffer[];
     source: string;
   };
   discovery: {
@@ -1244,8 +1243,14 @@ export async function x402Catalog(
       passportUsd: planUsd("strainchain_passport"),
       dppUsd: planUsd("dpp_readiness"),
       farmUsd: planUsd("strainchain_farm"),
+      starterUsd: planUsd("starter"),
+      creatorUsd: planUsd("creator"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
+      farmPaymentLink: planPaymentLink("strainchain_farm"),
+      starterPaymentLink: planPaymentLink("starter"),
+      creatorPaymentLink: planPaymentLink("creator"),
+      offers: catalogOffers(),
       source: "src/lib/plans.ts",
     },
     discovery: {

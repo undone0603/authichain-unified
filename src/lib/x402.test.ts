@@ -758,7 +758,21 @@ describe("x402Catalog", () => {
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
       planPaymentLink("dpp_readiness")
     );
-    expect(catalog.humanCheckout.farmPaymentLink).toBeUndefined();
+    expect(catalog.humanCheckout.farmPaymentLink).toBe(
+      planPaymentLink("strainchain_farm")
+    );
+    expect(catalog.humanCheckout.starterPaymentLink).toBe(
+      planPaymentLink("starter")
+    );
+    expect(catalog.humanCheckout.creatorPaymentLink).toBe(
+      planPaymentLink("creator")
+    );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).toContain(
+      "starter"
+    );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).toContain(
+      "musa_audit_bundle"
+    );
     expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
     expect(JSON.stringify(catalog)).not.toContain("/api/checkout");
     expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
