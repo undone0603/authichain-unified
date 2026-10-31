@@ -296,10 +296,11 @@ ${CHECKOUT_EMAIL_FORM_CSS}
 <main id="main">
   <section class="hero" aria-labelledby="x402-title">
     <div class="wrap">
-      <p class="kicker"><i aria-hidden="true"></i> Live · x402 · ${esc(p.priceUsd)} USDC</p>
+      <p class="kicker"><i aria-hidden="true"></i> Live · x402</p>
       <h1 id="x402-title">Agent verification, paid per call.</h1>
       <p class="lede">AuthiChain exposes an <strong>x402</strong> micropayment rail so a funded agent can verify a product without a contract, an API key, or a human in the runtime loop.</p>
-      <p>An unpaid <code>POST</code> receives <code>HTTP 402 Payment Required</code> with the exact scheme, asset, and receiving address. The agent settles ${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}, retries with an <code>X-PAYMENT</code> proof, and the edge verifies settlement before answering.</p>
+      <p>An unpaid <code>POST</code> receives <code>HTTP 402 Payment Required</code> with the exact scheme, asset, and receiving address. The agent settles, retries with an <code>X-PAYMENT</code> proof, and the edge verifies settlement before answering.</p>
+      <p>Agents get 3 free verification calls per day on POST /api/v1/agent-verify. After that, each call returns an x402 payment request for $0.05 USDC on Base.</p>
       <div class="cta">
         <a class="btn btn-primary" href="${esc(p.healthUrl)}">GET /api/x402/health</a>
         <a class="btn" href="${esc(p.catalogUrl)}">GET /api/x402/catalog</a>

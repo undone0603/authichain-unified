@@ -23,7 +23,7 @@ A QR names an item. A signature binds a claim to a key. An anchor binds a hash t
 - [Battery passport example](/battery-passport) — e-bike and other LMT batteries. A passport is required from 18 February 2027.
 - [Examples and fixtures](/docs/examples) — signed records you can check against the published JWKS.
 - [Open Verification Protocol](/protocol) — run `verifier.mjs` on your own machine. v0.1.0 draft.
-- [x402 agent pay](/x402) — $0.05 USDC per verification call on Base.
+- [x402 agent pay](/x402) — Agents get 3 free verification calls per day on POST /api/v1/agent-verify. After that, each call returns an x402 payment request for $0.05 USDC on Base.
 
 ## What is live
 

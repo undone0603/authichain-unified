@@ -2,15 +2,10 @@
  * /llms.txt for agents. Point crawlers at Payment Links, unpaid POST /api/x402,
  * and the canonical Living QR scan. Do not tell them to GET /api/checkout.
  */
-import {
-  planById,
-  planPaymentLink,
-  planUsd,
-  type PlanId,
-} from "../../../src/lib/plans.ts";
-import { x402PriceUsd } from "../../../src/lib/x402.ts";
+import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
 
-const X402_USD = x402PriceUsd();
+const PASSPORT_LINK = planPaymentLink("strainchain_passport") ?? "";
+const DPP_LINK = planPaymentLink("dpp_readiness") ?? "";
 
 const LLMS_PATHS = new Set([
   "/llms.txt",
@@ -61,8 +56,8 @@ export function renderLlmsTxt(): string {
     "> The authentic agentic economy. Signed seals, MCP verify, x402 pay-per-call.",
     "",
     "## Agent pay (x402)",
-    `- Unpaid POST https://authichain.com/api/x402 returns HTTP 402 ($${X402_USD} USDC on Base)`,
-    "- An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment.",
+    "- Unpaid POST https://authichain.com/api/x402 returns HTTP 402",
+    "- Agents get 3 free verification calls per day on POST /api/v1/agent-verify. After that, each call returns an x402 payment request for $0.05 USDC on Base.",
     "- Canonical paid verify: POST https://authichain.com/api/v1/agent-verify",
     "- Read https://authichain.com/api/x402/health first. paidVerify.bound false means HTTP 503 before settlement and no payment is taken.",
     "- Catalog: https://authichain.com/api/x402/catalog",
