@@ -221,6 +221,12 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /Signed QR seals for real products\./);
   assert.doesNotMatch(html, /Agent consensus/);
   assert.match(html, /Public certificate registry: in development\./);
+  assert.match(html, /not a customer product/);
+  assert.match(html, /not a physical inspection/);
+  assert.match(html, /does not itself read the anchor transaction/);
+  assert.ok(html.includes('href="/api/verify?id=polygon-anchor-1"'));
+  assert.ok(html.includes('href="/verify?id=polygon-anchor-1"'));
+  assert.equal(html.includes("polygonscan.com"), false);
   const starterFirst = planPaymentLink("starter") ?? "";
   const auditLater = planPaymentLink("dpp_readiness") ?? "";
   assert.ok(starterFirst.length > 0 && auditLater.length > 0);
@@ -520,6 +526,12 @@ test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
   assert.match(hubHtml, /authichain\.com\/qron\/r\//);
   assert.match(hubHtml, /presentation_not_found/);
   assert.match(hubHtml, /This host verifies the signature/);
+  assert.match(hubHtml, /Not a customer product/);
+  assert.match(hubHtml, /Not a battery passport/);
+  assert.match(hubHtml, /does not itself read the anchor transaction/);
+  assert.ok(hubHtml.includes('href="/api/verify?id=polygon-anchor-1"'));
+  assert.ok(hubHtml.includes('href="/verify?id=polygon-anchor-1"'));
+  assert.equal(hubHtml.includes("polygonscan.com"), false);
 
   for (const path of [
     "/docs/gs1-digital-link",

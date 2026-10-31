@@ -2336,7 +2336,7 @@ function foundersVision() {
   <div class="wrap" style="max-width:760px">
     <p class="section-tag">What is live</p>
     <h2>Realized capability, not a pitch deck</h2>
-    <p class="section-sub">One founder. Agents draft and check. Money, mail, and deploy wait for the founder. AuthiChain is building seals that bind to products and log every scan against the serial. Public verification is in development. The money path is EU DPP Readiness.</p>
+    <p class="section-sub">One founder. Agents draft and check. Money, mail, and deploy wait for the founder. AuthiChain is building seals that bind to products and log every scan against the serial. One published demonstration record can be checked now at <a href="/api/verify?id=polygon-anchor-1">/api/verify?id=polygon-anchor-1</a>. The human page is <a href="/verify?id=polygon-anchor-1">/verify?id=polygon-anchor-1</a>. It is not a customer product and not a physical inspection. The human page does not itself read the anchor transaction. Product seals and the public certificate registry remain in development. The money path is EU DPP Readiness.</p>
   </div>
 </section>`;
 }
