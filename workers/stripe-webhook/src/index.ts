@@ -12,6 +12,7 @@ export interface Env {
   STRIPE_WEBHOOK_SECRET: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
+  NTFY_TOPIC?: string;
 }
 
 async function supabaseUpsert(
@@ -335,6 +336,26 @@ export default {
         // but would record a false purchase_starter_succeeded — the single metric
         // the first-dollar kill decision reads. An unmapped price gets no event.
         await recordPurchaseEvent(env, grant?.plan ?? null, email);
+
+        // Non-founder first-sale alert (observability only; never blocks grant)
+        if (
+          (session.amount_total ?? 0) >= 2900 &&
+          email &&
+          !isFounderEmail(email) &&
+          env.NTFY_TOPIC
+        ) {
+          console.log(
+            JSON.stringify({
+              evt: "first_sale_non_founder",
+              amount: (session.amount_total ?? 0) / 100,
+              plan,
+            })
+          );
+          fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+            method: "POST",
+            body: `FIRST NON-FOUNDER SALE: $${((session.amount_total ?? 0) / 100).toFixed(2)}`,
+          }).catch(() => {});
+        }
       }
     }
 
