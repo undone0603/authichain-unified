@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
-// CLI wrapper for the reference verifier. Same contract as `node verifier.mjs`:
+// CLI wrapper for the reference verifier.
+//
 //   authichain-verify <record.json> [anchor.json]
 // A DigitalProductPassport prints { genuine, digitalIdentity, verdict, reasons }
 // and exits 0 only when genuine. Any other record prints the reference
@@ -9,9 +10,30 @@
 import { readFileSync } from 'node:fs';
 import { verifyScan } from '../passport.mjs';
 
-const [recordPath, anchorPath] = process.argv.slice(2);
+const USAGE = 'usage: authichain-verify [--jwks <jwks.json>] <record.json> [anchor.json]\n       authichain-verify --jwks <jwks.json> <seal.jws>';
+const args = process.argv.slice(2);
+
+let jwks = null;
+let rest = args;
+if (args[0] === '--jwks') {
+  if (!args[1] || !args[2]) {
+    console.error(USAGE);
+    process.exit(2);
+  }
+  jwks = JSON.parse(readFileSync(args[1], 'utf8'));
+  rest = args.slice(2);
+  const text = readFileSync(rest[0], 'utf8').trim();
+  if (!text.startsWith('{')) {
+    // A compact JWS seal rather than a JSON record.
+    const result = verifyAttestationJws(text, jwks);
+    console.log(JSON.stringify(result, null, 2));
+    process.exit(result.verdict === 'invalid' ? 1 : 0);
+  }
+}
+
+const [recordPath, anchorPath] = rest;
 if (!recordPath || recordPath === '-h' || recordPath === '--help') {
-  console.error('usage: authichain-verify <record.json> [anchor.json]');
+  console.error(USAGE);
   process.exit(2);
 }
 const record = JSON.parse(readFileSync(recordPath, 'utf8'));

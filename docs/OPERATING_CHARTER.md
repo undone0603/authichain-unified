@@ -81,8 +81,16 @@ tighten back automatically. The switch is `launch_mode` in
 ## Merge autopilot
 
 The owner decided on 2026-10-02 that a branch which is green and clean merges
-on its own, whatever it touches, security, revenue, schema and this charter
-included. That replaces the earlier rule that such merges wait for the owner.
+on its own, and narrowed that on 2026-10-13: a PR that touches a restricted
+path, or whose changed code lines mention a restricted symbol, is skipped and
+waits for the owner to merge it by hand. Restricted means payment trust and
+paid fulfilment, outbound-send gating, secrets and their bind/set workflows,
+deploy workflows, database migrations, pricing, and the autonomy controls
+themselves (this charter, `.github/autonomy.json`, `scripts/autonomy/`,
+`CLAUDE.md`). The lists are `RESTRICTED_PATHS` and `RESTRICTED_SYMBOLS` in
+`scripts/autonomy/merge-autopilot.mjs`, which is itself restricted, so loosening
+them always needs the owner. An incomplete file list or an unreadable code diff
+counts as restricted. Branches still get updated from main either way.
 The switch is `merge_autopilot` in `.github/autonomy.json`; the workflow is
 `merge-autopilot.yml` and the rules live in `scripts/autonomy/merge-autopilot.mjs`.
 
