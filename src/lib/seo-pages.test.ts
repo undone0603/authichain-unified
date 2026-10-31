@@ -47,7 +47,24 @@ describe("seo-pages loader", () => {
     expect(page).not.toBeNull();
     expect(page?.title).toBe("Authentic Agentic Economy | AuthiChain");
     expect(page?.jsonLd["@type"]).toBe("Article");
+    expect(page?.metaDescription).toBe(
+      "The authentic agentic economy: signed seals, MCP, and x402. A signed record is not a physical inspection."
+    );
+    expect(page?.metaDescription).not.toContain("trust physical products");
     expect(page?.bodyHtml).toContain("authentic agentic economy");
+    expect(page?.bodyHtml).toContain("not a physical inspection");
+    expect(page?.bodyHtml).toContain("empty JSON body is the unpaid HTTP 402");
+    expect(page?.bodyHtml).toContain("not a paid receipt");
+    expect(page?.bodyHtml).toContain("/api/verify?id=polygon-anchor-1");
+    expect(page?.bodyHtml).toContain("not a product");
+    expect(page?.bodyHtml).toContain(
+      "does not itself read the anchor transaction"
+    );
+    expect(page?.bodyHtml).not.toContain("unpaid POST returns HTTP 402");
+    expect(page?.bodyHtml).not.toContain("physical-world authenticity");
+    expect(page?.bodyHtml).not.toContain("verify authenticity");
+    expect(page?.bodyHtml).not.toContain("polygonscan.com");
+    expect(JSON.stringify(page?.jsonLd)).not.toContain("trust physical products");
     expect(page?.bodyHtml).toContain(
       'action="https://authichain.com/checkout/dpp_readiness"'
     );
