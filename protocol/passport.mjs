@@ -375,6 +375,45 @@ export function appendPassportEvidence(metadata, entry) {
   };
 }
 
+export const UDI_PRESENT_SENTENCE =
+  'The manufacturer supplied UDI-DI {udiDi} as evidence on this passport. The category name did not assign it. It is not a certification.';
+export const UDI_ABSENT_SENTENCE =
+  'No manufacturer-supplied UDI is stored on this passport.';
+
+function suppliedText(value) {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+}
+
+/**
+ * Store a UDI only when the manufacturer supplies udiDi.
+ * The category word does not assign one. The row does not set genuine.
+ */
+export function udiEvidence(metadata, input) {
+  const supplied = plainObject(input) ? input : {};
+  const udiDi = suppliedText(supplied.udiDi);
+  const udiPi = suppliedText(supplied.udiPi);
+  if (!udiDi) {
+    return { stored: false, entry: null, metadata, message: UDI_ABSENT_SENTENCE };
+  }
+  const entry = { type: 'manufacturer_udi', udiDi };
+  if (udiPi) entry.udiPi = udiPi;
+  try {
+    const next = appendPassportEvidence(metadata, entry);
+    return {
+      stored: true,
+      entry,
+      metadata: next,
+      message: UDI_PRESENT_SENTENCE.replace('{udiDi}', () => udiDi),
+    };
+  } catch (err) {
+    if (err && err.message === 'passport_required') {
+      return { stored: false, entry: null, metadata, message: UDI_ABSENT_SENTENCE };
+    }
+    throw err;
+  }
+}
+
 /**
  * Scan entry used by the CLI. A product passport exits 0 only when genuine.
  * Any other record keeps the reference verifier's exit rule.
