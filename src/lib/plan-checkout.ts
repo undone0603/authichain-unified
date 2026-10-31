@@ -111,9 +111,15 @@ export async function createPlanCheckoutSession(opts: {
     const session = await stripe.checkout.sessions.create({
       mode: plan.stripe_mode,
       ...hostedCheckoutRecoveryParams(plan.stripe_mode),
-      payment_method_types: ["card"],
       line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
-      success_url: `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}${
+      success_url: `${origin}${
+        plan.id === "starter" ||
+        plan.id === "creator" ||
+        plan.id === "qron_launch" ||
+        plan.id === "qron_launch_annual"
+          ? "/generate?paid=1&"
+          : "/dpp/thanks?"
+      }session_id={CHECKOUT_SESSION_ID}${
         prospectId ? `&prospect_id=${encodeURIComponent(prospectId)}` : ""
       }${source ? `&utm_source=${encodeURIComponent(source)}` : ""}&plan=${encodeURIComponent(plan.id)}`,
       cancel_url: `${origin}/#pricing`,
@@ -121,6 +127,9 @@ export async function createPlanCheckoutSession(opts: {
       metadata: {
         plan: plan.id,
         brand,
+        ...(plan.stripe_price_id
+          ? { stripe_price_id: plan.stripe_price_id }
+          : {}),
         ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
         ...(refCode ? { ref_code: refCode } : {}),
         ...(prospectId ? { prospect_id: prospectId } : {}),
@@ -132,6 +141,7 @@ export async function createPlanCheckoutSession(opts: {
               metadata: {
                 plan: plan.id,
                 brand,
+                stripe_price_id: plan.stripe_price_id,
                 ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
                 ...(refCode ? { ref_code: refCode } : {}),
                 ...(prospectId ? { prospect_id: prospectId } : {}),
@@ -159,6 +169,20 @@ export async function createPlanCheckoutSession(opts: {
         status: 500,
         error: "Stripe did not return a checkout URL",
       };
+    }
+    // Instrument QRON Launch Annual checkout start
+    if (plan.id === "qron_launch_annual") {
+      console.log(
+        JSON.stringify({
+          evt: "checkout_start_qron_annual",
+          plan_id: "qron_launch_annual",
+          session_id: session.id,
+          amount_usd: 190,
+          generations: 1200,
+          brand,
+          ts: Date.now(),
+        })
+      );
     }
     return { ok: true, url: session.url, planId: plan.id };
   } catch (error: unknown) {

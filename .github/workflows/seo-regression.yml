@@ -7,7 +7,7 @@ name: SEO Regression Check
 
 on:
   schedule:
-    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+    - cron: "10 6 * * 1" # weekly, Monday 06:10 UTC, after genesis at 06:00
   workflow_dispatch: {}
 
 permissions:

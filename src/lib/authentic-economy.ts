@@ -134,7 +134,7 @@ export function agentPricingDiscovery() {
       docs: "https://authichain.com/x402",
       tokenomics: AGENT_TOKENOMICS_DOC,
       identity: WEB3_IDENTITY_DOC,
-      note: "Prefer GET catalog/health for live payTo and price. Runtime payTo is env X402_PAY_TO. Unpaid POST returns HTTP 402; pay Base USDC and retry with X-PAYMENT. Do not use Polygon or $QRON on this rail.",
+      note: "Prefer GET catalog/health for live payTo and price. Runtime payTo is env X402_PAY_TO. An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment. After settlement, retry with X-PAYMENT and a seal UUID. Do not use Polygon or $QRON on this rail.",
     },
     humanCheckout: {
       rail: MONEY_RAILS.stripe.rail,

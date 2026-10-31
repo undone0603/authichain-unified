@@ -17,12 +17,15 @@ import {
   validateLaunchMode,
 } from "../autonomy/launch-mode.mjs";
 import {
+  blindReason,
   decideIssueAction,
   evaluateWorkflows,
   isCallOnly,
   isQueuedCancellation,
   pickLatestCompletedRun,
   runProbes,
+  monitorFulfilment,
+  renderReport,
   signature,
 } from "../autonomy/ops-pulse.mjs";
 
@@ -471,6 +474,50 @@ describe("ops pulse", () => {
     );
   });
 
+  it("alerts when fulfilment read credentials are absent instead of silently skipping", async () => {
+    const f = await monitorFulfilment({
+      stripeKey: "",
+      supabaseUrl: "https://example.test",
+      supabaseKey: "read-only-key",
+    });
+    expect(f).toEqual({
+      checked: 0,
+      problems: [],
+      monitoring: [{ name: "fulfilment", kind: "credentials_missing" }],
+    });
+    const report = { at: "t", probes: [], workflows: [], ...f };
+    expect(signature(report)).toBe("monitor:fulfilment:credentials_missing");
+    expect(decideIssueAction(null, report).action).toBe("create");
+    expect(renderReport(report)).toContain("required read credentials are missing");
+  });
+
+  it("redacts monitoring read failures and only clears alert after a successful read", async () => {
+    const config = {
+      stripeKey: "stripe-read-key",
+      supabaseUrl: "https://example.test",
+      supabaseKey: "supabase-read-key",
+    };
+    const failed = await monitorFulfilment({
+      ...config,
+      check: async () => {
+        throw new Error("secret-token customer@example.test");
+      },
+    });
+    const redReport = { at: "t", probes: [], workflows: [], ...failed };
+    expect(signature(redReport)).toBe("monitor:fulfilment:read_failed");
+    expect(renderReport(redReport)).toContain("Stripe/Supabase read failed");
+    expect(renderReport(redReport)).not.toContain("secret-token");
+    expect(renderReport(redReport)).not.toContain("customer@example.test");
+    const ok = await monitorFulfilment({
+      ...config,
+      check: async () => ({ checked: 0, problems: [] }),
+    });
+    expect(ok.monitoring).toEqual([]);
+    const greenReport = { at: "t", probes: [], workflows: [], ...ok };
+    expect(signature(greenReport)).toBe("");
+    expect(decideIssueAction({ number: 1, body: renderReport(redReport) }, greenReport).action).toBe("close");
+  });
+
   const red = {
     at: "t",
     probes: [{ name: "site", url: "u", expect: [200], ok: false, status: 502 }],
@@ -518,7 +565,7 @@ describe("ops pulse", () => {
 });
 
 describe("fulfilment watchdog", async () => {
-  const { findUnfulfilled } = await import("../autonomy/revenue-watch.mjs");
+  const { findUnfulfilled, checkFulfilment } = await import("../autonomy/revenue-watch.mjs");
   const now = Date.parse("2026-09-23T12:00:00Z");
   const s = (
     id: string,
@@ -528,6 +575,7 @@ describe("fulfilment watchdog", async () => {
     id,
     status: "complete",
     payment_status: "paid",
+    amount_total: 29900,
     created: Math.floor((now - minsAgo * 60_000) / 1000),
     customer_details: { email: `${id}@buyer.com` },
     ...extra,
@@ -541,6 +589,8 @@ describe("fulfilment watchdog", async () => {
       s("cs_fresh", 5),
       s("cs_founder", 60, { customer_details: { email: "Me@Founder.com" } }),
       s("cs_unpaid", 60, { payment_status: "unpaid" }),
+      s("cs_zero", 60, { amount_total: 0 }),
+      s("cs_no_payment_required", 60, { payment_status: "no_payment_required" }),
       s("cs_demo", 60, { metadata: { is_demo: "true" } }),
       s("cs_smoke", 60, {
         customer_details: { email: "smoke+dpp@authichain.com" },
@@ -577,6 +627,81 @@ describe("fulfilment watchdog", async () => {
     ]);
   });
 
+  it("excludes free completed checkouts without hiding unknown-amount payments", () => {
+    const out = findUnfulfilled(
+      [
+        s("cs_chargeable", 60, { amount_total: 2900 }),
+        s("cs_free", 60, { amount_total: 0 }),
+        s("cs_no_payment", 60, { payment_status: "no_payment_required" }),
+        s("cs_unknown", 60, { amount_total: null }),
+      ],
+      [],
+      { now }
+    );
+    expect(out.map((p: { session: string }) => p.session)).toEqual([
+      "cs_chargeable",
+      "cs_unknown",
+    ]);
+  });
+
+  it("paginates completed sessions before claiming healthy webhook delivery", async () => {
+    const first = Array.from({ length: 100 }, (_, i) =>
+      s(`cs_free_${i}`, 60, { amount_total: 0 })
+    );
+    const pages = [
+      { data: first, has_more: true },
+      { data: [s("cs_paid_second_page", 60)], has_more: false },
+    ];
+    const stripeUrls: string[] = [];
+    const result = await checkFulfilment({
+      stripeKey: "test-only",
+      supabaseUrl: "https://example.test",
+      supabaseKey: "test-only",
+      fetchImpl: async (url: string) => {
+        if (url.startsWith("https://api.stripe.com/")) {
+          stripeUrls.push(url);
+          return { ok: true, json: async () => pages.shift() };
+        }
+        if (url.includes("/rest/v1/stripe_events?"))
+          return { ok: true, json: async () => [] };
+        throw new Error("unexpected URL");
+      },
+    });
+    expect(stripeUrls).toHaveLength(2);
+    expect(stripeUrls[1]).toContain("starting_after=cs_free_99");
+    expect(result.checked).toBe(1);
+    expect(result.problems.map((p: { session: string }) => p.session)).toEqual([
+      "cs_paid_second_page",
+    ]);
+  });
+
+  it("fails closed when Stripe reports more results without a cursor", async () => {
+    await expect(
+      checkFulfilment({
+        stripeKey: "test-only",
+        supabaseUrl: "https://example.test",
+        supabaseKey: "test-only",
+        fetchImpl: async () => ({
+          ok: true,
+          json: async () => ({ data: [], has_more: true }),
+        }),
+      })
+    ).rejects.toThrow("missing page cursor");
+  });
+
+  it("fails closed when Stripe omits or corrupts the pagination flag", async () => {
+    for (const page of [{ data: [] }, { data: [], has_more: "false" }]) {
+      await expect(
+        checkFulfilment({
+          stripeKey: "test-only",
+          supabaseUrl: "https://example.test",
+          supabaseKey: "test-only",
+          fetchImpl: async () => ({ ok: true, json: async () => page }),
+        })
+      ).rejects.toThrow("invalid pagination flag");
+    }
+  });
+
   it("puts unfulfilled payments into the alert signature", () => {
     const report = {
       at: "t",
@@ -587,6 +712,34 @@ describe("fulfilment watchdog", async () => {
     expect(signature(report)).toBe("pay:cs_x");
     expect(decideIssueAction(null, report).body).toContain(
       "Paid but not fulfilled"
+    );
+  });
+
+  it("a watchdog that could not look is red, not green", () => {
+    const report = {
+      at: "t",
+      probes: [],
+      workflows: [],
+      revenue: [],
+      fulfilmentBlind: blindReason(
+        new Error("Stripe checkout sessions -> 401")
+      ),
+    };
+    expect(report.fulfilmentBlind).toBe(
+      "Stripe checkout sessions answered HTTP 401"
+    );
+    expect(signature(report)).toBe("watchdog:fulfilment");
+    const action = decideIssueAction(null, report);
+    expect(action.action).toBe("create");
+    expect(action.body).toContain("Fulfilment watchdog cannot see");
+  });
+
+  it("never copies an upstream error body into the public alert", () => {
+    expect(
+      blindReason(new Error("Supabase stripe_events -> 500 {\"hint\":\"secret\"}"))
+    ).toBe("Supabase stripe_events answered HTTP 500");
+    expect(blindReason(new Error("fetch failed: getaddrinfo api.stripe.com"))).toBe(
+      "the check failed before it could read Stripe and Supabase"
     );
   });
 });
@@ -985,6 +1138,7 @@ describe("stripe webhook reconcile", async () => {
       url: "https://authichain.com/api/stripe/webhook",
       ensure_events: [
         "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
         "checkout.session.expired",
         "invoice.paid",
         "invoice.payment_failed",

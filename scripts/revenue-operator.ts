@@ -9,11 +9,14 @@ import {
   canSend,
   type VerificationSource,
 } from "../server/outreach/send-guard";
-import { planPaymentLink } from "../src/lib/plans";
+import { planStripePaymentLink } from "../src/lib/plans";
 
 export const DEFAULT_FOUNDER_EMAILS = [
   "undone.k@gmail.com",
   "authichain@gmail.com",
+  // Same contract as src/lib/billing/live-catalog.ts and autonomy.json:
+  // an "@domain" entry covers every alias on that domain.
+  "@authichain.com",
 ] as const;
 
 export const FROZEN_DISPATCH = [
@@ -24,6 +27,11 @@ export const FROZEN_DISPATCH = [
   "gov-mint",
 ] as const;
 
+/** Public money SKUs: Starter $29 and EU DPP $299. HEAD only — never GET. */
+export const DPP_HEAD_PATH = "/api/checkout/dpp";
+export const STARTER_CHECKOUT_PATH = "/checkout/starter";
+export const DPP_CHECKOUT_PATH = "/checkout/dpp_readiness";
+/** @deprecated Farm is not a public money rail. Kept for old imports. */
 export const FARM_HEAD_PATH = "/api/checkout/plan/strainchain_farm";
 export const DEFAULT_ORIGIN = "https://authichain.com";
 
@@ -31,6 +39,8 @@ export type RevenueSubscription = {
   id: string;
   status?: string | null;
   customerEmail?: string | null;
+  /** False means Stripe test mode. Missing means the caller already filtered. */
+  livemode?: boolean | null;
 };
 
 export type RevenuePayout = {
@@ -43,6 +53,8 @@ export type RevenueCharge = {
   id: string;
   amount: number;
   paid: boolean;
+  /** False means Stripe test mode. Missing means the caller already filtered. */
+  livemode?: boolean | null;
   email?: string | null;
 };
 
@@ -59,8 +71,20 @@ export type RevenueVerdict = {
 
 export type SendRequest = {
   namedInboxThisTurn: string | null | undefined;
+  /**
+   * Operator-chosen published inbox. Substitutes for named-this-turn so the
+   * loop can pick one lawful contact without the owner typing it. This module
+   * still never sends mail.
+   */
+  operatorSelectedInbox?: string | null | undefined;
   source: VerificationSource;
   allowRoleInbox?: boolean;
+};
+
+export type OutreachCandidate = {
+  email: string;
+  source: VerificationSource;
+  sourceUrl?: string;
 };
 
 export type SendVerdict = {
@@ -111,7 +135,17 @@ export function isFounderEmail(
 ): boolean {
   if (!email) return false;
   const needle = email.trim().toLowerCase();
-  return founderEmails.some(item => item.trim().toLowerCase() === needle);
+  if (founderEmails.some(item => item.trim().toLowerCase() === needle)) {
+    return true;
+  }
+  const at = needle.lastIndexOf("@");
+  if (at < 0) return false;
+  const domainEntry = needle.slice(at);
+  return founderEmails.some(item => item.trim().toLowerCase() === domainEntry);
+}
+
+function countsAsLive<T extends { livemode?: boolean | null }>(row: T): boolean {
+  return row.livemode !== false;
 }
 
 function isStrangerEmail(
@@ -128,6 +162,7 @@ export function classifyRevenue(
 ): RevenueVerdict {
   let sawAnonymous = false;
   for (const sub of snapshot.subscriptions) {
+    if (!countsAsLive(sub)) continue;
     if (!ACTIVE.has((sub.status ?? "active").toLowerCase())) continue;
     if (!sub.customerEmail) {
       sawAnonymous = true;
@@ -142,7 +177,10 @@ export function classifyRevenue(
   }
 
   const strangerPaid = snapshot.charges.some(
-    charge => charge.paid && isStrangerEmail(charge.email, founderEmails)
+    charge =>
+      countsAsLive(charge) &&
+      charge.paid &&
+      isStrangerEmail(charge.email, founderEmails)
   );
   let blockedPayout: string | null = null;
   for (const payout of snapshot.payouts) {
@@ -179,7 +217,9 @@ export function classifySend(
   req: SendRequest,
   founderEmails: readonly string[] = DEFAULT_FOUNDER_EMAILS
 ): SendVerdict {
-  const to = (req.namedInboxThisTurn ?? "").trim().toLowerCase();
+  const named = (req.namedInboxThisTurn ?? "").trim().toLowerCase();
+  const selected = (req.operatorSelectedInbox ?? "").trim().toLowerCase();
+  const to = named || selected;
   if (!to) {
     return { allowed: false, reason: "no inbox named this turn" };
   }
@@ -195,13 +235,38 @@ export function classifySend(
       reason: assessment.reasons.join("; ") || "send guard rejected",
     };
   }
-  return { allowed: true, reason: `send to ${to}`, to };
+  const via = named ? "send to" : "operator-selected send to";
+  return { allowed: true, reason: `${via} ${to}`, to };
 }
 
-export function farmRailsSteps(
-  origin = DEFAULT_ORIGIN,
-  paymentLink = planPaymentLink("strainchain_farm")
-): RailsStep[] {
+/**
+ * First candidate whose provenance the send guard would allow. Skips founders,
+ * role inboxes, guesses, and government addresses. One inbox. Never sends.
+ */
+export function selectNextSendCandidate(
+  candidates: readonly OutreachCandidate[],
+  founderEmails: readonly string[] = DEFAULT_FOUNDER_EMAILS
+): SendVerdict {
+  for (const candidate of candidates) {
+    const verdict = classifySend(
+      {
+        namedInboxThisTurn: null,
+        operatorSelectedInbox: candidate.email,
+        source: candidate.source,
+      },
+      founderEmails
+    );
+    if (verdict.allowed) return verdict;
+  }
+  return { allowed: false, reason: "no sendable published inbox" };
+}
+
+/**
+ * Probe the public chargeable rails without opening a Stripe session.
+ * GET the gated confirm pages and the Starter Payment Link. HEAD the DPP
+ * anonymous cart so a GET without email cannot create a session.
+ */
+export function moneyRailsSteps(origin = DEFAULT_ORIGIN): RailsStep[] {
   const base = origin.replace(/\/+$/, "");
   const steps: RailsStep[] = [];
   // Farm A: Farm checkout is closed. The gated confirm page must answer 410
@@ -214,29 +279,27 @@ export function farmRailsSteps(
       accept: [410],
     });
   }
-  steps.push({
-    id: "farm_head",
-    url: `${base}${FARM_HEAD_PATH}`,
-    method: "HEAD",
-    accept: [204],
-  });
   return steps;
 }
 
-export async function checkFarmRails(
+/** @deprecated Use moneyRailsSteps. Farm is not the public money rail. */
+export function farmRailsSteps(origin = DEFAULT_ORIGIN): RailsStep[] {
+  return moneyRailsSteps(origin);
+}
+
+export async function checkMoneyRails(
   origin = DEFAULT_ORIGIN,
-  fetchImpl: typeof fetch = fetch,
-  paymentLink = planPaymentLink("strainchain_farm")
+  fetchImpl: typeof fetch = fetch
 ): Promise<RailsReport> {
-  if (!paymentLink) {
+  if (!planStripePaymentLink("starter")) {
     return {
       ok: false,
-      reason: "no Farm Payment Link in plans.ts",
+      reason: "no Starter Payment Link in plans.ts",
       results: [],
     };
   }
   const results: RailsResult[] = [];
-  for (const step of farmRailsSteps(origin, paymentLink)) {
+  for (const step of moneyRailsSteps(origin)) {
     try {
       const res = await fetchImpl(step.url, {
         method: step.method,
@@ -275,11 +338,20 @@ export async function checkFarmRails(
   };
 }
 
+/** @deprecated Use checkMoneyRails. */
+export async function checkFarmRails(
+  origin = DEFAULT_ORIGIN,
+  fetchImpl: typeof fetch = fetch
+): Promise<RailsReport> {
+  return checkMoneyRails(origin, fetchImpl);
+}
+
 export function decideOperatorAction(input: {
   rails: { ok: boolean; reason: string };
   snapshot: RevenueSnapshot;
   founderEmails?: readonly string[];
   send?: SendRequest | null;
+  candidates?: readonly OutreachCandidate[] | null;
 }): OperatorDecision {
   const founderEmails = input.founderEmails ?? DEFAULT_FOUNDER_EMAILS;
   const revenue = classifyRevenue(input.snapshot, founderEmails);
@@ -301,6 +373,19 @@ export function decideOperatorAction(input: {
       };
     }
     return { action: "refuse_send", reason: send.reason, revenue, send };
+  }
+  if (input.candidates && input.candidates.length > 0) {
+    const send = selectNextSendCandidate(input.candidates, founderEmails);
+    if (send.allowed && send.to) {
+      return {
+        action: "send_one",
+        reason: send.reason,
+        to: send.to,
+        revenue,
+        send,
+      };
+    }
+    return { action: "wait_buyer", reason: send.reason, revenue, send };
   }
   return { action: "wait_buyer", reason: revenue.reason, revenue };
 }
@@ -372,6 +457,7 @@ export function snapshotFromStripeLike(input: unknown): RevenueSnapshot {
         rec.customer_email,
         rec.email
       ),
+      livemode: typeof rec.livemode === "boolean" ? rec.livemode : null,
     };
   });
   const payouts = listOf(root.payouts).map((item, index) => {
@@ -396,6 +482,7 @@ export function snapshotFromStripeLike(input: unknown): RevenueSnapshot {
         rec.receiptEmail,
         billing?.email
       ),
+      livemode: typeof rec.livemode === "boolean" ? rec.livemode : null,
     };
   });
   return { subscriptions, payouts, charges };
@@ -418,7 +505,7 @@ function hasFlag(argv: string[], name: string): boolean {
 async function main(argv: string[]): Promise<number> {
   const cmd = argv[2] ?? "decide";
   if (cmd === "rails") {
-    const report = await checkFarmRails();
+    const report = await checkMoneyRails();
     console.log(JSON.stringify(report, null, 2));
     return report.ok ? 0 : 1;
   }
@@ -451,9 +538,11 @@ async function main(argv: string[]): Promise<number> {
       : hasFlag(argv, "--published")
         ? "published_contact"
         : "unknown";
+  const operatorSelected = hasFlag(argv, "--operator-selected");
   const send: SendRequest | null = sendRequested
     ? {
         namedInboxThisTurn: hasFlag(argv, "--named-this-turn") ? to : null,
+        operatorSelectedInbox: operatorSelected ? to : null,
         source,
         allowRoleInbox: hasFlag(argv, "--role-inbox"),
       }
@@ -462,6 +551,7 @@ async function main(argv: string[]): Promise<number> {
   if (cmd === "send") {
     const verdict = classifySend({
       namedInboxThisTurn: hasFlag(argv, "--named-this-turn") ? to : null,
+      operatorSelectedInbox: operatorSelected ? to : null,
       source,
       allowRoleInbox: hasFlag(argv, "--role-inbox"),
     });
@@ -469,11 +559,23 @@ async function main(argv: string[]): Promise<number> {
     return verdict.allowed ? 0 : 2;
   }
 
+  let candidates: OutreachCandidate[] | undefined;
+  const candidatesPath = flagValue(argv, "--candidates");
+  if (candidatesPath) {
+    const { readFileSync } = await import("node:fs");
+    const parsed = JSON.parse(readFileSync(candidatesPath, "utf8"));
+    if (!Array.isArray(parsed)) {
+      console.error("candidates file must be a JSON array");
+      return 2;
+    }
+    candidates = parsed as OutreachCandidate[];
+  }
+
   const rails =
     cmd === "decide" && hasFlag(argv, "--skip-rails")
       ? { ok: true, reason: "rails skipped" }
-      : await checkFarmRails();
-  const decision = decideOperatorAction({ rails, snapshot, send });
+      : await checkMoneyRails();
+  const decision = decideOperatorAction({ rails, snapshot, send, candidates });
   console.log(JSON.stringify(decision, null, 2));
   if (decision.action === "qualifying" || decision.action === "send_one") {
     return 0;

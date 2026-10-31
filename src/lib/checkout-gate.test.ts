@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createHmac } from "node:crypto";
 import {
   buildGatedSessionBody,
   gatedCheckoutPlanIds,
@@ -9,7 +10,11 @@ import {
   closedPlanFromGatedPath,
   isCheckoutClosedPlan,
   planFromGatedPath,
+  renderCheckoutChooserPage,
+  renderCheckoutConfirmPage,
   tryHandleGatedCheckout,
+  isQronGatedPlan,
+  verifyQronAttestationToken,
 } from "./checkout-gate";
 import { planById, planPaymentLink } from "./plans";
 
@@ -188,8 +193,9 @@ describe("tryHandleGatedCheckout — GET/HEAD never call Stripe", () => {
       new Request("https://authichain.com/checkout/launch"),
       {}
     );
-    expect(launch!.status).toBe(301);
-    expect(launch!.headers.get("location")).toBe("/checkout/qron_launch");
+    // qron_launch is retired for new buyers (RES-86c): alias goes to /pricing.
+    expect(launch!.status).toBe(303);
+    expect(launch!.headers.get("location")).toBe("/pricing");
     const unknown = await tryHandleGatedCheckout(
       new Request("https://authichain.com/checkout/nope"),
       {}
@@ -274,6 +280,21 @@ describe("tryHandleGatedCheckout — POST", () => {
     }
   });
 
+  it("lets Checkout choose payment methods for Launch Annual", () => {
+    const body = buildGatedSessionBody({
+      plan: planById("qron_launch_annual")!,
+      email: "a@b.co",
+      fields: new URLSearchParams(),
+    });
+    expect(body.get("mode")).toBe("subscription");
+    expect(body.get("line_items[0][price]")).toBe(
+      planById("qron_launch_annual")!.stripe_price_id
+    );
+    expect(
+      [...body.keys()].some(key => key.startsWith("payment_method_types"))
+    ).toBe(false);
+  });
+
   it("DPP POST carries the DPP offer metadata", () => {
     const body = buildGatedSessionBody({
       plan: planById("dpp_readiness")!,
@@ -295,7 +316,7 @@ describe("tryHandleGatedCheckout — POST", () => {
     const success = body.get("success_url") || "";
     const cancel = body.get("cancel_url") || "";
 
-    // /dpp/thanks names a DPP workspace and 50 generations; Starter grants 100.
+    // /dpp/thanks names a DPP workspace; Starter grants 100.
     expect(success).not.toContain("/dpp/thanks");
     expect(success).toContain("https://authichain.com/generate?paid=1");
     expect(cancel).toContain("https://authichain.com/generate?cancelled=1");
@@ -473,7 +494,7 @@ describe("tryHandleGatedCheckout — POST", () => {
 });
 
 describe("CFA-460: /checkout/starter confirm copy", () => {
-  it("shows the RES-86 sentence and no Launch $19 copy", async () => {
+  it("shows the Research PASS FREE-PREVIEW sentence and no Launch $19 copy", async () => {
     const res = await tryHandleGatedCheckout(
       new Request("https://authichain.com/checkout/starter"),
       {}
@@ -482,17 +503,28 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
     expect(res!.status).toBe(200);
     const html = await res!.text();
     expect(html).toContain(
-      "100 AI QR generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits."
+      "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits."
     );
     expect(html).not.toContain("$19");
     expect(html).not.toContain("qron_launch");
     expect(html).not.toContain("Launch subscription");
     expect(html).not.toContain("never expire");
+    expect(html).not.toContain("never-expire");
+    expect(html).not.toContain("no expiry");
+    expect(html).not.toContain("no-expiry");
+    expect(html).not.toContain("50 workspace generations");
   });
 
-  it("display override only: plans.ts Starter description is unchanged", () => {
-    expect(planById("starter")?.description).toContain(
-      "Pack credits never expire unless you switch to a Launch subscription."
+  it("plans.ts Starter pricing copy uses the Advisor-GO replace-only sentence", () => {
+    expect(planById("starter")?.description).toBe(
+      "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits."
+    );
+    expect(planById("starter")?.features).toContain(
+      "Starting a monthly plan replaces unused pack credits"
+    );
+    expect(planById("starter")?.description).not.toContain("never expire");
+    expect(planById("starter")?.features?.join(" ")).not.toContain(
+      "never expire"
     );
   });
 });

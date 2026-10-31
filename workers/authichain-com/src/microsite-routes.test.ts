@@ -199,3 +199,10 @@ test("sitemap lists canonical microsite URLs", () => {
   assert.equal(PASSPORT_CHECKOUT.includes("strainchain_passport"), true);
   assert.equal(DPP_CHECKOUT.endsWith("https://authichain.com/checkout/dpp_readiness"), true);
 });
+
+test("musa pack: EO 14392 card uses verified wording, no FR citation", () => {
+  const html = MICROSITE_HTML["musa"];
+  assert.ok(html.includes("Executive Order 14392, signed March 13, 2026. Directs the FTC to prioritize enforcement against unlawful American-origin claims and to consider marketplace verification rules. It is context for FTC enforcement, not a product certification or a seller standard."));
+  assert.ok(!html.includes("Directs agencies on Made in America advertising priority"));
+  assert.ok(!/\d+ FR \d+/.test(html));
+});
