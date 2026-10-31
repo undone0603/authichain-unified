@@ -337,7 +337,7 @@ export function renderMcpInstallPage(env?: X402Env): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Install the AuthiChain MCP server | AuthiChain</title>
-<meta name="description" content="Connect AuthiChain to Claude, Cursor or VS Code in one step. Look up AuthiChain product records. x402 paid verification and on-chain anchoring in development.">
+<meta name="description" content="Connect AuthiChain to Claude, Cursor or VS Code in one step. Look up AuthiChain product records. Agents can pay $0.05 USDC on Base per verification via x402.">
 <link rel="canonical" href="${MCP_INSTALL_CANONICAL}">
 ${ESTATE_FONTS_LINK}
 <style>${CSS}</style>
