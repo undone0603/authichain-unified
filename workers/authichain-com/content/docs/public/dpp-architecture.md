@@ -62,13 +62,13 @@ Live and citeable:
 - Open verification protocol at [/protocol](/protocol) (v0.1.0 draft).
 - Free readiness tool at [/dpp-check](/dpp-check).
 - Battery gap map at [/battery-passport](/battery-passport).
+- Agent verification at [/x402](/x402) — $0.05 USDC per call on Base. Unpaid `POST /api/x402` returns HTTP 402.
 - Human commercial path: EU DPP Readiness, $299 one-time.
 
 EU DPP Readiness opens an AuthiChain workspace with self-serve activation, so you can publish a first passport. Checkout is on [/pricing](/pricing).
 
 ## What is in development
 
-- Agent verification at [/x402](/x402) — x402 paid verification and on-chain anchoring in development.
 - Per-product passport fields carried as an ERC-721 payload.
 - A public certificate registry anyone can query by ID.
 - A public scan ledger on a resolver host. Intended origin `id.authichain.com` returned HTTP 522 on 2026-09-27.

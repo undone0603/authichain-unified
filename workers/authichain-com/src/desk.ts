@@ -55,8 +55,8 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
   },
   {
     surface: "x402 agent pay",
-    state: "pending",
-    detail: "x402 paid verification and on-chain anchoring in development. PayTo is the tokenomics EOA. Do not rebind.",
+    state: "live",
+    detail: "$0.05 USDC on Base. PayTo is the tokenomics EOA. Do not rebind.",
   },
   {
     surface: "SEO hubs /p",
@@ -571,7 +571,7 @@ function home(): string {
     "/desk",
     `<p class="kicker">Self-serve desk</p>
      <h1 style="font-size:clamp(2.2rem,6vw,3.6rem);margin:.4rem 0 1rem">Issue. Bind. Verify.</h1>
-     <p class="muted" style="max-width:36rem">AuthiChain is the truth layer for physical products. Humans pay Stripe. x402 paid verification and on-chain anchoring in development.</p> <!-- pragma: allowlist secret -->
+     <p class="muted" style="max-width:36rem">AuthiChain is the truth layer for physical products. Humans pay Stripe. Agents pay $0.05 USDC on Base.</p>
      <div class="row">${dppForm}
        <p style="align-self:end">${catalogPaymentLinkHtml({
          planId: "dpp_readiness",
@@ -590,7 +590,7 @@ function home(): string {
      <div class="grid g3" style="margin-top:2.5rem">
        <div class="card"><p class="kicker">TruMark</p><p>Scan seal. Not a SKU.</p><a href="/trumark">Open TruMark</a></div>
        <div class="card"><p class="kicker">Mini App</p><p>Passport $49. Sitemap loc is live.</p><a href="/telegram">Open /telegram</a></div>
-       <div class="card"><p class="kicker">x402</p><p>x402 paid verification and on-chain anchoring in development</p><a href="/x402">Agent docs</a></div>
+       <div class="card"><p class="kicker">x402</p><p>$0.05 USDC · Base 8453</p><a href="/x402">Agent docs</a></div>
      </div>
      <div class="grid g2" style="margin-top:1rem">
        <div class="card"><span class="badge">Public registry</span><p class="price" style="margin:.5rem 0">—</p><p class="muted">Certificates issued (API 404)</p></div>
@@ -692,7 +692,7 @@ function token(): string {
     `<h1>Payment rails</h1>
      <div class="grid" style="margin-top:1rem">
        <div class="card"><p class="kicker">Stripe · humans</p><p>Passport $49 · DPP $299 · QRON packs. Stripe acct, not these wallets.</p></div>
-       <div class="card"><p class="kicker">x402 · agents</p><p>x402 paid verification and on-chain anchoring in development. Do not rebind PayTo.</p>
+       <div class="card"><p class="kicker">x402 · agents</p><p>$0.05 Circle USDC on Base 8453. Health ready. Do not rebind PayTo.</p>
          <p class="mono">${PAYTO}</p><p class="mono">USDC ${USDC}</p><a href="/x402">authichain.com/x402</a></div>
      </div>
      <div class="card" style="margin-top:1rem">
