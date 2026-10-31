@@ -1,0 +1,181 @@
+// src/app/verify/manufacturer/page.tsx
+'use client';
+
+import { useState } from 'react';
+
+const ENDPOINT = '/api/manufacturer-status'; // proxy or full Worker URL
+const CONTRACT = '0x4da4D2675e52374639C9c954f4f653887A9972BE';
+
+type HistoryItem = {
+  type: 'granted' | 'revoked';
+  block: string;
+  tx: string;
+  role: string;
+  sender: string;
+  timestamp: string | null;
+};
+
+type Response = {
+  address: string;
+  contract: string;
+  chainId: number;
+  currentBlock: string;
+  history: HistoryItem[];
+  polygonscan: {
+    contract: string;
+    address: string;
+    logs: string;
+  };
+  disclaimer: string;
+  source: string;
+  error?: string;
+};
+
+export default function ManufacturerStatus() {
+  const [address, setAddress] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<Response | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function check() {
+    const trimmed = address.trim();
+    if (!/^0x[a-fA-F0-9]{40}$/.test(trimmed)) {
+      setError('Enter a valid 0x address');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setData(null);
+
+    console.log(JSON.stringify({ event: 'history_query_submitted', address: trimmed }));
+
+    try {
+      const res = await fetch(`${ENDPOINT}/${trimmed}/history`);
+      const json: Response = await res.json();
+      if (!res.ok || json.error) {
+        setError(json.error ?? `HTTP ${res.status}`);
+      } else {
+        setData(json);
+        console.log(JSON.stringify({ event: 'history_loaded', event_count: json.history?.length ?? 0 }));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Request failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto p-6 space-y-6">
+      <header>
+        <h1 className="text-2xl font-semibold">Manufacturer Role History</h1>
+        <p className="text-sm text-neutral-500 mt-1">
+          Public on-chain RoleGranted / RoleRevoked trail for AuthiChainProduct (ACPT) on Polygon.
+        </p>
+      </header>
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          placeholder="0x..."
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          className="flex-1 border rounded px-3 py-2 font-mono text-sm"
+          onKeyDown={(e) => e.key === 'Enter' && check()}
+        />
+        <button
+          onClick={check}
+          disabled={loading}
+          className="bg-black text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+        >
+          {loading ? 'Checking…' : 'Check history'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="text-red-600 text-sm border border-red-200 rounded p-3">
+          {error}
+        </div>
+      )}
+
+      {data && (
+        <div className="space-y-4 text-sm">
+          <div className="border rounded p-4 space-y-1 font-mono">
+            <div>Address: {data.address}</div>
+            <div>Contract: {data.contract}</div>
+            <div>Current block: {data.currentBlock}</div>
+            <div>
+              <a href={data.polygonscan.contract} target="_blank" rel="noreferrer" className="underline">
+                PolygonScan contract
+              </a>
+              {' · '}
+              <a href={data.polygonscan.address} target="_blank" rel="noreferrer" className="underline">
+                Address
+              </a>
+              {' · '}
+              <a href={data.polygonscan.logs} target="_blank" rel="noreferrer" className="underline">
+                Events
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="font-medium mb-2">Role history ({data.history.length})</h2>
+            {data.history.length === 0 ? (
+              <p className="text-neutral-500">No RoleGranted or RoleRevoked events found for this address.</p>
+            ) : (
+              <ul className="space-y-2">
+                {data.history.map((item, i) => (
+                  <li key={i} className="border rounded p-3 font-mono text-xs">
+                    <div className={item.type === 'granted' ? 'text-green-700' : 'text-red-700'}>
+                      {item.type.toUpperCase()} · block {item.block}
+                    </div>
+                    <div>Role: {item.role}</div>
+                    <div>Sender: {item.sender}</div>
+                    <div>
+                      Tx:{' '}
+                      <a
+                        href={`https://polygonscan.com/tx/${item.tx}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline"
+                      >
+                        {item.tx.slice(0, 10)}…{item.tx.slice(-8)}
+                      </a>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="text-xs text-neutral-500 border-t pt-3">
+            {data.disclaimer}
+          </div>
+          <div className="text-xs text-neutral-400">{data.source}</div>
+
+          <div className="pt-4 border-t">
+            <p className="text-sm mb-2">
+              Manufacturer role is publicly queryable. Request the role for your brand — $49 one-time, self-serve, auto-granted after payment.
+            </p>
+            <button
+              className="bg-blue-600 text-white px-4 py-2 rounded text-sm"
+              onClick={() => {
+                console.log(JSON.stringify({ event: 'role_request_cta_click' }));
+                // Wire to Stripe Checkout or /onboard
+                window.location.href = '/onboard?intent=manufacturer-role';
+              }}
+            >
+              Request Verified Manufacturer Role — $49
+            </button>
+          </div>
+        </div>
+      )}
+
+      <footer className="text-xs text-neutral-400">
+        Contract: {CONTRACT} · No account required · Results are live eth_getLogs
+      </footer>
+    </div>
+  );
+}

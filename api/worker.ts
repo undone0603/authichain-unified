@@ -343,7 +343,6 @@ async function handleStripeCheckout(req: Request, env: Env): Promise<Response> {
     },
     body: new URLSearchParams({
       mode: "subscription",
-      "payment_method_types[]": "card",
       customer_email: customer_email as string,
       "line_items[0][price]": price_id,
       "line_items[0][quantity]": "1",

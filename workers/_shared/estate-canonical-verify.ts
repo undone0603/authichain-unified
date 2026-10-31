@@ -78,22 +78,29 @@ export async function tryHandleEstateCanonicalVerify(
     );
   }
 
+  const raw = await request.text();
   let body: { jws?: unknown; expected_object_id?: unknown };
-  try {
-    body = (await request.json()) as {
-      jws?: unknown;
-      expected_object_id?: unknown;
-    };
-  } catch {
-    return json(
-      {
-        valid: false,
-        decision: "indeterminate",
-        decision_contract: DECISION_CONTRACT,
-        error: "invalid_json",
-      },
-      400,
-    );
+  // Apex empty POST is "jws is required". A blank body is that case.
+  // Non-empty text that is not JSON stays invalid_json.
+  if (!raw.trim()) {
+    body = {};
+  } else {
+    try {
+      body = JSON.parse(raw) as {
+        jws?: unknown;
+        expected_object_id?: unknown;
+      };
+    } catch {
+      return json(
+        {
+          valid: false,
+          decision: "indeterminate",
+          decision_contract: DECISION_CONTRACT,
+          error: "invalid_json",
+        },
+        400,
+      );
+    }
   }
 
   if (typeof body.jws !== "string" || !body.jws.trim()) {
