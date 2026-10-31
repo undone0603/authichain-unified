@@ -4,7 +4,7 @@ import { DOCS_PAGES } from "./docs-pages";
 import { renderDocsPage } from "./docs-render";
 
 test("rendered docs HTML passes the claim guard", () => {
-  const pages = ["/docs", ...DOCS_PAGES.map((slug) => `/docs/${slug}`)];
+  const pages = ["/docs", ...DOCS_PAGES.map(slug => `/docs/${slug}`)];
   for (const path of pages) {
     const html = renderDocsPage(path);
     assert.ok(html.includes("<title>"), path);
@@ -24,7 +24,8 @@ test("rendered docs HTML passes the claim guard", () => {
   assert.equal(architecture.includes("written assessment"), false);
   assert.equal(architecture.includes("written readiness assessment"), false);
   assert.equal(architecture.includes("AuthiChain Basic"), false);
-  assert.ok(architecture.includes("50 workspace generations"));
+  assert.ok(architecture.includes("with self-serve activation"));
+  assert.equal(architecture.includes("50 workspace generations"), false);
   assert.ok(architecture.includes("Not legal advice"));
 });
 
@@ -34,13 +35,15 @@ test("an unknown docs slug is not a rendered article", () => {
 });
 
 test("docs links keep query strings escaped exactly once", () => {
-  const pages = ["/docs", ...DOCS_PAGES.map((slug) => `/docs/${slug}`)];
+  const pages = ["/docs", ...DOCS_PAGES.map(slug => `/docs/${slug}`)];
   for (const path of pages) {
     const html = renderDocsPage(path);
     assert.equal(html.includes("&amp;amp;"), false, path);
   }
   const hub = renderDocsPage("/docs");
   assert.ok(
-    hub.includes('href="/dpp-check?utm_source=docs&amp;utm_medium=authority&amp;utm_campaign=docs-hub"'),
+    hub.includes(
+      'href="/dpp-check?utm_source=docs&amp;utm_medium=authority&amp;utm_campaign=docs-hub"'
+    )
   );
 });
