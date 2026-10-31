@@ -6,6 +6,7 @@
  *   DRY_RUN              anything except "false" is a dry run (default dry)
  *   X402_ENDPOINT        default https://authichain.com/api/x402
  *   X402_PAY_TO          default owner-authorized treasury (same as live health payTo)
+ *   X402_SEAL_ID        required: real, registered seal UUID (never fake smoke ID)
  *   X402_RPC             optional Base RPC (public mainnet.base.org fallback)
  *
  * Live payTo is the owner's keyed EOA (0x5db5…6AA2), not the $QRON
@@ -31,6 +32,7 @@ import {
   describePayer,
   fetchUsdcBalance,
   isDryRun,
+  validSmokeSealId,
   readPrivateKey,
   signExactPayment,
 } from "./lib/x402-smoke.ts";
@@ -57,6 +59,8 @@ export async function runX402Smoke(): Promise<void> {
   );
   const payTo = (process.env.X402_PAY_TO || OPS_PAY_TO).trim();
   const rpc = process.env.X402_RPC || DEFAULT_RPC;
+  const sealId = validSmokeSealId(process.env.X402_SEAL_ID);
+  if (!sealId) fail("X402_SEAL_ID must be a real registered UUID");
   const healthUrl = `${endpoint}/health`;
 
   const healthRes = await fetch(healthUrl, {
@@ -74,16 +78,14 @@ export async function runX402Smoke(): Promise<void> {
 
   const challengePayTo = health.payTo || payTo;
   const amountAtomic = health.pricePerCall?.atomic || MIN_ATOMIC.toString();
+  if (amountAtomic !== MIN_ATOMIC.toString()) fail("unexpected_x402_price_not_0_05_USDC");
+  if (health.payTo && health.payTo.toLowerCase() !== payTo.toLowerCase()) fail("payTo_unexpected");
   const asset =
     typeof health.asset === "string" && /^0x[a-fA-F0-9]{40}$/.test(health.asset)
       ? health.asset
       : BASE_USDC_ASSET;
 
-  if (
-    !dry &&
-    health.asset &&
-    health.asset.toLowerCase() !== asset.toLowerCase()
-  ) {
+  if (asset.toLowerCase() !== BASE_USDC_ASSET.toLowerCase()) {
     fail(
       `live_asset_not_contract health.asset is not Base USDC (expected ${BASE_USDC_ASSET})`
     );
@@ -130,7 +132,7 @@ export async function runX402Smoke(): Promise<void> {
   const challengeRes = await fetch(endpoint, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ sealId: "x402-smoke-challenge" }),
+    body: JSON.stringify({ sealId }),
   });
   const challenge = (await jsonOrText(challengeRes)) as {
     x402Version?: number;
@@ -140,6 +142,8 @@ export async function runX402Smoke(): Promise<void> {
   if (challengeRes.status !== 402) {
     fail(`unpaid_challenge_not_402 http=${challengeRes.status}`);
   }
+  const quoted = challenge.accepts?.[0]?.maxAmountRequired;
+  if (quoted && quoted !== MIN_ATOMIC.toString()) fail("challenge_price_not_0_05_USDC");
 
   const signed = await signExactPayment({
     wallet: new ethers.Wallet(key),
@@ -157,7 +161,6 @@ export async function runX402Smoke(): Promise<void> {
     return;
   }
 
-  const sealId = `x402-smoke-${Date.now()}`;
   const paid = await fetch(endpoint, {
     method: "POST",
     headers: {
