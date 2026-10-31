@@ -27,19 +27,23 @@ const env = {
 
 const STARTER = "price_1UIoEVGqTruSqV8T61lp48wB";
 const DPP = "price_1TwmD8GqTruSqV8TpAF8dfyA";
+const LAUNCH_ANNUAL = "price_1USNoSGqTruSqV8ThTIW7Ej8";
 
 function sessionEvent(opts: {
   id?: string;
   price: string;
   email?: string | null;
   prior?: string | null;
+  type?: string;
+  paymentStatus?: string;
 }) {
   return {
     id: "evt_1",
-    type: "checkout.session.completed",
+    type: opts.type ?? "checkout.session.completed",
     data: {
       object: {
         id: opts.id ?? "cs_1",
+        payment_status: opts.paymentStatus ?? "paid",
         customer: "cus_1",
         customer_details: {
           email: opts.email === undefined ? "buyer@example.com" : opts.email,
@@ -204,5 +208,113 @@ describe("stripe-webhook checkout grant", () => {
     expect(
       calls.filter(c => c.method === "POST" && c.url.includes("/profiles"))
     ).toHaveLength(1);
+  });
+
+  it("does not grant a checkout session that is still unpaid", async () => {
+    state.event = sessionEvent({
+      price: LAUNCH_ANNUAL,
+      id: "cs_unpaid",
+      paymentStatus: "unpaid",
+    });
+    const logs: string[] = [];
+    const spy = vi.spyOn(console, "log").mockImplementation(msg => {
+      logs.push(String(msg));
+    });
+    const calls = installFetch({ prior: null });
+    const res = await worker.fetch(
+      new Request("https://worker.test/stripe", {
+        method: "POST",
+        body: "{}",
+        headers: { "stripe-signature": "t=1,v1=ok" },
+      }),
+      env
+    );
+    spy.mockRestore();
+    expect(res.status).toBe(200);
+    expect(calls.filter(c => c.url.includes("/profiles"))).toEqual([]);
+    expect(patches(calls)).toEqual([]);
+    const events = logs.map(line => JSON.parse(line) as { evt: string });
+    expect(events).toEqual([
+      expect.objectContaining({
+        evt: "stripe_grant_held_unpaid",
+        session: "cs_unpaid",
+        type: "checkout.session.completed",
+      }),
+    ]);
+    expect(events.some(e => e.evt === "checkout_paid_qron_annual")).toBe(false);
+  });
+
+  it("grants Launch Annual and logs the paid event once the money arrives", async () => {
+    state.event = sessionEvent({
+      price: LAUNCH_ANNUAL,
+      id: "cs_annual",
+      type: "checkout.session.async_payment_succeeded",
+      paymentStatus: "paid",
+    });
+    const logs: string[] = [];
+    const spy = vi.spyOn(console, "log").mockImplementation(msg => {
+      logs.push(String(msg));
+    });
+    const calls = installFetch({ prior: null });
+    const res = await worker.fetch(
+      new Request("https://worker.test/stripe", {
+        method: "POST",
+        body: "{}",
+        headers: { "stripe-signature": "t=1,v1=ok" },
+      }),
+      env
+    );
+    spy.mockRestore();
+    expect(res.status).toBe(200);
+    expect(patches(calls)).toEqual([
+      expect.objectContaining({
+        plan: "qron_launch_annual",
+        generations_limit: 1200,
+        generations_used: 0,
+        last_grant_session_id: "cs_annual",
+      }),
+    ]);
+    const paid = logs
+      .map(line => JSON.parse(line) as { evt: string })
+      .filter(e => e.evt === "checkout_paid_qron_annual");
+    expect(paid).toEqual([
+      expect.objectContaining({
+        evt: "checkout_paid_qron_annual",
+        plan_id: "qron_launch_annual",
+        session_id: "cs_annual",
+        amount_usd: 190,
+        generations: 1200,
+        brand: "qron",
+      }),
+    ]);
+  });
+
+  it("does not log a second Launch Annual sale when the paid session replays", async () => {
+    state.event = sessionEvent({
+      price: LAUNCH_ANNUAL,
+      id: "cs_annual",
+      paymentStatus: "paid",
+    });
+    const logs: string[] = [];
+    const spy = vi.spyOn(console, "log").mockImplementation(msg => {
+      logs.push(String(msg));
+    });
+    const calls = installFetch({ prior: "cs_annual" });
+    const res = await worker.fetch(
+      new Request("https://worker.test/stripe", {
+        method: "POST",
+        body: "{}",
+        headers: { "stripe-signature": "t=1,v1=ok" },
+      }),
+      env
+    );
+    spy.mockRestore();
+    expect(res.status).toBe(200);
+    expect(patches(calls)).toEqual([]);
+    expect(
+      logs
+        .map(line => JSON.parse(line) as { evt: string })
+        .some(e => e.evt === "checkout_paid_qron_annual")
+    ).toBe(false);
   });
 });
