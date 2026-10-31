@@ -96,7 +96,7 @@ export function renderBillingEmail(
       const activateUrl = ctx.activateUrl || `${appUrl}/dpp/activate`;
       const subject = `Your AuthiChain workspace is ready — activate now`;
       const body = `<p>${hi}</p>
-        <p>Payment received. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.</p>
+        <p>Payment received. The checkout opens an AuthiChain workspace with self-serve activation.</p>
         <p>Activate it here. This does not include a written assessment or a scheduled call.</p>
         ${button(brandId, activateUrl, "Activate workspace")}
         <p style="font-size:13px;color:#9ca3af;">The activation link records merchant activation for this workspace.</p>`;
@@ -104,7 +104,7 @@ export function renderBillingEmail(
         from: emailFrom,
         subject,
         html: shell(brandId, body),
-        text: `${hi}\n\nThe checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations. Activate here: ${activateUrl}\n\nThis does not include a written assessment or a scheduled call.`,
+        text: `${hi}\n\nThe checkout opens an AuthiChain workspace with self-serve activation. Activate here: ${activateUrl}\n\nThis does not include a written assessment or a scheduled call.`,
       };
     }
     case "payment_failed": {

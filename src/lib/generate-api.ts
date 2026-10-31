@@ -28,6 +28,31 @@ import {
 export const QRON_IMAGE_GEN_DEFAULT =
   "https://qron-image-gen.undone-k.workers.dev";
 
+/** Soft-prompt when a signed-in user has fewer than this many credits left. */
+export const LOW_CREDIT_THRESHOLD = 20;
+
+/** Marketing v5 copy (qron-modes-copy.md, trigger b, Variant A "low-starter-a"). */
+export const LOW_CREDIT_STARTER_PROMPT = {
+  message:
+    "You're running low on generations. Top up any time: Starter is 100 for $29, paid once.",
+  button: "Add 100 generations for $29",
+  dismiss: "Not now",
+  small_print: "Checkout on authichain.com.",
+} as const;
+
+/** Starter-only upgrade payload when remaining credits are below threshold. */
+export function lowCreditUpgrade(left: unknown): Record<string, unknown> {
+  if (typeof left !== "number" || left >= LOW_CREDIT_THRESHOLD) return {};
+  return {
+    upgrade: {
+      url: `${gatedCheckoutUrl("starter")}?src=low_credit&utm_content=low-starter-a`,
+      plan: "starter",
+      remaining_credits: left,
+      ...LOW_CREDIT_STARTER_PROMPT,
+    },
+  };
+}
+
 export type CreditPack = {
   id: Plan["id"];
   name: string;
@@ -39,7 +64,13 @@ export type CreditPack = {
 
 export function generateCreditPacks(): CreditPack[] {
   // LOOP-03 order: Starter $29 → Launch $19/mo → Launch $190/yr → Creator; DPP last.
-  const order = ["starter", "qron_launch", "qron_launch_annual", "creator", "dpp_readiness"] as const;
+  const order = [
+    "starter",
+    "qron_launch",
+    "qron_launch_annual",
+    "creator",
+    "dpp_readiness",
+  ] as const;
   return listedPlans("qron")
     .filter(p => (order as readonly string[]).includes(p.id))
     .sort(
@@ -310,11 +341,17 @@ export async function handleGeneratePost(opts: {
         status: 401,
         body: {
           message: used
-            ? "You've used your 5 free generations. Keep going with Starter: 100 more for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits."
-            : "Free samples are paused for today. Try again later, or get Starter now: 100 generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits.",
+            ? "You've used your 5 free generations. Keep going with Starter: 100 more for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits."
+            : "Free samples are paused right now. Try again later, or get Starter now: 100 generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits.",
           code: used ? "FREE_SAMPLE_USED" : "FREE_SAMPLE_PAUSED",
           packs,
           pricing: "/pricing",
+          // Same shape as the low-credit prompt (#2050): existing Starter only.
+          upgrade: {
+            url: SAMPLE_EXHAUSTED_STARTER_URL,
+            plan: "starter",
+            label: "Starter Pack: 100 generations for $29, paid once",
+          },
         },
       };
     }
@@ -421,6 +458,7 @@ export async function handleGeneratePost(opts: {
         // Generate still returns. A scan 404s until a later bind stores the JWS.
       }
     }
+    const remaining = deducted.ok ? deducted.remaining : credit.remaining;
     return {
       status: 200,
       body: {
@@ -443,6 +481,7 @@ export async function handleGeneratePost(opts: {
             : {};
         })(),
         ...(anonymous ? { free_sample: true } : {}),
+        ...(anonymous ? {} : lowCreditUpgrade(remaining)),
       },
     };
   } catch (err) {

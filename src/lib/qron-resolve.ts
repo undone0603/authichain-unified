@@ -4,6 +4,7 @@ import { modeGenerateUrl, parseSelectableMode } from "./qron-modes";
  * attestation and returns AuthiChain Verification Decision v1.
  */
 import { toString as qrToString } from "qrcode";
+import { gatedCheckoutUrl } from "./plans";
 import {
   CANONICAL_VERIFY_URL,
   DECISION_CONTRACT,

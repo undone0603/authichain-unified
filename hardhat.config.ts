@@ -32,7 +32,11 @@ const config: HardhatUserConfig = {
     sources: "./contracts/ledger",
     tests: "./test",
     cache: "./cache",
-    artifacts: "./artifacts",
+    // Hardhat owns this subdirectory and prunes it on every compile. Pointed at
+    // ./artifacts it deleted the tracked artifacts/contracts/AuthiChainNFT.sol/
+    // AuthiChainNFT.json that deploy-govchain-nft-base.yml reads, whenever
+    // anyone ran `pnpm test:contracts` locally.
+    artifacts: "./artifacts/hardhat",
   },
   networks: {
     hardhat: { type: "edr-simulated" },
