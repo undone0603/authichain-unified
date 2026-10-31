@@ -53,6 +53,15 @@ jobs:
     runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ci-isolated"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
+      - name: Assert the CI runner is not the production publisher
+        if: runner.environment == 'self-hosted'
+        env:
+          AUTHICHAIN_RUNNER_NAME: ${{ runner.name }}
+        run: |
+          if [ "$AUTHICHAIN_RUNNER_NAME" != "authichain-ci-arm64-01" ]; then
+            echo "::error::Refusing PR execution on a non-isolated runner"
+            exit 1
+          fi
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Restore full tree after sparse checkout
@@ -133,6 +142,15 @@ jobs:
           - shard: 2
             filter: "--filter=!./workers/* --filter=!*worker*"
     steps:
+      - name: Assert the CI runner is not the production publisher
+        if: runner.environment == 'self-hosted'
+        env:
+          AUTHICHAIN_RUNNER_NAME: ${{ runner.name }}
+        run: |
+          if [ "$AUTHICHAIN_RUNNER_NAME" != "authichain-ci-arm64-01" ]; then
+            echo "::error::Refusing PR execution on a non-isolated runner"
+            exit 1
+          fi
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Restore full tree after sparse checkout
@@ -247,6 +265,15 @@ jobs:
     runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ci-isolated"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
+      - name: Assert the CI runner is not the production publisher
+        if: runner.environment == 'self-hosted'
+        env:
+          AUTHICHAIN_RUNNER_NAME: ${{ runner.name }}
+        run: |
+          if [ "$AUTHICHAIN_RUNNER_NAME" != "authichain-ci-arm64-01" ]; then
+            echo "::error::Refusing PR execution on a non-isolated runner"
+            exit 1
+          fi
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Restore full tree after sparse checkout
@@ -333,6 +360,15 @@ jobs:
     runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ci-isolated"]') || 'ubuntu-24.04' }}
     timeout-minutes: 5
     steps:
+      - name: Assert the CI runner is not the production publisher
+        if: runner.environment == 'self-hosted'
+        env:
+          AUTHICHAIN_RUNNER_NAME: ${{ runner.name }}
+        run: |
+          if [ "$AUTHICHAIN_RUNNER_NAME" != "authichain-ci-arm64-01" ]; then
+            echo "::error::Refusing PR execution on a non-isolated runner"
+            exit 1
+          fi
       - name: All CI Main jobs passed
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
