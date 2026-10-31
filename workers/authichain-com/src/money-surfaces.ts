@@ -19,8 +19,10 @@ import {
 } from "../../_shared/estate-landing.ts";
 
 export const DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
-export const CLAIM_FILE_CHECKOUT = "https://authichain.com/checkout/musa_claim_file";
-export const PASSPORT_CHECKOUT_PATH = "https://authichain.com/checkout/strainchain_passport";
+export const CLAIM_FILE_CHECKOUT =
+  "https://authichain.com/checkout/musa_claim_file";
+export const PASSPORT_CHECKOUT_PATH =
+  "https://authichain.com/checkout/strainchain_passport";
 
 const TRUMARK_PATHS = new Set(["/trumark", "/trumark/"]);
 const MADE_IN_AMERICA_PATHS = new Set([
@@ -180,7 +182,7 @@ export function renderTrumarkPage(): string {
       },
       {
         title: "EU DPP Readiness — $299",
-        body: "AuthiChain workspace, self-serve activation, and 50 workspace generations. $299 on the published Stripe Payment Link, or enter a work email for recoverable checkout.",
+        body: "AuthiChain workspace and self-serve activation. $299 on the published Stripe Payment Link, or enter a work email for recoverable checkout.",
       },
     ],
     "positioning"
@@ -206,6 +208,10 @@ ${surfaceFooter()}`,
   });
 }
 
+/** Gov provenance pilot, gated confirm page (Zac approved $7,500, 2026-10-16). */
+export const GOV_PILOT_LINK =
+  "https://authichain.com/checkout/gov_provenance_pilot";
+
 export function renderMadeInAmericaPage(): string {
   return pageShell({
     title: "Made in America origin claims | AuthiChain",
@@ -219,20 +225,29 @@ export function renderMadeInAmericaPage(): string {
   ${estateHero({
     eyebrow: "Made in America",
     title: "Prove the origin claim before anyone asks.",
-    lede: "The FTC Made in USA Labeling Rule (16 CFR Part 323) turns on whether all or virtually all of a product is US-origin. Executive Order 14392 told the FTC to prioritize truthful Made in America advertising. A signed, per-unit record is documentation — it does not replace meeting the standard.",
+    lede: "The FTC Made in USA Labeling Rule (16 CFR Part 323) turns on whether all or virtually all of a product is US-origin. Executive Order 14392 (March 13, 2026) directs the FTC to prioritize, where appropriate, enforcement against unlawful Made in America claims. A signed, per-unit record is documentation — it does not replace meeting the standard.",
     emailCheckout: {
       action: CLAIM_FILE_CHECKOUT,
       label: "Start my claim file — $299",
     },
     actions: [
-      { href: "/made-in-usa-claim-file", label: "What's in the claim file", primary: false },
+      {
+        href: "/made-in-usa-claim-file",
+        label: "What's in the claim file",
+        primary: false,
+      },
       { href: "/partners/brief", label: "Partner brief", primary: false },
       { href: "/pricing", label: "View pricing", primary: false },
+      {
+        href: GOV_PILOT_LINK,
+        label: "Federal buyers: 60-day provenance pilot — $7,500 fixed",
+        primary: false,
+      },
     ],
   })}
   ${estateSteps(
     "How origin evidence works",
-    "The April 2026 FTC sweep produced a $625,000 order. The rule a seller is held to is 16 CFR Part 323, not the Executive Order itself.",
+    "In April 2026 the FTC announced a Made in USA sweep that included a $625,000 stipulated order for consumer redress against TouchTunes Music Company, LLC, over electronic dartboards (ftc.gov, Apr 14, 2026). The rule a seller is held to is 16 CFR Part 323, not the Executive Order itself.",
     [
       {
         title: "Record",
@@ -240,7 +255,7 @@ export function renderMadeInAmericaPage(): string {
       },
       {
         title: "Show",
-        body: "A scan returns the chain of custody. Consumers, buyers, and regulators see the same evidence.",
+        body: "The record is built so a scan can show the chain of custody to consumers, buyers and regulators. Public scan verification is in development.",
       },
     ]
   )}
@@ -254,7 +269,7 @@ export function renderMadeInAmericaPage(): string {
       },
       {
         title: "EO 14392",
-        body: "Directs agencies on Made in America advertising priority. It is context for the sweep, not a product certification.",
+        body: "Signed March 13, 2026. Directs the FTC to prioritize enforcement against unlawful American-origin claims and to consider marketplace verification rules. It is context for the sweep, not a product certification or a seller standard.",
       },
       {
         title: "USDA Product of USA",
