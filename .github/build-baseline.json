@@ -1,0 +1,3 @@
+{
+  "skipRoots": [".github/", "docs/", "workers/"]
+}
