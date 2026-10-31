@@ -12,7 +12,7 @@ import {
 } from "./mcp-install-page";
 import { TOOLS, isMcpPath } from "./mcp-routes";
 import { DPP_CATEGORIES } from "../../../src/lib/dpp-readiness.ts";
-import manifest from "../../../content/microsites/manifest.json" with { type: "json" };
+import manifest from "../../../content/microsites/manifest.json";
 
 describe("mcp install routing", () => {
   it("claims only the install paths and never the agent endpoint", () => {

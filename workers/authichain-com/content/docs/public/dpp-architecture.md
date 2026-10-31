@@ -69,7 +69,6 @@ EU DPP Readiness opens an AuthiChain workspace with self-serve activation, so yo
 
 ## What is in development
 
-- Agent verification at [/x402](/x402) — x402 paid verification and on-chain anchoring in development.
 - Per-product passport fields carried as an ERC-721 payload.
 - A public certificate registry anyone can query by ID.
 - A public scan ledger on a resolver host. Intended origin `id.authichain.com` returned HTTP 522 on 2026-09-27.

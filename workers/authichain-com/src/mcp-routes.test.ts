@@ -24,9 +24,9 @@ import {
   tryHandleMcp,
   verifyRecordTool,
 } from "./mcp-routes";
-import anchorJson from "../../../protocol/examples/polygon-anchor-1.anchor.json" with { type: "json" };
-import recordJson from "../../../protocol/examples/polygon-anchor-1.record.json" with { type: "json" };
-import serverManifest from "../../../server.json" with { type: "json" };
+import anchorJson from "../../../protocol/examples/polygon-anchor-1.anchor.json";
+import recordJson from "../../../protocol/examples/polygon-anchor-1.record.json";
+import serverManifest from "../../../server.json";
 
 // CFA-363: paid paths need a replay store; an in-memory stub for these tests.
 function kvStub() {

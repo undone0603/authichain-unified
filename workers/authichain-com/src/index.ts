@@ -7,6 +7,7 @@ import { handleSalesInquiry } from './routes/sales';
 // inlines it at build time, so the worker stays self-contained at runtime.
 import { tryHandleDppRoute } from "./dpp-routes";
 import { tryHandleAgentPresentation } from "./agent-present-page";
+import { tryHandleBotIdentity } from "./bot-identity-routes";
 import {
   tryHandleApiCheckoutEmailGate,
   tryHandleProtocolCheckout,
@@ -174,7 +175,7 @@ const SEO = {
     'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain, Starter Pack',
   ogTitle: 'AuthiChain — The authentic agentic economy',
   ogDescription:
-    'Start with QRON Starter at $29. Signed seals, MCP tools. x402 paid verification and on-chain anchoring in development. EU DPP Readiness is $299 on live Stripe checkout when you need it.',
+    'Start with QRON Starter at $29. Signed seals, MCP tools, x402 at $0.05 USDC. EU DPP Readiness is $299 on live Stripe checkout when you need it.',
   twitterTitle: 'AuthiChain — The authentic agentic economy',
   twitterDescription:
     'Starter Pack $29. Issue → Bind → Verify. x402 for agents. EU DPP Readiness $299 when you need the passport path.',
@@ -2372,7 +2373,7 @@ function techStack() {
     "Claims limited to capabilities that are live on this estate.",
     [
       { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. The checkout opens an AuthiChain workspace with self-serve activation." },
-      { title: "Agent pay (x402)", body: "Secondary money path. x402 paid verification and on-chain anchoring in development. Public docs at /x402." },
+      { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
     "technology",
   );
@@ -2581,7 +2582,7 @@ const HTML = `<!DOCTYPE html>
     "Agents can pay. Our goal: a reader can check a signed record and is told, in the same breath, that the check is not a physical inspection. A signed record is not a physical inspection. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
-      { title: "Settlement", body: "Humans start with Starter $29 on Stripe. EU DPP Readiness is $299 when needed. x402 paid verification and on-chain anchoring in development." },
+      { title: "Settlement", body: "Humans start with Starter $29 on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
   )}
@@ -3600,6 +3601,8 @@ async function handleAuthichainCom(
     if (dppPage) return dppPage;
     const agentPage = await tryHandleAgentPresentation(request);
     if (agentPage) return agentPage;
+    const botIdentity = tryHandleBotIdentity(request);
+    if (botIdentity) return botIdentity;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
     // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the

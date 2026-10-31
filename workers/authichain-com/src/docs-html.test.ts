@@ -14,6 +14,10 @@ test("rendered docs HTML passes the claim guard", () => {
     assert.equal(html.includes("id.authichain.com/01/"), false, path);
   }
   const hub = renderDocsPage("/docs");
+  assert.ok(hub.includes('href="/api/verify?id=polygon-anchor-1"'));
+  assert.ok(hub.includes('href="/verify?id=polygon-anchor-1"'));
+  assert.ok(hub.includes("Not a customer product"));
+  assert.equal(hub.includes("polygonscan.com"), false);
   assert.ok(hub.includes("utm_source=docs"));
   assert.ok(hub.includes("utm_campaign=docs-hub"));
   assert.ok(hub.includes("/battery-passport"));

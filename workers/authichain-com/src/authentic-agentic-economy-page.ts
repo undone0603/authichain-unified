@@ -218,7 +218,7 @@ ${estateHero({
     { href: "/onboard", label: "Onboard", primary: false },
   ],
 })}
-${estateTrust([{ value: "in development", label: "x402 paid verification" }])}
+${estateTrust([{ value: "$0.05", label: "x402 per verify" }])}
 ${estateFeatures(
   "What is live on this estate",
   "Claims limited to capabilities that already run. No invented customer logos, no promised mint that is not deployed.",
