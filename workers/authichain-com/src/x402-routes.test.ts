@@ -77,6 +77,7 @@ describe("tryHandleX402", () => {
       humanCheckout: {
         farmUsd: number;
         farmPaymentLink?: string;
+        starterPaymentLink?: string;
       };
     };
     expect(body.protocol).toBe("x402");
@@ -96,7 +97,12 @@ describe("tryHandleX402", () => {
       )
     ).toBe(false);
     expect(body.humanCheckout.farmUsd).toBe(149);
-    expect(body.humanCheckout.farmPaymentLink).toBeUndefined();
+    expect(body.humanCheckout.farmPaymentLink).toBe(
+      "https://authichain.com/checkout/strainchain_farm"
+    );
+    expect(body.humanCheckout.starterPaymentLink).toBe(
+      "https://authichain.com/checkout/starter"
+    );
   });
 
   it("GET /api/x402/listing copies payTo from health for PayAPI", async () => {
@@ -350,10 +356,9 @@ describe("tryHandleX402", () => {
   });
 
   it("HEAD /api/x402 is 402 unpaid quote with empty body", async () => {
-    const res = await tryHandleX402(
-      req("/api/x402", { method: "HEAD" }),
-      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" }
-    );
+    const res = await tryHandleX402(req("/api/x402", { method: "HEAD" }), {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+    });
     expect(res!.status).toBe(402);
     expect(await res!.text()).toBe("");
     expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();

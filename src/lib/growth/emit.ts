@@ -96,7 +96,7 @@ export function isDeclaredFor(event: GrowthEvent, sku: GrowthSku): boolean {
 export async function hashEmail(email: string): Promise<string> {
   const normalized = email.toLowerCase().trim();
   const bytes = new TextEncoder().encode(normalized);
-  const cryptoApi = (globalThis as { crypto: Crypto }).crypto;
+  const cryptoApi = (globalThis as unknown as { crypto: Crypto }).crypto;
   const digest = await cryptoApi.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest))
     .map(b => b.toString(16).padStart(2, "0"))

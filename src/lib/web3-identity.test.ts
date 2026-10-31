@@ -40,9 +40,7 @@ describe("canonical web3 identity lock", () => {
     expect(TOKENOMICS_PAY_TO).toBe(X402_PUBLISHED_PAY_TO);
     // payTo is the owner's keyed EOA, which is also the $QRON holder.
     expect(TOKENOMICS_PAY_TO.toLowerCase()).toBe(QRON_HOLDER_EOA.toLowerCase());
-    expect(QRON_HOLDER_EOA).toBe(
-      "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
-    );
+    expect(QRON_HOLDER_EOA).toBe("0x5db511706FB6317cd23A7655F67450c5AC6e6AA2");
     expect(ECONOMY_NFT_DEPLOYER).toBe(NFT_DEPLOYER_EOA);
     expect(ECONOMY_NFT).toBe(POLYGON_AUTHICHAIN_NFT);
   });
@@ -88,7 +86,12 @@ describe("canonical web3 identity lock", () => {
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
       planPaymentLink("dpp_readiness")
     );
-    expect(catalog.humanCheckout.farmPaymentLink).toBeUndefined();
+    expect(catalog.humanCheckout.farmPaymentLink).toBe(
+      planPaymentLink("strainchain_farm")
+    );
+    expect(catalog.humanCheckout.starterPaymentLink).toBe(
+      planPaymentLink("starter")
+    );
     expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
     expect(planPaymentLink("strainchain_farm")).toBe(
       "https://authichain.com/checkout/strainchain_farm"
