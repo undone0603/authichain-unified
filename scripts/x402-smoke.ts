@@ -95,14 +95,15 @@ export async function runX402Smoke(): Promise<void> {
     fail(`health_not_ready http=${healthRes.status} status=${health.status}`);
   }
 
-  const challengePayTo = health.payTo || payTo;
-  const amountAtomic = health.pricePerCall?.atomic || MIN_ATOMIC.toString();
+  // Fail closed on an incomplete or inconsistent quote; never infer token,
+  // recipient, or amount before signing a spendable authorization.
+  if (!health.payTo || !ethers.isAddress(health.payTo)) fail("health_missing_payTo");
+  const challengePayTo = health.payTo;
+  const amountAtomic = health.pricePerCall?.atomic;
   if (amountAtomic !== MIN_ATOMIC.toString()) fail("unexpected_x402_price_not_0_05_USDC");
-  if (health.payTo && health.payTo.toLowerCase() !== payTo.toLowerCase()) fail("payTo_unexpected");
-  const asset =
-    typeof health.asset === "string" && /^0x[a-fA-F0-9]{40}$/.test(health.asset)
-      ? health.asset
-      : BASE_USDC_ASSET;
+  if (health.payTo.toLowerCase() !== payTo.toLowerCase()) fail("payTo_unexpected");
+  if (!health.asset || !ethers.isAddress(health.asset)) fail("health_missing_asset");
+  const asset = health.asset;
 
   if (asset.toLowerCase() !== BASE_USDC_ASSET.toLowerCase()) {
     fail(
@@ -155,14 +156,18 @@ export async function runX402Smoke(): Promise<void> {
   });
   const challenge = (await jsonOrText(challengeRes)) as {
     x402Version?: number;
-    accepts?: Array<{ payTo?: string; maxAmountRequired?: string }>;
+    accepts?: Array<{ payTo?: string; maxAmountRequired?: string; amount?: string; asset?: string; network?: string }>;
     extensions?: unknown;
   };
   if (challengeRes.status !== 402) {
     fail(`unpaid_challenge_not_402 http=${challengeRes.status}`);
   }
-  const quoted = challenge.accepts?.[0]?.maxAmountRequired;
-  if (quoted && quoted !== MIN_ATOMIC.toString()) fail("challenge_price_not_0_05_USDC");
+  const offer = challenge.accepts?.[0];
+  const quoted = offer?.amount ?? offer?.maxAmountRequired;
+  if (quoted !== MIN_ATOMIC.toString()) fail("challenge_price_not_0_05_USDC");
+  if (offer?.payTo?.toLowerCase() !== payTo.toLowerCase()) fail("challenge_payTo_unexpected");
+  if (offer?.asset?.toLowerCase() !== BASE_USDC_ASSET.toLowerCase()) fail("challenge_asset_unexpected");
+  if (offer?.network && !["base", "eip155:8453"].includes(offer.network)) fail("challenge_network_unexpected");
 
   const signed = await signExactPayment({
     wallet: new ethers.Wallet(key),
