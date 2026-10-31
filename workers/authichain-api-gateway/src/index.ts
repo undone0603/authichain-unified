@@ -759,7 +759,7 @@ td{padding:12px;border-bottom:1px solid #111}
 <tr><td>StrainChain Passport</td><td style="color:#3ddc60">$49</td><td>One published genetics passport</td></tr>
 <tr><td>QRON Starter Pack</td><td style="color:#3ddc60">$29</td><td>100 AI QR generations</td></tr>
 <tr><td>QRON Creator Pack</td><td style="color:#3ddc60">$99</td><td>500 AI QR generations</td></tr>
-<tr><td>EU DPP Readiness</td><td style="color:#3ddc60">$299</td><td>AuthiChain workspace, self-serve activation, 50 workspace generations</td></tr>
+<tr><td>EU DPP Readiness</td><td style="color:#3ddc60">$299</td><td>AuthiChain workspace, self-serve activation</td></tr>
 </table>
 
 <h2>Accounts v2 (Admin)</h2>
