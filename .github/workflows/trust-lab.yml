@@ -11,7 +11,7 @@ on:
       - ".github/workflows/trust-lab.yml"
 jobs:
   adversarial:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@v7
