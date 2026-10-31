@@ -69,7 +69,6 @@ export async function POST(req: NextRequest) {
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: stripeCustomerId,
       mode: 'subscription',
-      payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: success_url || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?subscribed=true&plan=${plan}`,
       cancel_url: cancel_url || `${process.env.NEXT_PUBLIC_APP_URL}/pricing?cancelled=true`,

@@ -8,6 +8,8 @@
  * mainnet anchor) via attestSeal — this module does not set it.
  */
 
+import { isDiscoveryExampleSealId } from "./x402";
+
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -75,8 +77,11 @@ export function parseSealRequest(input: Record<string, unknown>): SealRequest {
 export function unpaidSealRefusal(
   raw: Record<string, unknown>
 ): { status: number; body: Extract<SealRequest, { ok: false }>["body"] } | null {
-  if (Object.keys(raw).length === 0) return null;
-  const parsed = parseSealRequest(raw);
+  const body = coerceSealBody(raw);
+  const listed = listedSealId(body);
+  if (!listed) return null;
+  if (isDiscoveryExampleSealId(listed)) return null;
+  const parsed = parseSealRequest(body);
   if (parsed.ok) return null;
   return { status: parsed.status, body: parsed.body };
 }

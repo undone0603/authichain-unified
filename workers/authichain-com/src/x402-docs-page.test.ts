@@ -70,6 +70,7 @@ describe("x402 public docs page", () => {
     expect(html).not.toContain('{"sealId":"demo"}');
     expect(html).toContain("extensions.bazaar");
     expect(html).toContain("accepts[0].outputSchema.input");
+    expect(html).toContain("accepts[0].outputSchema.output");
     expect(html).toContain("PAYMENT-REQUIRED");
     expect(html).toContain("x402Version: 2");
     expect(html).toContain("application/ld+json");
