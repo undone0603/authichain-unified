@@ -7,7 +7,7 @@ name: Government Lead-Gen Engine
 
 on:
   schedule:
-    - cron: "0 6 * * *" # Daily 6 AM UTC — ingest runs live; everything downstream stays dry
+    - cron: "5 6 * * *" # Daily 06:05 UTC — ingest runs live; everything downstream stays dry. Genesis keeps 06:00.
   workflow_dispatch:
     inputs:
       dry_run:
@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   preflight:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     steps:
       - name: Validate SAM.gov API key
         run: |
@@ -71,7 +71,7 @@ jobs:
   # its own decision and its own manual dispatch. Notify (owner Slack channel
   # only) goes live on the schedule while launch mode is active.
   launch:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     outputs:
       active: ${{ steps.launch.outputs.active }}
     steps:

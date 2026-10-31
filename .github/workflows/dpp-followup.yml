@@ -1,0 +1,84 @@
+# .github/workflows/dpp-followup.yml
+#
+# The one follow-up email to people who ticked "email me this result" on
+# /dpp-check. Manual only: there is no schedule, so nothing here runs unless the
+# owner dispatches it. Runbook: docs/growth/DPP_FOLLOWUP.md.
+#
+# Dry run (default; reports who would be emailed, sends nothing):
+#   gh workflow run dpp-followup.yml
+# Live (needs the dry_run box unchecked AND repo variable OWNER_LIVE_SEND=true):
+#   gh workflow run dpp-followup.yml -f dry_run=false
+#
+# The report in the run summary masks every address (jo***@example.com).
+name: DPP Follow-up (opt-in, manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (run every send gate, send nothing). Live also needs vars.OWNER_LIVE_SEND=true."
+        required: false
+        default: true
+        type: boolean
+      max_sends:
+        description: "Cap on live sends this run"
+        required: false
+        default: "3"
+        type: string
+
+concurrency:
+  group: dpp-followup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.28.2"
+
+jobs:
+  followup:
+    name: DPP follow-up (${{ inputs.dry_run == false && 'live if OWNER_LIVE_SEND' || 'dry run' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+
+      - name: Send the follow-ups
+        run: pnpm exec tsx scripts/dpp-followup.ts
+        env:
+          # Anything but the literal "false" is a dry run, and the script
+          # additionally needs OWNER_LIVE_SEND=true before it will send.
+          DRY_RUN: ${{ inputs.dry_run == false && 'false' || 'true' }}
+          OWNER_LIVE_SEND: ${{ vars.OWNER_LIVE_SEND }}
+          MAX_LIVE_SENDS: ${{ inputs.max_sends }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY2: ${{ secrets.RESEND_API_KEY2 }}
+          RESEND_FROM: ${{ secrets.OUTREACH_FROM_EMAIL || 'AuthiChain <hello@authichain.com>' }}
+          RESEND_REPLY_TO: ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
+          MAILING_ADDRESS: ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
+          # Same opt-out wiring as b2b-outreach.yml: guardedSend refuses to send
+          # unless the unsubscribe link is one that is actually recorded.
+          UNSUBSCRIBE_URL: ${{ secrets.UNSUBSCRIBE_URL }}
+          OUTREACH_UNSUBSCRIBE_SECRET: ${{ secrets.OUTREACH_UNSUBSCRIBE_SECRET }}
+          UNSUBSCRIBE_ORIGIN: ${{ vars.UNSUBSCRIBE_ORIGIN }}
+          OUTREACH_ALLOW_MAILTO_OPTOUT: ${{ vars.OUTREACH_ALLOW_MAILTO_OPTOUT }}
