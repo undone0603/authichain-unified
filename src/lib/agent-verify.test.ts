@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseSealRequest, registryAnswer, unpaidSealRefusal } from "./agent-verify";
+import { x402BazaarDiscovery } from "./x402";
 
 const SEAL = "3f6c2a4e-8b1d-4c7a-9e2f-0a1b2c3d4e5f";
 
@@ -29,6 +30,24 @@ describe("parseSealRequest", () => {
       expect(r.body.error).toBe("seal_id_required");
       expect(r.body.detail).toMatch(/not registry keys/);
     }
+  });
+
+  it("refuses the bazaar nil UUID before payment and leaves that example in place", () => {
+    const example = x402BazaarDiscovery().bazaar.info.input.body.sealId;
+    expect(example).toBe("00000000-0000-4000-8000-000000000000");
+    const r = parseSealRequest({ sealId: ` ${example.toUpperCase()} ` });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.status).toBe(400);
+    expect(r.body.error).toBe("seal_id_nil");
+    expect(r.body.settled).toBe(false);
+    expect(r.body.detail).toMatch(/No payment was taken/);
+    expect(unpaidSealRefusal({ sealId: example })).toMatchObject({
+      status: 400,
+      body: { error: "seal_id_nil", settled: false },
+    });
+    expect(unpaidSealRefusal({})).toBeNull();
+    expect(unpaidSealRefusal({ sealId: SEAL })).toBeNull();
   });
 
   it("leaves an empty unpaid body and a real UUID on the 402 path", () => {

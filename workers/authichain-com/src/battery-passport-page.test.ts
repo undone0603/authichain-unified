@@ -31,18 +31,16 @@ describe("battery passport offer page", () => {
 
   it("sells the existing $299 plan through the email-gated checkout, tagged by campaign", () => {
     expect(html).toContain(`$${plan.price}`);
-    expect(html).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(html).toContain(
+      'action="https://authichain.com/checkout/dpp_readiness"'
+    );
     expect(html).toContain('name="utm_campaign" value="battery-passport"');
     expect(html).not.toContain('href="/api/checkout');
     expect(html).toContain('type="email" required');
   });
 
   it("lists the workspace grant and leaves the unbuilt report and credit off the page", () => {
-    for (const line of [
-      "AuthiChain workspace",
-      "Self-serve activation",
-      "50 workspace generations",
-    ])
+    for (const line of ["AuthiChain workspace", "Self-serve activation"])
       expect(html).toContain(line);
     expect(html).not.toContain("Written EU DPP readiness assessment");
     expect(html).not.toContain("written readiness assessment");
@@ -128,13 +126,21 @@ describe("battery passport offer page", () => {
   it("answers the legal FAQ without claiming to issue a passport", () => {
     // Wording sweep 2026-10-16: the $299 is a self-serve tool; the $950 report is the readiness assessment.
     expect(html).toContain("self-serve tool, not an assessment:");
-    expect(html).toContain("You do the work. Not an assessment, not legal advice, not a certification.");
+    expect(html).toContain(
+      "You do the work. Not an assessment, not legal advice, not a certification."
+    );
     expect(html).toContain("not a conformity assessment");
-    expect(html).toContain("The economic operator placing the battery on the EU market issues the passport.");
+    expect(html).toContain(
+      "The economic operator placing the battery on the EU market issues the passport."
+    );
     // RESEARCH-GATE fix 13 (PM-331): the $299 is a workspace, not an assessment.
     expect(html).not.toContain("It is a readiness assessment");
-    expect(html).not.toContain('"serviceType":"EU Digital Battery Passport readiness assessment"');
-    expect(html).toContain('"serviceType":"Workspace for EU Digital Battery Passport figures"');
+    expect(html).not.toContain(
+      '"serviceType":"EU Digital Battery Passport readiness assessment"'
+    );
+    expect(html).toContain(
+      '"serviceType":"Workspace for EU Digital Battery Passport figures"'
+    );
     expect(html).not.toContain("working passport you control");
     expect(html).not.toContain("signed and publicly verifiable");
     expect(html).toContain(
@@ -161,12 +167,31 @@ describe("wording sweep 2026-10-16: tiers and gap report CTAs", () => {
     expect(page).toContain("$350 per extra model");
   });
   it("links the gated checkout routes, never a raw Payment Link", () => {
-    expect(page).toContain('href="https://authichain.com/checkout/battery_gap_report" rel="nofollow"');
-    expect(page).toContain('href="https://authichain.com/checkout/battery_gap_report_extra" rel="nofollow"');
+    expect(page).toContain(
+      'href="https://authichain.com/checkout/battery_gap_report" rel="nofollow"'
+    );
+    expect(page).toContain(
+      'href="https://authichain.com/checkout/battery_gap_report_extra" rel="nofollow"'
+    );
     expect(page).not.toContain("buy.stripe.com");
   });
   it("never presents the report as an issued passport or legal advice", () => {
-    expect(page).toContain("Readiness only: not a conformity assessment, not legal advice, not an issued passport.");
-    expect(page).not.toMatch(/issued passport included|we issue your passport|guaranteed compliance/i);
+    expect(page).toContain(
+      "Readiness only: not a conformity assessment, not legal advice, not an issued passport."
+    );
+    expect(page).not.toMatch(
+      /issued passport included|we issue your passport|guaranteed compliance/i
+    );
+  });
+  it("drops the 10-business-day SLA and keeps the $950/$350 KEEP lines", () => {
+    expect(page).not.toContain("10 business days");
+    expect(page).not.toContain("50 workspace generations");
+    expect(page).toContain(
+      "A readiness assessment of one battery model against Annex XIII, written by us from a US-based provider. It arrives by email as a written document. No call."
+    );
+    expect(page).toContain("Each extra model on the gap report is $350.");
+    expect(page).toContain("$950 written gap report");
+    expect(page).toContain("Order the gap report — $950");
+    expect(page).toContain("Add a model — $350");
   });
 });
