@@ -1,5 +1,15 @@
 name: AgentZ Autonomous CI
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# One check per PR revision. The old push + PR pair accumulated obsolete
+# jobs on the single ops runner and delayed the required quality gate.
+concurrency:
+  group: ci-agentz-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -7,6 +17,7 @@ permissions:
 jobs:
   verify-and-heal:
     runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - name: Restore full tree after sparse checkout

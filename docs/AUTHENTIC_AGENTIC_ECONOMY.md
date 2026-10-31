@@ -7,7 +7,7 @@ One primitive, four faces:
 ```
 object → signed seal (Ed25519 + optional Polygon NFT)
       → human scan  /verify          → Stripe entitlement
-      → agent call  POST /api/x402   → x402 paid verification in development
+      → agent call  POST /api/x402   → $0.05 USDC on Base
       → public receipt
 ```
 
@@ -20,7 +20,7 @@ A seal proves the record the issuer published has not been altered since it was 
 | https://authichain.com/battery-passport | dpp_readiness | $299 one-time |
 | https://qron.space/generate | starter / creator | $29 / $99 one-time |
 | https://strainchain.io/onboard | strainchain_passport | $49 one-time |
-| https://authichain.com/x402 | agent verify | in development | <!-- pragma: allowlist secret -->
+| https://authichain.com/x402 | agent verify | $0.05 USDC |
 
 Apex product CTAs stay `/onboard`, `/dapp`, `/verify`. Never a `*.vercel.app` URL.
 
@@ -83,7 +83,7 @@ Wine, pharma packaging, auto parts, luxury receipts, diplomas, tickets are field
 ### Loop 4 — Agent 402
 
 - Trigger: unpaid `POST /api/x402` or MCP tools/call
-- Mechanism: x402 paid verification and on-chain anchoring in development
+- Mechanism: HTTP 402 + $0.05 USDC on Base → retry with `X-PAYMENT`
 - CVR estimate: unknown. Daily cap $10/payer already set.
 - Events: `x402_challenge`, `x402_settled`, `agent_verify_ok`
 - Kill: facilitator down 48h or payTo drift from `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2`

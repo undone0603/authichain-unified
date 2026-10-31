@@ -165,7 +165,7 @@ curl -sS -H 'accept: application/json' \
 ```
 
 Human lookup: [/verify](/verify).
-Agent pay rail: [/x402](/x402?utm_source=docs&utm_medium=authority&utm_campaign=verification) — x402 paid verification and on-chain anchoring in development. Do not send private keys.
+Agent pay rail: [/x402](/x402?utm_source=docs&utm_medium=authority&utm_campaign=verification) — $0.05 USDC on Base. Do not send private keys.
 
 Negative fixtures live in the repo:
 
