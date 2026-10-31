@@ -227,10 +227,15 @@ function esc(value: unknown): string {
 }
 
 function priceLabel(plan: Plan): string {
+  const raw = plan.price_suffix ?? "";
   const suffix =
-    plan.price_suffix === "/month" || plan.stripe_mode === "subscription"
-      ? "/mo"
-      : "";
+    raw === "/yr" || raw === "/year"
+      ? "/yr"
+      : raw === "/mo" ||
+          raw === "/month" ||
+          (raw === "" && plan.stripe_mode === "subscription")
+        ? "/mo"
+        : "";
   return `$${plan.price.toLocaleString("en-US")}${suffix}`;
 }
 
@@ -307,13 +312,21 @@ export function renderCheckoutChooserPage(
   }
   const qs = carry.toString() ? `?${carry.toString()}` : "";
   const publicIds = new Set<string>(PUBLIC_PLAN_IDS);
+  const seen = new Set<string>();
+  const launch = (["qron_launch", "qron_launch_annual"] as const)
+    .map(id => planById(id))
+    .filter((plan): plan is Plan => Boolean(plan));
   const plans = [
+    ...launch,
     ...listedPlans("qron"),
     ...listedPlans("strainchain"),
     ...listedPlans("musa"),
-  ].filter(
-    p => publicIds.has(p.id) && Boolean(p.stripe_price_id && p.stripe_mode)
-  );
+  ].filter(p => {
+    if (!publicIds.has(p.id) || !p.stripe_price_id || !p.stripe_mode) return false;
+    if (seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
+  });
   const items = plans
     .map(
       p =>
@@ -405,11 +418,16 @@ export function buildGatedSessionBody(opts: {
   // both authichain.com and authichain.govchain.us, so ${origin} is safe.
   const isClaimFile = plan.id === "musa_claim_file";
   const isStarter = plan.id === "starter";
+  const landsOnGenerate =
+    isStarter ||
+    plan.id === "creator" ||
+    plan.id === "qron_launch" ||
+    plan.id === "qron_launch_annual";
   body.set(
     "success_url",
     isClaimFile
       ? `${origin}/made-in-usa-claim-file/thanks?session_id={CHECKOUT_SESSION_ID}`
-      : isStarter
+      : landsOnGenerate
         ? `${origin}/generate?paid=1&session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
         : `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}&plan=${encodeURIComponent(plan.id)}`
   );
@@ -419,7 +437,7 @@ export function buildGatedSessionBody(opts: {
       ? `${origin}/dpp?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
       : isClaimFile
         ? `${origin}/made-in-usa-claim-file?cancelled=1`
-        : isStarter
+        : landsOnGenerate
           ? `${origin}/generate?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
           : `${origin}/pricing?cancelled=1`
   );
