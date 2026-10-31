@@ -32,7 +32,6 @@ class MarketplaceAgent:
         # Note: In production, this requires Stripe Connect Account IDs
         try:
             session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
                 line_items=[{
                     'price_data': {
                         'currency': 'usd',

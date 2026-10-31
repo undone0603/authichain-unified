@@ -1,9 +1,11 @@
+import { registryLookupDecision } from "../packages/verifier/src/registry-decision";
 import { timingSafeEqual } from "crypto";
 import { Router, type Request, type Response } from "express";
 import { ENV } from "./_core/env";
 import { analyticsStub } from "./analytics-stub";
 import { cannabisCallerNumbers } from "./cannabis-verify";
 import { createProduct, getCertificateByNumber, getCertificateForProduct, getDb, getProductById, getProductByName, getProductBySerial, getWhiteLabelByApiKey } from "./db";
+import { mountCoaUpload } from "./coa-upload";
 import { callerSignalReport, passportVerdict, trustScoreReply } from "./passport-verdict";
 import { generateProductQRON } from "./qron-service";
 import { reportUsageToStripe } from "./tenant-billing";
@@ -35,6 +37,8 @@ export function createInternalRouter(): Router {
     }
     next();
   });
+
+  mountCoaUpload(router);
 
   // ─── POST /api/internal/verify ──────────────────────────────────────────────
   router.post("/verify", async (req: Request, res: Response) => {
