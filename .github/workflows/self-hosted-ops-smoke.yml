@@ -12,6 +12,15 @@ jobs:
     runs-on: [self-hosted, Linux, ARM64, authichain-ci-isolated]
     timeout-minutes: 5
     steps:
+      - name: Assert the CI runner is not the production publisher
+        if: runner.environment == 'self-hosted'
+        env:
+          AUTHICHAIN_RUNNER_NAME: ${{ runner.name }}
+        run: |
+          if [ "$AUTHICHAIN_RUNNER_NAME" != "authichain-ci-arm64-01" ]; then
+            echo "::error::Refusing PR execution on a non-isolated runner"
+            exit 1
+          fi
       - name: Identity
         run: |
           set -euo pipefail
