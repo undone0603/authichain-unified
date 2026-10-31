@@ -19,6 +19,46 @@ export function verifySubmitted(
 
 export function expectedRecordHash(record: unknown): string;
 
+export const HASH_PUBLICATION_SENTENCE: string;
+
+export const ANCHOR_UNREAD_SENTENCE: string;
+
+export function passportHashPublished(input?: {
+  genuine?: boolean;
+  chain?: { queried?: boolean; onChain?: boolean; status?: string } | null;
+}): boolean;
+
+export function anchoredAfterChainRead(
+  submitted: { genuine?: boolean; anchored?: boolean } | null | undefined,
+  chain?: { queried?: boolean; onChain?: boolean; status?: string } | null,
+): boolean;
+
+export function publicationSentence(
+  submitted: { genuine?: boolean } | null | undefined,
+  chain?: { queried?: boolean; onChain?: boolean; status?: string } | null,
+): string | null;
+
+export function anchorUnreadSentence(
+  submitted: { genuine?: boolean } | null | undefined,
+  chain?: { queried?: boolean } | null,
+): string | null;
+
+export const HASH_PUBLICATION_EVIDENCE_ABSENT: string;
+
+export function hashPublicationEvidence(
+  metadata: unknown,
+  input?: {
+    chain?: { queried?: boolean; onChain?: boolean; status?: string } | null;
+    txHash?: unknown;
+    signingBytesSha256?: unknown;
+  } | null,
+): {
+  stored: boolean;
+  entry: { type: "hash_publication"; signingBytesSha256: string; txHash: string } | null;
+  metadata: unknown;
+  message: string;
+};
+
 export function readAnchorOnChain(
   record: unknown,
   anchor: unknown,

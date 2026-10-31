@@ -433,7 +433,6 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
       const stripe = getStripe();
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
-        payment_method_types: ["card"],
         line_items: [
           {
             price_data: {
@@ -570,7 +569,6 @@ Return JSON: { "subject": "AuthiChain Service Agreement — [Org]", "body": "...
       const stripe = getStripe();
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
-        payment_method_types: ["card"],
         line_items: [
           {
             price_data: {

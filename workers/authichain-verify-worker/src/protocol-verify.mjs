@@ -1,11 +1,14 @@
 /**
  * Run the reference verifier, then optionally read the anchor transaction.
  * A DigitalProductPassport is genuine only when scanProvesGenuine says so.
- * Any other record keeps verifyRecord's verdict. A missing or hash-less
- * transaction does not change the verdict. anchorOnChain is a separate fact.
+ * That passport leaves anchored false here. The handler applies
+ * passportHashPublished after it reads the transaction. Any other record
+ * keeps verifyRecord's verdict, and anchored follows that verdict.
+ * A missing or hash-less transaction does not change the verdict.
+ * anchorOnChain is a separate fact.
  */
 import { verifyRecord, sha256Hex, signingBytes } from "../../../protocol/verifier.mjs";
-import { scanPassport, productBindingSentence } from "../../../protocol/passport.mjs";
+import { appendPassportEvidence, scanPassport, productBindingSentence } from "../../../protocol/passport.mjs";
 
 function isPlainObject(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -59,7 +62,7 @@ export function verifySubmitted(record, anchor = null, observation = null) {
       reasons: scan.reasons,
       checks: result.checks,
       decision: scan.verdict,
-      anchored: scan.genuine === true,
+      anchored: false,
       anchorTransactionQueried: false,
       genuine: scan.genuine,
       digitalIdentity: scan.digitalIdentity,
@@ -80,6 +83,94 @@ export function verifySubmitted(record, anchor = null, observation = null) {
 
 export function expectedRecordHash(record) {
   return sha256Hex(signingBytes(record));
+}
+
+export const HASH_PUBLICATION_SENTENCE =
+  "The SHA-256 of this passport's signing bytes was published in a successful transaction input. That publication is a hash commitment. It does not make the product blockchain-authentic.";
+
+export const ANCHOR_UNREAD_SENTENCE =
+  "The anchor object is well formed. The transaction was not read, so publication of the hash is not confirmed.";
+
+/**
+ * A DPP is published only when the scan is genuine and the receipt succeeded
+ * with the signing-bytes hash in the transaction input. No I/O.
+ */
+export function passportHashPublished({ genuine, chain } = {}) {
+  return (
+    genuine === true &&
+    !!chain &&
+    chain.queried === true &&
+    chain.onChain === true &&
+    chain.status === "tx_contains_record_hash"
+  );
+}
+
+/** DPP anchored follows the publication rule. Any other record keeps its verdict bit. */
+export function anchoredAfterChainRead(submitted, chain) {
+  if (!submitted || typeof submitted !== "object") return false;
+  if (typeof submitted.genuine === "boolean") {
+    return passportHashPublished({ genuine: submitted.genuine, chain });
+  }
+  return submitted.anchored === true;
+}
+
+export function publicationSentence(submitted, chain) {
+  if (!passportHashPublished({ genuine: submitted?.genuine === true, chain })) return null;
+  return HASH_PUBLICATION_SENTENCE;
+}
+
+export function anchorUnreadSentence(submitted, chain) {
+  if (submitted?.genuine === true && chain?.queried !== true) return ANCHOR_UNREAD_SENTENCE;
+  return null;
+}
+
+export const HASH_PUBLICATION_EVIDENCE_ABSENT =
+  "No published signing-bytes hash is stored on this passport.";
+
+/**
+ * Store one hash_publication row only when this passport's signing-bytes hash
+ * was read in a successful transaction. The transaction hash has to be passed
+ * in from that read. An anchor object is not the row. The row does not set
+ * genuine. This function does not broadcast and it does not read the network.
+ */
+export function hashPublicationEvidence(metadata, input) {
+  const absent = {
+    stored: false,
+    entry: null,
+    metadata,
+    message: HASH_PUBLICATION_EVIDENCE_ABSENT,
+  };
+  const stored = readStoredPassport(metadata);
+  if (!stored || !isPlainObject(metadata) || !isPlainObject(metadata.passport)) return absent;
+  const supplied = isPlainObject(input) ? input : {};
+  const scan = scanPassport(stored.record, stored.anchor);
+  const chain = isPlainObject(supplied.chain) ? supplied.chain : null;
+  if (!passportHashPublished({ genuine: scan.genuine, chain })) return absent;
+  const hex = expectedRecordHash(stored.record);
+  if (typeof hex !== "string" || !/^[0-9a-f]{64}$/.test(hex)) return absent;
+  const signingBytesSha256 = "sha256:" + hex;
+  if (
+    supplied.signingBytesSha256 !== undefined &&
+    supplied.signingBytesSha256 !== null &&
+    supplied.signingBytesSha256 !== signingBytesSha256
+  ) {
+    return absent;
+  }
+  const txHash = typeof supplied.txHash === "string" ? supplied.txHash : "";
+  if (!TX_HASH_RE.test(txHash)) return absent;
+  const entry = { type: "hash_publication", signingBytesSha256, txHash };
+  try {
+    const next = appendPassportEvidence(metadata, entry);
+    return {
+      stored: true,
+      entry,
+      metadata: next,
+      message: HASH_PUBLICATION_SENTENCE,
+    };
+  } catch (err) {
+    if (err && err.message === "passport_required") return absent;
+    throw err;
+  }
 }
 
 export function assessChainRead({ tx, receipt, recordHash }) {
