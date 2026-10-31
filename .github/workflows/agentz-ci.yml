@@ -1,15 +1,11 @@
 name: AgentZ Autonomous CI
+# Push runs only on main. pull_request already covers every PR head, and
+# push on every branch doubled the self-hosted runner load (two runs per
+# PR push, both failing on the missing `python` alias).
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
-
-# One check per PR revision. The old push + PR pair accumulated obsolete
-# jobs on the single ops runner and delayed the required quality gate.
-concurrency:
-  group: ci-agentz-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -27,24 +23,15 @@ jobs:
           git reset --hard HEAD
           test -f package.json
 
+      # The self-hosted ARM64 runner has python3 but no `python` alias (run
+      # 40835361953, exit 127). No setup-python download: registry access
+      # from that runner is unreliable (see #2165).
       - name: Compile AgentZ Python sources
         run: python3 -m compileall -q agentz
 
-      - name: Install AgentZ Python deps
-        run: |
-          if [ "${{ runner.environment }}" = "self-hosted" ]; then
-            VENV="/home/zac/.cache/agentz-venv-${{ runner.name }}"
-          else
-            VENV="${GITHUB_WORKSPACE}/.venv-agentz"
-          fi
-          if [ ! -x "$VENV/bin/python" ]; then
-            python3 -m venv "$VENV"
-          fi
-          "$VENV/bin/pip" install -r requirements-agentz.txt
-          echo "AGENTZ_VENV=$VENV" >> "$GITHUB_ENV"
-
-      - name: Run AgentZ control-plane tests
-        run: PYTHONPATH="${GITHUB_WORKSPACE}" "$AGENTZ_VENV/bin/python" -m unittest discover -s agentz/tests -p 'test_*.py'
+      # agentz/tests is a pytest suite with runtime dependencies. It already
+      # runs in CI / Drizzle + Pytest Extras (ci.yml) against the cached
+      # requirements-agentz.txt venv, so it is not repeated here.
 
       - name: Confirm the web-client stub is not sold as an ABI
         run: |
