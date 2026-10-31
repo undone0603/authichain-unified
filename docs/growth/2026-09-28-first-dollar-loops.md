@@ -125,13 +125,13 @@ CTA: same.
 ### FAQ
 
 1. **Does $299 file my passport with the EU?** No.
-2. **What does $299 buy?** An AuthiChain workspace, self-serve activation, and 50 workspace generations.
+2. **What does $299 buy?** An AuthiChain workspace and self-serve activation.
 3. **Is AuthiChain a GS1 Conformant Resolver?** No.
 
 ### Meta
 
 - Title: `Free EU Digital Product Passport readiness check | AuthiChain`
-- Description: `Score DPP gaps for free. An AuthiChain workspace, self-serve activation, and 50 workspace generations are $299. AuthiChain does not operate the EU registry.`
+- Description: `Score DPP gaps for free. An AuthiChain workspace and self-serve activation are $299. AuthiChain does not operate the EU registry.`
 
 ### Loop mechanics
 

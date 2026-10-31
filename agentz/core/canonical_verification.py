@@ -43,14 +43,28 @@ def verify_attestation(
 
     response = requests.post(url, json=body, timeout=timeout_seconds)
     payload = response.json()
-    if not isinstance(payload, dict):
-        raise RuntimeError("canonical verification returned a non-object response")
+    if (
+        not isinstance(payload, dict)
+        or not isinstance(payload.get("valid"), bool)
+        or not isinstance(payload.get("decision"), str)
+    ):
+        # Same rule as verifyWithCanonicalWorker: a proxy error page or any
+        # other shape is not a decision, so callers see a failure.
+        raise RuntimeError("canonical verification returned a response outside the decision contract")
     payload["http_status"] = response.status_code
     return payload
 
 
 def is_positive_verification(response: dict[str, Any]) -> bool:
-    """Only the canonical ``verified`` + ``valid=true`` result is positive."""
+    """Only the canonical ``verified`` + ``valid=true`` result is positive.
+
+    When the HTTP status is known (``verify_attestation`` records it), it must
+    be 2xx too, matching ``isCanonicalPositive`` in packages/verifier: a
+    "verified" body under an error status is not positive.
+    """
+    status = response.get("http_status")
+    if status is not None and not (isinstance(status, int) and 200 <= status < 300):
+        return False
     return response.get("decision") == "verified" and response.get("valid") is True
 
 
