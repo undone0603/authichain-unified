@@ -167,6 +167,8 @@ service = "authichain-api"
 
 # Secrets (set at deploy from GitHub): STRIPE_SECRET_KEY, optional STRIPE_PRICE_ID.
 # DPP_SMOKE_SECRET (16+ chars) gates the $0 DPP-SMOKE-E2E session. Unset fails closed.
+# IP_HASH_SALT (optional): wrangler secret put IP_HASH_SALT --name authichain-com
+# Unset or empty fails closed: 503, no write.
 
 # VERIFY_APP: service binding to the Next app worker `authichain-app`
 # (wrangler.app.jsonc). Paid verify prefers the Supabase read below. This
@@ -194,3 +196,11 @@ binding = "MYBROWSER"
 [[kv_namespaces]]
 binding = "X402_REPLAY_KV"
 id = "ab391dc529884161bd84707d7627a9f0"
+
+# Optional email opt-in from the free checks (email_optins, migrations/0001 + 0002 country/unsub).
+# Existing AuthiChain-owned D1, $0. Rollback: delete this block.
+[[d1_databases]]
+binding = "DB"
+database_name = "authichain-db"
+database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
+migrations_dir = "migrations"

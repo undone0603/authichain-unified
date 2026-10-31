@@ -13,8 +13,15 @@ permissions:
 jobs:
   verify-and-heal:
     runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
 
       # The self-hosted ARM64 runner has python3 but no `python` alias (run
       # 40835361953, exit 127). No setup-python download: registry access
