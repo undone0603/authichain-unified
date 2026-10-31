@@ -29,6 +29,7 @@ Every vertical uses the same primitives:
 **Product:** Battery DPP workspace + passport resolver.
 
 **Core data modules**
+
 - battery model / individual battery identity
 - manufacturer and economic operator
 - chemistry, capacity, voltage, mass
@@ -40,6 +41,7 @@ Every vertical uses the same primitives:
 - access policy per Annex XIII audience
 
 **Existing repo assets to reuse**
+
 - `workers/authichain-com/src/battery-passport-page.ts`
 - battery gap calculator / Annex XIII mapping
 - `dpp_readiness` offer
@@ -48,6 +50,7 @@ Every vertical uses the same primitives:
 - supplier evidence registry (#1431)
 
 **Next implementation slice**
+
 - bind battery passport records to the supplier-evidence registry
 - create a battery-specific normalized schema and validation adapter
 - implement public/interested-party/authority access policies
@@ -60,6 +63,7 @@ Every vertical uses the same primitives:
 StrainChain should use the same DPP kernel but remain a **genetics/provenance passport** rather than claiming an ESPR DPP obligation.
 
 **Identity layers**
+
 - issuer/farm
 - cultivar identity
 - batch/lot
@@ -67,6 +71,7 @@ StrainChain should use the same DPP kernel but remain a **genetics/provenance pa
 - CoA as evidence bridge
 
 **Core data**
+
 - lineage with evidence-backed edge status
 - raw cannabinoid/terpene panel
 - derived totals calculated at render time
@@ -77,6 +82,7 @@ StrainChain should use the same DPP kernel but remain a **genetics/provenance pa
 - export controlled by the breeder
 
 **Guardrails**
+
 - no inference of parentage from names alone
 - no silently corrected CoA values
 - no platform ownership of breeder genetics
@@ -84,6 +90,7 @@ StrainChain should use the same DPP kernel but remain a **genetics/provenance pa
 - no medical, regulatory, or potency guarantee from provenance data
 
 **Next implementation slice**
+
 - connect existing genetics certificate reconciliation to durable evidence records
 - hash/sign a canonical certificate set
 - anchor the fingerprint using the existing seal/Polygon path
@@ -95,6 +102,7 @@ StrainChain should use the same DPP kernel but remain a **genetics/provenance pa
 The Commission lists textiles/apparel as a priority ESPR product group; the current Commission economic-operator page gives an indicative **2027** work-programme timeline. Inclusion in the working plan is not itself a mandatory DPP date; product-specific rules determine the final legal obligation.
 
 **Passport modules**
+
 - product/material identity
 - fibre composition
 - supplier/factory chain
@@ -113,6 +121,7 @@ The Commission lists textiles/apparel as a priority ESPR product group; the curr
 The Commission's current economic-operator page gives an indicative **2029** timeline for ICT products under the first ESPR working plan. Do not label electronics DPP as mandatory before the product-specific rules say so.
 
 **Passport modules**
+
 - model + serial
 - BOM/component provenance
 - critical materials
@@ -131,6 +140,7 @@ The Commission's current economic-operator page gives an indicative **2029** tim
 The Commission's current timeline identifies iron/steel for 2026 and aluminium for 2027 as indicative working-plan milestones. Treat these as rulemaking milestones, not automatic DPP compliance dates.
 
 **Passport modules**
+
 - heat/lot identity
 - mill/manufacturer
 - recycled content
@@ -147,6 +157,7 @@ This vertical also fits the existing Made-in-America / origin evidence work.
 The Commission's current indicative timeline is furniture 2028, mattresses 2029, and tyres 2027. Build these as configuration profiles on the same kernel rather than separate applications.
 
 Common modules:
+
 - identity
 - materials/BOM
 - supplier evidence
@@ -169,6 +180,7 @@ Never encode a sector-specific legal threshold into the canonical identity model
 ## Shared implementation backlog
 
 **P0 — kernel**
+
 - [ ] canonical DPP record schema
 - [ ] product/version identity
 - [ ] evidence graph linkage
@@ -180,6 +192,7 @@ Never encode a sector-specific legal threshold into the canonical identity model
 - [ ] export/version negotiation
 
 **P1 — battery**
+
 - [ ] Annex XIII data-point adapter
 - [ ] battery access tiers
 - [ ] lifecycle/state-of-health event model
@@ -187,6 +200,7 @@ Never encode a sector-specific legal threshold into the canonical identity model
 - [ ] registry/export integration
 
 **P1 — StrainChain**
+
 - [ ] certificate evidence linkage
 - [ ] canonical certificate hashing
 - [ ] anchor + verification
@@ -194,18 +208,21 @@ Never encode a sector-specific legal threshold into the canonical identity model
 - [ ] resolver passport route
 
 **P2 — textiles**
+
 - [ ] material/BOM adapter
 - [ ] supplier evidence mapping
 - [ ] recycled-content and substances evidence
 - [ ] repair/circularity module
 
 **P2 — electronics**
+
 - [ ] component/BOM graph
 - [ ] firmware/service events
 - [ ] repairability/spares
 - [ ] WEEE/end-of-life evidence
 
 **P3 — metals / furniture / tyres / mattresses**
+
 - [ ] profile definitions
 - [ ] evidence mappings
 - [ ] export fixtures
@@ -216,7 +233,7 @@ Never encode a sector-specific legal threshold into the canonical identity model
 Keep the commercial surface thin:
 
 - **Free:** DPP readiness check.
-- **$299:** AuthiChain workspace, self-serve activation, and 50 workspace generations.
+- **$299:** AuthiChain workspace and self-serve activation.
 - **Passport workspace:** publish signed passport records from verified evidence.
 - **API:** machine verification / resolver / evidence lookup.
 - **Enterprise:** supplier network, bulk ingestion, exports, audit packages and metered verification.
