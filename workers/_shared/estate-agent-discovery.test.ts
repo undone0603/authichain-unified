@@ -69,6 +69,11 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
     assert.ok(text.includes("paidVerify.bound false"));
     assert.ok(text.includes(`$${x402PriceUsd()} USDC`));
     assert.ok(
+      text.includes(
+        "An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment."
+      )
+    );
+    assert.ok(
       hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/mcp")
     );
     assert.ok(hasHttpsPath(text, "authichain.com", "/mcp"));

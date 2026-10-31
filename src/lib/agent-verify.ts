@@ -12,31 +12,8 @@ import { isDiscoveryExampleSealId } from "./x402";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/**
- * PayAI/Bazaar crawlers sometimes POST `outputSchema.input` (`type` +
- * `method` + `bodyType` + `body`) as the JSON body. Unwrap that so the
- * inner `sealId` is what we parse.
- */
-export function coerceSealBody(
-  raw: Record<string, unknown>
-): Record<string, unknown> {
-  const nested = raw.body;
-  if (
-    raw.type === "http" &&
-    nested &&
-    typeof nested === "object" &&
-    !Array.isArray(nested)
-  ) {
-    return nested as Record<string, unknown>;
-  }
-  return raw;
-}
-
-export function listedSealId(raw: Record<string, unknown>): string {
-  const body = coerceSealBody(raw);
-  const v = body.sealId ?? body.seal_id;
-  return typeof v === "string" ? v.trim() : "";
-}
+/** Bazaar discovery example. It matches the UUID shape and is not a registry row. */
+const NIL_SEAL_ID = "00000000-0000-4000-8000-000000000000";
 
 export type SealRequest =
   | { ok: true; sealId: string }
@@ -72,6 +49,18 @@ export function parseSealRequest(input: Record<string, unknown>): SealRequest {
         error: "seal_id_not_uuid",
         detail:
           "Seal ids are UUIDs; this value cannot exist in the registry. No payment was taken.",
+        settled: false,
+      },
+    };
+  }
+  if (sealId.toLowerCase() === NIL_SEAL_ID) {
+    return {
+      ok: false,
+      status: 400,
+      body: {
+        error: "seal_id_nil",
+        detail:
+          "The all-zero UUID is the discovery example, not a registry seal. No payment was taken.",
         settled: false,
       },
     };
