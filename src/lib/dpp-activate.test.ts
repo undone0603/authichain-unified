@@ -66,6 +66,242 @@ describe("activateDppMerchant", () => {
     }
   });
 
+  it("rejects a complete session that is not paid", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "unpaid",
+      status: "complete",
+      amount_total: 29900,
+      currency: "usd",
+      metadata: { plan: "dpp_readiness" },
+      line_items: {
+        data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+      },
+    });
+    const from = vi.fn();
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_unpaid",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(402);
+      expect(result.error).toMatch(/not paid/);
+    }
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("rejects a paid DPP-metadata session that is not 29900 cents", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 1000,
+      currency: "usd",
+      metadata: { plan: "dpp_readiness", is_demo: "false" },
+      line_items: {
+        data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+      },
+    });
+    const from = vi.fn();
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_ten",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(402);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("rejects a paid $0 demo DPP session", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 0,
+      currency: "usd",
+      metadata: { plan: "dpp_readiness", is_demo: "true" },
+      line_items: {
+        data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+      },
+    });
+    const from = vi.fn();
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_demo",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(402);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, "eur"])(
+    "rejects a paid $299 DPP session with currency %s",
+    async (currency) => {
+      retrieve.mockResolvedValueOnce({
+        payment_status: "paid",
+        status: "complete",
+        amount_total: 29900,
+        currency,
+        metadata: { plan: "dpp_readiness" },
+        line_items: {
+          data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+        },
+      });
+      const from = vi.fn();
+      const { activateDppMerchant } = await import("./dpp-activate");
+      const result = await activateDppMerchant({
+        body: {
+          session_id: "cs_wrong_currency",
+          categories: "a",
+          markets: "b",
+          labeling: "c",
+        },
+        stripeSecretKey: "sk_test",
+        supabase: { from },
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.status).toBe(402);
+      expect(from).not.toHaveBeenCalled();
+    }
+  );
+
+  it("rejects a paid $299 session with no DPP offer identity", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      currency: "usd",
+      metadata: {},
+      line_items: { data: [{}] },
+    });
+    const from = vi.fn();
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_unknown_product",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(400);
+      expect(result.error).toMatch(/Not a DPP workspace session/);
+    }
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["price_1UL0vVGqTruSqV8T5WYjrq6i", "another product"],
+    [undefined, "missing price ID"],
+  ])(
+    "rejects DPP metadata when line items contain %s (%s)",
+    async (priceId) => {
+      retrieve.mockResolvedValueOnce({
+        payment_status: "paid",
+        status: "complete",
+        amount_total: 29900,
+        currency: "usd",
+        metadata: { plan: "dpp_readiness" },
+        line_items: { data: [{ price: priceId ? { id: priceId } : null }] },
+      });
+      const from = vi.fn();
+      const { activateDppMerchant } = await import("./dpp-activate");
+      const result = await activateDppMerchant({
+        body: {
+          session_id: "cs_wrong_price",
+          categories: "a",
+          markets: "b",
+          labeling: "c",
+        },
+        stripeSecretKey: "sk_test",
+        supabase: { from },
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.status).toBe(400);
+      expect(from).not.toHaveBeenCalled();
+    }
+  );
+
+  it("returns 500 when the activation row is not stored", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      currency: "usd",
+      metadata: { plan: "dpp_readiness", visit_id: "visit_1" },
+      customer_details: { email: "buyer@example.com" },
+      line_items: {
+        data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+      },
+    });
+    const insert = vi.fn().mockResolvedValue({
+      error: { message: "db down" },
+    });
+    const from = vi.fn((table: string) => {
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: { id: "prof_1" }, error: null }),
+            }),
+          }),
+        };
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              order: () => ({
+                limit: async () => ({ data: [], error: null }),
+              }),
+            }),
+          }),
+        }),
+        insert,
+      };
+    });
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_db",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(500);
+      expect(result.error).toBe("Could not store the activation");
+      expect(result.error).not.toMatch(/db down/);
+    }
+  });
+
   it("rejects a $0 session that is not a DPP offer", async () => {
     retrieve.mockResolvedValueOnce({
       payment_status: "paid",
@@ -97,6 +333,7 @@ describe("activateDppMerchant", () => {
       payment_status: "paid",
       status: "complete",
       amount_total: 29900,
+      currency: "usd",
       metadata: { plan: "dpp_readiness", visit_id: "visit_1", source: "seo" },
       customer_details: { email: "buyer@example.com" },
       line_items: {

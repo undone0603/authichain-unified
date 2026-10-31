@@ -181,11 +181,11 @@ describe("DPP-SMOKE-E2E", () => {
       }),
     };
 
-    // recordDppLoopEvent swallows errors by design (it must never break a paid
-    // flow), but it must not fabricate a success signal either.
+    // Event recording returns a failure result without throwing. It must not
+    // fabricate a persisted event when the database insert fails.
     await expect(
       recordDppLoopEvent(failing as never, { visitId: VISIT, stage: "provisioned" }),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ ok: false });
   });
 
   it("ignores non-loop funnel rows when reconstructing", () => {
