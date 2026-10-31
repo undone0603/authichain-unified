@@ -39,7 +39,8 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
   {
     surface: "Cloudflare apex",
     state: "live",
-    detail: "Canonical host is https://authichain.com (#1258). authichain.govchain.us is a fallback. Money path is not Vercel. #1138 on main.",
+    detail:
+      "Canonical host is https://authichain.com (#1258). authichain.govchain.us is a fallback. Money path is not Vercel. #1138 on main.",
   },
   {
     surface: "EU DPP checkout",
@@ -168,14 +169,16 @@ const DESK_SEALS: DeskSeal[] = [
     product: "Michigan METRC sample",
     holder: "Self-serve desk seed",
     origin: "Michigan",
-    finding:
-      "Not a live METRC filing and not a cryptographic attestation.",
+    finding: "Not a live METRC filing and not a cryptographic attestation.",
     disclaimer: SAMPLE_NOTE,
     plan: "strainchain_passport",
     fields: [
       { label: "Source", value: "Desk seed · AC-7C2A91E4" },
       { label: "Protocol", value: "AuthiChain attestation 0.1" },
-      { label: "MCP", value: "query_provenance status desk_sample, verified false" },
+      {
+        label: "MCP",
+        value: "query_provenance status desk_sample, verified false",
+      },
     ],
   },
   {
@@ -204,7 +207,8 @@ const DESK_SEALS: DeskSeal[] = [
     product: "Sample cultivar genetics passport",
     holder: "Sun-grown Michigan cultivar desk",
     origin: "Northern Lower Peninsula, MI",
-    finding: "Genetics passport matches the sample CoA hash. Not a METRC filing.",
+    finding:
+      "Genetics passport matches the sample CoA hash. Not a METRC filing.",
     disclaimer: SAMPLE_NOTE,
     plan: "strainchain_passport",
     fields: [
@@ -231,7 +235,10 @@ const DESK_SEALS: DeskSeal[] = [
       { label: "Agency", value: "DLA Aviation · Philadelphia" },
       { label: "Fit", value: "From mint calldata, not an award" },
       { label: "Mint", value: "No government NFT. No SBIR win claimed." },
-      { label: "Origin brief", value: "FTC 16 CFR Part 323 · EO 14392 context" },
+      {
+        label: "Origin brief",
+        value: "FTC 16 CFR Part 323 · EO 14392 context",
+      },
       { label: "Packet", value: "govchain.us/gift · free DoD packet" },
     ],
   },
@@ -242,8 +249,7 @@ const DESK_SEALS: DeskSeal[] = [
     product: "Harbor-3 LFP industrial pack · clone attempt",
     holder: "Unknown presenter",
     origin: "Claimed Grand Rapids, MI",
-    finding:
-      "The original pack still verifies. This mark does not.",
+    finding: "The original pack still verifies. This mark does not.",
     disclaimer: SAMPLE_NOTE,
     plan: "dpp_readiness",
     fields: [
@@ -286,7 +292,6 @@ function lookupDeskSeal(raw: string): DeskSeal {
     ],
   };
 }
-
 
 type StoryChapter = { phase: string; title: string; body: string };
 
@@ -644,7 +649,7 @@ function pricing(): string {
      <div class="grid g2" style="margin-top:1.5rem">
        <div class="card"><p class="kicker">Passport</p><p class="price">$49</p><p class="muted">One cultivar. StrainChain, not an AuthiChain desk fee. Farm is not a public offer.</p>${passport}
          <p style="margin-top:.75rem"><a href="/telegram">Telegram Mini App</a></p></div>
-       <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Opens an AuthiChain workspace with self-serve activation and 50 workspace generations.</p>${dpp}</div>
+       <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Opens an AuthiChain workspace with self-serve activation.</p>${dpp}</div>
      </div>
      <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only. Theater is not listed. Farm is not a public offer.</p>`
   );

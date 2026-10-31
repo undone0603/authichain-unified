@@ -7,7 +7,9 @@ import {
   evaluateGate,
   evaluateGithubCiEvidence,
   evaluateGitlabCiEvidence,
+  evaluateLiveVerify,
   evaluateProbes,
+  evaluatePublicTrust,
   platformOf,
   validateManifest,
 } from "./launch-gates.mjs";
@@ -176,6 +178,41 @@ test("probes: wrong status, slow, error and missing result all FAIL", () => {
 });
 
 // ----------------------------------------------------------- gate framework
+
+test("live verify passes only when the endpoint and the shipped example agree", () => {
+  const ok = {
+    status: 200,
+    verdict: "verified",
+    source: "published_example",
+    ms: 400,
+    max_ms: 5000,
+    recordVerdict: "verified",
+    subjectId: "https://authichain.com/protocol/examples/polygon-anchor-1",
+    recordSubjectId: "https://authichain.com/protocol/examples/polygon-anchor-1",
+  };
+  assert.equal(evaluateLiveVerify(ok).status, "pass");
+  assert.equal(evaluateLiveVerify({ ...ok, verdict: "invalid" }).status, "fail");
+  assert.equal(evaluateLiveVerify({ ...ok, subjectId: "other" }).status, "fail");
+  assert.equal(evaluateLiveVerify({ ...ok, ms: 9000 }).status, "fail");
+  assert.equal(evaluateLiveVerify(undefined).status, "fail");
+});
+
+test("public trust fails closed when a marker or status is missing", () => {
+  const probes = [
+    { url: "https://authichain.com/api/health", expect_status: 200, max_ms: 3000, includes: '"status":"ok"' },
+  ];
+  const ok = evaluatePublicTrust(
+    { results: [{ url: probes[0].url, status: 200, ms: 20, includes: true }] },
+    probes
+  );
+  assert.equal(ok.status, "pass");
+  const missing = evaluatePublicTrust(
+    { results: [{ url: probes[0].url, status: 200, ms: 20, includes: false }] },
+    probes
+  );
+  assert.equal(missing.status, "fail");
+  assert.equal(evaluatePublicTrust({ results: [] }, probes).status, "fail");
+});
 
 test("pending gates always FAIL", () => {
   assert.equal(evaluateGate({ id: "p", type: "pending", ref: "r" }, undefined).status, "fail");
