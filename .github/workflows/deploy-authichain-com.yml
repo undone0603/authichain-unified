@@ -69,6 +69,11 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # The versions POST body is large. Undici's headers timer
+          # (UND_ERR_HEADERS_TIMEOUT) and a mid-upload ECONNRESET killed
+          # run 41181414792 after ipv4first was already set. Zero means
+          # no header or body deadline on this step only.
+          NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection --require ${{ github.workspace }}/workers/authichain-com/undici-long-timeout.cjs"
         run: npx wrangler deploy --minify --keep-vars --config wrangler.toml
       - name: Bind STRIPE_SECRET_KEY from GitHub secrets
         working-directory: workers/authichain-com
