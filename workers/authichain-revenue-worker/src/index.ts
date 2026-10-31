@@ -14,7 +14,6 @@ export default {
         const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
         
         const session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card'],
           line_items: [{ price: env.STRIPE_PRICE_ENTERPRISE, quantity: 1 }],
           mode: 'subscription',
           success_url: `${env.NEXT_PUBLIC_APP_URL}/docs/api-keys`,
@@ -54,7 +53,6 @@ export default {
     });
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
       line_items: [{ price: env.STRIPE_PRICE_BASIC, quantity: 1 }],
       mode: 'subscription',
       success_url: `${env.NEXT_PUBLIC_APP_URL}/onboard?session_id={CHECKOUT_SESSION_ID}`,

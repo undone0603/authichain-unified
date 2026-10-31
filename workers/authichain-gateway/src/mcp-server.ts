@@ -132,7 +132,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: check_certificate ────────────────────────────────────────────────
   server.tool(
     "check_certificate",
-    "Look up an AuthiChain verification certificate by its certificate number. Returns the full provenance chain and verification history.",
+    "Look up an AuthiChain certificate by its number and return its registry status (not_found, revoked, expired, or indeterminate). It does not read the chain or verify the item in hand.",
     {
       certificateNumber: z
         .string()
@@ -140,10 +140,37 @@ function createMcpServer(env: Env): McpServer {
     },
     async ({ certificateNumber }) => {
       try {
+        // The backend route is POST-only; the old GET could never succeed.
         const res = await fetch(
-          `${env.BACKEND_URL}/api/internal/certificates/verify?certNumber=${encodeURIComponent(certificateNumber)}`,
-          { headers: { "X-Internal-Secret": env.INTERNAL_SECRET } }
+          `${env.BACKEND_URL}/api/internal/certificates/verify`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Internal-Secret": env.INTERNAL_SECRET,
+            },
+            body: JSON.stringify({ certNumber: certificateNumber }),
+          }
         );
+        if (res.status === 404) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(
+                  {
+                    valid: false,
+                    decision: "not_found",
+                    message:
+                      "No certificate with that number. That is not evidence the item is counterfeit.",
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+          };
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         return {
