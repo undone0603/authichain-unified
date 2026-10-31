@@ -336,80 +336,50 @@ describe("fulfillDppPaidSession", () => {
     });
   });
 
-  it("throws for a real paid session with no buyer identity and does not record provisioned", async () => {
-    const { supabase, rows } = fakeSupabase({ profileId: null });
+  it("fails closed on a paid checkout without buyer identity; no grant side effect or success", async () => {
+    const { supabase, rows, continuity } = fakeSupabase({ profileId: null });
     await expect(
       fulfillDppPaidSession(supabase, {
         ...paidSession,
+        id: "cs_paid_no_identity",
+        amount_total: 29900,
         customer_details: null,
         customer_email: null,
         metadata: { ...paidSession.metadata, user_id: undefined },
       })
     ).rejects.toMatchObject({
       name: "RetryableFulfillmentError",
-      message: expect.stringMatching(/^DPP provision failed: no_identity/),
-    });
-    expect(rows.map(r => r.event_type)).toEqual(["dpp_loop:payment_succeeded"]);
-  });
-
-  it("emits fulfillment.started then fulfillment.failed, never entitlement.granted, when nothing was granted", async () => {
-    const { supabase } = fakeSupabase({ profileId: null });
-    const log = vi.spyOn(console, "log").mockImplementation(() => {});
-    try {
-      await fulfillDppPaidSession(supabase, {
-        ...paidSession,
-        customer_details: null,
-        customer_email: null,
-        metadata: { ...paidSession.metadata, user_id: undefined },
-      }).catch(() => undefined);
-      const events = log.mock.calls
-        .map(c => String(c[0]))
-        .filter(l => l.includes("authichain.trust-event/1"))
-        .map(l => JSON.parse(l).event);
-      expect(events).toEqual(["fulfillment.started", "fulfillment.failed"]);
-    } finally {
-      log.mockRestore();
-    }
-  });
-
-  it("emits entitlement.granted and fulfillment.completed for a granted session, with no buyer address", async () => {
-    const { supabase } = fakeSupabase();
-    const log = vi.spyOn(console, "log").mockImplementation(() => {});
-    try {
-      await fulfillDppPaidSession(supabase, paidSession);
-      const lines = log.mock.calls.map(c => String(c[0])).filter(l => l.includes("authichain.trust-event/1"));
-      expect(lines.map(l => JSON.parse(l).event)).toEqual([
-        "fulfillment.started",
-        "entitlement.granted",
-        "fulfillment.completed",
-      ]);
-      expect(lines.join(String.fromCharCode(10))).not.toContain("buyer@example.com");
-    } finally {
-      log.mockRestore();
-    }
-  });
-
-  it("a demo session with no buyer identity still records provisioned with skip_reason", async () => {
-    const { supabase, rows } = fakeSupabase({ profileId: null });
-    const result = await fulfillDppPaidSession(supabase, {
-      ...paidSession,
-      customer_details: null,
-      customer_email: null,
-      metadata: { ...paidSession.metadata, user_id: undefined, is_demo: "true" },
-    });
-    expect(result).toEqual({
-      handled: true,
-      profileId: null,
-      activationEmail: "skipped",
+      message: "DPP provision blocked: no buyer identity",
     });
     expect(rows.map(r => r.event_type)).toEqual([
       "dpp_loop:payment_succeeded",
-      "dpp_loop:provisioned",
     ]);
-    expect(rows[1].metadata).toMatchObject({
-      loop_stage: "provisioned",
-      skip_reason: "no_identity",
-    });
+    expect(continuity.get("founder_exit_side_effects") ?? []).toHaveLength(0);
+    const actions = continuity.get("founder_exit_actions") ?? [];
+    expect(actions).toHaveLength(1);
+    expect(actions[0]?.state).not.toBe("succeeded");
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("does not falsely complete a demo without buyer identity", async () => {
+    const { supabase, rows, continuity } = fakeSupabase({ profileId: null });
+    await expect(
+      fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        id: "cs_demo_no_identity",
+        customer_details: null,
+        customer_email: null,
+        metadata: { ...paidSession.metadata, is_demo: "true", user_id: undefined },
+      })
+    ).rejects.toMatchObject({ name: "RetryableFulfillmentError" });
+    expect(rows.map(r => r.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+    ]);
+    expect(continuity.get("founder_exit_side_effects") ?? []).toHaveLength(0);
+    expect((continuity.get("founder_exit_actions") ?? [])[0]?.state).not.toBe(
+      "succeeded"
+    );
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
   it("throws when the entitlement update fails and does not record provisioned", async () => {

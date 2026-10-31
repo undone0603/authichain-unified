@@ -159,27 +159,13 @@ async function fulfillDppPaidSessionOnce(
     );
   }
 
-  // A real buyer paid and there is nobody to grant to. Acknowledging that as
-  // handled told Stripe to stop retrying, closed the continuity record and
-  // wrote `provisioned`, so the watchdog and the stall report both saw a
-  // fulfilled sale. Fail like any other ungranted payment instead: no
-  // `provisioned`, Stripe keeps the event red, and once the paid stage
-  // outlives its retry budget runDppExceptionsReport escalates it.
-  if (prov.status === "no_identity" && !demo) {
+  // No buyer identity means no profile and no persisted entitlement. Do not
+  // record a grant side effect or return a successful webhook response. Keep
+  // this owner-held until Stripe retry/reconciliation policy is reviewed.
+  if (prov.status === "no_identity") {
     throw markRetryableFulfillment(
-      new Error(
-        `DPP provision failed: no_identity (paid session ${session.id} has no buyer email or user id)`
-      )
+      new Error("DPP provision blocked: no buyer identity")
     );
-  }
-
-  if (prov.profileId && !prov.skippedIdempotent) {
-    emitTrustEvent("entitlement.granted", {
-      session_id: session.id,
-      profile_id: prov.profileId,
-      plan,
-      demo,
-    });
   }
 
   try {
@@ -205,20 +191,6 @@ async function fulfillDppPaidSessionOnce(
       dedupeKey: session.id,
       metadata: {
         created: prov.created,
-        plan,
-        ...(demo ? { is_demo: true } : {}),
-      },
-    });
-  } else if (visitId && prov.status === "no_identity") {
-    await recordDppLoopEventOnce(supabase, {
-      visitId: String(visitId),
-      stage: "provisioned",
-      source: md.source || "direct",
-      email: email || null,
-      stripeSessionId: session.id,
-      dedupeKey: session.id,
-      metadata: {
-        skip_reason: "no_identity",
         plan,
         ...(demo ? { is_demo: true } : {}),
       },
