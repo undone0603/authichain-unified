@@ -102,7 +102,7 @@ const JSON_LD = {
           name: "How do agents pay AuthiChain?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "x402 paid verification and on-chain anchoring in development — not Polygon $QRON. Public docs are at /x402. The human money path remains EU DPP Readiness on Stripe.",
+            text: "Funded agents verify a product for $0.05 USDC on Base via the live x402 rail — not Polygon $QRON. Unpaid POST /api/x402 returns HTTP 402. Public docs are at /x402. The human money path remains EU DPP Readiness on Stripe.",
           },
         },
         {
@@ -143,8 +143,8 @@ function sources(): string {
     },
     {
       href: "https://authichain.govchain.us/x402",
-      title: "AuthiChain x402 agent pay (in development)", // pragma: allowlist secret
-      cite: "x402 paid verification and on-chain anchoring in development. Public docs at /x402.",
+      title: "AuthiChain x402 agent pay (live)",
+      cite: "Estate capability: $0.05 USDC on Base per verification. Health at GET /api/x402/health. Unpaid POST returns HTTP 402.",
     },
   ];
   const lis = items
@@ -217,7 +217,7 @@ ${estateHero({
     { href: "/onboard", label: "Onboard", primary: false },
   ],
 })}
-${estateTrust([{ value: "in development", label: "x402 paid verification" }])}
+${estateTrust([{ value: "$0.05", label: "x402 per verify" }])}
 ${estateFeatures(
   "What is live on this estate",
   "Claims limited to capabilities that already run. No invented customer logos, no promised mint that is not deployed.",
@@ -228,7 +228,7 @@ ${estateFeatures(
     },
     {
       title: "x402 agent pay",
-      body: "Secondary money path. x402 paid verification and on-chain anchoring in development. Public docs at /x402.",
+      body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Unpaid POST /api/x402 returns HTTP 402. Public docs at /x402.",
     },
     {
       title: "EU DPP Readiness",
@@ -251,7 +251,7 @@ ${estateSteps(
     },
     {
       title: "Pay",
-      body: "x402 paid verification and on-chain anchoring in development.",
+      body: "If the call is metered, the edge returns HTTP 402 with the Base USDC requirement. The agent settles $0.05 and retries with X-PAYMENT.",
     },
     {
       title: "Act",

@@ -131,7 +131,7 @@ export function renderPrivacyPage(): string {
 </ul>
 <h2>Card payments and agent payments</h2>
 <p>Card payments happen on Stripe. You review the total on Stripe before you pay. We keep the result Stripe sends back (paid or not), the email, the amount, and the plan. We do not store card numbers.</p>
-<p>x402 paid verification and on-chain anchoring are in development. See <a href="/x402">/x402</a>. We do not receive bank details for agent payments. The $QRON token is not a way to pay for AuthiChain services. <!-- pragma: allowlist secret --></p>
+<p>A paid agent call is a transfer of 0.05 USDC on Base (Circle USDC), unless the live description at <a href="/x402">/x402</a> or <a href="/.well-known/x402">/.well-known/x402</a> states a different figure. The live description controls. The transaction is public on Base. The facilitator published on that page checks the payment proof. We do not receive bank details for that payment. The $QRON token is not a way to pay for AuthiChain services.</p>
 <h2>Public records</h2>
 <p>A record we publish, and a transaction we send to a public chain such as Polygon (product anchors) or Base (USDC payments), can be read by anyone. We cannot delete it. Do not put a person's private information in a field you intend to publish or anchor.</p>
 <p>A signature check reports whether a signature and an anchor match the rules of the open verifier. It does not, by itself, prove that a physical product is genuine, legal, or compliant.</p>
