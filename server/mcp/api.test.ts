@@ -52,7 +52,8 @@ describe("authichain API MCP client", () => {
   });
 });
 
-const SEAL = "00000000-0000-4000-8000-000000000000";
+const SEAL = "3f6c2a4e-8b1d-4c7a-9e2f-0a1b2c3d4e5f";
+const NIL = "00000000-0000-4000-8000-000000000000";
 
 describe("paid verify payload", () => {
   it("sends a seal UUID and refuses productId-shaped subjects", async () => {
@@ -84,5 +85,20 @@ describe("paid verify payload", () => {
     expect(refused.status).toBe(400);
     expect(refused.error).toBe("seal_id_not_uuid");
     expect(refused.settled).toBe(false);
+
+    const nil = paidVerifyPayload(NIL);
+    expect(nil).toMatchObject({
+      ok: false,
+      status: 400,
+      body: { error: "seal_id_nil", settled: false },
+    });
+    const nilReply = JSON.parse(verifyPaidUnpaidReply(NIL)) as {
+      status: number;
+      error: string;
+      settled: boolean;
+    };
+    expect(nilReply.status).toBe(400);
+    expect(nilReply.error).toBe("seal_id_nil");
+    expect(nilReply.settled).toBe(false);
   });
 });
