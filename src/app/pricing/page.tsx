@@ -96,11 +96,6 @@ export default function PricingPage() {
                 <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter leading-relaxed">
                   {plan.description}
                 </p>
-                {plan.id === "qron_launch" && (
-                  <p className="mt-2 text-[10px] font-bold text-gold uppercase tracking-tight">
-                    Save 2 months — switch to annual $190/yr
-                  </p>
-                )}
               </div>
 
               <div className="flex-1 space-y-4 mb-10">
