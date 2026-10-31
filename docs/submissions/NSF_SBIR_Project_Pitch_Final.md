@@ -1,9 +1,11 @@
+> Redacted copy; contact details removed.
+
 # NSF SBIR Project Pitch: The Truth Protocol for Industrial Supply Chains
 
 ## Submitting entity (SAM legal business name): ZACHARY KIETZMAN
 **Brand / product:** AuthiChain
 **UEI:** R34XKWRJY9A5 | **CAGE:** 1PUJ6
-**Address:** 109 N 4th St, Roscommon, MI 48653-9090 USA
+**Address:** [MAILING_ADDRESS]
 **Target Award:** Phase I ($275,000)
 **Contact:** Z@authichain.com
 

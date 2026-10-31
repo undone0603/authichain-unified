@@ -463,6 +463,28 @@ describe("guardedSend", () => {
       expect(r.reason).toBe("mailing_address_not_configured");
       expect(fetchMock).not.toHaveBeenCalled();
     });
+
+    it("fails closed when the postal address is only whitespace", async () => {
+      process.env.RESEND_API_KEY = "re_test";
+      process.env.MAILING_ADDRESS = "   ";
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const dns = await import("node:dns");
+      vi.spyOn(dns.promises, "resolveMx").mockResolvedValue([
+        { exchange: "mx", priority: 1 },
+      ]);
+
+      const r = await guardedSend({
+        to: "jane.doe@acmelabs.com",
+        source: "published_contact",
+        subject: "s",
+        html: "<p>hi</p>",
+      });
+      expect(r.sent).toBe(false);
+      expect(r.reason).toBe("mailing_address_not_configured");
+      expect(fetchMock).not.toHaveBeenCalled();
+      delete process.env.MAILING_ADDRESS;
+    });
   });
 });
 

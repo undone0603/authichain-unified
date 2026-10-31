@@ -38,7 +38,7 @@ async def submit_proposal_via_browser(
        - Brand: AuthiChain (do not submit as AuthiChain, Inc. — no such corporation exists)
        - UEI: R34XKWRJY9A5
        - CAGE Code: 1PUJ6
-       - Physical Address: 109 N 4th St, Roscommon, MI 48653-9090 USA
+       - Physical Address: [MAILING_ADDRESS]
     4. Upload the proposal file located at: {artifact_path}.
     5. Click Submit and confirm that the 'Submitted' status or a receipt is visible.
     
