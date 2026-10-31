@@ -133,6 +133,7 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
       resolver,
       replayStore,
       now,
+      requiredCapability: "VERIFY_ATTESTATION",
     });
     expect(result.valid).toBe(true);
     expect(result.reasons).toEqual([]);
@@ -329,11 +330,13 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
       resolver: fixture.resolver,
       replayStore: store,
       now: fixture.now,
+      requiredCapability: "VERIFY_ATTESTATION",
     });
     const second = await verifyAgentMessage(fixture.message, {
       resolver: fixture.resolver,
       replayStore: store,
       now: fixture.now,
+      requiredCapability: "VERIFY_ATTESTATION",
     });
     expect(first.valid).toBe(true);
     expect(second.valid).toBe(false);
@@ -356,6 +359,7 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
       resolver: fixture.resolver,
       replayStore: store,
       now: fixture.now,
+      requiredCapability: "VERIFY_ATTESTATION",
     });
     expect(result.valid).toBe(false);
     expect(result.reasons).toContain("MESSAGE_ID_CONFLICT");
@@ -369,6 +373,7 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
       resolver: fixture.resolver,
       replayStore: store,
       now: fixture.now,
+      requiredCapability: "VERIFY_ATTESTATION",
     });
     expect(result.valid).toBe(false);
     const validBase = { ...fixture.message, message_id: "msg:1002" };
@@ -384,7 +389,8 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
         resolver: fixture.resolver,
         replayStore: store,
         now: fixture.now,
-      }
+        requiredCapability: "VERIFY_ATTESTATION",
+      },
     );
     expect(valid.valid).toBe(true);
   });

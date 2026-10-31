@@ -17,8 +17,8 @@ follow-up has no model call and no free text.
 - the category, score and band the visitor already saw;
 - the dated obligation only when `category.status === "law"`;
 - a link that reopens their result;
-- the plan named exactly as `plans.ts` names it (EU DPP Workspace, one-time,
-  50 workspace generations) with the checkout link;
+- the plan named exactly as `plans.ts` names it (EU DPP Workspace, one-time)
+  with the checkout link;
 - "It is not an audit, not a certification and not legal advice, and it does
   not register a product in EUDAMED.";
 - "This is the only follow-up we will send."
