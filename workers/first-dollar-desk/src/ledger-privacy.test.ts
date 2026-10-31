@@ -161,7 +161,7 @@ describe("first-dollar-desk /api/ledger privacy (RES-78)", () => {
 
   it("shows the public-ledger notice verbatim next to the pay buttons", async () => {
     const notice =
-      "Paid receipts appear on a public ledger with the amount, time and payment rail. On-chain payments also show the transaction hash, which is already public on Base. Your email and name are not shown on the ledger.";
+      "Paid receipts appear on a public ledger with the amount, time, payment rail and status. On-chain payments also show the transaction hash, which is already public on Base. Your email and name are not shown on the ledger.";
     for (const path of ["https://authichain.com/buy", "https://authichain.com/buy/human", "https://authichain.com/buy/agent"]) {
       const res = await worker.fetch(new Request(path, { headers: { accept: "text/html" } }), { LEDGER: fakeKv() });
       const html = await res.text();
