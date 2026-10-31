@@ -6,19 +6,9 @@
  * authichain-edge-router, whose unmounted GET /api/* falls through to ASSETS
  * and answers an empty 404.
  *
- * GET  /api/x402/health → 200 health (not_configured is OK — GET must not
- *      404). `freeCalls` says whether the daily UUID allowance is armed. It
- *      never includes the salt or keys.
- * GET  /api/x402 + /api/v1/agent-verify → 402 advertisement when unpaid.
- *      GET-first crawlers treat a 200 here as "free" and never buy. Health
- *      stays on /api/x402/health. GET never consumes the free UUID allowance.
- *      A GET that already carries a payment proof is settled the same as
- *      POST (empty body → missing-seal evidence). Otherwise GET-paying
- *      scouts retry with a proof and receive the same 402.
- * HEAD /api/x402 + /api/v1/agent-verify → 402 with the same PAYMENT-REQUIRED
- *      header as unpaid GET and an empty body. PayAI probes HEAD first and
- *      only GET on 404/405; HEAD 204 looked alive with no paywall.
- *      Other x402 paths keep HEAD 204.
+ * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → 200 health
+ *      (not_configured is OK — GET must not 404). `freeCalls` says whether
+ *      the daily UUID allowance is armed. It never includes the salt or keys.
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
  * GET  /api/x402/listing → PayAPI-ready pack copied from health
  * GET  /api/x402/growth → directories + skills + sisters
@@ -319,28 +309,21 @@ async function tryFreeCall(
   env: X402Env | undefined,
   opts: X402Options | undefined
 ): Promise<{ response: Response | null; remaining: number | null }> {
-  const raw = coerceSealBody(parseJsonObject(await request.clone().text()));
-  const refusal = unpaidSealRefusal(raw);
-  if (refusal) {
-    return { response: json(refusal.status, refusal.body), remaining: null };
-  }
+  const raw = parseJsonObject(await request.clone().text());
   const parsed = parseSealRequest(raw);
   if (!parsed.ok) {
-    // Empty body or listing sample (`demo` / bazaar UUID): 402 so a scanner
-    // can read the price. An empty body with a valid payment is settled as
-    // missing-seal evidence.
-    return { response: null, remaining: null };
-  }
-  // Listing example UUID: crawlers POST this body. A free 200 is classified
-  // as payability=free so they never buy. Do not consume the real-UUID
-  // allowance. Paid lookup of this id is still missing-seal evidence.
-  if (isDiscoveryExampleSealId(parsed.sealId)) {
+    // No body: 402 so a scanner can read the price. A named seal that cannot
+    // exist, or productId/serial used as the key, is refused here. The paid
+    // path does the same before settlement. This runs before the registry
+    // credential check so a bad id is not a payment challenge.
+    if (Object.keys(raw).length > 0) {
+      return { response: json(parsed.status, parsed.body), remaining: null };
+    }
     return { response: null, remaining: null };
   }
   const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);
   const creds = sealLookupCredentials(env);
-  if (!creds || limit <= 0)
-    return { response: null, remaining: limit <= 0 ? 0 : null };
+  if (!creds || limit <= 0) return { response: null, remaining: limit <= 0 ? 0 : null };
   const fetchImpl = opts?.fetchImpl ?? fetch;
   const store =
     opts && "freeStore" in opts
