@@ -414,6 +414,32 @@ export function planPaymentLink(id: PlanId): string | undefined {
   return gatedCheckoutUrl(id);
 }
 
+export type CatalogOffer = {
+  id: PlanId;
+  name: string;
+  usd: number;
+  priceSuffix: string | null;
+  checkout: string;
+};
+
+/** Every paid plan that has a gated checkout. Free is not an offer. */
+export function catalogOffers(): CatalogOffer[] {
+  return PLANS.flatMap(plan => {
+    if (plan.price <= 0) return [];
+    const checkout = planPaymentLink(plan.id);
+    if (!checkout) return [];
+    return [
+      {
+        id: plan.id,
+        name: plan.name,
+        usd: plan.price,
+        priceSuffix: plan.price_suffix ?? null,
+        checkout,
+      },
+    ];
+  });
+}
+
 export function planStripePaymentLink(id: PlanId): string | undefined {
   return planById(id)?.stripe_payment_link;
 }
