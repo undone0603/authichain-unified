@@ -57,7 +57,7 @@ const probes = live
   ? await Promise.all([
       probe("https://authichain.com/.well-known/jwks.json", {
         status: 200,
-        includes: "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE",
+        includes: "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ",
       }),
       probe("https://authichain.com/checkout/starter", {
         status: 200,

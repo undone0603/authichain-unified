@@ -9,4 +9,11 @@ describe("vertical verification gate", () => {
     }
     expect(verticalMayActOnVerified({ decision: "verified", valid: false })).toBe(false);
   });
+
+  it("refuses a verified body under an error status when the status is known", () => {
+    const verified = { decision: "verified", valid: true };
+    expect(verticalMayActOnVerified(verified, 200)).toBe(true);
+    expect(verticalMayActOnVerified(verified, 409)).toBe(false);
+    expect(verticalMayActOnVerified(verified, 503)).toBe(false);
+  });
 });

@@ -108,7 +108,8 @@ export function stripJsonc(text) {
       out += "\n";
     } else if (ch === "/" && text[i + 1] === "*") {
       i += 2;
-      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i += 1;
+      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/"))
+        i += 1;
       i += 1;
       out += " ";
     } else if (/\s/.test(ch)) {
@@ -272,11 +273,9 @@ export function checkCancelInProgress(root = ROOT) {
 }
 
 /**
- * CI workflows that gate main (CFA-123). No literal `cancel-in-progress: true`,
- * and on push the concurrency group must be per commit (contain github.sha):
- * GitHub cancels an older PENDING run in the same group when a newer one
- * queues, even with cancel-in-progress false, so a shared main group can still
- * drop a commit's CI before it starts.
+ * CI Main (CFA-123): one concurrency group per ref so a newer push to main
+ * cancels the superseded run. Literal `cancel-in-progress: true` is required
+ * here. Deploy workflows stay on cancel-in-progress false (PM-328).
  */
 export const CI_GATE_WORKFLOWS = ["main.yml"];
 
@@ -307,15 +306,20 @@ export function checkCiGateWorkflows(root = ROOT, files = CI_GATE_WORKFLOWS) {
       errors.push(`${rel}: missing (listed in CI_GATE_WORKFLOWS).`);
       continue;
     }
-    for (const line of cancelInProgressTrueLines(text)) {
+    if (cancelInProgressTrueLines(text).length === 0) {
       errors.push(
-        `${rel}:${line}: cancel-in-progress: true on a CI gate workflow; use \${{ github.event_name == 'pull_request' }}.`
+        `${rel}: CI gate must set cancel-in-progress: true so a newer push to main cancels the superseded run.`
       );
     }
     const group = topLevelConcurrencyGroup(text);
-    if (group !== null && !/github\.sha/.test(group)) {
+    if (group !== null && /github\.sha/.test(group)) {
       errors.push(
-        `${rel}: concurrency group "${group}" is shared across pushes to main; make it per commit on push (include github.sha) so a newer push can't cancel a pending run.`
+        `${rel}: concurrency group "${group}" is per-commit on push; share one group per ref (github.head_ref || github.ref) so a newer push cancels the superseded run.`
+      );
+    }
+    if (group !== null && !/github\.(head_ref|ref)/.test(group)) {
+      errors.push(
+        `${rel}: concurrency group "${group}" must be ref-scoped (github.head_ref || github.ref).`
       );
     }
   }
@@ -335,7 +339,7 @@ function main() {
     process.exit(1);
   }
   console.log(
-    `Deploy invariants OK: workers_dev = false on ${WORKERS_DEV_OFF.map(t => t.name).join(", ")}; preview_urls = false on ${PREVIEW_URLS_OFF.map(t => t.name).join(", ")}; no push-to-main deploy workflow cancels in progress; CI gate (${CI_GATE_WORKFLOWS.join(", ")}) is per-commit on main.`
+    `Deploy invariants OK: workers_dev = false on ${WORKERS_DEV_OFF.map(t => t.name).join(", ")}; preview_urls = false on ${PREVIEW_URLS_OFF.map(t => t.name).join(", ")}; no push-to-main deploy workflow cancels in progress; CI gate (${CI_GATE_WORKFLOWS.join(", ")}) cancels superseded runs on main.`
   );
 }
 

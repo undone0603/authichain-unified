@@ -12,7 +12,7 @@ import {
 } from "./mcp-install-page";
 import { TOOLS, isMcpPath } from "./mcp-routes";
 import { DPP_CATEGORIES } from "../../../src/lib/dpp-readiness.ts";
-import manifest from "../../../content/microsites/manifest.json" with { type: "json" };
+import manifest from "../../../content/microsites/manifest.json";
 
 describe("mcp install routing", () => {
   it("claims only the install paths and never the agent endpoint", () => {
@@ -43,6 +43,15 @@ describe("mcp install page", () => {
     expect(html).toContain('<link rel="canonical"');
     expect(html).toContain("width=device-width");
     expect(html).toContain("</html>");
+  });
+
+  it("describes honest live x402 $0.05, not an in-development rail", () => {
+    expect(html).toContain(
+      "Agents can pay $0.05 USDC on Base per verification via x402."
+    );
+    expect(html).not.toContain(
+      "x402 paid verification and on-chain anchoring in development"
+    );
   });
 
   it("offers every install path a reader needs", () => {
