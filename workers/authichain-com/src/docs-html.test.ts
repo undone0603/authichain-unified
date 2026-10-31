@@ -51,3 +51,21 @@ test("docs links keep query strings escaped exactly once", () => {
     )
   );
 });
+
+test("verification FAQ names the free demonstration check", () => {
+  const html = renderDocsPage("/docs/verification");
+  assert.match(html, /\/api\/verify\?id=polygon-anchor-1/);
+  assert.match(html, /not a customer product/);
+  assert.match(html, /not a physical inspection/);
+  assert.match(html, /does not itself read the anchor transaction/);
+  assert.match(html, /empty body returns HTTP 402/);
+  assert.match(html, /daily free allowance/);
+  assert.match(html, /free: true/);
+  assert.match(html, /verified: false/);
+  assert.match(html, /settlement: null/);
+  assert.match(html, /not a paid receipt/);
+  assert.match(html, /not a seal UUID is HTTP 400/);
+  assert.equal(html.includes("freeCalls"), false);
+  assert.equal(html.includes("polygonscan.com"), false);
+  assert.equal(html.includes('{"sealId":"demo"}'), false);
+});
