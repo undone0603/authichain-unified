@@ -54,6 +54,7 @@ export const RESTRICTED_PATHS = [
   ".github/autonomy.json",
   ".github/CODEOWNERS",
   ".github/workflows/merge-autopilot.yml",
+  ".github/workflows/main.yml",
   ".github/workflows/autonomy-reconcile.yml",
   ".github/workflows/deploy-*.yml",
   ".github/workflows/bind-*.yml",

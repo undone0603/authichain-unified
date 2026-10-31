@@ -241,6 +241,7 @@ describe("merge autopilot restricted changes", () => {
   for (const path of [
     ".github/autonomy.json",
     ".github/workflows/merge-autopilot.yml",
+    ".github/workflows/main.yml",
     ".github/workflows/autonomy-reconcile.yml",
     ".github/workflows/deploy-workers.yml",
     ".github/workflows/b2b-outreach.yml",
