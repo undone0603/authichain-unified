@@ -8,8 +8,13 @@
  * mainnet anchor) via attestSeal — this module does not set it.
  */
 
+import { isDiscoveryExampleSealId } from "./x402";
+
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Bazaar discovery example. It matches the UUID shape and is not a registry row. */
+const NIL_SEAL_ID = "00000000-0000-4000-8000-000000000000";
 
 export type SealRequest =
   | { ok: true; sealId: string }
@@ -48,19 +53,35 @@ export function parseSealRequest(input: Record<string, unknown>): SealRequest {
       },
     };
   }
+  if (sealId.toLowerCase() === NIL_SEAL_ID) {
+    return {
+      ok: false,
+      status: 400,
+      body: {
+        error: "seal_id_nil",
+        detail:
+          "The all-zero UUID is the discovery example, not a registry seal. No payment was taken.",
+        settled: false,
+      },
+    };
+  }
   return { ok: true, sealId };
 }
 
 /**
  * Unpaid calls with a body that cannot be a registry key are 400.
  * An empty object stays null so the caller can still return the 402
- * price challenge. A valid seal UUID also stays null.
+ * price challenge. A real seal UUID also stays null. The all-zero
+ * discovery example is 400.
  */
 export function unpaidSealRefusal(
   raw: Record<string, unknown>
 ): { status: number; body: Extract<SealRequest, { ok: false }>["body"] } | null {
-  if (Object.keys(raw).length === 0) return null;
-  const parsed = parseSealRequest(raw);
+  const body = coerceSealBody(raw);
+  const listed = listedSealId(body);
+  if (!listed) return null;
+  if (isDiscoveryExampleSealId(listed)) return null;
+  const parsed = parseSealRequest(body);
   if (parsed.ok) return null;
   return { status: parsed.status, body: parsed.body };
 }
