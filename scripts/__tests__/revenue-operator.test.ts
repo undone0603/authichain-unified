@@ -516,10 +516,84 @@ describe("snapshotFromStripeLike", () => {
           id: "ch_live",
           amount: 14900,
           paid: true,
+          livemode: true,
           billing_details: { email: "ops@example.com" },
         },
       ],
     });
     expect(snapshot.charges[0].email).toBe("ops@example.com");
+    expect(snapshot.charges[0].livemode).toBe(true);
+  });
+
+  it("keeps livemode false so a test-mode subscription cannot qualify", () => {
+    const snapshot = snapshotFromStripeLike({
+      subscriptions: [
+        {
+          id: "sub_test",
+          status: "active",
+          customer_email: "buyer@example.com",
+          livemode: false,
+        },
+      ],
+    });
+    expect(snapshot.subscriptions[0].livemode).toBe(false);
+    expect(classifyRevenue(snapshot).qualifying).toBe(false);
+  });
+});
+
+describe("founder domain and test mode", () => {
+  it("does not count an @authichain.com alias as a stranger subscription", () => {
+    const verdict = classifyRevenue({
+      subscriptions: [
+        {
+          id: "sub_ops",
+          status: "active",
+          customerEmail: "ops@authichain.com",
+        },
+      ],
+      payouts: [],
+      charges: [],
+    });
+    expect(verdict.qualifying).toBe(false);
+  });
+
+  it("does not let a test-mode paid charge unlock a payout", () => {
+    const snapshot = snapshotFromStripeLike({
+      payouts: [{ id: "po_test", amount: 2900, status: "paid" }],
+      charges: [
+        {
+          id: "ch_test",
+          amount: 2900,
+          paid: true,
+          livemode: false,
+          billing_details: { email: "buyer@example.com" },
+        },
+      ],
+    });
+    expect(classifyRevenue(snapshot).qualifying).toBe(false);
+  });
+});
+
+describe("manual desk addresses", () => {
+  const desks = [
+    "crew@canyon.com",
+    "us@canyon.com",
+    "webshop@sfm-bikes.de",
+    "hi@northvolt.com",
+    "dpo@verkor.com",
+    "service.ebike@yamaha-ebike-systems.com",
+  ];
+
+  it("refuses published desk addresses unless allowRoleInbox is set", () => {
+    for (const email of desks) {
+      const refused = classifySend({
+        namedInboxThisTurn: null,
+        operatorSelectedInbox: email,
+        source: "published_contact",
+        allowRoleInbox: false,
+      });
+      expect(refused.allowed, email).toBe(false);
+      expect(refused.reason, email).toContain("role_inbox");
+    }
   });
 });
