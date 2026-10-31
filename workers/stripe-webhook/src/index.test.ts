@@ -224,6 +224,22 @@ describe("stripe-webhook checkout grant", () => {
     expect(calls.some(c => c.method === "GET")).toBe(true);
   });
 
+  it("DPP does not acknowledge a paid session without a buyer email", async () => {
+    state.event = sessionEvent({ price: DPP, id: "cs_dpp", email: null });
+    const calls = installFetch();
+    const res = await worker.fetch(
+      new Request("https://worker.test/stripe", {
+        method: "POST",
+        body: "{}",
+        headers: { "stripe-signature": "t=1,v1=ok" },
+      }),
+      env
+    );
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "canonical DPP buyer identity missing" });
+    expect(calls.filter(c => c.url.includes("/profiles"))).toHaveLength(0);
+  });
+
   it("DPP does not acknowledge a matching session with no credits", async () => {
     state.event = sessionEvent({ price: DPP, id: "cs_dpp" });
     const calls = installFetch({ prior: "cs_dpp", grantLimit: 0 });
