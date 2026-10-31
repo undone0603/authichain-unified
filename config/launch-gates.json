@@ -61,9 +61,13 @@
     {
       "id": "live-verify-endpoint",
       "title": "Public verify/resolver endpoint serves a known-good record within budget",
-      "type": "pending",
+      "type": "live_verify",
       "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1930",
-      "evidence_required": "A published known-good record URL returns 200 and verifies with protocol/verifier.mjs; the /p lookup stays under its latency budget (see #1930).",
+      "url": "https://authichain.com/api/verify?id=polygon-anchor-1",
+      "max_ms": 5000,
+      "record": "protocol/examples/polygon-anchor-1.record.json",
+      "anchor": "protocol/examples/polygon-anchor-1.anchor.json",
+      "evidence_required": "GET the published example returns 200, verdict verified, source published_example, within max_ms. protocol/verifier.mjs verifies the shipped example, and the live subject id matches that record.",
       "on_pass": "report",
       "on_fail": "open_issue"
     },
@@ -115,9 +119,41 @@
     {
       "id": "public-trust-artifacts",
       "title": "Public trust artifacts (spec, open verifier, key registry, status page)",
-      "type": "pending",
+      "type": "public_trust",
       "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1996",
-      "evidence_required": "Spec, verifier version, registry and status page published and reachable.",
+      "evidence_required": "Spec, reference verifier, JWKS, issuer registry, and /api/health are reachable and contain their markers. There is no separate HTML status page.",
+      "probes": [
+        {
+          "url": "https://raw.githubusercontent.com/undone0603/authichain-unified/main/protocol/SPEC.md",
+          "expect_status": 200,
+          "max_ms": 5000,
+          "includes": "AuthiChain Verification Specification"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/undone0603/authichain-unified/main/protocol/verifier.mjs",
+          "expect_status": 200,
+          "max_ms": 5000,
+          "includes": "Reference verifier"
+        },
+        {
+          "url": "https://authichain.com/.well-known/jwks.json",
+          "expect_status": 200,
+          "max_ms": 3000,
+          "includes": "\"keys\""
+        },
+        {
+          "url": "https://authichain.com/protocol/issuer.json",
+          "expect_status": 200,
+          "max_ms": 3000,
+          "includes": "\"ready\":true"
+        },
+        {
+          "url": "https://authichain.com/api/health",
+          "expect_status": 200,
+          "max_ms": 3000,
+          "includes": "\"status\":\"ok\""
+        }
+      ],
       "on_pass": "report",
       "on_fail": "open_issue"
     },

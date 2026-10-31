@@ -51,6 +51,14 @@ const ROLE_LOCALPARTS = new Set([
   "no-reply",
   "team",
   "office",
+  // Published desks that are not a person. allowRoleInbox must be set
+  // explicitly; trusted provenance alone does not make them sendable.
+  "crew",
+  "us",
+  "webshop",
+  "hi",
+  "dpo",
+  "service.ebike",
 ]);
 
 export function isRoleInboxEmail(email: string): boolean {
