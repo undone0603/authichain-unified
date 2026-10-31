@@ -68,9 +68,12 @@ export async function GET(req: NextRequest) {
       { grants: data ?? [], total: count ?? 0, limit, offset },
       { headers: CORS }
     );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: 500, headers: CORS });
+  } catch {
+    // Query failures can include the project host. Do not echo them.
+    return NextResponse.json(
+      { error: "service unavailable" },
+      { status: 500, headers: CORS }
+    );
   }
 }
 

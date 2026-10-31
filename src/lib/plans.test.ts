@@ -65,6 +65,23 @@ describe("plan catalogue integrity", () => {
     );
     expect(PLAN_CREDITS.qron_launch).toBe(100);
   });
+
+  it("wires QRON Launch Annual $190/yr to the live Stripe price", () => {
+    expect(planById("qron_launch_annual")?.price).toBe(190);
+    expect(planById("qron_launch_annual")?.stripe_mode).toBe("subscription");
+    expect(planById("qron_launch_annual")?.generations).toBe(1200);
+    expect(planById("qron_launch_annual")?.listed).toBe(false);
+    expect(planByStripePriceId("price_1USNoSGqTruSqV8ThTIW7Ej8")?.id).toBe(
+      "qron_launch_annual"
+    );
+    expect(planByAmountCents(19000)).toBeUndefined();
+    expect(planPaymentLink("qron_launch_annual")).toBe(
+      "https://authichain.com/checkout/qron_launch_annual"
+    );
+    expect(PLAN_CREDITS.qron_launch_annual).toBe(1200);
+    expect(planUsd("dpp_readiness")).toBe(299);
+    expect(planById("dpp_readiness")?.name).toBe("EU DPP Workspace");
+  });
 });
 
 describe("isPurchasable", () => {
@@ -154,5 +171,44 @@ describe("listedPlans", () => {
     expect(planByAmountCents(9900)).toBeUndefined();
     expect(planByAmountCents(29900)).toBeUndefined();
     expect(planByAmountCents(2900)?.id).toBe("starter");
+  });
+
+  it("CFA-758: catalogue copy has no 50-workspace-generation or never-expire claims", () => {
+    const banned = [
+      "50 workspace generations",
+      "50 workspace generation",
+      "never expire",
+      "never-expire",
+      "no expiry",
+      "no-expiry",
+    ];
+    for (const p of PLANS) {
+      const blob = [p.description, ...(p.features ?? []), p.cta, p.name]
+        .join("\n")
+        .toLowerCase();
+      for (const phrase of banned) {
+        expect(blob, `${p.id} must not contain ${phrase}`).not.toContain(
+          phrase
+        );
+      }
+    }
+  });
+
+  it("gap-report SKU copy is email delivery, not a 10-business-day SLA", () => {
+    const report = planById("battery_gap_report")!;
+    expect(report.price).toBe(950);
+    expect(report.cta).toBe("Order the gap report — $950");
+    expect(report.description).toContain(
+      "arrives by email as a written document. No call."
+    );
+    expect(report.features).toContain(
+      "It arrives by email as a written document. No call."
+    );
+    expect(report.description).not.toContain("10 business days");
+    expect(report.features.join("\n")).not.toContain("10 business days");
+    expect(planById("battery_gap_report_extra")?.price).toBe(350);
+    expect(planById("battery_gap_report_extra")?.cta).toBe(
+      "Add a model — $350"
+    );
   });
 });

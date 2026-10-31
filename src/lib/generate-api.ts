@@ -6,7 +6,12 @@
  * This module is the worker-owned handler: credit packs come from
  * `src/lib/plans.ts`, and image generation proxies to qron-image-gen.
  */
-import { listedPlans, planPaymentLink, type Plan } from "./plans";
+import {
+  gatedCheckoutUrl,
+  listedPlans,
+  planPaymentLink,
+  type Plan,
+} from "./plans";
 import {
   CANONICAL_VERIFY_URL,
   DECISION_CONTRACT,
@@ -18,6 +23,7 @@ import {
   type QronPresentationAttestation,
 } from "./qron-presentation";
 import {
+  QRON_RESOLVE_ORIGIN,
   qronResolveUrl,
   scannableQrDataUrl,
   type StoredQronPresentation,
@@ -25,6 +31,31 @@ import {
 
 export const QRON_IMAGE_GEN_DEFAULT =
   "https://qron-image-gen.undone-k.workers.dev";
+
+/** Soft-prompt when a signed-in user has fewer than this many credits left. */
+export const LOW_CREDIT_THRESHOLD = 20;
+
+/** Marketing v5 copy (qron-modes-copy.md, trigger b, Variant A "low-starter-a"). */
+export const LOW_CREDIT_STARTER_PROMPT = {
+  message:
+    "You're running low on generations. Top up any time: Starter is 100 for $29, paid once.",
+  button: "Add 100 generations for $29",
+  dismiss: "Not now",
+  small_print: "Checkout on authichain.com.",
+} as const;
+
+/** Starter-only upgrade payload when remaining credits are below threshold. */
+export function lowCreditUpgrade(left: unknown): Record<string, unknown> {
+  if (typeof left !== "number" || left >= LOW_CREDIT_THRESHOLD) return {};
+  return {
+    upgrade: {
+      url: `${gatedCheckoutUrl("starter")}?src=low_credit&utm_content=low-starter-a`,
+      plan: "starter",
+      remaining_credits: left,
+      ...LOW_CREDIT_STARTER_PROMPT,
+    },
+  };
+}
 
 export type CreditPack = {
   id: Plan["id"];
@@ -89,6 +120,11 @@ export function generateHealthBody(
       estate_urls: readonly string[];
       jwks_url: string;
     };
+    scan: {
+      method: "GET";
+      url_template: string;
+      missing: "presentation_not_found";
+    };
   };
 } {
   return {
@@ -107,6 +143,11 @@ export function generateHealthBody(
         canonical_url: CANONICAL_VERIFY_URL,
         estate_urls: ESTATE_VERIFY_URLS,
         jwks_url: QRON_ATTESTATION_JWKS_URL,
+      },
+      scan: {
+        method: "GET",
+        url_template: `${QRON_RESOLVE_ORIGIN}/qron/r/{object_id}`,
+        missing: "presentation_not_found",
       },
     },
   };
@@ -169,6 +210,9 @@ export type GeneratePostResult = {
  * with a global daily ceiling so the sample cannot run up image-gen cost.
  */
 export const FREE_SAMPLE_GENERATIONS = 5;
+/** Starter checkout link shown when the free sample is used up or paused. */
+export const SAMPLE_EXHAUSTED_STARTER_URL =
+  "https://authichain.com/checkout/starter?src=sample_exhausted";
 export const FREE_SAMPLE_WINDOW_MS = 30 * 24 * 60 * 60_000;
 export const FREE_SAMPLE_GLOBAL_DAILY_CAP = 100;
 
@@ -294,6 +338,12 @@ export async function handleGeneratePost(opts: {
           code: used ? "FREE_SAMPLE_USED" : "FREE_SAMPLE_PAUSED",
           packs,
           pricing: "/pricing",
+          // Same shape as the low-credit prompt (#2050): existing Starter only.
+          upgrade: {
+            url: SAMPLE_EXHAUSTED_STARTER_URL,
+            plan: "starter",
+            label: "Starter Pack: 100 generations for $29, paid once",
+          },
         },
       };
     }
@@ -386,6 +436,7 @@ export async function handleGeneratePost(opts: {
         // Generate still returns. A scan 404s until a later bind stores the JWS.
       }
     }
+    const remaining = deducted.ok ? deducted.remaining : credit.remaining;
     return {
       status: 200,
       body: {
@@ -399,8 +450,9 @@ export async function handleGeneratePost(opts: {
           objectId: presentation.object_id,
         },
         ...(anonymous ? {} : { presentation }),
-        remaining_credits: deducted.ok ? deducted.remaining : credit.remaining,
+        remaining_credits: remaining,
         ...(anonymous ? { free_sample: true } : {}),
+        ...(anonymous ? {} : lowCreditUpgrade(remaining)),
       },
     };
   } catch (err) {

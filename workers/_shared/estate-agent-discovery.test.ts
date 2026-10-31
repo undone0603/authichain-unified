@@ -69,6 +69,11 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
     assert.ok(text.includes("paidVerify.bound false"));
     assert.ok(text.includes(`$${x402PriceUsd()} USDC`));
     assert.ok(
+      text.includes(
+        "An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment."
+      )
+    );
+    assert.ok(
       hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/mcp")
     );
     assert.ok(hasHttpsPath(text, "authichain.com", "/mcp"));
@@ -85,6 +90,9 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
     assert.ok(
       hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/api/verify")
     );
+    assert.ok(text.includes(`${sisterOrigin(brand)}/qron/r/{object_id}`));
+    assert.ok(text.includes("https://authichain.com/qron/r/{object_id}"));
+    assert.ok(text.includes("does not verify the signature"));
     assert.ok(text.includes("POST https://authichain.com/api/v1/attestation/verify"));
     assert.ok(text.includes(PASSPORT));
     assert.ok(text.includes(DPP));
@@ -128,7 +136,14 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
       get?: { responses: { "200": unknown } };
       post: {
         "x-payment-info": { protocols: string[]; price: { amount: string } };
-        responses: { "402": unknown };
+        responses: { "400": unknown; "402": unknown };
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: { properties: Record<string, { format?: string }> };
+            };
+          };
+        };
       };
     };
     assert.ok(post.get?.responses["200"]);
@@ -137,11 +152,21 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
       post.post["x-payment-info"].price.amount,
       String(x402PriceUsd())
     );
+    assert.ok(post.post.responses["400"]);
     assert.ok(post.post.responses["402"]);
+    const props =
+      post.post.requestBody.content["application/json"].schema.properties;
+    assert.deepEqual(Object.keys(props), ["sealId"]);
+    assert.equal(props.sealId.format, "uuid");
     assert.ok(spec.paths["/protocol/jwks.json"]);
     assert.ok(spec.paths["/protocol/issuer.json"]);
     assert.ok(spec.paths["/.well-known/jwks.json"]);
     assert.ok(spec.paths["/api/verify"]);
+    const scan = spec.paths["/qron/r/{object_id}"] as {
+      get?: { summary?: string };
+    };
+    assert.match(scan.get?.summary ?? "", /authichain\.com\/qron\/r/);
+    assert.match(scan.get?.summary ?? "", /does not verify/);
     assert.equal(spec.info["x-human-checkout"].passportPaymentLink, PASSPORT);
     assert.equal(spec.info["x-human-checkout"].dppPaymentLink, DPP);
     assert.equal(spec.info["x-human-checkout"].farmPaymentLink, undefined);
