@@ -20,7 +20,10 @@ export function AuthichainHome() {
       eyebrow="The authentic agentic economy"
       headline="Issue seals. Bind products. Verify anywhere."
       subhead="AuthiChain is the authenticity layer agents and humans use to prove a physical product is real. The primary money path is EU DPP Readiness — live Stripe checkout at $299 from the published plan catalogue."
-      primaryCta={{ label: "Start DPP checkout", href: "https://authichain.com/checkout/dpp_readiness" }}
+      primaryCta={{
+        label: "Start DPP checkout",
+        href: "https://authichain.com/checkout/dpp_readiness",
+      }}
       secondaryCta={{ label: "View pricing", href: "/pricing" }}
       stats={[
         { value: "$299", label: "EU DPP Readiness" },
@@ -30,7 +33,7 @@ export function AuthichainHome() {
         {
           icon: <Award className="h-6 w-6" />,
           title: "EU DPP Readiness",
-          desc: "Live self-serve checkout. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
+          desc: "Live self-serve checkout. It opens an AuthiChain workspace with self-serve activation.",
         },
         {
           icon: <ShieldCheck className="h-6 w-6" />,
@@ -101,36 +104,59 @@ export function AuthichainHome() {
         </div>
       </section>
       <section className="max-w-7xl mx-auto px-6 pb-20">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600 mb-3">Money surfaces</p>
-        <h2 className="text-2xl font-semibold tracking-tight text-slate-950 mb-3">TruMark and Made in America</h2>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600 mb-3">
+          Money surfaces
+        </p>
+        <h2 className="text-2xl font-semibold tracking-tight text-slate-950 mb-3">
+          TruMark and Made in America
+        </h2>
         <p className="text-sm text-slate-600 mb-8 max-w-2xl">
-          Two live self-serve paths. TruMark is the scan seal, not a SKU. Origin claims use the FTC Made in USA rule. No call booking.
+          Two live self-serve paths. TruMark is the scan seal, not a SKU. Origin
+          claims use the FTC Made in USA rule. No call booking.
         </p>
         <div className="grid gap-5 md:grid-cols-2">
           <article className="rounded-xl border border-slate-200 bg-white p-7 shadow-sm">
-            <h3 className="text-base font-semibold text-slate-950 mb-2">TruMark</h3>
+            <h3 className="text-base font-semibold text-slate-950 mb-2">
+              TruMark
+            </h3>
             <p className="text-sm text-slate-600 mb-5">
-              Physical scan seal. Cannabis brands publish one genetics passport from existing CoAs.
+              Physical scan seal. Cannabis brands publish one genetics passport
+              from existing CoAs.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <a href="/trumark" className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
+              <a
+                href="/trumark"
+                className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white"
+              >
                 TruMark brief
               </a>
-              <a href="https://authichain.com/checkout/strainchain_passport" className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900">
+              <a
+                href="https://authichain.com/checkout/strainchain_passport"
+                className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900"
+              >
                 Passport checkout — $49
               </a>
             </div>
           </article>
           <article className="rounded-xl border border-slate-200 bg-white p-7 shadow-sm">
-            <h3 className="text-base font-semibold text-slate-950 mb-2">Made in America</h3>
+            <h3 className="text-base font-semibold text-slate-950 mb-2">
+              Made in America
+            </h3>
             <p className="text-sm text-slate-600 mb-5">
-              Signed per-unit origin evidence for Made in USA labels. Partner brief at /partners/brief.
+              Signed per-unit origin evidence for Made in USA labels. Partner
+              brief at /partners/brief.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <a href="/made-in-america" className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
+              <a
+                href="/made-in-america"
+                className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white"
+              >
                 Made in USA brief
               </a>
-              <a href="https://authichain.com/checkout/dpp_readiness" className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900">
+              <a
+                href="https://authichain.com/checkout/dpp_readiness"
+                className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900"
+              >
                 DPP checkout — $299
               </a>
             </div>
