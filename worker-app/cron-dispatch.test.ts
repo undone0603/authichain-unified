@@ -137,6 +137,18 @@ test("CLEARED_JOBS has not drifted from server/scheduled-jobs.ts", () => {
   }
 });
 
+test("a committed API bundle copy uses the same schedule when it still names the job", () => {
+  const bundlePath = fileURLToPath(new URL("../api/server.js", import.meta.url));
+  const bundle = readFileSync(bundlePath, "utf8");
+  for (const job of CLEARED_JOBS) {
+    const at = bundle.indexOf(`name: "${job.name}"`);
+    if (at < 0) continue;
+    const match = bundle.slice(at, at + 400).match(/schedule:\s*"([^"]+)"/);
+    assert.ok(match, `${job.name} has no schedule in api/server.js`);
+    assert.equal(match[1], job.schedule, `${job.name} bundle schedule drifted`);
+  }
+});
+
 test("the dispatcher covers exactly ten jobs", () => {
   assert.equal(CLEARED_JOBS.length, 10);
   assert.equal(new Set(CLEARED_JOBS.map((j) => j.name)).size, 10, "names must be unique");

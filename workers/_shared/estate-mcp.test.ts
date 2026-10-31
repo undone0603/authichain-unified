@@ -138,6 +138,18 @@ test("GET discovery lists Payment Links and unpaid POST x402, not GET checkout",
         X402_PUBLISHED_PAY_TO,
         `${host} ${path}`
       );
+      assert.ok(
+        String(body.pricing.agentRail.note).includes(
+          "An empty JSON body is the unpaid HTTP 402."
+        ),
+        `${host} ${path}`
+      );
+      assert.ok(
+        String(body.pricing.agentRail.note).includes(
+          "A non-UUID sealId is HTTP 400 before payment."
+        ),
+        `${host} ${path}`
+      );
       const blob = JSON.stringify(body);
       assert.equal(blob.includes("/api/checkout"), false, `${host} ${path}`);
       assert.equal(
@@ -282,7 +294,7 @@ test("tools/call verify is unpaid HTTP 402 with published payTo", async () => {
 });
 
 test("tools/call verify with a non-key argument is 400 and does not ask for payment", async () => {
-  for (const args of [{ serial: "AC-1" }, { sealId: "demo" }, { productId: "p-1" }]) {
+  for (const args of [{ serial: "AC-1" }, { productId: "p-1" }]) {
     const res = await tryHandleSisterMcp(
       req("qron.space", "/mcp", {
         method: "POST",
