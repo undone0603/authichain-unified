@@ -235,6 +235,9 @@ export default {
           amountTotal: session.amount_total,
         });
         const plan = grant?.plan || session.metadata?.plan || "starter";
+        if (grant?.canonicalFulfillment && !email) {
+          return grantRetry("canonical DPP buyer identity missing");
+        }
 
         if (email) {
           const upserted = await supabaseUpsert(
