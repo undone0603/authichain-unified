@@ -1,12 +1,18 @@
 /**
  * Worker-local auth_seals read for paid verify. Settle only after that read
- * succeeds. verified stays false: a registry row is not an attestation.
+ * succeeds. Return independently reproducible signature/validity evidence.
  */
 import { createHash } from "node:crypto";
-import { parseSealRequest, registryAnswer } from "./agent-verify";
+import {
+  coerceSealBody,
+  listedSealId,
+  parseSealRequest,
+} from "./agent-verify";
+import { sealBaseline } from "./seal-baseline";
 import {
   buildPaymentRequired,
   dailyCapUsd,
+  isDiscoveryExampleSealId,
   parsePaymentHeader,
   paymentResponseHeaders,
   settlePayment,
@@ -15,7 +21,7 @@ import {
   wouldExceedCap,
 } from "./x402";
 
-const SEAL_SELECT = "id,product_id,batch_id,brand,created_at";
+const SEAL_SELECT = "id,product_id,batch_id,brand,created_at,qr_payload";
 
 export type SealLookupEnv = {
   SUPABASE_URL?: string;
@@ -511,16 +517,24 @@ export async function resolvePaidSealVerify(input: {
     try {
       const value = JSON.parse(input.bodyText) as unknown;
       if (value && typeof value === "object" && !Array.isArray(value)) {
-        parsedBody = value as Record<string, unknown>;
+        parsedBody = coerceSealBody(value as Record<string, unknown>);
       }
     } catch {
       parsedBody = {};
     }
   }
   const parsed = parseSealRequest(parsedBody);
-  if (!parsed.ok) {
+  const listed = listedSealId(parsedBody);
+  const discoveryAlias = Boolean(listed) && isDiscoveryExampleSealId(listed);
+  // Empty unpaid is the 402 price challenge. x402 clients retry that same
+  // empty body with a payment header. Listing samples (`demo`, bazaar UUID)
+  // and quote-crawler JSON with no sealId settle as missing-seal evidence.
+  // A sealId that is not a UUID stays 400 before settle so the agent is not
+  // charged for a key that cannot exist.
+  if (!parsed.ok && listed && !discoveryAlias) {
     return { action: "answer", status: parsed.status, body: parsed.body };
   }
+  const sealId = parsed.ok ? parsed.sealId : null;
 
   // Replay guard: refuse any reuse of a settled proof, BEFORE settling.
   const keys = replayKeys(input.proofHeader, proof);
@@ -553,14 +567,23 @@ export async function resolvePaidSealVerify(input: {
     };
   }
 
-  const lookup = await readSeal(fetchImpl, creds, parsed.sealId);
-  if (!lookup.ok) {
-    return {
-      action: "answer",
-      status: 503,
-      body: { error: "registry_unavailable", settled: false },
-    };
+  let seal: Record<string, unknown> | null = null;
+  if (sealId) {
+    const lookup = await readSeal(fetchImpl, creds, sealId);
+    if (!lookup.ok) {
+      return {
+        action: "answer",
+        status: 503,
+        body: { error: "registry_unavailable", settled: false },
+      };
+    }
+    seal = lookup.seal;
   }
+
+  // Prepare evidence before taking payment; verifier failures cannot charge
+  // the caller and then prevent delivery of a result. Empty body is missing
+  // evidence, not a registry outage.
+  const answer = sealBaseline(seal);
 
   // Pending marker BEFORE settle (CFA-351); released if settle fails.
   const claim = await claimReplay(replayStore, keys);
@@ -592,21 +615,16 @@ export async function resolvePaidSealVerify(input: {
   }
 
   await rememberSettledProof(replayStore, keys, {
-    sealId: parsed.sealId,
+    sealId,
     txHash: settlement.txHash ?? proof.txHash ?? null,
   });
   await recordSpend(fetchImpl, creds, proof.payer);
-  const answer = registryAnswer(lookup.seal);
   return {
     action: "answer",
     status: 200,
     body: {
-      verified: false,
-      registered: answer.registered,
-      status: answer.status,
-      checks: answer.checks,
-      subject: parsed.sealId,
-      details: answer.details,
+      ...answer,
+      subject: sealId ?? (discoveryAlias ? listed : null),
       settlement: {
         payer: proof.payer,
         amountAtomic: verification.amount.toString(),
