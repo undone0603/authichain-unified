@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.undone0603/authichain",
+  "name": "com.authichain/authichain",
   "title": "AuthiChain",
   "description": "Authenticity tools for agents: signed-record checks, EU DPP readiness, x402 seal verify on Base.",
   "version": "1.3.3",

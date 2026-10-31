@@ -268,8 +268,23 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
-      case "checkout.session.completed": {
+      case "checkout.session.completed":
+      case "checkout.session.async_payment_succeeded": {
         const session = event.data.object;
+        // Delayed methods emit completed while payment_status is still unpaid.
+        // Granting there would provision Launch before the money arrives.
+        // async_payment_succeeded is the paid event for those methods.
+        // A missing status still grants. A trial is no_payment_required.
+        if (session.payment_status === "unpaid") {
+          console.log(
+            JSON.stringify({
+              evt: "stripe_grant_held_unpaid",
+              session: session.id,
+              type: event.type,
+            })
+          );
+          break;
+        }
         const md = session.metadata || {};
         const userId = md.user_id;
         const plan = md.plan;
@@ -336,6 +351,24 @@ export async function POST(req: NextRequest) {
         if (prov.status === "upsert_failed") {
           throw new Error(
             `Provision failed: ${prov.error || "profiles upsert failed"}`
+          );
+        }
+
+        if (
+          resolvedPlan === "qron_launch_annual" &&
+          prov.status === "provisioned" &&
+          !prov.skippedIdempotent
+        ) {
+          console.log(
+            JSON.stringify({
+              evt: "checkout_paid_qron_annual",
+              plan_id: "qron_launch_annual",
+              session_id: session.id,
+              amount_usd: 190,
+              generations: 1200,
+              brand,
+              ts: Date.now(),
+            })
           );
         }
 
