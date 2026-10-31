@@ -198,6 +198,24 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # CFA-462 / CFA-464 (P1): this step only CHECKS that the attestation JWKS
+      # is live. It never generates, installs or rotates a signing key, and it
+      # never re-sets AUTHICHAIN_ATTESTATION_KEY_ID (the kid is derived from the
+      # public key's RFC 7638 thumbprint in worker-app/jwks.ts). On 2026-10-09 a
+      # non-200 probe here silently replaced the production key.
+      - name: Check attestation JWKS on authichain-edge-router (no key changes)
+        if: steps.secrets_check.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          JWKS_CODE="$(curl -sS -o /tmp/jwks-probe.json -w '%{http_code}' \
+            https://authichain.com/protocol/jwks.json || echo 000)"
+          if [ "$JWKS_CODE" != "200" ]; then
+            echo "::error::JWKS returned $JWKS_CODE; refusing to generate, install or rotate the signing key. Investigate by hand."
+            exit 1
+          fi
+          echo "JWKS live ($JWKS_CODE); no key changes made"
+
       - name: Deploy skipped notice
         if: steps.secrets_check.outputs.skip == 'true'
         run: echo "::notice::Cloudflare deploy skipped — set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID in repo secrets to enable."
