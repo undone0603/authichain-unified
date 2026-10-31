@@ -3,6 +3,7 @@
  * attestation and returns AuthiChain Verification Decision v1.
  */
 import { toString as qrToString } from "qrcode";
+import { gatedCheckoutUrl } from "./plans";
 import {
   CANONICAL_VERIFY_URL,
   DECISION_CONTRACT,
@@ -98,6 +99,22 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+export const QRON_RESOLVE_FOOTER_TEXT = "Create your own Living QR — free to try";
+export const QRON_RESOLVE_FOOTER_URL =
+  "https://qron.space/generate?utm_source=qron&utm_medium=resolve_footer";
+export const QRON_RESOLVE_STARTER_TEXT =
+  "Starter Pack: 100 generations for $29, paid once";
+export const QRON_RESOLVE_STARTER_URL = `${gatedCheckoutUrl("starter")}?src=resolve_footer&utm_content=low-starter-a`;
+
+function resolveFooterHtml(): string {
+  return (
+    "<footer>" +
+    `<p><a href="${escapeHtml(QRON_RESOLVE_FOOTER_URL)}">${QRON_RESOLVE_FOOTER_TEXT}</a></p>` +
+    `<p><a href="${escapeHtml(QRON_RESOLVE_STARTER_URL)}">${QRON_RESOLVE_STARTER_TEXT}</a></p>` +
+    "</footer>"
+  );
+}
+
 function htmlDecision(
   body: Record<string, unknown>,
   destination?: string
@@ -110,7 +127,7 @@ function htmlDecision(
     destination && /^https?:\/\//i.test(destination)
       ? `<p><a href="${escapeHtml(destination)}">Open destination</a></p>`
       : "";
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${decision}</title></head><body><h1>${decision}</h1><p>${contract}</p>${dest}</body></html>`;
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${decision}</title></head><body><h1>${decision}</h1><p>${contract}</p>${dest}${resolveFooterHtml()}</body></html>`;
 }
 
 export async function handleQronResolve(

@@ -29,7 +29,7 @@ Claim
 
 ## Why it matters
 
-Most “verified authentic” badges resolve to a vendor server saying *trust me*. That relocates the trust problem.
+Most “verified authentic” badges resolve to a vendor server saying _trust me_. That relocates the trust problem.
 
 A usable reference has to answer four different questions:
 
@@ -44,11 +44,11 @@ Those are not the same question. Mixing them produces false confidence and false
 
 Published at [/protocol](/protocol). Reference verifier: `verifier.mjs` (Node builtins only, Apache-2.0, v0.1.0 draft).
 
-| Verdict | Meaning |
-|---|---|
-| `verified` | Signature valid; anchor present, well formed, mainnet; hash matches |
-| `valid-unanchored` | Signature valid; no anchor supplied |
-| `invalid` | Any required check failed |
+| Verdict            | Meaning                                                             |
+| ------------------ | ------------------------------------------------------------------- |
+| `verified`         | Signature valid; anchor present, well formed, mainnet; hash matches |
+| `valid-unanchored` | Signature valid; no anchor supplied                                 |
+| `invalid`          | Any required check failed                                           |
 
 There is no score in this layer. A score is a product feature. A verdict is what a verifier owes you.
 
@@ -79,10 +79,10 @@ Anomalous scan reasons in that worker include `impossible_travel` and `cloned_id
 
 Documented in `docs/attestation/v0.1.md`.
 
-| Axis | Values |
-|---|---|
+| Axis     | Values                               |
+| -------- | ------------------------------------ |
 | Decision | `verified` \| `warning` \| `blocked` |
-| Status | `active` \| `revoked` \| `unknown` |
+| Status   | `active` \| `revoked` \| `unknown`   |
 
 Representation: compact JWS, protected header `typ=AC-ATTESTATION+JWS`, algorithm Ed25519 / EdDSA. Verify against the public JWKS.
 
@@ -90,7 +90,7 @@ Representation: compact JWS, protected header `typ=AC-ATTESTATION+JWS`, algorith
 GET https://authichain.com/.well-known/jwks.json
 ```
 
-kid `lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE`, `kty=OKP`, `crv=Ed25519`, `alg=EdDSA`.
+kid `T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ`, `kty=OKP`, `crv=Ed25519`, `alg=EdDSA`.
 
 v0.1 has no live status list. The status in the signed payload is the status at issuance.
 
