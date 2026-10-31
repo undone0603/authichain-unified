@@ -311,3 +311,28 @@ describe("stripeWebhook", () => {
     expect(createLicense).not.toHaveBeenCalled();
   });
 });
+
+describe("DPP report skip (only authichain.com unlocks it)", () => {
+  it("a DPP session (configured price id or product_line=dpp_report) returns 200 with no write and no license", async () => {
+    vi.clearAllMocks();
+    for (const object of [
+      { id: "cs_dpp1", customer_details: { email: "a@example.com" }, metadata: { product_line: "dpp_report" } },
+      { id: "cs_dpp2", customer_details: { email: "a@example.com" }, metadata: { stripe_price_id: "price_dppfixture" } },
+    ]) {
+      const res = await stripeWebhook(
+        new Request("https://issuer.example/api/license/stripe-webhook", {
+          method: "POST",
+          headers: { "Stripe-Signature": "t=1,v1=x" },
+          body: JSON.stringify({ id: "evt_" + object.id, type: "checkout.session.completed", data: { object } }),
+        }),
+        env({ DPP_REPORT_PRICE_ID: "price_dppfixture" } as Partial<Env>),
+        dummyCtx
+      );
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ skipped: "dpp_report" });
+    }
+    expect(createLicense).not.toHaveBeenCalled();
+    expect(logEvent).not.toHaveBeenCalled();
+    expect(isEventProcessed).not.toHaveBeenCalled();
+  });
+});
