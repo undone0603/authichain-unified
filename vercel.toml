@@ -1,0 +1,7 @@
+#:schema https://openapi.vercel.sh/vercel.json
+
+[daemons.agentz]
+root = "."
+entrypoint = "Dockerfile.agentz-daemon"
+command = ["python3", "-m", "agentz.daemon"]
+instances.iad1 = 1
