@@ -1,8 +1,9 @@
 import { describe, expect, it, afterEach } from "vitest";
 import { Hono } from "hono";
 import { generateKeyPairSync } from "node:crypto";
-import { exportPKCS8, generateKeyPair } from "jose";
-import { registerJwksRoute } from "./jwks";
+import { calculateJwkThumbprint, exportPKCS8, generateKeyPair } from "jose";
+import { vi } from "vitest";
+import { registerJwksRoute, resolveAttestationKey } from "./jwks";
 
 describe("registerJwksRoute", () => {
   afterEach(() => {
@@ -35,13 +36,17 @@ describe("registerJwksRoute", () => {
       extractable: true,
     });
     const pem = await exportPKCS8(privateKey);
-    process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 =
-      Buffer.from(pem, "utf8").toString("base64");
+    process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 = Buffer.from(
+      pem,
+      "utf8"
+    ).toString("base64");
     const app = new Hono();
     registerJwksRoute(app);
     const res = await app.request("/protocol/jwks.json");
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { keys: Array<{ d?: string; x?: string }> };
+    const body = (await res.json()) as {
+      keys: Array<{ d?: string; x?: string }>;
+    };
     expect(body.keys[0].d).toBeUndefined();
     expect(typeof body.keys[0].x).toBe("string");
   });
@@ -49,9 +54,8 @@ describe("registerJwksRoute", () => {
   it("accepts Node generateKeyPairSync PKCS#8 (CI bind format)", async () => {
     const { privateKey } = generateKeyPairSync("ed25519");
     const pem = privateKey.export({ type: "pkcs8", format: "pem" });
-    process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 = Buffer.from(pem).toString(
-      "base64",
-    );
+    process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 =
+      Buffer.from(pem).toString("base64");
     const app = new Hono();
     registerJwksRoute(app);
     const res = await app.request("/protocol/jwks.json");
@@ -79,7 +83,8 @@ describe("registerJwksRoute", () => {
     };
     expect(body.keys[0].kty).toBe("OKP");
     expect(body.keys[0].x).toBe(jwk.x);
-    expect(body.keys[0].kid).toBe("bound-kid");
+    // CFA-462: a configured kid that is not the thumbprint is ignored.
+    expect(body.keys[0].kid).toBe(await calculateJwkThumbprint(jwk as any));
     expect(body.keys[0].d).toBeUndefined();
     expect(body.keys[0].alg).toBe("EdDSA");
   });
@@ -120,7 +125,13 @@ describe("registerJwksRoute", () => {
     expect(body.keys[0].crv).toBe("Ed25519");
     expect(body.keys[0].alg).toBe("EdDSA");
     expect(body.keys[0].use).toBe("sig");
-    expect(body.keys[0].kid).toBe("test-kid");
+    expect(body.keys[0].kid).toBe(
+      await calculateJwkThumbprint({
+        kty: "OKP",
+        crv: "Ed25519",
+        x: body.keys[0].x as string,
+      })
+    );
     expect(body.keys[0].d).toBeUndefined();
     expect(typeof body.keys[0].x).toBe("string");
 
@@ -128,7 +139,110 @@ describe("registerJwksRoute", () => {
     expect(alias.status).toBe(200);
     expect(alias.headers.get("cache-control") ?? "").toMatch(/no-store/);
     const aliasBody = (await alias.json()) as typeof body;
-    expect(aliasBody.keys[0].kid).toBe("test-kid");
+    expect(aliasBody.keys[0].kid).toBe(body.keys[0].kid);
     expect(aliasBody.keys[0].d).toBeUndefined();
+  });
+
+  describe("CFA-462 kid = RFC 7638 thumbprint", () => {
+    const LIVE_X = "T36jnq2kRJRxGBhtyGG3PSboG_Vb6f-l8TixLr95vG0";
+    const LIVE_KID = "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ";
+    const STALE_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+
+    it("ignores a stale AUTHICHAIN_ATTESTATION_KEY_ID and warns with names only", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const r = await resolveAttestationKey({
+        AUTHICHAIN_ATTESTATION_PUBLIC_JWK: JSON.stringify({
+          kty: "OKP",
+          crv: "Ed25519",
+          x: LIVE_X,
+        }),
+        AUTHICHAIN_ATTESTATION_KEY_ID: STALE_KID,
+      });
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      expect(r.key.kid).toBe(LIVE_KID);
+      expect(r.key.publicJwk.kid).toBe(LIVE_KID);
+      expect(r.key.publicJwk.x).toBe(LIVE_X);
+      expect(warn).toHaveBeenCalledTimes(1);
+      const msg = String(warn.mock.calls[0][0]);
+      expect(msg).toContain("AUTHICHAIN_ATTESTATION_KEY_ID");
+      expect(msg).not.toContain(STALE_KID);
+      expect(msg).not.toContain(LIVE_KID);
+      expect(msg).not.toContain(LIVE_X);
+      warn.mockRestore();
+    });
+
+    it("ignores a stale kid embedded in the public JWK secret", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const r = await resolveAttestationKey({
+        AUTHICHAIN_ATTESTATION_PUBLIC_JWK: JSON.stringify({
+          kty: "OKP",
+          crv: "Ed25519",
+          x: LIVE_X,
+          kid: STALE_KID,
+        }),
+      });
+      expect(r.ok && r.key.kid).toBe(LIVE_KID);
+      warn.mockRestore();
+    });
+
+    it("does not warn when the configured kid already matches", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const r = await resolveAttestationKey({
+        AUTHICHAIN_ATTESTATION_PUBLIC_JWK: JSON.stringify({
+          kty: "OKP",
+          crv: "Ed25519",
+          x: LIVE_X,
+        }),
+        AUTHICHAIN_ATTESTATION_KEY_ID: LIVE_KID,
+      });
+      expect(r.ok && r.key.kid).toBe(LIVE_KID);
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+
+    it("signer kid from a private key equals the served JWKS kid", async () => {
+      const { privateKey } = generateKeyPairSync("ed25519");
+      const pem = privateKey.export({ type: "pkcs8", format: "pem" }) as string;
+      const r = await resolveAttestationKey({
+        AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64:
+          Buffer.from(pem).toString("base64"),
+        AUTHICHAIN_ATTESTATION_KEY_ID: "anything-else",
+      });
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      expect(r.key.kid).toBe(
+        await calculateJwkThumbprint(r.key.publicJwk as any)
+      );
+    });
+  });
+
+  it("CFA-462 option 1: JWKS has exactly one entry, kid T3AL7c4w, and never mJx2", async () => {
+    process.env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK = JSON.stringify({
+      kty: "OKP",
+      crv: "Ed25519",
+      x: "T36jnq2kRJRxGBhtyGG3PSboG_Vb6f-l8TixLr95vG0",
+    });
+    process.env.AUTHICHAIN_ATTESTATION_KEY_ID =
+      "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const app = new Hono();
+    registerJwksRoute(app);
+    for (const path of ["/protocol/jwks.json", "/.well-known/jwks.json"]) {
+      const body = (await (await app.request(path)).json()) as {
+        keys: Array<Record<string, unknown>>;
+      };
+      expect(body.keys).toHaveLength(1);
+      expect(body.keys[0].kid).toBe(
+        "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ"
+      );
+      expect(body.keys[0].x).toBe(
+        "T36jnq2kRJRxGBhtyGG3PSboG_Vb6f-l8TixLr95vG0"
+      );
+      const text = JSON.stringify(body);
+      expect(text).not.toContain("mJx2TLqUmUnxAJW_L-EQ1f28M8B6t9x-9VJPjJxbj7k");
+      expect(text).not.toContain("lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE");
+    }
+    warn.mockRestore();
   });
 });
