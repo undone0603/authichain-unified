@@ -34,7 +34,10 @@ export function findUnfulfilled(
   );
   const handled = new Map();
   for (const e of events) {
-    if (!e.session_id || !String(e.event_type).startsWith("checkout.session."))
+    if (
+      !e.session_id ||
+      !["checkout.session.completed", "checkout.session.async_payment_succeeded"].includes(String(e.event_type))
+    )
       continue;
     const ok = OK_STATUSES.has(String(e.status ?? "").toLowerCase());
     handled.set(e.session_id, handled.get(e.session_id) || ok);
