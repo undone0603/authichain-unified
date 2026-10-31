@@ -8,8 +8,6 @@
  * mainnet anchor) via attestSeal — this module does not set it.
  */
 
-import { isDiscoveryExampleSealId } from "./x402";
-
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Bazaar discovery example. It matches the UUID shape and is not a registry row. */
@@ -69,11 +67,37 @@ export function parseSealRequest(input: Record<string, unknown>): SealRequest {
 }
 
 /**
+ * PayAI and some crawlers wrap the JSON body as `{ type: "http", body }`.
+ * Unwrap that so the inner sealId is what we parse.
+ */
+export function coerceSealBody(
+  raw: Record<string, unknown>
+): Record<string, unknown> {
+  const nested = raw.body;
+  if (
+    raw.type === "http" &&
+    nested &&
+    typeof nested === "object" &&
+    !Array.isArray(nested)
+  ) {
+    return nested as Record<string, unknown>;
+  }
+  return raw;
+}
+
+export function listedSealId(raw: Record<string, unknown>): string {
+  const body = coerceSealBody(raw);
+  const value = body.sealId ?? body.seal_id;
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/**
  * Unpaid 400 only when the caller sent a sealId that cannot exist.
  * Quote crawlers (Lumi, others) POST probe JSON with url/resource/probe
  * and no sealId; HTTP 400 is classified as needs_different_request and
- * they never buy. Empty objects, listing samples (`demo` / bazaar UUID),
+ * they never buy. Empty objects, the listing sample `demo`,
  * valid UUIDs, and no-sealId probe JSON stay null so the caller returns 402.
+ * The all-zero discovery UUID is seal_id_nil and is refused before payment.
  * MCP verify applies a second check: a non-empty argument that is not a
  * seal UUID is 400 before payment. That check is not this function.
  */
@@ -85,8 +109,7 @@ export function unpaidSealRefusal(
 } | null {
   const body = coerceSealBody(raw);
   const listed = listedSealId(body);
-  if (!listed) return null;
-  if (isDiscoveryExampleSealId(listed)) return null;
+  if (!listed || listed.toLowerCase() === "demo") return null;
   const parsed = parseSealRequest(body);
   if (parsed.ok) return null;
   return { status: parsed.status, body: parsed.body };
