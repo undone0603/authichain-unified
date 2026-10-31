@@ -159,7 +159,7 @@ function sessionName(session: any): string {
   return email ? email.split("@")[0] : "there";
 }
 function onboardingBody(name: string, activateUrl: string): string {
-  return `Hi ${name},\n\nThanks for opening an ${PRODUCT_NAME}. This is a workspace with 50 generations. It is not an audit, not a certification, and not legal advice.\n\nComplete activation here:\n${activateUrl}\n\n— AuthiChain\nhello@authichain.com\n`;
+  return `Hi ${name},\n\nThanks for opening an ${PRODUCT_NAME}. This is a workspace with self-serve activation. It is not an audit, not a certification, and not legal advice.\n\nComplete activation here:\n${activateUrl}\n\n— AuthiChain\nhello@authichain.com\n`;
 }
 function recoveryBody(name: string, paymentUrl: string): string {
   return `Hi ${name},\n\nYou started checkout for the ${PRODUCT_NAME} but did not finish. It is still $299 and it is not an audit.\n\nFinish checkout here:\n${paymentUrl}\n\n— AuthiChain\nhello@authichain.com\n`;
