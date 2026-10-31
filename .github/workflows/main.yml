@@ -50,7 +50,7 @@ jobs:
     name: Typecheck and lint
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ci-isolated"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -72,7 +72,7 @@ jobs:
       - name: Use runner pnpm (self-hosted)
         if: runner.environment == 'self-hosted'
         run: |
-          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
+          pin="$HOME/setup-pnpm-${{ runner.name }}/node_modules/.bin"
           if [ -x "$pin/pnpm" ]; then
             echo "$pin" >> "$GITHUB_PATH"
             export PATH="$pin:$PATH"
@@ -95,14 +95,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
-
-      - name: Validate secrets format (skipped on pull_request)
-        # CFA-215: secrets never reach pull_request runs; PR code is untrusted.
-        if: github.event_name != 'pull_request'
-        run: node scripts/check-secrets-format.mjs
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Type check
         run: pnpm check
@@ -130,7 +122,7 @@ jobs:
     name: Tests (shard ${{ matrix.shard }}/2)
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ci-isolated"]') || 'ubuntu-24.04' }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -160,7 +152,7 @@ jobs:
       - name: Use runner pnpm (self-hosted)
         if: runner.environment == 'self-hosted'
         run: |
-          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
+          pin="$HOME/setup-pnpm-${{ runner.name }}/node_modules/.bin"
           if [ -x "$pin/pnpm" ]; then
             echo "$pin" >> "$GITHUB_PATH"
             export PATH="$pin:$PATH"
@@ -252,7 +244,7 @@ jobs:
     name: Production build
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ci-isolated"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -274,7 +266,7 @@ jobs:
       - name: Use runner pnpm (self-hosted)
         if: runner.environment == 'self-hosted'
         run: |
-          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
+          pin="$HOME/setup-pnpm-${{ runner.name }}/node_modules/.bin"
           if [ -x "$pin/pnpm" ]; then
             echo "$pin" >> "$GITHUB_PATH"
             export PATH="$pin:$PATH"
@@ -338,7 +330,7 @@ jobs:
     if: ${{ !cancelled() }}
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ci-isolated"]') || 'ubuntu-24.04' }}
     timeout-minutes: 5
     steps:
       - name: All CI Main jobs passed
@@ -364,10 +356,25 @@ jobs:
           cd "$ws"
           find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
 
+  # Production credentials must never be supplied to the persistent CI host.
+  # Check secrets only for trusted push-to-main code on the publisher runner.
+  production-secrets-format:
+    name: Production secrets format
+    if: github.event_name == 'push'
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Validate secrets format (publisher only)
+        run: node scripts/check-secrets-format.mjs
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
   production-proof:
     name: Production launch proof
     if: github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 20
     permissions:
       contents: read
@@ -392,7 +399,7 @@ jobs:
       - name: Use runner pnpm (self-hosted)
         if: runner.environment == 'self-hosted'
         run: |
-          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
+          pin="$HOME/setup-pnpm-${{ runner.name }}/node_modules/.bin"
           if [ -x "$pin/pnpm" ]; then
             echo "$pin" >> "$GITHUB_PATH"
             export PATH="$pin:$PATH"
