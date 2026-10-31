@@ -48,6 +48,9 @@ export function findUnfulfilled(
       s =>
         s.status === "complete" &&
         s.payment_status === "paid" &&
+        // Stripe always supplies livemode. Exclude explicit test-mode sessions;
+        // preserve an alert for malformed/missing livemode rather than hiding it.
+        s.livemode !== false &&
         s.amount_total !== 0
     )
     .filter(s => now - s.created * 1000 > graceMs)
@@ -105,7 +108,7 @@ export async function checkFulfilment({
   if (!complete)
     throw new Error("Stripe checkout sessions: pagination limit exceeded");
   const paid = sessions.filter(
-    s => s.payment_status === "paid" && s.amount_total !== 0
+    s => s.payment_status === "paid" && s.livemode !== false && s.amount_total !== 0
   );
   if (!paid.length) return { checked: 0, problems: [] };
   const events = [];
