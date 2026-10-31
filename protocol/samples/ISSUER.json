@@ -1,0 +1,27 @@
+{
+  "sampleOnly": true,
+  "status": "SAMPLE-ONLY",
+  "liveIssuerForbidden": true,
+  "adm": "ADM-256 Item 3",
+  "title": "SAMPLE ONLY — fictional AuthiChain passport (not a live product)", "_allowlist_0": "pragma: allowlist secret",
+  "issuerLabel": "Issuer did:key (SAMPLE — not the AuthiChain production issuer): did:key:z6MknvZLpAxf4Z1rbs2tNiv3pwwygwBEk6ivASSi6FpYt8Mp", "_allowlist_1": "pragma: allowlist secret",
+  "banner": "FICTIONAL SAMPLE — for dogfood/demo labels only. Not a production attestation. Do not treat as a real product seal.", "_allowlist_2": "pragma: allowlist secret",
+  "footer": "Generated SAMPLE-ONLY Ed25519 · private key never published · ADM-256 Item 3",
+  "issuer": "did:key:z6MknvZLpAxf4Z1rbs2tNiv3pwwygwBEk6ivASSi6FpYt8Mp",
+  "verificationMethod": "did:key:z6MknvZLpAxf4Z1rbs2tNiv3pwwygwBEk6ivASSi6FpYt8Mp#z6MknvZLpAxf4Z1rbs2tNiv3pwwygwBEk6ivASSi6FpYt8Mp",
+  "alg": "EdDSA",
+  "crv": "Ed25519",
+  "kid": "cRsk7dPwmDF03zauYy8y-njKkipigHHG9vc3zLMgW0g",
+  "kidNote": "RFC 7638 thumbprint of the SAMPLE public JWK only. Not a production kid.", "_allowlist_3": "pragma: allowlist secret",
+  "publicJwk": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": "fdu8J1FLInhji3ntBeWIzzN1OfH3lDhZz2Xe9md5Pvs",
+    "use": "sig",
+    "alg": "EdDSA",
+    "kid": "cRsk7dPwmDF03zauYy8y-njKkipigHHG9vc3zLMgW0g"
+  },
+  "shipRule": "This did:key must never appear in production JWKS/issuer docs.", "_allowlist_4": "pragma: allowlist secret",
+  "privateKeyPublished": false,
+  "privateKeyNote": "SAMPLE-ONLY Ed25519 private key is never published and is not in this repository."
+}

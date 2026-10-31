@@ -155,17 +155,26 @@ describe("negative: the signature cannot see what the binding sees", () => {
   });
 
   it("a one-byte change in any default artifact is caught", () => {
+    // One signed record for the pristine tree, then tamper+restore each
+    // default artifact. Still covers every path; avoids a keygen+sign per
+    // file, which trips the 5s default under CPU contention.
+    const originals = Object.fromEntries(
+      DEFAULT_ARTIFACTS.map(path => [
+        path,
+        readFileSync(join(root, path), "utf8"),
+      ])
+    );
+    const { record } = freshRecord();
     for (const path of DEFAULT_ARTIFACTS) {
-      makeTree();
-      const { record } = freshRecord();
-      write(path, readFileSync(join(root, path), "utf8") + " ");
+      write(path, originals[path] + " ");
       const result = checkReleaseRecord(record, expected(), { now: NOW });
       expect(result.verdict, path).toBe("mismatch");
       expect(result.failures, path).toContain(
         `artifact_digest_mismatch:${path}`
       );
+      write(path, originals[path]);
     }
-  });
+  }, 30_000);
 
   it("a record for another commit does not describe this one", () => {
     const { record } = freshRecord();
