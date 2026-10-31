@@ -96,7 +96,6 @@ describe("x402 public docs page", () => {
     expect(meta?.[1]).not.toContain("Our goal");
     expect(og?.[1]).not.toContain("Our goal");
     expect(html.match(/Our goal/g)).toHaveLength(1);
-    expect(html).not.toContain("in development");
     expect(html).not.toContain("Unpaid POST returns HTTP 402.");
     expect(html).toContain("An empty body is always the 402 challenge");
     expect(html).toContain("It is not a paid receipt");

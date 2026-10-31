@@ -18,6 +18,9 @@ describe("manufacturer status on the apex", () => {
     expect(res?.status).toBe(200);
     const html = await res!.text();
     expect(html).toContain("latest 10,000 blocks");
+    expect(html).toContain("body.fromBlock");
+    expect(html).toContain("body.currentBlock");
+    expect(html).toContain("Window: ");
     expect(html).toContain("does not take payment");
     expect(html).toContain("encodeURIComponent");
     expect(html).toContain("could not be read");

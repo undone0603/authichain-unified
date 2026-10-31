@@ -267,6 +267,9 @@ document.getElementById("q").addEventListener("submit", async (event) => {
       : body.historyError
         ? "Event list unavailable"
         : "Events: " + (events || "none in this window");
+    const windowLine = body.fromBlock != null && body.currentBlock != null
+      ? "Window: " + body.fromBlock + "–" + body.currentBlock
+      : "";
     const scan = body.polygonscan && typeof body.polygonscan.address === "string"
       ? body.polygonscan.address
       : "";
@@ -277,6 +280,7 @@ document.getElementById("q").addEventListener("submit", async (event) => {
       flag("Pauser", current.pauser),
       "Manufacturer verified (admin-set contract flag): " + (current.manufacturerVerified ? "yes" : "no"),
       historyLine,
+      windowLine,
       scan ? "PolygonScan: " + scan : "",
     ].filter(Boolean).join(" | ");
   } catch {
