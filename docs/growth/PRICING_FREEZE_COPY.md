@@ -55,7 +55,6 @@ Subhead: Four public offers. A signed record you can verify at /verify. Not a la
 - Features:
   - AuthiChain workspace
   - Self-serve activation
-  - 50 workspace generations
 - CTA: Start my battery passport — $299 → /battery-passport
 - Link: https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c
 - Legal: Not legal advice. Not a notified-body certification.
@@ -72,7 +71,7 @@ Q: Does a paid seal prove the physical item is genuine?
 A: It proves the digital record matches the issuer signature. It does not by itself prove the physical item was not swapped after sealing.
 
 Q: Is the $299 a legal certification?
-A: No. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations. Confirm obligations against the Regulation and your counsel.
+A: No. It opens an AuthiChain workspace with self-serve activation. Confirm obligations against the Regulation and your counsel.
 
 Q: Where did Theater / Enterprise go?
 A: Those Stripe prices still exist. They are not public offers until a customer has published a paid seal.

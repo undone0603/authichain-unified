@@ -12,7 +12,8 @@ on:
       - "scripts/verify-supabase-baseline.mjs"
       - "scripts/check-schema-drift.mjs"
   schedule:
-    - cron: "0 8 * * 1"
+    # Monday 08:10 UTC. AgentZ orchestration stays at 08:00.
+    - cron: "10 8 * * 1"
   workflow_dispatch:
 
 permissions:
