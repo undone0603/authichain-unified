@@ -612,7 +612,7 @@ async function sha256Hex(value) {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 __name(sha256Hex, "sha256Hex");
-var LEDGER_PUBLIC_NOTICE = "Paid receipts appear on a public ledger with the amount, time and payment rail. On-chain payments also show the transaction hash, which is already public on Base. Your email and name are not shown on the ledger.";
+var LEDGER_PUBLIC_NOTICE = "Paid receipts appear on a public ledger with the amount, time, payment rail and status. On-chain payments also show the transaction hash, which is already public on Base. Your email and name are not shown on the ledger.";
 var ONCHAIN_TX_HASH = /^0x[0-9a-fA-F]{64}$/;
 // RES-78: built fresh on every read, so receipts stored before this change are
 // redacted too. No buyer field at all (even a hash of an email or wallet can be
@@ -695,7 +695,7 @@ async function refreshAgent402DispatchCache(env, origin) {
       routerDispatchDetail: body.routerDispatchByChain?.base?.detail ?? null,
       routeSearchUrl: "https://agent402.tools/api/route?q=first%20dollar%20verify&include=external",
       indexUrl,
-      note: body.routerDispatchEligible === false ? "Agent402 Smart Order Router will not pay this seller yet. Autonomous agents must settle x402 directly (MCP verify or POST /api/agent/verify) with a non-owner wallet." : "Agent402 router may pay this seller on your behalf."
+      note: body.routerDispatchEligible === false ? "Agent402 currently reports routerDispatchEligible: false for this seller; pay x402 directly. Autonomous agents must settle x402 directly (MCP verify or POST /api/agent/verify) with a non-owner wallet." : "Agent402 router may pay this seller on your behalf."
     };
     await env.LEDGER.put("agent402_dispatch", JSON.stringify(snapshot));
     return snapshot;
@@ -844,7 +844,7 @@ function goalPayload(ledger, origin, env = {}, extras = {}) {
       nextActions: {
         human: "A non-operator completes Stripe Checkout \u2265$1 at humanShortUrl or humanCheckout; webhook ingests without manual steps.",
         agent: "A non-owner wallet settles x402 on agentVerifyUrl or MCP tool verify ($0.05+ USDC Base). Agent Stripe card does not count.",
-        discovery: "Listed on agent402.tools and x402scan; submit PayAPI form at discovery.payapiListing for marketplace canary traffic.",
+        discovery: "Listed on agent402.tools; submit PayAPI form at discovery.payapiListing for marketplace canary traffic.",
         optionalWorkerSecrets: [
           "STRIPE_SECRET_KEY \u2014 poll payment links + drain /thanks",
           "FIATDOCK_GATEWAY_SECRET \u2014 FiatDock marketplace gateway"
@@ -1118,7 +1118,7 @@ function htmlAgentCheckout(origin) {
     </ul>
     <a class="btn" href="${origin}/api/agent/verify">Fetch 402 challenge</a>
     <p class="note ledger-notice">${LEDGER_PUBLIC_NOTICE}</p>
-    <p class="note">Agent402 router pays sellers only after third-party settlement history \u2014 pay x402 directly here until then. Bounty: <a href="${origin}/.well-known/first-dollar-goal.json">first-dollar-goal.json</a></p>
+    <p class="note">Bounty: <a href="${origin}/.well-known/first-dollar-goal.json">first-dollar-goal.json</a></p>
     <p class="note"><button type="button" id="copy-agent" style="margin-top:8px;padding:8px 12px;cursor:pointer;">Copy agent page link</button> <span id="copy-agent-ok" hidden>Copied.</span></p>
     <script>
       document.getElementById("copy-agent")?.addEventListener("click", () => {
@@ -2082,6 +2082,14 @@ async function releaseStripeEvent(env, eventId) {
   }
 }
 __name(releaseStripeEvent, "releaseStripeEvent");
+function isDppReportCheckout(env, event) {
+  // CFA-633: checkout.session.completed carries no line_items unless the
+  // session is fetched with expand, so detect DPP by session metadata only.
+  if (!String(event?.type ?? "").startsWith("checkout.session.")) return false;
+  const s = event.data?.object ?? {};
+  return s.metadata?.product_line === "dpp_report";
+}
+__name(isDppReportCheckout, "isDppReportCheckout");
 async function handleStripeWebhook(request, env) {
   const header = request.headers.get("stripe-signature");
   if (!header) {
@@ -2093,6 +2101,11 @@ async function handleStripeWebhook(request, env) {
     event = await constructStripeEvent(payload, header, env.STRIPE_WEBHOOK_SECRET);
   } catch {
     return Response.json({ error: "invalid_signature" }, { status: 400 });
+  }
+  // Advisor ruling 2026-10-24: only authichain.com/api/stripe/webhook unlocks
+  // the DPP report. Ack a DPP session with 200: no claim, no receipt, no write.
+  if (isDppReportCheckout(env, event)) {
+    return Response.json({ received: true, skipped: "dpp_report" });
   }
   if (!await claimStripeEvent(env, event.id)) {
     return Response.json({ received: true, duplicate: true });
@@ -2317,10 +2330,9 @@ ${urls.map((href) => `  <url><loc>${href}</loc></url>`).join("\n")}
         `- Catalog: ${url.origin}${url.pathname.includes("/first-dollar") ? "/first-dollar" : ""}/.well-known/x402.json`,
         `- MCP: ${url.origin}${url.pathname.includes("/first-dollar") ? "/first-dollar" : ""}/mcp`,
         `- Smithery card: ${url.origin}/.well-known/mcp/server-card.json`,
-        "- Indexed on x402scan and listed on agent402.tools; PayAPI Market listing is queued for a third-party canary",
         `- Bounty manifest: ${url.origin}/.well-known/first-dollar-goal.json`,
         "- Facilitators: PayAI (https://facilitator.payai.network) and CDP x402",
-        "- Agent402 Smart Order Router requires seller settlement history; pay x402 directly until routerDispatchEligible is true",
+        "- Agent402 currently reports routerDispatchEligible: false for this seller; pay x402 directly.",
         "",
         "## Ledger",
         "- GET /api/ledger",

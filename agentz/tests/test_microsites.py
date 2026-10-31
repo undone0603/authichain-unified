@@ -105,3 +105,33 @@ def test_no_vercel_left_in_the_agent():
     source = inspect.getsource(microsites)
     assert "vercel.com" not in source
     assert not hasattr(microsites, "trigger_redeploy")
+
+
+def test_microsite_has_free_sample_and_starter_ctas():
+    page = microsites.generate_microsite_html({"name": "Acme"})
+    assert 'href="https://qron.space/generate?utm_source=agentz&amp;utm_medium=microsite"' in page
+    # The raw "&" must not appear unescaped inside the href.
+    assert 'utm_source=agentz&utm_medium' not in page
+    assert 'href="https://authichain.com/checkout/starter?src=agentz_microsite"' in page
+    assert "Starter Pack: 100 generations for $29, paid once." in page
+
+
+@pytest.mark.parametrize("claim", [
+    "Blockchain anchored", "Pipeline Value", "Provisioned autonomously by AgentZ",
+    "LIVING DIGITAL TWIN", "Digital Twin", "INITIALIZE PARTNERSHIP",
+])
+def test_microsite_has_no_unbuilt_claims(claim):
+    page = microsites.generate_microsite_html({"name": "Acme", "amount": "50000"})
+    assert claim not in page
+    assert "50000" not in page
+
+
+def test_microsite_identifies_seller_without_implying_affiliation():
+    page = microsites.generate_microsite_html({"name": "Acme & Co"})
+    assert "From QRON, the AI QR studio by AuthiChain." in page
+    assert "<title>Acme &amp; Co</title>" not in page
+    assert "<h1>Acme &amp; Co</h1>" not in page
+    assert "<title>QRON AI QR studio, made for Acme &amp; Co</title>" in page
+    assert "<h1>AI QR codes, made for Acme &amp; Co</h1>" in page
+    assert "Try 5 free AI QR generations." in page
+    assert "utm_source=agentz&amp;utm_medium=microsite" in page

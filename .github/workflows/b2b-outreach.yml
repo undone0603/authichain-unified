@@ -62,7 +62,9 @@ jobs:
     name: B2B Cold Outreach — ${{ github.event_name == 'schedule' && 'qron' || inputs.segment || 'all' }}
     # Enabling this workflow is not live send. Resolve-mode stays dry-run
     # unless vars.OWNER_LIVE_SEND=true (and dispatch also unchecks dry_run).
-    runs-on: ubuntu-latest
+    # GitHub-hosted runners are billing-locked, so the dry run uses the
+    # authichain-ops machine. It already has a persistent pnpm store.
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 20
 
     steps:
@@ -78,7 +80,8 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+          # Skip the ~1 GB pnpm cache upload on the self-hosted runner.
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
