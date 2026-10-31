@@ -4,7 +4,6 @@ import {
   Shield,
   ChevronLeft,
   Building2,
-  FileCheck,
   Stamp,
   ArrowRight
 } from 'lucide-react';
@@ -50,22 +49,6 @@ export default function AuthichainPilots() {
                 </div>
             </div>
 
-            {/* Pilot 2 */}
-            <div className="protocol-card p-10 border-zinc-800 bg-zinc-950/50 flex flex-col md:flex-row gap-10 items-center">
-                <div className="w-20 h-20 shrink-0 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-                    <FileCheck className="w-10 h-10 text-gold" />
-                </div>
-                <div>
-                    <div className="flex items-center gap-4 mb-2">
-                        <h3 className="text-2xl font-black uppercase tracking-tight">FTC Compliance Shield</h3>
-                        <span className="px-2 py-1 rounded bg-yellow-500/10 text-yellow-500 text-[10px] font-black uppercase tracking-widest">Deploying</span>
-                    </div>
-                    <p className="text-zinc-500 text-sm leading-relaxed font-medium">
-                        Responding directly to EO 14392, multiple domestic manufacturers are deploying the AuthiChain SDK to cryptographically anchor &ldquo;Made in USA&rdquo; claims to the Polygon network, ensuring irrefutable audit trails.
-                    </p>
-                </div>
-            </div>
-
             {/* Pilot 3 — Roscommon */}
             <Link
               href="/authichain/pilots/roscommon"
@@ -77,11 +60,11 @@ export default function AuthichainPilots() {
                 </div>
                 <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-4 mb-2">
-                        <h3 className="text-2xl font-black uppercase tracking-tight">USPS · Roscommon Phygital Stamp</h3>
+                        <h3 className="text-2xl font-black uppercase tracking-tight">Roscommon Phygital Postcard (concept)</h3>
                         <span className="px-2 py-1 rounded bg-gold/15 border border-gold/30 text-gold text-[10px] font-black uppercase tracking-widest">Proposed · Pilot Open</span>
                     </div>
                     <p className="text-zinc-400 text-sm leading-relaxed font-medium mb-3">
-                        Heart of Michigan testbed: a QRON-stamped postcard that opens a 3D landmark tour, an AI-narrated town history, and a local-business coupon book — turning every piece of mail into a micro-tourism billboard with a sponsorship revenue stream for the Postal Service.
+                        Heart of Michigan testbed: a QRON-coded postcard that opens a 3D landmark tour, an AI-narrated town history, and a local-business coupon book — turning each postcard into a small tourism billboard with a possible local-sponsorship revenue stream.
                     </p>
                     <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gold group-hover:translate-x-1 transition-transform">
                         View pilot prospectus <ArrowRight className="w-3 h-3" />
@@ -96,6 +79,10 @@ export default function AuthichainPilots() {
               Request Pilot Access
             </Link>
         </div>
+
+        <p className="mt-12 text-center text-[11px] text-zinc-500">
+          AuthiChain and QRON are not affiliated with or endorsed by the United States Postal Service.
+        </p>
       </div>
     </div>
   );
