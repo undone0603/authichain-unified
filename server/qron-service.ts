@@ -16,7 +16,9 @@ import { ENV } from "./_core/env";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const QRON_API = process.env.NEXT_PUBLIC_WORKER_URL ?? "https://qron-api.exzactly-k.workers.dev";
+const QRON_API =
+  process.env.NEXT_PUBLIC_WORKER_URL ??
+  "https://qron-api.exzactly-k.workers.dev";
 const QRON_SPACE_URL = "https://qron.space";
 const FAL_API = "https://fal.run";
 
@@ -25,10 +27,10 @@ const FINGERPRINT_MATCH_THRESHOLD = 0.85;
 
 // QRON modes by product tier
 const MODE_BY_TIER: Record<string, string> = {
-  standard:   "holographic",   // Legendary rarity, prismatic surface, hardest to copy
-  premium:    "dimensional",   // Perspective-warped grid, spatially complex
-  enterprise: "living",        // Particle halo + evolving aura, nearly impossible to fake
-  pharma:     "temporal",      // Time-ringed pulsing — changes appearance over scan sessions
+  standard: "holographic", // Legendary rarity, prismatic surface, hardest to copy
+  premium: "dimensional", // Perspective-warped grid, spatially complex
+  enterprise: "living", // Particle halo + evolving aura, nearly impossible to fake
+  pharma: "temporal", // Time-ringed pulsing — changes appearance over scan sessions
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -39,9 +41,15 @@ export interface QRONGenerateParams {
   brand?: string;
   serialNumber?: string;
   nftTokenId?: string;
-  category?: "luxury_fashion" | "pharma" | "electronics" | "automotive" | "food_bev" | "other";
+  category?:
+    | "luxury_fashion"
+    | "pharma"
+    | "electronics"
+    | "automotive"
+    | "food_bev"
+    | "other";
   tier?: "standard" | "premium" | "enterprise" | "pharma";
-  verifyUrl: string;   // the URL encoded in the QR (authichain.com/verify/...)
+  verifyUrl: string; // the URL encoded in the QR (authichain.com/verify/...)
 }
 
 export interface QRONRecord {
@@ -57,20 +65,25 @@ export interface QRONRecord {
 
 export interface FingerprintResult {
   pass: boolean;
-  similarity: number;         // 0-1 cosine similarity
+  similarity: number; // 0-1 cosine similarity
   verdict: "not_a_passport";
   details: string;
 }
 
 export interface TrustScore {
-  score: number;              // 0-100
+  score: number; // 0-100
   grade: "A" | "B" | "C" | "F";
   layers: {
-    qrDecode:        { pass: boolean; weight: number };
-    blockchain:      { pass: boolean; weight: number };
+    qrDecode: { pass: boolean; weight: number };
+    blockchain: { pass: boolean; weight: number };
     visualFingerprint: { pass: boolean; similarity: number; weight: number };
-    community:       { pass: boolean; verified: number; flagged: number; weight: number };
-    openArt:         { pass: boolean; weight: number };
+    community: {
+      pass: boolean;
+      verified: number;
+      flagged: number;
+      weight: number;
+    };
+    openArt: { pass: boolean; weight: number };
   };
   verdict: "not_a_passport";
 }
@@ -98,7 +111,9 @@ export function generateProductSeed(params: {
  * Uses Fal.ai illusion-diffusion with a deterministic seed so the same product
  * always produces the same visual pattern — counterfeits cannot reproduce it.
  */
-export async function generateProductQRON(params: QRONGenerateParams): Promise<QRONRecord> {
+export async function generateProductQRON(
+  params: QRONGenerateParams
+): Promise<QRONRecord> {
   const seed = generateProductSeed({
     productId: params.productId,
     nftTokenId: params.nftTokenId,
@@ -109,7 +124,12 @@ export async function generateProductQRON(params: QRONGenerateParams): Promise<Q
   const category = params.category ?? "other";
 
   // Build a rich art prompt from product identity
-  const prompt = buildArtPrompt(params.productName, params.brand, mode, category);
+  const prompt = buildArtPrompt(
+    params.productName,
+    params.brand,
+    mode,
+    category
+  );
 
   // Call QRON API to generate
   const res = await fetch(`${QRON_API}/api/generate`, {
@@ -117,10 +137,20 @@ export async function generateProductQRON(params: QRONGenerateParams): Promise<Q
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       prompt,
-      controlImage: params.verifyUrl,   // QR data encoded inside the art
+      controlImage: params.verifyUrl, // QR data encoded inside the art
       seed: parseInt(seed.slice(0, 8), 16), // first 8 hex chars as numeric seed
-      brandTier: params.tier === "enterprise" ? "enterprise" : params.tier === "premium" ? "growth" : "starter",
-      rarityTier: mode === "living" || mode === "temporal" ? "legendary" : mode === "holographic" || mode === "dimensional" ? "legendary" : "rare",
+      brandTier:
+        params.tier === "enterprise"
+          ? "enterprise"
+          : params.tier === "premium"
+            ? "growth"
+            : "starter",
+      rarityTier:
+        mode === "living" || mode === "temporal"
+          ? "legendary"
+          : mode === "holographic" || mode === "dimensional"
+            ? "legendary"
+            : "rare",
       mode,
       metadata: {
         productId: params.productId,
@@ -138,7 +168,7 @@ export async function generateProductQRON(params: QRONGenerateParams): Promise<Q
     throw new Error(`QRON generation failed: ${res.status} ${text}`);
   }
 
-  const json = await res.json() as any;
+  const json = (await res.json()) as any;
   const imageUrl: string = json.imageUrl ?? json.image_url ?? json.url;
   if (!imageUrl) throw new Error("QRON API did not return an image URL");
 
@@ -203,17 +233,23 @@ export async function verifyVisualFingerprint(params: {
   // Fast path: perceptual hash comparison (no API call needed)
   if (params.registeredFingerprintHash) {
     const scannedHash = await computeImageHash(params.scannedImageUrl);
-    const hammingDist = hammingDistance(params.registeredFingerprintHash, scannedHash);
+    const hammingDist = hammingDistance(
+      params.registeredFingerprintHash,
+      scannedHash
+    );
     const hashSim = 1 - hammingDist / 64; // normalize to 0-1
 
     // If hashes are very close, or clearly apart, skip CLIP.
-    if (hashSim >= 0.90 || hashSim < 0.40) {
+    if (hashSim >= 0.9 || hashSim < 0.4) {
       return visualCompareResult(hashSim, "phash");
     }
   }
 
   // Deep path: CLIP embedding similarity via Fal.ai
-  const sim = await getCLIPSimilarity(params.scannedImageUrl, params.registeredImageUrl);
+  const sim = await getCLIPSimilarity(
+    params.scannedImageUrl,
+    params.registeredImageUrl
+  );
   return visualCompareResult(sim, "clip");
 }
 
@@ -229,24 +265,85 @@ export function computeTrustScore(params: {
   openArtRegistered: boolean;
 }): TrustScore {
   const layers = {
-    qrDecode:          { pass: params.qrDecodePass,           weight: 20 },
-    blockchain:        { pass: params.blockchainCertExists,   weight: 25 },
-    visualFingerprint: { pass: params.visualFingerprint?.pass ?? false, similarity: params.visualFingerprint?.similarity ?? 0, weight: 30 },
-    community:         { pass: params.communityVerified > params.communityFlagged, verified: params.communityVerified, flagged: params.communityFlagged, weight: 15 },
-    openArt:           { pass: params.openArtRegistered,      weight: 10 },
+    qrDecode: { pass: params.qrDecodePass, weight: 20 },
+    blockchain: { pass: params.blockchainCertExists, weight: 25 },
+    visualFingerprint: {
+      pass: params.visualFingerprint?.pass ?? false,
+      similarity: params.visualFingerprint?.similarity ?? 0,
+      weight: 30,
+    },
+    community: {
+      pass: params.communityVerified > params.communityFlagged,
+      verified: params.communityVerified,
+      flagged: params.communityFlagged,
+      weight: 15,
+    },
+    openArt: { pass: params.openArtRegistered, weight: 10 },
   };
 
-  const score = (
-    (layers.qrDecode.pass           ? layers.qrDecode.weight           : 0) +
-    (layers.blockchain.pass         ? layers.blockchain.weight         : 0) +
-    (layers.visualFingerprint.pass  ? layers.visualFingerprint.weight  : 0) +
-    (layers.community.pass          ? layers.community.weight          : 0) +
-    (layers.openArt.pass            ? layers.openArt.weight            : 0)
-  );
+  const score =
+    (layers.qrDecode.pass ? layers.qrDecode.weight : 0) +
+    (layers.blockchain.pass ? layers.blockchain.weight : 0) +
+    (layers.visualFingerprint.pass ? layers.visualFingerprint.weight : 0) +
+    (layers.community.pass ? layers.community.weight : 0) +
+    (layers.openArt.pass ? layers.openArt.weight : 0);
 
-  const grade: TrustScore["grade"] = score >= 90 ? "A" : score >= 70 ? "B" : score >= 50 ? "C" : "F";
+  const grade: TrustScore["grade"] =
+    score >= 90 ? "A" : score >= 70 ? "B" : score >= 50 ? "C" : "F";
 
   return { score, grade, layers, verdict: "not_a_passport" };
+}
+
+// Server-observed passport evidence. Caller flags are not in this set.
+export const EVIDENCE_TALLY_TYPES = [
+  "visual_similarity",
+  "metrc_manifest_match",
+  "dscsa_package_ti",
+  "hash_publication",
+] as const;
+
+export const EVIDENCE_TALLY_SENTENCE =
+  "This number tallies evidence entries stored on the passport. It is not a genuineness verdict.";
+
+export const EVIDENCE_TALLY_ABSENT_SENTENCE =
+  "A visual compare is not a product passport scan.";
+
+const EVIDENCE_TALLY_TYPE_SET = new Set<string>(EVIDENCE_TALLY_TYPES);
+
+export interface EvidenceTally {
+  count: number;
+  verdict: "not_a_passport";
+  message: string;
+}
+
+function evidenceList(stored: unknown): unknown[] {
+  if (Array.isArray(stored)) return stored;
+  if (!stored || typeof stored !== "object") return [];
+  const passport = (stored as { passport?: unknown }).passport;
+  if (!passport || typeof passport !== "object" || Array.isArray(passport))
+    return [];
+  const evidence = (passport as { evidence?: unknown }).evidence;
+  return Array.isArray(evidence) ? evidence : [];
+}
+
+/**
+ * Count stored server-observed evidence entries. The number is not a verdict
+ * and it does not set genuine. Caller booleans are not inputs.
+ */
+export function evidenceTally(stored: unknown): EvidenceTally {
+  let count = 0;
+  for (const entry of evidenceList(stored)) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const type = (entry as { type?: unknown }).type;
+    if (typeof type === "string" && EVIDENCE_TALLY_TYPE_SET.has(type))
+      count += 1;
+  }
+  return {
+    count,
+    verdict: "not_a_passport",
+    message:
+      count > 0 ? EVIDENCE_TALLY_SENTENCE : EVIDENCE_TALLY_ABSENT_SENTENCE,
+  };
 }
 
 // ─── openART Registry ─────────────────────────────────────────────────────────
@@ -270,22 +367,36 @@ async function registerToOpenART(params: {
     body: JSON.stringify(params),
   });
   if (!res.ok) throw new Error(`openART register failed: ${res.status}`);
-  const json = await res.json() as any;
+  const json = (await res.json()) as any;
   return `${QRON_SPACE_URL}/openart/${json.id ?? params.qronId}`;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function buildArtPrompt(name: string, brand?: string, mode?: string, category?: string): string {
+function buildArtPrompt(
+  name: string,
+  brand?: string,
+  mode?: string,
+  category?: string
+): string {
   const modePrompts: Record<string, string> = {
-    holographic: "holographic prismatic iridescent surface, rainbow light refraction, authentication seal",
-    dimensional: "deep perspective grid, impossible geometry, 3D depth illusion, serialization marks",
-    living:      "particle halo swarm, bio-luminescent aura, evolving organic pattern, unique fingerprint",
-    temporal:    "pulsing concentric time rings, chronological depth, pharmaceutical precision markings",
+    holographic:
+      "holographic prismatic iridescent surface, rainbow light refraction, authentication seal",
+    dimensional:
+      "deep perspective grid, impossible geometry, 3D depth illusion, serialization marks",
+    living:
+      "particle halo swarm, bio-luminescent aura, evolving organic pattern, unique fingerprint",
+    temporal:
+      "pulsing concentric time rings, chronological depth, pharmaceutical precision markings",
   };
   const base = modePrompts[mode ?? "holographic"] ?? modePrompts.holographic;
   const brandTag = brand ? `${brand} brand identity, ` : "";
-  const catTag = category === "pharma" ? "medical grade, sterile aesthetic, " : category === "luxury_fashion" ? "luxury craftsmanship, haute couture, " : "";
+  const catTag =
+    category === "pharma"
+      ? "medical grade, sterile aesthetic, "
+      : category === "luxury_fashion"
+        ? "luxury craftsmanship, haute couture, "
+        : "";
   return `${brandTag}${catTag}${base}, anti-counterfeit visual seal for "${name}", ultra high detail, certificate of authenticity`;
 }
 
@@ -293,7 +404,10 @@ async function computeImageHash(imageUrl: string): Promise<string> {
   try {
     const res = await fetch(imageUrl);
     const buf = await res.arrayBuffer();
-    return createHash("sha256").update(Buffer.from(buf)).digest("hex").slice(0, 64);
+    return createHash("sha256")
+      .update(Buffer.from(buf))
+      .digest("hex")
+      .slice(0, 64);
   } catch {
     return createHash("sha256").update(imageUrl).digest("hex").slice(0, 64);
   }
@@ -326,12 +440,12 @@ async function getFalEmbedding(imageUrl: string): Promise<number[]> {
   const res = await fetch(`${FAL_API}/fal-ai/clip/image`, {
     method: "POST",
     headers: {
-      "Authorization": `Key ${process.env.FAL_KEY}`,
+      Authorization: `Key ${process.env.FAL_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ image_url: imageUrl }),
   });
-  const json = await res.json() as any;
+  const json = (await res.json()) as any;
   return json.embedding ?? json.image_embedding ?? [];
 }
 
