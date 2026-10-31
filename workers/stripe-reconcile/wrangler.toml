@@ -1,0 +1,25 @@
+# P0-4 Stripe <-> Supabase reconciliation. NOT DEPLOYED. Deploy + cron enable need Zac's approval.
+name = "stripe-reconcile"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+# 06:00 ET daily (10:00 UTC during EDT; 11:00 UTC in EST — adjust at DST change).
+[triggers]
+crons = ["0 10 * * *"]
+
+[vars]
+# Default ON: the run computes and prints the summary but writes nothing.
+DRY_RUN = "true"
+# Default OFF: daily runs look back 48h; Sundays (UTC) scan full history.
+# Set "true" to force a full-history scan, e.g. for the first live dry run
+# (Advisor condition 3: must show excluded_test_count=1 and $0 revenue).
+FULL_HISTORY = "false"
+SUPABASE_URL = "https://REPLACE_WITH_QRON_V2_REF.supabase.co"
+
+# Secrets (set by Zac via `wrangler secret put`, names only, never committed):
+#   STRIPE_RECON_RESTRICTED_KEY  - Stripe restricted, read-only key
+#   SUPABASE_ANON_KEY            - public anon apikey header for PostgREST
+#   RECON_DB_JWT                 - JWT whose role claim is `stripe_reconciler` (never service_role)
+
+[observability]
+enabled = true
