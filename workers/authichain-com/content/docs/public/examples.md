@@ -48,20 +48,6 @@ curl -sS -i -H 'Accept: application/json' \
 
 JWKS kid in production (RFC 7638 thumbprint, corrected 2026-10-17): `T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ`.
 
-## Published demonstration record
-
-`polygon-anchor-1` is one Ed25519 signed record. It is a demonstration, not a customer product, and not a physical inspection. Physical binding was not inspected. It is not a battery passport.
-
-```bash
-curl -sS "https://authichain.com/api/verify?id=polygon-anchor-1"
-```
-
-- [JSON verdict](/api/verify?id=polygon-anchor-1). This is the check that reports whether the anchor transaction carries the record hash.
-- [Human page](/verify?id=polygon-anchor-1). It shows the verdict. It does not itself read the anchor transaction.
-- [Record JSON](/protocol/examples/polygon-anchor-1.record.json) and [anchor JSON](/protocol/examples/polygon-anchor-1.anchor.json).
-
-The same files ship in the npm package as `examples/polygon-anchor-1.record.json` and `examples/polygon-anchor-1.anchor.json`.
-
 ## Repo fixtures
 
 In `undone0603/authichain-unified`:
