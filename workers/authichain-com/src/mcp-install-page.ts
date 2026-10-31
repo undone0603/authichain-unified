@@ -9,9 +9,9 @@
  *
  * Two rules govern everything below.
  *
- * 1. The tool list is NOT retyped. It is rendered from the live `TOOLS`
- *    array exported by mcp-routes.ts, so this page cannot drift from what
- *    tools/list actually answers. Adding a tool there adds a row here.
+ * 1. The tool list is NOT retyped. It is rendered from mcpTools(env) in
+ *    mcp-routes.ts, so this page cannot drift from what tools/list answers
+ *    for the same env. Adding a tool there adds a row here.
  *
  * 2. Showcases are seeded ONLY from records that are already public. That
  *    means the four published /m/ microsite packs (content/microsites/
@@ -30,7 +30,8 @@ import { ESTATE_FONTS_LINK } from "../../_shared/estate-landing";
 // Extensionless on purpose: tsconfig.workers.json charges one TS5097 per
 // ".ts" import and the ratchet fails on any increase.
 import { DPP_CATEGORIES } from "../../../src/lib/dpp-readiness";
-import { TOOLS } from "./mcp-routes";
+import { mcpTools } from "./mcp-routes";
+import type { X402Env } from "./x402-routes";
 import { PUBLISHED_PACKS as PACKS, packUrl } from "./published-packs";
 
 export const MCP_INSTALL_PATHS = [
@@ -195,7 +196,7 @@ export const SHOWCASES: readonly Showcase[] = [
     title: "Ask what a call costs before making it",
     call: { tool: "get_pricing", args: {} },
     returns:
-      "Verification is free: no API key, no payment header, no account. Returns the free tool list and the status of the paid plans, which are currently on hold.",
+      "Verification is free: no API key, no payment header, no account. Returns the free tool list and the live catalogue (QRON Starter Pack $29, StrainChain Passport $49, Creator Pack $99, EU DPP Workspace $299, x402 $0.05 USDC on Base).",
     limit:
       "The legacy x402 seal verify tool is a separate rail and answers 402 on an unpaid call. Use verify_record instead.",
     evidence: null,
@@ -305,13 +306,14 @@ function showcaseCard(s: Showcase): string {
 </article>`;
 }
 
-export function renderMcpInstallPage(): string {
+export function renderMcpInstallPage(env?: X402Env): string {
   const configJson = JSON.stringify(MCP_CLIENT_CONFIG, null, 2);
   const vscodeConfigJson = JSON.stringify(VSCODE_CLIENT_CONFIG, null, 2);
 
-  const toolRows = TOOLS.map(t => {
-    const paid = t.name === "verify";
-    return `<tr>
+  const toolRows = mcpTools(env)
+    .map(t => {
+      const paid = t.name === "verify";
+      return `<tr>
       <td><code>${esc(t.name)}</code> ${
         paid
           ? '<span class="tag">legacy x402</span>'
@@ -319,7 +321,8 @@ export function renderMcpInstallPage(): string {
       }</td>
       <td style="color:var(--ac-muted)">${esc(t.description)}</td>
     </tr>`;
-  }).join("");
+    })
+    .join("");
 
   const packItems = PACKS.map(
     p => `<li>

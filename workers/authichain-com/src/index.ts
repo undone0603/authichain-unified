@@ -3223,6 +3223,8 @@ interface Env {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  /** wrangler [vars]; same path GET /api/x402/health and MCP discovery read. */
+  X402_PAID_VERIFY_PATH?: string;
   /** Public auth_seals read for paid verify. Service role stays a secret. */
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
@@ -3601,7 +3603,7 @@ async function handleAuthichainCom(
     // /mcp/install is the human install surface. It must be checked before
     // tryHandleMcp, which owns the agent-facing /mcp JSON-RPC endpoint.
     if (isMcpInstallPath(p)) {
-      return new Response(renderMcpInstallPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+      return new Response(renderMcpInstallPage(env), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     const docsDest = docsRedirect(p);
     if (docsDest) return Response.redirect(new URL(docsDest, url.origin).href, 301);

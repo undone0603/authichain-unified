@@ -974,3 +974,25 @@ describe("x402PaidVerifyPathBound", () => {
     expect(x402PaidVerifyPathBound(undefined)).toBe(false);
   });
 });
+
+describe("x402PaidVerifyStatusForEnv", () => {
+  it("matches health: bound only when the env path is a real registry path", async () => {
+    const { x402PaidVerifyStatus, x402PaidVerifyStatusForEnv } =
+      await import("./x402");
+    expect(x402PaidVerifyStatusForEnv().status).toBe("registry_not_bound");
+    expect(x402PaidVerifyStatusForEnv({}).status).toBe("registry_not_bound");
+    expect(
+      x402PaidVerifyStatusForEnv({ X402_PAID_VERIFY_PATH: "nope" }).status
+    ).toBe("registry_not_bound");
+    expect(
+      x402PaidVerifyStatusForEnv({ X402_PAID_VERIFY_PATH: "seal_lookup" })
+    ).toEqual({
+      bound: true,
+      status: "bound",
+      detail: "Paid calls are answered from the seal registry.",
+    });
+    expect(
+      x402PaidVerifyStatusForEnv({ X402_PAID_VERIFY_PATH: "verify_app" })
+    ).toEqual(x402PaidVerifyStatus(true));
+  });
+});

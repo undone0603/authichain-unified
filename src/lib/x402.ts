@@ -808,6 +808,23 @@ export function x402PaidVerifyStatus(
 }
 
 /**
+ * Same binding rule as GET /api/x402/health: the worker env's
+ * X402_PAID_VERIFY_PATH ("seal_lookup" | "verify_app"), not the module
+ * constant. MCP discovery must call this; calling x402PaidVerifyStatus()
+ * with no env freezes registry_not_bound even when health is bound.
+ */
+export function x402PaidVerifyStatusForEnv(
+  env?: {
+    X402_PAID_VERIFY_PATH?: string;
+  } | null
+): X402PaidVerifyStatus {
+  return x402PaidVerifyStatus(
+    X402_PAID_VERIFY_BOUND ||
+      x402PaidVerifyPathBound(env?.X402_PAID_VERIFY_PATH)
+  );
+}
+
+/**
  * Cloudflare service binding to the Next app worker (`authichain-app`, see
  * wrangler.app.jsonc). Edge workers bind it as `VERIFY_APP`.
  */
@@ -1024,9 +1041,7 @@ export async function x402HealthReport(
   if (facilitator.configured && !facilitator.reachable) {
     warnings.push("Facilitator configured but unreachable.");
   }
-  const paidVerify = x402PaidVerifyStatus(
-    X402_PAID_VERIFY_BOUND || x402PaidVerifyPathBound(env.X402_PAID_VERIFY_PATH)
-  );
+  const paidVerify = x402PaidVerifyStatusForEnv(env);
   if (!paidVerify.bound) warnings.push(paidVerify.detail);
 
   return {
