@@ -42,7 +42,8 @@ export const PLANS: Plan[] = [
     id: 'starter',
     name: 'Starter Pack',
     price: 29,
-    description: '100 AI QR generations, never expire unless you switch to Launch',
+    description:
+      '100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits.',
     generations: 100,
     stripe_price_id: 'price_1UIoEVGqTruSqV8T61lp48wB',
     stripe_payment_link: 'https://authichain.com/checkout/starter',
