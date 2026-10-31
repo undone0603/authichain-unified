@@ -24,7 +24,7 @@ concurrency:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ci-isolated"]') || 'ubuntu-24.04' }}
     timeout-minutes: 360
     permissions:
       security-events: write
@@ -42,6 +42,15 @@ jobs:
           - language: actions
             build-mode: none
     steps:
+      - name: Assert dedicated CI runner identity
+        if: runner.environment == 'self-hosted'
+        env:
+          EXPECTED_RUNNER: ${{ runner.name }}
+        run: |
+          if [ "$EXPECTED_RUNNER" != "authichain-ci-arm64-01" ]; then
+            echo "::error::CI is not running on the isolated host."
+            exit 1
+          fi
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Initialize CodeQL
@@ -72,10 +81,19 @@ jobs:
   CodeQL:
     name: CodeQL
     needs: analyze
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'self-hosted' || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ci-isolated"]') || 'ubuntu-24.04' }}
     if: always()
     permissions: {}
     steps:
+      - name: Assert dedicated CI runner identity
+        if: runner.environment == 'self-hosted'
+        env:
+          EXPECTED_RUNNER: ${{ runner.name }}
+        run: |
+          if [ "$EXPECTED_RUNNER" != "authichain-ci-arm64-01" ]; then
+            echo "::error::CI is not running on the isolated host."
+            exit 1
+          fi
       - name: Require all analysis jobs to pass
         env:
           ANALYZE_RESULT: ${{ needs.analyze.result }}
