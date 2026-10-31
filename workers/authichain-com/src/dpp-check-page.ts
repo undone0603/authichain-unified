@@ -34,6 +34,7 @@ import {
   renderDppProductScanPage,
 } from "./dpp-product-scan-page.ts";
 
+import { emailOptinBlock } from "./email-optin.ts";
 export const DPP_CHECK_PATH = "/dpp-check";
 export const DPP_CHECK_CANONICAL = `https://authichain.com${DPP_CHECK_PATH}`;
 const CHECKOUT_ACTION = "https://authichain.com/checkout/dpp_readiness";
@@ -185,7 +186,7 @@ function resultHtml(r: DppReadinessResult, price: number): string {
     <h3>Next step</h3>
     <p>${esc(r.nextStep)}</p>
     ${cta}
-    ${r.inScope ? optInForm(r, price) : ""}
+    ${r.inScope ? optInForm(r, price) : emailOptinBlock("dpp-email-optin")}
     <p class="bp-note">${esc(r.disclaimer)}</p>
   </div>
 </section>`;
@@ -202,7 +203,7 @@ export function renderDppCheckPage(url: URL, now: Date = new Date()): string {
     : null;
   const title = "Free EU Digital Product Passport readiness check | AuthiChain";
   const description =
-    "Score DPP gaps for free. An AuthiChain workspace, self-serve activation, and 50 workspace generations are $299. AuthiChain does not operate the EU registry.";
+    "Score DPP gaps for free. An AuthiChain workspace and self-serve activation are $299. AuthiChain does not operate the EU registry.";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebApplication",

@@ -45,6 +45,15 @@ describe("mcp install page", () => {
     expect(html).toContain("</html>");
   });
 
+  it("describes honest live x402 $0.05, not an in-development rail", () => {
+    expect(html).toContain(
+      "Agents can pay $0.05 USDC on Base per verification via x402."
+    );
+    expect(html).not.toContain(
+      "x402 paid verification and on-chain anchoring in development"
+    );
+  });
+
   it("offers every install path a reader needs", () => {
     expect(html).toContain(MCP_ENDPOINT);
     expect(html).toContain("cursor://anysphere.cursor-deeplink/mcp/install");
