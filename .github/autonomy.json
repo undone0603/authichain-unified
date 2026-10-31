@@ -62,10 +62,17 @@
     ]
   },
   "merge_autopilot": {
-    "$comment": "Merges trusted PRs into main once every check is green and GitHub reports clean; merges main into branches that fall behind so CI re-runs first (never rebases). Owner decision 2026-10-02: covers every path, including security, revenue, schema and the charter. Set enabled=false, or add the label 'hold' to one PR, to stop it. Script: scripts/autonomy/merge-autopilot.mjs. SAFETY: CODEOWNERS requires @undone0603 on billing/Stripe/auth/schema/contracts/workflows. Held workflows must stay off. Never bypass required status checks.",
+    "$comment": "Merges trusted PRs into main once every check is green and GitHub reports clean; merges main into branches that fall behind so CI re-runs first (never rebases). Owner decision 2026-10-02, narrowed 2026-10-13: PRs touching RESTRICTED_PATHS or changing RESTRICTED_SYMBOLS (payments, fulfilment, sending, secrets, migrations, deploys, autonomy controls; lists in the script) are skipped and wait for the owner. Set enabled=false, or add the label 'hold' to one PR, to stop the merge. A held branch that falls behind main is still updated. Script: scripts/autonomy/merge-autopilot.mjs. SAFETY: CODEOWNERS requires @undone0603 on billing/Stripe/auth/schema/contracts/workflows. Held workflows must stay off. Never bypass required status checks.",
     "enabled": true,
     "trusted_authors": ["undone0603", "dependabot[bot]"],
-    "hold_labels": ["hold", "do-not-merge"]
+    "hold_labels": [
+      "hold",
+      "do-not-merge",
+      "hold:research",
+      "hold:stacked",
+      "hold:price",
+      "hold:wip"
+    ]
   },
   "lanes": {
     "ship": {
@@ -89,6 +96,7 @@
         "deploy-cloudflare.yml": "on",
         "deploy-edge-worker.yml": "on",
         "deploy-workers.yml": "on",
+        "build-workers.yml": "on",
         "deploy-verifier-web.yml": "on",
         "deploy-first-dollar-desk.yml": "on",
         "content-routine-pr.yml": "off",
@@ -97,7 +105,7 @@
         "merge-autopilot.yml": "on",
         "node-pnpm-setup.yml": "on",
         "reusable-deploy.yml": "on",
-        "autonomy-reconcile.yml": "off",
+        "autonomy-reconcile.yml": "on",
         "stripe-webhook-reconcile.yml": "on",
         "mcp-registry-publish.yml": "on",
         "npm-publish-verify.yml": "on",
@@ -194,6 +202,8 @@
         "deploy-qron-ai-api.yml": "manual",
         "deploy-govchain-nft-base.yml": "manual",
         "deploy-manufacturer-status.yml": "manual",
+        "deploy-authichain-app.yml": "manual",
+        "dpp-followup.yml": "manual",
         "dpp-outreach-trigger.yml": "manual",
         "guardrail-digest.yml": "manual",
         "outreach-trigger.yml": "manual",
