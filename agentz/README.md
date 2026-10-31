@@ -25,6 +25,14 @@ Repo integration audit (writes nothing in dry-run; `auto` refreshes only `docs/N
 python -m agentz.cli run repo_audit_integrate --mode dry-run
 ```
 
+Power-user product automations (public rails, wait_buyer, X draft pack, OpenClaw handoff; dry-run sends no HTTP):
+
+```bash
+python -m agentz.cli run power_user_ops --mode dry-run
+```
+
+OpenClaw drop-in: `agentz/openclaw/POWER_USER.md`. Live X publish stays on AgentZ `xurl`, not this CLI.
+
 See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and workflow details.
 
 ## Running the API
