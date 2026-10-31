@@ -9,6 +9,11 @@ on:
     - cron: "20 6 * * *"
   workflow_dispatch:
 
+# These probes are read-only: a new main revision supersedes older probes.
+concurrency:
+  group: cloudflare-production-health-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
