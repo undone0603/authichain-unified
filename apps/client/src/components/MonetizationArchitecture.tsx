@@ -57,8 +57,8 @@ const B: Record<string, Brand> = {
     role: "INDUSTRY SaaS EXAMPLE", 
     color: "#00C853", // Keeping specific site colors
     icon: <Leaf className="h-5 w-5" />,
-    desc: "AuthiChain compliance + QRON creative applied to cannabis. Seed-to-sale tracking, lab result verification, and METRC compliance.",
-    sells: "The proof that the two halves make a whole." 
+    desc: "A published genetics passport for one cultivar, built from certificates you already have.",
+    sells: "Passport — Per Cultivar is $49 once." 
   },
   gov: { 
     name: "GovChain", 
@@ -93,10 +93,7 @@ const QR_TIERS: Tier[] = [
 ];
 
 const SC_TIERS: Tier[] = [
-  { name: "Leaf", price: 0, period: "free", badge: "FREE", color: "#888", cta: "Verify Free", features: ["Verify any StrainChain product", "View lab results + provenance"] },
-  { name: "Dispensary", price: 149, period: "/mo", badge: "DISPENSARY", color: "#00C853", cta: "Onboard Dispensary", features: ["100 product certifications/month", "QR label generation for products", "Consumer scan dashboard", "Lab result integration", "Basic compliance reports"] },
-  { name: "Cultivator", price: 699, period: "/mo", badge: "CULTIVATOR", color: "#00C853", cta: "Scale Operations", features: ["1,000 certifications/month", "Seed-to-sale chain of custody", "METRC integration", "Custom strain QR art (FLUX.1)", "Multi-location support"] },
-  { name: "Enterprise", price: 2999, period: "/mo", badge: "MSO", color: "#69F0AE", cta: "Contact Sales", features: ["Unlimited certifications", "Multi-state compliance engine", "Full METRC/BioTrack integration", "White-label consumer app", "NFT marketplace for strains"] },
+  { name: "Passport — Per Cultivar", price: 49, period: "once", badge: "PASSPORT", color: "#00C853", cta: "Publish one passport", features: ["One published genetics passport", "Built from certificates you already have", "A scan reads that passport"] },
 ];
 
 const BUNDLES = [
@@ -117,11 +114,11 @@ const BUNDLES = [
     sites: ["AuthiChain", "StrainChain"],
     icon: <Boxes className="h-5 w-5" />,
     color: "#5CAD3C",
-    price: 649,
-    period: "/mo",
-    savings: "$199/mo",
-    desc: "Full compliance + cannabis vertical. Blockchain verification infrastructure with cannabis-specific SaaS.",
-    includes: ["AuthiChain Protect tier", "StrainChain Cultivator tier", "Cannabis compliance automation", "Unified audit trail"],
+    price: 49,
+    period: "once",
+    savings: "",
+    desc: "Passport — Per Cultivar is $49 once, built from certificates you already have.",
+    includes: ["Passport — Per Cultivar, $49 once", "Built from certificates you already have", "A scan reads that passport"],
     best_for: "Cannabis operators who need both compliance and industry tools",
   },
   {
@@ -129,11 +126,11 @@ const BUNDLES = [
     sites: ["QRON", "StrainChain"],
     icon: <Target className="h-5 w-5" />,
     color: "#00A86B",
-    price: 499,
-    period: "/mo",
-    savings: "$149/mo",
-    desc: "AI art + cannabis SaaS. Custom FLUX.1 strain art for every product, consumer scanner.",
-    includes: ["QRON Studio tier", "StrainChain Cultivator tier", "Strain-specific QR art", "Consumer engagement + rewards"],
+    price: 49,
+    period: "once",
+    savings: "",
+    desc: "Passport — Per Cultivar is $49 once, built from certificates you already have.",
+    includes: ["Passport — Per Cultivar, $49 once", "Built from certificates you already have", "A scan reads that passport"],
     best_for: "Cannabis brands investing in premium consumer experience",
   },
 ];
@@ -324,8 +321,10 @@ export default function MonetizationArchitecture() {
                     </div>
                     <div className="text-right shrink-0">
                       <div className="text-3xl font-bold" style={{ color: b.color }}>${b.price}</div>
-                      <div className="text-xs text-muted-foreground mb-2">/month</div>
-                      <Badge variant="outline" className="text-green-500 border-green-500/30 bg-green-500/5">Save {b.savings}</Badge>
+                      <div className="text-xs text-muted-foreground mb-2">{b.period === "once" ? "once" : "/month"}</div>
+                      {b.savings ? (
+                        <Badge variant="outline" className="text-green-500 border-green-500/30 bg-green-500/5">Save {b.savings}</Badge>
+                      ) : null}
                       <Button className="w-full mt-4" size="sm" onClick={() => handleCTA(b.name)}>Get Bundle</Button>
                     </div>
                   </div>

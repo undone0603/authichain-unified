@@ -4,7 +4,8 @@ import { BrandLanding } from '../_home/BrandLanding';
 
 export const metadata: Metadata = {
   title: 'Supply-Chain Provenance | StrainChain',
-  description: 'Compliance-grade, seed-to-sale blockchain provenance: QR-anchored custody events, lab-cert hashing, and digital product passports.',
+  description:
+    'A published genetics passport for one cultivar, built from certificates you already have. A scan reads that passport.',
 };
 
 export default function SupplyChainPage() {
@@ -13,49 +14,49 @@ export default function SupplyChainPage() {
       brandId="strainchain"
       themeClass="theme-agricultural"
       eyebrow="Supply-Chain Provenance"
-      headline="Prove Every Hand-Off, On-Chain."
-      subhead="Track products from origin to shelf with QR-anchored custody events, lab-certificate hashing, and verifiable digital product passports."
+      headline="A passport for one cultivar."
+      subhead="A published genetics passport for one cultivar, built from certificates you already have."
       primaryCta={{ label: 'Request demo', href: '/onboard' }}
       secondaryCta={{ label: 'How a passport works', href: 'https://strainchain.io/passport' }}
       stats={[
-        { value: 'QR', label: 'Anchored events' },
-        { value: 'METRC', label: 'Synced' },
-        { value: 'COA', label: 'Hashed' },
-        { value: 'DPP', label: 'Per package' },
+        { value: '$49', label: 'Passport per cultivar' },
+        { value: 'CoA', label: 'Certificates you already have' },
+        { value: 'One', label: 'Published record' },
+        { value: 'Scan', label: 'Reads that passport' },
       ]}
       features={[
         {
           icon: <Boxes className="h-6 w-6" />,
-          title: 'End-to-End Custody',
-          desc: 'Record every hand-off — cultivation, processing, transport, retail — as a QR-anchored chain of custody.',
+          title: 'Published passport',
+          desc: 'A published genetics passport for one cultivar, built from certificates you already have.',
         },
         {
           icon: <MapPin className="h-6 w-6" />,
-          title: 'Geo-Tagged Events',
-          desc: 'Capture location and timestamp at each step so origin and movement are independently verifiable.',
+          title: 'Cultivar identity',
+          desc: 'The digital identity is the passport subject for that cultivar.',
         },
         {
           icon: <FlaskConical className="h-6 w-6" />,
-          title: 'Lab-Certificate Hashing',
-          desc: 'Anchor COAs and test results on-chain — an altered or expired certificate is caught in a single scan.',
+          title: 'Lab results you already have',
+          desc: 'The passport carries that certificate panel. A scan reads the passport.',
         },
         {
           icon: <ClipboardCheck className="h-6 w-6" />,
-          title: 'Regulator-Ready Records',
-          desc: 'METRC and BioTrack integration keeps state reporting in sync with an on-chain backstop for every entry.',
+          title: 'Existing certificates',
+          desc: 'The passport is built from CoAs you already have.',
         },
         {
           icon: <QrCode className="h-6 w-6" />,
-          title: 'Digital Product Passports',
-          desc: 'Each package carries a scannable DPP — origin, testing, and handling history — built for US and EU disclosure rules.',
+          title: 'Scan the passport',
+          desc: 'A scan proves the passport for the identity that was scanned. A copied identifier carries the same passport.',
         },
         {
           icon: <ShieldCheck className="h-6 w-6" />,
-          title: 'Tamper-Evident Proof',
-          desc: 'Cryptographic seals make counterfeiting and diversion detectable, protecting brand and consumer alike.',
+          title: 'One price',
+          desc: 'Passport — Per Cultivar is $49 once.',
         },
       ]}
-      closingLine="Compliance-Grade Provenance, End to End."
+      closingLine="One cultivar, one passport."
     />
   );
 }

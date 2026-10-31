@@ -32,6 +32,14 @@ describe("anchorQRONAction (contained)", () => {
     expect(createClient).not.toHaveBeenCalled();
   });
 
+  it("refuses telemetry anchoring without calling the chain", async () => {
+    const { anchorTelemetryAction } = await import("./anchoring");
+    const result = await anchorTelemetryAction("evt-1", "0x" + "ab".repeat(32), "theater_1");
+    expect(result).toEqual({ success: false, error: NOTICE });
+    expect(anchorEdgeHash).not.toHaveBeenCalled();
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
   it("the qron-platform copy refuses the write too", async () => {
     const mod = await import("../../../apps/qron-platform/src/app/actions/anchoring");
     expect(await mod.anchorQRONAction("qron-123", "x")).toEqual({ success: false, error: NOTICE });

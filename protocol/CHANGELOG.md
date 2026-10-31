@@ -2,17 +2,25 @@
 
 ## Unreleased
 
-Verifier additions (RES-73). No version bump here; publishing stays a separate, owner-run step (`npm-publish-verify.yml` is manual only).
+No version bump in this change; the release that ships it is a separate PR. `verifier.mjs` verdicts, types, and example records are unchanged.
 
-- `verifyAttestationJws(jws, jwks)`: offline check of a v0.1 attestation seal (compact JWS, EdDSA, `typ` `AC-ATTESTATION+JWS`) against a JWKS the caller holds. Verdict `valid-offline` or `invalid`. Does not check live revocation.
-- `verifyRecord(..., { jwks })` and CLI `--jwks`: optionally require a record's `did:key` signer to be a key in a JWKS (`checks.issuerInJwks`). Without `jwks`, behaviour is unchanged; 28/28 conformance fixtures still pass under `--strict`.
-- `didKeyFromJwk`, `base58Encode` exported. Ship the attestation v0.1 test fixture and its public test key in `examples/`.
-- README quickstart. More package keywords.
-- `python/`: Python port (`authichain_verify`, depends only on `cryptography`), same CLI contract, passes the same conformance fixtures and ported unit tests. Not on PyPI yet.
-
-### Earlier in Unreleased: documentation only
-
-No version bump in this change; the release that ships it is a separate PR. Verifier logic, CLI, types and example records are unchanged.
+- `passport.mjs`: a product passport is a `DigitalProductPassport` whose digital identity is `credentialSubject.id`. `scanProvesGenuine` is true only when the reference verifier returns `verified`. A `gtin`, when present, must be 14 digits. This package does not assign one.
+- `authichain-verify` prints that passport scan and exits 0 only when it is genuine. Types for the passport export ship in `passport.d.ts`.
+- The verify worker and the product pages call the same scan when a stored passport is present. A registry status is not that proof.
+- `storePassport` places an already-signed passport on a metadata object. The digital identity stays `credentialSubject.id`. It does not assign a GTIN and it does not write a database.
+- A product scan that omits its own record uses that stored passport and its anchor. The expected digital identity is the product subject id, or `credentialSubject.id` on the stored passport. A registry status is not that identity. No GTIN is assigned.
+- Product verify routes report that scan. An active certificate, a model reply, or a row is not a genuine passport.
+- The internal trust-score route records caller-supplied flags beside that scan. An omitted flag is false. `verified` follows the stored passport when a product id is present. A flag tally is not a genuine passport.
+- The public product verify API records registry and anchor evidence. `verified` stays false. This route does not scan a product passport. A confirmed anchor receipt is not that scan.
+- `GET /api/v1/verify` reports the passport stored on the certification. An approved row is not signed as verified.
+- The industrial telemetry dashboard does not invent a verified scan, and that ingest does not anchor. A materials table is titled a product passport only when the stored passport scans genuine. A flag tally is not a passport.
+- Telemetry anchoring stays off. The StrainChain description does not claim a METRC or BioTrack connection. A pharma category is not a DSCSA profile.
+- A HubSpot anchor-proof label does not write a chain transaction. A visual image compare is not a passport scan. The StrainChain home states the $49 cultivar passport and does not claim a METRC or BioTrack connection.
+- The Next StrainChain home and the supply-chain page state that same $49 passport. A recorded supply-chain event does not scan a passport. The shadow brand catalog does not describe a METRC, BioTrack, or DSCSA connection.
+- A cannabis strain lookup scans the stored passport. Omitted cannabinoid numbers stay empty. The metering stub stays at zero and is not a passport scan.
+- A seal serial is stored only as `credentialSubject.sealSerialSha256`. `checkSealSerial` reports that commitment as `productBinding` and does not change `genuine`. A second presentation is the same passport. Evidence beside the passport is outside the signature. This check is not a verifier verdict, and the 28 conformance fixtures are unchanged.
+- A medical category is not a device profile. `mapDbToIdentity` stays `generic-provenance` and does not assign a UDI.
+- An inspection evidence row does not set `physical_binding`. A missing manufacturing date is not the harvest word Recent, and a missing rarity is not filled with 50. The asset story does not say the product is verified or on a Bitcoin truth layer.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 

@@ -95,15 +95,22 @@ async def api_create_product(data: ProductCreate, supabase: Client = Depends(get
 
 @app.post("/scan", dependencies=[Depends(verify_token)])
 async def api_scan(data: ScanInput, supabase: Client = Depends(get_supabase)):
-    """Operator-only. Writes the product's score and can issue $QRON.
+    """Operator-only. Writes the product's score and can record a simulated $QRON reward.
 
     `verified` comes from assess_scans, which requires a checked signature and
     a location check that actually ran. The signature is checked by the
-    reference verifier (agentz.core.signature); without a record, a trusted
-    issuer list or a product subject_id it stays "not_checked".
+    reference verifier (agentz.core.signature). When the request omits a
+    record, the passport stored on the product is checked instead. Without
+    that record, a trusted issuer list, or a digital identity, the signature
+    stays "not_checked". A product status is not that identity. The reward
+    below stays the existing simulated path.
     """
     from agentz.core.media import generate_story_mode
-    from agentz.core.signature import check_scan_signature
+    from agentz.core.signature import (
+        check_scan_signature,
+        digital_identity_of,
+        resolve_scan_inputs,
+    )
     from agentz.core.trust import assess_scans
     from agentz.core.growth import reward_repeat_scans
 
@@ -111,11 +118,12 @@ async def api_scan(data: ScanInput, supabase: Client = Depends(get_supabase)):
         supabase.table("products").select("metadata").eq("id", data.product_id)
         .single().execute().data
     ) or {}
-    signature = await check_scan_signature(
+    record, anchor, subject = resolve_scan_inputs(
         data.record,
         data.anchor,
-        (product.get("metadata") or {}).get("subject_id"),
+        product.get("metadata") or {},
     )
+    signature = await check_scan_signature(record, anchor, subject)
     # The Atomic Action
     assessment = await assess_scans(
         supabase, data.product_id, signature_valid=signature["signature_valid"]
@@ -125,13 +133,17 @@ async def api_scan(data: ScanInput, supabase: Client = Depends(get_supabase)):
     if assessment["verified"]:
         reward = await reward_repeat_scans(supabase, data.wallet, data.product_id)
 
-    return {
+    body = {
         "verified": assessment["verified"],
         "authenticity_score": assessment["score"],
         "checks": {**assessment["checks"], "signature_reason": signature["reason"]},
         "storymode_url": narration,
         "reward": reward
     }
+    identity = digital_identity_of(record)
+    if identity:
+        body["digitalIdentity"] = identity
+    return body
 
 @app.get("/marketplace")
 async def api_marketplace(supabase: Client = Depends(get_supabase)):

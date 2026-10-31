@@ -2,6 +2,15 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
 import type { Env } from "./index";
+import {
+  ANALYTICS_DESCRIPTION,
+  REGISTER_PRODUCT_DESCRIPTION,
+  TRUST_SCORE_DESCRIPTION,
+  VERIFY_CANNABIS_DESCRIPTION,
+  VERIFY_PRODUCT_DESCRIPTION,
+  registerProductBody,
+  trustScoreBody,
+} from "./product-tools";
 
 /**
  * MCP Server for ChatGPT Apps SDK integration.
@@ -28,7 +37,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: verify_product ───────────────────────────────────────────────────
   server.tool(
     "verify_product",
-    "Look up a product, serial or certificate number in the AuthiChain registry and return a Verification Decision v1 result. A registry match alone is never 'verified' and a miss is 'not_found', not counterfeit; verifying an item needs its signed attestation at /api/v1/attestation/verify.",
+    VERIFY_PRODUCT_DESCRIPTION,
     {
       productId: z.string().optional().describe("Product ID or serial number"),
       imageUrl: z
@@ -178,7 +187,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: verify_cannabis_strain ───────────────────────────────────────────
   server.tool(
     "verify_cannabis_strain",
-    "Record a cannabis strain query. It does not read lab results, genetics, terpenes or METRC, so it never returns 'verified' or 'compliant'; a rarity score is computed only from THC and CBD values you supply.",
+    VERIFY_CANNABIS_DESCRIPTION,
     {
       strainName: z.string().describe("Name of the cannabis strain"),
       batchId: z
@@ -227,30 +236,41 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: compute_trust_score ──────────────────────────────────────────────
   server.tool(
     "compute_trust_score",
-    "Compute an advisory score from signals you assert (QR decode, blockchain cert, NFC, visual match). The inputs are not checked, so the result is never an authenticity verdict.",
+    TRUST_SCORE_DESCRIPTION,
     {
+      productId: z
+        .string()
+        .optional()
+        .describe(
+          "Product id. When present, verified follows the stored passport."
+        ),
       qrDecodePass: z
         .boolean()
-        .describe("Whether QR code decoded successfully"),
+        .optional()
+        .describe("Whether the caller says the QR decoded"),
       blockchainCertExists: z
         .boolean()
-        .describe("Whether blockchain certificate exists"),
+        .optional()
+        .describe("Whether the caller says a blockchain certificate exists"),
       nfcMatch: z
         .boolean()
         .optional()
-        .describe("Whether NFC chip data matches"),
+        .describe("Whether the caller says NFC chip data matches"),
       visualMatch: z
         .number()
         .min(0)
         .max(100)
         .optional()
-        .describe("Visual similarity score (0-100)"),
+        .describe("Caller visual similarity score (0-100)"),
       geoFenceOk: z
         .boolean()
         .optional()
-        .describe("Whether scan location is within expected geo-fence"),
+        .describe(
+          "Whether the caller says the scan location is inside the expected geo-fence"
+        ),
     },
     async ({
+      productId,
       qrDecodePass,
       blockchainCertExists,
       nfcMatch,
@@ -264,13 +284,16 @@ function createMcpServer(env: Env): McpServer {
             "Content-Type": "application/json",
             "X-Internal-Secret": env.INTERNAL_SECRET,
           },
-          body: JSON.stringify({
-            qrDecodePass,
-            blockchainCertExists,
-            nfcMatch,
-            visualMatch,
-            geoFenceOk,
-          }),
+          body: JSON.stringify(
+            trustScoreBody({
+              productId,
+              qrDecodePass,
+              blockchainCertExists,
+              nfcMatch,
+              visualMatch,
+              geoFenceOk,
+            })
+          ),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -288,7 +311,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: register_product ─────────────────────────────────────────────────
   server.tool(
     "register_product",
-    "Register a new product in the AuthiChain verification network. Creates a blockchain-anchored record with provenance metadata.",
+    REGISTER_PRODUCT_DESCRIPTION,
     {
       name: z.string().describe("Product name"),
       manufacturer: z.string().describe("Manufacturer or brand name"),
@@ -297,9 +320,19 @@ function createMcpServer(env: Env): McpServer {
       metadata: z
         .record(z.string())
         .optional()
-        .describe("Additional product metadata"),
+        .describe("String metadata kept beside the passport"),
+      passport: z
+        .unknown()
+        .optional()
+        .describe(
+          "Already-signed DigitalProductPassport, or { record, anchor }"
+        ),
+      userId: z
+        .string()
+        .optional()
+        .describe("Registry user id required by the register handler"),
     },
-    async ({ name, manufacturer, serialNumber, category, metadata }) => {
+    async ({ name, manufacturer, serialNumber, category, metadata, passport, userId }) => {
       try {
         const res = await fetch(
           `${env.BACKEND_URL}/api/internal/products/register`,
@@ -309,13 +342,17 @@ function createMcpServer(env: Env): McpServer {
               "Content-Type": "application/json",
               "X-Internal-Secret": env.INTERNAL_SECRET,
             },
-            body: JSON.stringify({
-              name,
-              manufacturer,
-              serialNumber,
-              category,
-              metadata,
-            }),
+            body: JSON.stringify(
+              registerProductBody({
+                name,
+                manufacturer,
+                serialNumber,
+                category,
+                metadata,
+                passport,
+                userId,
+              })
+            ),
           }
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -334,7 +371,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: get_verification_analytics ───────────────────────────────────────
   server.tool(
     "get_verification_analytics",
-    "Usage analytics. Metering is not active yet, so this currently returns zero counts and says so.",
+    ANALYTICS_DESCRIPTION,
     {
       period: z
         .enum(["today", "week", "month", "quarter"])

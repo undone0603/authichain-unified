@@ -87,10 +87,10 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
     mrr_usd: 79,
     scan_limit: 1000,
     features: [
-      "METRC integration",
-      "1,000 scans/mo",
-      "Batch tracking",
-      "Compliance reports",
+      "One published genetics passport",
+      "Built from certificates you already have",
+      "A scan reads that passport",
+      "The listed passport is $49 once in src/lib/plans.ts",
     ],
   },
   strainchain_pro: {
@@ -100,11 +100,10 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
     mrr_usd: 199,
     scan_limit: 10000,
     features: [
-      "Full METRC sync",
-      "10,000 scans/mo",
-      "Multi-facility",
-      "API",
-      "Audit trail",
+      "One published genetics passport",
+      "Built from certificates you already have",
+      "A scan reads that passport",
+      "The listed passport is $49 once in src/lib/plans.ts",
     ],
   },
   strainchain_enterprise: {
@@ -113,7 +112,12 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
     brand: "strainchain.io",
     mrr_usd: 599,
     scan_limit: null,
-    features: ["Unlimited", "White-label", "DSCSA-ready", "Dedicated support"],
+    features: [
+      "One published genetics passport",
+      "Built from certificates you already have",
+      "A scan reads that passport",
+      "The listed passport is $49 once in src/lib/plans.ts",
+    ],
   },
   govchain_basic: {
     id: "govchain_basic",

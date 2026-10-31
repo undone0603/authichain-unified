@@ -1,6 +1,6 @@
 import { generateLivingQR } from "../hf-generation";
-import { anchorEdgeHash } from "../blockchain";
 import { supabaseAdmin as admin } from "@/lib/supabase-admin";
+import { anchorProofDeliverable } from "./anchor-proof";
 
 /**
  * HUBSPOT DEAL & DELIVERABLE AGENT
@@ -123,19 +123,11 @@ export class HubSpotDeliverableAgent {
 
       // 2. Generate specialized deliverables using existing Phase 2/3 infrastructure
       switch (type) {
-        case "anchor_proof":
-          // Phase 2 logic: Anchor a mock state for the pilot
-          const mockHash = `0x${Buffer.from(
-            `${deal.id}:${deal.metadata?.identity ?? ""}`
-          )
-            .toString("hex")
-            .slice(0, 64)}`;
-          const anchor = await anchorEdgeHash(
-            mockHash,
-            `pilot:${deal.dealname}`
-          );
-          artifactUrl = `https://polygonscan.com/tx/${anchor.txHash}`;
-          break;
+        case "anchor_proof": {
+          const refused = anchorProofDeliverable();
+          console.warn("[HubSpot-Agent] anchor_proof refused:", refused.error);
+          return;
+        }
 
         case "qron_design":
         case "living_qron":

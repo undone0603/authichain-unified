@@ -10,6 +10,8 @@ test("the demonstration id resolves to the mined record", () => {
   assert.equal(out.verdict, "verified");
   assert.equal(out.checks.signature, true);
   assert.equal(out.checks.anchorHash, true);
+  assert.equal(Object.hasOwn(out, "genuine"), false);
+  assert.equal(Object.hasOwn(out, "productBinding"), false);
 });
 
 test("the public URL resolves to the same record", () => {

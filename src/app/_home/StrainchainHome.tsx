@@ -14,44 +14,44 @@ export function StrainchainHome() {
       primaryCta={{ label: 'Request demo', href: '/onboard' }}
       secondaryCta={{ label: 'How a passport works', href: 'https://strainchain.io/passport' }}
       stats={[
-        { value: '/onboard', label: 'Live intake' },
-        { value: '/genetics', label: 'Passport library' },
-        { value: 'CoA panel', label: 'Totals derived' },
-        { value: 'No live SKU', label: 'Until Stripe price' },
+        { value: '$49', label: 'Passport per cultivar' },
+        { value: 'CoA', label: 'Certificates you already have' },
+        { value: 'One', label: 'Published record' },
+        { value: 'Scan', label: 'Reads that passport' },
       ]}
       features={[
         {
           icon: <Sprout className="h-6 w-6" />,
-          title: 'Seed-to-Sale Tracking',
-          desc: 'Follow every plant from clone to cure to checkout with QR-anchored events the regulator and the consumer can both verify.',
+          title: 'Published passport',
+          desc: 'A published genetics passport for one cultivar, built from certificates you already have.',
         },
         {
           icon: <ClipboardCheck className="h-6 w-6" />,
-          title: 'Compliance-Grade Records',
-          desc: 'METRC and BioTrack integration keeps state reporting in sync automatically.',
+          title: 'Existing certificates',
+          desc: 'The passport is built from CoAs you already have.',
         },
         {
           icon: <FlaskConical className="h-6 w-6" />,
-          title: 'Lab-Certificate Hashing',
-          desc: 'Anchor COAs and potency results on-chain so a tampered or expired lab cert is detectable in a single scan.',
+          title: 'Lab results you already have',
+          desc: 'The passport carries that certificate panel. A scan reads the passport.',
         },
         {
           icon: <MapPin className="h-6 w-6" />,
-          title: 'Geo-Fenced Custody',
-          desc: 'Record location at each hand-off — cultivation, processing, transport, dispensary — for a defensible chain of custody.',
+          title: 'Cultivar identity',
+          desc: 'The digital identity is the passport subject for that cultivar.',
         },
         {
           icon: <ShieldCheck className="h-6 w-6" />,
-          title: 'Strain NFTs',
-          desc: 'Tokenize genetics and batch identity so cultivators can prove lineage and protect premium strains from imitation.',
+          title: 'One price',
+          desc: 'Passport — Per Cultivar is $49 once.',
         },
         {
           icon: <Boxes className="h-6 w-6" />,
-          title: 'Digital Product Passports',
-          desc: 'Every package carries a verifiable DPP — origin, test results, and handling history — ready for EU and US disclosure rules.',
+          title: 'Scan the passport',
+          desc: 'A scan proves the passport for the identity that was scanned. A copied identifier carries the same passport.',
         },
       ]}
-      closingLine="Turn Compliance Into a Competitive Edge."
+      closingLine="One cultivar, one passport."
     />
   );
 }

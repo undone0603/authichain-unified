@@ -1311,16 +1311,14 @@ app.post("/api/gpt/verify", async c => {
     const productId = body?.productId;
     if (!productId) return c.json({ error: "productId required" }, 400);
     const db = getHyperdriveDb(c.env);
-    const [product] = await db
-      .select()
-      .from(products)
-      .where(eq(products.id, Number(productId)))
-      .limit(1);
-    // A registry lookup never verifies (docs/attestation/verification-decision.md):
-    // not found is not counterfeit, and a matching row is not authentic.
-    if (!product) {
-      return c.json({ verified: false, trustScore: null, ...registryLookupDecision(null) });
-    }
+    const id = String(productId);
+    const { getProductById, getProductBySerial } = await import(
+      "../server/content-db-helpers"
+    );
+    const { passportVerdict } = await import("../server/passport-verdict");
+    const product =
+      (await getProductById(db, id)) ?? (await getProductBySerial(db, id));
+    if (!product) return c.json(passportVerdict(null, null));
     const [cert] = await db
       .select()
       .from(certificates)
@@ -1328,12 +1326,10 @@ app.post("/api/gpt/verify", async c => {
       .limit(1);
     const decision = registryLookupDecision(cert ?? { status: "uncertified" });
     return c.json({
-      verified: decision.valid,
-      trustScore: null,
+      ...passportVerdict(product, cert ?? null),
       productName: product.name,
       brand: product.brand ?? null,
       certificateId: cert?.id ?? null,
-      ...decision,
     });
   } catch (err) {
     console.error("[GPT /verify]", err);
@@ -1372,11 +1368,19 @@ app.get("/api/gpt/certificates/verify", async c => {
       .from(certificates)
       .where(eq(certificates.certificateNumber, certNumber))
       .limit(1);
-    if (!cert) return c.json(registryLookupDecision(null));
+    if (!cert)
+      return c.json({ valid: false, message: "Certificate not found" });
+    const { getProductById } = await import("../server/content-db-helpers");
+    const { passportVerdict } = await import("../server/passport-verdict");
+    const product = cert.productId
+      ? await getProductById(db, String(cert.productId))
+      : undefined;
+    const verdict = passportVerdict(product, cert);
     return c.json({
+      ...verdict,
+      valid: verdict.verified,
       certificateId: cert.id,
       issuedAt: cert.issuedAt,
-      ...registryLookupDecision(cert),
     });
   } catch (err) {
     console.error("[GPT /certificates/verify]", err);
@@ -1400,14 +1404,11 @@ app.post("/api/gpt/cannabis/verify", async c => {
           .where(eq(products.name, strainName))
           .limit(1)
       : [];
-    // A name match is not a lab result and says nothing about METRC.
-    const decision = registryLookupDecision(product ? { status: "name_match" } : null);
+    const { passportVerdict } = await import("../server/passport-verdict");
     return c.json({
-      verified: decision.valid,
-      strainName: strainName || null,
+      ...passportVerdict(product, null),
+      strainName: strainName || "Unknown",
       batchId: batchId || null,
-      metrc_compliance: "not_assessed",
-      ...decision,
     });
   } catch (err) {
     console.error("[GPT /cannabis/verify]", err);
@@ -1422,23 +1423,26 @@ app.post("/api/gpt/trust-score", async c => {
     const productId = body?.productId;
     if (!productId) return c.json({ error: "productId required" }, 400);
     const db = getHyperdriveDb(c.env);
-    const [product] = await db
-      .select()
-      .from(products)
-      .where(eq(products.id, Number(productId)))
-      .limit(1);
-    if (!product) return c.json({ trustScore: null, ...registryLookupDecision(null) });
+    const id = String(productId);
+    const { getProductById, getProductBySerial } = await import(
+      "../server/content-db-helpers"
+    );
+    const { passportVerdict } = await import("../server/passport-verdict");
+    const product =
+      (await getProductById(db, id)) ?? (await getProductBySerial(db, id));
+    if (!product) {
+      return c.json({ verdict: "UNKNOWN", ...passportVerdict(null, null) });
+    }
     const [cert] = await db
       .select()
       .from(certificates)
       .where(eq(certificates.productId, product.id))
       .limit(1);
-    // The old 85/15 score was a constant keyed on "a certificate row exists"
-    // and labelled products without one SUSPICIOUS. No score is computed here.
+    const scan = passportVerdict(product, cert ?? null);
     return c.json({
-      trustScore: null,
+      ...scan,
+      verdict: scan.verified ? "GENUINE" : "UNVERIFIED",
       productName: product.name,
-      ...registryLookupDecision(cert ?? { status: "uncertified" }),
     });
   } catch (err) {
     console.error("[GPT /trust-score]", err);
@@ -1475,16 +1479,23 @@ app.post("/api/internal/verify", async c => {
     // agents listed for any certificate. A guess is not evidence: an unknown
     // identifier is not_found, and a known one is a registry record only.
     const db = getHyperdriveDb(c.env);
-    const { getCertificateByNumber } =
-      await import("../server/content-db-helpers");
+    const {
+      getCertificateByNumber,
+      getProductById,
+      getProductBySerial,
+    } = await import("../server/content-db-helpers");
+    const { passportVerdict } = await import("../server/passport-verdict");
     const cert = await getCertificateByNumber(db, String(lookupId));
-    const decision = registryLookupDecision(cert ?? null);
+    const product =
+      (cert?.productId
+        ? await getProductById(db, String(cert.productId))
+        : undefined) ??
+      (await getProductBySerial(db, String(lookupId))) ??
+      (await getProductById(db, String(lookupId)));
     return c.json({
-      verified: decision.valid,
-      type: cert ? "certificate" : "not_found",
+      type: "product_passport",
+      ...passportVerdict(product, cert),
       ...(cert ? { certificate: cert } : {}),
-      trustScore: null,
-      ...decision,
     });
   } catch (err: any) {
     console.error("[Internal API] verify error:", err.message);
@@ -1534,12 +1545,18 @@ app.post("/api/internal/certificates/verify", async c => {
     if (!cert)
       return c.json({ error: "Certificate not found", valid: false }, 404);
 
+    const { getProductById } = await import("../server/content-db-helpers");
+    const { passportVerdict } = await import("../server/passport-verdict");
+    const product = cert.productId
+      ? await getProductById(db, String(cert.productId))
+      : undefined;
+    const verdict = passportVerdict(product, cert);
     return c.json({
-      valid: cert.status === "active",
+      ...verdict,
+      valid: verdict.verified,
       certificate: cert,
       issuedAt: cert.issuedAt,
       expiresAt: cert.expiresAt,
-      blockchainVerified: !!cert.blockchainTxHash,
     });
   } catch (err: any) {
     console.error("[Internal API] certificates/verify error:", err.message);
@@ -1563,48 +1580,24 @@ app.post("/api/internal/cannabis/verify", async c => {
     if (!strain)
       return c.json({ error: "strainName or strainId required" }, 400);
 
-    // This returned verified:true for any strain name, filled a missing
-    // panel with THC 25 / CBD 1, and called any request with a dispensaryId
-    // "compliant". Nothing here reads a lab result, so nothing is verified,
-    // and a rarity score is only computed from numbers the caller supplied.
-    const thc = typeof thcPercent === "number" ? thcPercent : null;
-    const cbd = typeof cbdPercent === "number" ? cbdPercent : null;
-    let rarityScore: number | null = null;
-    let truthLayer: unknown = null;
-    if (thc !== null && cbd !== null) {
-      const metadata = {
-        name: strain,
-        type: "HYBRID" as const,
-        genetics: ["Unknown"],
-        thcContent: thc,
-        cbdContent: cbd,
-        harvestDate: new Date().toISOString(),
-      };
-      const profile = {
-        thc,
-        thca: thc * 1.12,
-        cbd,
-        cbda: cbd * 1.2,
-        total: thc + cbd + 5,
-      };
-      const { calculateStrainRarity, formatTruthLayerMetadata } =
-        await import("../server/cannabis-service");
-      rarityScore = calculateStrainRarity(metadata, profile);
-      truthLayer = formatTruthLayerMetadata(metadata, profile);
-    }
+    const db = getHyperdriveDb(c.env);
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(eq(products.name, strain))
+      .limit(1);
+    const { passportVerdict } = await import("../server/passport-verdict");
+    const { cannabisCallerNumbers } = await import("../server/cannabis-verify");
 
     return c.json({
-      verified: false,
-      decision: "indeterminate",
-      decision_contract: "AuthiChain Verification Decision v1",
-      reasons: ["no_lab_evidence", "no_signed_attestation_presented"],
+      ...passportVerdict(product, null),
       strainName: strain,
-      batchId: batchId || null,
-      dispensaryId: dispensaryId || null,
-      complianceStatus: "not_assessed",
-      rarityScore,
-      rarity_basis: rarityScore === null ? "not_computed" : "caller_supplied_panel",
-      truthLayer,
+      ...cannabisCallerNumbers({
+        thcPercent,
+        cbdPercent,
+        batchId,
+        dispensaryId,
+      }),
     });
   } catch (err: any) {
     console.error("[Internal API] cannabis/verify error:", err.message);
@@ -1613,44 +1606,35 @@ app.post("/api/internal/cannabis/verify", async c => {
 });
 
 // POST /api/internal/trust-score
+// Caller flags are recorded. verified follows a stored passport when a product id is present.
 app.post("/api/internal/trust-score", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
-    const {
-      qrDecodePass,
-      blockchainCertExists,
-      nfcMatch,
-      visualMatch,
-      geoFenceOk,
-    } = body ?? {};
+    const { callerSignalReport, passportVerdict, trustScoreReply } =
+      await import("../server/passport-verdict");
+    const callerSignals = callerSignalReport(body);
+    const rawId = body?.productId ?? body?.identifier;
+    const id = typeof rawId === "string" ? rawId.trim() : "";
+    if (!id) return c.json(trustScoreReply(null, callerSignals));
 
-    const { computeTrustScore } = await import("../server/qron-service");
-    const score = computeTrustScore({
-      qrDecodePass: qrDecodePass === true,
-      blockchainCertExists: blockchainCertExists === true,
-      communityVerified: visualMatch ? Math.round(visualMatch / 20) : 0,
-      communityFlagged: 0,
-      openArtRegistered: nfcMatch === true,
-    });
-
-    // Every input here is asserted by the caller, so the score is advisory.
-    // It never becomes an authenticity verdict.
-    const { verdict: _heuristicVerdict, ...advisory } = score;
-    return c.json({
-      ...advisory,
-      advisory: true,
-      verified: false,
-      decision: "indeterminate",
-      decision_contract: "AuthiChain Verification Decision v1",
-      reasons: ["caller_asserted_signals_only"],
-      inputs: {
-        qrDecodePass,
-        blockchainCertExists,
-        nfcMatch,
-        visualMatch,
-        geoFenceOk,
-      },
-    });
+    const db = getHyperdriveDb(c.env);
+    const { getProductById, getProductBySerial } = await import(
+      "../server/content-db-helpers"
+    );
+    const product =
+      (await getProductById(db, id)) ?? (await getProductBySerial(db, id));
+    const cert = product
+      ? (
+          await db
+            .select()
+            .from(certificates)
+            .where(eq(certificates.productId, product.id))
+            .limit(1)
+        )[0]
+      : undefined;
+    return c.json(
+      trustScoreReply(passportVerdict(product, cert ?? null), callerSignals)
+    );
   } catch (err: any) {
     console.error("[Internal API] trust-score error:", err.message);
     return c.json({ error: "Internal server error" }, 500);
@@ -1666,16 +1650,8 @@ app.get("/api/internal/analytics", async c => {
     // surfaces here as a 500 rather than silently returning stub data.
     getHyperdriveDb(c.env);
 
-    return c.json({
-      period,
-      // Nothing is metered yet. Nulls, not zeros: a zero reads as a
-      // measurement. The old activeAgents: 5 was a constant, not a count.
-      metered: false,
-      verifications: null,
-      qrCodesGenerated: null,
-      certificatesIssued: null,
-      message: "Usage metering is not active, so there are no counts to report.",
-    });
+    const { analyticsStub } = await import("../server/analytics-stub");
+    return c.json(analyticsStub(period));
   } catch (err: any) {
     console.error("[Internal API] analytics error:", err.message);
     return c.json({ error: "Internal server error" }, 500);
@@ -1686,27 +1662,55 @@ app.get("/api/internal/analytics", async c => {
 app.post("/api/internal/products/register", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
-    const { name, brand, category, serialNumber, description, userId } =
-      body ?? {};
+    const {
+      name,
+      brand,
+      manufacturer,
+      category,
+      serialNumber,
+      description,
+      userId,
+    } = body ?? {};
     if (!name) return c.json({ error: "name required" }, 400);
     const parsedUserId = parseInt(userId, 10);
     if (!userId || !Number.isFinite(parsedUserId) || parsedUserId <= 0) {
       return c.json({ error: "valid userId required" }, 400);
     }
 
+    const { productPassportMetadata, digitalIdentityOf } = await import(
+      "../protocol/passport.mjs"
+    );
+    let metadata: Record<string, unknown> | null = null;
+    if (body?.passport != null || body?.metadata?.passport != null) {
+      try {
+        metadata = productPassportMetadata(body);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "passport_invalid";
+        return c.json({ error: message }, 400);
+      }
+    }
+
     const db = getHyperdriveDb(c.env);
     const { createProduct } = await import("../server/content-db-helpers");
+    const resolvedBrand = brand || manufacturer;
     const product = await createProduct(db, {
       name,
-      brand,
+      brand: resolvedBrand,
+      manufacturer: manufacturer || brand,
       category,
       serialNumber,
       description,
       userId: parsedUserId,
       status: "active",
+      ...(metadata ? { metadata } : {}),
     });
+    const digitalIdentity = digitalIdentityOf(metadata);
 
-    return c.json({ success: true, product });
+    return c.json({
+      success: true,
+      product,
+      ...(digitalIdentity ? { digitalIdentity } : {}),
+    });
   } catch (err: any) {
     console.error("[Internal API] products/register error:", err.message);
     return c.json({ error: "Internal server error" }, 500);

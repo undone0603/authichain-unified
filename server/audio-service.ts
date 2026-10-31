@@ -2,14 +2,15 @@
  * AuthiChain Audio Service — BrandVoice™ Engine
  * Uses Forge API or OpenAI to generate scannable audio stories from product metadata.
  */
+import { audioStoryScript } from "./audio-story";
 import { ENV } from "./_core/env";
 import { storagePut } from "./storage";
 
 interface AudioStoryRequest {
   brandName: string;
   strainName: string;
-  thcContent: string;
-  harvestDate: string;
+  thcContent?: string | null;
+  harvestDate?: string | null;
 }
 
 /**
@@ -19,10 +20,7 @@ interface AudioStoryRequest {
 export async function generateProductAudioStory(data: AudioStoryRequest): Promise<string> {
   console.log(`🎙️ Generating BrandVoice story for ${data.brandName} - ${data.strainName}...`);
 
-  const script = `This is an authentic ${data.strainName} experience by ${data.brandName}. 
-  Harvested on ${data.harvestDate} with a verified T H C content of ${data.thcContent}. 
-  This product is secured on the Bitcoin Truth Layer for your safety and satisfaction. 
-  Enjoy the craft quality you can trust.`;
+  const script = audioStoryScript(data);
 
   const endpoints = [
     { url: `${(ENV.forgeApiUrl || "https://forge.manus.im").replace(/\/$/, "")}/v1/audio/speech`, key: ENV.forgeApiKey, name: "Forge" },

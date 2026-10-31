@@ -141,7 +141,7 @@ export const INDUSTRY_SOLUTIONS = {
   },
   pharmaceutical: {
     name: "Pharmaceutical & Healthcare",
-    tagline: "DSCSA-compliant drug supply chain verification",
+    tagline: "A published product record for a drug package. Not a certification.",
     startingPrice: 799,
     targetBuyers: [
       "Chief Compliance Officers",

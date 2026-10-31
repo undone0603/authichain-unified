@@ -2,9 +2,11 @@ import { registryLookupDecision } from "../packages/verifier/src/registry-decisi
 import { timingSafeEqual } from "crypto";
 import { Router, type Request, type Response } from "express";
 import { ENV } from "./_core/env";
-import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-service";
-import { createProduct, getCertificateByNumber, getDb, getWhiteLabelByApiKey } from "./db";
-import { computeTrustScore, generateProductQRON } from "./qron-service";
+import { analyticsStub } from "./analytics-stub";
+import { cannabisCallerNumbers } from "./cannabis-verify";
+import { createProduct, getCertificateByNumber, getCertificateForProduct, getDb, getProductById, getProductByName, getProductBySerial, getWhiteLabelByApiKey } from "./db";
+import { callerSignalReport, passportVerdict, trustScoreReply } from "./passport-verdict";
+import { generateProductQRON } from "./qron-service";
 import { reportUsageToStripe } from "./tenant-billing";
 
 function getErrorMessage(err: unknown): string {
@@ -42,16 +44,16 @@ export function createInternalRouter(): Router {
       const lookupId = identifier || productId || barcode;
       if (!lookupId) return res.status(400).json({ error: "identifier, productId, or barcode required" });
 
-      // No LLM guess, no fixed trust score, no agent claims: an unknown
-      // identifier is not_found and a known one is a registry record only.
+      // Check if it's a certificate number
       const cert = await getCertificateByNumber(String(lookupId));
-      const decision = registryLookupDecision(cert ?? null);
+      const product =
+        (cert?.productId ? await getProductById(String(cert.productId)) : undefined) ??
+        (await getProductBySerial(String(lookupId))) ??
+        (await getProductById(String(lookupId)));
       res.json({
-        verified: decision.valid,
-        type: cert ? "certificate" : "not_found",
+        type: "product_passport",
+        ...passportVerdict(product, cert),
         ...(cert ? { certificate: cert } : {}),
-        trustScore: null,
-        ...decision,
       });
     } catch (err: unknown) {
       console.error("[Internal API] verify error:", getErrorMessage(err));
@@ -92,12 +94,14 @@ export function createInternalRouter(): Router {
       const cert = await getCertificateByNumber(number);
       if (!cert) return res.status(404).json({ error: "Certificate not found", valid: false });
 
+      const product = cert.productId ? await getProductById(String(cert.productId)) : undefined;
+      const verdict = passportVerdict(product, cert);
       res.json({
-        valid: cert.status === "active",
+        ...verdict,
+        valid: verdict.verified,
         certificate: cert,
         issuedAt: cert.issuedAt,
         expiresAt: cert.expiresAt,
-        blockchainVerified: !!cert.blockchainTxHash,
       });
     } catch (err: unknown) {
       console.error("[Internal API] certificates/verify error:", getErrorMessage(err));
@@ -112,36 +116,17 @@ export function createInternalRouter(): Router {
       const strain = strainName || strainId;
       if (!strain) return res.status(400).json({ error: "strainName or strainId required" });
 
-      const thc = typeof thcPercent === "number" ? thcPercent : null;
-      const cbd = typeof cbdPercent === "number" ? cbdPercent : null;
-      let rarityScore: number | null = null;
-      let truthLayer: unknown = null;
-      if (thc !== null && cbd !== null) {
-        const metadata = {
-          name: strain,
-          type: "HYBRID" as const,
-          genetics: ["Unknown"],
-          thcContent: thc,
-          cbdContent: cbd,
-          harvestDate: new Date().toISOString(),
-        };
-        const profile = { thc, thca: thc * 1.12, cbd, cbda: cbd * 1.2, total: thc + cbd + 5 };
-        rarityScore = calculateStrainRarity(metadata, profile);
-        truthLayer = formatTruthLayerMetadata(metadata, profile);
-      }
+      const product = await getProductByName(String(strain));
 
       res.json({
-        verified: false,
-        decision: "indeterminate",
-        decision_contract: "AuthiChain Verification Decision v1",
-        reasons: ["no_lab_evidence", "no_signed_attestation_presented"],
+        ...passportVerdict(product, null),
         strainName: strain,
-        batchId: batchId || null,
-        dispensaryId: dispensaryId || null,
-        complianceStatus: "not_assessed",
-        rarityScore,
-        rarity_basis: rarityScore === null ? "not_computed" : "caller_supplied_panel",
-        truthLayer,
+        ...cannabisCallerNumbers({
+          thcPercent,
+          cbdPercent,
+          batchId,
+          dispensaryId,
+        }),
       });
     } catch (err: unknown) {
       console.error("[Internal API] cannabis/verify error:", getErrorMessage(err));
@@ -150,28 +135,19 @@ export function createInternalRouter(): Router {
   });
 
   // ─── POST /api/internal/trust-score ────────────────────────────────────────
+  // Caller flags are recorded. verified follows a stored passport when a product id is present.
   router.post("/trust-score", async (req: Request, res: Response) => {
     try {
-      const { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk } = req.body;
-
-      const score = computeTrustScore({
-        qrDecodePass: qrDecodePass === true,
-        blockchainCertExists: blockchainCertExists === true,
-        communityVerified: visualMatch ? Math.round(visualMatch / 20) : 0,
-        communityFlagged: 0,
-        openArtRegistered: nfcMatch === true,
-      });
-
-      const { verdict: _heuristicVerdict, ...advisory } = score;
-      res.json({
-        ...advisory,
-        advisory: true,
-        verified: false,
-        decision: "indeterminate",
-        decision_contract: "AuthiChain Verification Decision v1",
-        reasons: ["caller_asserted_signals_only"],
-        inputs: { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk },
-      });
+      const body = req.body ?? {};
+      const callerSignals = callerSignalReport(body);
+      const rawId = body.productId ?? body.identifier;
+      const id = typeof rawId === "string" ? rawId.trim() : "";
+      if (!id) {
+        return res.json(trustScoreReply(null, callerSignals));
+      }
+      const product = (await getProductById(id)) ?? (await getProductBySerial(id));
+      const cert = product ? await getCertificateForProduct(String(product.id)) : undefined;
+      res.json(trustScoreReply(passportVerdict(product, cert ?? null), callerSignals));
     } catch (err: unknown) {
       console.error("[Internal API] trust-score error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
@@ -185,17 +161,7 @@ export function createInternalRouter(): Router {
       const db = await getDb();
       if (!db) return res.status(503).json({ error: "Database unavailable" });
 
-      // Return aggregated metrics
-      res.json({
-        period,
-        // Nothing is metered yet. Nulls, not zeros: a zero reads as a
-        // measurement. The old activeAgents: 5 was a constant, not a count.
-        metered: false,
-        verifications: null,
-        qrCodesGenerated: null,
-        certificatesIssued: null,
-        message: "Usage metering is not active, so there are no counts to report.",
-      });
+      res.json(analyticsStub(period));
     } catch (err: unknown) {
       console.error("[Internal API] analytics error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
@@ -205,24 +171,45 @@ export function createInternalRouter(): Router {
   // ─── POST /api/internal/products/register ──────────────────────────────────
   router.post("/products/register", async (req: Request, res: Response) => {
     try {
-      const { name, brand, category, serialNumber, description, userId } = req.body;
+      const { name, brand, manufacturer, category, serialNumber, description, userId } = req.body;
       if (!name) return res.status(400).json({ error: "name required" });
       const parsedUserId = parseInt(userId, 10);
       if (!userId || !Number.isFinite(parsedUserId) || parsedUserId <= 0) {
         return res.status(400).json({ error: "valid userId required" });
       }
 
+      const { productPassportMetadata, digitalIdentityOf } = await import(
+        "../protocol/passport.mjs"
+      );
+      let metadata: Record<string, unknown> | null = null;
+      if (req.body?.passport != null || req.body?.metadata?.passport != null) {
+        try {
+          metadata = productPassportMetadata(req.body);
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : "passport_invalid";
+          return res.status(400).json({ error: message });
+        }
+      }
+
+      const resolvedBrand = brand || manufacturer;
       const product = await createProduct({
         name,
-        brand,
+        brand: resolvedBrand,
+        manufacturer: manufacturer || brand,
         category,
         serialNumber,
         description,
         userId: parsedUserId,
         status: "active",
+        ...(metadata ? { metadata } : {}),
       });
+      const digitalIdentity = digitalIdentityOf(metadata);
 
-      res.json({ success: true, product });
+      res.json({
+        success: true,
+        product,
+        ...(digitalIdentity ? { digitalIdentity } : {}),
+      });
     } catch (err: unknown) {
       console.error("[Internal API] products/register error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });

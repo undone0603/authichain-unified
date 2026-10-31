@@ -37,7 +37,10 @@
 import type { Context } from "hono";
 import { eq, sql } from "drizzle-orm";
 import { publishedRecord } from "../workers/authichain-verify-worker/src/published-record.mjs";
-import { verifySubmitted } from "../workers/authichain-verify-worker/src/protocol-verify.mjs";
+import {
+  readStoredPassport,
+  verifySubmitted,
+} from "../workers/authichain-verify-worker/src/protocol-verify.mjs";
 import { createHyperdriveRequestDb, getHyperdriveDb } from "../server/db";
 import {
   getCertificateByNumber,
@@ -259,10 +262,36 @@ function certStatusLabel(cert: { status?: string | null } | null | undefined): {
   verified: boolean;
 } {
   if (!cert) return { label: "Pending Verification", verified: false };
-  if (cert.status === "active") return { label: "", verified: true };
+  if (cert.status === "active") return { label: "", verified: false };
   if (cert.status === "revoked")
     return { label: "Certification Revoked", verified: false };
   return { label: "Pending Verification", verified: false };
+}
+
+function passportScanParagraph(
+  product: { metadata?: unknown } | null | undefined,
+  cert: { metadata?: unknown } | null | undefined
+): string {
+  const stored =
+    readStoredPassport(cert?.metadata) ?? readStoredPassport(product?.metadata);
+  if (!stored) return "";
+  const scan = verifySubmitted(stored.record, stored.anchor);
+  if (!scan || typeof scan.genuine !== "boolean") return "";
+  const identity =
+    typeof scan.digitalIdentity === "string" ? scan.digitalIdentity : "";
+  const who = identity ? " for " + escapeHtml(identity) : "";
+  if (scan.genuine) {
+    return (
+      '<p data-genuine="true">Genuine product passport' +
+      who +
+      ". This is the passport for that digital identity.</p>\n"
+    );
+  }
+  return (
+    '<p data-genuine="false">Stored passport' +
+    who +
+    " did not verify as genuine.</p>\n"
+  );
 }
 
 async function renderProductPassport(c: Context): Promise<Response> {
@@ -321,6 +350,7 @@ async function renderProductPassport(c: Context): Promise<Response> {
 
     const { product, cert } = result;
     const { label, verified } = certStatusLabel(cert);
+    const passportLine = passportScanParagraph(product, cert);
     const title = product.name + " -- Product Passport | AuthiChain";
     const description =
       (label ? label + ": " : "") +
@@ -333,6 +363,7 @@ async function renderProductPassport(c: Context): Promise<Response> {
       (label
         ? '<p data-verified="' + verified + '">' + escapeHtml(label) + "</p>\n"
         : "") +
+      passportLine +
       "<h1>" +
       escapeHtml(product.name) +
       "</h1>\n" +
@@ -715,6 +746,7 @@ async function renderVerify(c: Context): Promise<Response> {
     // The date comes from the row itself (issued_at, else created_at); if
     // neither parses, the date clause is left out rather than guessed.
     const issuedLine = onRecord ? certificateIssuedLine(cert) : "";
+    const passportLine = passportScanParagraph(product, cert);
     const title = product.name + " -- Verification | AuthiChain";
     const description = revoked
       ? product.name +
@@ -737,6 +769,7 @@ async function renderVerify(c: Context): Promise<Response> {
       '">' +
       escapeHtml(status) +
       "</p>\n" +
+      passportLine +
       (issuedLine
         ? '<p data-certificate-issued="true">' +
           escapeHtml(issuedLine) +
