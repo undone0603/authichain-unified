@@ -64,7 +64,17 @@ jobs:
             2>&1 | tee /tmp/er-versions-upload.log
           vid=$(node ../scripts/ci/parse-wrangler-version-id.mjs /tmp/er-versions-upload.log)
           echo "uploaded authichain-edge-router version $vid"
-          node ../scripts/ci/promote-worker-version.mjs authichain-edge-router "$vid"
+          # Record the checkout SHA and promoted version for later source/runtime audit.
+          # This is provenance metadata, not proof of successful paid fulfillment.
+          promotion=$(node ../scripts/ci/promote-worker-version.mjs authichain-edge-router "$vid")
+          printf '%s\n' "$promotion"
+          {
+            echo '### authichain-edge-router deployment provenance'
+            echo "- Source commit: `${GITHUB_SHA}`"
+            echo "- GitHub run: `${GITHUB_RUN_ID}` (attempt `${GITHUB_RUN_ATTEMPT}`)"
+            echo "- Worker version: `${vid}`"
+            echo "- Promotion: `${promotion}`"
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Smoke JWKS current + retired kids
         run: |
           set -euo pipefail
