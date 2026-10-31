@@ -33,6 +33,21 @@ test("rendered docs HTML passes the claim guard", () => {
   assert.ok(architecture.includes("Not legal advice"));
 });
 
+test("dpp architecture separates a free seal answer from the unpaid 402", () => {
+  const html = renderDocsPage("/docs/dpp-architecture");
+  assert.match(html, /An empty JSON body is the unpaid HTTP 402/);
+  assert.match(html, /daily free allowance/);
+  assert.match(html, /free: true/);
+  assert.match(html, /verified: false/);
+  assert.match(html, /settlement: null/);
+  assert.match(html, /not a paid receipt/);
+  assert.match(html, /non-UUID seal id is HTTP 400 before payment/);
+  assert.equal(html.includes("Unpaid POST /api/x402 returns HTTP 402"), false);
+  assert.equal(html.includes('{"sealId":"demo"}'), false);
+  assert.equal(html.includes("polygonscan.com"), false);
+  assert.equal(html.includes("polygon-anchor-1"), false);
+});
+
 test("an unknown docs slug is not a rendered article", () => {
   const html = renderDocsPage("/docs/attestations");
   assert.match(html, /Unknown docs page/);
