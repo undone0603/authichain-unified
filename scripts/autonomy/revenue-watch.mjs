@@ -17,7 +17,7 @@ export function isFounder(email, founders) {
   return at >= 0 && founders.has(e.slice(at));
 }
 
-const OK_STATUSES = new Set(["success", "processed", "handled", "duplicate"]);
+// A duplicate-only receipt is not proof that the original event succeeded.\nconst OK_STATUSES = new Set(["success", "processed", "handled"]);
 
 /**
  * Pure. sessions: Stripe checkout sessions. events: rows from stripe_events
