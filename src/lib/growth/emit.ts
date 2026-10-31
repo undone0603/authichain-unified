@@ -19,7 +19,12 @@
  * These loops are anonymous, self-serve and inbound.
  */
 import { isFounderEmail } from "../billing/live-catalog";
-import { GROWTH_LOOPS, type GrowthEvent, type GrowthLoop, type GrowthLoopId } from "./loops";
+import {
+  GROWTH_LOOPS,
+  type GrowthEvent,
+  type GrowthLoop,
+  type GrowthLoopId,
+} from "./loops";
 
 export type GrowthSku = GrowthLoop["sku"];
 
@@ -54,14 +59,23 @@ export function isGrowthEvent(value: string): value is GrowthEvent {
  * Some events (checkout_abandoned, checkout_email_captured) are shared by more
  * than one loop, so the sku is what disambiguates them.
  */
-export function loopForEvent(event: GrowthEvent, sku: GrowthSku): GrowthLoopId | null {
+export function loopForEvent(
+  event: GrowthEvent,
+  sku: GrowthSku
+): GrowthLoopId | null {
   const candidates = EVENT_TO_LOOPS.get(event);
   if (!candidates || candidates.length === 0) return null;
-  const match = GROWTH_LOOPS.find(l => l.sku === sku && candidates.includes(l.id));
+  const match = GROWTH_LOOPS.find(
+    l => l.sku === sku && candidates.includes(l.id)
+  );
   return match ? match.id : null;
 }
 
-const SKUS: readonly GrowthSku[] = ["starter", "dpp_readiness", "strainchain_passport"];
+const SKUS: readonly GrowthSku[] = [
+  "starter",
+  "dpp_readiness",
+  "strainchain_passport",
+];
 
 /** Narrow a catalogue plan id to a sku that actually has a growth loop. */
 export function isGrowthSku(id: string): id is GrowthSku {
@@ -96,7 +110,15 @@ export function isDeclaredFor(event: GrowthEvent, sku: GrowthSku): boolean {
 export async function hashEmail(email: string): Promise<string> {
   const normalized = email.toLowerCase().trim();
   const bytes = new TextEncoder().encode(normalized);
-  const cryptoApi = (globalThis as { crypto: Crypto }).crypto;
+  const cryptoApi = (
+    globalThis as unknown as {
+      crypto: {
+        subtle: {
+          digest(algorithm: string, data: BufferSource): Promise<ArrayBuffer>;
+        };
+      };
+    }
+  ).crypto;
   const digest = await cryptoApi.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest))
     .map(b => b.toString(16).padStart(2, "0"))
@@ -122,7 +144,7 @@ export async function buildGrowthEvent(input: {
   const loop = loopForEvent(input.event, input.sku);
   if (!loop) {
     throw new GrowthEventError(
-      `Event ${input.event} is not declared for sku ${input.sku} in GROWTH_LOOPS`,
+      `Event ${input.event} is not declared for sku ${input.sku} in GROWTH_LOOPS`
     );
   }
 
