@@ -37,6 +37,7 @@ import {
   withModeQuery,
 } from "./agentz-mode";
 import { cloudflareAccessHeaders } from "./access-headers";
+import { checkAgentzDependency } from "./agentz-dependency-health";
 import { inboundDppOffer } from "./dpp-offer";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -120,6 +121,13 @@ app.get("/health", c => {
     agentz_api: c.env.AGENTZ_API_URL ? "configured" : "not_set",
     version: "1.1.0",
   });
+});
+
+// Public dependency status only. The stored Access credentials never leave this Worker.
+app.get("/health/agentz", async c => {
+  const result = await checkAgentzDependency(c.env);
+  c.header("Cache-Control", "no-store");
+  return c.json(result, result.state === "healthy" ? 200 : 503);
 });
 
 app.get("/gateway/status", c => {
