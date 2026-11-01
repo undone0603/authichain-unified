@@ -13,6 +13,7 @@ import {
   hasWebhookEventProcessed
 } from "../db.js";
 import { calculateLeadScore } from "../sales/scoring-service.js";
+import { assessInstantlyReply } from "./instantly-reply-evidence.js";
 
 export async function handleInstantlyWebhook(payload: any) {
   const { event: eventType, email, webhook_id: webhookId } = payload;
@@ -37,21 +38,20 @@ export async function handleInstantlyWebhook(payload: any) {
     return { success: false, error: "Lead not found" };
   }
 
-  // 2. Update lead status flags
+  // 2. Update lead status flags. A vendor reply event is not human proof.
   const updates: any = {};
+  const replyReview = eventType === "email_replied" ? assessInstantlyReply(payload) : null;
   
   if (eventType === "email_opened") {
     updates.emailOpened = true;
   } else if (eventType === "email_clicked") {
     updates.emailClicked = true;
-  } else if (eventType === "email_replied") {
-    updates.emailReplied = true;
-    
-    // Notify sales team of a reply
+  } else if (eventType === "email_replied" && replyReview?.status === "review") {
+    // Notify for review, but never mark emailReplied or advance a warm lead.
     await createSystemNotification(
       1, // Admin
-      "New Prospect Reply",
-      `Lead ${email} has replied to an outreach sequence. Check Gmail immediately.`,
+      "Prospect Reply Requires Verification",
+      `A candidate reply for ${email} needs authenticated human/opt-in evidence before qualification.`,
       "system",
       "/email-campaigns"
     );
@@ -71,9 +71,11 @@ export async function handleInstantlyWebhook(payload: any) {
   });
 
   // 4. Recalculate lead score and potentially trigger auto-contract
-  const newScore = await calculateLeadScore(lead.id);
+  const newScore = Object.keys(updates).length > 0
+    ? await calculateLeadScore(lead.id)
+    : null;
   
   console.log(`[instantly-webhook] Lead ${email} score updated to ${newScore}`);
 
-  return { success: true, score: newScore };
+  return { success: true, score: newScore, replyReview };
 }
