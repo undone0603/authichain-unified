@@ -67,3 +67,14 @@ test("never exposes the upstream error response or credentials in results", asyn
   assert.equal(JSON.stringify(out).includes("sensitive"),false);
   assert.equal(JSON.stringify(out).includes("service-secret"),false);
 });
+\ntest("protected HTTP health route rejects an unauthenticated caller before probing", async () => {
+  const { default: app } = await import("./index.ts");
+  const response = await app.request("/health/agentz",{},{
+    ...env,
+    OPENCLAW_API_KEY:"bridge-secret",
+    OPENCLAW_API_VERSION:"v1",
+    AGENTZ_TIMEOUT_MS:"4000",
+  } as any);
+  assert.equal(response.status,401);
+  assert.deepEqual(await response.json(),{error:"unauthorized"});
+});
