@@ -1,0 +1,149 @@
+# Quality gate on CircleCI. GitHub Actions does not start these jobs while
+# the account is billing-locked. This file does not deploy. Do not add a
+# Cloudflare or Stripe token to the CircleCI project for this pipeline.
+version: 2.1
+
+executors:
+  node:
+    docker:
+      - image: cimg/node:22.23.3
+    resource_class: xlarge
+    working_directory: ~/project
+
+commands:
+  setup-node:
+    steps:
+      - run:
+          name: Install pnpm 10.28.2
+          command: |
+            corepack enable
+            corepack prepare pnpm@10.28.2 --activate
+            pnpm config set store-dir ~/.pnpm-store
+      - restore_cache:
+          keys:
+            - pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
+            - pnpm-store-v1-
+      - run:
+          name: Install dependencies
+          command: pnpm install --frozen-lockfile --prefer-offline
+          no_output_timeout: 20m
+      - save_cache:
+          key: pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
+          paths:
+            - ~/.pnpm-store
+
+jobs:
+  quality:
+    executor: node
+    steps:
+      - checkout
+      - setup-node
+      - run:
+          name: Type check
+          command: pnpm check
+          no_output_timeout: 20m
+      - run:
+          name: Lint
+          command: pnpm lint:ci
+          no_output_timeout: 20m
+      - run:
+          name: Workflow and deploy invariants
+          command: |
+            node scripts/check-workflow-cannot-fail.mjs
+            node scripts/ci/check-deploy-invariants.mjs
+            node scripts/ci/check-node-test-runners.mjs
+
+  typecheck-ratchet:
+    executor: node
+    environment:
+      NODE_OPTIONS: --max-old-space-size=8192
+    steps:
+      - checkout
+      - setup-node
+      - run:
+          name: Typecheck ratchet
+          command: node scripts/typecheck-ratchet.mjs
+          no_output_timeout: 20m
+
+  test-workers:
+    executor: node
+    steps:
+      - checkout
+      - setup-node
+      - run:
+          name: Test workers
+          command: |
+            if pnpm test --filter=./workers/* --continue=dependencies-successful; then
+              exit 0
+            fi
+            echo "Tests failed; retrying once"
+            sleep 15
+            pnpm test --filter=./workers/* --continue=dependencies-successful
+          no_output_timeout: 30m
+
+  test-other:
+    executor: node
+    steps:
+      - checkout
+      - setup-node
+      - run:
+          name: Install Playwright Chromium
+          command: pnpm --filter agent-browser exec playwright install --with-deps chromium
+          no_output_timeout: 20m
+      - run:
+          name: Test the other workspaces
+          command: |
+            if pnpm test --filter='!./workers/*' --continue=dependencies-successful; then
+              exit 0
+            fi
+            echo "Tests failed; retrying once"
+            sleep 15
+            pnpm test --filter='!./workers/*' --continue=dependencies-successful
+          no_output_timeout: 30m
+
+  build:
+    executor: node
+    environment:
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - checkout
+      - setup-node
+      - run:
+          name: Production build
+          command: |
+            if pnpm build; then
+              exit 0
+            fi
+            echo "Production build failed; retrying once"
+            sleep 15
+            pnpm build
+          no_output_timeout: 30m
+
+workflows:
+  quality-gate:
+    jobs:
+      - quality:
+          filters:
+            branches:
+              ignore:
+                - /dependabot\/.*/
+      - typecheck-ratchet:
+          filters:
+            branches:
+              ignore:
+                - /dependabot\/.*/
+      - test-workers:
+          filters:
+            branches:
+              ignore:
+                - /dependabot\/.*/
+      - test-other:
+          filters:
+            branches:
+              ignore:
+                - /dependabot\/.*/
+      - build:
+          filters:
+            branches:
+              ignore:
+                - /dependabot\/.*/

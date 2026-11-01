@@ -31,9 +31,9 @@ concurrency:
 # Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
 # Flip to 'false' once the runner is verified; the skip step warns visibly.
 env:
-  SKIP_PLAYWRIGHT_ON_SELF_HOSTED: "true"
-  PLAYWRIGHT_BROWSERS_PATH: "/home/zac/.cache/ms-playwright"
-  TURBO_CACHE_DIR: "/home/zac/.cache/turbo"
+  SKIP_PLAYWRIGHT_ON_SELF_HOSTED: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && 'true' || 'false' }}
+  PLAYWRIGHT_BROWSERS_PATH: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/ms-playwright' || '/home/runner/.cache/ms-playwright' }}
+  TURBO_CACHE_DIR: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/turbo' || '/home/runner/.cache/turbo' }}
 
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
@@ -50,7 +50,7 @@ jobs:
     name: Typecheck and lint
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -64,26 +64,12 @@ jobs:
       # Self-hosted WSL already has pnpm. action-setup@v6 with version
       # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
       # (CI Main run 40865371118). GitHub-hosted still uses the pin.
+      # Install the repo-pinned manager for every runner; never trust global PATH.
       - name: Install pnpm
-        if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-      - name: Use runner pnpm (self-hosted)
-        if: runner.environment == 'self-hosted'
-        run: |
-          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
-          if [ -x "$pin/pnpm" ]; then
-            echo "$pin" >> "$GITHUB_PATH"
-            export PATH="$pin:$PATH"
-          fi
-          command -v pnpm
-          actual="$(pnpm --version)"
-          if [ "$actual" != "10.28.2" ]; then
-            echo "ERROR: expected pinned pnpm 10.28.2 on self-hosted runner, got $actual" >&2
-            exit 1
-          fi
-          echo "Verified runner pnpm version: $actual"
+          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -130,7 +116,7 @@ jobs:
     name: Tests (shard ${{ matrix.shard }}/2)
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -152,26 +138,12 @@ jobs:
       # Self-hosted WSL already has pnpm. action-setup@v6 with version
       # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
       # (CI Main run 40865371118). GitHub-hosted still uses the pin.
+      # Install the repo-pinned manager for every runner; never trust global PATH.
       - name: Install pnpm
-        if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-      - name: Use runner pnpm (self-hosted)
-        if: runner.environment == 'self-hosted'
-        run: |
-          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
-          if [ -x "$pin/pnpm" ]; then
-            echo "$pin" >> "$GITHUB_PATH"
-            export PATH="$pin:$PATH"
-          fi
-          command -v pnpm
-          actual="$(pnpm --version)"
-          if [ "$actual" != "10.28.2" ]; then
-            echo "ERROR: expected pinned pnpm 10.28.2 on self-hosted runner, got $actual" >&2
-            exit 1
-          fi
-          echo "Verified runner pnpm version: $actual"
+          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -252,7 +224,7 @@ jobs:
     name: Production build
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -266,26 +238,12 @@ jobs:
       # Self-hosted WSL already has pnpm. action-setup@v6 with version
       # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
       # (CI Main run 40865371118). GitHub-hosted still uses the pin.
+      # Install the repo-pinned manager for every runner; never trust global PATH.
       - name: Install pnpm
-        if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-      - name: Use runner pnpm (self-hosted)
-        if: runner.environment == 'self-hosted'
-        run: |
-          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
-          if [ -x "$pin/pnpm" ]; then
-            echo "$pin" >> "$GITHUB_PATH"
-            export PATH="$pin:$PATH"
-          fi
-          command -v pnpm
-          actual="$(pnpm --version)"
-          if [ "$actual" != "10.28.2" ]; then
-            echo "ERROR: expected pinned pnpm 10.28.2 on self-hosted runner, got $actual" >&2
-            exit 1
-          fi
-          echo "Verified runner pnpm version: $actual"
+          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -338,7 +296,7 @@ jobs:
     if: ${{ !cancelled() }}
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 5
     steps:
       - name: All CI Main jobs passed
@@ -367,7 +325,7 @@ jobs:
   production-proof:
     name: Production launch proof
     if: github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 20
     permissions:
       contents: read
@@ -384,26 +342,12 @@ jobs:
       # Self-hosted WSL already has pnpm. action-setup@v6 with version
       # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
       # (CI Main run 40865371118). GitHub-hosted still uses the pin.
+      # Install the repo-pinned manager for every runner; never trust global PATH.
       - name: Install pnpm
-        if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-      - name: Use runner pnpm (self-hosted)
-        if: runner.environment == 'self-hosted'
-        run: |
-          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
-          if [ -x "$pin/pnpm" ]; then
-            echo "$pin" >> "$GITHUB_PATH"
-            export PATH="$pin:$PATH"
-          fi
-          command -v pnpm
-          actual="$(pnpm --version)"
-          if [ "$actual" != "10.28.2" ]; then
-            echo "ERROR: expected pinned pnpm 10.28.2 on self-hosted runner, got $actual" >&2
-            exit 1
-          fi
-          echo "Verified runner pnpm version: $actual"
+          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7

@@ -9,7 +9,7 @@ Footer: Generated SAMPLE-ONLY Ed25519 · private key never published · ADM-256 
 
 This did:key must never appear in production JWKS/issuer docs. <!-- pragma: allowlist secret -->
 
-It is a SAMPLE-ONLY issuer for dogfood/demo labels. It is not the AuthiChain production issuer (`docs/launch/PRODUCTION_ISSUER.md`, kid `T3AL7c4w…`). Do not add it to live JWKS, `/protocol/issuer.json`, Workers secrets, or attestation keys. <!-- pragma: allowlist secret -->
+It is a SAMPLE-ONLY issuer for dogfood/demo labels. It is not the AuthiChain production issuer (`docs/launch/PRODUCTION_ISSUER.md`, kid `jWTo5QsZ…`). Do not add it to live JWKS, `/protocol/issuer.json`, Workers secrets, or attestation keys. <!-- pragma: allowlist secret -->
 
 ## Files
 

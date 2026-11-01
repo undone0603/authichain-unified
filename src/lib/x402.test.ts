@@ -828,8 +828,19 @@ describe("x402AgentCard", () => {
     );
     expect(card.provider.url).toBe("https://authichain.com");
     expect(card.documentationUrl).toBe("https://authichain.com/x402");
-    expect(card.url).toBe("https://authichain.com/mcp");
+    expect(card.url).toBe("https://authichain.com/api/a2a");
+    expect(card.supportedInterfaces[0]).toEqual({
+      url: "https://authichain.com/api/a2a",
+      protocolBinding: "JSONRPC",
+      protocolVersion: "1.0",
+    });
     expect(card.skills.length).toBeGreaterThan(0);
+    const launch = card.skills.find(s => s.id === "qron-launch-subscription");
+    expect(launch?.examples).toEqual([
+      "https://authichain.com/checkout/qron_launch",
+      "https://authichain.com/checkout/qron_launch_annual",
+    ]);
+    expect(launch?.description).toContain("does not charge");
     const skill = card.skills.find(s => s.id === "paid-evidence-check");
     expect(skill?.tags).toEqual(
       expect.arrayContaining(["verification", "authenticity", "evidence"])

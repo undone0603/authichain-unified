@@ -296,14 +296,25 @@ async function renderProductPassport(c: Context): Promise<Response> {
       return htmlResponse(c, renderSeoHubHtml(seoPage, pathname), 200);
     }
 
-    // Same per-request pg.Client pattern as /verify: connect + every query
-    // share one 2.5s deadline, and the client is closed in finally.
-    const withLookupTimeout = makeVerifyDeadline();
-    dbHandle = createHyperdriveRequestDb(c.env as any);
-    await withLookupTimeout(dbHandle.connect());
-    const result = await withLookupTimeout(
-      findPassportBySerial(dbHandle.db, serial)
-    );
+    const db = getHyperdriveDb(c.env as any);
+    const result = await new Promise<
+      Awaited<ReturnType<typeof findPassportBySerial>>
+    >((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("passport-lookup-timeout")),
+        4000
+      );
+      findPassportBySerial(db, serial).then(
+        value => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        err => {
+          clearTimeout(timer);
+          reject(err);
+        }
+      );
+    });
 
     if (!result) {
       return htmlResponse(
@@ -413,13 +424,13 @@ function verifyPromptHtml(): string {
   return htmlDocument({
     title: "Verify a Product | AuthiChain",
     description:
-      "Look up an AuthiChain record. On-chain verification is in development.",
+      "Look up an AuthiChain certificate. A product certificate is not an on-chain check. The published demonstration record is linked on this page.",
     canonicalPath: "/verify",
     extraHead: '<link rel="manifest" href="/manifest.webmanifest">\n',
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      "<p>Enter a registry product ID to look up its record. On-chain verification is in development.</p>\n" +
+      "<p>Enter a registry product ID to look up its certificate. That certificate is not an on-chain check.</p>\n" +
       '<p>The open verifier checks the published demonstration record <a href="/verify?id=polygon-anchor-1">polygon-anchor-1</a>. The same check as JSON is <a href="/api/verify?id=polygon-anchor-1">/api/verify</a>.</p>\n' +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
@@ -615,6 +626,30 @@ function verifyLiveSealHtml(): string {
   });
 }
 
+/**
+ * Reserved path. Not a certificate number. The Next page at
+ * src/app/verify/manufacturer/page.tsx never runs on this host because
+ * /verify/* is owned here. The history reader is a separate route and may
+ * be absent; this page does not invent a role when it is.
+ */
+function verifyManufacturerHistoryHtml(): string {
+  return htmlDocument({
+    title: "Manufacturer role history | AuthiChain",
+    description:
+      "This path is not a certificate number. It does not look up a product and it does not grant a manufacturer role.",
+    canonicalPath: "/verify/manufacturer",
+    extraHead: '<meta name="robots" content="noindex">\n',
+    bodyHtml:
+      "<main>\n" +
+      "<h1>Manufacturer role history</h1>\n" +
+      "<p>This path is not a certificate number. Nothing was looked up in the product registry.</p>\n" +
+      "<p>RoleGranted and RoleRevoked events for one address are read from <code>GET /api/manufacturer-status/{address}/history</code>. This page does not call that reader and does not invent a role when the reader is absent.</p>\n" +
+      "<p>An empty history is not proof that an address holds no role. A role event is not proof that a product is genuine. This page does not sell a role.</p>\n" +
+      '<p><a href="/verify">Look up a certificate</a></p>\n' +
+      "</main>",
+  });
+}
+
 async function renderVerify(c: Context): Promise<Response> {
   const url = new URL(c.req.url);
   const idParam = url.searchParams.get("id");
@@ -636,6 +671,10 @@ async function renderVerify(c: Context): Promise<Response> {
 
     if (!idParam && pathSegment.toLowerCase() === "live") {
       return htmlResponse(c, verifyLiveSealHtml(), 200);
+    }
+
+    if (!idParam && pathSegment.toLowerCase() === "manufacturer") {
+      return htmlResponse(c, verifyManufacturerHistoryHtml(), 200);
     }
 
     if (!identifier) {
@@ -1494,7 +1533,7 @@ async function renderOnboard(c: Context): Promise<Response> {
 // deterministic reference object. That page must exist. Unknown ids 404.
 
 const LAUNCH_PROOF_PRODUCT_ID = "00000000-0000-4000-8000-000000000001";
-const LAUNCH_PROOF_KID = "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ";
+const LAUNCH_PROOF_KID = "jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM";
 
 function launchProofStoryHtml(): string {
   return htmlDocument({

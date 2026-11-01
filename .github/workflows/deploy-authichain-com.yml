@@ -8,11 +8,20 @@ on:
       - "src/lib/generation-seal.ts"
       - "src/lib/plans.ts"
       - "src/lib/checkout-gate.ts"
+      - "src/lib/agent-verify.ts"
+      - "src/lib/paid-seal-verify.ts"
       - "content/microsites/**"
       - "scripts/sync-microsite-packs.mjs"
       - ".github/workflows/deploy-authichain-com.yml"
+      - "scripts/ci/parse-wrangler-version-id.mjs"
+      - "scripts/ci/promote-worker-version.mjs"
 permissions:
   contents: read
+concurrency:
+  # Two installs on this 4 GB WSL runner get SIGKILL (exit 137).
+  # 41311322837 died 36s into pnpm while another deploy was also installing.
+  group: deploy-authichain-com
+  cancel-in-progress: false
 jobs:
   deploy:
     # Publish runner only: authichain-wsl. CI stays on authichain-ops (laptop).
@@ -55,7 +64,7 @@ jobs:
           # bufferutil/utf-8-validate are optional ws speedups; ws falls back to JS.
           # Skip their native builds here instead of installing toolchains on the runner.
           npm_config_build_from_source: "false"
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
       - name: Embed microsite HTML
         run: node scripts/sync-microsite-packs.mjs
       - name: Apply D1 migrations (authichain-db, email_optins)
@@ -71,19 +80,19 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          for i in 1 2 3; do
-            echo "=== wrangler deploy attempt $i/3 ==="
-            if npx wrangler deploy --minify --keep-vars --config wrangler.toml; then
-              echo "deploy succeeded on attempt $i"
-              exit 0
-            fi
-            if [ "$i" -lt 3 ]; then
-              sleep $((15 * i))
-              echo "retrying after network failure..."
-            fi
-          done
-          echo "::error::wrangler deploy failed after 3 attempts"
-          exit 1
+          # wrangler deploy on 40895854176 uploaded 1707 KiB then fetch-failed
+          # ~6.5 min later while listing bindings. versions upload --keep-vars
+          # stores the bundle; Cloudflare API POST deployments promotes it
+          # (same path as edge-router 1989 / authichain-com 1ee6d701).
+          # Do not rotate AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64.
+          # wrangler 4.153.0 hung then cancelled at 30m (41242803226).
+          # 4.83.0 rejects --keep-vars on versions upload (41248692011).
+          # Pin 4.149.0: has --keep-vars, before 4.150 source-map uploads.
+          npx --yes wrangler@4.149.0 versions upload --minify --keep-vars --config wrangler.toml \
+            2>&1 | tee /tmp/ac-versions-upload.log
+          vid=$(node ../../scripts/ci/parse-wrangler-version-id.mjs /tmp/ac-versions-upload.log)
+          echo "uploaded authichain-com version $vid"
+          node ../../scripts/ci/promote-worker-version.mjs authichain-com "$vid"
       - name: Bind STRIPE_SECRET_KEY from GitHub secrets
         working-directory: workers/authichain-com
         env:
@@ -119,7 +128,12 @@ jobs:
           printf '%s' "$PAY_TO" | npx wrangler secret put X402_PAY_TO --name authichain-com
           printf '%s' "$FACILITATOR" | npx wrangler secret put X402_FACILITATOR_URL --name authichain-com
           printf '%s' "$USDC_ASSET" | npx wrangler secret put X402_USDC_ASSET --name authichain-com
-          printf '%s' "$PAY_TO" | npx wrangler secret put X402_PAY_TO --name authichain-edge-router
-          printf '%s' "$FACILITATOR" | npx wrangler secret put X402_FACILITATOR_URL --name authichain-edge-router
-          printf '%s' "$USDC_ASSET" | npx wrangler secret put X402_USDC_ASSET --name authichain-edge-router
-          echo "bound X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET on authichain-com and authichain-edge-router (values not logged)"
+          echo "bound X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET on authichain-com (values not logged)"
+          # Do not secret-put authichain-edge-router here: wrangler secret put
+          # deploys a new version and would move live traffic off 1989.
+      - name: Smoke farm checkout
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://authichain.com/checkout/strainchain_farm)
+          echo "farm checkout HTTP $code"
+          test "$code" = "200"

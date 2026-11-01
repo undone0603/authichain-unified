@@ -19,6 +19,10 @@ on:
         required: false
         default: true
         type: boolean
+      seal_id:
+        description: "Real registered seal UUID (required even for dry-run; never a test placeholder)"
+        required: true
+        type: string
       endpoint:
         description: "x402 POST URL"
         required: false
@@ -64,6 +68,7 @@ jobs:
         env:
           DRY_RUN: ${{ inputs.dry_run }}
           X402_ENDPOINT: ${{ inputs.endpoint }}
+          X402_SEAL_ID: ${{ inputs.seal_id }}
           X402_PAY_TO: "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2" # pragma: allowlist secret
           POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
           WALLET_PRIVATE_KEY: ${{ secrets.WALLET_PRIVATE_KEY }}

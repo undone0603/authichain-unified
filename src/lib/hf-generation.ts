@@ -93,7 +93,8 @@ export async function generateLivingQR({
 
     // 3. Vision Check (Guardrail)
     const validation = await validateQRScannability(finalBuffer);
-    if (validation.isScannable) {
+    // Decoding is not enough: the image must decode to the exact URL.
+    if (validation.isScannable && validation.content === url) {
       isVerified = true;
       console.log(`[HF-Gen] Validation Passed on attempt ${attempt + 1}`);
     } else {
