@@ -566,31 +566,31 @@ test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
   assert.match(examplesHtml, /does not itself read the anchor transaction/);
   assert.match(examplesHtml, /not a counterfeit finding/);
   const exampleLinks = [...examplesHtml.matchAll(/href="([^"]+)"/g)].map(
-    (m) => new URL(m[1], "https://authichain.com")
+    m => new URL(m[1], "https://authichain.com")
   );
-  assert.ok(!exampleLinks.some((u) => u.hostname === "polygonscan.com"));
+  assert.ok(!exampleLinks.some(u => u.hostname === "polygonscan.com"));
   assert.ok(
     exampleLinks.some(
-      (u) =>
+      u =>
         u.pathname === "/api/verify" &&
         u.searchParams.get("id") === "polygon-anchor-1"
     )
   );
   assert.ok(
     exampleLinks.some(
-      (u) =>
+      u =>
         u.pathname === "/verify" &&
         u.searchParams.get("id") === "polygon-anchor-1"
     )
   );
   assert.ok(
     exampleLinks.some(
-      (u) => u.pathname === "/protocol/examples/polygon-anchor-1.record.json"
+      u => u.pathname === "/protocol/examples/polygon-anchor-1.record.json"
     )
   );
   assert.ok(
     exampleLinks.some(
-      (u) => u.pathname === "/protocol/examples/polygon-anchor-1.anchor.json"
+      u => u.pathname === "/protocol/examples/polygon-anchor-1.anchor.json"
     )
   );
 
@@ -996,16 +996,42 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
   }
 });
 
-test("/mcp and /api/mcp discovery says verify is free, with no Payment Links or x402 price", async () => {
+test("/mcp and /api/mcp discovery stays on_hold without a bound registry path", async () => {
   for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
     const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const body = (await res.json()) as {
+      pricing: { paidPlans: { status: string } };
+    };
+    assert.equal(body.pricing.paidPlans.status, "on_hold", path);
+    assert.equal(JSON.stringify(body).includes("$0.05"), false, path);
+  }
+});
+
+test("/mcp and /api/mcp discovery quotes the bound x402 $0.05 rail", async () => {
+  const mcpEnv = {
+    ...ENV,
+    X402_PAID_VERIFY_PATH: "seal_lookup",
+    X402_PAY_TO: X402_PUBLISHED_PAY_TO,
+    X402_PRICE_USD: "0.05",
+  } as unknown as Env;
+  for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
+    const res = await get(path, mcpEnv);
     assert.equal(res.status, 200, path);
     const body = (await res.json()) as {
       protocol: string;
       pay: { x402: string };
       pricing: {
         verify: { price: string; mcpTool: string };
-        paidPlans: { status: string };
+        paidPlans: {
+          status: string;
+          rail?: string;
+          pricePerCall?: { usd: number; atomic: string };
+          payTo?: string;
+          paidVerify?: { bound: boolean; status: string };
+          stripe?: { status: string };
+        };
+        legacySealVerify: { status: string };
         humanCheckout?: unknown;
       };
     };
@@ -1013,10 +1039,20 @@ test("/mcp and /api/mcp discovery says verify is free, with no Payment Links or 
     assert.equal(body.pay.x402, "POST https://authichain.com/api/x402", path);
     assert.equal(body.pricing.verify.price, "free", path);
     assert.equal(body.pricing.verify.mcpTool, "verify_record", path);
-    assert.equal(body.pricing.paidPlans.status, "on_hold", path);
+    assert.equal(body.pricing.paidPlans.status, "live", path);
+    assert.equal(body.pricing.paidPlans.rail, "x402", path);
+    assert.equal(body.pricing.paidPlans.pricePerCall?.usd, 0.05, path);
+    assert.equal(body.pricing.paidPlans.pricePerCall?.atomic, "50000", path);
+    assert.equal(body.pricing.paidPlans.payTo, X402_PUBLISHED_PAY_TO, path);
+    assert.equal(body.pricing.paidPlans.paidVerify?.bound, true, path);
+    assert.equal(body.pricing.paidPlans.paidVerify?.status, "bound", path);
+    assert.equal(body.pricing.paidPlans.stripe?.status, "on_hold", path);
+    assert.equal(body.pricing.legacySealVerify.status, "bound", path);
     assert.equal(body.pricing.humanCheckout, undefined, path);
     const text = JSON.stringify(body);
-    assert.equal(text.includes("$0.05"), false, path);
+    assert.equal(text.includes("$0.05"), true, path);
+    assert.equal(text.includes("USDC"), true, path);
+    assert.equal(text.includes("QRON"), false, path);
     for (const plan of [
       "dpp_readiness",
       "strainchain_passport",
@@ -1581,9 +1617,13 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/onboard</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/generate</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>"));
   assert.ok(
-    xml.includes("<loc>https://authichain.com/checkout/qron_launch_annual</loc>")
+    xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
+  );
+  assert.ok(
+    xml.includes(
+      "<loc>https://authichain.com/checkout/qron_launch_annual</loc>"
+    )
   );
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/creator</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));
@@ -1764,7 +1804,10 @@ test("JWKS and issuer.json are served here, not the stale edge-router proxy", as
   const kids = jwksBody.keys.map(k => k.kid);
   assert.ok(kids.includes("jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM"));
   assert.ok(kids.includes("T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ"));
-  assert.equal(kids.includes("lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE"), false);
+  assert.equal(
+    kids.includes("lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE"),
+    false
+  );
 
   const wellKnown = await get("/.well-known/jwks.json");
   assert.equal(wellKnown.status, 200);
@@ -1822,10 +1865,7 @@ test("/manifest.webmanifest is a record lookup, not an offline verify cache", as
     manifest.description,
     /A product certificate is not an on-chain check/
   );
-  assert.match(
-    manifest.description,
-    /\/api\/verify\?id=polygon-anchor-1/
-  );
+  assert.match(manifest.description, /\/api\/verify\?id=polygon-anchor-1/);
   assert.equal(manifest.description.includes("polygonscan.com"), false);
   assert.doesNotMatch(JSON.stringify(manifest), /authenticity/i);
   const sw = await get("/sw.js");

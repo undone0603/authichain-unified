@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { planPaymentLink } from "../../../src/lib/plans.ts";
+import {
+  BASE_USDC_ASSET,
+  X402_PUBLISHED_PAY_TO,
+} from "../../../src/lib/x402.ts";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
   publicKeyFromDidKey,
@@ -49,7 +53,15 @@ afterEach(() => {
   delete process.env.X402_FACILITATOR_URL;
   delete process.env.X402_PAY_TO;
   delete process.env.X402_NETWORK;
+  delete process.env.X402_PRICE_USD;
+  delete process.env.X402_PAID_VERIFY_PATH;
 });
+
+const BOUND_X402 = {
+  X402_PAID_VERIFY_PATH: "seal_lookup",
+  X402_PAY_TO: X402_PUBLISHED_PAY_TO,
+  X402_PRICE_USD: "0.05",
+} as const;
 
 describe("mcp discovery", () => {
   it("recognizes agent MCP paths and ignores checkout", () => {
@@ -167,6 +179,120 @@ describe("mcp discovery", () => {
     expect(tools.find(t => t.name === "get_pricing")?.description).toMatch(
       /^Free\./
     );
+  });
+
+  it("GET discovery and get_pricing quote the bound $0.05 x402 rail", async () => {
+    for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
+      const res = await tryHandleMcp(req(path), { ...BOUND_X402 });
+      expect(res, path).not.toBeNull();
+      expect(res!.status, path).toBe(200);
+      const body = (await res!.json()) as {
+        pricing: {
+          verify: { price: string; mcpTool: string };
+          paidPlans: {
+            status: string;
+            rail?: string;
+            pricePerCall?: { usd: number; atomic: string };
+            asset?: string;
+            payTo?: string;
+            paidVerify?: { bound: boolean; status: string };
+            stripe?: { status: string };
+          };
+          legacySealVerify: { status: string; bound?: boolean };
+          humanCheckout?: unknown;
+        };
+        tools: Array<{ name: string; description?: string }>;
+      };
+      expect(body.pricing.verify.price, path).toBe("free");
+      expect(body.pricing.verify.mcpTool, path).toBe("verify_record");
+      expect(body.pricing.paidPlans.status, path).toBe("live");
+      expect(body.pricing.paidPlans.rail, path).toBe("x402");
+      expect(body.pricing.paidPlans.pricePerCall?.usd, path).toBe(0.05);
+      expect(body.pricing.paidPlans.pricePerCall?.atomic, path).toBe("50000");
+      expect(body.pricing.paidPlans.asset?.toLowerCase(), path).toBe(
+        BASE_USDC_ASSET.toLowerCase()
+      );
+      expect(body.pricing.paidPlans.payTo, path).toBe(X402_PUBLISHED_PAY_TO);
+      expect(body.pricing.paidPlans.paidVerify?.bound, path).toBe(true);
+      expect(body.pricing.paidPlans.paidVerify?.status, path).toBe("bound");
+      expect(body.pricing.paidPlans.stripe?.status, path).toBe("on_hold");
+      expect(body.pricing.legacySealVerify.status, path).toBe("bound");
+      expect(body.pricing.humanCheckout, path).toBeUndefined();
+      const text = JSON.stringify(body);
+      expect(text, path).toContain("$0.05");
+      expect(text, path).toContain("USDC");
+      expect(text, path).not.toContain("QRON");
+      expect(text, path).not.toContain("/api/checkout");
+      for (const plan of [
+        "dpp_readiness",
+        "strainchain_passport",
+        "strainchain_farm",
+      ] as const) {
+        const link = planPaymentLink(plan);
+        if (link) expect(text, path).not.toContain(link);
+      }
+      expect(
+        body.tools.find(t => t.name === "get_pricing")?.description,
+        path
+      ).toMatch(/\$0\.05 USDC on Base/);
+      expect(
+        body.tools.find(t => t.name === "verify")?.description,
+        path
+      ).toMatch(/\$0\.05 USDC on Base/);
+    }
+
+    const list = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+      }),
+      { ...BOUND_X402 }
+    );
+    const listed = (await list!.json()) as {
+      result: { tools: Array<{ name: string; description?: string }> };
+    };
+    expect(
+      listed.result.tools.find(t => t.name === "get_pricing")?.description
+    ).toMatch(/\$0\.05 USDC on Base/);
+
+    const call = await tryHandleMcp(
+      req("/api/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/call",
+          params: { name: "get_pricing" },
+        }),
+      }),
+      { ...BOUND_X402 }
+    );
+    const priced = (await call!.json()) as {
+      result: { content: Array<{ text: string }> };
+    };
+    const pricing = JSON.parse(priced.result.content[0].text) as {
+      paidPlans: {
+        status: string;
+        pricePerCall: { usd: number; atomic: string };
+        paidVerify: { bound: boolean; status: string };
+        stripe: { status: string };
+      };
+      legacySealVerify: { status: string; bound: boolean };
+    };
+    expect(pricing.paidPlans.status).toBe("live");
+    expect(pricing.paidPlans.pricePerCall.usd).toBe(0.05);
+    expect(pricing.paidPlans.pricePerCall.atomic).toBe("50000");
+    expect(pricing.paidPlans.paidVerify.bound).toBe(true);
+    expect(pricing.paidPlans.paidVerify.status).toBe("bound");
+    expect(pricing.paidPlans.stripe.status).toBe("on_hold");
+    expect(pricing.legacySealVerify.status).toBe("bound");
+    expect(pricing.legacySealVerify.bound).toBe(true);
+    expect(priced.result.content[0].text).toContain("$0.05");
+    expect(priced.result.content[0].text).toContain("USDC");
+    expect(priced.result.content[0].text).not.toContain("QRON");
+    expect(priced.result.content[0].text).not.toContain("/api/checkout");
   });
 
   it("tools/call dpp_readiness_check is free and scores the answers", async () => {
