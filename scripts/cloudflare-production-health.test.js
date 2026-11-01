@@ -49,6 +49,15 @@ describe("production health probes target routes that exist", () => {
   it("never probes the non-existent /api/checkout/launch (404 on 2026-10-22)", () => {
     expect(PUBLIC_PROBES.map(pathOf)).not.toContain("/api/checkout/launch");
   });
+
+  it("treats unlisted Launch annual confirm HEAD as 303 to /pricing", () => {
+    const probe = PUBLIC_PROBES.find(
+      p => p.id === "checkout_launch_annual_confirm_head"
+    );
+    expect(probe).toBeTruthy();
+    expect(probe.accept).toEqual([303]);
+    expect(probe.method).toBe("HEAD");
+  });
 });
 
 describe("probePublic", () => {
