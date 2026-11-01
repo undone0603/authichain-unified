@@ -1,0 +1,75 @@
+#!/usr/bin/env sh
+# Beanstalk protected-ref guard (reference-transaction hook)
+# Conservative baseline: protect configured branch refs against non-FF updates and deletions.
+# Assumptions: original policy unknown; this is opt-in client-side enforcement only.
+# Bypassable by anyone who can edit hooks, core.hooksPath, or config.
+# Does not create tamper-proof provenance or security isolation.
+
+set -eu
+
+STATE="$1"
+# Only enforce on preparing/prepared phases (non-zero exits abort the transaction)
+if [ "$STATE" != "preparing" ] && [ "$STATE" != "prepared" ]; then
+  exit 0
+fi
+
+# Config: protected refs from env or default file relative to repo root
+# Look for BEANSTALK_PROTECTED_REFS (space-separated) or beanstalk/protected-refs.txt
+PROTECTED=""
+if [ -n "${BEANSTALK_PROTECTED_REFS:-}" ]; then
+  PROTECTED="$BEANSTALK_PROTECTED_REFS"
+elif [ -f "${GIT_DIR:-.git}/../beanstalk/protected-refs.txt" ]; then
+  PROTECTED=$(tr '\n' ' ' < "${GIT_DIR:-.git}/../beanstalk/protected-refs.txt")
+else
+  # Conservative default: protect main and master if they exist
+  PROTECTED="refs/heads/main refs/heads/master"
+fi
+
+# Zero object ID
+ZERO=$(printf '0%.0s' $(seq 1 40))
+
+# Read proposed updates from stdin
+while IFS= read -r line || [ -n "$line" ]; do
+  # Format: <old-value> SP <new-value> SP <ref-name>
+  old=$(echo "$line" | awk '{print $1}')
+  new=$(echo "$line" | awk '{print $2}')
+  ref=$(echo "$line" | awk '{print $3}')
+
+  # Skip non-branch refs and unprotected
+  case "$ref" in
+    refs/heads/*)
+      is_protected=0
+      for p in $PROTECTED; do
+        if [ "$ref" = "$p" ]; then
+          is_protected=1
+          break
+        fi
+      done
+      [ "$is_protected" -eq 0 ] && continue
+      ;;
+    *)
+      continue
+      ;;
+  esac
+
+  # Deletion (new is zero)
+  if [ "$new" = "$ZERO" ]; then
+    echo "error: protected ref $ref cannot be deleted" >&2
+    exit 1
+  fi
+
+  # Creation (old is zero) is allowed for protected refs
+  if [ "$old" = "$ZERO" ]; then
+    continue
+  fi
+
+  # Non-fast-forward check: new must be descendant of old
+  # Use git merge-base --is-ancestor
+  if ! git merge-base --is-ancestor "$old" "$new" >/dev/null 2>&1; then
+    echo "error: protected ref $ref update is not a fast-forward ($old -> $new)" >&2
+    echo "  tip: use --force only on unprotected branches; protected refs require FF" >&2
+    exit 1
+  fi
+done
+
+exit 0

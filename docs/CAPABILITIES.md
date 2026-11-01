@@ -68,7 +68,7 @@ A large automation layer invisible to repo code search. Key clusters:
 
 **GitHub Actions (the real cron layer — ~15 scheduled workflows):**
 
-- `autonomous-business-cycle.yml` — **14 daily jobs** hitting the CRON_SECRET-gated Vercel endpoints (pipeline 00:00, subscription-health 03:00, customer-health 05:00, automation 06:00, govchain 07:00, dunning 08:00, retention 09:00, trial-reminder 10:00, live-check 11:00, token-metrics 12:00, ecosystem-health 13:00; competitive-monitor Mondays; founder-payout 1st of month). **This is LIVE — the autonomous business cycle runs.**
+- `autonomous-business-cycle.yml` — the 14-job daily schedule was retired on 2026-09-08. The file is `workflow_dispatch` only. It is not a live daily scheduler. Do not re-add the schedule.
 - `outreach-trigger.yml` (every 4h) + `dpp-outreach-trigger.yml` (every 8h) → qron-outreach worker. **Both hit exhausted queues — no-ops burning minutes.**
 - `b2b-outreach.yml` (Mondays 14:00) → `scripts/b2b-cold-outreach.ts` (Apollo-enriched)
 - `gov-engine.yml` (6am) + gov-{ingest,score,mint,notify,proposals}.yml — gov procurement pipeline
@@ -81,22 +81,22 @@ A large automation layer invisible to repo code search. Key clusters:
 
 **Vercel native cron (`vercel.json`):** only `/api/cron/nurture-replies`. Everything else is GitHub-driven.
 
-## 6. AgentZ — 53 Python workflows (`agentz/workflows/registry.yaml`)
+## 6. AgentZ — 76 Python workflows (`agentz/workflows/registry.yaml`)
 
 Autonomous business-operations agent. Capabilities span gov grant proposals, DocuSign blitzes, HubSpot drip repair, LinkedIn/Reddit outreach, Stripe link generation, pilot deployments (Detroit/Michigan), SEO, content multiplication, RFP capture, executive reporting, the reinvestment flywheel, and social launches.
 
-**⚠ Safety-critical:** the CLI `run` command defaults to `--mode confirm` and dispatches through the registry runner (credential preflight treats placeholders as missing). `run --all --mode auto` is refused. The GitHub path (`agentz-orchestration.yml`) pings live claw/AgentZ and may POST claw `/architect/cycle` in **dry-run only**. It does **not** run the CLI registry (no `hot_lead_outreach_blitz` / AgentZ cold email). Prefer `--mode dry-run` until a dry-run orchestration log is green. Run env: `~/.agentz-venv`, node 22, Groq-only LLM.
+**⚠ Safety-critical:** the CLI `run` command defaults to `--mode confirm` and dispatches through the registry runner (credential preflight treats placeholders as missing). `--mode auto` is refused for one workflow and for `--all`. The GitHub path (`agentz-orchestration.yml`) pings live claw/AgentZ and may POST claw `/architect/cycle` in **dry-run only**. It does **not** run the CLI registry (no `hot_lead_outreach_blitz` / AgentZ cold email). Prefer `--mode dry-run` until a dry-run orchestration log is green. Run env: `~/.agentz-venv`, node 22, Groq-only LLM.
 
 ## 7. Money surface
 
-- **Stripe** acct `acct_1SXIyEGqTruSqV8T` ("Authichain+claude"): ~28 active payment links, 3 flagship subscription tiers (`src/app/pricing/page.tsx`, 5 buy-links live), 1 registered webhook path. **Zero successful charges ever** — every historical charge is a failed owner self-test. Constraint is traffic, not plumbing.
+- **Stripe** acct `acct_1SXIyEGqTruSqV8T` ("Authichain+claude"): ~28 active payment links, 3 flagship subscription tiers (`src/app/pricing/page.tsx`, 5 buy-links live), 1 registered webhook path. A 2026-10-31 livemode read found 0 subscriptions, one paid founder self-test of $10, and four failed founder charges. That $10 charge is not qualifying revenue. Constraint is a non-founder buyer, not a claim of zero charges.
 - **Revenue provisioning:** `checkout.session.completed` → find/create user by email → record revenue → welcome email. Verified working end-to-end.
 - **x402 agent pay (LIVE, not `not_configured`):** `GET https://authichain.com/api/x402/health` → 200 `ready` / `trustless`. PayTo / tokenomics EOA `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2` (owner-authorized EOA, also holds `$QRON`; never the `$QRON` contract `0xAebf…E437`, not the NFT deployer), Base `8453`, Circle USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`, **$0.05 / call**, PayAI facilitator reachable. `POST /api/x402` returns **402** with asset + EIP-712 extra when unpaid. Public docs: `https://authichain.com/x402`. Machine catalog: `GET /api/x402/catalog` and `/.well-known/x402.json` (prices copied from health). Tokenomics: `docs/strategy/AGENT_TOKENOMICS_x402.md`. Identity: `docs/strategy/WEB3_IDENTITY.md`. `$QRON` is not this rail. Do not rebind payTo away from the authorized treasury / facilitator. Live self-pay smokes already succeeded — do not treat another settle as required. // pragma: allowlist secret
 
 ## Cross-cutting risks (for a future ops pass)
 
 1. **Worker drift** — 11 live CF workers have no repo source; `qron-daily-ops` carries dead-but-embedded secrets. Source them into `workers/` or document as deliberate.
-2. **Shadow schedulers** — GitHub Actions + Supabase pg_cron + CF worker crons all fire independently; no single pane. The autonomous business cycle IS live daily.
-3. **AgentZ default-auto** — CLI executes side-effects by default; only 1/53 workflows gated. Consider flipping the CLI default to `confirm`.
+2. **Shadow schedulers** — GitHub Actions + Supabase pg_cron + CF worker crons all fire independently; no single pane. The autonomous business cycle schedule is retired. It is not a live daily run.
+3. **AgentZ run mode** — `agentz/cli.py` defaults to `confirm` and refuses `--mode auto` for one workflow and for `--all`. The registry lists 76 workflow ids, not 53. The CLI does not execute side effects by default.
 4. **Outreach** — 16% bounce rate, 0 replies ever, daily drip sends from `noreply@` with no reply-to (see `outreach-pipeline-audit` memory).
 5. **Edge-function sprawl** — 80+ functions, most `verify_jwt:false`, undocumented; overlap with tRPC/workers unknown.
