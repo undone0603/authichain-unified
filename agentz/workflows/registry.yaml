@@ -1207,3 +1207,28 @@ workflows:
       bounty submit, unstaked claim, or pitch. Base USDC only. Refuses
       auctions, exploit requests, stakes, and requester accept. Does not
       sign, submit, or pay. A submission is not a payout.
+  - id: power_user_ops
+    title: "Power-user ops: product rails, wait_buyer, X draft, OpenClaw handoff"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.power_user_ops
+    type: composite
+    estimated_minutes: 3
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    max_runs_per_day: 8
+    rollback_strategy: "Read-only probes and a DRAFT xurl pack. OpenClaw notify stays dry-run unless payload.notify_openclaw is set in auto."
+    description: |
+      Product-side power-user automations (not exploits):
+        1) Probe farm checkout, x402 quote/health, protocol JWKS.
+        2) Print wait_buyer stance (founder $10 is not a buyer).
+        3) Emit a STATUS: DRAFT X pack for AgentZ OpenClaw xurl.
+        4) Dry-run notify claw.authichain.com.
+        5) Restate frozen gates (outreach, autopilot, no key rotation).
+      Dry-run sends no HTTP. Never sends mail, deploys, merges, or rotates
+      AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64.

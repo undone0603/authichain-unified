@@ -32,6 +32,13 @@ python -m agentz.cli run taskmarket_cycle --mode dry-run
 ```
 
 The picker is `agentz/core/taskmarket.py`. It chooses one open Base USDC worker task and prints the CLI command. It does not claim, submit, stake, or treat the task as Stripe revenue. Procedure: `agentz/knowledge/TASKMARKET.md`.
+Power-user product automations (public rails, wait_buyer, X draft pack, OpenClaw handoff; dry-run sends no HTTP):
+
+```bash
+python -m agentz.cli run power_user_ops --mode dry-run
+```
+
+OpenClaw drop-in: `agentz/openclaw/POWER_USER.md`. Live X publish stays on AgentZ `xurl`, not this CLI.
 
 See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and workflow details.
 

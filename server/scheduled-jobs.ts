@@ -660,16 +660,18 @@ registerJob({
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// JOB 11: StrainChain METRC Sync (Runs every 1 hour)
+// JOB 11: StrainChain METRC Sync is off. It does not call the network.
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "strainchain-metrc-sync",
-  description: "Sync METRC transfers and auto-anchor to the Truth Layer",
+  description: "METRC sync is off. This job does not call the network or anchor.",
   schedule: "0 * * * *",
-  enabled: true,
+  enabled: false,
   handler: async (): Promise<JobResult> => {
-    const { runStrainChainSync } = await import("./jobs/strainchain-sync");
-    return await runStrainChainSync();
+    return {
+      itemsProcessed: 0,
+      details: { status: "metrc_unavailable" },
+    };
   },
 });
 
