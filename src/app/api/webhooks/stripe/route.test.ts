@@ -71,7 +71,7 @@ const saved = Object.fromEntries(
   environment.map(name => [name, process.env[name]])
 ) as Record<string, string | undefined>;
 
-function checkoutEvent(id: string, amountTotal = 29900) {
+function checkoutEvent(id: string, amountTotal = 29900, currency = "usd") {
   return {
     id: `evt_test_legacy_${id}`,
     object: "event",
@@ -84,7 +84,7 @@ function checkoutEvent(id: string, amountTotal = 29900) {
         payment_status: "paid",
         mode: "payment",
         amount_total: amountTotal,
-        currency: "usd",
+        currency,
         customer_email: "offline-buyer@example.test",
       },
     },
@@ -154,6 +154,29 @@ describe("retired legacy webhook payment amount", () => {
     expect(response.status).toBe(200);
     const payment = inserts.find(entry => entry.table === "payments")?.row;
     expect(payment?.amount).toBe(299.99);
+  });
+
+  it("preserves zero-decimal JPY amounts without dividing by 100", async () => {
+    const response = await POST(signedRequest(checkoutEvent("jpy500", 500, "jpy")));
+    expect(response.status).toBe(200);
+    const payment = inserts.find(entry => entry.table === "payments")?.row;
+    expect(payment).toMatchObject({ amount: 500, currency: "jpy" });
+  });
+
+  it("honors Stripe's two-decimal ISK and UGX API special cases", async () => {
+    const isk = await POST(signedRequest(checkoutEvent("isk500", 500, "isk")));
+    expect(isk.status).toBe(200);
+    expect(inserts.find(entry => entry.table === "payments")?.row.amount).toBe(5);
+    inserts.length = 0;
+    const ugx = await POST(signedRequest(checkoutEvent("ugx500", 500, "ugx")));
+    expect(ugx.status).toBe(200);
+    expect(inserts.find(entry => entry.table === "payments")?.row.amount).toBe(5);
+  });
+
+  it("retains two-decimal HUF charge behavior despite its payout exception", async () => {
+    const response = await POST(signedRequest(checkoutEvent("huf1045", 1045, "huf")));
+    expect(response.status).toBe(200);
+    expect(inserts.find(entry => entry.table === "payments")?.row.amount).toBe(10.45);
   });
 
   it("rejects a different signing secret without recording payment", async () => {
