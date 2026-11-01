@@ -30,7 +30,7 @@ permissions:
 jobs:
   secret-scan:
     name: Secret scan
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    runs-on: ${{ vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -39,7 +39,12 @@ jobs:
         run: |
           # Tree scan only. Removed keys in old commits were failing a
           # history scan and skipping every deploy.
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_arm64.tar.gz -o gitleaks.tgz
+          case "$(uname -m)" in
+            aarch64|arm64) ARCH=arm64 ;;
+            x86_64|amd64) ARCH=x64 ;;
+            *) echo "::error::Unsupported runner architecture"; exit 1 ;;
+          esac
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_${ARCH}.tar.gz" -o gitleaks.tgz
           tar --no-same-owner -xzf gitleaks.tgz gitleaks
           ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
 
@@ -67,7 +72,7 @@ jobs:
   # no other worker is ever in that path's matrix.
   deploy-matrix:
     name: Build worker matrix
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    runs-on: ${{ vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     timeout-minutes: 5
     outputs:
@@ -183,7 +188,7 @@ jobs:
           echo "deploy matrix (auto-deploy, narrowed to changed allow-listed workers): ${eligible}"
 
   deploy:
-    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
+    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-24.04' || (vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04') }}
     timeout-minutes: 45
     needs: [secret-scan, deploy-matrix]
     # GitHub fails the whole workflow when `strategy.matrix` expands to an
@@ -445,7 +450,7 @@ jobs:
     name: Post-deploy smoke (blocking)
     needs: [deploy]
     if: ${{ needs.deploy.result == 'success' }}
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    runs-on: ${{ vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 10
     permissions:
       contents: read

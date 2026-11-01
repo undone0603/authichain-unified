@@ -23,6 +23,74 @@ const CORS_HEADERS = {
 };
 
 const JWKS_URL = "https://authichain.com/.well-known/jwks.json";
+
+// Free /verify lead magnet: upgrade CTA on every /verify response.
+export const ONBOARD_URL = "https://authichain.com/onboard";
+export const UPGRADE_CTA = {
+  url: ONBOARD_URL,
+  track_url: "/verify/cta",
+  // DRAFT COPY: needs AuthiChain Research wording PASS before deploy.
+  label: "Set up AuthiChain for your products",
+} as const;
+
+const EMAIL_TABLE = "verify_email_captures";
+const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,253}\.[^\s@.]{2,63}$/;
+
+export function normalizeEmail(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const email = value.trim().toLowerCase();
+  if (email.length > 254 || !EMAIL_RE.test(email)) return null;
+  return email;
+}
+
+function logEvent(evt: string, fields: Record<string, unknown> = {}): void {
+  console.log(JSON.stringify({ evt, ts: new Date().toISOString(), worker: "authichain-verify-worker", ...fields }));
+}
+
+type EmailCaptureStatus = "not_requested" | "consent_missing" | "invalid_email" | "stored" | "store_failed";
+
+async function captureEmail(
+  email: unknown,
+  consent: unknown,
+  identifier: string,
+  decision: string | null,
+  env: Env,
+): Promise<EmailCaptureStatus> {
+  if (email === undefined || email === null || email === "") return "not_requested";
+  if (consent !== true) return "consent_missing"; // never store without explicit consent=true
+  const normalized = normalizeEmail(email);
+  if (!normalized) return "invalid_email";
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return "store_failed";
+  try {
+    const res = await fetch(`${env.SUPABASE_URL}/rest/v1/${EMAIL_TABLE}`, {
+      method: "POST",
+      headers: {
+        apikey: env.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        email: normalized,
+        consent: true,
+        consented_at: new Date().toISOString(),
+        source: "verify",
+        qron_id: identifier || null,
+        decision,
+      }),
+    });
+    if (!res.ok) {
+      logEvent("verify_email_capture_error", { status: res.status });
+      return "store_failed";
+    }
+    // Never log the address itself; only the domain.
+    logEvent("verify_email_captured", { qron_id: identifier || null, email_domain: normalized.split("@")[1] });
+    return "stored";
+  } catch (err) {
+    logEvent("verify_email_capture_error", { err: String(err) });
+    return "store_failed";
+  }
+}
 // polygon.contract is null: no one has shown AuthiChain controls that address (RES-145).
 
 function json(body: unknown, status = 200, extra?: Record<string, string>): Response {
@@ -129,6 +197,8 @@ type Submission = {
   raw: string;
   record: Record<string, unknown> | null;
   anchor: Record<string, unknown> | null;
+  email?: unknown;
+  consent?: unknown;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -158,11 +228,37 @@ async function parseSubmission(request: Request, url: URL): Promise<Submission> 
     raw: String(body.input || body.id || body.qrCode || ""),
     record: isRecord(body.record) ? body.record : null,
     anchor: isRecord(body.anchor) ? body.anchor : null,
+    email: body.email,
+    consent: body.consent,
   };
 }
 
 async function handleVerify(request: Request, env: Env, url: URL): Promise<Response> {
   const submitted = await parseSubmission(request, url);
+  logEvent("verify_started", { method: request.method, has_record: !!submitted.record });
+  const res = await verifyCore(submitted, env);
+  let body: Record<string, unknown>;
+  try {
+    body = (await res.json()) as Record<string, unknown>;
+  } catch {
+    return res;
+  }
+  const decision = typeof body.decision === "string" ? body.decision : null;
+  const identifier = typeof body.qron_id === "string" ? body.qron_id : "";
+  if (res.status === 200) {
+    logEvent("verify_success", { qron_id: identifier || null, decision, source: body.source ?? null });
+  }
+  const emailCapture = res.status === 200
+    ? await captureEmail(submitted.email, submitted.consent, identifier, decision, env)
+    : "not_requested";
+  const headers = new Headers(res.headers);
+  return new Response(JSON.stringify({ ...body, emailCapture, cta: UPGRADE_CTA }), {
+    status: res.status,
+    headers,
+  });
+}
+
+async function verifyCore(submitted: Submission, env: Env): Promise<Response> {
   if (submitted.invalid) return json({ error: "Invalid JSON body" }, 400);
 
   const published = submitted.record ? null : publishedRecord(submitted.raw);
@@ -346,6 +442,17 @@ export default {
         ts: Date.now(),
         contract: "evaluate",
         draft: true,
+      });
+    }
+
+    if (path === "/verify/cta" || path === "/api/verify/cta") {
+      logEvent("verify_cta_clicked", {
+        qron_id: url.searchParams.get("id") || null,
+        ref: url.searchParams.get("ref") || null,
+      });
+      return new Response(null, {
+        status: 302,
+        headers: { ...CORS_HEADERS, Location: ONBOARD_URL, "Cache-Control": "no-store" },
       });
     }
 

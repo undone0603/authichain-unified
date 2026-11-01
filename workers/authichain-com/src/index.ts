@@ -1,7 +1,10 @@
 import { isVerifyLivePath, renderVerifyLivePage } from "./verify-live-page.ts";
+import {
+  isVerifyManufacturerPath,
+  renderVerifyManufacturerPage,
+} from "./verify-manufacturer-page.ts";
 import { isIsThisRealPath, renderIsThisRealPage } from "./is-this-real-page.ts";
 import { handleSalesInquiry } from './routes/sales';
-import mcpServer from './mcp-server';
 // The DPP regulatory timeline is shared with the Next.js page rather than
 // duplicated here: content/dpp/regulatory-timeline.json is the single source of
 // truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild
@@ -24,6 +27,7 @@ import { tryHandleMcp } from "./mcp-routes";
 import { tryHandleMcpFree } from "./mcp-free-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
 import { tryHandleProtocolExample } from "./protocol-example-route";
+import { tryHandleProtocolJwks } from "./protocol-jwks-route";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import { isMcpInstallPath, renderMcpInstallPage } from "./mcp-install-page";
 import { docsRedirect, isDocsHub, isDocsPage } from "./docs-pages";
@@ -273,7 +277,7 @@ function assetResponse(svg: string): Response {
 const VERIFY_MANIFEST = JSON.stringify({
   name: 'AuthiChain',
   short_name: 'AuthiChain',
-  description: 'Look up an AuthiChain record. On-chain verification is in development.',
+  description: 'Look up an AuthiChain certificate. A product certificate is not an on-chain check. One published demonstration record has a JSON verdict at /api/verify?id=polygon-anchor-1.',
   start_url: '/verify',
   scope: '/',
   display: 'browser',
@@ -3283,13 +3287,14 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
 /**
  * /verify lookups that outlive the APP_WORKER budget used to rethrow, which
  * surfaced as Cloudflare error 1101 (2026-10-09, /verify?id=test123). Answer
- * a plain 404 "No record found" page instead; it never implies a record exists.
+ * a plain 404 page instead. The title says the lookup did not finish.
+ * It does not say the record is missing.
  */
 function verifyLookupTimeoutResponse(): Response {
   const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>No record found · AuthiChain</title>
+<title>Lookup did not finish · AuthiChain</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -3298,7 +3303,7 @@ h1{font-size:1.25rem;font-weight:800;text-transform:uppercase;letter-spacing:-.0
 p{color:#a1a1aa;margin-bottom:1rem}
 a.btn{display:inline-block;padding:.75rem 1.75rem;border-radius:.75rem;font-size:.7rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;background:transparent;border:1px solid #27272a;color:#fff;text-decoration:none}
 </style></head><body><main>
-<h1>No record found</h1>
+<h1>Lookup did not finish</h1>
 <p>We could not complete this lookup just now, so no record can be shown. Please try again in a minute.</p>
 <a class="btn" href="/verify">Look up another ID</a>
 </main></body></html>`;
@@ -3457,6 +3462,8 @@ async function handleAuthichainCom(
         // First-dollar LOOP-03 paths (live 200; generate proxies to APP_WORKER).
         { loc: 'https://authichain.com/generate', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/checkout/starter', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/checkout/qron_launch', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/checkout/qron_launch_annual', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/checkout/creator', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },
@@ -3653,7 +3660,10 @@ async function handleAuthichainCom(
     const apiV1 = await tryHandleApiV1(request, env);
     if (apiV1) return apiV1;
     // Before APP_PREFIXES. /protocol/* otherwise proxies, and the credential
-    // subject URL 404s on the edge router.
+    // subject URL 404s on the edge router. JWKS/issuer are served here because
+    // the 8.8 MiB edge-router versions POST cannot complete from authichain-wsl.
+    const protocolJwks = tryHandleProtocolJwks(request);
+    if (protocolJwks) return protocolJwks;
     const publishedExample = tryHandleProtocolExample(request);
     if (publishedExample) return publishedExample;
     if (p === '/api/sales') {
@@ -3732,6 +3742,22 @@ async function handleAuthichainCom(
           ...HTML_SECURITY_HEADERS,
           "Content-Type": "text/html; charset=utf-8",
           "Cache-Control": "public, max-age=300",
+        },
+      });
+    }
+    // /verify/manufacturer is a reserved role-history page, not a certificate id.
+    if (isVerifyManufacturerPath(p) && !url.searchParams.get("id")) {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response("method not allowed", {
+          status: 405,
+          headers: { Allow: "GET, HEAD", "Cache-Control": "no-store" },
+        });
+      }
+      return new Response(renderVerifyManufacturerPage(), {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store",
         },
       });
     }
