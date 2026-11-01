@@ -447,6 +447,14 @@ test("authichain pricing uses buyer copy and QRON titles; held strings unchanged
   assert.doesNotMatch(html, /\$1,499|\$199\/mo/);
 });
 
+test("qron pricing links the recurring Launch checkout without a Launch card", () => {
+  const html = renderEstatePricingPage("qron");
+  assert.match(html, /href="https:\/\/authichain.com\/checkout\/qron_launch"/);
+  assert.match(html, /QRON Launch \$19\/mo/);
+  assert.doesNotMatch(html, /<h3>QRON Launch/);
+  assert.equal(plan("qron_launch").listed, false);
+});
+
 test("qron pricing does not list Theater", () => {
   const html = renderEstatePricingPage("qron");
   assert.doesNotMatch(html, /Theater|\$499|\$1,?499/);
