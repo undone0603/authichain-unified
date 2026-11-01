@@ -116,7 +116,9 @@ describe("claimStripeEvent (stripe_events, on conflict do nothing)", () => {
       readError: { code: "PGRST", message: "temporary read failure" },
     });
     expect(await claimStripeEvent(supabase, "evt_read", "x")).toBe("claimed");
-    expect(await claimStripeEvent(supabase, "evt_read", "x")).toBe("unavailable");
+    expect(await claimStripeEvent(supabase, "evt_read", "x")).toBe(
+      "unavailable"
+    );
   });
 
   it("fails closed when the write errors or there is no client", async () => {

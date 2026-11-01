@@ -32,7 +32,11 @@ type SupabaseError = { code?: string; message?: string } | null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseLike = { from: (table: string) => any };
 
-export type StripeEventClaim = "claimed" | "duplicate" | "in_flight" | "unavailable";
+export type StripeEventClaim =
+  | "claimed"
+  | "duplicate"
+  | "in_flight"
+  | "unavailable";
 
 /**
  * Thrown by the edge Stripe webhook handler when the once-only claim could
@@ -41,7 +45,10 @@ export type StripeEventClaim = "claimed" | "duplicate" | "in_flight" | "unavaila
  */
 export class StripeEventClaimUnavailableError extends Error {
   readonly httpStatus = 500;
-  constructor(eventId: string, reason: "unavailable" | "in_flight" = "unavailable") {
+  constructor(
+    eventId: string,
+    reason: "unavailable" | "in_flight" = "unavailable"
+  ) {
     super(
       reason === "in_flight"
         ? `[stripe-webhook] stripe_events delivery ${eventId} is still in flight; refusing to acknowledge an unverified outcome (Stripe will retry)`
@@ -114,7 +121,9 @@ export async function claimStripeEvent(
       error: SupabaseError;
     };
     if (priorErr || !prior) {
-      console.warn("[stripe-webhook] prior claim status unavailable; failing closed");
+      console.warn(
+        "[stripe-webhook] prior claim status unavailable; failing closed"
+      );
       return "unavailable";
     }
     return prior.status === "received" ? "in_flight" : "duplicate";
