@@ -7,8 +7,10 @@ import {
   KEEP_BINDINGS,
   EDGE_ROUTER_RESOURCE_BINDINGS,
   buildMultipartBody,
+  CURL_WRITE_OUT,
   curlArgv,
   parseTomlVars,
+  splitCurlOutput,
   parseVersionUploadResponse,
   versionUploadMetadata,
   versionsUploadUrl,
@@ -68,6 +70,16 @@ test("curl argv is IPv4 HTTP/2 raw multipart with retries and a header file", ()
   assert.ok(argv.includes("480"));
   assert.ok(argv.includes("--retry-all-errors"));
   assert.ok(argv.includes("--data-binary"));
+  assert.equal(argv[argv.indexOf("--write-out") + 1], CURL_WRITE_OUT);
+  for (const field of [
+    "size_upload",
+    "speed_upload",
+    "size_download",
+    "http_code",
+    "time_total",
+  ]) {
+    assert.match(CURL_WRITE_OUT, new RegExp(`%\\{${field}\\}`));
+  }
   assert.ok(argv.includes("@/tmp/body.mime"));
   assert.ok(argv.includes("@/tmp/auth.hdr"));
   assert.ok(argv.includes("Expect:"));
@@ -113,6 +125,15 @@ test("parseVersionUploadResponse throws on success=false", () => {
   );
 });
 
+test("splitCurlOutput keeps the JSON body and the write-out line apart", () => {
+  const stdout =
+    `${JSON.stringify({ success: true, result: { id: ID } })}\n` +
+    "authichain-curl size_upload=9310000 speed_upload=0 size_download=0 http_code=000 time_total=480.001\n";
+  const split = splitCurlOutput(stdout);
+  assert.equal(JSON.parse(split.body).result.id, ID);
+  assert.match(split.writeOut, /^authichain-curl size_upload=9310000/);
+});
+
 test("uploadWorkerVersion POSTs via injected curl and returns the id", () => {
   let seen;
   const id = uploadWorkerVersion({
@@ -125,7 +146,9 @@ test("uploadWorkerVersion POSTs via injected curl and returns the id", () => {
       seen = [cmd, ...args];
       return {
         status: 0,
-        stdout: JSON.stringify({ success: true, result: { id: ID } }),
+        stdout:
+          JSON.stringify({ success: true, result: { id: ID } }) +
+          "\nauthichain-curl size_upload=12 speed_upload=3 size_download=40 http_code=200 time_total=1.5\n",
         stderr: "",
       };
     },
@@ -133,8 +156,29 @@ test("uploadWorkerVersion POSTs via injected curl and returns the id", () => {
   assert.equal(id, ID);
   assert.equal(seen[0], "curl");
   assert.ok(seen.includes("--ipv4"));
+  assert.ok(seen.includes("--write-out"));
   assert.ok(seen.includes("--data-binary"));
   assert.doesNotMatch(seen.join(" "), /tok-secret/);
+});
+
+test("a failed POST reports stderr and the curl write-out", () => {
+  assert.throws(
+    () =>
+      uploadWorkerVersion({
+        scriptName: "authichain-edge-router",
+        bundlePath: path.join(ROOT, "scripts/ci/upload-worker-version.mjs"),
+        wranglerToml: TOML,
+        accountId: ACCOUNT,
+        token: "tok-secret",
+        spawnImpl: () => ({
+          status: 28,
+          stdout:
+            "\nauthichain-curl size_upload=0 speed_upload=0 size_download=0 http_code=000 time_total=480\n",
+          stderr: "curl: (28) Operation timed out after 480000 milliseconds with 0 bytes received",
+        }),
+      }),
+    /exit 28: curl: \(28\) Operation timed out.*\| authichain-curl size_upload=0 speed_upload=0 size_download=0 http_code=000 time_total=480/
+  );
 });
 
 test("live wrangler.toml still has the resource binding ids this upload sends", () => {
