@@ -69,6 +69,15 @@ def test_architect_live_flag_honors_requested_mode():
     assert live is True
 
 
+def test_taskmarket_fail_closed_without_live_flag():
+    mode, coerced, _ = resolve_execution_mode(
+        query_mode="auto",
+        workflow_id="taskmarket_cycle",
+    )
+    assert mode == "dry-run"
+    assert coerced is True
+
+
 def test_cold_email_fail_closed_without_live_flag():
     mode, coerced, _ = resolve_execution_mode(
         body={"mode": "confirm"},
