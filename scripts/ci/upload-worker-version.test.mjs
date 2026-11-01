@@ -14,7 +14,6 @@ import {
   versionsUploadUrl,
   uploadWorkerVersion,
 } from "./upload-worker-version.mjs";
-import { gzipSync } from "node:zlib";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const ID = "f0afbac9-1240-47a6-ac80-d58bddcc072d";
@@ -54,27 +53,28 @@ test("metadata keeps secrets and assets; never sends secret_text values", () => 
   assert.doesNotMatch(JSON.stringify(meta), /AUTHICHAIN_ATTESTATION/);
 });
 
-test("curl argv is IPv4 HTTP/1.1 gzip body with retries and a header file", () => {
+test("curl argv is IPv4 HTTP/1.1 multipart with retries and a header file", () => {
   const argv = curlArgv({
     url: versionsUploadUrl(ACCOUNT, "authichain-edge-router"),
-    bodyPath: "/tmp/body.gz",
+    bodyPath: "/tmp/body.mime",
     headerPath: "/tmp/auth.hdr",
     contentType: "multipart/form-data; boundary=abc",
   });
   assert.equal(argv[0], "curl");
   assert.ok(argv.includes("--ipv4"));
   assert.ok(argv.includes("--http1.1"));
+  assert.ok(argv.includes("--expect100-timeout"));
   assert.ok(argv.includes("--retry"));
   assert.ok(argv.includes("--retry-all-errors"));
   assert.ok(argv.includes("--data-binary"));
-  assert.ok(argv.includes("@/tmp/body.gz"));
+  assert.ok(argv.includes("@/tmp/body.mime"));
   assert.ok(argv.includes("@/tmp/auth.hdr"));
-  assert.ok(argv.includes("Content-Encoding: gzip"));
+  assert.equal(argv.includes("Content-Encoding: gzip"), false);
   assert.doesNotMatch(argv.join(" "), /Bearer /);
   assert.doesNotMatch(argv.join(" "), /AUTHICHAIN_ATTESTATION/);
 });
 
-test("multipart gzip shrinks the 8.8 MiB-class body and keeps metadata JSON", () => {
+test("multipart gzips only the JS module part", () => {
   const meta = versionUploadMetadata({
     compatibilityDate: "2026-08-01",
     compatibilityFlags: ["nodejs_compat"],
@@ -86,10 +86,12 @@ test("multipart gzip shrinks the 8.8 MiB-class body and keeps metadata JSON", ()
     moduleBuf,
     boundary: "----test",
   });
-  const gz = gzipSync(raw, { level: 9 });
-  assert.ok(gz[0] === 0x1f && gz[1] === 0x8b);
-  assert.ok(gz.length < raw.length / 4);
-  assert.match(raw.toString("utf8"), /"keep_assets":true/);
+  const text = raw.toString("latin1");
+  assert.match(text, /Content-Encoding: gzip/);
+  assert.match(text, /"keep_assets":true/);
+  assert.ok(raw.length < moduleBuf.length);
+  const gzAt = raw.indexOf(Buffer.from([0x1f, 0x8b]));
+  assert.ok(gzAt > 0);
 });
 
 test("parseVersionUploadResponse reads result.id", () => {
