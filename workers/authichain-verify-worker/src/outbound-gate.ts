@@ -256,6 +256,73 @@ export async function authorizeOutbound(input: {
   if (payload.attribution !== campaign.attribution) {
     return finish("BINDING_MISMATCH", ["attribution_mismatch"], identityExtra);
   }
+
+  // Public, non-targeted community introductions have no qualified commercial
+  // prospect, email recipient or Scout opportunity. They use the SAME signed
+  // gate but a separate campaign approval and a single fixed room.
+  if (input.transport === "forum") {
+    const endpoint = "https://agenticsuperhero.com/api/v1/channels/lobby/messages";
+    if (!campaign.allow_public_forum) {
+      return finish("CAMPAIGN_UNAUTHORIZED", ["public_forum_not_approved"], identityExtra);
+    }
+    if (payload.campaign_id !== campaign.campaign_id ||
+        payload.prospect_id !== "community:agenticsuperhero" ||
+        payload.opportunity_id !== "community:agenticsuperhero:lobby") {
+      return finish("BINDING_MISMATCH", ["community_scope_mismatch"], identityExtra);
+    }
+    if (payload.recipient !== endpoint || payload.recipient_source !== "published_contact") {
+      return finish("RECIPIENT_INELIGIBLE", ["forum_endpoint_not_allowlisted"], identityExtra);
+    }
+    if (input.message.evidence_ids.length === 0) {
+      return finish("ATTRIBUTION_MISSING", ["public_room_evidence_required"], identityExtra);
+    }
+    if (!payload.body.includes(outboundDisclosure({
+      agentId: input.message.agent_id,
+      organizationId: input.message.organization_id,
+      role: input.message.role,
+      attestationId: input.message.attestation_id,
+    }))) {
+      return finish("POLICY_DENIED", ["agent_disclosure_missing"], identityExtra);
+    }
+    if (await contentHash(payload.body) !== payload.content_hash) {
+      return finish("BINDING_MISMATCH", ["content_hash_mismatch"], identityExtra);
+    }
+    const contactKey = endpoint;
+    if (input.ledger.isSuppressed(contactKey)) {
+      return finish("SUPPRESSED", ["forum_suppressed"], identityExtra);
+    }
+    if (input.ledger.duplicateContact(campaign.campaign_id, contactKey)) {
+      return finish("DUPLICATE_CONTACT", ["duplicate_contact"], identityExtra);
+    }
+    if (input.ledger.sendsForAgent(input.message.agent_id) >= policy.max_sends_per_agent ||
+        input.ledger.sendsForCampaign(campaign.campaign_id) >= policy.max_sends_per_campaign ||
+        input.ledger.sendsForRecipient(contactKey).length >= policy.max_sends_per_recipient) {
+      return finish("RATE_LIMIT", ["forum_rate_limit"], identityExtra);
+    }
+    if (!policy.production_send) {
+      return finish("PRODUCTION_SEND_DISABLED", ["production_send_disabled"], identityExtra);
+    }
+    if (!campaign.human_send_approved) {
+      return finish("CAMPAIGN_UNAUTHORIZED", ["human_send_not_approved"], identityExtra);
+    }
+    const decision = finish("ALLOW", [], {
+      ...identityExtra, capability: "SEND_OUTBOUND",
+      prospect_id: payload.prospect_id,
+      opportunity_id: payload.opportunity_id,
+      campaign_id: campaign.campaign_id,
+    });
+    input.ledger.recordSend({
+      at: now.toISOString(),
+      message_id: input.message.message_id,
+      agent_id: input.message.agent_id,
+      campaign_id: campaign.campaign_id,
+      prospect_id: payload.prospect_id,
+      opportunity_id: payload.opportunity_id,
+      recipient: contactKey,
+      content_hash: payload.content_hash,
+    });
+    return decision;
+  }
   if (
     !isCommercialOutboundOffer(campaign.offer_id) ||
     !policy.public_offers.includes(campaign.offer_id)
@@ -338,24 +405,15 @@ export async function authorizeOutbound(input: {
     return finish("POLICY_DENIED", ["agent_disclosure_missing"], identityExtra);
   }
 
-  // Public-room routing is a separate transport with an exact, reviewable allowlist.
-  // It must not inherit an email-recipient validation bypass for arbitrary URLs.
-  let contactKey: string;
-  if (input.transport === "forum") {
-    const allowedEndpoint = "https://agenticsuperhero.com/api/v1/channels/lobby/messages";
-    if (payload.recipient !== allowedEndpoint || payload.recipient_source !== "published_contact") {
-      return finish("RECIPIENT_INELIGIBLE", ["forum_endpoint_not_allowlisted"], identityExtra);
-    }
-    contactKey = allowedEndpoint;
-  } else {
-    const recipient = assessRecipient(payload.recipient, payload.recipient_source, {
-      allowRoleInbox: campaign.allow_role_inbox === true,
-    });
-    if (recipient.status !== "allow") {
-      return finish("RECIPIENT_INELIGIBLE", recipient.reasons, identityExtra);
-    }
-    contactKey = contactKey;
+  const recipient = assessRecipient(
+    payload.recipient,
+    payload.recipient_source,
+    { allowRoleInbox: campaign.allow_role_inbox === true }
+  );
+  if (recipient.status !== "allow") {
+    return finish("RECIPIENT_INELIGIBLE", recipient.reasons, identityExtra);
   }
+  const contactKey = recipient.email;
   if (input.ledger.isSuppressed(contactKey)) {
     return finish(
       "SUPPRESSED",
