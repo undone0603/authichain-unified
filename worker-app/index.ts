@@ -46,6 +46,7 @@ type Env = {
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_WEBHOOK_AUTHICHAIN_SECRET?: string;
+  INSTANTLY_WEBHOOK_SECRET?: string;
   NEXT_PUBLIC_SUPABASE_URL?: string;
   SUPABASE_URL?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
@@ -983,19 +984,17 @@ app.post("/api/paddle/webhook", async c => {
 
 // ─── Instantly.ai Webhook ───────────────────────────────────────────────────
 app.post("/api/webhooks/instantly", async c => {
-  const secret = process.env.INSTANTLY_WEBHOOK_SECRET;
-  if (secret) {
-    const provided = c.req.header("x-webhook-secret");
-    if (!provided || !timingSafeEqualStrings(provided, secret)) {
-      return c.json({ error: "Invalid webhook secret" }, 401);
-    }
+  const secret = c.env?.INSTANTLY_WEBHOOK_SECRET || process.env.INSTANTLY_WEBHOOK_SECRET;
+  if (!secret) return c.json({ error: "Instantly webhook secret not configured" }, 503);
+  const provided = c.req.header("x-webhook-secret");
+  if (!provided || !timingSafeEqualStrings(provided, secret)) {
+    return c.json({ error: "Invalid webhook secret" }, 401);
   }
   try {
     const { handleInstantlyWebhook } =
       await import("../server/webhooks/instantly");
     const payload = await c.req.json();
-    const db = getHyperdriveDb(c.env);
-    const result = await handleInstantlyWebhook(db, payload);
+    const result = await handleInstantlyWebhook(payload);
     return c.json(result);
   } catch (err: any) {
     console.error(`[Instantly Webhook] Error: ${err.message}`);

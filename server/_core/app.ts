@@ -135,11 +135,10 @@ export function createApp() {
   // ─── Instantly.ai Webhook ────────────────────────────────────────────────
   app.post("/api/webhooks/instantly", async (req, res) => {
     const secret = process.env.INSTANTLY_WEBHOOK_SECRET;
-    if (secret) {
-      const provided = req.headers["x-webhook-secret"] as string | undefined;
-      if (!provided || !timingSafeEqual(provided, secret)) {
-        return res.status(401).json({ error: "Invalid webhook secret" });
-      }
+    if (!secret) return res.status(503).json({ error: "Instantly webhook secret not configured" });
+    const provided = req.headers["x-webhook-secret"] as string | undefined;
+    if (!provided || !timingSafeEqual(provided, secret)) {
+      return res.status(401).json({ error: "Invalid webhook secret" });
     }
     try {
       const { handleInstantlyWebhook } = await import("../webhooks/instantly.js");
