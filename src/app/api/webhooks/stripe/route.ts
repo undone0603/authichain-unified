@@ -172,6 +172,25 @@ export async function POST(req: NextRequest) {
 }
 
 /**
+ * Stripe Checkout amount_total is in the currency's API minor units.
+ * ISK and UGX use two-decimal API amounts for charge compatibility, even
+ * though ISO currency formatting treats them as zero-decimal.
+ * HUF/TWD have two-decimal charges (their zero-decimal rule applies to payouts).
+ * See https://docs.stripe.com/currencies
+ */
+function stripeAmountToMajorUnits(amountMinor: number, currency: string): number {
+  const code = currency.toUpperCase();
+  const digits =
+    code === "ISK" || code === "UGX"
+      ? 2
+      : new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: code,
+        }).resolvedOptions().maximumFractionDigits;
+  return amountMinor / 10 ** digits;
+}
+
+/**
  * Handle checkout.session.completed
  * - Record payment in payments table (session_id, customer_email, amount, status='paid')
  * - Tag lead as customer in lead_captures (status='customer')
@@ -202,7 +221,7 @@ async function handleCheckoutSessionCompleted(
   const { error: paymentError } = await supabase.from("payments").insert({
     session_id: sessionId,
     customer_email: customerEmail,
-    amount: amountCents / 100, // public.payments.amount stores major currency units
+    amount: stripeAmountToMajorUnits(amountCents, currency),
     currency,
     status: "paid",
     created_at: new Date().toISOString(),
