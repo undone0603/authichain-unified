@@ -123,8 +123,10 @@ app.get("/health", c => {
   });
 });
 
-// Public dependency status only. The stored Access credentials never leave this Worker.
+// The M2M probe is read-only, but remains bearer-protected to prevent
+// unauthenticated callers from amplifying requests into the private origin.
 app.get("/health/agentz", async c => {
+  if (!bearerOk(c)) return unauthorized(c);
   const result = await checkAgentzDependency(c.env);
   c.header("Cache-Control", "no-store");
   return c.json(result, result.state === "healthy" ? 200 : 503);
