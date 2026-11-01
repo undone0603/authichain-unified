@@ -15,6 +15,7 @@
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
  * GET  /.well-known/agent-card.json (+ agent.json) → A2A Agent Card
  *      with skills and x402 payment metadata. No contact email. No ERC-8004.
+ * POST /api/a2a → A2A 1.0 JSON-RPC. Does not settle a payment.
  * GET  /.well-known/lumi-monitor.txt → Lumi Watch-trial domain proof.
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
  * POST /api/x402 + /api/v1/agent-verify → 402 challenge when unpaid. A paid
@@ -49,6 +50,11 @@ import {
   type X402HealthEnv,
   type X402VerifyBinding,
 } from "../../../src/lib/x402";
+import {
+  A2A_RPC_PATH,
+  a2aMethodList,
+  handleA2aJsonRpc,
+} from "../../../src/lib/a2a-jsonrpc";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
 import { sealBaseline } from "../../../src/lib/seal-baseline";
 import {
@@ -128,6 +134,7 @@ export function isX402Path(pathname: string): boolean {
     p === "/.well-known/x402.json" ||
     p === "/.well-known/agent-card.json" ||
     p === "/.well-known/agent.json" ||
+    p === A2A_RPC_PATH ||
     p === "/.well-known/lumi-monitor.txt" ||
     p === "/openapi.json"
   );
@@ -504,6 +511,20 @@ export async function tryHandleX402(
 
   if (request.method === "GET" && isFanoutPath(url.pathname)) {
     return fanoutResponse();
+  }
+
+  if (normalizePath(url.pathname) === A2A_RPC_PATH) {
+    if (request.method === "GET") return json(200, a2aMethodList());
+    if (request.method === "POST") {
+      const body = await request.text();
+      const answered = handleA2aJsonRpc(body, {
+        now: opts?.now,
+        a2aVersion: request.headers.get("A2A-Version"),
+      });
+      if (answered.body === null) return new Response(null, { status: 204 });
+      return json(answered.status, answered.body);
+    }
+    return json(405, { error: "method not allowed" });
   }
 
   if (request.method === "GET" && isAgentCardPath(url.pathname)) {

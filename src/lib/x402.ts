@@ -21,7 +21,12 @@
  */
 
 import { BASE_USDC, TOKENOMICS_PAY_TO } from "../../scripts/lib/evm-chains";
-import { planPaymentLink, planUsd } from "./plans";
+import {
+  catalogOffers,
+  planPaymentLink,
+  planUsd,
+  type CatalogOffer,
+} from "./plans";
 
 export interface PaymentRequirement {
   scheme: "exact";
@@ -201,18 +206,7 @@ export function x402BazaarDiscovery(): X402BazaarExtension {
     },
     output: {
       type: "json",
-      example: {
-        verified: false,
-        authenticityScore: 0,
-        subject: "00000000-0000-4000-8000-000000000000",
-        details: {},
-        settlement: {
-          payer: "0x0000000000000000000000000000000000000000",
-          amountAtomic: "50000",
-          txHash: "0x",
-          trustless: true,
-        },
-      },
+      example: x402PaidOutputExample(),
     },
   };
   return {
@@ -1113,9 +1107,14 @@ export type X402CatalogBody = {
     passportUsd: number;
     dppUsd: number;
     farmUsd: number;
+    starterUsd: number;
+    creatorUsd: number;
     passportPaymentLink?: string;
     dppPaymentLink?: string;
     farmPaymentLink?: string;
+    starterPaymentLink?: string;
+    creatorPaymentLink?: string;
+    offers: CatalogOffer[];
     source: string;
   };
   discovery: {
@@ -1229,8 +1228,14 @@ export async function x402Catalog(
       passportUsd: planUsd("strainchain_passport"),
       dppUsd: planUsd("dpp_readiness"),
       farmUsd: planUsd("strainchain_farm"),
+      starterUsd: planUsd("starter"),
+      creatorUsd: planUsd("creator"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
+      farmPaymentLink: planPaymentLink("strainchain_farm"),
+      starterPaymentLink: planPaymentLink("starter"),
+      creatorPaymentLink: planPaymentLink("creator"),
+      offers: catalogOffers(),
       source: "src/lib/plans.ts",
     },
     discovery: {
@@ -1288,7 +1293,7 @@ export type X402AgentCard = {
 /**
  * A2A Agent Card at `/.well-known/agent-card.json`.
  * Identity + skills + x402 payment metadata for Trust Passport probes.
- * This host has no A2A JSON-RPC and no ERC-8004 registration — do not claim either.
+ * JSON-RPC 1.0 is POST /api/a2a. There is no ERC-8004 registration.
  * A valid signature is not real-world truth. Do not add contact email.
  */
 export async function x402AgentCard(
@@ -1298,16 +1303,14 @@ export async function x402AgentCard(
   const paid = catalog.endpoints.filter(e => e.paid);
   const resources = [
     ...new Set(
-      paid
-        .map(e => e.url || e.resource)
-        .filter((u): u is string => Boolean(u))
+      paid.map(e => e.url || e.resource).filter((u): u is string => Boolean(u))
     ),
   ];
   const accepts = paid.find(e => e.accepts && e.accepts.length > 0)?.accepts;
   return {
     name: "AuthiChain",
     description: X402_RESOURCE_DESCRIPTION,
-    url: "https://authichain.com/mcp",
+    url: "https://authichain.com/api/a2a",
     version: "1.3.2",
     documentationUrl: "https://authichain.com/x402",
     provider: {
@@ -1323,9 +1326,9 @@ export async function x402AgentCard(
     defaultOutputModes: ["application/json"],
     supportedInterfaces: [
       {
-        url: "https://authichain.com/mcp",
-        protocolBinding: "HTTP",
-        protocolVersion: "2025-03-26",
+        url: "https://authichain.com/api/a2a",
+        protocolBinding: "JSONRPC",
+        protocolVersion: "1.0",
       },
     ],
     additionalInterfaces: [
@@ -1473,7 +1476,9 @@ export async function x402OpenApiDocument(
           description:
             "E-bike and other light means of transport (LMT) batteries, plus industrial and EV batteries over 2 kWh, need a battery passport from 18 February 2027 under Regulation (EU) 2023/1542. This page is that gap map, with a worked example on a fictional e-bike pack at /battery-passport/sample-audit.",
           responses: {
-            "200": { description: "HTML gap map. Not an x402 payment endpoint." },
+            "200": {
+              description: "HTML gap map. Not an x402 payment endpoint.",
+            },
           },
         },
       },

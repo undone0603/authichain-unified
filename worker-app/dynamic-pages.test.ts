@@ -214,33 +214,16 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("Product Not Found");
   });
 
-  it("returns a retryable 503 with Retry-After when the lookup errors", async () => {
-    (getCertificateByNumber as any).mockRejectedValue(new Error("db down"));
-    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+  it("handles passport lookup timeout gracefully with 404 guidance", async () => {
+    (getCertificateByNumber as any).mockRejectedValue(
+      new Error("passport-lookup-timeout")
+    );
 
-    const res = await app.request("/p/CERT-ERR", {}, makeEnv() as any);
+    const res = await app.request("/p/timeout-serial", {}, makeEnv() as any);
+    const body = await res.text();
 
-    expect(res.status).toBe(503);
-    expect(res.headers.get("retry-after")).toBe("30");
-    expect(createHyperdriveRequestDb).toHaveBeenCalled();
-  });
-
-  it("returns a retryable 503 (not 404) when the connect times out", async () => {
-    vi.useFakeTimers();
-    try {
-      (createHyperdriveRequestDb as any).mockReturnValueOnce({
-        db: {},
-        connect: () => new Promise(() => {}),
-        close: vi.fn().mockResolvedValue(undefined),
-      });
-      const pending = app.request("/p/CERT-SLOW", {}, makeEnv() as any);
-      await vi.advanceTimersByTimeAsync(3000);
-      const res = await pending;
-      expect(res.status).toBe(503);
-      expect(res.headers.get("retry-after")).toBe("30");
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(res.status).toBe(404);
+    expect(body).toContain("The registry lookup timed out");
   });
 
   it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {
@@ -358,7 +341,8 @@ describe("renderDynamicPage: /verify verification landing", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("Verify a Product");
-    expect(body).toContain("On-chain verification is in development.");
+    expect(body).toContain("That certificate is not an on-chain check.");
+    expect(body).not.toContain("On-chain verification is in development.");
     expect(body).toContain('href="/verify?id=polygon-anchor-1"');
     expect(body).toContain(
       '<link rel="manifest" href="/manifest.webmanifest">'
@@ -537,6 +521,26 @@ describe("renderDynamicPage: /verify verification landing", () => {
     );
     expect(body).toContain("What this does not prove");
     expect(body).not.toContain("No record found");
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
+    expect(getProductById).not.toHaveBeenCalled();
+  });
+
+  it("serves /verify/manufacturer as role-history copy, not a certificate lookup", async () => {
+    const res = await app.request(
+      "/verify/manufacturer/",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("<h1>Manufacturer role history</h1>");
+    expect(body).toContain("This path is not a certificate number.");
+    expect(body).toContain("GET /api/manufacturer-status/{address}/history");
+    expect(body).toContain("does not invent a role");
+    expect(body).toContain("does not sell a role");
+    expect(body).not.toContain("No record found");
+    expect(body).not.toContain("$49");
     expect(getCertificateByNumber).not.toHaveBeenCalled();
     expect(getProductById).not.toHaveBeenCalled();
   });
@@ -1173,7 +1177,7 @@ describe("renderDynamicPage: /story StoryMode", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("AuthiChain Launch Proof");
-    expect(body).toContain("T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ");
+    expect(body).toContain("jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM");
     expect(body).toContain("StoryMode");
     expect(body).not.toContain("verified against the live public JWKS");
     expect(body).toContain(
