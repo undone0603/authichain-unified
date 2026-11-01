@@ -1549,3 +1549,101 @@ describe("handleStripeWebhook — Starter amount fallback gate (#1890 parity, ed
     expect(starterCalls().length).toBe(1);
   });
 });
+
+describe("handleStripeWebhook — unknown paid offer hold (#2247)", () => {
+  it("holds an unrecognized $1,500 one-time payment link without granting credits", async () => {
+    recordStripeWebhookDelivery.mockResolvedValue({ ok: true });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_unknown_build", {
+        id: "cs_unknown_build",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 150000,
+        currency: "usd",
+        livemode: true,
+        payment_link: "plink_unknown_build",
+        customer_details: { email: "buyer@example.test" },
+        metadata: {},
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true,
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_unknown_build",
+        sessionId: "cs_unknown_build",
+        status: "reconciliation_required",
+        error: "paid_checkout_unknown_offer",
+      })
+    );
+
+    // A duplicate must preserve the original hold, not overwrite it with success.
+    claimStripeEventMock.mockResolvedValueOnce("duplicate");
+    const duplicate = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(duplicate).toMatchObject({
+      received: true,
+      duplicate: true,
+      handled: false,
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledTimes(2);
+  });
+
+  it("holds an unknown $150/month subscription checkout without a grant", async () => {
+    recordStripeWebhookDelivery.mockResolvedValue({ ok: true });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_unknown_hosting", {
+        id: "cs_unknown_hosting",
+        mode: "subscription",
+        subscription: "sub_unknown_hosting",
+        payment_status: "paid",
+        amount_total: 15000,
+        currency: "usd",
+        livemode: true,
+        payment_link: "plink_unknown_hosting",
+        metadata: {},
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).resolves.toMatchObject({
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_unknown_hosting",
+        status: "reconciliation_required",
+        error: "paid_checkout_unknown_offer",
+      })
+    );
+  });
+
+  it("fails closed if the unknown-offer hold cannot persist its status", async () => {
+    recordStripeWebhookDelivery
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, detail: "base_columns_only" });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_unknown_legacy", {
+        id: "cs_unknown_legacy",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 150000,
+        metadata: {},
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+});
