@@ -202,7 +202,7 @@ async function handleCheckoutSessionCompleted(
   const { error: paymentError } = await supabase.from("payments").insert({
     session_id: sessionId,
     customer_email: customerEmail,
-    amount_cents: amountCents,
+    amount: amountCents / 100, // public.payments.amount stores major currency units
     currency,
     status: "paid",
     created_at: new Date().toISOString(),
