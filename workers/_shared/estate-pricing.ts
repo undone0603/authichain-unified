@@ -414,6 +414,14 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     footerStart: [
       { href: "/generate", label: "Generate Living QR" },
       {
+        href: "https://authichain.com/checkout/qron_launch",
+        label: "QRON Launch $19/mo",
+      },
+      {
+        href: "https://authichain.com/checkout/qron_launch_annual",
+        label: "QRON Launch $190/yr",
+      },
+      {
         href: "https://authichain.com/checkout/starter",
         label: "Buy Starter $29",
       },

@@ -27,6 +27,7 @@ import { tryHandleMcp } from "./mcp-routes";
 import { tryHandleMcpFree } from "./mcp-free-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
 import { tryHandleProtocolExample } from "./protocol-example-route";
+import { tryHandleProtocolJwks } from "./protocol-jwks-route";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import { isMcpInstallPath, renderMcpInstallPage } from "./mcp-install-page";
 import { docsRedirect, isDocsHub, isDocsPage } from "./docs-pages";
@@ -3461,6 +3462,8 @@ async function handleAuthichainCom(
         // First-dollar LOOP-03 paths (live 200; generate proxies to APP_WORKER).
         { loc: 'https://authichain.com/generate', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/checkout/starter', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/checkout/qron_launch', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/checkout/qron_launch_annual', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/checkout/creator', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },
@@ -3657,7 +3660,10 @@ async function handleAuthichainCom(
     const apiV1 = await tryHandleApiV1(request, env);
     if (apiV1) return apiV1;
     // Before APP_PREFIXES. /protocol/* otherwise proxies, and the credential
-    // subject URL 404s on the edge router.
+    // subject URL 404s on the edge router. JWKS/issuer are served here because
+    // the 8.8 MiB edge-router versions POST cannot complete from authichain-wsl.
+    const protocolJwks = tryHandleProtocolJwks(request);
+    if (protocolJwks) return protocolJwks;
     const publishedExample = tryHandleProtocolExample(request);
     if (publishedExample) return publishedExample;
     if (p === '/api/sales') {

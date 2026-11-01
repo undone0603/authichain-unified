@@ -1530,15 +1530,19 @@ test("the 404 escapes the path, so a hostile URL cannot inject markup", async ()
   );
 });
 
-test("sitemap does not list /checkout/qron_launch after it closed to new buyers (#2020)", async () => {
+test("sitemap lists the open Launch checkout pages", async () => {
   const res = await get("/sitemap.xml");
   assert.equal(res.status, 200);
   const xml = await res.text();
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
   assert.ok(
-    !xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
+    xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
   );
-  assert.ok(!xml.includes("/checkout/qron_launch"));
+  assert.ok(
+    xml.includes(
+      "<loc>https://authichain.com/checkout/qron_launch_annual</loc>"
+    )
+  );
 });
 
 test("the sitemap no longer lists pages that do not exist", async () => {
@@ -1577,10 +1581,9 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/onboard</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/generate</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
-  // Retired plans 303 to /pricing, so they are no longer sitemap pages.
+  assert.ok(xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>"));
   assert.ok(
-    !xml.includes("/checkout/qron_launch"),
-    "/checkout/qron_launch is closed to new buyers (#2020); sitemap must not list it"
+    xml.includes("<loc>https://authichain.com/checkout/qron_launch_annual</loc>")
   );
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/creator</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));
@@ -1752,6 +1755,33 @@ test("/protocol links the anchored demonstration record and the MCP tool", async
     )
   );
   assert.match(html, /verify_record/);
+});
+
+test("JWKS and issuer.json are served here, not the stale edge-router proxy", async () => {
+  const jwks = await get("/protocol/jwks.json");
+  assert.equal(jwks.status, 200);
+  const jwksBody = (await jwks.json()) as { keys: Array<{ kid: string }> };
+  const kids = jwksBody.keys.map(k => k.kid);
+  assert.ok(kids.includes("jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM"));
+  assert.ok(kids.includes("T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ"));
+  assert.equal(kids.includes("lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE"), false);
+
+  const wellKnown = await get("/.well-known/jwks.json");
+  assert.equal(wellKnown.status, 200);
+  assert.deepEqual(await wellKnown.json(), jwksBody);
+
+  const issuer = await get("/protocol/issuer.json");
+  assert.equal(issuer.status, 200);
+  const issuerBody = (await issuer.json()) as {
+    kid: string;
+    signing: boolean;
+  };
+  assert.equal(issuerBody.kid, "jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM");
+  assert.equal(issuerBody.signing, true);
+
+  const launch = await get("/protocol/launch-proof");
+  assert.equal(launch.status, 200);
+  assert.equal(await launch.text(), "app");
 });
 
 test("polygon-anchor-1 files are served before the /protocol app proxy", async () => {

@@ -8,6 +8,7 @@ on:
       - ".github/workflows/deploy-authichain-edge-router.yml"
       - "scripts/ci/parse-wrangler-version-id.mjs"
       - "scripts/ci/promote-worker-version.mjs"
+      - "scripts/ci/upload-worker-version.mjs"
 permissions:
   contents: read
 # Queue behind an in-flight publish. PM-328 forbids cancelling a
@@ -19,7 +20,7 @@ jobs:
   deploy:
     # Publish runner only: authichain-wsl. CI stays on authichain-ops (laptop).
     runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
-    timeout-minutes: 30
+    timeout-minutes: 40
     env:
       # WSL has no IPv6. Node 22 Happy Eyeballs races AAAA (ENETUNREACH) with
       # Cloudflare anycast A records and aborts in ~1.6s. ipv4first alone still
@@ -55,19 +56,16 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          # versions upload --keep-vars stores the bundle and keeps Worker
-          # secrets (including AUTHICHAIN_ATTESTATION_*). Cloudflare API POST
-          # deployments promotes it. Do not wrangler deploy. Do not secret-put
-          # AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 / KEY_ID / PUBLIC_JWK /
-          # RETIRED_PUBLIC_JWKS here (Oct 9 overwrite).
-          # wrangler 4.153.0 hung 11–16 min on the 8.8 MiB POST then
-          # "fetch failed" (41242803187, 41246493823). 4.83.0 rejects
-          # --keep-vars on versions upload (41248692011). 4.149.0 has
-          # --keep-vars and is the last release before 4.150 source-map
-          # uploads (extra POST size).
-          npx --yes wrangler@4.149.0 versions upload --minify --keep-vars --config wrangler.toml \
+          # Versions API wants uncompressed JS in the multipart. HTTP gzip
+          # returned NextPart EOF (41298894966); part gzip eval'd as JS
+          # (41297825503). Dry-run locally, then curl --ipv4 --http2 of the
+          # raw 8.8 MiB body with keep_bindings secret_text. Do not wrangler
+          # deploy. Do not secret-put.
+          rm -rf /tmp/er-bundle
+          mkdir -p /tmp/er-bundle
+          npx --yes wrangler@4.149.0 versions upload --minify --keep-vars --dry-run --outdir /tmp/er-bundle --config wrangler.toml \
             2>&1 | tee /tmp/er-versions-upload.log
-          vid=$(node ../scripts/ci/parse-wrangler-version-id.mjs /tmp/er-versions-upload.log)
+          vid=$(node ../scripts/ci/upload-worker-version.mjs authichain-edge-router /tmp/er-bundle)
           echo "uploaded authichain-edge-router version $vid"
           # Record the checkout SHA and promoted version for later source/runtime audit.
           # This is provenance metadata, not proof of successful paid fulfillment.

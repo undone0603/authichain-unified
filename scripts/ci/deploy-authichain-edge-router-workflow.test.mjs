@@ -20,9 +20,10 @@ function step(title) {
 
 test("Publish uses versions upload + API promote, not wrangler deploy", () => {
   const publish = step("Publish authichain-edge-router");
-  assert.match(publish, /wrangler@4\.149\.0 versions upload --minify --keep-vars/);
-  assert.match(publish, /parse-wrangler-version-id\.mjs/);
+  assert.match(publish, /wrangler@4\.149\.0 versions upload --minify --keep-vars --dry-run --outdir/);
+  assert.match(publish, /upload-worker-version\.mjs authichain-edge-router/);
   assert.match(publish, /promote-worker-version\.mjs authichain-edge-router/);
+  assert.doesNotMatch(publish, /parse-wrangler-version-id\.mjs/);
   // Every successful promotion must leave a traceable GitHub-run/source/version record.
   assert.match(publish, /promotion=\$\(node .*promote-worker-version/);
   assert.match(publish, /GITHUB_SHA/);
