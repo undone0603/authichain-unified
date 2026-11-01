@@ -93,6 +93,7 @@
         "vercel-deploy-guard.yml": "on",
         "verified-deployment-commit.yml": "on",
         "deploy-authichain-com.yml": "on",
+        "deploy-authichain-edge-router.yml": "on",
         "deploy-cloudflare.yml": "on",
         "deploy-edge-worker.yml": "on",
         "deploy-workers.yml": "on",
@@ -189,6 +190,7 @@
       "managed": false,
       "workflows": {
         "self-hosted-ops-smoke.yml": "manual",
+        "wsl-net-check.yml": "manual",
         "agentz-manual-post.yml": "manual",
         "agentz-tunnel-bringup.yml": "manual",
         "authichain-ledger-reconstruction.yml": "manual",
