@@ -68,6 +68,10 @@
     "collective-cloud": {
       "disposition": "unrelated",
       "note": "Static site plus a USGS earthquake feed proxy. Not an AuthiChain surface."
+    },
+    "grok-cloudflare-toolchain": {
+      "disposition": "unknown",
+      "note": "Live Cloudflare Worker with no in-repo source (Issue #1817). Awaiting owner confirmation to archive or retire."
     }
   },
   "expected_not_live": {

@@ -77,6 +77,7 @@ describe("tryHandleX402", () => {
       humanCheckout: {
         farmUsd: number;
         farmPaymentLink?: string;
+        starterPaymentLink?: string;
       };
     };
     expect(body.protocol).toBe("x402");
@@ -96,7 +97,12 @@ describe("tryHandleX402", () => {
       )
     ).toBe(false);
     expect(body.humanCheckout.farmUsd).toBe(149);
-    expect(body.humanCheckout.farmPaymentLink).toBeUndefined();
+    expect(body.humanCheckout.farmPaymentLink).toBe(
+      "https://authichain.com/checkout/strainchain_farm"
+    );
+    expect(body.humanCheckout.starterPaymentLink).toBe(
+      "https://authichain.com/checkout/starter"
+    );
   });
 
   it("GET /api/x402/listing copies payTo from health for PayAPI", async () => {
@@ -204,7 +210,42 @@ describe("tryHandleX402", () => {
       const raw = JSON.stringify(body).toLowerCase();
       expect(raw).not.toContain("authenticityscore");
       expect(raw).not.toContain("erc8004");
+      const card = body as unknown as {
+        url: string;
+        supportedInterfaces: Array<{ protocolBinding: string; url: string }>;
+      };
+      expect(card.url).toBe("https://authichain.com/api/a2a");
+      expect(card.supportedInterfaces[0]).toMatchObject({
+        protocolBinding: "JSONRPC",
+        protocolVersion: "1.0",
+        url: "https://authichain.com/api/a2a",
+      });
     }
+  });
+
+  it("POST /api/a2a SendMessage returns a completed task and does not settle", async () => {
+    const res = await tryHandleX402(
+      req("/api/a2a", {
+        method: "POST",
+        headers: { "content-type": "application/json", "A2A-Version": "1.0" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "SendMessage",
+          params: { message: { parts: [{ text: "evidence" }] } },
+        }),
+      })
+    );
+    expect(res).not.toBeNull();
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as {
+      result: { task: { status: { state: string }; artifacts: Array<{ parts: Array<{ text: string }> }> } };
+    };
+    expect(body.result.task.status.state).toBe("TASK_STATE_COMPLETED");
+    expect(body.result.task.artifacts[0].parts[0].text).toContain(
+      "does not settle"
+    );
+    expect(JSON.stringify(body)).not.toContain("txHash");
   });
 
   it("GET /.well-known/lumi-monitor.txt is the Watch-trial domain proof", async () => {
@@ -350,10 +391,9 @@ describe("tryHandleX402", () => {
   });
 
   it("HEAD /api/x402 is 402 unpaid quote with empty body", async () => {
-    const res = await tryHandleX402(
-      req("/api/x402", { method: "HEAD" }),
-      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" }
-    );
+    const res = await tryHandleX402(req("/api/x402", { method: "HEAD" }), {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+    });
     expect(res!.status).toBe(402);
     expect(await res!.text()).toBe("");
     expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
