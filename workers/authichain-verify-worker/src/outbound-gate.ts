@@ -203,6 +203,15 @@ export async function authorizeOutbound(input: {
     verifier_reasons: verified.reasons,
   };
   if (!verified.valid) {
+    // A well-signed but categorically disallowed action is still a policy
+    // refusal. Do not downgrade concurrent signature/capability failures.
+    if (verified.reasons.length === 1 &&
+        verified.reasons[0] === "INTENT_MISMATCH" &&
+        BLOCKED_INTENTS.has(input.message.intent)) {
+      return finish("POLICY_DENIED", [
+        `action_not_permitted:${input.message.intent}`
+      ], identityExtra);
+    }
     // Preserve a concrete missing capability in the diagnostic when the
     // signed presentation omits SEND_OUTBOUND. Do not weaken verification.
     const reasons = verified.reasons.includes("CAPABILITY_NOT_GRANTED") &&
