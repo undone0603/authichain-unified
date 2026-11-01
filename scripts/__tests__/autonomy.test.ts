@@ -190,12 +190,12 @@ describe("launch mode", () => {
     expect(validateManifest(manifest, listWorkflowFiles())).toEqual([]);
   });
 
-  it("keeps the CFA-150 containment set off in the manifest, not only via operator_hold", () => {
+  it("keeps held workflows off while the audited autonomy reconciler is on", () => {
     const desired = new Map(
       flatten(loadManifest()).map(r => [r.file, r.desired])
     );
+    expect(desired.get("autonomy-reconcile.yml")).toBe("on");
     for (const f of [
-      "autonomy-reconcile.yml",
       "content-routine-pr.yml",
       "b2b-outreach.yml",
       "content-publish.yml",
@@ -624,6 +624,83 @@ describe("fulfilment watchdog", async () => {
     ).toEqual([
       "cs_missing:no webhook record",
       "cs_error:webhook ran but did not succeed",
+    ]);
+  });
+
+  it("never treats an expired-checkout receipt as paid-checkout delivery", () => {
+    const sessions = [
+      s("cs_expired_receipt", 60),
+      s("cs_async_paid", 60),
+    ];
+    const events = [
+      {
+        session_id: "cs_expired_receipt",
+        event_type: "checkout.session.expired",
+        status: "success",
+      },
+      {
+        session_id: "cs_async_paid",
+        event_type: "checkout.session.async_payment_succeeded",
+        status: "success",
+      },
+    ];
+    const out = findUnfulfilled(sessions, events, { now });
+    expect(out).toEqual([
+      {
+        session: "cs_expired_receipt",
+        reason: "no webhook record",
+        paid_at: new Date(sessions[0].created * 1000).toISOString(),
+        livemode: undefined,
+      },
+    ]);
+  });
+
+  it("does not accept a duplicate-only checkout receipt as successful delivery", () => {
+    const sessions = [s("cs_duplicate_only", 60), s("cs_verified", 60)];
+    const events = [
+      {
+        session_id: "cs_duplicate_only",
+        event_type: "checkout.session.completed",
+        status: "duplicate",
+      },
+      {
+        session_id: "cs_verified",
+        event_type: "checkout.session.completed",
+        status: "success",
+      },
+    ];
+    const out = findUnfulfilled(sessions, events, { now });
+    expect(
+      out.map((p: { session: string; reason: string }) => `${p.session}:${p.reason}`)
+    ).toEqual(["cs_duplicate_only:webhook ran but did not succeed"]);
+  });
+
+  it("does not mistake test-mode paid checkouts for live webhook failures", async () => {
+    const sessions = [
+      s("cs_test_mode", 60, { livemode: false }),
+      s("cs_live_mode", 60, { livemode: true }),
+    ];
+    expect(
+      findUnfulfilled(sessions, [], { now }).map(
+        (p: { session: string }) => p.session
+      )
+    ).toEqual(["cs_live_mode"]);
+
+    const result = await checkFulfilment({
+      stripeKey: "test-only",
+      supabaseUrl: "https://example.test",
+      supabaseKey: "test-only",
+      fetchImpl: async (url: string) => {
+        if (url.startsWith("https://api.stripe.com/"))
+          return { ok: true, json: async () => ({ data: sessions, has_more: false }) };
+        if (url.includes("/rest/v1/stripe_events?"))
+          return { ok: true, json: async () => [] };
+        throw new Error("unexpected URL");
+      },
+    });
+    expect(result.checked).toBe(1);
+    expect(result.problems.map((p: { session: string }) => p.session)).toEqual([
+      "cs_live_mode",
     ]);
   });
 
