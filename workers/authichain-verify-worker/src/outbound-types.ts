@@ -45,7 +45,7 @@ export const OUTBOUND_DENIALS = [
 
 export type OutboundDenial = (typeof OUTBOUND_DENIALS)[number];
 
-export type OutboundTransportKind = "test" | "email";
+export type OutboundTransportKind = "test" | "email" | "forum";
 
 export interface OutboundPolicy {
   policy_version: string;
