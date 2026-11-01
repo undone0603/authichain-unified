@@ -1349,6 +1349,17 @@ export async function x402AgentCard(
           "Run the independent verifier on the signed record; leftover unknowns stay unknown",
         ],
       },
+      {
+        id: "qron-launch-subscription",
+        name: "QRON Launch subscription",
+        description:
+          "A person, not this agent, pays QRON Launch. Monthly is 19 USD. Annual is 190 USD. This card does not create a Checkout Session and does not charge. Send the person to the confirm page.",
+        tags: ["subscription", "qron", "checkout"],
+        examples: [
+          "https://authichain.com/checkout/qron_launch",
+          "https://authichain.com/checkout/qron_launch_annual",
+        ],
+      },
     ],
     x402: {
       scheme: "exact",
