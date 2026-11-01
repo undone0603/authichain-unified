@@ -1051,15 +1051,18 @@ describe("handleStripeWebhook — affiliate accrual", () => {
         id: "cs_aff_001",
         mode: "payment",
         payment_status: "paid",
-        metadata: { affiliate_code: "CUP20" },
-        amount_total: 4900,
+        // Affiliate commission only follows a recognized fulfilled purchase.
+        // An unknown paid SKU must remain on reconciliation hold.
+        metadata: { affiliate_code: "CUP20", plan: "starter" },
+        customer_details: { email: "buyer@example.test" },
+        amount_total: 2900,
       })
     );
     const { handleStripeWebhook } = await import("./stripe.js");
     await handleStripeWebhook(RAW_BODY, SIG);
     expect(accrueAffiliateCommission).toHaveBeenCalledWith(expect.anything(), {
       affiliateCode: "CUP20",
-      amountCents: 4900,
+      amountCents: 2900,
       conversion: true,
       eventId: "evt_aff_001",
     });
@@ -1615,6 +1618,8 @@ describe("handleStripeWebhook — unknown paid offer hold (#2247)", () => {
     });
     expect(provisionPurchase).not.toHaveBeenCalled();
     expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+    // No commission for money held without an actual fulfilled product.
+    expect(accrueAffiliateCommission).not.toHaveBeenCalled();
     expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
       expect.anything(),
       expect.objectContaining({
