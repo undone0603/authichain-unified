@@ -80,7 +80,10 @@ jobs:
           # stores the bundle; Cloudflare API POST deployments promotes it
           # (same path as edge-router 1989 / authichain-com 1ee6d701).
           # Do not rotate AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64.
-          npx wrangler versions upload --minify --keep-vars --config wrangler.toml \
+          # wrangler 4.153.0 hung then cancelled at 30m (41242803226).
+          # 4.83.0 rejects --keep-vars on versions upload (41248692011).
+          # Pin 4.149.0: has --keep-vars, before 4.150 source-map uploads.
+          npx --yes wrangler@4.149.0 versions upload --minify --keep-vars --config wrangler.toml \
             2>&1 | tee /tmp/ac-versions-upload.log
           vid=$(node ../../scripts/ci/parse-wrangler-version-id.mjs /tmp/ac-versions-upload.log)
           echo "uploaded authichain-com version $vid"

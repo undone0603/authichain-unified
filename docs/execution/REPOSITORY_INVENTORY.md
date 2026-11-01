@@ -15,7 +15,7 @@ Prior one-line stub, preserved: `Default Branch: main | Commit: 5ee076b7 | Open 
 | ---- | ------ | ------ |
 | `main` head | `caf0f083` | `caf0f083` (identical) |
 | Branches | 364 | 360 |
-| Open PRs / MRs | 50+ PRs (45 non-Dependabot, mostly drafts) | 97 MRs |
+| Open PRs / MRs | 102 PRs (newest 100 read: 95 non-Dependabot, 70 drafts) | 97 MRs |
 | Open issues | 43 | not counted |
 | Workflows / pipelines | 106 workflow files | `.gitlab-ci.yml` (see `CI_STATUS.md`) |
 
@@ -23,8 +23,8 @@ Prior one-line stub, preserved: `Default Branch: main | Commit: 5ee076b7 | Open 
 
 | Component | Location | Purpose | Status | Dependencies | Tests | Destination | Next action |
 | --------- | -------- | ------- | ------ | ------------ | ----- | ----------- | ----------- |
-| Web app and API routes | `src/` (558 files) | Next.js app: checkout, DPP, verify, QRON pages, `/api/v1/*` | FI, SEC | Next, Supabase, Stripe | `src` + `protocol`: 159 files, 1,286 pass, 1 skipped (after the fixes on branch `fix/p1-dpp-fulfill-test-cas-mock`) | stays | Merge !1999 on GitHub (BLOCKERS B-1) |
-| Checkout and plans | `src/lib/plans.ts`, `src/lib/checkout-gate.ts` | Catalogue and gated Stripe Checkout session creation; `plans.ts` is the source of truth for anything that charges | FI, SEC | Stripe | `checkout-gate*.test.ts` pass (48 tests with attestation suites) | stays | Gate removed in draft !1999 per owner decision (BLOCKERS B-1); merge on GitHub, then Stripe test-mode check |
+| Web app and API routes | `src/` (558 files) | Next.js app: checkout, DPP, verify, QRON pages, `/api/v1/*` | FI, SEC | Next, Supabase, Stripe | `src` + `protocol`: 159 files, 1,286 pass, 1 skipped (after the fixes on branch `fix/p1-dpp-fulfill-test-cas-mock`) | stays | Resolve monthly Launch (BLOCKERS B-1) |
+| Checkout and plans | `src/lib/plans.ts`, `src/lib/checkout-gate.ts` | Catalogue and gated Stripe Checkout session creation; `plans.ts` is the source of truth for anything that charges | FI, SEC | Stripe | `checkout-gate*.test.ts` pass (48 tests with attestation suites) | stays | Owner decision on monthly Launch (BLOCKERS B-1); PR #1996 on hold |
 | Stripe webhook and provisioning | `workers/stripe-webhook/`, `src/app/api/stripe/webhook/`, `src/lib/provisioning.ts`, `src/lib/dpp-fulfill-checkout.ts` | Verified webhook, per-session idempotent grants, compare-and-set entitlement write (`ef4d083e`), `humanHold` for DPP prices (`workers/stripe-webhook/src/grant-map.ts`) | FI, SEC | Stripe, Supabase | Replay, unpaid-hold, humanHold and fulfillment tests pass after the test-mock fixes | stays | Add sandbox end-to-end run (NEXT_ACTIONS N-4) |
 | Outbound send policy | `workers/authichain-verify-worker/src/outbound-gate.ts`, `outbound-types.ts` | `production_send` defaults to `false`; email blocked while off | PR, SEC | none | `outbound-pipeline.test.ts` passes | stays | Do not alter; test only |
 | Protocol and attestation | `protocol/`, `schemas/`, `fixtures/attestation-v0.1-*` | Signed records (Ed25519 / did:key), JWS attestation v0.1, JWKS, trust registry, adversarial fixtures (expired, replayed, tampered) | FI | none | `protocol/verifier.test.mjs`, `trust-registry.test.ts` pass | stays | Bind dogfood record to commit and artifact (N-3) |
@@ -39,7 +39,7 @@ Prior one-line stub, preserved: `Default Branch: main | Commit: 5ee076b7 | Open 
 | Smart contracts | `contracts/` | AuthiChain NFT, QRON ERC-20 template, billing, bounty, subscriptions | EX, SEC | Hardhat | `pnpm test:contracts`; **not run** | stays | Run in a later pass; no deploys |
 | Database | `supabase/` (124 files), `drizzle/` (45) | Postgres schema and migrations | SEC | Supabase | n/a | stays | Issue #1735: review SECURITY DEFINER views and RPC grants |
 | Dogfood script | `scripts/generate-dogfood.mjs`, GitLab job `dogfood_record` | Signs a reference record with an ephemeral Ed25519 key and verifies it with `protocol/verifier.mjs` | FI | none | Run on 2026-10-22: verdict `valid-unanchored`; 6 negative cases rejected (`VERIFICATION_EVIDENCE.md`) | stays | Subject is a reference demo, not a release artifact (N-3) |
-| Draft PR backlog | GitHub PRs #1954-#1990 (draft) | Evidence writers, passport tally, DSCSA, hash publication, CircleCI gates | FI (unreviewed) | varies | per PR | review in priority order | Triage into `RECOVERED_WORK.md` (N-5) |
+| Draft PR backlog | GitHub open PRs #1842-#1996 (mostly draft) | Evidence writers, passport tally, DSCSA, hash publication, CircleCI gates | FI (unreviewed) | varies | per PR | review in priority order | First pass in `RECOVERED_WORK.md`; code review still owed (N-5) |
 | Documentation | `docs/` (528 files) | Strategy, operations, charter | mixed | none | n/a | stays | `AUTHICHAIN_EXECUTION_PLAN.md` conflicts with `.gitlab-ci.yml` (see `CI_STATUS.md`) |
 
 ## Secret hygiene (2026-10-22)
