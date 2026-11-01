@@ -163,6 +163,47 @@ describe("activateDppMerchant", () => {
     }
   });
 
+  it("returns 503 when paid activation cannot persist its durable event", async () => {
+    const { activateDppMerchant } = await import("./dpp-activate");
+    for (const failure of ["error", "exception"]) {
+      retrieve.mockResolvedValueOnce({
+        status: "complete", payment_status: "paid", amount_total: 29900,
+        metadata: { offer: "dpp_readiness_2026", visit_id: "visit_record" },
+        customer_details: { email: "buyer@example.test" },
+        line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+      });
+      const insert = vi.fn();
+      if (failure === "error") insert.mockResolvedValueOnce({ error: { message: "database unavailable" } });
+      else insert.mockRejectedValueOnce(new Error("database unavailable"));
+      const from = vi.fn((table: string) => {
+        if (table === "profiles") {
+          return { select: () => ({ eq: () => ({
+            maybeSingle: async () => ({ data: { id: "profile_verified" }, error: null }),
+          }) }) };
+        }
+        if (table === "funnel_events") {
+          return {
+            select: () => ({ eq: () => ({ eq: () => ({ order: () => ({
+              limit: async () => ({ data: [], error: null }),
+            }) }) }) }),
+            insert,
+          };
+        }
+        throw new Error("unexpected table");
+      });
+      const result = await activateDppMerchant({
+        body: { session_id: "cs_record_error", categories: "a", markets: "b", labeling: "c" },
+        stripeSecretKey: "sk_test", supabase: { from },
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        status: 503,
+        error: "Merchant activation could not be persisted",
+      });
+      expect(insert).toHaveBeenCalledTimes(1);
+    }
+  });
+
   it("returns and persists an importer_file on first paid DPP activation", async () => {
     retrieve.mockResolvedValueOnce({
       payment_status: "paid",
