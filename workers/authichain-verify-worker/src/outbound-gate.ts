@@ -763,6 +763,8 @@ export async function authorizeDraft(input: {
     resolver: input.registry,
     replayStore: input.replay,
     now,
+    requiredCapability: "DRAFT_OUTBOUND",
+    expectedIntent: "DRAFT_OUTBOUND",
   });
   if (!verified.valid) {
     const code = mapIdentity(verified.reasons);
