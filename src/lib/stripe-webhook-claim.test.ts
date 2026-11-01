@@ -111,6 +111,39 @@ describe("claimStripeEvent (stripe_events, on conflict do nothing)", () => {
     );
   });
 
+  it("does not acknowledge a legacy NULL-status receipt as fulfilled", async () => {
+    const { supabase, rows } = fakeStripeEvents();
+    await claimStripeEvent(supabase, "evt_legacy_null", "checkout.session.completed");
+    rows.get("evt_legacy_null")!.status = null;
+    expect(
+      await claimStripeEvent(supabase, "evt_legacy_null", "checkout.session.completed")
+    ).toBe("unavailable");
+    expect(rows.get("evt_legacy_null")!.status).toBeNull();
+  });
+
+  it("fails closed on unknown status instead of treating it as a duplicate", async () => {
+    const { supabase, rows } = fakeStripeEvents();
+    await claimStripeEvent(supabase, "evt_unknown_status", "invoice.paid");
+    rows.get("evt_unknown_status")!.status = "unrecognized";
+    expect(
+      await claimStripeEvent(supabase, "evt_unknown_status", "invoice.paid")
+    ).toBe("unavailable");
+    expect(rows.get("evt_unknown_status")!.status).toBe("unrecognized");
+  });
+
+  it("preserves terminal reconciliation holds and duplicate receipts", async () => {
+    const { supabase, rows } = fakeStripeEvents();
+    await claimStripeEvent(supabase, "evt_terminal_hold", "checkout.session.completed");
+    rows.get("evt_terminal_hold")!.status = "reconciliation_required";
+    expect(
+      await claimStripeEvent(supabase, "evt_terminal_hold", "checkout.session.completed")
+    ).toBe("duplicate");
+    rows.get("evt_terminal_hold")!.status = "duplicate";
+    expect(
+      await claimStripeEvent(supabase, "evt_terminal_hold", "checkout.session.completed")
+    ).toBe("duplicate");
+  });
+
   it("fails closed when the existing claim status cannot be read", async () => {
     const { supabase } = fakeStripeEvents({
       readError: { code: "PGRST", message: "temporary read failure" },
