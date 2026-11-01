@@ -24,6 +24,8 @@ import {
   decisionIsGated,
   DPP_OFFER_LINE,
   EmailTransport,
+  ForumTransport,
+  agenticSuperHeroForumSender,
   performOutbound,
   TestOutboundTransport,
   authorizeDraft,
@@ -743,5 +745,103 @@ describe("restricted outbound defaults", () => {
     expect(policy.max_sends_per_recipient).toBe(1);
     expect(policy.cooldown_ms).toBe(30 * 24 * 60 * 60 * 1000);
     expect(campaign.human_send_approved).toBe(false);
+  });
+});
+
+describe("gated AgentZ public forum transport", () => {
+  const endpoint = "https://agenticsuperhero.com/api/v1/channels/lobby/messages";
+
+  it("requires signed AgentZ, campaign approval and the exact public-room allowlist", async () => {
+    const ctx = await prepared();
+    const blockedMessage = await ctx.sendMessage("msg:forum-unapproved", {
+      recipient: endpoint, recipient_source: "published_contact",
+    });
+    const noSender = new ForumTransport(async () => ({ platform_message_id: "unreachable" }));
+    const blocked = await performOutbound({
+      message: blockedMessage, registry: ctx.registry, replay: ctx.replay, ledger: ctx.ledger,
+      policy: ctx.policy, campaign: ctx.campaign, transport: "forum", now: NOW,
+      forumTransport: noSender,
+    });
+    expect(blocked.decision.code).toBe("CAMPAIGN_UNAUTHORIZED");
+    expect(blocked.result.external).toBe(false);
+
+    const approved = await prepared();
+    approved.campaign.human_send_approved = true; // per-campaign, never flips global defaults
+    approved.policy.production_send = true;
+    const unknownTarget = await approved.sendMessage("msg:forum-unknown", {
+      recipient: "https://example.com/room", recipient_source: "published_contact",
+    });
+    const denied = await performOutbound({
+      message: unknownTarget, registry: approved.registry, replay: approved.replay,
+      ledger: approved.ledger, policy: approved.policy, campaign: approved.campaign,
+      transport: "forum", now: NOW, forumTransport: noSender,
+    });
+    expect(denied.decision.code).toBe("RECIPIENT_INELIGIBLE");
+    expect(denied.result.external).toBe(false);
+  });
+
+  it("posts once through the signed gate and only counts a confirmed platform ID", async () => {
+    const ctx = await prepared();
+    ctx.policy.production_send = true;
+    ctx.campaign.human_send_approved = true;
+    const message = await ctx.sendMessage("msg:forum-one", {
+      recipient: endpoint, recipient_source: "published_contact",
+    });
+    const calls: string[] = [];
+    const sender = new ForumTransport(async ({ endpoint: actual, body }) => {
+      calls.push(actual);
+      expect(body).toBe(ctx.body);
+      return { platform_message_id: "forum-123" };
+    });
+    const posted = await performOutbound({
+      message, registry: ctx.registry, replay: ctx.replay, ledger: ctx.ledger,
+      policy: ctx.policy, campaign: ctx.campaign, transport: "forum", now: NOW,
+      forumTransport: sender,
+    });
+    expect(posted.decision.code).toBe("ALLOW");
+    expect(posted.result).toMatchObject({
+      delivered: true, external: true, platform_message_id: "forum-123",
+    });
+    expect(calls).toEqual([endpoint]);
+    expect((await sender.deliver(posted.decision, message)).code).toBe("TRANSPORT_REFUSED");
+    expect(calls).toHaveLength(1);
+  });
+
+  it("refuses network calls with an unbranded decision or no sender", async () => {
+    const ctx = await prepared();
+    const message = await ctx.sendMessage("msg:forum-forged", {
+      recipient: endpoint, recipient_source: "published_contact",
+    });
+    const forged = {
+      allow: true, code: "ALLOW" as const, reasons: [],
+      transport: "forum" as const, production_send: true, human_send_approved: true,
+      message_id: message.message_id, agent_id: message.agent_id,
+    };
+    const forum = new ForumTransport(async () => { throw new Error("should not post"); });
+    expect((await forum.deliver(forged, message)).code).toBe("TRANSPORT_REFUSED");
+    ctx.campaign.human_send_approved = true;
+    ctx.policy.production_send = true;
+    const missingSender = await performOutbound({
+      message, registry: ctx.registry, replay: ctx.replay, ledger: ctx.ledger,
+      policy: ctx.policy, campaign: ctx.campaign, transport: "forum", now: NOW,
+    });
+    expect(missingSender.decision.code).toBe("ALLOW");
+    expect(missingSender.result).toMatchObject({
+      external: false, code: "TRANSPORT_REFUSED", reason: "forum_sender_not_configured",
+    });
+  });
+
+  it("does not report a guest POST as delivered without a platform message ID", async () => {
+    const sender = agenticSuperHeroForumSender(async (url, options) => {
+      expect(String(url)).toBe(endpoint);
+      expect(options?.method).toBe("POST");
+      return new Response(JSON.stringify({ status: "accepted", id: "m-42" }), {
+        status: 201, headers: { "Content-Type": "application/json" },
+      });
+    });
+    await expect(sender({endpoint,body:"Hello from AgentZ",message_id:"m",agent_id:AGENTZ_ID}))
+      .resolves.toMatchObject({platform_message_id:"m-42"});
+    await expect(sender({endpoint:"https://untrusted.example/",body:"x",message_id:"m",agent_id:AGENTZ_ID}))
+      .rejects.toThrow(/allowlisted/);
   });
 });
