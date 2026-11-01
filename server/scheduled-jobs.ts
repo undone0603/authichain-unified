@@ -360,7 +360,9 @@ registerJob({
       .where(gte(payments.createdAt, oneWeekAgo));
     const newPayments = paymentsResult?.count || 0;
 
-    // Total active subscriptions
+    // Internal access state is not proof of payment. Some legitimate
+    // admin/seed grants have no provider subscription or billing period.
+    // Do not use this count for MRR, paid-customer or renewal milestones.
     const [activeSubs] = await db.select({ count: count() })
       .from(subscriptions)
       .where(eq(subscriptions.status, "active"));
@@ -380,8 +382,9 @@ registerJob({
 New Users: ${newUsers}
 Authentications: ${newAuths}
 New Leads: ${newLeads}
-Payments: ${newPayments}
-Active Subscriptions: ${totalActiveSubs}
+Payment records created (not verified paid): ${newPayments}
+Internal active subscription rows (not verified paid): ${totalActiveSubs}
+Verified paid subscriptions / renewals: not measured by this digest
 
 HubSpot CRM: ${crmStats.contacts} contacts | ${crmStats.companies} companies | ${crmStats.deals} deals`;
 
@@ -392,7 +395,10 @@ HubSpot CRM: ${crmStats.contacts} contacts | ${crmStats.companies} companies | $
 
     return {
       itemsProcessed: 1,
-      details: { newUsers, newAuths, newLeads, newPayments, totalActiveSubs, crmStats },
+      details: {
+        newUsers, newAuths, newLeads, newPayments, totalActiveSubs, crmStats,
+        subscriptionCountBasis: "internal_status_only_not_payment_verified",
+      },
     };
   },
 });
