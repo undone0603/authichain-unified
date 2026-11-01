@@ -231,6 +231,27 @@ describe("handleStripeWebhook — test events", () => {
 });
 
 describe("handleStripeWebhook — idempotency", () => {
+  it("returns HTTP 500 for a fresh in-flight paid receipt instead of false success", async () => {
+    claimStripeEventMock.mockResolvedValueOnce("in_flight");
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_inflight_paid", {
+        id: "cs_inflight_paid",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 150000,
+        metadata: {},
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toMatchObject({
+      name: "StripeEventClaimUnavailableError",
+      httpStatus: 500,
+    });
+    expect(recordStripeWebhookDelivery).not.toHaveBeenCalled();
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
+
   it("marks duplicate events and skips processing", async () => {
     const { hasWebhookEventProcessed } = await import("../db.js");
     vi.mocked(hasWebhookEventProcessed).mockResolvedValueOnce(true);
@@ -1030,15 +1051,18 @@ describe("handleStripeWebhook — affiliate accrual", () => {
         id: "cs_aff_001",
         mode: "payment",
         payment_status: "paid",
-        metadata: { affiliate_code: "CUP20" },
-        amount_total: 4900,
+        // Affiliate commission only follows a recognized fulfilled purchase.
+        // An unknown paid SKU must remain on reconciliation hold.
+        metadata: { affiliate_code: "CUP20", plan: "starter" },
+        customer_details: { email: "buyer@example.test" },
+        amount_total: 2900,
       })
     );
     const { handleStripeWebhook } = await import("./stripe.js");
     await handleStripeWebhook(RAW_BODY, SIG);
     expect(accrueAffiliateCommission).toHaveBeenCalledWith(expect.anything(), {
       affiliateCode: "CUP20",
-      amountCents: 4900,
+      amountCents: 2900,
       conversion: true,
       eventId: "evt_aff_001",
     });
@@ -1242,6 +1266,7 @@ describe("handleStripeWebhook — once-only claim in stripe_events (no DATABASE_
       from: ReturnType<typeof vi.fn>;
     };
     const ids = new Set<string>();
+    const statuses = new Map<string, string>();
     client.from.mockImplementation((table: string) => {
       if (table !== "stripe_events") return {};
       return {
@@ -1249,6 +1274,7 @@ describe("handleStripeWebhook — once-only claim in stripe_events (no DATABASE_
           select: async () => {
             if (ids.has(row.event_id)) return { data: [], error: null };
             ids.add(row.event_id);
+            statuses.set(row.event_id, "received");
             return { data: [{ event_id: row.event_id }], error: null };
           },
         }),
@@ -1260,6 +1286,16 @@ describe("handleStripeWebhook — once-only claim in stripe_events (no DATABASE_
           };
           return chain;
         },
+        // Real claimStripeEvent reads a persisted terminal status before it
+        // acknowledges the second delivery as a safe duplicate.
+        select: (_columns: string) => ({
+          eq: (_column: string, id: string) => ({
+            maybeSingle: async () => ({
+              data: statuses.has(id) ? { status: statuses.get(id) } : null,
+              error: null,
+            }),
+          }),
+        }),
       };
     });
     const db = await import("../db.js");
@@ -1282,6 +1318,13 @@ describe("handleStripeWebhook — once-only claim in stripe_events (no DATABASE_
     const first = await handleStripeWebhook(RAW_BODY, SIG);
     expect(first.duplicate).toBeUndefined();
     expect(vi.mocked(sendEmail)).toHaveBeenCalledTimes(1);
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventId: "evt_claim_once", status: "success" })
+    );
+    // Delivery writes are mocked here, so mirror the persisted success status
+    // in the fake stripe_events row before the real claim's second read.
+    statuses.set("evt_claim_once", "success");
 
     const second = await handleStripeWebhook(RAW_BODY, SIG);
     expect(second.duplicate).toBe(true);
@@ -1547,5 +1590,105 @@ describe("handleStripeWebhook — Starter amount fallback gate (#1890 parity, ed
   it("explicit metadata.plan=starter still grants in test mode", async () => {
     await run("gate_meta", { livemode: false, metadata: { plan: "starter" } });
     expect(starterCalls().length).toBe(1);
+  });
+});
+
+describe("handleStripeWebhook — unknown paid offer hold (#2247)", () => {
+  it("holds an unrecognized $1,500 one-time payment link without granting credits", async () => {
+    recordStripeWebhookDelivery.mockResolvedValue({ ok: true });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_unknown_build", {
+        id: "cs_unknown_build",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 150000,
+        currency: "usd",
+        livemode: true,
+        payment_link: "plink_unknown_build",
+        customer_details: { email: "buyer@example.test" },
+        metadata: {},
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true,
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+    // No commission for money held without an actual fulfilled product.
+    expect(accrueAffiliateCommission).not.toHaveBeenCalled();
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_unknown_build",
+        sessionId: "cs_unknown_build",
+        status: "reconciliation_required",
+        error: "paid_checkout_unknown_offer",
+      })
+    );
+
+    // A duplicate must preserve the original hold, not overwrite it with success.
+    claimStripeEventMock.mockResolvedValueOnce("duplicate");
+    const duplicate = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(duplicate).toMatchObject({
+      received: true,
+      duplicate: true,
+      handled: false,
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledTimes(2);
+  });
+
+  it("holds an unknown $150/month subscription checkout without a grant", async () => {
+    recordStripeWebhookDelivery.mockResolvedValue({ ok: true });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_unknown_hosting", {
+        id: "cs_unknown_hosting",
+        mode: "subscription",
+        subscription: "sub_unknown_hosting",
+        payment_status: "paid",
+        amount_total: 15000,
+        currency: "usd",
+        livemode: true,
+        payment_link: "plink_unknown_hosting",
+        metadata: {},
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).resolves.toMatchObject({
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_unknown_hosting",
+        status: "reconciliation_required",
+        error: "paid_checkout_unknown_offer",
+      })
+    );
+  });
+
+  it("fails closed if the unknown-offer hold cannot persist its status", async () => {
+    recordStripeWebhookDelivery
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, detail: "base_columns_only" });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_unknown_legacy", {
+        id: "cs_unknown_legacy",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 150000,
+        metadata: {},
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(provisionPurchase).not.toHaveBeenCalled();
   });
 });
