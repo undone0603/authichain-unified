@@ -1263,6 +1263,7 @@ describe("handleStripeWebhook — once-only claim in stripe_events (no DATABASE_
       from: ReturnType<typeof vi.fn>;
     };
     const ids = new Set<string>();
+    const statuses = new Map<string, string>();
     client.from.mockImplementation((table: string) => {
       if (table !== "stripe_events") return {};
       return {
@@ -1270,6 +1271,7 @@ describe("handleStripeWebhook — once-only claim in stripe_events (no DATABASE_
           select: async () => {
             if (ids.has(row.event_id)) return { data: [], error: null };
             ids.add(row.event_id);
+            statuses.set(row.event_id, "received");
             return { data: [{ event_id: row.event_id }], error: null };
           },
         }),
@@ -1281,6 +1283,16 @@ describe("handleStripeWebhook — once-only claim in stripe_events (no DATABASE_
           };
           return chain;
         },
+        // Real claimStripeEvent reads a persisted terminal status before it
+        // acknowledges the second delivery as a safe duplicate.
+        select: (_columns: string) => ({
+          eq: (_column: string, id: string) => ({
+            maybeSingle: async () => ({
+              data: statuses.has(id) ? { status: statuses.get(id) } : null,
+              error: null,
+            }),
+          }),
+        }),
       };
     });
     const db = await import("../db.js");
@@ -1303,6 +1315,13 @@ describe("handleStripeWebhook — once-only claim in stripe_events (no DATABASE_
     const first = await handleStripeWebhook(RAW_BODY, SIG);
     expect(first.duplicate).toBeUndefined();
     expect(vi.mocked(sendEmail)).toHaveBeenCalledTimes(1);
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventId: "evt_claim_once", status: "success" })
+    );
+    // Delivery writes are mocked here, so mirror the persisted success status
+    // in the fake stripe_events row before the real claim's second read.
+    statuses.set("evt_claim_once", "success");
 
     const second = await handleStripeWebhook(RAW_BODY, SIG);
     expect(second.duplicate).toBe(true);
