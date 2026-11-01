@@ -24,7 +24,7 @@ concurrency:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 360
     permissions:
       security-events: write
@@ -72,7 +72,7 @@ jobs:
   CodeQL:
     name: CodeQL
     needs: analyze
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'self-hosted' || 'ubuntu-24.04' }}
+    runs-on: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && 'self-hosted' || 'ubuntu-24.04' }}
     if: always()
     permissions: {}
     steps:
