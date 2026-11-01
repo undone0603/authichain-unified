@@ -2,9 +2,11 @@
  * Live /mcp and /api/mcp 404 today — landing 404s /mcp, APP_WORKER 404s
  * /api/mcp. Agents that probe those paths never see a pay rail.
  *
- * Verification is free (verify_record, GET /api/verify). Prices are on hold,
- * so get_pricing and GET discovery list no Payment Links and no x402 price.
- * tools/call verify is the legacy unpaid 402 as /api/x402 — not a fake
+ * Verification is free (verify_record, GET /api/verify). Stripe catalogue
+ * SKUs stay on hold, so get_pricing lists no Payment Links. When
+ * X402_PAID_VERIFY_PATH is bound (wrangler seal_lookup), get_pricing and GET
+ * discovery quote the live $0.05 USDC-on-Base x402 rail that health already
+ * reports. tools/call verify is the same unpaid 402 as /api/x402 — not a fake
  * "SECURED" JSON. Do not tell agents to GET /api/checkout.
  *
  * Do not import authentic-economy here — that pulls supabase-js into the
@@ -12,12 +14,15 @@
  */
 import {
   BASE_USDC_ASSET,
+  X402_PAID_VERIFY_BOUND,
   X402_PUBLISHED_PAY_TO,
   buildPaymentRequired,
   forwardPaidVerifyMcp,
   parsePaymentHeader,
   readPaymentProofHeader,
+  usdToAtomic,
   X402_REGISTRY_NOT_BOUND,
+  x402PaidVerifyPathBound,
   x402PriceUsd,
   x402PaidVerifyStatus,
   type X402EnvVars,
@@ -472,6 +477,10 @@ function hydrateX402(env?: X402Env) {
     const value = env[name];
     if (value && !process.env[name]) process.env[name] = value;
   }
+  const paidPath = env.X402_PAID_VERIFY_PATH;
+  if (paidPath && !process.env.X402_PAID_VERIFY_PATH) {
+    process.env.X402_PAID_VERIFY_PATH = paidPath;
+  }
 }
 
 function livePayTo(env?: X402Env): string {
@@ -482,14 +491,44 @@ function livePayTo(env?: X402Env): string {
   );
 }
 
+function mcpPaidVerifyStatus(env?: X402Env) {
+  const path = env?.X402_PAID_VERIFY_PATH || process.env.X402_PAID_VERIFY_PATH;
+  return x402PaidVerifyStatus(
+    X402_PAID_VERIFY_BOUND || x402PaidVerifyPathBound(path)
+  );
+}
+
+function mcpTools(env?: X402Env) {
+  const bound = mcpPaidVerifyStatus(env).bound;
+  if (!bound) return TOOLS;
+  return TOOLS.map(tool => {
+    if (tool.name === "get_pricing") {
+      return {
+        ...tool,
+        description:
+          "Free. Quotes the live x402 agent rail ($0.05 USDC on Base) and lists free verification tools. Stripe catalogue SKUs are not listed.",
+      };
+    }
+    if (tool.name === "verify") {
+      return {
+        ...tool,
+        description:
+          "x402 seal verify. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. Paid calls are answered from the seal registry at $0.05 USDC on Base. For free verification use verify_record.",
+      };
+    }
+    return tool;
+  });
+}
+
 /**
- * get_pricing and GET discovery. Verification is free; paid plans are on
- * hold, so this lists no Payment Links and no per-call price. Text only:
- * the legacy x402 `verify` path below is unchanged.
+ * get_pricing and GET discovery. verify_record stays free. Stripe SKUs stay
+ * on hold (no Payment Links). When the seal registry path is bound, quote the
+ * same $0.05 x402 rail as /api/x402/health.
  */
-export function mcpPricingDiscovery(_env?: X402Env) {
-  const legacy = x402PaidVerifyStatus();
-  return {
+export function mcpPricingDiscovery(env?: X402Env) {
+  hydrateX402(env);
+  const paidVerify = mcpPaidVerifyStatus(env);
+  const free = {
     verify: {
       price: "free",
       mcpTool: "verify_record",
@@ -504,27 +543,62 @@ export function mcpPricingDiscovery(_env?: X402Env) {
       "get_pricing",
       "scan_living_qr",
     ],
+  };
+  if (!paidVerify.bound) {
+    return {
+      ...free,
+      paidPlans: {
+        status: "on_hold",
+        note: "Prices are on hold. No Payment Links or per-call prices are offered here.",
+      },
+      legacySealVerify: {
+        tool: "verify",
+        status: paidVerify.status,
+        note: "Legacy x402 seal verify, not answering: a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
+      },
+    };
+  }
+  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  return {
+    ...free,
     paidPlans: {
-      status: "on_hold",
-      note: "Prices are on hold. No Payment Links or per-call prices are offered here.",
+      status: "live",
+      rail: "x402",
+      pricePerCall: { usd: priceUsd, atomic: usdToAtomic(priceUsd) },
+      network: env?.X402_NETWORK || process.env.X402_NETWORK || "base",
+      chainId: env?.X402_CHAIN_ID || process.env.X402_CHAIN_ID || "8453",
+      asset: BASE_USDC_ASSET,
+      payTo: livePayTo(env),
+      http: [
+        "POST https://authichain.com/api/v1/agent-verify",
+        "POST https://authichain.com/api/x402",
+      ],
+      mcpTool: "verify",
+      health: "https://authichain.com/api/x402/health",
+      catalog: "https://authichain.com/api/x402/catalog",
+      paidVerify,
+      note: "Metered agent verify is $0.05 USDC on Base. Unpaid POST returns HTTP 402. Three free UUID calls per IP per UTC day, then 402. Stripe catalogue SKUs are not listed.",
+      stripe: {
+        status: "on_hold",
+        note: "Human Stripe catalogue stays wait_buyer. Not mixed into x402.",
+      },
     },
     legacySealVerify: {
       tool: "verify",
-      status: legacy.status,
-      note: legacy.bound
-        ? "Legacy x402 seal verify. For free verification use verify_record."
-        : "Legacy x402 seal verify, not answering: a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
+      status: paidVerify.status,
+      bound: paidVerify.bound,
+      note: "x402 seal verify. Paid calls are answered from the seal registry. For free verification use verify_record.",
     },
   };
 }
 
-function discoveryBody() {
+function discoveryBody(env?: X402Env) {
   return {
     protocol: "mcp",
     jsonrpc: "2.0",
     serverInfo: { name: "authichain", version: SERVER_VERSION },
-    tools: TOOLS,
-    pricing: mcpPricingDiscovery(),
+    tools: mcpTools(env),
+    pricing: mcpPricingDiscovery(env),
     pay: {
       x402: "POST https://authichain.com/api/x402",
       mcpVerify: "POST https://authichain.com/mcp tools/call verify",
@@ -1296,7 +1370,8 @@ async function handleRpc(
   }
 
   if (method === "tools/list") {
-    return rpcResult(id, { tools: TOOLS });
+    hydrateX402(env);
+    return rpcResult(id, { tools: mcpTools(env) });
   }
 
   if (method === "tools/call") {
@@ -1390,7 +1465,7 @@ async function handleRpc(
           isError: true,
         });
       }
-      // Paid plans are on hold (see mcpPricingDiscovery): no audit pitch here.
+      // Stripe catalogue stays on hold (see mcpPricingDiscovery): no audit pitch.
       const result = scoreDppReadiness(input, { offerAudit: false });
       return rpcResult(id, {
         content: [
@@ -1546,7 +1621,7 @@ export async function tryHandleMcp(
       });
     }
     hydrateX402(env);
-    return json(200, discoveryBody());
+    return json(200, discoveryBody(env));
   }
 
   if (request.method === "POST") {
