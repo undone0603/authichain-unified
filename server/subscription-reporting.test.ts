@@ -7,8 +7,12 @@ describe("subscription digest revenue-truth boundary", () => {
       paymentRecordCount: 0,
       internalActiveCount: 3,
     });
-    expect(digest).toContain("Internal active subscription rows (not verified paid): 3");
-    expect(digest).toContain("Verified paid subscriptions / renewals: not measured");
+    expect(digest).toContain(
+      "Internal active subscription rows (not verified paid): 3"
+    );
+    expect(digest).toContain(
+      "Verified paid subscriptions / renewals: not measured"
+    );
     expect(digest).not.toMatch(/^Active Subscriptions:/m);
   });
 
@@ -17,7 +21,9 @@ describe("subscription digest revenue-truth boundary", () => {
       paymentRecordCount: 1,
       internalActiveCount: 0,
     });
-    expect(digest).toContain("Payment records created (not verified paid): 1");
+    expect(digest).toContain(
+      "Payment records created (not verified paid): 1"
+    );
     expect(digest).not.toMatch(/^Paid Renewals: 1$/m);
   });
 });
