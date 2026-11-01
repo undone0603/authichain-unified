@@ -504,6 +504,7 @@ describe("verifiable outbound", () => {
     expect(kill.code).toBe("KILL_SWITCH");
 
     const email = await prepared();
+    email.policy.production_send = false;
     const blocked = await performOutbound({
       message: await email.sendMessage("msg:email"),
       registry: email.registry, replay: email.replay, ledger: email.ledger,
