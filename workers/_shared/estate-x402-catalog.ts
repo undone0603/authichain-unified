@@ -8,7 +8,11 @@
  * offer. Do not invent Stripe
  * URLs. Do not add GET /api/checkout. Do not publish a facilitator URL.
  */
-import { planPaymentLink, planUsd } from "../../src/lib/plans.ts";
+import {
+  catalogOffers,
+  planPaymentLink,
+  planUsd,
+} from "../../src/lib/plans.ts";
 import {
   x402Caip2Network,
   x402HealthReport,
@@ -31,6 +35,7 @@ export type SisterHumanCheckout = {
   creatorUsd?: number;
   starterPaymentLink?: string;
   creatorPaymentLink?: string;
+  offers: ReturnType<typeof catalogOffers>;
   source: "src/lib/plans.ts";
 };
 
@@ -82,6 +87,7 @@ function humanCheckout(
     farmUsd: planUsd("strainchain_farm"),
     passportPaymentLink: planPaymentLink("strainchain_passport"),
     dppPaymentLink: planPaymentLink("dpp_readiness"),
+    offers: catalogOffers(),
     source: "src/lib/plans.ts",
   };
   if (brand === "qron") {

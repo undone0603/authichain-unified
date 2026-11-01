@@ -50,15 +50,15 @@ describe("bot identities", () => {
     const did = get("/.well-known/did.json")!;
     expect(did.status).toBe(200);
     expect(did.headers.get("Content-Type")).toBe("application/did+json");
-    for (const p of ["/.well-known/agent-card.json", "/.well-known/agent.json"]) {
-      const r = get(p)!;
-      expect(r.status).toBe(200);
-      const card = await r.json();
-      expect(card.name).toBe("AuthiChain agents");
-      expect(card.description).toContain("None of them is a person");
-      expect(card.description).toContain("do not show who operates an agent");
-      expect(card.identity.agents).toHaveLength(23);
-    }
+    expect(get("/.well-known/agent-card.json")).toBeNull();
+    expect(get("/.well-known/agent.json")).toBeNull();
+    const roster = get("/agents/agent-card.json")!;
+    expect(roster.status).toBe(200);
+    const card = await roster.json();
+    expect(card.name).toBe("AuthiChain agents");
+    expect(card.description).toContain("None of them is a person");
+    expect(card.description).toContain("do not show who operates an agent");
+    expect(card.identity.agents).toHaveLength(23);
     const dir = get("/.well-known/http-message-signatures-directory")!;
     expect(dir.status).toBe(200);
     expect(dir.headers.get("Content-Type")).toBe("application/http-message-signatures-directory+json");

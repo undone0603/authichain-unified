@@ -1,8 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { parseSealRequest, registryAnswer, unpaidSealRefusal } from "./agent-verify";
+import {
+  coerceSealBody,
+  listedSealId,
+  parseSealRequest,
+  registryAnswer,
+  unpaidSealRefusal,
+} from "./agent-verify";
 import { x402BazaarDiscovery } from "./x402";
 
 const SEAL = "3f6c2a4e-8b1d-4c7a-9e2f-0a1b2c3d4e5f";
+
+describe("coerceSealBody", () => {
+  it("unwraps PayAI outputSchema.input wrappers", () => {
+    expect(
+      coerceSealBody({
+        type: "http",
+        method: "POST",
+        bodyType: "json",
+        body: { sealId: "demo" },
+      })
+    ).toEqual({ sealId: "demo" });
+    expect(listedSealId({ type: "http", body: { seal_id: ` ${SEAL} ` } })).toBe(
+      SEAL
+    );
+    expect(coerceSealBody({ sealId: SEAL })).toEqual({ sealId: SEAL });
+  });
+});
 
 describe("parseSealRequest", () => {
   it("accepts a seal UUID from sealId or seal_id", () => {
