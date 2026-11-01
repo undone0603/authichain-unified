@@ -203,6 +203,7 @@
         "deploy-govchain-nft-base.yml": "manual",
         "deploy-manufacturer-status.yml": "manual",
         "deploy-authichain-app.yml": "manual",
+        "deploy-authichain-edge-router.yml": "manual",
         "dpp-followup.yml": "manual",
         "dpp-outreach-trigger.yml": "manual",
         "guardrail-digest.yml": "manual",
@@ -223,6 +224,7 @@
         "upload-microsites-kv.yml": "manual",
         "verify-outreach-secrets.yml": "manual",
         "verify-scheduled-jobs.yml": "manual",
+        "wsl-net-check.yml": "manual",
         "x402-smoke.yml": "manual",
         "anchor-polygon-record.yml": "manual"
       }
