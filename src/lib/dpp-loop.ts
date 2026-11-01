@@ -83,9 +83,9 @@ function normalizeSource(
 export async function recordDppLoopEvent(
   supabase: SupabaseLike,
   input: RecordDppLoopEventInput
-): Promise<void> {
+): Promise<{ ok: boolean }> {
   const visitId = input.visitId?.trim();
-  if (!visitId) return;
+  if (!visitId) return { ok: false };
 
   try {
     const { error } = await supabase.from("funnel_events").insert({
@@ -107,9 +107,12 @@ export async function recordDppLoopEvent(
     });
     if (error) {
       console.error("[dpp-loop] record failed:", input.stage, error);
+      return { ok: false };
     }
+    return { ok: true };
   } catch (err) {
     console.error("[dpp-loop] record failed:", input.stage, err);
+    return { ok: false };
   }
 }
 
@@ -540,13 +543,15 @@ export async function recordDppLoopEventOnce(
     console.error("[dpp-loop] dedupe check failed:", input.stage, err);
   }
 
-  await recordDppLoopEvent(supabase, {
+  const write = await recordDppLoopEvent(supabase, {
     ...input,
     metadata: {
       ...(input.metadata || {}),
       ...(input.dedupeKey ? { dedupe_key: input.dedupeKey } : {}),
     },
   });
+  // A failed insert is not evidence that a paid fulfillment stage was recorded.
+  if (!write.ok) return { recorded: false, reason: "write_failed" };
   return { recorded: true };
 }
 

@@ -3,7 +3,13 @@
  * POST /api/dpp/activate is not a 404.
  */
 
-import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "./dpp-loop";
+import {
+  DPP_PRICE_ID,
+  dppActivateUrl,
+  isDppDemoSession,
+  isDppOffer,
+  recordDppLoopEvent,
+} from "./dpp-loop";
 import {
   buildDppImporterFile,
   parseImporterPackFigures,
@@ -89,7 +95,8 @@ export async function activateDppMerchant(opts: {
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
     expand: ["line_items"],
   });
-  if (session.payment_status !== "paid" && session.status !== "complete") {
+  // status=complete is not payment. Delayed methods can complete while unpaid.
+  if (session.payment_status !== "paid") {
     return { ok: false, status: 402, error: "Checkout session is not paid" };
   }
 
@@ -102,11 +109,24 @@ export async function activateDppMerchant(opts: {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
   const linePriceId = session.line_items?.data?.[0]?.price?.id ?? null;
-  if (linePriceId && !isDppOffer(md, linePriceId)) {
+  // Stripe metadata alone cannot override the product actually purchased.
+  // The canonical $299 DPP checkout has one known live price ID.
+  if (linePriceId !== DPP_PRICE_ID) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
-  if (!isDppOffer(md) && session.amount_total !== 29900) {
-    return { ok: false, status: 400, error: "Not a DPP workspace session" };
+  // DPP metadata is not cash. Demo, $0, and the founder $10 session must not
+  // write merchant_activated. Only a paid 29900-cent USD session can.
+  const currency = String(session.currency || "").toLowerCase();
+  if (
+    isDppDemoSession(md) ||
+    session.amount_total !== 29900 ||
+    currency !== "usd"
+  ) {
+    return {
+      ok: false,
+      status: 402,
+      error: "Checkout session is not a paid $299 DPP workspace",
+    };
   }
 
   const email = (
@@ -174,7 +194,7 @@ export async function activateDppMerchant(opts: {
       : buildDppImporterFile({ categories, markets, labeling, pack });
 
   if (!alreadyActivated) {
-    await recordDppLoopEvent(opts.supabase, {
+    const recorded = await recordDppLoopEvent(opts.supabase, {
       visitId,
       stage: "merchant_activated",
       source: String(md.source || "direct"),
@@ -190,6 +210,13 @@ export async function activateDppMerchant(opts: {
         importer_file,
       },
     });
+    if (!recorded.ok) {
+      return {
+        ok: false,
+        status: 500,
+        error: "Could not store the activation",
+      };
+    }
   }
 
   return {
