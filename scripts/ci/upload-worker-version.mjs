@@ -5,7 +5,9 @@
  * part-level gzip eval'd as JS (41297825503), HTTP gzip of the body
  * returned multipart NextPart EOF (41298894966). HTTP/1.1 uncompressed
  * RST after ~96s (41264005567). Send raw JS over HTTP/2 with a longer
- * max-time so the 8.8 MiB POST can finish.
+ * max-time so the 8.8 MiB POST can finish. A failed POST appends curl's
+ * size_upload, speed_upload, size_download, http_code, and time_total.
+ * Run 41303592477 exited 28 with 0 bytes received and no version id.
  *
  * keep_bindings secret_text inherits AUTHICHAIN_ATTESTATION_*. keep_assets
  * keeps client/public. Does not print the API token or secret values.
@@ -129,6 +131,20 @@ export function buildMultipartBody({ metadata, moduleBuf, boundary }) {
   return Buffer.concat([head, meta, mid, moduleBuf, tail]);
 }
 
+export const CURL_WRITE_OUT =
+  "\nauthichain-curl size_upload=%{size_upload} speed_upload=%{speed_upload} size_download=%{size_download} http_code=%{http_code} time_total=%{time_total}\n";
+
+export function splitCurlOutput(stdout) {
+  const text = String(stdout ?? "");
+  const marker = "\nauthichain-curl ";
+  const at = text.lastIndexOf(marker);
+  if (at === -1) return { body: text.trim(), writeOut: "" };
+  return {
+    body: text.slice(0, at).trim(),
+    writeOut: text.slice(at + 1).trim(),
+  };
+}
+
 export function curlArgv({ url, bodyPath, headerPath, contentType }) {
   return [
     "curl",
@@ -144,6 +160,8 @@ export function curlArgv({ url, bodyPath, headerPath, contentType }) {
     "--show-error",
     "--max-time",
     "480",
+    "--write-out",
+    CURL_WRITE_OUT,
     "-X",
     "POST",
     url,
@@ -223,11 +241,14 @@ export function uploadWorkerVersion({
       encoding: "utf8",
       maxBuffer: 4 * 1024 * 1024,
     });
+    const { body, writeOut } = splitCurlOutput(result.stdout);
     if (result.status !== 0) {
-      const err = String(result.stderr || result.stdout || "").trim();
-      throw new Error(`curl versions POST exit ${result.status}: ${err || "no output"}`);
+      const err = String(result.stderr || "").trim();
+      const snippet = body.length > 0 && body.length <= 500 ? body : "";
+      const detail = [err, writeOut, snippet].filter(Boolean).join(" | ");
+      throw new Error(`curl versions POST exit ${result.status}: ${detail || "no output"}`);
     }
-    return parseVersionUploadResponse(result.stdout);
+    return parseVersionUploadResponse(body);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
