@@ -35,6 +35,46 @@ describe("activateDppMerchant", () => {
     if (!result.ok) expect(result.status).toBe(400);
   });
 
+  it("fails closed when Checkout is complete but the payment has not cleared", async () => {
+    const { activateDppMerchant } = await import("./dpp-activate");
+    for (const payment_status of ["unpaid", "no_payment_required", undefined]) {
+      retrieve.mockResolvedValueOnce({
+        status: "complete",
+        payment_status,
+        amount_total: 29900,
+        metadata: { offer: "dpp_readiness_2026" },
+        line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+      });
+      const from = vi.fn(() => { throw new Error("must not create activation event"); });
+      const result = await activateDppMerchant({
+        body: { session_id: "cs_pending", categories: "a", markets: "b", labeling: "c" },
+        stripeSecretKey: "sk_test",
+        supabase: { from },
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.status).toBe(402);
+      expect(from).not.toHaveBeenCalled();
+    }
+  });
+
+  it("rejects a paid checkout whose session is still open", async () => {
+    retrieve.mockResolvedValueOnce({
+      status: "open", payment_status: "paid", amount_total: 29900,
+      metadata: { plan: "dpp_readiness" },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+    });
+    const from = vi.fn(() => { throw new Error("must not create activation event"); });
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: { session_id: "cs_open", categories: "a", markets: "b", labeling: "c" },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(402);
+    expect(from).not.toHaveBeenCalled();
+  });
+
   it("rejects a paid $299 session whose line item is another product", async () => {
     retrieve.mockResolvedValueOnce({
       payment_status: "paid",
