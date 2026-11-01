@@ -23,8 +23,8 @@ export function renderVerifyLivePage(): string {
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>This seal is already on Base. | AuthiChain</title>
-<meta name="description" content="Founder example. Signature check plus an on-chain anchor. This does not prove a physical object is genuine.">
+<title>Verify it yourself. Then issue your own. | AuthiChain</title>
+<meta name="description" content="Open protocol. Local verifier. Live demonstration record. No account required to check. Self-serve path to publish a signed seal.">
 <link rel="canonical" href="https://authichain.com/verify/live">
 <meta name="robots" content="index, follow">
 <style>
@@ -44,8 +44,8 @@ dd{margin:.15rem 0 0;word-break:break-all}
 .actions a.ghost{border:1px solid #3f3f46;color:#fafafa}
 </style></head><body>
 <main>
-<h1>This seal is already on Base.</h1>
-<p>Founder example. Signature check + on-chain anchor. You can verify it without trusting us.</p>
+<h1>Verify it yourself. Then issue your own.</h1>
+<p>Open protocol. Local verifier. Live demonstration record. No account required to check. Self-serve path to publish a signed seal.</p>
 <h2>Public proof</h2>
 <dl>
 <dt>Holder</dt><dd>${HOLDER}</dd>
@@ -53,18 +53,19 @@ dd{margin:.15rem 0 0;word-break:break-all}
 <dt>Mint tx</dt><dd><a href="https://basescan.org/tx/${MINT_TX}">view on BaseScan</a></dd>
 <dt>Open protocol</dt><dd><a href="/protocol">run the verifier yourself</a></dd>
 </dl>
+<p>One published demonstration record (polygon-anchor-1) can be checked now. Protocol verdicts: verified / valid-unanchored / invalid. Signature check is live. Public registry of customer seals is in development.</p>
 <p>What this does not prove: that any physical object is genuine. A signed record is not an inspection.</p>
 <div class="actions">
-<a class="primary" href="/generate">Generate your own Living QR</a>
-<a class="ghost" href="/pricing">Buy Starter — $29</a>
+<a class="primary" href="/onboard" data-event="onboard_cta_clicked">Start self-serve — issue a seal</a>
+<a class="ghost" href="/protocol">Run the open verifier</a>
 </div>
 <h2>FAQ</h2>
-<h3>Does this prove the product is authentic?</h3>
-<p>No. It proves the claim was signed and the anchor hash matches what is on Base. Physical genuineness is a separate inspection.</p>
-<h3>Can I do this for my products?</h3>
-<p>Yes. Self-serve generation and the $29 Starter Pack. No call required.</p>
-<h3>Is the public certificate registry live?</h3>
-<p>In development. This page shows the live path that already exists.</p>
+<h3>Does this prove a physical product is genuine?</h3>
+<p>No. It checks a signed record and optional anchor. Binding to a physical item is a separate step.</p>
+<h3>Is the public registry live?</h3>
+<p>In development. Demonstration record is live.</p>
+<h3>How do agents pay?</h3>
+<p>$0.05 USDC on the live x402 rail.</p>
 </main>
 </body></html>`;
 }
