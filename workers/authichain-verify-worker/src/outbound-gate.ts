@@ -203,9 +203,15 @@ export async function authorizeOutbound(input: {
     verifier_reasons: verified.reasons,
   };
   if (!verified.valid) {
+    // Preserve a concrete missing capability in the diagnostic when the
+    // signed presentation omits SEND_OUTBOUND. Do not weaken verification.
+    const reasons = verified.reasons.includes("CAPABILITY_NOT_GRANTED") &&
+      !input.message.capabilities.includes("SEND_OUTBOUND")
+      ? [...verified.reasons, "SEND_OUTBOUND"]
+      : verified.reasons;
     return finish(
       mapIdentity(verified.reasons),
-      verified.reasons,
+      reasons,
       identityExtra
     );
   }
