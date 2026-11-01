@@ -191,6 +191,8 @@ export async function authorizeOutbound(input: {
     resolver: input.registry,
     replayStore: input.replay,
     now,
+    requiredCapability: "SEND_OUTBOUND",
+    expectedIntent: "SEND_OUTBOUND",
   });
   const identityExtra = {
     agent_id: verified.agent_id ?? base.agent_id,
@@ -201,9 +203,24 @@ export async function authorizeOutbound(input: {
     verifier_reasons: verified.reasons,
   };
   if (!verified.valid) {
+    // A well-signed but categorically disallowed action is still a policy
+    // refusal. Do not downgrade concurrent signature/capability failures.
+    if (verified.reasons.length === 1 &&
+        verified.reasons[0] === "INTENT_MISMATCH" &&
+        BLOCKED_INTENTS.has(input.message.intent)) {
+      return finish("POLICY_DENIED", [
+        `action_not_permitted:${input.message.intent}`
+      ], identityExtra);
+    }
+    // Preserve a concrete missing capability in the diagnostic when the
+    // signed presentation omits SEND_OUTBOUND. Do not weaken verification.
+    const reasons = verified.reasons.includes("CAPABILITY_NOT_GRANTED") &&
+      !input.message.capabilities.includes("SEND_OUTBOUND")
+      ? [...verified.reasons, "SEND_OUTBOUND"]
+      : verified.reasons;
     return finish(
       mapIdentity(verified.reasons),
-      verified.reasons,
+      reasons,
       identityExtra
     );
   }
@@ -253,6 +270,73 @@ export async function authorizeOutbound(input: {
   }
   if (payload.attribution !== campaign.attribution) {
     return finish("BINDING_MISMATCH", ["attribution_mismatch"], identityExtra);
+  }
+
+  // Public, non-targeted community introductions have no qualified commercial
+  // prospect, email recipient or Scout opportunity. They use the SAME signed
+  // gate but a separate campaign approval and a single fixed room.
+  if (input.transport === "forum") {
+    const endpoint = "https://agenticsuperhero.com/api/v1/channels/lobby/messages";
+    if (!campaign.allow_public_forum) {
+      return finish("CAMPAIGN_UNAUTHORIZED", ["public_forum_not_approved"], identityExtra);
+    }
+    if (payload.campaign_id !== campaign.campaign_id ||
+        payload.prospect_id !== "community:agenticsuperhero" ||
+        payload.opportunity_id !== "community:agenticsuperhero:lobby") {
+      return finish("BINDING_MISMATCH", ["community_scope_mismatch"], identityExtra);
+    }
+    if (payload.recipient !== endpoint || payload.recipient_source !== "published_contact") {
+      return finish("RECIPIENT_INELIGIBLE", ["forum_endpoint_not_allowlisted"], identityExtra);
+    }
+    if (input.message.evidence_ids.length === 0) {
+      return finish("ATTRIBUTION_MISSING", ["public_room_evidence_required"], identityExtra);
+    }
+    if (!payload.body.includes(outboundDisclosure({
+      agentId: input.message.agent_id,
+      organizationId: input.message.organization_id,
+      role: input.message.role,
+      attestationId: input.message.attestation_id,
+    }))) {
+      return finish("POLICY_DENIED", ["agent_disclosure_missing"], identityExtra);
+    }
+    if (await contentHash(payload.body) !== payload.content_hash) {
+      return finish("BINDING_MISMATCH", ["content_hash_mismatch"], identityExtra);
+    }
+    const contactKey = endpoint;
+    if (input.ledger.isSuppressed(contactKey)) {
+      return finish("SUPPRESSED", ["forum_suppressed"], identityExtra);
+    }
+    if (input.ledger.duplicateContact(campaign.campaign_id, contactKey)) {
+      return finish("DUPLICATE_CONTACT", ["duplicate_contact"], identityExtra);
+    }
+    if (input.ledger.sendsForAgent(input.message.agent_id) >= policy.max_sends_per_agent ||
+        input.ledger.sendsForCampaign(campaign.campaign_id) >= policy.max_sends_per_campaign ||
+        input.ledger.sendsForRecipient(contactKey).length >= policy.max_sends_per_recipient) {
+      return finish("RATE_LIMIT", ["forum_rate_limit"], identityExtra);
+    }
+    if (!policy.production_send) {
+      return finish("PRODUCTION_SEND_DISABLED", ["production_send_disabled"], identityExtra);
+    }
+    if (!campaign.human_send_approved) {
+      return finish("CAMPAIGN_UNAUTHORIZED", ["human_send_not_approved"], identityExtra);
+    }
+    const decision = finish("ALLOW", [], {
+      ...identityExtra, capability: "SEND_OUTBOUND",
+      prospect_id: payload.prospect_id,
+      opportunity_id: payload.opportunity_id,
+      campaign_id: campaign.campaign_id,
+    });
+    input.ledger.recordSend({
+      at: now.toISOString(),
+      message_id: input.message.message_id,
+      agent_id: input.message.agent_id,
+      campaign_id: campaign.campaign_id,
+      prospect_id: payload.prospect_id,
+      opportunity_id: payload.opportunity_id,
+      recipient: contactKey,
+      content_hash: payload.content_hash,
+    });
+    return decision;
   }
   if (
     !isCommercialOutboundOffer(campaign.offer_id) ||
@@ -339,21 +423,20 @@ export async function authorizeOutbound(input: {
   const recipient = assessRecipient(
     payload.recipient,
     payload.recipient_source,
-    {
-      allowRoleInbox: campaign.allow_role_inbox === true,
-    }
+    { allowRoleInbox: campaign.allow_role_inbox === true }
   );
   if (recipient.status !== "allow") {
     return finish("RECIPIENT_INELIGIBLE", recipient.reasons, identityExtra);
   }
-  if (input.ledger.isSuppressed(recipient.email)) {
+  const contactKey = recipient.email;
+  if (input.ledger.isSuppressed(contactKey)) {
     return finish(
       "SUPPRESSED",
-      [input.ledger.suppressionReason(recipient.email) ?? "suppressed"],
+      [input.ledger.suppressionReason(contactKey) ?? "suppressed"],
       identityExtra
     );
   }
-  if (input.ledger.duplicateContact(campaign.campaign_id, recipient.email)) {
+  if (input.ledger.duplicateContact(campaign.campaign_id, contactKey)) {
     return finish("DUPLICATE_CONTACT", ["duplicate_contact"], identityExtra);
   }
   if (
@@ -368,7 +451,7 @@ export async function authorizeOutbound(input: {
   ) {
     return finish("RATE_LIMIT", ["campaign_rate_limit"], identityExtra);
   }
-  const prior = input.ledger.sendsForRecipient(recipient.email);
+  const prior = input.ledger.sendsForRecipient(contactKey);
   if (prior.length >= policy.max_sends_per_recipient) {
     return finish("RATE_LIMIT", ["recipient_rate_limit"], identityExtra);
   }
@@ -380,14 +463,14 @@ export async function authorizeOutbound(input: {
     }
   }
 
-  if (input.transport === "email" && !policy.production_send) {
+  if ((input.transport === "email" || input.transport === "forum") && !policy.production_send) {
     return finish(
       "PRODUCTION_SEND_DISABLED",
       ["production_send_disabled"],
       identityExtra
     );
   }
-  if (input.transport === "email" && !campaign.human_send_approved) {
+  if ((input.transport === "email" || input.transport === "forum") && !campaign.human_send_approved) {
     return finish(
       "CAMPAIGN_UNAUTHORIZED",
       ["human_send_not_approved"],
@@ -410,7 +493,7 @@ export async function authorizeOutbound(input: {
     campaign_id: campaign.campaign_id,
     prospect_id: payload.prospect_id,
     opportunity_id: payload.opportunity_id,
-    recipient: recipient.email,
+    recipient: contactKey,
     content_hash: payload.content_hash,
   });
   return decision;
@@ -452,6 +535,8 @@ export interface TransportResult {
   external: boolean;
   code: "ALLOW" | OutboundDenial;
   reason?: string;
+  platform_message_id?: string;
+  external_url?: string;
 }
 
 function consumeDecision(decision: OutboundDecision): boolean {
@@ -574,6 +659,92 @@ export class EmailTransport {
   }
 }
 
+/**
+ * Single-destination, signed AgentZ public-forum adapter. External I/O only
+ * occurs after the existing branded authorization is verified and consumed.
+ * A zero-credential guest post is not itself proof of issuer-signed identity.
+ */
+export interface ForumSendRequest {
+  endpoint: string;
+  body: string;
+  message_id: string;
+  agent_id: string;
+}
+export interface ForumReceipt {
+  platform_message_id: string;
+  external_url?: string;
+}
+export type ForumSender = (request: ForumSendRequest) => Promise<ForumReceipt>;
+
+export class ForumTransport {
+  constructor(private readonly sender: ForumSender | null = null) {}
+
+  async deliver(
+    decision: OutboundDecision,
+    message: SignedAgentMessage<OutboundActionPayload>
+  ): Promise<TransportResult> {
+    if (!decisionIsGated(decision) || decision.transport !== "forum" ||
+        !decisionBindsMessage(decision, message) || !consumeDecision(decision)) {
+      return { delivered: false, external: false, code: "TRANSPORT_REFUSED", reason: "ungated_decision" };
+    }
+    if (!decision.allow || !decision.production_send || !decision.human_send_approved) {
+      return { delivered: false, external: false,
+        code: decision.allow ? "PRODUCTION_SEND_DISABLED" : decision.code,
+        reason: "forum_send_not_approved" };
+    }
+    if (!this.sender) {
+      return { delivered: false, external: false, code: "TRANSPORT_REFUSED", reason: "forum_sender_not_configured" };
+    }
+    try {
+      const receipt = await this.sender({
+        endpoint: message.payload.recipient,
+        body: message.payload.body,
+        message_id: message.message_id,
+        agent_id: message.agent_id,
+      });
+      if (!receipt?.platform_message_id) {
+        return { delivered: false, external: false, code: "TRANSPORT_REFUSED",
+          reason: "post_response_lacks_message_id_do_not_retry_automatically" };
+      }
+      return { delivered: true, external: true, code: "ALLOW",
+        platform_message_id: receipt.platform_message_id, external_url: receipt.external_url };
+    } catch {
+      // A timed-out POST may have arrived: do not retry without first reconciling.
+      return { delivered: false, external: false, code: "TRANSPORT_REFUSED",
+        reason: "post_delivery_unknown_do_not_retry_automatically" };
+    }
+  }
+}
+
+/** Native fetch sender. Explicitly opt in via ForumTransport; never default to network sending. */
+export function agenticSuperHeroForumSender(fetchFn: typeof fetch = fetch): ForumSender {
+  return async ({endpoint, body}) => {
+    if (endpoint !== "https://agenticsuperhero.com/api/v1/channels/lobby/messages") {
+      throw new Error("forum_endpoint_not_allowlisted");
+    }
+    const response = await fetchFn(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+      redirect: "error",
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok) throw new Error("forum_post_non_success");
+    const data = await response.json() as {
+      id?: string | number;
+      message_id?: string | number;
+      url?: string;
+      message?: {id?: string | number};
+    };
+    const id = data.id ?? data.message_id ?? data.message?.id;
+    // Reject invented URLs; accept only an explicit canonical URL from the platform.
+    const external_url =
+      typeof data.url === "string" && data.url.startsWith("https://agenticsuperhero.com/")
+        ? data.url : undefined;
+    return { platform_message_id: id == null ? "" : String(id), external_url };
+  };
+}
+
 export async function performOutbound(input: {
   message: SignedAgentMessage<OutboundActionPayload>;
   registry: AgentIdentityResolver;
@@ -585,6 +756,7 @@ export async function performOutbound(input: {
   now?: Date;
   testTransport?: TestOutboundTransport;
   emailTransport?: EmailTransport;
+  forumTransport?: ForumTransport;
 }): Promise<{ decision: BrandedDecision; result: TransportResult }> {
   const decision = await authorizeOutbound(input);
   const at = (input.now ?? new Date()).toISOString();
@@ -594,7 +766,9 @@ export async function performOutbound(input: {
           decision,
           input.message
         )
-      : (input.testTransport ?? new TestOutboundTransport()).deliver(
+      : input.transport === "forum"
+        ? await (input.forumTransport ?? new ForumTransport(null)).deliver(decision, input.message)
+        : (input.testTransport ?? new TestOutboundTransport()).deliver(
           decision,
           input.message
         );
@@ -662,6 +836,8 @@ export async function authorizeDraft(input: {
     resolver: input.registry,
     replayStore: input.replay,
     now,
+    requiredCapability: "DRAFT_OUTBOUND",
+    expectedIntent: "DRAFT_OUTBOUND",
   });
   if (!verified.valid) {
     const code = mapIdentity(verified.reasons);
