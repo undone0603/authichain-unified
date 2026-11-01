@@ -821,6 +821,88 @@ describe("fulfilment watchdog", async () => {
   });
 });
 
+describe("durable grant watchdog", async () => {
+  const { findMissingProfileGrants, checkFulfilment, expectsProfileGrant } =
+    await import("../autonomy/revenue-watch.mjs");
+  const now = Date.parse("2026-11-01T16:00:00Z");
+  const purchased = (id: string, metadata: Record<string, unknown> = {
+    offer: "dpp_readiness_2026", canonical_name: "dpp_workspace",
+  }) => ({
+    id, created: Math.floor((now - 60 * 60_000) / 1000),
+    status: "complete", payment_status: "paid", amount_total: 29900,
+    livemode: true, metadata, customer_details: { email: "buyer@example.org" },
+  });
+  const successful = (id: string) => ({
+    session_id: id, status: "success", event_type: "checkout.session.completed",
+  });
+
+  it("reports a webhook-successful paid DPP sale without its durable grant", () => {
+    const sessions = [purchased("cs_paid_missing"), purchased("cs_paid_granted")];
+    const out = findMissingProfileGrants(
+      sessions, sessions.map(s => successful(s.id)),
+      [{ last_grant_session_id: "cs_paid_granted" }], { now },
+    );
+    expect(out.map((x: { session: string; reason: string }) => x.session + ":" + x.reason))
+      .toEqual(["cs_paid_missing:webhook succeeded; durable profile grant missing"]);
+    expect(JSON.stringify(out)).not.toContain("buyer@example.org");
+    expect(JSON.stringify(out)).not.toContain("29900");
+  });
+
+  it("never reports free demos, founders, unrelated/held offers or pending webhooks as missing grants", () => {
+    const s = [
+      purchased("cs_zero", { plan: "dpp_readiness" }),
+      purchased("cs_demo", { plan: "dpp_readiness", is_demo: "true" }),
+      purchased("cs_founder"),
+      purchased("cs_musa", { plan: "musa_claim_file" }),
+      purchased("cs_unacknowledged"),
+      purchased("cs_paid_starter", { plan: "starter" }),
+    ];
+    s[0]!.amount_total = 0;
+    s[2]!.customer_details.email = "founder@authichain.com";
+    expect(expectsProfileGrant(s[3])).toBe(false);
+    const out = findMissingProfileGrants(s, [
+      successful("cs_zero"), successful("cs_demo"), successful("cs_founder"),
+      successful("cs_musa"), successful("cs_paid_starter"),
+    ], [], { now, founderEmails: ["@authichain.com"] });
+    expect(out.map((x: { session: string }) => x.session)).toEqual(["cs_paid_starter"]);
+  });
+
+  it("queries the actual profile session marker in addition to successful webhook receipt", async () => {
+    const one = purchased("cs_paid_dpp");
+    const called: string[] = [];
+    const result = await checkFulfilment({
+      stripeKey: "fake", supabaseUrl: "https://example.test", supabaseKey: "fake",
+      fetchImpl: async (url: string) => {
+        called.push(url);
+        if (url.startsWith("https://api.stripe.com"))
+          return { ok: true, json: async () => ({data:[one],has_more:false}) };
+        if (url.includes("/rest/v1/stripe_events?"))
+          return { ok: true, json: async () => [successful(one.id)] };
+        if (url.includes("/rest/v1/profiles?"))
+          return { ok: true, json: async () => [] };
+        throw Error("unexpected URL");
+      },
+    });
+    expect(result.checked).toBe(1);
+    expect(result.problems).toHaveLength(1);
+    expect(result.problems[0].reason).toContain("durable profile grant missing");
+    expect(called.some(url => url.includes("last_grant_session_id"))).toBe(true);
+  });
+
+  it("fails closed when the grant ledger is unavailable instead of falsely declaring success", async () => {
+    await expect(checkFulfilment({
+      stripeKey: "fake", supabaseUrl: "https://example.test", supabaseKey: "fake",
+      fetchImpl: async (url: string) => {
+        if (url.startsWith("https://api.stripe.com"))
+          return { ok:true, json:async () => ({ data:[purchased("cs_missing")], has_more:false }) };
+        if (url.includes("/rest/v1/stripe_events?"))
+          return { ok:true, json:async () => [successful("cs_missing")] };
+        return { ok:false, status:403 };
+      },
+    })).rejects.toThrow("Supabase profiles grants -> 403");
+  });
+});
+
 describe("approval queue", async () => {
   const { decide, latchHeld, latchSearchQuery } =
     await import("../autonomy/approvals.mjs");
