@@ -176,22 +176,22 @@ export function classifyRevenue(
     }
   }
 
-  const strangerPaid = snapshot.charges.some(
-    charge =>
-      countsAsLive(charge) &&
-      charge.paid &&
-      isStrangerEmail(charge.email, founderEmails)
+  // One-time catalog charges (Starter $29, DPP $299) qualify without waiting for
+  // a Stripe payout batch. Payouts alone never qualify without a stranger charge.
+  const strangerCharge = snapshot.charges.find(
+    charge => charge.paid && charge.amount > 0 && isStrangerEmail(charge.email, founderEmails)
   );
+  if (strangerCharge) {
+    return {
+      qualifying: true,
+      reason: `paid charge ${strangerCharge.id} for ${strangerCharge.email}`,
+    };
+  }
+
   let blockedPayout: string | null = null;
   for (const payout of snapshot.payouts) {
     if (!PAID_OUT.has((payout.status ?? "paid").toLowerCase())) continue;
     if (payout.amount <= 0) continue;
-    if (strangerPaid) {
-      return {
-        qualifying: true,
-        reason: `payout ${payout.id} with a non-founder paid charge`,
-      };
-    }
     blockedPayout = payout.id;
   }
 

@@ -165,6 +165,37 @@ describe("classifyRevenue", () => {
     expect(ok.qualifying).toBe(true);
   });
 
+  it("counts a non-founder paid one-time charge without a payout (Starter path)", () => {
+    const verdict = classifyRevenue(
+      snap({
+        charges: [
+          {
+            id: "ch_starter",
+            amount: 2900,
+            paid: true,
+            email: "buyer@example.com",
+          },
+        ],
+      }),
+      founders
+    );
+    expect(verdict.qualifying).toBe(true);
+    expect(verdict.reason).toContain("ch_starter");
+    expect(verdict.reason).toContain("buyer@example.com");
+  });
+
+  it("does not count zero-dollar paid-status charges as customer revenue", () => {
+    const verdict = classifyRevenue(
+      snap({
+        charges: [
+          { id: "ch_free", amount: 0, paid: true, email: "buyer@example.com" },
+        ],
+      }),
+      founders
+    );
+    expect(verdict.qualifying).toBe(false);
+  });
+
   it("does not treat a paid charge with no email as a stranger", () => {
     const verdict = classifyRevenue(
       snap({
@@ -506,6 +537,33 @@ describe("freeze gates", () => {
     expect(mayRunAgentzAuto("auto").allowed).toBe(false);
     expect(mayRunAgentzAuto("confirm").allowed).toBe(true);
   });
+
+  it("keeps cold_outreach master switch off in autonomy.json", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const { fileURLToPath } = await import("node:url");
+    const { dirname, join } = await import("node:path");
+    const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
+    const autonomy = JSON.parse(
+      await readFile(join(root, ".github/autonomy.json"), "utf8")
+    );
+    expect(autonomy.cold_outreach.enabled).toBe(false);
+    expect(autonomy.operator_hold.workflows).toEqual(
+      expect.arrayContaining([
+        "b2b-outreach.yml",
+        "content-publish.yml",
+        "gov-mint.yml",
+        "marketing-autonomous.yml",
+        "pipeline-tick.yml",
+      ])
+    );
+  });
+
+  it("defaults agent outbound email production_send to false", async () => {
+    const { defaultOutboundPolicy } = await import(
+      "../../workers/authichain-verify-worker/src/outbound-types"
+    );
+    expect(defaultOutboundPolicy().production_send).toBe(false);
+  });
 });
 
 describe("snapshotFromStripeLike", () => {
@@ -595,5 +653,58 @@ describe("manual desk addresses", () => {
       expect(refused.allowed, email).toBe(false);
       expect(refused.reason, email).toContain("role_inbox");
     }
+  });
+});
+
+describe("campaign candidate compliance", () => {
+  it("selects a confirmed_reply candidate and refuses unknown provenance", () => {
+    const allowed = selectNextSendCandidate(
+      [
+        {
+          email: "robert@joinclab.com",
+          source: "confirmed_reply",
+          sourceUrl: "https://mail.google.com/",
+        },
+        {
+          email: "scott.krupa@fastsigns.com",
+          source: "unknown",
+        },
+      ],
+      founders
+    );
+    expect(allowed.allowed).toBe(true);
+    expect(allowed.to).toBe("robert@joinclab.com");
+
+    const refused = selectNextSendCandidate(
+      [
+        {
+          email: "scott.krupa@fastsigns.com",
+          source: "unknown",
+        },
+        {
+          email: "hannah.melotto@melottogroup.com",
+          source: "unknown",
+        },
+      ],
+      founders
+    );
+    expect(refused.allowed).toBe(false);
+  });
+
+  it("keeps decideOperatorAction on send_one for confirmed_reply without inventing revenue", () => {
+    const decision = decideOperatorAction({
+      rails: { ok: true, reason: "skipped", results: [] },
+      snapshot: snap({}),
+      candidates: [
+        {
+          email: "robert@joinclab.com",
+          source: "confirmed_reply",
+        },
+      ],
+      founderEmails: founders,
+    });
+    expect(decision.action).toBe("send_one");
+    expect(decision.to).toBe("robert@joinclab.com");
+    expect(decision.revenue.qualifying).toBe(false);
   });
 });
