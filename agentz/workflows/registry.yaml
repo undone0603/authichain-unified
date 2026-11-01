@@ -1188,6 +1188,25 @@ workflows:
       Does not deploy, delete Workers, disable workflows, rotate tokens,
       publish, or merge.
 
+  - id: taskmarket_cycle
+    title: "Taskmarket — pick one funded worker task"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.taskmarket_cycle
+    type: api
+    estimated_minutes: 2
+    requires: []
+    prerequisites: []
+    confirm_before_run: true
+    risk_class: high
+    financial_limit_usd: 0
+    reputational_impact: medium
+    requires_human_approval: true
+    description: |
+      Read open tasks from api.taskmarket.dev and print one worker action:
+      bounty submit, unstaked claim, or pitch. Base USDC only. Refuses
+      auctions, exploit requests, stakes, and requester accept. Does not
+      sign, submit, or pay. A submission is not a payout.
   - id: power_user_ops
     title: "Power-user ops: product rails, wait_buyer, X draft, OpenClaw handoff"
     priority: high
