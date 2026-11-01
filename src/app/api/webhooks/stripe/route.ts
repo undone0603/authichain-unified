@@ -172,22 +172,20 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * Stripe Checkout amount_total is in the currency's API minor units.
- * ISK and UGX use two-decimal API amounts for charge compatibility, even
- * though ISO currency formatting treats them as zero-decimal.
- * HUF/TWD have two-decimal charges (their zero-decimal rule applies to payouts).
- * See https://docs.stripe.com/currencies
+ * Stripe Checkout amount_total uses API charge units, not always ISO's currency
+ * fraction digits. Keep the explicit Stripe zero-decimal *charge* list to avoid
+ * runtime/ICU differences (notably HUF). ISK and UGX have a special two-decimal
+ * charge representation even though they are zero-decimal ISO currencies.
+ * https://docs.stripe.com/currencies#zero-decimal
  */
+const STRIPE_ZERO_DECIMAL_CHARGE_CURRENCIES = new Set([
+  "bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga",
+  "pyg", "rwf", "vnd", "vuv", "xaf", "xof", "xpf",
+]);
+
 function stripeAmountToMajorUnits(amountMinor: number, currency: string): number {
-  const code = currency.toUpperCase();
-  const digits =
-    code === "ISK" || code === "UGX"
-      ? 2
-      : new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: code,
-        }).resolvedOptions().maximumFractionDigits;
-  return amountMinor / 10 ** digits;
+  const divisor = STRIPE_ZERO_DECIMAL_CHARGE_CURRENCIES.has(currency.toLowerCase()) ? 1 : 100;
+  return amountMinor / divisor;
 }
 
 /**
