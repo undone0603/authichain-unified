@@ -2,17 +2,21 @@
 /**
  * POST a bundled Worker version over IPv4 HTTP/1.1 (curl), then print the
  * version id. wrangler's undici fetch hangs on the 8.8 MiB edge-router POST
- * from authichain-wsl (41242803187, 41246493823, 41250709348).
+ * from authichain-wsl (41242803187, 41246493823, 41250709348). Uncompressed
+ * curl of that bundle got RST after ~96s (41264005567). Gzip the multipart
+ * body (~1.7 MiB) and retry curl 56.
  *
  * keep_bindings secret_text inherits AUTHICHAIN_ATTESTATION_* and every other
  * secret. keep_assets keeps client/public. Does not print the API token or
  * secret values. Does not secret-put.
  */
 import { spawnSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 import { parseWranglerVersionId } from "./parse-wrangler-version-id.mjs";
 
 const NAME = /^[a-z0-9][a-z0-9-]{0,62}$/;
@@ -107,11 +111,34 @@ export function resolveBundleFile(bundlePath) {
   return indexJs;
 }
 
-export function curlArgv({ url, metadataPath, bundlePath, headerPath }) {
+export function buildMultipartBody({ metadata, moduleBuf, boundary }) {
+  const meta = Buffer.from(JSON.stringify(metadata), "utf8");
+  const chunks = [
+    `--${boundary}\r\n`,
+    `Content-Disposition: form-data; name="metadata"\r\n`,
+    `Content-Type: application/json\r\n\r\n`,
+  ];
+  const head = Buffer.from(chunks.join(""), "utf8");
+  const mid = Buffer.from(
+    `\r\n--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="index.js"; filename="index.js"\r\n` +
+      `Content-Type: application/javascript+module\r\n\r\n`,
+    "utf8"
+  );
+  const tail = Buffer.from(`\r\n--${boundary}--\r\n`, "utf8");
+  return Buffer.concat([head, meta, mid, moduleBuf, tail]);
+}
+
+export function curlArgv({ url, bodyPath, headerPath, contentType }) {
   return [
     "curl",
     "--ipv4",
     "--http1.1",
+    "--retry",
+    "3",
+    "--retry-delay",
+    "5",
+    "--retry-all-errors",
     "--silent",
     "--show-error",
     "--max-time",
@@ -121,10 +148,12 @@ export function curlArgv({ url, metadataPath, bundlePath, headerPath }) {
     url,
     "-H",
     `@${headerPath}`,
-    "-F",
-    `metadata=<${metadataPath};type=application/json`,
-    "-F",
-    `index.js=@${bundlePath};type=application/javascript+module;filename=index.js`,
+    "-H",
+    "Content-Encoding: gzip",
+    "-H",
+    `Content-Type: ${contentType}`,
+    "--data-binary",
+    `@${bodyPath}`,
   ];
 }
 
@@ -172,15 +201,21 @@ export function uploadWorkerVersion({
   });
   const bundle = resolveBundleFile(bundlePath);
   const dir = mkdtempSync(path.join(tmpdir(), "er-upload-"));
-  const metadataPath = path.join(dir, "metadata.json");
   const headerPath = path.join(dir, "auth.hdr");
-  writeFileSync(metadataPath, JSON.stringify(metadata));
+  const bodyPath = path.join(dir, "body.gz");
+  const boundary = `----authichain-${randomBytes(12).toString("hex")}`;
+  const raw = buildMultipartBody({
+    metadata,
+    moduleBuf: readFileSync(bundle),
+    boundary,
+  });
+  writeFileSync(bodyPath, gzipSync(raw, { level: 9 }));
   writeFileSync(headerPath, `Authorization: Bearer ${token}\n`, { mode: 0o600 });
   const args = curlArgv({
     url: versionsUploadUrl(accountId, scriptName),
-    metadataPath,
-    bundlePath: bundle,
+    bodyPath,
     headerPath,
+    contentType: `multipart/form-data; boundary=${boundary}`,
   });
   try {
     const result = spawnImpl(args[0], args.slice(1), {

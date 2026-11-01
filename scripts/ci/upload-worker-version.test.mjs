@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   KEEP_BINDINGS,
   EDGE_ROUTER_RESOURCE_BINDINGS,
+  buildMultipartBody,
   curlArgv,
   parseTomlVars,
   parseVersionUploadResponse,
@@ -13,6 +14,7 @@ import {
   versionsUploadUrl,
   uploadWorkerVersion,
 } from "./upload-worker-version.mjs";
+import { gzipSync } from "node:zlib";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const ID = "f0afbac9-1240-47a6-ac80-d58bddcc072d";
@@ -52,24 +54,42 @@ test("metadata keeps secrets and assets; never sends secret_text values", () => 
   assert.doesNotMatch(JSON.stringify(meta), /AUTHICHAIN_ATTESTATION/);
 });
 
-test("curl argv is IPv4 HTTP/1.1 multipart and reads the Bearer header from a file", () => {
+test("curl argv is IPv4 HTTP/1.1 gzip body with retries and a header file", () => {
   const argv = curlArgv({
     url: versionsUploadUrl(ACCOUNT, "authichain-edge-router"),
-    metadataPath: "/tmp/metadata.json",
-    bundlePath: "/tmp/index.js",
+    bodyPath: "/tmp/body.gz",
     headerPath: "/tmp/auth.hdr",
+    contentType: "multipart/form-data; boundary=abc",
   });
   assert.equal(argv[0], "curl");
   assert.ok(argv.includes("--ipv4"));
   assert.ok(argv.includes("--http1.1"));
-  assert.ok(argv.includes("-X"));
-  assert.ok(argv.includes("POST"));
-  assert.ok(argv.includes("-H"));
+  assert.ok(argv.includes("--retry"));
+  assert.ok(argv.includes("--retry-all-errors"));
+  assert.ok(argv.includes("--data-binary"));
+  assert.ok(argv.includes("@/tmp/body.gz"));
   assert.ok(argv.includes("@/tmp/auth.hdr"));
-  assert.ok(argv.some(a => a.startsWith("metadata=<")));
-  assert.ok(argv.some(a => a.startsWith("index.js=@")));
+  assert.ok(argv.includes("Content-Encoding: gzip"));
   assert.doesNotMatch(argv.join(" "), /Bearer /);
   assert.doesNotMatch(argv.join(" "), /AUTHICHAIN_ATTESTATION/);
+});
+
+test("multipart gzip shrinks the 8.8 MiB-class body and keeps metadata JSON", () => {
+  const meta = versionUploadMetadata({
+    compatibilityDate: "2026-08-01",
+    compatibilityFlags: ["nodejs_compat"],
+    vars: parseTomlVars(TOML),
+  });
+  const moduleBuf = Buffer.alloc(200_000, 97);
+  const raw = buildMultipartBody({
+    metadata: meta,
+    moduleBuf,
+    boundary: "----test",
+  });
+  const gz = gzipSync(raw, { level: 9 });
+  assert.ok(gz[0] === 0x1f && gz[1] === 0x8b);
+  assert.ok(gz.length < raw.length / 4);
+  assert.match(raw.toString("utf8"), /"keep_assets":true/);
 });
 
 test("parseVersionUploadResponse reads result.id", () => {
@@ -109,6 +129,7 @@ test("uploadWorkerVersion POSTs via injected curl and returns the id", () => {
   assert.equal(id, ID);
   assert.equal(seen[0], "curl");
   assert.ok(seen.includes("--ipv4"));
+  assert.ok(seen.includes("--data-binary"));
   assert.doesNotMatch(seen.join(" "), /tok-secret/);
 });
 
