@@ -98,6 +98,8 @@ export interface OutboundCampaign {
   human_send_approved: boolean;
   paused: boolean;
   allow_role_inbox: boolean;
+  /** Explicit one-room public AgentZ introduction; false unless separately approved. */
+  allow_public_forum?: boolean;
   attribution: string;
 }
 
