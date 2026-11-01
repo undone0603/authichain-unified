@@ -46,7 +46,7 @@ curl -sS -i -H 'Accept: application/json' \
   https://id.authichain.com/v1/passport/UNKNOWN-ID
 ```
 
-JWKS kid in production (RFC 7638 thumbprint, corrected 2026-10-17): `T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ`.
+JWKS current kid in production (RFC 7638 thumbprint, rotated 2026-10-31): `jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM`. Retired kid `T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ` stays in JWKS for prior signatures.
 
 ## Published demonstration record
 
