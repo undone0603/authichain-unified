@@ -45,3 +45,40 @@ Introduce AgentZ as an openly disclosed **AI representative operated by AuthiCha
 - **Commercial progress** — independent pilot request, then a real non-founder checkout plus webhook-backed entitlement. Counting a reply as paid conversion is prohibited.
 
 Sources checked 2026-11-01: [Agentic SuperHero](https://agenticsuperhero.com/), [The Colony agent guide](https://thecolony.ai/for-agents), [The Colony terms](https://thecolony.cc/terms), [Moltbook](https://www.moltbook.com/), [official A2A community](https://a2a-protocol.org/latest/community/), and [AuthiChain](https://authichain.com/).
+
+## Implemented unblock: scoped public-forum sender
+
+[Single-use AgentZ command](../../scripts/agentz-a2a-introduction.ts) is wired to the repository's existing `authorizeOutbound` / `performOutbound` gate with a new **`forum`** transport. It does not reuse the email recipient path and **does not invent a Scout prospect or DPP customer**. Explicit community scope:
+
+- Fixed venue: `https://agenticsuperhero.com/api/v1/channels/lobby/messages`.
+- Scope keys: `community:agenticsuperhero` / `community:agenticsuperhero:lobby`.
+- Campaign: `agentz-a2a-community-2026-11-01`; attribution `community:public-introduction`.
+- Required: issuer-signed AgentZ attestation, signed SEND_OUTBOUND message, trusted issuer key, replay check, valid content hash, full agent disclosure, `authorized`, `allow_public_forum`, `human_send_approved`, `production_send`, and no kill switch.
+- Sender is **not injected by default**. A guest platform account does not itself prove signed AgentZ identity.
+- Local one-shot lock `agentz/logs/outreach/a2a-community-2026-11-01-receipt.json.attempted` is retained on every attempted send, including failures, so restarts never blindly duplicate an ambiguous POST.
+
+### Safe dry-run — no runtime keys or network POST needed
+
+```bash
+pnpm exec tsx scripts/agentz-a2a-introduction.ts
+```
+
+### Restricted public send — requires already provisioned AgentZ identity
+
+At the **existing trusted AgentZ runtime**, supply the following environment variable names through its secret manager (do not paste secret values into chat or commit them):
+
+- `AGENTZ_ATTESTATION_JSON`: existing issuer-signed AuthiChain AgentZ attestation.
+- `AGENTZ_SIGNING_JWK`: the matching AgentZ signing key as a protected JSON JWK.
+- `AGENTZ_TRUSTED_ISSUER_JWK`: trusted issuer public JWK (not fetched from an untrusted forum).
+- `AGENTZ_PUBLIC_FORUM_SEND_APPROVED=true`: operator's explicit permission for **this one public introduction**.
+- `AGENTZ_OUTBOUND_KILL_SWITCH=true`: optional emergency stop (blocks posting).
+
+Run once:
+
+```bash
+pnpm exec tsx scripts/agentz-a2a-introduction.ts --publish
+```
+
+The command first validates its signed AgentZ identity and reads the live room. Then it atomically records an attempt, runs the same policy gate used for other signed outbound tasks, and asks the external API to post once. It records `PLATFORM_RECEIPT_CONFIRMED` only if the platform returns a message ID. If the response or network fails, it records `DELIVERY_UNCONFIRMED_DO_NOT_RETRY` and keeps the lock. No environment variable exists in this PR and none was read or created in this ChatGPT session.
+
+**Verification caveat:** Tests were added but GitHub CI was failing on the PR head in this session; no green test run is asserted. External reachability from this ChatGPT execution environment was unavailable. This change alone does **not** create a social post or prove that AgentZ has been deployed.
