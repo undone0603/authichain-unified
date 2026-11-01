@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * POST a bundled Worker version over IPv4 HTTP/1.1 (curl), then print the
- * version id. wrangler's undici fetch hangs on the 8.8 MiB edge-router POST
- * from authichain-wsl (41242803187, 41246493823, 41250709348). Uncompressed
- * curl of that bundle got RST after ~96s (41264005567). Gzip of the whole
- * request timed out with 0 bytes received (41265515618). Gzip only the JS
- * module part (~1.7 MiB) and send a normal multipart body.
+ * POST a bundled Worker version over IPv4 HTTP/2 (curl), then print the
+ * version id. The versions API parses uncompressed JS in the multipart:
+ * part-level gzip eval'd as JS (41297825503), HTTP gzip of the body
+ * returned multipart NextPart EOF (41298894966). HTTP/1.1 uncompressed
+ * RST after ~96s (41264005567). Send raw JS over HTTP/2 with a longer
+ * max-time so the 8.8 MiB POST can finish.
  *
- * keep_bindings secret_text inherits AUTHICHAIN_ATTESTATION_* and every other
- * secret. keep_assets keeps client/public. Does not print the API token or
- * secret values. Does not secret-put.
+ * keep_bindings secret_text inherits AUTHICHAIN_ATTESTATION_*. keep_assets
+ * keeps client/public. Does not print the API token or secret values.
+ * Does not secret-put.
  */
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -17,7 +17,6 @@ import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { gzipSync } from "node:zlib";
 import { parseWranglerVersionId } from "./parse-wrangler-version-id.mjs";
 
 const NAME = /^[a-z0-9][a-z0-9-]{0,62}$/;
@@ -114,7 +113,6 @@ export function resolveBundleFile(bundlePath) {
 
 export function buildMultipartBody({ metadata, moduleBuf, boundary }) {
   const meta = Buffer.from(JSON.stringify(metadata), "utf8");
-  const gz = gzipSync(moduleBuf, { level: 9 });
   const head = Buffer.from(
     `--${boundary}\r\n` +
       `Content-Disposition: form-data; name="metadata"\r\n` +
@@ -124,35 +122,35 @@ export function buildMultipartBody({ metadata, moduleBuf, boundary }) {
   const mid = Buffer.from(
     `\r\n--${boundary}\r\n` +
       `Content-Disposition: form-data; name="index.js"; filename="index.js"\r\n` +
-      `Content-Type: application/javascript+module\r\n` +
-      `Content-Encoding: gzip\r\n\r\n`,
+      `Content-Type: application/javascript+module\r\n\r\n`,
     "utf8"
   );
   const tail = Buffer.from(`\r\n--${boundary}--\r\n`, "utf8");
-  return Buffer.concat([head, meta, mid, gz, tail]);
+  return Buffer.concat([head, meta, mid, moduleBuf, tail]);
 }
 
 export function curlArgv({ url, bodyPath, headerPath, contentType }) {
   return [
     "curl",
     "--ipv4",
-    "--http1.1",
-    "--expect100-timeout",
-    "1",
+    "--http2",
+    "--tcp-nodelay",
     "--retry",
-    "3",
+    "2",
     "--retry-delay",
     "5",
     "--retry-all-errors",
     "--silent",
     "--show-error",
     "--max-time",
-    "180",
+    "480",
     "-X",
     "POST",
     url,
     "-H",
     `@${headerPath}`,
+    "-H",
+    "Expect:",
     "-H",
     `Content-Type: ${contentType}`,
     "--data-binary",

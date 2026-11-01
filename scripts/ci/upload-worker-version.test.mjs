@@ -53,7 +53,7 @@ test("metadata keeps secrets and assets; never sends secret_text values", () => 
   assert.doesNotMatch(JSON.stringify(meta), /AUTHICHAIN_ATTESTATION/);
 });
 
-test("curl argv is IPv4 HTTP/1.1 multipart with retries and a header file", () => {
+test("curl argv is IPv4 HTTP/2 raw multipart with retries and a header file", () => {
   const argv = curlArgv({
     url: versionsUploadUrl(ACCOUNT, "authichain-edge-router"),
     bodyPath: "/tmp/body.mime",
@@ -62,19 +62,21 @@ test("curl argv is IPv4 HTTP/1.1 multipart with retries and a header file", () =
   });
   assert.equal(argv[0], "curl");
   assert.ok(argv.includes("--ipv4"));
-  assert.ok(argv.includes("--http1.1"));
-  assert.ok(argv.includes("--expect100-timeout"));
+  assert.ok(argv.includes("--http2"));
+  assert.equal(argv.includes("--http1.1"), false);
   assert.ok(argv.includes("--retry"));
+  assert.ok(argv.includes("480"));
   assert.ok(argv.includes("--retry-all-errors"));
   assert.ok(argv.includes("--data-binary"));
   assert.ok(argv.includes("@/tmp/body.mime"));
   assert.ok(argv.includes("@/tmp/auth.hdr"));
+  assert.ok(argv.includes("Expect:"));
   assert.equal(argv.includes("Content-Encoding: gzip"), false);
   assert.doesNotMatch(argv.join(" "), /Bearer /);
   assert.doesNotMatch(argv.join(" "), /AUTHICHAIN_ATTESTATION/);
 });
 
-test("multipart gzips only the JS module part", () => {
+test("multipart carries uncompressed JS", () => {
   const meta = versionUploadMetadata({
     compatibilityDate: "2026-08-01",
     compatibilityFlags: ["nodejs_compat"],
@@ -87,11 +89,11 @@ test("multipart gzips only the JS module part", () => {
     boundary: "----test",
   });
   const text = raw.toString("latin1");
-  assert.match(text, /Content-Encoding: gzip/);
+  assert.doesNotMatch(text, /Content-Encoding: gzip/);
+  assert.match(text, /Content-Type: application\/javascript\+module/);
   assert.match(text, /"keep_assets":true/);
-  assert.ok(raw.length < moduleBuf.length);
-  const gzAt = raw.indexOf(Buffer.from([0x1f, 0x8b]));
-  assert.ok(gzAt > 0);
+  assert.ok(raw.includes(moduleBuf));
+  assert.ok(raw.length > moduleBuf.length);
 });
 
 test("parseVersionUploadResponse reads result.id", () => {
