@@ -612,6 +612,8 @@ test("qron.space home links QRON Launch and still links Starter", async () => {
     const html = await (await get("/")).text();
     assert.match(html, /https:\/\/authichain.com\/checkout\/qron_launch/);
     assert.match(html, /QRON Launch \$19\/mo/);
+    assert.match(html, /https:\/\/authichain.com\/checkout\/qron_launch_annual/);
+    assert.match(html, /QRON Launch \$190\/yr/);
     assert.match(html, /https:\/\/authichain.com\/checkout\/starter/);
   } finally {
     globalThis.fetch = real;

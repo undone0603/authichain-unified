@@ -418,6 +418,10 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         label: "QRON Launch $19/mo",
       },
       {
+        href: "https://authichain.com/checkout/qron_launch_annual",
+        label: "QRON Launch $190/yr",
+      },
+      {
         href: "https://authichain.com/checkout/starter",
         label: "Buy Starter $29",
       },
