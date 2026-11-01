@@ -2,12 +2,7 @@
  * /llms.txt for agents. Point crawlers at Payment Links, unpaid POST /api/x402,
  * and the canonical Living QR scan. Do not tell them to GET /api/checkout.
  */
-import {
-  planById,
-  planPaymentLink,
-  planUsd,
-  type PlanId,
-} from "../../../src/lib/plans.ts";
+import { catalogOffers } from "../../../src/lib/plans.ts";
 import { x402PriceUsd } from "../../../src/lib/x402.ts";
 
 const X402_USD = x402PriceUsd();
@@ -23,38 +18,16 @@ export function isLlmsTxtPath(pathname: string): boolean {
   return LLMS_PATHS.has(pathname);
 }
 
-/** Listed plans only. Closed Launch checkouts 303 to /pricing. */
-function listedCheckoutLine(
-  id: PlanId,
-  label: string,
-  href?: string
-): string | null {
-  const plan = planById(id);
-  if (!plan || plan.listed === false) return null;
-  const link = href ?? planPaymentLink(id);
-  if (!link) return null;
-  const suffix = plan.price_suffix ?? "";
-  return `- ${label} $${planUsd(id)}${suffix}: ${link}`;
-}
-
 export function renderLlmsTxt(): string {
-  const dpp = planById("dpp_readiness");
   const humanCheckout = [
     "## Human checkout (Stripe Payment Links)",
-    listedCheckoutLine("qron_launch", "QRON Launch"),
-    listedCheckoutLine("qron_launch_annual", "QRON Launch Annual"),
-    listedCheckoutLine("starter", "QRON Starter"),
-    listedCheckoutLine("creator", "QRON Creator"),
+    ...catalogOffers().map(offer => {
+      const suffix = offer.priceSuffix ?? "";
+      return `- ${offer.name} $${offer.usd}${suffix}: ${offer.checkout}`;
+    }),
     "- Generate (redirects to Starter): https://authichain.com/generate",
-    listedCheckoutLine("dpp_readiness", dpp?.name ?? "EU DPP Workspace"),
-    listedCheckoutLine(
-      "musa_claim_file",
-      "Made in USA Claim File",
-      "https://authichain.com/made-in-usa-claim-file"
-    ),
-    listedCheckoutLine("strainchain_passport", "StrainChain Passport"),
     "- Pricing: https://authichain.com/pricing",
-  ].filter((line): line is string => line !== null);
+  ];
 
   return [
     "# AuthiChain",
