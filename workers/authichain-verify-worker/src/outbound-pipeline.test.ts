@@ -748,97 +748,144 @@ describe("restricted outbound defaults", () => {
   });
 });
 
+
 describe("gated AgentZ public forum transport", () => {
   const endpoint = "https://agenticsuperhero.com/api/v1/channels/lobby/messages";
+  async function communityMessage(
+    ctx: Awaited<ReturnType<typeof prepared>>,
+    messageId: string,
+    recipient = endpoint,
+  ) {
+    return signed(ctx.agentz, messageId, "SEND_OUTBOUND", ["SEND_OUTBOUND"], [EVIDENCE_ID], {
+      action: "SEND_OUTBOUND" as const,
+      prospect_id: "community:agenticsuperhero",
+      opportunity_id: "community:agenticsuperhero:lobby",
+      campaign_id: ctx.campaign.campaign_id,
+      attribution: ctx.campaign.attribution,
+      recipient,
+      recipient_source: "published_contact" as const,
+      content_hash: ctx.hash,
+      body: ctx.body,
+    });
+  }
 
-  it("requires signed AgentZ, campaign approval and the exact public-room allowlist", async () => {
+  it("requires an explicitly approved, signed public introduction campaign", async () => {
     const ctx = await prepared();
-    const blockedMessage = await ctx.sendMessage("msg:forum-unapproved", {
-      recipient: endpoint, recipient_source: "published_contact",
-    });
-    const noSender = new ForumTransport(async () => ({ platform_message_id: "unreachable" }));
-    const blocked = await performOutbound({
-      message: blockedMessage, registry: ctx.registry, replay: ctx.replay, ledger: ctx.ledger,
-      policy: ctx.policy, campaign: ctx.campaign, transport: "forum", now: NOW,
-      forumTransport: noSender,
-    });
-    expect(blocked.decision.code).toBe("CAMPAIGN_UNAUTHORIZED");
-    expect(blocked.result.external).toBe(false);
-
-    const approved = await prepared();
-    approved.campaign.human_send_approved = true; // per-campaign, never flips global defaults
-    approved.policy.production_send = true;
-    const unknownTarget = await approved.sendMessage("msg:forum-unknown", {
-      recipient: "https://example.com/room", recipient_source: "published_contact",
-    });
+    const message = await communityMessage(ctx, "msg:forum-no-campaign");
+    const sender = new ForumTransport(async () => ({platform_message_id:"never"}));
     const denied = await performOutbound({
-      message: unknownTarget, registry: approved.registry, replay: approved.replay,
-      ledger: approved.ledger, policy: approved.policy, campaign: approved.campaign,
-      transport: "forum", now: NOW, forumTransport: noSender,
+      message, registry:ctx.registry, replay:ctx.replay, ledger:ctx.ledger,
+      policy:ctx.policy, campaign:ctx.campaign, transport:"forum", now:NOW,
+      forumTransport:sender,
+    });
+    expect(denied.decision).toMatchObject({
+      allow:false, code:"CAMPAIGN_UNAUTHORIZED", reasons:["public_forum_not_approved"],
+    });
+    expect(denied.result.external).toBe(false);
+
+    const approvalCtx = await prepared();
+    approvalCtx.campaign.allow_public_forum = true;
+    const approvedMessage = await communityMessage(approvalCtx,"msg:forum-needs-human");
+    const needsApproval = await performOutbound({
+      message: approvedMessage, registry: approvalCtx.registry, replay: approvalCtx.replay,
+      ledger: approvalCtx.ledger, policy: approvalCtx.policy, campaign: approvalCtx.campaign,
+      transport: "forum", now: NOW, forumTransport: sender,
+    });
+    expect(needsApproval.decision.code).toBe("CAMPAIGN_UNAUTHORIZED");
+    expect(needsApproval.result.delivered).toBe(false);
+  });
+
+  it("refuses unallowlisted destinations without contacting the network", async () => {
+    const ctx = await prepared();
+    ctx.campaign.allow_public_forum = true;
+    ctx.campaign.human_send_approved = true;
+    ctx.policy.production_send = true;
+    const message = await communityMessage(ctx, "msg:forum-unknown", "https://untrusted.example/room");
+    const denied = await performOutbound({
+      message, registry:ctx.registry, replay:ctx.replay, ledger:ctx.ledger,
+      policy:ctx.policy, campaign:ctx.campaign, transport:"forum", now:NOW,
+      forumTransport:new ForumTransport(async () => { throw Error("must not send"); }),
     });
     expect(denied.decision.code).toBe("RECIPIENT_INELIGIBLE");
     expect(denied.result.external).toBe(false);
   });
 
-  it("posts once through the signed gate and only counts a confirmed platform ID", async () => {
+  it("posts once using a signed decision, then rejects re-use", async () => {
     const ctx = await prepared();
-    ctx.policy.production_send = true;
+    ctx.campaign.allow_public_forum = true;
     ctx.campaign.human_send_approved = true;
-    const message = await ctx.sendMessage("msg:forum-one", {
-      recipient: endpoint, recipient_source: "published_contact",
-    });
-    const calls: string[] = [];
-    const sender = new ForumTransport(async ({ endpoint: actual, body }) => {
-      calls.push(actual);
+    ctx.policy.production_send = true;
+    const message = await communityMessage(ctx, "msg:forum-one");
+    const calls:string[] = [];
+    const sender = new ForumTransport(async ({endpoint:target,body}) => {
+      calls.push(target);
       expect(body).toBe(ctx.body);
-      return { platform_message_id: "forum-123" };
+      return {platform_message_id:"forum-123"};
     });
     const posted = await performOutbound({
-      message, registry: ctx.registry, replay: ctx.replay, ledger: ctx.ledger,
-      policy: ctx.policy, campaign: ctx.campaign, transport: "forum", now: NOW,
-      forumTransport: sender,
+      message, registry:ctx.registry, replay:ctx.replay, ledger:ctx.ledger,
+      policy:ctx.policy, campaign:ctx.campaign, transport:"forum", now:NOW,
+      forumTransport:sender,
     });
     expect(posted.decision.code).toBe("ALLOW");
     expect(posted.result).toMatchObject({
-      delivered: true, external: true, platform_message_id: "forum-123",
+      delivered:true,external:true,platform_message_id:"forum-123",
     });
     expect(calls).toEqual([endpoint]);
-    expect((await sender.deliver(posted.decision, message)).code).toBe("TRANSPORT_REFUSED");
+    expect((await sender.deliver(posted.decision,message)).code).toBe("TRANSPORT_REFUSED");
     expect(calls).toHaveLength(1);
   });
 
-  it("refuses network calls with an unbranded decision or no sender", async () => {
+  it("refuses forged or unconfigured senders", async () => {
     const ctx = await prepared();
-    const message = await ctx.sendMessage("msg:forum-forged", {
-      recipient: endpoint, recipient_source: "published_contact",
-    });
+    const message = await communityMessage(ctx, "msg:forum-forged");
     const forged = {
-      allow: true, code: "ALLOW" as const, reasons: [],
-      transport: "forum" as const, production_send: true, human_send_approved: true,
-      message_id: message.message_id, agent_id: message.agent_id,
+      allow:true,code:"ALLOW" as const,reasons:[],
+      transport:"forum" as const,production_send:true,human_send_approved:true,
+      message_id:message.message_id,agent_id:message.agent_id,
     };
-    const forum = new ForumTransport(async () => { throw new Error("should not post"); });
-    expect((await forum.deliver(forged, message)).code).toBe("TRANSPORT_REFUSED");
+    expect((await new ForumTransport(async () => { throw Error("unreachable"); })
+      .deliver(forged,message)).code).toBe("TRANSPORT_REFUSED");
+    ctx.campaign.allow_public_forum = true;
     ctx.campaign.human_send_approved = true;
     ctx.policy.production_send = true;
-    const missingSender = await performOutbound({
-      message, registry: ctx.registry, replay: ctx.replay, ledger: ctx.ledger,
-      policy: ctx.policy, campaign: ctx.campaign, transport: "forum", now: NOW,
+    const noSender = await performOutbound({
+      message, registry:ctx.registry,replay:ctx.replay,ledger:ctx.ledger,
+      policy:ctx.policy,campaign:ctx.campaign,transport:"forum",now:NOW,
     });
-    expect(missingSender.decision.code).toBe("ALLOW");
-    expect(missingSender.result).toMatchObject({
-      external: false, code: "TRANSPORT_REFUSED", reason: "forum_sender_not_configured",
+    expect(noSender.decision.code).toBe("ALLOW");
+    expect(noSender.result).toMatchObject({
+      delivered:false,external:false,reason:"forum_sender_not_configured",
     });
   });
 
-  it("does not report a guest POST as delivered without a platform message ID", async () => {
-    const sender = agenticSuperHeroForumSender(async (url, options) => {
+  it("needs a real platform message ID before claiming delivery", async () => {
+    const ctx = await prepared();
+    ctx.campaign.allow_public_forum = true;
+    ctx.campaign.human_send_approved = true;
+    ctx.policy.production_send = true;
+    const message = await communityMessage(ctx,"msg:forum-no-id");
+    const posted = await performOutbound({
+      message, registry:ctx.registry,replay:ctx.replay,ledger:ctx.ledger,
+      policy:ctx.policy,campaign:ctx.campaign,transport:"forum",now:NOW,
+      forumTransport:new ForumTransport(async () => ({platform_message_id:""})),
+    });
+    expect(posted.decision.code).toBe("ALLOW");
+    expect(posted.result).toMatchObject({
+      external:false, delivered:false,
+      reason:"post_response_lacks_message_id_do_not_retry_automatically",
+    });
+  });
+
+  it("builds an HTTP sender with exact origin and id-only receipts", async () => {
+    const fetchFn = (async (url: string | URL | Request, options?: RequestInit) => {
       expect(String(url)).toBe(endpoint);
       expect(options?.method).toBe("POST");
-      return new Response(JSON.stringify({ status: "accepted", id: "m-42" }), {
-        status: 201, headers: { "Content-Type": "application/json" },
+      return new Response(JSON.stringify({status:"accepted",id:"m-42"}),{
+        status:201,headers:{"Content-Type":"application/json"},
       });
-    });
+    }) as typeof fetch;
+    const sender = agenticSuperHeroForumSender(fetchFn);
     await expect(sender({endpoint,body:"Hello from AgentZ",message_id:"m",agent_id:AGENTZ_ID}))
       .resolves.toMatchObject({platform_message_id:"m-42"});
     await expect(sender({endpoint:"https://untrusted.example/",body:"x",message_id:"m",agent_id:AGENTZ_ID}))
