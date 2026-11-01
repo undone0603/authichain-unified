@@ -179,9 +179,10 @@ export async function activateDppMerchant(opts: {
       : buildDppImporterFile({ categories, markets, labeling, pack });
 
   if (!alreadyActivated) {
-    await recordDppLoopEvent(opts.supabase, {
-      visitId,
-      stage: "merchant_activated",
+    try {
+      await recordDppLoopEvent(opts.supabase, {
+        visitId,
+        stage: "merchant_activated",
       source: String(md.source || "direct"),
       email,
       profileId,
@@ -194,7 +195,12 @@ export async function activateDppMerchant(opts: {
         activated_at: new Date().toISOString(),
         importer_file,
       },
-    });
+      }, { requirePersisted: true });
+    } catch {
+      // A paid customer must never receive a success response for an
+      // activation that was not durably recorded. Safe to retry.
+      return { ok: false, status: 503, error: "Merchant activation could not be persisted" };
+    }
   }
 
   return {
