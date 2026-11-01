@@ -1,18 +1,19 @@
 # Paid catalog checkout: reconciliation and operator recovery (DRAFT / HOLD)
 
-**Evidence snapshot:** 2026-10-28 UTC. **Status:** review-only runbook; no production repair is authorized.
+**Evidence snapshot:** 2026-10-31 UTC. **Status:** review-only runbook; no production repair is authorized. Pull request #2124 is on `main` (`c393aa43`). That merge does not authorize a grant, replay, or backfill.
 **Scope:** paid Starter/catalog credits handled by `server/webhooks/stripe.ts` and
 `src/lib/provisioning.ts`. This is **not** the DPP fulfillment path.
 
 ## Why this is a hold, not a completed purchase
 
 A paid catalog checkout with neither a trustworthy `user_id` nor buyer email
-cannot be mapped to a profile. `provisionPurchase` returns `no_identity`;
-the main-branch handler currently converts that to `false` and can log webhook
-`success` anyway. Draft PR #2124 proposes a durable
-`public.stripe_events.status = 'reconciliation_required'` record with
-`handled: false`. The proposed HTTP 200 means **receipt/hold persisted**,
-not entitlement granted, customer activated, or revenue qualified.
+cannot be mapped to a profile. `provisionPurchase` returns `no_identity`.
+On `main`, pull request #2124 records
+`public.stripe_events.status = 'reconciliation_required'` with
+`handled: false` and HTTP 200 when that rich log persists. That HTTP 200
+means **receipt/hold persisted**, not entitlement granted, customer
+activated, or revenue qualified. QRON-v2 had recorded no such row as of
+2026-10-31.
 
 The hold is valid only if the **rich** event log persists `event_id`,
 `event_type`, `session_id`, `status`, `http_status` and a non-PII error
@@ -34,7 +35,7 @@ FROM public.stripe_events
 GROUP BY event_type, status
 ORDER BY events DESC;
 
--- Paid catalog recovery candidates, if PR #2124 is ever reviewed and deployed.
+-- Paid catalog recovery candidates. #2124 is on main; zero rows means none are recorded.
 SELECT event_type, status, COUNT(*)::int AS events,
        COUNT(*) FILTER (WHERE session_id IS NOT NULL)::int AS with_session
 FROM public.stripe_events
@@ -53,7 +54,8 @@ SELECT
 
 ## Reproducible paid-session linkage check (aggregate only)
 
-This query was executed read-only on QRON-v2 on 2026-10-28. It scopes
+This query was executed read-only on QRON-v2 on 2026-10-28 and again on
+2026-10-31. Both runs returned the same four counts. It scopes
 to the live AuthiChain Stripe account, uses **positive-amount paid**
 Checkout Sessions, joins synced charges by payment intent **and account**,
 and checks for a session-keyed webhook log and profile grant marker.
@@ -91,7 +93,7 @@ SELECT COUNT(*)::int AS paid_positive_sessions,
 FROM evidence;
 ```
 
-Observed result: **1 paid-positive session**, **1 matched succeeded charge**,
+Observed result on both dates: **1 paid-positive session**, **1 matched succeeded charge**,
 **0 session-keyed webhook logs**, **0 matching profile grant markers**.
 The only positive paid session is the previously classified $10 **founder
 smoke payment**, not a qualifying independent customer. Absence of a
@@ -106,22 +108,31 @@ Snapshot on 2026-10-28: 227 `stripe_events` (148 `success`,
 set`, last seen 2026-09-23; they are **not** evidence of 75 failed paid
 fulfillments. The five `checkout.session.completed` rows consist of four
 older NULL-status records without `session_id` and one `success` record.
-There were **zero** `reconciliation_required` rows. Also zero
-`public.revenue_events`, zero `public.entitlements`, one profile with a
-session grant marker, and three locally active subscriptions. These are
-diagnostic counts only; the last two do not prove paid renewals.
+
+Snapshot on 2026-10-31: 235 `stripe_events`. By type and status:
+155 `checkout.session.expired` / `success` (latest 2026-10-31 12:15:12 UTC),
+75 `checkout.session.expired` / `error` (latest 2026-09-23 03:17:34 UTC),
+four `checkout.session.completed` / NULL (latest 2026-09-20 21:26:04 UTC),
+and one `checkout.session.completed` / `success` (2026-10-13 18:25:36 UTC).
+The eight new rows are expired sessions logged as `success`. The 75 error
+rows are unchanged in count and latest timestamp from the 2026-10-28
+classification. There are still **zero** `reconciliation_required` rows.
+Also still zero `public.revenue_events`, zero `public.entitlements`, one
+profile with a session grant marker, and three locally active subscriptions.
+These are diagnostic counts only; the last two do not prove paid renewals.
+`success` in this table is a webhook log status, not a paid grant.
 
 ## Stripe destination ownership: sync is not fulfillment (2026-10-28 read-only)
 
 The live Stripe account has **10 webhook endpoints**, **six enabled**. Four
 enabled destinations subscribe to `checkout.session.completed`:
 
-| Destination | Intended/observed role | What is *not* established |
-| --- | --- | --- |
-| `https://authichain.com/api/stripe/webhook` (`we_1UGTCSGqTruSqV8ThM9bXVWp`) | Canonical AuthiChain edge-router webhook per repo routing and Stripe configuration | Exact deployed Cloudflare Worker revision, per-event delivery outcome, persisted paid grant |
-| `https://nhdnkzhtadfkkluiulhs.supabase.co/functions/v1/stripe-webhook` | Stripe Sync Engine ingestion into `stripe_sdp_data` | Customer entitlement or `public.revenue_events` writer |
-| `https://first-dollar-desk.undone-k.workers.dev/api/stripe/webhook` | Separate first-dollar-desk receiver | Effect on this specific catalog/DPP order |
-| `https://authichain-license-issuer.undone-k.workers.dev/api/license/stripe-webhook` | Separate license-issuer receiver | Effect on this specific catalog/DPP order |
+| Destination                                                                         | Intended/observed role                                                             | What is _not_ established                                                                   |
+| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `https://authichain.com/api/stripe/webhook` (`we_1UGTCSGqTruSqV8ThM9bXVWp`)         | Canonical AuthiChain edge-router webhook per repo routing and Stripe configuration | Exact deployed Cloudflare Worker revision, per-event delivery outcome, persisted paid grant |
+| `https://nhdnkzhtadfkkluiulhs.supabase.co/functions/v1/stripe-webhook`              | Stripe Sync Engine ingestion into `stripe_sdp_data`                                | Customer entitlement or `public.revenue_events` writer                                      |
+| `https://first-dollar-desk.undone-k.workers.dev/api/stripe/webhook`                 | Separate first-dollar-desk receiver                                                | Effect on this specific catalog/DPP order                                                   |
+| `https://authichain-license-issuer.undone-k.workers.dev/api/license/stripe-webhook` | Separate license-issuer receiver                                                   | Effect on this specific catalog/DPP order                                                   |
 
 The **deployed** Supabase Edge Function `stripe-webhook` (version **36**,
 SHA-256 `171afd1b8c0f578e1046bfbab8ac753ea588b3f9fddcef0cedfc42e434e86555`)
@@ -133,10 +144,11 @@ observations**, not evidence of business-ledger or entitlement completion.
 An empty `public.revenue_events` table cannot be repaired by assuming
 the Stripe Sync Engine performs AuthiChain fulfillment.
 
-Stripe live read-only on this date: **five charges** (one successful $10
-founder smoke payment, four failed), **zero subscriptions**; QRON-v2:
-**zero `public.revenue_events`**, **zero `public.entitlements`**, and
-**zero `reconciliation_required` holds**. The Stripe Events list API only
+Stripe live read-only on 2026-10-28: **five charges** (one successful $10
+founder smoke payment, four failed), **zero subscriptions**. QRON-v2 on
+2026-10-31: **zero `public.revenue_events`**, **zero `public.entitlements`**,
+and **zero `reconciliation_required` holds**. The 2026-10-28 charge and
+subscription figures were not re-queried from the Stripe API on 2026-10-31. The Stripe Events list API only
 returns events from roughly the past 30 days; a missing older event in that
 listing is **not** proof of webhook non-delivery. A current Vercel READY
 deployment also does not identify the Cloudflare Worker version.
@@ -162,7 +174,7 @@ Any change to destination ownership or economic handling requires owner review.
    invent or assign an account.
 2. **Verify the intended entitlement separately.** Read
    `public.profiles.last_grant_session_id`, `generations_limit`,
-   `generations_used` and plan/status for the *verified* profile in a
+   `generations_used` and plan/status for the _verified_ profile in a
    restricted operator session. Confirm the actual product feature is usable
    and the grant matches the paid price. `public.subscriptions` is a
    legacy/admin model, not the live credit authority. A matching marker
@@ -188,15 +200,17 @@ Any change to destination ownership or economic handling requires owner review.
 
 ## Release proof required before removing HOLD
 
-- Owner reviews #2124 and the separate Cloudflare edge-router publish
-  proposal #2115; both remain draft/hold. Confirm the actual deployed
-  `authichain-edge-router` commit and runtime bindings. A Vercel production
-  commit does not identify the Cloudflare webhook Worker revision.
+- Pull request #2124 is merged on `main` (`c393aa43`). The separate Cloudflare
+  edge-router publish proposal #2115 remains draft/hold. Confirm the actual
+  deployed `authichain-edge-router` commit and runtime bindings. A merge to
+  `main`, and a Vercel production commit, do not identify the Cloudflare
+  webhook Worker revision. Zero `reconciliation_required` rows on 2026-10-31
+  does not prove which revision handled live traffic.
 - Non-production tests cover missing identity, profile write failure,
   duplicate event, pre-existing session grant, recoverable retry and
   concurrent deliveries. Mocked signed-handler tests alone are **not**
   cryptographic proof of a genuine signed webhook.
-- Verify the *actual* signed test delivery, persistent hold, idempotent
+- Verify the _actual_ signed test delivery, persistent hold, idempotent
   grant, and product access in an authorized non-production environment.
   An HTTP 200 for a hold must remain `handled:false`; do not represent it
   as a completed customer order.
