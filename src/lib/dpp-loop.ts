@@ -82,10 +82,14 @@ function normalizeSource(
 /** Persist one observable loop stage. Never throws — logging only on failure. */
 export async function recordDppLoopEvent(
   supabase: SupabaseLike,
-  input: RecordDppLoopEventInput
+  input: RecordDppLoopEventInput,
+  options: { requirePersisted?: boolean } = {}
 ): Promise<void> {
   const visitId = input.visitId?.trim();
-  if (!visitId) return;
+  if (!visitId) {
+    if (options.requirePersisted) throw new Error("DPP activation visit ID missing");
+    return;
+  }
 
   try {
     const { error } = await supabase.from("funnel_events").insert({
@@ -105,11 +109,12 @@ export async function recordDppLoopEvent(
       },
       timestamp: new Date().toISOString(),
     });
-    if (error) {
-      console.error("[dpp-loop] record failed:", input.stage, error);
-    }
+    if (error) throw error;
   } catch (err) {
     console.error("[dpp-loop] record failed:", input.stage, err);
+    // Marketing telemetry may remain best-effort. Paid merchant activation
+    // explicitly requires a durable event before reporting success.
+    if (options.requirePersisted) throw err;
   }
 }
 
