@@ -3462,6 +3462,8 @@ async function handleAuthichainCom(
         // First-dollar LOOP-03 paths (live 200; generate proxies to APP_WORKER).
         { loc: 'https://authichain.com/generate', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/checkout/starter', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/checkout/qron_launch', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/checkout/qron_launch_annual', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/checkout/creator', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },
