@@ -156,7 +156,7 @@ async function getWebhookSupabase() {
 
 async function fulfillCatalogCreditsIfPaid(
   session: Stripe.Checkout.Session
-): Promise<boolean | "reconciliation_required"> {
+): Promise<boolean | "reconciliation_required" | "unknown_paid_offer"> {
   if (session.payment_status !== "paid") return false;
   // Stripe marks fully discounted $0 sessions as paid without collecting money.
   // DPP is handled separately; do not grant paid catalog credits for $0/unknown totals.
@@ -236,7 +236,15 @@ async function fulfillCatalogCreditsIfPaid(
         );
       }
     }
-    return false;
+    // An unknown paid SKU is not a fulfilled purchase. Stripe Payment Links
+    // commonly omit line_items and metadata from the webhook Session, so
+    // price-only offers (including MCP/A2A build and Agent Rail hosting) can
+    // reach this branch. Persist an operator reconciliation hold rather than
+    // acknowledging the payment as delivered. Explicit one_time_service
+    // checkouts retain their separate order-payment handler below.
+    return session.metadata?.type === "one_time_service"
+      ? false
+      : "unknown_paid_offer";
   }
 
   const supabase = await getWebhookSupabase();
@@ -244,7 +252,9 @@ async function fulfillCatalogCreditsIfPaid(
     console.error(
       "[stripe-webhook] catalogue session paid but Supabase is not configured"
     );
-    return false;
+    throw markRetryableFulfillment(
+      new Error("Paid catalogue checkout cannot provision: Supabase unavailable")
+    );
   }
 
   const { provisionPurchase } = await import("../../src/lib/provisioning");
@@ -1052,13 +1062,20 @@ export async function handleStripeWebhook(
         try {
           await fulfillDppCheckoutIfPaid(session);
           const catalogFulfilled = await fulfillCatalogCreditsIfPaid(session);
-          if (catalogFulfilled === "reconciliation_required") {
-            // Deterministic missing identity: durable operator hold, not an
-            // unbounded Stripe retry. If the hold cannot be persisted, fail
-            // closed so the payment is not silently acknowledged as fulfilled.
+          if (
+            catalogFulfilled === "reconciliation_required" ||
+            catalogFulfilled === "unknown_paid_offer"
+          ) {
+            // Missing identity or an unrecognized paid SKU requires an
+            // operator-reviewed, durable hold; never invent an entitlement.
+            // If the hold cannot be persisted, fail closed so the payment
+            // is not silently acknowledged as fulfilled.
             const hold = await logDelivery("reconciliation_required", {
               httpStatus: 200,
-              error: "paid_catalog_missing_buyer_identity",
+              error:
+                catalogFulfilled === "unknown_paid_offer"
+                  ? "paid_checkout_unknown_offer"
+                  : "paid_catalog_missing_buyer_identity",
             });
             if (!hold.ok || hold.detail === "base_columns_only") {
               // The legacy fallback omits status; an event-id-only row is not
