@@ -50,4 +50,41 @@ describe("buildRevenueProof", () => {
     expect(proof.revenue_by_surface["authichain.com"]).toBe(1);
     expect(proof.generated_at).toBe("2026-09-21T12:00:00.000Z");
   });
+
+  it("excludes legacy $0 and founder smoke from customer conversion proof", () => {
+    const rows: LoopEventRow[] = [
+      row("dpp_smoke_1789591727", "payment_succeeded", {
+        metadata: { loop_stage: "payment_succeeded", amount_total: 0, surface: "authichain.com" },
+      }),
+      row("dpp_smoke_1789591727", "provisioned"),
+      row("dpp_smoke_1789591727", "merchant_activated"),
+      row("paid_smoke_10_20260920", "payment_succeeded", {
+        metadata: { loop_stage: "payment_succeeded", amount_total: 1000, surface: "authichain.com" },
+      }),
+      row("paid_smoke_10_20260920", "provisioned"),
+      row("real_customer", "payment_succeeded", {
+        metadata: { loop_stage: "payment_succeeded", amount_total: 29900, surface: "authichain.com" },
+      }),
+      row("real_customer", "provisioned"),
+    ];
+    const proof = buildRevenueProof(rows);
+    expect(proof.excluded.demo).toBe(2);
+    expect(proof.visit_count).toBe(1);
+    expect(proof.stripe_conversions).toBe(1);
+    expect(proof.provisioning_success).toBe(1);
+    expect(proof.activated_merchants).toBe(0);
+    expect(proof.revenue_by_surface["authichain.com"]).toBe(1);
+  });
+
+  it("excludes unmarked zero-total checkouts without relying on smoke IDs", () => {
+    const proof = buildRevenueProof([
+      row("free_promo_visit", "payment_succeeded", {
+        metadata: { loop_stage: "payment_succeeded", amount_total: "0" },
+      }),
+      row("free_promo_visit", "provisioned"),
+    ]);
+    expect(proof.excluded.demo).toBe(1);
+    expect(proof.stripe_conversions).toBe(0);
+    expect(proof.provisioning_success).toBe(0);
+  });
 });
