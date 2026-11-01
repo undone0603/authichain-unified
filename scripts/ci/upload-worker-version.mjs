@@ -1,17 +1,15 @@
 #!/usr/bin/env node
 /**
  * POST a bundled Worker version over IPv4 HTTP/2 (curl), then print the
- * version id. wrangler's undici fetch hangs on the 8.8 MiB edge-router POST
- * from authichain-wsl (41242803187, 41246493823, 41250709348). Uncompressed
- * curl HTTP/1.1 RST after ~96s (41264005567). HTTP/1.1 gzip of the multipart
- * timed out with 0 bytes (41265515618). Gzip of only the JS part reached CF
- * (~1.7 MiB) but the versions API does not decompress part Content-Encoding
- * and eval'd gzip bytes as JS (41297825503 SyntaxError at index.js:1).
+ * version id. The versions API parses uncompressed JS in the multipart:
+ * part-level gzip eval'd as JS (41297825503), HTTP gzip of the body
+ * returned multipart NextPart EOF (41298894966). HTTP/1.1 uncompressed
+ * RST after ~96s (41264005567). Send raw JS over HTTP/2 with a longer
+ * max-time so the 8.8 MiB POST can finish.
  *
- * Send uncompressed JS in the multipart (what CF parses) and gzip the HTTP
- * body (wire ~1.7 MiB) over HTTP/2. keep_bindings secret_text inherits
- * AUTHICHAIN_ATTESTATION_*. keep_assets keeps client/public. Does not print
- * the API token or secret values. Does not secret-put.
+ * keep_bindings secret_text inherits AUTHICHAIN_ATTESTATION_*. keep_assets
+ * keeps client/public. Does not print the API token or secret values.
+ * Does not secret-put.
  */
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -19,7 +17,6 @@ import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { gzipSync } from "node:zlib";
 import { parseWranglerVersionId } from "./parse-wrangler-version-id.mjs";
 
 const NAME = /^[a-z0-9][a-z0-9-]{0,62}$/;
@@ -132,10 +129,6 @@ export function buildMultipartBody({ metadata, moduleBuf, boundary }) {
   return Buffer.concat([head, meta, mid, moduleBuf, tail]);
 }
 
-export function gzipHttpBody(multipartBuf) {
-  return gzipSync(multipartBuf, { level: 9 });
-}
-
 export function curlArgv({ url, bodyPath, headerPath, contentType }) {
   return [
     "curl",
@@ -143,14 +136,14 @@ export function curlArgv({ url, bodyPath, headerPath, contentType }) {
     "--http2",
     "--tcp-nodelay",
     "--retry",
-    "3",
+    "2",
     "--retry-delay",
     "5",
     "--retry-all-errors",
     "--silent",
     "--show-error",
     "--max-time",
-    "180",
+    "480",
     "-X",
     "POST",
     url,
@@ -158,8 +151,6 @@ export function curlArgv({ url, bodyPath, headerPath, contentType }) {
     `@${headerPath}`,
     "-H",
     "Expect:",
-    "-H",
-    "Content-Encoding: gzip",
     "-H",
     `Content-Type: ${contentType}`,
     "--data-binary",
@@ -219,7 +210,7 @@ export function uploadWorkerVersion({
     moduleBuf: readFileSync(bundle),
     boundary,
   });
-  writeFileSync(bodyPath, gzipHttpBody(raw));
+  writeFileSync(bodyPath, raw);
   writeFileSync(headerPath, `Authorization: Bearer ${token}\n`, { mode: 0o600 });
   const args = curlArgv({
     url: versionsUploadUrl(accountId, scriptName),

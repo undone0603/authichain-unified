@@ -20,7 +20,7 @@ jobs:
   deploy:
     # Publish runner only: authichain-wsl. CI stays on authichain-ops (laptop).
     runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
-    timeout-minutes: 30
+    timeout-minutes: 40
     env:
       # WSL has no IPv6. Node 22 Happy Eyeballs races AAAA (ENETUNREACH) with
       # Cloudflare anycast A records and aborts in ~1.6s. ipv4first alone still
@@ -56,12 +56,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          # wrangler hung on the 8.8 MiB POST (41242803187, 41246493823,
-          # 41250709348). HTTP/1.1 uncompressed RST (41264005567). HTTP/1.1
-          # gzip 0-byte timeout (41265515618). Module-part gzip reached CF
-          # but eval'd gzip as JS (41297825503). Dry-run locally, then curl
-          # --ipv4 --http2 with HTTP gzip of uncompressed JS + keep_bindings
-          # secret_text. Do not wrangler deploy. Do not secret-put.
+          # Versions API wants uncompressed JS in the multipart. HTTP gzip
+          # returned NextPart EOF (41298894966); part gzip eval'd as JS
+          # (41297825503). Dry-run locally, then curl --ipv4 --http2 of the
+          # raw 8.8 MiB body with keep_bindings secret_text. Do not wrangler
+          # deploy. Do not secret-put.
           rm -rf /tmp/er-bundle
           mkdir -p /tmp/er-bundle
           npx --yes wrangler@4.149.0 versions upload --minify --keep-vars --dry-run --outdir /tmp/er-bundle --config wrangler.toml \
