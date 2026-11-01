@@ -5,6 +5,7 @@
   import { notifyOwner } from "./_core/notification";
   import { getDb,logActivity } from "./db";
   import { getCRMStats,isHubSpotConfigured,syncLeadToHubSpot } from "./hubspot-service";
+  import { formatUnverifiedSubscriptionMetrics } from "./subscription-reporting";
 
 // ─── Job Registry ───────────────────────────────────────────────────────────
 interface JobDefinition {
@@ -382,9 +383,10 @@ registerJob({
 New Users: ${newUsers}
 Authentications: ${newAuths}
 New Leads: ${newLeads}
-Payment records created (not verified paid): ${newPayments}
-Internal active subscription rows (not verified paid): ${totalActiveSubs}
-Verified paid subscriptions / renewals: not measured by this digest
+${formatUnverifiedSubscriptionMetrics({
+  paymentRecordCount: newPayments,
+  internalActiveCount: totalActiveSubs,
+})}
 
 HubSpot CRM: ${crmStats.contacts} contacts | ${crmStats.companies} companies | ${crmStats.deals} deals`;
 
