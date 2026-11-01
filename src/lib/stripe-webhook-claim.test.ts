@@ -8,7 +8,10 @@ type Row = { event_id: string; status: string | null; processed_at: string };
 
 /** In-memory stand-in for public.stripe_events (PRIMARY KEY event_id). */
 export function fakeStripeEvents(
-  opts: { upsertError?: { code: string; message: string } } = {}
+  opts: {
+    upsertError?: { code: string; message: string };
+    readError?: { code: string; message: string };
+  } = {}
 ) {
   const rows = new Map<string, Row>();
   const supabase = {
@@ -30,6 +33,15 @@ export function fakeStripeEvents(
             }
             return { data: [{ event_id: row.event_id }], error: null };
           },
+        }),
+        select: (_columns: string) => ({
+          eq: (_column: string, id: string) => ({
+            maybeSingle: async () => {
+              if (opts.readError) return { data: null, error: opts.readError };
+              const row = rows.get(id);
+              return { data: row ? { status: row.status } : null, error: null };
+            },
+          }),
         }),
         update: (patch: Partial<Row>) => {
           let id = "";
@@ -65,7 +77,7 @@ describe("claimStripeEvent (stripe_events, on conflict do nothing)", () => {
       "claimed"
     );
     expect(await claimStripeEvent(supabase, "evt_1", "invoice.paid")).toBe(
-      "duplicate"
+      "in_flight"
     );
     rows.get("evt_1")!.status = "success";
     expect(await claimStripeEvent(supabase, "evt_1", "invoice.paid")).toBe(
@@ -81,7 +93,7 @@ describe("claimStripeEvent (stripe_events, on conflict do nothing)", () => {
       "claimed"
     );
     expect(await claimStripeEvent(supabase, "evt_2", "invoice.paid")).toBe(
-      "duplicate"
+      "in_flight"
     );
   });
 
@@ -91,7 +103,7 @@ describe("claimStripeEvent (stripe_events, on conflict do nothing)", () => {
     await claimStripeEvent(supabase, "evt_3", "x", t0);
     const soon = new Date(t0.getTime() + 60_000);
     expect(await claimStripeEvent(supabase, "evt_3", "x", soon)).toBe(
-      "duplicate"
+      "in_flight"
     );
     const later = new Date(t0.getTime() + STRIPE_CLAIM_STALE_MS + 60_000);
     expect(await claimStripeEvent(supabase, "evt_3", "x", later)).toBe(
@@ -99,7 +111,15 @@ describe("claimStripeEvent (stripe_events, on conflict do nothing)", () => {
     );
   });
 
-  it("fails open when the write errors or there is no client", async () => {
+  it("fails closed when the existing claim status cannot be read", async () => {
+    const { supabase } = fakeStripeEvents({
+      readError: { code: "PGRST", message: "temporary read failure" },
+    });
+    expect(await claimStripeEvent(supabase, "evt_read", "x")).toBe("claimed");
+    expect(await claimStripeEvent(supabase, "evt_read", "x")).toBe("unavailable");
+  });
+
+  it("fails closed when the write errors or there is no client", async () => {
     const { supabase } = fakeStripeEvents({
       upsertError: { code: "42703", message: "column missing" },
     });

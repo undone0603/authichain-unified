@@ -231,6 +231,27 @@ describe("handleStripeWebhook — test events", () => {
 });
 
 describe("handleStripeWebhook — idempotency", () => {
+  it("returns HTTP 500 for a fresh in-flight paid receipt instead of false success", async () => {
+    claimStripeEventMock.mockResolvedValueOnce("in_flight");
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_inflight_paid", {
+        id: "cs_inflight_paid",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 150000,
+        metadata: {},
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toMatchObject({
+      name: "StripeEventClaimUnavailableError",
+      httpStatus: 500,
+    });
+    expect(recordStripeWebhookDelivery).not.toHaveBeenCalled();
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
+
   it("marks duplicate events and skips processing", async () => {
     const { hasWebhookEventProcessed } = await import("../db.js");
     vi.mocked(hasWebhookEventProcessed).mockResolvedValueOnce(true);

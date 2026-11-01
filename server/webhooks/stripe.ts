@@ -646,8 +646,11 @@ export async function handleStripeWebhook(
   // on this Worker, so refuse (route -> 500) and let Stripe retry later.
   // Thrown before logDelivery("received") so the retry is not mistaken for
   // an in-flight duplicate. Stripe dashboard test events stay exempt.
-  if (claim === "unavailable" && !event.id.startsWith("evt_test_")) {
-    throw new StripeEventClaimUnavailableError(event.id);
+  if (
+    (claim === "unavailable" || claim === "in_flight") &&
+    !event.id.startsWith("evt_test_")
+  ) {
+    throw new StripeEventClaimUnavailableError(event.id, claim);
   }
 
   // Persist before side effects so a later throw is still queryable.

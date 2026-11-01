@@ -12,7 +12,8 @@
  *   - 0 rows (row exists)            -> re-claim only if the earlier delivery
  *                                       ended status=error, or is stuck at
  *                                       status=received for >10 min (crashed
- *                                       Worker); otherwise "duplicate"
+ *                                       Worker); fresh received -> "in_flight"
+ *                                       (HTTP 500 retry), completed -> "duplicate"
  *   - any other error / no client    -> "unavailable". The edge handler
  *                                       now FAILS CLOSED on this (PM-338):
  *                                       it throws StripeEventClaimUnavailableError
@@ -31,7 +32,7 @@ type SupabaseError = { code?: string; message?: string } | null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseLike = { from: (table: string) => any };
 
-export type StripeEventClaim = "claimed" | "duplicate" | "unavailable";
+export type StripeEventClaim = "claimed" | "duplicate" | "in_flight" | "unavailable";
 
 /**
  * Thrown by the edge Stripe webhook handler when the once-only claim could
@@ -40,9 +41,11 @@ export type StripeEventClaim = "claimed" | "duplicate" | "unavailable";
  */
 export class StripeEventClaimUnavailableError extends Error {
   readonly httpStatus = 500;
-  constructor(eventId: string) {
+  constructor(eventId: string, reason: "unavailable" | "in_flight" = "unavailable") {
     super(
-      `[stripe-webhook] stripe_events claim unavailable for ${eventId}; refusing to process without a duplicate guard (Stripe will retry)`
+      reason === "in_flight"
+        ? `[stripe-webhook] stripe_events delivery ${eventId} is still in flight; refusing to acknowledge an unverified outcome (Stripe will retry)`
+        : `[stripe-webhook] stripe_events claim unavailable for ${eventId}; refusing to process without a duplicate guard (Stripe will retry)`
     );
     this.name = "StripeEventClaimUnavailableError";
   }
@@ -93,11 +96,28 @@ export async function claimStripeEvent(
       .select("event_id")) as { data: unknown[] | null; error: SupabaseError };
     if (reErr) {
       console.warn(
-        `[stripe-webhook] re-claim check failed (${reErr.code ?? "error"}); treating as duplicate`
+        `[stripe-webhook] re-claim check failed (${reErr.code ?? "error"}); failing closed`
       );
-      return "duplicate";
+      return "unavailable";
     }
-    return Array.isArray(re) && re.length > 0 ? "claimed" : "duplicate";
+    if (Array.isArray(re) && re.length > 0) return "claimed";
+
+    // A fresh 'received' row is NOT proof that its first delivery completed.
+    // Returning 'duplicate' would acknowledge a payment whose first attempt
+    // may have failed to persist fulfillment or a reconciliation hold.
+    const { data: prior, error: priorErr } = (await supabase
+      .from("stripe_events")
+      .select("status")
+      .eq("event_id", eventId)
+      .maybeSingle()) as {
+      data: { status: string | null } | null;
+      error: SupabaseError;
+    };
+    if (priorErr || !prior) {
+      console.warn("[stripe-webhook] prior claim status unavailable; failing closed");
+      return "unavailable";
+    }
+    return prior.status === "received" ? "in_flight" : "duplicate";
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn(`[stripe-webhook] claim skipped (${msg})`);
