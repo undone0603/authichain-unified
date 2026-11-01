@@ -132,6 +132,37 @@ describe("activateDppMerchant", () => {
     }
   });
 
+  it("rejects forged DPP metadata and matching dollar amount without the purchased DPP price", async () => {
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const invalidPurchases = [
+      { line_items: undefined },
+      { line_items: { data: [{ price: { id: "price_1UL0vVGqTruSqV8T5WYjrq6i" } }] } },
+      { line_items: { data: [
+        { price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } },
+        { price: { id: "price_another_product" } },
+      ] } },
+    ];
+    for (const [index, purchase] of invalidPurchases.entries()) {
+      retrieve.mockResolvedValueOnce({
+        status: "complete", payment_status: "paid", amount_total: 29900,
+        metadata: { offer: "dpp_readiness_2026", plan: "dpp_readiness" },
+        customer_details: { email: "buyer@example.test" },
+        ...purchase,
+      });
+      const from = vi.fn(() => { throw new Error("must not persist invalid activation"); });
+      const result = await activateDppMerchant({
+        body: { session_id: `cs_wrong_price_${index}`, categories: "a", markets: "b", labeling: "c" },
+        stripeSecretKey: "sk_test", supabase: { from },
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.status).toBe(400);
+        expect(result.error).toMatch(/Not a DPP workspace session/);
+      }
+      expect(from).not.toHaveBeenCalled();
+    }
+  });
+
   it("returns and persists an importer_file on first paid DPP activation", async () => {
     retrieve.mockResolvedValueOnce({
       payment_status: "paid",
