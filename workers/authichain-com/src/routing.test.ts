@@ -1392,6 +1392,45 @@ test("/verify/live is the founder seal, not an app lookup for the id live", asyn
     assert.notEqual(html, "app");
   }
   assert.deepEqual(seen, []);
+  const manufacturerSeen: string[] = [];
+  const manufacturerEnv = {
+    APP_WORKER: {
+      fetch: async (r: Request) => {
+        manufacturerSeen.push(new URL(r.url).pathname);
+        return new Response("app", { status: 200 });
+      },
+    },
+  } as unknown as Env;
+  for (const path of [
+    "/verify/manufacturer",
+    "/verify/manufacturer/",
+    "/verify/MANUFACTURER",
+  ]) {
+    const res = await get(path, manufacturerEnv);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.match(html, /<h1>Manufacturer role history<\/h1>/);
+    assert.match(html, /This path is not a certificate number\./);
+    assert.match(html, /GET \/api\/manufacturer-status\/\{address\}\/history/);
+    assert.match(html, /does not invent a role/);
+    assert.match(html, /does not sell a role/);
+    assert.doesNotMatch(html, /No record found/);
+    assert.doesNotMatch(html, /\$49/);
+    assert.notEqual(html, "app");
+  }
+  assert.deepEqual(manufacturerSeen, []);
+  const manufacturerWithId = await get(
+    "/verify/manufacturer?id=polygon-anchor-1",
+    manufacturerEnv
+  );
+  assert.equal(await manufacturerWithId.text(), "app");
+  const manufacturerPost = await worker.fetch(
+    new Request("https://authichain.com/verify/manufacturer", {
+      method: "POST",
+    }),
+    manufacturerEnv
+  );
+  assert.equal(manufacturerPost.status, 405);
   const other = await get("/verify/not-a-real-record", env);
   assert.equal(await other.text(), "app");
   const withId = await get("/verify/live?id=polygon-anchor-1", env);
@@ -1415,7 +1454,8 @@ test("hung APP_WORKER /verify lookup 404s with HTML instead of throwing (1101)",
     assert.equal(res.status, 404);
     assert.match(res.headers.get("content-type") ?? "", /text\/html/);
     const html = await res.text();
-    assert.match(html, /No record found/);
+    assert.match(html, /Lookup did not finish/);
+    assert.doesNotMatch(html, /No record found/);
     assert.match(html, /name="robots" content="noindex"/);
     assert.equal(/on-chain|blockchain|polygon/i.test(html), false);
   }
@@ -1714,6 +1754,33 @@ test("/protocol links the anchored demonstration record and the MCP tool", async
   assert.match(html, /verify_record/);
 });
 
+test("JWKS and issuer.json are served here, not the stale edge-router proxy", async () => {
+  const jwks = await get("/protocol/jwks.json");
+  assert.equal(jwks.status, 200);
+  const jwksBody = (await jwks.json()) as { keys: Array<{ kid: string }> };
+  const kids = jwksBody.keys.map(k => k.kid);
+  assert.ok(kids.includes("jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM"));
+  assert.ok(kids.includes("T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ"));
+  assert.equal(kids.includes("lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE"), false);
+
+  const wellKnown = await get("/.well-known/jwks.json");
+  assert.equal(wellKnown.status, 200);
+  assert.deepEqual(await wellKnown.json(), jwksBody);
+
+  const issuer = await get("/protocol/issuer.json");
+  assert.equal(issuer.status, 200);
+  const issuerBody = (await issuer.json()) as {
+    kid: string;
+    signing: boolean;
+  };
+  assert.equal(issuerBody.kid, "jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM");
+  assert.equal(issuerBody.signing, true);
+
+  const launch = await get("/protocol/launch-proof");
+  assert.equal(launch.status, 200);
+  assert.equal(await launch.text(), "app");
+});
+
 test("polygon-anchor-1 files are served before the /protocol app proxy", async () => {
   const record = await get("/protocol/examples/polygon-anchor-1");
   assert.equal(record.status, 200);
@@ -1748,7 +1815,15 @@ test("/manifest.webmanifest is a record lookup, not an offline verify cache", as
   };
   assert.equal(manifest.start_url, "/verify");
   assert.equal(manifest.display, "browser");
-  assert.match(manifest.description, /On-chain verification is in development/);
+  assert.match(
+    manifest.description,
+    /A product certificate is not an on-chain check/
+  );
+  assert.match(
+    manifest.description,
+    /\/api\/verify\?id=polygon-anchor-1/
+  );
+  assert.equal(manifest.description.includes("polygonscan.com"), false);
   assert.doesNotMatch(JSON.stringify(manifest), /authenticity/i);
   const sw = await get("/sw.js");
   assert.notEqual(sw.status, 200);

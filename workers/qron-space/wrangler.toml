@@ -18,6 +18,11 @@ zone_name = "qron.space"
 [vars]
 # Origin that renders /generate (Living QR intake) and /p (SEO hubs).
 APP_ORIGIN = "https://authichain.com"
+# Kill switch for the hourly mode-usage digest. "false" = log dry-run only.
+MODE_USAGE_CRON_ENABLED = "false"
+
+[triggers]
+crons = ["0 * * * *"]
 
 [observability]
 enabled = true

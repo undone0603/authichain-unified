@@ -26,8 +26,7 @@ describe("llms.txt", () => {
     expect(text).toContain("https://authichain.com/battery-passport");
     expect(text).toContain("18 February 2027");
     expect(text).toContain("e-bike / LMT");
-    expect(text).not.toContain("/checkout/qron_launch");
-    expect(text).not.toContain("QRON Launch");
+    expect(text).toContain(planPaymentLink("qron_launch"));
     expect(text).toContain(planPaymentLink("starter"));
     expect(text).toContain(planPaymentLink("creator"));
     expect(text).toContain("https://authichain.com/generate");
@@ -35,10 +34,11 @@ describe("llms.txt", () => {
     expect(text).toContain(planPaymentLink("dpp_readiness"));
     expect(text).not.toContain("EU DPP Readiness $");
     expect(text).toContain(planPaymentLink("strainchain_passport"));
-    expect(text).toContain(
-      "Made in USA Claim File $299 per SKU: https://authichain.com/made-in-usa-claim-file"
-    );
-    expect(text).not.toContain(planPaymentLink("strainchain_farm"));
+    expect(text).toContain(planPaymentLink("musa_claim_file"));
+    expect(text).toContain(planPaymentLink("musa_audit_bundle"));
+    expect(text).toContain(planPaymentLink("battery_gap_report"));
+    expect(text).toContain(planPaymentLink("gov_provenance_pilot"));
+    expect(text).toContain(planPaymentLink("strainchain_farm"));
     expect(text).not.toContain("GET /api/checkout");
     expect(text.toLowerCase()).not.toContain("facilitator.payai");
   });

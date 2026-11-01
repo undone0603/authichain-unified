@@ -19,6 +19,9 @@ import {
   RETIRED_ISSUER_DID,
   RETIRED_ISSUER_KID,
   RETIRED_ISSUER_RETIRED_AT,
+  RETIRED_OCT31_ISSUER_DID,
+  RETIRED_OCT31_ISSUER_KID,
+  RETIRED_OCT31_ISSUER_RETIRED_AT,
   isMcpPath,
   scanLivingQr,
   tryHandleMcp,
@@ -109,7 +112,12 @@ describe("mcp discovery", () => {
       result: { tools: Array<{ name: string }> };
     };
     expect(listed.result.tools.map(t => t.name)).toEqual(
-      expect.arrayContaining(["get_pricing", "verify", "query_provenance", "verify_attestation"])
+      expect.arrayContaining([
+        "get_pricing",
+        "verify",
+        "query_provenance",
+        "verify_attestation",
+      ])
     );
 
     const call = await tryHandleMcp(
@@ -408,8 +416,12 @@ describe("mcp discovery", () => {
       expect(calls).toHaveLength(2);
       const paths = calls.map(call => new URL(call).pathname);
       expect(paths).toContain("/rest/v1/authichain_attestation_records");
-      const registryUrl = new URL(calls.find(call => new URL(call).pathname === "/rest/v1/auth_seals")!);
-      expect(registryUrl.searchParams.get("or")).toContain("product_id.eq.NOPE-XYZ");
+      const registryUrl = new URL(
+        calls.find(call => new URL(call).pathname === "/rest/v1/auth_seals")!
+      );
+      expect(registryUrl.searchParams.get("or")).toContain(
+        "product_id.eq.NOPE-XYZ"
+      );
     } finally {
       globalThis.fetch = orig;
     }
@@ -418,7 +430,10 @@ describe("mcp discovery", () => {
   it("query_provenance reads auth_seals and never labels registration as verified", async () => {
     const orig = globalThis.fetch;
     const calls: string[] = [];
-    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = (async (
+      input: RequestInfo | URL,
+      init?: RequestInit
+    ) => {
       calls.push(String(input));
       const url = new URL(String(input));
       expect(url.searchParams.get("or")).toContain("product_id.eq.PRODUCT-123");
@@ -431,17 +446,22 @@ describe("mcp discovery", () => {
         return new Response("[]", { status: 200 });
       }
       expect(url.pathname).toBe("/rest/v1/auth_seals");
-      return new Response(JSON.stringify([{
-        id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
-        product_id: "PRODUCT-123",
-        batch_id: "batch-2026-A",
-        brand: "Example Brand",
-        polygon_tx: null,
-        created_at: "2026-10-01T12:00:00.000Z",
-      }]), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify([
+          {
+            id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+            product_id: "PRODUCT-123",
+            batch_id: "batch-2026-A",
+            brand: "Example Brand",
+            polygon_tx: null,
+            created_at: "2026-10-01T12:00:00.000Z",
+          },
+        ]),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }
+      );
     }) as typeof fetch;
     try {
       const res = await tryHandleMcp(
@@ -471,9 +491,19 @@ describe("mcp discovery", () => {
         status: string;
         registered: boolean;
         verified: boolean;
-        product: { id: string; sealId: string; batchId: string; brand: string; source: string };
+        product: {
+          id: string;
+          sealId: string;
+          batchId: string;
+          brand: string;
+          source: string;
+        };
         registry: { state: string; source: string; semantics: string };
-        verification: { signature: string; revocation: string; physicalBinding: string };
+        verification: {
+          signature: string;
+          revocation: string;
+          physicalBinding: string;
+        };
       };
       expect(data.status).toBe("registered");
       expect(data.registered).toBe(true);
@@ -516,7 +546,8 @@ describe("mcp discovery", () => {
       decision: "verified",
       payload: { version: "0.1", subject: { object_id: "SKU-123" } },
       jws: "header.payload.signature",
-      record_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      record_hash:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       published_at: "2026-10-16T00:00:00.000Z",
     };
     globalThis.fetch = (async (input: RequestInfo | URL) => {
@@ -534,19 +565,37 @@ describe("mcp discovery", () => {
             jsonrpc: "2.0",
             id: 31,
             method: "tools/call",
-            params: { name: "query_provenance", arguments: { assetId: "SKU-123" } },
+            params: {
+              name: "query_provenance",
+              arguments: { assetId: "SKU-123" },
+            },
           }),
         }),
-        { SUPABASE_URL: "https://example.supabase.co", SUPABASE_ANON_KEY: "anon-test" },
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
       );
-      const body = await res!.json() as { result: { content: Array<{ text: string }> } };
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }> };
+      };
       const data = JSON.parse(body.result.content[0].text) as {
-        status: string; verified: boolean; signedRecord: { jws: string; record_hash: string };
-        verification: { signature: string; issuerTrust: string; revocation: string; physicalBinding: string };
+        status: string;
+        verified: boolean;
+        signedRecord: { jws: string; record_hash: string };
+        verification: {
+          signature: string;
+          issuerTrust: string;
+          revocation: string;
+          physicalBinding: string;
+        };
       };
       expect(data.status).toBe("published_attestation");
       expect(data.verified).toBe(false);
-      expect(data.signedRecord).toMatchObject({ jws: row.jws, record_hash: row.record_hash });
+      expect(data.signedRecord).toMatchObject({
+        jws: row.jws,
+        record_hash: row.record_hash,
+      });
       expect(data.verification).toEqual({
         signature: "not_checked",
         issuerTrust: "not_checked",
@@ -573,7 +622,8 @@ describe("mcp discovery", () => {
       decision: "verified",
       payload: { version: "0.1", subject: { object_id: "SKU-123" } },
       jws: "header.payload.signature",
-      record_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      record_hash:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       published_at: "2026-10-16T00:00:00.000Z",
     };
     globalThis.fetch = (async (input: RequestInfo | URL) => {
@@ -584,17 +634,23 @@ describe("mcp discovery", () => {
     const verifyFetch = vi.fn(async (request: Request) => {
       const url = new URL(request.url);
       expect(url.pathname).toBe("/api/v1/attestation/verify");
-      const body = await request.json() as { jws: string; expected_object_id?: string };
+      const body = (await request.json()) as {
+        jws: string;
+        expected_object_id?: string;
+      };
       expect(body.jws).toBe(row.jws);
       expect(body.expected_object_id).toBe("SKU-123");
-      return new Response(JSON.stringify({
-        valid: true,
-        decision: "verified",
-        cryptographic_status: "valid",
-        issuer_status: "trusted",
-        claim_status: "active",
-        reasons: [],
-      }), { status: 200 });
+      return new Response(
+        JSON.stringify({
+          valid: true,
+          decision: "verified",
+          cryptographic_status: "valid",
+          issuer_status: "trusted",
+          claim_status: "active",
+          reasons: [],
+        }),
+        { status: 200 }
+      );
     });
     try {
       const res = await tryHandleMcp(
@@ -615,11 +671,16 @@ describe("mcp discovery", () => {
           SUPABASE_URL: "https://example.supabase.co",
           SUPABASE_ANON_KEY: "anon-test",
           APP_WORKER: { fetch: verifyFetch },
-        } as unknown as NonNullable<Parameters<typeof tryHandleMcp>[1]>,
+        } as unknown as NonNullable<Parameters<typeof tryHandleMcp>[1]>
       );
-      const body = await res!.json() as { result: { content: Array<{ text: string }>; isError?: boolean } };
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }>; isError?: boolean };
+      };
       const data = JSON.parse(body.result.content[0].text) as {
-        verified: boolean; status: string; physicalBinding: string; physical_authenticity: string;
+        verified: boolean;
+        status: string;
+        physicalBinding: string;
+        physical_authenticity: string;
       };
       expect(verifyFetch).toHaveBeenCalledTimes(1);
       expect(data).toMatchObject({
@@ -643,9 +704,11 @@ describe("mcp discovery", () => {
       issuer_id: "https://authichain.com",
       payload: { subject: { object_id: "SKU-123" } },
       jws: "header.payload.signature",
-      record_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      record_hash:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     };
-    globalThis.fetch = (async () => new Response(JSON.stringify([row]), { status: 200 })) as typeof fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify([row]), { status: 200 })) as typeof fetch;
     try {
       const res = await tryHandleMcp(
         req("/mcp", {
@@ -655,13 +718,24 @@ describe("mcp discovery", () => {
             jsonrpc: "2.0",
             id: 33,
             method: "tools/call",
-            params: { name: "verify_attestation", arguments: { assetId: "SKU-123" } },
+            params: {
+              name: "verify_attestation",
+              arguments: { assetId: "SKU-123" },
+            },
           }),
         }),
-        { SUPABASE_URL: "https://example.supabase.co", SUPABASE_ANON_KEY: "anon-test" },
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
       );
-      const body = await res!.json() as { result: { content: Array<{ text: string }>; isError?: boolean } };
-      const data = JSON.parse(body.result.content[0].text) as { verified: boolean; status: string };
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }>; isError?: boolean };
+      };
+      const data = JSON.parse(body.result.content[0].text) as {
+        verified: boolean;
+        status: string;
+      };
       expect(data.verified).toBe(false);
       expect(data.status).toBe("verifier_not_configured");
       expect(body.result.isError).toBe(true);
@@ -672,7 +746,8 @@ describe("mcp discovery", () => {
 
   it("does not turn a registry outage into a false not_registered result", async () => {
     const orig = globalThis.fetch;
-    globalThis.fetch = (async () => new Response("unavailable", { status: 503 })) as typeof fetch;
+    globalThis.fetch = (async () =>
+      new Response("unavailable", { status: 503 })) as typeof fetch;
     try {
       const res = await tryHandleMcp(
         req("/mcp", {
@@ -704,7 +779,9 @@ describe("mcp discovery", () => {
       expect(data.status).toBe("registry_unavailable");
       expect(data.verified).toBe(false);
       expect(data.registry.state).toBe("signed_record_registry_unavailable");
-      expect(data.registry.note).toContain("No conclusion about signed-record existence");
+      expect(data.registry.note).toContain(
+        "No conclusion about signed-record existence"
+      );
     } finally {
       globalThis.fetch = orig;
     }
@@ -1076,7 +1153,7 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
     expect(sha256Hex(signingBytes(recordJson))).toBe(DEMONSTRATION_RECORD_HASH);
   });
 
-  it("production issuer did:key matches JWKS kid T3AL7c4w… (RFC 7638)", () => {
+  it("production issuer did:key matches JWKS kid jWTo5QsZ… (RFC 7638)", () => {
     const jwk = publicKeyFromDidKey(PRODUCTION_ISSUER_DID).export({
       format: "jwk",
     }) as { crv: string; kty: string; x: string };
@@ -1085,9 +1162,9 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
       .digest("base64url");
     expect(thumb).toBe(PRODUCTION_ISSUER_KID);
     expect(PRODUCTION_ISSUER_KID).toBe(
-      "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ"
+      "jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM"
     );
-    expect(jwk.x).toBe("T36jnq2kRJRxGBhtyGG3PSboG_Vb6f-l8TixLr95vG0");
+    expect(jwk.x).toBe("MCKE_tTFsmcYVr2PTJgo8X2F3gJTXXrwZev_1UtE5Nk");
   });
 
   it("retired issuer did:key matches its RFC 7638 kid lue84w… (pre-Oct-9 key)", () => {
@@ -1100,7 +1177,45 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
     expect(thumb).toBe(RETIRED_ISSUER_KID);
     expect(jwk.x).toBe("mJx2TLqUmUnxAJW_L-EQ1f28M8B6t9x-9VJPjJxbj7k");
     expect(RETIRED_ISSUER_DID).not.toBe(PRODUCTION_ISSUER_DID);
+    expect(RETIRED_ISSUER_DID).not.toBe(RETIRED_OCT31_ISSUER_DID);
     expect(RETIRED_ISSUER_RETIRED_AT).toBe("2026-10-09T05:12:01Z");
+  });
+
+  it("retired Oct 31 issuer did:key matches its RFC 7638 kid T3AL7c4w…", () => {
+    const jwk = publicKeyFromDidKey(RETIRED_OCT31_ISSUER_DID).export({
+      format: "jwk",
+    }) as { crv: string; kty: string; x: string };
+    const thumb = createHash("sha256")
+      .update(JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x }))
+      .digest("base64url");
+    expect(thumb).toBe(RETIRED_OCT31_ISSUER_KID);
+    expect(jwk.x).toBe("T36jnq2kRJRxGBhtyGG3PSboG_Vb6f-l8TixLr95vG0");
+    expect(RETIRED_OCT31_ISSUER_DID).not.toBe(PRODUCTION_ISSUER_DID);
+    expect(RETIRED_OCT31_ISSUER_RETIRED_AT).toBe("2026-10-31T20:38:07Z");
+  });
+
+  it("Oct 31 retired issuer is allowlisted only for records issued before the rotation", async () => {
+    const vm =
+      RETIRED_OCT31_ISSUER_DID + "#" + RETIRED_OCT31_ISSUER_DID.slice(8);
+    const mk = (validFrom: string) => ({
+      ...forgedRecord().record,
+      issuer: RETIRED_OCT31_ISSUER_DID,
+      validFrom,
+      proof: { ...forgedRecord().record.proof, verificationMethod: vm },
+    });
+    const before = (await verifyRecordTool({
+      record: mk("2026-10-31T20:38:06Z"),
+    })) as any;
+    expect(before.signer).toMatchObject({
+      allowlisted: true,
+      role: "retired_issuer",
+      productionIssuer: false,
+      kid: RETIRED_OCT31_ISSUER_KID,
+    });
+    const after = (await verifyRecordTool({
+      record: mk("2026-10-31T20:38:07Z"),
+    })) as any;
+    expect(after.signer).toMatchObject({ allowlisted: false, role: null });
   });
 
   it("retired issuer is allowlisted only for records issued before Oct 9", async () => {
