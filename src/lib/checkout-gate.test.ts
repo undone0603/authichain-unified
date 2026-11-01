@@ -540,9 +540,13 @@ describe("Launch Annual cadence", () => {
     expect(confirm).not.toContain("$190/mo");
     expect(renderCheckoutConfirmPage({ plan: monthly! })).toContain("$19/mo");
     const chooser = renderCheckoutChooserPage();
-    // Launch plans are unlisted, so the chooser no longer offers them.
-    expect(chooser).not.toContain("$190/yr");
-    expect(chooser).not.toContain("$19/mo");
+    // Direct chooser links. listed stays false, so /pricing and /generate do not grow Launch buttons.
+    expect(chooser).toContain('href="/checkout/qron_launch"');
+    expect(chooser).toContain('href="/checkout/qron_launch_annual"');
+    expect(chooser).toContain("$19/mo");
+    expect(chooser).toContain("$190/yr");
+    expect(planById("qron_launch")?.listed).toBe(false);
+    expect(planById("qron_launch_annual")?.listed).toBe(false);
   });
 
   it("opens a subscription session for the annual price", () => {

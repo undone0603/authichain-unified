@@ -65,6 +65,34 @@ test("a 404 is answered without reaching the network", async () => {
   assert.equal(res.status, 404);
 });
 
+test("the homepage names the one stored scan", async () => {
+  const f = stubFetch();
+  try {
+    const html = await (await get("/")).text();
+    assert.match(html, /\/qron\/r\/qron%3Aurl%3A71cead6b/);
+    assert.match(html, /does not verify the signature/);
+    assert.match(html, /This page does not itself read that scan/);
+    assert.match(html, /presentation_not_found/);
+    assert.match(html, /not a physical inspection/);
+    assert.match(html, /Opening \/generate does not store a signed scan/);
+    assert.match(html, /One stored scan is signed/);
+    assert.match(html, /An anonymous generate is not a stored signed scan/);
+    assert.doesNotMatch(html, /Scan-to-verify is in development/);
+    assert.doesNotMatch(html, /Signed payload \(in development\)/);
+    assert.doesNotMatch(html, /In development: Ed25519-signed codes/);
+    assert.doesNotMatch(html, /Turn a URL into a signed Living QR/);
+    assert.doesNotMatch(html, /Create a signed QR/);
+    assert.doesNotMatch(html, /Generate signed Living QR/);
+    assert.doesNotMatch(html, /polygonscan\.com/i);
+    assert.doesNotMatch(
+      html,
+      /live on Polygon|anchored on Polygon|Polygon mainnet|certificate contract on Polygon/i
+    );
+  } finally {
+    f.restore();
+  }
+});
+
 test("the apex still renders the marketing page", async () => {
   const f = stubFetch();
   try {
