@@ -1,0 +1,59 @@
+name: Deploy qron-space
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "workers/qron-space/**"
+      - "workers/_shared/estate-pricing.ts"
+      - ".github/workflows/deploy-qron-space.yml"
+permissions:
+  contents: read
+concurrency:
+  # Share the 4 GB WSL runner with authichain-com. Two installs get SIGKILL.
+  group: deploy-authichain-com
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 30
+    env:
+      NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        if: runner.environment != 'self-hosted'
+        with:
+          version: "10.28.2"
+          run_install: false
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          command -v pnpm
+          pnpm --version
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install node-gyp (native builds)
+        run: npm i -g node-gyp@11
+      - name: Install
+        env:
+          npm_config_build_from_source: "false"
+        run: pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
+      - name: Publish qron-space
+        working-directory: workers/qron-space
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          # Deploy Workers (workers/*) is disabled. This publishes only
+          # qron-space. Pin 4.149.0: --keep-vars works, and 4.150 source-map
+          # uploads hung the authichain-com job.
+          npx --yes wrangler@4.149.0 versions upload --minify --keep-vars --config wrangler.toml \
+            2>&1 | tee /tmp/qron-versions-upload.log
+          vid=$(node ../../scripts/ci/parse-wrangler-version-id.mjs /tmp/qron-versions-upload.log)
+          echo "uploaded qron-space version $vid"
+          node ../../scripts/ci/promote-worker-version.mjs qron-space "$vid"
