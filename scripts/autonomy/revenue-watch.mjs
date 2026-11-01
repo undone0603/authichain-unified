@@ -69,6 +69,67 @@ export function findUnfulfilled(
     }));
 }
 
+// Only products whose *actual customer access* is persisted on
+// public.profiles.last_grant_session_id. Do not flag held services that are
+// provisioned through other rails, or infer a grant from a webhook 200.
+// This is a read-only monitor; matching metadata cannot itself grant credits.
+export function expectsProfileGrant(session) {
+  const meta = session.metadata ?? {};
+  return meta.plan === "starter" ||
+    meta.plan === "creator" ||
+    meta.plan === "dpp_readiness" ||
+    meta.offer === "dpp_readiness_2026" ||
+    meta.canonical_name === "dpp_workspace";
+}
+
+/**
+ * Paid and acknowledged by Stripe webhook but not persisted in the canonical
+ * profiles grant ledger. This is the missing payment -> entitlement proof.
+ * Output intentionally contains session ids, not buyer addresses or amounts.
+ */
+export function findMissingProfileGrants(
+  sessions,
+  events,
+  profiles,
+  { now = Date.now(), graceMs = 15 * 60_000, founderEmails = [] } = {},
+) {
+  const founders = new Set(
+    founderEmails.map(e => e.trim().toLowerCase()).filter(Boolean),
+  );
+  const acknowledged = new Set(
+    events
+      .filter(e =>
+        ["checkout.session.completed", "checkout.session.async_payment_succeeded"].includes(e.event_type) &&
+        ["success", "processed", "handled"].includes(String(e.status || "").toLowerCase()) &&
+        e.session_id
+      )
+      .map(e => e.session_id),
+  );
+  const granted = new Set(
+    profiles.map(p => p.last_grant_session_id).filter(Boolean),
+  );
+  return sessions
+    .filter(s =>
+      s.status === "complete" &&
+      s.payment_status === "paid" &&
+      s.livemode === true &&
+      Number.isFinite(s.amount_total) &&
+      s.amount_total > 0 &&
+      now - s.created * 1000 > graceMs &&
+      expectsProfileGrant(s) &&
+      s.metadata?.is_demo !== "true" &&
+      !isFounder(s.customer_details?.email ?? s.customer_email, founders) &&
+      acknowledged.has(s.id) &&
+      !granted.has(s.id)
+    )
+    .map(s => ({
+      session: s.id,
+      reason: "webhook succeeded; durable profile grant missing",
+      paid_at: new Date(s.created * 1000).toISOString(),
+      livemode: true,
+    }));
+}
+
 export async function checkFulfilment({
   stripeKey,
   supabaseUrl,
@@ -124,8 +185,29 @@ export async function checkFulfilment({
     if (!Array.isArray(rows)) throw new Error("Supabase stripe_events: invalid response");
     events.push(...rows);
   }
+  // The receipt ledger is not the customer-access ledger. Read the canonical
+  // profile grant marker for recognized credit/workspace purchases as well.
+  // A failed/forbidden read is an error, NOT a green watchdog.
+  const grantCandidates = paid.filter(expectsProfileGrant);
+  const profileGrants = [];
+  for (let i = 0; i < grantCandidates.length; i += 50) {
+    const ids = grantCandidates.slice(i, i + 50)
+      .map(s => `"${s.id}"`).join(",");
+    const grantRes = await fetchImpl(
+      `${supabaseUrl}/rest/v1/profiles?select=last_grant_session_id&last_grant_session_id=in.(${encodeURIComponent(ids)})`,
+      { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } },
+    );
+    if (!grantRes.ok) throw new Error(`Supabase profiles grants -> ${grantRes.status}`);
+    const rows = await grantRes.json();
+    if (!Array.isArray(rows))
+      throw new Error("Supabase profiles grants: invalid response");
+    profileGrants.push(...rows);
+  }
   return {
     checked: paid.length,
-    problems: findUnfulfilled(paid, events, { founderEmails }),
+    problems: [
+      ...findUnfulfilled(paid, events, { founderEmails }),
+      ...findMissingProfileGrants(paid, events, profileGrants, { founderEmails }),
+    ],
   };
 }
