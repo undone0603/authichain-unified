@@ -126,7 +126,21 @@ export async function claimStripeEvent(
       );
       return "unavailable";
     }
-    return prior.status === "received" ? "in_flight" : "duplicate";
+    // Only finalized, persisted outcomes can be acknowledged as duplicates.
+    // Legacy NULL statuses and unrecognized values are NOT evidence that a
+    // paid checkout was fulfilled or durably placed on operator hold.
+    if (prior.status === "received") return "in_flight";
+    if (
+      prior.status === "success" ||
+      prior.status === "duplicate" ||
+      prior.status === "reconciliation_required"
+    ) {
+      return "duplicate";
+    }
+    console.warn(
+      "[stripe-webhook] prior claim has no recognized terminal status; failing closed for reconciliation"
+    );
+    return "unavailable";
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn(`[stripe-webhook] claim skipped (${msg})`);
