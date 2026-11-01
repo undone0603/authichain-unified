@@ -243,7 +243,8 @@ export const DEMONSTRATION_RECORD_HASH =
 /**
  * Production attestation issuer: kid jWTo5QsZ… (RFC 7638 thumbprint, CFA-462)
  * published at /protocol/jwks.json and /.well-known/jwks.json
- * (authichain-edge-router, AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64). did:key is
+ * (authichain-com protocol-jwks-route; private key stays on
+ * authichain-edge-router). did:key is
  * derived from that JWK's x. Rotated 2026-10-31T20:38:07Z. The authichain-api
  * certificate key (kid A_qAn4…) is deliberately not listed.
  */
