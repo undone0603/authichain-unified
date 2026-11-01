@@ -451,6 +451,8 @@ test("qron pricing links the recurring Launch checkout without a Launch card", (
   const html = renderEstatePricingPage("qron");
   assert.match(html, /href="https:\/\/authichain.com\/checkout\/qron_launch"/);
   assert.match(html, /QRON Launch \$19\/mo/);
+  assert.match(html, /href="https:\/\/authichain.com\/checkout\/qron_launch_annual"/);
+  assert.match(html, /QRON Launch \$190\/yr/);
   assert.doesNotMatch(html, /<h3>QRON Launch/);
   assert.equal(plan("qron_launch").listed, false);
 });
