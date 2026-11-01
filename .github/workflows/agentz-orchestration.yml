@@ -171,10 +171,28 @@ jobs:
     if: needs.preflight.outputs.ready == 'true'
     steps:
       - uses: actions/checkout@v7
+      # Same pattern as lint.yml / ci.yml (e1e17f8): self-hosted runners use
+      # their own pinned pnpm and keep a persistent store, so skip the pnpm
+      # download and the actions/cache pnpm cache there. With cache: pnpm,
+      # setup-node failed every job on LAPTOP-72MAGTL2 (run 40977074264:
+      # "Dependencies lock file is not found").
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        if: runner.environment != 'self-hosted'
         with: { version: "${{ env.PNPM_VERSION }}" }
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          command -v pnpm
+          actual="$(pnpm --version)"
+          if [ "$actual" != "${{ env.PNPM_VERSION }}" ]; then
+            echo "ERROR: expected pinned pnpm ${{ env.PNPM_VERSION }} on self-hosted runner, got $actual" >&2
+            exit 1
+          fi
+          echo "Verified runner pnpm version: $actual"
       - uses: actions/setup-node@v7
-        with: { node-version: "${{ env.NODE_VERSION }}", cache: pnpm }
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Qualify leads with AI scoring
         run: pnpm exec tsx scripts/qualify-leads.ts
@@ -201,10 +219,28 @@ jobs:
     if: needs.resolve-mode.outputs.dry_run != 'true'
     steps:
       - uses: actions/checkout@v7
+      # Same pattern as lint.yml / ci.yml (e1e17f8): self-hosted runners use
+      # their own pinned pnpm and keep a persistent store, so skip the pnpm
+      # download and the actions/cache pnpm cache there. With cache: pnpm,
+      # setup-node failed every job on LAPTOP-72MAGTL2 (run 40977074264:
+      # "Dependencies lock file is not found").
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        if: runner.environment != 'self-hosted'
         with: { version: "${{ env.PNPM_VERSION }}" }
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          command -v pnpm
+          actual="$(pnpm --version)"
+          if [ "$actual" != "${{ env.PNPM_VERSION }}" ]; then
+            echo "ERROR: expected pinned pnpm ${{ env.PNPM_VERSION }} on self-hosted runner, got $actual" >&2
+            exit 1
+          fi
+          echo "Verified runner pnpm version: $actual"
       - uses: actions/setup-node@v7
-        with: { node-version: "${{ env.NODE_VERSION }}", cache: pnpm }
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Sync MI leads to HubSpot CRM
         run: pnpm exec tsx scripts/sync-mi-leads-hubspot.ts
@@ -228,10 +264,28 @@ jobs:
     if: always() && needs.qualify-leads.result != 'cancelled'
     steps:
       - uses: actions/checkout@v7
+      # Same pattern as lint.yml / ci.yml (e1e17f8): self-hosted runners use
+      # their own pinned pnpm and keep a persistent store, so skip the pnpm
+      # download and the actions/cache pnpm cache there. With cache: pnpm,
+      # setup-node failed every job on LAPTOP-72MAGTL2 (run 40977074264:
+      # "Dependencies lock file is not found").
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        if: runner.environment != 'self-hosted'
         with: { version: "${{ env.PNPM_VERSION }}" }
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          command -v pnpm
+          actual="$(pnpm --version)"
+          if [ "$actual" != "${{ env.PNPM_VERSION }}" ]; then
+            echo "ERROR: expected pinned pnpm ${{ env.PNPM_VERSION }} on self-hosted runner, got $actual" >&2
+            exit 1
+          fi
+          echo "Verified runner pnpm version: $actual"
       - uses: actions/setup-node@v7
-        with: { node-version: "${{ env.NODE_VERSION }}", cache: pnpm }
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Generate funnel performance report
         run: pnpm exec tsx scripts/funnel-report.ts

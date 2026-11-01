@@ -14,6 +14,8 @@ export type Grant = {
   generations: number;
   refillOnInvoicePaid: boolean;
   humanHold?: boolean;
+  /** Canonical apex webhook is the only grant writer; this worker checks its receipt. */
+  canonicalFulfillment?: boolean;
 };
 
 export const GRANT_BY_PRICE: Record<string, Grant> = {
@@ -44,9 +46,9 @@ export const GRANT_BY_PRICE: Record<string, Grant> = {
   price_1TwmD8GqTruSqV8TpAF8dfyA: {
     plan: "dpp_readiness",
     brand: "authichain",
-    generations: 0,
+    generations: 50,
     refillOnInvoicePaid: false,
-    humanHold: true,
+    canonicalFulfillment: true,
   },
   price_1UHjCZGqTruSqV8T35M6AmoJ: {
     plan: "strainchain_passport",

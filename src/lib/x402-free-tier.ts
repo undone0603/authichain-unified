@@ -4,7 +4,7 @@
  *
  * The first N calls (X402_FREE_DAILY_CALLS, default 3) per client per UTC day
  * are answered without payment; call N+1 gets the normal 402. The client is
- * keyed on a SHA-256 of CF-Connecting-IP salted with X402_FREE_IP_SALT (required;
+ * keyed on a SHA-256 of CF-Connecting-IP (IPv6 reduced to its /64) salted with X402_FREE_IP_SALT (required;
  * unset or empty means no free calls), so rotating claimed wallets
  * buys nothing. There is no claimed-payer header convention in this codebase,
  * so no wallet key is used before payment.
@@ -52,6 +52,36 @@ export interface FreeTierStore {
     limit: number,
     now: Date
   ): Promise<{ granted: boolean; used: number } | null>;
+}
+
+/**
+ * Free-tier client key. IPv4 is used as-is. IPv6 is reduced to its /64
+ * prefix, because one subscriber usually holds a whole /64 and can rotate
+ * the low 64 bits at will (that let a rotating client bypass the cap).
+ * IPv4-mapped IPv6 (::ffff:a.b.c.d) is treated as the IPv4 address.
+ */
+export function freeTierClientKey(ip: string): string {
+  const raw = ip.trim().toLowerCase().replace(/^\[|\]$/g, "").split("%")[0];
+  if (!raw.includes(":")) return raw;
+  const mapped = raw.match(/^(?:0*:)*:?ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (mapped) return mapped[1];
+  let body = raw;
+  let tail: string[] = [];
+  const v4 = body.match(/:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (v4) {
+    const o = v4[1].split(".").map(Number);
+    tail = [((o[0] << 8) | o[1]).toString(16), ((o[2] << 8) | o[3]).toString(16)];
+    body = body.slice(0, -v4[1].length) + "0";
+  }
+  const halves = body.split("::");
+  if (halves.length > 2) return raw;
+  const head = halves[0] ? halves[0].split(":") : [];
+  const rest = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  if (v4) rest.length ? rest.splice(-1, 1, ...tail) : head.splice(-1, 1, ...tail);
+  const fill = halves.length === 2 ? 8 - head.length - rest.length : 0;
+  const groups = [...head, ...Array(Math.max(0, fill)).fill("0"), ...rest];
+  if (groups.length !== 8 || groups.some(g => !/^[0-9a-f]{1,4}$/.test(g))) return raw;
+  return groups.slice(0, 4).map(g => parseInt(g, 16).toString(16)).join(":") + "::/64";
 }
 
 /** Daily key: same IP hashes differently each UTC day (YYYY-MM-DD). */
@@ -124,7 +154,7 @@ export async function claimFreeCall(input: {
   const ip = (input.request.headers.get("CF-Connecting-IP") || "").trim();
   if (!ip) return { free: false, remaining: null };
   try {
-    const key = `ip:${await hashClientIp(ip, salt, input.now)}`;
+    const key = `ip:${await hashClientIp(freeTierClientKey(ip), salt, input.now)}`;
     const r = await input.store.reserve(key, utcDayStart(input.now), input.limit, input.now);
     if (!r) return { free: false, remaining: null };
     if (!r.granted) return { free: false, remaining: 0 };

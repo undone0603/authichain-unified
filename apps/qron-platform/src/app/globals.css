@@ -11,6 +11,9 @@
 
 /* â”€â”€â”€â”€ AuthiChain Protocol Brand Tokens â”€â”€â”€â”€ */
 :root {
+  /* Offline font stacks: do not require Google Fonts during CI or deployment. */
+  --font-geist-sans: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --font-geist-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
   --background: #0a0a0a;
   --foreground: #ededed;
 

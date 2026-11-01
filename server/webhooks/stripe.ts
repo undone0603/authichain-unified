@@ -158,6 +158,9 @@ async function fulfillCatalogCreditsIfPaid(
   session: Stripe.Checkout.Session
 ): Promise<boolean | "reconciliation_required"> {
   if (session.payment_status !== "paid") return false;
+  // Stripe marks fully discounted $0 sessions as paid without collecting money.
+  // DPP is handled separately; do not grant paid catalog credits for $0/unknown totals.
+  if (session.amount_total == null || session.amount_total <= 0) return false;
   const linePriceId = checkoutLinePriceId(session);
   const { isDppOffer } = await import("../../src/lib/dpp-loop");
   if (isDppOffer(session.metadata || {}, linePriceId)) return false;
