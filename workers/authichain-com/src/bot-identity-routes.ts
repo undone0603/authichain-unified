@@ -226,7 +226,9 @@ export function tryHandleBotIdentity(request: Request): Response | null {
   if (request.method !== "GET" && request.method !== "HEAD") return null;
   const path = new URL(request.url).pathname.replace(/\/$/, "") || "/";
   if (path === "/.well-known/did.json") return json(issuerDidDocument(), { "Content-Type": "application/did+json" });
-  if (path === "/.well-known/agent-card.json" || path === "/.well-known/agent.json") return json(teamAgentCard());
+  // /.well-known/agent-card.json is the A2A + MCP card in x402-routes.
+  // The identity roster stays at /agents/agent-card.json.
+  if (path === "/agents/agent-card.json") return json(teamAgentCard());
   if (path === "/.well-known/http-message-signatures-directory") {
     return json(keyDirectory(), { "Content-Type": "application/http-message-signatures-directory+json" });
   }

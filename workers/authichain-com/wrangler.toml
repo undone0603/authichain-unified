@@ -107,6 +107,35 @@ zone_name = "govchain.us"
 pattern = "authichain.govchain.us/api/x402/growth/"
 zone_name = "govchain.us"
 
+# More specific than edge-router so live JWKS is this worker. The 8.8 MiB
+# edge-router versions POST cannot complete from authichain-wsl. After the
+# matching edge-router routes are deleted, authichain.com/* would also
+# reach these handlers; keep the exact routes so a future edge-router
+# deploy cannot steal JWKS back.
+[[routes]]
+pattern = "authichain.com/.well-known/jwks.json"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/protocol/jwks.json"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/protocol/issuer.json"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.govchain.us/.well-known/jwks.json"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/protocol/jwks.json"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/protocol/issuer.json"
+zone_name = "govchain.us"
+
 [[routes]]
 pattern = "authichain.com/*"
 zone_name = "authichain.com"

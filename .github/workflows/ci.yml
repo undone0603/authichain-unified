@@ -33,7 +33,7 @@ jobs:
   extras:
     name: Drizzle + Pytest Extras
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@v4
       - name: Restore full tree after sparse checkout
@@ -46,28 +46,13 @@ jobs:
       # Self-hosted ARM64 already has pnpm; the next step requires the
       # 10.28.2 pin. pnpm/action-setup with version 10.28.2 downloads from
       # npm and ETIMEDOUT / signature-fails. GitHub-hosted still uses the pin.
+      # Install the repo-pinned manager for every runner; never trust global PATH.
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        if: runner.environment != 'self-hosted'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: /home/zac/setup-pnpm-${{ runner.name }}
+          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
-      - name: Use runner pnpm (self-hosted)
-        if: runner.environment == 'self-hosted'
-        run: |
-          pin="/home/zac/setup-pnpm-${{ runner.name }}/node_modules/.bin"
-          if [ -x "$pin/pnpm" ]; then
-            echo "$pin" >> "$GITHUB_PATH"
-            export PATH="$pin:$PATH"
-          fi
-          command -v pnpm
-          actual="$(pnpm --version)"
-          if [ "$actual" != "10.28.2" ]; then
-            echo "ERROR: expected pinned pnpm 10.28.2 on self-hosted runner, got $actual" >&2
-            exit 1
-          fi
-          echo "Verified runner pnpm version: $actual"
 
       - name: Setup Node
         uses: actions/setup-node@v4

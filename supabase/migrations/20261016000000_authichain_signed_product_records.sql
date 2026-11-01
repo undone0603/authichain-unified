@@ -50,6 +50,9 @@ create unique index if not exists attestation_status_events_issuer_idempotency_i
 alter table public.authichain_attestation_records enable row level security;
 grant select on table public.authichain_attestation_records to anon, authenticated;
 revoke insert, update, delete on table public.authichain_attestation_records from anon, authenticated;
+-- RLS applies to row DML, not to TRUNCATE. Supabase's default table ACL can
+-- also leave REFERENCES and TRIGGER on public API roles; remove all three.
+revoke truncate, references, trigger on table public.authichain_attestation_records from anon, authenticated;
 
 do $$
 begin

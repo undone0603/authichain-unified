@@ -1348,6 +1348,132 @@ describe("handleStripeWebhook — stripe_events claim fails closed (PM-338)", ()
   });
 });
 
+describe("handleStripeWebhook — paid Starter missing-identity hold (#2122)", () => {
+  it("durably holds a paid Starter checkout with no buyer identity and does not report a grant", async () => {
+    provisionPurchase.mockResolvedValueOnce({
+      profileId: null,
+      created: false,
+      status: "no_identity",
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_starter_missing_identity", {
+        id: "cs_starter_missing_identity",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 2900,
+        currency: "usd",
+        livemode: true,
+        customer_details: null,
+        customer_email: null,
+        metadata: { plan: "starter" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true,
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(provisionPurchase).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        email: null,
+        userId: null,
+        sessionId: "cs_starter_missing_identity",
+      })
+    );
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_starter_missing_identity",
+        sessionId: "cs_starter_missing_identity",
+        status: "reconciliation_required",
+        httpStatus: 200,
+        error: "paid_catalog_missing_buyer_identity",
+      })
+    );
+    expect(growthRecordRpc).not.toHaveBeenCalled();
+
+    // Stripe resend must not erase the hold or silently grant credits.
+    claimStripeEventMock.mockResolvedValueOnce("duplicate");
+    const duplicate = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(duplicate).toMatchObject({
+      received: true,
+      duplicate: true,
+      handled: false,
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledTimes(2);
+    expect(provisionPurchase).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not acknowledge a missing-identity hold when only legacy base columns persist", async () => {
+    provisionPurchase.mockResolvedValueOnce({
+      profileId: null,
+      created: false,
+      status: "no_identity",
+    });
+    recordStripeWebhookDelivery
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, detail: "base_columns_only" });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_starter_hold_legacy", {
+        id: "cs_starter_hold_legacy",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 2900,
+        customer_details: null,
+        metadata: { plan: "starter" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_starter_hold_legacy",
+        status: "reconciliation_required",
+      })
+    );
+  });
+
+  it("still returns a retryable failure for a paid Starter profile-write error", async () => {
+    provisionPurchase.mockResolvedValueOnce({
+      profileId: null,
+      created: false,
+      status: "upsert_failed",
+      error: "profiles update failed",
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_starter_write_failure", {
+        id: "cs_starter_write_failure",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 2900,
+        currency: "usd",
+        livemode: true,
+        customer_details: { email: "buyer@example.test" },
+        metadata: { plan: "starter" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_starter_write_failure",
+        status: "error",
+        httpStatus: 500,
+      })
+    );
+    expect(growthRecordRpc).not.toHaveBeenCalled();
+  });
+});
+
 describe("handleStripeWebhook — Starter amount fallback gate (#1890 parity, edge-router)", () => {
   const base = {
     mode: "payment",
@@ -1394,6 +1520,28 @@ describe("handleStripeWebhook — Starter amount fallback gate (#1890 parity, ed
   ])("%s grants nothing from the amount", async (_l, over) => {
     await run(`gate_${String(_l).replace(/\W+/g, "_")}`, over);
     expect(starterCalls().length).toBe(0);
+  });
+
+  it.each([
+    ["Starter metadata", { metadata: { plan: "starter" } }],
+    ["Creator metadata", { metadata: { plan: "creator" } }],
+    ["known Starter price", { metadata: { stripe_price_id: "price_1UIoEVGqTruSqV8T61lp48wB" } }],
+  ])("zero-total paid %s checkout never grants catalog credits", async (label, over) => {
+    await run(`gate_zero_${String(label).replace(/\W+/g, "_")}`, {
+      amount_total: 0,
+      amount_subtotal: 0,
+      ...over,
+    });
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(growthRecordRpc).not.toHaveBeenCalled();
+  });
+
+  it("unknown total with explicit Starter metadata never grants credits", async () => {
+    await run("gate_null_total", {
+      amount_total: null,
+      metadata: { plan: "starter" },
+    });
+    expect(provisionPurchase).not.toHaveBeenCalled();
   });
 
   it("explicit metadata.plan=starter still grants in test mode", async () => {

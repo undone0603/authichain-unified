@@ -57,23 +57,9 @@ not_found_handling = "single-page-application"
 # speed - correctness for those paths does not depend on the manifest.
 run_worker_first = ["/*", "!/_next/*", "!/assets/*"]
 
-# More specific than authichain-com's authichain.com/* glob so JWKS is not
-# swallowed by landing HTML. Requires AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64
-# (and optional AUTHICHAIN_ATTESTATION_KEY_ID) as Worker secrets.
-[[routes]]
-pattern = "authichain.com/.well-known/jwks.json"
-zone_name = "authichain.com"
-
-# Never-cached launch alias. /.well-known/jwks.json is a CF HIT of landing HTML
-# and the token cannot purge (401/10000).
-[[routes]]
-pattern = "authichain.com/protocol/jwks.json"
-zone_name = "authichain.com"
-
-[[routes]]
-pattern = "authichain.com/protocol/issuer.json"
-zone_name = "authichain.com"
-
+# JWKS and issuer.json moved to authichain-com (landing worker can still
+# deploy from authichain-wsl; this 8.8 MiB Worker cannot). launch-proof
+# stays here because it needs AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64.
 [[routes]]
 pattern = "authichain.com/protocol/launch-proof"
 zone_name = "authichain.com"
@@ -188,20 +174,8 @@ zone_name = "authichain.com"
 pattern = "app.authichain.com/*"
 zone_name = "authichain.com"
 
-# Mirrors of the apex path routes on the primary host authichain.govchain.us
-# (govchain.us zone; attached live 2026-09-25 via the API).
-[[routes]]
-pattern = "authichain.govchain.us/.well-known/jwks.json"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/protocol/jwks.json"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/protocol/issuer.json"
-zone_name = "govchain.us"
-
+# Mirrors of the apex path routes on authichain.govchain.us. JWKS/issuer
+# live on authichain-com. launch-proof stays here (private key).
 [[routes]]
 pattern = "authichain.govchain.us/protocol/launch-proof"
 zone_name = "govchain.us"
