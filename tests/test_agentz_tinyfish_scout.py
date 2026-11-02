@@ -97,3 +97,59 @@ def test_api_failure_is_fail_closed(monkeypatch):
     monkeypatch.setattr(adapter, "call_tinyfish", fake_call)
     with pytest.raises(RuntimeError, match="search failed"):
         run(Context(Mode.CONFIRM))
+
+
+def _run_daemon_cycle(monkeypatch, *, enabled: bool, has_key: bool):
+    """Execute exactly one daemon loop with fake process and clock."""
+    import signal
+    from types import SimpleNamespace
+    from agentz import daemon
+
+    calls = []
+    monkeypatch.setattr(daemon, "STOP", False)
+    monkeypatch.setattr(daemon, "POLL_SECONDS", 300)
+    monkeypatch.setattr(daemon.time, "monotonic", lambda: 1000000)
+    monkeypatch.setattr(signal, "signal", lambda *_args: None)
+    monkeypatch.setattr(
+        daemon.time, "sleep",
+        lambda _seconds: setattr(daemon, "STOP", True),
+    )
+    monkeypatch.setattr(
+        daemon.subprocess, "run",
+        lambda argv, **_kwargs: (
+            calls.append(argv) or SimpleNamespace(returncode=0)
+        ),
+    )
+    if enabled:
+        monkeypatch.setenv("AGENTZ_TINYFISH_SCOUT_ENABLED", "true")
+    else:
+        monkeypatch.delenv("AGENTZ_TINYFISH_SCOUT_ENABLED", raising=False)
+    if has_key:
+        monkeypatch.setenv("TINYFISH_API_KEY", "dummy-test-key")
+    else:
+        monkeypatch.delenv("TINYFISH_API_KEY", raising=False)
+
+    assert daemon.main() == 0
+    return calls
+
+
+def test_daemon_never_runs_tinyfish_without_explicit_flag(monkeypatch):
+    calls = _run_daemon_cycle(monkeypatch, enabled=False, has_key=True)
+    assert len(calls) == 1
+    assert "govchain_grant_proposal" in calls[0]
+
+
+def test_daemon_never_runs_tinyfish_without_api_key(monkeypatch):
+    calls = _run_daemon_cycle(monkeypatch, enabled=True, has_key=False)
+    assert len(calls) == 1
+    assert "tinyfish_a2a_scout" not in str(calls)
+
+
+def test_daemon_opt_in_dispatch_is_read_only_and_targeted(monkeypatch):
+    calls = _run_daemon_cycle(monkeypatch, enabled=True, has_key=True)
+    assert len(calls) == 2
+    assert "govchain_grant_proposal" in calls[0]
+    assert "dry-run" in calls[0]
+    assert "tinyfish_a2a_scout" in calls[1]
+    assert "confirm" in calls[1]
+    assert "auto" not in calls[1]
