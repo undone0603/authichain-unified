@@ -47,7 +47,7 @@ describe("activateDppMerchant", () => {
       amount_total: 29900,
       metadata: { plan: "dpp_readiness" },
       customer_details: { email: "buyer@example.com" },
-      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" }, quantity: 1 }] },
     });
     const from = vi.fn();
     const { activateDppMerchant } = await import("./dpp-activate");
@@ -105,6 +105,8 @@ describe("activateDppMerchant", () => {
 
   it.each([
     ["paginated Stripe line items", { line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" }, quantity: 1 }], has_more: true } }],
+    ["quantity missing from expanded line item", { line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }], has_more: false } }],
+    ["quantity explicitly null", { line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" }, quantity: null }], has_more: false } }],
     ["multiple DPP units", { line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" }, quantity: 2 }], has_more: false } }],
     ["recurring subscription mode", { mode: "subscription" }],
     ["subscription reference on payment mode", { subscription: "sub_unexpected" }],
@@ -204,7 +206,7 @@ describe("activateDppMerchant", () => {
       status: "complete",
       metadata: { plan: "dpp_readiness", visit_id: "stripe_visit" },
       customer_details: { email: "buyer@example.com" },
-      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" }, quantity: 1 }] },
     });
     const eventsInsert = vi.fn();
     const from = vi.fn((table: string) => {
@@ -243,7 +245,7 @@ describe("activateDppMerchant", () => {
       status: "complete",
       metadata: { plan: "dpp_readiness", visit_id: "stripe_visit" },
       customer_details: { email: "buyer@example.com" },
-      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" }, quantity: 1 }] },
     });
     const insert = vi.fn().mockResolvedValue({ error: null });
     const from = vi.fn((table: string) =>
@@ -297,7 +299,7 @@ describe("activateDppMerchant", () => {
       payment_status: "paid", status: "complete",
       metadata: { plan: "dpp_readiness", visit_id: "visit_1" },
       customer_details: { email: "buyer@example.com" },
-      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" }, quantity: 1 }] },
     });
     const insert = vi.fn().mockResolvedValue({
       error: failWrite ? { message: "storage failed" } : null,
@@ -354,7 +356,7 @@ describe("activateDppMerchant", () => {
       metadata: { plan: "dpp_readiness", visit_id: "visit_1", source: "seo" },
       customer_details: { email: "buyer@example.com" },
       line_items: {
-        data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+        data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" }, quantity: 1 }],
       },
     });
 
