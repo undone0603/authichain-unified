@@ -140,21 +140,28 @@ export async function activateDppMerchant(opts: {
 
   let profileId: string | null = null;
   if (email) {
-    const { data: profile } = await opts.supabase
+    const { data: profile, error: profileLookupError } = await opts.supabase
       .from("profiles")
       .select("id")
       .eq("email", email)
       .maybeSingle();
+    if (profileLookupError) {
+      return { ok: false, status: 503, error: "Customer record lookup failed" };
+    }
     profileId = (profile?.id as string) || null;
   }
 
-  const { data: prior } = await opts.supabase
+  const { data: prior, error: priorLookupError } = await opts.supabase
     .from("funnel_events")
     .select("id, metadata")
     .eq("prospect_id", visitId)
     .eq("event_type", "dpp_loop:merchant_activated")
     .order("timestamp", { ascending: false })
     .limit(5);
+
+  if (priorLookupError) {
+    return { ok: false, status: 503, error: "Activation record lookup failed" };
+  }
 
   const alreadyActivated = Array.isArray(prior)
     ? prior.some(
@@ -190,22 +197,31 @@ export async function activateDppMerchant(opts: {
       : buildDppImporterFile({ categories, markets, labeling, pack });
 
   if (!alreadyActivated) {
-    await recordDppLoopEvent(opts.supabase, {
-      visitId,
-      stage: "merchant_activated",
-      source: String(md.source || "direct"),
-      email,
-      profileId,
-      stripeSessionId: sessionId,
-      metadata: {
-        categories,
-        markets,
-        labeling,
-        call_windows: (opts.body.call_windows || "").trim() || null,
-        activated_at: new Date().toISOString(),
-        importer_file,
-      },
-    });
+    try {
+      await recordDppLoopEvent(
+        opts.supabase,
+        {
+          visitId,
+          stage: "merchant_activated",
+          source: String(md.source || "direct"),
+          email,
+          profileId,
+          stripeSessionId: sessionId,
+          metadata: {
+            categories,
+            markets,
+            labeling,
+            call_windows: (opts.body.call_windows || "").trim() || null,
+            activated_at: new Date().toISOString(),
+            importer_file,
+          },
+        },
+        { required: true }
+      );
+    } catch {
+      // Without a durable activation row the merchant must not see "Activated".
+      return { ok: false, status: 503, error: "Activation could not be recorded" };
+    }
   }
 
   return {
