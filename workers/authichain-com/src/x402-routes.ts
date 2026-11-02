@@ -54,6 +54,7 @@ import {
   A2A_RPC_PATH,
   a2aMethodList,
   handleA2aJsonRpc,
+  memoryA2aStore,
 } from "../../../src/lib/a2a-jsonrpc";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
 import { sealBaseline } from "../../../src/lib/seal-baseline";
@@ -517,9 +518,15 @@ export async function tryHandleX402(
     if (request.method === "GET") return json(200, a2aMethodList());
     if (request.method === "POST") {
       const body = await request.text();
+      // Public A2A is an immediate, unauthenticated demonstration. Using the
+      // module-global task store would let one anonymous caller enumerate
+      // another caller's task history via ListTasks/GetTask. Until a real
+      // authenticated tenant-scoped store exists, keep each HTTP request
+      // isolated; the completed task is returned to its sender immediately.
       const answered = handleA2aJsonRpc(body, {
         now: opts?.now,
         a2aVersion: request.headers.get("A2A-Version"),
+        store: memoryA2aStore(),
       });
       if (answered.body === null) return new Response(null, { status: 204 });
       return json(answered.status, answered.body);
