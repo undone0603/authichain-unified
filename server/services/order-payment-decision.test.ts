@@ -7,6 +7,7 @@ const settled = {
   mode: "payment",
   subscription: null,
   amount_total: 19900,
+  currency: "usd",
   payment_intent: "pi_test_001",
 };
 
@@ -15,7 +16,7 @@ describe("decideOrderPaymentAction", () => {
     const result = decideOrderPaymentAction({ status: "pending" }, settled);
     expect(result).toEqual({
       action: "mark-paid",
-      updates: { status: "paid", stripePaymentIntentId: "pi_test_001" },
+      updates: { status: "paid", stripePaymentIntentId: "pi_test_001", paidAmountCents: 19900 },
     });
   });
 
@@ -26,7 +27,7 @@ describe("decideOrderPaymentAction", () => {
     );
     expect(result).toEqual({
       action: "mark-paid",
-      updates: { status: "paid", stripePaymentIntentId: "pi_test_002" },
+      updates: { status: "paid", stripePaymentIntentId: "pi_test_002", paidAmountCents: 19900 },
     });
   });
 
@@ -43,6 +44,8 @@ describe("decideOrderPaymentAction", () => {
     ["unknown checkout total", { amount_total: null }],
     ["missing checkout total", { amount_total: undefined }],
     ["missing PaymentIntent", { payment_intent: undefined }],
+    ["missing currency", { currency: undefined }],
+    ["non-USD currency", { currency: "eur" }],
     ["unexpanded PaymentIntent without id", { payment_intent: {} }],
   ])("refuses %s without marking an order paid", (_name, override) => {
     const result = decideOrderPaymentAction(
@@ -50,6 +53,17 @@ describe("decideOrderPaymentAction", () => {
       { ...settled, ...override },
     );
     expect(result.action).toBe("ignore");
+  });
+
+  it("preserves the actual positive discounted USD total rather than list price", () => {
+    const result = decideOrderPaymentAction(
+      { status: "pending" },
+      { ...settled, amount_total: 1000 },
+    );
+    expect(result).toEqual({
+      action: "mark-paid",
+      updates: { status: "paid", stripePaymentIntentId: "pi_test_001", paidAmountCents: 1000 },
+    });
   });
 
   it.each(["paid", "in_progress", "delivered", "cancelled"])(
