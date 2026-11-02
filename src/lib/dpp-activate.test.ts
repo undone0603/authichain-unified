@@ -266,8 +266,8 @@ describe("activateDppMerchant", () => {
                 eq: () => ({
                   contains: () => ({
                     order: () => ({
-                    limit: async () => ({ data: [], error: null }),
-                  }),
+                      limit: async () => ({ data: [], error: null }),
+                    }),
                   }),
                 }),
               }),
@@ -325,11 +325,11 @@ describe("activateDppMerchant", () => {
             eq: () => ({
               contains: () => ({
                 order: () => ({
-                limit: async () => ({
-                  data: failWrite ? [] : null,
-                  error: failWrite ? null : { message: "read failed" },
+                  limit: async () => ({
+                    data: failWrite ? [] : null,
+                    error: failWrite ? null : { message: "read failed" },
+                  }),
                 }),
-              }),
               }),
             }),
           }),
@@ -382,8 +382,8 @@ describe("activateDppMerchant", () => {
               eq: () => ({
                 contains: () => ({
                   order: () => ({
-                  limit: async () => ({ data: [], error: null }),
-                }),
+                    limit: async () => ({ data: [], error: null }),
+                  }),
                 }),
               }),
             }),
