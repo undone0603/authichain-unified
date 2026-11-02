@@ -56,6 +56,7 @@ def test_unlisted_actions_refused():
 
 
 def test_dry_run_has_no_network_or_process(capsys, monkeypatch):
+    monkeypatch.delenv("TINYFISH_API_KEY", raising=False)
     monkeypatch.setenv("PATH", "")
     assert cli_action("search", ["Agent2Agent spec"], dry_run=True) == 0
     output = json.loads(capsys.readouterr().out)
@@ -78,3 +79,12 @@ def test_transport_exception_is_sanitized(capsys, monkeypatch):
     output = json.loads(capsys.readouterr().out)
     assert output["error"] == "TinyFish MCP connection failed"
     assert "should-not-appear" not in str(output)
+
+
+def test_headless_mode_dry_run_hides_key(capsys, monkeypatch):
+    monkeypatch.setenv("TINYFISH_API_KEY", "sk-tinyfish-private-do-not-log")
+    monkeypatch.setenv("PATH", "")
+    assert cli_action("search", ["Agent2Agent"], dry_run=True) == 0
+    output = capsys.readouterr().out
+    assert "sk-tinyfish-private-do-not-log" not in output
+    assert json.loads(output)["connection"] == "api-key-http"
