@@ -64,7 +64,7 @@ def test_discovered_private_and_control_character_urls_refused():
             {"url": "https://169.254.169.254/metadata"},
             {"url": "https://2130706433/private"},
             {"url": "https://foo.internal/data"},
-            {"url": "https://example.org/unsafe\\nheader"},
+            {"url": "https://example.org/unsafe\nheader"},
             {"url": "https://example.org/clean?token=not-recorded"},
         ]}
     }) == ["https://example.org/clean"]
