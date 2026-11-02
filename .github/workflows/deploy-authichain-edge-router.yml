@@ -58,7 +58,9 @@ jobs:
           set -euo pipefail
           # Versions API wants uncompressed JS in the multipart. HTTP gzip
           # returned NextPart EOF (41298894966); part gzip eval'd as JS
-          # (41297825503). Dry-run locally, then curl --ipv4 --http2 of the
+          # (41297825503). HTTP/2 then stalled with PROTOCOL_ERROR and 0 bytes
+          # (41303592477, 41341161323), so the transport is now --http1.1 with a
+          # stall guard. Dry-run locally, then curl --ipv4 of the
           # raw 8.8 MiB body with keep_bindings secret_text. Do not wrangler
           # deploy. Do not secret-put.
           rm -rf /tmp/er-bundle
