@@ -15,6 +15,8 @@ import time
 
 POLL_SECONDS = max(300, int(os.getenv("AGENTZ_DAEMON_POLL_SECONDS", "900")))
 SAFE_WORKFLOW = "govchain_grant_proposal"
+SCOUT_WORKFLOW = "tinyfish_a2a_scout"
+SCOUT_INTERVAL_SECONDS = max(86400, int(os.getenv("AGENTZ_TINYFISH_SCOUT_INTERVAL_SECONDS", "86400")))
 STOP = False
 
 
@@ -37,6 +39,8 @@ def main() -> int:
         SAFE_WORKFLOW,
         POLL_SECONDS,
     )
+
+    scout_last_attempt = -SCOUT_INTERVAL_SECONDS
 
     while not STOP:
         try:
@@ -68,6 +72,34 @@ def main() -> int:
             logging.error("AgentZ dry-run evaluation timed out after 600 seconds")
         except Exception:
             logging.exception("AgentZ dry-run evaluation failed")
+
+        # Opt-in to read-only public research. No secret -> no interactive OAuth.
+        if (
+            os.getenv("AGENTZ_TINYFISH_SCOUT_ENABLED", "").lower() == "true"
+            and os.getenv("TINYFISH_API_KEY", "").strip()
+            and time.monotonic() - scout_last_attempt >= SCOUT_INTERVAL_SECONDS
+        ):
+            scout_last_attempt = time.monotonic()
+            try:
+                scout = subprocess.run(
+                    [
+                        sys.executable, "-m", "agentz.cli", "run",
+                        SCOUT_WORKFLOW, "--mode", "confirm",
+                    ],
+                    check=False,
+                    timeout=120,
+                    capture_output=True,
+                    text=True,
+                )
+                # Raw source content is untrusted and must not enter daemon logs.
+                logging.info(
+                    "TinyFish read-only scout completed; exit_code=%d",
+                    scout.returncode,
+                )
+            except subprocess.TimeoutExpired:
+                logging.error("TinyFish scout timed out")
+            except Exception:
+                logging.exception("TinyFish scout failed")
 
         deadline = time.monotonic() + POLL_SECONDS
         while not STOP and time.monotonic() < deadline:
