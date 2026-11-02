@@ -12,17 +12,52 @@ import signal
 import subprocess
 import sys
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 
 POLL_SECONDS = max(300, int(os.getenv("AGENTZ_DAEMON_POLL_SECONDS", "900")))
 SAFE_WORKFLOW = "govchain_grant_proposal"
 SCOUT_WORKFLOW = "tinyfish_a2a_scout"
-SCOUT_INTERVAL_SECONDS = max(86400, int(os.getenv("AGENTZ_TINYFISH_SCOUT_INTERVAL_SECONDS", "86400")))
 STOP = False
 
 
 def _stop(_signum: int, _frame: object) -> None:
     global STOP
     STOP = True
+
+
+def _claim_daily_scout_slot() -> bool:
+    """Claim one UTC-day slot on a pre-existing host-managed persistent volume.
+
+    This claim is written BEFORE the network request. A crash or failed call
+    still consumes the day's slot, so restarts never multiply requests.
+    The owner must explicitly provision an absolute durable state directory;
+    ephemeral storage cannot establish cross-restart rate limiting.
+    """
+    raw = os.getenv("AGENTZ_TINYFISH_SCOUT_STATE_DIR", "").strip()
+    if not raw:
+        logging.error("TinyFish scout disabled: persistent state directory is unset")
+        return False
+    path = Path(raw)
+    if not path.is_absolute() or path.is_symlink() or not path.is_dir():
+        logging.error("TinyFish scout disabled: state directory must exist on an absolute persistent volume")
+        return False
+    marker = path / ("tinyfish-a2a-scout-" + datetime.now(timezone.utc).strftime("%Y%m%d") + ".claimed")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        fd = os.open(marker, flags, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as record:
+            record.write(datetime.now(timezone.utc).isoformat() + "\\n")
+            record.flush()
+            os.fsync(record.fileno())
+        return True
+    except FileExistsError:
+        return False
+    except OSError:
+        logging.exception("TinyFish scout disabled: could not durably claim daily slot")
+        return False
 
 
 def main() -> int:
@@ -39,8 +74,6 @@ def main() -> int:
         SAFE_WORKFLOW,
         POLL_SECONDS,
     )
-
-    scout_last_attempt = -SCOUT_INTERVAL_SECONDS
 
     while not STOP:
         try:
@@ -77,9 +110,8 @@ def main() -> int:
         if (
             os.getenv("AGENTZ_TINYFISH_SCOUT_ENABLED", "").lower() == "true"
             and os.getenv("TINYFISH_API_KEY", "").strip()
-            and time.monotonic() - scout_last_attempt >= SCOUT_INTERVAL_SECONDS
+            and _claim_daily_scout_slot()
         ):
-            scout_last_attempt = time.monotonic()
             try:
                 scout = subprocess.run(
                     [
