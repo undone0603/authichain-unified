@@ -4,6 +4,8 @@ on:
     paths:
       - 'scripts/alliances/public-evidence-probe.mjs'
       - 'scripts/alliances/public-evidence-probe.test.mjs'
+      - 'scripts/alliances/arbiter-peer-repro.mjs'
+      - 'scripts/alliances/arbiter-peer-repro.test.mjs'
       - 'docs/alliances/PUBLIC_PEER_CHALLENGE.md'
       - '.github/workflows/public-peer-evidence.yml'
   workflow_dispatch:
@@ -24,3 +26,5 @@ jobs:
         run: node --check scripts/alliances/public-evidence-probe.mjs
       - name: Execute no-network negative fixtures
         run: node --test scripts/alliances/public-evidence-probe.test.mjs
+      - name: Verify free ARBITER handoff gates
+        run: node --test scripts/alliances/arbiter-peer-repro.test.mjs
