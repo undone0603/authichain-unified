@@ -1233,6 +1233,30 @@ workflows:
       Dry-run sends no HTTP. Never sends mail, deploys, merges, or rotates
       AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64.
 
+  - id: a2a_card_preflight
+    title: "AgentZ: read-only AuthiChain AgentCard discovery and evidence boundary check"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.a2a_card_preflight
+    type: api
+    estimated_minutes: 1
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    max_runs_per_day: 4
+    description: |
+      Fixed AuthiChain-owned /.well-known/agent-card.json GET.
+      Default no-network dry-run; attended CLI --mode confirm plus
+      AGENTZ_A2A_CARD_PREFLIGHT_LIVE=true required for network use.
+      No task POST, payments, credentials, redirects or arbitrary hosts.
+      Checks only declared AgentCard structure; never claims official A2A
+      TCK conformance, verified agent identity, independent review,
+      physical authenticity, or successful paid settlement.
+
   - id: mcp_httpx_readonly
     title: "AgentZ: HTTPX no-wallet MCP initialize + tools/list compatibility probe"
     priority: medium
