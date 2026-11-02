@@ -15,7 +15,7 @@ const MAX_BYTES = 128 * 1024;
 const MAX_ITEMS = 30;
 
 function normalizeAuthor(value) {
-  return typeof value === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(value)
+  return typeof value === "string" && /^[A-Za-z0-9_-]{1,64}(?:\\[bot\\])?$/.test(value)
     ? value.toLowerCase() : null;
 }
 
@@ -35,7 +35,7 @@ export function classifyComments(comments, source) {
     }
     ids.add(id);
     if (OWNER_ALIASES.has(author) || author === source.owner.toLowerCase()) self++;
-    else if (author.includes("[bot]") || author.endsWith("-bot") ||
+    else if (author.endsWith("[bot]") || author.endsWith("-bot") ||
              entry?.user?.type === "Bot") bot++;
     else external++;
   }
