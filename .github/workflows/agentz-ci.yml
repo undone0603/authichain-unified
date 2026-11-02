@@ -46,6 +46,16 @@ jobs:
             exit 1
           fi
           echo "PASS: missing TinyFish key blocks live scout"
+          python3 - <<'PY'
+          import json
+          from agentz.core.runner import DEFAULT_AUDIT_LOG
+          rows = DEFAULT_AUDIT_LOG.read_text(encoding="utf-8").splitlines()
+          assert rows, "AgentZ wrote no run audit"
+          last = json.loads(rows[-1])
+          assert last["workflow_id"] == "tinyfish_a2a_scout", last
+          assert last["status"] == "blocked", last
+          print("PASS: audit records a blocked TinyFish live attempt")
+          PY
   verify-and-heal:
     runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 20
