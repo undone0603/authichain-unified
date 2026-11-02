@@ -9,6 +9,7 @@ NOW = datetime(2026, 11, 2, 1, 10, tzinfo=timezone.utc)
 
 def event(i, *, minutes=1, city="Detroit", country="US", qid=7, timestamp=True):
     return {"id": i, "qron_id": qid, "city": city, "country": country,
+            "session_id": f"session-{i % 4}",
             "scanned_at": (NOW-timedelta(minutes=minutes)).isoformat() if timestamp else None}
 
 
@@ -30,6 +31,7 @@ def test_distinct_locations_inside_window_yield_review_only():
     assert a["counterfeit_verdict"] is None
     assert a["count"] == 11
     assert a["distinct_locations"] == 2
+    assert a["distinct_sessions"] == 4
     assert a["verification"] == "not_performed"
 
 
@@ -64,3 +66,15 @@ def test_no_external_notifications(caplog):
     a=analyze_scan_events([event(i,city="Detroit" if i%2 else "Lansing") for i in range(11)],now=NOW)
     asyncio.run(trigger_notifications(a))
     assert "not a counterfeit verdict" in caplog.text
+
+
+def test_single_session_never_generates_burst():
+    scans = [{**event(i,city="Detroit" if i % 2 else "Lansing"),
+             "session_id": "session-one"} for i in range(30)]
+    assert analyze_scan_events(scans, now=NOW) == []
+
+
+def test_missing_sessions_cannot_be_treated_as_independent():
+    scans = [{**event(i,city="Detroit" if i % 2 else "Lansing"),
+             "session_id": None} for i in range(30)]
+    assert analyze_scan_events(scans, now=NOW) == []
