@@ -32,7 +32,7 @@ test("read-only observer uses only fixed public GitHub URLs", async () => {
   const report = await observe(async (url, init) => {
     urls.push(url);
     assert.equal(init.method, "GET");
-    assert.equal(init.redirect, "error");
+    assert.equal(init.redirect, undefined);
     assert.equal(init.headers.Authorization, undefined);
     return Response.json([{ id: 5, user: { login: "outsidePeer" }, body: "test" }]);
   });
