@@ -144,6 +144,10 @@ export function selfTest() {
          result.independent_test_passes === 0 &&
          result.partnerships === 0 &&
          validateSourceTarget(SOURCE_TARGETS[0]) &&
+         !validateSourceTarget({
+           ...SOURCE_TARGETS[0], checks: ["ephemeral_default_task_store"],
+         }) &&
+         Object.isFrozen(SOURCE_TARGETS[0].checks) &&
          specimen.evidence_state === "patterns_present_unverified" &&
          specimen.checks.every(c => c.state === "check_present") &&
          specimen.independent_validation_proven === false;
