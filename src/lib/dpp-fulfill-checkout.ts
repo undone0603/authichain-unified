@@ -11,6 +11,7 @@ import { renderBillingEmail } from "./billing-emails";
 import { getBrandIdFromMetadata } from "./brand-billing";
 import { sendEmail } from "./email";
 import {
+  DPP_PRICE_ID,
   dppActivateUrl,
   isDppDemoSession,
   isDppOffer,
@@ -85,7 +86,12 @@ async function fulfillDppPaidSessionOnce(
   const linePriceId =
     (typeof priceId === "string" && priceId) ||
     (typeof md.stripe_price_id === "string" ? md.stripe_price_id : null);
-  if (!isDppOffer(md, linePriceId)) {
+  if (
+    !isDppOffer(md, linePriceId) ||
+    (linePriceId && linePriceId !== DPP_PRICE_ID)
+  ) {
+    // A Checkout Session's actual line-price identity must win over claimed
+    // offer metadata. Different $299 offers can exist in this account.
     return { handled: false, profileId: null, activationEmail: "skipped" };
   }
   // This helper has multiple webhook callers. Do not assume each caller has
