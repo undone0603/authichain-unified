@@ -30,7 +30,7 @@ describe("tryHandleDppRoute", () => {
     expect(res!.headers.get("content-type")).toMatch(/text\/html/);
     const html = await res!.text();
     expect(html).toContain("Checkout return");
-      expect(html).not.toContain("Payment received");
+    expect(html).not.toContain("Payment received");
     expect(html).toContain(
       "/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
     );
@@ -49,7 +49,7 @@ describe("tryHandleDppRoute", () => {
     }
   });
 
-  it("names the right product and credits for a credit-bearing plan", async () => {
+  it("names the plan without claiming credit delivery on the return page", async () => {
     const html = await (await tryHandleDppRoute(
       req("/dpp/thanks?session_id=cs_test_1&visit_id=chk_1&plan=qron_launch")
     ))!.text();
@@ -69,7 +69,7 @@ describe("tryHandleDppRoute", () => {
       req("/dpp/thanks?session_id=cs_test_1&plan=not_a_real_plan")
     ))!.text();
     expect(html).toContain("Checkout return");
-      expect(html).not.toContain("Payment received");
+    expect(html).not.toContain("Payment received");
     expect(html).not.toContain("Workspace opened");
     expect(html).not.toContain("/dpp/activate?");
     expect(html).not.toContain("generations");
