@@ -9,6 +9,7 @@ export type OrderPaymentDecision =
       updates: {
         status: "paid";
         stripePaymentIntentId: string | null;
+        paidAmountCents: number;
       };
     }
   | {
@@ -28,6 +29,7 @@ export type SessionShape = {
   mode?: string | null;
   subscription?: string | { id?: string } | null;
   amount_total?: number | null;
+  currency?: string | null;
 };
 
 function extractPaymentIntentId(session: SessionShape): string | null {
@@ -64,6 +66,11 @@ export function decideOrderPaymentAction(
   ) {
     return { action: "ignore", reason: "No positive checkout total" };
   }
+  // The service checkout is created in USD. Reject foreign-currency
+  // events rather than recording an unrelated amount as USD revenue.
+  if (session.currency?.toLowerCase() !== "usd") {
+    return { action: "ignore", reason: "Checkout currency is not USD" };
+  }
   const paymentIntentId = extractPaymentIntentId(session);
   if (!paymentIntentId) {
     return { action: "ignore", reason: "Missing PaymentIntent evidence" };
@@ -74,6 +81,7 @@ export function decideOrderPaymentAction(
     updates: {
       status: "paid",
       stripePaymentIntentId: paymentIntentId,
+      paidAmountCents: session.amount_total as number,
     },
   };
 }
