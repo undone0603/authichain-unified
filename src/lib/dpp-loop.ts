@@ -265,7 +265,14 @@ export function stallOf(
 export function isDemoVisit(rows: LoopEventRow[]): boolean {
   return rows.some(row => {
     const meta = row.metadata;
-    return meta?.is_demo === true || meta?.demo === true;
+    // Stripe marks fully discounted checkouts as "paid" even though no
+    // cash was collected. Historical sessions may lack an is_demo flag.
+    // Exclude only evidenced $0 payment stages, not mere checkout visits.
+    return (
+      meta?.is_demo === true ||
+      meta?.demo === true ||
+      (stageOf(row) === "payment_succeeded" && meta?.amount_total === 0)
+    );
   });
 }
 
