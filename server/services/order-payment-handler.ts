@@ -1,14 +1,9 @@
-// Orchestrator for the service-order payment-completion webhook path.
-// Looks up the service order by Stripe checkout session id, decides whether
-// to transition status to "paid" via decideOrderPaymentAction, and dispatches
-// the necessary DB updates + customer notification.
-//
-// Designed to be called from server/webhooks/stripe.ts inside the
-// checkout.session.completed handler. Idempotent: if the order is already
-// past the "pending" state, the call is a no-op.
-
+// Service-order payment completion after a signed Stripe webhook.
+// A pre-read is advisory only: the transactional pending->paid compare-and-swap
+// in settleServiceOrderPaymentAtomic is the sole authority for side effects.
 import * as db from "../db";
 import { decideOrderPaymentAction, type SessionShape } from "./order-payment-decision";
+import { settleServiceOrderPaymentAtomic } from "./order-payment-atomic";
 
 export type HandleResult =
   | { handled: true; orderId: number }
@@ -27,47 +22,14 @@ export async function handleServiceOrderPayment(session: SessionWithId): Promise
     return { handled: false, reason: decision.reason };
   }
 
-  await db.updateServiceOrderStatus(order.id, decision.updates.status, {
-    stripePaymentIntentId: decision.updates.stripePaymentIntentId,
+  const claimed = await settleServiceOrderPaymentAtomic({
+    orderId: order.id,
+    sessionId: session.id,
+    paymentIntentId: decision.updates.stripePaymentIntentId!,
+    paidAmountCents: decision.updates.paidAmountCents,
   });
-
-  await db.logActivity({
-    userId: order.userId ?? null,
-    action: "service_order_paid",
-    entityType: "service_order",
-    entityId: order.id,
-    details: {
-      sessionId: session.id,
-      amount: decision.updates.paidAmountCents,
-      serviceType: order.serviceType,
-    },
-  });
-
-  if (order.amount) {
-    await db.recordRevenue({
-      source: "stripe",
-      amount: (decision.updates.paidAmountCents / 100).toFixed(2),
-      currency: "USD",
-      type: "service_order",
-      userId: order.userId ?? null,
-      metadata: {
-        sessionId: session.id,
-        orderId: order.id,
-        serviceType: order.serviceType,
-        stripePaymentIntentId: decision.updates.stripePaymentIntentId,
-      },
-    });
+  if (!claimed) {
+    return { handled: false, reason: "Order already settled or session changed" };
   }
-
-  if (order.userId) {
-    await db.createSystemNotification(
-      order.userId,
-      "Payment confirmed",
-      `Your service order for ${order.serviceType} is paid and will be fulfilled shortly.`,
-      "success",
-      "/orders",
-    );
-  }
-
   return { handled: true, orderId: order.id };
 }
