@@ -9,7 +9,8 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from urllib.parse import urlsplit
+from datetime import datetime, timezone
+from urllib.parse import urlsplit, urlunsplit
 
 from agentz.core.modes import ExecutionContext, Mode
 
@@ -34,7 +35,10 @@ def _public_references(response: dict) -> list[str]:
 
     urls: list[str] = []
     for data in candidates:
-        for item in data.get("results", []):
+        items = data.get("results")
+        if not isinstance(items, list):
+            continue
+        for item in items:
             if not isinstance(item, dict):
                 continue
             url = item.get("url")
@@ -43,10 +47,14 @@ def _public_references(response: dict) -> list[str]:
             parsed = urlsplit(url)
             if parsed.scheme != "https" or not parsed.hostname:
                 continue
-            if parsed.username or parsed.password:
+            if parsed.username or parsed.password or len(url) > 2048:
                 continue
-            if url not in urls:
-                urls.append(url)
+            if not parsed.hostname or parsed.hostname.endswith(".local"):
+                continue
+            # Remove fragments and query strings, which may carry private tokens.
+            source = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
+            if source not in urls:
+                urls.append(source)
             if len(urls) >= MAX_URLS:
                 return urls
     return urls
@@ -67,6 +75,16 @@ def run(ctx: ExecutionContext) -> str:
         raise RuntimeError("TinyFish scout search failed")
 
     refs = _public_references(response)
+    # Store a bounded local checkpoint for reproducible audit. A search source
+    # is not a verified partnership, and this is not an AuthiChain attestation.
+    ctx.save_state({
+        "tool": "tinyfish.search",
+        "observed_at_utc": datetime.now(timezone.utc).isoformat(),
+        "query": QUERY,
+        "sources": refs,
+        "verification": "unverified",
+        "external_side_effects": "none",
+    })
     # Only log URLs; do not echo raw untrusted page content or credentials.
     if ctx.verbose:
         for url in refs:
