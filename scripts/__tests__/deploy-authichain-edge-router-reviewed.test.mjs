@@ -9,7 +9,7 @@ test("protected release is manual only and never runs on a main push", () => {
   assert.match(yaml, /^  workflow_dispatch:/m);
   assert.doesNotMatch(yaml, /^  push:/m);
   assert.match(yaml, /environment: production-cloudflare/);
-  assert.match(yaml, /CLOUDFLARE_DEPLOY_ENABLED/);
+  assert.match(yaml, /AUTHICHAIN_EDGE_DEPLOY_APPROVED/);
   assert.match(yaml, /deploy-authichain-edge-router'/);
 });
 
