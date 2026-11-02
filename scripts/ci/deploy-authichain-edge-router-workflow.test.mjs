@@ -54,3 +54,14 @@ test("smoke expects current jWTo5QsZ kid and retired T3AL7c4w kid", () => {
   assert.match(smoke, /protocol\/jwks\.json/);
   assert.match(smoke, /protocol\/issuer\.json/);
 });
+
+test("publish requires a successful exact-head Main gate", () => {
+  assert.match(yml, /actions: read/);
+  const guard = step("Require exact-head CI Main gate");
+  assert.match(guard, /GITHUB_TOKEN: \${{ github.token }}/);
+  assert.match(guard, /require-exact-head-main-gate\\.mjs/);
+  const gateOffset = yml.indexOf("- name: Require exact-head CI Main gate");
+  const publishOffset = yml.indexOf("- name: Publish authichain-edge-router");
+  assert.ok(gateOffset > 0 && gateOffset < publishOffset);
+  assert.doesNotMatch(guard, /continue-on-error: true/);
+});
