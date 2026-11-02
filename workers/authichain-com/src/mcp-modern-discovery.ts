@@ -122,7 +122,11 @@ export function handleModernMcpDiscovery(
   }
 
   return send(200, id, null, {
+    // Required by MCP 2026-07-28 ListToolsResult. Keep results private and
+    // immediately stale; authentication/policy can influence the tool list.
     resultType: "complete",
+    ttlMs: 0,
+    cacheScope: "private",
     tools: getTools(),
     _meta: {
       "io.modelcontextprotocol/serverInfo": {
