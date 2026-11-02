@@ -6,7 +6,7 @@ function req(path: string, init?: RequestInit): Request {
 }
 
 describe("tryHandleDppRoute", () => {
-  it("aliases /thanks and /success to the DPP thanks page", async () => {
+  it("aliases /thanks and /success to an unverified checkout-return page", async () => {
     for (const path of [
       "/thanks?session_id=cs_test_1&visit_id=dpp_abc",
       "/success?session_id=cs_test_1&visit_id=dpp_abc",
@@ -14,7 +14,8 @@ describe("tryHandleDppRoute", () => {
       const res = await tryHandleDppRoute(req(path));
       expect(res).not.toBeNull();
       const html = await res!.text();
-      expect(html).toContain("Payment received");
+      expect(html).toContain("Checkout return");
+      expect(html).not.toContain("Payment received");
       expect(html).toContain(
         "/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
       );
@@ -28,7 +29,8 @@ describe("tryHandleDppRoute", () => {
     expect(res).not.toBeNull();
     expect(res!.headers.get("content-type")).toMatch(/text\/html/);
     const html = await res!.text();
-    expect(html).toContain("Payment received");
+    expect(html).toContain("Checkout return");
+      expect(html).not.toContain("Payment received");
     expect(html).toContain(
       "/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
     );
@@ -40,8 +42,8 @@ describe("tryHandleDppRoute", () => {
       "/dpp/thanks?session_id=cs_test_1&visit_id=dpp_abc&plan=dpp_readiness",
     ]) {
       const html = await (await tryHandleDppRoute(req(path)))!.text();
-      expect(html).toContain("Workspace opened");
-      expect(html).toContain("with self-serve activation.");
+      expect(html).toContain("Verify before workspace activation");
+      expect(html).toContain("Access requires a verified Stripe payment");
       expect(html).not.toContain("50 workspace generations");
       expect(html).toContain("/dpp/activate?");
     }
@@ -55,19 +57,52 @@ describe("tryHandleDppRoute", () => {
     expect(html).not.toContain("Workspace opened");
     expect(html).not.toContain("50 workspace generations");
     expect(html).not.toContain("/dpp/activate?");
-    expect(html).toContain("100 generations");
-    expect(html).toContain("/generate?paid=1");
-    expect(html).toContain("session_id=cs_test_1");
+    expect(html).toContain("generation balance");
+    expect(html).not.toContain("100 generations");
+    expect(html).toContain('href="/generate"');
+    expect(html).not.toContain("paid=1");
+    expect(html).not.toContain("session_id=cs_test_1");
   });
 
-  it("confirms payment without claiming a product for an unknown plan", async () => {
+  it("does not confirm payment for an unknown plan", async () => {
     const html = await (await tryHandleDppRoute(
       req("/dpp/thanks?session_id=cs_test_1&plan=not_a_real_plan")
     ))!.text();
-    expect(html).toContain("Payment received");
+    expect(html).toContain("Checkout return");
+      expect(html).not.toContain("Payment received");
     expect(html).not.toContain("Workspace opened");
     expect(html).not.toContain("/dpp/activate?");
     expect(html).not.toContain("generations");
+  });
+
+  it("never treats a forged session or plan as payment or a delivered credit grant", async () => {
+    for (const path of [
+      "/success?session_id=cs_fake&plan=starter",
+      "/success?session_id=cs_fake&plan=creator",
+      "/success?session_id=cs_fake&plan=dpp_readiness",
+      "/success?session_id=cs_fake&plan=unknown",
+      "/thanks?session_id=cs_fake",
+    ]) {
+      const res = await tryHandleDppRoute(req(path));
+      const html = await res!.text();
+      expect(html).not.toContain("Payment received");
+      expect(html).not.toContain("Workspace opened");
+      expect(html).not.toContain("is ready");
+      expect(html).not.toContain("Your payment added");
+      expect(html).not.toContain("checkout is confirmed");
+      expect(html).not.toContain("paid=1");
+    }
+  });
+
+  it("rejects implied payment when no session ID was supplied", async () => {
+    for (const path of ["/thanks", "/success", "/dpp/thanks?plan=starter"]) {
+      const res = await tryHandleDppRoute(req(path));
+      const html = await res!.text();
+      expect(html).toContain("No checkout reference provided");
+      expect(html).not.toContain("Payment received");
+      expect(html).not.toContain("Continue to activation");
+      expect(html).not.toContain("/generate?paid=1");
+    }
   });
 
   it("serves activate HTML that posts to /api/dpp/activate", async () => {
