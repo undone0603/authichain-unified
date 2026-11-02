@@ -482,9 +482,30 @@ export function largestFunnelLeak(
   return best && best.drop > 0 ? best : null;
 }
 
+/**
+ * Known founder-origin payment smoke is cash, but not independent customer
+ * revenue. Reporting-only: never use this classifier to deny entitlements.
+ *
+ * The historical visit was matched to Stripe's purpose=paid_smoke_10 on
+ * 2026-11-02. Future explicitly tagged smoke can be excluded too. Unmarked
+ * positive cash is still only a cash-positive funnel event, NOT proof of an
+ * independent buyer, signed webhook, usable entitlement, or renewal.
+ */
+export function isKnownFounderSmokeVisit(rows: LoopEventRow[]): boolean {
+  return rows.some(row => {
+    if (stageOf(row) !== "payment_succeeded") return false;
+    return (
+      row.prospect_id === "paid_smoke_10_20260920" ||
+      row.metadata?.purpose === "paid_smoke_10" ||
+      row.metadata?.founder_smoke === true
+    );
+  });
+}
+
 export function countEconomicStates(rows: LoopEventRow[]): {
   visits: number;
   demoVisits: number;
+  knownFounderSmokeVisits: number;
   reached: Record<EconomicState, number>;
   leak: FunnelLeak | null;
 } {
@@ -501,6 +522,7 @@ export function countEconomicStates(rows: LoopEventRow[]): {
   }
   let visits = 0;
   let demoVisits = 0;
+  let knownFounderSmokeVisits = 0;
   for (const visitRows of byVisit.values()) {
     if (isDemoVisit(visitRows)) {
       demoVisits += 1;
@@ -508,6 +530,8 @@ export function countEconomicStates(rows: LoopEventRow[]): {
     }
     visits += 1;
     const loop = reconstructLoop(visitRows);
+    const founderSmoke = isKnownFounderSmokeVisit(visitRows);
+    if (founderSmoke) knownFounderSmokeVisits += 1;
     // A recorded "payment_succeeded" event can represent a $0 discounted
     // Checkout, and old events can be missing amount_total entirely.
     // Never promote those visits into PAID or later *economic* states without
@@ -519,7 +543,7 @@ export function countEconomicStates(rows: LoopEventRow[]): {
       typeof row.metadata?.amount_total === "number" &&
       Number.isSafeInteger(row.metadata.amount_total) &&
       row.metadata.amount_total > 0
-    );
+    ) && !founderSmoke;
     const seen = new Set<EconomicState>();
     for (const stage of loop.reached) {
       const state = STATE_FOR_STAGE[stage];
@@ -531,7 +555,7 @@ export function countEconomicStates(rows: LoopEventRow[]): {
     }
     for (const state of seen) reached[state] += 1;
   }
-  return { visits, demoVisits, reached, leak: largestFunnelLeak(reached) };
+  return { visits, demoVisits, knownFounderSmokeVisits, reached, leak: largestFunnelLeak(reached) };
 }
 
 /**
