@@ -102,8 +102,9 @@ export async function activateDppMerchant(opts: {
   // actual line-item price, not caller-controlled metadata or amount alone.
   if (
     session.mode !== "payment" ||
+    typeof session.amount_total !== "number" ||
     !Number.isFinite(session.amount_total) ||
-    (session.amount_total ?? 0) <= 0
+    session.amount_total <= 0
   ) {
     return { ok: false, status: 400, error: "Not a paid DPP workspace purchase" };
   }
