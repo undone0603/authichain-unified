@@ -11,6 +11,7 @@ on:
       - "scripts/ci/upload-worker-version.mjs"
 permissions:
   contents: read
+  actions: read
 # Queue behind an in-flight publish. PM-328 forbids cancelling a
 # push-to-main deploy that is already uploading.
 concurrency:
@@ -43,6 +44,13 @@ jobs:
           node-version: "22"
           cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
           cache-dependency-path: pnpm-lock.yaml
+      # Never upload/publish a source SHA until the exact-head CI Main run
+      # and all five required jobs succeeded. Fail closed on missing evidence.
+      # This step is read-only; it does not start, cancel, or retry CI.
+      - name: Require exact-head CI Main gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ci/require-exact-head-main-gate.mjs
       - name: Install node-gyp (native builds)
         run: npm i -g node-gyp@11
       - name: Install
