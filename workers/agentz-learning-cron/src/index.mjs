@@ -84,16 +84,12 @@ export async function observe(fetcher = fetch) {
     const url = `https://api.github.com/repos/${source.owner}/${source.repo}/issues/${source.issue}/comments?per_page=${MAX_ITEMS}`;
     let failureCategory = "transport_failure";
     try {
-      // AbortSignal.timeout may be unavailable in some Worker runtimes.
-      // Do not make the entire source fail simply due to that API difference.
-      const signal = typeof AbortSignal !== "undefined" &&
-        typeof AbortSignal.timeout === "function"
-        ? AbortSignal.timeout(8000) : undefined;
+      // Minimal native Worker fetch options; avoid runtime-specific
+      // AbortSignal.timeout or redirect rejection on public GitHub requests.
       const res = await fetcher(url, {
-        method: "GET", redirect: "error",
+        method: "GET",
         headers: { "Accept": "application/vnd.github+json",
                    "User-Agent": "AuthiChain-AgentZ-Edge-ReadOnly/0.1" },
-        ...(signal ? { signal } : {}),
       });
       if (!res.ok) {
         failureCategory = res.status === 403 || res.status === 429
@@ -106,12 +102,14 @@ export async function observe(fetcher = fetch) {
       const rows = await readBoundedJson(res);
       failureCategory = "invalid_comment_schema";
       results.push(classifyComments(rows, source));
-    } catch {
+    } catch (error) {
       // Report only fixed category names, never exception contents, URLs,
       // headers, request metadata, or untrusted text.
       results.push({
         source: source.label, evidence_state: "coverage_unknown",
         failure_category: failureCategory,
+        error_class: ["TypeError", "AbortError", "TimeoutError", "NetworkError"]
+          .includes(error?.name) ? error.name : "other",
         external_feedback_candidates: null, independent_test_passes: 0,
         next_action: "retry_later_without_outbound",
       });
@@ -160,7 +158,7 @@ export class AgentZLearningAlarm {
     // an unbounded polling loop or bypass the six-hour schedule.
     if (last?.sources?.length &&
         last.sources.every(x => x.evidence_state === "coverage_unknown")) {
-      const retryKey = "unknown_retry_diagnostic_v2_" + new Date().toISOString().slice(0, 10);
+      const retryKey = "unknown_retry_diagnostic_v3_" + new Date().toISOString().slice(0, 10);
       if (!(await this.ctx.storage.get(retryKey))) {
         await this.ctx.storage.put(retryKey, true);
         await this.ctx.storage.setAlarm(Date.now() + 15_000);
@@ -191,6 +189,7 @@ export class AgentZLearningAlarm {
       sources: report.sources.map(x => ({
         source: x.source, evidence_state: x.evidence_state,
         failure_category: x.failure_category ?? null,
+        error_class: x.error_class ?? null,
         external_feedback_candidates: x.external_feedback_candidates,
         independent_test_passes: 0,
       })),
