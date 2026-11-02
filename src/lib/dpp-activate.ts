@@ -100,9 +100,18 @@ export async function activateDppMerchant(opts: {
   // $299 item can share the amount, and metadata can contradict line items.
   // Require the actual purchased price in expanded Stripe line items.
   const lineItems = session.line_items?.data ?? [];
+  // Keep activation as strict as the webhook's authoritative checkout
+  // classifier. A partial/paginated item list, recurring mode, or multiple
+  // units is not unambiguous evidence of a single DPP workspace purchase.
+  // These guards apply to fully discounted checkouts too; complimentary
+  // access must still belong to an actual paid-status, completed DPP SKU.
   if (
+    session.line_items?.has_more ||
+    session.mode !== "payment" ||
+    session.subscription ||
     lineItems.length !== 1 ||
     lineItems[0]?.price?.id !== DPP_PRICE_ID ||
+    (lineItems[0]?.quantity != null && lineItems[0].quantity !== 1) ||
     (typeof md.plan === "string" &&
       md.plan.length > 0 &&
       md.plan !== "dpp_readiness")
