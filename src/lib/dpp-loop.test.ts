@@ -746,6 +746,38 @@ describe("economic state", () => {
     expect(result.reached.PROVISIONED).toBe(1);
   });
 
+  it("excludes confirmed founder smoke from paid economic milestones without changing access", () => {
+    const rows = [
+      loopRow("paid_smoke_10_20260920", "attributed_visit"),
+      loopRow("paid_smoke_10_20260920", "payment_succeeded", { amount_total: 1000 }),
+      loopRow("paid_smoke_10_20260920", "provisioned"),
+      loopRow("tagged_smoke", "payment_succeeded", {
+        amount_total: 1000, purpose: "paid_smoke_10",
+      }),
+      loopRow("tagged_smoke", "merchant_activated"),
+      loopRow("real_cash_unattributed", "payment_succeeded", { amount_total: 29900 }),
+      loopRow("real_cash_unattributed", "provisioned"),
+    ];
+    const result = countEconomicStates(rows);
+    expect(result.visits).toBe(3);
+    expect(result.demoVisits).toBe(0);
+    expect(result.knownFounderSmokeVisits).toBe(2);
+    expect(result.reached.PAID).toBe(1);
+    expect(result.reached.PROVISIONED).toBe(1);
+    expect(result.reached.ACTIVATED).toBe(0);
+    // The remaining cash-positive event is not automatically an independent
+    // customer; buyer identity and usable entitlement require separate proof.
+  });
+
+  it("does not let an unrelated checkout-stage smoke marker suppress paid cash", () => {
+    const result = countEconomicStates([
+      loopRow("ordinary", "checkout_started", { purpose: "paid_smoke_10" }),
+      loopRow("ordinary", "payment_succeeded", { amount_total: 29900 }),
+    ]);
+    expect(result.knownFounderSmokeVisits).toBe(0);
+    expect(result.reached.PAID).toBe(1);
+  });
+
   it("does not accept negative, fractional or string totals as cash evidence", () => {
     for (const amount_total of [-100, 0.1, "29900", null, undefined]) {
       const result = countEconomicStates([
