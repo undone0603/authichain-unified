@@ -76,10 +76,13 @@ def validate_declaration(card: Any) -> dict[str, Any]:
         if not isinstance(url, str):
             errors.append(f"interface_{index}_missing_url")
             continue
-        u = urllib.parse.urlsplit(url)
-        if (u.scheme, u.hostname, u.port, u.username, u.password, u.query, u.fragment) != (
-            "https", "authichain.com", None, None, None, "", ""
-        ):
+        try:
+            u = urllib.parse.urlsplit(url)
+            origin = (u.scheme, u.hostname, u.port, u.username, u.password, u.query, u.fragment)
+        except ValueError:
+            errors.append(f"interface_{index}_malformed_url")
+            continue
+        if origin != ("https", "authichain.com", None, None, None, "", ""):
             errors.append(f"interface_{index}_unexpected_origin")
         if interface.get("protocolBinding") == "JSONRPC" and u.path == "/api/a2a":
             seen_a2a = True
