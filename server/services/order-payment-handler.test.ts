@@ -24,6 +24,31 @@ beforeEach(() => {
 });
 
 describe("handleServiceOrderPayment", () => {
+  it("uses an injected Workers DB for lookup and settlement without Node DATABASE_URL", async () => {
+    const limit = vi.fn().mockResolvedValue([{
+      id: 52, userId: 7, status: "pending", amount: "19900", serviceType: "audit",
+    }]);
+    const where = vi.fn(() => ({ limit }));
+    const from = vi.fn(() => ({ where }));
+    const select = vi.fn(() => ({ from }));
+    const requestDb = { select } as any;
+    await expect(handleServiceOrderPayment(settled, requestDb))
+      .resolves.toEqual({ handled: true, orderId: 52 });
+    expect(db.getServiceOrderBySessionId).not.toHaveBeenCalled();
+    expect(select).toHaveBeenCalledTimes(1);
+    expect(settleServiceOrderPaymentAtomic).toHaveBeenCalledWith(
+      expect.objectContaining({ orderId: 52, paidAmountCents: 19900 }), requestDb,
+    );
+  });
+
+  it("propagates an injected Workers DB lookup failure for webhook retry", async () => {
+    const requestDb = { select: () => { throw new Error("Hyperdrive unavailable"); } } as any;
+    await expect(handleServiceOrderPayment(settled, requestDb))
+      .rejects.toThrow("Hyperdrive unavailable");
+    expect(db.getServiceOrderBySessionId).not.toHaveBeenCalled();
+    expect(settleServiceOrderPaymentAtomic).not.toHaveBeenCalled();
+  });
+
   it("ignores an unknown order without attempting settlement", async () => {
     vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue(null as any);
     expect(await handleServiceOrderPayment(settled)).toEqual({
