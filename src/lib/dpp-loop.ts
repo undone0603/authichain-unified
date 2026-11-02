@@ -79,7 +79,7 @@ function normalizeSource(
   return "direct";
 }
 
-/** Persist one observable loop stage. Never throws — logging only on failure. */
+/** Persist a loop stage. Analytics are best-effort; strict buyer activation throws if storage fails. */
 export async function recordDppLoopEvent(
   supabase: SupabaseLike,
   input: RecordDppLoopEventInput,
