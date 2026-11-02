@@ -15,6 +15,20 @@ in that same batch. A follow-up HTTP request cannot retrieve or list a previous
 request's task; an immediate `SendMessage` response already contains its
 completed result.
 
+**Library-wide defense-in-depth:** `handleA2aJsonRpc` no longer creates
+or reuses an implicit module-global `defaultStore`. When `opts.store` is
+omitted, it constructs a new in-memory store for each invocation, shared
+only within that invocation's JSON-RPC batch. An authenticated client that
+needs persistence must inject its own owner-scoped store and enforce
+authorization outside the JSON-RPC request body. The public Worker also
+passes a fresh store explicitly.
+
+Regression coverage now checks this rule at **both** the shared
+`src/lib/a2a-jsonrpc.test.ts` boundary and the public
+`workers/authichain-com/src/x402-routes.test.ts` boundary. Those
+TypeScript tests are committed but have not produced a green hosted run;
+do not claim execution or deployed protection.
+
 **Trade-off:** This is a stateless anonymous demonstration, not durable A2A
 task lifecycle support. External clients should not expect `GetTask` on a
 later request to succeed. Do not advertise durable, multi-tenant, or certified
