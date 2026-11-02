@@ -153,6 +153,17 @@ export class AgentZLearningAlarm {
       await this.ctx.storage.setAlarm(Date.now() + 15_000);
     }
     const last = await this.ctx.storage.get("last_report") ?? null;
+    // One bounded retry per UTC day after an entirely unknown observation.
+    // Health never triggers an immediate network request and cannot create
+    // an unbounded polling loop or bypass the six-hour schedule.
+    if (last?.sources?.length &&
+        last.sources.every(x => x.evidence_state === "coverage_unknown")) {
+      const retryKey = "unknown_retry_" + new Date().toISOString().slice(0, 10);
+      if (!(await this.ctx.storage.get(retryKey))) {
+        await this.ctx.storage.put(retryKey, true);
+        await this.ctx.storage.setAlarm(Date.now() + 15_000);
+      }
+    }
     return Response.json({
       alarm_armed: (await this.ctx.storage.getAlarm()) !== null,
       next_alarm_utc: new Date(await this.ctx.storage.getAlarm()).toISOString(),
