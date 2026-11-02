@@ -1,0 +1,10 @@
+name = "authichain-agentz-learning"
+main = "src/index.mjs"
+compatibility_date = "2026-10-17"
+workers_dev = true
+
+[triggers]
+crons = ["17 */6 * * *"]
+
+[observability]
+enabled = true
