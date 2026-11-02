@@ -57,6 +57,19 @@ def test_strips_query_tokens_from_source_url():
     }) == ["https://example.org/agent"]
 
 
+def test_discovered_private_and_control_character_urls_refused():
+    assert _public_references({
+        "structured_content": {"results": [
+            {"url": "https://127.0.0.1/private"},
+            {"url": "https://169.254.169.254/metadata"},
+            {"url": "https://2130706433/private"},
+            {"url": "https://foo.internal/data"},
+            {"url": "https://example.org/unsafe\\nheader"},
+            {"url": "https://example.org/clean?token=not-recorded"},
+        ]}
+    }) == ["https://example.org/clean"]
+
+
 def test_malformed_untrusted_output_does_not_crash():
     assert _public_references({
         "content": ["this is not JSON", "[null]", '{"results":"bad"}'],
