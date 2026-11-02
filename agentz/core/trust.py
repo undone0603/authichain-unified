@@ -36,28 +36,32 @@ def calculate_authenticity(scan_history: Dict[str, Any]) -> float:
         
     return max(score, 0.0)
 
-async def detect_geospatial_anomalies(supabase, qron_id: int, expected_region: str = "US") -> Dict[str, Any]:
+async def detect_geospatial_anomalies(supabase, qron_id: int, expected_region: Optional[str] = None) -> Dict[str, Any]:
+    """Return a review heuristic, never physical authenticity proof.
+
+    Missing market/country data means the check is unknown, not clear and not
+    evidence of counterfeiting. Scan locations are caller-controlled metadata.
     """
-    Analyzes scan locations for a product to detect unauthorized distribution or counterfeiting.
-    """
+    if not isinstance(expected_region, str) or not expected_region.strip():
+        return {"anomaly": None, "checked": False, "reason": "Target market not configured"}
+    expected = expected_region.strip().casefold()
     try:
         res = supabase.table("scan_events").select("city, country").eq("qron_id", qron_id).execute()
-        scans = res.data or []
-        
-        if len(scans) < 3:
-            return {"anomaly": False, "reason": "Insufficient data"}
-            
-        # Count unexpected regions
-        anomalous_scans = [s for s in scans if s.get("country") != expected_region]
-        
-        if len(anomalous_scans) >= 3:
-            return {
-                "anomaly": True, 
-                "reason": f"Detected {len(anomalous_scans)} scans outside {expected_region}",
-                "count": len(anomalous_scans)
-            }
-            
-        return {"anomaly": False, "reason": "Locations within expected range"}
+        scans = res.data
+        if not isinstance(scans, list) or len(scans) < 3:
+            return {"anomaly": None, "checked": False, "reason": "Insufficient location observations"}
+        countries = []
+        for scan in scans:
+            country = scan.get("country") if isinstance(scan, dict) else None
+            if not isinstance(country, str) or not country.strip():
+                return {"anomaly": None, "checked": False, "reason": "Incomplete country observations"}
+            countries.append(country.strip().casefold())
+        unexpected = sum(country != expected for country in countries)
+        if unexpected >= 3:
+            return {"anomaly": True, "checked": True,
+                    "reason": f"Observed {unexpected} scans outside configured region",
+                    "count": unexpected}
+        return {"anomaly": False, "checked": True, "reason": "No multi-scan region anomaly in observations"}
     except Exception as e:
         # A check that did not run is not a clean result. Report it as an
         # error so callers cannot read it as "no anomaly".
@@ -96,12 +100,14 @@ async def assess_scans(
     scans = scans_res.data
 
     # 2. Geospatial Anomaly Pass (Phase 19)
-    # Default to US for pilot, but in production this would be set in product metadata
-    target_market = product_metadata.get("target_market", "US")
+    # Do not invent a product's intended market from missing metadata.
+    target_market = product_metadata.get("target_market")
     geo_check = await detect_geospatial_anomalies(supabase, qron_id, expected_region=target_market)
 
     if geo_check.get("error"):
         geo_status = "error"
+    elif geo_check.get("checked") is not True:
+        geo_status = "unknown"
     elif geo_check["anomaly"]:
         geo_status = "anomaly"
         logger.warning("geo_anomaly flag set for product")
