@@ -101,17 +101,32 @@ def analyze_scan_events(
 
 
 async def detect_suspicious_activity(supabase, *, now: datetime | None = None) -> list[dict[str, Any]]:
-    """Read recent scans; propagate DB errors rather than claim everything is safe."""
+    """Read a bounded UTC window and fail closed on incomplete source coverage.
+
+    One extra row is the truncation sentinel. If the query reaches that row,
+    do not issue a falsely reassuring empty alert list: pagination or an
+    aggregate per-product query is required for high-volume deployments.
+    """
+    checked_at = now if now is not None else datetime.now(timezone.utc)
+    if checked_at.tzinfo is None:
+        raise ValueError("now must include timezone")
+    checked_at = checked_at.astimezone(timezone.utc)
+    start = checked_at - timedelta(minutes=WINDOW_MINUTES)
     result = (
         supabase.table("scan_events")
         .select("id,qron_id,scanned_at,city,country,session_id")
+        .gte("scanned_at", start.isoformat())
+        .lte("scanned_at", checked_at.isoformat())
         .order("scanned_at", desc=True)
-        .limit(200)
+        .limit(201)
         .execute()
     )
-    if getattr(result, "data", None) is None:
-        raise RuntimeError("scan_events query unavailable; anomaly status unknown")
-    return analyze_scan_events(result.data, now=now)
+    data = getattr(result, "data", None)
+    if not isinstance(data, list):
+        raise RuntimeError("scan_events query unavailable; anomaly coverage unknown")
+    if len(data) >= 201:
+        raise RuntimeError("scan_events window truncated; anomaly coverage unknown")
+    return analyze_scan_events(data, now=checked_at)
 
 
 async def trigger_notifications(alerts: list[dict[str, Any]]) -> None:
