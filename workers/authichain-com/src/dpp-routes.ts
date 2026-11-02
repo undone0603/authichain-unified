@@ -110,8 +110,16 @@ function thanksHtml(
   );
 }
 
+/**
+ * JSON string values inside an inline script must escape "<": the HTML
+ * parser ends a script element at </script> even inside a quoted JS string.
+ */
+function inlineScriptString(value: string): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
 function activateHtml(sessionId: string, visitId: string): string {
-  if (!sessionId) {
+  if (!/^cs_(?:live|test)_[A-Za-z0-9]+$/.test(sessionId)) {
     return pageShell(
       "Missing checkout session | AuthiChain",
       `<h1>Missing checkout session</h1>
@@ -150,8 +158,8 @@ function activateHtml(sessionId: string, visitId: string): string {
              method: 'POST',
              headers: { 'Content-Type': 'application/json' },
              body: JSON.stringify({
-               session_id: ${JSON.stringify(sessionId)},
-               visit_id: ${JSON.stringify(visitId)},
+               session_id: ${inlineScriptString(sessionId)},
+               visit_id: ${inlineScriptString(visitId)},
                categories: fd.get('categories'),
                markets: fd.get('markets'),
                labeling: fd.get('labeling'),
