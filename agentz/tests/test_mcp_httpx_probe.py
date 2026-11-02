@@ -118,12 +118,23 @@ class ModernMcpTests(unittest.TestCase):
             self.assertEqual(data["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"], "2026-07-28")
             self.assertNotIn("mcp-session-id", req.headers)
             self.assertNotIn("authorization", req.headers)
-            return ok({"jsonrpc":"2.0","id":1,"result":{"tools":[{"name":"verify_record"}]}})
+            return ok({"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","tools":[{"name":"verify_record"}]}})
         r=self.run_modern(handler)
         self.assertEqual(r["state"], "modern_mcp_listing_confirmed")
         self.assertEqual(r["tools_count"], 1)
         self.assertEqual(len(seen), 1)
         self.assertFalse(r["tools_invoked"])
+
+    def test_modern_missing_result_type_does_not_claim_success(self):
+        r = self.run_modern(lambda req: ok({"jsonrpc":"2.0","id":1,"result":{"tools":[]}}))
+        self.assertEqual(r["state"], "invalid_modern_result_type")
+        self.assertFalse(r["confirmed"])
+
+    def test_modern_input_required_is_not_a_complete_tool_list(self):
+        r = self.run_modern(lambda req: ok({"jsonrpc":"2.0","id":1,"result":{
+            "resultType":"input_required", "tools":[], "inputRequests":[]}}))
+        self.assertEqual(r["state"], "invalid_modern_result_type")
+        self.assertFalse(r["confirmed"])
 
     def test_modern_version_error_has_no_automatic_legacy_fallback(self):
         requests=[]
