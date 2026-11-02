@@ -101,6 +101,28 @@ def test_board_shows_only_reachable_gigs_and_the_live_checkout_links():
     html = render_board(worker(), [gig(title="Review an A2A card"), gig(id="far", place=FAR, title="Dallas deploy")], NOW)
     assert "Review an A2A card" in html
     assert "Dallas deploy" not in html
-    assert "hidden:far" in html
+    assert "hidden:far" not in html
+    assert "far" not in html
     assert "https://authichain.com/checkout/qron_launch" in html
     assert "Offers are not payments." in html
+
+
+def test_board_escapes_untrusted_gig_content():
+    injected = gig(
+        title="<img src=x onerror=alert(1)>",
+        kind="<script>alert(2)</script>",
+        place=Place(30.27, -97.74, "Research & Review"),
+    )
+    html = render_board(worker(), [injected], NOW)
+    assert "<img" not in html
+    assert "<script>" not in html
+    assert "&lt;img src=x onerror=alert(1)&gt;" in html
+    assert "&lt;script&gt;alert(2)&lt;/script&gt;" in html
+    assert "Research &amp; Review" in html
+
+
+def test_board_does_not_disclose_filtered_gig_identifiers():
+    blocked = gig(id="private-hidden-gig-identifier", place=FAR)
+    html = render_board(worker(), [gig(), blocked], NOW)
+    assert "private-hidden-gig-identifier" not in html
+    assert "gig-1" not in html or "hidden:" not in html  # IDs are not leaked in comments.
