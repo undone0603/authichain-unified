@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   DPP_PRICE_ID,
+  classifyRetrievedDppCheckout,
   dppActivateUrl,
   fetchAllLoopEvents,
   dppSmokeRequestAuthorized,
@@ -642,3 +643,98 @@ describe("dppExceptionAlert", () => {
     expect(String(fetchMock.mock.calls[0][1].body)).toContain("term_esc_1");
   });
 });
+
+describe("classifyRetrievedDppCheckout (authoritative line items)", () => {
+  const paid = {
+    status: "complete",
+    payment_status: "paid",
+    mode: "payment",
+    metadata: { offer: DPP_OFFER_KEY, plan: "dpp_readiness" },
+    line_items: {
+      data: [{ price: { id: DPP_PRICE_ID }, quantity: 1 }],
+      has_more: false,
+    },
+  };
+
+  it("accepts only the canonical single-unit DPP price", () => {
+    expect(classifyRetrievedDppCheckout(paid)).toBe("dpp");
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        metadata: {},
+      })
+    ).toBe("dpp");
+  });
+
+  it("holds a forged DPP offer with another $299 price", () => {
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        line_items: { data: [{ price: { id: "price_other_299" } }] },
+      })
+    ).toBe("reconciliation_required");
+  });
+
+  it("holds absent, paginated, and mixed line-item evidence", () => {
+    expect(
+      classifyRetrievedDppCheckout({ ...paid, line_items: undefined })
+    ).toBe("reconciliation_required");
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        line_items: { ...paid.line_items, has_more: true },
+      })
+    ).toBe("reconciliation_required");
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        line_items: {
+          data: [
+            { price: { id: DPP_PRICE_ID } },
+            { price: { id: "price_other" } },
+          ],
+        },
+      })
+    ).toBe("reconciliation_required");
+  });
+
+  it("holds subscription, conflicting plan, and multiple units", () => {
+    expect(
+      classifyRetrievedDppCheckout({ ...paid, mode: "subscription" })
+    ).toBe("reconciliation_required");
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        metadata: { plan: "other_plan" },
+      })
+    ).toBe("reconciliation_required");
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        line_items: {
+          data: [{ price: { id: DPP_PRICE_ID }, quantity: 2 }],
+        },
+      })
+    ).toBe("reconciliation_required");
+  });
+
+  it("never authorizes complete-but-unpaid or open-but-paid", () => {
+    expect(
+      classifyRetrievedDppCheckout({ ...paid, payment_status: "unpaid" })
+    ).toBe("not_paid");
+    expect(
+      classifyRetrievedDppCheckout({ ...paid, status: "open" })
+    ).toBe("not_paid");
+  });
+
+  it("leaves unrelated paid catalog SKUs to their own fulfillment path", () => {
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        metadata: { plan: "starter" },
+        line_items: { data: [{ price: { id: "price_starter" } }] },
+      })
+    ).toBe("other");
+  });
+});
+
