@@ -82,7 +82,8 @@ function normalizeSource(
 /** Persist one observable loop stage. Never throws — logging only on failure. */
 export async function recordDppLoopEvent(
   supabase: SupabaseLike,
-  input: RecordDppLoopEventInput
+  input: RecordDppLoopEventInput,
+  options?: { strict?: boolean }
 ): Promise<void> {
   const visitId = input.visitId?.trim();
   if (!visitId) return;
@@ -106,9 +107,11 @@ export async function recordDppLoopEvent(
       timestamp: new Date().toISOString(),
     });
     if (error) {
+      if (options?.strict) throw new Error("DPP event storage unavailable");
       console.error("[dpp-loop] record failed:", input.stage, error);
     }
   } catch (err) {
+    if (options?.strict) throw new Error("DPP event storage unavailable");
     console.error("[dpp-loop] record failed:", input.stage, err);
   }
 }
