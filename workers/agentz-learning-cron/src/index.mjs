@@ -1,4 +1,4 @@
-import { inspectPublicSources } from "./source-inspection.mjs";
+import { inspectPublicSources, inspectSourceText, SOURCE_TARGETS, validateSourceTarget } from "./source-inspection.mjs";
 
 /**
  * AgentZ Edge Learning Watch — isolated zero-credential Cloudflare Cron Worker.
@@ -133,11 +133,20 @@ export function selfTest() {
     { id: 3, user: { login: "automated-bot", type: "Bot" } },
     { id: 3, user: { login: "automated-bot", type: "Bot" } },
   ], s);
+  const specimen = inspectSourceText(
+    SOURCE_TARGETS[0],
+    'if (session.payment_status !== "paid" || session.status !== "complete") deny();' +
+      'if (lineItems[0]?.price?.id !== DPP_PRICE_ID) deny();'
+  );
   return result.self_comments === 1 &&
          result.external_feedback_candidates === 1 &&
          result.automated_comments === 1 &&
          result.independent_test_passes === 0 &&
-         result.partnerships === 0;
+         result.partnerships === 0 &&
+         validateSourceTarget(SOURCE_TARGETS[0]) &&
+         specimen.evidence_state === "patterns_present_unverified" &&
+         specimen.checks.every(c => c.state === "check_present") &&
+         specimen.independent_validation_proven === false;
 }
 
 /**
