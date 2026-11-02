@@ -7,30 +7,80 @@ export const TARGETS = Object.freeze([
   Object.freeze({ id: 'unknown_verification', url: 'https://authichain.com/api/verify?id=authichain-peer-fixture-missing-20261102' }),
   Object.freeze({ id: 'agentcard_discovery', url: 'https://authichain.com/.well-known/agent-card.json' }),
   Object.freeze({ id: 'mcp_registry_metadata', url: 'https://registry.modelcontextprotocol.io/v0.1/servers/com.authichain%2Fauthichain/versions/latest' }),
+  Object.freeze({ id: 'mcp_discovery', url: 'https://authichain.com/mcp' }),
 ]);
 const MAX_BYTES = 131072;
 
+const nonemptyString = x => typeof x === 'string' && x.trim().length > 0;
+
+/** Discovery evidence is observed only when the expected target's shape is present. */
 export function classify(id, record) {
-  if (!record || typeof record !== 'object' || Array.isArray(record)) return { state: 'coverage_unknown', reason: 'invalid_json_shape' };
-  if (id === 'demo_verification') return {
-    state: 'observed', kind: record.demonstration === true ? 'demonstration' : 'not_confirmed_demonstration',
-    reported_decision: typeof record.decision === 'string' ? record.decision : 'not_reported',
-    independently_verified_signature: false, independently_verified_chain: false,
-    physical_product_authenticity: 'not_established',
-  };
-  if (id === 'unknown_verification') return {
-    state: 'observed', reported_decision: typeof record.decision === 'string' ? record.decision : 'not_reported',
-    counterfeit_verdict: 'not_established', absence_is_counterfeit: false,
-  };
-  if (id === 'agentcard_discovery') return {
-    state: 'observed', advertised_url: typeof record.url === 'string' ? record.url : null,
-    advertised_version: typeof record.protocolVersion === 'string' ? record.protocolVersion : null,
-    card_signature_validated: false, caller_authorized: false, a2a_tck_passed: false,
-  };
-  if (id === 'mcp_registry_metadata') return {
-    state: 'observed', registry_response_received: true,
-    tools_list_tested: false, tool_invocation_tested: false, mcp_conformance_verified: false,
-  };
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    return { state: 'coverage_unknown', reason: 'invalid_json_shape' };
+  }
+  if (id === 'demo_verification') {
+    if (!nonemptyString(record.decision) || typeof record.demonstration !== 'boolean') {
+      return { state: 'coverage_unknown', reason: 'missing_demo_evidence_fields' };
+    }
+    return {
+      state: 'observed', kind: record.demonstration === true ? 'demonstration' : 'not_confirmed_demonstration',
+      reported_decision: record.decision,
+      independently_verified_signature: false, independently_verified_chain: false,
+      physical_product_authenticity: 'not_established',
+    };
+  }
+  if (id === 'unknown_verification') {
+    if (!nonemptyString(record.decision)) {
+      return { state: 'coverage_unknown', reason: 'missing_record_decision' };
+    }
+    return {
+      state: 'observed', reported_decision: record.decision,
+      expected_not_found: record.decision === 'not_found',
+      counterfeit_verdict: 'not_established', absence_is_counterfeit: false,
+    };
+  }
+  if (id === 'agentcard_discovery') {
+    // A2A 1.0 protocolVersion belongs on supportedInterfaces, NOT at card root.
+    const iface = Array.isArray(record.supportedInterfaces) && record.supportedInterfaces.find(x =>
+      x && x.protocolBinding === 'JSONRPC' && nonemptyString(x.protocolVersion) &&
+      typeof x.url === 'string' && x.url.startsWith('https://'));
+    if (!nonemptyString(record.name) || !nonemptyString(record.version) || !iface) {
+      return { state: 'coverage_unknown', reason: 'missing_a2a_card_interface' };
+    }
+    return {
+      state: 'observed', card_name: record.name, application_version: record.version,
+      advertised_url: iface.url, advertised_version: iface.protocolVersion,
+      card_signature_validated: false, caller_authorized: false, a2a_tck_passed: false,
+    };
+  }
+  if (id === 'mcp_registry_metadata') {
+    const server = record.server;
+    if (server?.name !== 'com.authichain/authichain' || !nonemptyString(server.version)) {
+      return { state: 'coverage_unknown', reason: 'mcp_registry_identity_unconfirmed' };
+    }
+    const meta = record._meta?.['io.modelcontextprotocol.registry/official'];
+    return {
+      state: 'observed', registry_response_received: true,
+      registry_name: server.name, registry_version: server.version,
+      registry_status: nonemptyString(meta?.status) ? meta.status : 'not_reported',
+      registry_active: meta?.status === 'active',
+      tools_list_tested: false, tool_invocation_tested: false, mcp_conformance_verified: false,
+    };
+  }
+  if (id === 'mcp_discovery') {
+    if (record.protocol !== 'mcp' || !nonemptyString(record.serverInfo?.version) ||
+        !Array.isArray(record.tools) || !record.tools.every(x => nonemptyString(x?.name))) {
+      return { state: 'coverage_unknown', reason: 'invalid_mcp_get_advertisement' };
+    }
+    const toolNames = record.tools.map(x => x.name);
+    return {
+      state: 'observed', advertised_version: record.serverInfo.version,
+      advertised_tool_count: toolNames.length,
+      free_verify_record_advertised: toolNames.includes('verify_record'),
+      tools_list_tested: false, tool_invocation_tested: false,
+      mcp_conformance_verified: false,
+    };
+  }
   return { state: 'coverage_unknown', reason: 'unrecognized_target' };
 }
 
