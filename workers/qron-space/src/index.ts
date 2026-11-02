@@ -2289,11 +2289,11 @@ export default {
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>QRON — Living QR codes that scan</title>
-<meta name="description" content="Generate a Living QR for packaging and labels, scannable from any camera. One stored scan is at /qron/r/qron%3Aurl%3A71cead6b. This host forwards the scan and does not verify the signature.">
+<meta name="description" content="Generate a Living QR for packaging and labels, scannable from any camera. Stored scan lookup is separate from generation and is verified by AuthiChain, not this site.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="QRON">
 <meta property="og:title" content="QRON — Living QR codes that scan">
-<meta property="og:description" content="Generate a Living QR for packaging and labels, scannable from any camera. One stored scan is at /qron/r/qron%3Aurl%3A71cead6b. This host forwards the scan and does not verify the signature.">
+<meta property="og:description" content="Generate a Living QR for packaging and labels, scannable from any camera. Stored scan lookup is separate from generation and is verified by AuthiChain, not this site.">
 <meta property="og:url" content="https://qron.space/">
 <meta property="og:image" content="https://qron.space/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -2343,7 +2343,7 @@ ${estateFeatures(
   [
     { title: "Living QR generation", body: "Create a QR that can change its destination later, so packaging does not need a reprint when a campaign URL changes. An anonymous generate is not a stored signed scan." },
     { title: "Scannable AI art", body: "Illusion-diffusion styles that remain readable by a standard phone camera. Art is the surface; the payload is the product." },
-    { title: "Stored scan", body: "One stored code is at /qron/r/qron%3Aurl%3A71cead6b. This host forwards that scan to authichain.com and does not verify the signature. This page does not itself read that scan. A missing id is presentation_not_found. The scan is not a physical inspection." },
+    { title: "Stored scan", body: "Stored QR presentations resolve at /qron/r/{object_id} when available. This site forwards to AuthiChain, which checks signatures; an unavailable or missing lookup is not a counterfeit verdict. A scan is not a physical inspection." },
     { title: "Packaging and labels", body: "Export print-ready art for jars, cards, and cartons. The generate path is the same one production already proxies." },
   ],
   "features",
