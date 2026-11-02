@@ -943,7 +943,7 @@ export function classifyRetrievedDppCheckout(session: {
     session.subscription ||
     items.length !== 1 ||
     items[0]?.price?.id !== DPP_PRICE_ID ||
-    (items[0]?.quantity != null && items[0].quantity !== 1) ||
+    items[0]?.quantity !== 1 ||
     (typeof metadata.plan === "string" &&
       metadata.plan.length > 0 &&
       metadata.plan !== "dpp_readiness")
