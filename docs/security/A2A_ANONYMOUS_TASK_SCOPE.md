@@ -29,6 +29,15 @@ Regression coverage now checks this rule at **both** the shared
 TypeScript tests are committed but have not produced a green hosted run;
 do not claim execution or deployed protection.
 
+**Request memory budget:** Public anonymous A2A POST bodies are limited to
+64 KiB measured in UTF-8 bytes, not character count. A response with
+HTTP 413 `a2a_request_too_large` is returned before parsing or task creation.
+Both a claimed `Content-Length` and the actual request stream are checked,
+so omitting or understating the header does not bypass the cap. A legitimate
+client requiring larger payloads needs a separately authenticated,
+tenant-scoped endpoint and explicit resource limits; this anonymous demo
+must not accept unbounded arrays/messages.
+
 **Trade-off:** This is a stateless anonymous demonstration, not durable A2A
 task lifecycle support. External clients should not expect `GetTask` on a
 later request to succeed. Do not advertise durable, multi-tenant, or certified
