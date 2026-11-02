@@ -74,6 +74,7 @@ test("public fetch uses exactly the two fixed allowlisted URLs", async () => {
   const outputs = await inspectPublicSources(async (url, options) => {
     urls.push(url);
     assert.equal(options.method, "GET");
+    assert.equal(options.redirect, "error");
     assert.equal(options.headers.Authorization, undefined);
     assert.equal(options.headers.Cookie, undefined);
     return new Response(url === dpp.url ? paid + "\n" + price : `const store = opts.store ?? memoryA2aStore();`);
@@ -101,6 +102,27 @@ test("response redirected to an unknown host is rejected", async () => {
     ok: true,
     url: "https://attacker.example/private",
     body: new Response(paid + price).body,
+  }));
+  assert.ok(results.every(x => x.evidence_state === "coverage_unknown"));
+});
+
+test("same-host source URL substitution cannot pass fixed-source checks", async () => {
+  const results = await inspectPublicSources(async (url) => ({
+    ok: true,
+    redirected: false,
+    url: url.replace(/\\/[^/]+$/, "/untrusted-copy.ts"),
+    body: new Response(paid + "\\n" + price).body,
+  }));
+  assert.ok(results.every(x => x.evidence_state === "coverage_unknown"));
+  assert.ok(results.every(x => x.checks.every(c => c.state === "not_evaluated")));
+});
+
+test("a redirect is rejected even when it resolves to the expected URL", async () => {
+  const results = await inspectPublicSources(async (url) => ({
+    ok: true,
+    redirected: true,
+    url,
+    body: new Response(paid + "\\n" + price).body,
   }));
   assert.ok(results.every(x => x.evidence_state === "coverage_unknown"));
 });
