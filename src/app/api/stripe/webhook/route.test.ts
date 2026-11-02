@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { NextRequest } from "next/server";
 import { POST } from "./route";
 import { provisionPurchase } from "@/lib/provisioning";
+import { fulfillDppPaidSession } from "@/lib/dpp-fulfill-checkout";
 
 // ─── Hoisted fakes ────────────────────────────────────────────────────────────
 
@@ -69,7 +70,10 @@ const {
     let updatePayload: any = null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const builder: any = {
-      select: () => builder,
+      select: () =>
+        updatePayload !== null && table === "stripe_events"
+          ? Promise.resolve({ data: [{ event_id: "evt_held" }], error: null })
+          : builder,
       eq: (col: string, val: unknown) => {
         filters.push([col, val]);
         return builder;
@@ -391,6 +395,35 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
         invoiceId: "in_cycle_001",
       })
     );
+  });
+
+  it("holds paid DPP metadata with a different purchased price", async () => {
+    const event = {
+      id: "evt_dpp_wrong_price_next",
+      type: "checkout.session.completed",
+      livemode: true,
+      data: {
+        object: {
+          id: "cs_dpp_wrong_price_next",
+          mode: "payment",
+          status: "complete",
+          payment_status: "paid",
+          amount_total: 29900,
+          metadata: { offer: "dpp_readiness_2026" },
+        },
+      },
+    };
+    mockCheckoutRetrieve.mockResolvedValueOnce({
+      ...event.data.object,
+      line_items: { data: [{ price: { id: "price_other_299" } }] },
+    });
+    const response = await postInvoice(event);
+    expect(response.body).toMatchObject({
+      received: true,
+      reconciliationRequired: true,
+    });
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+    expect(provisionPurchase).not.toHaveBeenCalled();
   });
 
   it("checkout.session.completed: $29 with no plan metadata provisions starter", async () => {
