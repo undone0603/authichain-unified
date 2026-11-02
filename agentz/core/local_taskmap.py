@@ -175,3 +175,40 @@ def offer(
         "paid": False,
         "stripe_revenue": False,
     }
+
+
+def render_board(worker: Worker, gigs: list[Gig], now: datetime) -> str:
+    """HTML board. Pins come from map_pins. Prices on the board are not charges."""
+    pins = [pin for pin in map_pins(worker, gigs, now) if pin["role"] == "gig"]
+    cards = []
+    for pin in pins:
+        price = f"${pin['asking_price_usd']:g}"
+        window = "timed" if pin["timed"] else "untimed"
+        talk = "negotiable" if pin["negotiable"] else "fixed price"
+        cards.append(
+            "<article class=\"gig\" style=\"left:{x}%;top:{y}%\">"
+            "<h2>{title}</h2>"
+            "<p>{kind} · {label} · {km:.1f} km</p>"
+            "<p>{price} · {talk} · {window}</p>"
+            "</article>".format(
+                x=pin["x"],
+                y=pin["y"],
+                title=pin["title"],
+                kind=pin["kind"],
+                label=pin["label"],
+                km=pin["distance_km"],
+                price=price,
+                talk=talk,
+                window=window,
+            )
+        )
+    body = "\n".join(cards) if cards else "<p>No gigs in range for this worker.</p>"
+    hidden = [gig.id for gig in gigs if gig.id not in {pin["id"] for pin in pins}]
+    return (
+        "<!doctype html><title>Local task map</title>"
+        "<p>Offers are not payments.</p>"
+        "<p><a href=\"https://authichain.com/checkout/qron_launch\">QRON Launch $19/mo</a>"
+        " · <a href=\"https://authichain.com/checkout/qron_launch_annual\">QRON Launch annual $190/yr</a></p>"
+        f"<section id=\"map\">{body}</section>"
+        f"<!-- hidden:{','.join(hidden)} -->"
+    )

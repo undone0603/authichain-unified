@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 
-from agentz.core.local_taskmap import Gig, Place, Worker, map_pins, offer, scope
+from agentz.core.local_taskmap import Gig, Place, Worker, map_pins, offer, render_board, scope
 
 NOW = datetime(2026, 11, 1, 12, tzinfo=timezone.utc)
 AUSTIN = Place(30.2672, -97.7431, "Austin")
@@ -95,3 +95,12 @@ def test_offer_can_move_a_negotiable_price_and_is_not_cash():
     assert refused["status"] == "refused"
     assert hidden["status"] == "hidden"
     assert hidden["paid"] is False
+
+
+def test_board_shows_only_reachable_gigs_and_the_live_checkout_links():
+    html = render_board(worker(), [gig(title="Review an A2A card"), gig(id="far", place=FAR, title="Dallas deploy")], NOW)
+    assert "Review an A2A card" in html
+    assert "Dallas deploy" not in html
+    assert "hidden:far" in html
+    assert "https://authichain.com/checkout/qron_launch" in html
+    assert "Offers are not payments." in html
