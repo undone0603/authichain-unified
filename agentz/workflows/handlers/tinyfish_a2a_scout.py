@@ -70,7 +70,12 @@ def run(ctx: ExecutionContext) -> str:
 
     from agentz.integrations.tinyfish_mcp import call_tinyfish
 
-    response = asyncio.run(call_tinyfish("search", [QUERY]))
+    try:
+        response = asyncio.run(call_tinyfish("search", [QUERY]))
+    except Exception as exc:
+        # The registry runner records traceback/error text. Never let a
+        # transport exception containing headers or tokens reach that log.
+        raise RuntimeError("TinyFish scout transport failed") from None
     if not response.get("ok"):
         raise RuntimeError("TinyFish scout search failed")
 
