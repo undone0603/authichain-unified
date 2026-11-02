@@ -35,6 +35,39 @@ describe("activateDppMerchant", () => {
     if (!result.ok) expect(result.status).toBe(400);
   });
 
+  it.each([
+    ["complete but unpaid", "complete", "unpaid"],
+    ["open but paid", "open", "paid"],
+    ["expired and unpaid", "expired", "unpaid"],
+  ])("rejects %s even for a DPP plan", async (_label, status, payment_status) => {
+    retrieve.mockResolvedValueOnce({
+      status,
+      payment_status,
+      amount_total: 29900,
+      metadata: { plan: "dpp_readiness" },
+      customer_details: { email: "buyer@example.com" },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+    });
+    const from = vi.fn();
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_test_non_paid",
+        categories: "LMT",
+        markets: "DE",
+        labeling: "Wh",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(402);
+      expect(result.error).toMatch(/not paid/);
+    }
+    expect(from).not.toHaveBeenCalled();
+  });
+
   it("rejects a paid $299 session whose line item is another product", async () => {
     retrieve.mockResolvedValueOnce({
       payment_status: "paid",
