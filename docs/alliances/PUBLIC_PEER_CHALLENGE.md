@@ -22,7 +22,7 @@ $sha = git rev-parse HEAD
 node scripts/alliances/public-evidence-probe.mjs --live "--ref=$sha" | Out-File -Encoding utf8 public-peer-report.json
 ```
 
-The first command uses deterministic, mocked responses and makes **no** outbound requests. The second performs four fixed, read-only GET requests: a published demonstration verifier, an unknown identifier, the published A2A AgentCard, and the official MCP Registry metadata entry. A source outage, rate limit, invalid JSON, or unsupported response is `coverage_unknown`, never `no activity`. The script refuses live traffic unless explicitly given `--live`.
+The first command uses deterministic, mocked responses and makes **no** outbound requests. The second performs five fixed, read-only GET requests: a published demonstration verifier, an unknown identifier, the published A2A AgentCard, the official MCP Registry metadata entry, and the public MCP GET discovery advertisement. It never sends MCP POST `initialize`, `tools/list`, or `tools/call` and never creates an A2A task. A source outage, rate limit, invalid JSON, or unsupported response is `coverage_unknown`, never `no activity`. The script refuses live traffic unless explicitly given `--live`.
 
 ## Optional ARBITER A2A handoff challenge (local, no remote calls)
 
@@ -51,6 +51,8 @@ Test report fields have narrow semantics:
 - `decision=verified` on `polygon-anchor-1` is an AuthiChain-published **demonstration** result, not independent re-verification of signature, on-chain inclusion or a physical product.
 - `decision=not_found` is absence of a record, **never** a counterfeit verdict.
 - A discoverable AgentCard is not a signed, authenticated or authorized agent. The A2A TCK is not run here.
+- The A2A 1.0 protocol version is read from `supportedInterfaces[].protocolVersion` (not the root AgentCard object). Missing or malformed required discovery fields produce `coverage_unknown`, not `observed`.
+- GET `/mcp` advertises a server version and tool names, but it is not a Streamable HTTP `tools/list` response. The official registry version and GET server version may differ; report both without inferring the cause.
 - MCP Registry entries are namespace and metadata observations, **not** `initialize`, `tools/list` or `tools/call` conformance results.
 - x402 health or discovery is not a verified purchase, settlement or service delivery. This probe deliberately does **not** initiate payment.
 
