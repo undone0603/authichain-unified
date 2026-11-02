@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DPP_PRICE_ID,
   classifyRetrievedDppCheckout,
+  countEconomicStates,
   dppActivateUrl,
   fetchAllLoopEvents,
   dppSmokeRequestAuthorized,
@@ -279,6 +280,10 @@ describe("dpp-loop", () => {
     expect(summary.demoVisits).toBe(1);
     expect(summary.visits).toBe(1);
     expect(summary.funnel.payment_succeeded).toBe(1);
+    const economic = countEconomicStates([zeroCash, collectedCash]);
+    expect(economic.demoVisits).toBe(1);
+    expect(economic.visits).toBe(1);
+    expect(economic.reached.PAID).toBe(1);
   });
 
   it("pages through funnel_events instead of a single limit(5000)", async () => {
