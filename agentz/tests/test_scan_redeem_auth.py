@@ -148,11 +148,11 @@ def test_offline_signature_and_geography_cannot_certify_physical_goods():
 def test_legacy_offline_verifier_never_issues_qron_reward(client, verdict):
     c, _ = client
     reward = AsyncMock()
-    with _secret(SECRET), \\
+    with _secret(SECRET), \
             patch("agentz.core.signature.check_scan_signature", AsyncMock(return_value={
                 "signature_valid": True, "reason": "ok", "verdict": verdict,
-            })), \\
-            patch("agentz.core.media.generate_story_mode", AsyncMock(return_value=None)), \\
+            })), \
+            patch("agentz.core.media.generate_story_mode", AsyncMock(return_value=None)), \
             patch("agentz.core.growth.reward_repeat_scans", reward):
         r = c.post("/scan", json=SCAN, headers={"Authorization": f"Bearer {SECRET}"})
     assert r.status_code == 200
