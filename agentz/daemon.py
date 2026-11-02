@@ -52,6 +52,13 @@ def _claim_daily_scout_slot() -> bool:
             record.write(datetime.now(timezone.utc).isoformat() + "\n")
             record.flush()
             os.fsync(record.fileno())
+        # Flush the directory entry as well, so an abrupt host restart
+        # cannot lose the claim while retaining the outgoing request.
+        dir_fd = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
         return True
     except FileExistsError:
         return False
