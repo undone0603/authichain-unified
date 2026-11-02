@@ -124,16 +124,76 @@ export function selfTest() {
          result.partnerships === 0;
 }
 
-export default {
+/**
+ * SQLite-backed Durable Object Alarm. Exactly one named instance is used.
+ * No Cron Trigger or long-running container required.
+ */
+export class AgentZLearningAlarm {
+  constructor(ctx, env) { this.ctx = ctx; this.env = env; }
+
   async fetch(request) {
+    if (request.method !== "GET") return new Response("Not allowed", { status: 405 });
+    const prior = await this.ctx.storage.getAlarm();
+    if (prior === null) {
+      // Repeated health checks do not multiply or reschedule existing alarms.
+      await this.ctx.storage.setAlarm(Date.now() + 15_000);
+    }
+    const last = await this.ctx.storage.get("last_report") ?? null;
+    return Response.json({
+      alarm_armed: (await this.ctx.storage.getAlarm()) !== null,
+      next_alarm_utc: new Date(await this.ctx.storage.getAlarm()).toISOString(),
+      last_report: last,
+    }, { headers: { "Cache-Control": "no-store" } });
+  }
+
+  async alarm() {
+    let report;
+    try {
+      report = await observe();
+    } catch {
+      report = {
+        schema: "agentz.edge-learning.v1",
+        observed_at_utc: new Date().toISOString(),
+        sources: [],
+        evidence_state: "coverage_unknown",
+        independent_validation_proven: false,
+      };
+    }
+    const status = {
+      observed_at_utc: report.observed_at_utc,
+      sources: report.sources.map(x => ({
+        source: x.source, evidence_state: x.evidence_state,
+        external_feedback_candidates: x.external_feedback_candidates,
+        independent_test_passes: 0,
+      })),
+      independent_validation_proven: false,
+      outbound_enabled: false,
+      payment_enabled: false,
+    };
+    await this.ctx.storage.put("last_report", status);
+    await this.ctx.storage.setAlarm(Date.now() + 6 * 60 * 60 * 1000);
+    console.log(JSON.stringify({ event: "agentz_edge_alarm", ...status }));
+  }
+}
+
+export default {
+  async fetch(request, env) {
     const path = new URL(request.url).pathname;
     if (request.method !== "GET") return new Response("Method not allowed", { status: 405 });
-    if (path === "/health") {
-      return Response.json({
-        service: "agentz-edge-learning", version: VERSION,
-        status: "cron_configured_not_last_run_proof", cron_utc: CRON,
-        read_only: true, requires_secrets: false, underlying_python_daemon: false,
-      }, { headers: { "Cache-Control": "no-store" } });
+    if (path === "/health" || path === "/status") {
+      try {
+        const id = env.AGENTZ_LEARNING_ALARM.idFromName("singleton");
+        const stub = env.AGENTZ_LEARNING_ALARM.get(id);
+        const state = await (await stub.fetch("https://internal/health")).json();
+        return Response.json({
+          service: "agentz-edge-learning", version: VERSION,
+          scheduler: "durable_object_alarm_6h", ...state,
+          read_only: true, requires_secrets: false, underlying_python_daemon: false,
+        }, { headers: { "Cache-Control": "no-store" } });
+      } catch {
+        return Response.json({ service: "agentz-edge-learning",
+          scheduler: "unavailable", alarm_armed: false }, { status: 503 });
+      }
     }
     if (path === "/self-test") {
       return Response.json({
@@ -142,12 +202,5 @@ export default {
       }, { headers: { "Cache-Control": "no-store" } });
     }
     return new Response("Not found", { status: 404 });
-  },
-  async scheduled() {
-    const result = await observe();
-    console.log(JSON.stringify({ event: "agentz_edge_learning_cron", ...result }));
-    if (result.sources.every(s => s.evidence_state === "coverage_unknown")) {
-      throw new Error("No public source coverage for this cron run");
-    }
   },
 };
