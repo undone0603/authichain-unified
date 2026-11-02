@@ -145,7 +145,11 @@ function serviceOrderSessionFromCheckout(session: Stripe.Checkout.Session) {
   return {
     id: session.id,
     payment_intent:
-      typeof session.payment_intent === "string" ? session.payment_intent : undefined,
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent && typeof session.payment_intent === "object"
+          ? session.payment_intent.id
+          : undefined,
     status: session.status,
     payment_status: session.payment_status,
     mode: session.mode,
