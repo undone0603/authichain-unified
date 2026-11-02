@@ -8,6 +8,8 @@
 
 **Security:** user/reviewer names returned by GitHub are public metadata; reports only contain counts, source aliases and next-action labels. An outside comment is *external feedback, not independent verification*. Self comments and bot accounts cannot become an independent verifier or partner. No prompt text is consumed. Upstream responses are capped to 128 KiB each and queries to 30 comments/source; older comments may not be included. No source author/role is cryptographically attested. This service performs **no model-weight training**, no autonomous outreach and **no production authorization**. It does not replace the real Python AgentZ runner / daemon.
 
+**First observed scheduled run:** `2026-11-02T03:46:30.304Z` was persisted and the next six-hour alarm was scheduled. Both fixed GitHub sources returned `coverage_unknown` on that first read; no independent review or valid source count was claimed. The next revision adds fixed diagnostic categories without retaining raw upstream errors and allows **one additional alarm retry per UTC day** if all sources are unknown. Further status checks cannot induce unlimited polling. The reason for initial source failures remains unverified until the bounded diagnostic executes.
+
 **Tests:** `node --test workers/agentz-learning-cron/index.test.mjs`.
 
 **Safety gates:** This Worker is deliberately independent of the existing privileged `authichain-agentz` Worker and its Durable Object. It does not change `humanHold=true` or `production_send=false`. A separate approved host/Cloudflare Container or GitLab runner is still required for the full Python AgentZ runtime, MCP transport and signed actions. Do not mistake the health route or GitHub metadata for that functionality.
