@@ -77,10 +77,12 @@ export function inspectSourceText(target, text) {
   };
 }
 
-async function readBoundedSource(response) {
+async function readBoundedSource(response, expectedUrl) {
   if (!response.ok) throw new Error("Public source unavailable");
-  if (response.url && new URL(response.url).hostname !== SAFE_SOURCE_HOST)
-    throw new Error("Unexpected source redirect");
+  // Follow neither cross-host nor same-host redirects: another public file
+  // could carry matching text and falsely satisfy a fixed-source check.
+  if (response.redirected || (response.url && response.url !== expectedUrl))
+    throw new Error("Unexpected source redirect or final URL");
   const reader = response.body?.getReader();
   if (!reader) throw new Error("Source body missing");
   const chunks = [];
@@ -116,9 +118,10 @@ export async function inspectPublicSources(fetcher = fetch) {
       if (!validateSourceTarget(target)) throw new Error("Disallowed target");
       const response = await fetcher(target.url, {
         method: "GET",
+        redirect: "error",
         headers: { Accept: "text/plain", "User-Agent": "AuthiChain-AgentZ-Edge-ReadOnly/0.2" },
       });
-      const text = await readBoundedSource(response);
+      const text = await readBoundedSource(response, target.url);
       results.push(inspectSourceText(target, text));
     } catch {
       results.push({
