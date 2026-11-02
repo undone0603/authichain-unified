@@ -50,6 +50,13 @@ const PLAN_ALIASES: Record<string, PlanId> = {
   launch: "qron_launch",
 };
 
+// Legacy subscription prices remain mapped for existing customers, but both
+// QRON Launch offers are retired for new buyers (RES-86c).
+const RETIRED_CHECKOUT_PLANS = new Set<PlanId>([
+  "qron_launch",
+  "qron_launch_annual",
+]);
+
 /** Query/form keys carried from the landing into Stripe metadata. */
 export const CHECKOUT_CARRY_KEYS = [
   "visit_id",
@@ -313,15 +320,12 @@ export function renderCheckoutChooserPage(
   const qs = carry.toString() ? `?${carry.toString()}` : "";
   const publicIds = new Set<string>(PUBLIC_PLAN_IDS);
   const seen = new Set<string>();
-  const launch = (["qron_launch", "qron_launch_annual"] as const)
-    .map(id => planById(id))
-    .filter((plan): plan is Plan => Boolean(plan));
   const plans = [
-    ...launch,
     ...listedPlans("qron"),
     ...listedPlans("strainchain"),
     ...listedPlans("musa"),
   ].filter(p => {
+    if (RETIRED_CHECKOUT_PLANS.has(p.id)) return false;
     if (!publicIds.has(p.id) || !p.stripe_price_id || !p.stripe_mode) return false;
     if (seen.has(p.id)) return false;
     seen.add(p.id);
@@ -659,6 +663,15 @@ export async function tryHandleGatedCheckout(
       ? new Response(null, { status: 404, headers: HTML_HEADERS })
       : htmlResponse(html, 404);
   }
+  // Fail closed before redirect/GET/POST handling. Do not create sessions for
+  // retired QRON Launch prices, including the /checkout/launch alias.
+  if (RETIRED_CHECKOUT_PLANS.has(plan.id)) {
+    return new Response(null, {
+      status: 303,
+      headers: { ...CHECKOUT_REDIRECT_HEADERS, Location: "/pricing" },
+    });
+  }
+
   // Canonicalise aliases (/checkout/dpp → /checkout/dpp_readiness).
   if (p !== `/checkout/${plan.id}` && (method === "GET" || method === "HEAD")) {
     return new Response(null, {
@@ -779,5 +792,5 @@ export async function tryHandleGatedCheckout(
 
 /** Every catalogue plan that the gate can sell (for tests/inventory). */
 export function gatedCheckoutPlanIds(): PlanId[] {
-  return PLANS.filter(p => p.stripe_price_id && p.stripe_mode).map(p => p.id);
+  return PLANS.filter(p => p.stripe_price_id && p.stripe_mode && !RETIRED_CHECKOUT_PLANS.has(p.id)).map(p => p.id);
 }
