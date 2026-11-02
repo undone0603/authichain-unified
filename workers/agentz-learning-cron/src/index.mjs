@@ -15,8 +15,10 @@ const MAX_BYTES = 128 * 1024;
 const MAX_ITEMS = 30;
 
 function normalizeAuthor(value) {
-  return typeof value === "string" && /^[A-Za-z0-9_-]{1,64}(?:\\[bot\\])?$/.test(value)
-    ? value.toLowerCase() : null;
+  if (typeof value !== "string" || value.length > 70) return null;
+  const author = value.toLowerCase();
+  const base = author.endsWith("[bot]") ? author.slice(0, -5) : author;
+  return /^[a-z0-9_-]{1,64}$/.test(base) ? author : null;
 }
 
 /** All external feedback remains unverified; never promote a claimed pass. */
