@@ -42,7 +42,7 @@ gates.
 
 ```bash
 python -m pip install -r requirements-agentz.txt
-python -m pytest -q tests/test_agentz_tinyfish_mcp.py
+python -m pytest -q tests/test_agentz_tinyfish_mcp.py tests/test_agentz_tinyfish_scout.py
 python -m agentz.cli tinyfish search 'Agent2Agent protocol specification' --dry-run
 python -m agentz.cli tinyfish fetch_content https://github.com/a2aproject/a2a --dry-run
 ```
@@ -67,6 +67,38 @@ present. Its dry-run prints **only the selected transport**, never the key.
 Without `TINYFISH_API_KEY`, install Node.js/`npx` and run the same commands.
 The first call may open `mcp-remote` OAuth sign-in on **that host**. ChatGPT's
 TinyFish connection does not authenticate the AgentZ host.
+
+
+## AgentZ orchestration integration
+
+The registry now has \`tinyfish_a2a_scout\`, one **read-only** public search
+for A2A open-agent interoperability repositories. The registry allows at most
+one successful live run per day. It requires the host's \`TINYFISH_API_KEY\`.
+
+\`\`\`bash
+python -m agentz.cli run tinyfish_a2a_scout --mode dry-run
+python -m agentz.cli run tinyfish_a2a_scout --mode confirm
+\`\`\`
+
+The existing AgentZ daemon retains its original dry-run GovChain task.
+TinyFish **does not start automatically**. To opt into one research query
+per day in the long-running daemon, bind both runtime variables:
+
+\`\`\`
+TINYFISH_API_KEY=<secret set in host secret manager>
+AGENTZ_TINYFISH_SCOUT_ENABLED=true
+\`\`\`
+
+Only set these on the **real Python AgentZ service**, not on the similarly
+named Cloudflare Worker. The daemon rate-limits to at least 24 hours and
+does not log raw TinyFish content. It cannot send outreach, post content,
+create monitors, or use browser automation. To stop it, remove/disable
+\`AGENTZ_TINYFISH_SCOUT_ENABLED\` and restart the service. The flag defaults
+to off.
+
+The workflow's outputs are source URLs marked unverified, not partnership
+confirmations or evidence of authentication. The exact runner process
+must execute successfully on an authenticated host before launch is claimed.
 
 ## Release evidence requirements
 
