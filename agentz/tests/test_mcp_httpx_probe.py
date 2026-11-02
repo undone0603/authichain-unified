@@ -5,7 +5,7 @@ import unittest
 
 import httpx
 
-from agentz.integrations.mcp_httpx_probe import ENDPOINT, probe
+from agentz.integrations.mcp_httpx_probe import ENDPOINT, probe, probe_modern
 
 
 def ok(body, headers=None, status=200):
@@ -101,6 +101,51 @@ class HttpxMcpTests(unittest.TestCase):
 
     def test_not_mcp_not_success(self):
         self.assertEqual(self.run_probe(lambda _:httpx.Response(200,json={"protocol":"mcp","tools":[]}))["state"],"invalid_initialize_response")
+
+
+class ModernMcpTests(unittest.TestCase):
+    def run_modern(self, handle):
+        return asyncio.run(probe_modern(transport=httpx.MockTransport(handle)))
+
+    def test_modern_one_request_without_initialize_or_session(self):
+        seen=[]
+        def handler(req):
+            seen.append(req)
+            data=json.loads(req.content)
+            self.assertEqual(req.headers["mcp-protocol-version"], "2026-07-28")
+            self.assertEqual(req.headers["mcp-method"], "tools/list")
+            self.assertEqual(data["method"], "tools/list")
+            self.assertEqual(data["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"], "2026-07-28")
+            self.assertNotIn("mcp-session-id", req.headers)
+            self.assertNotIn("authorization", req.headers)
+            return ok({"jsonrpc":"2.0","id":1,"result":{"tools":[{"name":"verify_record"}]}})
+        r=self.run_modern(handler)
+        self.assertEqual(r["state"], "modern_mcp_listing_confirmed")
+        self.assertEqual(r["tools_count"], 1)
+        self.assertEqual(len(seen), 1)
+        self.assertFalse(r["tools_invoked"])
+
+    def test_modern_version_error_has_no_automatic_legacy_fallback(self):
+        requests=[]
+        def handler(req):
+            requests.append(req)
+            return httpx.Response(400,json={"jsonrpc":"2.0","id":1,"error":{"code":-32004,"message":"unsupported"}})
+        r=self.run_modern(handler)
+        self.assertEqual(r["state"],"unexpected_http_status")
+        self.assertEqual(len(requests), 1)
+
+    def test_modern_rpc_error_not_compatibility_success(self):
+        r=self.run_modern(lambda req:ok({"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found"}}))
+        self.assertEqual(r["state"],"modern_mcp_error")
+        self.assertFalse(r["confirmed"])
+
+    def test_modern_transport_error_is_inconclusive(self):
+        def handler(req): raise httpx.ConnectError("fake DNS issue",request=req)
+        self.assertEqual(self.run_modern(handler)["state"],"transport_unavailable")
+
+    def test_modern_get_discovery_json_is_not_jsonrpc(self):
+        r=self.run_modern(lambda req:ok({"protocol":"mcp","tools":[]}))
+        self.assertEqual(r["state"],"invalid_modern_tools_list_response")
 
 
 if __name__ == "__main__":
