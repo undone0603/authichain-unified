@@ -969,7 +969,9 @@ export function dppActivateUrl(
   sessionId: string,
   visitId?: string | null
 ): string {
-  const base = "https://authichain.govchain.us/dpp/activate";
+  // Keep checkout, receipt and customer activation on one trusted hostname.
+  // Old GovChain deep links can continue working, but must not be newly minted.
+  const base = "https://authichain.com/dpp/activate";
   const params = new URLSearchParams({ session_id: sessionId });
   if (visitId) params.set("visit_id", visitId);
   return `${base}?${params.toString()}`;
