@@ -5,7 +5,7 @@
  * activate POST are not handled here — they fall through to APP_PREFIXES.
  */
 
-import { PLANS, PLAN_CREDITS } from "../../../src/lib/plans";
+import { PLANS } from "../../../src/lib/plans";
 
 const HTML_HEADERS: Record<string, string> = {
   "Cache-Control": "private, no-store, no-cache, must-revalidate",
@@ -67,46 +67,46 @@ function thanksHtml(
   visitId: string,
   planId: string
 ): string {
+  // A return URL is not evidence of payment. Never claim "paid", "opened",
+  // credit delivery, or confirmation from query-string parameters.
+  const recognizedSession = /^cs_(?:live|test)_[A-Za-z0-9]+$/.test(sessionId);
+  if (!recognizedSession) {
+    return pageShell(
+      "Checkout not verified | AuthiChain",
+      `<p class="kicker">Checkout status</p>
+       <h1>Payment not verified</h1>
+       <p>No valid checkout session was supplied. Return to the offer or use your
+       payment confirmation email; this URL is not a receipt.</p>
+       <a class="btn" href="/checkout/dpp_readiness">Return to checkout</a>`
+    );
+  }
+
   const qs = new URLSearchParams({ session_id: sessionId });
   if (visitId) qs.set("visit_id", visitId);
-
   if (planId && planId !== "dpp_readiness") {
     const plan = PLANS.find(p => p.id === planId);
-    const credits = plan ? PLAN_CREDITS[plan.id] : 0;
-    const name = plan ? plan.name : "";
-
-    if (plan && credits > 0) {
-      const generateQs = new URLSearchParams({ paid: "1" });
-      if (sessionId) generateQs.set("session_id", sessionId);
-      if (visitId) generateQs.set("visit_id", visitId);
-      return pageShell(
-        `Payment received | AuthiChain`,
-        `<p class="kicker">Payment received</p>
-     <h1>${esc(name)} is ready</h1>
-     <p>Your payment added ${credits} generations to this account. Open the generator to use them.</p>
-     <a class="btn" href="/generate?${generateQs.toString()}">Open the generator</a>
-     <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email is also on the way.</p>`
-      );
-    }
-
-    // Known plan with no generation credits, or an id this worker does not
-    // recognise. Confirm the payment without claiming a product.
+    const product = plan ? ` for ${esc(plan.name)}` : "";
     return pageShell(
-      "Payment received | AuthiChain",
-      `<p class="kicker">Payment received</p>
-     <h1>Payment received</h1>
-     <p>${name ? `Your ${esc(name)} purchase is confirmed. ` : ""}A confirmation email with your next steps is on the way.</p>
-     <a class="btn" href="/">Back to AuthiChain</a>`
+      "Check checkout status | AuthiChain",
+      `<p class="kicker">Checkout return</p>
+       <h1>Check your payment status</h1>
+       <p>You returned from checkout${product}. Payment and access are confirmed
+       by Stripe-backed fulfillment, not by this page or its URL.</p>
+       <a class="btn" href="/generate">Open the generator</a>`
     );
   }
 
   return pageShell(
-    "Payment received | AuthiChain",
-    `<p class="kicker">Payment received</p>
-     <h1>Workspace opened</h1>
-     <p>Your payment opens an AuthiChain workspace with self-serve activation. Activate it below. The same link is in the confirmation email.</p>
-     <a class="btn" href="/dpp/activate?${qs.toString()}">Activate workspace</a>
-     <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email with the same link is also on the way.</p>`
+    "Check checkout status | AuthiChain",
+    `<p class="kicker">Checkout return</p>
+     <h1>Check your workspace activation</h1>
+     <p>Returning here does not establish that payment succeeded or a
+     workspace was opened. The activation service checks your Stripe session
+     before accepting a paid workspace activation.</p>
+     <a class="btn" href="/dpp/activate?${qs.toString()}">Check activation</a>
+     <p style="margin-top:1.5rem;font-size:.875rem">
+       If your payment is still processing, follow up using Stripe's confirmation
+       email. No payment is taken on this page.</p>`
   );
 }
 
