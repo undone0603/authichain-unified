@@ -110,7 +110,7 @@ test("same-host source URL substitution cannot pass fixed-source checks", async 
   const results = await inspectPublicSources(async (url) => ({
     ok: true,
     redirected: false,
-    url: url.replace(/\\/[^/]+$/, "/untrusted-copy.ts"),
+    url: url.slice(0, url.lastIndexOf("/") + 1) + "untrusted-copy.ts",
     body: new Response(paid + "\\n" + price).body,
   }));
   assert.ok(results.every(x => x.evidence_state === "coverage_unknown"));
