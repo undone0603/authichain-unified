@@ -27,7 +27,16 @@ async function run(body,requestHeaders=headers()){
 }
 test("modern list returns completed JSON-RPC result",async()=>{
  const r=await run(msg());assert.equal(r.http,200);assert.equal(r.payload.result.resultType,"complete");
+ assert.equal(r.payload.result.ttlMs,0);assert.equal(r.payload.result.cacheScope,"private");
  assert.equal(r.payload.result.tools[0].name,"verify_record");assert.equal(r.header,"2026-07-28");
+});
+test("cache hints are conservative for all modern tool lists",async()=>{
+ for(const id of [1,2,50]){
+   const r=await run(msg("tools/list",id));
+   assert.equal(r.payload.result.resultType,"complete");
+   assert.equal(r.payload.result.ttlMs,0);
+   assert.equal(r.payload.result.cacheScope,"private");
+ }
 });
 test("legacy initialize remains in legacy dispatcher",async()=>{
  const b=msg("initialize",2,"2025-06-18");const r=await run(b,{"MCP-Protocol-Version":"2025-06-18"});
