@@ -88,3 +88,33 @@ def test_headless_mode_dry_run_hides_key(capsys, monkeypatch):
     output = capsys.readouterr().out
     assert "sk-tinyfish-private-do-not-log" not in output
     assert json.loads(output)["connection"] == "api-key-http"
+
+def test_headless_transport_uses_http_api_key(monkeypatch):
+    import asyncio
+    import sys
+    import types
+    from contextlib import asynccontextmanager
+    from agentz.integrations.tinyfish_mcp import tinyfish_transport
+
+    secrets = []
+
+    @asynccontextmanager
+    async def fake_streamable_http_client(url, *, headers):
+        secrets.append((url, headers["X-API-Key"]))
+        yield "read", "write", "session"
+
+    mcp_client = types.ModuleType("mcp.client")
+    mcp_http = types.ModuleType("mcp.client.streamable_http")
+    mcp_http.streamable_http_client = fake_streamable_http_client
+    monkeypatch.setitem(sys.modules, "mcp", types.ModuleType("mcp"))
+    monkeypatch.setitem(sys.modules, "mcp.client", mcp_client)
+    monkeypatch.setitem(sys.modules, "mcp.client.streamable_http", mcp_http)
+    monkeypatch.setenv("TINYFISH_API_KEY", "test-secret")
+    monkeypatch.setenv("PATH", "")
+
+    async def run():
+        async with tinyfish_transport() as transport:
+            assert transport == ("read", "write")
+
+    asyncio.run(run())
+    assert secrets == [("https://agent.tinyfish.ai/mcp", "test-secret")]
