@@ -200,6 +200,7 @@
         "cloudflare-builds-status.yml": "manual",
         "d1-license-migrate.yml": "manual",
         "deploy-qron-ai-api.yml": "manual",
+        "deploy-qron-space.yml": "manual",
         "deploy-govchain-nft-base.yml": "manual",
         "deploy-manufacturer-status.yml": "manual",
         "deploy-authichain-app.yml": "manual",
