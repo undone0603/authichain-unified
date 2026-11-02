@@ -650,6 +650,43 @@ export async function handleStripeWebhook(
     });
   };
 
+  // A signed, positive-cash service checkout without a matching order is not
+  // fulfillment. Persist a durable operator hold; do not acknowledge a
+  // successful service-order settlement or erase a hold on Stripe replay.
+  const holdUnmatchedPaidServiceOrder = async (
+    result: Awaited<ReturnType<typeof handleServiceOrderPayment>>,
+    session: Stripe.Checkout.Session
+  ): Promise<boolean> => {
+    const pi = session.payment_intent;
+    const paymentIntentId =
+      typeof pi === "string" ? pi : pi && typeof pi === "object" ? pi.id : null;
+    if (
+      result?.handled !== false ||
+      result.reason !== "no service order for this session" ||
+      session.status !== "complete" ||
+      session.payment_status !== "paid" ||
+      session.mode !== "payment" ||
+      Boolean(session.subscription) ||
+      session.currency?.toLowerCase() !== "usd" ||
+      !Number.isSafeInteger(session.amount_total) ||
+      (session.amount_total ?? 0) <= 0 ||
+      typeof paymentIntentId !== "string" ||
+      !paymentIntentId.startsWith("pi_")
+    ) {
+      return false;
+    }
+    const hold = await logDelivery("reconciliation_required", {
+      httpStatus: 200,
+      error: "paid_service_order_missing_order",
+    });
+    if (!hold.ok || hold.detail === "base_columns_only") {
+      throw markRetryableFulfillment(
+        new Error("Could not persist paid service order reconciliation hold")
+      );
+    }
+    return true;
+  };
+
   // F1: claim the event id once in stripe_events (PRIMARY KEY event_id)
   // BEFORE any fulfillment or email. Drizzle/DATABASE_URL is absent on the
   // apex Worker, so this is the only duplicate check that works there.
@@ -708,6 +745,15 @@ export async function handleStripeWebhook(
       if (session.metadata?.type === "one_time_service") {
         const result = await handleServiceOrderPayment(serviceOrderSessionFromCheckout(session));
         serviceReplayed = result.handled;
+        if (await holdUnmatchedPaidServiceOrder(result, session)) {
+          return {
+            received: true,
+            type: event.type,
+            duplicate: true,
+            handled: false,
+            reconciliationRequired: true,
+          };
+        }
       }
       // A duplicate catalog delivery does not replay a credit grant. The
       // existing receipt may be a reconciliation hold: never overwrite it
@@ -1157,7 +1203,15 @@ export async function handleStripeWebhook(
 
         if (session.metadata?.type === "one_time_service") {
           try {
-            await handleServiceOrderPayment(serviceOrderSessionFromCheckout(session));
+            const result = await handleServiceOrderPayment(serviceOrderSessionFromCheckout(session));
+            if (await holdUnmatchedPaidServiceOrder(result, session)) {
+              return {
+                received: true,
+                type: event.type,
+                handled: false,
+                reconciliationRequired: true,
+              };
+            }
           } catch (serviceErr) {
             // A failed SQL transaction must remain retryable by Stripe.
             throw markRetryableFulfillment(serviceErr);
