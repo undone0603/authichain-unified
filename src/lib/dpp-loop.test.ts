@@ -255,6 +255,32 @@ describe("dpp-loop", () => {
     expect(summary.demoVisits).toBe(1);
   });
 
+  it("does not count fully discounted DPP checkouts as paying customers without demo metadata", () => {
+    const zeroCash = {
+      prospect_id: "discounted_1",
+      event_type: "dpp_loop:payment_succeeded",
+      timestamp: "2026-09-16T00:00:00.000Z",
+      metadata: { loop_stage: "payment_succeeded", amount_total: 0 },
+    };
+    const collectedCash = {
+      prospect_id: "customer_1",
+      event_type: "dpp_loop:payment_succeeded",
+      timestamp: "2026-09-16T00:00:00.000Z",
+      metadata: { loop_stage: "payment_succeeded", amount_total: 29900 },
+    };
+    expect(isDemoVisit([zeroCash])).toBe(true);
+    expect(isDemoVisit([collectedCash])).toBe(false);
+    expect(isDemoVisit([{
+      ...zeroCash,
+      event_type: "dpp_loop:checkout_started",
+      metadata: { loop_stage: "checkout_started", amount_total: 0 },
+    }])).toBe(false);
+    const summary = summarizeDppLoop([zeroCash, collectedCash]);
+    expect(summary.demoVisits).toBe(1);
+    expect(summary.visits).toBe(1);
+    expect(summary.funnel.payment_succeeded).toBe(1);
+  });
+
   it("pages through funnel_events instead of a single limit(5000)", async () => {
     const pages: number[] = [];
     const supabase = {
