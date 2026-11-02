@@ -1,0 +1,26 @@
+name: Public peer evidence probe (no secrets)
+on:
+  pull_request:
+    paths:
+      - 'scripts/alliances/public-evidence-probe.mjs'
+      - 'scripts/alliances/public-evidence-probe.test.mjs'
+      - 'docs/alliances/PUBLIC_PEER_CHALLENGE.md'
+      - '.github/workflows/public-peer-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-public-peer:
+    name: Offline public evidence boundaries
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Node version
+        run: node --version
+      - name: Verify syntax
+        run: node --check scripts/alliances/public-evidence-probe.mjs
+      - name: Execute no-network negative fixtures
+        run: node --test scripts/alliances/public-evidence-probe.test.mjs
