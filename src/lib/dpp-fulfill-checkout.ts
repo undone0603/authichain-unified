@@ -38,6 +38,8 @@ export type DppCheckoutSessionLike = {
   customer?: string | { id: string } | null;
   subscription?: string | { id: string } | null;
   amount_total?: number | null;
+  payment_status?: string | null;
+  status?: string | null;
 };
 
 function toId(
@@ -84,6 +86,12 @@ async function fulfillDppPaidSessionOnce(
     (typeof priceId === "string" && priceId) ||
     (typeof md.stripe_price_id === "string" ? md.stripe_price_id : null);
   if (!isDppOffer(md, linePriceId)) {
+    return { handled: false, profileId: null, activationEmail: "skipped" };
+  }
+  // This helper has multiple webhook callers. Do not assume each caller has
+  // already validated payment. A completed async checkout can still be unpaid;
+  // even signed Stripe events must be checked before grant side effects.
+  if (session.payment_status !== "paid" || session.status !== "complete") {
     return { handled: false, profileId: null, activationEmail: "skipped" };
   }
 
