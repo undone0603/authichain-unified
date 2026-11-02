@@ -410,6 +410,29 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     );
   });
 
+  it("retries a paid DPP webhook when the Supabase entitlement connection is absent", async () => {
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_dpp_missing_supabase", {
+        id: "cs_dpp_missing_supabase",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        amount_total: 29900,
+        customer_details: { email: "buyer@example.com" },
+        metadata: {
+          offer: "dpp_readiness_2026",
+          plan: "dpp_readiness",
+        },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(
+      "DPP entitlement database not configured"
+    );
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
+
   it("fulfills a paid DPP session even when Drizzle DATABASE_URL is missing", async () => {
     const { hasWebhookEventProcessed, logActivity, logAutomationAudit } =
       await import("../db.js");
