@@ -95,17 +95,16 @@ async def api_create_product(data: ProductCreate, supabase: Client = Depends(get
 
 @app.post("/scan", dependencies=[Depends(verify_token)])
 async def api_scan(data: ScanInput, supabase: Client = Depends(get_supabase)):
-    """Operator-only. Writes the product's score and can issue $QRON.
+    """Operator-only legacy scan telemetry. No authenticity or reward decision.
 
-    `verified` comes from assess_scans, which requires a checked signature and
-    a location check that actually ran. The signature is checked by the
-    reference verifier (agentz.core.signature); without a record, a trusted
-    issuer list or a product subject_id it stays "not_checked".
+    A valid offline signature and location heuristic are not proof of live
+    issuer authorization, revocation state or physical product binding.
+    Until a canonical trust decision is integrated, this endpoint cannot
+    verify an item or issue QRON rewards.
     """
     from agentz.core.media import generate_story_mode
     from agentz.core.signature import check_scan_signature
     from agentz.core.trust import assess_scans
-    from agentz.core.growth import reward_repeat_scans
 
     product = (
         supabase.table("products").select("metadata").eq("id", data.product_id)
@@ -121,9 +120,10 @@ async def api_scan(data: ScanInput, supabase: Client = Depends(get_supabase)):
         supabase, data.product_id, signature_valid=signature["signature_valid"]
     )
     narration = await generate_story_mode(supabase, data.product_id)
+    # No reward without an independently authorized canonical verification.
+    # Removing the call prevents a future score change from accidentally
+    # enabling value transfer through this legacy endpoint.
     reward = None
-    if assessment["verified"]:
-        reward = await reward_repeat_scans(supabase, data.wallet, data.product_id)
 
     return {
         "verified": assessment["verified"],
