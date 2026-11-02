@@ -41,6 +41,7 @@ describe("handleServiceOrderPayment", () => {
       payment_status: "paid",
       mode: "payment",
       amount_total: 19900,
+      currency: "usd",
     });
 
     expect(result).toEqual({ handled: true, orderId: 42 });
@@ -96,6 +97,7 @@ describe("handleServiceOrderPayment", () => {
       payment_status: "paid",
       mode: "payment",
       amount_total: 9900,
+      currency: "usd",
     });
 
     expect(result).toEqual({ handled: true, orderId: 43 });
@@ -111,6 +113,7 @@ describe("handleServiceOrderPayment", () => {
     ["completed but unpaid", { status: "complete", payment_status: "unpaid", amount_total: 19900 }],
     ["fully discounted paid-status", { status: "complete", payment_status: "paid", amount_total: 0 }],
     ["open despite paid status", { status: "open", payment_status: "paid", amount_total: 19900 }],
+    ["foreign-currency checkout", { status: "complete", payment_status: "paid", amount_total: 19900, currency: "eur" }],
   ])("never records revenue for %s", async (_name, overrides) => {
     vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue({
       id: 45,
@@ -124,6 +127,7 @@ describe("handleServiceOrderPayment", () => {
       id: "cs_test_unsettled",
       payment_intent: "pi_test_unsettled",
       mode: "payment",
+      currency: "usd",
       ...overrides,
     });
 
@@ -132,6 +136,32 @@ describe("handleServiceOrderPayment", () => {
     expect(db.logActivity).not.toHaveBeenCalled();
     expect(db.recordRevenue).not.toHaveBeenCalled();
     expect(db.createSystemNotification).not.toHaveBeenCalled();
+  });
+
+  it("records actual discounted cash rather than the catalog list price", async () => {
+    vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue({
+      id: 46,
+      userId: 7,
+      status: "pending",
+      amount: 19900,
+      serviceType: "authenticity_audit",
+    } as any);
+    const result = await handleServiceOrderPayment({
+      id: "cs_test_discounted",
+      payment_intent: "pi_test_discounted",
+      status: "complete",
+      payment_status: "paid",
+      mode: "payment",
+      amount_total: 1000,
+      currency: "usd",
+    });
+    expect(result).toEqual({ handled: true, orderId: 46 });
+    expect(db.recordRevenue).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: "10.00", currency: "USD" }),
+    );
+    expect(db.logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ details: expect.objectContaining({ amount: 1000 }) }),
+    );
   });
 
   it("is idempotent — ignores an already-paid order without side effects", async () => {
