@@ -5,6 +5,23 @@ on:
     branches: [main]
     paths:
       - "worker-app/**"
+      # worker-app/index.ts dynamically imports these signed webhook and DPP
+      # fulfillment modules. Source changes must never be silently omitted
+      # from the production Worker build/deployment provenance.
+      - "server/webhooks/stripe.ts"
+      - "server/services/order-payment-handler.ts"
+      - "src/lib/stripe-webhook-claim.ts"
+      - "src/lib/stripe-webhook-log.ts"
+      - "src/lib/stripe-construct-event.ts"
+      - "src/lib/retryable-fulfillment.ts"
+      - "src/lib/provisioning.ts"
+      - "src/lib/dpp-activate.ts"
+      - "src/lib/dpp-loop.ts"
+      - "src/lib/dpp-fulfill-checkout.ts"
+      - "src/lib/plans.ts"
+      - "src/lib/checkout-gate.ts"
+      - "src/lib/billing/**"
+      - "src/lib/founder-exit/**"
       - ".github/workflows/deploy-authichain-edge-router.yml"
       - "scripts/ci/parse-wrangler-version-id.mjs"
       - "scripts/ci/promote-worker-version.mjs"
