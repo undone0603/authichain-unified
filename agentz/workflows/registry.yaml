@@ -1233,6 +1233,28 @@ workflows:
       Dry-run sends no HTTP. Never sends mail, deploys, merges, or rotates
       AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64.
 
+  - id: peer_feedback_learning
+    title: "AgentZ: triage public third-party review signals into safe learning actions"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.peer_learning
+    type: composite
+    estimated_minutes: 1
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    max_runs_per_day: 1
+    rollback_strategy: "Do not invoke this workflow; no external writes occur."
+    description: |
+      Offline-only curated GitHub/GitLab source snapshot to a local AgentZ
+      learning checkpoint. All peer test reports remain unverified until
+      independently reproduced. No network, outreach, paid API, deployments,
+      trust promotions, or changes to production_send/humanHold.
+
   - id: tinyfish_a2a_scout
     title: "TinyFish: discover public open A2A agent interoperability projects"
     priority: medium
