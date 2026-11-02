@@ -20,6 +20,7 @@ import { provisionPurchase } from "@/lib/provisioning";
 const {
   mockAfterCalls,
   mockRetrieve,
+  mockCheckoutRetrieve,
   mockAnchorSale,
   mockAnchorReversal,
   mockConstructEvent,
@@ -29,6 +30,7 @@ const {
 } = vi.hoisted(() => {
   const mockAfterCalls: Array<() => unknown> = [];
   const mockRetrieve = vi.fn();
+  const mockCheckoutRetrieve = vi.fn();
   const mockAnchorSale = vi.fn().mockResolvedValue(undefined);
   const mockAnchorReversal = vi.fn().mockResolvedValue(undefined);
   const mockConstructEvent = vi.fn();
@@ -137,6 +139,7 @@ const {
   return {
     mockAfterCalls,
     mockRetrieve,
+    mockCheckoutRetrieve,
     mockAnchorSale,
     mockAnchorReversal,
     mockConstructEvent,
@@ -177,7 +180,10 @@ vi.mock("next/server", () => ({
 vi.mock("stripe", () => ({
   default: class MockStripe {
     subscriptions = { retrieve: mockRetrieve };
-    checkout = { sessions: { list: vi.fn().mockResolvedValue({ data: [] }) } };
+    checkout = { sessions: {
+      list: vi.fn().mockResolvedValue({ data: [] }),
+      retrieve: mockCheckoutRetrieve,
+    } };
     constructor(..._args: unknown[]) {}
   },
 }));
@@ -214,8 +220,26 @@ vi.mock("@/lib/email", () => ({
   sendEmail: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/dpp-loop", () => ({
+  DPP_PRICE_ID: "price_1TwmD8GqTruSqV8TpAF8dfyA",
   recordDppLoopEvent: vi.fn().mockResolvedValue(undefined),
-  isDppOffer: () => false,
+  classifyRetrievedDppCheckout: (session: {
+    status?: string;
+    payment_status?: string;
+    mode?: string;
+    metadata?: { plan?: string; offer?: string };
+    line_items?: { data?: Array<{ price?: { id?: string } }> };
+  }) => {
+    const price = session.line_items?.data?.[0]?.price?.id;
+    const claimed = session.metadata?.plan === "dpp_readiness" ||
+      session.metadata?.offer === "dpp_readiness_2026";
+    if (session.status !== "complete" || session.payment_status !== "paid") {
+      return claimed ? "not_paid" : "other";
+    }
+    if (claimed && price !== "price_1TwmD8GqTruSqV8TpAF8dfyA") {
+      return "reconciliation_required";
+    }
+    return price === "price_1TwmD8GqTruSqV8TpAF8dfyA" ? "dpp" : "other";
+  },
   dppActivateUrl: () => "https://authichain.com/dpp/activate",
 }));
 vi.mock("@/lib/dpp-fulfill-checkout", () => ({
@@ -260,6 +284,16 @@ async function flushAfter() {
 
 function postInvoice(event: unknown) {
   mockConstructEvent.mockResolvedValue(event);
+  const checkout = (event as { data?: { object?: Record<string, unknown> } })
+    ?.data?.object;
+  mockCheckoutRetrieve.mockResolvedValue({
+    ...checkout,
+    status: checkout?.status ?? "complete",
+    mode: checkout?.mode ?? "payment",
+    line_items: {
+      data: [{ price: { id: "price_starter" }, quantity: 1 }],
+    },
+  });
   // Request shape matches the next/server mock above.
 
   const req = {
