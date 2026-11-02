@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { classifyComments, CRON, observe, selfTest, SOURCES } from "./src/index.mjs";
+import { ALARM_INTERVAL_MS, AgentZLearningAlarm, classifyComments, observe, selfTest, SOURCES } from "./src/index.mjs";
 
 test("synthetic classifier is safe and has no validation promotion", () => {
   assert.equal(selfTest(), true);
-  assert.equal(CRON, "17 */6 * * *");
+  assert.equal(ALARM_INTERVAL_MS, 21_600_000);
 });
 
 test("third-party reply is feedback, not a conformance pass", () => {
@@ -55,4 +55,22 @@ test("large public metadata response is coverage-unknown", async () => {
   const payload = "x".repeat(130 * 1024);
   const report = await observe(async () => new Response(payload, { status: 200 }));
   assert.ok(report.sources.every(s => s.evidence_state === "coverage_unknown"));
+});
+
+test("Durable Object arms once without using account cron triggers", async () => {
+  let next = null;
+  const store = new Map();
+  const ctx = { storage: {
+    getAlarm: async () => next,
+    setAlarm: async (value) => { next = value; },
+    get: async (key) => store.get(key),
+    put: async (key, value) => { store.set(key, value); },
+  }};
+  const obj = new AgentZLearningAlarm(ctx, {});
+  const first = await (await obj.fetch(new Request("https://internal/status"))).json();
+  assert.equal(first.alarm_armed, true);
+  const when = next;
+  const second = await (await obj.fetch(new Request("https://internal/status"))).json();
+  assert.equal(second.alarm_armed, true);
+  assert.equal(next, when); // repeated checks do not multiply scheduled runs
 });
