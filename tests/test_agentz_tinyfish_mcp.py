@@ -48,6 +48,17 @@ def test_private_and_unsafe_urls_refused(url):
         public_url(url)
 
 
+@pytest.mark.parametrize("url", [
+    "https://example.com/path\nheader",
+    "https://example.com/path\rheader",
+    "https://example.com\tadmin",
+    "https://example.com/path\x7f",
+])
+def test_raw_control_characters_refused(url):
+    with pytest.raises(ValueError, match="control characters"):
+        public_url(url)
+
+
 def test_unlisted_actions_refused():
     with pytest.raises(ValueError):
         request_for("run_web_automation", ["https://example.com"])
