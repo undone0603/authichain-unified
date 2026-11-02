@@ -1130,6 +1130,11 @@ export async function handleStripeWebhook(
               typeof session.payment_intent === "string"
                 ? session.payment_intent
                 : undefined,
+            status: session.status,
+            payment_status: session.payment_status,
+            mode: session.mode,
+            subscription: session.subscription,
+            amount_total: session.amount_total,
           });
         }
 
