@@ -804,11 +804,13 @@ test("a malformed certificate id is a 404", async () => {
   assert.equal((await get("/cert/garbage")).status, 404);
 });
 
-test("/thanks and /success serve the DPP thanks page", async () => {
+test("/thanks and /success never claim payment without a checkout reference", async () => {
   for (const path of ["/thanks", "/success"]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
-    assert.match(await res.text(), /Payment received/);
+    const html = await res.text();
+    assert.match(html, /No checkout reference provided/);
+    assert.doesNotMatch(html, /Payment received|Workspace opened/);
   }
 });
 
