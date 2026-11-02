@@ -156,6 +156,29 @@ describe("tryHandleDppRoute", () => {
     expect(await tryHandleDppRoute(req("/dpp"))).toBeNull();
   });
 
+  it("rejects malformed session IDs before showing an activation form", async () => {
+    const payload = "</script><script>window.pwned=1</script>";
+    const res = tryHandleDppRoute(
+      req("/dpp/activate?session_id=" + encodeURIComponent(payload))
+    );
+    const html = await res!.text();
+    expect(html).toContain("Missing checkout session");
+    expect(html).not.toContain("window.pwned=1");
+    expect(html).not.toContain('id="f"');
+  });
+
+  it("escapes the visitor ID before including it in inline activation JavaScript", async () => {
+    const payload = "</script><script>window.pwned=1</script>";
+    const res = tryHandleDppRoute(
+      req("/dpp/activate?session_id=cs_test_1&visit_id=" + encodeURIComponent(payload))
+    );
+    const html = await res!.text();
+    expect(html).toContain("Activate your workspace");
+    expect(html).not.toContain(payload);
+    expect(html).toContain("\\u003c/script>");
+    expect(html).not.toContain("<script>window.pwned=1</script>");
+  });
+
   it("returns null for unrelated paths", async () => {
     expect(await tryHandleDppRoute(req("/protocol"))).toBeNull();
   });
