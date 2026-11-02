@@ -74,3 +74,11 @@ test("Durable Object arms once without using account cron triggers", async () =>
   assert.equal(second.alarm_armed, true);
   assert.equal(next, when); // repeated checks do not multiply scheduled runs
 });
+
+test("HTTP access denial is unknown with a safe diagnostic category", async () => {
+  const report = await observe(async () => new Response("forbidden", { status: 403 }));
+  assert.equal(report.sources.length, 2);
+  assert.ok(report.sources.every(s => s.evidence_state === "coverage_unknown"));
+  assert.ok(report.sources.every(s => s.failure_category === "upstream_rate_limit_or_denied"));
+  assert.ok(!JSON.stringify(report).includes("forbidden"));
+});
