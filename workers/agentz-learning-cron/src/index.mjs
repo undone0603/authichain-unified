@@ -82,7 +82,7 @@ export async function observe(fetcher = fetch) {
   const results = [];
   for (const source of SOURCES) {
     const url = `https://api.github.com/repos/${source.owner}/${source.repo}/issues/${source.issue}/comments?per_page=${MAX_ITEMS}`;
-    let failureCategory = "transport_or_parse_failure";
+    let failureCategory = "transport_failure";
     try {
       // AbortSignal.timeout may be unavailable in some Worker runtimes.
       // Do not make the entire source fail simply due to that API difference.
@@ -102,7 +102,9 @@ export async function observe(fetcher = fetch) {
           : "upstream_http_failure";
         throw new Error("Upstream refused public metadata read");
       }
+      failureCategory = "body_read_or_json_failure";
       const rows = await readBoundedJson(res);
+      failureCategory = "invalid_comment_schema";
       results.push(classifyComments(rows, source));
     } catch {
       // Report only fixed category names, never exception contents, URLs,
@@ -158,7 +160,7 @@ export class AgentZLearningAlarm {
     // an unbounded polling loop or bypass the six-hour schedule.
     if (last?.sources?.length &&
         last.sources.every(x => x.evidence_state === "coverage_unknown")) {
-      const retryKey = "unknown_retry_" + new Date().toISOString().slice(0, 10);
+      const retryKey = "unknown_retry_diagnostic_v2_" + new Date().toISOString().slice(0, 10);
       if (!(await this.ctx.storage.get(retryKey))) {
         await this.ctx.storage.put(retryKey, true);
         await this.ctx.storage.setAlarm(Date.now() + 15_000);
