@@ -82,20 +82,34 @@ export async function observe(fetcher = fetch) {
   const results = [];
   for (const source of SOURCES) {
     const url = `https://api.github.com/repos/${source.owner}/${source.repo}/issues/${source.issue}/comments?per_page=${MAX_ITEMS}`;
+    let failureCategory = "transport_or_parse_failure";
     try {
+      // AbortSignal.timeout may be unavailable in some Worker runtimes.
+      // Do not make the entire source fail simply due to that API difference.
+      const signal = typeof AbortSignal !== "undefined" &&
+        typeof AbortSignal.timeout === "function"
+        ? AbortSignal.timeout(8000) : undefined;
       const res = await fetcher(url, {
         method: "GET", redirect: "error",
         headers: { "Accept": "application/vnd.github+json",
                    "User-Agent": "AuthiChain-AgentZ-Edge-ReadOnly/0.1" },
-        signal: AbortSignal.timeout(8000),
+        ...(signal ? { signal } : {}),
       });
+      if (!res.ok) {
+        failureCategory = res.status === 403 || res.status === 429
+          ? "upstream_rate_limit_or_denied"
+          : res.status === 404 ? "upstream_not_found"
+          : "upstream_http_failure";
+        throw new Error("Upstream refused public metadata read");
+      }
       const rows = await readBoundedJson(res);
       results.push(classifyComments(rows, source));
     } catch {
-      // Do not claim that zero findings means healthy coverage. Avoid logging
-      // network errors that might include sensitive upstream details.
+      // Report only fixed category names, never exception contents, URLs,
+      // headers, request metadata, or untrusted text.
       results.push({
         source: source.label, evidence_state: "coverage_unknown",
+        failure_category: failureCategory,
         external_feedback_candidates: null, independent_test_passes: 0,
         next_action: "retry_later_without_outbound",
       });
@@ -163,6 +177,7 @@ export class AgentZLearningAlarm {
       observed_at_utc: report.observed_at_utc,
       sources: report.sources.map(x => ({
         source: x.source, evidence_state: x.evidence_state,
+        failure_category: x.failure_category ?? null,
         external_feedback_candidates: x.external_feedback_candidates,
         independent_test_passes: 0,
       })),
