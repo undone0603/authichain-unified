@@ -11,6 +11,7 @@ on:
       - 'agentz/tests/test_agent_threats.py'
       - 'agentz/tests/test_offline_scan_cannot_certify.py'
       - 'agentz/tests/test_geo_unknown.py'
+      - 'agentz/tests/test_geo_no_punitive_side_effects.py'
       - 'agentz/tests/test_scan_redeem_auth.py'
       - '.github/workflows/agent-evidence-triage.yml'
   workflow_dispatch:
@@ -32,4 +33,4 @@ jobs:
       - name: Verify agent threat and QR scan anomaly classifiers
         env:
           PYTHONPATH: ${{ github.workspace }}
-        run: python3 -m pytest -q agentz/tests/test_agent_threats.py agentz/tests/test_scan_alerts.py agentz/tests/test_offline_scan_cannot_certify.py agentz/tests/test_geo_unknown.py
+        run: python3 -m pytest -q agentz/tests/test_agent_threats.py agentz/tests/test_scan_alerts.py agentz/tests/test_offline_scan_cannot_certify.py agentz/tests/test_geo_unknown.py agentz/tests/test_geo_no_punitive_side_effects.py
