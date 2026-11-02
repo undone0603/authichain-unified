@@ -41,6 +41,7 @@ describe("activateDppMerchant", () => {
     ["expired and unpaid", "expired", "unpaid"],
   ])("rejects %s even for a DPP plan", async (_label, status, payment_status) => {
     retrieve.mockResolvedValueOnce({
+      mode: "payment",
       status,
       payment_status,
       amount_total: 29900,
@@ -74,6 +75,7 @@ describe("activateDppMerchant", () => {
     ["wrong explicit plan with DPP price", "price_1TwmD8GqTruSqV8TpAF8dfyA", "musa_claim_file"],
   ])("rejects %s", async (_label, priceId, plan) => {
     retrieve.mockResolvedValueOnce({
+      mode: "payment",
       payment_status: "paid",
       status: "complete",
       amount_total: 29900,
@@ -101,8 +103,40 @@ describe("activateDppMerchant", () => {
     expect(from).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["paginated Stripe line items", { line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" }, quantity: 1 }], has_more: true } }],
+    ["multiple DPP units", { line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" }, quantity: 2 }], has_more: false } }],
+    ["recurring subscription mode", { mode: "subscription" }],
+    ["subscription reference on payment mode", { subscription: "sub_unexpected" }],
+    ["explicitly unknown checkout mode", { mode: null }],
+  ])("rejects %s without reading entitlements or creating activation", async (_label, override) => {
+    retrieve.mockResolvedValueOnce({
+      mode: "payment",
+      status: "complete",
+      payment_status: "paid",
+      metadata: { plan: "dpp_readiness" },
+      customer_details: { email: "buyer@example.com" },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" }, quantity: 1 }], has_more: false },
+      ...override,
+    });
+    const from = vi.fn();
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: { session_id: "cs_test_ambiguous", categories: "LMT", markets: "DE", labeling: "Wh" },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(400);
+      expect(result.error).toMatch(/Not a DPP workspace session/);
+    }
+    expect(from).not.toHaveBeenCalled();
+  });
+
   it("rejects a paid $299 session whose line item is another product", async () => {
     retrieve.mockResolvedValueOnce({
+      mode: "payment",
       payment_status: "paid",
       status: "complete",
       amount_total: 29900,
@@ -134,6 +168,7 @@ describe("activateDppMerchant", () => {
 
   it("rejects a $0 session that is not a DPP offer", async () => {
     retrieve.mockResolvedValueOnce({
+      mode: "payment",
       payment_status: "paid",
       status: "complete",
       amount_total: 0,
@@ -164,6 +199,7 @@ describe("activateDppMerchant", () => {
     ["profile lookup failed", null, { message: "storage unavailable" }, 503],
   ])("never claims activation when %s", async (_label, profile, lookupError, expectedStatus) => {
     retrieve.mockResolvedValueOnce({
+      mode: "payment",
       payment_status: "paid",
       status: "complete",
       metadata: { plan: "dpp_readiness", visit_id: "stripe_visit" },
@@ -202,6 +238,7 @@ describe("activateDppMerchant", () => {
 
   it("does not trust a body visit_id over Stripe's checkout attribution", async () => {
     retrieve.mockResolvedValueOnce({
+      mode: "payment",
       payment_status: "paid",
       status: "complete",
       metadata: { plan: "dpp_readiness", visit_id: "stripe_visit" },
@@ -256,6 +293,7 @@ describe("activateDppMerchant", () => {
     ["event insertion", true],
   ])("returns unavailable rather than claiming activation after %s failure", async (_label, failWrite) => {
     retrieve.mockResolvedValueOnce({
+      mode: "payment",
       payment_status: "paid", status: "complete",
       metadata: { plan: "dpp_readiness", visit_id: "visit_1" },
       customer_details: { email: "buyer@example.com" },
@@ -309,6 +347,7 @@ describe("activateDppMerchant", () => {
 
   it("returns and persists an importer_file on first paid DPP activation", async () => {
     retrieve.mockResolvedValueOnce({
+      mode: "payment",
       payment_status: "paid",
       status: "complete",
       amount_total: 29900,
