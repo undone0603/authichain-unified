@@ -14,6 +14,10 @@ class Context:
     def __init__(self, mode):
         self.mode = mode
         self.verbose = False
+        self.state = None
+
+    def save_state(self, data):
+        self.state = data
 
 
 def test_dry_run_never_requires_auth_or_calls_network(monkeypatch):
@@ -45,6 +49,14 @@ def test_only_https_source_links_are_printable():
     assert refs == ["https://github.com/a2aproject/a2a", "https://example.org/example"]
 
 
+def test_strips_query_tokens_from_source_url():
+    assert _public_references({
+        "structured_content": {
+            "results": [{"url": "https://example.org/agent?secret=never-log#fragment"}]
+        }
+    }) == ["https://example.org/agent"]
+
+
 def test_malformed_untrusted_output_does_not_crash():
     assert _public_references({
         "content": ["this is not JSON", "[null]", '{"results":"bad"}'],
@@ -66,7 +78,12 @@ def test_success_response_reports_count_without_sending(monkeypatch):
         }
     monkeypatch.setenv("TINYFISH_API_KEY", "dummy-test-key")
     monkeypatch.setattr(adapter, "call_tinyfish", fake_call)
-    result = run(Context(Mode.CONFIRM))
+    ctx = Context(Mode.CONFIRM)
+    result = run(ctx)
+    assert ctx.state["tool"] == "tinyfish.search"
+    assert ctx.state["verification"] == "unverified"
+    assert ctx.state["sources"] == ["https://github.com/a2aproject/a2a"]
+    assert "observed_at_utc" in ctx.state
     assert "references=1" in result
     assert "no outreach or payments" in result
 
