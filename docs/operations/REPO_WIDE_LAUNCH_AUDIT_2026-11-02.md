@@ -80,6 +80,10 @@ All four Workers had deployed version records in Cloudflare. None of these obser
 5. **Commercial:** Reconcile one independent live payment to a signed webhook, durable grant and delivered service. No founder self-purchase is customer proof.
 6. **AgentZ:** The read-only AgentCard preflight and MCP HTTPX diagnostic reside in draft PR #2275, not `main`. Public discovery is live, but the edge learning Worker explicitly says it is not the Python daemon; an official A2A TCK pass has not been demonstrated.
 
+## Exact-source local regression evidence (2026-11-02)
+
+The two committed dependency-free smoke-test files were reconstructed on an isolated Node.js 22.16.0 runner. `git hash-object` matched their GitHub blob SHA-1 exactly: `3bdf9d96f8ee8119e47c92a5b603ec3c11515ff8` (runner) and `aba743d075522706ccc228cfc307e2ddae02d171` (mock suite). `node --test scripts/launch/four-domain-smoke.test.mjs` completed **11/11 passed, 0 failures**, in 154.49 ms. No outbound HTTP requests occur in this mocked suite, and no production services changed. The separate three source-invariant tests remain **authored but not executed** in this local run; eight equivalent textual source properties were checked successfully against GitHub readback. Hosted exact-head CI and independent review remain outstanding.
+
 ## Verification and release state
 
 - **Complete:** Tracked-tree enumeration at pinned SHA; representative high-risk source-path inspection; read-only domain/Cloudflare and opportunity-view checks; no-payment QA fixtures committed to a review branch.
