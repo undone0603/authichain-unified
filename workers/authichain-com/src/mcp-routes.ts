@@ -31,6 +31,7 @@ import {
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
+import { handleModernMcpDiscovery } from "./mcp-modern-discovery";
 
 type McpEnv = X402Env & {
   /** Service binding to authichain-edge-router. Public fetch of this zone returns 522. */
@@ -1328,6 +1329,14 @@ async function handleRpc(
   } catch {
     return rpcError(null, "invalid JSON", -32700);
   }
+  // MCP 2026-07-28 stateless metadata is validated before any legacy path.
+  // The modern adapter only lists tools; no modern tools/call is authorized.
+  const modernResponse = handleModernMcpDiscovery(request, body, () => {
+    hydrateX402(env);
+    return mcpTools(env);
+  });
+  if (modernResponse) return modernResponse;
+
   const method = body.method ?? "";
   const id = body.id;
 
@@ -1587,7 +1596,7 @@ export async function tryHandleMcp(
         // clients on every call; omitting them here failed the preflight
         // for any browser-side MCP client before the request was made.
         "Access-Control-Allow-Headers":
-          "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID, X-PAYMENT, PAYMENT-SIGNATURE",
+          "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id, Last-Event-ID, X-PAYMENT, PAYMENT-SIGNATURE",
         "Access-Control-Expose-Headers":
           "MCP-Protocol-Version, Mcp-Session-Id, WWW-Authenticate",
         "Access-Control-Max-Age": "86400",
