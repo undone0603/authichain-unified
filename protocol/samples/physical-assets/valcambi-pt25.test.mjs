@@ -18,7 +18,7 @@ test("no serial, GTIN, image bytes, or issuer claims leak in public record", () 
  assert.equal(data.evidence.length, 2);
  for (const e of data.evidence) {
    assert.match(e.sha256, /^[a-f0-9]{64}$/);
-   assert.match(e.file, /^private\\//);
+   assert.equal(e.file.startsWith("private/"), true);
    assert.match(e.availability, /^private/);
  }
 });
