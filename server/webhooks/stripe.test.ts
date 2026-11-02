@@ -169,6 +169,7 @@ beforeEach(async () => {
   vi.mocked(db.logAutomationAudit).mockResolvedValue(undefined);
   growthRecordRpc.mockResolvedValue({ error: null });
   claimStripeEventMock.mockResolvedValue("claimed");
+  vi.mocked(recordStripeWebhookDelivery).mockResolvedValue({ ok: true });
   mockCheckoutRetrieve.mockImplementation(async () => {
     const event = mockConstructEvent.mock.results.at(-1)?.value;
     const session = event?.data?.object || {};
