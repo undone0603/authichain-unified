@@ -17,7 +17,7 @@ permissions:
 jobs:
   tinyfish-offline:
     name: TinyFish offline safety (no credentials or service calls)
-    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
