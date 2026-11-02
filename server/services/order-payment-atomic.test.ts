@@ -19,7 +19,7 @@ function fakeDatabase(claims: Array<{ id: number; userId: number | null; service
   const where = vi.fn(() => ({ returning }));
   const set = vi.fn(() => ({ where }));
   const update = vi.fn(() => ({ set }));
-  const values = vi.fn(async () => undefined);
+  const values = vi.fn(async (_value: unknown) => undefined);
   const insert = vi.fn(() => ({ values }));
   const tx = { update, insert };
   const transaction = vi.fn(async (callback: (transaction: typeof tx) => Promise<boolean>) => callback(tx));
