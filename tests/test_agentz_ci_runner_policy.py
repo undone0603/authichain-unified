@@ -31,4 +31,4 @@ def test_verify_and_heal_protects_self_hosted_runner_from_prs():
         'fromJSON('
     )
     assert "'ubuntu-24.04'" in selector
-    assert "'authichain-ops'" in selector
+    assert '"authichain-ops"' in selector
