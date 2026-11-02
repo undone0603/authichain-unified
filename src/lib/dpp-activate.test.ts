@@ -146,6 +146,132 @@ describe("activateDppMerchant", () => {
     });
   }
 
+  it("fails closed when prior activation receipt lookup fails", async () => {
+    retrieve.mockResolvedValueOnce({
+      mode: "payment",
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      metadata: { plan: "dpp_readiness" },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+    });
+    const insert = vi.fn();
+    const from = vi.fn(() => ({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            order: () => ({
+              limit: async () => ({
+                data: null,
+                error: { message: "read failed" },
+              }),
+            }),
+          }),
+        }),
+      }),
+      insert,
+    }));
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_failed_read",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(503);
+      expect(result.error).toBe("Activation record lookup failed");
+    }
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("does not report activated when the durable event insert fails", async () => {
+    retrieve.mockResolvedValueOnce({
+      mode: "payment",
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      metadata: { plan: "dpp_readiness" },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+    });
+    const insert = vi.fn().mockResolvedValue({
+      error: { message: "database write failed" },
+    });
+    const from = vi.fn(() => ({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            order: () => ({
+              limit: async () => ({ data: [], error: null }),
+            }),
+          }),
+        }),
+      }),
+      insert,
+    }));
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_failed_insert",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(insert).toHaveBeenCalledOnce();
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(503);
+      expect(result.error).toBe("Activation could not be recorded");
+    }
+  });
+
+  it("refuses to activate when a buyer's profile lookup fails", async () => {
+    retrieve.mockResolvedValueOnce({
+      mode: "payment",
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      metadata: { plan: "dpp_readiness" },
+      customer_details: { email: "buyer@example.com" },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+    });
+    const from = vi.fn(() => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({
+            data: null,
+            error: { message: "profile read failed" },
+          }),
+        }),
+      }),
+    }));
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_profile_read_failed",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(503);
+      expect(result.error).toBe("Customer record lookup failed");
+    }
+    expect(from).toHaveBeenCalledTimes(1);
+  });
+
   it("returns and persists an importer_file on first paid DPP activation", async () => {
     retrieve.mockResolvedValueOnce({
       mode: "payment",
