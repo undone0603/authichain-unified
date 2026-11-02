@@ -264,8 +264,10 @@ describe("activateDppMerchant", () => {
             select: () => ({
               eq: () => ({
                 eq: () => ({
-                  order: () => ({
+                  contains: () => ({
+                    order: () => ({
                     limit: async () => ({ data: [], error: null }),
+                  }),
                   }),
                 }),
               }),
@@ -321,11 +323,13 @@ describe("activateDppMerchant", () => {
         select: () => ({
           eq: () => ({
             eq: () => ({
-              order: () => ({
+              contains: () => ({
+                order: () => ({
                 limit: async () => ({
                   data: failWrite ? [] : null,
                   error: failWrite ? null : { message: "read failed" },
                 }),
+              }),
               }),
             }),
           }),
@@ -376,8 +380,10 @@ describe("activateDppMerchant", () => {
           select: () => ({
             eq: () => ({
               eq: () => ({
-                order: () => ({
+                contains: () => ({
+                  order: () => ({
                   limit: async () => ({ data: [], error: null }),
+                }),
                 }),
               }),
             }),
@@ -415,5 +421,63 @@ describe("activateDppMerchant", () => {
     expect(inserted?.metadata?.importer_file?.product?.categories).toBe(
       "LMT e-bike"
     );
+  });
+
+  it("queries prior activations by the exact Stripe session instead of a truncated visit history", async () => {
+    retrieve.mockResolvedValueOnce({
+      mode: "payment",
+      status: "complete",
+      payment_status: "paid",
+      metadata: { plan: "dpp_readiness", visit_id: "repeat_visit" },
+      customer_details: { email: "buyer@example.com" },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" }, quantity: 1 }] },
+    });
+    const contains = vi.fn(() => ({
+      order: () => ({
+        limit: async () => ({
+          data: [{ metadata: { stripe_session_id: "cs_earlier_purchase" } }],
+          error: null,
+        }),
+      }),
+    }));
+    const insert = vi.fn();
+    const from = vi.fn((table: string) =>
+      table === "profiles"
+        ? {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: { id: "prof_1", last_grant_session_id: "cs_earlier_purchase" },
+                  error: null,
+                }),
+              }),
+            }),
+          }
+        : {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({ contains }),
+              }),
+            }),
+            insert,
+          }
+    );
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_earlier_purchase",
+        categories: "LMT",
+        markets: "DE",
+        labeling: "Wh",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(contains).toHaveBeenCalledWith("metadata", {
+      stripe_session_id: "cs_earlier_purchase",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.already_activated).toBe(true);
+    expect(insert).not.toHaveBeenCalled();
   });
 });
