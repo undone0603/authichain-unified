@@ -17,6 +17,9 @@ test("exact main SHA and paginated quality gate are required before any deploy",
   assert.match(yaml, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
   assert.match(yaml, /git rev-parse origin\/main/);
   assert.match(yaml, /github\.paginate\(github\.rest\.checks\.listForRef/);
+  assert.match(yaml, /uses: actions\\/github-script@[0-9a-f]{40}/);
+  assert.doesNotMatch(yaml, /uses: actions\\/github-script@v[0-9]+/);
+
   assert.match(yaml, /Main quality gate/);
   assert.match(yaml, /latest\.conclusion !== 'success'/);
   assert.ok(yaml.indexOf("Require successful exact-head Main quality gate") < yaml.indexOf("Publish pinned authichain-edge-router only"));
