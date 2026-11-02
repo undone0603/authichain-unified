@@ -1,81 +1,82 @@
 # AgentZ + TinyFish MCP (read-only research)
 
-AgentZ uses the owner's configured TinyFish MCP endpoint through the exact stdio bridge:
+## Architecture
+
+The project-root `.mcp.json` retains the user's exact developer-client bridge:
 
 ```json
-{ "command": "npx", "args": ["-y", "mcp-remote", "https://agent.tinyfish.ai/mcp"] }
+{
+  "command": "npx",
+  "args": ["-y", "mcp-remote", "https://agent.tinyfish.ai/mcp"]
+}
 ```
 
-The project-root `.mcp.json` exposes this configuration to MCP-aware development
-assistants. **The AgentZ Python daemon does not automatically load `.mcp.json`.**
-The separate `agentz.integrations.tinyfish_mcp` client and `agentz tinyfish` CLI
-explicitly invoke the same bridge, with a hard-coded allowlist.
+**AgentZ's Python service does not load `.mcp.json`.** It uses
+`agentz.integrations.tinyfish_mcp` through `python -m agentz.cli tinyfish`
+and chooses one of two transports:
+
+- **Headless / production-capable:** If `TINYFISH_API_KEY` is set, the Python MCP SDK connects directly to `https://agent.tinyfish.ai/mcp` over Streamable HTTP with an `X-API-Key` header; Node.js is not required.
+- **Interactive developer fallback:** If no API key exists, the same adapter runs `npx -y mcp-remote https://agent.tinyfish.ai/mcp`, using that host user's OAuth session. This requires Node.js, `npx`, and usually first-run browser authentication.
+
+The Python MCP SDK is included in `requirements-agentz.txt`. The existing
+`Dockerfile.agentz-daemon` installs those requirements, but its scheduled task
+does **not** invoke TinyFish automatically. Deployment, a secured `TINYFISH_API_KEY`
+runtime secret, and an explicit authorized research workflow remain separate
+gates.
 
 ## Capabilities and trust boundary
 
-- Enabled through the AgentZ CLI: TinyFish `search` and `fetch_content` only.
-- **Not enabled**: web automation, browser profiles, posting, form submissions,
-  monitor creation, paid actions, Stripe operations, or production outreach.
-- Fetched pages are untrusted evidence; they are not instructions for AgentZ.
-- Read-only search/fetch results should retain source URLs and observation times
-  before being promoted to AuthiChain provenance claims.
-- No user token or TinyFish credential belongs in the repository or PR.
+- **Allowed:** `search` and `fetch_content`, each explicitly validated in the CLI.
+- **Not enabled:** browser automations, signed-in profile control, monitoring,
+  posting, form submissions, payment actions, external messaging, or outreach.
+- Webpage text and search snippets are **untrusted evidence**, never executable
+  instructions to AgentZ. Preserve URL and retrieval time before citing.
+- URL validation blocks private IP literals and common numeric aliases, but
+  cannot prove that any DNS hostname stays public; rely on TinyFish's own
+  network safety controls as well.
+- Neither API key nor OAuth cache belongs in code, Docker layers, CI logs,
+  PRs, audit records, or stdout.
+- Any new tools or write operations require a separate policy review.
 
-## Setup on the AgentZ host
-
-1. Ensure Node.js / `npx` can run and that Python dependencies for AgentZ exist.
-2. Install the MCP Python client in the AgentZ environment:
-
-   ```bash
-   python -m pip install 'mcp>=1.12,<2'
-   ```
-
-3. From the repo root, validate an offline request:
-
-   ```bash
-   python -m agentz.cli tinyfish search 'Agent2Agent protocol specification' --dry-run
-   python -m agentz.cli tinyfish fetch_content https://github.com/a2aproject/A2A --dry-run
-   ```
-
-4. Run the first interactive command in the *AgentZ host's* user session:
-
-   ```bash
-   python -m agentz.cli tinyfish search 'Agent2Agent protocol specification'
-   ```
-
-   The `mcp-remote` OAuth browser login may be required. Finish the TinyFish
-   sign-in for **that host and user**; ChatGPT's own connection does not grant
-   the remote AgentZ service permission. Keep any OAuth cache out of the repo.
-
-5. Verify a fetch only after search works:
-
-   ```bash
-   python -m agentz.cli tinyfish fetch_content https://github.com/a2aproject/A2A
-   ```
-
-## Runtime/deployment caveats
-
-- `Dockerfile.agentz-daemon` currently uses `python:3.12-slim` and does **not**
-  install Node.js, `mcp-remote`, or the `mcp` Python SDK. This PR does not
-  provision TinyFish in that deployment and does not change the daemon schedule.
-- For a headless deployment, separately design key-based authentication using
-  TinyFish's documented API-key path/local proxy. Do not copy a personal OAuth
-  cache into an image. Do not silently switch a long-running daemon to an
-  interactive login flow.
-- TinyFish's own documentation distinguishes free search/fetch from billable
-  browser automation and monitoring; this integration intentionally excludes
-  those billable operations.
-- PR merge, CI success, deployment and live AgentZ authentication are distinct
-  evidence gates. A functioning TinyFish plugin in ChatGPT verifies neither
-  the deployed AgentZ container nor its credentials.
-
-## Offline tests
+## Local setup and testing
 
 ```bash
+python -m pip install -r requirements-agentz.txt
 python -m pytest -q tests/test_agentz_tinyfish_mcp.py
+python -m agentz.cli tinyfish search 'Agent2Agent protocol specification' --dry-run
+python -m agentz.cli tinyfish fetch_content https://github.com/a2aproject/a2a --dry-run
 ```
+
+### Headless AgentZ host (preferred for noninteractive execution)
+
+1. Create a TinyFish API key at https://agent.tinyfish.ai/api-keys.
+2. Inject it as the runtime secret `TINYFISH_API_KEY`, using your host's
+   secure secret manager. Do not paste it into a GitHub file or command log.
+3. After the code has passed review and is deployed to that runtime, run:
+
+```bash
+python -m agentz.cli tinyfish search 'Agent2Agent protocol specification'
+python -m agentz.cli tinyfish fetch_content https://github.com/a2aproject/a2a
+```
+
+The adapter sends `X-API-Key` to the hosted MCP endpoint when the secret is
+present. Its dry-run prints **only the selected transport**, never the key.
+
+### Local OAuth fallback
+
+Without `TINYFISH_API_KEY`, install Node.js/`npx` and run the same commands.
+The first call may open `mcp-remote` OAuth sign-in on **that host**. ChatGPT's
+TinyFish connection does not authenticate the AgentZ host.
+
+## Release evidence requirements
+
+Record separately: local tests; repo CI; accepted PR/merge; dependency install;
+remote AgentZ auth; live Search+Fetch; and deployed service revision.
+Fail-closed on transport errors. A successful ChatGPT TinyFish search is not
+proof that remote AgentZ has started.
 
 ## References
 
-- TinyFish MCP: https://github.com/tinyfish-io/tinyfish-mcp-server
-- Agent2Agent protocol: https://github.com/a2aproject/a2a
+- [TinyFish MCP server and API-key documentation](https://github.com/tinyfish-io/tinyfish-mcp-server)
+- [TinyFish MCP integration](https://docs.tinyfish.ai/mcp-integration)
+- [Agent2Agent protocol](https://github.com/a2aproject/a2a)
