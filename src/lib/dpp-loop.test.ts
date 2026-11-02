@@ -593,7 +593,7 @@ describe("economic state", () => {
       loopRow("b", "checkout_started"),
       loopRow("c", "attributed_visit"),
       loopRow("c", "checkout_started"),
-      loopRow("c", "payment_succeeded"),
+      loopRow("c", "payment_succeeded", { amount_total: 29900 }),
       loopRow("demo", "attributed_visit", { demo: true }),
       loopRow("demo", "payment_succeeded", { demo: true }),
     ]);
@@ -610,6 +610,42 @@ describe("economic state", () => {
       continued: 0,
       drop: 1,
     });
+  });
+
+  it("keeps zero-cash and unknown-total checkouts out of the paid economic funnel", () => {
+    const rows = [
+      loopRow("unknown", "attributed_visit"),
+      loopRow("unknown", "checkout_started"),
+      loopRow("unknown", "payment_succeeded"),
+      loopRow("unknown", "provisioned"),
+      loopRow("zero", "attributed_visit"),
+      loopRow("zero", "payment_succeeded", { amount_total: 0 }),
+      loopRow("zero", "provisioned"),
+      loopRow("genuine", "attributed_visit"),
+      loopRow("genuine", "checkout_started"),
+      loopRow("genuine", "payment_succeeded", { amount_total: 29900 }),
+      loopRow("genuine", "provisioned"),
+    ];
+    const result = countEconomicStates(rows);
+    // A complimentary workspace can be granted, but it isn't cash revenue.
+    // An unknown payment total must remain unverified for revenue reporting.
+    expect(result.demoVisits).toBe(1);
+    expect(result.visits).toBe(2);
+    expect(result.reached.CHECKOUT_STARTED).toBe(2);
+    expect(result.reached.PAID).toBe(1);
+    expect(result.reached.PROVISIONED).toBe(1);
+  });
+
+  it("does not accept negative, fractional or string totals as cash evidence", () => {
+    for (const amount_total of [-100, 0.1, "29900", null, undefined]) {
+      const result = countEconomicStates([
+        loopRow("uncertain", "attributed_visit"),
+        loopRow("uncertain", "payment_succeeded", { amount_total }),
+        loopRow("uncertain", "merchant_activated"),
+      ]);
+      expect(result.reached.PAID).toBe(0);
+      expect(result.reached.ACTIVATED).toBe(0);
+    }
   });
 
   it("keeps a larger top-of-funnel drop ahead of a smaller paid drop", async () => {
