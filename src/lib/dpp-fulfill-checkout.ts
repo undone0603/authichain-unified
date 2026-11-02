@@ -97,10 +97,13 @@ async function fulfillDppPaidSessionOnce(
   }
 
   const subscriptionId = toId(session.subscription);
-  if (session.mode === "subscription" || subscriptionId) {
-    console.error(
-      `[dpp-fulfill] refusing DPP grant for recurring checkout: session=${session.id} mode=${session.mode ?? "unknown"}`
-    );
+  if (session.mode !== "payment" || subscriptionId) {
+    // No recurring, setup, or missing-mode session may issue a one-time grant.
+    return { handled: false, profileId: null, activationEmail: "skipped" };
+  }
+  // Do not let buyer-controlled attribution select a different entitlement.
+  // The verified DPP price determines the plan, not checkout metadata.
+  if (typeof md.plan === "string" && md.plan.length > 0 && md.plan !== "dpp_readiness") {
     return { handled: false, profileId: null, activationEmail: "skipped" };
   }
 
@@ -114,7 +117,7 @@ async function fulfillDppPaidSessionOnce(
     .toLowerCase()
     .trim();
   const brand = getBrandIdFromMetadata(md);
-  const plan = md.plan || "dpp_readiness";
+  const plan = "dpp_readiness";
   const demo = isDppDemoSession(md);
   emitTrustEvent("fulfillment.started", { session_id: session.id, plan, demo });
   const loopMeta = {
