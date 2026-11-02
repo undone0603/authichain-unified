@@ -70,6 +70,21 @@ def test_discovered_private_and_control_character_urls_refused():
     }) == ["https://example.org/clean"]
 
 
+def test_malformed_source_urls_do_not_abort_good_sources():
+    response = {"structured_content": {"results": [
+        {"url": "https://[broken"},
+        {"url": "https://[not-an-ip]/path"},
+        {"url": "https://example.org/safe"},
+    ]}}
+    assert _public_references(response) == ["https://example.org/safe"]
+
+
+def test_null_and_malformed_content_gracefully_ignored():
+    assert _public_references({"content": None}) == []
+    assert _public_references({"content": {"results": []}}) == []
+    assert _public_references({"content": [None, 42, "{malformed"]}) == []
+
+
 def test_malformed_untrusted_output_does_not_crash():
     assert _public_references({
         "content": ["this is not JSON", "[null]", '{"results":"bad"}'],
