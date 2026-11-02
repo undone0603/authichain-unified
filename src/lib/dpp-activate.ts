@@ -89,7 +89,9 @@ export async function activateDppMerchant(opts: {
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
     expand: ["line_items"],
   });
-  if (session.payment_status !== "paid" && session.status !== "complete") {
+  // A completed Checkout Session can still be unpaid for asynchronous
+  // payment methods. Never unlock a workspace until Stripe reports paid.
+  if (session.payment_status !== "paid" || session.status !== "complete") {
     return { ok: false, status: 402, error: "Checkout session is not paid" };
   }
 
