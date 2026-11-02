@@ -49,7 +49,13 @@ def _public_references(response: dict) -> list[str]:
                 continue
             if parsed.username or parsed.password or len(url) > 2048:
                 continue
-            if not parsed.hostname or parsed.hostname.endswith(".local"):
+            if any(ord(char) < 32 or ord(char) == 127 for char in url):
+                continue
+            # Apply the same local/private-host guard as the MCP fetch adapter.
+            from agentz.integrations.tinyfish_mcp import public_url
+            try:
+                public_url(url)
+            except ValueError:
                 continue
             # Remove fragments and query strings, which may carry private tokens.
             source = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
