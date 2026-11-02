@@ -117,21 +117,37 @@ export async function activateDppMerchant(opts: {
   )
     .toLowerCase()
     .trim();
-  const visitId =
-    (opts.body.visit_id || "").trim() ||
-    String(
-      md.visit_id || md.prospect_id || session.client_reference_id || sessionId
-    );
+  // The request body cannot choose the prospect associated with the
+  // purchase. Bind attribution to Stripe-supplied checkout fields only.
+  const visitId = String(
+    md.visit_id || md.prospect_id || session.client_reference_id || sessionId
+  );
 
-  let profileId: string | null = null;
-  if (email) {
-    const { data: profile } = await opts.supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
-    profileId = (profile?.id as string) || null;
+  // Stripe payment completion alone does not mean the webhook has persisted
+  // the buyer's entitlement. A false activation success would conceal a paid
+  // but unfulfilled order; give the buyer a retryable "not ready" response.
+  if (!email) {
+    return { ok: false, status: 409, error: "Buyer identity unavailable for activation" };
   }
+  const { data: profile, error: grantLookupError } = await opts.supabase
+    .from("profiles")
+    .select("id, last_grant_session_id")
+    .eq("email", email)
+    .maybeSingle();
+  if (grantLookupError) {
+    return { ok: false, status: 503, error: "Entitlement lookup unavailable" };
+  }
+  if (
+    !profile?.id ||
+    profile.last_grant_session_id !== sessionId
+  ) {
+    return {
+      ok: false,
+      status: 409,
+      error: "Paid checkout is awaiting entitlement fulfillment",
+    };
+  }
+  const profileId = profile.id as string;
 
   const { data: prior } = await opts.supabase
     .from("funnel_events")
