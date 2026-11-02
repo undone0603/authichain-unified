@@ -1479,6 +1479,21 @@ describe("handleStripeWebhook — stripe_events claim fails closed (PM-338)", ()
     expect(recordStripeWebhookDelivery).not.toHaveBeenCalled();
   });
 
+  it("returns retryable 500 for an in-flight duplicate before any side effects", async () => {
+    await setup("evt_claim_in_flight");
+    claimStripeEventMock.mockResolvedValueOnce("in_flight");
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const { StripeEventClaimUnavailableError } =
+      await import("../../src/lib/stripe-webhook-claim");
+    const err = await handleStripeWebhook(RAW_BODY, SIG).catch(e => e);
+    expect(err).toBeInstanceOf(StripeEventClaimUnavailableError);
+    expect(err.httpStatus).toBe(500);
+    expect(err.message).toContain("still in flight");
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(recordStripeWebhookDelivery).not.toHaveBeenCalled();
+  });
+
   it("still lets Stripe dashboard evt_test_ events through", async () => {
     await setup("evt_test_claim_down");
     claimStripeEventMock.mockResolvedValueOnce("unavailable");
