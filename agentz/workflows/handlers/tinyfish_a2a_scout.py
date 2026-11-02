@@ -72,7 +72,7 @@ def run(ctx: ExecutionContext) -> str:
 
     try:
         response = asyncio.run(call_tinyfish("search", [QUERY]))
-    except Exception as exc:
+    except Exception:
         # The registry runner records traceback/error text. Never let a
         # transport exception containing headers or tokens reach that log.
         raise RuntimeError("TinyFish scout transport failed") from None
