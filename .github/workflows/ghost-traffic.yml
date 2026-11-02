@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   run-strike:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 30
     # Manual runs (workflow_dispatch) are always allowed. Scheduled light
     # probes run only once GHOST_TRAFFIC_ENABLED is "true" — same kill-switch

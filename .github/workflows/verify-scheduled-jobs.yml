@@ -35,7 +35,7 @@ permissions:
 jobs:
   verify:
     name: Run and verify
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 20
     steps:
       - name: Require DATABASE_URL
