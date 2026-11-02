@@ -40,6 +40,46 @@ assert frame.intents[0].status == "proposed_only"
 assert frame.consciousness_claim == "not_assessed"
 ```
 
+
+## Focus-of-focus — observing attention without executing it
+
+`agentz/spin_focus.py` accepts one existing, digest-verified SPIN frame and
+operator-supplied ratings of each proposed intent's relevance and novelty.
+It chooses **only an unexecuted proposal** with sufficient cited evidence:
+
+```python
+from agentz.spin_experiment import Evidence, Intent, spin_cycle
+from agentz.spin_focus import FocusCandidate, inspect_own_focus, inspect_focus_review
+
+frame = spin_cycle(
+    (Evidence("ci-1", "CI jobs failed before execution", .95),),
+    (Intent("Audit CI runner eligibility", "analyze", ("ci-1",)),),
+)
+review = inspect_own_focus(
+    frame, "verify safe customer fulfillment",
+    (FocusCandidate(intent_index=0, relevance=.9, novelty=.1),),
+)
+assert inspect_focus_review(frame, review) == "proposal_only_no_execution"
+```
+
+The review records evidence-derived priority, attention drift (unweighted
+relevance gap), and a second-order tamper check. **Ratings are subjective
+inputs, not automatically verified facts.** A held intent, weak evidence, or
+unrecognized action category cannot become executable. A high novelty score
+reduces priority when it exceeds objective relevance; it never creates
+permissions. No internal component assigns itself authorization.
+
+Run the complete local sandbox tests using:
+
+```sh
+python -m unittest discover -s agentz/tests -p 'test_spin*.py' -v
+```
+
+On 2026-11-02, an isolated local Python 3 interpreter executed **13/13 tests**
+for the exact four Git blob hashes committed to PR #2282. This proves only
+these local code paths, not the full repository's CI, platform deployment, or
+synthetic consciousness. The module has not been integrated into production.
+
 ## Research follow-up
 
 Measure source-grounding, calibration, drift across cycles, audit integrity,
