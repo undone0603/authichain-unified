@@ -1,7 +1,7 @@
 """
 agentz.core.trust
 -----------------
-Trust Agent: Computes authenticity scores and detects counterfeit patterns.
+Trust Agent: Computes scan heuristics only; not physical authenticity.
 Enhanced with Geospatial Anomaly Detection (Phase 19).
 """
 from __future__ import annotations
@@ -10,12 +10,12 @@ from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger("agentz.trust")
 
-# Anything above this, with every check actually run and passed, is "verified".
+# Historical heuristic threshold, never an authenticity or authorization gate.
 VERIFIED_THRESHOLD = 90.0
 
 def calculate_authenticity(scan_history: Dict[str, Any]) -> float:
     """
-    Computes an authenticity score (0-100) based on scan history and patterns.
+    Computes a risk heuristic (0-100) from incomplete scan observations.
     """
     score = 100.0
     
