@@ -3,30 +3,18 @@
     "playwright": {
       "type": "local",
       "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp@latest",
-        "--headless"
-      ],
-      "tools": [
-        "*"
-      ]
+      "args": ["-y", "@playwright/mcp@latest", "--headless"],
+      "tools": ["*"]
     },
     "authichain-api": {
       "type": "local",
       "command": "npx",
-      "args": [
-        "-y",
-        "tsx",
-        "server/mcp/api.ts"
-      ],
+      "args": ["-y", "tsx", "server/mcp/api.ts"],
       "env": {
         "AUTHICHAIN_API_BASE": "https://authichain.com",
         "AUTHICHAIN_API_KEY": "${AUTHICHAIN_API_KEY}"
       },
-      "tools": [
-        "*"
-      ]
+      "tools": ["*"]
     },
     "supabase": {
       "type": "local",
@@ -40,22 +28,13 @@
       "env": {
         "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
       },
-      "tools": [
-        "*"
-      ]
+      "tools": ["*"]
     },
     "tinyfish": {
       "type": "local",
       "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "https://agent.tinyfish.ai/mcp"
-      ],
-      "tools": [
-        "search",
-        "fetch_content"
-      ]
+      "args": ["-y", "mcp-remote", "https://agent.tinyfish.ai/mcp"],
+      "tools": ["search", "fetch_content"]
     }
   }
 }
