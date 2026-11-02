@@ -573,13 +573,17 @@ export async function recordDppLoopEventOnce(
   }
 
   try {
-    await recordDppLoopEvent(supabase, {
-      ...input,
-      metadata: {
-        ...(input.metadata || {}),
-        ...(input.dedupeKey ? { dedupe_key: input.dedupeKey } : {}),
+    await recordDppLoopEvent(
+      supabase,
+      {
+        ...input,
+        metadata: {
+          ...(input.metadata || {}),
+          ...(input.dedupeKey ? { dedupe_key: input.dedupeKey } : {}),
+        },
       },
-    }, { strict: true });
+      { strict: true }
+    );
     return { recorded: true };
   } catch {
     // Analytics remain best-effort, but publication and verification callers
