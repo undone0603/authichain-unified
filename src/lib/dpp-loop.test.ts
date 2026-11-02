@@ -59,6 +59,36 @@ function activatedRow(
 }
 
 describe("dpp-loop", () => {
+  it("strict activation event insertion fails closed when storage rejects a write", async () => {
+    const from = vi.fn(() => ({
+      insert: async () => ({ error: { message: "db sensitive details" } }),
+    }));
+    await expect(
+      recordDppLoopEvent(
+        { from },
+        { visitId: "visit_1", stage: "merchant_activated", stripeSessionId: "cs_test_1" },
+        { strict: true },
+      )
+    ).rejects.toThrow("DPP event storage unavailable");
+    expect(from).toHaveBeenCalledWith("funnel_events");
+  });
+
+  it("optional analytics loop writes still do not block application flow", async () => {
+    const from = vi.fn(() => ({
+      insert: async () => ({ error: { message: "db unavailable" } }),
+    }));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(recordDppLoopEvent(
+        { from },
+        { visitId: "visit_1", stage: "attributed_visit" },
+      )).resolves.toBeUndefined();
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+
   it("detects offer by metadata and price id", () => {
     expect(isDppOffer({ offer: DPP_OFFER_KEY })).toBe(true);
     expect(isDppOffer({ plan: "dpp_readiness" })).toBe(true);
