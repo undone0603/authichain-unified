@@ -1636,4 +1636,99 @@ describe("service-order webhook retry and product isolation", () => {
     expect(handleServiceOrderPayment).toHaveBeenCalledTimes(1);
     expect(provisionPurchase).not.toHaveBeenCalled();
   });
+  it("persists a reconciliation hold when paid service checkout has no matching order", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: false, reason: "no service order for this session",
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_service_missing_order", session),
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true, handled: false, reconciliationRequired: true,
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_service_missing_order",
+        status: "reconciliation_required",
+        error: "paid_service_order_missing_order",
+      }),
+    );
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("rechecks unmatched paid service orders on duplicate signed events", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    claimStripeEventMock.mockResolvedValue("duplicate");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: false, reason: "no service order for this session",
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_service_missing_replay", session),
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true, duplicate: true, handled: false, reconciliationRequired: true,
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_service_missing_replay",
+        status: "reconciliation_required",
+      }),
+    );
+  });
+
+  it("fails retryably if the missing-order hold can only write legacy base columns", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: false, reason: "no service order for this session",
+    });
+    recordStripeWebhookDelivery
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, detail: "base_columns_only" });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_service_hold_legacy", session),
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_service_hold_legacy",
+        status: "reconciliation_required",
+      }),
+    );
+  });
+
+  it("does not call an unpaid service checkout fulfilled or create a paid hold", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: false, reason: "no service order for this session",
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_service_unpaid_no_hold", {
+        ...session, payment_status: "unpaid",
+      }),
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({ received: true, handled: false });
+    expect(result.reconciliationRequired).toBeUndefined();
+    expect(recordStripeWebhookDelivery).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: "reconciliation_required" }),
+    );
+  });
+
 });
