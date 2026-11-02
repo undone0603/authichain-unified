@@ -287,6 +287,20 @@ describe("fulfillDppPaidSession", () => {
     expect(rows).toHaveLength(0);
   });
 
+  it("refuses a paid other-product price despite DPP metadata", async () => {
+    const from = vi.fn();
+    const session = {
+      ...paidSession,
+      id: "cs_paid_other_offer",
+      amount_total: 29900,
+    };
+    const result = await fulfillDppPaidSession({ from }, session, "price_other_299");
+    expect(result).toEqual({
+      handled: false, profileId: null, activationEmail: "skipped",
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
   it("treats the catalog price id as a DPP offer without metadata.offer", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(
