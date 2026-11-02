@@ -296,6 +296,35 @@ describe("tryHandleX402", () => {
     expect(replies[1].result.tasks?.length).toBe(1);
   });
 
+  it("rejects oversized anonymous A2A messages before task creation", async () => {
+    const request = req("/api/a2a", {
+      method: "POST",
+      headers: { "content-type": "application/json", "A2A-Version": "1.0" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 1, method: "SendMessage",
+        params: { message: { parts: [{ text: "x".repeat(70_000) }] } },
+      }),
+    });
+    const result = await tryHandleX402(request);
+    expect(result?.status).toBe(413);
+    expect(await result!.json()).toEqual({ error: "a2a_request_too_large" });
+  });
+
+  it("enforces byte limits even without Content-Length", async () => {
+    const request = req("/api/a2a", {
+      method: "POST",
+      headers: { "content-type": "application/json", "A2A-Version": "1.0" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 2, method: "SendMessage",
+        params: { message: { parts: [{ text: "🔥".repeat(20_000) }] } },
+      }),
+    });
+    request.headers.delete("content-length");
+    const result = await tryHandleX402(request);
+    expect(result?.status).toBe(413);
+    expect(await result!.json()).toEqual({ error: "a2a_request_too_large" });
+  });
+
   it("GET /.well-known/lumi-monitor.txt is the Watch-trial domain proof", async () => {
     const res = await tryHandleX402(req("/.well-known/lumi-monitor.txt"));
     expect(res).not.toBeNull();
