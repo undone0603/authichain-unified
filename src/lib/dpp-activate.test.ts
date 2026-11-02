@@ -251,6 +251,62 @@ describe("activateDppMerchant", () => {
     expect(insert.mock.calls[0]?.[0]?.prospect_id).toBe("stripe_visit");
   });
 
+  it.each([
+    ["history lookup", false],
+    ["event insertion", true],
+  ])("returns unavailable rather than claiming activation after %s failure", async (_label, failWrite) => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid", status: "complete",
+      metadata: { plan: "dpp_readiness", visit_id: "visit_1" },
+      customer_details: { email: "buyer@example.com" },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+    });
+    const insert = vi.fn().mockResolvedValue({
+      error: failWrite ? { message: "storage failed" } : null,
+    });
+    const from = vi.fn((table: string) => {
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({
+                data: { id: "prof_1", last_grant_session_id: "cs_paid_pending" },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              order: () => ({
+                limit: async () => ({
+                  data: failWrite ? [] : null,
+                  error: failWrite ? null : { message: "read failed" },
+                }),
+              }),
+            }),
+          }),
+        }),
+        insert,
+      };
+    });
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_paid_pending",
+        categories: "LMT", markets: "DE", labeling: "Wh",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(503);
+    expect(insert).toHaveBeenCalledTimes(failWrite ? 1 : 0);
+  });
+
   it("returns and persists an importer_file on first paid DPP activation", async () => {
     retrieve.mockResolvedValueOnce({
       payment_status: "paid",
