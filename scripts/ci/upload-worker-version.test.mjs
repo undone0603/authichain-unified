@@ -55,7 +55,7 @@ test("metadata keeps secrets and assets; never sends secret_text values", () => 
   assert.doesNotMatch(JSON.stringify(meta), /AUTHICHAIN_ATTESTATION/);
 });
 
-test("curl argv is IPv4 HTTP/2 raw multipart with retries and a header file", () => {
+test("curl argv is IPv4 HTTP/1.1 raw multipart with retries and a header file", () => {
   const argv = curlArgv({
     url: versionsUploadUrl(ACCOUNT, "authichain-edge-router"),
     bodyPath: "/tmp/body.mime",
@@ -64,10 +64,10 @@ test("curl argv is IPv4 HTTP/2 raw multipart with retries and a header file", ()
   });
   assert.equal(argv[0], "curl");
   assert.ok(argv.includes("--ipv4"));
-  assert.ok(argv.includes("--http2"));
-  assert.equal(argv.includes("--http1.1"), false);
+  assert.ok(argv.includes("--http1.1"));
+  assert.equal(argv.includes("--http2"), false);
   assert.ok(argv.includes("--retry"));
-  assert.ok(argv.includes("480"));
+  assert.ok(argv.includes("600"));
   assert.ok(argv.includes("--retry-all-errors"));
   assert.ok(argv.includes("--data-binary"));
   assert.equal(argv[argv.indexOf("--write-out") + 1], CURL_WRITE_OUT);
