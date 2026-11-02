@@ -51,6 +51,10 @@ for (const [name, override, expected] of [
   ["two units", { line_items: { data: [
     { price: { id: price }, quantity: 2 },
   ], has_more: false } }, false],
+  ["quantity missing", { line_items: { data: [{ price: { id: price } }], has_more: false } }, false],
+  ["quantity null", { line_items: { data: [{ price: { id: price }, quantity: null }], has_more: false } }, false],
+  ["quantity zero", { line_items: { data: [{ price: { id: price }, quantity: 0 }], has_more: false } }, false],
+  ["fractional quantity", { line_items: { data: [{ price: { id: price }, quantity: 0.5 }], has_more: false } }, false],
   ["recurring checkout", { mode: "subscription" }, false],
   ["subscription reference", { subscription: "sub_unexpected" }, false],
   ["missing checkout mode", { mode: null }, false],
