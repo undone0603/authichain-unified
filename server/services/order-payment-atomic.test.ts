@@ -30,6 +30,15 @@ function fakeDatabase(claims: Array<{ id: number; userId: number | null; service
 beforeEach(() => vi.resetAllMocks());
 
 describe("settleServiceOrderPaymentAtomic", () => {
+  it("uses an injected request-scoped transaction without Node DATABASE_URL", async () => {
+    const f = fakeDatabase([{ id: 42, userId: 7, serviceType: "audit" }]);
+    const requestDb = { transaction: f.transaction } as any;
+    await expect(settleServiceOrderPaymentAtomic(evidence, requestDb)).resolves.toBe(true);
+    expect(getDb).not.toHaveBeenCalled();
+    expect(f.transaction).toHaveBeenCalledTimes(1);
+    expect(f.insert).toHaveBeenCalledTimes(3);
+  });
+
   it("writes one activity, revenue and notification only after winning the pending CAS", async () => {
     const f = fakeDatabase([{ id: 42, userId: 7, serviceType: "authenticity_audit" }]);
     await expect(settleServiceOrderPaymentAtomic(evidence)).resolves.toBe(true);
