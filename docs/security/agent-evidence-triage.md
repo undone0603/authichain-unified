@@ -10,6 +10,29 @@ Status: **source-level read-only proposal**, not production detection. Checked: 
 4. Database failures or absent required observations are *unknown*, not clean. No outbound message, takedown, revocation, product withdrawal, or change to payment/production flags occurs. The alert logger is local, without consumer contact or external reporting.
 5. Only an independent signed record, current issuer authorization, durable revocation state and appropriate physical-world supply-chain evidence can support further verification. A web page, an A2A card, a successful TLS connection, and a valid cryptographic signature each establish **different things**.
 
+## Geography evidence and source coverage
+
+The existing legacy geographic heuristic also needs a careful trust boundary.
+The original `detect_geospatial_anomalies` could treat missing country data
+as a mismatch, and `assess_scans` defaulted an absent product target market
+to `US`. Both are ungrounded assumptions for a global supply chain.
+
+The proposed implementation now requires an explicitly configured
+`metadata.target_market` and at least three complete country observations.
+Incomplete, missing or unusable observations produce
+`checks.location=unknown`, never `clear` or `anomaly`. Country names are
+compared case-insensitively. Three or more observations outside the
+declared market remain an *investigation heuristic*, not a counterfeit,
+unauthorized distribution or physical authenticity verdict. Geography can
+be spoofed, and a legitimate item may cross regions.
+
+The focused suite now includes `agentz/tests/test_geo_unknown.py`,
+covering absent market, missing country, insufficient observations,
+normalization, cross-border review and the legacy scan API boundary.
+The 36-test focused suite was executed against all six exact committed
+source blobs after the change; the full project and route integration
+tests remain gated by independent CI.
+
 ## Legacy /scan reward and authenticity boundary
 
 A new high-impact fail-closed control is proposed on this branch. The Python
