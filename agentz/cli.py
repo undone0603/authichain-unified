@@ -165,7 +165,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         with open(args.json_out, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2)
 
-    if any(r.status == "failed" for r in results):
+    # A blocked launch attempt must never look successful to the daemon,
+    # a scheduler, or an external orchestrator just because nothing ran.
+    if any(r.status in {"failed", "blocked"} for r in results):
         return 1
     return 0
 
