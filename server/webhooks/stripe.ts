@@ -374,50 +374,22 @@ async function recordStarterGrowthEvent(
 
 async function fulfillDppCheckoutIfPaid(
   session: Stripe.Checkout.Session
-): Promise<void> {
-  // $0 DPP-SMOKE sessions still arrive as payment_status=paid. Do not
-  // gate on amount_total > 0 or is_demo — that was not the live miss,
-  // and it would drop every current smoke.
-  if (session.payment_status !== "paid") return;
+): Promise<"dpp" | "other" | "reconciliation_required" | "not_paid"> {
+  if (session.payment_status !== "paid") return "not_paid";
 
-  const { isDppOffer } = await import("../../src/lib/dpp-loop");
-  const linePriceId = checkoutLinePriceId(session);
-  if (!isDppOffer(session.metadata || {}, linePriceId)) return;
-
-  // Collision guard: DPP readiness is a one-time $299 audit. A recurring
-  // (subscription-mode) Session must never enter the DPP grant path, even
-  // when its metadata claims the DPP offer — the subscription lifecycle
-  // handler owns recurring entitlements.
-  if (isRecurringCheckoutSession(session)) {
-    console.error(
-      "[stripe-webhook] refusing DPP fulfill for recurring checkout: " +
-        `session=${session.id} mode=${session.mode ?? "unknown"}`
-    );
-    try {
-      await auditSafe(
-        "billing_unfulfillable_subscription",
-        {
-          eventId: null,
-          stripeSessionId: session.id,
-          reason: "recurring_session_claimed_dpp_offer",
-          linePriceId,
-        },
-        undefined
-      );
-    } catch (auditErr) {
-      console.warn(
-        "[stripe-webhook] unfulfillable-subscription audit skipped:",
-        auditErr instanceof Error ? auditErr.message : String(auditErr)
-      );
-    }
-    return;
-  }
+  // Stripe webhook event metadata, amount and embedded line_items are not
+  // authoritative product proof. Re-fetch the actual purchased line item.
+  // This also recognizes Payment Link DPP purchases without offer metadata.
+  const verified = await getStripeClient().checkout.sessions.retrieve(session.id, {
+    expand: ["line_items"],
+  });
+  const { classifyRetrievedDppCheckout } =
+    await import("../../src/lib/dpp-loop");
+  const classification = classifyRetrievedDppCheckout(verified);
+  if (classification !== "dpp") return classification;
 
   const supabase = await getWebhookSupabase();
   if (!supabase) {
-    // This is a paid entitlement, not optional telemetry. Returning normally
-    // acknowledges the webhook and can strand the buyer without access.
-    // Throw so the caller reports a retryable delivery failure to Stripe.
     throw markRetryableFulfillment(
       new Error("DPP entitlement database not configured")
     );
@@ -425,9 +397,11 @@ async function fulfillDppCheckoutIfPaid(
 
   const { fulfillDppPaidSession } =
     await import("../../src/lib/dpp-fulfill-checkout");
-  await fulfillDppPaidSession(supabase, session, linePriceId);
+  const actualPriceId = verified.line_items?.data?.[0]?.price?.id ?? null;
+  const result = await fulfillDppPaidSession(supabase, verified, actualPriceId);
+  // A paid event without a persisted entitlement must not be marked success.
+  return result.handled ? "dpp" : "reconciliation_required";
 }
-
 /**
  * Every distinct env var name that any brand's Stripe webhook endpoint may be
  * signed with, per shared/brands.ts `billing.webhookSecretEnv`, plus the
@@ -678,16 +652,30 @@ export async function handleStripeWebhook(
     );
     const session = event.data.object as Stripe.Checkout.Session;
     try {
-      await fulfillDppCheckoutIfPaid(session);
+      const dppResult = await fulfillDppCheckoutIfPaid(session);
+      if (dppResult === "reconciliation_required") {
+        const hold = await logDelivery("reconciliation_required", {
+          httpStatus: 200,
+          error: "paid_dpp_price_or_entitlement_unverified",
+        });
+        if (!hold.ok || hold.detail === "base_columns_only") {
+          throw markRetryableFulfillment(
+            new Error("Could not persist paid DPP reconciliation hold")
+          );
+        }
+        return {
+          received: true,
+          type: event.type,
+          duplicate: true,
+          handled: false,
+          reconciliationRequired: true,
+        };
+      }
       // A duplicate catalog delivery does not replay a credit grant. The
       // existing receipt may be a reconciliation hold: never overwrite it
       // with a false success or claim that this event fulfilled a customer.
       // DPP is the only replay path here (session-level idempotency).
-      const { isDppOffer } = await import("../../src/lib/dpp-loop");
-      const dppReplay =
-        session.payment_status === "paid" &&
-        !isRecurringCheckoutSession(session) &&
-        isDppOffer(session.metadata || {}, checkoutLinePriceId(session));
+      const dppReplay = dppResult === "dpp";
       if (claim !== "duplicate") {
         await logDelivery("success", { httpStatus: 200 });
       }
@@ -1052,8 +1040,28 @@ export async function handleStripeWebhook(
         // Fulfill before Drizzle audit: a paid DPP session must provision even
         // when DATABASE_URL / activity_log is unavailable on the edge Worker.
         try {
-          await fulfillDppCheckoutIfPaid(session);
-          const catalogFulfilled = await fulfillCatalogCreditsIfPaid(session);
+          const dppResult = await fulfillDppCheckoutIfPaid(session);
+          if (dppResult === "reconciliation_required") {
+            const hold = await logDelivery("reconciliation_required", {
+              httpStatus: 200,
+              error: "paid_dpp_price_or_entitlement_unverified",
+            });
+            if (!hold.ok || hold.detail === "base_columns_only") {
+              throw markRetryableFulfillment(
+                new Error("Could not persist paid DPP reconciliation hold")
+              );
+            }
+            return {
+              received: true,
+              type: event.type,
+              handled: false,
+              reconciliationRequired: true,
+            };
+          }
+          const catalogFulfilled =
+            dppResult === "other"
+              ? await fulfillCatalogCreditsIfPaid(session)
+              : false;
           if (catalogFulfilled === "reconciliation_required") {
             // Deterministic missing identity: durable operator hold, not an
             // unbounded Stripe retry. If the hold cannot be persisted, fail
