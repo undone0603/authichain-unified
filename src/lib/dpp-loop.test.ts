@@ -62,6 +62,69 @@ function activatedRow(
 }
 
 describe("dpp-loop", () => {
+  it("keeps canonical event identity when supplemental metadata tries to relabel payment", async () => {
+    const captured: Array<Record<string, unknown>> = [];
+    const insert = vi.fn(async (row: Record<string, unknown>) => {
+      captured.push(row);
+      return { error: null };
+    });
+    await recordDppLoopEvent(
+      { from: () => ({ insert }) },
+      {
+        visitId: "visit_unpaid",
+        stage: "checkout_started",
+        email: "buyer@example.com",
+        profileId: "profile_verified",
+        stripeSessionId: "cs_verified",
+        metadata: {
+          offer: "other_offer",
+          loop_stage: "payment_succeeded",
+          email: "spoof@example.com",
+          profile_id: "profile_spoof",
+          stripe_session_id: "cs_spoof",
+          amount_total: 29900,
+        },
+      }
+    );
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(captured[0]?.metadata).toEqual({
+      amount_total: 29900,
+      offer: DPP_OFFER_KEY,
+      loop_stage: "checkout_started",
+      email: "buyer@example.com",
+      profile_id: "profile_verified",
+      stripe_session_id: "cs_verified",
+    });
+  });
+
+  it("does not accept reserved identity keys from metadata when top-level identifiers are absent", async () => {
+    const captured: Array<Record<string, unknown>> = [];
+    const insert = vi.fn(async (row: Record<string, unknown>) => {
+      captured.push(row);
+      return { error: null };
+    });
+    await recordDppLoopEvent(
+      { from: () => ({ insert }) },
+      {
+        visitId: "visit_anonymous",
+        stage: "attributed_visit",
+        metadata: {
+          offer: "other_offer",
+          loop_stage: "retained",
+          email: "spoof@example.com",
+          profile_id: "profile_spoof",
+          stripe_session_id: "cs_spoof",
+          campaign: "test_campaign",
+        },
+      }
+    );
+    expect(captured[0]?.metadata).toEqual({
+      campaign: "test_campaign",
+      offer: DPP_OFFER_KEY,
+      loop_stage: "attributed_visit",
+    });
+  });
+
   it("strict activation event insertion fails closed when storage rejects a write", async () => {
     const from = vi.fn(() => ({
       insert: async () => ({ error: { message: "db sensitive details" } }),
