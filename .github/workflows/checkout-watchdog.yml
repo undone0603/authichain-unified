@@ -31,7 +31,9 @@ jobs:
   watch:
     name: pricing cards lead to live plans
     # Self-hosted WSL runner label authichain-ops (public-repo: no PR jobs on this host).
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    # authichain-ops has no online runner; jobs on that label queue and get
+    # cancelled. authichain-wsl (wsl-zac-arm64) is the live self-hosted box.
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
