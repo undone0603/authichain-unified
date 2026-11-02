@@ -149,13 +149,16 @@ export async function activateDppMerchant(opts: {
   }
   const profileId = profile.id as string;
 
-  const { data: prior } = await opts.supabase
+  const { data: prior, error: activationLookupError } = await opts.supabase
     .from("funnel_events")
     .select("id, metadata")
     .eq("prospect_id", visitId)
     .eq("event_type", "dpp_loop:merchant_activated")
     .order("timestamp", { ascending: false })
     .limit(5);
+  if (activationLookupError || !Array.isArray(prior)) {
+    return { ok: false, status: 503, error: "Activation history unavailable" };
+  }
 
   const alreadyActivated = Array.isArray(prior)
     ? prior.some(
@@ -191,7 +194,8 @@ export async function activateDppMerchant(opts: {
       : buildDppImporterFile({ categories, markets, labeling, pack });
 
   if (!alreadyActivated) {
-    await recordDppLoopEvent(opts.supabase, {
+    try {
+      await recordDppLoopEvent(opts.supabase, {
       visitId,
       stage: "merchant_activated",
       source: String(md.source || "direct"),
@@ -206,7 +210,10 @@ export async function activateDppMerchant(opts: {
         activated_at: new Date().toISOString(),
         importer_file,
       },
-    });
+      }, { strict: true });
+    } catch {
+      return { ok: false, status: 503, error: "Activation event persistence unavailable" };
+    }
   }
 
   return {
