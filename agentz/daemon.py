@@ -1,8 +1,8 @@
-"""Vercel Daemon entrypoint for a fail-closed AgentZ workflow.
+"""Daemon entrypoint for fail-closed AgentZ workflows.
 
-Only the registry's documented dry-run-safe GovChain proposal workflow is
-scheduled here. Do not expand this allowlist without reviewing each handler
-for external side effects and human-approval requirements.
+The original GovChain proposal remains dry-run-only. Optional TinyFish A2A
+research is restricted to a public read-only search, a host-bound API key,
+and an explicit enable flag; outreach and payment workflows stay disabled.
 """
 from __future__ import annotations
 
