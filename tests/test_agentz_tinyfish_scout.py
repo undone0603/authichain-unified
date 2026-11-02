@@ -153,3 +153,18 @@ def test_daemon_opt_in_dispatch_is_read_only_and_targeted(monkeypatch):
     assert "tinyfish_a2a_scout" in calls[1]
     assert "confirm" in calls[1]
     assert "auto" not in calls[1]
+
+
+def test_scout_masks_secret_bearing_transport_failure(monkeypatch):
+    import agentz.integrations.tinyfish_mcp as adapter
+
+    async def fake_call(_action, _values):
+        raise OSError("Authorization: Bearer private-key-do-not-log")
+
+    monkeypatch.setenv("TINYFISH_API_KEY", "private-key-do-not-log")
+    monkeypatch.setattr(adapter, "call_tinyfish", fake_call)
+    with pytest.raises(RuntimeError) as captured:
+        run(Context(Mode.CONFIRM))
+    assert "private-key-do-not-log" not in str(captured.value)
+    assert str(captured.value) == "TinyFish scout transport failed"
+    assert captured.value.__cause__ is None
