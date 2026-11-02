@@ -147,31 +147,22 @@ describe("createPlanCheckoutSession", () => {
     expect(arg.customer_creation).toBeUndefined();
   });
 
-  it("lands Launch monthly and annual on /generate", async () => {
+  it("rejects both retired QRON Launch plans without calling Stripe", async () => {
     for (const planId of ["qron_launch", "qron_launch_annual"] as const) {
-      create.mockResolvedValue({
-        url: "https://checkout.stripe.com/c/pay/cs_test_launch",
-      });
       const result = await createPlanCheckoutSession({
-        request: new Request(
-          `https://authichain.govchain.us/api/checkout/plan/${planId}`,
-          { method: "GET" }
-        ),
-        body: { planId },
+        request: new Request("https://authichain.govchain.us/api/checkout", {
+          method: "POST",
+        }),
+        body: { planId, email: "ops@brand.com" },
         stripeSecretKey: "sk_test_x",
       });
-      expect(result.ok).toBe(true);
-      const success = create.mock.calls[0][0].success_url as string;
-      expect(success, planId).toContain("/generate?paid=1&session_id=");
-      expect(success, planId).not.toContain("/dpp/thanks");
-      expect(success.split("?").length, planId).toBe(2);
-      const session = create.mock.calls.at(-1)?.[0];
-      expect(session.metadata.plan, planId).toBe(planId);
-      expect(session.metadata.stripe_price_id, planId).toBeTruthy();
-      expect(session.subscription_data.metadata.stripe_price_id, planId).toBe(
-        session.metadata.stripe_price_id
-      );
+      expect(result, planId).toMatchObject({
+        ok: false,
+        status: 400,
+        error: "Plan is no longer available",
+      });
     }
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("carries aff_ref + ref_code cookies into session and subscription metadata", async () => {
