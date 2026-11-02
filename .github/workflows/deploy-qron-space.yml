@@ -41,7 +41,10 @@ jobs:
       - name: Install
         env:
           npm_config_build_from_source: "false"
-        run: pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
+        run: |
+          # 41389192163: frozen install still died with exit 137 after 3m39s
+          # while CI was also on this 4 GB runner. Keep the graph small.
+          pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0 --network-concurrency=1 --child-concurrency=1
       - name: Publish qron-space
         working-directory: workers/qron-space
         env:
