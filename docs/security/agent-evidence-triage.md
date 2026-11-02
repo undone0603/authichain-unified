@@ -29,7 +29,7 @@ be spoofed, and a legitimate item may cross regions.
 The focused suite now includes `agentz/tests/test_geo_unknown.py`,
 covering absent market, missing country, insufficient observations,
 normalization, cross-border review and the legacy scan API boundary.
-The 36-test focused suite was executed against all six exact committed
+The 36-test focused suite was executed against all seven exact committed
 source blobs after the change; the full project and route integration
 tests remain gated by independent CI.
 
