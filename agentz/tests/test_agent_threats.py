@@ -3,10 +3,7 @@ from agentz.core.agent_threats import triage_agent_verification as triage
 
 
 def test_missing_not_counterfeit():
-    for candidate in (
-        None, {}, {"valid": False, "reasons": ["AGENT_NOT_FOUND"]},
-        {"valid": False, "reasons": ["ISSUER_NOT_FOUND"]}
-    ):
+    for candidate in (None, {}, {"valid": False, "reasons": ["AGENT_NOT_FOUND"]}, {"valid": False, "reasons": ["ISSUER_NOT_FOUND"]}):
         result = triage(candidate, from_canonical_verifier=True)
         assert result["state"] == "indeterminate"
         assert result["counterfeit_verdict"] is None
