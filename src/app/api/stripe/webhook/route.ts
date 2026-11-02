@@ -181,7 +181,19 @@ async function claimStripeEvent(
     .eq("event_id", event.id)
     .maybeSingle();
   if (readError) throw readError;
-  if (!existing || existing.status === "success" || !existing.status) {
+  // A legacy NULL status or missing row is not proof that fulfillment
+  // finished. Never acknowledge a possibly ungranted paid event as a
+  // duplicate; require operator reconciliation instead.
+  if (!existing || !existing.status) {
+    throw new Error("Stripe event claim status unavailable");
+  }
+  // A persisted reconciliation hold is a terminal *held* outcome, not a
+  // fulfilled sale. Re-deliveries can be acknowledged without re-granting.
+  if (
+    existing.status === "success" ||
+    existing.status === "duplicate" ||
+    existing.status === "reconciliation_required"
+  ) {
     return "duplicate";
   }
 
