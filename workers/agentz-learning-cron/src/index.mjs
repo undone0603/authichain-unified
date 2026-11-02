@@ -1,3 +1,5 @@
+import { inspectPublicSources } from "./source-inspection.mjs";
+
 /**
  * AgentZ Edge Learning Watch — isolated zero-credential Cloudflare Cron Worker.
  *
@@ -184,8 +186,12 @@ export class AgentZLearningAlarm {
         independent_validation_proven: false,
       };
     }
+    // Source code inspection is entirely read-only and uses fixed, public
+    // files. A failed fetch is unknown coverage, not evidence of safe code.
+    const sourceInspections = await inspectPublicSources();
     const status = {
       observed_at_utc: report.observed_at_utc,
+      source_inspections: sourceInspections,
       sources: report.sources.map(x => ({
         source: x.source, evidence_state: x.evidence_state,
         failure_category: x.failure_category ?? null,
