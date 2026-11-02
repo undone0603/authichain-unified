@@ -16,7 +16,8 @@ permissions:
 
 jobs:
   verify-and-heal:
-    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    # Never run unmerged pull-request code on the persistent ops runner.
+    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7

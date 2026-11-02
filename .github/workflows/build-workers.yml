@@ -38,9 +38,9 @@ permissions:
 jobs:
   dry-run:
     name: Worker dry-run build
-    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
-    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    # Never execute fork or same-repo PR code on the persistent ops runner.
+    # Self-hosted routing requires a main push; all PRs use hosted CI.
+    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 40
     steps:
       - name: Checkout

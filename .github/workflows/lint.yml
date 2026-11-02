@@ -31,9 +31,9 @@ permissions:
   contents: read
 jobs:
   lint:
-    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
-    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    # Only merged main push commits may use the self-hosted publishing machine.
+    # ALL pull requests (including same-repo and forks) stay on isolated hosted CI.
+    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

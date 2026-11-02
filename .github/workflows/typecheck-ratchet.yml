@@ -29,9 +29,10 @@ permissions:
 jobs:
   ratchet:
     name: Typecheck ratchet
-    # Zac, Oct 23 9:30 AM ET: use wsl-zac-arm64. Public repo: never run fork PRs on it.
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    # Only reviewed main push may execute on production-publishing WSL.
+    # Same-repo PRs stay on hosted CI; fork PRs are skipped by the job guard.
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
