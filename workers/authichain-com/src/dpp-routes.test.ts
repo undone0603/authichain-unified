@@ -14,7 +14,7 @@ describe("tryHandleDppRoute", () => {
       const res = await tryHandleDppRoute(req(path));
       expect(res).not.toBeNull();
       const html = await res!.text();
-      expect(html).toContain("Payment received");
+      expect(html).toContain("Check your workspace activation");
       expect(html).toContain(
         "/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
       );
@@ -28,7 +28,7 @@ describe("tryHandleDppRoute", () => {
     expect(res).not.toBeNull();
     expect(res!.headers.get("content-type")).toMatch(/text\/html/);
     const html = await res!.text();
-    expect(html).toContain("Payment received");
+    expect(html).toContain("Check your workspace activation");
     expect(html).toContain(
       "/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
     );
@@ -40,8 +40,8 @@ describe("tryHandleDppRoute", () => {
       "/dpp/thanks?session_id=cs_test_1&visit_id=dpp_abc&plan=dpp_readiness",
     ]) {
       const html = await (await tryHandleDppRoute(req(path)))!.text();
-      expect(html).toContain("Workspace opened");
-      expect(html).toContain("with self-serve activation.");
+      expect(html).toContain("Check your workspace activation");
+      expect(html).toContain("does not establish that payment succeeded");
       expect(html).not.toContain("50 workspace generations");
       expect(html).toContain("/dpp/activate?");
     }
@@ -55,19 +55,37 @@ describe("tryHandleDppRoute", () => {
     expect(html).not.toContain("Workspace opened");
     expect(html).not.toContain("50 workspace generations");
     expect(html).not.toContain("/dpp/activate?");
-    expect(html).toContain("100 generations");
-    expect(html).toContain("/generate?paid=1");
-    expect(html).toContain("session_id=cs_test_1");
+    expect(html).toContain("QRON Launch");
+    expect(html).toContain("href=\"/generate\"");
+    expect(html).not.toContain("paid=1");
   });
 
   it("confirms payment without claiming a product for an unknown plan", async () => {
     const html = await (await tryHandleDppRoute(
       req("/dpp/thanks?session_id=cs_test_1&plan=not_a_real_plan")
     ))!.text();
-    expect(html).toContain("Payment received");
+    expect(html).toContain("Check your workspace activation");
     expect(html).not.toContain("Workspace opened");
     expect(html).not.toContain("/dpp/activate?");
     expect(html).not.toContain("generations");
+  });
+
+  it("does not claim a paid purchase with an absent session", async () => {
+    const html = await (await tryHandleDppRoute(req("/dpp/thanks")))!.text();
+    expect(html).toContain("Payment not verified");
+    expect(html).not.toContain("Workspace opened");
+    expect(html).not.toContain("Payment received");
+    expect(html).not.toContain("/dpp/activate?session_id=");
+    expect(html).toContain("/checkout/dpp_readiness");
+  });
+
+  it("does not claim payment for an unpaid but syntactically valid session", async () => {
+    const html = await (await tryHandleDppRoute(
+      req("/dpp/thanks?session_id=cs_live_unpaid123")
+    ))!.text();
+    expect(html).toContain("does not establish that payment succeeded");
+    expect(html).not.toContain("Payment received");
+    expect(html).not.toContain("Workspace opened");
   });
 
   it("serves activate HTML that posts to /api/dpp/activate", async () => {
