@@ -24,6 +24,8 @@ MAX_FETCH_URLS = 10
 
 def public_url(url: str) -> str:
     """Reject local/private targets before handing URLs to a remote fetcher."""
+    if any(ord(char) < 32 or ord(char) == 127 for char in url):
+        raise ValueError("URLs with raw control characters are not permitted")
     parsed = urlsplit(url)
     if parsed.scheme not in ("https", "http") or not parsed.hostname:
         raise ValueError("TinyFish fetch requires an absolute HTTP(S) URL")
