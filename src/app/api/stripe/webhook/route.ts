@@ -5,7 +5,7 @@ import { provisionPurchase } from "@/lib/provisioning";
 import { renderBillingEmail } from "@/lib/billing-emails";
 import { getBrandIdFromMetadata } from "@/lib/brand-billing";
 import { sendEmail } from "@/lib/email";
-import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "@/lib/dpp-loop";
+import { DPP_PRICE_ID, classifyRetrievedDppCheckout, dppActivateUrl, recordDppLoopEvent } from "@/lib/dpp-loop";
 import { fulfillDppPaidSession } from "@/lib/dpp-fulfill-checkout";
 import {
   anchorStripeReversal,
@@ -300,17 +300,75 @@ export async function POST(req: NextRequest) {
           : grantParsed;
         const email =
           session.customer_email || session.customer_details?.email || null;
-        const linePriceId =
-          session.line_items?.data?.[0]?.price?.id ||
-          (typeof session.metadata?.stripe_price_id === "string"
-            ? session.metadata.stripe_price_id
-            : null);
-        const dppOffer = isDppOffer(md as Record<string, unknown>, linePriceId);
+        // The signed webhook's metadata/amount do not establish the SKU.
+        // Re-fetch the paid Checkout from Stripe with authoritative line items.
+        let dppOffer = false;
+        let linePriceId =
+          session.line_items?.data?.[0]?.price?.id ?? null;
+        if (session.payment_status === "paid") {
+          const verified = await stripe.checkout.sessions.retrieve(session.id, {
+            expand: ["line_items"],
+          });
+          const proof = classifyRetrievedDppCheckout(verified);
+          if (proof === "reconciliation_required") {
+            // Deterministic SKU conflict: a durable operator hold, not
+            // endless retries or an invented entitlement.
+            const { data: held, error: holdError } = await getSupabase()
+              .from("stripe_events")
+              .update({
+                status: "reconciliation_required",
+                processed_at: new Date().toISOString(),
+                error: "paid_dpp_price_or_entitlement_unverified",
+              })
+              .eq("event_id", event.id)
+              .select("event_id");
+            if (holdError || !held?.length) {
+              throw new Error("Could not persist paid DPP reconciliation hold");
+            }
+            return NextResponse.json({
+              received: true,
+              reconciliationRequired: true,
+            });
+          }
+          if (proof === "not_paid") {
+            throw new Error("Paid checkout event not confirmed by Stripe");
+          }
+          dppOffer = proof === "dpp";
+          if (dppOffer) {
+            const result = await fulfillDppPaidSession(
+              getSupabase(), verified, DPP_PRICE_ID
+            );
+            if (!result.handled) {
+              const { data: held, error: holdError } = await getSupabase()
+                .from("stripe_events")
+                .update({
+                  status: "reconciliation_required",
+                  processed_at: new Date().toISOString(),
+                  error: "paid_dpp_entitlement_not_persisted",
+                })
+                .eq("event_id", event.id)
+                .select("event_id");
+              if (holdError || !held?.length) {
+                throw new Error("Could not persist paid DPP entitlement hold");
+              }
+              return NextResponse.json({
+                received: true,
+                reconciliationRequired: true,
+              });
+            }
+            break;
+          }
+          linePriceId = verified.line_items?.data?.[0]?.price?.id ?? null;
+        }
         const visitId =
           md.visit_id || md.prospect_id || session.client_reference_id || null;
 
-        if (dppOffer) {
-          await fulfillDppPaidSession(getSupabase(), session, linePriceId);
+        // A no-payment-required or pending DPP offer is not a paid grant.
+        if (
+          session.payment_status !== "paid" &&
+          (md.plan === "dpp_readiness" ||
+            md.offer === "dpp_readiness_2026")
+        ) {
           break;
         }
 
