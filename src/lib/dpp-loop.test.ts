@@ -92,6 +92,52 @@ describe("dpp-loop", () => {
   });
 
 
+  it.each(["returned error", "thrown error"])(
+    "does not claim event_recorded when the analytics insert fails (%s)",
+    async failure => {
+      const insert = vi.fn(async () => {
+        if (failure === "thrown error") throw new Error("database unavailable");
+        return { error: { message: "database unavailable" } };
+      });
+      const query = {
+        select: () => query,
+        eq: () => query,
+        contains: () => query,
+        limit: async () => ({ data: [], error: null }),
+        insert,
+      };
+      const from = vi.fn(() => query);
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        const result = await recordDppLoopEventOnce(
+          { from },
+          { visitId: "visit_write_failed", stage: "dpp_published", dedupeKey: "dpp_1" }
+        );
+        expect(result).toEqual({ recorded: false, reason: "storage_unavailable" });
+        expect(insert).toHaveBeenCalledTimes(1);
+      } finally {
+        log.mockRestore();
+      }
+    }
+  );
+
+  it("reports event_recorded only after a successful analytics insert", async () => {
+    const insert = vi.fn(async () => ({ error: null }));
+    const query = {
+      select: () => query,
+      eq: () => query,
+      contains: () => query,
+      limit: async () => ({ data: [], error: null }),
+      insert,
+    };
+    const result = await recordDppLoopEventOnce(
+      { from: () => query },
+      { visitId: "visit_written", stage: "verification", dedupeKey: "dpp_2" }
+    );
+    expect(result).toEqual({ recorded: true });
+    expect(insert).toHaveBeenCalledTimes(1);
+  });
+
   it("dedupes a checkout beyond 25 prior events using an exact database filter", async () => {
     const rows = [
       ...Array.from({ length: 30 }, (_, i) => ({
