@@ -89,12 +89,20 @@ export async function recordDppLoopEvent(
   if (!visitId) return;
 
   try {
+    // Supplemental analytics cannot override canonical event identity. In
+    // particular, a checkout_started event must never be relabeled as paid,
+    // and a caller-supplied session id must not replace the verified one.
+    const reserved = new Set(["offer", "loop_stage", "email", "profile_id", "stripe_session_id"]);
+    const supplementalMetadata = Object.fromEntries(
+      Object.entries(input.metadata || {}).filter(([key]) => !reserved.has(key))
+    );
     const { error } = await supabase.from("funnel_events").insert({
       prospect_id: visitId,
       stage: STAGE_TO_FUNNEL[input.stage],
       source: normalizeSource(input.source),
       event_type: `dpp_loop:${input.stage}`,
       metadata: {
+        ...supplementalMetadata,
         offer: DPP_OFFER_KEY,
         loop_stage: input.stage,
         ...(input.email ? { email: input.email } : {}),
@@ -102,7 +110,6 @@ export async function recordDppLoopEvent(
         ...(input.stripeSessionId
           ? { stripe_session_id: input.stripeSessionId }
           : {}),
-        ...(input.metadata || {}),
       },
       timestamp: new Date().toISOString(),
     });
