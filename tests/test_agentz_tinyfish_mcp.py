@@ -34,6 +34,10 @@ def test_fetch_arguments_are_read_only():
     "http://169.254.169.254/latest/meta-data",
     "http://[::1]/private",
     "http://localhost",
+    "http://127.1/private",
+    "http://0177.0.0.1/private",
+    "http://2130706433/private",
+    "http://0x7f000001/private",
     "https://foo.internal",
     "https://x.local",
     "https://user:pass@example.com",
@@ -63,3 +67,14 @@ def test_dry_run_has_no_network_or_process(capsys, monkeypatch):
 def test_invalid_fetch_fails_closed_without_network(capsys):
     assert cli_action("fetch_content", ["http://localhost"], dry_run=False) == 1
     assert json.loads(capsys.readouterr().out)["ok"] is False
+
+
+def test_transport_exception_is_sanitized(capsys, monkeypatch):
+    async def broken_connection(_action, _values):
+        raise OSError("Authorization: Bearer should-not-appear")
+
+    monkeypatch.setattr("agentz.integrations.tinyfish_mcp.call_tinyfish", broken_connection)
+    assert cli_action("search", ["Agent2Agent"], dry_run=False) == 1
+    output = json.loads(capsys.readouterr().out)
+    assert output["error"] == "TinyFish MCP connection failed"
+    assert "should-not-appear" not in str(output)
