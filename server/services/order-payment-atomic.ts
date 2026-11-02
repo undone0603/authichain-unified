@@ -11,7 +11,10 @@ export type SettledServiceOrder = {
   paidAmountCents: number;
 };
 
-export async function settleServiceOrderPaymentAtomic(input: SettledServiceOrder): Promise<boolean> {
+export async function settleServiceOrderPaymentAtomic(
+  input: SettledServiceOrder,
+  requestDb?: Awaited<ReturnType<typeof getDb>>,
+): Promise<boolean> {
   if (
     !Number.isSafeInteger(input.orderId) || input.orderId <= 0 ||
     typeof input.sessionId !== "string" || !input.sessionId.startsWith("cs_") ||
@@ -21,7 +24,9 @@ export async function settleServiceOrderPaymentAtomic(input: SettledServiceOrder
     throw new Error("Invalid service-order settlement evidence");
   }
 
-  const d = await getDb();
+  // Workers supply a request-scoped Hyperdrive client. Node callers retain
+  // the existing DATABASE_URL accessor; never cache Workers I/O globally.
+  const d = requestDb ?? await getDb();
   return d.transaction(async tx => {
     // The pending->paid transition is a compare-and-swap. Only its winner
     // may write economic evidence. All writes share one SQL transaction.
