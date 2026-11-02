@@ -3,7 +3,7 @@
  * POST /api/dpp/activate is not a 404.
  */
 
-import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "./dpp-loop";
+import { DPP_PRICE_ID, dppActivateUrl, recordDppLoopEvent } from "./dpp-loop";
 import {
   buildDppImporterFile,
   parseImporterPackFigures,
@@ -96,18 +96,17 @@ export async function activateDppMerchant(opts: {
   }
 
   const md = (session.metadata || {}) as Record<string, unknown>;
-  // Another $299 product (the Made in USA claim file) shares the DPP amount,
-  // so an explicit non-DPP plan must never activate a DPP workspace.
-  const otherPlan =
-    typeof md.plan === "string" && md.plan && md.plan !== "dpp_readiness";
-  if (otherPlan && !isDppOffer(md)) {
-    return { ok: false, status: 400, error: "Not a DPP workspace session" };
-  }
-  const linePriceId = session.line_items?.data?.[0]?.price?.id ?? null;
-  if (linePriceId && !isDppOffer(md, linePriceId)) {
-    return { ok: false, status: 400, error: "Not a DPP workspace session" };
-  }
-  if (!isDppOffer(md) && session.amount_total !== 29900) {
+  // Checkout metadata and total price are not the product proof. A different
+  // $299 item can share the amount, and metadata can contradict line items.
+  // Require the actual purchased price in expanded Stripe line items.
+  const lineItems = session.line_items?.data ?? [];
+  if (
+    lineItems.length !== 1 ||
+    lineItems[0]?.price?.id !== DPP_PRICE_ID ||
+    (typeof md.plan === "string" &&
+      md.plan.length > 0 &&
+      md.plan !== "dpp_readiness")
+  ) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
 
