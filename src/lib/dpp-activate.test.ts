@@ -158,6 +158,99 @@ describe("activateDppMerchant", () => {
     }
   });
 
+  it.each([
+    ["not yet provisioned", null, null, 409],
+    ["grant belongs to another checkout", { id: "prof_1", last_grant_session_id: "cs_other" }, null, 409],
+    ["profile lookup failed", null, { message: "storage unavailable" }, 503],
+  ])("never claims activation when %s", async (_label, profile, lookupError, expectedStatus) => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      metadata: { plan: "dpp_readiness", visit_id: "stripe_visit" },
+      customer_details: { email: "buyer@example.com" },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+    });
+    const eventsInsert = vi.fn();
+    const from = vi.fn((table: string) => {
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: profile, error: lookupError }),
+            }),
+          }),
+        };
+      }
+      return { insert: eventsInsert };
+    });
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_checkout",
+        visit_id: "attacker_supplied_visit",
+        categories: "LMT",
+        markets: "DE",
+        labeling: "Wh",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(expectedStatus);
+    expect(eventsInsert).not.toHaveBeenCalled();
+  });
+
+  it("does not trust a body visit_id over Stripe's checkout attribution", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      metadata: { plan: "dpp_readiness", visit_id: "stripe_visit" },
+      customer_details: { email: "buyer@example.com" },
+      line_items: { data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }] },
+    });
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    const from = vi.fn((table: string) =>
+      table === "profiles"
+        ? {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: { id: "prof_1", last_grant_session_id: "cs_checkout" },
+                  error: null,
+                }),
+              }),
+            }),
+          }
+        : {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  order: () => ({
+                    limit: async () => ({ data: [], error: null }),
+                  }),
+                }),
+              }),
+            }),
+            insert,
+          }
+    );
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_checkout",
+        visit_id: "attacker_supplied_visit",
+        categories: "LMT",
+        markets: "DE",
+        labeling: "Wh",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.visit_id).toBe("stripe_visit");
+    expect(insert.mock.calls[0]?.[0]?.prospect_id).toBe("stripe_visit");
+  });
+
   it("returns and persists an importer_file on first paid DPP activation", async () => {
     retrieve.mockResolvedValueOnce({
       payment_status: "paid",
@@ -176,7 +269,7 @@ describe("activateDppMerchant", () => {
         return {
           select: () => ({
             eq: () => ({
-              maybeSingle: async () => ({ data: { id: "prof_1" }, error: null }),
+              maybeSingle: async () => ({ data: { id: "prof_1", last_grant_session_id: "cs_dpp" }, error: null }),
             }),
           }),
         };
