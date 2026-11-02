@@ -1,0 +1,154 @@
+name: Deploy authichain-edge-router (protected manual)
+
+# Deliberately NOT triggered on push. A successful merge does not publish a
+# payment/webhook Worker. Owner must dispatch the exact current main SHA,
+# approve the protected production-cloudflare environment, and pass CI.
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: "Full 40-character HEAD of main to release"
+        required: true
+        type: string
+      confirmation:
+        description: "Type deploy-authichain-edge-router to confirm production release"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  checks: read
+
+concurrency:
+  group: release-authichain-edge-router
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Protected authichain-edge-router release
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    environment: production-cloudflare
+    timeout-minutes: 45
+    env:
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+      CLOUDFLARE_DEPLOY_ENABLED: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED }}
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - name: Require explicit operator approval and exact main revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main' || { echo '::error::Dispatch from main only'; exit 1; }
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo '::error::expected_sha must be a full lowercase SHA'; exit 1; }
+          test "$EXPECTED_SHA" = "$GITHUB_SHA" || { echo '::error::Dispatch revision differs from expected SHA'; exit 1; }
+          test "$CONFIRMATION" = 'deploy-authichain-edge-router' || { echo '::error::Explicit confirmation missing'; exit 1; }
+          test "$CLOUDFLARE_DEPLOY_ENABLED" = 'true' || { echo '::error::CLOUDFLARE_DEPLOY_ENABLED is not true'; exit 1; }
+
+      - name: Checkout pinned revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify full checkout, exact main tip, and intended Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f worker-app/index.ts
+          test -f scripts/ci/post-deploy-smoke.mjs
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$EXPECTED_SHA" || { echo '::error::main advanced; review and redispatch from new HEAD'; exit 1; }
+          grep -Eq '^name = "authichain-edge-router"$' worker-app/wrangler.toml
+
+      - name: Require successful exact-head Main quality gate (all check pages)
+        uses: actions/github-script@v8
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = process.env.EXPECTED_SHA;
+            const runs = await github.paginate(github.rest.checks.listForRef, {
+              owner, repo, ref: sha, per_page: 100
+            });
+            const matching = runs
+              .filter(run => run.name === 'Main quality gate' && run.head_sha === sha)
+              .sort((a, b) => b.id - a.id);
+            if (matching.length === 0) {
+              core.setFailed('No exact-head Main quality gate check was found');
+            } else {
+              const latest = matching[0];
+              if (latest.status !== 'completed' || latest.conclusion !== 'success') {
+                core.setFailed('Latest exact-head Main quality gate is not successful');
+              } else {
+                core.info('Exact-head Main quality gate passed: ' + latest.html_url);
+              }
+            }
+
+      - name: Scan checkout for secrets before publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$(uname -m)" in
+            aarch64|arm64) arch=arm64 ;;
+            x86_64|amd64) arch=x64 ;;
+            *) echo '::error::Unsupported architecture'; exit 1 ;;
+          esac
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_${arch}.tar.gz" -o gitleaks.tgz
+          tar --no-same-owner -xzf gitleaks.tgz gitleaks
+          ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: "10.28.2"
+          run_install: false
+
+      - name: Setup Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "22"
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build application before release
+        run: pnpm build
+
+      - name: Check Cloudflare credentials without changing bindings
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo '::error::Cloudflare API token missing'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo '::error::Cloudflare account missing'; exit 1; }
+
+      - name: Validate edge-router bundle (no publish)
+        working-directory: worker-app
+        run: pnpm exec wrangler deploy --dry-run --minify --keep-vars --config wrangler.toml
+
+      # The only production write in this workflow. No secret put, DDL, cron
+      # enablement, Stripe mutation, or other Worker publish.
+      - name: Publish pinned authichain-edge-router only
+        working-directory: worker-app
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler deploy --minify --keep-vars --config wrangler.toml
+
+      - name: Blocking read-only public smoke
+        run: node scripts/ci/post-deploy-smoke.mjs
+
+      - name: Log release identity (not fulfillment evidence)
+        shell: bash
+        run: |
+          echo "Protected edge-router release attempted at $EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Verify Cloudflare deployed revision, signed webhook, persisted entitlement, and buyer action independently." >> "$GITHUB_STEP_SUMMARY"
