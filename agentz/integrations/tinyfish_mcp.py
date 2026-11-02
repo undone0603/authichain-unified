@@ -78,13 +78,19 @@ async def tinyfish_transport():
     """Prefer API-key HTTP on headless hosts; fall back to local OAuth bridge."""
     key = os.getenv("TINYFISH_API_KEY", "").strip()
     if key:
+        import httpx
         from mcp.client.streamable_http import streamable_http_client
 
-        # Keep secrets in process memory; never log request headers or print keys.
-        async with streamable_http_client(
-            MCP_ENDPOINT, headers={"Authorization": f"Bearer {key}"}
-        ) as (read, write, _):
-            yield read, write
+        # MCP SDK v1.25+ accepts a caller-managed HTTP client, not headers=.
+        # Keep credentials in process memory. Never print a request or its headers.
+        timeout = httpx.Timeout(30.0, read=300.0)
+        async with httpx.AsyncClient(
+            headers={"Authorization": f"Bearer {key}"}, timeout=timeout
+        ) as client:
+            async with streamable_http_client(
+                MCP_ENDPOINT, http_client=client
+            ) as (read, write, _):
+                yield read, write
     else:
         if shutil.which("npx") is None:
             raise RuntimeError(
@@ -107,7 +113,7 @@ async def call_tinyfish(action: str, values: list[str]) -> dict[str, Any]:
     try:
         from mcp import ClientSession
     except ImportError as exc:
-        raise RuntimeError("Python MCP SDK missing; install mcp>=1.12,<2") from exc
+        raise RuntimeError("Python MCP SDK missing; install mcp>=1.25,<2") from exc
 
     async with tinyfish_transport() as (read, write):
         async with ClientSession(read, write) as session:
