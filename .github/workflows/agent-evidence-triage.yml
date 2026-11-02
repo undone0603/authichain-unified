@@ -6,6 +6,7 @@ on:
       - 'agentz/core/alerts.py'
       - 'agentz/core/agent_threats.py'
       - 'agentz/core/trust.py'
+      - 'agentz/api/main.py'
       - 'agentz/tests/test_scan_alerts.py'
       - 'agentz/tests/test_agent_threats.py'
       - 'agentz/tests/test_offline_scan_cannot_certify.py'
