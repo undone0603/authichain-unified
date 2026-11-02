@@ -40,8 +40,8 @@ python -m agentz.cli run power_user_ops --mode dry-run
 
 OpenClaw drop-in: `agentz/openclaw/POWER_USER.md`. Live X publish stays on AgentZ `xurl`, not this CLI.
 
-TinyFish MCP read-only search/fetch (Node.js/npx and an authenticated TinyFish
-session on the AgentZ host are required):
+TinyFish MCP read-only search/fetch (on headless hosts, supply a protected
+`TINYFISH_API_KEY`; Node.js/npx is only needed for local OAuth fallback):
 
 ```bash
 python -m agentz.cli tinyfish search 'Agent2Agent protocol' --dry-run
@@ -55,8 +55,10 @@ python -m agentz.cli run tinyfish_a2a_scout --mode dry-run
 python -m agentz.cli run tinyfish_a2a_scout --mode confirm
 ```
 Its daemon schedule remains disabled until the host sets
-`AGENTZ_TINYFISH_SCOUT_ENABLED=true` and secures `TINYFISH_API_KEY`.
-It performs at most one read-only A2A search per day, without outreach.
+`AGENTZ_TINYFISH_SCOUT_ENABLED=true`, secures `TINYFISH_API_KEY`,
+and configures `AGENTZ_TINYFISH_SCOUT_STATE_DIR` on a durable mounted volume.
+The daemon permits one research *attempt* per UTC date, without outreach.
+If the state volume is missing, it refuses to run.
 
 See [AgentZ + TinyFish MCP](../docs/operations/AGENTZ_TINYFISH_MCP.md) for
 OAuth setup and the explicit boundary excluding browser automations and paid actions.
