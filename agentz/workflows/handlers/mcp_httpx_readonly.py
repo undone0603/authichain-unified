@@ -5,7 +5,7 @@ import asyncio
 import os
 
 from agentz.core.modes import Mode
-from agentz.integrations.mcp_httpx_probe import ENDPOINT, probe
+from agentz.integrations.mcp_httpx_probe import ENDPOINT, probe, probe_modern
 
 
 def run(ctx):
@@ -18,4 +18,7 @@ def run(ctx):
             "requirements": "--mode auto plus AGENTZ_HTTPX_MCP_LIVE=true",
             "payment": False,
         }
-    return asyncio.run(probe())
+    era = os.environ.get("AGENTZ_HTTPX_MCP_ERA", "modern")
+    if era not in ("modern", "legacy"):
+        return {"state": "invalid_era_configuration", "network_called": False, "payment": False}
+    return asyncio.run(probe_modern() if era == "modern" else probe())
