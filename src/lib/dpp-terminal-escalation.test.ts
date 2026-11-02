@@ -96,6 +96,7 @@ function paidSession() {
   return {
     id: SESSION,
     payment_status: "paid",
+    mode: "payment",
     status: "complete",
     amount_total: 29900,
     customer_details: { email: "buyer@example.com" },
