@@ -30,6 +30,11 @@ def public_url(url: str) -> str:
     host = parsed.hostname.lower().rstrip(".")
     if host in {"localhost", "metadata.google.internal"} or host.endswith((".localhost", ".local", ".internal")):
         raise ValueError("Private/local hosts are not permitted")
+    # Numeric aliases such as 127.1, 0177.0.0.1 and 2130706433 are
+    # accepted by some URL clients as loopback despite failing ipaddress.
+    labels = host.split(".")
+    if host.startswith("0x") or all(label.isdigit() or label.startswith("0x") for label in labels):
+        raise ValueError("Numeric host aliases are not permitted")
     try:
         address = ipaddress.ip_address(host)
     except ValueError:
@@ -118,4 +123,8 @@ def cli_action(action: str, values: list[str], *, dry_run: bool = False) -> int:
         return 0 if result["ok"] else 1
     except (ValueError, RuntimeError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}))
+        return 1
+    except Exception as exc:
+        # MCP/OAuth transports may raise ExceptionGroup; never print secrets.
+        print(json.dumps({"ok": False, "error": "TinyFish MCP connection failed", "error_type": type(exc).__name__}))
         return 1
