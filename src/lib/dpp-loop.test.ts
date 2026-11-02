@@ -118,8 +118,18 @@ describe("dpp-loop", () => {
 
   it("builds activate URL with session and visit", () => {
     expect(dppActivateUrl("cs_test_1", "dpp_abc")).toBe(
-      "https://authichain.govchain.us/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
+      "https://authichain.com/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
     );
+  });
+
+  it("encodes untrusted visit attribution within the canonical activation URL", () => {
+    const link = dppActivateUrl("cs_test_1", "</script><script>alert(1)</script>");
+    const parsed = new URL(link);
+    expect(parsed.origin).toBe("https://authichain.com");
+    expect(parsed.pathname).toBe("/dpp/activate");
+    expect(parsed.searchParams.get("session_id")).toBe("cs_test_1");
+    expect(parsed.searchParams.get("visit_id")).toBe("</script><script>alert(1)</script>");
+    expect(link).not.toContain("<script>");
   });
 
   it("records loop events onto funnel_events with loop_stage metadata", async () => {
