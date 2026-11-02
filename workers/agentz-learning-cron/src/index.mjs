@@ -5,7 +5,7 @@
  * payment processor or authority to outreach. Public metadata is untrusted.
  */
 export const VERSION = "0.1.0";
-export const CRON = "17 */6 * * *";
+export const ALARM_INTERVAL_MS = 6 * 60 * 60 * 1000;
 export const SOURCES = Object.freeze([
   { label: "authichain-alliance", owner: "undone0603", repo: "authichain-unified", issue: 2263 },
   { label: "cedr-guard", owner: "Sheernox", repo: "cedr", issue: 7 },
@@ -171,7 +171,7 @@ export class AgentZLearningAlarm {
       payment_enabled: false,
     };
     await this.ctx.storage.put("last_report", status);
-    await this.ctx.storage.setAlarm(Date.now() + 6 * 60 * 60 * 1000);
+    await this.ctx.storage.setAlarm(Date.now() + ALARM_INTERVAL_MS);
     console.log(JSON.stringify({ event: "agentz_edge_alarm", ...status }));
   }
 }
