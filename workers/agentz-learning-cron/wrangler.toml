@@ -3,8 +3,13 @@ main = "src/index.mjs"
 compatibility_date = "2026-10-17"
 workers_dev = true
 
-[triggers]
-crons = ["17 */6 * * *"]
+[[durable_objects.bindings]]
+name = "AGENTZ_LEARNING_ALARM"
+class_name = "AgentZLearningAlarm"
+
+[exports.AgentZLearningAlarm]
+type = "durable-object"
+storage = "sqlite"
 
 [observability]
 enabled = true
