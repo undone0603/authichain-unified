@@ -56,16 +56,14 @@ function esc(value: unknown): string {
 }
 
 /**
- * The thanks page names a product, so it has to know which one was bought.
- * `plan` comes from the checkout success_url; it only selects copy (the real
- * entitlement is granted by the Stripe webhook), so a tampered value cannot
- * grant anything. No `plan` means a link issued before this param existed:
- * those keep the original DPP copy unchanged.
- */
-/**
  * A Stripe redirect is not a signed receipt. URL query parameters are fully
  * user-controlled; they can select informational copy, NEVER payment status,
  * a generation grant, or verified access. Do not imply delivery here.
+ *
+ * A missing `plan` is expected for the live Starter Payment Link return.
+ * Treat that route as a generic unverified checkout return; do not infer DPP.
+ * The explicit /dpp/thanks route can offer activation navigation, but its
+ * server-side payment and durable-fulfillment checks remain authoritative.
  */
 function thanksHtml(
   sessionId: string,
