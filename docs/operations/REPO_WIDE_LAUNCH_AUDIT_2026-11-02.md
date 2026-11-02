@@ -89,3 +89,21 @@ The two committed dependency-free smoke-test files were reconstructed on an isol
 - **Complete:** Tracked-tree enumeration at pinned SHA; representative high-risk source-path inspection; read-only domain/Cloudflare and opportunity-view checks; no-payment QA fixtures committed to a review branch.
 - **Not complete:** Whole-file line-by-line security review, historical secret scan, exact-head hosted CI, independent reviewer approval, real end-to-end customer delivery, and full production A2A conformance.
 - **Decision:** Keep economic/security changes under review. Maintain `humanHold`, `production_send`, protected branches, private credentials and independent review. No auto-merge, money movement, secret changes or unsolicited outreach.
+
+## Supplemental release-policy checks (2026-11-02)
+
+### P1 — Three GitHub workflows missing from autonomy manifest
+
+At the pinned main SHA, the tracked tree contains **114** GitHub Actions workflows, while `.github/autonomy.json` classifies **111** unique workflow filenames. `scripts/autonomy/reconcile.mjs` explicitly fails its offline manifest check for unclassified files. Missing: `deploy-authichain-edge-router.yml`, `deploy-qron-space.yml`, and `wsl-net-check.yml`. Existing draft PR #2240 already adds the first and third; the remaining gap is documented in [comment #6580345572](https://github.com/undone0603/authichain-unified/pull/2240#issuecomment-6580345572). The disposition of `deploy-qron-space.yml` must be owner-reviewed; classification does not authorize a production deployment.
+
+### P1 — AgentZ legacy runner defaults to AUTO without registry-specific policy
+
+`agentz/cli.py` refuses `--mode auto`. `agentz/core/runner.py` checks only `should_force_confirm()` and does not call the complete `assess_workflow()` function, although `agentz/core/governor.py` assesses its own actions. Separately, `agentz/workflows/runner.py` (direct handler entrypoint used by workflows) defaults to `AGENTZ_MODE` or `auto`, and supplies the risk firewall **hardcoded medium risk, $100 budget, no required approval, protocol veto disabled**, rather than looking up the selected registry entry. This is a verified static policy inconsistency, **not** evidence of an actual unauthorized send/spend. See [P1 issue #2289](https://github.com/undone0603/authichain-unified/issues/2289). Preserve policy hold and add fail-closed regression tests before release.
+
+### P2 — Launch mode logically expired
+
+`.github/autonomy.json` has `launch_mode.enabled=true` with `expires=2026-10-31`. `scripts/autonomy/launch-mode.mjs` compares the expiry to the current time. As of 2026-11-02, launch mode should evaluate **inactive**; setting `enabled=true` is not evidence that the temporary exception remains live. Cold outreach is separately disabled and operator holds stay in force.
+
+### P1 — Production exact-head CI gate still in draft
+
+Draft [PR #2281](https://github.com/undone0603/authichain-unified/pull/2281) proposes an exact-head CI release guard for Cloudflare publishing. This was not merged in the inspected main. Main CI runs were failed without test steps. Existing active Worker versions and GET 200 responses do not establish that future production changes are eligible to deploy.
