@@ -1232,3 +1232,25 @@ workflows:
         5) Restate frozen gates (outreach, autopilot, no key rotation).
       Dry-run sends no HTTP. Never sends mail, deploys, merges, or rotates
       AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64.
+
+  - id: tinyfish_a2a_scout
+    title: "TinyFish: discover public open A2A agent interoperability projects"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.tinyfish_a2a_scout
+    type: api
+    estimated_minutes: 1
+    requires: [tinyfish_api_key]
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    max_runs_per_day: 1
+    rollback_strategy: "Disable AGENTZ_TINYFISH_SCOUT_ENABLED; no external data is mutated."
+    description: |
+      One public TinyFish search, never browser automation or any paid run.
+      In dry-run, no HTTP. Live requires a TinyFish key on the AgentZ host.
+      Emits source URLs only, unverified; sends no mail, outreach, tokens,
+      production writes, or deployments.

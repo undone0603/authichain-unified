@@ -1,0 +1,124 @@
+# AgentZ + TinyFish MCP (read-only research)
+
+## Architecture
+
+The project-root `.mcp.json` retains the user's exact developer-client bridge:
+
+```json
+{
+  "command": "npx",
+  "args": ["-y", "mcp-remote", "https://agent.tinyfish.ai/mcp"]
+}
+```
+
+**AgentZ's Python service does not load `.mcp.json`.** It uses
+`agentz.integrations.tinyfish_mcp` through `python -m agentz.cli tinyfish`
+and chooses one of two transports:
+
+- **Headless / production-capable:** If `TINYFISH_API_KEY` is set, the Python MCP SDK connects directly to `https://agent.tinyfish.ai/mcp` over Streamable HTTP with an `Authorization: Bearer` header; Node.js is not required.
+- **Interactive developer fallback:** If no API key exists, the same adapter runs `npx -y mcp-remote https://agent.tinyfish.ai/mcp`, using that host user's OAuth session. This requires Node.js, `npx`, and usually first-run browser authentication.
+
+The Python MCP SDK is included in `requirements-agentz.txt`. The existing
+`Dockerfile.agentz-daemon` installs those requirements, but its scheduled task
+does **not** invoke TinyFish automatically. Deployment, a secured `TINYFISH_API_KEY`
+runtime secret, and an explicit authorized research workflow remain separate
+gates.
+
+## Capabilities and trust boundary
+
+- **Allowed:** `search` and `fetch_content`, each explicitly validated in the CLI.
+- **Not enabled:** browser automations, signed-in profile control, monitoring,
+  posting, form submissions, payment actions, external messaging, or outreach.
+- Webpage text and search snippets are **untrusted evidence**, never executable
+  instructions to AgentZ. Preserve URL and retrieval time before citing.
+- URL validation blocks private IP literals and common numeric aliases, but
+  cannot prove that any DNS hostname stays public; rely on TinyFish's own
+  network safety controls as well.
+- Neither API key nor OAuth cache belongs in code, Docker layers, CI logs,
+  PRs, audit records, or stdout.
+- Any new tools or write operations require a separate policy review.
+
+## Local setup and testing
+
+```bash
+python -m pip install -r requirements-agentz.txt
+python -m pytest -q tests/test_agentz_tinyfish_mcp.py tests/test_agentz_tinyfish_scout.py
+python -m agentz.cli tinyfish search 'Agent2Agent protocol specification' --dry-run
+python -m agentz.cli tinyfish fetch_content https://github.com/a2aproject/a2a --dry-run
+```
+
+### Headless AgentZ host (preferred for noninteractive execution)
+
+1. Create a TinyFish API key at https://agent.tinyfish.ai/api-keys.
+2. Inject it as the runtime secret `TINYFISH_API_KEY`, using your host's
+   secure secret manager. Do not paste it into a GitHub file or command log.
+3. After the code has passed review and is deployed to that runtime, run:
+
+```bash
+python -m agentz.cli tinyfish search 'Agent2Agent protocol specification'
+python -m agentz.cli tinyfish fetch_content https://github.com/a2aproject/a2a
+```
+
+The adapter sends the Bearer authorization header to the hosted MCP endpoint when the secret is
+present. Its dry-run prints **only the selected transport**, never the key.
+
+### Local OAuth fallback
+
+Without `TINYFISH_API_KEY`, install Node.js/`npx` and run the same commands.
+The first call may open `mcp-remote` OAuth sign-in on **that host**. ChatGPT's
+TinyFish connection does not authenticate the AgentZ host.
+
+
+## AgentZ orchestration integration
+
+The registry now has `tinyfish_a2a_scout`, one **read-only** public search
+for A2A open-agent interoperability repositories. The registry blocks repeat successful live runs on the same UTC day,
+and the daemon independently limits *attempts* to once per UTC day. It requires the host's `TINYFISH_API_KEY`.
+
+```bash
+python -m agentz.cli run tinyfish_a2a_scout --mode dry-run
+python -m agentz.cli run tinyfish_a2a_scout --mode confirm
+```
+
+The existing AgentZ daemon retains its original dry-run GovChain task.
+TinyFish **does not start automatically**. To opt into one research query
+per day in the long-running daemon, bind both runtime variables:
+
+```
+TINYFISH_API_KEY=<secret set in host secret manager>
+AGENTZ_TINYFISH_SCOUT_STATE_DIR=/absolute/path/to/host-persistent-volume/agentz
+AGENTZ_TINYFISH_SCOUT_ENABLED=true
+```
+
+Only set these on the **real Python AgentZ service**, not on the similarly
+named Cloudflare Worker. Provision the **state directory on a durable shared
+host volume beforehand** with appropriate permissions; it must already exist
+and be an absolute path. The daemon claims a private UTC-date marker using
+atomic exclusive creation **before** making the TinyFish call. A failed call
+consumes that day's slot, and restarting the daemon cannot issue another query
+on that UTC day if the volume persists. If the directory is absent, unwritable,
+or configured as a relative path, the research task does not run.
+A VM/container's ephemeral filesystem is **not** adequate: no cross-restart
+guarantee exists without a real persistent volume. The limit is one attempt
+per UTC calendar day, which can be less than 24 hours between UTC day boundaries.
+The daemon does not log raw TinyFish content. It cannot send outreach, post content,
+create monitors, or use browser automation. To stop it, remove/disable
+`AGENTZ_TINYFISH_SCOUT_ENABLED` and restart the service. The flag defaults
+to off.
+
+The workflow's outputs are source URLs marked unverified, not partnership
+confirmations or evidence of authentication. The exact runner process
+must execute successfully on an authenticated host before launch is claimed.
+
+## Release evidence requirements
+
+Record separately: local tests; repo CI; accepted PR/merge; dependency install;
+remote AgentZ auth; live Search+Fetch; and deployed service revision.
+Fail-closed on transport errors. A successful ChatGPT TinyFish search is not
+proof that remote AgentZ has started.
+
+## References
+
+- [TinyFish MCP server and API-key documentation](https://github.com/tinyfish-io/tinyfish-mcp-server)
+- [TinyFish MCP integration](https://docs.tinyfish.ai/mcp-integration)
+- [Agent2Agent protocol](https://github.com/a2aproject/a2a)

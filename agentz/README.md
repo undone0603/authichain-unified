@@ -40,6 +40,27 @@ python -m agentz.cli run power_user_ops --mode dry-run
 
 OpenClaw drop-in: `agentz/openclaw/POWER_USER.md`. Live X publish stays on AgentZ `xurl`, not this CLI.
 
+TinyFish MCP read-only search/fetch (Node.js/npx and an authenticated TinyFish
+session on the AgentZ host are required):
+
+```bash
+python -m agentz.cli tinyfish search 'Agent2Agent protocol' --dry-run
+python -m agentz.cli tinyfish search 'Agent2Agent protocol'
+python -m agentz.cli tinyfish fetch_content https://github.com/a2aproject/a2a
+```
+
+The optional AgentZ discovery workflow is registered separately:
+```bash
+python -m agentz.cli run tinyfish_a2a_scout --mode dry-run
+python -m agentz.cli run tinyfish_a2a_scout --mode confirm
+```
+Its daemon schedule remains disabled until the host sets
+`AGENTZ_TINYFISH_SCOUT_ENABLED=true` and secures `TINYFISH_API_KEY`.
+It performs at most one read-only A2A search per day, without outreach.
+
+See [AgentZ + TinyFish MCP](../docs/operations/AGENTZ_TINYFISH_MCP.md) for
+OAuth setup and the explicit boundary excluding browser automations and paid actions.
+
 See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and workflow details.
 
 ## Running the API
