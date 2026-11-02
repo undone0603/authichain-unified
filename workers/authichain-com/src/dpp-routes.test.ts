@@ -60,11 +60,11 @@ describe("tryHandleDppRoute", () => {
     expect(html).not.toContain("paid=1");
   });
 
-  it("confirms payment without claiming a product for an unknown plan", async () => {
+  it("does not confirm payment for an unknown plan", async () => {
     const html = await (await tryHandleDppRoute(
       req("/dpp/thanks?session_id=cs_test_1&plan=not_a_real_plan")
     ))!.text();
-    expect(html).toContain("Check your workspace activation");
+    expect(html).toContain("Check your payment status");
     expect(html).not.toContain("Workspace opened");
     expect(html).not.toContain("/dpp/activate?");
     expect(html).not.toContain("generations");
