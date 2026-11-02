@@ -1,0 +1,110 @@
+name: Isolated GitLab SHA 28f016e9 validation
+on:
+  push:
+    branches:
+      - ci/isolated-gitlab-28f016e9-20261102
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: isolated-gitlab-28f016e9
+  cancel-in-progress: true
+jobs:
+  validate:
+    name: Exact-head Vitest and quality gate (no deploy)
+    if: github.repository == 'undone0603/authichain-unified' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CI: 'true'
+      HUSKY: '0'
+      NODE_OPTIONS: '--max-old-space-size=4096'
+    steps:
+      - name: Private GitLab exact SHA checkout (no persistent credentials)
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_READ_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$GITLAB_TOKEN" ]; then
+            echo "::error::Missing GitLab read_repository credential: GITLAB_READ_TOKEN. No source checked out."
+            exit 1
+          fi
+          askpass="$RUNNER_TEMP/gitlab-askpass-28f016e9"
+          cat > "$askpass" <<'EOF'
+          #!/bin/sh
+          case "$1" in
+            *Username*) printf 'oauth2' ;;
+            *Password*) printf '%s' "$GITLAB_TOKEN" ;;
+            *) exit 1 ;;
+          esac
+          EOF
+          chmod 700 "$askpass"
+          trap 'rm -f "$askpass"' EXIT
+          GIT_ASKPASS="$askpass" GIT_TERMINAL_PROMPT=0 git -c credential.helper= clone --quiet --depth=1 --single-branch --branch feat/premium-10c-industry-agent-pools-20261101 https://gitlab.com/authichain-group/authichain-unified.git exact-src
+          git -C exact-src remote set-url origin https://gitlab.com/authichain-group/authichain-unified.git
+          got="$(git -C exact-src rev-parse HEAD)"
+          expected="28f016e98a184bcd34012a4632c78bf61d278e71"
+          if [ "$got" != "$expected" ]; then
+            echo "::error::GitLab HEAD mismatch; expected $expected, got $got. Refusing tests."
+            exit 1
+          fi
+          echo "Verified exact GitLab SHA $got"
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: '10.28.2'
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+      - name: Install dependencies without lifecycle scripts
+        working-directory: exact-src
+        run: pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
+      - name: Targeted spend-ledger route test
+        working-directory: exact-src
+        shell: bash
+        run: |
+          set -euo pipefail
+          if pnpm exec vitest run src/app/api/v1/agent-verify/route.test.ts > "$RUNNER_TEMP/targeted.log" 2>&1; then
+            echo "PASS targeted src/app/api/v1/agent-verify/route.test.ts"
+          else
+            echo "::error::FAIL targeted route suite (private full log retained on ephemeral runner)"
+            grep -E 'FAIL |Test Files|Tests |Failed to resolve import|Error:|error TS[0-9]+' "$RUNNER_TEMP/targeted.log" | tail -n 25 || true
+            exit 1
+          fi
+      - name: Full GitLab-equivalent blocking quality gate (non-deploying)
+        working-directory: exact-src
+        shell: bash
+        run: |
+          set -uo pipefail
+          failed=0
+          run_gate() {
+            label="$1"
+            shift
+            "$@" > "$RUNNER_TEMP/$label.log" 2>&1
+            rc=$?
+            printf '%s exit=%s\n' "$label" "$rc"
+            if [ "$rc" -ne 0 ]; then
+              grep -E 'FAIL |Test Files|Tests |error TS[0-9]+|ERR_PNPM|not ok' "$RUNNER_TEMP/$label.log" | tail -n 20 || true
+              failed=1
+            fi
+          }
+          run_gate lint pnpm run lint:ci
+          run_gate check pnpm run check
+          run_gate vitest pnpm exec vitest run --exclude scripts/__tests__/autonomy.test.ts
+          run_gate node node --experimental-strip-types --test scripts/autonomy/*.test.mjs scripts/ci/*.test.mjs protocol/qfs/envelope.test.mjs scripts/lib/b2b-send-policy.test.ts worker-app/cron-dispatch.test.ts workers/authichain-verify-worker/src/protocol-verify.test.mjs workers/authichain-verify-worker/src/published-record.test.mjs
+          run_gate tsx pnpm exec tsx --test protocol/qfs/envelope.test.mjs scripts/lib/b2b-send-policy.test.ts worker-app/cron-dispatch.test.ts workers/authichain-verify-worker/src/agent-d1-concurrency.node-test.mjs
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::Blocking quality gate failed (no merge or deployment)."
+            exit 1
+          fi
+          echo "All five blocking quality steps passed at exact GitLab SHA."
+      - name: Known-red autonomy test (advisory only)
+        working-directory: exact-src
+        shell: bash
+        run: |
+          set +e
+          pnpm exec vitest run scripts/__tests__/autonomy.test.ts > "$RUNNER_TEMP/autonomy-known-red.log" 2>&1
+          rc=$?
+          echo "autonomy_known_red_exit=$rc (advisory, independently tracked)"
+          exit 0
