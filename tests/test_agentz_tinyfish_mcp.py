@@ -98,14 +98,27 @@ def test_headless_transport_uses_http_api_key(monkeypatch):
 
     secrets = []
 
+    class FakeHttpClient:
+        def __init__(self, *, headers, timeout):
+            self.headers = headers
+            self.timeout = timeout
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, _type, _value, _traceback):
+            return False
+
     @asynccontextmanager
-    async def fake_streamable_http_client(url, *, headers):
-        secrets.append((url, headers["Authorization"]))
+    async def fake_streamable_http_client(url, *, http_client):
+        secrets.append((url, http_client.headers["Authorization"]))
         yield "read", "write", "session"
 
     mcp_client = types.ModuleType("mcp.client")
     mcp_http = types.ModuleType("mcp.client.streamable_http")
     mcp_http.streamable_http_client = fake_streamable_http_client
+    import httpx
+    monkeypatch.setattr(httpx, "AsyncClient", FakeHttpClient)
     monkeypatch.setitem(sys.modules, "mcp", types.ModuleType("mcp"))
     monkeypatch.setitem(sys.modules, "mcp.client", mcp_client)
     monkeypatch.setitem(sys.modules, "mcp.client.streamable_http", mcp_http)
