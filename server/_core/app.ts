@@ -46,7 +46,7 @@ import {
   adminRateLimit,
 } from "./rate-limit";
 import { getDb } from "../db";
-import { isRetryableFulfillment } from "../../src/lib/retryable-fulfillment";
+import { stripeWebhookFailureStatus } from "./stripe-webhook-error-status";
 import { getOpsSummary } from "./db-helpers";
 
 function getErrorMessage(error: unknown): string {
@@ -112,10 +112,7 @@ export function createApp() {
       // Duplicate-claim and paid-fulfillment failures must return 5xx or
       // Stripe will treat a failed entitlement grant as terminal delivery.
       // Invalid signatures and non-retryable request errors stay HTTP 400.
-      if (
-        (err as { name?: string } | null)?.name === "StripeEventClaimUnavailableError" ||
-        isRetryableFulfillment(err)
-      ) {
+      if (stripeWebhookFailureStatus(err) === 500) {
         return res.status(500).json({ error: "Temporarily unavailable; retry" });
       }
       res.status(400).json({ error: message });
