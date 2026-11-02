@@ -16,10 +16,34 @@ describe("tryHandleDppRoute", () => {
       const html = await res!.text();
       expect(html).toContain("Checkout return");
       expect(html).not.toContain("Payment received");
-      expect(html).toContain(
-        "/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
-      );
+      expect(html).toContain("Checkout status needs verification");
+      expect(html).toContain('href="/generate"');
+      expect(html).not.toContain("/dpp/activate?");
+      expect(html).not.toContain("paid=1");
     }
+  });
+
+  it("does not mistake the live planless Starter Payment Link return for DPP", async () => {
+    // Stripe Payment Link after_completion redirects only with session_id.
+    for (const path of [
+      "/success?session_id=cs_live_starter_example",
+      "/thanks?session_id=cs_live_starter_example",
+    ]) {
+      const html = await (await tryHandleDppRoute(req(path)))!.text();
+      expect(html).toContain("does not identify which product was purchased");
+      expect(html).toContain('href="/generate"');
+      expect(html).not.toContain("/dpp/activate?");
+      expect(html).not.toContain("Workspace opened");
+      expect(html).not.toContain("Payment received");
+      expect(html).not.toContain("paid=1");
+    }
+    // DPP-specific return remains permitted to offer activation, but never
+    // claims signed payment evidence or grants access on the return page.
+    const dpp = await (await tryHandleDppRoute(
+      req("/dpp/thanks?session_id=cs_dpp_example")
+    ))!.text();
+    expect(dpp).toContain("/dpp/activate?session_id=cs_dpp_example");
+    expect(dpp).not.toContain("Workspace opened");
   });
 
   it("serves thanks HTML at the edge with the activate query string", async () => {
