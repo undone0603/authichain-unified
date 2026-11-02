@@ -86,7 +86,23 @@ function thanksHtml(
   const qs = new URLSearchParams({ session_id: sessionId });
   if (visitId) qs.set("visit_id", visitId);
 
-  if (planId && planId !== "dpp_readiness") {
+  // The live Starter Payment Link redirects to /success?session_id=... with
+  // NO plan parameter. Do not infer DPP merely because plan is absent.
+  if (!planId) {
+    return pageShell(
+      "Checkout return | AuthiChain",
+      `<p class="kicker">Checkout return</p>
+       <h1>Checkout status needs verification</h1>
+       <p>This redirect does not identify which product was purchased or verify
+       that Stripe collected payment. Customer access is provided only after
+       a signed webhook and a persisted entitlement or operator-reviewed order.</p>
+       <a class="btn" href="/generate">Check generation balance</a>
+       <p>If you purchased another product, use your receipt or contact support
+       for the correct next steps.</p>`
+    );
+  }
+
+  if (planId !== "dpp_readiness") {
     const plan = PLANS.find(p => p.id === planId);
     const credits = plan ? PLAN_CREDITS[plan.id] : 0;
 
@@ -221,7 +237,10 @@ export function tryHandleDppRoute(request: Request): Response | null {
       thanksHtml(
         url.searchParams.get("session_id") || "",
         url.searchParams.get("visit_id") || "",
-        url.searchParams.get("plan") || ""
+        url.searchParams.get("plan") ||
+          (p === "/dpp/thanks" || p.startsWith("/dpp/thanks/")
+            ? "dpp_readiness"
+            : "")
       )
     );
   }
