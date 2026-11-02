@@ -111,7 +111,7 @@ export async function activateDppMerchant(opts: {
     session.subscription ||
     lineItems.length !== 1 ||
     lineItems[0]?.price?.id !== DPP_PRICE_ID ||
-    (lineItems[0]?.quantity != null && lineItems[0].quantity !== 1) ||
+    lineItems[0]?.quantity !== 1 ||
     (typeof md.plan === "string" &&
       md.plan.length > 0 &&
       md.plan !== "dpp_readiness")
