@@ -415,10 +415,12 @@ async function fulfillDppCheckoutIfPaid(
 
   const supabase = await getWebhookSupabase();
   if (!supabase) {
-    console.error(
-      "[stripe-webhook] DPP session paid but Supabase is not configured"
+    // This is a paid entitlement, not optional telemetry. Returning normally
+    // acknowledges the webhook and can strand the buyer without access.
+    // Throw so the caller reports a retryable delivery failure to Stripe.
+    throw markRetryableFulfillment(
+      new Error("DPP entitlement database not configured")
     );
-    return;
   }
 
   const { fulfillDppPaidSession } =
