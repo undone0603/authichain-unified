@@ -1135,6 +1135,7 @@ export async function handleStripeWebhook(
             mode: session.mode,
             subscription: session.subscription,
             amount_total: session.amount_total,
+            currency: session.currency,
           });
         }
 
