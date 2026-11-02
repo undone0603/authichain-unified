@@ -248,6 +248,13 @@ def cmd_openclaw(args: argparse.Namespace) -> int:
     return 2
 
 
+def cmd_tinyfish(args: argparse.Namespace) -> int:
+    """Run one read-only TinyFish MCP operation through AgentZ."""
+    from agentz.integrations.tinyfish_mcp import cli_action
+
+    return cli_action(args.tinyfish_action, args.values, dry_run=args.dry_run)
+
+
 def build_parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog="agentz",
@@ -332,6 +339,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write run results to a JSON file",
     )
 
+    tf = sub.add_parser(
+        "tinyfish",
+        help="Read-only TinyFish MCP research (search/fetch only; no browser actions)",
+    )
+    tf_sub = tf.add_subparsers(dest="tinyfish_action", required=True)
+    tf_search = tf_sub.add_parser("search", help="Search the public web via MCP")
+    tf_search.add_argument("values", nargs=1, metavar="QUERY")
+    tf_fetch = tf_sub.add_parser("fetch_content", help="Fetch 1-10 public HTTP(S) URLs")
+    tf_fetch.add_argument("values", nargs="+", metavar="URL")
+    for tf_action in (tf_search, tf_fetch):
+        tf_action.add_argument(
+            "--dry-run", action="store_true",
+            help="Validate and print the request; do not connect to TinyFish",
+        )
+
     oc = sub.add_parser(
         "openclaw",
         help="Talk to the OpenClaw bridge (claw.authichain.com)",
@@ -388,6 +410,8 @@ def main(argv: list[str] | None = None) -> int:
         if not args.all and not args.workflow_id:
             parser.error("run requires a workflow id or --all")
         return cmd_run(args)
+    if args.command == "tinyfish":
+        return cmd_tinyfish(args)
     if args.command == "openclaw":
         return cmd_openclaw(args)
 
