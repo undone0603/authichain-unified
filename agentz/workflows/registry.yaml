@@ -1232,3 +1232,27 @@ workflows:
         5) Restate frozen gates (outreach, autopilot, no key rotation).
       Dry-run sends no HTTP. Never sends mail, deploys, merges, or rotates
       AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64.
+
+  - id: mcp_httpx_readonly
+    title: "AgentZ: HTTPX no-wallet MCP initialize + tools/list compatibility probe"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.mcp_httpx_readonly
+    type: api
+    estimated_minutes: 1
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    max_runs_per_day: 4
+    description: |
+      Default dry-run; no network unless --mode auto and
+      AGENTZ_HTTPX_MCP_LIVE=true explicitly opt in. HTTPX does at most three
+      bounded JSON-RPC POST frames to https://authichain.com/mcp:
+      initialize, notifications/initialized and tools/list. It never uses
+      tools/call, payment, credentials, cookies, wallets, redirects, customer
+      data or external hosts. Network failures are inconclusive, never
+      proof of protocol nonconformance or certification.
