@@ -24,7 +24,8 @@ def _public_references(response: dict) -> list[str]:
     structured = response.get("structured_content")
     if isinstance(structured, dict):
         candidates.append(structured)
-    for part in response.get("content", []):
+    parts = response.get("content")
+    for part in parts if isinstance(parts, list) else []:
         if isinstance(part, str):
             try:
                 data = json.loads(part)
@@ -44,10 +45,15 @@ def _public_references(response: dict) -> list[str]:
             url = item.get("url")
             if not isinstance(url, str):
                 continue
-            parsed = urlsplit(url)
-            if parsed.scheme != "https" or not parsed.hostname:
-                continue
-            if parsed.username or parsed.password or len(url) > 2048:
+            try:
+                parsed = urlsplit(url)
+                if parsed.scheme != "https" or not parsed.hostname:
+                    continue
+                if parsed.username or parsed.password or len(url) > 2048:
+                    continue
+            except ValueError:
+                # Invalid bracketed IPv6 and Unicode hostnames may raise.
+                # One malicious result must not abort other public sources.
                 continue
             if any(ord(char) < 32 or ord(char) == 127 for char in url):
                 continue
