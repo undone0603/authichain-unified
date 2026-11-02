@@ -508,8 +508,27 @@ export function countEconomicStates(rows: LoopEventRow[]): {
     }
     visits += 1;
     const loop = reconstructLoop(visitRows);
+    // A recorded "payment_succeeded" event can represent a $0 discounted
+    // Checkout, and old events can be missing amount_total entirely.
+    // Never promote those visits into PAID or later *economic* states without
+    // a positive Stripe session total recorded on that payment stage.
+    // This is reporting-only: complimentary entitlements and activation must
+    // continue through their separate fulfillment/authorization workflow.
+    const positiveCheckoutEvidence = visitRows.some(row =>
+      stageOf(row) === "payment_succeeded" &&
+      typeof row.metadata?.amount_total === "number" &&
+      Number.isSafeInteger(row.metadata.amount_total) &&
+      row.metadata.amount_total > 0
+    );
     const seen = new Set<EconomicState>();
-    for (const stage of loop.reached) seen.add(STATE_FOR_STAGE[stage]);
+    for (const stage of loop.reached) {
+      const state = STATE_FOR_STAGE[stage];
+      if (
+        ECONOMIC_STATES.indexOf(state) >= ECONOMIC_STATES.indexOf("PAID") &&
+        !positiveCheckoutEvidence
+      ) continue;
+      seen.add(state);
+    }
     for (const state of seen) reached[state] += 1;
   }
   return { visits, demoVisits, reached, leak: largestFunnelLeak(reached) };
