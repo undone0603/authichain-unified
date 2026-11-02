@@ -71,29 +71,29 @@ TinyFish connection does not authenticate the AgentZ host.
 
 ## AgentZ orchestration integration
 
-The registry now has \`tinyfish_a2a_scout\`, one **read-only** public search
+The registry now has `tinyfish_a2a_scout`, one **read-only** public search
 for A2A open-agent interoperability repositories. The registry allows at most
-one successful live run per day. It requires the host's \`TINYFISH_API_KEY\`.
+one successful live run per day. It requires the host's `TINYFISH_API_KEY`.
 
-\`\`\`bash
+```bash
 python -m agentz.cli run tinyfish_a2a_scout --mode dry-run
 python -m agentz.cli run tinyfish_a2a_scout --mode confirm
-\`\`\`
+```
 
 The existing AgentZ daemon retains its original dry-run GovChain task.
 TinyFish **does not start automatically**. To opt into one research query
 per day in the long-running daemon, bind both runtime variables:
 
-\`\`\`
+```
 TINYFISH_API_KEY=<secret set in host secret manager>
 AGENTZ_TINYFISH_SCOUT_ENABLED=true
-\`\`\`
+```
 
 Only set these on the **real Python AgentZ service**, not on the similarly
 named Cloudflare Worker. The daemon rate-limits to at least 24 hours and
 does not log raw TinyFish content. It cannot send outreach, post content,
 create monitors, or use browser automation. To stop it, remove/disable
-\`AGENTZ_TINYFISH_SCOUT_ENABLED\` and restart the service. The flag defaults
+`AGENTZ_TINYFISH_SCOUT_ENABLED` and restart the service. The flag defaults
 to off.
 
 The workflow's outputs are source URLs marked unverified, not partnership
