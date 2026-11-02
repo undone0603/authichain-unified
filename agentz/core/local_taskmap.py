@@ -9,6 +9,7 @@ negotiable. An offer is not a payment and is not Stripe revenue.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from html import escape
 from datetime import datetime, timezone
 from math import asin, cos, radians, sin, sqrt
 from typing import Any
@@ -193,9 +194,9 @@ def render_board(worker: Worker, gigs: list[Gig], now: datetime) -> str:
             "</article>".format(
                 x=pin["x"],
                 y=pin["y"],
-                title=pin["title"],
-                kind=pin["kind"],
-                label=pin["label"],
+                title=escape(str(pin["title"]), quote=True),
+                kind=escape(str(pin["kind"]), quote=True),
+                label=escape(str(pin["label"]), quote=True),
                 km=pin["distance_km"],
                 price=price,
                 talk=talk,
@@ -203,12 +204,10 @@ def render_board(worker: Worker, gigs: list[Gig], now: datetime) -> str:
             )
         )
     body = "\n".join(cards) if cards else "<p>No gigs in range for this worker.</p>"
-    hidden = [gig.id for gig in gigs if gig.id not in {pin["id"] for pin in pins}]
     return (
         "<!doctype html><title>Local task map</title>"
         "<p>Offers are not payments.</p>"
         "<p><a href=\"https://authichain.com/checkout/qron_launch\">QRON Launch $19/mo</a>"
         " · <a href=\"https://authichain.com/checkout/qron_launch_annual\">QRON Launch annual $190/yr</a></p>"
         f"<section id=\"map\">{body}</section>"
-        f"<!-- hidden:{','.join(hidden)} -->"
     )
