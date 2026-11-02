@@ -1587,6 +1587,28 @@ describe("service-order webhook retry and product isolation", () => {
     );
   });
 
+  it("preserves an expanded PaymentIntent ID when replaying a claimed service order", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    claimStripeEventMock.mockResolvedValue("duplicate");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({ handled: true, orderId: 42 });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_service_expanded_pi", {
+        ...session,
+        payment_intent: { id: "pi_test_service_expanded" },
+      }),
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(handleServiceOrderPayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: session.id,
+        payment_intent: "pi_test_service_expanded",
+        amount_total: 2900,
+      }),
+    );
+  });
+
   it("returns a retryable failure when atomic service-order settlement fails", async () => {
     const { handleServiceOrderPayment } =
       await import("../services/order-payment-handler.js");
