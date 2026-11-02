@@ -83,15 +83,11 @@ async function fulfillDppPaidSessionOnce(
   priceId?: string | null
 ): Promise<DppFulfillResult> {
   const md = session.metadata || {};
-  const linePriceId =
-    (typeof priceId === "string" && priceId) ||
-    (typeof md.stripe_price_id === "string" ? md.stripe_price_id : null);
-  if (
-    !isDppOffer(md, linePriceId) ||
-    (linePriceId && linePriceId !== DPP_PRICE_ID)
-  ) {
-    // A Checkout Session's actual line-price identity must win over claimed
-    // offer metadata. Different $299 offers can exist in this account.
+  // Only a caller that verified the *retrieved Stripe line item* may supply
+  // this price identity. Session metadata (including stripe_price_id, offer
+  // and plan) is buyer-controlled attribution, not proof of the purchased SKU.
+  // With no authoritative price argument, fail closed before any DB writes.
+  if (priceId !== DPP_PRICE_ID) {
     return { handled: false, profileId: null, activationEmail: "skipped" };
   }
   // This helper has multiple webhook callers. Do not assume each caller has
