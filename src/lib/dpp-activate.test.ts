@@ -68,6 +68,39 @@ describe("activateDppMerchant", () => {
     expect(from).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["same-price other product with DPP metadata", "price_other_299", "dpp_readiness"],
+    ["amount-only checkout without price identity", null, "dpp_readiness"],
+    ["wrong explicit plan with DPP price", "price_1TwmD8GqTruSqV8TpAF8dfyA", "musa_claim_file"],
+  ])("rejects %s", async (_label, priceId, plan) => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      metadata: { plan },
+      line_items: { data: [{ price: priceId ? { id: priceId } : null }] },
+      customer_details: { email: "buyer@example.com" },
+    });
+    const from = vi.fn();
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_paid_other_299",
+        categories: "LMT",
+        markets: "DE",
+        labeling: "Wh",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(400);
+      expect(result.error).toMatch(/Not a DPP workspace session/);
+    }
+    expect(from).not.toHaveBeenCalled();
+  });
+
   it("rejects a paid $299 session whose line item is another product", async () => {
     retrieve.mockResolvedValueOnce({
       payment_status: "paid",
