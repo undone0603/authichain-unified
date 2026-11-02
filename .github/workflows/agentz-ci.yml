@@ -37,7 +37,8 @@ jobs:
             tests/test_agentz_tinyfish_mcp.py \
             tests/test_agentz_tinyfish_scout.py \
             tests/test_agentz_cli_exit_status.py \
-            tests/test_agentz_ci_runner_policy.py
+            tests/test_agentz_ci_runner_policy.py \
+            tests/test_agentz_peer_learning.py
       - name: Verify real AgentZ dry-run and missing-key failure
         env:
           TINYFISH_API_KEY: ""
