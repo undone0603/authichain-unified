@@ -139,6 +139,22 @@ function isRecurringCheckoutSession(session: Stripe.Checkout.Session): boolean {
   return false;
 }
 
+// Share the same Stripe evidence mapping for first delivery and retries.
+// Event-level duplicate claims are not fulfillment receipts for service orders.
+function serviceOrderSessionFromCheckout(session: Stripe.Checkout.Session) {
+  return {
+    id: session.id,
+    payment_intent:
+      typeof session.payment_intent === "string" ? session.payment_intent : undefined,
+    status: session.status,
+    payment_status: session.payment_status,
+    mode: session.mode,
+    subscription: session.subscription,
+    amount_total: session.amount_total,
+    currency: session.currency,
+  };
+}
+
 function isReplayableCheckoutEvent(type: string): boolean {
   return (
     type === "checkout.session.completed" ||
@@ -677,10 +693,18 @@ export async function handleStripeWebhook(
     const session = event.data.object as Stripe.Checkout.Session;
     try {
       await fulfillDppCheckoutIfPaid(session);
+      // A previously claimed service-order event may have failed before the
+      // atomic order/ledger transaction committed. Recheck the exact session:
+      // its pending->paid CAS makes replay safe and suppresses duplicates.
+      let serviceReplayed = false;
+      if (session.metadata?.type === "one_time_service") {
+        const result = await handleServiceOrderPayment(serviceOrderSessionFromCheckout(session));
+        serviceReplayed = result.handled;
+      }
       // A duplicate catalog delivery does not replay a credit grant. The
       // existing receipt may be a reconciliation hold: never overwrite it
       // with a false success or claim that this event fulfilled a customer.
-      // DPP is the only replay path here (session-level idempotency).
+      // DPP and service-order CAS are replayable; catalog grants are not.
       const { isDppOffer } = await import("../../src/lib/dpp-loop");
       const dppReplay =
         session.payment_status === "paid" &&
@@ -693,7 +717,7 @@ export async function handleStripeWebhook(
         received: true,
         type: event.type,
         duplicate: true,
-        handled: dppReplay,
+        handled: dppReplay || serviceReplayed,
       };
     } catch (dppErr) {
       const retryable = markRetryableFulfillment(dppErr);
@@ -1124,19 +1148,12 @@ export async function handleStripeWebhook(
         }
 
         if (session.metadata?.type === "one_time_service") {
-          await handleServiceOrderPayment({
-            id: session.id,
-            payment_intent:
-              typeof session.payment_intent === "string"
-                ? session.payment_intent
-                : undefined,
-            status: session.status,
-            payment_status: session.payment_status,
-            mode: session.mode,
-            subscription: session.subscription,
-            amount_total: session.amount_total,
-            currency: session.currency,
-          });
+          try {
+            await handleServiceOrderPayment(serviceOrderSessionFromCheckout(session));
+          } catch (serviceErr) {
+            // A failed SQL transaction must remain retryable by Stripe.
+            throw markRetryableFulfillment(serviceErr);
+          }
         }
 
         console.log(
