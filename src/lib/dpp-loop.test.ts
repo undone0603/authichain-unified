@@ -10,6 +10,7 @@ import {
   isDppOffer,
   isDemoVisit,
   recordDppLoopEvent,
+  recordDppLoopEventOnce,
   recordEarnedRetention,
   runDppExceptionsReport,
   stallOf,
@@ -90,6 +91,59 @@ describe("dpp-loop", () => {
     }
   });
 
+
+  it("dedupes a checkout beyond 25 prior events using an exact database filter", async () => {
+    const rows = [
+      ...Array.from({ length: 30 }, (_, i) => ({
+        prospect_id: "visit_many",
+        event_type: "dpp_loop:payment_succeeded",
+        metadata: { dedupe_key: `cs_other_${i}` },
+      })),
+      {
+        prospect_id: "visit_many",
+        event_type: "dpp_loop:payment_succeeded",
+        metadata: { dedupe_key: "cs_target" },
+      },
+    ];
+    const filters: Array<[string, string]> = [];
+    let exactKey: string | undefined;
+    const insert = vi.fn(async () => ({ error: null }));
+    const query = {
+      select: () => query,
+      eq: (column: string, value: string) => {
+        filters.push([column, value]);
+        return query;
+      },
+      contains: vi.fn((column: string, value: { dedupe_key: string }) => {
+        expect(column).toBe("metadata");
+        exactKey = value.dedupe_key;
+        return query;
+      }),
+      limit: vi.fn(async (n: number) => ({
+        data: rows
+          .filter(row =>
+            filters.every(([column, value]) =>
+              row[column as "prospect_id" | "event_type"] === value
+            )
+          )
+          .filter(row => !exactKey || row.metadata.dedupe_key === exactKey)
+          .slice(0, n),
+        error: null,
+      })),
+      insert,
+    };
+    const from = vi.fn(() => query);
+    const result = await recordDppLoopEventOnce(
+      { from },
+      { visitId: "visit_many", stage: "payment_succeeded", dedupeKey: "cs_target" }
+    );
+    expect(result).toEqual({ recorded: false, reason: "already_recorded" });
+    expect(query.contains).toHaveBeenCalledWith("metadata", {
+      dedupe_key: "cs_target",
+    });
+    expect(query.limit).toHaveBeenCalledWith(1);
+    expect(insert).not.toHaveBeenCalled();
+  });
 
   it("detects offer by metadata and price id", () => {
     expect(isDppOffer({ offer: DPP_OFFER_KEY })).toBe(true);
