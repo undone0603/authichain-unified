@@ -57,7 +57,9 @@ jobs:
           print("PASS: audit records a blocked TinyFish live attempt")
           PY
   verify-and-heal:
-    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    # Never execute unreviewed pull-request code on the production-capable
+    # self-hosted runner. Only main-branch pushes may opt into authichain-ops.
+    runs-on: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
