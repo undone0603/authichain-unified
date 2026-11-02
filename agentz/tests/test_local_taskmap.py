@@ -125,4 +125,5 @@ def test_board_does_not_disclose_filtered_gig_identifiers():
     blocked = gig(id="private-hidden-gig-identifier", place=FAR)
     html = render_board(worker(), [gig(), blocked], NOW)
     assert "private-hidden-gig-identifier" not in html
-    assert "gig-1" not in html or "hidden:" not in html  # IDs are not leaked in comments.
+    assert "hidden:" not in html
+    assert "Review an A2A card" in html
