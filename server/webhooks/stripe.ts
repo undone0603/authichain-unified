@@ -1212,6 +1212,7 @@ export async function handleStripeWebhook(
                 reconciliationRequired: true,
               };
             }
+            if (!result?.handled) handled = false;
           } catch (serviceErr) {
             // A failed SQL transaction must remain retryable by Stripe.
             throw markRetryableFulfillment(serviceErr);
