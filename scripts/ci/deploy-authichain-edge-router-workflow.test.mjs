@@ -65,3 +65,38 @@ test("publish requires a successful exact-head Main gate", () => {
   assert.ok(gateOffset > 0 && gateOffset < publishOffset);
   assert.doesNotMatch(guard, /continue-on-error: true/);
 });
+
+test("canonical webhook and DPP dependencies trigger edge-router deployment", () => {
+  // Changing these source files must trigger a build of the deployed Worker,
+  // not just an unrelated Next/Vercel build.
+  const [trigger] = yml.split("\npermissions:");
+  assert.ok(trigger.includes('branches: [main]'));
+  const direct = [
+    "server/webhooks/stripe.ts",
+    "server/services/order-payment-handler.ts",
+    "src/lib/stripe-webhook-claim.ts",
+    "src/lib/stripe-webhook-log.ts",
+    "src/lib/stripe-construct-event.ts",
+    "src/lib/retryable-fulfillment.ts",
+    "src/lib/provisioning.ts",
+    "src/lib/dpp-activate.ts",
+    "src/lib/dpp-loop.ts",
+    "src/lib/dpp-fulfill-checkout.ts",
+    "src/lib/plans.ts",
+    "src/lib/checkout-gate.ts",
+  ];
+  for (const file of direct) {
+    assert.ok(
+      trigger.includes('      - "' + file + '"'),
+      "missing deploy path trigger: " + file
+    );
+  }
+  for (const glob of ["src/lib/billing/**", "src/lib/founder-exit/**"]) {
+    assert.ok(trigger.includes('      - "' + glob + '"'), "missing " + glob);
+  }
+  assert.match(yml, /cancel-in-progress: false/);
+  assert.ok(
+    yml.indexOf("- name: Require exact-head CI Main gate") <
+    yml.indexOf("- name: Publish authichain-edge-router")
+  );
+});
