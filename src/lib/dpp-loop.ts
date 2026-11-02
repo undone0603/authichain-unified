@@ -868,6 +868,66 @@ export function isDppDemoSession(
   return isDppSmokePromo(String(metadata?.promo || ""));
 }
 
+
+/**
+ * Classify a Stripe-RETRIEVED Checkout Session after expanding line_items.
+ *
+ * Webhook payload metadata and amount_total are not proof of a purchased SKU.
+ * Callers MUST retrieve the session from Stripe with expand: ["line_items"]
+ * before invoking this function. Ambiguous paid sessions require a durable
+ * operator reconciliation hold, never an automatic grant or silent 2xx.
+ */
+export function classifyRetrievedDppCheckout(session: {
+  status?: string | null;
+  payment_status?: string | null;
+  mode?: string | null;
+  subscription?: string | { id: string } | null;
+  metadata?: Record<string, unknown> | null;
+  line_items?: {
+    data?: Array<{
+      price?: { id?: string | null } | null;
+      quantity?: number | null;
+    }>;
+    has_more?: boolean;
+  } | null;
+}): "dpp" | "other" | "reconciliation_required" | "not_paid" {
+  const metadata = session.metadata || {};
+  const claimedDpp = isDppOffer(metadata);
+  const items = session.line_items?.data;
+  const includesDpp = items?.some(item => item.price?.id === DPP_PRICE_ID) ?? false;
+
+  // Incomplete async payment cannot grant an entitlement even if Checkout
+  // is complete. The async_payment_succeeded event will be evaluated later.
+  if (session.payment_status !== "paid" || session.status !== "complete") {
+    return claimedDpp || includesDpp ? "not_paid" : "other";
+  }
+
+  // A paid Checkout without expanded/complete price evidence must not be
+  // silently classified as a different product and acknowledged as fulfilled.
+  if (!items || session.line_items?.has_more) {
+    return "reconciliation_required";
+  }
+
+  if (!claimedDpp && !includesDpp) return "other";
+
+  // DPP is a one-time single-unit workspace. Any mixed basket, recurring
+  // checkout, contradictory plan, or other purchased price is a human hold.
+  if (
+    session.mode !== "payment" ||
+    session.subscription ||
+    items.length !== 1 ||
+    items[0]?.price?.id !== DPP_PRICE_ID ||
+    (items[0]?.quantity != null && items[0].quantity !== 1) ||
+    (typeof metadata.plan === "string" &&
+      metadata.plan.length > 0 &&
+      metadata.plan !== "dpp_readiness")
+  ) {
+    return "reconciliation_required";
+  }
+
+  return "dpp";
+}
+
 export function isDppOffer(
   metadata: Record<string, unknown> | null | undefined,
   priceId?: string | null
