@@ -530,7 +530,7 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
 });
 
 describe("Launch Annual cadence", () => {
-  it("shows $190/yr on the confirm page and the plan chooser", () => {
+  it("retains historical price metadata without promoting retired plans in the chooser", () => {
     const annual = planById("qron_launch_annual");
     const monthly = planById("qron_launch");
     expect(annual).toBeTruthy();
@@ -540,11 +540,10 @@ describe("Launch Annual cadence", () => {
     expect(confirm).not.toContain("$190/mo");
     expect(renderCheckoutConfirmPage({ plan: monthly! })).toContain("$19/mo");
     const chooser = renderCheckoutChooserPage();
-    // Direct chooser links. listed stays false, so /pricing and /generate do not grow Launch buttons.
-    expect(chooser).toContain('href="/checkout/qron_launch"');
-    expect(chooser).toContain('href="/checkout/qron_launch_annual"');
-    expect(chooser).toContain("$19/mo");
-    expect(chooser).toContain("$190/yr");
+    // The historical prices remain for existing subscribers, but no new
+    // checkout path may be offered from the public chooser.
+    expect(chooser).not.toContain('href="/checkout/qron_launch"');
+    expect(chooser).not.toContain('href="/checkout/qron_launch_annual"');
     expect(planById("qron_launch")?.listed).toBe(false);
     expect(planById("qron_launch_annual")?.listed).toBe(false);
   });
