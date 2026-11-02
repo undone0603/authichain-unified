@@ -561,6 +561,34 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     );
   });
 
+  it("holds a signed paid event contradicted by Stripe's retrieved unpaid state", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_dpp_state_mismatch", {
+        id: "cs_dpp_state_mismatch",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        metadata: { plan: "dpp_readiness" },
+      })
+    );
+    mockCheckoutRetrieve.mockResolvedValueOnce({
+      id: "cs_dpp_state_mismatch",
+      mode: "payment",
+      status: "complete",
+      payment_status: "unpaid",
+      metadata: { plan: "dpp_readiness" },
+      line_items: {
+        data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+      },
+    });
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true, handled: false, reconciliationRequired: true,
+    });
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
+
   it("fails closed when a paid DPP hold cannot be persisted", async () => {
     mockConstructEvent.mockReturnValue(
       makeEvent("checkout.session.completed", "evt_dpp_hold_unavailable", {
