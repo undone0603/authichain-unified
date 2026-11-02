@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "authichain.physical-asset-observation.v0.1",
+  "recordType": "owner_submitted_photo_observation",
+  "recordId": "urn:authichain:pilot:physical:valcambi-pt25:20261102-d2aa08ac",
+  "evidenceRecordedDate": "2026-11-02",
+  "classification": "REAL_OBJECT_UNVERIFIED",
+  "asset": {
+    "observedBrand": "Valcambi Suisse",
+    "observedKind": "minted platinum bar in assay-style blister",
+    "nominalWeightGrams": 2.5,
+    "statedFineness": "999.5",
+    "productMatch": "visually consistent with Valcambi catalogue specification; not independently authenticated",
+    "manufacturerReference": "https://valcambi.com/product/minted-bars/",
+    "manufacturerRelationship": "none asserted",
+    "gtin": null,
+    "serialPublic": null,
+    "serialPrivateReviewRequired": true
+  },
+  "evidence": [
+    {
+      "file": "private/front.jpg",
+      "sha256": "d2aa08acc06150ef37543643f51c5fc2c67090b2328324549f1a266ce2fc0585",
+      "availability": "private; not uploaded to repo",
+      "meaning": "photo integrity only"
+    },
+    {
+      "file": "private/back.jpg",
+      "sha256": "a8b2558a20cfac364cf50af0e6a38ec8da355466ac3d64c0d325d17f723e6848",
+      "availability": "private; not uploaded to repo",
+      "meaning": "photo integrity only"
+    }
+  ],
+  "trust": {
+    "photographicEvidence": "present_private",
+    "photoFileHashes": "present",
+    "serialMatch": "not_independently_checked",
+    "physicalInspection": "not_performed",
+    "compositionAndWeight": "not_independently_tested",
+    "manufacturerAttestation": "absent",
+    "chainOfCustody": "not_established",
+    "authichainRegistration": "not_issued",
+    "issuerSignature": "absent",
+    "onChainAnchor": "absent",
+    "cloneDetection": "not_enabled",
+    "status": "EVIDENCE_ONLY_UNVERIFIED"
+  },
+  "consumerDisclosure": "Photographs document an owner-submitted object. Neither the bar nor any manufacturer claim is authenticated by AuthiChain. A matching photograph, QR code, or file hash is not proof of metal composition, legal ownership, or physical identity.",
+  "nextGate": [
+    "Confirm exact bar and certificate serial privately",
+    "Record custody and purchase evidence if available",
+    "Obtain qualified dealer inspection or testing if authentication is sought",
+    "Only an authorized issuer may create a live AuthiChain attestation",
+    "Assign real registry identifier and live QR only after issuance"
+  ]
+}
