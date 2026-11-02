@@ -1490,6 +1490,7 @@ describe("handleStripeWebhook — stripe_events claim fails closed (PM-338)", ()
     expect(err.httpStatus).toBe(500);
     expect(err.message).toContain("still in flight");
     expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+    const { sendEmail } = await import("../email-service.js");
     expect(sendEmail).not.toHaveBeenCalled();
     expect(recordStripeWebhookDelivery).not.toHaveBeenCalled();
   });
