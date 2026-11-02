@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install minimal AgentZ test dependencies
-        run: python3 -m pip install --disable-pip-version-check pytest>=8.0 PyYAML>=6.0 python-dotenv>=1.0 httpx>=0.27
+        run: python3 -m pip install --disable-pip-version-check "pytest>=8.0" "PyYAML>=6.0" "python-dotenv>=1.0" "httpx>=0.27"
       - name: Validate read-only MCP, scout, daemon and CLI regression
         env:
           TINYFISH_API_KEY: ""
