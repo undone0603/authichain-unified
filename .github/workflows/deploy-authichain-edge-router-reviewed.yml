@@ -32,7 +32,7 @@ jobs:
     env:
       EXPECTED_SHA: ${{ inputs.expected_sha }}
       CONFIRMATION: ${{ inputs.confirmation }}
-      CLOUDFLARE_DEPLOY_ENABLED: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED }}
+      AUTHICHAIN_EDGE_DEPLOY_APPROVED: ${{ vars.AUTHICHAIN_EDGE_DEPLOY_APPROVED }}
       NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - name: Require explicit operator approval and exact main revision
@@ -43,7 +43,7 @@ jobs:
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo '::error::expected_sha must be a full lowercase SHA'; exit 1; }
           test "$EXPECTED_SHA" = "$GITHUB_SHA" || { echo '::error::Dispatch revision differs from expected SHA'; exit 1; }
           test "$CONFIRMATION" = 'deploy-authichain-edge-router' || { echo '::error::Explicit confirmation missing'; exit 1; }
-          test "$CLOUDFLARE_DEPLOY_ENABLED" = 'true' || { echo '::error::CLOUDFLARE_DEPLOY_ENABLED is not true'; exit 1; }
+          test "$AUTHICHAIN_EDGE_DEPLOY_APPROVED" = 'true' || { echo '::error::AUTHICHAIN_EDGE_DEPLOY_APPROVED is not true'; exit 1; }
 
       - name: Checkout pinned revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
