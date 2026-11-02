@@ -14,7 +14,6 @@ import {
   DPP_PRICE_ID,
   dppActivateUrl,
   isDppDemoSession,
-  isDppOffer,
   recordDppLoopEventOnce,
 } from "./dpp-loop";
 import {
