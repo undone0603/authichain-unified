@@ -73,8 +73,9 @@ async def assess_scans(
 
     `signature_valid` is the result of a real signature check done by the
     caller, or None when no check was done. It is never assumed: a scan is
-    only "verified" when the signature was checked and valid, the location
-    check ran without error, and the score clears VERIFIED_THRESHOLD.
+    not "verified" merely because a signature and location heuristic pass.
+    Canonical issuer trust, current lifecycle/revocation, and physical binding
+    are not established by this legacy endpoint.
     """
     # 0. Fetch qron_id from product
     product_res = supabase.table("products").select("qron_id, metadata, authenticity_score").eq("id", product_id).single().execute()
@@ -126,11 +127,11 @@ async def assess_scans(
     else:
         signature_status = "valid" if signature_valid else "invalid"
 
-    verified = (
-        signature_status == "valid"
-        and geo_status == "clear"
-        and final_score > VERIFIED_THRESHOLD
-    )
+    # A trusted offline signature + a location heuristic cannot establish
+    # current issuer authorization, revocation status, on-chain anchoring, or
+    # physical-world product binding. Until the canonical verifier checks all
+    # required conditions, this legacy scan endpoint must fail closed.
+    verified = False
 
     # 4. Update Timeline in Metadata
     if "timeline" not in product_metadata:
@@ -165,6 +166,7 @@ async def assess_scans(
             "signature": signature_status,
             "location": geo_status,
             "velocity": velocity,
+            "canonical_registry": "not_checked",
         },
     }
 
