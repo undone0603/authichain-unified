@@ -15,6 +15,7 @@ logger = logging.getLogger("agentz.alerts")
 WINDOW_MINUTES = 10
 MIN_SCANS = 11
 MIN_LOCATIONS = 2
+MIN_SESSIONS = 3
 
 
 def _timestamp(value: Any) -> datetime | None:
@@ -42,15 +43,15 @@ def analyze_scan_events(
 ) -> list[dict[str, Any]]:
     """Find time-bounded, deduplicated multi-location scan bursts.
 
-    The common ``scan_events`` schema has id, qron_id, scanned_at, city,
-    country. It does NOT prove the identifier uniquely binds one physical
+    The QRON-v2 ``scan_events`` schema has id, qron_id, scanned_at, city,
+    country, session_id. It does NOT prove the identifier uniquely binds one physical
     item; therefore even a valid burst can only request investigation.
     """
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
         raise ValueError("now must include timezone")
     now = now.astimezone(timezone.utc)
-    grouped: dict[str, list[tuple[datetime, tuple[str, str]]]] = defaultdict(list)
+    grouped: dict[str, list[tuple[datetime, tuple[str, str], str]]] = defaultdict(list)
     seen: set[str] = set()
     for scan in scans:
         if not isinstance(scan, dict):
@@ -63,6 +64,9 @@ def analyze_scan_events(
         qid = str(qid).strip()
         if len(qid) > 96:
             continue
+        session = scan.get("session_id")
+        if not isinstance(session, str) or not (0 < len(session.strip()) <= 128):
+            continue
         observed, location = _timestamp(scan.get("scanned_at")), _location(scan)
         if observed is None or location is None:
             continue
@@ -72,20 +76,22 @@ def analyze_scan_events(
         if key in seen:
             continue
         seen.add(key)
-        grouped[qid].append((observed, location))
+        grouped[qid].append((observed, location, session.strip()))
 
     alerts: list[dict[str, Any]] = []
     for qid, events in sorted(grouped.items()):
-        distinct = len({location for _, location in events})
-        if len(events) >= MIN_SCANS and distinct >= MIN_LOCATIONS:
+        distinct = len({location for _, location, _ in events})
+        distinct_sessions = len({session for _, _, session in events})
+        if len(events) >= MIN_SCANS and distinct >= MIN_LOCATIONS and distinct_sessions >= MIN_SESSIONS:
             alerts.append({
                 "type": "MULTI_LOCATION_SCAN_BURST",
                 "qron_id": qid,
                 "count": len(events),
                 "distinct_locations": distinct,
+                "distinct_sessions": distinct_sessions,
                 "window_minutes": WINDOW_MINUTES,
-                "first_seen": min(ts for ts, _ in events).isoformat(),
-                "last_seen": max(ts for ts, _ in events).isoformat(),
+                "first_seen": min(ts for ts, _, _ in events).isoformat(),
+                "last_seen": max(ts for ts, _, _ in events).isoformat(),
                 "severity": "REVIEW",
                 "verification": "not_performed",
                 "counterfeit_verdict": None,
@@ -98,7 +104,7 @@ async def detect_suspicious_activity(supabase, *, now: datetime | None = None) -
     """Read recent scans; propagate DB errors rather than claim everything is safe."""
     result = (
         supabase.table("scan_events")
-        .select("id,qron_id,scanned_at,city,country")
+        .select("id,qron_id,scanned_at,city,country,session_id")
         .order("scanned_at", desc=True)
         .limit(200)
         .execute()
