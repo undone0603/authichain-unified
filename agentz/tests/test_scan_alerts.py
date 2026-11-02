@@ -56,6 +56,8 @@ def test_database_failure_is_not_reported_as_clean():
         def table(self,*a): return self
         def select(self,*a): return self
         def order(self,*a,**k): return self
+        def gte(self,*a): return self
+        def lte(self,*a): return self
         def limit(self,*a): return self
         def execute(self): return SimpleNamespace(data=None)
     with pytest.raises(RuntimeError,match="unknown"):
@@ -78,3 +80,41 @@ def test_missing_sessions_cannot_be_treated_as_independent():
     scans = [{**event(i,city="Detroit" if i % 2 else "Lansing"),
              "session_id": None} for i in range(30)]
     assert analyze_scan_events(scans, now=NOW) == []
+
+
+def test_database_query_is_window_bounded():
+    class DB:
+        def __init__(self): self.ops = []
+        def table(self,*a): self.ops.append(("table",a)); return self
+        def select(self,*a): self.ops.append(("select",a)); return self
+        def gte(self,*a): self.ops.append(("gte",a)); return self
+        def lte(self,*a): self.ops.append(("lte",a)); return self
+        def order(self,*a,**k): self.ops.append(("order",a)); return self
+        def limit(self,*a): self.ops.append(("limit",a)); return self
+        def execute(self): return SimpleNamespace(data=[])
+    db=DB()
+    assert asyncio.run(detect_suspicious_activity(db,now=NOW)) == []
+    assert ("gte", ("scanned_at", (NOW-timedelta(minutes=10)).isoformat())) in db.ops
+    assert ("lte", ("scanned_at", NOW.isoformat())) in db.ops
+    assert ("limit", (201,)) in db.ops
+    assert all("ip_address" not in str(x) and "user_agent" not in str(x) for x in db.ops)
+
+
+def test_truncated_result_is_unknown_not_safe():
+    class DB:
+        def table(self,*a): return self
+        def select(self,*a): return self
+        def gte(self,*a): return self
+        def lte(self,*a): return self
+        def order(self,*a,**k): return self
+        def limit(self,*a): return self
+        def execute(self): return SimpleNamespace(data=[event(i) for i in range(201)])
+    with pytest.raises(RuntimeError,match="truncated.*unknown"):
+        asyncio.run(detect_suspicious_activity(DB(),now=NOW))
+
+
+def test_naive_query_time_is_rejected_before_database_call():
+    class DB:
+        def table(self,*a): raise AssertionError("DB must not be called")
+    with pytest.raises(ValueError, match="timezone"):
+        asyncio.run(detect_suspicious_activity(DB(),now=datetime(2026,11,1)))
