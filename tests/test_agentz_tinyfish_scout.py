@@ -99,13 +99,17 @@ def test_api_failure_is_fail_closed(monkeypatch):
         run(Context(Mode.CONFIRM))
 
 
-def _run_daemon_cycle(monkeypatch, *, enabled: bool, has_key: bool):
+def _run_daemon_cycle(monkeypatch, *, enabled: bool, has_key: bool, state_dir=None):
     """Execute exactly one daemon loop with fake process and clock."""
     import signal
     from types import SimpleNamespace
     from agentz import daemon
 
     calls = []
+    if state_dir is None:
+        monkeypatch.delenv("AGENTZ_TINYFISH_SCOUT_STATE_DIR", raising=False)
+    else:
+        monkeypatch.setenv("AGENTZ_TINYFISH_SCOUT_STATE_DIR", str(state_dir))
     monkeypatch.setattr(daemon, "STOP", False)
     monkeypatch.setattr(daemon, "POLL_SECONDS", 300)
     monkeypatch.setattr(daemon.time, "monotonic", lambda: 1000000)
@@ -145,8 +149,8 @@ def test_daemon_never_runs_tinyfish_without_api_key(monkeypatch):
     assert "tinyfish_a2a_scout" not in str(calls)
 
 
-def test_daemon_opt_in_dispatch_is_read_only_and_targeted(monkeypatch):
-    calls = _run_daemon_cycle(monkeypatch, enabled=True, has_key=True)
+def test_daemon_opt_in_dispatch_is_read_only_and_targeted(monkeypatch, tmp_path):
+    calls = _run_daemon_cycle(monkeypatch, enabled=True, has_key=True, state_dir=tmp_path)
     assert len(calls) == 2
     assert "govchain_grant_proposal" in calls[0]
     assert "dry-run" in calls[0]
@@ -154,6 +158,41 @@ def test_daemon_opt_in_dispatch_is_read_only_and_targeted(monkeypatch):
     assert "confirm" in calls[1]
     assert "auto" not in calls[1]
 
+
+
+
+def test_enabled_daemon_refuses_without_persistent_state_dir(monkeypatch):
+    calls = _run_daemon_cycle(monkeypatch, enabled=True, has_key=True)
+    assert len(calls) == 1
+
+
+def test_restart_does_not_repeat_daily_scout(monkeypatch, tmp_path):
+    first = _run_daemon_cycle(
+        monkeypatch, enabled=True, has_key=True, state_dir=tmp_path,
+    )
+    second = _run_daemon_cycle(
+        monkeypatch, enabled=True, has_key=True, state_dir=tmp_path,
+    )
+    assert len(first) == 2
+    assert len(second) == 1
+    markers = list(tmp_path.glob("tinyfish-a2a-scout-*.claimed"))
+    assert len(markers) == 1
+    assert markers[0].stat().st_mode & 0o777 == 0o600
+
+
+def test_scout_slot_is_atomic_between_processes(monkeypatch, tmp_path):
+    from agentz import daemon
+    monkeypatch.setenv("AGENTZ_TINYFISH_SCOUT_STATE_DIR", str(tmp_path))
+    assert daemon._claim_daily_scout_slot() is True
+    assert daemon._claim_daily_scout_slot() is False
+
+
+def test_nonexistent_state_dir_fails_closed(monkeypatch, tmp_path):
+    from agentz import daemon
+    monkeypatch.setenv(
+        "AGENTZ_TINYFISH_SCOUT_STATE_DIR", str(tmp_path / "not-mounted"),
+    )
+    assert daemon._claim_daily_scout_slot() is False
 
 def test_scout_masks_secret_bearing_transport_failure(monkeypatch):
     import agentz.integrations.tinyfish_mcp as adapter
