@@ -18,13 +18,19 @@ IMPERSONATION_SIGNALS = frozenset({
 })
 
 
-def triage_agent_verification(result: Mapping[str, Any] | None) -> dict[str, Any]:
+def triage_agent_verification(
+    result: Mapping[str, Any] | None, *, from_canonical_verifier: bool = False
+) -> dict[str, Any]:
     """Classify evidence for a *human* review queue; never authorize activity.
 
     A positive state means the canonical verifier's response says its specific
     signed message was valid, not that a product, physical actor, or unknown
     peer was authenticated. This function is not a network trust boundary.
     """
+    # A remote AgentCard or tool output can itself say "valid": true.
+    # Refuse to promote it into a trust decision without a trusted verifier.
+    if from_canonical_verifier is not True:
+        return _decision("indeterminate", [], "request_independent_verification")
     if not isinstance(result, Mapping):
         return _decision("indeterminate", [], "request_independent_verification")
 
