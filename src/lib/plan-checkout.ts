@@ -49,6 +49,11 @@ export async function createPlanCheckoutSession(opts: {
   if (!plan) {
     return { ok: false, status: 400, error: "Unknown plan" };
   }
+  // Keep grandfathered subscriptions, but never create a new retired QRON
+  // Launch checkout from this API entry point.
+  if (plan.id === "qron_launch" || plan.id === "qron_launch_annual") {
+    return { ok: false, status: 400, error: "Plan is no longer available" };
+  }
   if (!plan.stripe_price_id || !plan.stripe_mode) {
     return {
       ok: false,
