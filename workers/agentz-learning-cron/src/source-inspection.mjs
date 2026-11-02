@@ -3,18 +3,18 @@
  * Static heuristics are NOT vulnerability findings or formal verification.
  */
 export const SOURCE_TARGETS = Object.freeze([
-  {
+  Object.freeze({
     id: "dpp-payment-activation",
     path: "src/lib/dpp-activate.ts",
     url: "https://raw.githubusercontent.com/undone0603/authichain-unified/main/src/lib/dpp-activate.ts",
-    checks: ["paid_and_complete_guard", "exact_dpp_price_guard"],
-  },
-  {
+    checks: Object.freeze(["paid_and_complete_guard", "exact_dpp_price_guard"]),
+  }),
+  Object.freeze({
     id: "a2a-task-isolation",
     path: "src/lib/a2a-jsonrpc.ts",
     url: "https://raw.githubusercontent.com/undone0603/authichain-unified/main/src/lib/a2a-jsonrpc.ts",
-    checks: ["no_implicit_global_task_store", "ephemeral_default_task_store"],
-  },
+    checks: Object.freeze(["no_implicit_global_task_store", "ephemeral_default_task_store"]),
+  }),
 ]);
 export const SOURCE_MAX_BYTES = 96 * 1024;
 const SAFE_SOURCE_HOST = "raw.githubusercontent.com";
@@ -24,8 +24,11 @@ const EVIDENCE_STATES = new Set(["check_present", "review_candidate"]);
 
 /** Never follow an arbitrary URL or scan a file outside the allowlist. */
 export function validateSourceTarget(target) {
-  if (!SOURCE_TARGETS.some(t => t.id === target?.id && t.path === target.path && t.url === target.url))
-    return false;
+  if (!SOURCE_TARGETS.some(t =>
+    t.id === target?.id && t.path === target.path && t.url === target.url &&
+    Array.isArray(target.checks) && target.checks.length === t.checks.length &&
+    target.checks.every((id, i) => id === t.checks[i])
+  )) return false;
   try {
     const u = new URL(target.url);
     return u.protocol === "https:" && u.hostname === SAFE_SOURCE_HOST &&
