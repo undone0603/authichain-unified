@@ -191,6 +191,7 @@ def test_restart_does_not_repeat_daily_scout(monkeypatch, tmp_path):
     markers = list(tmp_path.glob("tinyfish-a2a-scout-*.claimed"))
     assert len(markers) == 1
     assert markers[0].stat().st_mode & 0o777 == 0o600
+    assert markers[0].read_text().endswith("\n")
 
 
 def test_scout_slot_is_atomic_between_processes(monkeypatch, tmp_path):
