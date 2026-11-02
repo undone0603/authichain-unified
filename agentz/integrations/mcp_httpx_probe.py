@@ -187,7 +187,12 @@ async def probe_modern(*, transport: httpx.AsyncBaseTransport | None = None) -> 
                 result["mcp_error_code"] = msg["error"].get("code") if isinstance(msg["error"], dict) else None
                 return result
             data = msg.get("result")
-            tools = data.get("tools") if isinstance(data, dict) else None
+            if not isinstance(data, dict) or data.get("resultType") != "complete":
+                # Required on every MCP 2026-07-28 result. A missing or
+                # input_required discriminator is not a completed tools list.
+                result["state"] = "invalid_modern_result_type"
+                return result
+            tools = data.get("tools")
             if not isinstance(tools, list) or any(
                 not isinstance(t, dict) or not isinstance(t.get("name"), str) for t in tools
             ):
