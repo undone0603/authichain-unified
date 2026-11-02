@@ -162,9 +162,12 @@ export async function activateDppMerchant(opts: {
     .from("funnel_events")
     .select("id, metadata")
     .eq("prospect_id", visitId)
+    // Match the checkout in Postgres before limiting results: a shared visit_id
+    // may have more than five later activations for other purchases.
     .eq("event_type", "dpp_loop:merchant_activated")
+    .contains("metadata", { stripe_session_id: sessionId })
     .order("timestamp", { ascending: false })
-    .limit(5);
+    .limit(1);
   if (activationLookupError || !Array.isArray(prior)) {
     return { ok: false, status: 503, error: "Activation history unavailable" };
   }
