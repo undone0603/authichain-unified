@@ -604,7 +604,8 @@ export interface StripeWebhookResult {
 
 export async function handleStripeWebhook(
   rawBody: Buffer,
-  sig: string
+  sig: string,
+  serviceOrderHandler: typeof handleServiceOrderPayment = handleServiceOrderPayment,
 ): Promise<StripeWebhookResult> {
   const candidateSecrets = getWebhookSecretCandidates();
   if (candidateSecrets.length === 0) {
@@ -743,7 +744,7 @@ export async function handleStripeWebhook(
       // its pending->paid CAS makes replay safe and suppresses duplicates.
       let serviceReplayed = false;
       if (session.metadata?.type === "one_time_service") {
-        const result = await handleServiceOrderPayment(serviceOrderSessionFromCheckout(session));
+        const result = await serviceOrderHandler(serviceOrderSessionFromCheckout(session));
         serviceReplayed = result.handled;
         if (await holdUnmatchedPaidServiceOrder(result, session)) {
           return {
@@ -1203,7 +1204,7 @@ export async function handleStripeWebhook(
 
         if (session.metadata?.type === "one_time_service") {
           try {
-            const result = await handleServiceOrderPayment(serviceOrderSessionFromCheckout(session));
+            const result = await serviceOrderHandler(serviceOrderSessionFromCheckout(session));
             if (await holdUnmatchedPaidServiceOrder(result, session)) {
               return {
                 received: true,
