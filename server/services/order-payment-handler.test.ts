@@ -37,6 +37,10 @@ describe("handleServiceOrderPayment", () => {
     const result = await handleServiceOrderPayment({
       id: "cs_test_001",
       payment_intent: "pi_test_xyz",
+      status: "complete",
+      payment_status: "paid",
+      mode: "payment",
+      amount_total: 19900,
     });
 
     expect(result).toEqual({ handled: true, orderId: 42 });
@@ -88,6 +92,10 @@ describe("handleServiceOrderPayment", () => {
     const result = await handleServiceOrderPayment({
       id: "cs_test_002",
       payment_intent: "pi_test_abc",
+      status: "complete",
+      payment_status: "paid",
+      mode: "payment",
+      amount_total: 9900,
     });
 
     expect(result).toEqual({ handled: true, orderId: 43 });
@@ -97,6 +105,33 @@ describe("handleServiceOrderPayment", () => {
     expect(db.recordRevenue).toHaveBeenCalledWith(
       expect.objectContaining({ amount: "99.00", userId: null }),
     );
+  });
+
+  it.each([
+    ["completed but unpaid", { status: "complete", payment_status: "unpaid", amount_total: 19900 }],
+    ["fully discounted paid-status", { status: "complete", payment_status: "paid", amount_total: 0 }],
+    ["open despite paid status", { status: "open", payment_status: "paid", amount_total: 19900 }],
+  ])("never records revenue for %s", async (_name, overrides) => {
+    vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue({
+      id: 45,
+      userId: 7,
+      status: "pending",
+      amount: 19900,
+      serviceType: "authenticity_audit",
+    } as any);
+
+    const result = await handleServiceOrderPayment({
+      id: "cs_test_unsettled",
+      payment_intent: "pi_test_unsettled",
+      mode: "payment",
+      ...overrides,
+    });
+
+    expect(result.handled).toBe(false);
+    expect(db.updateServiceOrderStatus).not.toHaveBeenCalled();
+    expect(db.logActivity).not.toHaveBeenCalled();
+    expect(db.recordRevenue).not.toHaveBeenCalled();
+    expect(db.createSystemNotification).not.toHaveBeenCalled();
   });
 
   it("is idempotent — ignores an already-paid order without side effects", async () => {
