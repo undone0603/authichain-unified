@@ -151,6 +151,7 @@ function fakeSupabase(opts?: {
 
 const paidSession = {
   id: "cs_live_smoke_check",
+  mode: "payment",
   payment_status: "paid",
   status: "complete",
   amount_total: 0,
@@ -273,11 +274,42 @@ describe("fulfillDppPaidSession", () => {
     expect(redactForLog("x".repeat(500))).toHaveLength(200);
   });
 
+  it.each([
+    ["missing payment mode", { mode: undefined }],
+    ["recurring checkout", { mode: "subscription" }],
+    ["setup checkout", { mode: "setup" }],
+    ["recurring subscription reference", { subscription: "sub_unexpected" }],
+    ["contradictory entitlement plan", { metadata: { ...paidSession.metadata, plan: "starter" } }],
+  ])("refuses %s even with the canonical DPP price", async (_label, override) => {
+    const from = vi.fn();
+    const result = await fulfillDppPaidSession({ from }, {
+      ...paidSession,
+      ...override,
+    }, DPP_PRICE_ID);
+    expect(result).toEqual({
+      handled: false,
+      profileId: null,
+      activationEmail: "skipped",
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("uses the canonical DPP plan when optional plan metadata is absent", async () => {
+    const { supabase, profileUpdates } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, {
+      ...paidSession,
+      metadata: { offer: DPP_OFFER_KEY, visit_id: "canonical_plan_fixture" },
+    }, DPP_PRICE_ID);
+    expect(result.handled).toBe(true);
+    expect(profileUpdates.some(p => p.subscription_plan === "dpp_readiness")).toBe(true);
+  });
+
   it("does not grant when spoofed metadata claims a canonical price but authoritative price was not supplied", async () => {
     const from = vi.fn();
     const result = await fulfillDppPaidSession({ from }, {
       id: "cs_spoofed_metadata",
       status: "complete",
+      mode: "payment",
       payment_status: "paid",
       metadata: {
         offer: DPP_OFFER_KEY,
@@ -328,6 +360,7 @@ describe("fulfillDppPaidSession", () => {
       supabase,
       {
         id: "cs_price_only",
+        mode: "payment",
         payment_status: "paid",
         status: "complete",
         customer_details: { email: "buyer@example.com" },
@@ -347,6 +380,7 @@ describe("fulfillDppPaidSession", () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, {
       id: "cs_live_a1y4TuVXsdPVbXgPejLnXYpSWD5RvpmO273RUC3BxOHnAZ5JwlARbBMxQS",
+      mode: "payment",
       payment_status: "paid",
       status: "complete",
       amount_total: 0,
@@ -499,6 +533,7 @@ describe("fulfillDppPaidSession", () => {
     await expect(
       fulfillDppPaidSession(supabase, {
         id: "cs_live_a1y4Tu_user_id",
+        mode: "payment",
         payment_status: "paid",
         status: "complete",
         amount_total: 0,
@@ -523,6 +558,7 @@ describe("fulfillDppPaidSession", () => {
     });
     const result = await fulfillDppPaidSession(supabase, {
       id: "cs_live_a1y4Tu_guest",
+      mode: "payment",
       payment_status: "paid",
       status: "complete",
       amount_total: 0,
