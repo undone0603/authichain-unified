@@ -785,6 +785,16 @@ describe("classifyRetrievedDppCheckout (authoritative line items)", () => {
     ).toBe("reconciliation_required");
   });
 
+  it("holds missing, null, zero or fractional DPP item quantity", () => {
+    for (const quantity of [undefined, null, 0, 0.5, 2]) {
+      expect(classifyRetrievedDppCheckout({
+        ...paid,
+        line_items: { data: [{ price: { id: DPP_PRICE_ID }, quantity }], has_more: false },
+      })).toBe("reconciliation_required");
+    }
+    expect(classifyRetrievedDppCheckout(paid)).toBe("dpp");
+  });
+
   it("never authorizes complete-but-unpaid or open-but-paid", () => {
     expect(
       classifyRetrievedDppCheckout({ ...paid, payment_status: "unpaid" })
