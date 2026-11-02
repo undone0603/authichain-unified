@@ -14,7 +14,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { DPP_OFFER_KEY } from "./plans";
 import { fulfillDppPaidSession } from "./dpp-fulfill-checkout";
-import { STALL_THRESHOLDS_MS, runDppExceptionsReport } from "./dpp-loop";
+import { DPP_PRICE_ID, STALL_THRESHOLDS_MS, runDppExceptionsReport } from "./dpp-loop";
 import { NTFY_URL, publishFounderAlert } from "./founder-alerts";
 
 vi.mock("./email", () => ({
@@ -123,14 +123,14 @@ describe("DPP terminal escalation (upsert_failed → retry budget → exception)
 
     // First delivery: provision fails → throw so Stripe retries.
     await expect(
-      fulfillDppPaidSession(supabase, paidSession())
+      fulfillDppPaidSession(supabase, paidSession(), DPP_PRICE_ID)
     ).rejects.toThrow(/DPP provision failed/);
     expect(rows.map(r => r.event_type)).toEqual(["dpp_loop:payment_succeeded"]);
 
     // Stripe retry: still failing, and payment_succeeded is NOT duplicated —
     // recordDppLoopEventOnce dedupe_key (session id) holds.
     await expect(
-      fulfillDppPaidSession(supabase, paidSession())
+      fulfillDppPaidSession(supabase, paidSession(), DPP_PRICE_ID)
     ).rejects.toThrow(/DPP provision failed/);
     expect(
       rows.filter(r => r.event_type === "dpp_loop:payment_succeeded")
@@ -168,7 +168,7 @@ describe("DPP terminal escalation (upsert_failed → retry budget → exception)
   it("builds the founder alert from the terminal exception (no live send)", async () => {
     const { supabase } = fakeTerminalSupabase();
     await expect(
-      fulfillDppPaidSession(supabase, paidSession())
+      fulfillDppPaidSession(supabase, paidSession(), DPP_PRICE_ID)
     ).rejects.toThrow(/DPP provision failed/);
     const report = await runDppExceptionsReport(
       supabase,
