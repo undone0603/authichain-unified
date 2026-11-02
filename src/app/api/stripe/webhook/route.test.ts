@@ -36,7 +36,12 @@ const {
   const mockAnchorReversal = vi.fn().mockResolvedValue(undefined);
   const mockConstructEvent = vi.fn();
   const db = {
-    seenEvent: null as null | { event_id: string },
+    seenEvent: null as null | {
+      event_id: string;
+      status?: string | null;
+      processed_at?: string | null;
+    },
+    eventInsertConflict: false,
     profile: { id: "prof_1" } as Record<string, unknown> | null,
     affiliate: {
       id: "aff_1",
@@ -85,9 +90,9 @@ const {
       insert: (row: Record<string, unknown>) => {
         if (table === "stripe_events") {
           calls.eventInserts.push(row);
-          return {
-            select: () => Promise.resolve({ data: [row], error: null }),
-          };
+          return db.eventInsertConflict
+            ? { error: { code: "23505", message: "duplicate event_id" } }
+            : { error: null };
         }
         if (table === "payment_history") calls.paymentInserts.push(row);
         return Promise.resolve({ error: null });
@@ -322,6 +327,7 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     calls.affiliateUpdates.length = 0;
     calls.eventInserts.length = 0;
     db.seenEvent = null;
+    db.eventInsertConflict = false;
     db.profile = { id: "prof_1" };
     db.affiliate = {
       id: "aff_1",
@@ -340,6 +346,42 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
     process.env.SUPABASE_SERVICE_ROLE_KEY = "service_role_test";
   });
+
+  it.each([
+    ["legacy NULL status", { event_id: "evt_legacy", status: null }],
+    ["missing claim row", null],
+  ])("does not acknowledge %s as a processed paid event", async (_case, seen) => {
+    db.eventInsertConflict = true;
+    db.seenEvent = seen;
+    const response = await postInvoice(
+      invoiceEvent("subscription_cycle", {
+        event: "evt_claim_unverified",
+        invoice: "in_claim_unverified",
+      })
+    );
+    expect(response.status).toBe(500);
+    expect(response.body).not.toMatchObject({ received: true });
+    expect(calls.paymentInserts).toHaveLength(0);
+    expect(mockAnchorSale).not.toHaveBeenCalled();
+  });
+
+  it.each(["success", "duplicate", "reconciliation_required"])(
+    "acknowledges previously persisted %s status without repeating side effects",
+    async status => {
+      db.eventInsertConflict = true;
+      db.seenEvent = { event_id: "evt_prior", status };
+      const response = await postInvoice(
+        invoiceEvent("subscription_cycle", {
+          event: "evt_prior",
+          invoice: "in_prior",
+        })
+      );
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({ received: true, duplicate: true });
+      expect(calls.paymentInserts).toHaveLength(0);
+      expect(mockAnchorSale).not.toHaveBeenCalled();
+    }
+  );
 
   it("subscription_create: no affiliate credit, no ledger anchor", async () => {
     const res = await postInvoice(
