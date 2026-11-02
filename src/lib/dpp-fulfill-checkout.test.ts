@@ -151,6 +151,8 @@ function fakeSupabase(opts?: {
 
 const paidSession = {
   id: "cs_live_smoke_check",
+  payment_status: "paid",
+  status: "complete",
   amount_total: 0,
   customer_details: { email: "buyer@example.com" },
   client_reference_id: "smoke_check_1",
@@ -163,6 +165,27 @@ const paidSession = {
 };
 
 describe("fulfillDppPaidSession", () => {
+  it.each([
+    ["completed with unpaid async payment", "complete", "unpaid"],
+    ["open with paid status", "open", "paid"],
+    ["missing payment state", undefined, undefined],
+  ])("refuses %s before any database side effect", async (_label, status, payment_status) => {
+    const from = vi.fn();
+    const result = await fulfillDppPaidSession({ from }, {
+      id: "cs_test_never_paid",
+      status,
+      payment_status,
+      amount_total: 29900,
+      metadata: { offer: DPP_OFFER_KEY, plan: "dpp_readiness" },
+      customer_details: { email: "buyer@example.com" },
+    });
+    expect(result).toEqual({
+      handled: false, profileId: null, activationEmail: "skipped",
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+
   beforeEach(() => {
     vi.mocked(sendEmail).mockClear();
   });
@@ -270,6 +293,8 @@ describe("fulfillDppPaidSession", () => {
       supabase,
       {
         id: "cs_price_only",
+        payment_status: "paid",
+        status: "complete",
         customer_details: { email: "buyer@example.com" },
         client_reference_id: "plink_visit",
         metadata: {},
@@ -287,6 +312,8 @@ describe("fulfillDppPaidSession", () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, {
       id: "cs_live_a1y4TuVXsdPVbXgPejLnXYpSWD5RvpmO273RUC3BxOHnAZ5JwlARbBMxQS",
+      payment_status: "paid",
+      status: "complete",
       amount_total: 0,
       customer_details: { email: "authichain@gmail.com" },
       client_reference_id: "smoke_check_1789786486",
@@ -437,6 +464,8 @@ describe("fulfillDppPaidSession", () => {
     await expect(
       fulfillDppPaidSession(supabase, {
         id: "cs_live_a1y4Tu_user_id",
+        payment_status: "paid",
+        status: "complete",
         amount_total: 0,
         customer_details: { email: "authichain@gmail.com" },
         client_reference_id: "smoke_check_1789786486",
@@ -459,6 +488,8 @@ describe("fulfillDppPaidSession", () => {
     });
     const result = await fulfillDppPaidSession(supabase, {
       id: "cs_live_a1y4Tu_guest",
+      payment_status: "paid",
+      status: "complete",
       amount_total: 0,
       customer_details: { email: "authichain@gmail.com" },
       client_reference_id: "smoke_check_1789786486",
