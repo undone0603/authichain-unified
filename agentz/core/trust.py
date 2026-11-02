@@ -65,8 +65,10 @@ async def detect_geospatial_anomalies(supabase, qron_id: int, expected_region: O
     except Exception as e:
         # A check that did not run is not a clean result. Report it as an
         # error so callers cannot read it as "no anomaly".
-        logger.error(f"Geospatial check failed for {qron_id}: {e}")
-        return {"anomaly": None, "error": True, "reason": f"Check error: {e}"}
+        # Storage/SDK exceptions can include sensitive query or credential
+        # details. Keep the raw exception out of logs and API-visible results.
+        logger.error("Geospatial scan check unavailable; evidence coverage unknown")
+        return {"anomaly": None, "error": True, "reason": "Geospatial data unavailable"}
 
 async def assess_scans(
     supabase, product_id: str, signature_valid: Optional[bool] = None
@@ -110,10 +112,9 @@ async def assess_scans(
         geo_status = "unknown"
     elif geo_check["anomaly"]:
         geo_status = "anomaly"
-        logger.warning("geo_anomaly flag set for product")
-        product_metadata["security_flag"] = "geo_anomaly"
-        product_metadata["geo_alert"] = geo_check["reason"]
-        score = max(0.0, score - 25.0)
+        # A location heuristic is not proof of illegitimate goods, and should
+        # not impose a persistent security flag or authenticity penalty.
+        logger.warning("Geospatial review candidate; no counterfeit verdict")
     else:
         geo_status = "clear"
 
