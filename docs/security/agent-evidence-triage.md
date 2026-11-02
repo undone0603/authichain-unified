@@ -10,6 +10,35 @@ Status: **source-level read-only proposal**, not production detection. Checked: 
 4. Database failures or absent required observations are *unknown*, not clean. No outbound message, takedown, revocation, product withdrawal, or change to payment/production flags occurs. The alert logger is local, without consumer contact or external reporting.
 5. Only an independent signed record, current issuer authorization, durable revocation state and appropriate physical-world supply-chain evidence can support further verification. A web page, an A2A card, a successful TLS connection, and a valid cryptographic signature each establish **different things**.
 
+## Legacy /scan reward and authenticity boundary
+
+A new high-impact fail-closed control is proposed on this branch. The Python
+`agentz.core.signature.check_scan_signature` delegates to the offline
+`protocol/verifier.mjs`. Its `signature_valid=True` means the record has
+a cryptographically valid signature from an issuer on the local trusted list
+and the subject ID matches. It may return `valid-unanchored`, and even its
+`verified` verdict does **not** check live transaction inclusion or current
+revocation/supersession, and does not bind the physical item scanned.
+
+Therefore the legacy `agentz.core.trust.assess_scans` function now always
+reports `verified=False` and `checks.canonical_registry=not_checked`.
+The operator-only `POST /scan` route explicitly removes its QRON reward
+side effect. A score from scan velocity and geography remains **heuristic**
+and can never override this gate. Do not reinterpret a high numerical
+`authenticity_score` as a positive product-authenticity outcome.
+
+The deliberate trade-off: this **pauses the former legacy /scan reward path**
+until an independently validated canonical verification decision, current
+issuer lifecycle/revocation checks, and appropriate physical-world evidence
+are securely wired and reviewed. This does **not** modify the separate
+x402 paid verification route or operator authentication. A positive status
+or monetary reward must never be restored by simply toggling a boolean
+or trusting client-supplied proof fields.
+
+The regression tests include valid `signature_valid=True` with both
+`valid-unanchored` and offline `verified` outputs; neither may return a
+positive physical authenticity status or a reward.
+
 ## Response playbook
 
 On `suspicious_evidence`: preserve sanitized event time, canonical verifier result, issuer/key ID, claimed agent ID and action intent; hold the requested high-impact action through the existing signed-message policy gate; review the original signed payload, trusted key source, revocation and replay ledger. Use independent authorized human review before declaring impersonation. Do not post public accusations.
@@ -24,7 +53,7 @@ On `MULTI_LOCATION_SCAN_BURST`: inspect serialization vs batch scope, source sys
 PYTHONPATH=. python -m pytest -q agentz/tests/test_agent_threats.py agentz/tests/test_scan_alerts.py
 ```
 
-Local isolated proof on the four exact GitHub source blobs: **24 passed**. This does not establish full repository CI, live agent identity verification, a live anomaly, or any lives saved. A connected QRON-v2 read-only aggregate query showed 30 stored scan events and 0 events in the prior ten minutes at the time checked.
+The four isolated classifier/scan files were source-matched and the updated focused suite ran **27 passed**. Additional legacy-scan API and reward regression tests are committed but remain unverified by an available full-repository runner. This does not establish full repository CI, live agent identity verification, a live anomaly, or any lives saved. A connected QRON-v2 read-only aggregate query showed 30 stored scan events and 0 events in the prior ten minutes at the time checked.
 
 ## Primary references
 
