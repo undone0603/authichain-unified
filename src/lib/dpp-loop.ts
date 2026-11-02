@@ -548,14 +548,17 @@ export async function recordDppLoopEventOnce(
   if (!visitId) return { recorded: false, reason: "no_visit_id" };
 
   try {
-    const { data } = await supabase
+    const key = input.dedupeKey;
+    // A visit can have many checkout attempts. Looking at just 25 events
+    // can miss the exact checkout and create a duplicate paid/provisioned
+    // stage. Filter by the idempotency key in Postgres before limiting.
+    let query = supabase
       .from("funnel_events")
       .select("id, metadata")
       .eq("prospect_id", visitId)
-      .eq("event_type", `dpp_loop:${input.stage}`)
-      .limit(25);
-
-    const key = input.dedupeKey;
+      .eq("event_type", `dpp_loop:${input.stage}`);
+    if (key) query = query.contains("metadata", { dedupe_key: key });
+    const { data } = await query.limit(key ? 1 : 25);
     const duplicate = Array.isArray(data)
       ? data.some((row: { metadata?: Record<string, unknown> }) =>
           key ? row?.metadata?.dedupe_key === key : true
