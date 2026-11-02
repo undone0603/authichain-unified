@@ -15,7 +15,7 @@ The project-root `.mcp.json` retains the user's exact developer-client bridge:
 `agentz.integrations.tinyfish_mcp` through `python -m agentz.cli tinyfish`
 and chooses one of two transports:
 
-- **Headless / production-capable:** If `TINYFISH_API_KEY` is set, the Python MCP SDK connects directly to `https://agent.tinyfish.ai/mcp` over Streamable HTTP with an `X-API-Key` header; Node.js is not required.
+- **Headless / production-capable:** If `TINYFISH_API_KEY` is set, the Python MCP SDK connects directly to `https://agent.tinyfish.ai/mcp` over Streamable HTTP with an `Authorization: Bearer` header; Node.js is not required.
 - **Interactive developer fallback:** If no API key exists, the same adapter runs `npx -y mcp-remote https://agent.tinyfish.ai/mcp`, using that host user's OAuth session. This requires Node.js, `npx`, and usually first-run browser authentication.
 
 The Python MCP SDK is included in `requirements-agentz.txt`. The existing
@@ -59,7 +59,7 @@ python -m agentz.cli tinyfish search 'Agent2Agent protocol specification'
 python -m agentz.cli tinyfish fetch_content https://github.com/a2aproject/a2a
 ```
 
-The adapter sends `X-API-Key` to the hosted MCP endpoint when the secret is
+The adapter sends the Bearer authorization header to the hosted MCP endpoint when the secret is
 present. Its dry-run prints **only the selected transport**, never the key.
 
 ### Local OAuth fallback
