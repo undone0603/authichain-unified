@@ -386,6 +386,9 @@ async function fulfillDppCheckoutIfPaid(
   const { classifyRetrievedDppCheckout } =
     await import("../../src/lib/dpp-loop");
   const classification = classifyRetrievedDppCheckout(verified);
+  // A signed paid event contradicted by Stripe's retrieved payment state
+  // requires operator reconciliation; never acknowledge it as success.
+  if (classification === "not_paid") return "reconciliation_required";
   if (classification !== "dpp") return classification;
 
   const supabase = await getWebhookSupabase();
