@@ -82,7 +82,7 @@ async def tinyfish_transport():
 
         # Keep secrets in process memory; never log request headers or print keys.
         async with streamable_http_client(
-            MCP_ENDPOINT, headers={"X-API-Key": key}
+            MCP_ENDPOINT, headers={"Authorization": f"Bearer {key}"}
         ) as (read, write, _):
             yield read, write
     else:
