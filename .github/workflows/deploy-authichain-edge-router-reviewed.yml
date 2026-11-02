@@ -115,6 +115,9 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Enforce manual release safety regression checks
+        run: node --test scripts/__tests__/deploy-authichain-edge-router-reviewed.test.mjs
+
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
