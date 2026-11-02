@@ -1250,9 +1250,10 @@ workflows:
     max_runs_per_day: 4
     description: |
       Default dry-run; no network unless --mode auto and
-      AGENTZ_HTTPX_MCP_LIVE=true explicitly opt in. HTTPX does at most three
-      bounded JSON-RPC POST frames to https://authichain.com/mcp:
-      initialize, notifications/initialized and tools/list. It never uses
-      tools/call, payment, credentials, cookies, wallets, redirects, customer
-      data or external hosts. Network failures are inconclusive, never
-      proof of protocol nonconformance or certification.
+      AGENTZ_HTTPX_MCP_LIVE=true explicitly opt in. Defaults to MCP 2026-07-28
+      stateless POST tools/list with per-request metadata and headers. Set
+      AGENTZ_HTTPX_MCP_ERA=legacy to explicitly select older 2025-06-18
+      initialize, notifications/initialized, tools/list. Never automatically
+      downgrade a failed modern probe. No tools/call, payment, credentials,
+      cookies, wallets, redirects, customer data or external hosts.
+      Network failures are inconclusive, not proof of nonconformance.
