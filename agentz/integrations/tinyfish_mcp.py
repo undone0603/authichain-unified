@@ -11,7 +11,9 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import json
+import os
 import shutil
+from contextlib import asynccontextmanager
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -71,27 +73,48 @@ def request_for(action: str, values: list[str]) -> dict[str, Any]:
     raise ValueError("TinyFish action is not in the read-only allowlist")
 
 
-async def call_tinyfish(action: str, values: list[str]) -> dict[str, Any]:
-    """Initialize MCP, check server-advertised tools, call exactly one tool."""
-    args = request_for(action, values)
-    if shutil.which("npx") is None:
-        raise RuntimeError("npx is missing; install Node.js on the AgentZ host")
-    try:
-        from mcp import ClientSession, StdioServerParameters
+@asynccontextmanager
+async def tinyfish_transport():
+    """Prefer API-key HTTP on headless hosts; fall back to local OAuth bridge."""
+    key = os.getenv("TINYFISH_API_KEY", "").strip()
+    if key:
+        from mcp.client.streamable_http import streamable_http_client
+
+        # Keep secrets in process memory; never log request headers or print keys.
+        async with streamable_http_client(
+            MCP_ENDPOINT, headers={"X-API-Key": key}
+        ) as (read, write, _):
+            yield read, write
+    else:
+        if shutil.which("npx") is None:
+            raise RuntimeError(
+                "Set TINYFISH_API_KEY for headless MCP or install npx for OAuth"
+            )
+        from mcp import StdioServerParameters
         from mcp.client.stdio import stdio_client
+
+        params = StdioServerParameters(
+            command="npx",
+            args=["-y", "mcp-remote", MCP_ENDPOINT],
+        )
+        async with stdio_client(params) as (read, write):
+            yield read, write
+
+
+async def call_tinyfish(action: str, values: list[str]) -> dict[str, Any]:
+    """Initialize MCP, check advertised tools, call exactly one read-only tool."""
+    args = request_for(action, values)
+    try:
+        from mcp import ClientSession
     except ImportError as exc:
         raise RuntimeError("Python MCP SDK missing; install mcp>=1.12,<2") from exc
 
-    params = StdioServerParameters(
-        command="npx",
-        args=["-y", "mcp-remote", MCP_ENDPOINT],
-    )
-    async with stdio_client(params) as (read, write):
+    async with tinyfish_transport() as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             available = {tool.name for tool in (await session.list_tools()).tools}
-            if action not in available:
-                raise RuntimeError(f"TinyFish did not advertise {action!r}")
+            if action not in READ_ONLY_TOOLS or action not in available:
+                raise RuntimeError(f"TinyFish did not advertise authorized {action!r}")
             result = await session.call_tool(action, args)
             return {
                 "tool": action,
@@ -113,7 +136,8 @@ def cli_action(action: str, values: list[str], *, dry_run: bool = False) -> int:
             print(json.dumps({
                 "mode": "dry-run",
                 "endpoint": MCP_ENDPOINT,
-                "bridge": ["npx", "-y", "mcp-remote", MCP_ENDPOINT],
+                "connection": "api-key-http" if os.getenv("TINYFISH_API_KEY") else "mcp-remote-oauth",
+                "bridge": ["npx", "-y", "mcp-remote", MCP_ENDPOINT] if not os.getenv("TINYFISH_API_KEY") else None,
                 "tool": action,
                 "arguments": args,
             }, indent=2))
