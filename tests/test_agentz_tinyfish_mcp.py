@@ -100,7 +100,7 @@ def test_headless_transport_uses_http_api_key(monkeypatch):
 
     @asynccontextmanager
     async def fake_streamable_http_client(url, *, headers):
-        secrets.append((url, headers["X-API-Key"]))
+        secrets.append((url, headers["Authorization"]))
         yield "read", "write", "session"
 
     mcp_client = types.ModuleType("mcp.client")
@@ -117,4 +117,4 @@ def test_headless_transport_uses_http_api_key(monkeypatch):
             assert transport == ("read", "write")
 
     asyncio.run(run())
-    assert secrets == [("https://agent.tinyfish.ai/mcp", "test-secret")]
+    assert secrets == [("https://agent.tinyfish.ai/mcp", "Bearer test-secret")]
