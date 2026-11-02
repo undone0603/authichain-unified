@@ -49,7 +49,7 @@ def _claim_daily_scout_slot() -> bool:
     try:
         fd = os.open(marker, flags, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as record:
-            record.write(datetime.now(timezone.utc).isoformat() + "\\n")
+            record.write(datetime.now(timezone.utc).isoformat() + "\n")
             record.flush()
             os.fsync(record.fileno())
         return True
