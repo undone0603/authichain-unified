@@ -572,14 +572,21 @@ export async function recordDppLoopEventOnce(
     console.error("[dpp-loop] dedupe check failed:", input.stage, err);
   }
 
-  await recordDppLoopEvent(supabase, {
-    ...input,
-    metadata: {
-      ...(input.metadata || {}),
-      ...(input.dedupeKey ? { dedupe_key: input.dedupeKey } : {}),
-    },
-  });
-  return { recorded: true };
+  try {
+    await recordDppLoopEvent(supabase, {
+      ...input,
+      metadata: {
+        ...(input.metadata || {}),
+        ...(input.dedupeKey ? { dedupe_key: input.dedupeKey } : {}),
+      },
+    }, { strict: true });
+    return { recorded: true };
+  } catch {
+    // Analytics remain best-effort, but publication and verification callers
+    // must not claim event_recorded when PostgREST rejected the write.
+    console.error("[dpp-loop] once write failed:", input.stage);
+    return { recorded: false, reason: "storage_unavailable" };
+  }
 }
 
 /**
