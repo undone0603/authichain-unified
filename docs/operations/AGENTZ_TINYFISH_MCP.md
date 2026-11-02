@@ -72,8 +72,8 @@ TinyFish connection does not authenticate the AgentZ host.
 ## AgentZ orchestration integration
 
 The registry now has `tinyfish_a2a_scout`, one **read-only** public search
-for A2A open-agent interoperability repositories. The registry allows at most
-one successful live run per day. It requires the host's `TINYFISH_API_KEY`.
+for A2A open-agent interoperability repositories. The registry blocks repeat successful live runs on the same UTC day,
+and the daemon independently limits *attempts* to once per UTC day. It requires the host's `TINYFISH_API_KEY`.
 
 ```bash
 python -m agentz.cli run tinyfish_a2a_scout --mode dry-run
@@ -86,12 +86,22 @@ per day in the long-running daemon, bind both runtime variables:
 
 ```
 TINYFISH_API_KEY=<secret set in host secret manager>
+AGENTZ_TINYFISH_SCOUT_STATE_DIR=/absolute/path/to/host-persistent-volume/agentz
 AGENTZ_TINYFISH_SCOUT_ENABLED=true
 ```
 
 Only set these on the **real Python AgentZ service**, not on the similarly
-named Cloudflare Worker. The daemon rate-limits to at least 24 hours and
-does not log raw TinyFish content. It cannot send outreach, post content,
+named Cloudflare Worker. Provision the **state directory on a durable shared
+host volume beforehand** with appropriate permissions; it must already exist
+and be an absolute path. The daemon claims a private UTC-date marker using
+atomic exclusive creation **before** making the TinyFish call. A failed call
+consumes that day's slot, and restarting the daemon cannot issue another query
+on that UTC day if the volume persists. If the directory is absent, unwritable,
+or configured as a relative path, the research task does not run.
+A VM/container's ephemeral filesystem is **not** adequate: no cross-restart
+guarantee exists without a real persistent volume. The limit is one attempt
+per UTC calendar day, which can be less than 24 hours between UTC day boundaries.
+The daemon does not log raw TinyFish content. It cannot send outreach, post content,
 create monitors, or use browser automation. To stop it, remove/disable
 `AGENTZ_TINYFISH_SCOUT_ENABLED` and restart the service. The flag defaults
 to off.
