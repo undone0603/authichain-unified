@@ -131,3 +131,108 @@ def test_headless_transport_uses_http_api_key(monkeypatch):
 
     asyncio.run(run())
     assert secrets == [("https://agent.tinyfish.ai/mcp", "Bearer test-secret")]
+
+@pytest.mark.parametrize("advertised,expect_failure", [
+    ("search", False),
+    ("fetch_content", True),
+])
+def test_session_dispatch_respects_advertised_tools(monkeypatch, advertised, expect_failure):
+    import asyncio
+    import sys
+    import types
+    from contextlib import asynccontextmanager
+    from agentz import integrations
+    from agentz.integrations import tinyfish_mcp
+
+    calls = []
+
+    class FakeSession:
+        def __init__(self, _read, _write):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return False
+
+        async def initialize(self):
+            calls.append("initialized")
+
+        async def list_tools(self):
+            return types.SimpleNamespace(
+                tools=[types.SimpleNamespace(name=advertised)]
+            )
+
+        async def call_tool(self, name, args):
+            calls.append((name, args))
+            return types.SimpleNamespace(
+                isError=False,
+                structuredContent={"results": [{"url": "https://example.org"}]},
+                content=[types.SimpleNamespace(type="text", text='{"ok":true}')],
+            )
+
+    @asynccontextmanager
+    async def fake_transport():
+        yield "read", "write"
+
+    fake_sdk = types.ModuleType("mcp")
+    fake_sdk.ClientSession = FakeSession
+    monkeypatch.setitem(sys.modules, "mcp", fake_sdk)
+    monkeypatch.setattr(tinyfish_mcp, "tinyfish_transport", fake_transport)
+
+    if expect_failure:
+        with pytest.raises(RuntimeError, match="did not advertise authorized"):
+            asyncio.run(tinyfish_mcp.call_tinyfish("search", ["A2A"]))
+        assert calls == ["initialized"]
+    else:
+        result = asyncio.run(tinyfish_mcp.call_tinyfish("search", ["A2A"]))
+        assert result["ok"] is True
+        assert result["structured_content"]["results"][0]["url"] == "https://example.org"
+        assert calls[0] == "initialized"
+        assert calls[1][0] == "search"
+        assert calls[1][1]["query"] == "A2A"
+
+
+def test_session_propagates_server_tool_error_as_failure(monkeypatch):
+    import asyncio
+    import sys
+    import types
+    from contextlib import asynccontextmanager
+    from agentz.integrations import tinyfish_mcp
+
+    class FakeSession:
+        def __init__(self, _read, _write):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return False
+
+        async def initialize(self):
+            pass
+
+        async def list_tools(self):
+            return types.SimpleNamespace(
+                tools=[types.SimpleNamespace(name="search")]
+            )
+
+        async def call_tool(self, _name, _args):
+            return types.SimpleNamespace(
+                isError=True,
+                structuredContent=None,
+                content=[types.SimpleNamespace(type="text", text="operation rejected")],
+            )
+
+    @asynccontextmanager
+    async def fake_transport():
+        yield "read", "write"
+
+    fake_sdk = types.ModuleType("mcp")
+    fake_sdk.ClientSession = FakeSession
+    monkeypatch.setitem(sys.modules, "mcp", fake_sdk)
+    monkeypatch.setattr(tinyfish_mcp, "tinyfish_transport", fake_transport)
+    result = asyncio.run(tinyfish_mcp.call_tinyfish("search", ["A2A"]))
+    assert result["ok"] is False
