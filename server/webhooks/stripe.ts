@@ -173,6 +173,9 @@ async function getWebhookSupabase() {
 async function fulfillCatalogCreditsIfPaid(
   session: Stripe.Checkout.Session
 ): Promise<boolean | "reconciliation_required"> {
+  // Service orders have a separate atomic payment ledger, not catalogue credits.
+  // Metadata.plan and matching amounts must never cross this product boundary.
+  if (session.metadata?.type === "one_time_service") return false;
   if (session.payment_status !== "paid") return false;
   // Stripe marks fully discounted $0 sessions as paid without collecting money.
   // DPP is handled separately; do not grant paid catalog credits for $0/unknown totals.
@@ -293,6 +296,7 @@ async function fulfillCatalogCreditsIfPaid(
 }
 
 function isStarterCheckoutSession(session: Stripe.Checkout.Session): boolean {
+  if (session.metadata?.type === "one_time_service") return false;
   if (session.mode !== "payment" || isRecurringCheckoutSession(session)) {
     return false;
   }
