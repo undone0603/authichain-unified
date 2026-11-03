@@ -72,7 +72,7 @@ function makeProposals(issues) {
   const balanced = termsFromUtility(issues,issues.map(()=>base));
   proposals.push({id:"balanced_trade",strategy:"multi_issue_tradeoff",terms:balanced,score:evaluateTerms(issues,balanced)});
   const priority=[...issues.keys()].sort((a,b)=>issues[b].weight-issues[a].weight);
-  for (const j of priority.slice(0,2)) {
+  for (const j of priority.slice(0,1)) {
     const otherWeight=w-issues[j].weight;
     const delta=Math.min(0.15,0.20*otherWeight/Math.max(issues[j].weight,1));
     if (delta<=0) continue;
