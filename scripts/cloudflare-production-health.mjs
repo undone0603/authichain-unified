@@ -17,15 +17,14 @@ export const PUBLIC_PROBES = [
     method: "HEAD",
   },
   {
-    // Unlisted Launch annual (plans.ts listed:false; HOLD #1905). checkout-gate
-    // HEAD never calls Stripe and 303s closed checkouts to /pricing. Accept 303
-    // as the healthy off-sale signal. A 200 would mean the confirm page is back
-    // on sale without updating this probe. Canonical /checkout/<planId> path —
-    // aliases such as /checkout/launch answer 301. Earlier /api/checkout/launch
-    // 404 failed the scheduled pipeline on 2026-10-22.
+    // Unlisted Launch annual stays off /pricing (plans.ts listed:false).
+    // tryHandleGatedCheckout HEAD of the canonical confirm path returns 200
+    // and never calls Stripe. 303 is only the POST redirect to Checkout.
+    // Aliases such as /checkout/launch answer 301. A 303 or 404 here means
+    // the live confirm page closed.
     id: "checkout_launch_annual_confirm_head",
     url: `${ORIGIN}/checkout/qron_launch_annual`,
-    accept: [303],
+    accept: [200],
     method: "HEAD",
   },
 ];
