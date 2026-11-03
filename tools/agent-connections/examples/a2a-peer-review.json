@@ -1,0 +1,20 @@
+{
+  "schema": "authichain-a2a-peer-review/1",
+  "name": "AuthiChain public agent",
+  "agentCard": "https://authichain.com/.well-known/agent-card.json",
+  "expectedInterface": {
+    "url": "https://authichain.com/api/a2a",
+    "protocolBinding": "JSONRPC",
+    "protocolVersion": "1.0"
+  },
+  "status": "discovery_only_not_peer_connected",
+  "approval": {
+    "peerOwner": false,
+    "customer": false,
+    "authenticatedConnection": false,
+    "sendMessages": false,
+    "payments": false
+  },
+  "acceptedTaskTypes": [],
+  "note": "This is a static review manifest, not a universal A2A client config or peer connection."
+}
