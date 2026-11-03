@@ -111,6 +111,40 @@ describe("mcp discovery", () => {
     }
   });
 
+  it("tools/list exposes a read-only MCP + A2A setup catalog without payment or peer messaging", async () => {
+    const listing = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 77, method: "tools/list" }),
+      })
+    );
+    const listed = (await listing!.json()) as { result: { tools: Array<{ name: string }> } };
+    expect(listed.result.tools.map(t => t.name)).toContain("get_agent_setup_offers");
+    const response = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 78,
+          method: "tools/call",
+          params: { name: "get_agent_setup_offers", arguments: {} },
+        }),
+      })
+    );
+    expect(response?.status).toBe(200);
+    const body = (await response!.json()) as {
+      result: { content: Array<{ text: string }> };
+    };
+    const catalog = JSON.parse(body.result.content[0].text);
+    expect(catalog.status).toBe("public_discovery_only");
+    expect(catalog.offers).toHaveLength(3);
+    expect(catalog.a2a.connectionRequiresPeerConsent).toBe(true);
+    expect(catalog.a2a.taskMessagingAutomaticallyAuthorized).toBe(false);
+    expect(body.result.content[0].text).not.toContain("buy.stripe.com");
+  });
+
   it("JSON-RPC tools/list and get_pricing are public", async () => {
     const list = await tryHandleMcp(
       req("/mcp", {
