@@ -1350,6 +1350,18 @@ export async function x402AgentCard(
         ],
       },
       {
+        id: "negotiation-planning",
+        name: "Negotiation planning and tradeoff proposals",
+        description:
+          "Free non-binding negotiation planning via /negotiate and the MCP negotiate tool. Supports BATNA, walk-away limits, weighted issues and alternative offers. Never contacts third parties, places orders or pays.",
+        tags:["negotiation","procurement","a2a","offers"],
+        examples:[
+          "GET https://authichain.com/negotiate",
+          "MCP tools/call negotiate: objective, issues, counterpartOffers",
+          "A2A SendMessage: /negotiate",
+        ],
+      },
+      {
         id: "qron-launch-subscription",
         name: "QRON Launch subscription",
         description:
