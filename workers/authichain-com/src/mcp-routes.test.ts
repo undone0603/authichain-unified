@@ -2052,6 +2052,40 @@ describe("negotiate: eighth MCP tool, non-binding and bounded", () => {
     expect(body.tools.map(tool => tool.name)).toContain("negotiate");
   });
 
+  it("marks unsupported currency as a legacy MCP tool error", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "MCP-Protocol-Version": "2025-06-18" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 19,
+          method: "tools/call",
+          params: {
+            name: "negotiate",
+            arguments: {
+              currency: "AUD",
+              buyer_max_usd: 120,
+              seller_min_usd: 80,
+            },
+          },
+        }),
+      })
+    );
+    expect(res?.status).toBe(200);
+    const body = (await res!.json()) as {
+      result: {
+        isError?: boolean;
+        content: Array<{ text: string }>;
+      };
+    };
+    expect(body.result.isError).toBe(true);
+    expect(JSON.parse(body.result.content[0].text)).toMatchObject({
+      status: "unsupported_currency",
+      binding: false,
+    });
+  });
+
   it("answers legacy tools/call without payment, signatures or external calls", async () => {
     const res = await tryHandleMcp(
       req("/mcp", {
