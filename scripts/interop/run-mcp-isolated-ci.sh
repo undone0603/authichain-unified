@@ -41,7 +41,7 @@ run_step format corepack pnpm exec prettier --check workers/authichain-com/src/m
 run_step lint corepack pnpm exec eslint workers/authichain-com/src/mcp-routes.ts workers/authichain-com/src/mcp-routes.test.ts
 run_step vitest corepack pnpm exec vitest run workers/authichain-com/src/mcp-routes.test.ts
 run_step typecheck corepack pnpm exec tsc --noEmit
-run_step worker-dry-run corepack pnpm exec wrangler deploy --cwd workers/authichain-com --dry-run --outdir "${EVIDENCE_DIR}/worker-dry-run"
+run_step worker-dry-run corepack pnpm exec wrangler deploy --config workers/authichain-com/wrangler.toml --dry-run --outdir "${EVIDENCE_DIR}/worker-dry-run"
 
 # Never upload raw logs automatically: inspect/redact before sharing.
 (cd "${EVIDENCE_DIR}" && sha256sum *.txt *.command *.exit *.log > manifest.sha256)
