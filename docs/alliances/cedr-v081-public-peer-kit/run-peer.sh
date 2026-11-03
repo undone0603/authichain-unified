@@ -3,6 +3,16 @@
 # No GitLab access, production secrets, payments, tool execution, or deployments.
 set -euo pipefail
 umask 077
+# The release binary is executable code; never run it on a production machine.
+if [[ "${CEDR_ISOLATED_RUNNER_APPROVED:-}" != "YES" ]]; then
+  echo 'BLOCKED: explicitly approve a separately isolated disposable non-production Linux runner (CEDR_ISOLATED_RUNNER_APPROVED=YES)' >&2
+  exit 78
+fi
+case "${RUNNER_NAME:-}" in
+  authichain-ops|wsl-zac-arm64|LAPTOP-72MAGTL2)
+    echo "BLOCKED: protected runner name: ${RUNNER_NAME}" >&2
+    exit 78;;
+esac
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT="${CEDR_PEER_EVIDENCE_DIR:-$PWD/cedr-public-peer-evidence}"
 mkdir -p "$OUT"
