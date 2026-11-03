@@ -10,7 +10,7 @@ Use a disposable Ubuntu x86_64 or ARM64 host with Node.js 22, `bash`, `curl`, `s
 cd docs/alliances/cedr-v081-public-peer-kit
 node --test verify-report.test.mjs
 export CEDR_PEER_EVIDENCE_DIR="$PWD/cedr-public-peer-evidence"
-bash run-peer.sh
+CEDR_ISOLATED_RUNNER_APPROVED=YES bash run-peer.sh
 ```
 
 The runner fetches official Cedr v0.8.1 Linux release binaries, uses pinned SHA256 digests for the binary and `SHA256SUMS`, verifies upstream GitHub release attestation, and creates a fresh temporary `HOME` containing only one `.mcp.json` public endpoint. `guard lock --remote` must successfully introspect an actual nonempty tool surface; `guard remote --force --format json` must report exactly `claude.authichain` as `unchanged`, no errors or changes. Other states such as `failed`, `auth_required`, `unsupported`, `not_pinned`, empty tool surfaces and missing baselines are **not passing** evidence even if Cedr exits 0.
@@ -22,3 +22,7 @@ Keep `cedr-public-peer-evidence/` private until you review and sanitize raw outp
 The 15 offline tests can execute without a network but do **not** count as live handshake evidence. Source staging review: private AuthiChain GitLab MR !2030. No release, production payment, deployment, or merge is authorized by running this kit. A runner must be independently authorized and isolated. Prior hosted CI attempts were blocked before execution by account billing/quota restrictions.
 
 **Review workflow:** This branch is staged as a draft because the project’s GitHub-hosted Actions are billing-locked and same-repository PR checks otherwise target a persistent self-hosted runner. The last commit intentionally includes a CI-skip marker; do not merge or treat skipped checks as validation. An independently approved, disposable executor must run the live peer test first.
+
+### Additional release gates
+
+Do not set `CEDR_ISOLATED_RUNNER_APPROVED=YES` unless the host is a separately isolated, disposable **nonproduction** Linux environment with no secrets, wallets or production deployment credentials. Known AuthiChain production/self-hosted runner names are explicitly blocked. The verifier also requires the exact set of seven tool names from the 2026-11-03 public `tools/list` observation; changed tool inventory is inconclusive pending review, not an automatic interoperability pass. The snapshot is first-party protocol evidence, not independent Cedr attestation.
