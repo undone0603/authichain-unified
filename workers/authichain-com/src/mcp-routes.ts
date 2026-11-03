@@ -210,6 +210,37 @@ export const TOOLS = [
     },
   },
   {
+    name: "negotiate",
+    description:
+      "Free, non-binding A2A negotiation planner. Compares a buyer's maximum budget with a supplier's minimum price, applies explicit authorization boundaries, and returns a proposed price or a reason for no agreement. Does not accept contracts, reserve inventory, move funds, contact suppliers, or create a legally binding commitment.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        buyer_max_usd: {
+          type: "number",
+          minimum: 0,
+          description: "Buyer's authorized maximum price in USD.",
+        },
+        seller_min_usd: {
+          type: "number",
+          minimum: 0,
+          description: "Seller's stated minimum price in USD.",
+        },
+        opening_offer_usd: {
+          type: "number",
+          minimum: 0,
+          description: "Optional buyer opening offer, not an executed offer.",
+        },
+        scope: {
+          type: "string",
+          maxLength: 500,
+          description: "Brief description of the deliverable being discussed.",
+        },
+      },
+      required: ["buyer_max_usd", "seller_min_usd"],
+    },
+  },
+  {
     name: "scan_living_qr",
     description:
       "Free. Scan a stored Living QR. GET https://authichain.com/qron/r/{object_id} returns AuthiChain Verification Decision v1. This host verifies the signature. A missing id is presentation_not_found. Not an x402 payment endpoint, and it does not inspect a physical product.",
@@ -498,6 +529,66 @@ function mcpPaidVerifyStatus(env?: X402Env) {
   );
 }
 
+/**
+ * Non-binding, deterministic negotiation planning. Never calls external
+ * systems, signs agreements, quotes live inventory, or settles payment.
+ */
+export function negotiateTool(args: Record<string, unknown>) {
+  const max = args.buyer_max_usd;
+  const min = args.seller_min_usd;
+  const opening = args.opening_offer_usd;
+  if (
+    typeof max !== "number" ||
+    typeof min !== "number" ||
+    !Number.isFinite(max) ||
+    !Number.isFinite(min) ||
+    max < 0 ||
+    min < 0 ||
+    max > 1_000_000_000 ||
+    min > 1_000_000_000 ||
+    (opening !== undefined &&
+      (typeof opening !== "number" ||
+        !Number.isFinite(opening) ||
+        opening < 0 ||
+        opening > max)) ||
+    (args.scope !== undefined &&
+      (typeof args.scope !== "string" || args.scope.length > 500))
+  ) {
+    return {
+      status: "invalid_input",
+      binding: false,
+      error: "Supply finite nonnegative buyer_max_usd and seller_min_usd; optional opening_offer_usd must not exceed the buyer cap.",
+    };
+  }
+  const buyerCents = Math.round(max * 100);
+  const sellerCents = Math.round(min * 100);
+  const openingCents =
+    typeof opening === "number" ? Math.round(opening * 100) : undefined;
+  if (buyerCents < sellerCents) {
+    return {
+      status: "no_overlap",
+      binding: false,
+      buyer_max_usd: buyerCents / 100,
+      seller_min_usd: sellerCents / 100,
+      gap_usd: (sellerCents - buyerCents) / 100,
+      next_step: "Revisit scope, timing or authorized limits; do not exceed the buyer cap.",
+    };
+  }
+  const proposalCents = Math.max(
+    sellerCents,
+    Math.min(buyerCents, openingCents ?? Math.round((buyerCents + sellerCents) / 2))
+  );
+  return {
+    status: "proposal_only",
+    binding: false,
+    proposed_price_usd: proposalCents / 100,
+    buyer_max_usd: buyerCents / 100,
+    seller_min_usd: sellerCents / 100,
+    scope: typeof args.scope === "string" ? args.scope : null,
+    next_step: "Require explicit counterparty acceptance, validated fulfillment, and a separate authorized signing/payment mandate.",
+  };
+}
+
 function mcpTools(env?: X402Env) {
   const bound = mcpPaidVerifyStatus(env).bound;
   if (!bound) return TOOLS;
@@ -542,6 +633,7 @@ export function mcpPricingDiscovery(env?: X402Env) {
       "dpp_readiness_check",
       "get_pricing",
       "scan_living_qr",
+      "negotiate",
     ],
   };
   if (!paidVerify.bound) {
@@ -1521,6 +1613,13 @@ async function handleRpc(
       arguments?: Record<string, unknown>;
     };
     const name = params.name ?? "";
+    if (name === "negotiate" || name === "authichain_negotiate") {
+      const result = negotiateTool(params.arguments ?? {});
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        ...(result.status === "invalid_input" ? { isError: true } : {}),
+      });
+    }
     if (name === "get_pricing" || name === "authichain_get_pricing") {
       hydrateX402(env);
       return rpcResult(id, {
@@ -1621,7 +1720,7 @@ async function handleRpc(
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use verify_attestation (free, published signed JWS), verify_record (free reference protocol), get_pricing (free), dpp_readiness_check (free), query_provenance (free registration lookup), or verify (legacy x402).",
+          text: "Unknown tool. Use verify_attestation (free, published signed JWS), verify_record (free reference protocol), get_pricing (free), dpp_readiness_check (free), query_provenance (free registration lookup), negotiate (non-binding), or verify (legacy x402).",
         },
       ],
       isError: true,
