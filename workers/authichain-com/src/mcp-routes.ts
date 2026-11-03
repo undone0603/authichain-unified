@@ -216,6 +216,11 @@ export const TOOLS = [
     inputSchema: {
       type: "object",
       properties: {
+        currency: {
+          type: "string",
+          enum: ["USD"],
+          description: "Explicit price currency. Only USD is supported; never silently convert AUD or another currency.",
+        },
         buyer_max_usd: {
           type: "number",
           minimum: 0,
@@ -237,7 +242,7 @@ export const TOOLS = [
           description: "Brief description of the deliverable being discussed.",
         },
       },
-      required: ["buyer_max_usd", "seller_min_usd"],
+      required: ["currency", "buyer_max_usd", "seller_min_usd"],
     },
   },
   {
@@ -541,6 +546,13 @@ export function negotiateTool(args: Record<string, unknown>) {
       error: "Negotiation arguments must be a JSON object.",
     };
   }
+  if (args.currency !== "USD") {
+    return {
+      status: "unsupported_currency",
+      binding: false,
+      error: "Explicit currency USD is required. No implicit FX conversion.",
+    };
+  }
   const max = args.buyer_max_usd;
   const min = args.seller_min_usd;
   const opening = args.opening_offer_usd;
@@ -605,6 +617,7 @@ export function negotiateTool(args: Record<string, unknown>) {
     return {
       status: "no_overlap",
       binding: false,
+      currency: "USD",
       buyer_max_usd: buyerCents / 100,
       seller_min_usd: sellerCents / 100,
       gap_usd: (sellerCents - buyerCents) / 100,
@@ -618,6 +631,7 @@ export function negotiateTool(args: Record<string, unknown>) {
   return {
     status: "proposal_only",
     binding: false,
+    currency: "USD",
     proposed_price_usd: proposalCents / 100,
     buyer_max_usd: buyerCents / 100,
     seller_min_usd: sellerCents / 100,
