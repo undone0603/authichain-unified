@@ -1914,6 +1914,30 @@ describe("MCP 2026-07-28 read-only conformance", () => {
     expect(initialized.result.resultType).toBeUndefined();
   });
 
+  it("does not silently downgrade modern requests missing their version header", async () => {
+    const res = await tryHandleMcp(
+      modernRequest("tools/list", {
+        headers: { "MCP-Protocol-Version": "" },
+      })
+    );
+    expect(res?.status).toBe(400);
+    const body = (await res!.json()) as { error: { code: number } };
+    expect(body.error.code).toBe(-32020);
+  });
+
+  it("rejects malformed JSON-RPC root objects", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "MCP-Protocol-Version": "2026-07-28" },
+        body: "null",
+      })
+    );
+    expect(res?.status).toBe(400);
+    const body = (await res!.json()) as { error: { code: number } };
+    expect(body.error.code).toBe(-32600);
+  });
+
   it("allows browser preflight for new mirrored headers", async () => {
     const res = await tryHandleMcp(req("/mcp", { method: "OPTIONS" }));
     expect(res?.status).toBe(204);
