@@ -22,7 +22,8 @@ describe("MCP + A2A connection offers", () => {
     expect(catalogue.status).toBe("public_discovery_only");
     expect(JSON.stringify(catalogue)).not.toContain("buy.stripe.com");
     expect(JSON.stringify(catalogue)).not.toContain("payment_intent");
-    expect(JSON.stringify(catalogue)).not.toContain("secret");
+    expect(JSON.stringify(catalogue)).not.toContain('"apiKey"');
+    expect(JSON.stringify(catalogue)).not.toContain('"authorization"');
   });
 
   it("lists the actual MCP and A2A 1.0 endpoints and no connection assertion", () => {
