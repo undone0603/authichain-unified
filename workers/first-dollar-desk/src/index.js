@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { matchPendingFacilitatorReceipt } from "./facilitator-match.mjs";
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
@@ -505,16 +506,9 @@ async function reconcilePendingFacilitatorReceipts(env) {
   for (let index = 0; index < (ledger.receipts ?? []).length; index += 1) {
     const item = ledger.receipts[index];
     if (item.status !== "pending" || !item.metadata?.x402 || item.txHash) continue;
-    const created = Date.parse(item.createdAt ?? "");
-    const matchByTx = chainCandidates.find(
-      (row) => item.metadata?.facilitatorTxHint && row.txHash && String(row.txHash).toLowerCase() === String(item.metadata.facilitatorTxHint).toLowerCase()
-    );
-    const match = matchByTx ?? chainCandidates.find((row) => {
-      if (row.amountCents !== item.amountCents) return false;
-      const seen = Date.parse(row.createdAt ?? "");
-      if (!Number.isFinite(created) || !Number.isFinite(seen)) return true;
-      return seen >= created - 12e4 && seen <= created + 36e5;
-    });
+    // A same-amount transfer near the same time is not proof that the
+    // facilitator settled this particular HTTP verification request.
+    const match = matchPendingFacilitatorReceipt(item, chainCandidates);
     if (!match) continue;
     const merged = classify(
       {
