@@ -1330,27 +1330,120 @@ async function handleRpc(
   }
   const method = body.method ?? "";
   const id = body.id;
-  // Opt-in modern stateless discovery: never silently downgrade or grant
-  // tools/call authority merely because the caller requested a new version.
+  // Opt-in MCP 2026-07-28. Legacy negotiation and its response frames
+  // remain untouched below. Only public discovery and tool listing are
+  // exposed here; all modern tool execution fails closed until separately
+  // reviewed and tested.
   const versionHeader = request.headers.get("MCP-Protocol-Version");
   if (versionHeader === "2026-07-28") {
+    const modernHeaders = { "MCP-Protocol-Version": "2026-07-28" };
+    const reject = (
+      status: number,
+      code: number,
+      message: string,
+      data?: Record<string, unknown>
+    ) =>
+      json(
+        status,
+        {
+          jsonrpc: "2.0",
+          id: id ?? null,
+          error: { code, message, ...(data ? { data } : {}) },
+        },
+        modernHeaders
+      );
+    // A supplied Origin must be trustworthy before accepting a modern MCP
+    // request. Missing Origin is normal for non-browser A2A clients.
+    const origin = request.headers.get("Origin");
+    if (origin && origin !== new URL(request.url).origin) {
+      return reject(403, -32600, "Origin not allowed");
+    }
+    const params =
+      body.params && typeof body.params === "object" && !Array.isArray(body.params)
+        ? (body.params as { _meta?: Record<string, unknown> })
+        : undefined;
+    const meta = params?._meta;
     const methodHeader = request.headers.get("Mcp-Method");
-    const meta = body.params && typeof body.params === "object"
-      ? (body.params as { _meta?: Record<string, unknown> })._meta
-      : undefined;
-    const metaVersion = meta?.["io.modelcontextprotocol/protocolVersion"];
-    if (methodHeader !== method || metaVersion !== "2026-07-28") {
-      return rpcError(id ?? null, "modern protocol method/version metadata mismatch", -32600);
+    if (
+      typeof method !== "string" ||
+      !method ||
+      methodHeader !== method ||
+      meta?.["io.modelcontextprotocol/protocolVersion"] !== "2026-07-28"
+    ) {
+      return reject(400, -32020, "HeaderMismatch: method or protocol version differs");
     }
-    if (body.jsonrpc !== "2.0" || method !== "tools/list") {
-      return rpcError(id ?? null, "modern method unsupported on this limited read-only adapter", -32601);
+    if (body.jsonrpc !== "2.0" || id === null || id === undefined ||
+        (typeof id !== "string" && typeof id !== "number")) {
+      return reject(400, -32600, "Invalid modern JSON-RPC request");
     }
-    hydrateX402(env);
-    return json(200, { jsonrpc: "2.0", id, result: { resultType: "complete", tools: mcpTools(env), ttlMs: 0, cacheScope: "private" } },
-      { "MCP-Protocol-Version": "2026-07-28" });
+    if (
+      !meta ||
+      typeof meta["io.modelcontextprotocol/clientCapabilities"] !== "object" ||
+      meta["io.modelcontextprotocol/clientCapabilities"] === null ||
+      Array.isArray(meta["io.modelcontextprotocol/clientCapabilities"])
+    ) {
+      return reject(400, -32602, "Missing clientCapabilities in _meta");
+    }
+    if (method === "server/discover") {
+      return json(
+        200,
+        {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            resultType: "complete",
+            supportedVersions: ["2026-07-28", ...SUPPORTED_PROTOCOL_VERSIONS],
+            capabilities: { tools: { listChanged: false } },
+            _meta: {
+              "io.modelcontextprotocol/serverInfo": {
+                name: "authichain",
+                version: SERVER_VERSION,
+              },
+            },
+            instructions:
+              "Read-only interoperability preview. tools/list is supported; modern tools/call is not available. Verification does not prove physical authenticity.",
+            ttlMs: 0,
+            cacheScope: "private",
+          },
+        },
+        modernHeaders
+      );
+    }
+    if (method === "tools/list") {
+      hydrateX402(env);
+      return json(
+        200,
+        {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            resultType: "complete",
+            tools: mcpTools(env),
+            ttlMs: 0,
+            cacheScope: "private",
+          },
+        },
+        modernHeaders
+      );
+    }
+    return reject(404, -32601, "Method not found");
   }
-  if (versionHeader && !SUPPORTED_PROTOCOL_VERSIONS.some(v => v === versionHeader)) {
-    return rpcError(id ?? null, "unsupported MCP protocol version", -32600);
+  if (
+    versionHeader &&
+    !(SUPPORTED_PROTOCOL_VERSIONS as readonly string[]).includes(versionHeader)
+  ) {
+    return json(400, {
+      jsonrpc: "2.0",
+      id: id ?? null,
+      error: {
+        code: -32022,
+        message: "Unsupported protocol version",
+        data: {
+          supported: ["2026-07-28", ...SUPPORTED_PROTOCOL_VERSIONS],
+          requested: versionHeader,
+        },
+      },
+    });
   }
 
   /**
@@ -1609,7 +1702,7 @@ export async function tryHandleMcp(
         // clients on every call; omitting them here failed the preflight
         // for any browser-side MCP client before the request was made.
         "Access-Control-Allow-Headers":
-          "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Session-Id, Last-Event-ID, X-PAYMENT, PAYMENT-SIGNATURE",
+          "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id, Last-Event-ID, X-PAYMENT, PAYMENT-SIGNATURE",
         "Access-Control-Expose-Headers":
           "MCP-Protocol-Version, Mcp-Session-Id, WWW-Authenticate",
         "Access-Control-Max-Age": "86400",
