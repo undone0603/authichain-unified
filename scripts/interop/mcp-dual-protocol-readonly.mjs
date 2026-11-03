@@ -21,6 +21,7 @@ const modernMeta = {
   },
 };
 const observations = [];
+const runStartedAt = new Date().toISOString();
 async function probe(label, headers, message, expectedStatus) {
   const response = await fetch(endpoint, {
     method: "POST",
@@ -34,6 +35,7 @@ async function probe(label, headers, message, expectedStatus) {
     signal: AbortSignal.timeout(12000),
   });
   const raw = await response.text();
+  if (raw.length > 1_000_000) throw Error("Response exceeded read-only probe size limit");
   let frame;
   try {
     frame = raw ? JSON.parse(raw) : null;
@@ -131,10 +133,13 @@ try {
 }
 console.log(JSON.stringify({
   target: endpoint,
-  executedAt: new Date().toISOString(),
+  executedAt: runStartedAt,
+  completedAt: new Date().toISOString(),
+  runtime: process.version,
   sourceRevision: process.env.SOURCE_SHA || "not-supplied",
   outcome,
   observations,
+  statusMeaning: outcome === "incomplete" ? "Transport failure; protocol compatibility not evaluated" : outcome === "fail" ? "Observed responses did not satisfy this probe\u0027s expected assertions" : "All probe assertions satisfied on this target",
   note: "Read-only wire observations. No tool execution, paid settlement or independent certification.",
 }, null, 2));
 if (outcome !== "pass") process.exitCode = 1;
