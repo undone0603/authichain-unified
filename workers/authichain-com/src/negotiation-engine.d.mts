@@ -39,4 +39,4 @@ export type NegotiationOutput = {
   caution:string;
 };
 export class NegotiationInputError extends Error {}
-export function evaluateNegotiation(input: NegotiationInput): NegotiationOutput;
+export function evaluateNegotiation(input: unknown): NegotiationOutput;
