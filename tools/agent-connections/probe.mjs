@@ -3,6 +3,9 @@
  * No arbitrary URL input (avoids SSRF), no tool execution, no A2A message,
  * no x402 signature, no keys, no paid checkout, no external peer pairing.
  */
+import { pathToFileURL } from "node:url";
+import { resolve } from "node:path";
+
 export const MCP_URL = "https://authichain.com/mcp";
 export const AGENT_CARD_URL = "https://authichain.com/.well-known/agent-card.json";
 export const A2A_ENDPOINT = "https://authichain.com/api/a2a";
@@ -144,7 +147,7 @@ export async function probeAuthichainConnections({ fetchImpl = fetch } = {}) {
   };
 }
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {
     const result = await probeAuthichainConnections();
     process.stdout.write(JSON.stringify(result, null, 2) + "\n");
