@@ -18,6 +18,7 @@ import {
   DEMONSTRATION_SIGNER_DID,
   LATEST_PROTOCOL_VERSION,
   SERVER_VERSION,
+  negotiateTool,
   PRODUCTION_ISSUER_DID,
   PRODUCTION_ISSUER_KID,
   RETIRED_ISSUER_DID,
@@ -1952,5 +1953,80 @@ describe("MCP 2026-07-28 read-only conformance", () => {
     expect(res?.status).toBe(204);
     expect(res?.headers.get("Access-Control-Allow-Headers")).toContain("Mcp-Method");
     expect(res?.headers.get("Access-Control-Allow-Headers")).toContain("Mcp-Name");
+  });
+});
+
+
+describe("negotiate: eighth MCP tool, non-binding and bounded", () => {
+  it("produces a proposal only within both stated limits", () => {
+    expect(negotiateTool({
+      buyer_max_usd: 120,
+      seller_min_usd: 80,
+      opening_offer_usd: 90,
+      scope: "Public MCP assessment",
+    })).toMatchObject({
+      status: "proposal_only",
+      binding: false,
+      proposed_price_usd: 90,
+    });
+  });
+
+  it("returns no overlap without exceeding either authorization limit", () => {
+    expect(negotiateTool({
+      buyer_max_usd: 50,
+      seller_min_usd: 75,
+    })).toMatchObject({
+      status: "no_overlap",
+      binding: false,
+      gap_usd: 25,
+    });
+  });
+
+  it("rejects invalid values, unbounded prices and opening offers above cap", () => {
+    for (const args of [
+      { buyer_max_usd: -1, seller_min_usd: 0 },
+      { buyer_max_usd: Infinity, seller_min_usd: 1 },
+      { buyer_max_usd: 100, seller_min_usd: 0, opening_offer_usd: 101 },
+      { buyer_max_usd: 100, seller_min_usd: 0, scope: "x".repeat(501) },
+    ]) {
+      expect(negotiateTool(args)).toMatchObject({
+        status: "invalid_input",
+        binding: false,
+      });
+    }
+  });
+
+  it("publishes exactly eight tools including negotiate on legacy discovery", async () => {
+    const res = await tryHandleMcp(req("/.well-known/mcp.json"));
+    const body = (await res!.json()) as { tools: Array<{ name: string }> };
+    expect(body.tools).toHaveLength(8);
+    expect(body.tools.map(tool => tool.name)).toContain("negotiate");
+  });
+
+  it("answers legacy tools/call without payment, signatures or external calls", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "MCP-Protocol-Version": "2025-06-18" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 18,
+          method: "tools/call",
+          params: {
+            name: "negotiate",
+            arguments: { buyer_max_usd: 120, seller_min_usd: 80 },
+          },
+        }),
+      })
+    );
+    expect(res?.status).toBe(200);
+    const body = (await res!.json()) as {
+      result: { content: Array<{ text: string }> };
+    };
+    expect(JSON.parse(body.result.content[0].text)).toMatchObject({
+      status: "proposal_only",
+      binding: false,
+      proposed_price_usd: 100,
+    });
   });
 });
