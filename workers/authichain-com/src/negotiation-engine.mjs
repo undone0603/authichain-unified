@@ -1,3 +1,5 @@
+import {assessInboundSupplierContract} from "./inbound-contract-gate.mjs";
+
 /**
  * AuthiChain negotiate v0.1: deterministic, general-purpose multi-issue proposals.
  * BATNA, reservation values, MESO-style tradeoffs, no external side effects.
@@ -116,6 +118,7 @@ export function evaluateNegotiation(input) {
     zopa:{status:"UNKNOWN",reason:"Counterparty reservation values are unverified; overlap cannot be established."},
     counterpartOffers:assessed,
     proposals,
+    ...(input.inboundContract!==undefined?{inboundContractReadiness:assessInboundSupplierContract(input.inboundContract)}:{}),
     strategicNotes:[
       "Use the target proposal as an evidence-based opening, not a factual market price.",
       "Trade concessions only for reciprocal value, such as price for delivery or warranty.",

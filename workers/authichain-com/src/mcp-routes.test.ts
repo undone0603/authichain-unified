@@ -140,6 +140,27 @@ describe("mcp discovery", () => {
     expect(result.sideEffectsPerformed).toBe(0);
   });
 
+  it("contract readiness remains non-binding and inbound-funds-only",async()=>{
+    const response=await tryHandleMcp(req("/mcp",{
+      method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({
+        jsonrpc:"2.0",id:203,method:"tools/call",
+        params:{name:"negotiate",arguments:{
+          objective:"Plan contract terms for an inbound digital service",
+          issues:[{key:"price_usd",direction:"maximize",target:1500,walkAway:1200,weight:5}],
+          inboundContract:{contract:{id:"candidate_contract_001",role:"service_provider",supplier:"AuthiChain"}}
+        }}
+      })
+    }));
+    const result=(await response!.json()).result;
+    const data=JSON.parse(result.content[0].text);
+    expect(data.inboundContractReadiness.status).toBe("BLOCKED");
+    expect(data.inboundContractReadiness.accepted).toBe(false);
+    expect(data.inboundContractReadiness.automaticSpendAuthorized).toBe(false);
+    expect(data.inboundContractReadiness.automaticAcceptanceAuthorized).toBe(false);
+    expect(data.inboundContractReadiness.missing).toContain("agentz_reproducible_fulfillment");
+  });
+
   it("fails closed on invalid negotiate arguments in MCP",async()=>{
     const response=await tryHandleMcp(req("/mcp",{
       method:"POST",headers:{"content-type":"application/json"},
