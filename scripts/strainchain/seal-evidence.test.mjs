@@ -17,6 +17,7 @@ const allUnknown = () => ({
   continuous_first_opening_video: "unknown",
   independent_witness_present: "unknown",
   first_opening_barrier_visible: "unknown",
+  reported_unopened_at_retail_handoff: "unknown",
 });
 const make = (observations = {}, evidence = [ref()]) => ({
   case_id: "case-seal-001",
@@ -110,6 +111,26 @@ test("rejects uncontrolled status categories", () => {
   assert.throws(() => assessPackageSeal(make({ mouth_open: "maybe" })), /invalid_observation_mouth_open/);
   assert.throws(() => assessPackageSeal(make({ verified_counterfeit: "yes" })), /invalid_observations/);
   assert.throws(() => assessPackageSeal({ ...make(), case_id: "??" }), /invalid_case_id/);
+});
+
+
+test("retail label and first-person unopened handoff do not become factory-seal proof", () => {
+  const evidence = [
+    ref(1, { role: "front" }),
+    ref(2, { role: "interior_mouth" }),
+    ref(3, { role: "retail_label" }),
+  ];
+  const result = assessPackageSeal(make({
+    mouth_open: "yes",
+    tear_feature_intact: "yes",
+    interior_access_reported_without_tearing: "yes",
+    reported_unopened_at_retail_handoff: "yes",
+  }, evidence));
+  assert.equal(result.state, SEAL_REVIEW_STATES.BYPASS_SUSPECTED);
+  assert.equal(result.release_gate, "HOLD");
+  assert.ok(result.flags.includes("RETAIL_UNOPENED_AS_REPORTED_NOT_INDEPENDENTLY_VERIFIED"));
+  assert.ok(!result.flags.includes("INDEPENDENT_REVIEW_REQUIRED"));
+  assert.equal(result.evidence_hashes.length, 3);
 });
 
 test("classification deterministic and never asserts release", () => {
