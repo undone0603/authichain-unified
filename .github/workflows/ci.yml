@@ -53,7 +53,6 @@ jobs:
           version: "10.28.2"
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
