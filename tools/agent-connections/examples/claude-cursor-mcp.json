@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "authichain": {
+      "type": "http",
+      "url": "https://authichain.com/mcp"
+    }
+  }
+}
