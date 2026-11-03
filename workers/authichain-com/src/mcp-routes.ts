@@ -1370,6 +1370,11 @@ async function handleRpc(
         ? (body.params as { _meta?: Record<string, unknown> })
         : undefined;
     const meta = params?._meta;
+    // Metadata is untrusted JSON. Reject arrays and primitives before
+    // accessing protocol fields; do not fall back to the legacy adapter.
+    if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+      return reject(400, -32602, "Missing or invalid modern _meta object");
+    }
     const methodHeader = request.headers.get("Mcp-Method");
     if (
       typeof method !== "string" ||
@@ -1417,7 +1422,7 @@ async function handleRpc(
       );
     }
     if (method === "tools/list") {
-      hydrateX402(env);
+      // Listing must not mutate process-wide x402 configuration.
       return json(
         200,
         {
