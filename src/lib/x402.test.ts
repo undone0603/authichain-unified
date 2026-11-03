@@ -834,12 +834,12 @@ describe("x402AgentCard", () => {
       protocolVersion: "1.0",
     });
     expect(card.skills.length).toBeGreaterThan(0);
-    const launch = card.skills.find(s => s.id === "qron-launch-subscription");
-    expect(launch?.examples).toEqual([
-      "https://authichain.com/checkout/qron_launch",
-      "https://authichain.com/checkout/qron_launch_annual",
-    ]);
-    expect(launch?.description).toContain("does not charge");
+    // Unlisted QRON Launch SKUs retain gated checkout routes, but must never
+    // appear in public agent-discovery metadata.
+    expect(card.skills.some(s => s.id === "qron-launch-subscription")).toBe(false);
+    const published = JSON.stringify(card);
+    expect(published).not.toContain("/checkout/qron_launch");
+    expect(published).not.toContain("/checkout/qron_launch_annual");
     const skill = card.skills.find(s => s.id === "paid-evidence-check");
     expect(skill?.tags).toEqual(
       expect.arrayContaining(["verification", "authenticity", "evidence"])
