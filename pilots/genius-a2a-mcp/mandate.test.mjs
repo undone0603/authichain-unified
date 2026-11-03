@@ -20,3 +20,6 @@ test('unrecognized field denied',()=>{const b=body();b.admin=true;assert.throws(
 test('excessive request count denied',()=>{const b=body();b.maxRequests=999;assert.throws(()=>check(envelope(b)),/scope/);});
 test('non-zero budget denied',()=>{const b=body();b.budgetCents=1;assert.throws(()=>check(envelope(b)),/scope/);});
 test('overlong lifetime denied',()=>{const b=body();b.expiresAt='2026-11-03T18:00:00Z';assert.throws(()=>check(envelope(b)),/excessive/);});
+
+test('fractional UTC timestamps accepted',()=>{const b=body();b.issuedAt='2026-11-03T16:59:00.123Z';assert.equal(check(envelope(b)).authorized,true);});
+test('invalid calendar timestamp denied',()=>{const b=body();b.issuedAt='2026-02-31T16:59:00Z';assert.throws(()=>check(envelope(b)),/time/);});
