@@ -1,0 +1,18 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { verify, EXPECTED } from './verify-report.mjs';
+const base = () => ({version:1,baseline:'abcd',servers:[{client:'claude',name:'authichain',url:EXPECTED,status:'unchanged',changes:[],error:null}]});
+const surface = () => ({method:'introspect',tools:[{name:'verify_record',inputSchema:{type:'object'}}],egress:['authichain.com']});
+test('true exact surface pass is narrowly labeled',()=>{const v=verify(base(),surface());assert.equal(v.pass,true);assert.equal(v.productAuthenticityVerified,false)});
+for (const status of ['changed','failed','auth_required','unsupported','not_pinned']) test('reject '+status,()=>{const a=base();a.servers[0].status=status;assert.equal(verify(a,surface()).pass,false)});
+test('empty report rejects',()=>{const a=base();a.servers=[];assert.equal(verify(a,surface()).pass,false)});
+test('missing baseline rejects',()=>{const a=base();a.baseline='';assert.equal(verify(a,surface()).pass,false)});
+test('wrong endpoint rejects',()=>{const a=base();a.servers[0].url='https://else.example/mcp';assert.equal(verify(a,surface()).pass,false)});
+test('error or drift rejects',()=>{let a=base();a.servers[0].changes=[{}];assert.equal(verify(a,surface()).pass,false);a=base();a.servers[0].error='bad';assert.equal(verify(a,surface()).pass,false)});
+test('no introspected tools rejects',()=>{const a=surface();a.tools=[];assert.equal(verify(base(),a).pass,false)});
+test('wrong egress rejects',()=>{const a=surface();a.egress=['other.example'];assert.equal(verify(base(),a).pass,false)});
+test('runner Bash syntax',()=>{const r=spawnSync('bash',['-n','run-peer.sh'],{cwd:new URL('.',import.meta.url).pathname,encoding:'utf8'});assert.equal(r.status,0,r.stderr)});
+test('fail-closed on missing prerequisites without network',()=>{const r=spawnSync('bash',['run-peer.sh'],{cwd:new URL('.',import.meta.url).pathname,env:{PATH:'/usr/bin:/bin'},encoding:'utf8',timeout:1500});assert.notEqual(r.status,0)});
+test('no payment or mutation methods in runner',()=>{let r=readFileSync(new URL('./run-peer.sh',import.meta.url),'utf8');assert.doesNotMatch(r,/tools\/call|wrangler deploy|stripe\.com|git push/);assert.match(r,/CEDR_TELEMETRY=0 DO_NOT_TRACK=1/)});
