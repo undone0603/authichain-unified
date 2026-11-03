@@ -11,8 +11,14 @@ A consumer pouch has an intact-looking hanging/tear-away top while its interior
 mouth is visibly open; the observer reports only a resealable zipper inside.
 Classification: **OPEN_MOUTH_TEAR_FEATURE_INTACT (observation)**. Time of opening,
 initial seal history, actual factory process and contents are **unverified**.
-The original photos and identifying labels stay in a private evidence packet,
-not this repository. A QR identifier only identifies a record; it does not
+A subsequent photo shows a retail tracking label whose barcode matches the
+identifier printed on the earlier pouch. The observer states that the package
+was obtained as an **unopened retail unit directly from the named producer**.
+That is a first-person retail-origin statement, NOT independent evidence of
+original factory sealing, chain of custody, or the actual condition at sale.
+The matching barcode links the pictured labels, but barcodes can be copied.
+The original photos, identifying codes and source details stay in a private
+case packet, not this repository. A QR identifier only identifies a record; it does not
 prove a manufacturer's issuance, physical seal or untampered contents.
 
 ## Required physical construction
@@ -73,6 +79,19 @@ separate adversarial access challenge. Never invent pass thresholds.
 All states carry explicit boundaries: no counterfeit conclusion, no legal
 noncompliance determination, no unauthorized lab/Metrc integration, no
 hash-as-authenticity claim.
+
+## Evidence added after first observations
+
+- Record a dated **observer statement** describing where and in what stated
+  condition the unit was received, and whether the seller described it as unopened.
+- Retain the original retail receipt, packaging, contemporaneous photographs,
+  and barcode/package-number agreement **privately**.
+- The classifier flags `RETAIL_UNOPENED_AS_REPORTED_NOT_INDEPENDENTLY_VERIFIED`
+  separately; this does **not** upgrade `BYPASS_SUSPECTED` to witnessed proof.
+- Request factory sealing specifications for that exact package design/lot,
+  including location of the irreversible barrier relative to the zipper.
+- Never equate a license number, duplicate barcode or matching package name
+  with a trusted issuer signature or proof of regulatory compliance.
 
 ## Suggested first pilot
 
