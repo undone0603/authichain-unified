@@ -1668,7 +1668,10 @@ async function handleRpc(
       const result = negotiateTool(params.arguments ?? {});
       return rpcResult(id, {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-        ...(result.status === "invalid_input" ? { isError: true } : {}),
+        ...(result.status === "invalid_input" ||
+        result.status === "unsupported_currency"
+          ? { isError: true }
+          : {}),
       });
     }
     if (name === "get_pricing" || name === "authichain_get_pricing") {
