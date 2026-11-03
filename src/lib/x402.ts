@@ -1350,6 +1350,17 @@ export async function x402AgentCard(
         ],
       },
       {
+        id: "mcp-a2a-setup-discovery",
+        name: "MCP and A2A connection setup discovery",
+        description:
+          "Read-only setup information: free MCP self-install and written-scope assisted MCP/A2A peer onboarding. Ask SendMessage for MCP A2A setup; no peer is connected and no payment or outbound task occurs.",
+        tags: ["mcp", "a2a", "connection", "onboarding"],
+        examples: [
+          "https://authichain.com/mcp/install#agent-connections",
+          "SendMessage: MCP and A2A setup offers and connections",
+        ],
+      },
+      {
         id: "qron-launch-subscription",
         name: "QRON Launch subscription",
         description:
