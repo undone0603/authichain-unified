@@ -128,10 +128,15 @@ def test_crowded_deadline_loses_to_a_smaller_open_bounty():
 
 
 def test_handler_uses_supplied_tasks_and_does_not_sign():
+    from datetime import timedelta
+
+    # The handler uses the real clock, unlike the fixed-time picker tests.
+    # Keep this fixture open so the test does not expire as the calendar advances.
+    future_expiry = (datetime.now(timezone.utc) + timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     ctx = ExecutionContext(
         mode=Mode.DRY_RUN,
         workflow_id="taskmarket_cycle",
-        parameters={"tasks": [_task(id="0xhandler", referenceCode="TSK-HANDLER")]},
+        parameters={"tasks": [_task(id="0xhandler", referenceCode="TSK-HANDLER", expiryTime=future_expiry)]},
     )
     plan = json.loads(run(ctx))
     assert plan["referenceCode"] == "TSK-HANDLER"
