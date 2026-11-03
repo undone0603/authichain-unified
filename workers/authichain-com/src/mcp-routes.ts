@@ -1328,6 +1328,13 @@ async function handleRpc(
   } catch {
     return rpcError(null, "invalid JSON", -32700);
   }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return json(400, {
+      jsonrpc: "2.0",
+      id: null,
+      error: { code: -32600, message: "Invalid JSON-RPC request object" },
+    });
+  }
   const method = body.method ?? "";
   const id = body.id;
   // Opt-in MCP 2026-07-28. Legacy negotiation and its response frames
@@ -1427,6 +1434,20 @@ async function handleRpc(
       );
     }
     return reject(404, -32601, "Method not found");
+  }
+  // Do not downgrade modern metadata to a legacy request when the
+  // mandatory version header is absent.
+  if (
+    !versionHeader &&
+    request.headers.get("Mcp-Method") &&
+    body.params &&
+    typeof body.params === "object"
+  ) {
+    return json(400, {
+      jsonrpc: "2.0",
+      id: id ?? null,
+      error: { code: -32020, message: "HeaderMismatch: missing MCP-Protocol-Version" },
+    });
   }
   if (
     versionHeader &&
