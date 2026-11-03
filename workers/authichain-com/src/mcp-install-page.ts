@@ -31,6 +31,7 @@ import { ESTATE_FONTS_LINK } from "../../_shared/estate-landing";
 // ".ts" import and the ratchet fails on any increase.
 import { DPP_CATEGORIES } from "../../../src/lib/dpp-readiness";
 import { TOOLS } from "./mcp-routes";
+import { renderAgentSetupOffers } from "./agent-setup-offers";
 import { PUBLISHED_PACKS as PACKS, packUrl } from "./published-packs";
 
 export const MCP_INSTALL_PATHS = [
@@ -388,6 +389,8 @@ ${ESTATE_FONTS_LINK}
     </div>
   </div>
 </div></section>
+
+${renderAgentSetupOffers()}
 
 <section><div class="wrap">
   <h2>What it can do</h2>
