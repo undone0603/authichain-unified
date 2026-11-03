@@ -1988,6 +1988,9 @@ describe("negotiate: eighth MCP tool, non-binding and bounded", () => {
       { buyer_max_usd: Infinity, seller_min_usd: 1 },
       { buyer_max_usd: 100, seller_min_usd: 0, opening_offer_usd: 101 },
       { buyer_max_usd: 100, seller_min_usd: 0, scope: "x".repeat(501) },
+      { buyer_max_usd: 1.001, seller_min_usd: 0 },
+      { buyer_max_usd: 100, seller_min_usd: 0.001 },
+      { buyer_max_usd: 100, seller_min_usd: 0, opening_offer_usd: 0.001 },
     ]) {
       expect(negotiateTool(args)).toMatchObject({
         status: "invalid_input",
