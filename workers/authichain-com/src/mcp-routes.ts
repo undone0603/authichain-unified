@@ -560,6 +560,20 @@ export function negotiateTool(args: Record<string, unknown>) {
       error: "Supply finite nonnegative buyer_max_usd and seller_min_usd; optional opening_offer_usd must not exceed the buyer cap.",
     };
   }
+  // Reject amounts that cannot be represented as exact USD cents. Rounding
+  // an unauthorized fractional-cent amount could silently exceed a limit.
+  if (
+    !Number.isSafeInteger(Math.round(max * 100)) ||
+    !Number.isSafeInteger(Math.round(min * 100)) ||
+    (typeof opening === "number" &&
+      !Number.isSafeInteger(Math.round(opening * 100)))
+  ) {
+    return {
+      status: "invalid_input",
+      binding: false,
+      error: "Price cannot be represented safely in USD cents.",
+    };
+  }
   const buyerCents = Math.round(max * 100);
   const sellerCents = Math.round(min * 100);
   const openingCents =
