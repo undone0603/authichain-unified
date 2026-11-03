@@ -1999,6 +1999,15 @@ describe("negotiate: eighth MCP tool, non-binding and bounded", () => {
     }
   });
 
+  it("rejects null, primitive and array tool argument payloads", () => {
+    for (const value of [null, 3, "100", []]) {
+      expect(negotiateTool(value as unknown as Record<string, unknown>)).toMatchObject({
+        status: "invalid_input",
+        binding: false,
+      });
+    }
+  });
+
   it("publishes exactly eight tools including negotiate on legacy discovery", async () => {
     const res = await tryHandleMcp(req("/.well-known/mcp.json"));
     const body = (await res!.json()) as { tools: Array<{ name: string }> };
