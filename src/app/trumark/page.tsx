@@ -23,7 +23,9 @@ export default function TruMarkPage() {
           </h1>
           <p className="text-slate-600 text-lg leading-relaxed mb-8 max-w-2xl">
             TruMark is the physical mark a shopper or inspector scans. It is not
-            a price. A cannabis brand publishes one genetics passport for $49.
+            a price. A cannabis brand can order one genetics passport for $49.
+            Existing lab CoAs and issuer authorization are required after
+            payment; publication follows evidence review, not instant issuance.
             Origin and EU documentation run on EU DPP Readiness at $299. Larger
             tag programs start from the published catalogue or a written packet.
           </p>
@@ -58,7 +60,7 @@ export default function TruMarkPage() {
           },
           {
             t: "Passport — $49",
-            d: "One published genetics passport from existing CoAs. $49 on the published Stripe Payment Link, or enter a work email for recoverable checkout.",
+            d: "One genetics passport from reviewed issuer-supplied CoAs. Payment does not automatically issue or certify it; issuer authorization and evidence review come first. $49 on the published Stripe Payment Link, or enter a work email for recoverable checkout.",
           },
           {
             t: "EU DPP Readiness — $299",
