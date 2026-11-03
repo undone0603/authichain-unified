@@ -32,7 +32,6 @@ import {
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
 import {evaluateNegotiation, NegotiationInputError} from "./negotiation-engine.mjs";
-import type {NegotiationInput} from "./negotiation-engine.mjs";
 
 type McpEnv = X402Env & {
   /** Service binding to authichain-edge-router. Public fetch of this zone returns 522. */
@@ -1433,7 +1432,7 @@ async function handleRpc(
     const name = params.name ?? "";
     if (name === "negotiate") {
       try {
-        const result=evaluateNegotiation((params.arguments ?? {}) as NegotiationInput);
+        const result=evaluateNegotiation(params.arguments ?? {});
         return rpcResult(id, {content:[{type:"text",text:JSON.stringify(result,null,2)}]});
       }catch(e) {
         return rpcResult(id, {
