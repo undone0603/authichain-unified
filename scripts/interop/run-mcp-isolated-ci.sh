@@ -35,7 +35,8 @@ run_step() {
   echo "PASS: ${label}"
 }
 
-# Must use a locked dependency graph; no mutation of lockfile.\n# No production environment variables or remote deployments are needed.
+# Must use a locked dependency graph; no mutation of lockfile.
+# No production environment variables or remote deployments are needed.
 run_step install corepack pnpm install --frozen-lockfile --ignore-scripts
 run_step format corepack pnpm exec prettier --check workers/authichain-com/src/mcp-routes.ts workers/authichain-com/src/mcp-routes.test.ts
 run_step lint corepack pnpm exec eslint workers/authichain-com/src/mcp-routes.ts workers/authichain-com/src/mcp-routes.test.ts
