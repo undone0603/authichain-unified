@@ -33,7 +33,9 @@ concurrency:
 env:
   SKIP_PLAYWRIGHT_ON_SELF_HOSTED: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && 'true' || 'false' }}
   PLAYWRIGHT_BROWSERS_PATH: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/ms-playwright' || '/home/runner/.cache/ms-playwright' }}
-  TURBO_CACHE_DIR: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/turbo' || '/home/runner/.cache/turbo' }}
+  # Use each job's owned workspace, not /home/runner on the self-hosted zac account.
+  # Existing workspace cleanup already removes .turbo between jobs.
+  TURBO_CACHE_DIR: ${{ github.workspace }}/.turbo
 
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
