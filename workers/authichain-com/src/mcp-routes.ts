@@ -1346,7 +1346,7 @@ async function handleRpc(
       return rpcError(id ?? null, "modern method unsupported on this limited read-only adapter", -32601);
     }
     hydrateX402(env);
-    return json(200, { jsonrpc: "2.0", id, result: { resultType: "complete", tools: mcpTools(env) } },
+    return json(200, { jsonrpc: "2.0", id, result: { resultType: "complete", tools: mcpTools(env), ttlMs: 0, cacheScope: "private" } },
       { "MCP-Protocol-Version": "2026-07-28" });
   }
   if (versionHeader && !SUPPORTED_PROTOCOL_VERSIONS.some(v => v === versionHeader)) {
