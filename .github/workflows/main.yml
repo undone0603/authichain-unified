@@ -158,6 +158,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      # The workflow-level vars flag may be unset even when the job runs on
+      # a self-hosted account. Always install browsers into that runner's HOME.
+      - name: Select runner-owned Playwright browser path
+        if: matrix.shard == 2
+        run: echo "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> "$GITHUB_ENV"
+
       - name: "Skipped on self-hosted: Playwright browser install"
         if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED == 'true' && matrix.shard == 2
         run: |
