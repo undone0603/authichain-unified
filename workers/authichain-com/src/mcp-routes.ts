@@ -534,6 +534,13 @@ function mcpPaidVerifyStatus(env?: X402Env) {
  * systems, signs agreements, quotes live inventory, or settles payment.
  */
 export function negotiateTool(args: Record<string, unknown>) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) {
+    return {
+      status: "invalid_input",
+      binding: false,
+      error: "Negotiation arguments must be a JSON object.",
+    };
+  }
   const max = args.buyer_max_usd;
   const min = args.seller_min_usd;
   const opening = args.opening_offer_usd;
