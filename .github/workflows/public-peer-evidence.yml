@@ -6,7 +6,12 @@ on:
       - 'scripts/alliances/public-evidence-probe.test.mjs'
       - 'scripts/alliances/arbiter-peer-repro.mjs'
       - 'scripts/alliances/arbiter-peer-repro.test.mjs'
+      - 'scripts/alliances/m2m-verify.mjs'
+      - 'scripts/alliances/m2m-verify.test.mjs'
+      - 'agentz/swarm/authichain-m2m.mjs'
+      - 'agentz/swarm/authichain-m2m.test.mjs'
       - 'docs/alliances/PUBLIC_PEER_CHALLENGE.md'
+      - 'docs/alliances/AGENTZ_M2M_VERIFICATION.md'
       - '.github/workflows/public-peer-evidence.yml'
   workflow_dispatch:
 permissions:
@@ -22,9 +27,15 @@ jobs:
           persist-credentials: false
       - name: Node version
         run: node --version
-      - name: Verify syntax
-        run: node --check scripts/alliances/public-evidence-probe.mjs
-      - name: Execute no-network negative fixtures
+      - name: Verify syntax (read-only fixtures)
+        run: |
+          node --check scripts/alliances/public-evidence-probe.mjs
+          node --check scripts/alliances/arbiter-peer-repro.mjs
+          node --check scripts/alliances/m2m-verify.mjs
+          node --check agentz/swarm/authichain-m2m.mjs
+      - name: Execute no-network evidence boundary fixtures
         run: node --test scripts/alliances/public-evidence-probe.test.mjs
       - name: Verify free ARBITER handoff gates
         run: node --test scripts/alliances/arbiter-peer-repro.test.mjs
+      - name: Verify AgentZ M2M free verification gates (22 local cases)
+        run: node --test scripts/alliances/m2m-verify.test.mjs agentz/swarm/authichain-m2m.test.mjs
