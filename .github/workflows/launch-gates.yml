@@ -35,6 +35,17 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+      # Sparse-checkout settings persist in the shared self-hosted work dir, so a
+      # job that inherits them sees a one-file tree and every scripts/autonomy
+      # path looks deleted. launch-gates failed twice on 2026-11-03 with
+      # "Cannot find module .../scripts/autonomy/launch-gates.mjs" while the file
+      # was present on main. Same guard cloudflare-production-health.yml uses.
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable || true
+          git reset --hard HEAD
+          test -f scripts/autonomy/launch-gates.mjs
       - uses: actions/setup-node@v7
         with:
           node-version: 22
