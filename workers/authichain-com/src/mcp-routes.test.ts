@@ -1960,7 +1960,8 @@ describe("MCP 2026-07-28 read-only conformance", () => {
 describe("negotiate: eighth MCP tool, non-binding and bounded", () => {
   it("produces a proposal only within both stated limits", () => {
     expect(negotiateTool({
-      currency: "USD", buyer_max_usd: 120,
+      currency: "USD",
+      buyer_max_usd: 120,
       seller_min_usd: 80,
       opening_offer_usd: 90,
       scope: "Public MCP assessment",
@@ -1973,7 +1974,8 @@ describe("negotiate: eighth MCP tool, non-binding and bounded", () => {
 
   it("returns no overlap without exceeding either authorization limit", () => {
     expect(negotiateTool({
-      currency: "USD", buyer_max_usd: 50,
+      currency: "USD",
+      buyer_max_usd: 50,
       seller_min_usd: 75,
     })).toMatchObject({
       status: "no_overlap",
@@ -1984,13 +1986,20 @@ describe("negotiate: eighth MCP tool, non-binding and bounded", () => {
 
   it("rejects invalid values, unbounded prices and opening offers above cap", () => {
     for (const args of [
-      { currency: "USD", buyer_max_usd: -1, seller_min_usd: 0 },
-      { currency: "USD", buyer_max_usd: Infinity, seller_min_usd: 1 },
-      { currency: "USD", buyer_max_usd: 100, seller_min_usd: 0, opening_offer_usd: 101 },
-      { currency: "USD", buyer_max_usd: 100, seller_min_usd: 0, scope: "x".repeat(501) },
-      { currency: "USD", buyer_max_usd: 1.001, seller_min_usd: 0 },
-      { currency: "USD", buyer_max_usd: 100, seller_min_usd: 0.001 },
-      { currency: "USD", buyer_max_usd: 100, seller_min_usd: 0, opening_offer_usd: 0.001 },
+      { currency: "USD",
+      buyer_max_usd: -1, seller_min_usd: 0 },
+      { currency: "USD",
+      buyer_max_usd: Infinity, seller_min_usd: 1 },
+      { currency: "USD",
+      buyer_max_usd: 100, seller_min_usd: 0, opening_offer_usd: 101 },
+      { currency: "USD",
+      buyer_max_usd: 100, seller_min_usd: 0, scope: "x".repeat(501) },
+      { currency: "USD",
+      buyer_max_usd: 1.001, seller_min_usd: 0 },
+      { currency: "USD",
+      buyer_max_usd: 100, seller_min_usd: 0.001 },
+      { currency: "USD",
+      buyer_max_usd: 100, seller_min_usd: 0, opening_offer_usd: 0.001 },
     ]) {
       expect(negotiateTool(args)).toMatchObject({
         status: "invalid_input",
@@ -2000,11 +2009,15 @@ describe("negotiate: eighth MCP tool, non-binding and bounded", () => {
   });
 
   it("rejects absent and non-USD currencies instead of silently converting marketplace budgets", () => {
-    expect(negotiateTool({ buyer_max_usd: 100, seller_min_usd: 80 })).toMatchObject({
+    expect(
+      negotiateTool({ buyer_max_usd: 100, seller_min_usd: 80 })
+    ).toMatchObject({
       status: "unsupported_currency",
       binding: false,
     });
-    expect(negotiateTool({ currency: "AUD", buyer_max_usd: 100, seller_min_usd: 80 })).toMatchObject({
+    expect(
+      negotiateTool({ currency: "AUD", buyer_max_usd: 100, seller_min_usd: 80 })
+    ).toMatchObject({
       status: "unsupported_currency",
       binding: false,
     });
@@ -2037,7 +2050,8 @@ describe("negotiate: eighth MCP tool, non-binding and bounded", () => {
           method: "tools/call",
           params: {
             name: "negotiate",
-            arguments: { currency: "USD", buyer_max_usd: 120, seller_min_usd: 80 },
+            arguments: { currency: "USD",
+      buyer_max_usd: 120, seller_min_usd: 80 },
           },
         }),
       })
