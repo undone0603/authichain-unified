@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 export const METHODS = Object.freeze(['genius_sources_list','genius_evidence_verify','genius_manifest_build','genius_report_get']);
 const isPlain = x => x !== null && typeof x === 'object' && !Array.isArray(x) && Object.getPrototypeOf(x) === Object.prototype;
-const validIso = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(s) && Number.isFinite(Date.parse(s)) && new Date(s).toISOString() === new Date(Date.parse(s)).toISOString();
+const validIso = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(s) && Number.isFinite(Date.parse(s)) && new Date(Date.parse(s)).toISOString().startsWith(s.slice(0,19));
 const canonical = x => JSON.stringify(Object.fromEntries(Object.entries(x).sort(([a],[b]) => a.localeCompare(b, 'en'))));
 export const signMandate = (body, key) => createHmac('sha256', key).update(canonical(body)).digest('hex');
 export function validateMandate(envelope, { key, now, seen, origin, method, requester }) {
