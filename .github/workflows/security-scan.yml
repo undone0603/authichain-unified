@@ -24,7 +24,7 @@ concurrency:
 jobs:
   gitleaks:
     name: Secret scan (gitleaks)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     # Skip Dependabot PRs - its GITHUB_TOKEN is read-only on PR events
     if: github.actor != 'dependabot[bot]'
     permissions:
@@ -39,7 +39,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz -o gitleaks.tgz
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_$(uname -m | sed "s/aarch64/arm64/;s/x86_64/x64/").tar.gz -o gitleaks.tgz
           tar --no-same-owner -xzf gitleaks.tgz gitleaks
           if [ "$EVENT_NAME" = "schedule" ]; then
             ./gitleaks detect --source . --config .gitleaks.toml --redact --verbose

@@ -217,6 +217,10 @@ test("the apex still renders the homepage", async () => {
   // LOOP-03: hero + bottom email checkout lead Starter $29; DPP stays lower.
   assert.match(html, /Buy Starter Pack/);
   assert.doesNotMatch(html, /Start Launch/);
+  assert.match(html, /href="https:\/\/authichain.com\/checkout\/qron_launch"/);
+  assert.match(html, /QRON Launch \$19\/mo/);
+  assert.match(html, /href="https:\/\/authichain.com\/checkout\/qron_launch_annual"/);
+  assert.match(html, /QRON Launch \$190\/yr/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Signed QR seals for real products\./);
   assert.doesNotMatch(html, /Agent consensus/);
