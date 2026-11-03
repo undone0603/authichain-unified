@@ -217,10 +217,10 @@ test("the apex still renders the homepage", async () => {
   // LOOP-03: hero + bottom email checkout lead Starter $29; DPP stays lower.
   assert.match(html, /Buy Starter Pack/);
   assert.doesNotMatch(html, /Start Launch/);
-  assert.match(html, /href="https:\/\/authichain.com\/checkout\/qron_launch"/);
-  assert.match(html, /QRON Launch \$19\/mo/);
-  assert.match(html, /href="https:\/\/authichain.com\/checkout\/qron_launch_annual"/);
-  assert.match(html, /QRON Launch \$190\/yr/);
+  assert.doesNotMatch(html, /href="https:\/\/authichain.com\/checkout\/qron_launch"/);
+  assert.doesNotMatch(html, /QRON Launch \$19\/mo/);
+  assert.doesNotMatch(html, /href="https:\/\/authichain.com\/checkout\/qron_launch_annual"/);
+  assert.doesNotMatch(html, /QRON Launch \$190\/yr/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Signed QR seals for real products\./);
   assert.doesNotMatch(html, /Agent consensus/);
@@ -1570,18 +1570,16 @@ test("the 404 escapes the path, so a hostile URL cannot inject markup", async ()
   );
 });
 
-test("sitemap lists the open Launch checkout pages", async () => {
+test("sitemap excludes unlisted Launch checkout pages", async () => {
   const res = await get("/sitemap.xml");
   assert.equal(res.status, 200);
   const xml = await res.text();
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
   assert.ok(
-    xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
+    !xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
   );
   assert.ok(
-    xml.includes(
-      "<loc>https://authichain.com/checkout/qron_launch_annual</loc>"
-    )
+    !xml.includes("<loc>https://authichain.com/checkout/qron_launch_annual</loc>")
   );
 });
 
@@ -1622,12 +1620,10 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/generate</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
   assert.ok(
-    xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
+    !xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
   );
   assert.ok(
-    xml.includes(
-      "<loc>https://authichain.com/checkout/qron_launch_annual</loc>"
-    )
+    !xml.includes("<loc>https://authichain.com/checkout/qron_launch_annual</loc>")
   );
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/creator</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));

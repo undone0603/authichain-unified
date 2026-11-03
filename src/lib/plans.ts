@@ -427,10 +427,16 @@ export type CatalogOffer = {
   checkout: string;
 };
 
-/** Every paid plan that has a gated checkout. Free is not an offer. */
+/** Public discovery only: hidden products retain checkout routes but are not advertised. */
 export function catalogOffers(): CatalogOffer[] {
+  const publiclyListed = new Set<string>(PUBLIC_PLAN_IDS);
   return PLANS.flatMap(plan => {
-    if (plan.price <= 0) return [];
+    if (
+      plan.price <= 0 ||
+      plan.listed === false ||
+      !publiclyListed.has(plan.id)
+    )
+      return [];
     const checkout = planPaymentLink(plan.id);
     if (!checkout) return [];
     return [

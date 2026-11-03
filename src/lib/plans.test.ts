@@ -5,6 +5,7 @@ import {
   PLAN_TIER,
   isPurchasable,
   listedPlans,
+  PUBLIC_PLAN_IDS,
   planByAmountCents,
   planById,
   planByStripePriceId,
@@ -31,15 +32,30 @@ describe("plan catalogue integrity", () => {
     expect(PLAN_CREDITS.free).toBe(5);
   });
 
-  it("offers a gated checkout for every paid plan", () => {
+  it("only advertises publicly listed paid plans, preserving hidden checkout routes", () => {
     const offers = catalogOffers();
+    const publicIds = new Set<string>(PUBLIC_PLAN_IDS);
     const paid = PLANS.filter(
       plan =>
-        plan.price > 0 && (plan.stripe_price_id || plan.stripe_payment_link)
+        publicIds.has(plan.id) &&
+        plan.listed !== false &&
+        plan.price > 0 &&
+        (plan.stripe_price_id || plan.stripe_payment_link)
     );
     expect(offers.map(offer => offer.id).sort()).toEqual(
       paid.map(plan => plan.id).sort()
     );
+    const hidden = [
+      "qron_launch",
+      "qron_launch_annual",
+      "strainchain_farm",
+      "theater_1",
+      "theater_3",
+    ] as const;
+    for (const id of hidden) {
+      expect(offers.map(offer => offer.id)).not.toContain(id);
+      expect(planPaymentLink(id)).toBeTruthy();
+    }
     for (const offer of offers) {
       expect(offer.checkout).toBe(planPaymentLink(offer.id));
       expect(offer.checkout).not.toContain("/api/checkout");
