@@ -12,6 +12,10 @@ export function verify(report, surface) {
   if (!Array.isArray(s.changes) || s.changes.length || s.error != null) return fail('remote_report_error_or_drift');
   if (!surface || surface.method !== 'introspect' || !Array.isArray(surface.tools) || surface.tools.length === 0) return fail('missing_introspected_tools');
   if (!Array.isArray(surface.egress) || !surface.egress.includes('authichain.com')) return fail('wrong_egress');
+  const names = surface.tools.map(t => t?.name);
+  const expected = ['get_pricing', 'verify', 'query_provenance', 'verify_attestation', 'verify_record', 'dpp_readiness_check', 'scan_living_qr'];
+  if (names.length !== expected.length || new Set(names).size !== names.length ||
+      [...names].sort().join('\0') !== [...expected].sort().join('\0')) return fail('unexpected_tool_names');
   return {pass:true, evidence:'self_baselined_remote_mcp_tool_surface_recheck', endpoint:EXPECTED,
     toolCount:surface.tools.length, readOnly:true, productAuthenticityVerified:false, independentEndorsement:false};
 }
