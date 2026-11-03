@@ -20,6 +20,24 @@
 
 workflows:
 
+  # Safe first-party MCP/A2A handshake; not a peer connector or a payment rail.
+  - id: mcp_a2a_connection_audit
+    title: "Audit public MCP handshake and A2A 1.0 Agent Card"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.mcp_a2a_connection_audit
+    type: api
+    estimated_minutes: 1
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    max_runs_per_day: 1
+    description: |
+      Read-only preflight: POST MCP initialize + tools/list and GET first-party
+      A2A Agent Card. No tools/call, task message, payment, secrets or third-party
+      peer connection. Run only when diagnosing setup; not an outbound campaign.
+
+
   # =================================================================
   # CRITICAL — TIME-SENSITIVE
   # =================================================================
