@@ -56,7 +56,7 @@ export function ScanDemo({
       )}
       <div className="p-4 text-center space-y-3">
         <p className="text-xs text-zinc-400">
-          Demonstration of public signed record (polygon-anchor-1). A scan verifies the cryptographic signature and record. It does not inspect the physical product and is not a certification.
+          Published demonstration record (polygon-anchor-1). Not a customer product. Not a physical inspection. Verdict: verified. Physical binding was not inspected.
         </p>
         <a
           href={verifyUrl}
@@ -65,7 +65,7 @@ export function ScanDemo({
           className="inline-block text-sm text-indigo-400 hover:underline"
           onClick={() => log("live_verify_click")}
         >
-          Or scan this live demo seal yourself →
+          Or open the live demonstration record →
         </a>
       </div>
     </div>
