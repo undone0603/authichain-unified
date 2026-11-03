@@ -1330,6 +1330,28 @@ async function handleRpc(
   }
   const method = body.method ?? "";
   const id = body.id;
+  // Opt-in modern stateless discovery: never silently downgrade or grant
+  // tools/call authority merely because the caller requested a new version.
+  const versionHeader = request.headers.get("MCP-Protocol-Version");
+  if (versionHeader === "2026-07-28") {
+    const methodHeader = request.headers.get("Mcp-Method");
+    const meta = body.params && typeof body.params === "object"
+      ? (body.params as { _meta?: Record<string, unknown> })._meta
+      : undefined;
+    const metaVersion = meta?.["io.modelcontextprotocol/protocolVersion"];
+    if (methodHeader !== method || metaVersion !== "2026-07-28") {
+      return rpcError(id ?? null, "modern protocol method/version metadata mismatch", -32600);
+    }
+    if (body.jsonrpc !== "2.0" || method !== "tools/list") {
+      return rpcError(id ?? null, "modern method unsupported on this limited read-only adapter", -32601);
+    }
+    hydrateX402(env);
+    return json(200, { jsonrpc: "2.0", id, result: { resultType: "complete", tools: mcpTools(env) } },
+      { "MCP-Protocol-Version": "2026-07-28" });
+  }
+  if (versionHeader && !SUPPORTED_PROTOCOL_VERSIONS.some(v => v === versionHeader)) {
+    return rpcError(id ?? null, "unsupported MCP protocol version", -32600);
+  }
 
   /**
    * A JSON-RPC notification has no `id` member at all — not `id: null`,
@@ -1587,7 +1609,7 @@ export async function tryHandleMcp(
         // clients on every call; omitting them here failed the preflight
         // for any browser-side MCP client before the request was made.
         "Access-Control-Allow-Headers":
-          "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID, X-PAYMENT, PAYMENT-SIGNATURE",
+          "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Session-Id, Last-Event-ID, X-PAYMENT, PAYMENT-SIGNATURE",
         "Access-Control-Expose-Headers":
           "MCP-Protocol-Version, Mcp-Session-Id, WWW-Authenticate",
         "Access-Control-Max-Age": "86400",
