@@ -14,6 +14,22 @@ export const A2A_PROTOCOL_VERSION = "1.0";
 const EVIDENCE_TEXT =
   "Paid evidence check for agents: signed record, machine-readable verification result, explicit unknowns, and a settlement receipt. A valid signature is not real-world truth. POST https://authichain.com/api/x402 or https://authichain.com/api/v1/agent-verify. Unpaid calls return HTTP 402 for 50000 units of USDC on Base. This JSON-RPC method does not pay and does not settle.";
 
+// Public setup discovery only. It never connects a third-party peer, sends a
+// separate outbound message, issues tokens, or creates an invoice.
+const CONNECTION_SETUP_TEXT =
+  "MCP self-connection is free at https://authichain.com/mcp/install#agent-connections. " +
+  "MCP: https://authichain.com/mcp (read-only tools/list). " +
+  "A2A 1.0 Agent Card: https://authichain.com/.well-known/agent-card.json; JSON-RPC: https://authichain.com/api/a2a. " +
+  "Assisted MCP integration and A2A peer onboarding are written-scope / quote-only services. " +
+  "Request a scope at https://authichain.com/mcp/install#agent-connections. " +
+  "No external peer is connected, no task is sent to a third party, and no payment is collected by this response.";
+
+function isSetupInquiry(parts: A2aPart[]): boolean {
+  const combined = parts.map(p => p.text).join(" ").slice(0, 4096);
+  return /\b(?:mcp|a2a)\b/i.test(combined) &&
+    /\b(?:setup|connect(?:ion|ions)?|integrat(?:ion|e)|onboard(?:ing)?|offers?)\b/i.test(combined);
+}
+
 export const A2A_METHODS = [
   "SendMessage",
   "SendStreamingMessage",
@@ -214,10 +230,12 @@ function sendMessage(
   }
   const id = message.taskId || crypto.randomUUID();
   const contextId = message.contextId || crypto.randomUUID();
+  const setupInquiry = isSetupInquiry(message.parts);
+  const responseText = setupInquiry ? CONNECTION_SETUP_TEXT : EVIDENCE_TEXT;
   const agentMessage: A2aMessage = {
     messageId: crypto.randomUUID(),
     role: "ROLE_AGENT",
-    parts: [{ text: EVIDENCE_TEXT }],
+    parts: [{ text: responseText }],
     contextId,
     taskId: id,
   };
@@ -232,8 +250,8 @@ function sendMessage(
     artifacts: [
       {
         artifactId: crypto.randomUUID(),
-        name: "evidence-check",
-        parts: [{ text: EVIDENCE_TEXT }],
+        name: setupInquiry ? "connection-setup-discovery" : "evidence-check",
+        parts: [{ text: responseText }],
       },
     ],
   };
