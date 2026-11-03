@@ -551,6 +551,7 @@ export function negotiateTool(args: Record<string, unknown>) {
         !Number.isFinite(opening) ||
         opening < 0 ||
         opening > max)) ||
+    (typeof opening === "number" && opening > 1_000_000_000) ||
     (args.scope !== undefined &&
       (typeof args.scope !== "string" || args.scope.length > 500))
   ) {
