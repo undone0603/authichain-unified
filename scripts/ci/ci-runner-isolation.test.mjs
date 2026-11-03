@@ -82,3 +82,12 @@ test("auxiliary routing is PR-only and retains existing push/schedule behavior",
     }
   }
 });
+
+test("typecheck ratchet never routes PR or push checks to the production publisher", () => {
+  const content = readFileSync(".github/workflows/typecheck-ratchet.yml", "utf8");
+  const routes = content.split("\n").filter(line => line.trim().startsWith("runs-on:"));
+  assert.equal(routes.length, 1);
+  assert.match(routes[0], /authichain-ops/);
+  assert.match(routes[0], /ubuntu-24\.04/);
+  assert.doesNotMatch(routes[0], /authichain-wsl/);
+});
