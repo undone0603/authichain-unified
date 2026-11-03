@@ -104,6 +104,7 @@ const JSON_HEADERS = {
 export const TOOLS = [
   {
     name: "negotiate",
+    annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false},
     description:
       "Free, stateless negotiation-planning tool. Uses BATNA (unverified outside option), explicit walk-away limits, weighted issues and comparable tradeoff proposals. Returns drafts only: no acceptance, counterparty messaging, payment, purchase, signature or trust grant.",
     inputSchema: {
