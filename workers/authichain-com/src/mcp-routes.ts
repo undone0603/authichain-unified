@@ -52,6 +52,7 @@ import {
   verifySubmitted,
 } from "../../authichain-verify-worker/src/protocol-verify.mjs";
 import { publishedRecord } from "../../authichain-verify-worker/src/published-record.mjs";
+import { agentConnectionDiscovery } from "./agent-setup-offers";
 import {
   DPP_CATEGORIES,
   DPP_QUESTIONS,
@@ -100,6 +101,16 @@ const JSON_HEADERS = {
 };
 
 export const TOOLS = [
+  {
+    name: "get_agent_setup_offers",
+    description:
+      "Free. List AuthiChain MCP connection configuration and A2A 1.0 Agent Card discovery, plus scope-required setup services. Read-only metadata: no messages, credentials, contract, checkout, or external peer connection.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
   {
     name: "get_pricing",
     description:
@@ -541,6 +552,7 @@ export function mcpPricingDiscovery(env?: X402Env) {
       "query_provenance",
       "dpp_readiness_check",
       "get_pricing",
+      "get_agent_setup_offers",
       "scan_living_qr",
     ],
   };
@@ -1387,6 +1399,16 @@ async function handleRpc(
           {
             type: "text",
             text: JSON.stringify(mcpPricingDiscovery(env), null, 2),
+          },
+        ],
+      });
+    }
+    if (name === "get_agent_setup_offers") {
+      return rpcResult(id, {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(agentConnectionDiscovery(), null, 2),
           },
         ],
       });
