@@ -9,7 +9,7 @@ if [[ "${CEDR_ISOLATED_RUNNER_APPROVED:-}" != "YES" ]]; then
   exit 78
 fi
 case "${RUNNER_NAME:-}" in
-  authichain-ops|wsl-zac-arm64|LAPTOP-72MAGTL2)
+  authichain-ops|wsl-*|LAPTOP-*)
     echo "BLOCKED: protected runner name: ${RUNNER_NAME}" >&2
     exit 78;;
 esac
