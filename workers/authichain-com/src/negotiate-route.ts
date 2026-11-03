@@ -3,7 +3,6 @@
  * GET /negotiate: schema + examples. POST /negotiate: proposals only.
  */
 import {evaluateNegotiation, NegotiationInputError} from "./negotiation-engine.mjs";
-import type {NegotiationInput} from "./negotiation-engine.mjs";
 const MAX_BYTES=16*1024;
 const HEADERS={
   "Content-Type":"application/json; charset=utf-8",
@@ -65,7 +64,7 @@ export async function tryHandleNegotiate(request:Request):Promise<Response|null>
     return response(415,{error:"application_json_required"});
   try {
     const input=await boundedInput(request);
-    return response(200,evaluateNegotiation(input as NegotiationInput));
+    return response(200,evaluateNegotiation(input));
   }catch(e) {
     if(e instanceof NegotiationInputError)return response(422,{error:"invalid_negotiation_input",detail:e.message});
     return response(500,{error:"negotiation_unavailable"});
