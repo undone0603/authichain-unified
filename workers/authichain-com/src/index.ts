@@ -24,6 +24,7 @@ import {
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleCertificateRegistry } from "./certificate-registry";
 import { tryHandleMcp } from "./mcp-routes";
+import { tryHandleNegotiate } from "./negotiate-route";
 import { tryHandleMcpFree } from "./mcp-free-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
 import { tryHandleProtocolExample } from "./protocol-example-route";
@@ -3661,6 +3662,9 @@ async function handleAuthichainCom(
     if (mcpFree) return mcpFree;
     const mcp = await tryHandleMcp(request, env, env.VERIFY_APP);
     if (mcp) return mcp;
+    // Stateless negotiation planning before APP_PREFIXES /api proxy.
+    const negotiation = await tryHandleNegotiate(request);
+    if (negotiation) return negotiation;
     const apiV1 = await tryHandleApiV1(request, env);
     if (apiV1) return apiV1;
     // Before APP_PREFIXES. /protocol/* otherwise proxies, and the credential
