@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
+import { authorizePilotCall } from './dispatch.mjs';
+import { signMandate } from './mandate.mjs';
+const key=randomBytes(32), now=Date.parse('2026-11-03T17:00:00Z');
+const body=()=>({version:1,requester:'independent-reviewer',taskId:'test_task_00001',nonce:'random_nonce_00000001',scope:'public-only',budgetCents:0,issuedAt:'2026-11-03T16:59:00Z',expiresAt:'2026-11-03T17:05:00Z',maxRequests:3,methods:['genius_sources_list'],origins:['https://example.org']});
+const build=()=>{const b=body();return {action:'public.read',method:'genius_sources_list',envelope:{body:b,signature:signMandate(b,key)},policyContext:{scopeApproved:true,maxRequests:2,publicOnly:true},verification:{key,now,seen:new Set(),origin:'https://example.org',requester:'independent-reviewer'}};};
+test('authorized public tool returns bounded receipt',()=>{const r=authorizePilotCall(build());assert.equal(r.authorized,true);assert.equal(r.requestLimit,2);});
+test('unapproved public scope denied',()=>{const x=build();x.policyContext.scopeApproved=false;assert.throws(()=>authorizePilotCall(x),/Policy denied/);});
+test('unknown MCP tool denied',()=>{const x=build();x.method='transfer_funds';assert.throws(()=>authorizePilotCall(x),/Unsupported/);});
+test('production deploy cannot pass pilot dispatcher',()=>{const x=build();x.action='deploy.production';assert.throws(()=>authorizePilotCall(x),/Policy denied/);});
+test('replay denied on second call',()=>{const x=build();authorizePilotCall(x);assert.throws(()=>authorizePilotCall(x),/Replay/);});
+test('unsigned envelope denied',()=>{const x=build();delete x.envelope.signature;assert.throws(()=>authorizePilotCall(x),/signed/);});
