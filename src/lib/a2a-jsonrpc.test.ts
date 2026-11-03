@@ -52,6 +52,20 @@ describe("A2A JSON-RPC", () => {
     expect((again.body as { error: { code: number } }).error.code).toBe(-32004);
   });
 
+  it("explains /negotiate to A2A without acting on counterparties",()=>{
+    const store=memoryA2aStore();
+    const r=handleA2aJsonRpc(call("SendMessage",{
+      message:{messageId:"nego-1",role:"ROLE_USER",parts:[{text:"/negotiate replacement parts"}]}
+    }),{store,now:NOW});
+    expect(r.status).toBe(200);
+    const result=r.body as {result:{task:{artifacts:Array<{name:string;parts:Array<{text:string}>}>}}};
+    const artifact=result.result.task.artifacts[0];
+    expect(artifact.name).toBe("negotiation-planning");
+    expect(artifact.parts[0].text).toContain("https://authichain.com/negotiate");
+    expect(artifact.parts[0].text).toContain("no purchase is placed");
+    expect(artifact.parts[0].text).toContain("no payment is made");
+  });
+
   it("GetTask honors historyLength and ListTasks omits artifacts", () => {
     const store = memoryA2aStore();
     const sent = handleA2aJsonRpc(
