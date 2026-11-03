@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   CANARY_WORKER,
+  compileEnvironment,
   SKIP_BY_DEFAULT,
   diffRange,
   plan,
@@ -105,4 +106,18 @@ test("diff ranges match the event", () => {
   assert.deepEqual(diffRange("pull_request"), ["FETCH_HEAD", "HEAD"]);
   assert.deepEqual(diffRange("push", { before: "abc123" }), ["abc123", "HEAD"]);
   assert.deepEqual(diffRange("push", { before: "0000000" }), ["HEAD~1", "HEAD"]);
+});
+
+
+test("compile-only child environment strips Cloudflare credentials", () => {
+  const env = compileEnvironment({
+    PATH: "/bin",
+    CLOUDFLARE_API_TOKEN: "must-not-pass",
+    CLOUDFLARE_ACCOUNT_ID: "must-not-pass",
+    CLOUDFLARE_API_KEY: "must-not-pass",
+    CLOUDFLARE_EMAIL: "must-not-pass",
+    CF_API_TOKEN: "must-not-pass",
+    CF_ACCOUNT_ID: "must-not-pass",
+  });
+  assert.deepEqual(env, { PATH: "/bin" });
 });
