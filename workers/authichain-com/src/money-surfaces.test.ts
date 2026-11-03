@@ -36,6 +36,9 @@ test("TruMark page uses live Passport and DPP checkout CTAs", () => {
   assert.equal(html.includes(`action="${PASSPORT_CHECKOUT_PATH}"`), true);
   assert.equal(html.includes(`action="${DPP_CHECKOUT}"`), true);
   assert.match(html, /Passport checkout — \$49/);
+  assert.match(html, /issuer authorization/);
+  assert.match(html, /publication follows evidence review, not instant issuance/);
+  assert.match(html, /Payment does not automatically issue or certify it/);
   assert.match(html, /DPP checkout — \$299/);
   assert.match(html, /name="email"/);
   assert.match(html, /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/);
