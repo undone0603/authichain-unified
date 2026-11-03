@@ -561,6 +561,21 @@ export function negotiateTool(args: Record<string, unknown>) {
       error: "Supply finite nonnegative buyer_max_usd and seller_min_usd; optional opening_offer_usd must not exceed the buyer cap.",
     };
   }
+  // Reject amounts with sub-cent precision rather than silently rounding
+  // outside a counterparty's expressed budget.
+  const hasSubCent = (amount: number) =>
+    Math.abs(amount * 100 - Math.round(amount * 100)) > 1e-7;
+  if (
+    hasSubCent(max) ||
+    hasSubCent(min) ||
+    (typeof opening === "number" && hasSubCent(opening))
+  ) {
+    return {
+      status: "invalid_input",
+      binding: false,
+      error: "Prices must use whole USD cents.",
+    };
+  }
   // Reject amounts that cannot be represented as exact USD cents. Rounding
   // an unauthorized fractional-cent amount could silently exceed a limit.
   if (
