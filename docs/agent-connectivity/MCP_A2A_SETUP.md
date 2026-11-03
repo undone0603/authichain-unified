@@ -59,6 +59,15 @@ The public `/mcp/install` page shows both exact config shapes. Nothing requires 
 1. Obtain the other peer owner's authorization and expected HTTPS domain; **do not** submit their private URL to a public directory.
 2. Read their Agent Card from `https://<authorized-peer>/.well-known/agent-card.json` using a trusted client. For arbitrary peers, validate DNS/redirects/egress against an explicit operator allowlist, not an unaudited fetch from the public Worker.
 3. Inspect `supportedInterfaces` (prefer the first supported transport), `skills`, `capabilities`, `securitySchemes` and exact issuer/domain ownership. Reject undeclared protocol versions; never infer identity from an untrusted card alone.
+   Before any live peer call, validate an authorized local card offline:
+
+   ```sh
+   node --test tools/agent-connections/peer-card.test.mjs
+   node tools/agent-connections/peer-card.mjs ./authorized-peer-card.json https://peer.example/
+   ```
+
+   This report always returns `connected: false`. A matching origin and interface are only compatibility evidence, not a trust grant.
+
 4. Confirm authentication and task limits in a written approval. Use a sandbox and the real A2A 1.0 client for non-financial `SendMessage` only **after** peer approval. Do not attach production tokens to a sample card or send task payloads to unreviewed URLs.
 5. Record successful negotiation, request/response test and revocation instructions. A connected peer is not a verified payment, customer or product, and no live settlements or outbound messages are initiated by this kit.
 
