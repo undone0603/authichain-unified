@@ -68,3 +68,18 @@ test("untrusted counterpart offers do not get mistaken for a verified contract",
  assert.equal(r.counterpartOffers[0].source,"caller_supplied_unverified");
  assert.equal(r.allowedActions.acceptOffer,false);
 });
+
+test("inbound contract request returns a separate non-authorizing readiness check",()=>{
+ const i=example();
+ i.inboundContract={
+  contract:{id:"customer_contract_001",supplier:"AuthiChain",role:"service_provider",
+    sku:"mcp_a2a_build",incomingTotalCents:150000,currency:"usd"},
+  cashFlow:{maxOutboundCents:0,requiredActions:[],noProcurement:true,noVendorPayments:true}
+ };
+ const result=evaluateNegotiation(i);
+ assert.equal(result.status,"PROPOSALS_ONLY");
+ assert.equal(result.inboundContractReadiness.status,"BLOCKED");
+ assert.equal(result.inboundContractReadiness.accepted,false);
+ assert.equal(result.inboundContractReadiness.automaticSpendAuthorized,false);
+ assert.ok(result.inboundContractReadiness.missing.includes("agentz_reproducible_fulfillment"));
+});
