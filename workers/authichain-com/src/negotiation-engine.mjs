@@ -58,7 +58,9 @@ function evaluateTerms(issues, raw, ref) {
 function termsFromUtility(issues, utilities) {
   return Object.fromEntries(issues.map((issue,i) => {
     const u=clamp(utilities[i]);
-    return [issue.key,round(issue.walkAway + (issue.target-issue.walkAway)*u)];
+    const raw=round(issue.walkAway + (issue.target-issue.walkAway)*u);
+    const bounded=Math.max(Math.min(issue.target,issue.walkAway),Math.min(Math.max(issue.target,issue.walkAway),raw));
+    return [issue.key,bounded];
   }));
 }
 function makeProposals(issues) {
@@ -96,6 +98,9 @@ export function evaluateNegotiation(input) {
     const check=evaluateTerms(issues,o.terms,"counterpartOffers["+i+"].terms");
     return {id:o.id, status:check.withinWalkAway?"WITHIN_DECLARED_LIMITS":"OUTSIDE_DECLARED_LIMITS",...check,source:"caller_supplied_unverified"};
   }).sort((a,b)=>Number(b.withinWalkAway)-Number(a.withinWalkAway)||b.weightedUtility-a.weightedUtility);
+  if (input.outsideOption !== undefined &&
+      (!record(input.outsideOption) || !record(input.outsideOption.terms)))
+    error("outsideOption must provide an object of numeric terms");
   const batna=input.outsideOption === undefined ? null:evaluateTerms(issues,input.outsideOption.terms,"outsideOption.terms");
   const proposals=makeProposals(issues);
   return {
