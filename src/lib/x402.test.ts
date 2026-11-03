@@ -836,7 +836,9 @@ describe("x402AgentCard", () => {
     expect(card.skills.length).toBeGreaterThan(0);
     // Unlisted QRON Launch SKUs retain gated checkout routes, but must never
     // appear in public agent-discovery metadata.
-    expect(card.skills.some(s => s.id === "qron-launch-subscription")).toBe(false);
+    expect(
+      card.skills.some(s => s.id === "qron-launch-subscription")
+    ).toBe(false);
     const published = JSON.stringify(card);
     expect(published).not.toContain("/checkout/qron_launch");
     expect(published).not.toContain("/checkout/qron_launch_annual");
