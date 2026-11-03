@@ -14,6 +14,12 @@ Problem: a printed QR and state tag can identify a record but cannot alone prove
 - Deliverable is a passport based on reviewed source panels, QR/shareable link as described in `src/lib/plans.ts`. **No packaging forensic certificate, verification guarantee, regulatory determination, or trade-sample transfer is included**.
 - Manufacturer label/QR program: request an asynchronous **written packet** at hello@authichain.com (custom enterprise scope; no invented price).
 
+## Verified commercial readiness
+
+**CHECKOUT ACTIVE; PASSPORT FULFILLMENT HUMAN-HELD.** The existing live Stripe link contains the $49 passport price, but `workers/stripe-webhook/src/grant-map.ts` sets `strainchain_passport` to `humanHold: true`, zero automatic credits, and no certificate. There is no verified automated CoA review, issuance, or customer delivery. Therefore customer-facing materials must disclose evidence review before issuance, and the existing payment link must not be represented as immediate delivery. The first real paid order requires an auditable operator/intake response before any announcement of completion.
+
+**Release gate:** Provide a documented post-checkout route for the buyer to supply authorized CoAs, an owner-review queue, a confirmed issuer signature, a public verifiable issued artifact, and explicit customer acceptance. Keep the manual issuance hold until those checks are demonstrated. Never silently change a held purchase to a grant.
+
 ## Buyer journey / completion gates
 
 1. **Discovery.** Share a redacted observation-only demo and explain the missing issuer, label-binding and CoA proof. Obtain contact from a public, legitimate business source; comply with opt-out/suppression rules. No mass-send or impersonation.
