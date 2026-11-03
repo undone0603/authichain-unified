@@ -100,3 +100,15 @@ test("canonical webhook and DPP dependencies trigger edge-router deployment", ()
     yml.indexOf("- name: Publish authichain-edge-router")
   );
 });
+
+test("uplink preflight obtains the publisher token from a scoped secret", () => {
+  const probe = step("Preflight uplink probe (fail fast on a stalled runner)");
+  assert.match(probe, /if: runner\.environment == 'self-hosted'/);
+  assert.ok(
+    probe.includes("CLOUDFLARE_API_TOKEN: $" + "{{ secrets.CLOUDFLARE_API_TOKEN }}"),
+    "strict set -u shell must not read an undefined token"
+  );
+  assert.match(probe, /set -euo pipefail/);
+  assert.match(probe, /speed_upload/);
+  assert.doesNotMatch(probe, /echo .*CLOUDFLARE_API_TOKEN/);
+});
