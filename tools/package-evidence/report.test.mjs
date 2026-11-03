@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildPackageEvidenceReport } from './report.mjs';
@@ -68,4 +68,39 @@ test('rejects invalid or duplicate source IDs and path traversal', async () => {
   await assert.rejects(buildPackageEvidenceReport({ ...base(), files: [{id:'x',path:'a'}, {id:'x',path:'b'}] }), /duplicate/);
   const r = await buildPackageEvidenceReport({ ...base(), files: [{id:'x',path:'../secret'}] });
   assert.ok(codes(r).includes('FILE_UNAVAILABLE'));
+});
+
+test('unknown free-form label fields fail closed and sensitive product text is redacted', async () => {
+  const i = base();
+  i.files = [{ id: 'pouch', kind: 'photo', path: 'missing.jpg' }];
+  i.observations = [
+    { source_id: 'pouch', field: 'label_text', scope: 'pouch', value: 'LICENSE-ID-ABC1234567890' },
+    { source_id: 'pouch', field: 'product_name', scope: 'pouch', value: 'Batch XYZ1234567890' },
+    { source_id: 'pouch', field: 'product_name', scope: 'pouch', value: 'Sherb Cream Pie' },
+  ];
+  const r = await buildPackageEvidenceReport(i);
+  assert.equal(r.observations[0].observed, '[REDACTED]');
+  assert.equal(r.observations[1].observed, '[REDACTED]');
+  assert.equal(r.observations[2].observed, 'Sherb Cream Pie');
+  assert.ok(!JSON.stringify(r).includes('ABC1234567890'));
+  assert.ok(!JSON.stringify(r).includes('XYZ1234567890'));
+});
+
+test('symlink escaping the case directory is rejected', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'authi-case-'));
+  const external = await mkdtemp(join(tmpdir(), 'authi-secret-'));
+  try {
+    await writeFile(join(external, 'secret.txt'), 'private-only-file');
+    await symlink(join(external, 'secret.txt'), join(root, 'escape'));
+    const r = await buildPackageEvidenceReport({ ...base(), files: [{id:'x',kind:'document',path:'escape'}] }, {root});
+    assert.equal(r.files[0].status, 'UNAVAILABLE');
+    assert.ok(!JSON.stringify(r).includes('private-only-file'));
+  } finally { await rm(root, {recursive:true,force:true}); await rm(external,{recursive:true,force:true}); }
+});
+
+test('unknown URI schemes do not expose QR payload', async () => {
+  const i = base(); i.qr_observations = [{source_id:'x',decoded_payload:'supersecretmetrcid:12345'}];
+  const r = await buildPackageEvidenceReport(i);
+  assert.equal(r.qr[0].scheme, 'other');
+  assert.ok(!JSON.stringify(r).includes('supersecretmetrcid'));
 });
