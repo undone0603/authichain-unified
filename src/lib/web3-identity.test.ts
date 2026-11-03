@@ -86,9 +86,8 @@ describe("canonical web3 identity lock", () => {
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
       planPaymentLink("dpp_readiness")
     );
-    expect(catalog.humanCheckout.farmPaymentLink).toBe(
-      planPaymentLink("strainchain_farm")
-    );
+    // Unlisted Farm stays out of the publicly advertised x402 catalog.
+    expect(catalog.humanCheckout.farmPaymentLink).toBeUndefined();
     expect(catalog.humanCheckout.starterPaymentLink).toBe(
       planPaymentLink("starter")
     );

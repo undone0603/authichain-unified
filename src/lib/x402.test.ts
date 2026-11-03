@@ -758,9 +758,8 @@ describe("x402Catalog", () => {
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
       planPaymentLink("dpp_readiness")
     );
-    expect(catalog.humanCheckout.farmPaymentLink).toBe(
-      planPaymentLink("strainchain_farm")
-    );
+    // Farm is not a publicly listed self-serve offer.
+    expect(catalog.humanCheckout.farmPaymentLink).toBeUndefined();
     expect(catalog.humanCheckout.starterPaymentLink).toBe(
       planPaymentLink("starter")
     );

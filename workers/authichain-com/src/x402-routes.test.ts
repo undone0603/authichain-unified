@@ -97,9 +97,8 @@ describe("tryHandleX402", () => {
       )
     ).toBe(false);
     expect(body.humanCheckout.farmUsd).toBe(149);
-    expect(body.humanCheckout.farmPaymentLink).toBe(
-      "https://authichain.com/checkout/strainchain_farm"
-    );
+    // Expose the Farm price for context, not an unlisted checkout CTA.
+    expect(body.humanCheckout.farmPaymentLink).toBeUndefined();
     expect(body.humanCheckout.starterPaymentLink).toBe(
       "https://authichain.com/checkout/starter"
     );
