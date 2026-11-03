@@ -16,6 +16,7 @@ export type NegotiationInput = {
   issues: NegotiationIssue[];
   counterpartOffers?: NegotiationOffer[];
   outsideOption?: { terms: Record<string, number> };
+  inboundContract?: import('./inbound-contract-gate.mjs').InboundContractGateInput;
 };
 export type NegotiationScore = {
   withinWalkAway: boolean;
@@ -36,6 +37,7 @@ export type NegotiationOutput = {
   allowedActions:{draft:true;score:true;counterpropose:false;sendMessage:false;acceptOffer:false;purchase:false;issuePayment:false;sign:false;createAccount:false};
   humanApprovalRequired:true;
   sideEffectsPerformed:0;
+  inboundContractReadiness?: import('./inbound-contract-gate.mjs').InboundContractReadiness;
   caution:string;
 };
 export class NegotiationInputError extends Error {}
