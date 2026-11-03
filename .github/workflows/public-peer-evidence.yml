@@ -6,6 +6,9 @@ on:
       - 'scripts/alliances/public-evidence-probe.test.mjs'
       - 'scripts/alliances/arbiter-peer-repro.mjs'
       - 'scripts/alliances/arbiter-peer-repro.test.mjs'
+      - 'scripts/alliances/cedr-streamable-handshake.mjs'
+      - 'scripts/alliances/cedr-streamable-handshake.test.mjs'
+      - 'docs/alliances/CEDR_STREAMABLE_HTTP_HANDSHAKE.md'
       - 'scripts/alliances/m2m-verify.mjs'
       - 'scripts/alliances/m2m-verify.test.mjs'
       - 'agentz/swarm/authichain-m2m.mjs'
@@ -31,10 +34,13 @@ jobs:
         run: |
           node --check scripts/alliances/public-evidence-probe.mjs
           node --check scripts/alliances/arbiter-peer-repro.mjs
+          node --check scripts/alliances/cedr-streamable-handshake.mjs
           node --check scripts/alliances/m2m-verify.mjs
           node --check agentz/swarm/authichain-m2m.mjs
       - name: Execute no-network evidence boundary fixtures
         run: node --test scripts/alliances/public-evidence-probe.test.mjs
+      - name: Verify Cedr MCP Streamable HTTP handshake fail-closed behavior (offline)
+        run: node --test scripts/alliances/cedr-streamable-handshake.test.mjs
       - name: Verify free ARBITER handoff gates
         run: node --test scripts/alliances/arbiter-peer-repro.test.mjs
       - name: Verify AgentZ M2M free verification gates (22 local cases)
