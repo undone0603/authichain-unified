@@ -17,6 +17,8 @@ The public fixture intentionally omits media and uses invented, redacted-style i
 - A QR URL is an address, **not** proof the business issued the package. QR target validation and signed issuer attestations are separate product features.
 - Genetics passports require actual CoAs, issuer authorization, human/source review, and subsequent controlled issuance. A trade sample photo is not a CoA.
 - Even when files hash successfully, the report status remains `NOT_AUTHENTICATED`, and counterfeit determination remains `NOT_DETERMINED`.
+- Reports use fail-closed redaction: unknown/free-form observation fields are masked; product/manufacturer/sale-status strings are shown only when they pass a sensitive-token check. Full QR payloads are never written to the report.
+- Media hashes are computed in a bounded stream (512 MiB per source); paths and symlink targets must remain inside the supplied evidence directory.
 - Never resell a package marked `TRADE SAMPLE — NOT FOR RESALE`. This tool is for selling authentication software and documenting packaging evidence, **not physical cannabis**.
 
 The existing commercial offer (see `src/lib/plans.ts`) is the **$49 StrainChain genetics passport for one cultivar** at `https://authichain.com/checkout/strainchain_passport`. It is not a $49 forensic authenticity finding. For manufacturer batch/label integrations beyond that product, the `/trumark` page invites an asynchronous written packet rather than inventing a new Stripe SKU.
