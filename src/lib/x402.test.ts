@@ -835,6 +835,9 @@ describe("x402AgentCard", () => {
       protocolVersion: "1.0",
     });
     expect(card.skills.length).toBeGreaterThan(0);
+    const setup = card.skills.find(s => s.id === "mcp-a2a-setup-discovery");
+    expect(setup?.description).toContain("no peer is connected");
+    expect(setup?.examples).toContain("https://authichain.com/mcp/install#agent-connections");
     const launch = card.skills.find(s => s.id === "qron-launch-subscription");
     expect(launch?.examples).toEqual([
       "https://authichain.com/checkout/qron_launch",
