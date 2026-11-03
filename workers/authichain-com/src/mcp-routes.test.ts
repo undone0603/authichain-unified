@@ -1745,3 +1745,179 @@ describe("scan_living_qr", () => {
     expect(payload.result.content[0].text).not.toContain("header.payload.sig");
   });
 });
+
+
+describe("MCP 2026-07-28 read-only conformance", () => {
+  const modernMeta = {
+    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+    "io.modelcontextprotocol/clientCapabilities": {},
+  };
+
+  function modernRequest(
+    method: string,
+    options: {
+      meta?: Record<string, unknown>;
+      headers?: Record<string, string>;
+    } = {}
+  ) {
+    return req("/mcp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": method,
+        ...options.headers,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 203,
+        method,
+        params: { _meta: options.meta ?? modernMeta },
+      }),
+    });
+  }
+
+  it("discovers supported versions without using a legacy initialize handshake", async () => {
+    const res = await tryHandleMcp(modernRequest("server/discover"));
+    expect(res?.status).toBe(200);
+    expect(res?.headers.get("MCP-Protocol-Version")).toBe("2026-07-28");
+    const body = (await res!.json()) as {
+      result: {
+        resultType: string;
+        supportedVersions: string[];
+        capabilities: { tools: unknown };
+        cacheScope: string;
+        ttlMs: number;
+        _meta: Record<string, unknown>;
+      };
+    };
+    expect(body.result.resultType).toBe("complete");
+    expect(body.result.supportedVersions).toContain("2026-07-28");
+    expect(body.result.supportedVersions).toContain("2025-06-18");
+    expect(body.result.capabilities.tools).toBeDefined();
+    expect(body.result.cacheScope).toBe("private");
+    expect(body.result.ttlMs).toBe(0);
+    expect(body.result._meta["io.modelcontextprotocol/serverInfo"]).toEqual({
+      name: "authichain",
+      version: SERVER_VERSION,
+    });
+  });
+
+  it("lists tools statelessly with required result and cache metadata", async () => {
+    const res = await tryHandleMcp(modernRequest("tools/list"));
+    expect(res?.status).toBe(200);
+    const body = (await res!.json()) as {
+      result: {
+        resultType: string;
+        tools: Array<{ name: string }>;
+        cacheScope: string;
+        ttlMs: number;
+      };
+    };
+    expect(body.result.resultType).toBe("complete");
+    expect(body.result.ttlMs).toBe(0);
+    expect(body.result.cacheScope).toBe("private");
+    expect(body.result.tools.map(t => t.name)).toContain("verify_record");
+    expect(body.result.tools.map(t => t.name)).toContain("verify");
+  });
+
+  it("rejects mirrored-method mismatch with HTTP 400 HeaderMismatch", async () => {
+    const res = await tryHandleMcp(
+      modernRequest("tools/list", { headers: { "Mcp-Method": "tools/call" } })
+    );
+    expect(res?.status).toBe(400);
+    const body = (await res!.json()) as { error: { code: number } };
+    expect(body.error.code).toBe(-32020);
+  });
+
+  it("rejects mismatched metadata protocol with HTTP 400", async () => {
+    const res = await tryHandleMcp(
+      modernRequest("tools/list", {
+        meta: {
+          ...modernMeta,
+          "io.modelcontextprotocol/protocolVersion": "2025-06-18",
+        },
+      })
+    );
+    expect(res?.status).toBe(400);
+    const body = (await res!.json()) as { error: { code: number } };
+    expect(body.error.code).toBe(-32020);
+  });
+
+  it("rejects absent required client capabilities", async () => {
+    const res = await tryHandleMcp(
+      modernRequest("tools/list", {
+        meta: { "io.modelcontextprotocol/protocolVersion": "2026-07-28" },
+      })
+    );
+    expect(res?.status).toBe(400);
+    const body = (await res!.json()) as { error: { code: number } };
+    expect(body.error.code).toBe(-32602);
+  });
+
+  it("blocks unauthorized browser origins", async () => {
+    const res = await tryHandleMcp(
+      modernRequest("tools/list", {
+        headers: { Origin: "https://attacker.example" },
+      })
+    );
+    expect(res?.status).toBe(403);
+  });
+
+  it("fails closed on modern tools/call even if x402 is bound", async () => {
+    const res = await tryHandleMcp(
+      modernRequest("tools/call", { headers: { "Mcp-Name": "verify" } }),
+      { ...BOUND_X402 }
+    );
+    expect(res?.status).toBe(404);
+    const body = (await res!.json()) as { error: { code: number } };
+    expect(body.error.code).toBe(-32601);
+  });
+
+  it("returns supported versions on unsupported modern protocol", async () => {
+    const res = await tryHandleMcp(
+      modernRequest("tools/list", {
+        headers: { "MCP-Protocol-Version": "2099-01-01" },
+      })
+    );
+    expect(res?.status).toBe(400);
+    const body = (await res!.json()) as {
+      error: {
+        code: number;
+        data: { requested: string; supported: string[] };
+      };
+    };
+    expect(body.error.code).toBe(-32022);
+    expect(body.error.data.requested).toBe("2099-01-01");
+    expect(body.error.data.supported).toContain("2026-07-28");
+  });
+
+  it("preserves legacy initialize and tools/list response shape", async () => {
+    const init = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "MCP-Protocol-Version": "2025-06-18" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 7,
+          method: "initialize",
+          params: { protocolVersion: "2025-06-18" },
+        }),
+      })
+    );
+    const initialized = (await init!.json()) as {
+      result: { protocolVersion: string; resultType?: string };
+    };
+    expect(init?.status).toBe(200);
+    expect(initialized.result.protocolVersion).toBe("2025-06-18");
+    expect(initialized.result.resultType).toBeUndefined();
+  });
+
+  it("allows browser preflight for new mirrored headers", async () => {
+    const res = await tryHandleMcp(req("/mcp", { method: "OPTIONS" }));
+    expect(res?.status).toBe(204);
+    expect(res?.headers.get("Access-Control-Allow-Headers")).toContain("Mcp-Method");
+    expect(res?.headers.get("Access-Control-Allow-Headers")).toContain("Mcp-Name");
+  });
+});
