@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { manifest } from './manifest.mjs';
+const base = {sourceUrl:'https://example.org/report.pdf',observedAt:'2026-11-03T16:00:00Z',content:new TextEncoder().encode('synthetic report')};
+test('deterministic public evidence',()=>assert.deepEqual(manifest(base),manifest(base)));
+test('changed bytes change digest',()=>assert.notEqual(manifest(base).sha256,manifest({...base,content:new TextEncoder().encode('changed')} ).sha256));
+test('not found cannot be mistaken for noncompliance',()=>{const r=manifest({...base,status:'not_found',content:null});assert.equal(r.complianceVerdict,null);assert.equal(r.sha256,null);});
+test('no http or embedded credentials',()=>{assert.throws(()=>manifest({...base,sourceUrl:'http://example.org'}));assert.throws(()=>manifest({...base,sourceUrl:'https://a:b@example.org'}));});
+test('no misleading non-observed content',()=>assert.throws(()=>manifest({...base,status:'inconclusive'})));
+test('UTC observation required',()=>assert.throws(()=>manifest({...base,observedAt:'2026-11-03T16:00:00-05:00'})));
