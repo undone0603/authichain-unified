@@ -1959,13 +1959,15 @@ describe("MCP 2026-07-28 read-only conformance", () => {
 
 describe("negotiate: eighth MCP tool, non-binding and bounded", () => {
   it("produces a proposal only within both stated limits", () => {
-    expect(negotiateTool({
-      currency: "USD",
-      buyer_max_usd: 120,
-      seller_min_usd: 80,
-      opening_offer_usd: 90,
-      scope: "Public MCP assessment",
-    })).toMatchObject({
+    expect(
+      negotiateTool({
+        currency: "USD",
+        buyer_max_usd: 120,
+        seller_min_usd: 80,
+        opening_offer_usd: 90,
+        scope: "Public MCP assessment",
+      })
+    ).toMatchObject({
       status: "proposal_only",
       binding: false,
       proposed_price_usd: 90,
@@ -1973,34 +1975,45 @@ describe("negotiate: eighth MCP tool, non-binding and bounded", () => {
   });
 
   it("returns no overlap without exceeding either authorization limit", () => {
-    expect(negotiateTool({
-      currency: "USD",
-      buyer_max_usd: 50,
-      seller_min_usd: 75,
-    })).toMatchObject({
+    expect(
+      negotiateTool({
+        currency: "USD",
+        buyer_max_usd: 50,
+        seller_min_usd: 75,
+      })
+    ).toMatchObject({
       status: "no_overlap",
       binding: false,
       gap_usd: 25,
     });
   });
 
-  it("rejects invalid values, unbounded prices and opening offers above cap", () => {
-    for (const args of [
-      { currency: "USD",
-      buyer_max_usd: -1, seller_min_usd: 0 },
-      { currency: "USD",
-      buyer_max_usd: Infinity, seller_min_usd: 1 },
-      { currency: "USD",
-      buyer_max_usd: 100, seller_min_usd: 0, opening_offer_usd: 101 },
-      { currency: "USD",
-      buyer_max_usd: 100, seller_min_usd: 0, scope: "x".repeat(501) },
-      { currency: "USD",
-      buyer_max_usd: 1.001, seller_min_usd: 0 },
-      { currency: "USD",
-      buyer_max_usd: 100, seller_min_usd: 0.001 },
-      { currency: "USD",
-      buyer_max_usd: 100, seller_min_usd: 0, opening_offer_usd: 0.001 },
-    ]) {
+  it("rejects invalid values, unbounded prices and offers above cap", () => {
+    const invalid = [
+      { currency: "USD", buyer_max_usd: -1, seller_min_usd: 0 },
+      { currency: "USD", buyer_max_usd: Infinity, seller_min_usd: 1 },
+      {
+        currency: "USD",
+        buyer_max_usd: 100,
+        seller_min_usd: 0,
+        opening_offer_usd: 101,
+      },
+      {
+        currency: "USD",
+        buyer_max_usd: 100,
+        seller_min_usd: 0,
+        scope: "x".repeat(501),
+      },
+      { currency: "USD", buyer_max_usd: 1.001, seller_min_usd: 0 },
+      { currency: "USD", buyer_max_usd: 100, seller_min_usd: 0.001 },
+      {
+        currency: "USD",
+        buyer_max_usd: 100,
+        seller_min_usd: 0,
+        opening_offer_usd: 0.001,
+      },
+    ];
+    for (const args of invalid) {
       expect(negotiateTool(args)).toMatchObject({
         status: "invalid_input",
         binding: false,
@@ -2008,24 +2021,24 @@ describe("negotiate: eighth MCP tool, non-binding and bounded", () => {
     }
   });
 
-  it("rejects absent and non-USD currencies instead of silently converting marketplace budgets", () => {
-    expect(
-      negotiateTool({ buyer_max_usd: 100, seller_min_usd: 80 })
-    ).toMatchObject({
-      status: "unsupported_currency",
-      binding: false,
-    });
-    expect(
-      negotiateTool({ currency: "AUD", buyer_max_usd: 100, seller_min_usd: 80 })
-    ).toMatchObject({
-      status: "unsupported_currency",
-      binding: false,
-    });
+  it("rejects absent and non-USD currencies without implicit FX", () => {
+    const invalid = [
+      { buyer_max_usd: 100, seller_min_usd: 80 },
+      { currency: "AUD", buyer_max_usd: 100, seller_min_usd: 80 },
+    ];
+    for (const args of invalid) {
+      expect(negotiateTool(args)).toMatchObject({
+        status: "unsupported_currency",
+        binding: false,
+      });
+    }
   });
 
-  it("rejects null, primitive and array tool argument payloads", () => {
+  it("rejects malformed tool argument payloads", () => {
     for (const value of [null, 3, "100", []]) {
-      expect(negotiateTool(value as unknown as Record<string, unknown>)).toMatchObject({
+      expect(
+        negotiateTool(value as unknown as Record<string, unknown>)
+      ).toMatchObject({
         status: "invalid_input",
         binding: false,
       });
