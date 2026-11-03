@@ -31,7 +31,7 @@ permissions:
 jobs:
   signals:
     if: github.repository == 'undone0603/authichain-unified'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
