@@ -28,7 +28,7 @@ concurrency:
 jobs:
   compliance-audit:
     name: Run EU DPP Compliance Audit
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04') || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
     timeout-minutes: 30
     # This job requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY repository
     # secrets to talk to the live product ledger. Those secrets are not
