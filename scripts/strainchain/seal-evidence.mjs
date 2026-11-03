@@ -18,7 +18,7 @@ export const SEAL_REVIEW_STATES = Object.freeze({
 const TRI = new Set(["yes", "no", "unknown"]);
 const PHASES = new Set(["unknown", "as_received_before_first_open", "after_opening"]);
 const ROLES = new Set([
-  "front", "back", "top", "interior_mouth", "seam", "first_opening_video", "other",
+  "front", "back", "top", "interior_mouth", "seam", "retail_label", "first_opening_video", "other",
 ]);
 const CUSTODY = new Set(["unverified", "observer_statement", "independent_witness"]);
 const KEYS = [
@@ -28,6 +28,7 @@ const KEYS = [
   "continuous_first_opening_video",
   "independent_witness_present",
   "first_opening_barrier_visible",
+  "reported_unopened_at_retail_handoff",
 ];
 
 function validateRef(evidence) {
@@ -111,6 +112,11 @@ export function assessPackageSeal(input) {
   if (witnessedBypass) flags.push("INDEPENDENT_REVIEW_REQUIRED");
   if (yes("first_opening_barrier_visible")) {
     flags.push("BARRIER_VISUALLY_OBSERVED_NOT_QUALIFIED");
+  }
+  // A first-person handoff statement is relevant provenance, not proof of
+  // manufacturer sealing or independent chain of custody. Never upgrades state.
+  if (yes("reported_unopened_at_retail_handoff")) {
+    flags.push("RETAIL_UNOPENED_AS_REPORTED_NOT_INDEPENDENTLY_VERIFIED");
   }
 
   return Object.freeze({
