@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 export function ScanDemo({
-  videoSrc = "https://files2.heygen.ai/aries/output/897aa40a-d4c7-44fe-966e-82686a107b36/video.mp4?Expires=1794269916&Signature=SdcJ~W-nxnvlP8I-XPT9vYiSofLa6UPszMpZ4gusPdTppzhusugNK6AsaH2w~25h6vAdzN7nkkvlO5DmxFeGFlD3MVy3yRM20nHfZXnlvQ2yWVKt5zE0lzp2iJ4X3v71Kjr14ev7oqUTd0zv4qDpPKWwTFTOKdbcYO7RcO3w6r3bfFI-Ute4KOuP0GrW82a8TGfIGBYL2kgL31doJOn~vxIWcQ2gxElNoQOQo72XkcsRcI7SibX9-b-EsylQhiX7tFuQMeoBlR-XlyBDggf1RFt1OWyBO2M6rwUG3JQ9UkbICrh1rfcOxnuHMmP8xpn-VwNC4BQciqu7Ti36fQnf9A__&Key-Pair-Id=K38HBHX5LX3X2H",
+  videoSrc = "/scan-demo.mp4",
   poster = "/bottle-qr-poster.jpg",
   verifyUrl = "https://authichain.com/verify?id=polygon-anchor-1",
 }: {
