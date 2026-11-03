@@ -5,12 +5,30 @@ on:
     branches: [main]
     paths:
       - "worker-app/**"
+      # worker-app/index.ts dynamically imports these signed webhook and DPP
+      # fulfillment modules. Source changes must never be silently omitted
+      # from the production Worker build/deployment provenance.
+      - "server/webhooks/stripe.ts"
+      - "server/services/order-payment-handler.ts"
+      - "src/lib/stripe-webhook-claim.ts"
+      - "src/lib/stripe-webhook-log.ts"
+      - "src/lib/stripe-construct-event.ts"
+      - "src/lib/retryable-fulfillment.ts"
+      - "src/lib/provisioning.ts"
+      - "src/lib/dpp-activate.ts"
+      - "src/lib/dpp-loop.ts"
+      - "src/lib/dpp-fulfill-checkout.ts"
+      - "src/lib/plans.ts"
+      - "src/lib/checkout-gate.ts"
+      - "src/lib/billing/**"
+      - "src/lib/founder-exit/**"
       - ".github/workflows/deploy-authichain-edge-router.yml"
       - "scripts/ci/parse-wrangler-version-id.mjs"
       - "scripts/ci/promote-worker-version.mjs"
       - "scripts/ci/upload-worker-version.mjs"
 permissions:
   contents: read
+  actions: read
 # Queue behind an in-flight publish. PM-328 forbids cancelling a
 # push-to-main deploy that is already uploading.
 concurrency:
@@ -43,6 +61,13 @@ jobs:
           node-version: "22"
           cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
           cache-dependency-path: pnpm-lock.yaml
+      # Never upload/publish a source SHA until the exact-head CI Main run
+      # and all five required jobs succeeded. Fail closed on missing evidence.
+      # This step is read-only; it does not start, cancel, or retry CI.
+      - name: Require exact-head CI Main gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ci/require-exact-head-main-gate.mjs
       - name: Install node-gyp (native builds)
         run: npm i -g node-gyp@11
       - name: Install
@@ -51,6 +76,8 @@ jobs:
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Preflight uplink probe (fail fast on a stalled runner)
         if: runner.environment == 'self-hosted'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
           # The 8.8 MiB versions POST has stalled at 7-11 KB/s for 9 runs. Probe

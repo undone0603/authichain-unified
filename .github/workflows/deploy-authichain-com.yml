@@ -17,6 +17,7 @@ on:
       - "scripts/ci/promote-worker-version.mjs"
 permissions:
   contents: read
+  actions: read
 concurrency:
   # Two installs on this 4 GB WSL runner get SIGKILL (exit 137).
   # 41311322837 died 36s into pnpm while another deploy was also installing.
@@ -57,6 +58,13 @@ jobs:
           # deploy after wrangler publish has already succeeded.
           cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
           cache-dependency-path: pnpm-lock.yaml
+      # Block D1 migrations and production Worker promotion until the exact
+      # source SHA has completed CI Main with all required jobs successful.
+      # Read-only evidence check: no dispatches, retries, or bypasses.
+      - name: Require exact-head CI Main gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ci/require-exact-head-main-gate.mjs
       - name: Install node-gyp (native builds)
         run: npm i -g node-gyp@11
       - name: Install

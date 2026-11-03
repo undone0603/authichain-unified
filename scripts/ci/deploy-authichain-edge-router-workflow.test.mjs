@@ -54,3 +54,61 @@ test("smoke expects current jWTo5QsZ kid and retired T3AL7c4w kid", () => {
   assert.match(smoke, /protocol\/jwks\.json/);
   assert.match(smoke, /protocol\/issuer\.json/);
 });
+
+test("publish requires a successful exact-head Main gate", () => {
+  assert.match(yml, /actions: read/);
+  const guard = step("Require exact-head CI Main gate");
+  assert.ok(guard.includes("GITHUB_TOKEN: ${{ github.token }}"));
+  assert.ok(guard.includes("require-exact-head-main-gate.mjs"));
+  const gateOffset = yml.indexOf("- name: Require exact-head CI Main gate");
+  const publishOffset = yml.indexOf("- name: Publish authichain-edge-router");
+  assert.ok(gateOffset > 0 && gateOffset < publishOffset);
+  assert.doesNotMatch(guard, /continue-on-error: true/);
+});
+
+test("canonical webhook and DPP dependencies trigger edge-router deployment", () => {
+  // Changing these source files must trigger a build of the deployed Worker,
+  // not just an unrelated Next/Vercel build.
+  const [trigger] = yml.split("\npermissions:");
+  assert.ok(trigger.includes('branches: [main]'));
+  const direct = [
+    "server/webhooks/stripe.ts",
+    "server/services/order-payment-handler.ts",
+    "src/lib/stripe-webhook-claim.ts",
+    "src/lib/stripe-webhook-log.ts",
+    "src/lib/stripe-construct-event.ts",
+    "src/lib/retryable-fulfillment.ts",
+    "src/lib/provisioning.ts",
+    "src/lib/dpp-activate.ts",
+    "src/lib/dpp-loop.ts",
+    "src/lib/dpp-fulfill-checkout.ts",
+    "src/lib/plans.ts",
+    "src/lib/checkout-gate.ts",
+  ];
+  for (const file of direct) {
+    assert.ok(
+      trigger.includes('      - "' + file + '"'),
+      "missing deploy path trigger: " + file
+    );
+  }
+  for (const glob of ["src/lib/billing/**", "src/lib/founder-exit/**"]) {
+    assert.ok(trigger.includes('      - "' + glob + '"'), "missing " + glob);
+  }
+  assert.match(yml, /cancel-in-progress: false/);
+  assert.ok(
+    yml.indexOf("- name: Require exact-head CI Main gate") <
+    yml.indexOf("- name: Publish authichain-edge-router")
+  );
+});
+
+test("uplink preflight obtains the publisher token from a scoped secret", () => {
+  const probe = step("Preflight uplink probe (fail fast on a stalled runner)");
+  assert.match(probe, /if: runner\.environment == 'self-hosted'/);
+  assert.ok(
+    probe.includes("CLOUDFLARE_API_TOKEN: $" + "{{ secrets.CLOUDFLARE_API_TOKEN }}"),
+    "strict set -u shell must not read an undefined token"
+  );
+  assert.match(probe, /set -euo pipefail/);
+  assert.match(probe, /speed_upload/);
+  assert.doesNotMatch(probe, /echo .*CLOUDFLARE_API_TOKEN/);
+});
