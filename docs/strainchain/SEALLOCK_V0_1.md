@@ -67,18 +67,84 @@ separate adversarial access challenge. Never invent pass thresholds.
 3. **BYPASS_SUSPECTED** — access without destruction is *reported* and
    supported by images, but no authenticated continuous first-opening
    record or chain of custody exists.
-4. **BYPASS_WITNESSED** — continuous first-opening evidence, independent
+4. **BYPASS_WITNESSED_REVIEW_REQUIRED** — reported continuous first-opening evidence, independent
    observer and the defined access challenge establish accessibility
    without destruction. Requires human review; not a legal finding.
 5. **FIRST_OPENING_BARRIER_OBSERVED** — a physical barrier appears in
    visual evidence but has not passed all qualification gates.
-6. **DESIGN_QUALIFIED** — independent qualification artifacts and all
-   physical gates pass for the identified package **design revision**.
-   This does NOT certify a specific retail unit or its contents.
+6. **DESIGN_QUALIFIED (future, not emitted by this code)** — only a
+   separate authorized, independently verified design-review process could
+   make this designation. No local classifier, photograph, uploaded metadata,
+   hash or test fixture can certify a design or a specific retail unit.
 
 All states carry explicit boundaries: no counterfeit conclusion, no legal
 noncompliance determination, no unauthorized lab/Metrc integration, no
 hash-as-authenticity claim.
+
+## Enforceable design-review preflight (v0.2 branch implementation)
+
+`scripts/strainchain/seal-design-preflight.mjs` adds a **separate**
+manufacturer-design evidence gate. It never changes the classification of a
+consumer's photographs, and it does not certify or release any stock.
+
+The submission requires:
+1. A design/revision and evidence of an **irreversible first-opening barrier**,
+   located before the reusable closure, that covers every contents-access path
+   including corners, side seams, zipper ends and bottom seams.
+2. A SHA-256-referenced **predeclared acceptance criteria** document and
+   **sampling plan**. The standard does not prescribe arbitrary strength or
+   leak thresholds; the qualified packaging engineer must specify those in
+   advance for the selected materials, packaging geometry and intended use.
+3. Seven individually reported checks: `barrier_design`,
+   `process_controls`, `bypass_challenge`, `seal_strength`,
+   `leak_method_if_applicable`, `unit_trace`, `retail_handoff`.
+4. A first-opening challenge, including test count, whether the witness
+   recorded the entire opening sequence, whether **all access routes** were
+   challenged and whether contents were accessed without destroying the barrier.
+5. An evidence hash for each passing/failing gate. The leak method may be
+   **not applicable** only with a documented, independently reviewable reason.
+   Neither the method nor the result may be fabricated to satisfy a gate.
+
+The decisions are strictly:
+
+| Software assessment | Meaning | Product release |
+| --- | --- | --- |
+| `BLOCK_REPORTED_BYPASS_OR_FAILED_GATE` | Submission reports a missing barrier, accessible zipper, unprotected access route, silent bypass or failed gate | **HOLD** |
+| `BLOCK_INCOMPLETE_DESIGN_EVIDENCE` | One or more required observations, tests, evidence references or qualifications are missing/unknown | **HOLD** |
+| `READY_FOR_INDEPENDENT_REVIEW_ONLY` | Submitted metadata is internally complete and self-consistent enough for a qualified reviewer to audit the actual documents and samples | **HOLD** |
+
+`READY_FOR_INDEPENDENT_REVIEW_ONLY` is deliberately **not** an approval.
+The supplied reviewer role is just a claim; an independent reviewer must
+authenticate identities, obtain original test data, verify hash correspondence,
+confirm seal/test standards and applicability, inspect samples and validate
+acceptance criteria. A signed record requires independently trusted AuthiChain
+issuer-key verification. A QR code or a copied barcode is not that proof.
+
+Test offline with Node 22, without secrets or services:
+
+```sh
+node --test scripts/strainchain/seal-evidence.test.mjs
+node --test scripts/strainchain/seal-design-preflight.test.mjs
+```
+
+The test files cover refusal of zipper-first and side-seam access, claimed
+silent entry, missing sample evidence, invalid hashes, unqualified exceptions,
+failing strength tests and the no-automatic-release invariant.
+
+**Physical enforcement model:** producers validate and record the sealing
+process per lot; independent reviewers challenge representative quarantined
+samples; participating receiving retailers put ambiguous/failing lots on
+contractual hold; genuine issuer attestations link designs and lots to the
+consumer-facing record. StrainChain itself is not a regulator and cannot
+compel independent businesses to adopt this workflow. An issuer-signed
+document is evidence of the *claim*, not an independent physical guarantee.
+
+**Methods distinction:** ASTM F88/F88M-23 measures flexible seal strength;
+ASTM F3039-23 identifies certain nonporous package leaks using destructive
+dye penetration. Neither proves that an entire unopened bag resists silent
+entry through a bypass route. Verify the applicable methods and specimen
+handling with an independent packaging engineer. Do not use destructive
+test samples for retail resale.
 
 ## Evidence added after first observations
 
