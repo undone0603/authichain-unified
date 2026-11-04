@@ -28,8 +28,6 @@ concurrency:
   group: ci-main-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
-env:
-
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
   contents: read
