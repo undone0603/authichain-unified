@@ -50,12 +50,12 @@ describe("production health probes target routes that exist", () => {
     expect(PUBLIC_PROBES.map(pathOf)).not.toContain("/api/checkout/launch");
   });
 
-  it("treats unlisted Launch annual confirm HEAD as 303 to /pricing", () => {
+  it("treats unlisted Launch annual confirm HEAD as 200 and never a Stripe redirect", () => {
     const probe = PUBLIC_PROBES.find(
       p => p.id === "checkout_launch_annual_confirm_head"
     );
     expect(probe).toBeTruthy();
-    expect(probe.accept).toEqual([303]);
+    expect(probe.accept).toEqual([200]);
     expect(probe.method).toBe("HEAD");
   });
 });

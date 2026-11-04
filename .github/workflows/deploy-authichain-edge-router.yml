@@ -49,6 +49,25 @@ jobs:
         env:
           npm_config_build_from_source: "false"
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+      - name: Preflight uplink probe (fail fast on a stalled runner)
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          # The 8.8 MiB versions POST has stalled at 7-11 KB/s for 9 runs. Probe
+          # api.cloudflare.com with a 1 MiB payload first so a bad uplink fails in
+          # ~15s with an actionable message instead of eating the job timeout.
+          head -c 1048576 /dev/zero > /tmp/probe.bin
+          out=$(curl -s --ipv4 --http1.1 -o /dev/null -m 25 \
+            -w '%{speed_upload} %{http_code}' \
+            -X POST --data-binary @/tmp/probe.bin \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            https://api.cloudflare.com/client/v4/user/tokens/verify || true)
+          speed=${out%% *}; code=${out##* }
+          echo "uplink: ${speed:-0} bytes/s (http ${code:-none})"
+          if [ "${speed:-0}" -lt 200000 ]; then
+            echo "::warning::Uplink to api.cloudflare.com is under 200 KB/s. The 8.8 MiB bundle will not upload; fix the runner's network (WSL2 MTU 1280) or run this job elsewhere."
+          fi
+
       - name: Publish authichain-edge-router
         working-directory: worker-app
         env:
@@ -58,7 +77,9 @@ jobs:
           set -euo pipefail
           # Versions API wants uncompressed JS in the multipart. HTTP gzip
           # returned NextPart EOF (41298894966); part gzip eval'd as JS
-          # (41297825503). Dry-run locally, then curl --ipv4 --http2 of the
+          # (41297825503). HTTP/2 then stalled with PROTOCOL_ERROR and 0 bytes
+          # (41303592477, 41341161323), so the transport is now --http1.1 with a
+          # stall guard. Dry-run locally, then curl --ipv4 of the
           # raw 8.8 MiB body with keep_bindings secret_text. Do not wrangler
           # deploy. Do not secret-put.
           rm -rf /tmp/er-bundle
