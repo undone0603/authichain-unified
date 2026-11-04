@@ -44,9 +44,37 @@ export async function submitGovchainOnboard(
   }
   const n = Number(request.headers.get('content-length') || 0);
   if (n > 2048) return html('Request too large', '<p>No request was saved.</p>', 413);
+  // Enforce the size cap while reading: request.text() buffers the entire
+  // request before checking length, allowing unbounded memory use if a
+  // client omits Content-Length or lies about it.
   let raw: string;
-  try { raw = await request.text(); } catch { return html('Invalid request', '<p>No request was saved.</p>', 400); }
-  if (raw.length > 2048) return html('Request too large', '<p>No request was saved.</p>', 413);
+  const reader = request.body?.getReader();
+  if (!reader) return html('Invalid request', '<p>No request was saved.</p>', 400);
+  try {
+    const chunks: Uint8Array[] = [];
+    let bytes = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > 2048) {
+        void reader.cancel().catch(() => {});
+        return html('Request too large', '<p>No request was saved.</p>', 413);
+      }
+      chunks.push(value);
+    }
+    const buffer = new Uint8Array(bytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      buffer.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    raw = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+  } catch {
+    return html('Invalid request', '<p>No request was saved.</p>', 400);
+  } finally {
+    reader.releaseLock();
+  }
   const values = new URLSearchParams(raw);
   if (values.get('website')) {
     // Honeypot. Do not forward bot submissions; never claim stored lead data.
