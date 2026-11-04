@@ -143,7 +143,7 @@ function compileWorker(name) {
       "--config",
       config,
     ],
-    { cwd, stdio: "inherit", env: process.env }
+    { cwd, stdio: "inherit", env: { ...process.env, CLOUDFLARE_API_TOKEN: "", CLOUDFLARE_ACCOUNT_ID: "" } }
   );
   return result.status === 0;
 }
