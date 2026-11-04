@@ -24,7 +24,7 @@ import {
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleCertificateRegistry } from "./certificate-registry";
 import { tryHandleMcp } from "./mcp-routes";
-import { tryHandleAgentNegotiate } from "./agent-negotiate";
+import { tryHandleAgentCompatibility } from "./agent-negotiate";
 import { tryHandleMcpFree } from "./mcp-free-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
 import { tryHandleProtocolExample } from "./protocol-example-route";
@@ -3657,10 +3657,10 @@ async function handleAuthichainCom(
     if (certificateRegistry) return certificateRegistry;
     const x402 = await tryHandleX402(request, env, env.VERIFY_APP);
     if (x402) return x402;
-    // /negotiate and /api/negotiate are local, read-only capability preflight.
+    // /agent-compatibility is a local read-only capability preflight; commercial /negotiate is separate.
     // This does not replace MCP initialize/server/discover or A2A authorization.
-    const negotiate = await tryHandleAgentNegotiate(request);
-    if (negotiate) return negotiate;
+    const compatibility = await tryHandleAgentCompatibility(request);
+    if (compatibility) return compatibility;
     // /mcp/free: free-only sibling for the marketplace plugin (Advisor ruling B).
     const mcpFree = await tryHandleMcpFree(request, env);
     if (mcpFree) return mcpFree;
