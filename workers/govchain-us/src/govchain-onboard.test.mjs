@@ -25,3 +25,31 @@ test('rejects unsupported content type',async()=>{let calls=0;const r=await subm
 test('limits excessive submissions',async()=>{let calls=0;const r=await submitGovchainOnboard(req(valid,{'content-length':'3000'}),async()=>{calls++;return Response.json({ok:true})});assert.equal(r.status,413);assert.equal(calls,0)});
 test('honeypot never forwards',async()=>{let calls=0;const r=await submitGovchainOnboard(req(valid+'&website=bot'),async()=>{calls++;return Response.json({ok:true})});assert.equal(calls,0);assert.doesNotMatch(await r.text(),/was saved/i)});
 for(const [name,response] of [['backend failure',()=>new Response('oops',{status:500})],['false ok',()=>Response.json({ok:false})],['invalid json',()=>new Response('html')],['network error',()=>{throw Error('down')}]] )test('fails closed: '+name,async()=>{const r=await submitGovchainOnboard(req(valid),async()=>response());assert.equal(r.status,503);assert.match(await r.text(),/not saved/i)});
+
+test('rejects chunked oversize input without Content-Length or forwarding', async () => {
+ let calls = 0;
+ const stream = new ReadableStream({
+   start(controller) {
+     controller.enqueue(new TextEncoder().encode('company=Firm&email=x%40example.com&other='));
+     controller.enqueue(new Uint8Array(3500).fill(65));
+     controller.close();
+   },
+ });
+ const request = new Request('https://govchain.us/onboard', {
+   method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+   body: stream, duplex: 'half',
+ });
+ const response = await submitGovchainOnboard(request, async () => { calls++; return Response.json({ ok: true }); });
+ assert.equal(response.status, 413);
+ assert.equal(calls, 0);
+});
+test('rejects malformed UTF-8 before forwarding', async () => {
+ const request = new Request('https://govchain.us/onboard', {
+   method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+   body: new Uint8Array([0xff, 0xfe]), duplex: 'half',
+ });
+ let calls = 0;
+ const response = await submitGovchainOnboard(request, async () => { calls++; return Response.json({ ok: true }); });
+ assert.equal(response.status, 400);
+ assert.equal(calls, 0);
+});
