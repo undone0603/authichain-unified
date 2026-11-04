@@ -71,3 +71,24 @@ test("invalid reservation inputs fail closed", () => {
   assert.equal(matchPendingFacilitatorReceipt(pending,null,new Set()),null);
   assert.deepEqual([...reservedFacilitatorTxHashes(null)],[]);
 });
+
+test("October-style duplicate spend rows cannot both claim one transaction", () => {
+  const samePayer = "0x26b610a059de2488ebe3e0eda02ae17907917419";
+  const chainTx = `0x${"9".repeat(64)}`;
+  const transfer = { ...candidate, txHash: chainTx, wallet: samePayer, amountCents: 5 };
+  const pendingRows = [
+    { ...pending, wallet: samePayer, metadata: { x402: "1", facilitatorTxHint: chainTx }, createdAt: "2026-10-17T02:16:04.863Z" },
+    { ...pending, wallet: samePayer, metadata: { x402: "1", facilitatorTxHint: chainTx }, createdAt: "2026-10-17T02:16:06.095Z" },
+  ];
+  const reserved = reservedFacilitatorTxHashes([]);
+  const matches = pendingRows.map(row => matchPendingFacilitatorReceipt(row, [transfer], reserved));
+  assert.deepEqual(matches, [transfer, null]);
+  assert.equal(reserved.size, 1);
+});
+
+test("previously attributed transaction cannot be claimed on a later pass", () => {
+  const previouslyMatched = { ...pending, txHash: tx, status: "qualified" };
+  const reserved = reservedFacilitatorTxHashes([previouslyMatched]);
+  assert.equal(matchPendingFacilitatorReceipt(pending, [candidate], reserved), null);
+  assert.deepEqual([...reserved], [tx]);
+});
