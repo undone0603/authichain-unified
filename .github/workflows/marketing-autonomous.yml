@@ -46,9 +46,12 @@ jobs:
   seo-refresh:
     name: SEO — Sitemap refresh + IndexNow ping
     runs-on: ${{ (github.event_name == 'workflow_dispatch' && inputs.runner == 'ubuntu-latest') && fromJSON('["ubuntu-latest"]') || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
-    if: |
-      github.event_name == 'workflow_dispatch' && (inputs.strategy == 'all' || inputs.strategy == 'seo_only') ||
-      github.event_name == 'schedule'
+    if: >-
+      (github.event_name == 'workflow_dispatch' &&
+       (inputs.strategy == 'all' || inputs.strategy == 'seo_only') ||
+       github.event_name == 'schedule') &&
+      ((github.event_name == 'workflow_dispatch' && inputs.runner == 'ubuntu-latest') ||
+       vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true')
     steps:
       - uses: actions/checkout@v7
         with:
@@ -161,7 +164,7 @@ jobs:
   linkedin-post:
     name: LinkedIn — retired in favour of validated bundles
     runs-on: ${{ (github.event_name == 'workflow_dispatch' && inputs.runner == 'ubuntu-latest') && fromJSON('["ubuntu-latest"]') || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
-    if: github.event_name == 'workflow_dispatch' && inputs.strategy == 'linkedin_only'
+    if: github.event_name == 'workflow_dispatch' && inputs.strategy == 'linkedin_only' && (inputs.runner == 'ubuntu-latest' || vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true')
     steps:
       # The rotating posts that used to live here were hardcoded and unbacked:
       # a "$4.5 trillion" market size with no source, "100% scannable under
@@ -182,8 +185,10 @@ jobs:
   content-drafts:
     name: Content — Generate weekly drafts
     runs-on: ${{ (github.event_name == 'workflow_dispatch' && inputs.runner == 'ubuntu-latest') && fromJSON('["ubuntu-latest"]') || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
-    if: |
-      github.event_name == 'workflow_dispatch' && (inputs.strategy == 'all' || inputs.strategy == 'content_drafts')
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.strategy == 'all' || inputs.strategy == 'content_drafts') &&
+      (inputs.runner == 'ubuntu-latest' || vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true')
     steps:
       - uses: actions/checkout@v7
 
@@ -213,7 +218,7 @@ jobs:
   reddit-draft:
     name: Reddit — retired in favour of validated bundles
     runs-on: ${{ (github.event_name == 'workflow_dispatch' && inputs.runner == 'ubuntu-latest') && fromJSON('["ubuntu-latest"]') || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
-    if: github.event_name == 'workflow_dispatch' && inputs.strategy == 'reddit_only'
+    if: github.event_name == 'workflow_dispatch' && inputs.strategy == 'reddit_only' && (inputs.runner == 'ubuntu-latest' || vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true')
     steps:
       # The hardcoded r/QRcode submission that used to live here claimed
       # error-correction "L4" (QR levels are L/M/Q/H — there is no L4) and

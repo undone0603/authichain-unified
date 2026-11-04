@@ -63,13 +63,47 @@ jobs:
     # Enabling this workflow is not live send. Resolve-mode stays dry-run
     # unless vars.OWNER_LIVE_SEND=true (and dispatch also unchecks dry_run).
     # GitHub-hosted runners are billing-locked, so the dry run uses the
-    # authichain-ops machine. It already has a persistent pnpm store.
+    # authichain-ops machine. Require independently verified host isolation.
+    if: ${{ vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' }}
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 20
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      # The persistent runner has previously retained broken refs or a
+      # sparse checkout that omitted the deliverability breaker. Never run
+      # sending-capable steps from a partial or incorrect checkout.
+      - name: Verify checkout integrity and required safety controls
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY:?}" = "undone0603/authichain-unified"
+          test "${GITHUB_WORKSPACE:?}" = "${RUNNER_WORKSPACE:?}/authichain-unified"
+          test ! -L "$GITHUB_WORKSPACE"
+          test -d "$GITHUB_WORKSPACE/.git"
+          test ! -L "$GITHUB_WORKSPACE/.git"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          GIT_OPTIONAL_LOCKS=0 git fsck --full --no-reflogs
+          if test -e "$GITHUB_WORKSPACE/.git/ORIG_HEAD"; then
+            git rev-parse --verify 'ORIG_HEAD^{commit}' >/dev/null
+          fi
+          test -z "$(git status --porcelain)"
+          for required in \
+            .github/autonomy.json \
+            scripts/autonomy/launch-mode.mjs \
+            scripts/autonomy/deliverability-breaker.mjs \
+            scripts/autonomy/approvals.mjs \
+            scripts/outreach-optout-check.ts \
+            scripts/b2b-cold-outreach.ts; do
+            if test ! -f "$required"; then
+              echo "::error::Missing checkout safety file: $required"
+              exit 1
+            fi
+          done
 
       - name: Setup pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10

@@ -20,7 +20,8 @@ permissions:
 jobs:
   health:
     name: Public edge + Workers inventory
-    # Self-hosted WSL runner label authichain-ops (public-repo: no PR jobs on this host).
+    # Runner labels alone do not prove host or credential isolation.
+    if: ${{ vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' }}
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 10
     steps:

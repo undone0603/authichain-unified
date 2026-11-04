@@ -285,3 +285,102 @@ test("privileged Dependabot events cannot run on the production publisher", () =
     assert.doesNotMatch(source, /runs-on: \[self-hosted, Linux, ARM64, authichain-wsl\]/);
   }
 });
+
+test("credential-bearing ops job chains are gated by independent host attestation", () => {
+  const flag = "vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'";
+  const workflowJobs = {
+    "merge-autopilot.yml": ["sweep"],
+    "ops-pulse.yml": ["pulse"],
+    "revenue-cycle.yml": ["revenue-cycle"],
+    "gov-mint.yml": ["mint"],
+    "stripe-webhook-reconcile.yml": ["reconcile"],
+    "agentz-orchestration.yml": [
+      "resolve-mode", "ping-claw-agentz", "preflight", "qualify-leads",
+      "sync-mi-leads", "funnel-report", "notify-webhook",
+    ],
+    "gov-engine.yml": [
+      "preflight", "launch", "ingest", "score", "proposals", "mint", "notify",
+    ],
+    "b2b-outreach.yml": ["outreach"],
+    "cloudflare-production-health.yml": ["health"],
+  };
+  for (const [workflow, jobs] of Object.entries(workflowJobs)) {
+    const source = readFileSync(`.github/workflows/${workflow}`, "utf8");
+    const jobSection = source.slice(source.indexOf("\njobs:") + 6);
+    assert.ok(jobSection.length > 10, workflow);
+    const found = Array.from(jobSection.matchAll(/^  ([a-z0-9-]+):\s*$/gm));
+    for (const job of jobs) {
+      const index = found.findIndex(m => m[1] === job);
+      assert.ok(index >= 0, workflow + ":" + job);
+      const start = found[index].index;
+      const end = index + 1 < found.length ? found[index + 1].index : jobSection.length;
+      const block = jobSection.slice(start, end);
+      assert.ok(block.includes(flag), workflow + ":" + job);
+      assert.match(block, /^    if:/m, workflow + ":" + job);
+      assert.doesNotMatch(block, /authichain-wsl/, workflow + ":" + job);
+    }
+  }
+});
+
+test("GovChain Mint never selects unattested ops; explicit hosted choice survives", () => {
+  const mint = readFileSync(".github/workflows/gov-mint.yml", "utf8");
+  assert.ok(mint.includes("(inputs.runner || 'authichain-ops') == 'ubuntu-latest' || vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'"));
+  assert.ok(mint.includes('runs-on:'));
+  assert.ok(mint.includes('fromJSON(\'["ubuntu-latest"]\')'));
+  assert.ok(mint.includes('fromJSON(\'["self-hosted","Linux","ARM64","authichain-ops"]\')'));
+});
+
+test("reusable GovChain and support jobs also require attested ops selection", () => {
+  const flag = "vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'";
+  const scope = {
+    "gov-ingest.yml": ["ingest-opportunities"],
+    "gov-score.yml": ["score"],
+    "gov-proposals.yml": ["proposals"],
+    "gov-notify.yml": ["notify"],
+    "marketing-autonomous.yml": ["seo-refresh", "linkedin-post", "content-drafts", "reddit-draft"],
+    "launch-gates.yml": ["gates"],
+    "production-smoke-gate.yml": ["smoke"],
+    "deploy-workers.yml": ["secret-scan", "deploy-matrix", "post-deploy-smoke"],
+  };
+  for (const [workflow, jobs] of Object.entries(scope)) {
+    const source = readFileSync(`.github/workflows/${workflow}`, "utf8");
+    const section = source.slice(source.indexOf("\njobs:") + 6);
+    assert.ok(section.length > 10, workflow);
+    const found = Array.from(section.matchAll(/^  ([a-z0-9-]+):\s*$/gm));
+    for (const job of jobs) {
+      const index = found.findIndex(item => item[1] === job);
+      assert.ok(index >= 0, workflow + ":" + job);
+      const start = found[index].index;
+      const end = index + 1 < found.length ? found[index + 1].index : section.length;
+      const block = section.slice(start, end);
+      assert.ok(block.includes("authichain-ops"), workflow + ":" + job);
+      assert.ok(block.includes(flag), workflow + ":" + job);
+      assert.doesNotMatch(block, /rm -rf.*\.git/, workflow + ":" + job);
+    }
+  }
+  const marketing = readFileSync(".github/workflows/marketing-autonomous.yml", "utf8");
+  assert.ok(marketing.includes("inputs.runner == 'ubuntu-latest' || " + flag));
+  assert.ok(marketing.includes("github.event_name == 'schedule') &&"));
+  const deploy = readFileSync(".github/workflows/deploy-workers.yml", "utf8");
+  assert.ok(deploy.includes("authichain-wsl"));
+  assert.ok(deploy.includes("vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && " + flag));
+});
+
+test("B2B outreach refuses partial Git checkout before sending-capable steps", () => {
+  const source = readFileSync(".github/workflows/b2b-outreach.yml", "utf8");
+  const verify = source.indexOf("Verify checkout integrity and required safety controls");
+  assert.ok(verify > source.indexOf("Checkout repository"));
+  assert.ok(verify < source.indexOf("Install dependencies"));
+  assert.ok(source.includes('test "${GITHUB_WORKSPACE:?}" = "${RUNNER_WORKSPACE:?}/authichain-unified"'));
+  assert.ok(source.includes('test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"'));
+  assert.ok(source.includes("git fsck --full --no-reflogs"));
+  assert.ok(source.includes("rev-parse --verify 'ORIG_HEAD^{commit}'"));
+  assert.ok(source.includes('test -z "$(git status --porcelain)"'));
+  for (const path of [
+    ".github/autonomy.json", "scripts/autonomy/launch-mode.mjs",
+    "scripts/autonomy/deliverability-breaker.mjs",
+    "scripts/autonomy/approvals.mjs", "scripts/outreach-optout-check.ts",
+    "scripts/b2b-cold-outreach.ts",
+  ]) assert.ok(source.includes(path));
+  assert.ok(!source.includes('rm -rf -- "$GITHUB_WORKSPACE/.git"'));
+});

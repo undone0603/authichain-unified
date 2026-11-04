@@ -49,7 +49,7 @@ jobs:
     name: Revenue Cycle — ${{ inputs.phase || 'report' }}
     # Scheduled runs are always dry-run report. Manual live requires both
     # inputs.live and the repository kill-switch variable.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+    if: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' }}
     # Self-hosted WSL runner label authichain-ops (public-repo: no PR jobs on this host).
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 20
