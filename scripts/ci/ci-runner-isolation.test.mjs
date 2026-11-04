@@ -329,3 +329,39 @@ test("GovChain Mint never selects unattested ops; explicit hosted choice survive
   assert.ok(mint.includes('fromJSON(\'["ubuntu-latest"]\')'));
   assert.ok(mint.includes('fromJSON(\'["self-hosted","Linux","ARM64","authichain-ops"]\')'));
 });
+
+test("reusable GovChain and support jobs also require attested ops selection", () => {
+  const flag = "vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'";
+  const scope = {
+    "gov-ingest.yml": ["ingest-opportunities"],
+    "gov-score.yml": ["score"],
+    "gov-proposals.yml": ["proposals"],
+    "gov-notify.yml": ["notify"],
+    "marketing-autonomous.yml": ["seo-refresh", "linkedin-post", "content-drafts", "reddit-draft"],
+    "launch-gates.yml": ["gates"],
+    "production-smoke-gate.yml": ["smoke"],
+    "deploy-workers.yml": ["secret-scan", "deploy-matrix", "post-deploy-smoke"],
+  };
+  for (const [workflow, jobs] of Object.entries(scope)) {
+    const source = readFileSync(`.github/workflows/${workflow}`, "utf8");
+    const section = source.slice(source.indexOf("\njobs:") + 6);
+    assert.ok(section.length > 10, workflow);
+    const found = Array.from(section.matchAll(/^  ([a-z0-9-]+):\s*$/gm));
+    for (const job of jobs) {
+      const index = found.findIndex(item => item[1] === job);
+      assert.ok(index >= 0, workflow + ":" + job);
+      const start = found[index].index;
+      const end = index + 1 < found.length ? found[index + 1].index : section.length;
+      const block = section.slice(start, end);
+      assert.ok(block.includes("authichain-ops"), workflow + ":" + job);
+      assert.ok(block.includes(flag), workflow + ":" + job);
+      assert.doesNotMatch(block, /rm -rf.*\.git/, workflow + ":" + job);
+    }
+  }
+  const marketing = readFileSync(".github/workflows/marketing-autonomous.yml", "utf8");
+  assert.ok(marketing.includes("inputs.runner == 'ubuntu-latest' || " + flag));
+  assert.ok(marketing.includes("github.event_name == 'schedule') &&"));
+  const deploy = readFileSync(".github/workflows/deploy-workers.yml", "utf8");
+  assert.ok(deploy.includes("authichain-wsl"));
+  assert.ok(deploy.includes("vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && " + flag));
+});
