@@ -179,3 +179,27 @@ test("lint and autonomy checks fail closed on an incomplete checkout", () => {
   assert.ok(autonomy.includes("test -f .github/autonomy.json"));
   assert.ok(autonomy.includes("node scripts/autonomy/reconcile.mjs --check"));
 });
+
+test("stale self-hosted PR Git metadata recovery is scoped to the isolated CI workspace", () => {
+  for (const file of [
+    ".github/workflows/main.yml",
+    ".github/workflows/ci.yml",
+    ".github/workflows/lint.yml",
+    ".github/workflows/typecheck-ratchet.yml",
+    ".github/workflows/autonomy-reconcile.yml",
+    ".github/workflows/contract-tests.yml",
+  ]) {
+    const source = readFileSync(file, "utf8");
+    assert.ok(source.includes("Recover stale Git metadata"), file);
+    assert.ok(source.includes("GITHUB_WORKSPACE"), file);
+    assert.ok(source.includes("RUNNER_WORKSPACE"), file);
+    assert.ok(source.includes("test ! -L"), file);
+    assert.ok(source.includes("rm -rf --"), file);
+    assert.ok(source.includes("github.event_name == 'pull_request'"), file);
+  }
+  const main = readFileSync(".github/workflows/main.yml", "utf8");
+  assert.equal(main.split("Recover stale Git metadata").length - 1, 3);
+  const autonomy = readFileSync(".github/workflows/autonomy-reconcile.yml", "utf8");
+  assert.equal(autonomy.split("Recover stale Git metadata").length - 1, 1);
+  assert.ok(main.slice(main.indexOf("  production-proof:")).includes("authichain-wsl"));
+});

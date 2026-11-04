@@ -35,6 +35,22 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
     runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     steps:
+      # Persistent CI checkouts can contain corrupt refs/ORIG_HEAD after a canceled run.
+      # Reset ONLY .git in this repository's isolated PR workspace; source files
+      # and all production publishing workspaces remain untouched.
+      - name: Recover stale Git metadata (isolated PR workspace only)
+        if: runner.environment == 'self-hosted' && github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY:?}" = "undone0603/authichain-unified"
+          test "${GITHUB_WORKSPACE:?}" = "${RUNNER_WORKSPACE:?}/authichain-unified"
+          test ! -L "$GITHUB_WORKSPACE"
+          if test -e "$GITHUB_WORKSPACE/.git"; then
+            test -d "$GITHUB_WORKSPACE/.git"
+            test ! -L "$GITHUB_WORKSPACE/.git"
+            rm -rf -- "$GITHUB_WORKSPACE/.git"
+          fi
       - uses: actions/checkout@v4
       - name: Restore full tree after sparse checkout
         if: runner.environment == 'self-hosted'
