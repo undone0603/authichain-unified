@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   negotiateAgentCapabilities,
-  tryHandleAgentNegotiate,
+  tryHandleAgentCompatibility,
   MCP_NEGOTIATE_VERSIONS,
 } from "./agent-negotiate";
 
@@ -69,17 +69,17 @@ describe("capability negotiation is not peer authorization", () => {
   });
 
   it("GET and HEAD expose only a public discovery", async () => {
-    for (const path of ["/negotiate", "/api/negotiate"]) {
-      const res = await tryHandleAgentNegotiate(req(path));
+    for (const path of ["/agent-compatibility", "/api/agent-compatibility"]) {
+      const res = await tryHandleAgentCompatibility(req(path));
       expect(res?.status).toBe(200);
       expect((await res!.json()).status).toBe("discovery_only");
-      expect((await tryHandleAgentNegotiate(req(path, { method: "HEAD" })) )?.status).toBe(204);
+      expect((await tryHandleAgentCompatibility(req(path, { method: "HEAD" })) )?.status).toBe(204);
     }
-    expect(await tryHandleAgentNegotiate(req("/checkout"))).toBeNull();
+    expect(await tryHandleAgentCompatibility(req("/checkout"))).toBeNull();
   });
 
   it("POST returns compatibility hints and does not establish trust", async () => {
-    const res = await tryHandleAgentNegotiate(req("/negotiate", {
+    const res = await tryHandleAgentCompatibility(req("/agent-compatibility", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mcpVersions: ["2025-06-18"], capabilities: ["mcp.tools.list"] }),
@@ -92,7 +92,7 @@ describe("capability negotiation is not peer authorization", () => {
   });
 
   it("rejects credential-bearing or prohibited requests without executing", async () => {
-    const res = await tryHandleAgentNegotiate(req("/negotiate", {
+    const res = await tryHandleAgentCompatibility(req("/agent-compatibility", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ intent: "pay", mcpVersions: ["2025-06-18"] }),
@@ -109,16 +109,16 @@ describe("capability negotiation is not peer authorization", () => {
       [{ method: "POST", headers: { "Content-Type": "application/json", Origin: "https://attacker.example" }, body: "{}" }, 403],
     ];
     for (const [init, status] of cases) {
-      expect((await tryHandleAgentNegotiate(req("/negotiate", init)))?.status).toBe(status);
+      expect((await tryHandleAgentCompatibility(req("/agent-compatibility", init)))?.status).toBe(status);
     }
   });
 
   it("OPTIONS honors same-origin only and PUT is denied", async () => {
-    const res = await tryHandleAgentNegotiate(req("/negotiate", {
+    const res = await tryHandleAgentCompatibility(req("/agent-compatibility", {
       method: "OPTIONS",
       headers: { Origin: "https://authichain.com" },
     }));
     expect(res?.status).toBe(204);
-    expect((await tryHandleAgentNegotiate(req("/negotiate", { method: "PUT" })))?.status).toBe(405);
+    expect((await tryHandleAgentCompatibility(req("/agent-compatibility", { method: "PUT" })))?.status).toBe(405);
   });
 });
