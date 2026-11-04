@@ -76,6 +76,9 @@ describe("capability negotiation is not peer authorization", () => {
       expect((await tryHandleAgentCompatibility(req(path, { method: "HEAD" })) )?.status).toBe(204);
     }
     expect(await tryHandleAgentCompatibility(req("/checkout"))).toBeNull();
+    // Keep the distinct BATNA/MESO commercial /negotiate handler (#2318) unshadowed.
+    expect(await tryHandleAgentCompatibility(req("/negotiate"))).toBeNull();
+    expect(await tryHandleAgentCompatibility(req("/api/negotiate"))).toBeNull();
   });
 
   it("POST returns compatibility hints and does not establish trust", async () => {
