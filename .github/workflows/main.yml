@@ -32,8 +32,6 @@ concurrency:
 # Flip to 'false' once the runner is verified; the skip step warns visibly.
 env:
   SKIP_PLAYWRIGHT_ON_SELF_HOSTED: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && 'true' || 'false' }}
-  PLAYWRIGHT_BROWSERS_PATH: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/ms-playwright' || '/home/runner/.cache/ms-playwright' }}
-  TURBO_CACHE_DIR: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/turbo' || '/home/runner/.cache/turbo' }}
 
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
@@ -69,7 +67,7 @@ jobs:
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+          dest: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm-{1}', runner.temp, runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -143,7 +141,7 @@ jobs:
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+          dest: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm-{1}', runner.temp, runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -159,7 +157,7 @@ jobs:
       - name: "Skipped on self-hosted: Playwright browser install"
         if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED == 'true' && matrix.shard == 2
         run: |
-          if [ -d "$PLAYWRIGHT_BROWSERS_PATH" ] && [ "$(ls -A "$PLAYWRIGHT_BROWSERS_PATH" 2>/dev/null)" ]; then
+          if [ -d "$HOME/.cache/ms-playwright" ] && [ "$(ls -A "$HOME/.cache/ms-playwright" 2>/dev/null)" ]; then
             echo "Using pre-cached Playwright browsers at $PLAYWRIGHT_BROWSERS_PATH"
           else
             echo "::warning title=Skipped on self-hosted::Playwright Chromium install not run (needs apt/sudo and ARM64 Chromium). Browser-dependent tests in shard 2 may fail or be absent. Not a pass."
@@ -243,7 +241,7 @@ jobs:
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+          dest: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm-{1}', runner.temp, runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -347,7 +345,7 @@ jobs:
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+          dest: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm-{1}', runner.temp, runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7

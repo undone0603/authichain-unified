@@ -51,7 +51,7 @@ jobs:
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+          dest: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm-{1}', runner.temp, runner.name) || '~/setup-pnpm' }}
 
 
       - name: Setup Node
@@ -61,7 +61,7 @@ jobs:
 
       - name: Setup Python virtual environment
         run: |
-          VENV_DIR="/home/zac/.cache/agentz-venv-${{ runner.name }}"
+          VENV_DIR="${RUNNER_TEMP:?}/agentz-venv"
           if [ ! -d "$VENV_DIR" ]; then
             python3 -m venv "$VENV_DIR"
           fi
@@ -69,6 +69,7 @@ jobs:
           if [ -f "requirements-agentz.txt" ]; then
             "$VENV_DIR/bin/pip" install -r requirements-agentz.txt
           fi
+          echo "AGENTZ_VENV=$VENV_DIR" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -82,7 +83,7 @@ jobs:
             echo "::warning::Skipping AgentZ pytest on self-hosted ARM64 runner (tooling incomplete)."
             exit 0
           fi
-          PYTHONPATH="${GITHUB_WORKSPACE}" /home/zac/.cache/agentz-venv-${{ runner.name }}/bin/pytest agentz/tests
+          PYTHONPATH="${GITHUB_WORKSPACE}" "$AGENTZ_VENV/bin/python" -m pytest agentz/tests
 
       # Persistent self-hosted runner: drop deps and build outputs so state
       # never leaks into the next run. Workspace-only; never outside it.

@@ -137,3 +137,25 @@ test("worker build PRs are credential-free and use hosted runners for forks", ()
   assert.ok(script.includes('CLOUDFLARE_API_TOKEN: ""'));
   assert.ok(script.includes('CLOUDFLARE_ACCOUNT_ID: ""'));
 });
+
+test("isolated CI uses per-runner temp paths and hosted Hardhat coverage", () => {
+  for (const path of [
+    ".github/workflows/main.yml",
+    ".github/workflows/ci.yml",
+    ".github/workflows/lint.yml",
+    ".github/workflows/typecheck-ratchet.yml",
+    ".github/workflows/build-workers.yml",
+  ]) {
+    const source = readFileSync(path, "utf8");
+    assert.ok(!source.includes("/home/zac"), path);
+    assert.ok(source.includes("runner.temp"), path);
+  }
+  assert.ok(extras.includes("RUNNER_TEMP"));
+  assert.ok(extras.includes("AGENTZ_VENV=$VENV_DIR"));
+  const lint = readFileSync(".github/workflows/lint.yml", "utf8");
+  assert.ok(lint.includes("if: runner.environment != 'self-hosted'"));
+  assert.ok(lint.includes("if: runner.environment == 'self-hosted'"));
+  assert.ok(!lint.includes("SKIP_HARDHAT_ON_SELF_HOSTED"));
+  assert.ok(!main.includes("PLAYWRIGHT_BROWSERS_PATH:"));
+  assert.ok(!main.includes("TURBO_CACHE_DIR:"));
+});
