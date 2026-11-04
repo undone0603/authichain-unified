@@ -112,4 +112,6 @@ ISSUER_ED25519_PKCS8_B64=... node scripts/musa/claim-attestation.mjs issue input
 node scripts/musa/claim-attestation.mjs verify attestation.json --expect-issuer did:key:...
 ```
 
-Never commit the key. The issuer value must be published somewhere the customer can compare it, because a `did:key` only proves itself. Until that's done, the page's "anyone can check the signature" promise isn't fully met.
+The published issuer is `did:key:z6Mkv3GxMirZuvJjw8h7k7vWQBRnxNVUbRepxR2AuUm2ydHZ`, shown in the claim file page's FAQ. A `did:key` only proves itself, so always verify with `--expect-issuer` set to this value.
+
+Never commit the key. It's held outside the repo at `~/.authichain/musa-issuer.pkcs8.b64` on the founder's laptop, and it needs an offline backup. If it's lost or rotated, issue from a new key and update this value and the FAQ.

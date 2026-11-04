@@ -89,7 +89,7 @@ const SEND: string[] = [
   "Your bill of materials for the SKU: every component, ingredient and piece of packaging that is part of the product",
   "For each line, the supplier's origin statement with its share of US content if you have one, or a supplier contact so we can request it",
   "Where final assembly and each significant processing step happen",
-  "The exact claim you print or plan to print, and where it appears (label, listing, ads, packaging, press). Include flags, maps and \"proudly American\" lines, not just the words Made in USA",
+  'The exact claim you print or plan to print, and where it appears (label, listing, ads, packaging, press). Include flags, maps and "proudly American" lines, not just the words Made in USA',
 ];
 
 const FAQ: Array<{ q: string; a: string }> = [
@@ -102,7 +102,7 @@ const FAQ: Array<{ q: string; a: string }> = [
     a: "No. It is substantiation support: an organised evidence file and a signed attestation. The FTC does not pre-approve origin claims and does not certify products. For a legal opinion, talk to your counsel, and give them the file.",
   },
   {
-    q: "I don't print \"Made in USA\", just a flag or \"Built in Ohio\". Does this apply to me?",
+    q: 'I don\'t print "Made in USA", just a flag or "Built in Ohio". Does this apply to me?',
     a: 'It can. A flag, a US map, "American-made", "Built in the USA" or a state name can all tell a shopper the product is made here, even without the words. What counts is the overall impression the label or listing gives. Send us every place the idea appears and the file covers the claim you actually make.',
   },
   {
@@ -115,7 +115,7 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "What does the signed attestation prove?",
-    a: "That this record was issued by AuthiChain on that date and has not been changed since. Anyone can check the signature. It does not prove the underlying facts on its own: the supplier documents in the file do that.",
+    a: "That this record was issued by AuthiChain on that date and has not been changed since. Anyone can check the signature against our published issuer ID, did:key:z6Mkv3GxMirZuvJjw8h7k7vWQBRnxNVUbRepxR2AuUm2ydHZ. It does not prove the underlying facts on its own: the supplier documents in the file do that.",
   },
   {
     q: "I sell several products. How do I buy more than one?",
