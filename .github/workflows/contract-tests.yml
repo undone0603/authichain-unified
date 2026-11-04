@@ -33,10 +33,9 @@ jobs:
     runs-on: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04') || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
     timeout-minutes: 20
     steps:
-      # Persistent CI checkouts can contain corrupt refs/ORIG_HEAD after a canceled run.
-      # Reset ONLY .git in this repository's isolated PR workspace; source files
-      # and all production publishing workspaces remain untouched.
-      - name: Recover stale Git metadata (isolated PR workspace only)
+      # PR jobs must not erase corrupted Git evidence. Quarantine/repair is an
+      # operator-only task after the host has independently passed isolation review.
+      - name: Check stale Git metadata (read-only; fail closed)
         if: runner.environment == 'self-hosted' && github.event_name == 'pull_request'
         shell: bash
         run: |
@@ -44,10 +43,16 @@ jobs:
           test "${GITHUB_REPOSITORY:?}" = "undone0603/authichain-unified"
           test "${GITHUB_WORKSPACE:?}" = "${RUNNER_WORKSPACE:?}/authichain-unified"
           test ! -L "$GITHUB_WORKSPACE"
-          if test -e "$GITHUB_WORKSPACE/.git"; then
+          if test -e "$GITHUB_WORKSPACE/.git" || test -L "$GITHUB_WORKSPACE/.git"; then
             test -d "$GITHUB_WORKSPACE/.git"
             test ! -L "$GITHUB_WORKSPACE/.git"
-            rm -rf -- "$GITHUB_WORKSPACE/.git"
+            if ! git -C "$GITHUB_WORKSPACE" fsck --full --no-reflogs >/dev/null; then
+              echo "::error::Corrupt PR checkout; stop and quarantine this workspace from the operator host."
+              exit 1
+            fi
+            if test -e "$GITHUB_WORKSPACE/.git/ORIG_HEAD"; then
+              git -C "$GITHUB_WORKSPACE" rev-parse --verify 'ORIG_HEAD^{commit}' >/dev/null
+            fi
           fi
       - name: Checkout
         uses: actions/checkout@v7
