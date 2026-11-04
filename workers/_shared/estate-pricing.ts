@@ -157,10 +157,23 @@ const QRON_TITLED_PLANS = new Set([
 /** Plain-language Theater 1 button; the price matches the card. */
 const THEATER_1_BUTTON = "Subscribe — $499/mo";
 
+/**
+ * authichain.com/pricing sells the whole public catalogue: QRON, then Made in
+ * USA, then the StrainChain Passport. Farm stays off public buy links (#1606).
+ */
+function authichainCataloguePlans(): Plan[] {
+  return [
+    ...listedPlans("qron"),
+    ...listedPlans("musa"),
+    ...listedPlans("strainchain").filter(p => p.id === "strainchain_passport"),
+  ];
+}
+
 function cataloguePricingGrid(
   origin: Exclude<PricingOrigin, "strainchain">
 ): string {
-  const plans = listedPlans("qron");
+  const plans =
+    origin === "authichain" ? authichainCataloguePlans() : listedPlans("qron");
   const cards = plans
     .map(plan => {
       const cta = planCheckoutCta(plan, origin);
@@ -170,7 +183,8 @@ function cataloguePricingGrid(
         origin === "authichain" ? plan.id === "starter" : plan.highlighted
       );
       const suffix = plan.price_suffix ?? (plan.price === 0 ? "" : " one-time");
-      const amount = plan.price === 0 ? "Free" : `$${plan.price}`;
+      const amount =
+        plan.price === 0 ? "Free" : `$${plan.price.toLocaleString("en-US")}`;
       const features = plan.features.map(f => `<li>${esc(f)}</li>`).join("");
       // On the AuthiChain page, QRON products carry the QRON name Stripe shows.
       const title =
@@ -319,7 +333,9 @@ function pricingPage(origin: PricingOrigin): PricingPage {
   }
 
   const isAuthichain = origin === "authichain";
-  const catalogueOffers = listedPlans("qron")
+  const catalogueOffers = (
+    isAuthichain ? authichainCataloguePlans() : listedPlans("qron")
+  )
     .filter(p => p.price > 0)
     .map(p => ({
       "@type": "Offer" as const,
@@ -365,7 +381,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         primary: false,
       },
       plansNote:
-        "Generation packs first, then the EU DPP Workspace. E-bike and other LMT batteries need a passport from 18 February 2027.",
+        "Generation packs first, then the EU DPP Workspace, Made in USA claim files and the StrainChain Passport. E-bike and other LMT batteries need a passport from 18 February 2027.",
       ctaTitle: "Buy the Starter Pack",
       ctaLede:
         "$29, one time — 100 AI QR generations. Add a work email first so we can send your receipt.",
