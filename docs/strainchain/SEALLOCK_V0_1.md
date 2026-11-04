@@ -18,7 +18,8 @@ That is a first-person retail-origin statement, NOT independent evidence of
 original factory sealing, chain of custody, or the actual condition at sale.
 The matching barcode links the pictured labels, but barcodes can be copied.
 The software classifier only flags an observed open mouth when an evidence
-reference is explicitly tagged as an **interior-mouth or top-opening view**;
+reference is explicitly tagged as an **interior-mouth, top-opening, or
+first-opening-video view**;
 a retail-label barcode, front photo or unsupported assertion alone cannot
 establish that visual finding. These tags remain reporter-provided metadata,
 not authenticated photographs or independent findings.
