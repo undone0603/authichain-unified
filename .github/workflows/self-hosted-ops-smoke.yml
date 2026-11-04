@@ -1,21 +1,85 @@
 name: Self-hosted ops smoke
-# Proves the WSL authichain-ops runner is picking up jobs.
-# No secrets, no deploy, no checkout of untrusted PR code.
+# Operator-invoked trusted main-SHA checkout only, never PR source.
+# A green job does NOT establish independent physical/credential isolation.
 on:
   workflow_dispatch:
+    inputs:
+      expected_main_sha:
+        description: "Full 40-character main SHA recorded by the operator before dispatch"
+        required: true
+        type: string
+      operator_confirms_isolation:
+        description: "Operator independently verified distinct unprivileged no-secret host (not inferred from runner label)"
+        required: true
+        default: "no"
+        type: choice
+        options:
+          - "no"
+          - "yes"
 
 permissions:
   contents: read
 
 jobs:
-  smoke:
+  trusted-checkout:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.operator_confirms_isolation == 'yes' }}
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: Identity
+      - name: Preflight isolated runner and empty Git worktree
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_main_sha }}
         run: |
           set -euo pipefail
-          echo "runner_ok=1"
-          uname -a
-          echo "github_ref=${GITHUB_REF}"
-          echo "event=${GITHUB_EVENT_NAME}"
+          test "$GITHUB_REPOSITORY" = "undone0603/authichain-unified"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$(id -u)" -ne 0
+          test "$GITHUB_WORKSPACE" = "$RUNNER_WORKSPACE/authichain-unified"
+          test ! -L "$GITHUB_WORKSPACE"
+          case "$EXPECTED_SHA" in ''|*[!0-9a-f]*) echo "::error::Invalid expected SHA"; exit 2;; esac
+          test "${#EXPECTED_SHA}" -eq 40
+          test "$EXPECTED_SHA" = "$GITHUB_SHA" || { echo "::error::Expected main SHA changed"; exit 1; }
+          if test -e "$GITHUB_WORKSPACE/.git" || test -L "$GITHUB_WORKSPACE/.git"; then
+            echo "::error::Persistent Git metadata found: operator must quarantine and attest a fresh worktree."
+            exit 1
+          fi
+          # Ambient environment check ONLY; never claims production secrets
+          # are absent from the host filesystem or outside environment.
+          for key in CLOUDFLARE_API_TOKEN STRIPE_SECRET_KEY SUPABASE_SERVICE_ROLE_KEY VERCEL_TOKEN RESEND_API_KEY; do
+            if test -n "$(printenv "$key" || true)"; then
+              echo "::error::Production credential exposed through job environment; abort."
+              exit 1
+            fi
+          done
+          echo "preflight=passed (host isolation remains operator-attested, not machine-proven)"
+      - name: Checkout trusted main SHA without persisting Git credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+          clean: false
+          submodules: false
+      - name: Verify exact commit and Git object integrity
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_main_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git cat-file -t "$EXPECTED_SHA")" = "commit"
+          GIT_OPTIONAL_LOCKS=0 git fsck --full --no-reflogs
+          test -f package.json
+          test -f pnpm-lock.yaml
+          test -z "$(git status --porcelain)"
+          {
+            echo "### Trusted isolated-runner checkout evidence"
+            echo "- Run: $GITHUB_RUN_ID"
+            echo "- UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- Runner: $RUNNER_NAME / $RUNNER_OS / $RUNNER_ARCH"
+            echo "- SHA: $EXPECTED_SHA"
+            echo "- Git fsck and clean-worktree checks: passed"
+            echo "- Independent host and credential isolation: requires separate operator evidence"
+          } >> "$GITHUB_STEP_SUMMARY"

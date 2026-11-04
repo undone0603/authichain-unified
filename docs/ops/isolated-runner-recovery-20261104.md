@@ -28,3 +28,13 @@ Stop if runner identity, host isolation, credential separation, exact SHA, or Gi
 - Subsequent independent review and protected deploy proof for DPP receipt #2273 and payment/fulfillment #2270.
 
 This document is an operator procedure, **not** evidence that any host was repaired, a runner registered, a workflow activated, or customer revenue received.
+
+## Trusted checkout-only smoke workflow (review-gated, NOT executed)
+
+A proposed updated `.github/workflows/self-hosted-ops-smoke.yml` accepts an explicitly recorded 40-character **default-branch** commit SHA and a manual operator assertion that physical/account/credential isolation was independently checked. It executes only on `refs/heads/main` with `operator_confirms_isolation=yes` and routes exclusively to `authichain-ops`. The default is `no`. This new workflow definition is **not active on main until reviewed and merged**. Do not dispatch it on a shared publishing machine or before the operator has quarantined the corrupt worktree.
+
+The job checks the unprivileged user, strict workspace path, absence of preexisting `.git`, a short list of forbidden ambient credential environment variables (this **does not** establish filesystem or network credential isolation), and the exact expected default-branch SHA. It then performs an ordinary SHA-pinned, credentials-not-persisted `actions/checkout`, verifies `git rev-parse HEAD`, `git cat-file -t`, and `git fsck --full --no-reflogs`, and records the run metadata without printing credentials. No PR head is checked out and no PR code is run. A green result proves only that one checkout completed on the labeled runner. Operator identity, host identity, network/storage isolation, and absence of production credentials must be evidenced **out of band**.
+
+**Operator procedure:** 1) Inspect GitHub runner registration and host separation, 2) stop/quarantine compromised worktree and preserve logs, 3) validate clean unprivileged host without production credentials, 4) record main SHA, 5) after this workflow is approved on main, manually dispatch `Self-hosted ops smoke` on main with the recorded SHA and `yes`, 6) retain job link, timestamp, logs, `fsck` and external host-isolation attestation. Abort if any step fails. This PR has **not** executed these actions.
+
+The built-in Node assertion file `scripts/ci/trusted-ops-smoke.test.mjs` checks non-destructive, default-branch-only, fail-closed workflow properties locally; it is not a replacement for actual checkout or external host evidence.
