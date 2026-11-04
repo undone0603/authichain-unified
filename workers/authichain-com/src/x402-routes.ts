@@ -312,12 +312,13 @@ async function tryFreeCall(
   const raw = parseJsonObject(await request.clone().text());
   const parsed = parseSealRequest(raw);
   if (!parsed.ok) {
-    // No body: 402 so a scanner can read the price. A named seal that cannot
-    // exist, or productId/serial used as the key, is refused here. The paid
-    // path does the same before settlement. This runs before the registry
+    // Only a named seal that cannot exist is refused here. Quote crawlers POST
+    // probe JSON with no sealId and treat a 400 as "needs a different request",
+    // so they must get the 402 to read the price. This runs before the registry
     // credential check so a bad id is not a payment challenge.
-    if (Object.keys(raw).length > 0) {
-      return { response: json(parsed.status, parsed.body), remaining: null };
+    const refusal = unpaidSealRefusal(raw);
+    if (refusal) {
+      return { response: json(refusal.status, refusal.body), remaining: null };
     }
     return { response: null, remaining: null };
   }
