@@ -67,9 +67,10 @@ separate adversarial access challenge. Never invent pass thresholds.
 3. **BYPASS_SUSPECTED** — access without destruction is *reported* and
    supported by images, but no authenticated continuous first-opening
    record or chain of custody exists.
-4. **BYPASS_WITNESSED_REVIEW_REQUIRED** — reported continuous first-opening evidence, independent
-   observer and the defined access challenge establish accessibility
-   without destruction. Requires human review; not a legal finding.
+4. **WITNESS_RECORD_CLAIMED_REVIEW_REQUIRED** — the submitter claims to have a continuous first-opening recording and
+   independent witness. Neither the recorder, chronology nor physical bypass
+   has been authenticated by the classifier. Requires qualified external
+   review; not a legal finding.
 5. **FIRST_OPENING_BARRIER_OBSERVED** — a physical barrier appears in
    visual evidence but has not passed all qualification gates.
 6. **DESIGN_QUALIFIED (future, not emitted by this code)** — only a
