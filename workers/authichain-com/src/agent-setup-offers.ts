@@ -57,6 +57,13 @@ export function agentConnectionDiscovery() {
   return {
     schema: "authichain-agent-connections/1",
     status: "public_discovery_only",
+    negotiation: {
+      endpoint: "https://authichain.com/negotiate",
+      apiEndpoint: "https://authichain.com/api/negotiate",
+      status: "read_only_capability_preflight",
+      standardizedHandshake: false,
+      authorizationGranted: false,
+    },
     mcp: {
       transport: "streamable_http",
       endpoint: MCP_REMOTE_ENDPOINT,
@@ -124,6 +131,9 @@ export function renderAgentSetupOffers(): string {
     <h2>MCP &amp; A2A connections</h2>
     <p class="sub">Free client setup is available now. Assisted integration and agent-to-agent peer onboarding
     are quote-only services requiring a written scope and owner-approved trust policy. No payment is collected on this page.</p>
+    <p class="sub">Read-only compatibility preflight: <a href="/negotiate"><code>/negotiate</code></a>.
+    It lists supported versions and compatible public capabilities; it is not an MCP or A2A protocol handshake
+    and never authorizes a peer, payment or outbound task.</p>
     <div class="grid two three">${cards}</div>
     <div class="grid two" style="margin-top:14px">
       <div class="card">
