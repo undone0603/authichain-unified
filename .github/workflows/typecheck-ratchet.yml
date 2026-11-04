@@ -31,7 +31,7 @@ jobs:
     name: Typecheck ratchet
     # CI isolation: never run typecheck jobs on the production publishing runner.
     # Run on main pushes and fork PRs as well; fork code uses hosted isolation.
-    runs-on: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04') || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
+    runs-on: ${{ vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
       # PR jobs must not erase corrupted Git evidence. Quarantine/repair is an

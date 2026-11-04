@@ -205,3 +205,29 @@ test("self-hosted PR preflight detects corrupted Git metadata without erasing ev
   assert.equal(autonomy.split("Check stale Git metadata (read-only; fail closed)").length - 1, 1);
   assert.ok(main.slice(main.indexOf("  production-proof:")).includes("authichain-wsl"));
 });
+
+test("unattested ops runner cannot be selected for PR test code", () => {
+  const attestation = "vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'";
+  for (const file of [
+    ".github/workflows/main.yml", ".github/workflows/ci.yml",
+    ".github/workflows/lint.yml", ".github/workflows/typecheck-ratchet.yml",
+    ".github/workflows/build-workers.yml", ".github/workflows/security-scan.yml",
+    ".github/workflows/honest-launch-gate.yml", ".github/workflows/schema-drift.yml",
+    ".github/workflows/windows-path-safety.yml", ".github/workflows/supabase-baseline.yml",
+    ".github/workflows/compliance-audit.yml", ".github/workflows/vercel-deploy-guard.yml",
+    ".github/workflows/nightstamp-scan-gate.yml", ".github/workflows/autonomy-reconcile.yml",
+    ".github/workflows/contract-tests.yml",
+  ]) {
+    const workflow = readFileSync(file, "utf8");
+    for (const route of workflow.split(String.fromCharCode(10)).filter(s => s.includes("runs-on:"))) {
+      if (route.includes("authichain-ops") && route.includes("fromJSON(")) {
+        assert.ok(route.includes(attestation), file);
+      }
+    }
+  }
+  const typecheck = readFileSync(".github/workflows/typecheck-ratchet.yml", "utf8");
+  assert.ok(typecheck.split(String.fromCharCode(10)).find(line => line.includes("runs-on:")).includes("|| 'ubuntu-24.04'"));
+  const auto = readFileSync(".github/workflows/autonomy-reconcile.yml", "utf8");
+  assert.ok(auto.includes("github.ref == 'refs/heads/main' && " + attestation));
+  assert.ok(main.slice(main.indexOf("  production-proof:")).includes("authichain-wsl"));
+});

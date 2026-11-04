@@ -42,7 +42,7 @@ permissions:
 jobs:
   check:
     name: Manifest covers every workflow
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 5
     steps:
       # PR jobs must not erase corrupted Git evidence. Quarantine/repair is an
@@ -80,7 +80,7 @@ jobs:
   reconcile:
     name: Reconcile GitHub to manifest
     needs: check
-    if: github.repository == 'undone0603/authichain-unified' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.repository == 'undone0603/authichain-unified' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 5
     permissions:

@@ -12,7 +12,7 @@ on:
 
 jobs:
   scan-gate:
-    runs-on: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04') || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
+    runs-on: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04') || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
