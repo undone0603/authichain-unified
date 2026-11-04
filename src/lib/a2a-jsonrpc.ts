@@ -19,6 +19,7 @@ const EVIDENCE_TEXT =
 const CONNECTION_SETUP_TEXT =
   "MCP self-connection is free at https://authichain.com/mcp/install#agent-connections. " +
   "MCP: https://authichain.com/mcp (read-only tools/list). " +
+  "Read-only compatibility preflight: GET/POST https://authichain.com/negotiate (not a standard MCP/A2A handshake or authorization). " +
   "A2A 1.0 Agent Card: https://authichain.com/.well-known/agent-card.json; JSON-RPC: https://authichain.com/api/a2a. " +
   "Assisted MCP integration and A2A peer onboarding are written-scope / quote-only services. " +
   "Request a scope at https://authichain.com/mcp/install#agent-connections. " +
@@ -27,7 +28,7 @@ const CONNECTION_SETUP_TEXT =
 function isSetupInquiry(parts: A2aPart[]): boolean {
   const combined = parts.map(p => p.text).join(" ").slice(0, 4096);
   return /\b(?:mcp|a2a)\b/i.test(combined) &&
-    /\b(?:setup|connect(?:ion|ions)?|integrat(?:ion|e)|onboard(?:ing)?|offers?)\b/i.test(combined);
+    /\b(?:setup|connect(?:ion|ions)?|integrat(?:ion|e)|onboard(?:ing)?|offers?|negotiat(?:e|ion)|capabilit(?:y|ies))\b/i.test(combined);
 }
 
 export const A2A_METHODS = [
