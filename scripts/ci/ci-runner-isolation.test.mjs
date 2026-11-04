@@ -180,7 +180,7 @@ test("lint and autonomy checks fail closed on an incomplete checkout", () => {
   assert.ok(autonomy.includes("node scripts/autonomy/reconcile.mjs --check"));
 });
 
-test("stale self-hosted PR Git metadata recovery is scoped to the isolated CI workspace", () => {
+test("self-hosted PR preflight detects corrupted Git metadata without erasing evidence", () => {
   for (const file of [
     ".github/workflows/main.yml",
     ".github/workflows/ci.yml",
@@ -190,16 +190,18 @@ test("stale self-hosted PR Git metadata recovery is scoped to the isolated CI wo
     ".github/workflows/contract-tests.yml",
   ]) {
     const source = readFileSync(file, "utf8");
-    assert.ok(source.includes("Recover stale Git metadata"), file);
+    assert.ok(source.includes("Check stale Git metadata (read-only; fail closed)"), file);
+    assert.ok(source.includes("git -C \"$GITHUB_WORKSPACE\" fsck --full --no-reflogs"), file);
+    assert.ok(source.includes("rev-parse --verify 'ORIG_HEAD^{commit}'"), file);
     assert.ok(source.includes("GITHUB_WORKSPACE"), file);
     assert.ok(source.includes("RUNNER_WORKSPACE"), file);
     assert.ok(source.includes("test ! -L"), file);
-    assert.ok(source.includes("rm -rf --"), file);
+    assert.ok(!source.includes('rm -rf -- "$GITHUB_WORKSPACE/.git"'), file);
     assert.ok(source.includes("github.event_name == 'pull_request'"), file);
   }
   const main = readFileSync(".github/workflows/main.yml", "utf8");
-  assert.equal(main.split("Recover stale Git metadata").length - 1, 3);
+  assert.equal(main.split("Check stale Git metadata (read-only; fail closed)").length - 1, 3);
   const autonomy = readFileSync(".github/workflows/autonomy-reconcile.yml", "utf8");
-  assert.equal(autonomy.split("Recover stale Git metadata").length - 1, 1);
+  assert.equal(autonomy.split("Check stale Git metadata (read-only; fail closed)").length - 1, 1);
   assert.ok(main.slice(main.indexOf("  production-proof:")).includes("authichain-wsl"));
 });
