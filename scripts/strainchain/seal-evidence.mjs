@@ -11,7 +11,7 @@ export const SEAL_REVIEW_STATES = Object.freeze({
   INDETERMINATE: "INDETERMINATE",
   OPEN_MOUTH_TEAR_FEATURE_INTACT: "OPEN_MOUTH_TEAR_FEATURE_INTACT",
   BYPASS_SUSPECTED: "BYPASS_SUSPECTED",
-  BYPASS_WITNESSED_REVIEW_REQUIRED: "BYPASS_WITNESSED_REVIEW_REQUIRED",
+  WITNESS_RECORD_CLAIMED_REVIEW_REQUIRED: "WITNESS_RECORD_CLAIMED_REVIEW_REQUIRED",
   FIRST_OPENING_BARRIER_OBSERVED: "FIRST_OPENING_BARRIER_OBSERVED",
 });
 
@@ -90,16 +90,17 @@ export function assessPackageSeal(input) {
     e.phase === "as_received_before_first_open" &&
     e.custody === "independent_witness"
   );
-  // Even a witness-marked video/hash is merely evidence to review, not a
-  // verified seal certificate; the signature and custody require real audit.
-  const witnessedBypass = reportedBypass && video &&
+  // These are submitter-provided fields and hashes. They do not authenticate
+  // a witness, video content, chronology, source custody or a physical bypass.
+  // Require external review; never name the state as a witnessed conclusion.
+  const claimedWitnessRecord = reportedBypass && video &&
     yes("continuous_first_opening_video") &&
     yes("independent_witness_present");
 
   let state = SEAL_REVIEW_STATES.INDETERMINATE;
   if (!input.evidence.length) state = SEAL_REVIEW_STATES.NOT_ASSESSED;
-  else if (witnessedBypass) {
-    state = SEAL_REVIEW_STATES.BYPASS_WITNESSED_REVIEW_REQUIRED;
+  else if (claimedWitnessRecord) {
+    state = SEAL_REVIEW_STATES.WITNESS_RECORD_CLAIMED_REVIEW_REQUIRED;
   } else if (reportedBypass) state = SEAL_REVIEW_STATES.BYPASS_SUSPECTED;
   else if (openingVisual) state = SEAL_REVIEW_STATES.OPEN_MOUTH_TEAR_FEATURE_INTACT;
   else if (yes("first_opening_barrier_visible")) {
@@ -109,7 +110,7 @@ export function assessPackageSeal(input) {
   const flags = [];
   if (openingVisual) flags.push("OPEN_MOUTH_WITH_TEAR_FEATURE_INTACT");
   if (reportedBypass) flags.push("FIRST_OPENING_BYPASS_REPORTED");
-  if (witnessedBypass) flags.push("INDEPENDENT_REVIEW_REQUIRED");
+  if (claimedWitnessRecord) flags.push("INDEPENDENT_REVIEW_REQUIRED");
   if (yes("first_opening_barrier_visible")) {
     flags.push("BARRIER_VISUALLY_OBSERVED_NOT_QUALIFIED");
   }
