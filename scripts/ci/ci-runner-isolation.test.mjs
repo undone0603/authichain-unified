@@ -217,6 +217,13 @@ test("unattested ops runner cannot be selected for PR test code", () => {
     ".github/workflows/compliance-audit.yml", ".github/workflows/vercel-deploy-guard.yml",
     ".github/workflows/nightstamp-scan-gate.yml", ".github/workflows/autonomy-reconcile.yml",
     ".github/workflows/contract-tests.yml",
+    ".github/workflows/buyer-signals.yml",
+    ".github/workflows/cloudflare-builds-status.yml",
+    ".github/workflows/cloudflare-estate-audit.yml",
+    ".github/workflows/deploy-govchain-nft-base.yml",
+    ".github/workflows/codeql.yml",
+    ".github/workflows/trust-lab.yml",
+    ".github/workflows/agentz-ci.yml",
   ]) {
     const workflow = readFileSync(file, "utf8");
     for (const route of workflow.split(String.fromCharCode(10)).filter(s => s.includes("runs-on:"))) {
@@ -230,4 +237,41 @@ test("unattested ops runner cannot be selected for PR test code", () => {
   const auto = readFileSync(".github/workflows/autonomy-reconcile.yml", "utf8");
   assert.ok(auto.includes("github.ref == 'refs/heads/main' && " + attestation));
   assert.ok(main.slice(main.indexOf("  production-proof:")).includes("authichain-wsl"));
+});
+
+test("all independent PR checks require attestation before selecting ops", () => {
+  const flag = "vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'";
+  for (const name of [
+    "buyer-signals.yml", "cloudflare-builds-status.yml",
+    "cloudflare-estate-audit.yml", "deploy-govchain-nft-base.yml",
+    "trust-lab.yml", "agentz-ci.yml",
+  ]) {
+    const source = readFileSync(`.github/workflows/${name}`, "utf8");
+    assert.match(source, /pull_request:/, name);
+    const routes = source.split("\n").filter(line => line.includes("runs-on:"));
+    assert.ok(routes.some(line => line.includes("authichain-ops")), name);
+    for (const route of routes.filter(line => line.includes("authichain-ops"))) {
+      assert.ok(route.includes(flag), name);
+      assert.ok(route.includes("ubuntu-24.04"), name);
+    }
+  }
+});
+
+test("CodeQL analysis and aggregate jobs never use generic self-hosted for PRs", () => {
+  const codeql = readFileSync(".github/workflows/codeql.yml", "utf8");
+  const routes = codeql.split("\n").filter(line => line.includes("runs-on:"));
+  assert.equal(routes.length, 2);
+  for (const route of routes) {
+    assert.match(route, /vars\.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'/);
+    assert.match(route, /authichain-ops/);
+    assert.match(route, /ubuntu-24\.04/);
+    assert.doesNotMatch(route, /&& 'self-hosted'/);
+  }
+});
+
+test("GovChain live deploy remains dispatch-only, never PR-executable", () => {
+  const source = readFileSync(".github/workflows/deploy-govchain-nft-base.yml", "utf8");
+  const job = source.slice(source.indexOf("  deploy-nft:"));
+  assert.match(job, /if: github\.event_name == 'workflow_dispatch'/);
+  assert.match(job, /runs-on: \[self-hosted, Linux, ARM64, authichain-wsl\]/);
 });
