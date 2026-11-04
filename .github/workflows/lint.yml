@@ -71,6 +71,14 @@ jobs:
       - name: Run lint and prettier
         run: pnpm lint:ci
 
+      # Diagnostic only: displays formatting corrections in logs; does not
+      # commit, push, skip tests, or override the failing lint result.
+      - name: Show exact Prettier diff on lint failure
+        if: failure()
+        run: |
+          pnpm exec prettier --write .github/workflows/ci.yml .github/workflows/lint.yml
+          git diff --no-ext-diff -- .github/workflows/ci.yml .github/workflows/lint.yml
+
       - name: Check for structural cannot-fail patterns in workflows
         run: node scripts/check-workflow-cannot-fail.mjs
 
