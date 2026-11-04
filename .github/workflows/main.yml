@@ -28,10 +28,7 @@ concurrency:
   group: ci-main-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
-# Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
-# Flip to 'false' once the runner is verified; the skip step warns visibly.
 env:
-  SKIP_PLAYWRIGHT_ON_SELF_HOSTED: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && 'true' || 'false' }}
 
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
@@ -155,10 +152,10 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: "Skipped on self-hosted: Playwright browser install"
-        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED == 'true' && matrix.shard == 2
+        if: runner.environment == 'self-hosted' && matrix.shard == 2
         run: |
           if [ -d "$HOME/.cache/ms-playwright" ] && [ "$(ls -A "$HOME/.cache/ms-playwright" 2>/dev/null)" ]; then
-            echo "Using pre-cached Playwright browsers at $PLAYWRIGHT_BROWSERS_PATH"
+            echo "Using pre-cached Playwright browsers at $HOME/.cache/ms-playwright"
           else
             echo "::warning title=Skipped on self-hosted::Playwright Chromium install not run (needs apt/sudo and ARM64 Chromium). Browser-dependent tests in shard 2 may fail or be absent. Not a pass."
           fi
@@ -167,14 +164,14 @@ jobs:
       # install on a hit. Keyed on the lockfile, so a Playwright bump misses.
       - name: Cache Playwright browsers
         id: pw-cache
-        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && (matrix.shard == 2)
+        if: runner.environment != 'self-hosted' && (matrix.shard == 2)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright browsers
-        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && matrix.shard == 2 && steps.pw-cache.outputs.cache-hit != 'true'
+        if: runner.environment != 'self-hosted' && matrix.shard == 2 && steps.pw-cache.outputs.cache-hit != 'true'
         run: |
           # --with-deps needs passwordless sudo. The self-hosted runner does not
           # have it; its system libraries are already installed.
@@ -185,7 +182,7 @@ jobs:
           fi
 
       - name: Install Playwright system deps (cache hit)
-        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && matrix.shard == 2 && steps.pw-cache.outputs.cache-hit == 'true'
+        if: runner.environment != 'self-hosted' && matrix.shard == 2 && steps.pw-cache.outputs.cache-hit == 'true'
         run: |
           if sudo -n true 2>/dev/null; then
             pnpm --filter agent-browser exec playwright install-deps chromium

@@ -159,3 +159,10 @@ test("isolated CI uses per-runner temp paths and hosted Hardhat coverage", () =>
   assert.ok(!main.includes("PLAYWRIGHT_BROWSERS_PATH:"));
   assert.ok(!main.includes("TURBO_CACHE_DIR:"));
 });
+
+test("Playwright steps key off the assigned runner, not a stale repository variable", () => {
+  assert.ok(!main.includes("SKIP_PLAYWRIGHT_ON_SELF_HOSTED"));
+  assert.ok(main.includes("runner.environment == 'self-hosted' && matrix.shard == 2"));
+  assert.ok(main.includes("runner.environment != 'self-hosted' && matrix.shard == 2"));
+  assert.ok(main.includes("HOME/.cache/ms-playwright"));
+});
