@@ -31,9 +31,10 @@ permissions:
   contents: read
 jobs:
   lint:
-    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
-    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    # All pull requests use GitHub-hosted runners, including same-repo branches.
+    # Only trusted pushes to main may use the self-hosted runner.
+    # Hosted runner eligibility/billing must be verified separately.
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
