@@ -285,3 +285,47 @@ test("privileged Dependabot events cannot run on the production publisher", () =
     assert.doesNotMatch(source, /runs-on: \[self-hosted, Linux, ARM64, authichain-wsl\]/);
   }
 });
+
+test("credential-bearing ops job chains are gated by independent host attestation", () => {
+  const flag = "vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'";
+  const workflowJobs = {
+    "merge-autopilot.yml": ["sweep"],
+    "ops-pulse.yml": ["pulse"],
+    "revenue-cycle.yml": ["revenue-cycle"],
+    "gov-mint.yml": ["mint"],
+    "stripe-webhook-reconcile.yml": ["reconcile"],
+    "agentz-orchestration.yml": [
+      "resolve-mode", "ping-claw-agentz", "preflight", "qualify-leads",
+      "sync-mi-leads", "funnel-report", "notify-webhook",
+    ],
+    "gov-engine.yml": [
+      "preflight", "launch", "ingest", "score", "proposals", "mint", "notify",
+    ],
+    "b2b-outreach.yml": ["outreach"],
+    "cloudflare-production-health.yml": ["health"],
+  };
+  for (const [workflow, jobs] of Object.entries(workflowJobs)) {
+    const source = readFileSync(`.github/workflows/${workflow}`, "utf8");
+    const jobSection = source.slice(source.indexOf("\njobs:") + 6);
+    assert.ok(jobSection.length > 10, workflow);
+    const found = Array.from(jobSection.matchAll(/^  ([a-z0-9-]+):\s*$/gm));
+    for (const job of jobs) {
+      const index = found.findIndex(m => m[1] === job);
+      assert.ok(index >= 0, workflow + ":" + job);
+      const start = found[index].index;
+      const end = index + 1 < found.length ? found[index + 1].index : jobSection.length;
+      const block = jobSection.slice(start, end);
+      assert.ok(block.includes(flag), workflow + ":" + job);
+      assert.match(block, /^    if:/m, workflow + ":" + job);
+      assert.doesNotMatch(block, /authichain-wsl/, workflow + ":" + job);
+    }
+  }
+});
+
+test("GovChain Mint never selects unattested ops; explicit hosted choice survives", () => {
+  const mint = readFileSync(".github/workflows/gov-mint.yml", "utf8");
+  assert.ok(mint.includes("(inputs.runner || 'authichain-ops') == 'ubuntu-latest' || vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'"));
+  assert.ok(mint.includes('runs-on:'));
+  assert.ok(mint.includes('fromJSON(\'["ubuntu-latest"]\')'));
+  assert.ok(mint.includes('fromJSON(\'["self-hosted","Linux","ARM64","authichain-ops"]\')'));
+});
