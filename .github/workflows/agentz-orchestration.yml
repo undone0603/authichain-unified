@@ -42,6 +42,7 @@ env:
 
 jobs:
   resolve-mode:
+    if: ${{ vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' }}
     name: Resolve dry-run / ping
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     outputs:
@@ -95,7 +96,7 @@ jobs:
     name: Ping claw + AgentZ
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     needs: resolve-mode
-    if: needs.resolve-mode.outputs.ping_agentz == 'true'
+    if: (needs.resolve-mode.outputs.ping_agentz == 'true') && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'
     outputs:
       status: ${{ job.status }}
     # Job-level env cannot interpolate ${{ env.* }} (Actions parse error:
@@ -133,6 +134,7 @@ jobs:
           fi
 
   preflight:
+    if: ${{ vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' }}
     name: Verify live-operation prerequisites
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     outputs:
@@ -168,7 +170,7 @@ jobs:
     name: Qualify Leads
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     needs: [preflight, resolve-mode]
-    if: needs.preflight.outputs.ready == 'true'
+    if: (needs.preflight.outputs.ready == 'true') && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'
     steps:
       - uses: actions/checkout@v7
       # Same pattern as lint.yml / ci.yml (e1e17f8): self-hosted runners use
@@ -216,7 +218,7 @@ jobs:
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     needs: [qualify-leads, resolve-mode]
     # sync-mi-leads-hubspot.ts does not honor DRY_RUN — skip on dry-run.
-    if: needs.resolve-mode.outputs.dry_run != 'true'
+    if: (needs.resolve-mode.outputs.dry_run != 'true') && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'
     steps:
       - uses: actions/checkout@v7
       # Same pattern as lint.yml / ci.yml (e1e17f8): self-hosted runners use
@@ -261,7 +263,7 @@ jobs:
     name: Funnel Report
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     needs: [qualify-leads, resolve-mode]
-    if: always() && needs.qualify-leads.result != 'cancelled'
+    if: (always() && needs.qualify-leads.result != 'cancelled') && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'
     steps:
       - uses: actions/checkout@v7
       # Same pattern as lint.yml / ci.yml (e1e17f8): self-hosted runners use
@@ -310,7 +312,7 @@ jobs:
         sync-mi-leads,
         funnel-report,
       ]
-    if: always()
+    if: (always()) && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'
     steps:
       - name: Post orchestration summary to webhook
         env:

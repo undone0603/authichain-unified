@@ -25,6 +25,7 @@ permissions:
 
 jobs:
   preflight:
+    if: ${{ vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' }}
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     steps:
       - name: Validate SAM.gov API key
@@ -71,6 +72,7 @@ jobs:
   # its own decision and its own manual dispatch. Notify (owner Slack channel
   # only) goes live on the schedule while launch mode is active.
   launch:
+    if: ${{ vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' }}
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     outputs:
       active: ${{ steps.launch.outputs.active }}
@@ -85,6 +87,7 @@ jobs:
         run: node scripts/autonomy/launch-mode.mjs
 
   ingest:
+    if: ${{ vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' }}
     needs: preflight
     uses: ./.github/workflows/gov-ingest.yml
     with:
@@ -92,6 +95,7 @@ jobs:
     secrets: inherit
 
   score:
+    if: ${{ vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' }}
     needs: ingest
     uses: ./.github/workflows/gov-score.yml
     with:
@@ -99,6 +103,7 @@ jobs:
     secrets: inherit
 
   proposals:
+    if: ${{ vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' }}
     needs: score
     uses: ./.github/workflows/gov-proposals.yml
     with:
@@ -106,6 +111,7 @@ jobs:
     secrets: inherit
 
   mint:
+    if: ${{ vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' }}
     needs: proposals
     uses: ./.github/workflows/gov-mint.yml
     with:
@@ -114,7 +120,7 @@ jobs:
 
   notify:
     needs: [launch, ingest, score, proposals]
-    if: always()
+    if: (always()) && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'
     uses: ./.github/workflows/gov-notify.yml
     with:
       dry_run: ${{ github.event_name == 'schedule' && (needs.launch.outputs.active == 'true' && 'false' || 'true') || inputs.dry_run }}
