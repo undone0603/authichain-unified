@@ -19,7 +19,7 @@ on:
         required: false
         default: "base"
       runner:
-        description: Runner target (authichain-ops bypasses GitHub-hosted billing lock)
+        description: Runner target (authichain-ops requires isolation attestation)
         required: false
         type: choice
         default: authichain-ops
@@ -61,6 +61,8 @@ permissions:
 
 jobs:
   mint:
+    # Explicit hosted selection is unaffected; unverified ops label is not trusted.
+    if: ${{ (inputs.runner || 'authichain-ops') == 'ubuntu-latest' || vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' }}
     runs-on: ${{ (inputs.runner || 'authichain-ops') == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
 
     steps:

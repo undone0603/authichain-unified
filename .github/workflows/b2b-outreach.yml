@@ -63,7 +63,8 @@ jobs:
     # Enabling this workflow is not live send. Resolve-mode stays dry-run
     # unless vars.OWNER_LIVE_SEND=true (and dispatch also unchecks dry_run).
     # GitHub-hosted runners are billing-locked, so the dry run uses the
-    # authichain-ops machine. It already has a persistent pnpm store.
+    # authichain-ops machine. Require independently verified host isolation.
+    if: ${{ vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' }}
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 20
 
