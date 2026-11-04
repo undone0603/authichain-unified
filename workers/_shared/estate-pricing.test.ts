@@ -441,22 +441,22 @@ test("authichain pricing uses buyer copy and QRON titles; held strings unchanged
   // listed.
   assertCardWording(html, plan("free"));
   assertCardWording(html, plan("dpp_readiness"));
-  assert.match(html, /href="\/checkout\/qron_launch"/);
-  assert.match(html, /QRON Launch \$19\/mo/);
-  assert.match(html, /href="\/checkout\/qron_launch_annual"/);
-  assert.match(html, /QRON Launch \$190\/yr/);
+  assert.doesNotMatch(html, /href="\/checkout\/qron_launch"/);
+  assert.doesNotMatch(html, /QRON Launch \$19\/mo/);
+  assert.doesNotMatch(html, /href="\/checkout\/qron_launch_annual"/);
+  assert.doesNotMatch(html, /QRON Launch \$190\/yr/);
   assert.doesNotMatch(html, /<h3>QRON Launch/);
   assert.doesNotMatch(html, /Free Trial|Try Free for 7 Days/);
   // No new plan prices.
   assert.doesNotMatch(html, /\$1,499|\$199\/mo/);
 });
 
-test("qron pricing links the recurring Launch checkout without a Launch card", () => {
+test("qron pricing excludes unlisted Launch checkout and labels", () => {
   const html = renderEstatePricingPage("qron");
-  assert.match(html, /href="https:\/\/authichain.com\/checkout\/qron_launch"/);
-  assert.match(html, /QRON Launch \$19\/mo/);
-  assert.match(html, /href="https:\/\/authichain.com\/checkout\/qron_launch_annual"/);
-  assert.match(html, /QRON Launch \$190\/yr/);
+  assert.doesNotMatch(html, /href="https:\/\/authichain.com\/checkout\/qron_launch"/);
+  assert.doesNotMatch(html, /QRON Launch \$19\/mo/);
+  assert.doesNotMatch(html, /href="https:\/\/authichain.com\/checkout\/qron_launch_annual"/);
+  assert.doesNotMatch(html, /QRON Launch \$190\/yr/);
   assert.doesNotMatch(html, /<h3>QRON Launch/);
   assert.equal(plan("qron_launch").listed, false);
 });
