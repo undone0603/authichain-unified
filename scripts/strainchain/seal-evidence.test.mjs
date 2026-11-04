@@ -98,6 +98,29 @@ test("a zipper and tear feature alone do not qualify as a seal", () => {
   assert.equal(result.release_gate, "HOLD");
 });
 
+test("an unrelated label or front photo alone cannot establish an open mouth", () => {
+  const observations = {
+    mouth_open: "yes",
+    tear_feature_intact: "yes",
+    interior_access_reported_without_tearing: "yes",
+  };
+  for (const role of ["retail_label", "front", "back", "other"]) {
+    const result = assessPackageSeal(make(observations, [ref(9, { role })]));
+    assert.equal(result.state, SEAL_REVIEW_STATES.INDETERMINATE);
+    assert.ok(!result.flags.includes("OPEN_MOUTH_WITH_TEAR_FEATURE_INTACT"));
+    assert.ok(!result.flags.includes("FIRST_OPENING_BYPASS_REPORTED"));
+  }
+});
+
+test("lack of opening image must not generate an observed-bypass flag", () => {
+  const result = assessPackageSeal(make({
+    mouth_open: "yes",
+    tear_feature_intact: "yes",
+  }, []));
+  assert.equal(result.state, SEAL_REVIEW_STATES.NOT_ASSESSED);
+  assert.ok(!result.flags.includes("OPEN_MOUTH_WITH_TEAR_FEATURE_INTACT"));
+});
+
 test("private image bytes and external links cannot be embedded", () => {
   assert.throws(() => assessPackageSeal(make({}, [{ ...ref(), imageData: "secret" }])), /unexpected_evidence_field/);
   assert.throws(() => assessPackageSeal(make({}, [{ ...ref(), publicUrl: "https://example.org" }])), /unexpected_evidence_field/);
