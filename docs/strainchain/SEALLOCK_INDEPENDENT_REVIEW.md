@@ -75,7 +75,7 @@ tear-away appearance, child-resistant reclosure and ordinary print labels.
 | Strength/leak acceptance criteria preregistered | yes / no |
 | Qualification artifacts original and authenticated | yes / no / incomplete |
 | Independent reviewer signature verified | yes / no |
-| Verdict | reported bypass / indeterminate / complete for external review |
+| Verdict | reported bypass / indeterminate / ready for external review only |
 | Operational disposition | **HOLD until independently authorized** |
 
 No automated SealLock state means "verified genuine product" or authorizes
