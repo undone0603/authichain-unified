@@ -1,0 +1,18 @@
+{
+  "linkedin": "A plain QR code is just a pointer. Anyone can print one that opens any page, so a QR sticker on a product proves nothing about where the product came from.\n\nQRON takes a different approach: the QR payload carries a cryptographic signature alongside the product reference. A verifier checks that signature against the issuer's public key. If the payload was altered, or the code was never issued by that registry, the check fails and says so.\n\nThe point is that trust lives in the signature, not in the look of the sticker or the domain it happens to link to. A copied code that points somewhere else does not carry a valid signature for that destination.\n\nQRON is part of the AuthiChain family of tools alongside AuthiChain (product authentication and EU Digital Product Passport), GovChain and StrainChain.\n\nIf you issue QR codes on physical goods today, how do you tell a genuine one from a copy?\n\nhttps://qron.space/\n\nTry the verifier: https://authichain.com/verify?utm_source=linkedin&utm_medium=social&utm_campaign=qron-signed-qr&utm_content=a",
+  "reddit": {
+    "subreddit": "QRCodes",
+    "title": "A QR code is just a pointer anyone can copy. We attach a signature to the payload so it can be checked.",
+    "body": "A normal QR code encodes a URL or text and nothing else, so there is no way to tell whether the one on a product was issued by the brand or printed by someone else.\n\nQRON signs the payload. The code carries the product reference plus a cryptographic signature, and a verifier checks that signature against the issuer's public key. Change the payload and the check fails. Copy the code onto a different item and the registry record will not match what you are holding.\n\nThis does not stop someone from physically copying a valid code onto a fake item. It makes tampered or unissued codes detectable, and it moves the question from \"does this look right\" to \"does the signature check out\".\n\nWould love to hear how others here handle authenticity for printed codes, or what attack on this design I am missing.\n\nVerifier: https://authichain.com/verify?utm_source=reddit&utm_medium=social&utm_campaign=qron-signed-qr&utm_content=a\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "A plain QR code is just a pointer. Anyone can print one that opens any page, so a sticker on a product proves nothing about its origin.",
+    "QRON puts a cryptographic signature in the QR payload. A verifier checks it against the issuer's public key. Alter the payload or use an unissued code and the check fails. Trust sits in the signature, not the sticker. https://qron.space/",
+    "Try a signature check on a registered product: https://authichain.com/verify?utm_source=twitter&utm_medium=social&utm_campaign=qron-signed-qr&utm_content=a"
+  ],
+  "experiment": {
+    "campaign": "qron-signed-qr",
+    "variant": "a",
+    "hypothesis": "a problem-led hook (a plain QR code is just a copyable pointer) drives more click-through to /verify than a capability-led hook"
+  }
+}
