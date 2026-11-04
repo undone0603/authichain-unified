@@ -54,6 +54,15 @@ describe("mcp install page", () => {
     );
   });
 
+  it("publishes MCP and A2A onboarding offers without checkout or premature peer claims", () => {
+    expect(html).toContain('id="agent-connections"');
+    expect(html).toContain("A2A peer interoperability setup");
+    expect(html).toContain("https://authichain.com/.well-known/agent-card.json");
+    expect(html).toContain("https://authichain.com/api/a2a");
+    expect(html).toContain("No payment is collected on this page");
+    expect(html).toContain("Discovery is not an established peer relationship");
+  });
+
   it("offers every install path a reader needs", () => {
     expect(html).toContain(MCP_ENDPOINT);
     expect(html).toContain("cursor://anysphere.cursor-deeplink/mcp/install");

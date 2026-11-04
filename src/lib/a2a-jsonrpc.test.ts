@@ -52,6 +52,26 @@ describe("A2A JSON-RPC", () => {
     expect((again.body as { error: { code: number } }).error.code).toBe(-32004);
   });
 
+  it("SendMessage can describe MCP/A2A setup without claiming a peer connection or charge", () => {
+    const store = memoryA2aStore();
+    const res = handleA2aJsonRpc(
+      call("SendMessage", {
+        message: { messageId: "setup-1", role: "ROLE_USER", parts: [{ text: "MCP and A2A setup offers and connections" }] },
+      }),
+      { store, now: NOW }
+    );
+    expect(res.status).toBe(200);
+    const body = res.body as {
+      result: { task: { artifacts: Array<{ name: string; parts: Array<{ text: string }> }> } };
+    };
+    const artifact = body.result.task.artifacts[0];
+    expect(artifact.name).toBe("connection-setup-discovery");
+    expect(artifact.parts[0].text).toContain("/mcp/install#agent-connections");
+    expect(artifact.parts[0].text).toContain("quote-only");
+    expect(artifact.parts[0].text).toContain("No external peer is connected");
+    expect(artifact.parts[0].text).not.toContain("buy.stripe.com");
+  });
+
   it("GetTask honors historyLength and ListTasks omits artifacts", () => {
     const store = memoryA2aStore();
     const sent = handleA2aJsonRpc(
