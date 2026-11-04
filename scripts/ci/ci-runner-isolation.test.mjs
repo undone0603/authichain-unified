@@ -8,15 +8,21 @@ const publisher = readFileSync(
   ".github/workflows/deploy-authichain-edge-router.yml", "utf8"
 );
 
-test("all five CI Main jobs use isolated authichain-ops, never the production publisher", () => {
-  const expressions = [...main.matchAll(/runs-on: \${{([^\n]+)}}/g)].map(m => m[1]);
-  assert.equal(expressions.length, 5);
+test("all four required CI validation jobs use isolated authichain-ops", () => {
+  const expressions = [...main.matchAll(/runs-on: \$\{\{([^\n]+)\}\}/g)].map(
+    match => match[1]
+  );
+  assert.equal(expressions.length, 4);
   for (const exp of expressions) {
     assert.match(exp, /authichain-ops/);
     assert.doesNotMatch(exp, /authichain-wsl/);
-    assert.match(exp, /github\.event\.pull_request\.head\.repo\.full_name == github\.repository/);
+    assert.match(exp, /head\.repo\.full_name == github\.repository/);
     assert.match(exp, /ubuntu-24\.04/);
   }
+  const productionProof = main.slice(main.indexOf("  production-proof:"));
+  assert.match(productionProof, /runs-on: \[self-hosted, Linux, ARM64, authichain-wsl\]/);
+  assert.match(productionProof, /if: github\.event_name == 'push'/);
+  assert.match(productionProof, /\[pipeline-proof\]/);
 });
 
 test("CI extras remain isolated while fork pull requests retain hosted runner", () => {
