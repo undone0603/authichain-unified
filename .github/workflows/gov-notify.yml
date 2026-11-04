@@ -21,7 +21,7 @@ on:
 jobs:
   notify:
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
-    if: always()
+    if: always() && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'
 
     steps:
       - uses: actions/checkout@v7

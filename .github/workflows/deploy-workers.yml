@@ -30,7 +30,7 @@ permissions:
 jobs:
   secret-scan:
     name: Secret scan
-    runs-on: ${{ vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -72,7 +72,7 @@ jobs:
   # no other worker is ever in that path's matrix.
   deploy-matrix:
     name: Build worker matrix
-    runs-on: ${{ vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     timeout-minutes: 5
     outputs:
@@ -450,7 +450,7 @@ jobs:
     name: Post-deploy smoke (blocking)
     needs: [deploy]
     if: ${{ needs.deploy.result == 'success' }}
-    runs-on: ${{ vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 10
     permissions:
       contents: read
