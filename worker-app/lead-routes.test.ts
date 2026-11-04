@@ -418,3 +418,27 @@ describe("is-this-real lead source", () => {
     expect(NO_OUTBOUND_SOURCE).toBe("is-this-real");
   });
 });
+
+describe("GovChain contractor intake hold", () => {
+  it("persists the GovChain-tagged inquiry without launching enrichment or external outreach", async () => {
+    const res = await post("/api/leads/capture", {
+      email: "contractor@example.com",
+      name: "Example Contractor",
+      source: "govchain_onboard",
+      product_interest: "govchain",
+      page_url: "https://govchain.us/onboard",
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    const captured = inserts.find(entry => entry.table === "lead_captures");
+    expect(captured).toBeDefined();
+    expect(captured?.row).toMatchObject({
+      email: "contractor@example.com",
+      source: "govchain_onboard",
+      product_interest: "govchain",
+      page_url: "https://govchain.us/onboard",
+    });
+    expect(fetchCalls).toHaveLength(0);
+    expect(hubspotCalls()).toHaveLength(0);
+  });
+});
