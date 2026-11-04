@@ -1,7 +1,7 @@
 /**
  * Non-standard, read-only AuthiChain capability preflight.
  *
- * /negotiate is NOT MCP initialize, MCP 2026-07-28 server/discover,
+ * /agent-compatibility is NOT MCP initialize, MCP 2026-07-28 server/discover,
  * an A2A 1.0 operation, or an authorization decision. No peer connections,
  * tool invocation, tasks, identity assertions, signing, or settlement occur.
  */
@@ -18,7 +18,7 @@ export const NEGOTIATE_CAPABILITIES = [
   "a2a.agent_card.read",
 ] as const;
 
-const NEGOTIATE_SCHEMA = "authichain-agent-negotiate/1";
+const NEGOTIATE_SCHEMA = "authichain-agent-compatibility/1";
 const MAX_BODY_BYTES = 4096;
 const INPUT_KEYS = new Set(["intent", "mcpVersions", "a2aVersions", "capabilities"]);
 const PUBLIC_NEXT = {
@@ -158,11 +158,11 @@ async function boundedJson(request: Request): Promise<{ ok: true; data: unknown 
   }
 }
 
-/** Routed before /api/* proxy and before /mcp, so /api/negotiate is local. */
-export async function tryHandleAgentNegotiate(request: Request): Promise<Response | null> {
+/** Routed before /api/* proxy and before /mcp; not the commercial /negotiate engine. */
+export async function tryHandleAgentCompatibility(request: Request): Promise<Response | null> {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "") || "/";
-  if (path !== "/negotiate" && path !== "/api/negotiate") return null;
+  if (path !== "/agent-compatibility" && path !== "/api/agent-compatibility") return null;
   const origin = request.headers.get("Origin");
   if (origin) {
     let allowed = false;
