@@ -38,9 +38,9 @@ permissions:
 jobs:
   dry-run:
     name: Worker dry-run build
-    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
-    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    # PR code always uses a hosted runner; never execute it on a credentialed host.
+    # Push/dispatch may use authichain-ops only after independent host isolation audit.
+    runs-on: ${{ github.event_name != 'pull_request' && vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 40
     defaults:
       run:
@@ -80,19 +80,10 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Compile changed workers
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         env:
           DIFF_BEFORE: ${{ github.event.before }}
           DISPATCH_WORKER: ${{ github.event.inputs.worker }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node scripts/ci/build-workers.mjs
-
-      - name: Fork pull request has no Cloudflare token
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
-        run: |
-          echo "::error::Fork pull requests cannot compile workers (no Cloudflare token)."
-          exit 1
 
       # Persistent self-hosted runner: drop deps and build outputs so state
       # never leaks into the next run. Workspace-only; never outside it.
