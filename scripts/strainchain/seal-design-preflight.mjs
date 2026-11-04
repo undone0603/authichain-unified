@@ -20,6 +20,7 @@ const PASS = new Set(["pass", "fail", "unknown", "not_applicable"]);
 const YES_NO_UNKNOWN = new Set(["yes", "no", "unknown"]);
 const SHA = /^[a-f0-9]{64}$/;
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$/;
+const SAFE_REVISION = /^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/;
 const ROLES = new Set(["issuer_claim", "laboratory_claim", "independent_reviewer_claim"]);
 const EXACT_RECORD_KEYS = ["result", "artifact_sha256", "recorded_by"];
 const EXACT_GEOMETRY_KEYS = [
@@ -50,7 +51,9 @@ export function assessSealDesignPreflight(input) {
     "design_id", "revision", "geometry", "criteria_sha256",
     "sample_plan_sha256", "challenge", "gates",
   ], "design");
-  if (!SAFE_ID.test(input.design_id) || !SAFE_ID.test(input.revision)) {
+  if (typeof input.design_id !== "string" ||
+      typeof input.revision !== "string" ||
+      !SAFE_ID.test(input.design_id) || !SAFE_REVISION.test(input.revision)) {
     throw new Error("invalid_design_identity");
   }
   exactKeys(input.geometry, EXACT_GEOMETRY_KEYS, "geometry");
