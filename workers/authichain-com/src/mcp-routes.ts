@@ -53,6 +53,7 @@ import {
 } from "../../authichain-verify-worker/src/protocol-verify.mjs";
 import { publishedRecord } from "../../authichain-verify-worker/src/published-record.mjs";
 import { agentConnectionDiscovery } from "./agent-setup-offers";
+import { negotiateAgentCapabilities } from "./agent-negotiate";
 import {
   DPP_CATEGORIES,
   DPP_QUESTIONS,
@@ -108,6 +109,21 @@ export const TOOLS = [
     inputSchema: {
       type: "object",
       properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "negotiate",
+    description:
+      "Free, read-only AuthiChain MCP/A2A capability compatibility preflight. This is not MCP initialize, MCP server/discover, peer authorization, a session, or a message/payment/signing action.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        intent: { type: "string", enum: ["discover"] },
+        mcpVersions: { type: "array", items: { type: "string" }, maxItems: 8 },
+        a2aVersions: { type: "array", items: { type: "string" }, maxItems: 8 },
+        capabilities: { type: "array", items: { type: "string" }, maxItems: 12 },
+      },
       additionalProperties: false,
     },
   },
@@ -1401,6 +1417,14 @@ async function handleRpc(
             text: JSON.stringify(mcpPricingDiscovery(env), null, 2),
           },
         ],
+      });
+    }
+    if (name === "negotiate") {
+      const result = negotiateAgentCapabilities(params.arguments ?? {});
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(result) }],
+        ...(result.status === "discovery_only" || result.status === "compatible_read_only"
+          ? {} : { isError: true }),
       });
     }
     if (name === "get_agent_setup_offers") {
