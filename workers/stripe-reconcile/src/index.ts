@@ -54,6 +54,13 @@ async function db(env: Env, path: string, init: RequestInit = {}): Promise<any> 
   return init.method === "POST" ? null : r.json();
 }
 
+/** Stripe metadata values are strings; never forward an untyped value to the ledger. */
+function testPaymentMetadata(metadata: unknown): Record<string, string> {
+  if (metadata === null || typeof metadata !== "object") return {};
+  const value = (metadata as { test_payment?: unknown }).test_payment;
+  return typeof value === "string" ? { test_payment: value } : {};
+}
+
 export async function gather(env: Env, now: Date): Promise<ReconInput> {
   const full = isFullHistory(env) || now.getUTCDay() === 0;
   const start = full ? new Date(0) : new Date(now.getTime() - 48 * 3600e3);
@@ -77,7 +84,7 @@ export async function gather(env: Env, now: Date): Promise<ReconInput> {
     windowStart: iso, windowEnd: now.toISOString(),
     charges: charges.map((c) => ({ id: c.id, payment_intent: c.payment_intent, amount: c.amount,
       amount_refunded: c.amount_refunded, currency: c.currency, status: c.status, refunded: c.refunded,
-      livemode: c.livemode, metadata: c.metadata?.test_payment ? { test_payment: c.metadata.test_payment } : {} })),
+      livemode: c.livemode, metadata: testPaymentMetadata(c.metadata) })),
     sessions: sessions.map((s) => ({ id: s.id, payment_intent: s.payment_intent, livemode: s.livemode, status: s.status })),
     payouts: payoutRows, ledger, events, allowlist: allowlistFile.ids,
   };

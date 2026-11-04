@@ -29,11 +29,32 @@ permissions:
 jobs:
   ratchet:
     name: Typecheck ratchet
-    # Zac, Oct 23 9:30 AM ET: use wsl-zac-arm64. Public repo: never run fork PRs on it.
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    # CI isolation: never run typecheck jobs on the production publishing runner.
+    # Run on main pushes and fork PRs as well; fork code uses hosted isolation.
+    runs-on: ${{ vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
+      # PR jobs must not erase corrupted Git evidence. Quarantine/repair is an
+      # operator-only task after the host has independently passed isolation review.
+      - name: Check stale Git metadata (read-only; fail closed)
+        if: runner.environment == 'self-hosted' && github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY:?}" = "undone0603/authichain-unified"
+          test "${GITHUB_WORKSPACE:?}" = "${RUNNER_WORKSPACE:?}/authichain-unified"
+          test ! -L "$GITHUB_WORKSPACE"
+          if test -e "$GITHUB_WORKSPACE/.git" || test -L "$GITHUB_WORKSPACE/.git"; then
+            test -d "$GITHUB_WORKSPACE/.git"
+            test ! -L "$GITHUB_WORKSPACE/.git"
+            if ! git -C "$GITHUB_WORKSPACE" fsck --full --no-reflogs >/dev/null; then
+              echo "::error::Corrupt PR checkout; stop and quarantine this workspace from the operator host."
+              exit 1
+            fi
+            if test -e "$GITHUB_WORKSPACE/.git/ORIG_HEAD"; then
+              git -C "$GITHUB_WORKSPACE" rev-parse --verify 'ORIG_HEAD^{commit}' >/dev/null
+            fi
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Restore full tree after sparse checkout
         if: runner.environment == 'self-hosted'
@@ -47,7 +68,7 @@ jobs:
           version: "10.28.2"
           # action-setup deletes dest on every job. A shared ~/setup-pnpm
           # races when both self-hosted runners install pnpm together.
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+          dest: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm-{1}', runner.temp, runner.name) || '~/setup-pnpm' }}
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:

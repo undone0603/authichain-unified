@@ -28,13 +28,6 @@ concurrency:
   group: ci-main-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
-# Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
-# Flip to 'false' once the runner is verified; the skip step warns visibly.
-env:
-  SKIP_PLAYWRIGHT_ON_SELF_HOSTED: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && 'true' || 'false' }}
-  PLAYWRIGHT_BROWSERS_PATH: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/ms-playwright' || '/home/runner/.cache/ms-playwright' }}
-  TURBO_CACHE_DIR: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/turbo' || '/home/runner/.cache/turbo' }}
-
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
   contents: read
@@ -50,9 +43,30 @@ jobs:
     name: Typecheck and lint
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
+      # PR jobs must not erase corrupted Git evidence. Quarantine/repair is an
+      # operator-only task after the host has independently passed isolation review.
+      - name: Check stale Git metadata (read-only; fail closed)
+        if: runner.environment == 'self-hosted' && github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY:?}" = "undone0603/authichain-unified"
+          test "${GITHUB_WORKSPACE:?}" = "${RUNNER_WORKSPACE:?}/authichain-unified"
+          test ! -L "$GITHUB_WORKSPACE"
+          if test -e "$GITHUB_WORKSPACE/.git" || test -L "$GITHUB_WORKSPACE/.git"; then
+            test -d "$GITHUB_WORKSPACE/.git"
+            test ! -L "$GITHUB_WORKSPACE/.git"
+            if ! git -C "$GITHUB_WORKSPACE" fsck --full --no-reflogs >/dev/null; then
+              echo "::error::Corrupt PR checkout; stop and quarantine this workspace from the operator host."
+              exit 1
+            fi
+            if test -e "$GITHUB_WORKSPACE/.git/ORIG_HEAD"; then
+              git -C "$GITHUB_WORKSPACE" rev-parse --verify 'ORIG_HEAD^{commit}' >/dev/null
+            fi
+          fi
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Restore full tree after sparse checkout
@@ -69,7 +83,7 @@ jobs:
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+          dest: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm-{1}', runner.temp, runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -116,7 +130,7 @@ jobs:
     name: Tests (shard ${{ matrix.shard }}/2)
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -127,6 +141,27 @@ jobs:
           - shard: 2
             filter: "--filter=!./workers/* --filter=!*worker*"
     steps:
+      # PR jobs must not erase corrupted Git evidence. Quarantine/repair is an
+      # operator-only task after the host has independently passed isolation review.
+      - name: Check stale Git metadata (read-only; fail closed)
+        if: runner.environment == 'self-hosted' && github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY:?}" = "undone0603/authichain-unified"
+          test "${GITHUB_WORKSPACE:?}" = "${RUNNER_WORKSPACE:?}/authichain-unified"
+          test ! -L "$GITHUB_WORKSPACE"
+          if test -e "$GITHUB_WORKSPACE/.git" || test -L "$GITHUB_WORKSPACE/.git"; then
+            test -d "$GITHUB_WORKSPACE/.git"
+            test ! -L "$GITHUB_WORKSPACE/.git"
+            if ! git -C "$GITHUB_WORKSPACE" fsck --full --no-reflogs >/dev/null; then
+              echo "::error::Corrupt PR checkout; stop and quarantine this workspace from the operator host."
+              exit 1
+            fi
+            if test -e "$GITHUB_WORKSPACE/.git/ORIG_HEAD"; then
+              git -C "$GITHUB_WORKSPACE" rev-parse --verify 'ORIG_HEAD^{commit}' >/dev/null
+            fi
+          fi
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Restore full tree after sparse checkout
@@ -143,7 +178,7 @@ jobs:
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+          dest: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm-{1}', runner.temp, runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -157,10 +192,10 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: "Skipped on self-hosted: Playwright browser install"
-        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED == 'true' && matrix.shard == 2
+        if: runner.environment == 'self-hosted' && matrix.shard == 2
         run: |
-          if [ -d "$PLAYWRIGHT_BROWSERS_PATH" ] && [ "$(ls -A "$PLAYWRIGHT_BROWSERS_PATH" 2>/dev/null)" ]; then
-            echo "Using pre-cached Playwright browsers at $PLAYWRIGHT_BROWSERS_PATH"
+          if [ -d "$HOME/.cache/ms-playwright" ] && [ "$(ls -A "$HOME/.cache/ms-playwright" 2>/dev/null)" ]; then
+            echo "Using pre-cached Playwright browsers at $HOME/.cache/ms-playwright"
           else
             echo "::warning title=Skipped on self-hosted::Playwright Chromium install not run (needs apt/sudo and ARM64 Chromium). Browser-dependent tests in shard 2 may fail or be absent. Not a pass."
           fi
@@ -169,14 +204,14 @@ jobs:
       # install on a hit. Keyed on the lockfile, so a Playwright bump misses.
       - name: Cache Playwright browsers
         id: pw-cache
-        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && (matrix.shard == 2)
+        if: runner.environment != 'self-hosted' && (matrix.shard == 2)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright browsers
-        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && matrix.shard == 2 && steps.pw-cache.outputs.cache-hit != 'true'
+        if: runner.environment != 'self-hosted' && matrix.shard == 2 && steps.pw-cache.outputs.cache-hit != 'true'
         run: |
           # --with-deps needs passwordless sudo. The self-hosted runner does not
           # have it; its system libraries are already installed.
@@ -187,7 +222,7 @@ jobs:
           fi
 
       - name: Install Playwright system deps (cache hit)
-        if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && matrix.shard == 2 && steps.pw-cache.outputs.cache-hit == 'true'
+        if: runner.environment != 'self-hosted' && matrix.shard == 2 && steps.pw-cache.outputs.cache-hit == 'true'
         run: |
           if sudo -n true 2>/dev/null; then
             pnpm --filter agent-browser exec playwright install-deps chromium
@@ -224,9 +259,30 @@ jobs:
     name: Production build
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
+      # PR jobs must not erase corrupted Git evidence. Quarantine/repair is an
+      # operator-only task after the host has independently passed isolation review.
+      - name: Check stale Git metadata (read-only; fail closed)
+        if: runner.environment == 'self-hosted' && github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY:?}" = "undone0603/authichain-unified"
+          test "${GITHUB_WORKSPACE:?}" = "${RUNNER_WORKSPACE:?}/authichain-unified"
+          test ! -L "$GITHUB_WORKSPACE"
+          if test -e "$GITHUB_WORKSPACE/.git" || test -L "$GITHUB_WORKSPACE/.git"; then
+            test -d "$GITHUB_WORKSPACE/.git"
+            test ! -L "$GITHUB_WORKSPACE/.git"
+            if ! git -C "$GITHUB_WORKSPACE" fsck --full --no-reflogs >/dev/null; then
+              echo "::error::Corrupt PR checkout; stop and quarantine this workspace from the operator host."
+              exit 1
+            fi
+            if test -e "$GITHUB_WORKSPACE/.git/ORIG_HEAD"; then
+              git -C "$GITHUB_WORKSPACE" rev-parse --verify 'ORIG_HEAD^{commit}' >/dev/null
+            fi
+          fi
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Restore full tree after sparse checkout
@@ -243,7 +299,7 @@ jobs:
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+          dest: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm-{1}', runner.temp, runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -296,7 +352,7 @@ jobs:
     if: ${{ !cancelled() }}
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 5
     steps:
       - name: All CI Main jobs passed
@@ -325,7 +381,7 @@ jobs:
   production-proof:
     name: Production launch proof
     if: github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
-    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 20
     permissions:
       contents: read
@@ -347,7 +403,7 @@ jobs:
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+          dest: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm-{1}', runner.temp, runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7

@@ -21,11 +21,6 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
-# Flip to 'false' once the runner is verified; the skip step warns visibly.
-env:
-  SKIP_HARDHAT_ON_SELF_HOSTED: "true"
-
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
   contents: read
@@ -33,17 +28,45 @@ jobs:
   lint:
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
-    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
+      # PR jobs must not erase corrupted Git evidence. Quarantine/repair is an
+      # operator-only task after the host has independently passed isolation review.
+      - name: Check stale Git metadata (read-only; fail closed)
+        if: runner.environment == 'self-hosted' && github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY:?}" = "undone0603/authichain-unified"
+          test "${GITHUB_WORKSPACE:?}" = "${RUNNER_WORKSPACE:?}/authichain-unified"
+          test ! -L "$GITHUB_WORKSPACE"
+          if test -e "$GITHUB_WORKSPACE/.git" || test -L "$GITHUB_WORKSPACE/.git"; then
+            test -d "$GITHUB_WORKSPACE/.git"
+            test ! -L "$GITHUB_WORKSPACE/.git"
+            if ! git -C "$GITHUB_WORKSPACE" fsck --full --no-reflogs >/dev/null; then
+              echo "::error::Corrupt PR checkout; stop and quarantine this workspace from the operator host."
+              exit 1
+            fi
+            if test -e "$GITHUB_WORKSPACE/.git/ORIG_HEAD"; then
+              git -C "$GITHUB_WORKSPACE" rev-parse --verify 'ORIG_HEAD^{commit}' >/dev/null
+            fi
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       # Install the repo-pinned manager for every runner; never trust global PATH.
+      # The persistent runner may have a prior sparse-checkout configuration.
+      # Restore the repository and refuse to run a hollow/partial checkout.
+      - name: Ensure complete checkout
+        run: |
+          git sparse-checkout disable
+          test -f package.json
+          test -f pnpm-lock.yaml
+
       - name: Install pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
-
+          dest: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm-{1}', runner.temp, runner.name) || '~/setup-pnpm' }}
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -66,7 +89,15 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run lint and prettier
-        run: pnpm run --dir "${GITHUB_WORKSPACE}" lint:ci
+        run: pnpm lint:ci
+
+      # Diagnostic only: displays formatting corrections in logs; does not
+      # commit, push, skip tests, or override the failing lint result.
+      - name: Show exact Prettier diff on lint failure
+        if: failure()
+        run: |
+          pnpm exec prettier --write .github/workflows/ci.yml .github/workflows/lint.yml
+          git diff --no-ext-diff -- .github/workflows/ci.yml .github/workflows/lint.yml
 
       - name: Check for structural cannot-fail patterns in workflows
         run: node scripts/check-workflow-cannot-fail.mjs
@@ -122,11 +153,11 @@ jobs:
       # Hardhat contract tests (test/AuthiChainLedger.test.ts). Hardhat fetches
       # solc 0.8.19 on first run; no other job ran these.
       - name: Contract tests (Hardhat)
-        if: env.SKIP_HARDHAT_ON_SELF_HOSTED != 'true'
+        if: runner.environment != 'self-hosted'
         run: pnpm test:contracts
 
       - name: "Skipped on self-hosted: Hardhat contract tests"
-        if: env.SKIP_HARDHAT_ON_SELF_HOSTED == 'true'
+        if: runner.environment == 'self-hosted'
         run: echo "::warning title=Skipped on self-hosted::Hardhat contract tests (pnpm test:contracts) not run - solc 0.8.19 fetch/ARM64 binary unverified on the runner. Not a pass."
 
       - name: Check wrangler.toml Durable Object migrations

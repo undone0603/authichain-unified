@@ -33,8 +33,29 @@ jobs:
   extras:
     name: Drizzle + Pytest Extras
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
-    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     steps:
+      # PR jobs must not erase corrupted Git evidence. Quarantine/repair is an
+      # operator-only task after the host has independently passed isolation review.
+      - name: Check stale Git metadata (read-only; fail closed)
+        if: runner.environment == 'self-hosted' && github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY:?}" = "undone0603/authichain-unified"
+          test "${GITHUB_WORKSPACE:?}" = "${RUNNER_WORKSPACE:?}/authichain-unified"
+          test ! -L "$GITHUB_WORKSPACE"
+          if test -e "$GITHUB_WORKSPACE/.git" || test -L "$GITHUB_WORKSPACE/.git"; then
+            test -d "$GITHUB_WORKSPACE/.git"
+            test ! -L "$GITHUB_WORKSPACE/.git"
+            if ! git -C "$GITHUB_WORKSPACE" fsck --full --no-reflogs >/dev/null; then
+              echo "::error::Corrupt PR checkout; stop and quarantine this workspace from the operator host."
+              exit 1
+            fi
+            if test -e "$GITHUB_WORKSPACE/.git/ORIG_HEAD"; then
+              git -C "$GITHUB_WORKSPACE" rev-parse --verify 'ORIG_HEAD^{commit}' >/dev/null
+            fi
+          fi
       - uses: actions/checkout@v4
       - name: Restore full tree after sparse checkout
         if: runner.environment == 'self-hosted'
@@ -51,8 +72,7 @@ jobs:
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
-
+          dest: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm-{1}', runner.temp, runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -61,7 +81,7 @@ jobs:
 
       - name: Setup Python virtual environment
         run: |
-          VENV_DIR="/home/zac/.cache/agentz-venv-${{ runner.name }}"
+          VENV_DIR="${RUNNER_TEMP:?}/agentz-venv"
           if [ ! -d "$VENV_DIR" ]; then
             python3 -m venv "$VENV_DIR"
           fi
@@ -69,6 +89,7 @@ jobs:
           if [ -f "requirements-agentz.txt" ]; then
             "$VENV_DIR/bin/pip" install -r requirements-agentz.txt
           fi
+          echo "AGENTZ_VENV=$VENV_DIR" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -82,7 +103,7 @@ jobs:
             echo "::warning::Skipping AgentZ pytest on self-hosted ARM64 runner (tooling incomplete)."
             exit 0
           fi
-          PYTHONPATH="${GITHUB_WORKSPACE}" /home/zac/.cache/agentz-venv-${{ runner.name }}/bin/pytest agentz/tests
+          PYTHONPATH="${GITHUB_WORKSPACE}" "$AGENTZ_VENV/bin/python" -m pytest agentz/tests
 
       # Persistent self-hosted runner: drop deps and build outputs so state
       # never leaks into the next run. Workspace-only; never outside it.

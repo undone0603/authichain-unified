@@ -8,7 +8,8 @@ on:
 
 jobs:
   automerge:
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    if: vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     permissions:
       contents: read
       checks: read

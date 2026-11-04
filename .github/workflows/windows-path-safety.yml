@@ -18,7 +18,7 @@ concurrency:
 jobs:
   paths:
     name: Reject NTFS-illegal filenames
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04') || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
