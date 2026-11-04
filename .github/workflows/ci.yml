@@ -32,7 +32,6 @@ env:
 jobs:
   extras:
     name: Drizzle + Pytest Extras
-    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
     runs-on: ${{ (github.event_name != 'pull_request') && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@v4
