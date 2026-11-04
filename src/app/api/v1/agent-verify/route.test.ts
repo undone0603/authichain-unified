@@ -1,5 +1,9 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { GET, POST } from "./route";
+
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: async () => ({ ok: true, remaining: 120 }),
+}));
 
 const PAY_TO = "0xabc0000000000000000000000000000000000001";
 const SEAL = "3f6c2a4e-8b1d-4c7a-9e2f-0a1b2c3d4e5f";
@@ -65,13 +69,37 @@ describe("POST /api/v1/agent-verify (Next)", () => {
     expect(res.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
   });
 
-  it("refuses the all-zero discovery example before the 402", async () => {
+  it("refuses a paid all-zero discovery example before settlement", async () => {
     process.env.X402_PAY_TO = PAY_TO;
-    const res = await post(JSON.stringify({ sealId: NIL }));
+    const res = await POST(
+      new Request("https://authichain.com/api/v1/agent-verify", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "X-PAYMENT": Buffer.from(
+            JSON.stringify({
+              scheme: "exact",
+              network: "base",
+              payer: "0xabc0000000000000000000000000000000000002",
+              amount: "50000",
+              validBefore: String(Math.floor(Date.now() / 1000) + 600),
+              signature: "0xdead",
+            })
+          ).toString("base64"),
+        },
+        body: JSON.stringify({ sealId: NIL }),
+      })
+    );
     expect(res.status).toBe(400);
-    expect(res.headers.get("PAYMENT-REQUIRED")).toBeNull();
     const json = (await res.json()) as { error: string; settled: boolean };
     expect(json.error).toBe("seal_id_nil");
     expect(json.settled).toBe(false);
+  });
+
+  it("keeps the unpaid all-zero discovery example on the 402 challenge", async () => {
+    process.env.X402_PAY_TO = PAY_TO;
+    const res = await post(JSON.stringify({ sealId: NIL }));
+    expect(res.status).toBe(402);
+    expect(res.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
   });
 });
