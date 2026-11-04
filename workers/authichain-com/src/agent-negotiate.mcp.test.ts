@@ -15,14 +15,14 @@ describe("MCP/A2A negotiate discovery boundaries", () => {
     const res = await tryHandleMcp(mcp("tools/list"));
     expect(res?.status).toBe(200);
     const body = (await res!.json()) as { result: { tools: Array<{ name: string; inputSchema: Record<string, unknown> }> } };
-    const tool = body.result.tools.find(t => t.name === "negotiate");
+    const tool = body.result.tools.find(t => t.name === "get_agent_compatibility");
     expect(tool).toBeDefined();
     expect(tool?.inputSchema.additionalProperties).toBe(false);
   });
 
   it("returns compatibility data, never a token or connection state", async () => {
     const res = await tryHandleMcp(mcp("tools/call", {
-      name: "negotiate",
+      name: "get_agent_compatibility",
       arguments: {
         intent: "discover",
         mcpVersions: ["2025-06-18"],
@@ -42,7 +42,7 @@ describe("MCP/A2A negotiate discovery boundaries", () => {
 
   it("rejects capability escalation as an MCP tool error", async () => {
     const res = await tryHandleMcp(mcp("tools/call", {
-      name: "negotiate",
+      name: "get_agent_compatibility",
       arguments: { mcpVersions: ["2025-06-18"], intent: "pay", capabilities: ["mcp.tools.pay"] },
     }));
     const body = (await res!.json()) as { result: { content: Array<{ text: string }>; isError: boolean } };
@@ -69,7 +69,7 @@ describe("MCP/A2A negotiate discovery boundaries", () => {
       result: { task: { artifacts: Array<{ parts: Array<{ text: string }> }> } };
     };
     const text = body.result.task.artifacts[0].parts[0].text;
-    expect(text).toContain("https://authichain.com/negotiate");
+    expect(text).toContain("https://authichain.com/agent-compatibility");
     expect(text).toContain("No external peer is connected");
     expect(text).not.toContain("buy.stripe.com");
   });
