@@ -54,3 +54,61 @@ test("smoke expects current jWTo5QsZ kid and retired T3AL7c4w kid", () => {
   assert.match(smoke, /protocol\/jwks\.json/);
   assert.match(smoke, /protocol\/issuer\.json/);
 });
+
+test("uplink gate is a configurable floor sized to the measured link, not 200 KB/s", () => {
+  const probe = step("Preflight uplink probe");
+  assert.match(probe, /MIN_UPLINK_BYTES_PER_SEC: "80000"/);
+  assert.match(probe, /-lt "\$\{MIN_UPLINK_BYTES_PER_SEC\}"/);
+  assert.doesNotMatch(probe, /-lt 200000/);
+  // A bundle at the floor must still upload well inside the script's 600 s ceiling.
+  const floor = Number(probe.match(/MIN_UPLINK_BYTES_PER_SEC: "(\d+)"/)[1]);
+  assert.ok(floor >= 20_000 && 9_300_000 / floor < 600, "floor must allow an 8.8 MiB upload in under 600 s");
+  assert.ok(floor <= 11_000 * 10, "floor must stay well above the 7-11 KB/s stall speeds");
+});
+
+test("rollback target is recorded before publish and fails closed", () => {
+  const record = step("Record live version (rollback target)");
+  assert.match(record, /set -euo pipefail/);
+  assert.match(record, /live-worker-version\.mjs authichain-edge-router/);
+  assert.match(record, /PREV_VERSION_ID=\$\{prev\}" >> "\$GITHUB_ENV"/);
+  assert.doesNotMatch(record, /\|\| true/);
+  assert.ok(
+    yml.indexOf("- name: Record live version") < yml.indexOf("- name: Publish authichain-edge-router"),
+    "live version must be recorded before anything is uploaded"
+  );
+});
+
+test("publish marks the promoted version only after promotion succeeds", () => {
+  const publish = step("Publish authichain-edge-router");
+  const promoteAt = publish.indexOf("promotion=$(node");
+  const markAt = publish.indexOf('PROMOTED_VERSION_ID=${vid}');
+  assert.ok(promoteAt > -1 && markAt > promoteAt, "marker must follow the promote call");
+});
+
+test("smoke retries before declaring failure, with no pipe into grep -q", () => {
+  const smoke = step("Smoke JWKS current + retired kids");
+  assert.match(smoke, /set -euo pipefail/);
+  assert.match(smoke, /for attempt in 1 2 3 4 5; do/);
+  assert.match(smoke, /JWKS\/issuer smoke failed after 5 attempts/);
+  assert.doesNotMatch(smoke, /\| grep/);
+  assert.doesNotMatch(smoke, /\|\| true/);
+});
+
+test("failed smoke after promotion restores the previous version via the API promote path", () => {
+  const rollback = step("Roll back to previous version");
+  assert.match(
+    rollback,
+    /if: failure\(\) && env\.PROMOTED_VERSION_ID != '' && env\.PREV_VERSION_ID != ''/
+  );
+  assert.match(rollback, /promote-worker-version\.mjs authichain-edge-router "\$\{PREV_VERSION_ID\}"/);
+  assert.match(rollback, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
+  assert.match(rollback, /CLOUDFLARE_ACCOUNT_ID: \$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
+  assert.doesNotMatch(rollback, /\|\| true/);
+  assert.doesNotMatch(rollback, /wrangler/);
+  // Last step: it must see the smoke result and nothing may run after it.
+  assert.ok(
+    yml.indexOf("- name: Roll back to previous version") >
+      yml.indexOf("- name: Smoke JWKS current + retired kids")
+  );
+  assert.equal(yml.match(/\n      - name: /g).length, yml.slice(0, yml.indexOf("- name: Roll back")).match(/\n      - name: /g).length + 1);
+});
