@@ -77,7 +77,7 @@ export async function gather(env: Env, now: Date): Promise<ReconInput> {
     windowStart: iso, windowEnd: now.toISOString(),
     charges: charges.map((c) => ({ id: c.id, payment_intent: c.payment_intent, amount: c.amount,
       amount_refunded: c.amount_refunded, currency: c.currency, status: c.status, refunded: c.refunded,
-      livemode: c.livemode, metadata: c.metadata?.test_payment ? { test_payment: c.metadata.test_payment } : {} })),
+      livemode: c.livemode, ...(typeof c.metadata?.test_payment === "string" ? { metadata: { test_payment: c.metadata.test_payment as string } } : {}) })),
     sessions: sessions.map((s) => ({ id: s.id, payment_intent: s.payment_intent, livemode: s.livemode, status: s.status })),
     payouts: payoutRows, ledger, events, allowlist: allowlistFile.ids,
   };
