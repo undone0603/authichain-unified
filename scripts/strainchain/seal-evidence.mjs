@@ -85,7 +85,8 @@ export function assessPackageSeal(input) {
   // observed open mouth. Demand a photo reference to the mouth/top; the
   // SHA remains an integrity pointer, not proof the picture is genuine.
   const openingViewReferenced = input.evidence.some(e =>
-    e.role === "interior_mouth" || e.role === "top"
+    e.role === "interior_mouth" || e.role === "top" ||
+    e.role === "first_opening_video"
   );
   const openingVisual = openingViewReferenced &&
     yes("mouth_open") && yes("tear_feature_intact");
