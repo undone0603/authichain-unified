@@ -33,6 +33,14 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       # Install the repo-pinned manager for every runner; never trust global PATH.
+      # The persistent runner may have a prior sparse-checkout configuration.
+      # Restore the repository and refuse to run a hollow/partial checkout.
+      - name: Ensure complete checkout
+        run: |
+          git sparse-checkout disable
+          test -f package.json
+          test -f pnpm-lock.yaml
+
       - name: Install pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
@@ -61,7 +69,7 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run lint and prettier
-        run: pnpm run --dir "${GITHUB_WORKSPACE}" lint:ci
+        run: pnpm lint:ci
 
       - name: Check for structural cannot-fail patterns in workflows
         run: node scripts/check-workflow-cannot-fail.mjs
