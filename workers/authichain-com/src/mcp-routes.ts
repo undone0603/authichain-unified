@@ -113,9 +113,9 @@ export const TOOLS = [
     },
   },
   {
-    name: "negotiate",
+    name: "get_agent_compatibility",
     description:
-      "Free, read-only AuthiChain MCP/A2A capability compatibility preflight. This is not MCP initialize, MCP server/discover, peer authorization, a session, or a message/payment/signing action.",
+      "Free compatibility preflight. Not the commercial negotiate tool, MCP initialize/server-discover, peer authorization, a session, or an action/payment/signature.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1419,7 +1419,7 @@ async function handleRpc(
         ],
       });
     }
-    if (name === "negotiate") {
+    if (name === "get_agent_compatibility") {
       const result = negotiateAgentCapabilities(params.arguments ?? {});
       return rpcResult(id, {
         content: [{ type: "text", text: JSON.stringify(result) }],
