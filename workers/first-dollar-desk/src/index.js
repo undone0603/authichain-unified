@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { matchPendingFacilitatorReceipt, reservedFacilitatorTxHashes } from "./facilitator-match.mjs";
+import { upsertLedgerReceipt } from "./receipt-merge.mjs";
 import { nextOnchainScanFrom } from "./onchain-cursor.mjs";
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
@@ -607,14 +608,9 @@ async function readLedger(env) {
 __name(readLedger, "readLedger");
 async function writeReceipt(env, receipt) {
   const ledger = await readLedger(env);
-  const index = ledger.receipts.findIndex(
-    (item) => receipt.stripeChargeId && item.stripeChargeId === receipt.stripeChargeId || receipt.stripePaymentIntentId && item.stripePaymentIntentId === receipt.stripePaymentIntentId || receipt.stripeCheckoutSessionId && item.stripeCheckoutSessionId === receipt.stripeCheckoutSessionId || receipt.txHash && item.txHash === receipt.txHash || item.id === receipt.id
-  );
-  if (index >= 0) {
-    ledger.receipts[index] = { ...ledger.receipts[index], ...receipt };
-  } else {
-    ledger.receipts.unshift(receipt);
-  }
+  // The chain scanner must not overwrite or demote an x402 facilitator
+  // receipt for the same USDC transfer. Preserve its evidence on rescan.
+  ledger.receipts = upsertLedgerReceipt(ledger.receipts, receipt);
   ledger.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   await env.LEDGER.put("ledger", JSON.stringify(ledger));
   return ledger;
