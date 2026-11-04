@@ -166,3 +166,16 @@ test("Playwright steps key off the assigned runner, not a stale repository varia
   assert.ok(main.includes("runner.environment != 'self-hosted' && matrix.shard == 2"));
   assert.ok(main.includes("HOME/.cache/ms-playwright"));
 });
+
+test("lint and autonomy checks fail closed on an incomplete checkout", () => {
+  const lint = readFileSync(".github/workflows/lint.yml", "utf8");
+  const autonomy = readFileSync(".github/workflows/autonomy-reconcile.yml", "utf8");
+  assert.ok(lint.includes("git sparse-checkout disable"));
+  assert.ok(lint.includes("test -f package.json"));
+  assert.ok(lint.includes("test -f pnpm-lock.yaml"));
+  assert.ok(lint.includes("run: pnpm lint:ci"));
+  assert.ok(!lint.includes('pnpm run --dir'));
+  assert.ok(autonomy.includes("test -f scripts/autonomy/reconcile.mjs"));
+  assert.ok(autonomy.includes("test -f .github/autonomy.json"));
+  assert.ok(autonomy.includes("node scripts/autonomy/reconcile.mjs --check"));
+});
