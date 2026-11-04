@@ -31,9 +31,9 @@ concurrency:
 # Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
 # Flip to 'false' once the runner is verified; the skip step warns visibly.
 env:
-  SKIP_PLAYWRIGHT_ON_SELF_HOSTED: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && 'true' || 'false' }}
-  PLAYWRIGHT_BROWSERS_PATH: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/ms-playwright' || '/home/runner/.cache/ms-playwright' }}
-  TURBO_CACHE_DIR: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/turbo' || '/home/runner/.cache/turbo' }}
+  SKIP_PLAYWRIGHT_ON_SELF_HOSTED: ${{ github.event_name != 'pull_request' && vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && 'true' || 'false' }}
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.event_name != 'pull_request' && vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/ms-playwright' || '/home/runner/.cache/ms-playwright' }}
+  TURBO_CACHE_DIR: ${{ github.event_name != 'pull_request' && vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/turbo' || '/home/runner/.cache/turbo' }}
 
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
