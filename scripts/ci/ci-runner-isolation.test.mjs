@@ -92,29 +92,42 @@ test("typecheck ratchet never routes PR or push checks to the production publish
   assert.doesNotMatch(routes[0], /authichain-wsl/);
 });
 
-test("typecheck ratchet runs on main push and runs fork PRs on hosted runner", () => {
+test("typecheck ratchet covers main pushes and fork PRs without publisher routing", () => {
   const source = readFileSync(".github/workflows/typecheck-ratchet.yml", "utf8");
-  assert.match(source, /push:\\s*\\n\\s+branches: \\[main\\]/);
-  assert.match(source, /pull_request:/);
-  assert.doesNotMatch(source, /if:\\s*\\$\\{\\{\\s*github\\.event\\.pull_request\\.head\\.repo\\.full_name == github\\.repository/);
-  assert.match(source, /github\\.event_name == 'pull_request'/);
-  assert.match(source, /ubuntu-24\\.04/);
-  assert.doesNotMatch(source.split("\\n").find(line => line.trim().startsWith("runs-on:")), /authichain-wsl/);
+  assert.ok(source.includes("  push:"));
+  assert.ok(source.includes("    branches: [main]"));
+  assert.ok(source.includes("  pull_request:"));
+  assert.ok(
+    !source.includes(
+      "    if: " + "$" + "{{ github.event.pull_request.head.repo.full_name == github.repository }}"
+    )
+  );
+  const runner = source
+    .split(String.fromCharCode(10))
+    .find(line => line.trim().startsWith("runs-on:"));
+  assert.ok(runner);
+  assert.ok(runner.includes("github.event_name == 'pull_request'"));
+  assert.ok(runner.includes("ubuntu-24.04"));
+  assert.ok(!runner.includes("authichain-wsl"));
 });
 
-test("worker builds isolate fork PRs and omit Cloudflare deployment credentials", () => {
-  const source = readFileSync(".github/workflows/build-workers.yml", "utf8");
+test("worker build PRs are credential-free and use hosted runners for forks", () => {
+  const workflow = readFileSync(".github/workflows/build-workers.yml", "utf8");
   const script = readFileSync("scripts/ci/build-workers.mjs", "utf8");
-  const runner = source.split("\\n").find(line => line.trim().startsWith("runs-on:"));
+  const runner = workflow
+    .split(String.fromCharCode(10))
+    .find(line => line.trim().startsWith("runs-on:"));
   assert.ok(runner);
-  assert.match(runner, /head\\.repo\\.full_name == github\\.repository/);
-  assert.match(runner, /ubuntu-24\\.04/);
-  assert.match(runner, /authichain-ops/);
-  assert.doesNotMatch(runner, /authichain-wsl/);
-  assert.doesNotMatch(source, /secrets\\.CLOUDFLARE_(API_TOKEN|ACCOUNT_ID)/);
-  assert.doesNotMatch(source, /Fork pull request has no Cloudflare token/);
-  assert.match(source, /Compile changed workers \\(no deploy credentials\\)/);
-  assert.match(script, /"deploy",\\s*\\n\\s*"--dry-run"/);
-  assert.match(script, /CLOUDFLARE_API_TOKEN: ""/);
-  assert.match(script, /CLOUDFLARE_ACCOUNT_ID: ""/);
+  assert.ok(runner.includes("github.event_name != 'pull_request'"));
+  assert.ok(runner.includes("head.repo.full_name == github.repository"));
+  assert.ok(runner.includes("ubuntu-24.04"));
+  assert.ok(runner.includes("authichain-ops"));
+  assert.ok(!runner.includes("authichain-wsl"));
+  assert.ok(!workflow.includes("secrets.CLOUDFLARE_"));
+  assert.ok(!workflow.includes("Fork pull request has no Cloudflare token"));
+  assert.ok(workflow.includes("Compile changed workers (no deploy credentials)"));
+  assert.ok(script.includes('"deploy",'));
+  assert.ok(script.includes('"--dry-run",'));
+  assert.ok(script.includes('CLOUDFLARE_API_TOKEN: ""'));
+  assert.ok(script.includes('CLOUDFLARE_ACCOUNT_ID: ""'));
 });
