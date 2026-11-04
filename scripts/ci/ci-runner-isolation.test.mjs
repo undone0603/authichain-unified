@@ -275,3 +275,13 @@ test("GovChain live deploy remains dispatch-only, never PR-executable", () => {
   assert.match(job, /if: github\.event_name == 'workflow_dispatch'/);
   assert.match(job, /runs-on: \[self-hosted, Linux, ARM64, authichain-wsl\]/);
 });
+
+test("privileged Dependabot events cannot run on the production publisher", () => {
+  for (const name of ["dependabot-auto-merge.yml", "automerge-dependabot.yml"]) {
+    const source = readFileSync(`.github/workflows/${name}`, "utf8");
+    assert.match(source, /pull_request_target:/);
+    assert.match(source, /runs-on: \[self-hosted, Linux, ARM64, authichain-ops\]/);
+    assert.match(source, /if:.*vars\.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'/);
+    assert.doesNotMatch(source, /runs-on: \[self-hosted, Linux, ARM64, authichain-wsl\]/);
+  }
+});
