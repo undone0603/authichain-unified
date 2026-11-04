@@ -527,11 +527,15 @@ export async function resolvePaidSealVerify(input: {
   const listed = listedSealId(parsedBody);
   const discoveryAlias = Boolean(listed) && isDiscoveryExampleSealId(listed);
   // Empty unpaid is the 402 price challenge. x402 clients retry that same
-  // empty body with a payment header. Listing samples (`demo`, bazaar UUID)
-  // and quote-crawler JSON with no sealId settle as missing-seal evidence.
-  // A sealId that is not a UUID stays 400 before settle so the agent is not
-  // charged for a key that cannot exist.
-  if (!parsed.ok && listed && !discoveryAlias) {
+  // empty body with a payment header. The `demo` listing sample and
+  // quote-crawler JSON with no sealId settle as missing-seal evidence.
+  // A sealId that is not a UUID, or the all-zero placeholder, stays 400 before
+  // settle so the agent is not charged for a key that cannot exist.
+  if (
+    !parsed.ok &&
+    listed &&
+    (!discoveryAlias || parsed.body.error === "seal_id_nil")
+  ) {
     return { action: "answer", status: parsed.status, body: parsed.body };
   }
   const sealId = parsed.ok ? parsed.sealId : null;

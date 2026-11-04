@@ -55,7 +55,7 @@ describe("parseSealRequest", () => {
     }
   });
 
-  it("refuses the bazaar nil UUID before payment and leaves that example in place", () => {
+  it("refuses the bazaar nil UUID as a seal key and leaves it on the unpaid 402", () => {
     const example = x402BazaarDiscovery().bazaar.info.input.body.sealId;
     expect(example).toBe("00000000-0000-4000-8000-000000000000");
     const r = parseSealRequest({ sealId: ` ${example.toUpperCase()} ` });
@@ -65,10 +65,7 @@ describe("parseSealRequest", () => {
     expect(r.body.error).toBe("seal_id_nil");
     expect(r.body.settled).toBe(false);
     expect(r.body.detail).toMatch(/No payment was taken/);
-    expect(unpaidSealRefusal({ sealId: example })).toMatchObject({
-      status: 400,
-      body: { error: "seal_id_nil", settled: false },
-    });
+    expect(unpaidSealRefusal({ sealId: example })).toBeNull();
     expect(unpaidSealRefusal({})).toBeNull();
     expect(unpaidSealRefusal({ sealId: SEAL })).toBeNull();
   });

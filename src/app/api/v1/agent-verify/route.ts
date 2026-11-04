@@ -127,7 +127,11 @@ export async function POST(request: Request) {
   const listed = listedSealId(input);
   const discoveryAlias = Boolean(listed) && isDiscoveryExampleSealId(listed);
   const parsed = parseSealRequest(input);
-  if (!parsed.ok && !emptyBody && !discoveryAlias) {
+  if (
+    !parsed.ok &&
+    !emptyBody &&
+    (!discoveryAlias || parsed.body.error === "seal_id_nil")
+  ) {
     return NextResponse.json(parsed.body, { status: parsed.status });
   }
   const sealId = parsed.ok ? parsed.sealId : null;

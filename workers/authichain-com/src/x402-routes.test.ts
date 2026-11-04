@@ -258,6 +258,25 @@ describe("tryHandleX402", () => {
     expect(text).not.toMatch(/authenticityscore/i);
   });
 
+  it("unpaid POST with the all-zero discovery example is 402", async () => {
+    const res = await tryHandleX402(
+      req("/api/v1/agent-verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sealId: "00000000-0000-4000-8000-000000000000",
+        }),
+      }),
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_PRICE_USD: "0.05",
+      }
+    );
+    expect(res).not.toBeNull();
+    expect(res!.status).toBe(402);
+    expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+  });
+
   it("unpaid POST with quote-crawler JSON and no sealId is 402", async () => {
     const res = await tryHandleX402(
       req("/api/v1/agent-verify", {
