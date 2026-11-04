@@ -1361,6 +1361,17 @@ export async function x402AgentCard(
         ],
       },
       {
+        id: "read-only-capability-negotiation",
+        name: "MCP and A2A compatibility preflight",
+        description:
+          "AuthiChain-specific, read-only GET/POST /negotiate. Returns supported MCP handshake versions, A2A 1.0, and available read-only capabilities. It does not establish a peer session, grant trust, contact an agent, or replace MCP initialize/server-discover.",
+        tags: ["mcp", "a2a", "capability", "compatibility", "discovery"],
+        examples: [
+          "GET https://authichain.com/negotiate",
+          "POST https://authichain.com/negotiate with intent discover and mcpVersions/a2aVersions",
+        ],
+      },
+      {
         id: "qron-launch-subscription",
         name: "QRON Launch subscription",
         description:
