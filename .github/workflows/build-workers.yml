@@ -42,11 +42,20 @@ jobs:
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
     runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: worker-build-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 2
+          path: worker-build-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Verify isolated checkout
+        run: |
+          test -f package.json || { echo '::error::Checkout missing package.json'; exit 1; }
+          test -f scripts/ci/build-workers.mjs || { echo '::error::Checkout missing worker build script'; exit 1; }
 
       - name: Fetch pull request base
         if: github.event_name == 'pull_request'
@@ -56,6 +65,7 @@ jobs:
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
+          package_json_file: worker-build-${{ github.run_id }}-${{ github.run_attempt }}/package.json
           # action-setup deletes dest on every job. A shared ~/setup-pnpm
           # races when both self-hosted runners install pnpm together.
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
@@ -88,9 +98,12 @@ jobs:
       # never leaks into the next run. Workspace-only; never outside it.
       - name: Clean workspace (self-hosted)
         if: always()
+        working-directory: ${{ github.workspace }}
         run: |
           set -eu
-          ws="${GITHUB_WORKSPACE:?}"
-          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          root="${GITHUB_WORKSPACE:?}"
+          ws="$root/worker-build-${{ github.run_id }}-${{ github.run_attempt }}"
+          case "$root" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          test -d "$ws" || exit 0
           cd "$ws"
           find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
