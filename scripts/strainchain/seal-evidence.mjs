@@ -81,7 +81,14 @@ export function assessPackageSeal(input) {
     if (!TRI.has(observations[key])) throw new Error(`invalid_observation_${key}`);
   }
   const yes = key => observations[key] === "yes";
-  const openingVisual = yes("mouth_open") && yes("tear_feature_intact");
+  // A matching barcode or a general product picture cannot support an
+  // observed open mouth. Demand a photo reference to the mouth/top; the
+  // SHA remains an integrity pointer, not proof the picture is genuine.
+  const openingViewReferenced = input.evidence.some(e =>
+    e.role === "interior_mouth" || e.role === "top"
+  );
+  const openingVisual = openingViewReferenced &&
+    yes("mouth_open") && yes("tear_feature_intact");
   const reportedBypass = openingVisual &&
     yes("interior_access_reported_without_tearing");
 
