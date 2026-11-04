@@ -139,9 +139,9 @@ consumer-facing record. StrainChain itself is not a regulator and cannot
 compel independent businesses to adopt this workflow. An issuer-signed
 document is evidence of the *claim*, not an independent physical guarantee.
 
-**Methods distinction:** ASTM F88/F88M-23 measures flexible seal strength;
-ASTM F3039-23 identifies certain nonporous package leaks using destructive
-dye penetration. Neither proves that an entire unopened bag resists silent
+**Methods distinction:** [ASTM F88/F88M-23](https://store.astm.org/standards/f88_f88m)
+measures flexible seal strength; [ASTM F3039-23](https://store.astm.org/standards/f3039)
+identifies certain nonporous package leaks using destructive dye penetration. Neither proves that an entire unopened bag resists silent
 entry through a bypass route. Verify the applicable methods and specimen
 handling with an independent packaging engineer. Do not use destructive
 test samples for retail resale.
@@ -178,8 +178,9 @@ evidence, not inference about motives.
 
 ## Compliance boundary
 
-Michigan Administrative Code R 420.504 requires the container, bag or product
-holding marihuana to be sealed and labeled before retail sale or transfer.
+[Michigan Administrative Code R 420.504](https://ars.apps.lara.state.mi.us/AdminCode/DownloadAdminCodeFile?FileName=R+420.1+to+R+420.1004.pdf&ReturnHTML=True)
+requires the container, bag or product holding marihuana to be sealed and
+labeled before retail sale or transfer.
 Whether a particular package is legally compliant requires the **effective**
 rule, original condition at transfer, full facts and regulator/legal review.
 A proposed StrainChain SealLock criterion may be stricter than the current
