@@ -51,6 +51,8 @@ jobs:
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Preflight uplink probe (fail fast on a stalled runner)
         if: runner.environment == 'self-hosted'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
           # The 8.8 MiB versions POST has stalled at 7-11 KB/s for 9 runs. Probe
@@ -65,7 +67,8 @@ jobs:
           speed=${out%% *}; code=${out##* }
           echo "uplink: ${speed:-0} bytes/s (http ${code:-none})"
           if [ "${speed:-0}" -lt 200000 ]; then
-            echo "::warning::Uplink to api.cloudflare.com is under 200 KB/s. The 8.8 MiB bundle will not upload; fix the runner's network (WSL2 MTU 1280) or run this job elsewhere."
+            echo "::error::Uplink to api.cloudflare.com is under 200 KB/s. The 8.8 MiB bundle will not upload; failing now instead of stalling the runner for 20-35 minutes. Fix the runner's network (WSL2 MTU 1280) or run this job elsewhere."
+            exit 1
           fi
 
       - name: Publish authichain-edge-router
