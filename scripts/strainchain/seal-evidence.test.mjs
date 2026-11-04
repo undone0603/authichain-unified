@@ -57,7 +57,7 @@ test("claims of witnesses without authenticated opening video stay suspected", (
   assert.equal(result.state, SEAL_REVIEW_STATES.BYPASS_SUSPECTED);
 });
 
-test("qualified first-opening witness evidence still requires human review", () => {
+test("witness claims and video hash require independent review, not validation", () => {
   const result = assessPackageSeal(make({
     mouth_open: "yes",
     tear_feature_intact: "yes",
@@ -69,8 +69,10 @@ test("qualified first-opening witness evidence still requires human review", () 
     phase: "as_received_before_first_open",
     custody: "independent_witness",
   })]));
-  assert.equal(result.state, SEAL_REVIEW_STATES.BYPASS_WITNESSED_REVIEW_REQUIRED);
+  assert.equal(result.state, SEAL_REVIEW_STATES.WITNESS_RECORD_CLAIMED_REVIEW_REQUIRED);
   assert.equal(result.release_gate, "HOLD");
+  assert.ok(result.flags.includes("INDEPENDENT_REVIEW_REQUIRED"));
+  assert.ok(result.limitations.includes("No proof of original factory state or chain of custody"));
 });
 
 test("visible weld can be recorded but not called qualified", () => {
