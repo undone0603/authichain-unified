@@ -28,7 +28,7 @@ const CONNECTION_SETUP_TEXT =
 function isSetupInquiry(parts: A2aPart[]): boolean {
   const combined = parts.map(p => p.text).join(" ").slice(0, 4096);
   return /\b(?:mcp|a2a)\b/i.test(combined) &&
-    /\b(?:setup|connect(?:ion|ions)?|integrat(?:ion|e)|onboard(?:ing)?|offers?|negotiat(?:e|ion)|capabilit(?:y|ies))\b/i.test(combined);
+    /\b(?:setup|connect(?:ion|ions)?|integrat(?:ion|e)|onboard(?:ing)?|offers?|capabilit(?:y|ies))\b/i.test(combined);
 }
 
 export const A2A_METHODS = [
