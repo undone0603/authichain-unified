@@ -365,3 +365,22 @@ test("reusable GovChain and support jobs also require attested ops selection", (
   assert.ok(deploy.includes("authichain-wsl"));
   assert.ok(deploy.includes("vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && " + flag));
 });
+
+test("B2B outreach refuses partial Git checkout before sending-capable steps", () => {
+  const source = readFileSync(".github/workflows/b2b-outreach.yml", "utf8");
+  const verify = source.indexOf("Verify checkout integrity and required safety controls");
+  assert.ok(verify > source.indexOf("Checkout repository"));
+  assert.ok(verify < source.indexOf("Install dependencies"));
+  assert.ok(source.includes('test "${GITHUB_WORKSPACE:?}" = "${RUNNER_WORKSPACE:?}/authichain-unified"'));
+  assert.ok(source.includes('test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"'));
+  assert.ok(source.includes("git fsck --full --no-reflogs"));
+  assert.ok(source.includes("rev-parse --verify 'ORIG_HEAD^{commit}'"));
+  assert.ok(source.includes('test -z "$(git status --porcelain)"'));
+  for (const path of [
+    ".github/autonomy.json", "scripts/autonomy/launch-mode.mjs",
+    "scripts/autonomy/deliverability-breaker.mjs",
+    "scripts/autonomy/approvals.mjs", "scripts/outreach-optout-check.ts",
+    "scripts/b2b-cold-outreach.ts",
+  ]) assert.ok(source.includes(path));
+  assert.ok(!source.includes('rm -rf -- "$GITHUB_WORKSPACE/.git"'));
+});
