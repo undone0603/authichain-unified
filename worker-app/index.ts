@@ -23,6 +23,7 @@ import { registerUnsubscribeRoutes } from "./unsubscribe-routes";
 import { registerInboundRoutes } from "./inbound-routes";
 import { registerGuardrailApi } from "./guardrail-api";
 import { registerLeadRoutes } from "./lead-routes";
+import { collectStrainchainStats, CHAIN_EVENT_TYPES } from "./strainchain-stats";
 import { registerResendInbound } from "./resend-inbound";
 import { registerNurtureReplies } from "./nurture-replies";
 import type { WorkersAIBinding } from "../src/lib/sentiment-classifier";
@@ -220,6 +221,7 @@ app.use(
   "/api/leads/capture",
   rateLimitMiddleware("lead-capture", 10, 60 * 60_000)
 );
+app.use("/api/strainchain/stats", rateLimitMiddleware("strainchain-stats", 30, 60_000));
 // Catch-all API guard: 300 requests per minute per IP (also covers
 // /api/trpc/* — see tRPC note above)
 app.use("/api/*", rateLimitMiddleware("global", 300, 60_000));
@@ -233,6 +235,43 @@ app.use(
 );
 
 app.get("/api/health", c => c.json({ status: "ok" }));
+
+/** Restored public aggregate stats on the active Workers app; never expose DB errors or fabricate zero counts. */
+app.get("/api/strainchain/stats", async c => {
+  c.header("Cache-Control", "no-store");
+  const supabaseUrl = c.env?.SUPABASE_URL || c.env?.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = c.env?.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) return c.json({ error: "stats_unavailable" }, 503);
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const admin = createClient(supabaseUrl, serviceKey);
+    const stats = await collectStrainchainStats(
+      async eventType => {
+        const { count, error } = await admin
+          .from("product_events")
+          .select("*", { count: "exact", head: true })
+          .eq("event_type", eventType);
+        return { count, error };
+      },
+      async () => {
+        const { data, error } = await admin
+          .from("product_events")
+          .select("occurred_at")
+          .in("event_type", [...CHAIN_EVENT_TYPES])
+          .order("occurred_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return { data, error };
+      },
+    );
+    c.header("Cache-Control", "public, max-age=60");
+    return c.json(stats);
+  } catch {
+    console.warn("[strainchain-stats] aggregate query unavailable");
+    return c.json({ error: "stats_unavailable" }, 503);
+  }
+});
+
 
 function isAppHostname(host: string): boolean {
   const h = host.split(":")[0].toLowerCase();
