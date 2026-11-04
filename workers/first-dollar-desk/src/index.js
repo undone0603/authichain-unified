@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { matchPendingFacilitatorReceipt } from "./facilitator-match.mjs";
+import { nextOnchainScanFrom } from "./onchain-cursor.mjs";
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
@@ -228,6 +229,7 @@ async function fetchTransfersFromRpc(asset, rpcs, network, scanFromBlock = null,
       const rows = [];
       let chunks = 0;
       let chunkSize = RPC_CHUNK_BLOCKS;
+      let scannedThrough = null;
       for (let start = from; start <= latest && chunks < RPC_CATCHUP_CHUNKS; ) {
         const end = start + chunkSize - 1n > latest ? latest : start + chunkSize - 1n;
         let logs;
@@ -242,6 +244,7 @@ async function fetchTransfersFromRpc(asset, rpcs, network, scanFromBlock = null,
           throw error;
         }
         chunks += 1;
+        scannedThrough = end;
         for (const log of logs) {
           rows.push({
             hash: log.transactionHash,
@@ -260,7 +263,13 @@ async function fetchTransfersFromRpc(asset, rpcs, network, scanFromBlock = null,
       if (env?.LEDGER && network === "eip155:8453") {
         await env.LEDGER.put(BASE_RPC_PREFERRED_KV, url);
       }
-      return { rows, errors, source: url, latestBlock: latest.toString() };
+      return {
+        rows,
+        errors,
+        source: url,
+        latestBlock: latest.toString(),
+        scannedThrough: scannedThrough === null ? null : scannedThrough.toString()
+      };
     } catch (error) {
       errors.push(`${new URL(url).host}:${String(error?.message ?? error)}`);
     }
@@ -333,6 +342,7 @@ async function fetchTransfers(scanFromBlock = null, env = null) {
     rows: [...byHash.values()],
     errors: [...errors, ...rpc.errors ?? [], ...sepolia.errors ?? []],
     latestBlock: rpc.latestBlock ?? null,
+    scannedThrough: rpc.scannedThrough ?? null,
     rpcSource: rpc.source ?? null
   };
 }
@@ -475,7 +485,7 @@ async function syncOnchain(env, options = {}) {
     return { skipped: true };
   }
   const scanFrom = await env.LEDGER.get("onchain_scan_from");
-  const { rows, errors, latestBlock, rpcSource } = await fetchTransfers(scanFrom, env);
+  const { rows, errors, latestBlock, scannedThrough, rpcSource } = await fetchTransfers(scanFrom, env);
   let written = 0;
   for (const tx of rows) {
     await writeReceipt(env, classifyOnchain(tx, env));
@@ -483,9 +493,15 @@ async function syncOnchain(env, options = {}) {
   }
   const now = (/* @__PURE__ */ new Date()).toISOString();
   await env.LEDGER.put("onchain_sync_at", now);
-  if (latestBlock) {
-    const nextFrom = BigInt(latestBlock) > RPC_CHUNK_BLOCKS ? BigInt(latestBlock) - RPC_CHUNK_BLOCKS : 0n;
-    await env.LEDGER.put("onchain_scan_from", nextFrom.toString());
+  if (latestBlock && scannedThrough !== null) {
+    const nextFrom = nextOnchainScanFrom(
+      latestBlock,
+      scannedThrough,
+      RPC_CHUNK_BLOCKS
+    );
+    if (nextFrom !== null) {
+      await env.LEDGER.put("onchain_scan_from", nextFrom);
+    }
   }
   await reconcilePendingFacilitatorReceipts(env);
   return {
