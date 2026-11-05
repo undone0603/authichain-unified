@@ -38,8 +38,8 @@ permissions:
 jobs:
   dry-run:
     name: Worker dry-run build
-    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
-    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
+    # PR code always uses a hosted runner; never execute it on a credentialed host.
+    # Push/dispatch use ops only after independently verified host isolation.
     runs-on: ${{ github.event_name != 'pull_request' && vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 40
     steps:
@@ -47,8 +47,16 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 2
+          path: worker-build-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Verify isolated checkout
+        working-directory: ${{ github.workspace }}/worker-build-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          test -f package.json || { echo '::error::Checkout missing package.json'; exit 1; }
+          test -f scripts/ci/build-workers.mjs || { echo '::error::Checkout missing worker build script'; exit 1; }
 
       - name: Fetch pull request base
+        working-directory: ${{ github.workspace }}/worker-build-${{ github.run_id }}-${{ github.run_attempt }}
         if: github.event_name == 'pull_request'
         run: git fetch --no-tags --depth=1 origin ${{ github.base_ref }}
 
@@ -56,41 +64,39 @@ jobs:
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
+          package_json_file: worker-build-${{ github.run_id }}-${{ github.run_attempt }}/package.json
           # action-setup deletes dest on every job. A shared ~/setup-pnpm
           # races when both self-hosted runners install pnpm together.
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+          dest: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm-{1}', runner.temp, runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
           cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
+          cache-dependency-path: worker-build-${{ github.run_id }}-${{ github.run_attempt }}/pnpm-lock.yaml
 
       - name: Install dependencies
+        working-directory: ${{ github.workspace }}/worker-build-${{ github.run_id }}-${{ github.run_attempt }}
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Compile changed workers
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        working-directory: ${{ github.workspace }}/worker-build-${{ github.run_id }}-${{ github.run_attempt }}
         env:
           DIFF_BEFORE: ${{ github.event.before }}
           DISPATCH_WORKER: ${{ github.event.inputs.worker }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node scripts/ci/build-workers.mjs
-
-      - name: Fork pull request has no Cloudflare token
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
-        run: |
-          echo "::error::Fork pull requests cannot compile workers (no Cloudflare token)."
-          exit 1
 
       # Persistent self-hosted runner: drop deps and build outputs so state
       # never leaks into the next run. Workspace-only; never outside it.
       - name: Clean workspace (self-hosted)
         if: always()
+        working-directory: ${{ github.workspace }}
         run: |
           set -eu
-          ws="${GITHUB_WORKSPACE:?}"
-          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          root="${GITHUB_WORKSPACE:?}"
+          ws="$root/worker-build-${{ github.run_id }}-${{ github.run_attempt }}"
+          case "$root" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          test -d "$ws" || exit 0
           cd "$ws"
           find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
