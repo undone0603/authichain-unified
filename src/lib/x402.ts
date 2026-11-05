@@ -1232,7 +1232,6 @@ export async function x402Catalog(
       creatorUsd: planUsd("creator"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
-      farmPaymentLink: planPaymentLink("strainchain_farm"),
       starterPaymentLink: planPaymentLink("starter"),
       creatorPaymentLink: planPaymentLink("creator"),
       offers: catalogOffers(),

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { tryHandleX402, x402FreeCallsHealth } from "./x402-routes";
 import { freeTierClientKey, type FreeTierStore } from "../../../src/lib/x402-free-tier";
+import { X402_DISCOVERY_EXAMPLE_SEAL_ID } from "../../../src/lib/x402";
 
 const SEAL = "11111111-2222-4333-8444-555555555555";
 const ENV = {
@@ -87,10 +88,12 @@ describe("x402 health freeCalls", () => {
 describe("unpaid body that cannot be a seal", () => {
   it("returns 400 and does not ask for payment", async () => {
     const pay = { X402_PAY_TO: ENV.X402_PAY_TO };
+    // Only a listed sealId that cannot exist is refused before payment.
+    // `demo`, probe JSON and productId-only bodies stay on the 402 (below).
     for (const body of [
-      { sealId: "demo" },
-      { probe: "suggestions" },
-      { productId: "p-1" },
+      { sealId: "not-a-uuid" },
+      { seal_id: "12345" },
+      { sealId: "p-1", productId: "p-1" },
     ]) {
       const res = await tryHandleX402(
         new Request("https://authichain.com/api/v1/agent-verify", {
@@ -105,6 +108,25 @@ describe("unpaid body that cannot be a seal", () => {
       const json = (await res!.json()) as { error: string; settled: boolean };
       expect(json.settled).toBe(false);
       expect(["seal_id_required", "seal_id_not_uuid"]).toContain(json.error);
+    }
+  });
+
+  it("keeps listing samples and probe JSON on the 402 challenge", async () => {
+    for (const body of [
+      { sealId: "demo" },
+      { probe: "suggestions" },
+      { productId: "p-1" },
+    ]) {
+      const res = await tryHandleX402(
+        new Request("https://authichain.com/api/v1/agent-verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+        { X402_PAY_TO: ENV.X402_PAY_TO }
+      );
+      expect(res!.status).toBe(402);
+      expect(res!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
     }
   });
 
