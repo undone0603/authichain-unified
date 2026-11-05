@@ -15,15 +15,18 @@ function VerifyContent() {
   const initialId = searchParams.get("id") || "";
   const [id, setId] = useState(initialId);
   const [verdict, setVerdict] = useState<string | null>(null);
+  const [reasons, setReasons] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   const runVerify = async (sealId: string) => {
     setLoading(true);
     setVerdict(null);
+    setReasons([]);
     try {
       const res = await fetch(`/api/verify-proxy?id=${encodeURIComponent(sealId)}`);
       const body = await res.json();
       setVerdict(body.verdict || body.decision || body.error || "indeterminate");
+      setReasons(Array.isArray(body.reasons) ? body.reasons.map(String) : []);
     } catch {
       setVerdict("verification_failed");
     } finally {
@@ -82,6 +85,11 @@ function VerifyContent() {
               Protocol verdict
             </div>
             <div className="text-xl font-black mb-2">{verdict}</div>
+            {reasons.length > 0 && (
+              <p className="text-sm text-zinc-400">
+                {reasons.map(r => r.replace(/_/g, " ")).join(", ")}
+              </p>
+            )}
             <p className="text-xs text-zinc-500 mt-4 leading-relaxed">
               A “verified” verdict means the signature is valid and the hash matches the anchor. It does not prove the physical product is authentic.
             </p>
