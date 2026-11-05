@@ -107,9 +107,12 @@ test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const html = await res.text();
+    // Since effc8b12 the homepage links the $19/mo Launch confirm page beside
+    // Starter (asserted in "the apex still renders the homepage"); the
+    // Starter confirm page itself stays free of Launch copy.
+    const launchLinks = path === "/" ? [] : ["$19", "qron_launch"];
     for (const banned of [
-      "$19",
-      "qron_launch",
+      ...launchLinks,
       "Launch subscription",
       "unless you switch to a Launch",
       "Pack credits never expire.",
@@ -1082,7 +1085,13 @@ test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async
     assert.equal(body.protocol, "x402", path);
     assert.equal(body.catalog, "/api/x402/catalog", path);
     assert.equal(body.health, "/api/x402/health", path);
-    assert.equal(body.humanCheckout?.farmPaymentLink, undefined, path);
+    // Since 6606362f the catalog publishes a checkout offer for every paid
+    // plan, Farm included (asserted in x402-routes.test.ts).
+    assert.equal(
+      body.humanCheckout?.farmPaymentLink,
+      planPaymentLink("strainchain_farm"),
+      path
+    );
     assert.equal(
       body.humanCheckout?.farmUsd,
       planUsd("strainchain_farm"),
