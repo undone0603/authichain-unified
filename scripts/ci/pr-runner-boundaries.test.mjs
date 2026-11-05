@@ -15,13 +15,40 @@ const PR_HOSTED_WORKFLOWS = [
 
 const routesPrToHosted = line => {
   const route = line.trim();
-  return route === "runs-on: ubuntu-24.04" || (
-    route.includes("ubuntu-24.04") && (
-      route.includes("github.event_name == 'pull_request'") ||
-      route.includes("github.event_name != 'pull_request'")
-    )
-  );
+  // A mention of ubuntu-24.04 is not enough. The PR branch itself must
+  // select hosted execution; unsafe conditions can otherwise pass this test.
+  if (route === "runs-on: ubuntu-24.04") return true;
+  const hostedPrArm = route.startsWith(
+    "runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || "
+  ) && route.endsWith(" }}");
+  const hostedFallback = (
+    route.startsWith("runs-on: ${{ github.event_name != 'pull_request' && ") ||
+    route.startsWith("runs-on: ${{ (github.event_name != 'pull_request') && ")
+  ) && route.endsWith(" || 'ubuntu-24.04' }}");
+  return hostedPrArm || hostedFallback;
 };
+
+test("runner selector rejects misleading hosted fallback expressions", () => {
+  const unsafe = [
+    "runs-on: [self-hosted, Linux, ARM64, authichain-wsl]",
+    "runs-on: ${{ github.event_name == 'pull_request' && 'self-hosted' || 'ubuntu-24.04' }}",
+    "runs-on: ${{ github.event_name == 'pull_request' && fromJSON('[\"self-hosted\"]') || 'ubuntu-24.04' }}",
+    "runs-on: ${{ github.event_name != 'pull_request' && 'self-hosted' || 'self-hosted' }}",
+    "runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || 'self-hosted' }} || unsafe-suffix",
+  ];
+  for (const route of unsafe) {
+    assert.equal(routesPrToHosted(route), false, route);
+  }
+  const safe = [
+    "runs-on: ubuntu-24.04",
+    "runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || fromJSON('[\"self-hosted\"]') }}",
+    "runs-on: ${{ github.event_name != 'pull_request' && fromJSON('[\"self-hosted\"]') || 'ubuntu-24.04' }}",
+    "runs-on: ${{ (github.event_name != 'pull_request') && fromJSON('[\"self-hosted\"]') || 'ubuntu-24.04' }}",
+  ];
+  for (const route of safe) {
+    assert.equal(routesPrToHosted(route), true, route);
+  }
+});
 
 test("reviewed PR-triggered checks cannot select a self-hosted runner", () => {
   for (const name of PR_HOSTED_WORKFLOWS) {
