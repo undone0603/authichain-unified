@@ -25,6 +25,6 @@ test("the saved pnpm store key matches the branch-bound exact restore key", () =
 });
 
 test("CircleCI jobs do not attach protected contexts or request deploy execution", () => {
-  assert.doesNotMatch(source, /\n\\s*context:/);
-  assert.doesNotMatch(source, /\n\\s*(?:machine:|resource_class: self_hosted)/);
+  assert.doesNotMatch(source, /\n\s*context:/);
+  assert.doesNotMatch(source, /\n\s*(?:machine:|resource_class: self_hosted)/);
 });
