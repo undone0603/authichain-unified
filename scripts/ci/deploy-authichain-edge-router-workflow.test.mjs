@@ -112,3 +112,48 @@ test("failed smoke after promotion restores the previous version via the API pro
   );
   assert.equal(yml.match(/\n      - name: /g).length, yml.slice(0, yml.indexOf("- name: Roll back")).match(/\n      - name: /g).length + 1);
 });
+
+test("shared self-hosted workspace is restored to a full tree before anything runs", () => {
+  const restore = step("Restore full tree after sparse checkout");
+  assert.match(restore, /if: runner\.environment == 'self-hosted'/);
+  assert.match(restore, /set -euo pipefail/);
+  const disable = restore.indexOf("git sparse-checkout disable");
+  const reset = restore.indexOf("git reset --hard HEAD");
+  assert.ok(disable > -1 && reset > disable, "disable sparse first, then materialize with reset --hard");
+  assert.match(restore, /test "\$\(git rev-parse HEAD\)" = "\$\{GITHUB_SHA\}"/);
+  assert.match(restore, /git ls-files -v \| awk '\$1 == "S"/);
+  // Every file this job executes or bundles from must be present on disk.
+  assert.match(restore, /test -f scripts\/ci\/live-worker-version\.mjs/);
+  assert.match(restore, /test -f scripts\/ci\/upload-worker-version\.mjs/);
+  assert.match(restore, /test -f scripts\/ci\/promote-worker-version\.mjs/);
+  assert.match(restore, /test -f worker-app\/wrangler\.toml/);
+  assert.doesNotMatch(restore, /\|\| true/);
+  const at = name => yml.indexOf(`- name: ${name}`);
+  assert.ok(yml.indexOf("uses: actions/checkout@v7") < at("Restore full tree after sparse checkout"));
+  assert.ok(at("Restore full tree after sparse checkout") < at("Install node-gyp (native builds)"));
+  assert.ok(at("Restore full tree after sparse checkout") < at("Install\n"), "restore must precede pnpm install");
+  assert.ok(at("Restore full tree after sparse checkout") < at("Record live version (rollback target)"));
+});
+
+test("public pages are smoke-tested after promotion and before any rollback decision", () => {
+  const pages = step("Smoke public pages");
+  assert.match(pages, /set -euo pipefail/);
+  for (const url of [
+    "https://authichain.com/ ",
+    "https://authichain.com/pricing ",
+    "https://qron.space/ ",
+    "https://strainchain.io/ ",
+    "https://govchain.us/opportunities;",
+  ]) {
+    assert.ok(pages.includes(url), `smoke must cover ${url.trim()}`);
+  }
+  assert.match(pages, /api\/health/);
+  assert.match(pages, /"status":"ok"/);
+  assert.match(pages, /for attempt in 1 2 3 4 5; do/);
+  assert.match(pages, /public page smoke failed after 5 attempts/);
+  assert.doesNotMatch(pages, /\| grep/);
+  assert.doesNotMatch(pages, /\|\| true/);
+  const at = name => yml.indexOf(`- name: ${name}`);
+  assert.ok(at("Smoke JWKS current + retired kids") < at("Smoke public pages"));
+  assert.ok(at("Smoke public pages") < at("Roll back to previous version"));
+});

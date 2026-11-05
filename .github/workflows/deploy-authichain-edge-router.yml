@@ -28,6 +28,25 @@ jobs:
       NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
     steps:
       - uses: actions/checkout@v7
+      # Sparse-checkout settings persist in the shared self-hosted work dir
+      # (agentz-orchestration.yml and gov-engine.yml check out two files), so a
+      # job that inherits them sees a partial tree while HEAD still names the
+      # right commit. Run 41898073168 died with "Cannot find module
+      # .../scripts/ci/live-worker-version.mjs" for a file that was in the
+      # commit. Same guard launch-gates.yml, ci.yml and main.yml use, plus
+      # checks that this job runs and bundles exactly what the commit holds.
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test -z "$(git ls-files -v | awk '$1 == "S" { print }')"
+          test -f scripts/ci/live-worker-version.mjs
+          test -f scripts/ci/upload-worker-version.mjs
+          test -f scripts/ci/promote-worker-version.mjs
+          test -f worker-app/wrangler.toml
       - uses: pnpm/action-setup@v6
         if: runner.environment != 'self-hosted'
         with:
@@ -150,6 +169,36 @@ jobs:
             sleep 6
           done
           echo "::error::JWKS/issuer smoke failed after 5 attempts"
+          exit 1
+
+      - name: Smoke public pages
+        run: |
+          set -euo pipefail
+          # The JWKS smoke proves the signing keys survived; this proves the
+          # sites still serve. Every page must pass in the same attempt, so one
+          # healthy edge cannot mask another failing page.
+          pages() {
+            for url in \
+              https://authichain.com/ \
+              https://authichain.com/pricing \
+              https://qron.space/ \
+              https://strainchain.io/ \
+              https://govchain.us/opportunities; do
+              code=$(curl -sS -o /dev/null --max-time 20 -w '%{http_code}' "$url") || return 1
+              [ "$code" = "200" ] || { echo "  ${url} -> ${code}"; return 1; }
+            done
+            health=$(curl -sS --max-time 20 https://authichain.com/api/health) || return 1
+            grep -qF '"status":"ok"' <<<"$health"
+          }
+          for attempt in 1 2 3 4 5; do
+            if pages; then
+              echo "public pages healthy on attempt ${attempt}"
+              exit 0
+            fi
+            echo "public page smoke attempt ${attempt} failed; retrying in 6s"
+            sleep 6
+          done
+          echo "::error::public page smoke failed after 5 attempts"
           exit 1
 
       - name: Roll back to previous version (smoke failed after promotion)
