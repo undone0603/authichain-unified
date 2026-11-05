@@ -612,3 +612,23 @@ describe("dppExceptionAlert", () => {
     expect(String(fetchMock.mock.calls[0][1].body)).toContain("term_esc_1");
   });
 });
+
+describe("recordDppLoopEvent persistence mode", () => {
+  it.each(["returned", "thrown"] as const)(
+    "keeps ordinary telemetry best-effort but fails strict writes (%s)",
+    async failureMode => {
+      const insert = vi.fn().mockImplementation(async () => {
+        if (failureMode === "returned")
+          return { error: { message: "database unavailable" } };
+        throw new Error("database unavailable");
+      });
+      const supabase = { from: vi.fn(() => ({ insert })) };
+      const input = { visitId: "visit_strict", stage: "merchant_activated" as const };
+      await expect(
+        recordDppLoopEvent(supabase, input, { requirePersisted: true })
+      ).rejects.toThrow("DPP event persistence unavailable");
+      await expect(recordDppLoopEvent(supabase, input)).resolves.toBeUndefined();
+      expect(insert).toHaveBeenCalledTimes(2);
+    }
+  );
+});
