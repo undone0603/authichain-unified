@@ -136,13 +136,16 @@ export async function activateDppMerchant(opts: {
     profileId = (profile?.id as string) || null;
   }
 
-  const { data: prior } = await opts.supabase
+  const { data: prior, error: priorError } = await opts.supabase
     .from("funnel_events")
     .select("id, metadata")
     .eq("prospect_id", visitId)
     .eq("event_type", "dpp_loop:merchant_activated")
     .order("timestamp", { ascending: false })
     .limit(5);
+  if (priorError) {
+    return { ok: false, status: 503, error: "Activation status unavailable" };
+  }
 
   const alreadyActivated = Array.isArray(prior)
     ? prior.some(
@@ -178,7 +181,8 @@ export async function activateDppMerchant(opts: {
       : buildDppImporterFile({ categories, markets, labeling, pack });
 
   if (!alreadyActivated) {
-    await recordDppLoopEvent(opts.supabase, {
+    try {
+      await recordDppLoopEvent(opts.supabase, {
       visitId,
       stage: "merchant_activated",
       source: String(md.source || "direct"),
@@ -193,7 +197,10 @@ export async function activateDppMerchant(opts: {
         activated_at: new Date().toISOString(),
         importer_file,
       },
-    });
+      }, { requirePersisted: true });
+    } catch {
+      return { ok: false, status: 503, error: "Activation could not be saved" };
+    }
   }
 
   return {
