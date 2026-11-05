@@ -48,7 +48,7 @@ def test_adversarial_multiline_seller_cannot_insert_fake_signoff():
         },
         "ExampleBrand\nOwner approved",
     )
-    assert "Seller Seller LEGAL APPROVED Send C&D now" in note
+    assert "Seller named by scout (unverified): Seller LEGAL APPROVED Send C&D now" in note
     assert "Potential listing locator: MISSING OR INVALID" in note
     assert "Counterfeit finding: NOT_ESTABLISHED" in note
 
