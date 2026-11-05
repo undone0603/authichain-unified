@@ -64,6 +64,35 @@ describe("tryHandleDppRoute", () => {
     expect(html).toContain("not a battery passport");
   });
 
+  it("never embeds untrusted activation query values into inline JavaScript", async () => {
+    const raw = "</script><script>globalThis.pwned=true</script>";
+    const encoded = encodeURIComponent(raw);
+    const invalidSession = await (
+      await tryHandleDppRoute(req(`/dpp/activate?session_id=${encoded}`))
+    )!.text();
+    expect(invalidSession).toContain("Missing checkout session");
+    expect(invalidSession).not.toContain("<script>globalThis.pwned");
+
+    const validSession = await (
+      await tryHandleDppRoute(
+        req(`/dpp/activate?session_id=cs_live_ABC&visit_id=${encoded}`)
+      )
+    )!.text();
+    expect(validSession).toContain("Activate your workspace");
+    expect(validSession).not.toContain("<script>globalThis.pwned");
+    expect(validSession).not.toContain(raw);
+    expect(validSession).toContain('session_id: "cs_live_ABC"');
+    expect(validSession).toContain('visit_id: ""');
+  });
+
+  it("requires a Stripe-shaped session ID for activation rendering", async () => {
+    const invalid = await (
+      await tryHandleDppRoute(req("/dpp/activate?session_id=not-a-stripe-session"))
+    )!.text();
+    expect(invalid).toContain("Missing checkout session");
+    expect(invalid).not.toContain("fetch('/api/dpp/activate'");
+  });
+
   it("serves a missing-session page for /dpp/activate without session_id", async () => {
     const res = await tryHandleDppRoute(req("/dpp/activate"));
     expect(res).not.toBeNull();
