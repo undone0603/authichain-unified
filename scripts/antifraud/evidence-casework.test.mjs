@@ -187,6 +187,30 @@ test("A2A interface rejects fake approvals and fabricated evidence results", () 
   }), /invalid_case_result/);
 });
 
+test("A2A exchange rejects injected private data and unsafe actions", () => {
+  const result = triageCounterfeitEvidence(make(
+    item(1, "first_opening_bypass_reported"),
+  ));
+  assert.throws(() => toSafeAgentExchange({
+    ...result, signals: ["PACKAGE_FIRST_OPENING_REVIEW", "private-seller-name"],
+  }), /invalid_case_result/);
+  assert.throws(() => toSafeAgentExchange({
+    ...result, validation_steps: [
+      "PRESERVE_PRIVATE_ORIGINALS_AND_RECEIPTS",
+      "AUTO_SEND_LEGAL_DEMAND_TO_COMPANY",
+    ],
+  }), /invalid_case_result/);
+  assert.throws(() => toSafeAgentExchange({
+    ...result, priority: "CRIMINAL_FRAUD_CONFIRMED",
+  }), /invalid_case_result/);
+  assert.throws(() => toSafeAgentExchange({
+    ...result, external_communications: "AUTHORIZED",
+  }), /invalid_case_result/);
+  assert.throws(() => toSafeAgentExchange({
+    ...result, operational_effects: ["notify"],
+  }), /invalid_case_result/);
+});
+
 test("results are deterministic and never grant external action", () => {
   const x = make(
     item(1, "first_opening_bypass_reported"),
