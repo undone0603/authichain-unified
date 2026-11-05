@@ -93,6 +93,31 @@ describe("activateDppMerchant", () => {
     expect(from).not.toHaveBeenCalled();
   });
 
+  it("rejects DPP metadata when the line-item price is missing", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      metadata: { plan: "dpp_readiness", offer: "dpp_readiness_2026" },
+      line_items: { data: [{}] },
+    });
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const from = vi.fn();
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_no_price",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(400);
+    expect(from).not.toHaveBeenCalled();
+  });
+
   it("never accepts a same-price checkout without DPP identity", async () => {
     retrieve.mockResolvedValueOnce({
       payment_status: "paid",
