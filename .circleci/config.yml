@@ -1,6 +1,6 @@
-# Quality gate on CircleCI. GitHub Actions does not start these jobs while
-# the account is billing-locked. This file does not deploy. Do not add a
-# Cloudflare or Stripe token to the CircleCI project for this pipeline.
+# Credential-free CircleCI quality gate; deployment stays protected on GitHub.
+# Project settings must contain no production secrets or privileged contexts.
+# See .circleci/MIGRATION.md before retiring any GitHub checks.
 version: 2.1
 
 executors:
@@ -19,24 +19,31 @@ commands:
             corepack enable
             corepack prepare pnpm@10.28.2 --activate
             pnpm config set store-dir ~/.pnpm-store
-      - restore_cache:
-          keys:
-            - pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
-            - pnpm-store-v1-
       - run:
-          name: Install dependencies
-          command: pnpm install --frozen-lockfile --prefer-offline
+          name: Install dependencies without shared cross-branch caches
+          command: pnpm install --frozen-lockfile
           no_output_timeout: 20m
-      - save_cache:
-          key: pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
-          paths:
-            - ~/.pnpm-store
+
+  checkout-exact:
+    steps:
+      - checkout:
+          method: full
+      - run:
+          name: Verify pipeline commit before executing repository code
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing pipeline revision}"
+            mkdir -p /tmp/ci-evidence
+            git rev-parse HEAD > /tmp/ci-evidence/revision.txt
+      - store_artifacts:
+          path: /tmp/ci-evidence
+          destination: revision
 
 jobs:
   quality:
     executor: node
     steps:
-      - checkout
+      - checkout-exact
       - setup-node
       - run:
           name: Type check
@@ -58,7 +65,7 @@ jobs:
     environment:
       NODE_OPTIONS: --max-old-space-size=8192
     steps:
-      - checkout
+      - checkout-exact
       - setup-node
       - run:
           name: Typecheck ratchet
@@ -68,7 +75,7 @@ jobs:
   test-workers:
     executor: node
     steps:
-      - checkout
+      - checkout-exact
       - setup-node
       - run:
           name: Test workers
@@ -84,7 +91,7 @@ jobs:
   test-other:
     executor: node
     steps:
-      - checkout
+      - checkout-exact
       - setup-node
       - run:
           name: Install Playwright Chromium
@@ -106,7 +113,7 @@ jobs:
     environment:
       NODE_OPTIONS: --max-old-space-size=4096
     steps:
-      - checkout
+      - checkout-exact
       - setup-node
       - run:
           name: Production build
@@ -119,31 +126,52 @@ jobs:
             pnpm build
           no_output_timeout: 30m
 
+  extras:
+    executor: node
+    steps:
+      - checkout-exact
+      - setup-node
+      - run:
+          name: Drizzle migration source of truth
+          command: node scripts/check-drizzle-migrations.mjs
+      - run:
+          name: Install isolated Python test environment
+          command: |
+            python3 -m venv /tmp/agentz-venv
+            /tmp/agentz-venv/bin/python -m pip install -r requirements-agentz.txt
+          no_output_timeout: 20m
+      - run:
+          name: AgentZ Python tests
+          command: |
+            PYTHONPATH="$PWD" /tmp/agentz-venv/bin/python -m pytest agentz/tests --junitxml=/tmp/pytest-results/agentz.xml
+          no_output_timeout: 20m
+      - store_test_results:
+          path: /tmp/pytest-results
+
+  main-quality-gate:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - run:
+          name: All required quality jobs passed
+          command: |
+            printf '%s\n' "All six quality jobs succeeded for ${CIRCLE_SHA1:?}"
+
 workflows:
   quality-gate:
     jobs:
-      - quality:
-          filters:
-            branches:
-              ignore:
-                - /dependabot\/.*/
-      - typecheck-ratchet:
-          filters:
-            branches:
-              ignore:
-                - /dependabot\/.*/
-      - test-workers:
-          filters:
-            branches:
-              ignore:
-                - /dependabot\/.*/
-      - test-other:
-          filters:
-            branches:
-              ignore:
-                - /dependabot\/.*/
-      - build:
-          filters:
-            branches:
-              ignore:
-                - /dependabot\/.*/
+      - quality
+      - typecheck-ratchet
+      - test-workers
+      - test-other
+      - build
+      - extras
+      - main-quality-gate:
+          requires:
+            - quality
+            - typecheck-ratchet
+            - test-workers
+            - test-other
+            - build
+            - extras
