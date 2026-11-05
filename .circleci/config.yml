@@ -83,13 +83,7 @@ jobs:
       - setup-node
       - run:
           name: Test workers
-          command: |
-            if pnpm test --filter=./workers/* --continue=dependencies-successful; then
-              exit 0
-            fi
-            echo "Tests failed; retrying once"
-            sleep 15
-            pnpm test --filter=./workers/* --continue=dependencies-successful
+          command: pnpm test --filter=./workers/* --continue=dependencies-successful
           no_output_timeout: 30m
 
   test-other:
@@ -103,13 +97,7 @@ jobs:
           no_output_timeout: 20m
       - run:
           name: Test the other workspaces
-          command: |
-            if pnpm test --filter='!./workers/*' --continue=dependencies-successful; then
-              exit 0
-            fi
-            echo "Tests failed; retrying once"
-            sleep 15
-            pnpm test --filter='!./workers/*' --continue=dependencies-successful
+          command: pnpm test --filter='!./workers/*' --continue=dependencies-successful
           no_output_timeout: 30m
 
   build:
@@ -121,13 +109,7 @@ jobs:
       - setup-node
       - run:
           name: Production build
-          command: |
-            if pnpm build; then
-              exit 0
-            fi
-            echo "Production build failed; retrying once"
-            sleep 15
-            pnpm build
+          command: pnpm build
           no_output_timeout: 30m
 
   extras:
@@ -171,7 +153,13 @@ workflows:
       - typecheck-ratchet
       - test-workers
       - test-other
-      - build
+      - build:
+          requires:
+            - quality
+            - typecheck-ratchet
+            - test-workers
+            - test-other
+            - extras
       - extras
       - main-quality-gate:
           requires:
