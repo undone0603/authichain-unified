@@ -60,6 +60,8 @@ test("payment challenge only after all operational and human gates", async () =>
   assert.equal(result.accepts[0].network, "eip155:8453");
   assert.throws(() => buildTranslationPaymentRequired(q, policy, t + 300000), rejection("invalid_or_expired_quote"));
   assert.throws(() => buildTranslationPaymentRequired(q, { ...policy, payTo: "fake" }, t), rejection("invalid_payee"));
+  assert.throws(() => buildTranslationPaymentRequired(q, { ...policy, payTo: "0x0000000000000000000000000000000000000001" }, t), rejection("invalid_payee"));
+  assert.throws(() => buildTranslationPaymentRequired(q, { ...policy, resourceUrl: "https://attacker.example/api/a2a/translate" }, t), rejection("invalid_resource"));
 });
 
 const fake = (q, override = {}) => {
@@ -74,8 +76,8 @@ const fake = (q, override = {}) => {
       ...override.store,
     },
     payment: {
-      verify: async ({ quote }) => { calls.push("verify"); return { authorized: true, amountAtomic: quote.amountAtomic, network: quote.network, authorizationId: "mock" }; },
-      settle: async ({ quote }) => { calls.push("settle"); return { settled: true, amountAtomic: quote.amountAtomic, network: quote.network, transaction: "0xmock" }; },
+      verify: async ({ quote }) => { calls.push("verify"); return { authorized: true, amountAtomic: quote.amountAtomic, network: quote.network, asset: quote.asset, payTo: policy.payTo, requestDigest: quote.requestDigest, authorizationId: "mock" }; },
+      settle: async ({ quote }) => { calls.push("settle"); return { settled: true, amountAtomic: quote.amountAtomic, network: quote.network, asset: quote.asset, payTo: policy.payTo, transaction: "0xmock" }; },
       ...override.payment,
     },
     translator: {
@@ -98,7 +100,7 @@ test("mock authorized translation settles exactly once and persists before respo
   const response = await execute(q, ports);
   assert.equal(response.translation, "Hola mundo");
   assert.equal(response.receipt.semanticFidelityNotIndependentlyGuaranteed, true);
-  assert.deepEqual(calls, ["claim", "verify", "translate", "quality", "settle", "complete"]);
+  assert.deepEqual(calls, ["verify", "claim", "translate", "quality", "settle", "complete"]);
 });
 
 test("missing service or signature never incurs a charge", async () => {
