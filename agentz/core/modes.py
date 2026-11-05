@@ -97,6 +97,65 @@ class ExecutionContext:
                 print(f"{prefix}  [ERR] ERROR: {e}")
             raise
 
+    def gated_step(
+        self,
+        description: str,
+        executor: Any,
+        action: Any,
+        *,
+        target: str = "workspace",
+        policy: Any = None,
+        approver: Any = None,
+        receipts_path: Any = None,
+    ) -> Any:
+        """Run a side-effect through the consequence gate (ConseqGate).
+
+        The action is pre-executed in a snapshot in EVERY mode and judged on
+        its observed effects:
+
+        * dry-run: prints the real effects and verdict, changes nothing;
+        * confirm: a blocked action is rolled back without prompting; an
+          allowed one asks y/N before it is committed;
+        * auto:    commits only allowed actions.
+
+        A block is final. Returns the GateDecision. ``step`` is unchanged.
+        """
+        from agentz.core.consequence_gate import ConsequenceGate, write_receipt
+
+        prefix = f"  [{self.workflow_id}] "
+        gate = ConsequenceGate(executor, policy=policy, approver=approver, bot=self.workflow_id)
+        decision, handle = gate.evaluate(action)
+        decision.receipt["target"] = target
+        decision.receipt["mode"] = self.mode.value
+        decision.receipt["description"] = description[:200]
+        totals = decision.report.get("totals", {})
+        rows = decision.report.get("row_deltas", {})
+        verdict = "ALLOW" if decision.allowed else "BLOCK"
+        if self.verbose:
+            print(f"{prefix}GATE:  {description} -> {verdict} ({decision.reason})")
+            print(f"{prefix}  effects: files={totals} rows={rows}")
+
+        if self.mode == Mode.DRY_RUN:
+            gate.finish(decision, handle, commit=False, verdict="dry_run")
+        elif not decision.allowed:
+            gate.finish(decision, handle, commit=False, verdict="abstained")
+        elif self.mode == Mode.CONFIRM:
+            answer = input(f"{prefix}Commit these effects? [y/N] ").strip().lower()
+            if answer == "y":
+                gate.finish(decision, handle, commit=True)
+            else:
+                gate.finish(decision, handle, commit=False, verdict="declined")
+                if self.verbose:
+                    print(f"{prefix}skipped.")
+        else:
+            gate.finish(decision, handle, commit=True)
+
+        try:
+            write_receipt(decision.receipt, receipts_path)
+        except OSError as exc:  # a receipt failure never turns into an execution
+            if self.verbose:
+                print(f"{prefix}  [WARN] receipt not written: {exc}")
+        return decision
 
 def _truncate(s: str, limit: int = 200) -> str:
     return s if len(s) <= limit else s[:limit] + "..."

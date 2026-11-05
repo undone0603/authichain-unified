@@ -1188,6 +1188,26 @@ workflows:
       Does not deploy, delete Workers, disable workflows, rotate tokens,
       publish, or merge.
 
+  - id: consequence_gate_selftest
+    title: "Self-test the consequence gate (pre-execute, judge effects, roll back)"
+    priority: low
+    blocks_revenue: false
+    handler: handlers.consequence_gate_selftest
+    type: shell
+    estimated_minutes: 1
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    description: |
+      Runs six fixed scenarios through agentz.core.consequence_gate in a
+      temporary directory and an in-memory SQLite database, and fails if any
+      verdict is wrong or a blocked effect survives. Touches nothing outside
+      its temp dir in any mode. Sends, charges, and deploys nothing.
+
   - id: taskmarket_cycle
     title: "Taskmarket — pick one funded worker task"
     priority: high
