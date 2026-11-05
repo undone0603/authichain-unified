@@ -1,13 +1,12 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import DppThanksPage from "./page";
 
 const query = vi.hoisted(() => ({ value: "" }));
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(query.value),
 }));
-
-import DppThanksPage from "./page";
 
 function render(queryString: string): string {
   query.value = queryString;
