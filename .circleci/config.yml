@@ -83,7 +83,9 @@ jobs:
       - setup-node
       - run:
           name: Test workers
-          command: pnpm test --filter=./workers/* --continue=dependencies-successful
+          command: |
+            timeout 5m pnpm exec vitest run src/lib/x402.test.ts
+            timeout 10m pnpm test --filter=./workers/* --continue=dependencies-successful
           no_output_timeout: 30m
 
   test-other:
@@ -153,10 +155,13 @@ jobs:
 workflows:
   quality-gate:
     jobs:
-      - quality
-      - typecheck-ratchet
       - test-workers
-      - test-other
+      - quality:
+          requires: [test-workers]
+      - typecheck-ratchet:
+          requires: [test-workers]
+      - test-other:
+          requires: [test-workers]
       - build:
           requires:
             - quality
@@ -164,7 +169,8 @@ workflows:
             - test-workers
             - test-other
             - extras
-      - extras
+      - extras:
+          requires: [test-workers]
       - main-quality-gate:
           requires:
             - quality
