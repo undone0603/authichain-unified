@@ -24,9 +24,11 @@ async def scout_marketplace_infringement(brand_name: str, ctx: Optional[Executio
         attach_interceptor(controller, ctx)
         
     task = (
-        f"Search eBay and Amazon for listings of '{brand_name}' that appear to be counterfeit "
-        "or unauthorized. Look for suspiciously low prices or non-branded sellers. "
-        "Extract a list of listing URLs and seller names."
+        f"Search public eBay and Amazon listings mentioning '{brand_name}' for "
+        "possible brand-protection review leads. Record exact public evidence "
+        "and note uncertainty. Low prices, reseller status and listing text "
+        "alone do NOT prove a counterfeit or unauthorized sale. "
+        "Return listing URLs and seller names only as unverified scout reports."
     )
     
     llm = get_llm(model="gpt-4o")
@@ -78,20 +80,13 @@ def _parse_infringements(history: Any) -> List[Dict[str, str]]:
 
 async def draft_enforcement_notice(infringement_data: Dict[str, str], brand_name: str) -> str:
     """
-    Autonomously drafts a professional Cease & Desist letter.
+    Backward-compatible name with fail-closed behavior.
+
+    Previously generated a legal demand from an unverified search result.
+    Now returns only a neutral INTERNAL review memo, not an enforcement
+    claim, LLM-generated notice, or outbound message. An actual legal
+    demand requires separately verified rights and counsel authorization.
     """
-    llm = get_llm(model="gpt-4o")
-    
-    prompt = f"""
-    You are the AuthiChain Legal AI. Draft a professional Cease & Desist letter to the seller: {infringement_data['seller']}.
-    Brand: {brand_name}
-    Violation: {infringement_data['issue']} at {infringement_data['url']}
-    
-    State that {brand_name} is protected by AuthiChain's blockchain-anchored authenticity protocol 
-    and this listing is unauthorized. Demand immediate removal within 24 hours.
-    
-    Tone: Firm, legal, authoritative.
-    """
-    
-    response = llm.invoke(prompt)
-    return response.content.strip()
+    from agentz.core.legal_case_review import build_internal_review_memo
+
+    return build_internal_review_memo(infringement_data, brand_name)
