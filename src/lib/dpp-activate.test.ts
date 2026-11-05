@@ -301,4 +301,99 @@ describe("activateDppMerchant", () => {
       "LMT e-bike"
     );
   });
+
+  it.each(["returned_error", "thrown_error"] as const)(
+    "does not report activation success when persistence %s",
+    async failureMode => {
+      retrieve.mockResolvedValueOnce({
+        payment_status: "paid",
+        status: "complete",
+        amount_total: 29900,
+        metadata: { plan: "dpp_readiness", visit_id: "visit_db_failure" },
+        line_items: {
+          data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+        },
+      });
+      const insert = vi.fn().mockImplementation(async () => {
+        if (failureMode === "returned_error") {
+          return { error: { message: "database unavailable" } };
+        }
+        throw new Error("database unavailable");
+      });
+      const from = vi.fn(() => ({
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              order: () => ({
+                limit: async () => ({ data: [], error: null }),
+              }),
+            }),
+          }),
+        }),
+        insert,
+      }));
+      const { activateDppMerchant } = await import("./dpp-activate");
+      const result = await activateDppMerchant({
+        body: {
+          session_id: "cs_test_dpp_activation_fail",
+          categories: "a",
+          markets: "b",
+          labeling: "c",
+        },
+        stripeSecretKey: "sk_test",
+        supabase: { from },
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        status: 503,
+        error: "Activation could not be saved",
+      });
+      expect(insert).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it("does not report activation success when prior activation lookup errors", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      metadata: { plan: "dpp_readiness", visit_id: "visit_db_read_error" },
+      line_items: {
+        data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+      },
+    });
+    const insert = vi.fn();
+    const from = vi.fn(() => ({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            order: () => ({
+              limit: async () => ({
+                data: null,
+                error: { message: "database read unavailable" },
+              }),
+            }),
+          }),
+        }),
+      }),
+      insert,
+    }));
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_test_dpp_read_fail",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      status: 503,
+      error: "Activation status unavailable",
+    });
+    expect(insert).not.toHaveBeenCalled();
+  });
 });
