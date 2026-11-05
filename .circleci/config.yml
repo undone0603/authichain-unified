@@ -107,6 +107,7 @@ jobs:
     working_directory: ~/project
     environment:
       NODE_OPTIONS: --max-old-space-size=6144
+      AUTHICHAIN_BUILD_MAX_ATTEMPTS: "1"
     steps:
       - checkout-exact
       - setup-node

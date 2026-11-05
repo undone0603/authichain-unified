@@ -22,12 +22,19 @@ fi
 export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
 
 attempt=1
-max_attempts=3
+max_attempts="${AUTHICHAIN_BUILD_MAX_ATTEMPTS:-3}"
+if [[ ! "$max_attempts" =~ ^[1-3]$ ]]; then
+  echo "[build] AUTHICHAIN_BUILD_MAX_ATTEMPTS must be 1, 2, or 3" >&2
+  exit 2
+fi
 while [[ $attempt -le $max_attempts ]]; do
   echo "[build] attempt $attempt/$max_attempts (NODE_OPTIONS=$NODE_OPTIONS)"
   if pnpm exec next build --webpack; then
     echo "[build] success on attempt $attempt"
     exit 0
+  fi
+  if [[ $attempt -ge $max_attempts ]]; then
+    break
   fi
   echo "[build] failed attempt $attempt; sleeping $((15 * attempt))s before retry"
   sleep $((15 * attempt))
