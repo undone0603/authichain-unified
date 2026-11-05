@@ -6,7 +6,6 @@
 import {
   DPP_PRICE_ID,
   dppActivateUrl,
-  isDppOffer,
   recordDppLoopEvent,
 } from "./dpp-loop";
 import { DPP_OFFER_KEY } from "./plans";
@@ -109,14 +108,7 @@ export async function activateDppMerchant(opts: {
   const otherOffer =
     typeof offer === "string" && offer && offer !== DPP_OFFER_KEY;
   const linePriceId = session.line_items?.data?.[0]?.price?.id ?? null;
-  if (
-    otherPlan ||
-    otherOffer ||
-    (linePriceId && linePriceId !== DPP_PRICE_ID)
-  ) {
-    return { ok: false, status: 400, error: "Not a DPP workspace session" };
-  }
-  if (!isDppOffer(md, linePriceId)) {
+  if (otherPlan || otherOffer || linePriceId !== DPP_PRICE_ID) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
 
