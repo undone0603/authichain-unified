@@ -79,13 +79,17 @@ function normalizeSource(
   return "direct";
 }
 
-/** Persist one observable loop stage. Never throws — logging only on failure. */
+/** Persist one observable loop stage. Best-effort by default; activation can require a durable write. */
 export async function recordDppLoopEvent(
   supabase: SupabaseLike,
-  input: RecordDppLoopEventInput
+  input: RecordDppLoopEventInput,
+  options: { requirePersisted?: boolean } = {}
 ): Promise<void> {
   const visitId = input.visitId?.trim();
-  if (!visitId) return;
+  if (!visitId) {
+    if (options.requirePersisted) throw new Error("DPP event persistence unavailable");
+    return;
+  }
 
   try {
     const { error } = await supabase.from("funnel_events").insert({
@@ -105,11 +109,10 @@ export async function recordDppLoopEvent(
       },
       timestamp: new Date().toISOString(),
     });
-    if (error) {
-      console.error("[dpp-loop] record failed:", input.stage, error);
-    }
+    if (error) throw error;
   } catch (err) {
     console.error("[dpp-loop] record failed:", input.stage, err);
+    if (options.requirePersisted) throw new Error("DPP event persistence unavailable");
   }
 }
 
