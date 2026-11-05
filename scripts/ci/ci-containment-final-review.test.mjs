@@ -69,3 +69,12 @@ test("content PR creation and validation remain, while automatic merge is held",
   assert.ok(src.includes("- name: Open pull request"));
   assert.match(src, /- name: Enable auto-merge for content-only changes\n(?:[^\n]*\n){0,5}        if: \$\{\{ false \}\}/);
 });
+
+test("autopilot only merges after retrieving direct independent head-specific review evidence", () => {
+  const source = readFileSync("scripts/autonomy/merge-autopilot.mjs", "utf8");
+  assert.ok(source.includes("export function independentApprovalForHead"));
+  assert.ok(source.includes("const reviewGate = independentApprovalForHead(pr, reviews, sha)"));
+  assert.ok(source.includes('decision = { action: "wait", reason: reviewGate.reason }'));
+  assert.ok(source.includes("/reviews?per_page=100"));
+  assert.ok(source.includes('["COLLABORATOR", "MEMBER"]'));
+});
