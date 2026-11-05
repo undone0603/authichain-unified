@@ -16,7 +16,7 @@ commands:
       - run:
           name: Install pnpm 10.28.2
           command: |
-            corepack enable
+            sudo corepack enable
             corepack prepare pnpm@10.28.2 --activate
             pnpm config set store-dir ~/.pnpm-store
       - restore_cache:
