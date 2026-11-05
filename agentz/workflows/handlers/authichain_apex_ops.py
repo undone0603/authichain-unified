@@ -51,13 +51,13 @@ def run(ctx: ExecutionContext) -> str:
             )
             
         for inf in infringements[:1]: # Process first match for demo
-            ctx.step(f"   -> Infringement Detected: {inf['seller']} ({inf['url']})")
+            ctx.step("   -> Unverified marketplace lead found; no infringement established.")
             notice = ctx.step(
-                f"Drafting Cease & Desist for {inf['seller']}",
+                "Prepare private evidence-review memo for marketplace lead",
                 action=lambda: asyncio.run(draft_enforcement_notice(inf, brand_target))
             )
-            ctx.step(f"Legal Enforcement Drafted. Logging to HubSpot deal room.")
+            ctx.step("Private evidence-review memo prepared; no legal demand or CRM transmission.")
 
-        return "Apex evolution complete. Infrastructure is now transactional and legally self-defending."
+        return "Apex workflow complete; marketplace leads remain unverified and operator-held."
     finally:
         lm_manager.unload_model("local-model")
