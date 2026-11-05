@@ -38,6 +38,24 @@ const EVIDENCE_KEYS = Object.freeze([
   "ref", "kind", "artifact_sha256", "source_class",
 ]);
 const ALLOWED_USE = "private_internal_triage";
+const SAFE_SIGNALS = new Set([
+  "PACKAGE_FIRST_OPENING_REVIEW",
+  "ISSUER_AUTHENTICITY_REVIEW",
+  "POTENTIAL_IDENTIFIER_REUSE_REVIEW",
+  "LAB_DOCUMENT_CONSISTENCY_REVIEW",
+  "NOT_FOUND_IS_NOT_COUNTERFEIT",
+  "INDEPENDENT_REVIEW_REPORT_AUTHENTICATION_NEEDED",
+  "ISSUER_CREDENTIAL_CLAIM_REQUIRES_CANONICAL_VERIFICATION",
+]);
+const SAFE_ACTIONS = new Set([
+  "PRESERVE_PRIVATE_ORIGINALS_AND_RECEIPTS",
+  "REQUEST_INDEPENDENT_FIRST_OPENING_REPRODUCTION",
+  "VERIFY_AUTHORIZED_ISSUER_SIGNATURE_AND_REVOCATION",
+  "RECONCILE_PER_UNIT_SERIALS_AND_DISTINCT_PHYSICAL_ITEMS",
+  "VERIFY_LAB_COA_DIGEST_AND_ISSUER_PROVENANCE",
+  "RECHECK_IDENTIFIER_SOURCE_AND_SERVICE_HEALTH",
+  "SEEK_AUTHORIZED_QUALITY_OR_LEGAL_REVIEW_BEFORE_EXTERNAL_ACTION",
+]);
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$/;
 const HASH = /^[a-f0-9]{64}$/;
 
@@ -194,8 +212,15 @@ export function toSafeAgentExchange(result) {
       result.human_review_required !== true ||
       !Array.isArray(result.signals) ||
       !Array.isArray(result.validation_steps) ||
-      result.signals.some(x => typeof x !== "string") ||
-      result.validation_steps.some(x => typeof x !== "string")) {
+      !Object.values(PRIORITIES).includes(result.priority) ||
+      result.external_communications !== "NOT_AUTHORIZED" ||
+      result.allowed_automation !== "READ_ONLY_LOCAL_ANALYSIS" ||
+      !Array.isArray(result.operational_effects) ||
+      result.operational_effects.length !== 0 ||
+      result.signals.length > SAFE_SIGNALS.size ||
+      result.validation_steps.length > SAFE_ACTIONS.size ||
+      result.signals.some(x => !SAFE_SIGNALS.has(x)) ||
+      result.validation_steps.some(x => !SAFE_ACTIONS.has(x))) {
     throw new Error("invalid_case_result");
   }
   return Object.freeze({
