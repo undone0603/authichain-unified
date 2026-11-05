@@ -31,6 +31,7 @@ import {
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
+import {evaluateNegotiation, NegotiationInputError} from "./negotiation-engine.mjs";
 
 type McpEnv = X402Env & {
   /** Service binding to authichain-edge-router. Public fetch of this zone returns 522. */
@@ -100,6 +101,54 @@ const JSON_HEADERS = {
 };
 
 export const TOOLS = [
+  {
+    name: "negotiate",
+    annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false},
+    description:
+      "Free, stateless negotiation-planning tool. Uses BATNA (unverified outside option), explicit walk-away limits, weighted issues and comparable tradeoff proposals. Returns drafts only: no acceptance, counterparty messaging, payment, purchase, signature or trust grant.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        objective: {type:"string",minLength:3,maxLength:240},
+        issues: {
+          type:"array",minItems:1,maxItems:8,
+          items: {
+            type:"object",
+            properties:{
+              key:{type:"string",pattern:"^[a-z][a-z0-9_]{0,47}$"},
+              direction:{type:"string",enum:["minimize","maximize"]},
+              target:{type:"number"},
+              walkAway:{type:"number"},
+              weight:{type:"number",minimum:1,maximum:10},
+              unit:{type:"string",maxLength:16},
+            },
+            required:["key","direction","target","walkAway","weight"],
+            additionalProperties:false,
+          },
+        },
+        counterpartOffers:{
+          type:"array",maxItems:8,
+          items:{
+            type:"object",
+            properties:{
+              id:{type:"string",pattern:"^[a-z][a-z0-9_]{0,47}$"},
+              terms:{type:"object",additionalProperties:{type:"number"}},
+            },
+            required:["id","terms"],
+            additionalProperties:false,
+          },
+        },
+        outsideOption:{
+          type:"object",
+          properties:{terms:{type:"object",additionalProperties:{type:"number"}}},
+          required:["terms"],
+          additionalProperties:false,
+        },
+      },
+      required:["objective","issues"],
+      additionalProperties:false,
+    },
+  },
   {
     name: "get_pricing",
     description:
@@ -537,6 +586,7 @@ export function mcpPricingDiscovery(env?: X402Env) {
       docs: "https://authichain.com/protocol",
     },
     freeTools: [
+      "negotiate",
       "verify_record",
       "query_provenance",
       "dpp_readiness_check",
@@ -1380,6 +1430,17 @@ async function handleRpc(
       arguments?: Record<string, unknown>;
     };
     const name = params.name ?? "";
+    if (name === "negotiate") {
+      try {
+        const result=evaluateNegotiation(params.arguments ?? {});
+        return rpcResult(id, {content:[{type:"text",text:JSON.stringify(result,null,2)}]});
+      }catch(e) {
+        return rpcResult(id, {
+          content:[{type:"text",text:e instanceof NegotiationInputError?e.message:"negotiation_unavailable"}],
+          isError:true
+        });
+      }
+    }
     if (name === "get_pricing" || name === "authichain_get_pricing") {
       hydrateX402(env);
       return rpcResult(id, {

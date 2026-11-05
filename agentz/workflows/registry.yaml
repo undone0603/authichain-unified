@@ -20,6 +20,25 @@
 
 workflows:
 
+  # Negotiation plans are proposals only; even AUTO cannot issue messages or orders.
+  - id: negotiate_draft
+    title: "Generate BATNA/MESO negotiation drafts for approved numeric brief"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.negotiate_draft
+    type: api
+    estimated_minutes: 1
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    max_runs_per_day: 3
+    description: |
+      Read operator-provided negotiation parameters from context only.
+      Compute internal proposal/limit scores via local Node CLI.
+      Never contact suppliers or peers, accept offers, order, sign or pay.
+      If no brief exists, return INPUT_REQUIRED without a side effect.
+
+
   # =================================================================
   # CRITICAL — TIME-SENSITIVE
   # =================================================================

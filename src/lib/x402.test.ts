@@ -835,6 +835,10 @@ describe("x402AgentCard", () => {
       protocolVersion: "1.0",
     });
     expect(card.skills.length).toBeGreaterThan(0);
+    const negotiationSkill=card.skills.find(s=>s.id==="negotiation-planning");
+    expect(negotiationSkill?.examples).toContain("GET https://authichain.com/negotiate");
+    expect(negotiationSkill?.description).toContain("Never contacts third parties");
+
     const launch = card.skills.find(s => s.id === "qron-launch-subscription");
     expect(launch?.examples).toEqual([
       "https://authichain.com/checkout/qron_launch",

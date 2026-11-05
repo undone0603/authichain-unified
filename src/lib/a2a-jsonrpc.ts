@@ -14,6 +14,19 @@ export const A2A_PROTOCOL_VERSION = "1.0";
 const EVIDENCE_TEXT =
   "Paid evidence check for agents: signed record, machine-readable verification result, explicit unknowns, and a settlement receipt. A valid signature is not real-world truth. POST https://authichain.com/api/x402 or https://authichain.com/api/v1/agent-verify. Unpaid calls return HTTP 402 for 50000 units of USDC on Base. This JSON-RPC method does not pay and does not settle.";
 
+// Informational A2A discovery only; structured negotiation uses MCP or HTTP.
+// A2A SendMessage creates no binding commercial offer and never orders parts.
+const NEGOTIATION_TEXT =
+  "AuthiChain /negotiate is a free, stateless multi-issue proposal tool. " +
+  "Use MCP tools/list then tools/call negotiate, or GET/POST https://authichain.com/negotiate " +
+  "with an objective, numerical target and walk-away limits, and optionally supplier quotes. " +
+  "Results include BATNA/ZOPA cautions and weighted tradeoff drafts only. " +
+  "No supplier is contacted, no terms are accepted, no purchase is placed and no payment is made.";
+
+function isNegotiationInquiry(parts: A2aPart[]): boolean {
+  return parts.some(p => /\/negotiate\b|\bnegotiat(?:e|ion|ing)\b/i.test(p.text.slice(0,4096)));
+}
+
 export const A2A_METHODS = [
   "SendMessage",
   "SendStreamingMessage",
@@ -214,10 +227,12 @@ function sendMessage(
   }
   const id = message.taskId || crypto.randomUUID();
   const contextId = message.contextId || crypto.randomUUID();
+  const negotiationInquiry=isNegotiationInquiry(message.parts);
+  const responseText=negotiationInquiry?NEGOTIATION_TEXT:EVIDENCE_TEXT;
   const agentMessage: A2aMessage = {
     messageId: crypto.randomUUID(),
     role: "ROLE_AGENT",
-    parts: [{ text: EVIDENCE_TEXT }],
+    parts: [{ text: responseText }],
     contextId,
     taskId: id,
   };
@@ -232,8 +247,8 @@ function sendMessage(
     artifacts: [
       {
         artifactId: crypto.randomUUID(),
-        name: "evidence-check",
-        parts: [{ text: EVIDENCE_TEXT }],
+        name: negotiationInquiry ? "negotiation-planning" : "evidence-check",
+        parts: [{ text: responseText }],
       },
     ],
   };

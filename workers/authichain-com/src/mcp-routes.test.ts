@@ -111,6 +111,44 @@ describe("mcp discovery", () => {
     }
   });
 
+  it("advertises negotiate as eighth core tool and returns no-commit proposals",async()=>{
+    const listing=await tryHandleMcp(req("/mcp",{
+      method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({jsonrpc:"2.0",id:200,method:"tools/list"})
+    }));
+    const tools=(await listing!.json()).result.tools as Array<{name:string}>;
+    expect(tools).toHaveLength(8);
+    expect(tools.some(x=>x.name==="negotiate")).toBe(true);
+    const input={
+      objective:"Plan replacement part terms without ordering",
+      issues:[
+        {key:"price_usd",direction:"minimize",target:80,walkAway:120,weight:5},
+        {key:"delivery_days",direction:"minimize",target:2,walkAway:10,weight:4},
+      ],
+    };
+    const response=await tryHandleMcp(req("/mcp",{
+      method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({jsonrpc:"2.0",id:201,method:"tools/call",params:{name:"negotiate",arguments:input}})
+    }));
+    expect(response?.status).toBe(200);
+    const rpc=(await response!.json()).result;
+    const result=JSON.parse(rpc.content[0].text);
+    expect(result.status).toBe("PROPOSALS_ONLY");
+    expect(result.proposals.length).toBeGreaterThanOrEqual(3);
+    expect(result.allowedActions.sendMessage).toBe(false);
+    expect(result.allowedActions.purchase).toBe(false);
+    expect(result.sideEffectsPerformed).toBe(0);
+  });
+
+  it("fails closed on invalid negotiate arguments in MCP",async()=>{
+    const response=await tryHandleMcp(req("/mcp",{
+      method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({jsonrpc:"2.0",id:202,method:"tools/call",params:{name:"negotiate",arguments:{objective:"buy"}}})
+    }));
+    const result=(await response!.json()).result;
+    expect(result.isError).toBe(true);
+  });
+
   it("JSON-RPC tools/list and get_pricing are public", async () => {
     const list = await tryHandleMcp(
       req("/mcp", {
