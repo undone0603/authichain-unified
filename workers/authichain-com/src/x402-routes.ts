@@ -259,7 +259,11 @@ async function healthResponse(env?: X402Env): Promise<Response> {
 
 async function catalogResponse(env?: X402Env): Promise<Response> {
   hydrateX402(env);
-  return json(200, await x402Catalog(healthEnv(env)));
+  const catalog = await x402Catalog(healthEnv(env));
+  // Farm stays in the price list (farmUsd) but off public buy links (#1606),
+  // matching the sister-origin catalogs.
+  const { farmPaymentLink: _farmLink, ...humanCheckout } = catalog.humanCheckout;
+  return json(200, { ...catalog, humanCheckout });
 }
 
 async function listingResponse(env?: X402Env): Promise<Response> {
