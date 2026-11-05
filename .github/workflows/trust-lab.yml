@@ -2,6 +2,7 @@ name: trust-lab
 on:
   pull_request:
   push:
+    branches: [main]
     paths:
       - "protocol/trust-kernel/**"
       - "protocol/adversarial/**"
@@ -9,6 +10,9 @@ on:
       - "packages/verifier/**"
       - "packages/policy/**"
       - ".github/workflows/trust-lab.yml"
+permissions:
+  contents: read
+
 jobs:
   adversarial:
     runs-on: ${{ github.event_name != 'pull_request' && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}

@@ -41,7 +41,7 @@ jobs:
 
             const { data: pr } = await github.rest.pulls.get({owner, repo, pull_number: pr_number});
             const author = pr.user && pr.user.login;
-            if (!author || !author.startsWith('dependabot')) {
+            if (!author || author !== 'dependabot[bot]') {
               core.info(`PR #${pr_number} author is ${author}; not a dependabot PR.`);
               core.setOutput('eligible', 'false');
               return;
@@ -49,6 +49,11 @@ jobs:
 
             // Refresh PR to get mergeable state
             const refreshed = await github.rest.pulls.get({owner, repo, pull_number: pr_number});
+            if (refreshed.data.state !== 'open' || refreshed.data.draft || refreshed.data.base.ref !== 'main') {
+              core.info('PR must be open, non-draft and target main.');
+              core.setOutput('eligible', 'false');
+              return;
+            }
             if (refreshed.data.mergeable_state !== 'clean') {
               core.info(`PR #${pr_number} mergeable_state=${refreshed.data.mergeable_state}; skipping.`);
               core.setOutput('eligible', 'false');
@@ -65,16 +70,32 @@ jobs:
             }
 
             // Check check runs
-            const checks = await github.rest.checks.listForRef({owner, repo, ref});
-            const failing = checks.data.check_runs.find(c => c.conclusion !== 'success' && c.conclusion !== 'neutral' && c.conclusion !== null);
-            if (failing) {
-              core.info(`Found failing check run: ${failing.name} (${failing.conclusion}); skipping.`);
+            const checks = await github.rest.checks.listForRef({owner, repo, ref, per_page: 100});
+            const checkRuns = checks.data.check_runs;
+            if (checks.data.total_count > checkRuns.length ||
+                !checkRuns.some(c => c.name === 'Main quality gate' &&
+                  c.status === 'completed' && c.conclusion === 'success') ||
+                checkRuns.some(c => c.conclusion !== 'success' && c.conclusion !== 'neutral')) {
+              core.info('Required exact-head CI missing, incomplete, or not successful.');
+              core.setOutput('eligible', 'false');
+              return;
+            }
+
+            // Fail closed without a human reviewer approving this exact head.
+            const reviews = await github.rest.pulls.listReviews({
+              owner, repo, pull_number: pr_number, per_page: 100,
+            });
+            if (reviews.data.length >= 100 || !reviews.data.some(r =>
+              r.state === 'APPROVED' && r.commit_id === ref &&
+              r.user?.type === 'User' && r.user?.login !== author)) {
+              core.info('Independent exact-head human approval not verified.');
               core.setOutput('eligible', 'false');
               return;
             }
 
             core.setOutput('eligible', 'true');
             core.setOutput('pr_number', String(pr_number));
+            core.setOutput('expected_sha', ref);
 
       # Textual 3-way merges of pnpm-lock.yaml (a large generated file) can
       # silently produce duplicated mapping keys without registering as a git
@@ -103,5 +124,6 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const pr_number = Number('${{ steps.resolve.outputs.pr_number }}');
-            await github.rest.pulls.merge({ owner, repo, pull_number: pr_number, merge_method: 'squash' });
+            const sha = '${{ steps.resolve.outputs.expected_sha }}';
+            await github.rest.pulls.merge({ owner, repo, pull_number: pr_number, merge_method: 'squash', sha });
             core.info(`Merged PR #${pr_number} (Dependabot).`);
