@@ -104,9 +104,10 @@ export async function activateDppMerchant(opts: {
   // alone is never sufficient. Conflicting evidence always fails closed.
   const otherPlan =
     typeof md.plan === "string" && md.plan && md.plan !== "dpp_readiness";
-  const offer = md.offer ?? md.offer_key;
-  const otherOffer =
-    typeof offer === "string" && offer && offer !== DPP_OFFER_KEY;
+  const otherOffer = [md.offer, md.offer_key].some(
+    offer =>
+      typeof offer === "string" && offer !== "" && offer !== DPP_OFFER_KEY
+  );
   const linePriceId = session.line_items?.data?.[0]?.price?.id ?? null;
   if (otherPlan || otherOffer || linePriceId !== DPP_PRICE_ID) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
