@@ -2563,8 +2563,6 @@ const HTML = `<!DOCTYPE html>
     actions: [
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/generate", label: "Generate Living QR", primary: false },
-      { href: "https://authichain.com/checkout/qron_launch", label: "QRON Launch $19/mo", primary: false },
-      { href: "https://authichain.com/checkout/qron_launch_annual", label: "QRON Launch $190/yr", primary: false },
     ],
   })}
   ${estateTrust([
@@ -2637,8 +2635,6 @@ const HTML = `<!DOCTYPE html>
     actions: [
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/x402", label: "x402 agent pay", primary: false },
-      { href: "https://authichain.com/checkout/qron_launch", label: "QRON Launch $19/mo", primary: false },
-      { href: "https://authichain.com/checkout/qron_launch_annual", label: "QRON Launch $190/yr", primary: false },
     ],
   })}
   </main>
