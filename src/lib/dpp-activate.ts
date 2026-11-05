@@ -182,22 +182,26 @@ export async function activateDppMerchant(opts: {
 
   if (!alreadyActivated) {
     try {
-      await recordDppLoopEvent(opts.supabase, {
-      visitId,
-      stage: "merchant_activated",
-      source: String(md.source || "direct"),
-      email,
-      profileId,
-      stripeSessionId: sessionId,
-      metadata: {
-        categories,
-        markets,
-        labeling,
-        call_windows: (opts.body.call_windows || "").trim() || null,
-        activated_at: new Date().toISOString(),
-        importer_file,
-      },
-      }, { requirePersisted: true });
+      await recordDppLoopEvent(
+        opts.supabase,
+        {
+          visitId,
+          stage: "merchant_activated",
+          source: String(md.source || "direct"),
+          email,
+          profileId,
+          stripeSessionId: sessionId,
+          metadata: {
+            categories,
+            markets,
+            labeling,
+            call_windows: (opts.body.call_windows || "").trim() || null,
+            activated_at: new Date().toISOString(),
+            importer_file,
+          },
+        },
+        { requirePersisted: true }
+      );
     } catch {
       return { ok: false, status: 503, error: "Activation could not be saved" };
     }
