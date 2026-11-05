@@ -66,6 +66,33 @@ describe("activateDppMerchant", () => {
     expect(from).not.toHaveBeenCalled();
   });
 
+  it("rejects contradictory offer metadata even with a DPP price", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      metadata: { offer: "made_in_usa", plan: "dpp_readiness" },
+      line_items: {
+        data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+      },
+    });
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const from = vi.fn();
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_conflicting_offer",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(400);
+    expect(from).not.toHaveBeenCalled();
+  });
+
   it("never accepts a same-price checkout without DPP identity", async () => {
     retrieve.mockResolvedValueOnce({
       payment_status: "paid",
