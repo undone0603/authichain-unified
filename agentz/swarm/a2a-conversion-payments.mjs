@@ -5,6 +5,7 @@
  */
 import {
   BASE_CAIP2, BASE_USDC_ASSET, TranslationRefusal, sha256Hex,
+  APPROVED_MICROSERVICE_PAY_TO, APPROVED_A2A_ORIGIN,
 } from "./a2a-translation-payments.mjs";
 
 export const CONVERSION_PRICE_VERSION = "conversion-usdc-v1-proposal";
@@ -117,9 +118,9 @@ export function buildConversionPaymentRequired(quote, policy, nowMs = Date.now()
   if (!isRecord(quote) || quote.priceVersion !== CONVERSION_PRICE_VERSION ||
       nowMs >= quote.expiresAtMs || quote.network !== BASE_CAIP2 ||
       quote.asset !== BASE_USDC_ASSET) fail("invalid_or_expired_quote");
-  if (typeof policy.payTo !== "string" || !/^0x[a-fA-F0-9]{40}$/.test(policy.payTo)) fail("invalid_payee");
-  if (typeof policy.resourceUrl !== "string" ||
-      !/^https:\/\/[A-Za-z0-9.-]+\/api\/a2a\/convert$/.test(policy.resourceUrl)) fail("invalid_resource");
+  if (typeof policy.payTo !== "string" ||
+      policy.payTo.toLowerCase() !== APPROVED_MICROSERVICE_PAY_TO.toLowerCase()) fail("invalid_payee");
+  if (policy.resourceUrl !== APPROVED_A2A_ORIGIN + "/api/a2a/convert") fail("invalid_resource");
   return {
     x402Version: 2, error: "PAYMENT-SIGNATURE header required",
     resource: { url: policy.resourceUrl, mimeType: "application/json",
@@ -155,24 +156,28 @@ export async function deliverPaidConversion({
   const { quoteDigest, ...body } = quote;
   if (quoteDigest !== await sha256Hex(JSON.stringify(body))) fail("quote_tampered");
 
+  // A bogus payment signature must not reserve/lock somebody else's quote.
+  // This port performs cryptographic v2 verification and per-agent budget checks.
+  const auth = await ports.payment.verify({ quote, paymentSignature });
+  if (!auth || auth.authorized !== true || !auth.authorizationId ||
+      auth.amountAtomic !== quote.feeAtomic ||
+      auth.network !== quote.network ||
+      auth.asset?.toLowerCase() !== BASE_USDC_ASSET.toLowerCase() ||
+      auth.payTo?.toLowerCase() !== APPROVED_MICROSERVICE_PAY_TO.toLowerCase() ||
+      auth.quoteDigest !== quote.quoteDigest) fail("payment_not_authorized");
   if ((await ports.store.claim(quoteId, quote.requestDigest)) !== "claimed") {
     fail("already_claimed_or_conflict");
   }
   let attempted = false;
   try {
-    // The payment port must independently verify the v2 signature, payee,
-    // exact resource, chain, fee, nonce and per-payer budget/spending cap.
-    const auth = await ports.payment.verify({ quote, paymentSignature });
-    if (!auth || auth.authorized !== true || !auth.authorizationId ||
-        auth.amountAtomic !== quote.feeAtomic || auth.network !== quote.network) {
-      fail("payment_not_authorized");
-    }
     // Result and provenance already exist in the immutable quote. No transfer.
     attempted = true;
     const settled = await ports.payment.settle({ quote, auth, outputDigest: quote.quoteDigest });
     if (!settled || settled.settled !== true ||
         settled.amountAtomic !== quote.feeAtomic ||
         settled.network !== quote.network ||
+        settled.asset?.toLowerCase() !== BASE_USDC_ASSET.toLowerCase() ||
+        settled.payTo?.toLowerCase() !== APPROVED_MICROSERVICE_PAY_TO.toLowerCase() ||
         typeof settled.transaction !== "string" || !settled.transaction) fail("settlement_not_confirmed");
     const receipt = {
       quoteId, quoteDigest: quote.quoteDigest, requestDigest: quote.requestDigest,
