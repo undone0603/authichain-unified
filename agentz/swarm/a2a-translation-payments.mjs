@@ -9,6 +9,8 @@ export const BASE_USDC_ASSET = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 export const PRICE_PER_1000_CODEPOINTS = 10000; // 0.01 USDC, 6 decimals
 export const MAX_CODEPOINTS = 10000;
 export const QUOTE_TTL_MS = 300000;
+export const APPROVED_MICROSERVICE_PAY_TO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+export const APPROVED_A2A_ORIGIN = "https://authichain.com";
 
 export class TranslationRefusal extends Error {
   constructor(code) {
@@ -112,9 +114,8 @@ export function buildTranslationPaymentRequired(quote, config, nowMs = Date.now(
       nowMs >= quote.expiresAtMs || quote.network !== BASE_CAIP2 ||
       quote.asset !== BASE_USDC_ASSET) fail("invalid_or_expired_quote");
   if (typeof config.payTo !== "string" ||
-      !/^0x[a-fA-F0-9]{40}$/.test(config.payTo)) fail("invalid_payee");
-  if (typeof config.resourceUrl !== "string" ||
-      !/^https:\/\/[^\s/]+\/api\/a2a\/translate$/.test(config.resourceUrl)) fail("invalid_resource");
+      config.payTo.toLowerCase() !== APPROVED_MICROSERVICE_PAY_TO.toLowerCase()) fail("invalid_payee");
+  if (config.resourceUrl !== APPROVED_A2A_ORIGIN + "/api/a2a/translate") fail("invalid_resource");
   return {
     x402Version: 2,
     resource: {
@@ -166,17 +167,20 @@ export async function deliverPaidTranslation({ quoteId, request, paymentSignatur
       quote.amountAtomic !== r.amountAtomic ||
       quote.requestDigest !== await requestDigest(r)) fail("quote_mismatch_or_expired");
 
+  // First VERIFY (no charge). Unverified requests must not burn/lock a quote.
+  // A trusted v2 facilitator must verify the signature, payer, nonce and spend cap.
+  const auth = await ports.payment.verify({ quote, paymentSignature });
+  if (!auth || auth.authorized !== true ||
+      auth.amountAtomic !== quote.amountAtomic ||
+      auth.network !== quote.network || !auth.authorizationId ||
+      auth.asset?.toLowerCase() !== BASE_USDC_ASSET.toLowerCase() ||
+      auth.payTo?.toLowerCase() !== APPROVED_MICROSERVICE_PAY_TO.toLowerCase() ||
+      auth.requestDigest !== quote.requestDigest) fail("payment_not_authorized");
+  // Only a validated authorization may atomically claim the single-use quote.
   const claimed = await ports.store.claim(quoteId, quote.requestDigest);
   if (claimed !== "claimed") fail("already_claimed_or_conflict");
   let settlementAttempted = false;
   try {
-    // This port must verify v2 authorization for the exact quote, NOT decode
-    // a header or trust a self-declared payer. No legacy X-PAYMENT fallback.
-    const auth = await ports.payment.verify({ quote, paymentSignature });
-    if (!auth || auth.authorized !== true ||
-        auth.amountAtomic !== quote.amountAtomic ||
-        auth.network !== quote.network || !auth.authorizationId) fail("payment_not_authorized");
-
     const translated = await ports.translator.translate({
       text: r.text, sourceLanguage: r.sourceLanguage, targetLanguage: r.targetLanguage,
     });
@@ -193,6 +197,8 @@ export async function deliverPaidTranslation({ quoteId, request, paymentSignatur
     if (!settled || settled.settled !== true ||
         settled.network !== quote.network ||
         settled.amountAtomic !== quote.amountAtomic ||
+        settled.asset?.toLowerCase() !== BASE_USDC_ASSET.toLowerCase() ||
+        settled.payTo?.toLowerCase() !== APPROVED_MICROSERVICE_PAY_TO.toLowerCase() ||
         typeof settled.transaction !== "string" || !settled.transaction) fail("settlement_not_confirmed");
     const receipt = {
       quoteId, requestDigest: quote.requestDigest, outputDigest,
