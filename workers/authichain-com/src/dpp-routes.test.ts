@@ -6,68 +6,50 @@ function req(path: string, init?: RequestInit): Request {
 }
 
 describe("tryHandleDppRoute", () => {
-  it("aliases /thanks and /success to the DPP thanks page", async () => {
-    for (const path of [
-      "/thanks?session_id=cs_test_1&visit_id=dpp_abc",
-      "/success?session_id=cs_test_1&visit_id=dpp_abc",
-    ]) {
-      const res = await tryHandleDppRoute(req(path));
-      expect(res).not.toBeNull();
-      const html = await res!.text();
-      expect(html).toContain("Payment received");
-      expect(html).toContain(
-        "/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
-      );
-    }
-  });
-
-  it("serves thanks HTML at the edge with the activate query string", async () => {
-    const res = await tryHandleDppRoute(
-      req("/dpp/thanks?session_id=cs_test_1&visit_id=dpp_abc")
-    );
-    expect(res).not.toBeNull();
-    expect(res!.headers.get("content-type")).toMatch(/text\/html/);
-    const html = await res!.text();
-    expect(html).toContain("Payment received");
-    expect(html).toContain(
-      "/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
-    );
-  });
-
-  it("keeps the DPP copy when plan is absent or dpp_readiness", async () => {
-    for (const path of [
-      "/dpp/thanks?session_id=cs_test_1&visit_id=dpp_abc",
-      "/dpp/thanks?session_id=cs_test_1&visit_id=dpp_abc&plan=dpp_readiness",
-    ]) {
-      const html = await (await tryHandleDppRoute(req(path)))!.text();
-      expect(html).toContain("Workspace opened");
-      expect(html).toContain("with self-serve activation.");
-      expect(html).not.toContain("50 workspace generations");
-      expect(html).toContain("/dpp/activate?");
-    }
-  });
-
-  it("names the right product and credits for a credit-bearing plan", async () => {
-    const html = await (await tryHandleDppRoute(
-      req("/dpp/thanks?session_id=cs_test_1&visit_id=chk_1&plan=qron_launch")
-    ))!.text();
-    // The DPP workspace claim must not reach a non-DPP buyer.
+  it.each([
+    "/thanks",
+    "/success",
+    "/dpp/thanks",
+    "/success?session_id=fake",
+    "/dpp/thanks?session_id=cs_live_",
+  ])("does not claim payment or offer activation without a valid reference: %s", async path => {
+    const response = tryHandleDppRoute(req(path));
+    expect(response).not.toBeNull();
+    const html = await response!.text();
+    expect(response!.headers.get("cache-control")).toContain("no-store");
+    expect(html).toContain("Checkout status unverified");
+    expect(html).not.toContain("Payment received");
     expect(html).not.toContain("Workspace opened");
-    expect(html).not.toContain("50 workspace generations");
+    expect(html).not.toContain("Your payment added");
     expect(html).not.toContain("/dpp/activate?");
-    expect(html).toContain("100 generations");
-    expect(html).toContain("/generate?paid=1");
-    expect(html).toContain("session_id=cs_test_1");
   });
 
-  it("confirms payment without claiming a product for an unknown plan", async () => {
-    const html = await (await tryHandleDppRoute(
-      req("/dpp/thanks?session_id=cs_test_1&plan=not_a_real_plan")
-    ))!.text();
-    expect(html).toContain("Payment received");
+  it.each([
+    "/thanks?session_id=cs_test_1&visit_id=dpp_abc",
+    "/success?session_id=cs_test_1&visit_id=dpp_abc",
+    "/dpp/thanks?session_id=cs_live_ABC&visit_id=dpp_abc",
+  ])("treats plausible sessions as unverified, not paid: %s", async path => {
+    const html = await (await tryHandleDppRoute(req(path)))!.text();
+    expect(html).toContain("Checkout status unverified");
+    expect(html).toContain("Check activation eligibility");
+    expect(html).toContain("session_id=cs_");
+    expect(html).toContain("visit_id=dpp_abc");
+    expect(html).not.toContain("Payment received");
     expect(html).not.toContain("Workspace opened");
-    expect(html).not.toContain("/dpp/activate?");
-    expect(html).not.toContain("generations");
+    expect(html).not.toContain("A confirmation email is also on the way");
+  });
+
+  it("ignores spoofed plan claims and cannot issue paid generation copy", async () => {
+    for (const plan of ["qron_launch", "starter", "dpp_readiness", "not_a_real_plan"]) {
+      const html = await (await tryHandleDppRoute(
+        req(`/dpp/thanks?session_id=cs_test_1&plan=${plan}`)
+      ))!.text();
+      expect(html).toContain("Checkout status unverified");
+      expect(html).not.toContain("generations to this account");
+      expect(html).not.toContain("/generate?paid=1");
+      expect(html).not.toContain("Workspace opened");
+      expect(html).not.toContain("Payment received");
+    }
   });
 
   it("serves activate HTML that posts to /api/dpp/activate", async () => {
