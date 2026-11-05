@@ -93,6 +93,8 @@ test("valid x402 v2 challenge is a proposal, not a live 402 endpoint", async () 
   assert.ok(!JSON.stringify(h).includes(req.amount));
   assert.throws(() => buildConversionPaymentRequired(q, policy, now + 60000), rejection("invalid_or_expired_quote"));
   assert.throws(() => buildConversionPaymentRequired(q, { ...policy, payTo: "wrong" }, now), rejection("invalid_payee"));
+  assert.throws(() => buildConversionPaymentRequired(q, { ...policy, payTo: "0x0000000000000000000000000000000000000001" }, now), rejection("invalid_payee"));
+  assert.throws(() => buildConversionPaymentRequired(q, { ...policy, resourceUrl: "https://attacker.example/api/a2a/convert" }, now), rejection("invalid_resource"));
 });
 
 function fakePorts(q, opts = {}) {
@@ -105,8 +107,8 @@ function fakePorts(q, opts = {}) {
     ...opts.store,
   };
   const payment = {
-    verify: async ({ quote }) => { calls.push("verify"); return { authorized: true, authorizationId: "mock-auth", amountAtomic: quote.feeAtomic, network: quote.network }; },
-    settle: async ({ quote }) => { calls.push("settle"); return { settled: true, amountAtomic: quote.feeAtomic, network: quote.network, transaction: "0xmock" }; },
+    verify: async ({ quote }) => { calls.push("verify"); return { authorized: true, authorizationId: "mock-auth", amountAtomic: quote.feeAtomic, network: quote.network, asset: quote.asset, payTo: policy.payTo, quoteDigest: quote.quoteDigest }; },
+    settle: async ({ quote }) => { calls.push("settle"); return { settled: true, amountAtomic: quote.feeAtomic, network: quote.network, asset: quote.asset, payTo: policy.payTo, transaction: "0xmock" }; },
     ...opts.payment,
   };
   return { calls, ports: { policy, store, payment } };
@@ -122,7 +124,7 @@ test("mock verified delivery settles once and persists before release", async ()
   const result = await execute(q, ports);
   assert.equal(result.conversion.indicativeOutputAmount, "93.465");
   assert.equal(result.receipt.noAssetExchangePerformed, true);
-  assert.deepEqual(calls, ["claim", "verify", "settle", "complete"]);
+  assert.deepEqual(calls, ["verify", "claim", "settle", "complete"]);
 });
 
 test("missing services, duplicate claim and malformed payment refuse before settlement", async () => {
@@ -133,7 +135,7 @@ test("missing services, duplicate claim and malformed payment refuse before sett
   assert.deepEqual(calls, []);
   const dup = fakePorts(q, { store: { claim: async () => "already_claimed" } });
   await assert.rejects(execute(q, dup.ports), rejection("already_claimed_or_conflict"));
-  assert.deepEqual(dup.calls, []);
+  assert.deepEqual(dup.calls, ["verify"]);
 });
 
 test("tampered quote, mismatched request and expired quote never settle", async () => {
@@ -151,19 +153,19 @@ test("bad payment proof never reaches settlement", async () => {
   const q = await createConversionQuote(req, oracle(), now);
   const { ports, calls } = fakePorts(q, { payment: { verify: async () => { calls.push("bad"); return {authorized: true, amountAtomic: "1", network: BASE_CAIP2 }; } } });
   await assert.rejects(execute(q, ports), rejection("payment_not_authorized"));
-  assert.deepEqual(calls, ["claim", "bad", "hold:failed_before_settlement"]);
+  assert.deepEqual(calls, ["bad"]);
 });
 
 test("settlement timeout remains held for manual reconciliation", async () => {
   const q = await createConversionQuote(req, oracle(), now);
   const { ports, calls } = fakePorts(q, { payment: { settle: async () => { calls.push("timeout"); throw Error("network timeout"); } } });
   await assert.rejects(execute(q, ports), /network timeout/);
-  assert.deepEqual(calls, ["claim", "verify", "timeout", "hold:reconcile_settlement"]);
+  assert.deepEqual(calls, ["verify", "claim", "timeout", "hold:reconcile_settlement"]);
 });
 
 test("failed receipt persistence holds for reconciliation and never retries", async () => {
   const q = await createConversionQuote(req, oracle(), now);
   const { ports, calls } = fakePorts(q, { store: { complete: async () => { calls.push("complete-failed"); throw Error("database"); } } });
   await assert.rejects(execute(q, ports), /database/);
-  assert.deepEqual(calls, ["claim", "verify", "settle", "complete-failed", "hold:reconcile_settlement"]);
+  assert.deepEqual(calls, ["verify", "claim", "settle", "complete-failed", "hold:reconcile_settlement"]);
 });
