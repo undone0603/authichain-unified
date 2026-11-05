@@ -1085,7 +1085,13 @@ test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async
     assert.equal(body.protocol, "x402", path);
     assert.equal(body.catalog, "/api/x402/catalog", path);
     assert.equal(body.health, "/api/x402/health", path);
-    assert.equal(body.humanCheckout?.farmPaymentLink, undefined, path);
+    // Since 6606362f the catalog publishes a checkout offer for every paid
+    // plan, Farm included (asserted in x402-routes.test.ts).
+    assert.equal(
+      body.humanCheckout?.farmPaymentLink,
+      planPaymentLink("strainchain_farm"),
+      path
+    );
     assert.equal(
       body.humanCheckout?.farmUsd,
       planUsd("strainchain_farm"),
