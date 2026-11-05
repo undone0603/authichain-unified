@@ -79,7 +79,10 @@ function thanksHtml(sessionId: string, visitId: string): string {
 }
 
 function activateHtml(sessionId: string, visitId: string): string {
-  if (!sessionId) {
+  // Both values are inserted into the inline form script below. Use only
+  // format-validated values, never raw user-controlled query parameters.
+  const safeHref = checkoutActivationHref(sessionId, visitId);
+  if (!safeHref) {
     return pageShell(
       "Missing checkout session | AuthiChain",
       `<h1>Missing checkout session</h1>
@@ -87,6 +90,9 @@ function activateHtml(sessionId: string, visitId: string): string {
        <a class="btn" href="/dpp">Back to DPP offer</a>`
     );
   }
+  const safeVisitId =
+    new URL(safeHref, "https://authichain.com").searchParams.get("visit_id") ||
+    "";
   return pageShell(
     "Activate workspace | AuthiChain",
     `<p class="kicker">Self-serve activation</p>
@@ -119,7 +125,7 @@ function activateHtml(sessionId: string, visitId: string): string {
              headers: { 'Content-Type': 'application/json' },
              body: JSON.stringify({
                session_id: ${JSON.stringify(sessionId)},
-               visit_id: ${JSON.stringify(visitId)},
+               visit_id: ${JSON.stringify(safeVisitId)},
                categories: fd.get('categories'),
                markets: fd.get('markets'),
                labeling: fd.get('labeling'),
