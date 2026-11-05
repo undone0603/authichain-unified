@@ -43,16 +43,19 @@ commands:
             corepack enable
             corepack prepare pnpm@10.28.2 --activate
             pnpm config set store-dir ~/.pnpm-store
+      # Same-repository PR branches and main otherwise share CircleCI caches.
+      # Bind reads/writes to each branch so untrusted PR cache state is not
+      # restored into privileged default-branch pipelines.
       - restore_cache:
           keys:
-            - pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
-            - pnpm-store-v1-
+            - pnpm-store-v2-{{ .Branch }}-{{ checksum "pnpm-lock.yaml" }}
+            - pnpm-store-v2-{{ .Branch }}-
       - run:
           name: Install dependencies
           command: pnpm install --frozen-lockfile --prefer-offline
           no_output_timeout: 20m
       - save_cache:
-          key: pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
+          key: pnpm-store-v2-{{ .Branch }}-{{ checksum "pnpm-lock.yaml" }}
           paths:
             - ~/.pnpm-store
 

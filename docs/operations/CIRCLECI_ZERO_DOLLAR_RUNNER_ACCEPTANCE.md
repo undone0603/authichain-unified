@@ -76,3 +76,17 @@ is demonstrated. Smoke payments and $0 completed checkouts do not count as
 independent revenue. Recurring revenue additionally requires a legitimately
 subscribed customer and a settled subsequent renewal; do not count one-time
 DPP or Starter payments as MRR.
+
+## Cache trust boundary — preparatory update
+
+The v2 pnpm cache keys use `{{ .Branch }}` **both** for restore and save,
+including the partial fallback. This avoids main and same-repository PR branches
+sharing a dependency-store cache. CircleCI documents same-repository branches
+as a shared cache scope unless keys separate them. Fork origins have additional
+isolation, but do not assume that protects same-repository branches.
+
+This is defense in depth, not a proof of package integrity or CircleCI account
+isolation. Verify project SSH checkout keys, OIDC, contexts and project variables
+before executing PR code. If that audit cannot be completed, omit PR cache
+restore/save entirely in a separate reviewed change. Do not trigger a job solely
+to validate cache behavior before the zero-spend/credential-free gates clear.
