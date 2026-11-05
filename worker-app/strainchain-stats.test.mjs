@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { readFileSync } from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
+const raw = readFileSync(new URL('./strainchain-stats.ts', import.meta.url),'utf8');
+const { collectStrainchainStats, ALL_COUNT_TYPES, CHAIN_EVENT_TYPES } = await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(stripTypeScriptTypes(raw)));
+const fixture = Object.fromEntries(ALL_COUNT_TYPES.map((k,i)=>[k,i+1]));
+const good = (counts=fixture) => k=>Promise.resolve({count:counts[k],error:null});
+const recent = ()=>Promise.resolve({data:{occurred_at:'2026-11-01T00:00:00.000Z'},error:null});
+test('counts each event exactly once (seven event types)', async()=>{ const seen=[]; await collectStrainchainStats(async k=>{seen.push(k);return {count:fixture[k]}}, recent);assert.deepEqual(seen,ALL_COUNT_TYPES); });
+test('returns public, data-derived fields and total without double-counting registered', async()=>{
+ const r=await collectStrainchainStats(good(),recent); assert.deepEqual(r,{lab_tests:3,batches_cultivated:1,batches_harvested:2,batches_packaged:4,dispensary_receipts:6,batches_registered:7,total_chain_events:21,last_event_at:'2026-11-01T00:00:00.000Z'});
+});
+test('all legitimate zero counts remain zero',async()=>{const r=await collectStrainchainStats(good(Object.fromEntries(ALL_COUNT_TYPES.map(x=>[x,0]))),()=>Promise.resolve({data:null,error:null}));assert.equal(r.total_chain_events,0);assert.equal(r.last_event_at,null)});
+for(const [why,value] of [['missing count',undefined],['null count',null],['negative',-1],['fractional',2.5],['unsafe',Number.MAX_SAFE_INTEGER+2]])test('rejects '+why+' instead of fabricating zero',async()=>{await assert.rejects(collectStrainchainStats(k=>Promise.resolve({count:k==='lab_tested'?value:0}),recent),/event_count_unavailable/)});
+test('rejects backend error with count value',async()=>assert.rejects(collectStrainchainStats(k=>Promise.resolve({count:0,error:k==='harvested'?{message:'DB error'}:null}),recent),/event_count_unavailable/));
+test('rejects failed latest event query',async()=>assert.rejects(collectStrainchainStats(good(),()=>Promise.resolve({error:'DB down'})),/latest_event_failed/));
+test('rejects malformed most-recent timestamp',async()=>assert.rejects(collectStrainchainStats(good(),()=>Promise.resolve({data:{occurred_at:123}})),/invalid_last_event_time/));
+test('propagates rejected DB calls to fail closed',async()=>assert.rejects(collectStrainchainStats(async()=>{throw Error('offline')},recent),/offline/));
+test('counts only chain event types in total',()=>assert.equal(CHAIN_EVENT_TYPES.length,6));
