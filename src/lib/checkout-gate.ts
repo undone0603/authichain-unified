@@ -252,7 +252,7 @@ function pageShell(title: string, body: string): string {
  */
 const PLAN_DISPLAY_DESCRIPTION: Partial<Record<string, string>> = {
   starter:
-    "100 AI QR generations for $29, paid once. No subscription, and pack credits have no expiry date. Starting a monthly plan replaces unused pack credits.",
+    "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits.",
 };
 
 export function displayPlanDescription(
