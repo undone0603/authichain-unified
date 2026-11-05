@@ -9,6 +9,7 @@ import {
   isDppOffer,
   recordDppLoopEvent,
 } from "./dpp-loop";
+import { DPP_OFFER_KEY } from "./plans";
 import {
   buildDppImporterFile,
   parseImporterPackFigures,
@@ -104,8 +105,15 @@ export async function activateDppMerchant(opts: {
   // alone is never sufficient. Conflicting evidence always fails closed.
   const otherPlan =
     typeof md.plan === "string" && md.plan && md.plan !== "dpp_readiness";
+  const offer = md.offer ?? md.offer_key;
+  const otherOffer =
+    typeof offer === "string" && offer && offer !== DPP_OFFER_KEY;
   const linePriceId = session.line_items?.data?.[0]?.price?.id ?? null;
-  if (otherPlan || (linePriceId && linePriceId !== DPP_PRICE_ID)) {
+  if (
+    otherPlan ||
+    otherOffer ||
+    (linePriceId && linePriceId !== DPP_PRICE_ID)
+  ) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
   if (!isDppOffer(md, linePriceId)) {
