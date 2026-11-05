@@ -55,3 +55,17 @@ test("privileged CI repair listener verifies triggering repository identity", ()
   const src = workflow("ci-repair-loop");
   assert.ok(src.includes("workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository"));
 });
+
+test("privileged merge-autopilot workflow is held pending verified independent approval", () => {
+  const src = workflow("merge-autopilot");
+  assert.ok(src.includes("\n  sweep:\n"));
+  assert.match(src, /\n    if: \$\{\{ false \}\}/);
+  assert.ok(src.includes("successful CI alone is not independent human approval"));
+});
+
+test("content PR creation and validation remain, while automatic merge is held", () => {
+  const src = workflow("content-routine-pr");
+  assert.ok(src.includes("- name: Run main quality gate on the routine branch"));
+  assert.ok(src.includes("- name: Open pull request"));
+  assert.match(src, /- name: Enable auto-merge for content-only changes\n(?:[^\n]*\n){0,5}        if: \$\{\{ false \}\}/);
+});
