@@ -259,11 +259,7 @@ async function healthResponse(env?: X402Env): Promise<Response> {
 
 async function catalogResponse(env?: X402Env): Promise<Response> {
   hydrateX402(env);
-  const catalog = await x402Catalog(healthEnv(env));
-  // Farm stays in the price list (farmUsd) but off public buy links (#1606),
-  // matching the sister-origin catalogs.
-  const { farmPaymentLink: _farmLink, ...humanCheckout } = catalog.humanCheckout;
-  return json(200, { ...catalog, humanCheckout });
+  return json(200, await x402Catalog(healthEnv(env)));
 }
 
 async function listingResponse(env?: X402Env): Promise<Response> {
@@ -313,16 +309,23 @@ async function tryFreeCall(
   env: X402Env | undefined,
   opts: X402Options | undefined
 ): Promise<{ response: Response | null; remaining: number | null }> {
-  const raw = parseJsonObject(await request.clone().text());
+  const raw = coerceSealBody(parseJsonObject(await request.clone().text()));
+  // A named seal that cannot exist is refused before the 402 (400). Listing
+  // samples (`demo` / bazaar UUID) and no-sealId crawler probes are not
+  // refused: they get the 402 so the price can be read (c7aebe90, 5e807fab).
+  const refusal = unpaidSealRefusal(raw);
+  if (refusal) {
+    return { response: json(refusal.status, refusal.body), remaining: null };
+  }
   const parsed = parseSealRequest(raw);
   if (!parsed.ok) {
-    // No body: 402 so a scanner can read the price. A named seal that cannot
-    // exist, or productId/serial used as the key, is refused here. The paid
-    // path does the same before settlement. This runs before the registry
-    // credential check so a bad id is not a payment challenge.
-    if (Object.keys(raw).length > 0) {
-      return { response: json(parsed.status, parsed.body), remaining: null };
-    }
+    // Empty body or listing sample: 402 so a scanner can read the price.
+    return { response: null, remaining: null };
+  }
+  // Listing example UUID: crawlers POST this body. A free 200 is classified
+  // as payability=free so they never buy. Do not consume the real-UUID
+  // allowance. Paid lookup of this id is still missing-seal evidence.
+  if (isDiscoveryExampleSealId(parsed.sealId)) {
     return { response: null, remaining: null };
   }
   const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);
