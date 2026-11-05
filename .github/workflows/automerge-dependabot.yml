@@ -8,7 +8,9 @@ on:
 
 jobs:
   automerge:
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    # Fail closed until independent security review and exact-head CI exist.
+    if: vars.AUTHICHAIN_AUTOMERGE_REVIEWED == 'true'
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       checks: read
