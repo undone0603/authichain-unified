@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { QrScanner, validateAndExtract } from "./scanner";
 
@@ -9,7 +9,7 @@ const STARTER_SUB_URL = "https://buy.stripe.com/9B67sL87n7Fkh0SgXW1NE04";
 const STARTER_ONE_TIME_URL = "/checkout/starter";
 const DPP_URL = "/checkout/dpp_readiness";
 
-export default function VerifyPage() {
+function VerifyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialId = searchParams.get("id") || "";
@@ -107,5 +107,15 @@ export default function VerifyPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+// useSearchParams() needs a Suspense boundary or the static prerender of
+// /verify fails the production build (same pattern as /success, /login).
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-black" />}>
+      <VerifyContent />
+    </Suspense>
   );
 }
