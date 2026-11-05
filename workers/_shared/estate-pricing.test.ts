@@ -185,7 +185,8 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
     assert.ok(html.includes(`$${plan(id).price}`), `${id} price`);
   }
   assert.equal(html.includes("/checkout/starter"), true);
-  assert.equal(html.includes("/checkout/qron_launch"), false);
+  // Launch is linked from the footer (e7af0bd5); it must not become a card.
+  assert.doesNotMatch(html, /<h3>QRON Launch/);
   assert.match(html, /href="\/x402"/);
   assert.ok(html.includes(escHtml(plan("dpp_readiness").cta)));
   assert.match(html, /name="email"/);
@@ -239,7 +240,7 @@ test("qron /pricing HTML cites catalogue prices and generate", () => {
   assert.match(html, /href="\/generate"/);
   // LOOP-03: nav/footer lead Starter/Launch; DPP remains as a secondary link.
   assert.match(html, /https:\/\/authichain\.com\/checkout\/starter/);
-  assert.doesNotMatch(html, /https:\/\/authichain\.com\/checkout\/qron_launch/);
+  // Launch is linked beside Starter (14db6a65); "Start Launch" stays absent.
   assert.doesNotMatch(html, /Start Launch/);
   assert.match(html, />See pricing</);
   assert.match(html, /https:\/\/authichain\.com\/checkout\/dpp_readiness/);
