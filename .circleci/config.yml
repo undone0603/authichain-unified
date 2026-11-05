@@ -16,8 +16,12 @@ commands:
       - run:
           name: Install pnpm 10.28.2
           command: |
-            corepack enable
+            mkdir -p "$HOME/.local/bin"
+            corepack enable --install-directory "$HOME/.local/bin"
+            export PATH="$HOME/.local/bin:$PATH"
+            printf '%s\n' 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
             corepack prepare pnpm@10.28.2 --activate
+            test "$(pnpm --version)" = "10.28.2"
             pnpm config set store-dir ~/.pnpm-store
       - run:
           name: Install dependencies without shared cross-branch caches
