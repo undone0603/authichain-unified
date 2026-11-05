@@ -111,7 +111,15 @@ export function assessPackageSeal(input) {
     state = SEAL_REVIEW_STATES.WITNESS_RECORD_CLAIMED_REVIEW_REQUIRED;
   } else if (reportedBypass) state = SEAL_REVIEW_STATES.BYPASS_SUSPECTED;
   else if (openingVisual) state = SEAL_REVIEW_STATES.OPEN_MOUTH_TEAR_FEATURE_INTACT;
-  else if (yes("first_opening_barrier_visible")) {
+  // A photo of only a retail barcode or decorative front cannot establish
+  // visibility of a physical first-opening barrier. Reference a relevant view.
+  const barrierViewReferenced = input.evidence.some(e =>
+    e.role === "top" || e.role === "interior_mouth" ||
+    e.role === "seam" || e.role === "first_opening_video"
+  );
+  const barrierVisual = barrierViewReferenced &&
+    yes("first_opening_barrier_visible");
+  if (state === SEAL_REVIEW_STATES.INDETERMINATE && barrierVisual) {
     state = SEAL_REVIEW_STATES.FIRST_OPENING_BARRIER_OBSERVED;
   }
 
@@ -119,7 +127,7 @@ export function assessPackageSeal(input) {
   if (openingVisual) flags.push("OPEN_MOUTH_WITH_TEAR_FEATURE_INTACT");
   if (reportedBypass) flags.push("FIRST_OPENING_BYPASS_REPORTED");
   if (claimedWitnessRecord) flags.push("INDEPENDENT_REVIEW_REQUIRED");
-  if (yes("first_opening_barrier_visible")) {
+  if (barrierVisual) {
     flags.push("BARRIER_VISUALLY_OBSERVED_NOT_QUALIFIED");
   }
   // A first-person handoff statement is relevant provenance, not proof of
