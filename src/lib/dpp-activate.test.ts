@@ -9,6 +9,88 @@ vi.mock("stripe", () => ({
 }));
 
 describe("activateDppMerchant", () => {
+  it.each([
+    { payment_status: "unpaid", status: "complete" },
+    { payment_status: "paid", status: "open" },
+    { payment_status: "unpaid", status: "open" },
+  ])("rejects an unverified session: %j", async state => {
+    retrieve.mockResolvedValueOnce({
+      ...state,
+      metadata: { plan: "dpp_readiness" },
+      amount_total: 29900,
+      line_items: {
+        data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+      },
+    });
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const from = vi.fn();
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_unverified",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(402);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("rejects a conflicting line-item price even if metadata claims DPP", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      metadata: { plan: "dpp_readiness" },
+      line_items: {
+        data: [{ price: { id: "price_other_product" } }],
+      },
+    });
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const from = vi.fn();
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_conflict",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(400);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("never accepts a same-price checkout without DPP identity", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 29900,
+      metadata: {},
+      line_items: { data: [{}] },
+    });
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const from = vi.fn();
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_ambiguous",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(400);
+    expect(from).not.toHaveBeenCalled();
+  });
+
   it("returns 400 without session_id", async () => {
     const { activateDppMerchant } = await import("./dpp-activate");
     const result = await activateDppMerchant({
