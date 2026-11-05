@@ -22,5 +22,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Scan index
         run: bash scripts/check-windows-paths.sh

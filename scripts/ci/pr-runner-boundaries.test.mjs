@@ -143,12 +143,25 @@ test("both privileged Dependabot auto-merge workflows remain review-held", () =>
 
 test("core PR checkouts do not persist git credentials", () => {
   for (const name of [
+    "agentz-ci",
+    "autonomy-reconcile",
     "build-workers",
     "ci",
+    "cloudflare-estate-audit",
+    "codeql",
+    "compliance-audit",
     "contract-tests",
+    "honest-launch-gate",
     "lint",
     "main",
+    "nightstamp-scan-gate",
+    "schema-drift",
+    "security-scan",
+    "supabase-baseline",
+    "trust-lab",
     "typecheck-ratchet",
+    "vercel-deploy-guard",
+    "windows-path-safety",
   ]) {
     const lines = workflow(name).split("\n");
     const checkouts = lines.flatMap((line, i) =>

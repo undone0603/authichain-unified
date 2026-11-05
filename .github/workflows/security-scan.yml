@@ -32,6 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          persist-credentials: false
           # The Monday history scan needs every commit. Tree scans do not.
           # A bare 0 is falsy in an expression, so the depths are strings.
           fetch-depth: ${{ github.event_name == 'schedule' && '0' || '1' }}
