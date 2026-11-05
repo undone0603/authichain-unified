@@ -1,0 +1,9 @@
+name: x402 catalogue
+discover: printf '%s\n' src/lib/x402.test.ts
+run: pnpm exec vitest run --reporter=default --reporter=junit --outputFile.junit="<< outputs.junit >>" << test.atoms >>
+outputs:
+  junit: test-reports/x402/junit.xml
+options:
+  test-impact-analysis: false
+  dynamic-test-splitting: false
+  max-auto-rerun: 0

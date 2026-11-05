@@ -84,9 +84,12 @@ jobs:
       - run:
           name: Test workers
           command: |
-            timeout 5m pnpm exec vitest run src/lib/x402.test.ts
+            circleci testsuite doctor
+            timeout 5m circleci testsuite run "x402 catalogue"
             timeout 10m pnpm test --filter=./workers/* --continue=dependencies-successful
           no_output_timeout: 30m
+      - store_test_results:
+          path: test-reports/x402
 
   test-other:
     executor: node
