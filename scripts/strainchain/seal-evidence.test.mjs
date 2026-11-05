@@ -121,6 +121,28 @@ test("lack of opening image must not generate an observed-bypass flag", () => {
   assert.ok(!result.flags.includes("OPEN_MOUTH_WITH_TEAR_FEATURE_INTACT"));
 });
 
+test("barrier visibility cannot be inferred from a retail label alone", () => {
+  for (const role of ["retail_label", "front", "back", "other"]) {
+    const result = assessPackageSeal(make({
+      first_opening_barrier_visible: "yes",
+    }, [ref(31, { role })]));
+    assert.equal(result.state, SEAL_REVIEW_STATES.INDETERMINATE);
+    assert.ok(!result.flags.includes("BARRIER_VISUALLY_OBSERVED_NOT_QUALIFIED"));
+    assert.equal(result.release_gate, "HOLD");
+  }
+});
+
+test("a top or seam view may support only a claimed barrier observation", () => {
+  for (const role of ["top", "interior_mouth", "seam"]) {
+    const result = assessPackageSeal(make({
+      first_opening_barrier_visible: "yes",
+    }, [ref(32, { role })]));
+    assert.equal(result.state, SEAL_REVIEW_STATES.FIRST_OPENING_BARRIER_OBSERVED);
+    assert.ok(result.flags.includes("BARRIER_VISUALLY_OBSERVED_NOT_QUALIFIED"));
+    assert.equal(result.release_gate, "HOLD");
+  }
+});
+
 test("private image bytes and external links cannot be embedded", () => {
   assert.throws(() => assessPackageSeal(make({}, [{ ...ref(), imageData: "secret" }])), /unexpected_evidence_field/);
   assert.throws(() => assessPackageSeal(make({}, [{ ...ref(), publicUrl: "https://example.org" }])), /unexpected_evidence_field/);
