@@ -3,7 +3,12 @@
  * POST /api/dpp/activate is not a 404.
  */
 
-import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "./dpp-loop";
+import {
+  DPP_PRICE_ID,
+  dppActivateUrl,
+  isDppOffer,
+  recordDppLoopEvent,
+} from "./dpp-loop";
 import {
   buildDppImporterFile,
   parseImporterPackFigures,
@@ -89,23 +94,21 @@ export async function activateDppMerchant(opts: {
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
     expand: ["line_items"],
   });
-  if (session.payment_status !== "paid" && session.status !== "complete") {
+  if (session.payment_status !== "paid" || session.status !== "complete") {
     return { ok: false, status: 402, error: "Checkout session is not paid" };
   }
 
   const md = (session.metadata || {}) as Record<string, unknown>;
-  // Another $299 product (the Made in USA claim file) shares the DPP amount,
-  // so an explicit non-DPP plan must never activate a DPP workspace.
+  // A different $299 product can share the same amount. The payment must
+  // identify DPP by its own metadata or canonical line-item price; amount
+  // alone is never sufficient. Conflicting evidence always fails closed.
   const otherPlan =
     typeof md.plan === "string" && md.plan && md.plan !== "dpp_readiness";
-  if (otherPlan && !isDppOffer(md)) {
-    return { ok: false, status: 400, error: "Not a DPP workspace session" };
-  }
   const linePriceId = session.line_items?.data?.[0]?.price?.id ?? null;
-  if (linePriceId && !isDppOffer(md, linePriceId)) {
+  if (otherPlan || (linePriceId && linePriceId !== DPP_PRICE_ID)) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
-  if (!isDppOffer(md) && session.amount_total !== 29900) {
+  if (!isDppOffer(md, linePriceId)) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
 
