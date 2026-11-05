@@ -47,6 +47,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 2
+          persist-credentials: false
           path: worker-build-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Verify isolated checkout
@@ -58,7 +59,9 @@ jobs:
       - name: Fetch pull request base
         working-directory: ${{ github.workspace }}/worker-build-${{ github.run_id }}-${{ github.run_attempt }}
         if: github.event_name == 'pull_request'
-        run: git fetch --no-tags --depth=1 origin ${{ github.base_ref }}
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: git fetch --no-tags --depth=1 origin "$BASE_REF"
 
       - name: Install pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
