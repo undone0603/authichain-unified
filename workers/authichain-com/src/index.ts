@@ -2563,8 +2563,6 @@ const HTML = `<!DOCTYPE html>
     actions: [
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/generate", label: "Generate Living QR", primary: false },
-      { href: "https://authichain.com/checkout/qron_launch", label: "QRON Launch $19/mo", primary: false },
-      { href: "https://authichain.com/checkout/qron_launch_annual", label: "QRON Launch $190/yr", primary: false },
     ],
   })}
   ${estateTrust([
@@ -2637,8 +2635,6 @@ const HTML = `<!DOCTYPE html>
     actions: [
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/x402", label: "x402 agent pay", primary: false },
-      { href: "https://authichain.com/checkout/qron_launch", label: "QRON Launch $19/mo", primary: false },
-      { href: "https://authichain.com/checkout/qron_launch_annual", label: "QRON Launch $190/yr", primary: false },
     ],
   })}
   </main>
@@ -3466,8 +3462,6 @@ async function handleAuthichainCom(
         // First-dollar LOOP-03 paths (live 200; generate proxies to APP_WORKER).
         { loc: 'https://authichain.com/generate', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/checkout/starter', freq: 'weekly', pri: '0.95' },
-        { loc: 'https://authichain.com/checkout/qron_launch', freq: 'weekly', pri: '0.95' },
-        { loc: 'https://authichain.com/checkout/qron_launch_annual', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/checkout/creator', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },

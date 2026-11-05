@@ -310,15 +310,17 @@ async function tryFreeCall(
   opts: X402Options | undefined
 ): Promise<{ response: Response | null; remaining: number | null }> {
   const raw = parseJsonObject(await request.clone().text());
-  const parsed = parseSealRequest(raw);
-  if (!parsed.ok) {
-    // No body: 402 so a scanner can read the price. A named seal that cannot
-    // exist, or productId/serial used as the key, is refused here. The paid
-    // path does the same before settlement. This runs before the registry
-    // credential check so a bad id is not a payment challenge.
-    if (Object.keys(raw).length > 0) {
-      return { response: json(parsed.status, parsed.body), remaining: null };
-    }
+  // Unpaid 400 only for a listed sealId that cannot exist. Empty bodies,
+  // quote-crawler probe JSON (no sealId), wrapped listing samples and the
+  // discovery example ids (`demo`, bazaar UUID) stay on the 402 challenge so
+  // scanners read the price and never get a free 200. See unpaidSealRefusal.
+  const refusal = unpaidSealRefusal(raw);
+  if (refusal) {
+    return { response: json(refusal.status, refusal.body), remaining: null };
+  }
+  const parsed = parseSealRequest(coerceSealBody(raw));
+  if (!parsed.ok) return { response: null, remaining: null };
+  if (isDiscoveryExampleSealId(parsed.sealId)) {
     return { response: null, remaining: null };
   }
   const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);

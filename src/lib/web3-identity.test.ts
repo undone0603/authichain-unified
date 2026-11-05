@@ -86,9 +86,10 @@ describe("canonical web3 identity lock", () => {
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
       planPaymentLink("dpp_readiness")
     );
-    expect(catalog.humanCheckout.farmPaymentLink).toBe(
-      planPaymentLink("strainchain_farm")
-    );
+    // Farm is unlisted: the public catalog must not advertise its link.
+    expect(
+      (catalog.humanCheckout as Record<string, unknown>).farmPaymentLink
+    ).toBeUndefined();
     expect(catalog.humanCheckout.starterPaymentLink).toBe(
       planPaymentLink("starter")
     );
