@@ -66,12 +66,19 @@ describe("activateDppMerchant", () => {
     expect(from).not.toHaveBeenCalled();
   });
 
-  it("rejects contradictory offer metadata even with a DPP price", async () => {
+  it.each([
+    { offer: "made_in_usa", plan: "dpp_readiness" },
+    {
+      offer: "dpp_readiness_2026",
+      offer_key: "made_in_usa",
+      plan: "dpp_readiness",
+    },
+  ])("rejects contradictory offer metadata even with a DPP price: %j", async metadata => {
     retrieve.mockResolvedValueOnce({
       payment_status: "paid",
       status: "complete",
       amount_total: 29900,
-      metadata: { offer: "made_in_usa", plan: "dpp_readiness" },
+      metadata,
       line_items: {
         data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
       },
