@@ -5,7 +5,7 @@
  * activate POST are not handled here — they fall through to APP_PREFIXES.
  */
 
-import { PLANS, PLAN_CREDITS } from "../../../src/lib/plans";
+import { checkoutActivationHref } from "../../../src/lib/checkout-confirmation";
 
 const HTML_HEADERS: Record<string, string> = {
   "Cache-Control": "private, no-store, no-cache, must-revalidate",
@@ -56,57 +56,25 @@ function esc(value: unknown): string {
 }
 
 /**
- * The thanks page names a product, so it has to know which one was bought.
- * `plan` comes from the checkout success_url; it only selects copy (the real
- * entitlement is granted by the Stripe webhook), so a tampered value cannot
- * grant anything. No `plan` means a link issued before this param existed:
- * those keep the original DPP copy unchanged.
+ * A Stripe Checkout redirect is user-controlled and cannot establish
+ * settlement or entitlement. Always render a neutral page until a trusted
+ * server-side session lookup / entitlement check can confirm fulfillment.
+ * The activation API remains the authority for access.
  */
-function thanksHtml(
-  sessionId: string,
-  visitId: string,
-  planId: string
-): string {
-  const qs = new URLSearchParams({ session_id: sessionId });
-  if (visitId) qs.set("visit_id", visitId);
-
-  if (planId && planId !== "dpp_readiness") {
-    const plan = PLANS.find(p => p.id === planId);
-    const credits = plan ? PLAN_CREDITS[plan.id] : 0;
-    const name = plan ? plan.name : "";
-
-    if (plan && credits > 0) {
-      const generateQs = new URLSearchParams({ paid: "1" });
-      if (sessionId) generateQs.set("session_id", sessionId);
-      if (visitId) generateQs.set("visit_id", visitId);
-      return pageShell(
-        `Payment received | AuthiChain`,
-        `<p class="kicker">Payment received</p>
-     <h1>${esc(name)} is ready</h1>
-     <p>Your payment added ${credits} generations to this account. Open the generator to use them.</p>
-     <a class="btn" href="/generate?${generateQs.toString()}">Open the generator</a>
-     <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email is also on the way.</p>`
-      );
-    }
-
-    // Known plan with no generation credits, or an id this worker does not
-    // recognise. Confirm the payment without claiming a product.
-    return pageShell(
-      "Payment received | AuthiChain",
-      `<p class="kicker">Payment received</p>
-     <h1>Payment received</h1>
-     <p>${name ? `Your ${esc(name)} purchase is confirmed. ` : ""}A confirmation email with your next steps is on the way.</p>
-     <a class="btn" href="/">Back to AuthiChain</a>`
-    );
-  }
+function thanksHtml(sessionId: string, visitId: string): string {
+  const activationHref = checkoutActivationHref(sessionId, visitId);
+  const nextStep = activationHref
+    ? `<p>If you completed checkout, allow the payment confirmation to process. This page has not verified your payment.</p>
+       <a class="btn" href="${esc(activationHref)}">Check activation eligibility</a>`
+    : `<p>No valid checkout reference was supplied. Return to the offer or use the link from your confirmation email.</p>
+       <a class="btn" href="/dpp">Back to DPP offer</a>`;
 
   return pageShell(
-    "Payment received | AuthiChain",
-    `<p class="kicker">Payment received</p>
-     <h1>Workspace opened</h1>
-     <p>Your payment opens an AuthiChain workspace with self-serve activation. Activate it below. The same link is in the confirmation email.</p>
-     <a class="btn" href="/dpp/activate?${qs.toString()}">Activate workspace</a>
-     <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email with the same link is also on the way.</p>`
+    "Checkout status unverified | AuthiChain",
+    `<p class="kicker">Checkout status unverified</p>
+     <h1>We cannot confirm payment here</h1>
+     ${nextStep}
+     <p>This page does not confirm a payment, open a workspace, or grant credits. Activation requires a separate server-side eligibility check.</p>`
   );
 }
 
@@ -202,8 +170,7 @@ export function tryHandleDppRoute(request: Request): Response | null {
     return html(
       thanksHtml(
         url.searchParams.get("session_id") || "",
-        url.searchParams.get("visit_id") || "",
-        url.searchParams.get("plan") || ""
+        url.searchParams.get("visit_id") || ""
       )
     );
   }
