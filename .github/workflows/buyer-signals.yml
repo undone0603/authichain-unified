@@ -29,8 +29,24 @@ permissions:
   issues: write
 
 jobs:
+  # Validate untrusted PR code without granting issues:write or using the
+  # production-capable publisher. The scheduled trusted job remains separate.
+  verify-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Validate buyer-signals syntax (no outbound activity)
+        run: node --check scripts/growth/buyer-signals.mjs
+
   signals:
-    if: github.repository == 'undone0603/authichain-unified'
+    if: github.repository == 'undone0603/authichain-unified' && github.event_name != 'pull_request'
     runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 10
     steps:
