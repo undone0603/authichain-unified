@@ -373,8 +373,6 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       footerNote: "",
       footerStart: [
         { href: "/checkout/starter", label: "Starter checkout" },
-        { href: "/checkout/qron_launch", label: "QRON Launch $19/mo" },
-        { href: "/checkout/qron_launch_annual", label: "QRON Launch $190/yr" },
         { href: "/pricing", label: "Pricing" },
       ],
       footerMore: [
@@ -415,14 +413,6 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       "qron.space/generate is proxied to the AuthiChain app. That is the first-dollar path for this brand — Starter $29.",
     footerStart: [
       { href: "/generate", label: "Generate Living QR" },
-      {
-        href: "https://authichain.com/checkout/qron_launch",
-        label: "QRON Launch $19/mo",
-      },
-      {
-        href: "https://authichain.com/checkout/qron_launch_annual",
-        label: "QRON Launch $190/yr",
-      },
       {
         href: "https://authichain.com/checkout/starter",
         label: "Buy Starter $29",
