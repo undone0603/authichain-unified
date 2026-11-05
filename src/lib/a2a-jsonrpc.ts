@@ -69,7 +69,7 @@ export function memoryA2aStore(): A2aStore {
   };
 }
 
-const defaultStore = memoryA2aStore();
+// No process-wide default store for untrusted, anonymous JSON-RPC calls.
 
 type RpcError = { code: number; message: string; data?: unknown[] };
 
@@ -438,7 +438,7 @@ export function handleA2aJsonRpc(
     a2aVersion?: string | null;
   } = {}
 ): A2aHttpResult {
-  const store = opts.store ?? defaultStore;
+  const store = opts.store ?? memoryA2aStore();
   const now = opts.now ?? new Date();
   const version = versionError(opts.a2aVersion ?? null);
   let parsed: unknown;
