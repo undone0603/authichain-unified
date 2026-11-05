@@ -137,6 +137,8 @@ jobs:
       - run:
           name: Install isolated Python test environment
           command: |
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends python3-venv
             python3 -m venv /tmp/agentz-venv
             /tmp/agentz-venv/bin/python -m pip install -r requirements-agentz.txt
           no_output_timeout: 20m
