@@ -182,6 +182,7 @@ const cookiesSetSchema = baseCommandSchema.extend({
       httpOnly: z.boolean().optional(),
       secure: z.boolean().optional(),
       sameSite: z.enum(['Strict', 'Lax', 'None']).optional(),
+      partitionKey: z.string().optional(),
     })
   ),
 });

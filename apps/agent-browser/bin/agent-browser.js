@@ -9,7 +9,7 @@
  */
 
 import { spawn } from 'child_process';
-import { existsSync, accessSync, chmodSync, constants } from 'fs';
+import { existsSync, accessSync, chmodSync, statSync, constants } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { platform, arch } from 'os';
@@ -17,56 +17,58 @@ import { platform, arch } from 'os';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Map Node.js platform/arch to binary naming convention
-function getBinaryName() {
+function getCandidateBinaryNames() {
   const os = platform();
   const cpuArch = arch();
 
   let osKey;
   switch (os) {
-    case 'darwin':
-      osKey = 'darwin';
-      break;
-    case 'linux':
-      osKey = 'linux';
-      break;
-    case 'win32':
-      osKey = 'win32';
-      break;
-    default:
-      return null;
+    case 'darwin': osKey = 'darwin'; break;
+    case 'linux':  osKey = 'linux';  break;
+    case 'win32':  osKey = 'win32';  break;
+    default: return [];
   }
 
-  let archKey;
+  let primaryArch;
   switch (cpuArch) {
     case 'x64':
     case 'x86_64':
-      archKey = 'x64';
+      primaryArch = 'x64';
       break;
     case 'arm64':
     case 'aarch64':
-      archKey = 'arm64';
+      primaryArch = 'arm64';
       break;
     default:
-      return null;
+      return [];
   }
 
   const ext = os === 'win32' ? '.exe' : '';
-  return `agent-browser-${osKey}-${archKey}${ext}`;
+
+  // Primary arch first; on Windows ARM64 fall back to x64 (runs via emulation)
+  const candidates = [`agent-browser-${osKey}-${primaryArch}${ext}`];
+  if (os === 'win32' && primaryArch === 'arm64') {
+    candidates.push(`agent-browser-${osKey}-x64${ext}`);
+  }
+  return candidates;
 }
 
 function main() {
-  const binaryName = getBinaryName();
+  const candidates = getCandidateBinaryNames();
 
-  if (!binaryName) {
+  if (candidates.length === 0) {
     console.error(`Error: Unsupported platform: ${platform()}-${arch()}`);
     process.exit(1);
   }
 
-  const binaryPath = join(__dirname, binaryName);
+  // Pick the first candidate that exists and is non-empty
+  const binaryPath = candidates
+    .map((name) => join(__dirname, name))
+    .find((p) => existsSync(p) && statSync(p).size > 0);
 
-  if (!existsSync(binaryPath)) {
+  if (!binaryPath) {
     console.error(`Error: No binary found for ${platform()}-${arch()}`);
-    console.error(`Expected: ${binaryPath}`);
+    console.error(`Tried: ${candidates.join(', ')}`);
     console.error('');
     console.error('Run "npm run build:native" to build for your platform,');
     console.error('or reinstall the package to trigger the postinstall download.');
