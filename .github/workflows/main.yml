@@ -32,8 +32,6 @@ concurrency:
 # Flip to 'false' once the runner is verified; the skip step warns visibly.
 env:
   SKIP_PLAYWRIGHT_ON_SELF_HOSTED: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && 'true' || 'false' }}
-  PLAYWRIGHT_BROWSERS_PATH: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/ms-playwright' || '/home/runner/.cache/ms-playwright' }}
-  TURBO_CACHE_DIR: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/turbo' || '/home/runner/.cache/turbo' }}
 
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
@@ -81,6 +79,18 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
+
+      # The runner is selected independently of AUTHICHAIN_CI_SELF_HOSTED.
+      # Resolve writable cache directories from the *actual* runner HOME;
+      # otherwise ARM64 jobs try to install Chromium under /home/runner and
+      # fail EACCES before executing any tests (CI Main run 41490253883).
+      - name: Configure runner-owned caches
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${HOME:-}" && test -d "$HOME" && test -w "$HOME"
+          printf 'PLAYWRIGHT_BROWSERS_PATH=%s/.cache/ms-playwright\n' "$HOME" >> "$GITHUB_ENV"
+          printf 'TURBO_CACHE_DIR=%s/.cache/turbo\n' "$HOME" >> "$GITHUB_ENV"
 
       - name: Validate secrets format (skipped on pull_request)
         # CFA-215: secrets never reach pull_request runs; PR code is untrusted.
@@ -156,6 +166,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      # The runner is selected independently of AUTHICHAIN_CI_SELF_HOSTED.
+      # Resolve writable cache directories from the *actual* runner HOME;
+      # otherwise ARM64 jobs try to install Chromium under /home/runner and
+      # fail EACCES before executing any tests (CI Main run 41490253883).
+      - name: Configure runner-owned caches
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${HOME:-}" && test -d "$HOME" && test -w "$HOME"
+          printf 'PLAYWRIGHT_BROWSERS_PATH=%s/.cache/ms-playwright\n' "$HOME" >> "$GITHUB_ENV"
+          printf 'TURBO_CACHE_DIR=%s/.cache/turbo\n' "$HOME" >> "$GITHUB_ENV"
+
       - name: "Skipped on self-hosted: Playwright browser install"
         if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED == 'true' && matrix.shard == 2
         run: |
@@ -173,7 +195,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright browsers
         if: env.SKIP_PLAYWRIGHT_ON_SELF_HOSTED != 'true' && matrix.shard == 2 && steps.pw-cache.outputs.cache-hit != 'true'
@@ -255,6 +277,18 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
+
+      # The runner is selected independently of AUTHICHAIN_CI_SELF_HOSTED.
+      # Resolve writable cache directories from the *actual* runner HOME;
+      # otherwise ARM64 jobs try to install Chromium under /home/runner and
+      # fail EACCES before executing any tests (CI Main run 41490253883).
+      - name: Configure runner-owned caches
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${HOME:-}" && test -d "$HOME" && test -w "$HOME"
+          printf 'PLAYWRIGHT_BROWSERS_PATH=%s/.cache/ms-playwright\n' "$HOME" >> "$GITHUB_ENV"
+          printf 'TURBO_CACHE_DIR=%s/.cache/turbo\n' "$HOME" >> "$GITHUB_ENV"
 
       # Next build is ~218s. The baseline lists roots Next does not compile
       # (.github, docs, workers). A diff that stays inside them skips the
