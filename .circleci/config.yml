@@ -11,6 +11,30 @@ executors:
     working_directory: ~/project
 
 commands:
+  # CircleCI provides a new hosted container, but project-level environment
+  # variables may still contain privileged credentials. These names are
+  # prohibited in a PR test environment. This is defense-in-depth, not a
+  # replacement for an operator audit of project variables and OIDC trust.
+  assert-no-production-secrets:
+    steps:
+      - run:
+          name: Block production credentials in CI
+          command: |
+            set -euo pipefail
+            for key in \
+              STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET \
+              STRIPE_WEBHOOK_AUTHICHAIN_SECRET \
+              CLOUDFLARE_API_TOKEN CF_API_TOKEN CLOUDFLARE_ACCOUNT_ID \
+              SUPABASE_SERVICE_ROLE_KEY DATABASE_URL \
+              PRODUCTION_DATABASE_URL RESEND_API_KEY \
+              GITHUB_TOKEN GH_TOKEN CI_GITHUB_TOKEN \
+              VERCEL_TOKEN ETH_PRIVATE_KEY DEPLOY_KEY JWT_SECRET; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "BLOCKED: production-capable variable $key exists in this CI job" >&2
+                exit 78
+              fi
+            done
+            echo "Known production credential variables absent (not full host attestation)"
   setup-node:
     steps:
       - run:
@@ -19,16 +43,19 @@ commands:
             sudo corepack enable
             corepack prepare pnpm@10.28.2 --activate
             pnpm config set store-dir ~/.pnpm-store
+      # Same-repository PR branches and main otherwise share CircleCI caches.
+      # Bind reads/writes to each branch so untrusted PR cache state is not
+      # restored into privileged default-branch pipelines.
       - restore_cache:
           keys:
-            - pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
-            - pnpm-store-v1-
+            - pnpm-store-v2-{{ .Branch }}-{{ checksum "pnpm-lock.yaml" }}
+            - pnpm-store-v2-{{ .Branch }}-
       - run:
           name: Install dependencies
           command: pnpm install --frozen-lockfile --prefer-offline
           no_output_timeout: 20m
       - save_cache:
-          key: pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
+          key: pnpm-store-v2-{{ .Branch }}-{{ checksum "pnpm-lock.yaml" }}
           paths:
             - ~/.pnpm-store
 
@@ -36,6 +63,7 @@ jobs:
   quality:
     executor: node
     steps:
+      - assert-no-production-secrets
       - checkout
       - setup-node
       - run:
@@ -58,6 +86,7 @@ jobs:
     environment:
       NODE_OPTIONS: --max-old-space-size=6144
     steps:
+      - assert-no-production-secrets
       - checkout
       - setup-node
       - run:
@@ -68,6 +97,7 @@ jobs:
   test-workers:
     executor: node
     steps:
+      - assert-no-production-secrets
       - checkout
       - setup-node
       - run:
@@ -84,6 +114,7 @@ jobs:
   test-other:
     executor: node
     steps:
+      - assert-no-production-secrets
       - checkout
       - setup-node
       - run:
@@ -106,6 +137,7 @@ jobs:
     environment:
       NODE_OPTIONS: --max-old-space-size=4096
     steps:
+      - assert-no-production-secrets
       - checkout
       - setup-node
       - run:
