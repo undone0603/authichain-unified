@@ -1062,7 +1062,8 @@ async function handleThanks(request, env, url) {
         await writeReceipt(env, classify(receiptFromSession(session), env));
         recorded = true;
       } else if (error) {
-        note = `Stripe lookup: ${error}. Session queued for retry.`;
+        console.error("[first-dollar-desk] /thanks Stripe session lookup failed", String(error));
+        note = "Stripe lookup failed. Session queued for retry.";
         await queueStripeSession(env, sessionId);
       } else {
         note = "Checkout not paid yet; session queued for retry.";
