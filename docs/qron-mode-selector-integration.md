@@ -1,22 +1,15 @@
-# QRON Mode Selector + Viral Footer Integration
+# QRON Mode Selector + Viral Footer
 
-Files added on branch `feat/qron-mode-selector-viral-footer`:
+Draft integration for self-serve Launch Pack modes.
 
-- `src/lib/qron-modes.ts` — PORTAL_MODES matching CORE_MODES in workers/qron-space/src/mode-usage-cron.ts (stellar_seal, batch_verify, limited_drop + two extensions)
-- `src/components/ModeSelector.tsx` — drop into the /generate flow
-- `src/components/ViralFooter.tsx` — drop into the resolve/destination page
+## Events to log
+- mode_select {mode_id}
+- gen_start_with_mode {mode_id, anonymous}
+- gen_complete_with_mode {mode_id, object_id}
+- qr_scan_from_mode {mode_id, object_id}
+- footer_cta_click {mode_id, utm_source: "qr_footer"}
 
-## Integration steps (manual, ~30 min)
-
-1. In the generate page/component, import and render `<ModeSelector onSelect={handleModeSelect} />`.
-2. On mode select, seed the prompt with `PORTAL_MODES[modeId].promptSeed` and log `mode_select`.
-3. On generation complete, log `gen_complete_with_mode`.
-4. On the QR resolve page, render `<ViralFooter modeId={modeId} />`.
-5. Wire structured logs to Workers/D1 (already partially present via mode-usage-cron).
-
-## Next (founder-only)
-
-- Reconcile Stripe prices to match Drive pricing.ts (Starter $199/mo, Launch Pack $39 one-time).
-- Approve PR merge + deploy after review.
-
-No merge performed. No Stripe changes. No prod deploy.
+## Notes
+- Matches CORE_MODES in workers/qron-space/src/mode-usage-cron.ts (extended)
+- Zero new infra cost
+- Do not merge until Stripe prices reconciled (Starter $199/mo, Launch Pack $39 one-time)
