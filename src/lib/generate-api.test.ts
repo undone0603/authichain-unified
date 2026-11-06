@@ -615,3 +615,18 @@ describe("proxyQronImageGen", () => {
     expect(body.prompt).toContain("neon drift");
   });
 });
+
+describe("low-credit Starter soft prompt", () => {
+  it("19 left => Starter-only prompt with low_credit link", async () => {
+    const { lowCreditUpgrade } = await import("./generate-api");
+    const u = lowCreditUpgrade(19).upgrade as Record<string, unknown>;
+    expect(u.url).toBe("https://authichain.com/checkout/starter?src=low_credit&utm_content=low-starter-a");
+    expect(u.plan).toBe("starter");
+    expect(u.button).toBe("Add 100 generations for $29");
+  });
+  it("20 left or non-number => no prompt", async () => {
+    const { lowCreditUpgrade } = await import("./generate-api");
+    expect(lowCreditUpgrade(20)).toEqual({});
+    expect(lowCreditUpgrade(undefined)).toEqual({});
+  });
+});
