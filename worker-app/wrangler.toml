@@ -108,11 +108,9 @@ pattern = "authichain.com/api/checkout/*"
 zone_name = "authichain.com"
 
 # Proof-of-Support coffee checkout. More specific than authichain-com's
-# authichain.com/* glob. Rollback: delete these two [[routes]] blocks.
-[[routes]]
-pattern = "authichain.com/api/coffee"
-zone_name = "authichain.com"
-
+# authichain.com/* glob. Keep the wildcard only — an exact /api/coffee
+# route 404s on this worker (handler is /api/coffee/checkout).
+# Rollback: delete this [[routes]] block.
 [[routes]]
 pattern = "authichain.com/api/coffee/*"
 zone_name = "authichain.com"
@@ -224,10 +222,6 @@ zone_name = "govchain.us"
 
 [[routes]]
 pattern = "authichain.govchain.us/api/checkout/*"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/coffee"
 zone_name = "govchain.us"
 
 [[routes]]

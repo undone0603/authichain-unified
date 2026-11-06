@@ -1,0 +1,59 @@
+{
+  "sampleOnly": true,
+  "signer": {
+    "kind": "bundled_sample_ed25519",
+    "kid": "support-receipt-sample-f23686a577cdba90",
+    "note": "Signed by a dedicated SAMPLE Ed25519 key. The live passport issuer keys were not used. The private scalar was discarded after signing. Do not add this key to /.well-known/jwks.json."
+  },
+  "record": {
+    "amount": {
+      "cents": 500,
+      "currency": "USD",
+      "display": "$5.00"
+    },
+    "brand": "authichain",
+    "disclosure": "Voluntary commercial support for AuthiChain software development (Zachary Kietzman, sole proprietor). Not a charitable donation and not tax-deductible; confers no equity, tokens, credits, or SLA.",
+    "issuedAt": "2026-11-06T00:00:00.000Z",
+    "note": "SAMPLE Proof-of-Coffee signed by a dedicated demonstration Ed25519 key. Not the live passport issuer. The private scalar was discarded after signing. Offline-verifiable. Thanks for the support.",
+    "payment": {
+      "network": null,
+      "provider": "stripe",
+      "reference": "cs_test_sample_not_a_live_session",
+      "status": "paid"
+    },
+    "promises": {
+      "charity": false,
+      "equity": false,
+      "productEntitlement": false,
+      "sla": false,
+      "taxDeductible": false,
+      "tokens": false
+    },
+    "rail": "fiat",
+    "receiptId": "poc_sample_demo",
+    "signer": {
+      "kind": "bundled_sample_ed25519",
+      "kid": "support-receipt-sample-f23686a577cdba90",
+      "sample": true
+    },
+    "sku": "proof_of_support_coffee",
+    "supporter": {
+      "handle": "sample",
+      "message": "SAMPLE receipt only"
+    },
+    "type": "authichain.proof_of_coffee.v1"
+  },
+  "jws": "eyJhbGciOiJFZERTQSIsInR5cCI6IlBPQytKU09OIiwia2lkIjoic3VwcG9ydC1yZWNlaXB0LXNhbXBsZS1mMjM2ODZhNTc3Y2RiYTkwIn0.eyJhbW91bnQiOnsiY2VudHMiOjUwMCwiY3VycmVuY3kiOiJVU0QiLCJkaXNwbGF5IjoiJDUuMDAifSwiYnJhbmQiOiJhdXRoaWNoYWluIiwiZGlzY2xvc3VyZSI6IlZvbHVudGFyeSBjb21tZXJjaWFsIHN1cHBvcnQgZm9yIEF1dGhpQ2hhaW4gc29mdHdhcmUgZGV2ZWxvcG1lbnQgKFphY2hhcnkgS2lldHptYW4sIHNvbGUgcHJvcHJpZXRvcikuIE5vdCBhIGNoYXJpdGFibGUgZG9uYXRpb24gYW5kIG5vdCB0YXgtZGVkdWN0aWJsZTsgY29uZmVycyBubyBlcXVpdHksIHRva2VucywgY3JlZGl0cywgb3IgU0xBLiIsImlzc3VlZEF0IjoiMjAyNi0xMS0wNlQwMDowMDowMC4wMDBaIiwibm90ZSI6IlNBTVBMRSBQcm9vZi1vZi1Db2ZmZWUgc2lnbmVkIGJ5IGEgZGVkaWNhdGVkIGRlbW9uc3RyYXRpb24gRWQyNTUxOSBrZXkuIE5vdCB0aGUgbGl2ZSBwYXNzcG9ydCBpc3N1ZXIuIFRoZSBwcml2YXRlIHNjYWxhciB3YXMgZGlzY2FyZGVkIGFmdGVyIHNpZ25pbmcuIE9mZmxpbmUtdmVyaWZpYWJsZS4gVGhhbmtzIGZvciB0aGUgc3VwcG9ydC4iLCJwYXltZW50Ijp7Im5ldHdvcmsiOm51bGwsInByb3ZpZGVyIjoic3RyaXBlIiwicmVmZXJlbmNlIjoiY3NfdGVzdF9zYW1wbGVfbm90X2FfbGl2ZV9zZXNzaW9uIiwic3RhdHVzIjoicGFpZCJ9LCJwcm9taXNlcyI6eyJjaGFyaXR5IjpmYWxzZSwiZXF1aXR5IjpmYWxzZSwicHJvZHVjdEVudGl0bGVtZW50IjpmYWxzZSwic2xhIjpmYWxzZSwidGF4RGVkdWN0aWJsZSI6ZmFsc2UsInRva2VucyI6ZmFsc2V9LCJyYWlsIjoiZmlhdCIsInJlY2VpcHRJZCI6InBvY19zYW1wbGVfZGVtbyIsInNpZ25lciI6eyJraWQiOiJzdXBwb3J0LXJlY2VpcHQtc2FtcGxlLWYyMzY4NmE1NzdjZGJhOTAiLCJraW5kIjoiYnVuZGxlZF9zYW1wbGVfZWQyNTUxOSIsInNhbXBsZSI6dHJ1ZX0sInNrdSI6InByb29mX29mX3N1cHBvcnRfY29mZmVlIiwic3VwcG9ydGVyIjp7ImhhbmRsZSI6InNhbXBsZSIsIm1lc3NhZ2UiOiJTQU1QTEUgcmVjZWlwdCBvbmx5In0sInR5cGUiOiJhdXRoaWNoYWluLnByb29mX29mX2NvZmZlZS52MSJ9.pN0wT5JxoRVzrcs8tf5C-5BvT6j01Yx5HrkGoEQ0XOKjcW02PzHNrmMR50RXBLupscKyvaPbw5TpsIjqxZrrCw",
+  "jwks": {
+    "keys": [
+      {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "x": "HJcDZRrhFinrJ7EDMOdvyzZ6KL0jcoeim9fr57TU3v4",
+        "kid": "support-receipt-sample-f23686a577cdba90",
+        "use": "sig",
+        "alg": "EdDSA"
+      }
+    ]
+  }
+}

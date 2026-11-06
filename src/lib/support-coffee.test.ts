@@ -13,6 +13,8 @@ import {
   MIN_SUPPORT_CENTS,
   NON_TAX_DEDUCTIBLE_DISCLOSURE,
   RECEIPT_TYPE,
+  LIVE_COFFEE_RECEIPT_KID,
+  LIVE_COFFEE_RECEIPT_PUBLIC_JWK,
   SAMPLE_COFFEE_JWKS,
   SAMPLE_COFFEE_KID,
   SUPPORT_KIND,
@@ -23,9 +25,12 @@ import {
   centsToUsdcAtomic,
   coffeeCheckoutResponse,
   createCoffeeCheckoutSession,
+  coffeeJwksForEnv,
   generateSupportReceiptKeypair,
   isCoffeePaidSession,
   mintProofOfCoffeeReceipt,
+  parseCoffeeReceiptPrivateJwk,
+  buildSampleCoffeeReceipt,
   negotiateSupportRail,
   parseCoffeeThanksCookie,
   parseCoffeeThanksFlag,
@@ -285,6 +290,8 @@ describe("Proof-of-Coffee Ed25519 receipts", () => {
     expect(minted.record.amount.cents).toBe(1500);
     expect(minted.record.supporter.handle).toBe("@friend");
     expect(minted.jws.split(".").length).toBe(3);
+    expect(minted.sampleSigner).toBe(false);
+    expect(minted.verification.kid).not.toBe(SAMPLE_COFFEE_KID);
     const verified = await verifyProofOfCoffeeReceipt(minted.jws, minted.jwks);
     expect(verified.ok).toBe(true);
     if (verified.ok) expect(verified.record.receiptId).toBe("poc_test_fiat_1");
@@ -319,11 +326,13 @@ describe("Proof-of-Coffee Ed25519 receipts", () => {
   });
 
   it("detects tampered payload", async () => {
+    const keys = await generateSupportReceiptKeypair();
     const minted = await mintProofOfCoffeeReceipt({
       rail: "fiat",
       paymentStatus: "paid",
       amountCents: 500,
       receiptId: "poc_tamper",
+      privateJwk: keys.privateJwk,
     });
     const parts = minted.jws.split(".");
     const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
@@ -333,17 +342,52 @@ describe("Proof-of-Coffee Ed25519 receipts", () => {
     expect(verified.ok).toBe(false);
   });
 
-  it("labels bundled sample signer when no live secret is bound", async () => {
-    const minted = await mintProofOfCoffeeReceipt({
-      rail: "fiat",
-      paymentStatus: "paid",
-      amountCents: 500,
-      receiptId: "poc_sample_key",
-    });
-    expect(minted.sampleSigner).toBe(true);
-    expect(minted.record.signer.kind).toBe("bundled_sample_ed25519");
-    expect(minted.verification.kid).toBe(SAMPLE_COFFEE_KID);
+  it("fails closed when COFFEE_RECEIPT_PRIVATE_JWK is unset", async () => {
+    await expect(
+      mintProofOfCoffeeReceipt({
+        rail: "fiat",
+        paymentStatus: "paid",
+        amountCents: 500,
+        receiptId: "poc_unbound",
+      })
+    ).rejects.toThrow(/COFFEE_RECEIPT_PRIVATE_JWK is not bound/);
+    expect(parseCoffeeReceiptPrivateJwk(undefined)).toBeNull();
+    expect(parseCoffeeReceiptPrivateJwk("{not-json")).toBeNull();
     expect(SAMPLE_COFFEE_JWKS.keys[0]?.d).toBeUndefined();
+    expect(LIVE_COFFEE_RECEIPT_PUBLIC_JWK.kid).toBe(LIVE_COFFEE_RECEIPT_KID);
+    expect(LIVE_COFFEE_RECEIPT_PUBLIC_JWK.d).toBeUndefined();
+    const jwks = coffeeJwksForEnv();
+    expect(jwks.liveBound).toBe(false);
+    expect(jwks.keys.map(k => k.kid)).toEqual(
+      expect.arrayContaining([LIVE_COFFEE_RECEIPT_KID, SAMPLE_COFFEE_KID])
+    );
+    expect(jwks.keys.every(k => !k.d)).toBe(true);
+  });
+
+  it("verifies the static pre-signed sample receipt against the public JWKS", async () => {
+    const sample = buildSampleCoffeeReceipt();
+    expect(sample.sampleOnly).toBe(true);
+    expect(sample.signer.kid).toBe(SAMPLE_COFFEE_KID);
+    const verified = await verifyProofOfCoffeeReceipt(
+      sample.jws,
+      SAMPLE_COFFEE_JWKS
+    );
+    expect(verified.ok).toBe(true);
+  });
+
+  it("publishes bound live public key plus the sample kid", async () => {
+    const keys = await generateSupportReceiptKeypair();
+    const jwks = coffeeJwksForEnv({
+      COFFEE_RECEIPT_PRIVATE_JWK: JSON.stringify(keys.privateJwk),
+    });
+    expect(jwks.liveBound).toBe(true);
+    expect(jwks.keys.map(k => k.kid)).toEqual(
+      expect.arrayContaining([
+        keys.kid,
+        LIVE_COFFEE_RECEIPT_KID,
+        SAMPLE_COFFEE_KID,
+      ])
+    );
   });
 });
 
@@ -426,6 +470,7 @@ describe("paid session gate & thanks state", () => {
     });
     expect(cookie).toContain("ac_coffee_thanks=");
     expect(cookie).toContain("SameSite=Lax");
+    expect(cookie).toContain("Secure");
     expect(cookie.toLowerCase()).not.toContain("httponly");
     expect(cookie).not.toMatch(/@/);
     expect(parseCoffeeThanksCookie(cookie)).toEqual({

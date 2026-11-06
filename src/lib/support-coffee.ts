@@ -4,18 +4,23 @@
  * Dual path on https://authichain.com/coffee:
  *   GET  Accept: text/html  → HTML 1-tap fiat
  *   GET  Accept: application/json | ?rail=x402 → HTTP 402 Base USDC
+ *     challenge (eip155:8453 to the published payTo). Automated x402
+ *     facilitator settlement / receipt minting is not wired on /coffee yet.
  *   POST /coffee or /api/coffee/checkout → Stripe Checkout Session
  *     (mode: payment, metadata.kind = coffee_support) or the live Payment
  *     Link fallback when STRIPE_SECRET_KEY is absent.
  *
  * Compliance: AuthiChain is an operating brand of Zachary Kietzman, sole
  * proprietor. Never an Inc. corporate entity. Never 501(c)(3) / tax-deductible.
- * Receipts mint only after Stripe payment_status === "paid" && status ===
- * "complete" && metadata.kind === "coffee_support", or a settled x402 pay.
+ * Ed25519 Proof-of-Coffee JWS receipts and the "Thanks for the coffee" state
+ * mint only after Stripe payment_status === "paid" && status === "complete"
+ * && metadata.kind === "coffee_support". Live signing requires a valid
+ * COFFEE_RECEIPT_PRIVATE_JWK — never fall back to the sample key. Unset or
+ * invalid key still flips Thanks for the coffee (fail closed on JWS).
  *
- * The bundled Ed25519 key in protocol/samples/coffee-receipt-demo.* is a
- * dedicated SAMPLE signer. It is not the live passport issuer. Do not add
- * it to /.well-known/jwks.json. Bind COFFEE_RECEIPT_PRIVATE_JWK in production.
+ * protocol/samples/coffee-receipt-demo.jwks.json is the SAMPLE public key
+ * only. The matching private scalar was discarded after pre-signing
+ * coffee-receipt-demo.receipt.json. Do not add it to /.well-known/jwks.json.
  */
 import {
   applyHostedCheckoutRecovery,
@@ -29,7 +34,7 @@ import {
   encodeX402HeaderJson,
 } from "./x402";
 import sampleCoffeeJwksJson from "../../protocol/samples/coffee-receipt-demo.jwks.json";
-import sampleCoffeePrivateJwkJson from "../../protocol/samples/coffee-receipt-demo.private.jwk.json";
+import sampleCoffeeReceiptJson from "../../protocol/samples/coffee-receipt-demo.receipt.json";
 
 export const COFFEE_UNIT_CENTS = 500;
 export const COFFEE_PRESETS = Object.freeze([1, 3, 5] as const);
@@ -67,6 +72,8 @@ export const THANKS_BADGE = "Thanks for the coffee ☕";
 export const BUY_ANOTHER_COPY = "Buy another coffee";
 export const BUY_HEADING = "Buy AuthiChain a coffee";
 export const FREE_PREVIEW_V1 = "FREE-PREVIEW-V1";
+export const RECEIPT_KEY_UNBOUND_COPY =
+  "Payment verified — signed receipt key not yet bound on this edge node";
 
 /** Non-PII returning-supporter flag. HttpOnly=false so widgets can read it. */
 export const COFFEE_THANKS_COOKIE = "ac_coffee_thanks";
@@ -75,11 +82,27 @@ export const COFFEE_THANKS_STORAGE_KEY = "ac_coffee_thanks";
 export const SAMPLE_COFFEE_JWKS = sampleCoffeeJwksJson as {
   keys: CoffeeJwk[];
 };
-export const SAMPLE_COFFEE_PRIVATE_JWK =
-  sampleCoffeePrivateJwkJson as CoffeePrivateJwk;
+export const SAMPLE_COFFEE_RECEIPT = sampleCoffeeReceiptJson as {
+  sampleOnly: true;
+  signer: { kind: "bundled_sample_ed25519"; kid: string; note: string };
+  record: ProofOfCoffeeRecord;
+  jws: string;
+  jwks: { keys: CoffeeJwk[] };
+};
 export const SAMPLE_COFFEE_KID = String(
   SAMPLE_COFFEE_JWKS.keys[0]?.kid || "support-receipt-sample"
 );
+
+/** Public half of the live receipt key CF Deploy binds as COFFEE_RECEIPT_PRIVATE_JWK. */
+export const LIVE_COFFEE_RECEIPT_PUBLIC_JWK: CoffeeJwk = {
+  crv: "Ed25519",
+  x: "wrT2tuJ_wS0e5CuLy2Rc5xalX4PszE6PfprHc6WqZn8",
+  kty: "OKP",
+  kid: "coffee-receipt-live-d5f45f56b842581f",
+  alg: "EdDSA",
+  use: "sig",
+};
+export const LIVE_COFFEE_RECEIPT_KID = LIVE_COFFEE_RECEIPT_PUBLIC_JWK.kid!;
 
 export const COFFEE_PROMISES = Object.freeze({
   equity: false,
@@ -535,38 +558,76 @@ export async function generateSupportReceiptKeypair(): Promise<{
   };
 }
 
-function parsePrivateJwk(raw: string | CoffeePrivateJwk | undefined): {
-  jwk: CoffeePrivateJwk;
-  sample: boolean;
-} {
-  if (raw && typeof raw === "object" && raw.d && raw.x) {
-    return { jwk: raw, sample: false };
+function publicJwkOnly(jwk: CoffeeJwk, kid = jwk.kid): CoffeeJwk {
+  return {
+    kty: "OKP",
+    crv: "Ed25519",
+    x: jwk.x,
+    ...(kid ? { kid } : {}),
+    use: "sig",
+    alg: "EdDSA",
+  };
+}
+
+function dedupeJwks(keys: CoffeeJwk[]): CoffeeJwk[] {
+  const seen = new Set<string>();
+  const out: CoffeeJwk[] = [];
+  for (const key of keys) {
+    const id = key.kid || key.x;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(publicJwkOnly(key));
+  }
+  return out;
+}
+
+/** Valid live private JWK or null. Never returns the sample key. */
+export function parseCoffeeReceiptPrivateJwk(
+  raw: string | CoffeePrivateJwk | undefined | null
+): CoffeePrivateJwk | null {
+  if (raw && typeof raw === "object" && raw.d && raw.x && raw.kty === "OKP") {
+    return raw;
   }
   const text = typeof raw === "string" ? raw.trim() : "";
-  if (text) {
-    try {
-      const parsed = JSON.parse(text) as CoffeePrivateJwk;
-      if (parsed?.d && parsed?.x && parsed?.kty === "OKP") {
-        return { jwk: parsed, sample: false };
-      }
-    } catch {
-      /* fall through to sample */
+  if (!text) return null;
+  try {
+    const parsed = JSON.parse(text) as CoffeePrivateJwk;
+    if (
+      parsed?.d &&
+      parsed?.x &&
+      parsed?.kty === "OKP" &&
+      parsed?.crv === "Ed25519"
+    ) {
+      return parsed;
     }
+  } catch {
+    return null;
   }
-  return { jwk: SAMPLE_COFFEE_PRIVATE_JWK, sample: true };
+  return null;
 }
 
 export function coffeeJwksForEnv(env?: CoffeeEnv): {
   keys: CoffeeJwk[];
-  sample: boolean;
+  liveBound: boolean;
   kid: string;
 } {
-  const { jwk, sample } = parsePrivateJwk(env?.COFFEE_RECEIPT_PRIVATE_JWK);
-  const kid = String(jwk.kid || SAMPLE_COFFEE_KID);
+  const bound = parseCoffeeReceiptPrivateJwk(env?.COFFEE_RECEIPT_PRIVATE_JWK);
+  const keys: CoffeeJwk[] = [];
+  if (bound) {
+    keys.push(
+      publicJwkFromPrivate(bound, String(bound.kid || LIVE_COFFEE_RECEIPT_KID))
+    );
+  }
+  keys.push(LIVE_COFFEE_RECEIPT_PUBLIC_JWK);
+  for (const sampleKey of SAMPLE_COFFEE_JWKS.keys) {
+    keys.push(publicJwkOnly(sampleKey));
+  }
   return {
-    keys: [publicJwkFromPrivate(jwk, kid)],
-    sample,
-    kid,
+    keys: dedupeJwks(keys),
+    liveBound: Boolean(bound),
+    kid: bound
+      ? String(bound.kid || LIVE_COFFEE_RECEIPT_KID)
+      : LIVE_COFFEE_RECEIPT_KID,
   };
 }
 
@@ -608,6 +669,7 @@ export async function mintProofOfCoffeeReceipt(
     issuedAt?: string;
     receiptId?: string;
     privateJwk?: string | CoffeePrivateJwk;
+    sampleLabel?: boolean;
   },
   privateKeySource?: string | CoffeePrivateJwk
 ): Promise<{
@@ -643,8 +705,14 @@ export async function mintProofOfCoffeeReceipt(
     throw new Error("amountCents above maximum");
   }
 
-  const { jwk, sample } = parsePrivateJwk(input.privateJwk || privateKeySource);
-  const kid = input.kid || String(jwk.kid || SAMPLE_COFFEE_KID);
+  const jwk = parseCoffeeReceiptPrivateJwk(
+    input.privateJwk || privateKeySource
+  );
+  if (!jwk) {
+    throw new Error("COFFEE_RECEIPT_PRIVATE_JWK is not bound");
+  }
+  const sample = Boolean(input.sampleLabel);
+  const kid = input.kid || String(jwk.kid || LIVE_COFFEE_RECEIPT_KID);
   const fields = sanitizeSupporterFields({
     handle: input.handle,
     message: input.message,
@@ -879,7 +947,7 @@ export function parseCoffeeThanksFlag(
 
 export function serializeCoffeeThanksCookie(flag: CoffeeThanksFlag): string {
   const value = encodeURIComponent(`${flag.receiptId}|${flag.ts}`);
-  return `${COFFEE_THANKS_COOKIE}=${value}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  return `${COFFEE_THANKS_COOKIE}=${value}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`;
 }
 
 export function resolveCoffeePageMode(input: {
@@ -1157,7 +1225,7 @@ export async function coffeeCheckoutResponse(
   });
 }
 
-export async function buildSampleCoffeeReceipt(now = new Date()): Promise<{
+export function buildSampleCoffeeReceipt(): {
   sampleOnly: true;
   signer: {
     kind: "bundled_sample_ed25519";
@@ -1167,27 +1235,12 @@ export async function buildSampleCoffeeReceipt(now = new Date()): Promise<{
   record: ProofOfCoffeeRecord;
   jws: string;
   jwks: { keys: CoffeeJwk[] };
-}> {
-  const minted = await mintProofOfCoffeeReceipt({
-    rail: "fiat",
-    paymentStatus: "paid",
-    amountCents: 500,
-    handle: "sample",
-    message: "SAMPLE receipt only",
-    paymentReference: "cs_test_sample_not_a_live_session",
-    issuedAt: now.toISOString(),
-    receiptId: "poc_sample_demo",
-    privateJwk: SAMPLE_COFFEE_PRIVATE_JWK,
-  });
+} {
   return {
     sampleOnly: true,
-    signer: {
-      kind: "bundled_sample_ed25519",
-      kid: SAMPLE_COFFEE_KID,
-      note: "Signed by the bundled demonstration Ed25519 key. The live AuthiChain passport issuer keys were not used. Do not add this key to /.well-known/jwks.json.",
-    },
-    record: minted.record,
-    jws: minted.jws,
-    jwks: minted.jwks,
+    signer: SAMPLE_COFFEE_RECEIPT.signer,
+    record: SAMPLE_COFFEE_RECEIPT.record,
+    jws: SAMPLE_COFFEE_RECEIPT.jws,
+    jwks: SAMPLE_COFFEE_RECEIPT.jwks,
   };
 }

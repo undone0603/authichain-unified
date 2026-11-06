@@ -3,12 +3,15 @@
  *
  * GET  Accept: text/html → on-brand HTML
  * GET  Accept: application/json | ?rail=x402 → HTTP 402 Base USDC
+ *   challenge (eip155:8453). Automated x402 facilitator settlement / JWS
+ *   minting is not wired on /coffee yet.
  * POST /coffee or /api/coffee/checkout → Stripe Checkout or Payment Link
  * GET  /coffee/jwks.json, /coffee/sample-receipt.json
  *
  * "Thanks for the coffee" hero/CTA flips ONLY after a verified paid Stripe
  * session (payment_status === "paid", status === "complete",
  * metadata.kind === "coffee_support") — never on a bare ?thanks=1.
+ * Live JWS minting requires COFFEE_RECEIPT_PRIVATE_JWK; unset still thanks.
  */
 import {
   ESTATE_BASE_CSS,
@@ -25,6 +28,7 @@ import {
   COFFEE_CHECKOUT_PATH,
   COFFEE_JWKS_PATH,
   COFFEE_PATH,
+  COFFEE_PAYMENT_LINK_ID,
   COFFEE_PRESETS,
   COFFEE_SAMPLE_RECEIPT_PATH,
   COFFEE_THANKS_STORAGE_KEY,
@@ -35,6 +39,7 @@ import {
   MESSAGE_MAX,
   MIN_SUPPORT_CENTS,
   NON_TAX_DEDUCTIBLE_DISCLOSURE,
+  RECEIPT_KEY_UNBOUND_COPY,
   THANKS_BADGE,
   THANKS_COPY,
   buildSampleCoffeeReceipt,
@@ -45,6 +50,7 @@ import {
   isStripeCheckoutSessionId,
   mintProofOfCoffeeReceipt,
   negotiateSupportRail,
+  parseCoffeeReceiptPrivateJwk,
   parseCoffeeThanksCookie,
   resolveCoffeePageMode,
   retrieveCoffeeCheckoutSession,
@@ -195,6 +201,7 @@ export type CoffeePageView = {
     sampleSigner: boolean;
     kid: string;
   };
+  receiptUnbound?: boolean;
   thanksFlag?: { receiptId: string; ts: number };
 };
 
@@ -248,7 +255,14 @@ export function renderCoffeePage(
   });
 })();
 </script>`
-      : "";
+      : paid && view.receiptUnbound
+        ? `<section class="estate-section" id="receipt">
+  <div class="wrap">
+    <h2>Payment verified</h2>
+    <p class="section-sub" id="receipt-unbound">${esc(RECEIPT_KEY_UNBOUND_COPY)}</p>
+  </div>
+</section>`
+        : "";
   const persist =
     paid && view.thanksFlag
       ? `<script>${persistThanksScript(view.thanksFlag.receiptId, view.thanksFlag.ts)}</script>`
@@ -320,8 +334,8 @@ export function renderCoffeePage(
       <h1 id="coffee-heading">${esc(heading)}</h1>
       <p class="estate-lede hero-sub">${
         thanks
-          ? "Zero platform cut. Apple Pay, Google Pay, Link, and cards on our Stripe rail — or USDC via x402 for agents."
-          : "Zero platform cut. 1× is $5. Apple Pay, Google Pay, Link, and cards welcome. Agents tip USDC on the same URL."
+          ? "Zero platform cut. Apple Pay, Google Pay, Link, and cards on Stripe Checkout. Agents can request a Base USDC HTTP 402 challenge on the same URL; Ed25519 receipts currently mint after verified Stripe payment."
+          : "Zero platform cut. 1× is $5. Apple Pay, Google Pay, Link, and cards welcome. Agents can request a Base USDC HTTP 402 challenge on the same URL."
       }</p>
       <div class="estate-actions hero-cta">
         <a class="btn btn-outline" id="buy-another" href="#support"${buyAnotherHidden}>${esc(BUY_ANOTHER_COPY)}</a>
@@ -352,10 +366,11 @@ export function renderCoffeePage(
       </form>
       <div class="coffee-notice" role="note">
         <strong>Not a charity donation.</strong> ${esc(NON_TAX_DEDUCTIBLE_DISCLOSURE)}
+        Optional <code>supporter_handle</code> and <code>supporter_message</code> are stored in Stripe Checkout / PaymentIntent metadata (<code>acct_1SXIyEGqTruSqV8T</code>). When falling back to the standalone Stripe Payment Link (<code>${COFFEE_PAYMENT_LINK_ID}</code>), Stripe shows its hosted confirmation receipt on <code>buy.stripe.com</code>; on-page Checkout returns to <code>/coffee?thanks=1&amp;session_id=…</code> for the Thanks for the coffee state and Ed25519 receipt.
       </div>
       <p class="coffee-agent">
-        Agents: <code>Accept: application/json</code> or <code>?rail=x402</code> returns HTTP 402 with a Base USDC requirement to <code>${X402_PUBLISHED_PAY_TO}</code> (default 1× = $5).
-        After a verified paid Stripe session you receive an Ed25519 <em>Proof-of-Coffee</em> receipt — offline-verifiable, zero token/equity/SLA promises.
+        Agents: <code>Accept: application/json</code> or <code>?rail=x402</code> returns HTTP 402 with a Base USDC (<code>eip155:8453</code>) requirement to <code>${X402_PUBLISHED_PAY_TO}</code> (default 1× = $5).
+        Ed25519 <em>Proof-of-Coffee</em> receipts and the Thanks for the coffee state currently mint on verified Stripe Checkout completion — automated x402 facilitator settlement is not wired on <code>/coffee</code> yet.
       </p>
     </div>
   </section>
@@ -405,9 +420,24 @@ async function coffeeThanksView(
     return { view: { mode, thanksFlag: cookieFlag || undefined } };
   }
 
+  const unboundFlag = {
+    receiptId: `poc_${crypto.randomUUID().replace(/-/g, "")}`,
+    ts: Date.now(),
+  };
   const cents = Number(
     stripeSession.metadata?.amount_cents || stripeSession.amount_total || 0
   );
+  const bound = parseCoffeeReceiptPrivateJwk(env.COFFEE_RECEIPT_PRIVATE_JWK);
+  if (!bound) {
+    return {
+      view: {
+        mode: "paid_thanks",
+        receiptUnbound: true,
+        thanksFlag: unboundFlag,
+      },
+      setCookie: serializeCoffeeThanksCookie(unboundFlag),
+    };
+  }
   try {
     const minted = await mintProofOfCoffeeReceipt(
       {
@@ -417,9 +447,9 @@ async function coffeeThanksView(
         handle: stripeSession.metadata?.supporter_handle,
         message: stripeSession.metadata?.supporter_message,
         paymentReference: stripeSession.id || sessionId,
-        privateJwk: env.COFFEE_RECEIPT_PRIVATE_JWK,
+        privateJwk: bound,
       },
-      env.COFFEE_RECEIPT_PRIVATE_JWK
+      bound
     );
     const flag = {
       receiptId: minted.record.receiptId,
@@ -439,7 +469,14 @@ async function coffeeThanksView(
       setCookie: serializeCoffeeThanksCookie(flag),
     };
   } catch {
-    return { view: { mode: "buy" } };
+    return {
+      view: {
+        mode: "paid_thanks",
+        receiptUnbound: true,
+        thanksFlag: unboundFlag,
+      },
+      setCookie: serializeCoffeeThanksCookie(unboundFlag),
+    };
   }
 }
 
@@ -489,16 +526,15 @@ export async function tryHandleCoffee(
       return jsonResponse(
         {
           keys: jwks.keys,
-          sample: jwks.sample,
-          note: jwks.sample
-            ? "Bundled demonstration Ed25519 key. Not the live AuthiChain passport issuer."
-            : "Proof-of-Coffee receipt verifying key.",
+          liveBound: jwks.liveBound,
+          note: jwks.liveBound
+            ? "Proof-of-Coffee verifying keys. The sample kid verifies /coffee/sample-receipt.json only."
+            : "Live signing key not bound on this node. The sample kid verifies /coffee/sample-receipt.json only. Paid Stripe returns flip Thanks for the coffee without minting a live JWS.",
         },
         request.method
       );
     }
-    const sample = await buildSampleCoffeeReceipt();
-    return jsonResponse(sample, request.method);
+    return jsonResponse(buildSampleCoffeeReceipt(), request.method);
   }
 
   if (!HTML_PATHS.has(pathname)) return null;
@@ -551,8 +587,7 @@ export async function tryHandleCoffee(
     "Content-Type": "text/html; charset=utf-8",
   };
   if (setCookie) {
-    headers["Set-Cookie"] =
-      `${setCookie}${url.protocol === "https:" ? "; Secure" : ""}`;
+    headers["Set-Cookie"] = setCookie;
   }
   if (request.method === "HEAD") {
     return new Response(null, { status: 200, headers });

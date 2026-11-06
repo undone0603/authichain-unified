@@ -5,13 +5,17 @@ import {
   COFFEE_CHECKOUT_PATH,
   COFFEE_JWKS_PATH,
   COFFEE_PATH,
+  COFFEE_PAYMENT_LINK_ID,
   COFFEE_PAYMENT_LINK_URL,
   COFFEE_SAMPLE_RECEIPT_PATH,
   FREE_PREVIEW_V1,
+  LIVE_COFFEE_RECEIPT_KID,
   NON_TAX_DEDUCTIBLE_DISCLOSURE,
+  RECEIPT_KEY_UNBOUND_COPY,
   SAMPLE_COFFEE_KID,
   SUPPORT_KIND,
   THANKS_COPY,
+  generateSupportReceiptKeypair,
   verifyProofOfCoffeeReceipt,
 } from "../../../src/lib/support-coffee";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402";
@@ -58,6 +62,13 @@ describe("renderCoffeePage", () => {
     expect(html).toContain("estate-nav");
     expect(html).toContain("estate-footer");
     expect(html).toContain(X402_PUBLISHED_PAY_TO);
+    expect(html).toContain("eip155:8453");
+    expect(html).toContain(
+      "automated x402 facilitator settlement is not wired"
+    );
+    expect(html).toContain("supporter_handle");
+    expect(html).toContain(COFFEE_PAYMENT_LINK_ID);
+    expect(html).toContain("buy.stripe.com");
     expect(html).toContain(`action="${COFFEE_PATH}"`);
     expect(html).not.toContain("AuthiChain, Inc.");
     expect(html).not.toContain("501(c)(3)");
@@ -100,21 +111,31 @@ describe("renderCoffeePage", () => {
           disclosure: NON_TAX_DEDUCTIBLE_DISCLOSURE,
           note: "thanks",
           signer: {
-            kind: "bundled_sample_ed25519",
-            kid: SAMPLE_COFFEE_KID,
-            sample: true,
+            kind: "live_secret",
+            kid: "coffee-receipt-live-d5f45f56b842581f",
+            sample: false,
           },
         },
         jws: "aaa.bbb.ccc",
-        sampleSigner: true,
-        kid: SAMPLE_COFFEE_KID,
+        sampleSigner: false,
+        kid: "coffee-receipt-live-d5f45f56b842581f",
       },
       thanksFlag: { receiptId: "poc_paid1", ts: 1 },
     });
     expect(html).toContain(THANKS_COPY);
     expect(html).toContain("aaa.bbb.ccc");
     expect(html).toContain("Buy another coffee");
-    expect(html).toContain("bundled demonstration Ed25519");
+  });
+
+  it("paid unbound view still thanks without a JWS", () => {
+    const html = renderCoffeePage({
+      mode: "paid_thanks",
+      receiptUnbound: true,
+      thanksFlag: { receiptId: "poc_unbound1", ts: 1 },
+    });
+    expect(html).toContain(THANKS_COPY);
+    expect(html).toContain(RECEIPT_KEY_UNBOUND_COPY);
+    expect(html).not.toContain('id="coffee-jws"');
   });
 });
 
@@ -168,7 +189,7 @@ describe("tryHandleCoffee", () => {
     expect(res!.headers.get("location")).toBe(COFFEE_PAYMENT_LINK_URL);
   });
 
-  it("paid return renders Thanks for the coffee and a verifiable receipt", async () => {
+  it("paid return without COFFEE_RECEIPT_PRIVATE_JWK thanks but never signs with the sample kid", async () => {
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       expect(url).toContain("/v1/checkout/sessions/cs_test_paidcoffee");
@@ -191,10 +212,47 @@ describe("tryHandleCoffee", () => {
     expect(res!.status).toBe(200);
     const html = await res!.text();
     expect(html).toContain(THANKS_COPY);
+    expect(html).toContain(RECEIPT_KEY_UNBOUND_COPY);
+    expect(html).not.toContain('id="coffee-jws"');
+    expect(html).not.toContain(SAMPLE_COFFEE_KID);
+    expect(html).not.toMatch(/eyJ[A-Za-z0-9_-]+\.eyJ/);
+    const cookie = res!.headers.get("set-cookie") || "";
+    expect(cookie).toMatch(/ac_coffee_thanks=/);
+    expect(cookie).toMatch(/SameSite=Lax/);
+    expect(cookie).toMatch(/Secure/);
+    expect(cookie).not.toMatch(/HttpOnly/i);
+  });
+
+  it("paid return with a bound live key mints a non-sample JWS", async () => {
+    const keys = await generateSupportReceiptKeypair();
+    const fetchImpl = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          id: "cs_test_paidlive",
+          payment_status: "paid",
+          status: "complete",
+          amount_total: 500,
+          metadata: { kind: SUPPORT_KIND, amount_cents: "500" },
+        }),
+        { status: 200 }
+      );
+    }) as unknown as typeof fetch;
+    const res = await tryHandleCoffee(
+      req(`${COFFEE_PATH}?thanks=1&session_id=cs_test_paidlive`),
+      {
+        STRIPE_SECRET_KEY: "sk_test_x",
+        COFFEE_RECEIPT_PRIVATE_JWK: JSON.stringify(keys.privateJwk),
+      },
+      fetchImpl
+    );
+    expect(res!.status).toBe(200);
+    const html = await res!.text();
+    expect(html).toContain(THANKS_COPY);
     expect(html).toContain("Proof-of-Coffee receipt");
-    expect(res!.headers.get("set-cookie")).toMatch(/ac_coffee_thanks=/);
-    expect(res!.headers.get("set-cookie") || "").not.toMatch(/HttpOnly/i);
-    expect(html).toMatch(/eyJ/);
+    expect(html).toContain(keys.kid);
+    expect(html).not.toContain(SAMPLE_COFFEE_KID);
+    expect(html).toMatch(/eyJ[A-Za-z0-9_-]+\.eyJ/);
+    expect(html).not.toContain(RECEIPT_KEY_UNBOUND_COPY);
   });
 
   it("unpaid or forged session_id does not flip to the paid receipt state", async () => {
@@ -242,11 +300,13 @@ describe("tryHandleCoffee", () => {
     expect(jwksRes!.status).toBe(200);
     const jwks = (await jwksRes!.json()) as {
       keys: Array<{ kid: string; d?: string }>;
-      sample: boolean;
+      liveBound: boolean;
     };
-    expect(jwks.keys[0].kid).toBe(SAMPLE_COFFEE_KID);
-    expect(jwks.keys[0].d).toBeUndefined();
-    expect(jwks.sample).toBe(true);
+    expect(jwks.liveBound).toBe(false);
+    expect(jwks.keys.map(k => k.kid)).toEqual(
+      expect.arrayContaining([LIVE_COFFEE_RECEIPT_KID, SAMPLE_COFFEE_KID])
+    );
+    expect(jwks.keys.every(k => k.d === undefined)).toBe(true);
 
     const sampleRes = await tryHandleCoffee(req(COFFEE_SAMPLE_RECEIPT_PATH));
     const sample = (await sampleRes!.json()) as {

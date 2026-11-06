@@ -3237,7 +3237,7 @@ interface Env {
   STRIPE_PRICE_ID?: string;
   /** Optional override of the live coffee Payment Link fallback. */
   COFFEE_PAYMENT_LINK_URL?: string;
-  /** Optional live Proof-of-Coffee Ed25519 private JWK. Unset uses the bundled sample key. */
+  /** Optional live Proof-of-Coffee Ed25519 private JWK. Unset fails closed on JWS minting. */
   COFFEE_RECEIPT_PRIVATE_JWK?: string;
   /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
   DPP_SMOKE_SECRET?: string;
