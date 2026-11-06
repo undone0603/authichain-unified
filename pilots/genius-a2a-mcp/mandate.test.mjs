@@ -1,0 +1,25 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
+import { METHODS, signMandate, validateMandate } from './mandate.mjs';
+const key=randomBytes(32), now=Date.parse('2026-11-03T17:00:00Z'), origin='https://example.org';
+const body=()=>({version:1,requester:'independent-reviewer',taskId:'test_task_00001',nonce:'random_nonce_00000001',scope:'public-only',budgetCents:0,issuedAt:'2026-11-03T16:59:00Z',expiresAt:'2026-11-03T17:05:00Z',maxRequests:3,methods:[METHODS[0]],origins:[origin]});
+const envelope=(b=body())=>({body:b,signature:signMandate(b,key)});
+const check=(e,seen=new Set(),overrides={})=>validateMandate(e,{key,now,seen,origin,method:METHODS[0],requester:'independent-reviewer',...overrides});
+test('signed bounded mandate succeeds',()=>assert.equal(check(envelope()).authorized,true));
+test('replay denied',()=>{const s=new Set(),e=envelope();check(e,s);assert.throws(()=>check(e,s),/Replay/);});
+test('tampering denied',()=>{const e=envelope();e.body.budgetCents=100;assert.throws(()=>check(e),/scope/);});
+test('forged signature denied',()=>{const e=envelope();e.signature='0'.repeat(64);assert.throws(()=>check(e),/signature/);});
+test('expired denied',()=>assert.throws(()=>check(envelope(),new Set(),{now:now+600000}),/Expired/));
+test('requester mismatch denied',()=>assert.throws(()=>check(envelope(),new Set(),{requester:'another'}),/Requester/));
+test('unknown method denied',()=>assert.throws(()=>check(envelope(),new Set(),{method:'execute_payment'}),/Method/));
+test('unauthorized origin denied',()=>assert.throws(()=>check(envelope(),new Set(),{origin:'https://other.org'}),/Origin/));
+test('private origin denied',()=>{const b=body();b.origins=['https://localhost'];assert.throws(()=>check(envelope(b),new Set(),{origin:'https://localhost'}),/Unsafe/);});
+test('unsigned denied',()=>assert.throws(()=>check({body:body()}),/signed/));
+test('unrecognized field denied',()=>{const b=body();b.admin=true;assert.throws(()=>check(envelope(b)),/Unexpected/);});
+test('excessive request count denied',()=>{const b=body();b.maxRequests=999;assert.throws(()=>check(envelope(b)),/scope/);});
+test('non-zero budget denied',()=>{const b=body();b.budgetCents=1;assert.throws(()=>check(envelope(b)),/scope/);});
+test('overlong lifetime denied',()=>{const b=body();b.expiresAt='2026-11-03T18:00:00Z';assert.throws(()=>check(envelope(b)),/excessive/);});
+
+test('fractional UTC timestamps accepted',()=>{const b=body();b.issuedAt='2026-11-03T16:59:00.123Z';assert.equal(check(envelope(b)).authorized,true);});
+test('invalid calendar timestamp denied',()=>{const b=body();b.issuedAt='2026-02-31T16:59:00Z';assert.throws(()=>check(envelope(b)),/time/);});
