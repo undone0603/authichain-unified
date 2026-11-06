@@ -93,14 +93,28 @@ describe("mcp discovery", () => {
       expect(body.pay.x402).toBe("POST https://authichain.com/api/x402");
       expect(body.pricing.verify.price).toBe("free");
       expect(body.pricing.verify.mcpTool).toBe("verify_record");
-      expect(body.pricing.paidPlans.status).toBe("on_hold");
-      expect(body.pricing.humanCheckout).toBeUndefined();
+      expect(body.pricing.paidPlans.status).toBe("live");
+      expect(body.pricing.humanCheckout).toMatchObject({
+        status: "live",
+        starter: {
+          usd: 29,
+          checkout: "https://authichain.com/checkout/starter",
+        },
+        dpp_readiness: {
+          usd: 299,
+          checkout: "https://authichain.com/checkout/dpp_readiness",
+        },
+      });
       const text = JSON.stringify(body);
       expect(text).not.toContain("$0.05");
       expect(text).not.toContain("PaymentLink");
       expect(text).not.toContain("USDC");
+      expect(text).not.toContain("on_hold");
+      expect(text).not.toContain("wait_buyer");
+      expect(text).not.toContain("never expire");
+      expect(text).toContain("https://authichain.com/checkout/starter");
+      expect(text).toContain("https://authichain.com/checkout/dpp_readiness");
       for (const plan of [
-        "dpp_readiness",
         "strainchain_passport",
         "strainchain_farm",
       ] as const) {
@@ -156,14 +170,18 @@ describe("mcp discovery", () => {
     expect(pricing.verify.http).toBe(
       "GET https://authichain.com/api/verify?id=polygon-anchor-1"
     );
-    expect(pricing.paidPlans.status).toBe("on_hold");
+    expect(pricing.paidPlans.status).toBe("live");
     expect(priced.result.content[0].text).not.toContain("$0.05");
     expect(priced.result.content[0].text).not.toContain("USDC");
-    for (const plan of [
-      "dpp_readiness",
-      "strainchain_passport",
-      "strainchain_farm",
-    ] as const) {
+    expect(priced.result.content[0].text).not.toContain("on_hold");
+    expect(priced.result.content[0].text).not.toContain("wait_buyer");
+    expect(priced.result.content[0].text).toContain(
+      "https://authichain.com/checkout/starter"
+    );
+    expect(priced.result.content[0].text).toContain(
+      "https://authichain.com/checkout/dpp_readiness"
+    );
+    for (const plan of ["strainchain_passport", "strainchain_farm"] as const) {
       const link = planPaymentLink(plan);
       if (link) expect(priced.result.content[0].text).not.toContain(link);
     }
@@ -215,16 +233,32 @@ describe("mcp discovery", () => {
       expect(body.pricing.paidPlans.payTo, path).toBe(X402_PUBLISHED_PAY_TO);
       expect(body.pricing.paidPlans.paidVerify?.bound, path).toBe(true);
       expect(body.pricing.paidPlans.paidVerify?.status, path).toBe("bound");
-      expect(body.pricing.paidPlans.stripe?.status, path).toBe("on_hold");
+      expect(body.pricing.paidPlans.stripe?.status, path).toBe("live");
       expect(body.pricing.legacySealVerify.status, path).toBe("bound");
-      expect(body.pricing.humanCheckout, path).toBeUndefined();
+      expect(body.pricing.humanCheckout).toMatchObject({
+        status: "live",
+        starter: {
+          usd: 29,
+          checkout: "https://authichain.com/checkout/starter",
+        },
+        dpp_readiness: {
+          usd: 299,
+          checkout: "https://authichain.com/checkout/dpp_readiness",
+        },
+      });
       const text = JSON.stringify(body);
       expect(text, path).toContain("$0.05");
       expect(text, path).toContain("USDC");
+      expect(text, path).toContain("https://authichain.com/checkout/starter");
+      expect(text, path).toContain(
+        "https://authichain.com/checkout/dpp_readiness"
+      );
       expect(text, path).not.toContain("QRON");
       expect(text, path).not.toContain("/api/checkout");
+      expect(text, path).not.toContain("on_hold");
+      expect(text, path).not.toContain("wait_buyer");
+      expect(text, path).not.toContain("never expire");
       for (const plan of [
-        "dpp_readiness",
         "strainchain_passport",
         "strainchain_farm",
       ] as const) {
@@ -286,13 +320,22 @@ describe("mcp discovery", () => {
     expect(pricing.paidPlans.pricePerCall.atomic).toBe("50000");
     expect(pricing.paidPlans.paidVerify.bound).toBe(true);
     expect(pricing.paidPlans.paidVerify.status).toBe("bound");
-    expect(pricing.paidPlans.stripe.status).toBe("on_hold");
+    expect(pricing.paidPlans.stripe.status).toBe("live");
     expect(pricing.legacySealVerify.status).toBe("bound");
     expect(pricing.legacySealVerify.bound).toBe(true);
     expect(priced.result.content[0].text).toContain("$0.05");
     expect(priced.result.content[0].text).toContain("USDC");
+    expect(priced.result.content[0].text).toContain(
+      "https://authichain.com/checkout/starter"
+    );
+    expect(priced.result.content[0].text).toContain(
+      "https://authichain.com/checkout/dpp_readiness"
+    );
     expect(priced.result.content[0].text).not.toContain("QRON");
     expect(priced.result.content[0].text).not.toContain("/api/checkout");
+    expect(priced.result.content[0].text).not.toContain("on_hold");
+    expect(priced.result.content[0].text).not.toContain("wait_buyer");
+    expect(priced.result.content[0].text).not.toContain("never expire");
   });
 
   it("tools/call dpp_readiness_check is free and scores the answers", async () => {
@@ -323,7 +366,7 @@ describe("mcp discovery", () => {
     expect(result.score).toBe(40);
     expect(result.category.date).toBe("2027-02-18");
     expect(result.web).toBe("https://authichain.com/dpp-check");
-    // Paid plans are on hold: the MCP result names no audit, price or link.
+    // This tool never pitches an audit even though Stripe checkouts are live.
     expect(result.nextStep).not.toContain(planPaymentLink("dpp_readiness"));
     expect(result.nextStep).not.toMatch(/\$\d|audit/i);
 
@@ -870,7 +913,7 @@ describe("mcp discovery", () => {
     }
   });
 
-  it("does not turn a registry outage into a false not_registered result", async () => {
+  it("does not turn a registry outage into a fake or registered result", async () => {
     const orig = globalThis.fetch;
     globalThis.fetch = (async () =>
       new Response("unavailable", { status: 503 })) as typeof fetch;
@@ -900,14 +943,105 @@ describe("mcp discovery", () => {
       const data = JSON.parse(body.result.content[0].text) as {
         status: string;
         verified: boolean;
+        registered?: boolean;
         registry: { state: string; note: string };
       };
-      expect(data.status).toBe("registry_unavailable");
+      expect(data.status).toBe("unknown");
       expect(data.verified).toBe(false);
-      expect(data.registry.state).toBe("signed_record_registry_unavailable");
-      expect(data.registry.note).toContain(
-        "No conclusion about signed-record existence"
+      expect(data.registered).toBe(false);
+      expect(data.status).not.toBe("fake");
+      expect(data.status).not.toBe("registry_unavailable");
+      expect(data.registry.state).toBe("lookup_degraded");
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("keeps published packs even when both registries 503", async () => {
+    const orig = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response("unavailable", { status: 503 })) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 22,
+            method: "tools/call",
+            params: {
+              name: "query_provenance",
+              arguments: { assetId: "BAT-2026-001" },
+            },
+          }),
+        }),
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
       );
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }> };
+      };
+      const data = JSON.parse(body.result.content[0].text) as {
+        status: string;
+        verified: boolean;
+      };
+      expect(data.status).toBe("published_pack");
+      expect(data.verified).toBe(false);
+      expect(data.status).not.toBe("registry_unavailable");
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("treats a missing signed-record table as unknown, not registry_unavailable", async () => {
+    const orig = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/rest/v1/authichain_attestation_records") {
+        return new Response(
+          JSON.stringify({
+            code: "PGRST205",
+            message: "Could not find the table in the schema cache",
+          }),
+          { status: 404 }
+        );
+      }
+      return new Response("[]", { status: 200 });
+    }) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 23,
+            method: "tools/call",
+            params: {
+              name: "query_provenance",
+              arguments: { assetId: "NOPE-XYZ" },
+            },
+          }),
+        }),
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
+      );
+      const data = JSON.parse(
+        (
+          (await res!.json()) as {
+            result: { content: Array<{ text: string }> };
+          }
+        ).result.content[0].text
+      ) as { status: string; verified: boolean };
+      expect(data.status).toBe("unknown");
+      expect(data.verified).toBe(false);
+      expect(data.status).not.toBe("registry_unavailable");
+      expect(data.status).not.toBe("fake");
     } finally {
       globalThis.fetch = orig;
     }
