@@ -1,0 +1,63 @@
+name: Public peer evidence probe (no secrets)
+on:
+  pull_request:
+    paths:
+      - 'scripts/alliances/public-evidence-probe.mjs'
+      - 'scripts/alliances/public-evidence-probe.test.mjs'
+      - 'scripts/alliances/arbiter-peer-repro.mjs'
+      - 'scripts/alliances/arbiter-peer-repro.test.mjs'
+      - 'scripts/alliances/cedr-streamable-handshake.mjs'
+      - 'scripts/alliances/cedr-streamable-handshake.test.mjs'
+      - 'scripts/alliances/cedr-v0.8.1-authichain-isolated-run.sh'
+      - 'docs/alliances/CEDR_STREAMABLE_HTTP_HANDSHAKE.md'
+      - 'scripts/alliances/m2m-verify.mjs'
+      - 'scripts/alliances/m2m-verify.test.mjs'
+      - 'agentz/swarm/authichain-m2m.mjs'
+      - 'agentz/swarm/authichain-m2m.test.mjs'
+      - 'docs/alliances/PUBLIC_PEER_CHALLENGE.md'
+      - 'docs/alliances/AGENTZ_M2M_VERIFICATION.md'
+      - '.github/workflows/public-peer-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-public-peer:
+    name: Offline public evidence boundaries
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Node version
+        run: node --version
+      - name: Verify syntax (read-only fixtures)
+        run: |
+          node --check scripts/alliances/public-evidence-probe.mjs
+          node --check scripts/alliances/arbiter-peer-repro.mjs
+          node --check scripts/alliances/cedr-streamable-handshake.mjs
+          node --check scripts/alliances/m2m-verify.mjs
+          node --check agentz/swarm/authichain-m2m.mjs
+      - name: Execute no-network evidence boundary fixtures
+        run: node --test scripts/alliances/public-evidence-probe.test.mjs
+      - name: Validate isolated Cedr release runner guard (no network)
+        run: |
+          bash -n scripts/alliances/cedr-v0.8.1-authichain-isolated-run.sh
+          set +e
+          bash scripts/alliances/cedr-v0.8.1-authichain-isolated-run.sh >"$RUNNER_TEMP/cedr-unapproved.txt" 2>&1
+          actual=$?
+          set -e
+          test "$actual" -eq 78
+          grep -q 'BLOCKED: run only on a verified isolated' "$RUNNER_TEMP/cedr-unapproved.txt"
+          set +e
+          CEDR_ISOLATED_RUNNER_APPROVED=YES RUNNER_NAME=authichain-ops bash scripts/alliances/cedr-v0.8.1-authichain-isolated-run.sh >"$RUNNER_TEMP/cedr-protected.txt" 2>&1
+          actual=$?
+          set -e
+          test "$actual" -eq 78
+          grep -q 'BLOCKED: protected runner' "$RUNNER_TEMP/cedr-protected.txt"
+      - name: Verify Cedr MCP Streamable HTTP handshake fail-closed behavior (offline)
+        run: node --test scripts/alliances/cedr-streamable-handshake.test.mjs
+      - name: Verify free ARBITER handoff gates
+        run: node --test scripts/alliances/arbiter-peer-repro.test.mjs
+      - name: Verify AgentZ M2M free verification gates (22 local cases)
+        run: node --test scripts/alliances/m2m-verify.test.mjs agentz/swarm/authichain-m2m.test.mjs
