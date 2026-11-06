@@ -210,6 +210,42 @@ export const TOOLS = [
     },
   },
   {
+    name: "negotiate",
+    description:
+      "Free, non-binding A2A negotiation planner. Compares a buyer's maximum budget with a supplier's minimum price, applies explicit authorization boundaries, and returns a proposed price or a reason for no agreement. Does not accept contracts, reserve inventory, move funds, contact suppliers, or create a legally binding commitment.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        currency: {
+          type: "string",
+          enum: ["USD"],
+          description: "Explicit price currency. Only USD is supported; never silently convert AUD or another currency.",
+        },
+        buyer_max_usd: {
+          type: "number",
+          minimum: 0,
+          description: "Buyer's authorized maximum price in USD.",
+        },
+        seller_min_usd: {
+          type: "number",
+          minimum: 0,
+          description: "Seller's stated minimum price in USD.",
+        },
+        opening_offer_usd: {
+          type: "number",
+          minimum: 0,
+          description: "Optional buyer opening offer, not an executed offer.",
+        },
+        scope: {
+          type: "string",
+          maxLength: 500,
+          description: "Brief description of the deliverable being discussed.",
+        },
+      },
+      required: ["currency", "buyer_max_usd", "seller_min_usd"],
+    },
+  },
+  {
     name: "scan_living_qr",
     description:
       "Free. Scan a stored Living QR. GET https://authichain.com/qron/r/{object_id} returns AuthiChain Verification Decision v1. This host verifies the signature. A missing id is presentation_not_found. Not an x402 payment endpoint, and it does not inspect a physical product.",
@@ -498,6 +534,112 @@ function mcpPaidVerifyStatus(env?: X402Env) {
   );
 }
 
+/**
+ * Non-binding, deterministic negotiation planning. Never calls external
+ * systems, signs agreements, quotes live inventory, or settles payment.
+ */
+export function negotiateTool(args: Record<string, unknown>) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) {
+    return {
+      status: "invalid_input",
+      binding: false,
+      error: "Negotiation arguments must be a JSON object.",
+    };
+  }
+  if (args.currency !== "USD") {
+    return {
+      status: "unsupported_currency",
+      binding: false,
+      error: "Explicit currency USD is required. No implicit FX conversion.",
+    };
+  }
+  const max = args.buyer_max_usd;
+  const min = args.seller_min_usd;
+  const opening = args.opening_offer_usd;
+  if (
+    typeof max !== "number" ||
+    typeof min !== "number" ||
+    !Number.isFinite(max) ||
+    !Number.isFinite(min) ||
+    max < 0 ||
+    min < 0 ||
+    max > 1_000_000_000 ||
+    min > 1_000_000_000 ||
+    (opening !== undefined &&
+      (typeof opening !== "number" ||
+        !Number.isFinite(opening) ||
+        opening < 0 ||
+        opening > max)) ||
+    (typeof opening === "number" && opening > 1_000_000_000) ||
+    (args.scope !== undefined &&
+      (typeof args.scope !== "string" || args.scope.length > 500))
+  ) {
+    return {
+      status: "invalid_input",
+      binding: false,
+      error: "Supply finite nonnegative buyer_max_usd and seller_min_usd; optional opening_offer_usd must not exceed the buyer cap.",
+    };
+  }
+  // Reject amounts with sub-cent precision rather than silently rounding
+  // outside a counterparty's expressed budget.
+  const hasSubCent = (amount: number) =>
+    Math.abs(amount * 100 - Math.round(amount * 100)) > 1e-7;
+  if (
+    hasSubCent(max) ||
+    hasSubCent(min) ||
+    (typeof opening === "number" && hasSubCent(opening))
+  ) {
+    return {
+      status: "invalid_input",
+      binding: false,
+      error: "Prices must use whole USD cents.",
+    };
+  }
+  // Reject amounts that cannot be represented as exact USD cents. Rounding
+  // an unauthorized fractional-cent amount could silently exceed a limit.
+  if (
+    !Number.isSafeInteger(Math.round(max * 100)) ||
+    !Number.isSafeInteger(Math.round(min * 100)) ||
+    (typeof opening === "number" &&
+      !Number.isSafeInteger(Math.round(opening * 100)))
+  ) {
+    return {
+      status: "invalid_input",
+      binding: false,
+      error: "Price cannot be represented safely in USD cents.",
+    };
+  }
+  const buyerCents = Math.round(max * 100);
+  const sellerCents = Math.round(min * 100);
+  const openingCents =
+    typeof opening === "number" ? Math.round(opening * 100) : undefined;
+  if (buyerCents < sellerCents) {
+    return {
+      status: "no_overlap",
+      binding: false,
+      currency: "USD",
+      buyer_max_usd: buyerCents / 100,
+      seller_min_usd: sellerCents / 100,
+      gap_usd: (sellerCents - buyerCents) / 100,
+      next_step: "Revisit scope, timing or authorized limits; do not exceed the buyer cap.",
+    };
+  }
+  const proposalCents = Math.max(
+    sellerCents,
+    Math.min(buyerCents, openingCents ?? Math.round((buyerCents + sellerCents) / 2))
+  );
+  return {
+    status: "proposal_only",
+    binding: false,
+    currency: "USD",
+    proposed_price_usd: proposalCents / 100,
+    buyer_max_usd: buyerCents / 100,
+    seller_min_usd: sellerCents / 100,
+    scope: typeof args.scope === "string" ? args.scope : null,
+    next_step: "Require explicit counterparty acceptance, validated fulfillment, and a separate authorized signing/payment mandate.",
+  };
+}
+
 function mcpTools(env?: X402Env) {
   const bound = mcpPaidVerifyStatus(env).bound;
   if (!bound) return TOOLS;
@@ -542,6 +684,7 @@ export function mcpPricingDiscovery(env?: X402Env) {
       "dpp_readiness_check",
       "get_pricing",
       "scan_living_qr",
+      "negotiate",
     ],
   };
   if (!paidVerify.bound) {
@@ -1328,8 +1471,149 @@ async function handleRpc(
   } catch {
     return rpcError(null, "invalid JSON", -32700);
   }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return json(400, {
+      jsonrpc: "2.0",
+      id: null,
+      error: { code: -32600, message: "Invalid JSON-RPC request object" },
+    });
+  }
   const method = body.method ?? "";
   const id = body.id;
+  // Opt-in MCP 2026-07-28. Legacy negotiation and its response frames
+  // remain untouched below. Only public discovery and tool listing are
+  // exposed here; all modern tool execution fails closed until separately
+  // reviewed and tested.
+  const versionHeader = request.headers.get("MCP-Protocol-Version");
+  if (versionHeader === "2026-07-28") {
+    const modernHeaders = { "MCP-Protocol-Version": "2026-07-28" };
+    const reject = (
+      status: number,
+      code: number,
+      message: string,
+      data?: Record<string, unknown>
+    ) =>
+      json(
+        status,
+        {
+          jsonrpc: "2.0",
+          id: id ?? null,
+          error: { code, message, ...(data ? { data } : {}) },
+        },
+        modernHeaders
+      );
+    // A supplied Origin must be trustworthy before accepting a modern MCP
+    // request. Missing Origin is normal for non-browser A2A clients.
+    const origin = request.headers.get("Origin");
+    if (origin && origin !== new URL(request.url).origin) {
+      return reject(403, -32600, "Origin not allowed");
+    }
+    const params =
+      body.params && typeof body.params === "object" && !Array.isArray(body.params)
+        ? (body.params as { _meta?: Record<string, unknown> })
+        : undefined;
+    const meta = params?._meta;
+    // Metadata is untrusted JSON. Reject arrays and primitives before
+    // accessing protocol fields; do not fall back to the legacy adapter.
+    if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+      return reject(400, -32602, "Missing or invalid modern _meta object");
+    }
+    const methodHeader = request.headers.get("Mcp-Method");
+    if (
+      typeof method !== "string" ||
+      !method ||
+      methodHeader !== method ||
+      meta?.["io.modelcontextprotocol/protocolVersion"] !== "2026-07-28"
+    ) {
+      return reject(400, -32020, "HeaderMismatch: method or protocol version differs");
+    }
+    if (body.jsonrpc !== "2.0" || id === null || id === undefined ||
+        (typeof id !== "string" && typeof id !== "number")) {
+      return reject(400, -32600, "Invalid modern JSON-RPC request");
+    }
+    if (
+      !meta ||
+      typeof meta["io.modelcontextprotocol/clientCapabilities"] !== "object" ||
+      meta["io.modelcontextprotocol/clientCapabilities"] === null ||
+      Array.isArray(meta["io.modelcontextprotocol/clientCapabilities"])
+    ) {
+      return reject(400, -32602, "Missing clientCapabilities in _meta");
+    }
+    if (method === "server/discover") {
+      return json(
+        200,
+        {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            resultType: "complete",
+            supportedVersions: ["2026-07-28", ...SUPPORTED_PROTOCOL_VERSIONS],
+            capabilities: { tools: { listChanged: false } },
+            _meta: {
+              "io.modelcontextprotocol/serverInfo": {
+                name: "authichain",
+                version: SERVER_VERSION,
+              },
+            },
+            instructions:
+              "Read-only interoperability preview. tools/list is supported; modern tools/call is not available. Verification does not prove physical authenticity.",
+            ttlMs: 0,
+            cacheScope: "private",
+          },
+        },
+        modernHeaders
+      );
+    }
+    if (method === "tools/list") {
+      // Listing must not mutate process-wide x402 configuration.
+      return json(
+        200,
+        {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            resultType: "complete",
+            tools: mcpTools(env),
+            ttlMs: 0,
+            cacheScope: "private",
+          },
+        },
+        modernHeaders
+      );
+    }
+    return reject(404, -32601, "Method not found");
+  }
+  // Do not downgrade modern metadata to a legacy request when the
+  // mandatory version header is absent.
+  if (
+    !versionHeader &&
+    request.headers.get("Mcp-Method") &&
+    body.params &&
+    typeof body.params === "object"
+  ) {
+    return json(400, {
+      jsonrpc: "2.0",
+      id: id ?? null,
+      error: { code: -32020, message: "HeaderMismatch: missing MCP-Protocol-Version" },
+    });
+  }
+  if (
+    versionHeader &&
+    !(SUPPORTED_PROTOCOL_VERSIONS as readonly string[]).includes(versionHeader)
+  ) {
+    return json(400, {
+      jsonrpc: "2.0",
+      id: id ?? null,
+      error: {
+        code: -32022,
+        message: "Unsupported protocol version",
+        data: {
+          supported: ["2026-07-28", ...SUPPORTED_PROTOCOL_VERSIONS],
+          requested: versionHeader,
+        },
+      },
+    });
+  }
 
   /**
    * A JSON-RPC notification has no `id` member at all — not `id: null`,
@@ -1380,6 +1664,16 @@ async function handleRpc(
       arguments?: Record<string, unknown>;
     };
     const name = params.name ?? "";
+    if (name === "negotiate" || name === "authichain_negotiate") {
+      const result = negotiateTool(params.arguments ?? {});
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        ...(result.status === "invalid_input" ||
+        result.status === "unsupported_currency"
+          ? { isError: true }
+          : {}),
+      });
+    }
     if (name === "get_pricing" || name === "authichain_get_pricing") {
       hydrateX402(env);
       return rpcResult(id, {
@@ -1480,7 +1774,7 @@ async function handleRpc(
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use verify_attestation (free, published signed JWS), verify_record (free reference protocol), get_pricing (free), dpp_readiness_check (free), query_provenance (free registration lookup), or verify (legacy x402).",
+          text: "Unknown tool. Use verify_attestation (free, published signed JWS), verify_record (free reference protocol), get_pricing (free), dpp_readiness_check (free), query_provenance (free registration lookup), negotiate (non-binding), or verify (legacy x402).",
         },
       ],
       isError: true,
@@ -1587,7 +1881,7 @@ export async function tryHandleMcp(
         // clients on every call; omitting them here failed the preflight
         // for any browser-side MCP client before the request was made.
         "Access-Control-Allow-Headers":
-          "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID, X-PAYMENT, PAYMENT-SIGNATURE",
+          "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id, Last-Event-ID, X-PAYMENT, PAYMENT-SIGNATURE",
         "Access-Control-Expose-Headers":
           "MCP-Protocol-Version, Mcp-Session-Id, WWW-Authenticate",
         "Access-Control-Max-Age": "86400",
