@@ -79,21 +79,30 @@ function normalizeSource(
   return "direct";
 }
 
-/** Persist one observable loop stage. Never throws — logging only on failure. */
+/** Persist a loop stage. Analytics are best-effort; strict buyer activation throws if storage fails. */
 export async function recordDppLoopEvent(
   supabase: SupabaseLike,
-  input: RecordDppLoopEventInput
+  input: RecordDppLoopEventInput,
+  options?: { strict?: boolean }
 ): Promise<void> {
   const visitId = input.visitId?.trim();
   if (!visitId) return;
 
   try {
+    // Supplemental analytics cannot override canonical event identity. In
+    // particular, a checkout_started event must never be relabeled as paid,
+    // and a caller-supplied session id must not replace the verified one.
+    const reserved = new Set(["offer", "loop_stage", "email", "profile_id", "stripe_session_id"]);
+    const supplementalMetadata = Object.fromEntries(
+      Object.entries(input.metadata || {}).filter(([key]) => !reserved.has(key))
+    );
     const { error } = await supabase.from("funnel_events").insert({
       prospect_id: visitId,
       stage: STAGE_TO_FUNNEL[input.stage],
       source: normalizeSource(input.source),
       event_type: `dpp_loop:${input.stage}`,
       metadata: {
+        ...supplementalMetadata,
         offer: DPP_OFFER_KEY,
         loop_stage: input.stage,
         ...(input.email ? { email: input.email } : {}),
@@ -101,14 +110,15 @@ export async function recordDppLoopEvent(
         ...(input.stripeSessionId
           ? { stripe_session_id: input.stripeSessionId }
           : {}),
-        ...(input.metadata || {}),
       },
       timestamp: new Date().toISOString(),
     });
     if (error) {
+      if (options?.strict) throw new Error("DPP event storage unavailable");
       console.error("[dpp-loop] record failed:", input.stage, error);
     }
   } catch (err) {
+    if (options?.strict) throw new Error("DPP event storage unavailable");
     console.error("[dpp-loop] record failed:", input.stage, err);
   }
 }
@@ -262,7 +272,14 @@ export function stallOf(
 export function isDemoVisit(rows: LoopEventRow[]): boolean {
   return rows.some(row => {
     const meta = row.metadata;
-    return meta?.is_demo === true || meta?.demo === true;
+    // Stripe marks fully discounted checkouts as "paid" even though no
+    // cash was collected. Historical sessions may lack an is_demo flag.
+    // Exclude only evidenced $0 payment stages, not mere checkout visits.
+    return (
+      meta?.is_demo === true ||
+      meta?.demo === true ||
+      (stageOf(row) === "payment_succeeded" && meta?.amount_total === 0)
+    );
   });
 }
 
@@ -472,9 +489,30 @@ export function largestFunnelLeak(
   return best && best.drop > 0 ? best : null;
 }
 
+/**
+ * Known founder-origin payment smoke is cash, but not independent customer
+ * revenue. Reporting-only: never use this classifier to deny entitlements.
+ *
+ * The historical visit was matched to Stripe's purpose=paid_smoke_10 on
+ * 2026-11-02. Future explicitly tagged smoke can be excluded too. Unmarked
+ * positive cash is still only a cash-positive funnel event, NOT proof of an
+ * independent buyer, signed webhook, usable entitlement, or renewal.
+ */
+export function isKnownFounderSmokeVisit(rows: LoopEventRow[]): boolean {
+  return rows.some(row => {
+    if (stageOf(row) !== "payment_succeeded") return false;
+    return (
+      row.prospect_id === "paid_smoke_10_20260920" ||
+      row.metadata?.purpose === "paid_smoke_10" ||
+      row.metadata?.founder_smoke === true
+    );
+  });
+}
+
 export function countEconomicStates(rows: LoopEventRow[]): {
   visits: number;
   demoVisits: number;
+  knownFounderSmokeVisits: number;
   reached: Record<EconomicState, number>;
   leak: FunnelLeak | null;
 } {
@@ -491,6 +529,7 @@ export function countEconomicStates(rows: LoopEventRow[]): {
   }
   let visits = 0;
   let demoVisits = 0;
+  let knownFounderSmokeVisits = 0;
   for (const visitRows of byVisit.values()) {
     if (isDemoVisit(visitRows)) {
       demoVisits += 1;
@@ -498,11 +537,32 @@ export function countEconomicStates(rows: LoopEventRow[]): {
     }
     visits += 1;
     const loop = reconstructLoop(visitRows);
+    const founderSmoke = isKnownFounderSmokeVisit(visitRows);
+    if (founderSmoke) knownFounderSmokeVisits += 1;
+    // A recorded "payment_succeeded" event can represent a $0 discounted
+    // Checkout, and old events can be missing amount_total entirely.
+    // Never promote those visits into PAID or later *economic* states without
+    // a positive Stripe session total recorded on that payment stage.
+    // This is reporting-only: complimentary entitlements and activation must
+    // continue through their separate fulfillment/authorization workflow.
+    const positiveCheckoutEvidence = visitRows.some(row =>
+      stageOf(row) === "payment_succeeded" &&
+      typeof row.metadata?.amount_total === "number" &&
+      Number.isSafeInteger(row.metadata.amount_total) &&
+      row.metadata.amount_total > 0
+    ) && !founderSmoke;
     const seen = new Set<EconomicState>();
-    for (const stage of loop.reached) seen.add(STATE_FOR_STAGE[stage]);
+    for (const stage of loop.reached) {
+      const state = STATE_FOR_STAGE[stage];
+      if (
+        ECONOMIC_STATES.indexOf(state) >= ECONOMIC_STATES.indexOf("PAID") &&
+        !positiveCheckoutEvidence
+      ) continue;
+      seen.add(state);
+    }
     for (const state of seen) reached[state] += 1;
   }
-  return { visits, demoVisits, reached, leak: largestFunnelLeak(reached) };
+  return { visits, demoVisits, knownFounderSmokeVisits, reached, leak: largestFunnelLeak(reached) };
 }
 
 /**
@@ -519,14 +579,17 @@ export async function recordDppLoopEventOnce(
   if (!visitId) return { recorded: false, reason: "no_visit_id" };
 
   try {
-    const { data } = await supabase
+    const key = input.dedupeKey;
+    // A visit can have many checkout attempts. Looking at just 25 events
+    // can miss the exact checkout and create a duplicate paid/provisioned
+    // stage. Filter by the idempotency key in Postgres before limiting.
+    let query = supabase
       .from("funnel_events")
       .select("id, metadata")
       .eq("prospect_id", visitId)
-      .eq("event_type", `dpp_loop:${input.stage}`)
-      .limit(25);
-
-    const key = input.dedupeKey;
+      .eq("event_type", `dpp_loop:${input.stage}`);
+    if (key) query = query.contains("metadata", { dedupe_key: key });
+    const { data } = await query.limit(key ? 1 : 25);
     const duplicate = Array.isArray(data)
       ? data.some((row: { metadata?: Record<string, unknown> }) =>
           key ? row?.metadata?.dedupe_key === key : true
@@ -540,14 +603,25 @@ export async function recordDppLoopEventOnce(
     console.error("[dpp-loop] dedupe check failed:", input.stage, err);
   }
 
-  await recordDppLoopEvent(supabase, {
-    ...input,
-    metadata: {
-      ...(input.metadata || {}),
-      ...(input.dedupeKey ? { dedupe_key: input.dedupeKey } : {}),
-    },
-  });
-  return { recorded: true };
+  try {
+    await recordDppLoopEvent(
+      supabase,
+      {
+        ...input,
+        metadata: {
+          ...(input.metadata || {}),
+          ...(input.dedupeKey ? { dedupe_key: input.dedupeKey } : {}),
+        },
+      },
+      { strict: true }
+    );
+    return { recorded: true };
+  } catch {
+    // Analytics remain best-effort, but publication and verification callers
+    // must not claim event_recorded when PostgREST rejected the write.
+    console.error("[dpp-loop] once write failed:", input.stage);
+    return { recorded: false, reason: "storage_unavailable" };
+  }
 }
 
 /**
@@ -865,6 +939,66 @@ export function isDppDemoSession(
   return isDppSmokePromo(String(metadata?.promo || ""));
 }
 
+
+/**
+ * Classify a Stripe-RETRIEVED Checkout Session after expanding line_items.
+ *
+ * Webhook payload metadata and amount_total are not proof of a purchased SKU.
+ * Callers MUST retrieve the session from Stripe with expand: ["line_items"]
+ * before invoking this function. Ambiguous paid sessions require a durable
+ * operator reconciliation hold, never an automatic grant or silent 2xx.
+ */
+export function classifyRetrievedDppCheckout(session: {
+  status?: string | null;
+  payment_status?: string | null;
+  mode?: string | null;
+  subscription?: string | { id: string } | null;
+  metadata?: Record<string, unknown> | null;
+  line_items?: {
+    data?: Array<{
+      price?: { id?: string | null } | null;
+      quantity?: number | null;
+    }>;
+    has_more?: boolean;
+  } | null;
+}): "dpp" | "other" | "reconciliation_required" | "not_paid" {
+  const metadata = session.metadata || {};
+  const claimedDpp = isDppOffer(metadata);
+  const items = session.line_items?.data;
+  const includesDpp = items?.some(item => item.price?.id === DPP_PRICE_ID) ?? false;
+
+  // Incomplete async payment cannot grant an entitlement even if Checkout
+  // is complete. The async_payment_succeeded event will be evaluated later.
+  if (session.payment_status !== "paid" || session.status !== "complete") {
+    return claimedDpp || includesDpp ? "not_paid" : "other";
+  }
+
+  // A paid Checkout without expanded/complete price evidence must not be
+  // silently classified as a different product and acknowledged as fulfilled.
+  if (!items || session.line_items?.has_more) {
+    return "reconciliation_required";
+  }
+
+  if (!claimedDpp && !includesDpp) return "other";
+
+  // DPP is a one-time single-unit workspace. Any mixed basket, recurring
+  // checkout, contradictory plan, or other purchased price is a human hold.
+  if (
+    session.mode !== "payment" ||
+    session.subscription ||
+    items.length !== 1 ||
+    items[0]?.price?.id !== DPP_PRICE_ID ||
+    items[0]?.quantity !== 1 ||
+    (typeof metadata.plan === "string" &&
+      metadata.plan.length > 0 &&
+      metadata.plan !== "dpp_readiness")
+  ) {
+    return "reconciliation_required";
+  }
+
+  return "dpp";
+}
+
 export function isDppOffer(
   metadata: Record<string, unknown> | null | undefined,
   priceId?: string | null
@@ -880,7 +1014,9 @@ export function dppActivateUrl(
   sessionId: string,
   visitId?: string | null
 ): string {
-  const base = "https://authichain.govchain.us/dpp/activate";
+  // Keep checkout, receipt and customer activation on one trusted hostname.
+  // Old GovChain deep links can continue working, but must not be newly minted.
+  const base = "https://authichain.com/dpp/activate";
   const params = new URLSearchParams({ session_id: sessionId });
   if (visitId) params.set("visit_id", visitId);
   return `${base}?${params.toString()}`;

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   DPP_PRICE_ID,
+  classifyRetrievedDppCheckout,
+  countEconomicStates,
   dppActivateUrl,
   fetchAllLoopEvents,
   dppSmokeRequestAuthorized,
@@ -8,6 +10,7 @@ import {
   isDppOffer,
   isDemoVisit,
   recordDppLoopEvent,
+  recordDppLoopEventOnce,
   recordEarnedRetention,
   runDppExceptionsReport,
   stallOf,
@@ -59,6 +62,198 @@ function activatedRow(
 }
 
 describe("dpp-loop", () => {
+  it("keeps canonical event identity when supplemental metadata tries to relabel payment", async () => {
+    const captured: Array<Record<string, unknown>> = [];
+    const insert = vi.fn(async (row: Record<string, unknown>) => {
+      captured.push(row);
+      return { error: null };
+    });
+    await recordDppLoopEvent(
+      { from: () => ({ insert }) },
+      {
+        visitId: "visit_unpaid",
+        stage: "checkout_started",
+        email: "buyer@example.com",
+        profileId: "profile_verified",
+        stripeSessionId: "cs_verified",
+        metadata: {
+          offer: "other_offer",
+          loop_stage: "payment_succeeded",
+          email: "spoof@example.com",
+          profile_id: "profile_spoof",
+          stripe_session_id: "cs_spoof",
+          amount_total: 29900,
+        },
+      }
+    );
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(captured[0]?.metadata).toEqual({
+      amount_total: 29900,
+      offer: DPP_OFFER_KEY,
+      loop_stage: "checkout_started",
+      email: "buyer@example.com",
+      profile_id: "profile_verified",
+      stripe_session_id: "cs_verified",
+    });
+  });
+
+  it("does not accept reserved identity keys from metadata when top-level identifiers are absent", async () => {
+    const captured: Array<Record<string, unknown>> = [];
+    const insert = vi.fn(async (row: Record<string, unknown>) => {
+      captured.push(row);
+      return { error: null };
+    });
+    await recordDppLoopEvent(
+      { from: () => ({ insert }) },
+      {
+        visitId: "visit_anonymous",
+        stage: "attributed_visit",
+        metadata: {
+          offer: "other_offer",
+          loop_stage: "retained",
+          email: "spoof@example.com",
+          profile_id: "profile_spoof",
+          stripe_session_id: "cs_spoof",
+          campaign: "test_campaign",
+        },
+      }
+    );
+    expect(captured[0]?.metadata).toEqual({
+      campaign: "test_campaign",
+      offer: DPP_OFFER_KEY,
+      loop_stage: "attributed_visit",
+    });
+  });
+
+  it("strict activation event insertion fails closed when storage rejects a write", async () => {
+    const from = vi.fn(() => ({
+      insert: async () => ({ error: { message: "db sensitive details" } }),
+    }));
+    await expect(
+      recordDppLoopEvent(
+        { from },
+        { visitId: "visit_1", stage: "merchant_activated", stripeSessionId: "cs_test_1" },
+        { strict: true },
+      )
+    ).rejects.toThrow("DPP event storage unavailable");
+    expect(from).toHaveBeenCalledWith("funnel_events");
+  });
+
+  it("optional analytics loop writes still do not block application flow", async () => {
+    const from = vi.fn(() => ({
+      insert: async () => ({ error: { message: "db unavailable" } }),
+    }));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(recordDppLoopEvent(
+        { from },
+        { visitId: "visit_1", stage: "attributed_visit" },
+      )).resolves.toBeUndefined();
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+
+  it.each(["returned error", "thrown error"])(
+    "does not claim event_recorded when the analytics insert fails (%s)",
+    async failure => {
+      const insert = vi.fn(async () => {
+        if (failure === "thrown error") throw new Error("database unavailable");
+        return { error: { message: "database unavailable" } };
+      });
+      const query = {
+        select: () => query,
+        eq: () => query,
+        contains: () => query,
+        limit: async () => ({ data: [], error: null }),
+        insert,
+      };
+      const from = vi.fn(() => query);
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        const result = await recordDppLoopEventOnce(
+          { from },
+          { visitId: "visit_write_failed", stage: "dpp_published", dedupeKey: "dpp_1" }
+        );
+        expect(result).toEqual({ recorded: false, reason: "storage_unavailable" });
+        expect(insert).toHaveBeenCalledTimes(1);
+      } finally {
+        log.mockRestore();
+      }
+    }
+  );
+
+  it("reports event_recorded only after a successful analytics insert", async () => {
+    const insert = vi.fn(async () => ({ error: null }));
+    const query = {
+      select: () => query,
+      eq: () => query,
+      contains: () => query,
+      limit: async () => ({ data: [], error: null }),
+      insert,
+    };
+    const result = await recordDppLoopEventOnce(
+      { from: () => query },
+      { visitId: "visit_written", stage: "verification", dedupeKey: "dpp_2" }
+    );
+    expect(result).toEqual({ recorded: true });
+    expect(insert).toHaveBeenCalledTimes(1);
+  });
+
+  it("dedupes a checkout beyond 25 prior events using an exact database filter", async () => {
+    const rows = [
+      ...Array.from({ length: 30 }, (_, i) => ({
+        prospect_id: "visit_many",
+        event_type: "dpp_loop:payment_succeeded",
+        metadata: { dedupe_key: `cs_other_${i}` },
+      })),
+      {
+        prospect_id: "visit_many",
+        event_type: "dpp_loop:payment_succeeded",
+        metadata: { dedupe_key: "cs_target" },
+      },
+    ];
+    const filters: Array<[string, string]> = [];
+    let exactKey: string | undefined;
+    const insert = vi.fn(async () => ({ error: null }));
+    const query = {
+      select: () => query,
+      eq: (column: string, value: string) => {
+        filters.push([column, value]);
+        return query;
+      },
+      contains: vi.fn((column: string, value: { dedupe_key: string }) => {
+        expect(column).toBe("metadata");
+        exactKey = value.dedupe_key;
+        return query;
+      }),
+      limit: vi.fn(async (n: number) => ({
+        data: rows
+          .filter(row =>
+            filters.every(([column, value]) =>
+              row[column as "prospect_id" | "event_type"] === value
+            )
+          )
+          .filter(row => !exactKey || row.metadata.dedupe_key === exactKey)
+          .slice(0, n),
+        error: null,
+      })),
+      insert,
+    };
+    const from = vi.fn(() => query);
+    const result = await recordDppLoopEventOnce(
+      { from },
+      { visitId: "visit_many", stage: "payment_succeeded", dedupeKey: "cs_target" }
+    );
+    expect(result).toEqual({ recorded: false, reason: "already_recorded" });
+    expect(query.contains).toHaveBeenCalledWith("metadata", {
+      dedupe_key: "cs_target",
+    });
+    expect(query.limit).toHaveBeenCalledWith(1);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
   it("detects offer by metadata and price id", () => {
     expect(isDppOffer({ offer: DPP_OFFER_KEY })).toBe(true);
     expect(isDppOffer({ plan: "dpp_readiness" })).toBe(true);
@@ -86,8 +281,18 @@ describe("dpp-loop", () => {
 
   it("builds activate URL with session and visit", () => {
     expect(dppActivateUrl("cs_test_1", "dpp_abc")).toBe(
-      "https://authichain.govchain.us/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
+      "https://authichain.com/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
     );
+  });
+
+  it("encodes untrusted visit attribution within the canonical activation URL", () => {
+    const link = dppActivateUrl("cs_test_1", "</script><script>alert(1)</script>");
+    const parsed = new URL(link);
+    expect(parsed.origin).toBe("https://authichain.com");
+    expect(parsed.pathname).toBe("/dpp/activate");
+    expect(parsed.searchParams.get("session_id")).toBe("cs_test_1");
+    expect(parsed.searchParams.get("visit_id")).toBe("</script><script>alert(1)</script>");
+    expect(link).not.toContain("<script>");
   });
 
   it("records loop events onto funnel_events with loop_stage metadata", async () => {
@@ -222,6 +427,36 @@ describe("dpp-loop", () => {
     expect(summary.exceptions).toHaveLength(1);
     expect(summary.exceptions[0].visitId).toBe("paid_1");
     expect(summary.demoVisits).toBe(1);
+  });
+
+  it("does not count fully discounted DPP checkouts as paying customers without demo metadata", () => {
+    const zeroCash = {
+      prospect_id: "discounted_1",
+      event_type: "dpp_loop:payment_succeeded",
+      timestamp: "2026-09-16T00:00:00.000Z",
+      metadata: { loop_stage: "payment_succeeded", amount_total: 0 },
+    };
+    const collectedCash = {
+      prospect_id: "customer_1",
+      event_type: "dpp_loop:payment_succeeded",
+      timestamp: "2026-09-16T00:00:00.000Z",
+      metadata: { loop_stage: "payment_succeeded", amount_total: 29900 },
+    };
+    expect(isDemoVisit([zeroCash])).toBe(true);
+    expect(isDemoVisit([collectedCash])).toBe(false);
+    expect(isDemoVisit([{
+      ...zeroCash,
+      event_type: "dpp_loop:checkout_started",
+      metadata: { loop_stage: "checkout_started", amount_total: 0 },
+    }])).toBe(false);
+    const summary = summarizeDppLoop([zeroCash, collectedCash]);
+    expect(summary.demoVisits).toBe(1);
+    expect(summary.visits).toBe(1);
+    expect(summary.funnel.payment_succeeded).toBe(1);
+    const economic = countEconomicStates([zeroCash, collectedCash]);
+    expect(economic.demoVisits).toBe(1);
+    expect(economic.visits).toBe(1);
+    expect(economic.reached.PAID).toBe(1);
   });
 
   it("pages through funnel_events instead of a single limit(5000)", async () => {
@@ -531,7 +766,7 @@ describe("economic state", () => {
       loopRow("b", "checkout_started"),
       loopRow("c", "attributed_visit"),
       loopRow("c", "checkout_started"),
-      loopRow("c", "payment_succeeded"),
+      loopRow("c", "payment_succeeded", { amount_total: 29900 }),
       loopRow("demo", "attributed_visit", { demo: true }),
       loopRow("demo", "payment_succeeded", { demo: true }),
     ]);
@@ -548,6 +783,74 @@ describe("economic state", () => {
       continued: 0,
       drop: 1,
     });
+  });
+
+  it("keeps zero-cash and unknown-total checkouts out of the paid economic funnel", () => {
+    const rows = [
+      loopRow("unknown", "attributed_visit"),
+      loopRow("unknown", "checkout_started"),
+      loopRow("unknown", "payment_succeeded"),
+      loopRow("unknown", "provisioned"),
+      loopRow("zero", "attributed_visit"),
+      loopRow("zero", "payment_succeeded", { amount_total: 0 }),
+      loopRow("zero", "provisioned"),
+      loopRow("genuine", "attributed_visit"),
+      loopRow("genuine", "checkout_started"),
+      loopRow("genuine", "payment_succeeded", { amount_total: 29900 }),
+      loopRow("genuine", "provisioned"),
+    ];
+    const result = countEconomicStates(rows);
+    // A complimentary workspace can be granted, but it isn't cash revenue.
+    // An unknown payment total must remain unverified for revenue reporting.
+    expect(result.demoVisits).toBe(1);
+    expect(result.visits).toBe(2);
+    expect(result.reached.CHECKOUT_STARTED).toBe(2);
+    expect(result.reached.PAID).toBe(1);
+    expect(result.reached.PROVISIONED).toBe(1);
+  });
+
+  it("excludes confirmed founder smoke from paid economic milestones without changing access", () => {
+    const rows = [
+      loopRow("paid_smoke_10_20260920", "attributed_visit"),
+      loopRow("paid_smoke_10_20260920", "payment_succeeded", { amount_total: 1000 }),
+      loopRow("paid_smoke_10_20260920", "provisioned"),
+      loopRow("tagged_smoke", "payment_succeeded", {
+        amount_total: 1000, purpose: "paid_smoke_10",
+      }),
+      loopRow("tagged_smoke", "merchant_activated"),
+      loopRow("real_cash_unattributed", "payment_succeeded", { amount_total: 29900 }),
+      loopRow("real_cash_unattributed", "provisioned"),
+    ];
+    const result = countEconomicStates(rows);
+    expect(result.visits).toBe(3);
+    expect(result.demoVisits).toBe(0);
+    expect(result.knownFounderSmokeVisits).toBe(2);
+    expect(result.reached.PAID).toBe(1);
+    expect(result.reached.PROVISIONED).toBe(1);
+    expect(result.reached.ACTIVATED).toBe(0);
+    // The remaining cash-positive event is not automatically an independent
+    // customer; buyer identity and usable entitlement require separate proof.
+  });
+
+  it("does not let an unrelated checkout-stage smoke marker suppress paid cash", () => {
+    const result = countEconomicStates([
+      loopRow("ordinary", "checkout_started", { purpose: "paid_smoke_10" }),
+      loopRow("ordinary", "payment_succeeded", { amount_total: 29900 }),
+    ]);
+    expect(result.knownFounderSmokeVisits).toBe(0);
+    expect(result.reached.PAID).toBe(1);
+  });
+
+  it("does not accept negative, fractional or string totals as cash evidence", () => {
+    for (const amount_total of [-100, 0.1, "29900", null, undefined]) {
+      const result = countEconomicStates([
+        loopRow("uncertain", "attributed_visit"),
+        loopRow("uncertain", "payment_succeeded", { amount_total }),
+        loopRow("uncertain", "merchant_activated"),
+      ]);
+      expect(result.reached.PAID).toBe(0);
+      expect(result.reached.ACTIVATED).toBe(0);
+    }
   });
 
   it("keeps a larger top-of-funnel drop ahead of a smaller paid drop", async () => {
@@ -612,3 +915,108 @@ describe("dppExceptionAlert", () => {
     expect(String(fetchMock.mock.calls[0][1].body)).toContain("term_esc_1");
   });
 });
+
+describe("classifyRetrievedDppCheckout (authoritative line items)", () => {
+  const paid = {
+    status: "complete",
+    payment_status: "paid",
+    mode: "payment",
+    metadata: { offer: DPP_OFFER_KEY, plan: "dpp_readiness" },
+    line_items: {
+      data: [{ price: { id: DPP_PRICE_ID }, quantity: 1 }],
+      has_more: false,
+    },
+  };
+
+  it("accepts only the canonical single-unit DPP price", () => {
+    expect(classifyRetrievedDppCheckout(paid)).toBe("dpp");
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        metadata: {},
+      })
+    ).toBe("dpp");
+  });
+
+  it("holds a forged DPP offer with another $299 price", () => {
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        line_items: { data: [{ price: { id: "price_other_299" } }] },
+      })
+    ).toBe("reconciliation_required");
+  });
+
+  it("holds absent, paginated, and mixed line-item evidence", () => {
+    expect(
+      classifyRetrievedDppCheckout({ ...paid, line_items: undefined })
+    ).toBe("reconciliation_required");
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        line_items: { ...paid.line_items, has_more: true },
+      })
+    ).toBe("reconciliation_required");
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        line_items: {
+          data: [
+            { price: { id: DPP_PRICE_ID } },
+            { price: { id: "price_other" } },
+          ],
+        },
+      })
+    ).toBe("reconciliation_required");
+  });
+
+  it("holds subscription, conflicting plan, and multiple units", () => {
+    expect(
+      classifyRetrievedDppCheckout({ ...paid, mode: "subscription" })
+    ).toBe("reconciliation_required");
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        metadata: { plan: "other_plan" },
+      })
+    ).toBe("reconciliation_required");
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        line_items: {
+          data: [{ price: { id: DPP_PRICE_ID }, quantity: 2 }],
+        },
+      })
+    ).toBe("reconciliation_required");
+  });
+
+  it("holds missing, null, zero or fractional DPP item quantity", () => {
+    for (const quantity of [undefined, null, 0, 0.5, 2]) {
+      expect(classifyRetrievedDppCheckout({
+        ...paid,
+        line_items: { data: [{ price: { id: DPP_PRICE_ID }, quantity }], has_more: false },
+      })).toBe("reconciliation_required");
+    }
+    expect(classifyRetrievedDppCheckout(paid)).toBe("dpp");
+  });
+
+  it("never authorizes complete-but-unpaid or open-but-paid", () => {
+    expect(
+      classifyRetrievedDppCheckout({ ...paid, payment_status: "unpaid" })
+    ).toBe("not_paid");
+    expect(
+      classifyRetrievedDppCheckout({ ...paid, status: "open" })
+    ).toBe("not_paid");
+  });
+
+  it("leaves unrelated paid catalog SKUs to their own fulfillment path", () => {
+    expect(
+      classifyRetrievedDppCheckout({
+        ...paid,
+        metadata: { plan: "starter" },
+        line_items: { data: [{ price: { id: "price_starter" } }] },
+      })
+    ).toBe("other");
+  });
+});
+

@@ -3,7 +3,7 @@
  * POST /api/dpp/activate is not a 404.
  */
 
-import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "./dpp-loop";
+import { DPP_PRICE_ID, dppActivateUrl, recordDppLoopEvent } from "./dpp-loop";
 import {
   buildDppImporterFile,
   parseImporterPackFigures,
@@ -89,23 +89,33 @@ export async function activateDppMerchant(opts: {
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
     expand: ["line_items"],
   });
-  if (session.payment_status !== "paid" && session.status !== "complete") {
+  // A completed Checkout Session can still be unpaid for asynchronous
+  // payment methods. Never unlock a workspace until Stripe reports paid.
+  if (session.payment_status !== "paid" || session.status !== "complete") {
     return { ok: false, status: 402, error: "Checkout session is not paid" };
   }
 
   const md = (session.metadata || {}) as Record<string, unknown>;
-  // Another $299 product (the Made in USA claim file) shares the DPP amount,
-  // so an explicit non-DPP plan must never activate a DPP workspace.
-  const otherPlan =
-    typeof md.plan === "string" && md.plan && md.plan !== "dpp_readiness";
-  if (otherPlan && !isDppOffer(md)) {
-    return { ok: false, status: 400, error: "Not a DPP workspace session" };
-  }
-  const linePriceId = session.line_items?.data?.[0]?.price?.id ?? null;
-  if (linePriceId && !isDppOffer(md, linePriceId)) {
-    return { ok: false, status: 400, error: "Not a DPP workspace session" };
-  }
-  if (!isDppOffer(md) && session.amount_total !== 29900) {
+  // Checkout metadata and total price are not the product proof. A different
+  // $299 item can share the amount, and metadata can contradict line items.
+  // Require the actual purchased price in expanded Stripe line items.
+  const lineItems = session.line_items?.data ?? [];
+  // Keep activation as strict as the webhook's authoritative checkout
+  // classifier. A partial/paginated item list, recurring mode, or multiple
+  // units is not unambiguous evidence of a single DPP workspace purchase.
+  // These guards apply to fully discounted checkouts too; complimentary
+  // access must still belong to an actual paid-status, completed DPP SKU.
+  if (
+    session.line_items?.has_more ||
+    session.mode !== "payment" ||
+    session.subscription ||
+    lineItems.length !== 1 ||
+    lineItems[0]?.price?.id !== DPP_PRICE_ID ||
+    lineItems[0]?.quantity !== 1 ||
+    (typeof md.plan === "string" &&
+      md.plan.length > 0 &&
+      md.plan !== "dpp_readiness")
+  ) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
 
@@ -116,29 +126,51 @@ export async function activateDppMerchant(opts: {
   )
     .toLowerCase()
     .trim();
-  const visitId =
-    (opts.body.visit_id || "").trim() ||
-    String(
-      md.visit_id || md.prospect_id || session.client_reference_id || sessionId
-    );
+  // The request body cannot choose the prospect associated with the
+  // purchase. Bind attribution to Stripe-supplied checkout fields only.
+  const visitId = String(
+    md.visit_id || md.prospect_id || session.client_reference_id || sessionId
+  );
 
-  let profileId: string | null = null;
-  if (email) {
-    const { data: profile } = await opts.supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
-    profileId = (profile?.id as string) || null;
+  // Stripe payment completion alone does not mean the webhook has persisted
+  // the buyer's entitlement. A false activation success would conceal a paid
+  // but unfulfilled order; give the buyer a retryable "not ready" response.
+  if (!email) {
+    return { ok: false, status: 409, error: "Buyer identity unavailable for activation" };
   }
+  const { data: profile, error: grantLookupError } = await opts.supabase
+    .from("profiles")
+    .select("id, last_grant_session_id")
+    .eq("email", email)
+    .maybeSingle();
+  if (grantLookupError) {
+    return { ok: false, status: 503, error: "Entitlement lookup unavailable" };
+  }
+  if (
+    !profile?.id ||
+    profile.last_grant_session_id !== sessionId
+  ) {
+    return {
+      ok: false,
+      status: 409,
+      error: "Paid checkout is awaiting entitlement fulfillment",
+    };
+  }
+  const profileId = profile.id as string;
 
-  const { data: prior } = await opts.supabase
+  const { data: prior, error: activationLookupError } = await opts.supabase
     .from("funnel_events")
     .select("id, metadata")
     .eq("prospect_id", visitId)
+    // Match the checkout in Postgres before limiting results: a shared visit_id
+    // may have more than five later activations for other purchases.
     .eq("event_type", "dpp_loop:merchant_activated")
+    .contains("metadata", { stripe_session_id: sessionId })
     .order("timestamp", { ascending: false })
-    .limit(5);
+    .limit(1);
+  if (activationLookupError || !Array.isArray(prior)) {
+    return { ok: false, status: 503, error: "Activation history unavailable" };
+  }
 
   const alreadyActivated = Array.isArray(prior)
     ? prior.some(
@@ -174,7 +206,8 @@ export async function activateDppMerchant(opts: {
       : buildDppImporterFile({ categories, markets, labeling, pack });
 
   if (!alreadyActivated) {
-    await recordDppLoopEvent(opts.supabase, {
+    try {
+      await recordDppLoopEvent(opts.supabase, {
       visitId,
       stage: "merchant_activated",
       source: String(md.source || "direct"),
@@ -189,7 +222,10 @@ export async function activateDppMerchant(opts: {
         activated_at: new Date().toISOString(),
         importer_file,
       },
-    });
+      }, { strict: true });
+    } catch {
+      return { ok: false, status: 503, error: "Activation event persistence unavailable" };
+    }
   }
 
   return {

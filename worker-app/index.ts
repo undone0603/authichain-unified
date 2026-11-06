@@ -770,13 +770,13 @@ app.post("/api/dpp/activate", async c => {
           error: result.error,
           ...(result.detail ? { detail: result.detail } : {}),
         },
-        result.status as 400 | 402 | 500
+        result.status as 400 | 402 | 409 | 500 | 503
       );
     }
     return c.json(result);
   } catch (err: any) {
-    console.error("[dpp/activate] Error:", err?.message || err);
-    return c.json({ error: "Activation failed", detail: err?.message }, 500);
+    console.error("[dpp/activate] Unexpected failure", err?.name || "Error");
+    return c.json({ error: "Activation failed" }, 500);
   }
 });
 

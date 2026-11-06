@@ -151,6 +151,9 @@ function fakeSupabase(opts?: {
 
 const paidSession = {
   id: "cs_live_smoke_check",
+  mode: "payment",
+  payment_status: "paid",
+  status: "complete",
   amount_total: 0,
   customer_details: { email: "buyer@example.com" },
   client_reference_id: "smoke_check_1",
@@ -163,6 +166,27 @@ const paidSession = {
 };
 
 describe("fulfillDppPaidSession", () => {
+  it.each([
+    ["completed with unpaid async payment", "complete", "unpaid"],
+    ["open with paid status", "open", "paid"],
+    ["missing payment state", undefined, undefined],
+  ])("refuses %s before any database side effect", async (_label, status, payment_status) => {
+    const from = vi.fn();
+    const result = await fulfillDppPaidSession({ from }, {
+      id: "cs_test_never_paid",
+      status,
+      payment_status,
+      amount_total: 29900,
+      metadata: { offer: DPP_OFFER_KEY, plan: "dpp_readiness" },
+      customer_details: { email: "buyer@example.com" },
+    }, DPP_PRICE_ID);
+    expect(result).toEqual({
+      handled: false, profileId: null, activationEmail: "skipped",
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+
   beforeEach(() => {
     vi.mocked(sendEmail).mockClear();
   });
@@ -176,7 +200,7 @@ describe("fulfillDppPaidSession", () => {
     } as never);
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { supabase, rows } = fakeSupabase();
-    const result = await fulfillDppPaidSession(supabase, paidSession);
+    const result = await fulfillDppPaidSession(supabase, paidSession, DPP_PRICE_ID);
     const logged = errSpy.mock.calls
       .map(c => c.map(String).join(" "))
       .join("\n");
@@ -219,7 +243,7 @@ describe("fulfillDppPaidSession", () => {
     );
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { supabase, rows } = fakeSupabase();
-    const result = await fulfillDppPaidSession(supabase, paidSession);
+    const result = await fulfillDppPaidSession(supabase, paidSession, DPP_PRICE_ID);
     const logged = errSpy.mock.calls
       .map(c => c.map(String).join(" "))
       .join("\n");
@@ -235,7 +259,7 @@ describe("fulfillDppPaidSession", () => {
 
   it("writes no failure row when the send succeeds", async () => {
     const { supabase, rows } = fakeSupabase();
-    const result = await fulfillDppPaidSession(supabase, paidSession);
+    const result = await fulfillDppPaidSession(supabase, paidSession, DPP_PRICE_ID);
     expect(result.activationEmail).toBe("sent");
     expect(rows.some(r => r.event_type === "dpp_activation_email:failed")).toBe(
       false
@@ -248,6 +272,58 @@ describe("fulfillDppPaidSession", () => {
     );
     expect(redactForLog(undefined)).toBe("unknown");
     expect(redactForLog("x".repeat(500))).toHaveLength(200);
+  });
+
+  it.each([
+    ["missing payment mode", { mode: undefined }],
+    ["recurring checkout", { mode: "subscription" }],
+    ["setup checkout", { mode: "setup" }],
+    ["recurring subscription reference", { subscription: "sub_unexpected" }],
+    ["contradictory entitlement plan", { metadata: { ...paidSession.metadata, plan: "starter" } }],
+  ])("refuses %s even with the canonical DPP price", async (_label, override) => {
+    const from = vi.fn();
+    const result = await fulfillDppPaidSession({ from }, {
+      ...paidSession,
+      ...override,
+    }, DPP_PRICE_ID);
+    expect(result).toEqual({
+      handled: false,
+      profileId: null,
+      activationEmail: "skipped",
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("uses the canonical DPP plan when optional plan metadata is absent", async () => {
+    const { supabase, profileUpdates } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, {
+      ...paidSession,
+      metadata: { offer: DPP_OFFER_KEY, visit_id: "canonical_plan_fixture" },
+    }, DPP_PRICE_ID);
+    expect(result.handled).toBe(true);
+    expect(profileUpdates.some(p => p.subscription_plan === "dpp_readiness")).toBe(true);
+  });
+
+  it("does not grant when spoofed metadata claims a canonical price but authoritative price was not supplied", async () => {
+    const from = vi.fn();
+    const result = await fulfillDppPaidSession({ from }, {
+      id: "cs_spoofed_metadata",
+      status: "complete",
+      mode: "payment",
+      payment_status: "paid",
+      metadata: {
+        offer: DPP_OFFER_KEY,
+        plan: "dpp_readiness",
+        stripe_price_id: DPP_PRICE_ID,
+      },
+      customer_details: { email: "buyer@example.com" },
+    });
+    expect(result).toEqual({
+      handled: false,
+      profileId: null,
+      activationEmail: "skipped",
+    });
+    expect(from).not.toHaveBeenCalled();
   });
 
   it("no-ops when the session is not a DPP offer", async () => {
@@ -264,12 +340,29 @@ describe("fulfillDppPaidSession", () => {
     expect(rows).toHaveLength(0);
   });
 
+  it("refuses a paid other-product price despite DPP metadata", async () => {
+    const from = vi.fn();
+    const session = {
+      ...paidSession,
+      id: "cs_paid_other_offer",
+      amount_total: 29900,
+    };
+    const result = await fulfillDppPaidSession({ from }, session, "price_other_299");
+    expect(result).toEqual({
+      handled: false, profileId: null, activationEmail: "skipped",
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
   it("treats the catalog price id as a DPP offer without metadata.offer", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(
       supabase,
       {
         id: "cs_price_only",
+        mode: "payment",
+        payment_status: "paid",
+        status: "complete",
         customer_details: { email: "buyer@example.com" },
         client_reference_id: "plink_visit",
         metadata: {},
@@ -287,6 +380,9 @@ describe("fulfillDppPaidSession", () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, {
       id: "cs_live_a1y4TuVXsdPVbXgPejLnXYpSWD5RvpmO273RUC3BxOHnAZ5JwlARbBMxQS",
+      mode: "payment",
+      payment_status: "paid",
+      status: "complete",
       amount_total: 0,
       customer_details: { email: "authichain@gmail.com" },
       client_reference_id: "smoke_check_1789786486",
@@ -299,7 +395,7 @@ describe("fulfillDppPaidSession", () => {
         promo: "DPP-SMOKE-E2E",
         source: "direct",
       },
-    });
+    }, DPP_PRICE_ID);
     expect(result.handled).toBe(true);
     expect(result.profileId).toBe("prof_1");
     expect(rows.map(r => r.event_type)).toEqual([
@@ -313,13 +409,13 @@ describe("fulfillDppPaidSession", () => {
 
   it("sends the provisioned email for a non-demo paid session", async () => {
     const { supabase } = fakeSupabase();
-    await fulfillDppPaidSession(supabase, paidSession);
+    await fulfillDppPaidSession(supabase, paidSession, DPP_PRICE_ID);
     expect(sendEmail).toHaveBeenCalledOnce();
   });
 
   it("writes payment_succeeded before provision on a $0 promo session", async () => {
     const { supabase, rows } = fakeSupabase();
-    const result = await fulfillDppPaidSession(supabase, paidSession);
+    const result = await fulfillDppPaidSession(supabase, paidSession, DPP_PRICE_ID);
     expect(result).toEqual({
       handled: true,
       profileId: "prof_1",
@@ -344,7 +440,7 @@ describe("fulfillDppPaidSession", () => {
         customer_details: null,
         customer_email: null,
         metadata: { ...paidSession.metadata, user_id: undefined },
-      })
+      }, DPP_PRICE_ID)
     ).rejects.toMatchObject({
       name: "RetryableFulfillmentError",
       message: expect.stringMatching(/^DPP provision failed: no_identity/),
@@ -361,7 +457,7 @@ describe("fulfillDppPaidSession", () => {
         customer_details: null,
         customer_email: null,
         metadata: { ...paidSession.metadata, user_id: undefined },
-      }).catch(() => undefined);
+      }, DPP_PRICE_ID).catch(() => undefined);
       const events = log.mock.calls
         .map(c => String(c[0]))
         .filter(l => l.includes("authichain.trust-event/1"))
@@ -376,7 +472,7 @@ describe("fulfillDppPaidSession", () => {
     const { supabase } = fakeSupabase();
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     try {
-      await fulfillDppPaidSession(supabase, paidSession);
+      await fulfillDppPaidSession(supabase, paidSession, DPP_PRICE_ID);
       const lines = log.mock.calls.map(c => String(c[0])).filter(l => l.includes("authichain.trust-event/1"));
       expect(lines.map(l => JSON.parse(l).event)).toEqual([
         "fulfillment.started",
@@ -396,7 +492,7 @@ describe("fulfillDppPaidSession", () => {
       customer_details: null,
       customer_email: null,
       metadata: { ...paidSession.metadata, user_id: undefined, is_demo: "true" },
-    });
+    }, DPP_PRICE_ID);
     expect(result).toEqual({
       handled: true,
       profileId: null,
@@ -419,7 +515,7 @@ describe("fulfillDppPaidSession", () => {
           "Could not find the 'subscribed_at' column of 'profiles' in the schema cache",
       },
     });
-    await expect(fulfillDppPaidSession(supabase, paidSession)).rejects.toThrow(
+    await expect(fulfillDppPaidSession(supabase, paidSession, DPP_PRICE_ID)).rejects.toThrow(
       /subscribed_at/
     );
     expect(rows.map(r => r.event_type)).toEqual(["dpp_loop:payment_succeeded"]);
@@ -437,6 +533,9 @@ describe("fulfillDppPaidSession", () => {
     await expect(
       fulfillDppPaidSession(supabase, {
         id: "cs_live_a1y4Tu_user_id",
+        mode: "payment",
+        payment_status: "paid",
+        status: "complete",
         amount_total: 0,
         customer_details: { email: "authichain@gmail.com" },
         client_reference_id: "smoke_check_1789786486",
@@ -447,7 +546,7 @@ describe("fulfillDppPaidSession", () => {
           is_demo: "true",
           promo: "DPP-SMOKE-E2E",
         },
-      })
+      }, DPP_PRICE_ID)
     ).rejects.toThrow(/user_id/i);
     expect(rows.map(r => r.event_type)).toEqual(["dpp_loop:payment_succeeded"]);
   });
@@ -459,6 +558,9 @@ describe("fulfillDppPaidSession", () => {
     });
     const result = await fulfillDppPaidSession(supabase, {
       id: "cs_live_a1y4Tu_guest",
+      mode: "payment",
+      payment_status: "paid",
+      status: "complete",
       amount_total: 0,
       customer_details: { email: "authichain@gmail.com" },
       client_reference_id: "smoke_check_1789786486",
@@ -469,7 +571,7 @@ describe("fulfillDppPaidSession", () => {
         is_demo: "true",
         promo: "DPP-SMOKE-E2E",
       },
-    });
+    }, DPP_PRICE_ID);
     expect(result).toEqual({
       handled: true,
       profileId: "prof_guest",
@@ -489,8 +591,8 @@ describe("fulfillDppPaidSession", () => {
 
   it("does not double-count payment or provision on webhook replay", async () => {
     const { supabase, rows, profileUpdates, continuity } = fakeSupabase();
-    await fulfillDppPaidSession(supabase, paidSession);
-    await fulfillDppPaidSession(supabase, paidSession);
+    await fulfillDppPaidSession(supabase, paidSession, DPP_PRICE_ID);
+    await fulfillDppPaidSession(supabase, paidSession, DPP_PRICE_ID);
     expect(
       rows.filter(r => r.event_type === "dpp_loop:payment_succeeded")
     ).toHaveLength(1);

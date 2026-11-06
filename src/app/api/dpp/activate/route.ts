@@ -41,10 +41,11 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json(result);
   } catch (error: unknown) {
-    const err = error as { message?: string };
-    console.error("[dpp/activate] Error:", error);
+    // Do not send database, Stripe or key-configuration exception details
+    // to unauthenticated callers. The server logs retain the error class.
+    console.error("[dpp/activate] Unexpected failure", error instanceof Error ? error.name : "Error");
     return NextResponse.json(
-      { error: "Activation failed", detail: err?.message },
+      { error: "Activation failed" },
       { status: 500 }
     );
   }

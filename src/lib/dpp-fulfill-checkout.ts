@@ -11,9 +11,9 @@ import { renderBillingEmail } from "./billing-emails";
 import { getBrandIdFromMetadata } from "./brand-billing";
 import { sendEmail } from "./email";
 import {
+  DPP_PRICE_ID,
   dppActivateUrl,
   isDppDemoSession,
-  isDppOffer,
   recordDppLoopEventOnce,
 } from "./dpp-loop";
 import {
@@ -38,6 +38,8 @@ export type DppCheckoutSessionLike = {
   customer?: string | { id: string } | null;
   subscription?: string | { id: string } | null;
   amount_total?: number | null;
+  payment_status?: string | null;
+  status?: string | null;
 };
 
 function toId(
@@ -80,18 +82,28 @@ async function fulfillDppPaidSessionOnce(
   priceId?: string | null
 ): Promise<DppFulfillResult> {
   const md = session.metadata || {};
-  const linePriceId =
-    (typeof priceId === "string" && priceId) ||
-    (typeof md.stripe_price_id === "string" ? md.stripe_price_id : null);
-  if (!isDppOffer(md, linePriceId)) {
+  // Only a caller that verified the *retrieved Stripe line item* may supply
+  // this price identity. Session metadata (including stripe_price_id, offer
+  // and plan) is buyer-controlled attribution, not proof of the purchased SKU.
+  // With no authoritative price argument, fail closed before any DB writes.
+  if (priceId !== DPP_PRICE_ID) {
+    return { handled: false, profileId: null, activationEmail: "skipped" };
+  }
+  // This helper has multiple webhook callers. Do not assume each caller has
+  // already validated payment. A completed async checkout can still be unpaid;
+  // even signed Stripe events must be checked before grant side effects.
+  if (session.payment_status !== "paid" || session.status !== "complete") {
     return { handled: false, profileId: null, activationEmail: "skipped" };
   }
 
   const subscriptionId = toId(session.subscription);
-  if (session.mode === "subscription" || subscriptionId) {
-    console.error(
-      `[dpp-fulfill] refusing DPP grant for recurring checkout: session=${session.id} mode=${session.mode ?? "unknown"}`
-    );
+  if (session.mode !== "payment" || subscriptionId) {
+    // No recurring, setup, or missing-mode session may issue a one-time grant.
+    return { handled: false, profileId: null, activationEmail: "skipped" };
+  }
+  // Do not let buyer-controlled attribution select a different entitlement.
+  // The verified DPP price determines the plan, not checkout metadata.
+  if (typeof md.plan === "string" && md.plan.length > 0 && md.plan !== "dpp_readiness") {
     return { handled: false, profileId: null, activationEmail: "skipped" };
   }
 
@@ -105,7 +117,7 @@ async function fulfillDppPaidSessionOnce(
     .toLowerCase()
     .trim();
   const brand = getBrandIdFromMetadata(md);
-  const plan = md.plan || "dpp_readiness";
+  const plan = "dpp_readiness";
   const demo = isDppDemoSession(md);
   emitTrustEvent("fulfillment.started", { session_id: session.id, plan, demo });
   const loopMeta = {

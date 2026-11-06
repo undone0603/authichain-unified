@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockConstructEvent = vi.fn();
 const mockCustomersRetrieve = vi.fn();
+const mockCheckoutRetrieve = vi.fn();
 
 vi.mock("stripe", () => {
   class MockStripe {
@@ -22,6 +23,7 @@ vi.mock("stripe", () => {
         Promise.resolve(mockConstructEvent(...args)),
     };
     customers = { retrieve: mockCustomersRetrieve };
+    checkout = { sessions: { retrieve: (...args: unknown[]) => mockCheckoutRetrieve(...args) } };
   }
   return { default: MockStripe };
 });
@@ -167,6 +169,27 @@ beforeEach(async () => {
   vi.mocked(db.logAutomationAudit).mockResolvedValue(undefined);
   growthRecordRpc.mockResolvedValue({ error: null });
   claimStripeEventMock.mockResolvedValue("claimed");
+  vi.mocked(recordStripeWebhookDelivery).mockResolvedValue({ ok: true });
+  mockCheckoutRetrieve.mockImplementation(async () => {
+    const event = mockConstructEvent.mock.results.at(-1)?.value;
+    const session = event?.data?.object || {};
+    const md = session.metadata || {};
+    const claimedDpp =
+      md.plan === "dpp_readiness" ||
+      md.offer === "dpp_readiness_2026" ||
+      md.stripe_price_id === "price_1TwmD8GqTruSqV8TpAF8dfyA";
+    return {
+      ...session,
+      status: session.status ?? "complete",
+      line_items: session.line_items ?? {
+        data: [{ price: { id: claimedDpp
+          ? "price_1TwmD8GqTruSqV8TpAF8dfyA"
+          : "price_other" }, quantity: 1 }],
+        has_more: false,
+      },
+    };
+  });
+
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
   delete process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET;
   process.env.STRIPE_SECRET_KEY = "sk_test";
@@ -410,6 +433,29 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     );
   });
 
+  it("retries a paid DPP webhook when the Supabase entitlement connection is absent", async () => {
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_dpp_missing_supabase", {
+        id: "cs_dpp_missing_supabase",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        amount_total: 29900,
+        customer_details: { email: "buyer@example.com" },
+        metadata: {
+          offer: "dpp_readiness_2026",
+          plan: "dpp_readiness",
+        },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(
+      "DPP entitlement database not configured"
+    );
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
+
   it("fulfills a paid DPP session even when Drizzle DATABASE_URL is missing", async () => {
     const { hasWebhookEventProcessed, logActivity, logAutomationAudit } =
       await import("../db.js");
@@ -444,7 +490,7 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     expect(fulfillDppPaidSession).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ id: "cs_live_smoke_check" }),
-      null
+      "price_1TwmD8GqTruSqV8TpAF8dfyA"
     );
   });
 
@@ -475,8 +521,103 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         id: "cs_live_a1y4Tu_smoke",
         amount_total: 0,
       }),
-      null
+      "price_1TwmD8GqTruSqV8TpAF8dfyA"
     );
+  });
+
+  it("holds a paid metadata-DPP checkout with another purchased price", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_dpp_wrong_price", {
+        id: "cs_wrong_price",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        amount_total: 29900,
+        metadata: { offer: "dpp_readiness_2026", plan: "dpp_readiness" },
+        customer_details: { email: "buyer@example.com" },
+      })
+    );
+    mockCheckoutRetrieve.mockResolvedValueOnce({
+      id: "cs_wrong_price",
+      mode: "payment",
+      status: "complete",
+      payment_status: "paid",
+      metadata: { offer: "dpp_readiness_2026" },
+      line_items: { data: [{ price: { id: "price_other_299" } }] },
+    });
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true, handled: false, reconciliationRequired: true,
+    });
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_dpp_wrong_price",
+        status: "reconciliation_required",
+        httpStatus: 200,
+      })
+    );
+  });
+
+  it("holds a signed paid event contradicted by Stripe's retrieved unpaid state", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_dpp_state_mismatch", {
+        id: "cs_dpp_state_mismatch",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        metadata: { plan: "dpp_readiness" },
+      })
+    );
+    mockCheckoutRetrieve.mockResolvedValueOnce({
+      id: "cs_dpp_state_mismatch",
+      mode: "payment",
+      status: "complete",
+      payment_status: "unpaid",
+      metadata: { plan: "dpp_readiness" },
+      line_items: {
+        data: [{ price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+      },
+    });
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true, handled: false, reconciliationRequired: true,
+    });
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when a paid DPP hold cannot be persisted", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_dpp_hold_unavailable", {
+        id: "cs_hold_unavailable",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        metadata: { plan: "dpp_readiness" },
+      })
+    );
+    mockCheckoutRetrieve.mockResolvedValueOnce({
+      id: "cs_hold_unavailable",
+      mode: "payment",
+      status: "complete",
+      payment_status: "paid",
+      metadata: { plan: "dpp_readiness" },
+      line_items: { data: [{ price: { id: "price_other" } }] },
+    });
+    vi.mocked(recordStripeWebhookDelivery).mockImplementation(
+      async (_db, input) =>
+        input.status === "reconciliation_required"
+          ? { ok: false, detail: "base_columns_only" }
+          : { ok: true }
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(
+      "Could not persist paid DPP reconciliation hold"
+    );
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
   });
 
   it("does not fulfill checkout.session.completed until payment_status is paid", async () => {
@@ -663,7 +804,7 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     expect(fulfillDppPaidSession).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ id: "cs_live_a1y4Tu_replay" }),
-      null
+      "price_1TwmD8GqTruSqV8TpAF8dfyA"
     );
     expect(vi.mocked(upsertStripeSubscription)).not.toHaveBeenCalled();
     expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
@@ -1335,6 +1476,22 @@ describe("handleStripeWebhook — stripe_events claim fails closed (PM-338)", ()
     expect(sendEmail).not.toHaveBeenCalled();
     const { recordStripeWebhookDelivery } =
       await import("../../src/lib/stripe-webhook-log");
+    expect(recordStripeWebhookDelivery).not.toHaveBeenCalled();
+  });
+
+  it("returns retryable 500 for an in-flight duplicate before any side effects", async () => {
+    await setup("evt_claim_in_flight");
+    claimStripeEventMock.mockResolvedValueOnce("in_flight");
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const { StripeEventClaimUnavailableError } =
+      await import("../../src/lib/stripe-webhook-claim");
+    const err = await handleStripeWebhook(RAW_BODY, SIG).catch(e => e);
+    expect(err).toBeInstanceOf(StripeEventClaimUnavailableError);
+    expect(err.httpStatus).toBe(500);
+    expect(err.message).toContain("still in flight");
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+    const { sendEmail } = await import("../email-service.js");
+    expect(sendEmail).not.toHaveBeenCalled();
     expect(recordStripeWebhookDelivery).not.toHaveBeenCalled();
   });
 
