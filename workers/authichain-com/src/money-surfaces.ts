@@ -143,7 +143,7 @@ export function renderTrumarkPage(): string {
   ${estateHero({
     eyebrow: "01 / TruMark",
     title: "The scan seal. Checkout is the SKU.",
-    lede: "TruMark is the physical mark a shopper or inspector scans. It is not a price. A cannabis brand publishes one genetics passport for $49. Origin and EU documentation run on EU DPP Readiness at $299. Larger tag programs start from the published catalogue or a written packet.",
+    lede: "TruMark is the physical mark a shopper or inspector scans. It is not a price. A cannabis brand can order one genetics passport for $49. Existing lab CoAs and issuer authorization are required after payment; publication follows evidence review, not instant issuance. Origin and EU documentation run on EU DPP Readiness at $299. Larger tag programs start from the published catalogue or a written packet.",
     emailCheckout: {
       action: PASSPORT_CHECKOUT_PATH,
       label: "Start Passport checkout — $49",
@@ -178,7 +178,7 @@ export function renderTrumarkPage(): string {
       },
       {
         title: "Passport — $49",
-        body: "One published genetics passport from existing CoAs. $49 on the published Stripe Payment Link, or enter a work email for recoverable checkout.",
+        body: "One genetics passport from reviewed issuer-supplied CoAs. Payment does not automatically issue or certify it; issuer authorization and evidence review come first. $49 on the published Stripe Payment Link, or enter a work email for recoverable checkout.",
       },
       {
         title: "EU DPP Readiness — $299",
