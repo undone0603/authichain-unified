@@ -1,131 +1,18 @@
-import { pageMetadata } from "@/lib/page-metadata"
-
-export const metadata = pageMetadata("strainchain")
+export const metadata = {
+  title: "StrainChain",
+  description: "Cannabis COA and genetics passport scope, with integrations and verification limits stated explicitly.",
+  openGraph: { title: "StrainChain", description: "Cannabis COA and genetics passport scope, with integrations and verification limits stated explicitly." },
+  twitter: { title: "StrainChain", description: "Cannabis COA and genetics passport scope, with integrations and verification limits stated explicitly." },
+}
 
 # StrainChain
 
-StrainChain is the AuthiChain vertical for the licensed cannabis industry.
+The [StrainChain public site](https://strainchain.io/) describes cannabis genetics passports built from supplied COAs, with totals recomputed from the source panel.
 
-The cannabis market loses hundreds of millions of dollars annually to counterfeit products
-that bypass regulatory compliance, harm consumers, and destroy brand equity.
-StrainChain ends this by turning every licensed cannabis product into a verifiable truth.
+Its current disclosure labels on-chain strain records and the four-layer audit trail as in development. METRC, BioTrack, and Washington CCRS integrations are roadmap items, not established production integrations.
 
-## The problem
+A supplied COA, QR label, or registry entry does not by itself establish physical authenticity, a laboratory's current licence, product safety, legal sale authority, or regulatory compliance. These require separate, jurisdiction-specific evidence. Do not infer legal seizure or sale instructions from a QR result.
 
-- Licensed brands like Cookies, Stiiizy, and Jeeter see their products counterfeited at scale
-- Counterfeits bypass lab testing — putting dangerous products in consumers' hands
-- Dispensaries have no real-time verification at point of sale
-- Regulators have no visibility into where counterfeits enter the chain
+This documentation does not establish customer relationships, automated regulator checks, a universal potency tolerance, rewards, or a public verification API contract.
 
-## The StrainChain solution
-
-Every licensed cannabis product gets a **cannabis QRON code** that carries:
-
-- Brand digital signature
-- State-compliant batch ID (METRC, BioTrackTHC)
-- COA link from a licensed lab
-- Verified THC/CBD percentages
-- Blockchain-anchored chain of custody
-- Hologram pairing for physical tamper evidence
-
-One scan tells the consumer, the dispensary, and the brand: **this is real**.
-
-## Supported regulatory frameworks
-
-| State | Track-and-Trace | Batch format |
-|-------|----------------|--------------|
-| California | METRC | `1A406...` (24 chars) |
-| Colorado | METRC | `1A406...` (24 chars) |
-| Nevada | METRC | `1A406...` (24 chars) |
-| Washington | BioTrackTHC | 20-digit numeric |
-| Oregon | OTC | Alphanumeric |
-
-StrainChain validates batch ID format against state jurisdiction on every scan.
-
-## For brands
-
-### What you get
-
-- **QRON codes** — Batch-level, COA-linked, state-compliant
-- **Brand dashboard** — Real-time scan map, counterfeit alert feed, engagement metrics
-- **Consumer story engine** — AI-generated strain narratives that delight your customers
-- **Dispensary tools** — POS integration for point-of-sale verification
-
-### Onboarding flow
-
-1. Submit your brand's state license number
-2. Connect your licensed lab's COA system
-3. Generate QRON codes for your SKUs
-4. Apply codes to packaging (print-and-apply or embedded hologram)
-5. Go live — every scan protects your brand
-
-## For dispensaries
-
-### Point-of-sale verification
-
-```
-Budtender scans product QRON → Instant verdict → Allow or hold sale
-```
-
-| Verdict | Action |
-|---------|--------|
-| `authentic` | Allow sale, log scan event |
-| `suspicious` | Hold, flag for manager review |
-| `tampered` | Seize product, trigger counterfeit alert |
-| `inconclusive` | Request manual COA check |
-
-Integration available via REST API or the QRON Shopify-compatible POS widget.
-
-## For consumers
-
-### The scan experience
-
-1. Scan the QRON code on your cannabis product
-2. See: **Authentic** ✓ with confidence score
-3. Read the AI-generated strain story — origin, terpene profile, effects, grower notes
-4. View the COA lab results: THC %, CBD %, terpene breakdown
-5. See the full chain of custody: Farm → Processor → Lab → Dispensary
-6. Earn QRON points — redeemable for rewards with your favorite brands
-
-## Certificate of Analysis verification
-
-StrainChain verifies the COA before any `authentic` verdict is issued:
-
-1. COA URL is fetched from the QRON payload
-2. Lab license is cross-referenced with state registry
-3. Batch number format is validated for the state
-4. THC/CBD values are compared to label claim (±10% tolerance)
-5. Test date is checked for regulatory validity
-
-A COA that fails any of these checks immediately downgrades the verdict to `suspicious`.
-
-→ See the [StrainChain skill](/skills) for agent-powered verification.
-
-## Trust score integration
-
-StrainChain verdicts flow into the AuthiChain [Trust Score](/trust-score) engine.
-Cannabis-specific signals map directly to core trust signals:
-
-| StrainChain evidence | Trust signal |
-|---------------------|-------------|
-| Brand signature valid | `signature_valid` |
-| COA blockchain anchor | `blockchain_anchor` |
-| Licensed lab COA | `c2pa_manifest_complete` |
-| License resolved | `did_resolved` |
-| Hologram present | `hologram_seal` |
-
-The canonical score is HMAC-signed and included in every webhook payload,
-giving brands and regulators a tamper-proof audit trail.
-
-## Install the skill
-
-```bash
-npx skills add vercel-labs/agent-browser --skill strainchain
-```
-
-Example agent interactions:
-
-- "Verify this Cookies product: example.com/qron/abc123"
-- "Check the COA for batch 1A4060300002899000014847"
-- "Is this Stiiizy pod authentic? Scan the QR on the packaging"
-- "Run a counterfeit check on all Jeeter products in this dispensary batch"
+See [current StrainChain pricing](https://strainchain.io/pricing) for listed offers. This page authorizes no purchase, submission, upload, sharing, webhook, outreach, or blockchain transaction.

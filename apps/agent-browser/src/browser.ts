@@ -821,8 +821,7 @@ export class BrowserManager {
   async saveStorageState(path: string): Promise<void> {
     const context = this.contexts[0];
     if (context) {
-      // indexedDB:true (Playwright 1.51+) includes IndexedDB in saved state
-      await context.storageState({ path, indexedDB: true });
+      await context.storageState({ path });
     }
   }
 
@@ -2319,32 +2318,11 @@ export class BrowserManager {
     }
 
     // Capture state from current context (cookies + storage)
-    let storageState:
-      | {
-          cookies: Array<{
-            name: string;
-            value: string;
-            domain: string;
-            path: string;
-            expires: number;
-            httpOnly: boolean;
-            secure: boolean;
-            sameSite: 'Strict' | 'Lax' | 'None';
-            // partitionKey added in Playwright 1.54 for cookie partitioning
-            partitionKey?: { sourceOrigin?: string; hasCrossSiteAncestor?: boolean };
-          }>;
-          origins: Array<{
-            origin: string;
-            localStorage: Array<{ name: string; value: string }>;
-            // indexedDB added in Playwright 1.51
-            indexedDB?: Array<{ name: string; data?: unknown }>;
-          }>;
-        }
-      | undefined;
+    let storageState: Awaited<ReturnType<BrowserContext['storageState']>> | undefined;
 
     if (currentContext) {
       try {
-        storageState = await currentContext.storageState({ indexedDB: true });
+        storageState = await currentContext.storageState();
       } catch {
         // Ignore errors - context might be closed or invalid
       }

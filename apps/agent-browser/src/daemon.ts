@@ -86,7 +86,7 @@ async function saveStateToFile(
     throw new Error('No browser context available');
   }
 
-  const state = await context.storageState({ indexedDB: true });
+  const state = await context.storageState();
   const jsonData = JSON.stringify(state, null, 2);
 
   const key = getEncryptionKey();

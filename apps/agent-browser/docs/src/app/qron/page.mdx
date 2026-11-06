@@ -1,146 +1,16 @@
-import { pageMetadata } from "@/lib/page-metadata"
-
-export const metadata = pageMetadata("qron")
+export const metadata = {
+  title: "QRON",
+  description: "Observed QRON scope and limits: a QR destination is not proof of authenticity.",
+  openGraph: { title: "QRON", description: "Observed QRON scope and limits: a QR destination is not proof of authenticity." },
+  twitter: { title: "QRON", description: "Observed QRON scope and limits: a QR destination is not proof of authenticity." },
+}
 
 # QRON
 
-QRON is the physical-digital bridge of the AuthiChain Authentic Economy.
-Every QRON code turns a physical product into a living proof of its own authenticity.
+The [QRON public site](https://qron.space/) describes Living QR codes. Its current disclosure says this host forwards a stored scan and does not verify its signature.
 
-## What makes QRON different
+A successful scan or redirect alone does not prove a signature, blockchain transaction, physical-product identity, or legal compliance. Verify each asserted property separately with identified evidence.
 
-Standard QR codes are links. QRON codes are **signed contracts**:
+This documentation does not establish a public generation API contract, batch PDF endpoint, Shopify marketplace integration, points schedule, automatic webhook, counterfeit alert, or canonical trust-score service.
 
-| Feature | Standard QR | QRON |
-|---------|------------|------|
-| Cryptographic signature | ✗ | ✓ ECDSA-256 |
-| Blockchain anchor | ✗ | ✓ Polygon/Hedera |
-| Expiry timestamp | ✗ | ✓ Time-bounded |
-| Counterfeit detection | ✗ | ✓ Tamper-evident |
-| Consumer rewards | ✗ | ✓ On every scan |
-| AI product story | ✗ | ✓ Generated at scan |
-
-## Consumer scan experience
-
-When a consumer scans a QRON code, they see:
-
-1. **Authenticity verdict** — Authentic, Suspicious, or Counterfeit Alert
-2. **Confidence score** — How certain the verification is (0–100%)
-3. **Product story** — AI-generated narrative about origin, craft, journey
-4. **Provenance timeline** — Farm → Factory → Lab → Store
-5. **Reward points** — Minted instantly for this verification
-6. **Share** — Social share moment to spread authentic economy awareness
-
-## Brand onboarding
-
-### Generate a batch of QRON codes
-
-```bash
-POST /api/qron/generate
-{
-  "brand": "Your Brand",
-  "productName": "Product Name",
-  "sku": "SKU-001",
-  "batchSize": 500,
-  "description": "Handcrafted in small batches using...",
-  "expiresInDays": 365
-}
-```
-
-Response:
-```json
-{
-  "batchId": "batch-20260304-001",
-  "count": 500,
-  "anchorTx": "0xabc...",
-  "downloadUrl": "/api/qron/batch/batch-20260304-001/pdf",
-  "codes": ["https://verify.authichain.com/q/eyJ...", "..."]
-}
-```
-
-The PDF sheet is printable — apply codes to packaging, labels, or hang tags.
-
-### QRON code URL structure
-
-```
-https://verify.authichain.com/q/<base64url-payload>
-```
-
-The payload encodes brand, product, batch, signature, and anchor transaction.
-Anyone scanning the code can verify it — even without an AuthiChain account.
-
-## Shopify integration
-
-Install the QRON Shopify app to automatically generate and embed codes:
-
-1. Install via Shopify Partner marketplace
-2. Select products to protect
-3. Click **Generate QRON Codes**
-4. Codes are embedded as product metafields
-5. Your product pages display a "Verify Authenticity" button
-
-No code required. No API tokens to manage.
-
-## Reward system
-
-| Scan action | QRON points |
-|-------------|-------------|
-| First scan of a code | 100 pts |
-| Re-scan (loyalty return) | 10 pts |
-| Social share after scan | 25 pts |
-| 7-day scan streak | 500 pts bonus |
-| Confirmed counterfeit report | 1,000 pts |
-
-Points accumulate in the consumer's account. Redeemable for brand discounts, exclusive products, or community access. Future: $QRON token redemption.
-
-## Trust score on every scan
-
-Every QRON scan produces a canonical AuthiChain trust score — HMAC-signed and verifiable:
-
-```json
-{
-  "score": 0.94,
-  "verdict": "authentic",
-  "confidence": 94,
-  "components": {
-    "authScore": 0.33,
-    "freshnessScore": 0.19,
-    "provenanceScore": 0.15,
-    "platformBonus": 0.10
-  },
-  "signature": "sha256:abc123..."
-}
-```
-
-Brands receive this score in the webhook payload. Downstream systems verify
-the score using the `/api/trust-score` verify endpoint.
-
-→ See [Trust Score](/trust-score) for the full scoring schema.
-
-## Counterfeit detection
-
-When a QRON scan returns `tampered` or `suspicious`:
-
-1. Scan event is logged with geolocation
-2. Brand receives a webhook alert with the scan coordinates
-3. Counterfeit alert appears on the brand dashboard
-4. Consumer sees a warning: "⚠️ This product may be counterfeit"
-5. Consumer is invited to report to the retailer
-
-This creates a distributed counterfeit detection network: every scanner is a sensor.
-
-## Skill integration
-
-Use the `qron` skill with your AI agent to automate QRON workflows:
-
-```bash
-npx skills add vercel-labs/agent-browser --skill qron
-```
-
-Then in your agent:
-
-```
-"Generate 1000 QRON codes for Cookies Cereal Milk 3.5g, batch size 1000"
-"Verify the QRON code at verify.authichain.com/q/..."
-"Check scan analytics for batch batch-20260304-001"
-```
+See [current QRON pricing](https://qron.space/pricing) rather than assuming an offer from an older document. This page authorizes no generation, purchase, form submission, webhook, outreach, or on-chain write.
