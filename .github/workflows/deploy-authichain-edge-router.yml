@@ -28,6 +28,25 @@ jobs:
       NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
     steps:
       - uses: actions/checkout@v7
+      # Sparse-checkout settings persist in the shared self-hosted work dir
+      # (agentz-orchestration.yml and gov-engine.yml check out two files), so a
+      # job that inherits them sees a partial tree while HEAD still names the
+      # right commit. Run 41898073168 died with "Cannot find module
+      # .../scripts/ci/live-worker-version.mjs" for a file that was in the
+      # commit. Same guard launch-gates.yml, ci.yml and main.yml use, plus
+      # checks that this job runs and bundles exactly what the commit holds.
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test -z "$(git ls-files -v | awk '$1 == "S" { print }')"
+          test -f scripts/ci/live-worker-version.mjs
+          test -f scripts/ci/upload-worker-version.mjs
+          test -f scripts/ci/promote-worker-version.mjs
+          test -f worker-app/wrangler.toml
       - uses: pnpm/action-setup@v6
         if: runner.environment != 'self-hosted'
         with:
@@ -51,6 +70,15 @@ jobs:
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Preflight uplink probe (fail fast on a stalled runner)
         if: runner.environment == 'self-hosted'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # A floor, not a target. Measured on this runner on 2026-11-04: about
+          # 120-140 KB/s sustained to Cloudflare, so the 8.8 MiB bundle needs
+          # roughly 75 s. The stalls this gate exists for ran at 7-11 KB/s.
+          # 80 KB/s keeps a 7x margin over those stalls and still finishes the
+          # upload in about 2 minutes. A connection reset at ~96 s was seen once
+          # (run 41264005567); upload-worker-version.mjs retries it.
+          MIN_UPLINK_BYTES_PER_SEC: "80000"
         run: |
           set -euo pipefail
           # The 8.8 MiB versions POST has stalled at 7-11 KB/s for 9 runs. Probe
@@ -64,9 +92,21 @@ jobs:
             https://api.cloudflare.com/client/v4/user/tokens/verify || true)
           speed=${out%% *}; code=${out##* }
           echo "uplink: ${speed:-0} bytes/s (http ${code:-none})"
-          if [ "${speed:-0}" -lt 200000 ]; then
-            echo "::warning::Uplink to api.cloudflare.com is under 200 KB/s. The 8.8 MiB bundle will not upload; fix the runner's network (WSL2 MTU 1280) or run this job elsewhere."
+          if [ "${speed:-0}" -lt "${MIN_UPLINK_BYTES_PER_SEC}" ]; then
+            echo "::error::Uplink to api.cloudflare.com measured ${speed:-0} bytes/s, under the ${MIN_UPLINK_BYTES_PER_SEC} bytes/s floor. The 8.8 MiB bundle would stall; failing now instead of holding the runner for 20-35 minutes. Check the runner's network or run this job elsewhere."
+            exit 1
           fi
+
+      - name: Record live version (rollback target)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          # Fails closed: when the live version cannot be named, nothing deploys.
+          prev=$(node scripts/ci/live-worker-version.mjs authichain-edge-router)
+          echo "live authichain-edge-router version before this deploy: ${prev}"
+          echo "PREV_VERSION_ID=${prev}" >> "$GITHUB_ENV"
 
       - name: Publish authichain-edge-router
         working-directory: worker-app
@@ -92,6 +132,8 @@ jobs:
           # This is provenance metadata, not proof of successful paid fulfillment.
           promotion=$(node ../scripts/ci/promote-worker-version.mjs authichain-edge-router "$vid")
           printf '%s\n' "$promotion"
+          # Only set once the promotion call has succeeded; the rollback step keys off it.
+          echo "PROMOTED_VERSION_ID=${vid}" >> "$GITHUB_ENV"
           {
             echo '### authichain-edge-router deployment provenance'
             echo "- Source commit: ${GITHUB_SHA}"
@@ -104,11 +146,74 @@ jobs:
           set -euo pipefail
           CURRENT='jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM'
           RETIRED='T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ'
-          jwks=$(curl -sS --max-time 20 -H 'Cache-Control: no-cache' \
-            https://authichain.com/protocol/jwks.json)
-          echo "$jwks" | grep -F "$CURRENT"
-          echo "$jwks" | grep -F "$RETIRED"
-          issuer=$(curl -sS --max-time 20 -H 'Cache-Control: no-cache' \
-            https://authichain.com/protocol/issuer.json)
-          echo "$issuer" | grep -F "$CURRENT"
-          echo "$issuer" | grep -F '"signing":true'
+          # One pass of the original checks, chained with && so every check counts
+          # (a failing command inside a function called from `if` would not abort it).
+          smoke() {
+            jwks=$(curl -sS --max-time 20 -H 'Cache-Control: no-cache' \
+              https://authichain.com/protocol/jwks.json) &&
+              grep -qF "$CURRENT" <<<"$jwks" &&
+              grep -qF "$RETIRED" <<<"$jwks" &&
+              issuer=$(curl -sS --max-time 20 -H 'Cache-Control: no-cache' \
+                https://authichain.com/protocol/issuer.json) &&
+              grep -qF "$CURRENT" <<<"$issuer" &&
+              grep -qF '"signing":true' <<<"$issuer"
+          }
+          # A fresh promotion can take a few seconds to reach every edge; retry
+          # before concluding the new version is bad and rolling it back.
+          for attempt in 1 2 3 4 5; do
+            if smoke; then
+              echo "smoke passed on attempt ${attempt}"
+              exit 0
+            fi
+            echo "smoke attempt ${attempt} failed; retrying in 6s"
+            sleep 6
+          done
+          echo "::error::JWKS/issuer smoke failed after 5 attempts"
+          exit 1
+
+      - name: Smoke public pages
+        run: |
+          set -euo pipefail
+          # The JWKS smoke proves the signing keys survived; this proves the
+          # sites still serve. Every page must pass in the same attempt, so one
+          # healthy edge cannot mask another failing page.
+          pages() {
+            for url in \
+              https://authichain.com/ \
+              https://authichain.com/pricing \
+              https://qron.space/ \
+              https://strainchain.io/ \
+              https://govchain.us/opportunities; do
+              code=$(curl -sS -o /dev/null --max-time 20 -w '%{http_code}' "$url") || return 1
+              [ "$code" = "200" ] || { echo "  ${url} -> ${code}"; return 1; }
+            done
+            health=$(curl -sS --max-time 20 https://authichain.com/api/health) || return 1
+            grep -qF '"status":"ok"' <<<"$health"
+          }
+          for attempt in 1 2 3 4 5; do
+            if pages; then
+              echo "public pages healthy on attempt ${attempt}"
+              exit 0
+            fi
+            echo "public page smoke attempt ${attempt} failed; retrying in 6s"
+            sleep 6
+          done
+          echo "::error::public page smoke failed after 5 attempts"
+          exit 1
+
+      - name: Roll back to previous version (smoke failed after promotion)
+        if: failure() && env.PROMOTED_VERSION_ID != '' && env.PREV_VERSION_ID != ''
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          echo "::warning::Smoke failed after promotion; restoring ${PREV_VERSION_ID} (rejecting ${PROMOTED_VERSION_ID})"
+          node scripts/ci/promote-worker-version.mjs authichain-edge-router "${PREV_VERSION_ID}"
+          {
+            echo '### authichain-edge-router ROLLED BACK'
+            echo "- Restored version: ${PREV_VERSION_ID}"
+            echo "- Rejected version: ${PROMOTED_VERSION_ID}"
+            echo "- Source commit: ${GITHUB_SHA}"
+            echo "- GitHub run: ${GITHUB_RUN_ID} (attempt ${GITHUB_RUN_ATTEMPT})"
+          } >> "$GITHUB_STEP_SUMMARY"
