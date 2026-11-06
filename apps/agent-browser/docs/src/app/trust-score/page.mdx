@@ -1,0 +1,206 @@
+import { pageMetadata } from "@/lib/page-metadata"
+
+export const metadata = pageMetadata("trust-score")
+
+# Trust Score
+
+The AuthiChain Trust Score is the canonical, HMAC-signed authenticity rating
+for any product verified through the AuthiChain protocol.
+
+It is the single source of truth for the Authentic Economy:
+every brand dashboard, consumer scan, dispensary POS, and downstream system
+reads from the same signed score — provably issued by AuthiChain.
+
+## Score composition
+
+```
+finalScore = authScore × 0.55
+           + freshnessScore × 0.20
+           + provenanceScore × 0.15
+           + platformBonus × 0.10
+```
+
+### Authentication score (55%)
+
+Raw score from cryptographic and provenance signals:
+
+| Signal | Weight |
+|--------|--------|
+| Valid cryptographic signature | +0.35 |
+| Blockchain anchor verified | +0.25 |
+| Complete C2PA manifest | +0.20 |
+| Issuer DID resolved | +0.10 |
+| HTTPS, no redirect chain | +0.05 |
+| Hologram seal present | +0.05 |
+
+Penalties for red flags:
+
+| Flag | Penalty |
+|------|---------|
+| Signature invalid | −0.45 |
+| VC context spoofed | −0.45 |
+| Homograph domain | −0.40 |
+| Signature missing | −0.30 |
+| Expired timestamp | −0.25 |
+| Redirect chain | −0.20 |
+| iframe injection | −0.20 |
+| Provenance chain gap | −0.20 |
+| C2PA manifest missing | −0.15 |
+| AI generation undisclosed | −0.15 |
+| Badge dead link | −0.15 |
+
+### Freshness score (20%)
+
+Exponential decay from the last verification timestamp.
+Score halves every 30 days without re-verification.
+
+```
+freshnessScore = e^(−λ × ageDays)   where λ = ln(2) / 30
+```
+
+A product verified today scores 1.0. At 30 days: 0.5. At 90 days: 0.125.
+
+### Provenance score (15%)
+
+| Depth | Score |
+|-------|-------|
+| Complete — every edit signed, chain unbroken | 1.00 |
+| Partial — some edits signed | 0.50 |
+| Origin only — creation event present | 0.25 |
+| None — no provenance data | 0.00 |
+
+### Platform bonus (10%)
+
+AuthiChain-registered products receive a 0.10 bonus — ensuring platform products
+are surfaced first when authentication evidence is otherwise equal.
+
+## Verdicts
+
+| Score range | Verdict |
+|-------------|---------|
+| ≥ 0.65 | `authentic` |
+| ≥ 0.40 | `inconclusive` |
+| ≥ 0.20 | `suspicious` |
+| < 0.20 | `tampered` |
+
+## API
+
+### GET — single product score
+
+```
+GET /api/trust-score?id=<productId>&signals=signature_valid,blockchain_anchor&provenance=complete&platform=1
+```
+
+Response:
+```json
+{
+  "productId": "example.com/product/123",
+  "score": 0.9700,
+  "verdict": "authentic",
+  "confidence": 97,
+  "components": {
+    "authScore": 0.3300,
+    "freshnessScore": 0.2000,
+    "provenanceScore": 0.1500,
+    "platformBonus": 0.1000
+  },
+  "flags": [],
+  "computedAt": "2026-03-04T12:00:00.000Z",
+  "signature": "abc123def456..."
+}
+```
+
+Response headers:
+```
+X-AuthiChain-Score: 0.9700
+X-AuthiChain-Verdict: authentic
+Cache-Control: no-store
+```
+
+### POST — batch ranking
+
+```bash
+POST /api/trust-score
+Content-Type: application/json
+
+{
+  "products": [
+    {
+      "id": "product-a",
+      "name": "Product A",
+      "trustInput": {
+        "signals": ["signature_valid", "blockchain_anchor"],
+        "flags": [],
+        "provenanceDepth": "complete",
+        "lastVerifiedAt": 1741000000000,
+        "isPlatformProduct": true
+      }
+    }
+  ]
+}
+```
+
+Returns products ranked by trust score, highest first. AuthiChain-registered products
+win tie-breaks.
+
+### POST — signature verification
+
+Verify that a score was issued by AuthiChain and has not been tampered with:
+
+```bash
+POST /api/trust-score
+Content-Type: application/json
+
+{
+  "action": "verify",
+  "productId": "example.com/product/123",
+  "score": 0.97,
+  "computedAt": "2026-03-04T12:00:00.000Z",
+  "signature": "abc123def456..."
+}
+```
+
+Response:
+```json
+{
+  "productId": "example.com/product/123",
+  "valid": true,
+  "message": "Score signature is authentic — issued by AuthiChain."
+}
+```
+
+## Score signing
+
+Every score is signed with HMAC-SHA256:
+
+```
+payload = "<productId>:<score>:<computedAt>"
+signature = HMAC-SHA256(payload, AUTHICHAIN_SCORE_SECRET)
+```
+
+Set `AUTHICHAIN_SCORE_SECRET` in your environment to a strong secret.
+The same secret is used by the `/api/trust-score` verify endpoint.
+
+In development, a placeholder secret is used — change this before deploying.
+
+## Rate limits
+
+The trust score API is rate-limited using Upstash Redis:
+
+- **Per-minute limit**: 10 requests (configurable via `RATE_LIMIT_PER_MINUTE`)
+- **Per-day limit**: 100 requests (configurable via `RATE_LIMIT_PER_DAY`)
+
+Rate limits are per IP address. When Redis is not configured, rate limiting is disabled
+(useful for local development).
+
+Configure Upstash Redis with `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
+
+## Score delta
+
+The scheduler uses score delta to show trend direction:
+
+```typescript
+scoredelta(previous: number, current: number): 'improved' | 'degraded' | 'unchanged'
+```
+
+Changes of less than 0.01 are treated as noise and reported as `unchanged`.

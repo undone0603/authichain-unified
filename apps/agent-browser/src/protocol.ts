@@ -182,6 +182,13 @@ const cookiesSetSchema = baseCommandSchema.extend({
       httpOnly: z.boolean().optional(),
       secure: z.boolean().optional(),
       sameSite: z.enum(['Strict', 'Lax', 'None']).optional(),
+      // partitionKey added in Playwright 1.54 for cookie partitioning support
+      partitionKey: z
+        .object({
+          sourceOrigin: z.string().optional(),
+          hasCrossSiteAncestor: z.boolean().optional(),
+        })
+        .optional(),
     })
   ),
 });

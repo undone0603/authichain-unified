@@ -1,0 +1,116 @@
+import { pageMetadata } from "@/lib/page-metadata"
+
+export const metadata = pageMetadata("vision")
+
+# Vision Mode
+
+Vision mode sends a screenshot alongside each LLM message, giving the agent visual awareness of what the browser is displaying. This enables detection of visual artifacts — deepfakes, tampered QR codes, layout anomalies — that are invisible to accessibility-tree snapshots alone.
+
+## Enable vision mode
+
+Toggle **Vision Mode** in the Agent sidebar settings, or send `visionMode: true` in the API body:
+
+```json
+POST /api/agent
+{
+  "goal": "Check if this QR code has been tampered with",
+  "visionMode": true,
+  "provider": "openrouter",
+  "model": "openai/gpt-4o"
+}
+```
+
+## Supported models
+
+Vision mode is only available with multimodal models. Non-vision models silently ignore the screenshot payload.
+
+| Provider | Model |
+|----------|-------|
+| Groq | `llama-3.2-90b-vision-preview` |
+| OpenRouter | `openai/gpt-4o` |
+| OpenRouter | `anthropic/claude-sonnet-4-5` |
+| OpenRouter | `google/gemini-2.0-flash-exp:free` |
+
+## How it works
+
+1. After every `screenshot` action the agent takes, the base64-encoded image is saved server-side.
+2. On the next LLM call, the screenshot is injected as an `image_url` content part alongside the text prompt.
+3. The model responds with visual reasoning — it can read text in the image, detect UI anomalies, and describe what it sees.
+4. The screenshot is replaced after each new `screenshot` action (only the most recent image is sent).
+
+```typescript
+// Simplified content structure sent to the model
+[
+  { type: "text",      text: "What do you see on the page?" },
+  { type: "image_url", image_url: { url: "data:image/png;base64,..." } },
+]
+```
+
+## Use cases
+
+### QR code verification
+
+```bash
+# Agent captures QR, vision model inspects it for redirect chains, expiry, signatures
+agent-browser open https://example.com/product-qr
+agent-browser screenshot
+# → vision model reads QR payload and checks for tampering signals
+```
+
+The agent can read the QR payload from the image directly, without needing a QR library. Combined with the [authichain skill](/skills), it produces a structured verdict with `flags[]`.
+
+### Deepfake and media authenticity
+
+Vision models can inspect images and video thumbnails for:
+
+- Inconsistent lighting or shadow direction
+- Unnatural skin tones or blending artifacts
+- Missing or broken C2PA content-credentials badges
+- AI-generation watermarks or metadata discrepancies
+
+### Layout regression
+
+Compare visual output across environments without relying on DOM structure:
+
+```bash
+agent-browser open https://staging.example.com
+agent-browser screenshot
+# → vision model describes the layout, flags unexpected changes
+agent-browser open https://example.com
+agent-browser screenshot
+# → model compares both screenshots in context
+```
+
+### Form field inspection
+
+Verify that sensitive fields (credit card, SSN, password) render as masked inputs and that no injected overlays are present:
+
+```bash
+agent-browser open https://checkout.example.com
+agent-browser screenshot
+# → vision model confirms fields are correctly masked and no overlay injection is visible
+```
+
+## Trust score integration
+
+When vision mode is active and the agent issues a `done` verdict, the trust score engine incorporates visual evidence:
+
+- Visual signals (hologram seals, C2PA badges visible in the screenshot) contribute to `signals[]`
+- Visual anomalies (iframe overlays, cloned UI) are added to `flags[]`
+- The canonical score is signed and returned in the SSE `done` event
+
+See [Trust Score API](/api/trust-score) for the full scoring schema and signature verification.
+
+## Performance
+
+Vision payloads are large. A full-page screenshot at 1280×720 is typically 200–600 KB as base64. Budget approximately:
+
+- **+1–3 s** latency per vision call on Groq
+- **+2–5 s** latency per vision call on OpenRouter
+- **+0.001–0.003 USD** per vision call depending on model
+
+For high-throughput runs, enable vision only on `screenshot` steps where visual analysis is required, and use headless mode with a narrow viewport:
+
+```bash
+agent-browser open example.com --viewport 1024x768
+```

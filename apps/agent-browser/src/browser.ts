@@ -821,7 +821,8 @@ export class BrowserManager {
   async saveStorageState(path: string): Promise<void> {
     const context = this.contexts[0];
     if (context) {
-      await context.storageState({ path });
+      // indexedDB:true (Playwright 1.51+) includes IndexedDB in saved state
+      await context.storageState({ path, indexedDB: true });
     }
   }
 
@@ -1544,12 +1545,19 @@ export class BrowserManager {
       cdpUrl = `http://localhost:${cdpEndpoint}`;
     }
 
+    // isLocal:true (Playwright 1.58+) enables local file system optimisation
+    // (file uploads/downloads) when connecting to a same-machine browser.
+    const isLocal =
+      cdpUrl.startsWith('http://localhost:') ||
+      cdpUrl.startsWith('ws://localhost:') ||
+      cdpUrl === 'http://localhost';
+
     const browser = await chromium
-      .connectOverCDP(cdpUrl, { timeout: options?.timeout })
+      .connectOverCDP(cdpUrl, { timeout: options?.timeout, isLocal })
       .catch(() => {
         throw new Error(
           `Failed to connect via CDP to ${cdpUrl}. ` +
-            (cdpUrl.includes('localhost')
+            (/^\d+$/.test(cdpEndpoint)
               ? `Make sure the app is running with --remote-debugging-port=${cdpEndpoint}`
               : 'Make sure the remote browser is accessible and the URL is correct.')
         );
@@ -2322,17 +2330,21 @@ export class BrowserManager {
             httpOnly: boolean;
             secure: boolean;
             sameSite: 'Strict' | 'Lax' | 'None';
+            // partitionKey added in Playwright 1.54 for cookie partitioning
+            partitionKey?: { sourceOrigin?: string; hasCrossSiteAncestor?: boolean };
           }>;
           origins: Array<{
             origin: string;
             localStorage: Array<{ name: string; value: string }>;
+            // indexedDB added in Playwright 1.51
+            indexedDB?: Array<{ name: string; data?: unknown }>;
           }>;
         }
       | undefined;
 
     if (currentContext) {
       try {
-        storageState = await currentContext.storageState();
+        storageState = await currentContext.storageState({ indexedDB: true });
       } catch {
         // Ignore errors - context might be closed or invalid
       }
