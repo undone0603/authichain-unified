@@ -32,8 +32,6 @@ concurrency:
 # Flip to 'false' once the runner is verified; the skip step warns visibly.
 env:
   SKIP_PLAYWRIGHT_ON_SELF_HOSTED: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && 'true' || 'false' }}
-  PLAYWRIGHT_BROWSERS_PATH: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/ms-playwright' || '/home/runner/.cache/ms-playwright' }}
-  TURBO_CACHE_DIR: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && '/home/zac/.cache/turbo' || '/home/runner/.cache/turbo' }}
 
 # Least privilege (self-hosted CI move). Jobs that need more set it per job.
 permissions:
@@ -70,6 +68,20 @@ jobs:
         with:
           version: "10.28.2"
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+
+      # A repo variable cannot identify the user of a particular self-hosted
+      # job. Resolve browser/Turbo caches from this actual runner account HOME.
+      # No chmod/chown, no sudo, and no global cache deletion.
+      - name: Use runner-owned cache paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${HOME:-}" ] || [ ! -d "$HOME" ] || [ ! -w "$HOME" ]; then
+            echo "::error::Runner HOME missing or not writable; refuse to use another account's cache"
+            exit 1
+          fi
+          printf 'PLAYWRIGHT_BROWSERS_PATH=%s/.cache/ms-playwright\n' "$HOME" >> "$GITHUB_ENV"
+          printf 'TURBO_CACHE_DIR=%s/.cache/turbo\n' "$HOME" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -144,6 +156,20 @@ jobs:
         with:
           version: "10.28.2"
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+
+      # A repo variable cannot identify the user of a particular self-hosted
+      # job. Resolve browser/Turbo caches from this actual runner account HOME.
+      # No chmod/chown, no sudo, and no global cache deletion.
+      - name: Use runner-owned cache paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${HOME:-}" ] || [ ! -d "$HOME" ] || [ ! -w "$HOME" ]; then
+            echo "::error::Runner HOME missing or not writable; refuse to use another account's cache"
+            exit 1
+          fi
+          printf 'PLAYWRIGHT_BROWSERS_PATH=%s/.cache/ms-playwright\n' "$HOME" >> "$GITHUB_ENV"
+          printf 'TURBO_CACHE_DIR=%s/.cache/turbo\n' "$HOME" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -244,6 +270,20 @@ jobs:
         with:
           version: "10.28.2"
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+
+      # A repo variable cannot identify the user of a particular self-hosted
+      # job. Resolve browser/Turbo caches from this actual runner account HOME.
+      # No chmod/chown, no sudo, and no global cache deletion.
+      - name: Use runner-owned cache paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${HOME:-}" ] || [ ! -d "$HOME" ] || [ ! -w "$HOME" ]; then
+            echo "::error::Runner HOME missing or not writable; refuse to use another account's cache"
+            exit 1
+          fi
+          printf 'PLAYWRIGHT_BROWSERS_PATH=%s/.cache/ms-playwright\n' "$HOME" >> "$GITHUB_ENV"
+          printf 'TURBO_CACHE_DIR=%s/.cache/turbo\n' "$HOME" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -348,6 +388,20 @@ jobs:
         with:
           version: "10.28.2"
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
+
+      # A repo variable cannot identify the user of a particular self-hosted
+      # job. Resolve browser/Turbo caches from this actual runner account HOME.
+      # No chmod/chown, no sudo, and no global cache deletion.
+      - name: Use runner-owned cache paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${HOME:-}" ] || [ ! -d "$HOME" ] || [ ! -w "$HOME" ]; then
+            echo "::error::Runner HOME missing or not writable; refuse to use another account's cache"
+            exit 1
+          fi
+          printf 'PLAYWRIGHT_BROWSERS_PATH=%s/.cache/ms-playwright\n' "$HOME" >> "$GITHUB_ENV"
+          printf 'TURBO_CACHE_DIR=%s/.cache/turbo\n' "$HOME" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
