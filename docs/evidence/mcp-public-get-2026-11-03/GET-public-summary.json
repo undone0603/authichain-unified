@@ -1,0 +1,44 @@
+{
+  "classification": "SANITIZED_AUTHORED_SUMMARY_NOT_ORIGINAL_HTTP_FIXTURE",
+  "date_local": "2026-11-03",
+  "url": "https://authichain.com/mcp",
+  "reported_method": "GET",
+  "report_source": "https://github.com/undone0603/authichain-unified/issues/2326",
+  "independently_visible_public_content": true,
+  "original_http_status": null,
+  "original_raw_request": null,
+  "original_raw_response": null,
+  "original_headers": null,
+  "original_response_sha256": null,
+  "observed_json_fields": {
+    "protocol": "mcp",
+    "jsonrpc": "2.0",
+    "serverInfo": {
+      "name": "authichain",
+      "version": "1.4.0"
+    },
+    "tool_names": [
+      "get_pricing",
+      "verify",
+      "query_provenance",
+      "verify_attestation",
+      "verify_record",
+      "dpp_readiness_check",
+      "scan_living_qr"
+    ]
+  },
+  "modern_2026_07_28_post": {
+    "status": "not_tested",
+    "response": null
+  },
+  "legacy_2025_06_18_post": {
+    "status": "not_tested",
+    "response": null
+  },
+  "cross_operator_compatibility": "inconclusive",
+  "operator_specific_permission_url": null,
+  "independent_reproduction_url": null,
+  "independent_acceptance_url": null,
+  "genuine_task_completion_url": null,
+  "verified_revenue_url": null
+}
