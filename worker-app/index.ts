@@ -34,7 +34,7 @@ import {
   CHECKOUT_REDIRECT_HEADERS,
   checkoutRedirectResponse,
 } from "../src/lib/checkout-email";
-import { isRetryableFulfillment } from "../src/lib/retryable-fulfillment";
+import { isRetryableFulfillment, markRetryableFulfillment } from "../src/lib/retryable-fulfillment";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
@@ -675,8 +675,8 @@ app.post("/api/funnel", async c => {
 });
 
 // ─── Stripe Webhook ─────────────────────────────────────────────────────────
-// handleStripeWebhook(db, rawBody, sig) is a framework-agnostic plain
-// function (server/webhooks/stripe.ts) — just a new call site here.
+// The signed Stripe handler accepts a service-order callback so only that
+// economic path opens a request-scoped Hyperdrive connection.
 app.get("/api/stripe/webhook", c => {
   c.header("Cache-Control", "private, no-store");
   return c.json({
@@ -703,7 +703,31 @@ async function stripeWebhookPost(c: {
     hydrateProcessEnv(c.env);
     const { handleStripeWebhook } = await import("../server/webhooks/stripe");
     const rawBody = Buffer.from(await c.req.arrayBuffer());
-    const result = await handleStripeWebhook(rawBody, sig);
+    const serviceOrderHandler = async (
+      session: Parameters<typeof import("../server/services/order-payment-handler").handleServiceOrderPayment>[0],
+    ) => {
+      if (!c.env?.HYPERDRIVE) {
+        throw markRetryableFulfillment(new Error("Service-order Hyperdrive binding unavailable"));
+      }
+      const { createHyperdriveRequestDb } = await import("../server/db");
+      const { handleServiceOrderPayment } = await import("../server/services/order-payment-handler");
+      const requestDb = createHyperdriveRequestDb(c.env);
+      try {
+        await requestDb.connect();
+        return await handleServiceOrderPayment(session, requestDb.db);
+      } catch (error) {
+        // A missing connection or failed SQL transaction must trigger a
+        // Stripe retry, never an HTTP 400 or a false fulfillment receipt.
+        throw markRetryableFulfillment(error);
+      } finally {
+        try {
+          await requestDb.close();
+        } catch (closeError) {
+          console.warn("[Stripe Webhook] Hyperdrive cleanup failed", closeError);
+        }
+      }
+    };
+    const result = await handleStripeWebhook(rawBody, sig, serviceOrderHandler);
     return c.json(result);
   } catch (err: any) {
     console.error(`[Stripe Webhook] Error: ${err.message}`);
