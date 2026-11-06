@@ -77,6 +77,7 @@ import {
   isSampleAuditPath,
   renderSampleAuditPage,
 } from "./battery-sample-audit-page";
+import { tryHandleBatteryPassportSample } from "./battery-passport-sample-page";
 import {
   dppCheckCompleteEvent,
   dppCheckoutClickEvent,
@@ -3538,6 +3539,8 @@ async function handleAuthichainCom(
         },
       });
     }
+    const batterySample = await tryHandleBatteryPassportSample(request);
+    if (batterySample) return batterySample;
     if (isSampleAuditPath(p)) {
       return new Response(renderSampleAuditPage(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },

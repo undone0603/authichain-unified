@@ -168,6 +168,7 @@ test("CFA-758: money routes have no 50-workspace-generation or never-expire pack
     "/checkout/dpp_readiness",
     "/dpp",
     "/battery-passport",
+    "/battery-passport/sample",
     "/trumark",
     "/docs/dpp-architecture",
   ]) {
@@ -1949,4 +1950,26 @@ test("GET /dpp/scan returns 301 to /dpp-check through the Worker fetch", async (
   );
   assert.equal(res.status, 301);
   assert.match(res.headers.get("Location") ?? "", /\/dpp-check$/);
+});
+
+// CFA-772: the sample HTML path must not shadow POST (405) or JSON artifacts.
+test("POST /battery-passport/sample returns 405 through the Worker fetch", async () => {
+  const res = await worker.fetch(
+    new Request("https://authichain.com/battery-passport/sample", {
+      method: "POST",
+    }),
+    ENV
+  );
+  assert.equal(res.status, 405);
+  assert.match(await res.text(), /method_not_allowed/);
+});
+
+test("GET /battery-passport/sample.json returns 200 through the Worker fetch", async () => {
+  const res = await worker.fetch(
+    new Request("https://authichain.com/battery-passport/sample.json"),
+    ENV
+  );
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") ?? "", /application\/json/);
+  assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
 });
