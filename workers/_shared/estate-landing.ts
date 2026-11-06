@@ -8,7 +8,6 @@
  */
 
 import { emailCheckoutWithPaymentLinkHtml } from "../../src/lib/checkout-email";
-import { EMAIL_OPTIN_CONSENT_TEXT } from "./email-optin-copy.ts";
 
 export type EstateBrandId = "authichain" | "qron" | "govchain" | "strainchain";
 
@@ -784,6 +783,7 @@ const ESTATE_LEAD_CAPTURE_SCRIPT = `(function(){
     var loc=window.location;
     var body={
       email:email.slice(0,254),
+      consent:"yes",
       source:String(loc.hostname||form.elements.namedItem("source").value||""),
       product_interest:String(form.elements.namedItem("product_interest").value||""),
       page_url:String(loc.origin||"")+String(loc.pathname||"")
@@ -821,21 +821,22 @@ const ESTATE_LEAD_CAPTURE_SCRIPT = `(function(){
  */
 export function estateLeadCapture(brand: EstateBrandId): string {
   const b = ESTATE_BRANDS[brand];
+  const operator = ESTATE_BRANDS.authichain.name;
   return `<section class="estate-lead-capture" aria-labelledby="lead-capture-heading">
   <div class="wrap">
-    <h2 id="lead-capture-heading">Email updates</h2>
-    <p class="section-sub">Leave your email if you want us to follow up about ${esc(b.name)}. We do not sell your address, and we do not send spam.</p>
-    <form class="estate-lead-form" id="${ESTATE_LEAD_CAPTURE_ID}" action="${ESTATE_LEAD_CAPTURE_ENDPOINT}" method="post">
+    <h2 id="lead-capture-heading">Request follow-up</h2>
+    <p class="section-sub">Leave your email if you want 1-to-1 follow-up about ${esc(b.name)}. No automated newsletter is active, and we do not sell your address.</p>
+    <form class="estate-lead-form" id="${ESTATE_LEAD_CAPTURE_ID}" novalidate>
       <input type="hidden" name="source" value="${esc(b.domain)}">
       <input type="hidden" name="product_interest" value="${esc(b.id)}">
       <label for="lead-capture-email">Email
         <input class="estate-field" id="lead-capture-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email">
       </label>
       <label class="estate-lead-consent" for="lead-capture-consent">
-        <input id="lead-capture-consent" type="checkbox" name="consent" value="yes">
-        <span>${esc(EMAIL_OPTIN_CONSENT_TEXT)}</span>
+        <input id="lead-capture-consent" type="checkbox" name="consent" value="yes" required>
+        <span>I agree that ${esc(operator)} may email me 1-to-1 at this address about ${esc(b.name)}. To opt out or delete your record at any time, email authichain@mail.grokbot.com.</span>
       </label>
-      <p class="estate-lead-privacy">We store your email, which site you came from, and the page address so we can follow up. See the <a href="${ESTATE_LEAD_CAPTURE_PRIVACY_HREF}">privacy policy</a>.</p>
+      <p class="estate-lead-privacy">We store your email, site hostname, product interest, page URL, any UTM link parameters (utm_source, utm_medium, utm_campaign), and your consent record in our Supabase lead_captures database until you ask us to delete them at authichain@mail.grokbot.com (or 12 months after our last 1-to-1 email with no reply). To block abuse, Cloudflare checks your IP address against a short-lived rate limit (10 submissions per hour); your IP address is not stored in lead_captures. See the <a href="${ESTATE_LEAD_CAPTURE_PRIVACY_HREF}">privacy policy</a>.</p>
       <button class="btn btn-primary" type="submit">Send</button>
     </form>
     <p id="lead-capture-status" class="estate-lead-status" role="status" aria-live="polite" hidden></p>

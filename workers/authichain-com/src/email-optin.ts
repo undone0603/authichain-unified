@@ -19,8 +19,6 @@
  *   row status is confirmed. Contact: authichain@mail.grokbot.com.
  */
 
-import { EMAIL_OPTIN_CONSENT_TEXT as SHARED_EMAIL_OPTIN_CONSENT_TEXT } from "../../_shared/email-optin-copy.ts";
-
 export const EMAIL_OPTIN_PATH = "/api/email-optin";
 export const EMAIL_OPTIN_CONFIRM_PATH = "/api/email-optin/confirm";
 /** Unsubscribe: GET shows a confirm button; POST (button or RFC 8058 List-Unsubscribe-Post) unsubscribes. */
@@ -30,7 +28,8 @@ export const EMAIL_UNSUBSCRIBE_BASE =
 export const EMAIL_UNSUBSCRIBE_MAILTO = "authichain@mail.grokbot.com";
 
 /** Research gate PR2013 @ b2dbd98d, FIX 1, verbatim. */
-export const EMAIL_OPTIN_CONSENT_TEXT = SHARED_EMAIL_OPTIN_CONSENT_TEXT;
+export const EMAIL_OPTIN_CONSENT_TEXT =
+  "Optional: email me AuthiChain product updates, at most once a month. We will first send one email asking you to confirm. To unsubscribe at any time, email authichain@mail.grokbot.com.";
 /** /is-this-real (also POSTs /api/leads/capture). Research FIX 2 Option B, verbatim. */
 export const EMAIL_OPTIN_PRIVACY_LINE_IS_THIS_REAL =
   'If you tick the box, we store your email, the first seal ID you check, the page address, your country if you give it, when you agreed, and whether you confirmed. We send updates only after you confirm, and the confirm link expires after 30 days. Your email, seal ID and page address are saved in our Supabase lead list (lead_captures), and your email, country if you give it, when you agreed and whether you confirmed are saved in AuthiChain\'s Cloudflare D1 database. Unconfirmed sign-ups may be removed from our mailing list after 30 days; we keep the Supabase copy until you ask us to delete it at authichain@mail.grokbot.com. To limit abuse, we also keep a salted hash of your IP address for about a day; we never store the IP address itself. See the <a href="/privacy">privacy policy</a>.';

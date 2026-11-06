@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { EMAIL_OPTIN_CONSENT_TEXT } from "./email-optin-copy.ts";
 import {
   ESTATE_BASE_CSS,
   ESTATE_BRANDS,
@@ -169,13 +168,36 @@ test("estate footer lead capture is on every brand and posts hostname as source"
     assert.match(footer, /id="lead-capture"/);
     assert.equal(html.includes('id="lead-capture"'), true);
     assert.match(html, new RegExp(`id="${ESTATE_LEAD_CAPTURE_ID}"`));
-    assert.ok(html.includes(`action="${ESTATE_LEAD_CAPTURE_ENDPOINT}"`));
+    assert.match(html, /id="lead-capture-heading">Request follow-up</);
+    assert.ok(
+      html.includes(
+        `Leave your email if you want 1-to-1 follow-up about ${ESTATE_BRANDS[id].name}. No automated newsletter is active, and we do not sell your address.`
+      )
+    );
+    assert.match(
+      html,
+      /<form class="estate-lead-form" id="lead-capture" novalidate>/
+    );
+    assert.doesNotMatch(html, /id="lead-capture"[^>]*(action=|method=)/);
     assert.ok(html.includes(`fetch("${ESTATE_LEAD_CAPTURE_ENDPOINT}"`));
+    assert.ok(html.includes('consent:"yes"'));
     assert.ok(html.includes('type="email"'));
-    assert.ok(html.includes("required"));
-    assert.ok(html.includes('name="consent"'));
+    assert.match(
+      html,
+      /id="lead-capture-consent"[^>]*type="checkbox"[^>]*name="consent"[^>]*value="yes"[^>]*required/
+    );
     assert.doesNotMatch(html, /id="lead-capture-consent"[^>]*\bchecked\b/);
-    assert.ok(html.includes(EMAIL_OPTIN_CONSENT_TEXT));
+    assert.ok(
+      html.includes(
+        `I agree that ${ESTATE_BRANDS.authichain.name} may email me 1-to-1 at this address about ${ESTATE_BRANDS[id].name}. To opt out or delete your record at any time, email authichain@mail.grokbot.com.`
+      )
+    );
+    assert.doesNotMatch(html, /Optional:/);
+    assert.doesNotMatch(html, /id="lead-capture-heading">Email updates</);
+    assert.ok(html.includes("Supabase lead_captures database"));
+    assert.ok(html.includes("utm_source, utm_medium, utm_campaign"));
+    assert.ok(html.includes("10 submissions per hour"));
+    assert.ok(html.includes("your IP address is not stored in lead_captures"));
     assert.ok(html.includes(`href="${ESTATE_LEAD_CAPTURE_PRIVACY_HREF}"`));
     assert.ok(html.includes(`value="${ESTATE_BRANDS[id].domain}"`));
     assert.ok(html.includes(`value="${id}"`));

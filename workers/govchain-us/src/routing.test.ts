@@ -105,6 +105,11 @@ test("the apex still renders the marketing page", async () => {
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /--bg: #ffffff/);
   assert.match(html, /id="lead-capture"/);
+  assert.match(html, /Request follow-up/);
+  assert.match(html, /1-to-1 follow-up/);
+  assert.match(html, /consent:"yes"/);
+  assert.match(html, /novalidate/);
+  assert.match(html, /lead_captures/);
   assert.match(html, /https:\/\/authichain\.com\/api\/leads\/capture/);
   assert.match(html, /https:\/\/authichain\.com\/privacy/);
 });

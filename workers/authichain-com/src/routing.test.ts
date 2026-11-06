@@ -255,6 +255,11 @@ test("the apex still renders the homepage", async () => {
   );
   assert.match(html, /The authentic agentic economy/);
   assert.match(html, /id="lead-capture"/);
+  assert.match(html, /Request follow-up/);
+  assert.match(html, /1-to-1 follow-up/);
+  assert.match(html, /consent:"yes"/);
+  assert.match(html, /novalidate/);
+  assert.match(html, /lead_captures/);
   assert.match(html, /https:\/\/authichain\.com\/api\/leads\/capture/);
   assert.match(html, /https:\/\/authichain\.com\/privacy/);
   // AE-20261002-CFD-09: no Apollo visitor tracker anywhere on authichain.com.

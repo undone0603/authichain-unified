@@ -61,6 +61,16 @@ export const ESTATE_LEAD_CAPTURE_ORIGINS = [
   "https://govchain.us",
 ] as const;
 
+export const ESTATE_LEAD_CAPTURE_HOSTNAMES = [
+  "authichain.com",
+  "qron.space",
+  "strainchain.io",
+  "govchain.us",
+] as const;
+
+export const ESTATE_LEAD_CAPTURE_CONSENT_MESSAGE =
+  "consent: yes (site-lead-capture-v1)";
+
 export function estateLeadCaptureAllowedOrigin(
   origin: string | undefined | null
 ): string | null {
@@ -68,6 +78,26 @@ export function estateLeadCaptureAllowedOrigin(
   return (ESTATE_LEAD_CAPTURE_ORIGINS as readonly string[]).includes(origin)
     ? origin
     : null;
+}
+
+/**
+ * Footer captures from the four live apexes. Source is the hostname the
+ * form sends. Sister Origins only have this form on /api/leads/capture;
+ * https://authichain.com Origin is shared with battery/is-this-real/DPP
+ * forms that must keep running HubSpot without footer consent.
+ */
+export function isEstateFooterLeadCapture(
+  source: string | undefined,
+  origin: string | undefined | null
+): boolean {
+  if (
+    source &&
+    (ESTATE_LEAD_CAPTURE_HOSTNAMES as readonly string[]).includes(source)
+  ) {
+    return true;
+  }
+  const allowed = estateLeadCaptureAllowedOrigin(origin);
+  return !!allowed && allowed !== "https://authichain.com";
 }
 
 function attachEstateLeadCors(c: LeadContext) {
@@ -572,14 +602,25 @@ async function handleLeadCapture(c: LeadContext) {
   const email = str(body?.email);
   if (!body || !email) return c.json({ error: "Email required" }, 400);
 
+  const source = str(body.source) || "website";
+  const estateFooter = isEstateFooterLeadCapture(
+    source,
+    c.req.header("origin")
+  );
+  if (estateFooter && str(body.consent) !== "yes") {
+    return c.json({ error: "Consent required" }, 400);
+  }
+
   const lead: CapturedLead = {
     email,
     name: str(body.name),
-    source: str(body.source) || "website",
+    source,
     product_interest: str(body.product_interest) || "qron",
     company: clip(body.company, 200),
     role: clip(body.role, 120),
-    message: str(body.message)?.trim().slice(0, 2000),
+    message: estateFooter
+      ? ESTATE_LEAD_CAPTURE_CONSENT_MESSAGE
+      : str(body.message)?.trim().slice(0, 2000),
   };
   const formFields = {
     company: lead.company ?? null,
@@ -627,7 +668,9 @@ async function handleLeadCapture(c: LeadContext) {
     return c.json({ error: "Could not store the request" }, 500);
   }
 
-  await background(c, runLeadAutomation(c, lead));
+  // Estate footer captures are 1-to-1 follow-up only. Privacy names HubSpot
+  // for paid orders, so Apollo/Make/n8n/HubSpot must not run here.
+  if (!estateFooter) await background(c, runLeadAutomation(c, lead));
   return c.json({ ok: true });
 }
 

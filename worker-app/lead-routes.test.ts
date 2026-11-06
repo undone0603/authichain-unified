@@ -2,8 +2,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Hono } from "hono";
 import {
+  ESTATE_LEAD_CAPTURE_CONSENT_MESSAGE,
+  ESTATE_LEAD_CAPTURE_HOSTNAMES,
   ESTATE_LEAD_CAPTURE_ORIGINS,
   estateLeadCaptureAllowedOrigin,
+  isEstateFooterLeadCapture,
   registerLeadRoutes,
   syncContactToHubSpot,
   type LeadEnv,
@@ -344,6 +347,7 @@ describe("POST /api/lead-capture and /api/leads/capture", () => {
             email: `buyer@${hostname}`,
             source: hostname,
             product_interest: hostname.split(".")[0],
+            consent: "yes",
           }),
         },
         env
@@ -357,6 +361,8 @@ describe("POST /api/lead-capture and /api/leads/capture", () => {
       >;
       expect(row.source).toBe(hostname);
       expect(row.email).toBe(`buyer@${hostname}`);
+      expect(row.message).toBe(ESTATE_LEAD_CAPTURE_CONSENT_MESSAGE);
+      expect(hubspotCalls()).toHaveLength(0);
     }
   );
 
@@ -364,9 +370,113 @@ describe("POST /api/lead-capture and /api/leads/capture", () => {
     const res = await post("/api/leads/capture", {
       email: "buyer@acme.com",
       source: "authichain.com",
+      consent: "yes",
     });
     expect(res.status).toBe(200);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
+    const row = inserts.find(i => i.table === "lead_captures")!.row as Record<
+      string,
+      unknown
+    >;
+    expect(row.message).toBe(ESTATE_LEAD_CAPTURE_CONSENT_MESSAGE);
+    expect(hubspotCalls()).toHaveLength(0);
+  });
+
+  it.each([...ESTATE_LEAD_CAPTURE_HOSTNAMES])(
+    "returns 400 Consent required when estate hostname %s omits consent",
+    async hostname => {
+      const res = await post("/api/leads/capture", {
+        email: `buyer@${hostname}`,
+        source: hostname,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: "Consent required" });
+      expect(inserts.some(i => i.table === "lead_captures")).toBe(false);
+      expect(hubspotCalls()).toHaveLength(0);
+    }
+  );
+
+  it("returns 400 Consent required for a sister-origin capture without consent", async () => {
+    const res = await makeApp().request(
+      "/api/leads/capture",
+      {
+        method: "POST",
+        headers: {
+          Origin: "https://qron.space",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: "buyer@qron.space",
+          source: "website",
+        }),
+      },
+      env
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Consent required" });
+    expect(inserts.some(i => i.table === "lead_captures")).toBe(false);
+  });
+
+  it.each([...ESTATE_LEAD_CAPTURE_HOSTNAMES])(
+    "skips HubSpot, Apollo, Make, and n8n for quiet estate hostname %s",
+    async hostname => {
+      const res = await makeApp().request(
+        "/api/leads/capture",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: `buyer@${hostname}`,
+            source: hostname,
+            consent: "yes",
+          }),
+        },
+        {
+          ...env,
+          APOLLO_API_KEY: "apollo-test-key",
+          MAKE_LEAD_WEBHOOK_URL: "https://hook.make.example/lead",
+          N8N_LEAD_WEBHOOK_URL: "https://n8n.example/lead",
+        } as LeadEnv
+      );
+      expect(res.status).toBe(200);
+      const row = inserts.find(i => i.table === "lead_captures")!.row as Record<
+        string,
+        unknown
+      >;
+      expect(row.message).toBe("consent: yes (site-lead-capture-v1)");
+      expect(hubspotCalls()).toHaveLength(0);
+      expect(
+        fetchCalls.some(call =>
+          /make\.example|n8n\.example|apollo\.io/i.test(call.url)
+        )
+      ).toBe(false);
+    }
+  );
+
+  it("does not require footer consent for battery-passport from authichain.com Origin", async () => {
+    const res = await makeApp().request(
+      "/api/leads/capture",
+      {
+        method: "POST",
+        headers: {
+          Origin: "https://authichain.com",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: "buyer@acme.com",
+          source: "battery-passport-page",
+        }),
+      },
+      env
+    );
+    expect(res.status).toBe(200);
+    expect(hubspotCalls().length).toBeGreaterThan(0);
+    const row = inserts.find(i => i.table === "lead_captures")!.row as Record<
+      string,
+      unknown
+    >;
+    expect(row.message).toBeNull();
+    expect(row.source).toBe("battery-passport-page");
   });
 
   it("estateLeadCaptureAllowedOrigin only allows the four live apexes", () => {
@@ -375,6 +485,17 @@ describe("POST /api/lead-capture and /api/leads/capture", () => {
     );
     expect(estateLeadCaptureAllowedOrigin("https://evil.example")).toBeNull();
     expect(estateLeadCaptureAllowedOrigin(undefined)).toBeNull();
+    expect(isEstateFooterLeadCapture("qron.space", null)).toBe(true);
+    expect(isEstateFooterLeadCapture("website", "https://strainchain.io")).toBe(
+      true
+    );
+    expect(
+      isEstateFooterLeadCapture(
+        "battery-passport-page",
+        "https://authichain.com"
+      )
+    ).toBe(false);
+    expect(isEstateFooterLeadCapture("eu-dpp-guide", undefined)).toBe(false);
   });
 
   it("keeps the lead when the form-field migration is not applied yet", async () => {
@@ -455,6 +576,19 @@ describe("lead capture Apollo enrichment guard (CFD-125)", () => {
     expect(res.status).toBe(200);
     expect(inserts.some(i => i.table === "lead_captures")).toBe(true);
     expect(apolloCalls()).toHaveLength(1);
+  });
+
+  it("does not call api.apollo.io for estate footer captures even when LEAD_APOLLO_ENRICH is on", async () => {
+    process.env.LEAD_APOLLO_ENRICH = "on";
+    const res = await capture("/api/leads/capture", {
+      email: "buyer@acme.com",
+      source: "govchain.us",
+      consent: "yes",
+    });
+    expect(res.status).toBe(200);
+    expect(inserts.some(i => i.table === "lead_captures")).toBe(true);
+    expect(apolloCalls()).toHaveLength(0);
+    expect(hubspotCalls()).toHaveLength(0);
   });
 });
 
