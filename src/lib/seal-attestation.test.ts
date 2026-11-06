@@ -51,4 +51,15 @@ describe("attestSeal", () => {
     expect(result.verdict).toBe("valid-unanchored");
     expect(result.verified).toBe(false);
   });
+
+  it("reads the anchor stored beside the record in qr_payload", () => {
+    const result = attestSeal({
+      qr_payload: JSON.stringify({
+        record: fixture.record,
+        anchor: fixture.anchor,
+      }),
+    });
+    expect(result.verdict).toBe("verified");
+    expect(result.verified).toBe(true);
+  });
 });
