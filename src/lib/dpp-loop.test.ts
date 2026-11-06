@@ -123,6 +123,28 @@ describe("dpp-loop", () => {
     );
   });
 
+  it("keeps analytics best-effort but requires durable activation when requested", async () => {
+    const failed = {
+      from: vi.fn(() => ({
+        insert: vi.fn().mockResolvedValue({
+          error: { message: "database unreachable" },
+        }),
+      })),
+    };
+    const input = {
+      visitId: "dpp_paid_visit",
+      stage: "merchant_activated" as const,
+      stripeSessionId: "cs_paid",
+    };
+    await expect(recordDppLoopEvent(failed, input)).resolves.toBeUndefined();
+    await expect(
+      recordDppLoopEvent(failed, input, { required: true })
+    ).rejects.toThrow("dpp_loop_record_failed");
+    await expect(
+      recordDppLoopEvent(failed, { ...input, visitId: "" }, { required: true })
+    ).rejects.toThrow("dpp_loop_visit_id_required");
+  });
+
   it("does not treat bounce/abandon as founder exceptions", () => {
     const visitOnly = reconstructLoop([
       {
