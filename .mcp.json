@@ -35,6 +35,12 @@
       "command": "a2a-mcp-server",
       "args": [],
       "tools": ["*"]
+    },
+    "tinyfish": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://agent.tinyfish.ai/mcp"],
+      "tools": ["search", "fetch_content"]
     }
   }
 }
