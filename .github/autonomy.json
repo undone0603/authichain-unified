@@ -58,7 +58,9 @@
       "content-publish.yml",
       "gov-mint.yml",
       "marketing-autonomous.yml",
-      "pipeline-tick.yml"
+      "pipeline-tick.yml",
+      "deploy-authichain-edge-router.yml",
+      "deploy-qron-space.yml"
     ]
   },
   "merge_autopilot": {
@@ -93,6 +95,8 @@
         "vercel-deploy-guard.yml": "on",
         "verified-deployment-commit.yml": "on",
         "deploy-authichain-com.yml": "on",
+        "deploy-authichain-edge-router.yml": "on",
+        "deploy-qron-space.yml": "on",
         "deploy-cloudflare.yml": "on",
         "deploy-edge-worker.yml": "on",
         "deploy-workers.yml": "on",
@@ -223,6 +227,7 @@
         "upload-microsites-kv.yml": "manual",
         "verify-outreach-secrets.yml": "manual",
         "verify-scheduled-jobs.yml": "manual",
+        "wsl-net-check.yml": "manual",
         "x402-smoke.yml": "manual",
         "anchor-polygon-record.yml": "manual"
       }
