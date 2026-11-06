@@ -53,9 +53,28 @@ checked (2026-11-05 06:00 UTC), so the first pulse should not page for
 silence. The heartbeat last logged at 2026-11-04 06:23 UTC, which is outside
 the 7h window.
 
-## Not included (from the 10-14 plan)
+## Archive health (AgentZ)
 
-- Recording the three 2026-10-14 remote-only migrations in
-  `supabase/migrations` and refreshing `REMOTE_APPLIED_VERSIONS.txt`. This
-  needs the exact remote statements and is a separate change.
-- The AgentZ `ai_adapt_archive_health` workflow.
+`python -m agentz.cli run ai_adapt_archive_health --mode dry-run` makes two
+read-only GETs (`ai_adapt_archive`, `ops_bot_log`) and grades the archive:
+
+- **red** (the run fails): `ai-adapt-archive` has not logged a run for 36h,
+  or the heartbeat logged a `fail` row in the last 24h;
+- **unverified** (the run fails): the Supabase URL or service key is missing,
+  or the read failed. Error text is never kept;
+- **warn**: an item is not `available`, its watch streak is at 3 (alert) or
+  7+ (dead host), it has not been checked for 8 days, or it used all three
+  Software Heritage retries.
+
+It writes nothing in any mode. On 2026-11-06 the live state would grade
+**warn**: 145 items, all available, one dead host (streak 9), and the archive
+bot last ran at 11:55 UTC.
+
+## Migrations
+
+The three 2026-10-14 functions are recorded in `supabase/migrations`
+(`20261014195307_*`, `20261014195334_*`, `20261014195349_*`). Each file is the
+exact remote `schema_migrations.statements` text, md5-checked on 2026-11-06.
+They were already applied on remote; recording them applies nothing.
+`supabase/REMOTE_APPLIED_VERSIONS.txt` lists them and names three other
+remote-only versions that still need an owner decision.

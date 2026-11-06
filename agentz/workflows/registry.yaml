@@ -1208,6 +1208,27 @@ workflows:
       verdict is wrong or a blocked effect survives. Touches nothing outside
       its temp dir in any mode. Sends, charges, and deploys nothing.
 
+  - id: ai_adapt_archive_health
+    title: "Check the AI Adapt archive and its bot (read-only)"
+    priority: low
+    blocks_revenue: false
+    handler: handlers.ai_adapt_archive_health
+    type: api
+    estimated_minutes: 1
+    requires: [supabase_url, supabase_service_key]
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    description: |
+      Two PostgREST GETs on ai_adapt_archive and ops_bot_log. Red when the
+      archive bot has been silent for 36h or the pg_cron heartbeat fired in
+      the last 24h; warns on unavailable items, watch streaks at 3 or >= 7,
+      items unchecked for 8 days, and exhausted Software Heritage retries.
+      Writes nothing in any mode. From the 2026-10-14 archive v2 plan.
+
   - id: taskmarket_cycle
     title: "Taskmarket — pick one funded worker task"
     priority: high
