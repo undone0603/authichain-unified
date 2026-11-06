@@ -63,7 +63,22 @@ jobs:
       - name: Ratchet
         env:
           NODE_OPTIONS: --max-old-space-size=8192
-        run: node scripts/typecheck-ratchet.mjs
+        shell: bash
+        run: |
+          # Preserve the compiler exit code through tee.
+          set -o pipefail
+          node scripts/typecheck-ratchet.mjs 2>&1 | tee "${RUNNER_TEMP}/typecheck-ratchet.log"
+
+      # GitHub job-log blobs can return 404; keep the ratchet output for review.
+      # This does not rerun jobs, change baselines, or affect release gates.
+      - name: Upload ratchet diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: typecheck-ratchet-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/typecheck-ratchet.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       # Persistent self-hosted runner: drop deps and build outputs so state
       # never leaks into the next run. Workspace-only; never outside it.
