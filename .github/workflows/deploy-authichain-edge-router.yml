@@ -52,16 +52,24 @@ jobs:
         with:
           version: "10.28.2"
           run_install: false
-      - name: Use runner pnpm (self-hosted)
-        if: runner.environment == 'self-hosted'
-        run: |
-          command -v pnpm
-          pnpm --version
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
           cache-dependency-path: pnpm-lock.yaml
+      # Must run after setup-node. The runner's pnpm is a corepack shim with a
+      # "#!/usr/bin/env node" shebang, and the runner process has no node on
+      # PATH when the listener was started by hand instead of the systemd unit
+      # (run 42162800026: "/usr/bin/env: 'node': No such file or directory",
+      # exit 127, after the WSL restart on 2026-11-05). setup-node puts the
+      # cached node 22 on PATH, the same node every later step already uses.
+      - name: Use runner pnpm (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          command -v node
+          command -v pnpm
+          pnpm --version
       - name: Install node-gyp (native builds)
         run: npm i -g node-gyp@11
       - name: Install
