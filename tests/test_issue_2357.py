@@ -95,6 +95,51 @@ class TrustKernelBoundaries(unittest.TestCase):
             "identityValid": True, "statusActive": False}})
         self.assertNotEqual(r["decision"], "verified")
 
+    def test_inactive_or_suspended_attestation_overrides_positive_crypto_flags(self):
+        positive = {
+            "signatureValid": True, "issuerTrusted": True,
+            "identityValid": True, "statusActive": True,
+        }
+        for bad_status in ["inactive", "suspended", "blocked", "pending", "disabled"]:
+            with self.subTest(bad_status=bad_status):
+                r = actual({
+                    "objectFound": True,
+                    "attestation": {"status": bad_status},
+                    "crypto": positive,
+                })
+                self.assertEqual(r["decision"], "blocked")
+                self.assertIn("attestation_inactive_or_blocked", r["reasons"])
+                self.assert_no_automatic_enforcement(r)
+
+    def test_record_invalid_or_not_found_decision_cannot_be_overridden_by_flags(self):
+        positive = {
+            "signatureValid": True, "issuerTrusted": True,
+            "identityValid": True, "statusActive": True,
+        }
+        for bad_decision in ["invalid", "not_found"]:
+            with self.subTest(bad_decision=bad_decision):
+                r = actual({
+                    "objectFound": True,
+                    "attestation": {"decision": bad_decision},
+                    "crypto": positive,
+                })
+                self.assertEqual(r["decision"], "invalid")
+                self.assertIn("attestation_decision_conflict", r["reasons"])
+                self.assert_no_automatic_enforcement(r)
+
+    def test_consistent_active_attestation_and_trusted_flags_can_still_verify(self):
+        r = actual({
+            "objectFound": True,
+            "attestation": {"status": "active", "decision": "verified"},
+            "crypto": {
+                "signatureValid": True, "issuerTrusted": True,
+                "identityValid": True, "statusActive": True,
+            },
+        })
+        self.assertEqual(r["decision"], "verified")
+        self.assertEqual(r["vector"]["physical_binding"], "unknown")
+        self.assert_no_automatic_enforcement(r)
+
     def test_revoked_record_is_blocked(self):
         r = actual({"objectFound": True, "attestation": {"status": "revoked"}, "crypto": {
             "signatureValid": True, "issuerTrusted": True, "identityValid": True}})
