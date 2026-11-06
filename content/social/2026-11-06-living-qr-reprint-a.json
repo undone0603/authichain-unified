@@ -1,0 +1,18 @@
+{
+  "linkedin": "A QR code printed on a pack is a promise about a URL. When the campaign page moves, the code on every label already in circulation either breaks or goes to the wrong place, and the fix is a reprint.\n\nQRON generates Living QR codes for packaging and labels: the code on the pack stays the same, and where it points can be changed later. A campaign URL changing no longer has to mean new artwork and a new print run.\n\nA code that can be re-pointed also raises a fair question: how does anyone know a scan wasn't tampered with? That's why QRON can issue a stored scan that carries an Ed25519 signature, so a verifier can check it. We are explicit about the boundary: the qron.space host forwards a scan and does not verify the signature itself, and an anonymous generate is not a stored signed scan.\n\nIf you manage packaging or labels, how do you handle a destination that changes after the print run?\n\nhttps://qron.space/?utm_source=linkedin&utm_medium=social&utm_campaign=living-qr-reprint&utm_content=a",
+  "reddit": {
+    "subreddit": "packaging",
+    "title": "How do you handle a QR destination that changes after the labels are already printed?",
+    "body": "Printed QR codes usually encode a fixed URL. If the landing page moves, the labels already out in the world break or point somewhere stale, and the only fix is a reprint.\n\nWe work on QRON, which generates Living QR codes for packaging and labels. The code stays the same and the destination it resolves to can be changed later, so a URL change doesn't force new artwork.\n\nThe obvious worry with a re-pointable code is trust, so a stored scan can carry an Ed25519 signature that a verifier can check. To be precise about the limits: the qron.space host only forwards a scan and does not verify the signature, and an anonymous generate is not a stored signed scan.\n\nFor those of you running packaging or label programs: do you use redirect services, short links you control, or just reprint? Curious what has actually held up.\n\nhttps://qron.space/?utm_source=reddit&utm_medium=social&utm_campaign=living-qr-reprint&utm_content=a\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "A QR code on a pack is a promise about a URL. When the campaign page moves, every label already printed breaks or goes stale, and the fix is a reprint.",
+    "QRON generates Living QR codes for packaging and labels: the code stays put, the destination can change later. A URL change doesn't have to mean new artwork.",
+    "A re-pointable code needs trust, so a stored scan can carry an Ed25519 signature a verifier can check. The qron.space host forwards the scan and doesn't verify it. https://qron.space/?utm_source=twitter&utm_medium=social&utm_campaign=living-qr-reprint&utm_content=a"
+  ],
+  "experiment": {
+    "campaign": "living-qr-reprint",
+    "variant": "a",
+    "hypothesis": "a reprint-pain hook (labels already printed break when a URL moves) drives more click-through to qron.space than a trust-first hook; variant b will change only the hook"
+  }
+}
