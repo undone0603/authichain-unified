@@ -14,18 +14,36 @@ Status: proposed policy on draft PR #2368. This document is operational guidance
 
 - **Read-only checkout:** For a legacy CircleCI GitHub OAuth pipeline, permit only the provider-issued **read-only key scoped to this one repository** to fetch source. The current CircleCI config has six `checkout` steps and does not contain `add_ssh_keys` or attached contexts. This is source inspection, **not** confirmation of the actual key's permissions or CircleCI account settings.
 - **No PR write path:** Never attach a repository-write key, user/machine key, deployment key to a private infrastructure host, production secrets, or a broad GitHub token to PR jobs. Disable SSH debug sessions and remove extra keys from CircleCI project settings unless specifically required for a separately protected trusted job. Rotate any improperly scoped key and investigate its audit history.
-- **Separate the bypass:** The active GitHub ruleset `main-no-direct-push` (ID `24073494`) includes `actor_type=DeployKey, bypass_mode=always`. That is a **bypass capability, not a moat**. GitHub's actor rule is not restricted by fingerprint in the observed ruleset. A read-only checkout key cannot push, but **any write-capable key covered by the bypass could defeat the pull-request control**. Audit *all* deploy keys and whether each has write access before treating this configuration as safe.
+- **Separate the bypass:** The active GitHub ruleset `main-no-direct-push` (ID `24073494`) includes `actor_type=DeployKey, bypass_mode=always`. That is a **bypass capability, not a moat**. GitHub's actor rule is not restricted by fingerprint in the observed ruleset. A read-only checkout key cannot push, but **any write-capable key covered by the bypass could defeat the pull-request control**. Audit **all** deploy keys and whether each has write access before treating this configuration as safe.
 - **Recommended enforcement:** Remove the blanket DeployKey bypass from the ruleset after administrator review, keeping the narrow read-only CircleCI checkout key. If a trusted automation truly needs write privileges, use a separately scoped, auditable GitHub App/automation identity with protected merge and required-check enforcement; do not attach it to PR test jobs. No ruleset or deploy-key mutation is authorized by this document.
 - **Verify in provider consoles:** GitHub repo Settings → Deploy keys: list keys, created/last-used information when available, read/write flag, owner, purpose and fingerprint. CircleCI Project Settings → SSH Keys, environment variables, contexts, pipeline source and Advanced Settings: compare fingerprints without revealing private key material. Include SSH/OIDC trust and fork-trigger coverage. The connected APIs in this chat cannot inspect either account's sensitive key settings; record **unverified** rather than declaring a completed security audit.
 - **Release invariant:** A key must not independently convert a failed, absent, pending, or skipped required check into an accepted merge. Maintain the PR/CI/release separation regardless of the key used for checkout.
 
 ## Proportional acceptance by actual changed surface
 
-| Tier | Typical scope | Minimum acceptance | When independent human review is needed |
-| --- | --- | --- | --- |
-| A: low-risk | Docs, comments, examples, ordinary test descriptions, no executable or policy/permission changes | Diff reviewed by an authorized maintainer; relevant formatting or targeted checks where applicable; existing PR protections | Not a blanket requirement |
-| B: ordinary source and **non-privilege-expanding** CI maintenance | App features, standard tests, CI dependency/cache/job ordering, additions to existing isolated test pipelines | Exact-head relevant tests (and new aggregate where claimed); credential-isolation evidence for any PR-executing CI; authorized maintainer records acceptance | Only when the actual diff changes a trust boundary or active rules require it |
-| C: security, money, or operational privilege boundary | Authentication, signatures, permissions, CI runner trust/routing or token access, automatic merge, branch-rule bypass, checkout charging/settlement, customer-data access, production configuration/deployment | Exact-head appropriate regression/security checks; confirmed isolation; independent qualified human security approval; owner/operator approval for any production or payment activation | Required |
+### Tier A: low-risk
+
+Scope: Docs, comments, examples, and ordinary test descriptions with no executable or policy/permission changes.
+
+Acceptance: An authorized maintainer reviews the diff, completes relevant formatting or targeted checks where applicable, and complies with existing PR protections.
+
+Independent human review: Not a blanket requirement.
+
+### Tier B: ordinary source and non-privilege-expanding CI maintenance
+
+Scope: App features, standard tests, CI dependency/cache/job ordering, and additions to existing isolated test pipelines.
+
+Acceptance: Exact-head relevant tests (and any new aggregate where claimed), credential-isolation evidence for any PR-executing CI, and recorded acceptance by an authorized maintainer.
+
+Independent human review: Only when the actual diff changes a trust boundary or active rules require it.
+
+### Tier C: security, money, or operational privilege boundary
+
+Scope: Authentication, signatures, permissions, CI runner trust/routing or token access, automatic merge, branch-rule bypass, checkout charging/settlement, customer-data access, and production configuration/deployment.
+
+Acceptance: Exact-head appropriate regression/security checks, confirmed isolation, qualified independent human security approval, and owner/operator approval for any production or payment activation.
+
+Independent human review: Required.
 
 **Escalation rules:** Classify by behavior, not filename or title. A YAML-only change that routes PRs to a privileged runner is Tier C. A CircleCI migration is Tier B **only after** proving that it does not grant new privilege, exposure, write permissions, privileged contexts, or automatic production effects; otherwise classify it Tier C. Uncertainty defaults to the higher tier until resolved.
 
