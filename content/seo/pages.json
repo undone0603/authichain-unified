@@ -11909,5 +11909,261 @@
         }
       ]
     }
+  },
+  {
+    "slug": "battery-passport-second-life-repurposing-new-passport",
+    "keyword": "battery passport second life repurposing new passport",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Battery Passport Second Life Repurposing New | AuthiChain",
+    "metaDescription": "Under the EU Batteries Regulation, a battery that is repurposed, remanufactured or prepared for reuse needs a new passport linked to the original, issued by.",
+    "h1": "Battery Passport Second Life Repurposing New Passport",
+    "bodyHtml": "<p>Under the EU Batteries Regulation, a battery that is repurposed, remanufactured or prepared for reuse needs a new passport linked to the original, issued by whoever carries out that operation; the passport requirement for EV, industrial (above 2 kWh) and light-means-of-transport batteries starts on 18 February 2027.</p><h2>Why AuthiChain</h2><ul><li>A new record can name the original record by its hash, so the link between a second-life battery and its first-life passport is checkable rather than asserted</li><li>Each operator signs its own record with its own Ed25519 key, so a verifier sees who made each statement and can check each one offline</li><li>The spec has no field that certifies a battery fit for reuse; physical inspection and testing stay outside any passport format</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><p>Want to see a fictional walkthrough first? <a href=\"https://authichain.com/battery-passport/sample-audit\">Read the fictional e-bike walkthrough</a>.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Who issues the new passport for a repurposed battery?</h3><p>The economic operator that performs the repurposing, remanufacturing or preparation for reuse. Confirm the article and the exact definitions in Regulation (EU) 2023/1542 before you rely on this summary.</p><h3>Does a verified record show a used battery is safe to reuse?</h3><p>No. A signature shows who made a statement and that it has not changed since. Whether a battery is fit for a second application is decided by inspection and testing.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Battery Passport Second Life Repurposing New Passport",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Under the EU Batteries Regulation, a battery that is repurposed, remanufactured or prepared for reuse needs a new passport linked to the original, issued by whoever carries out that operation; the passport requirement for EV, industrial (above 2 kWh) and light-means-of-transport batteries starts on 18 February 2027.",
+          "url": "https://authichain.com/p/battery-passport-second-life-repurposing-new-passport"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Battery Passport Second Life Repurposing New Passport",
+              "item": "https://authichain.com/p/battery-passport-second-life-repurposing-new-passport"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Who issues the new passport for a repurposed battery?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The economic operator that performs the repurposing, remanufacturing or preparation for reuse. Confirm the article and the exact definitions in Regulation (EU) 2023/1542 before you rely on this summary."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a verified record show a used battery is safe to reuse?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. A signature shows who made a statement and that it has not changed since. Whether a battery is fit for a second application is decided by inspection and testing."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "run-verifiable-credential-verifier-against-conformance-suite",
+    "keyword": "run verifiable credential verifier against conformance suite",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Run Verifiable Credential Verifier Against | AuthiChain",
+    "metaDescription": "To test a verifier against the AuthiChain protocol, run it on the 28 adversarial fixtures: each fixture is a record with a known correct verdict (verified.",
+    "h1": "Run Verifiable Credential Verifier Against Conformance Suite",
+    "bodyHtml": "<p>To test a verifier against the AuthiChain protocol, run it on the 28 adversarial fixtures: each fixture is a record with a known correct verdict (verified, valid-unanchored or invalid), and the suite is validated against deliberately broken implementations so it demonstrably can fail.</p><h2>Why AuthiChain</h2><ul><li>protocol/SPEC.md §7 defines conformance as implementing §5 completely and returning only the three §5.1 verdicts</li><li>The reference verifier in protocol/verifier.mjs has no dependencies, so you can read it end to end before comparing your own output with it</li><li>Apache-2.0 with a patent grant means a competitor can implement the spec and run the same suite</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Do I need an AuthiChain account to run the suite?</h3><p>No. The spec, the reference verifier and the fixtures are public, and steps 1 to 4 of the verification procedure need no network access.</p><h3>Does passing the suite certify my verifier?</h3><p>No. It shows your verifier returns the expected verdicts on those 28 fixtures. It is a test result you can publish, not a certification issued by anyone.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Run Verifiable Credential Verifier Against Conformance Suite",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "To test a verifier against the AuthiChain protocol, run it on the 28 adversarial fixtures: each fixture is a record with a known correct verdict (verified, valid-unanchored or invalid), and the suite is validated against deliberately broken implementations so it demonstrably can fail.",
+          "url": "https://authichain.com/p/run-verifiable-credential-verifier-against-conformance-suite"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Run Verifiable Credential Verifier Against Conformance Suite",
+              "item": "https://authichain.com/p/run-verifiable-credential-verifier-against-conformance-suite"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do I need an AuthiChain account to run the suite?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. The spec, the reference verifier and the fixtures are public, and steps 1 to 4 of the verification procedure need no network access."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does passing the suite certify my verifier?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It shows your verifier returns the expected verdicts on those 28 fixtures. It is a test result you can publish, not a certification issued by anyone."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "tamper-evident-vs-tamper-proof-product-record",
+    "keyword": "tamper-evident vs tamper-proof product record",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Tamper-Evident Vs Tamper-Proof Product Record | AuthiChain",
+    "metaDescription": "A signed, anchored product record is tamper-evident, not tamper-proof: anyone can alter a copy, but the Ed25519 signature stops verifying and a recomputed.",
+    "h1": "Tamper-Evident Vs Tamper-Proof Product Record",
+    "bodyHtml": "<p>A signed, anchored product record is tamper-evident, not tamper-proof: anyone can alter a copy, but the Ed25519 signature stops verifying and a recomputed SHA-256 no longer matches the anchored hash, so the change shows up on any conforming verifier.</p><h2>Why AuthiChain</h2><ul><li>Steps 3 and 5 of protocol/SPEC.md §5 canonicalise the record and compare it to the signature and the anchored hash; one changed byte yields an invalid verdict</li><li>An anchor proves a hash was committed at a point in time; it does not prove the physical item exists or matches the record</li><li>A signature proves who asserted something, not that the assertion is true; an issuer can sign a false statement and it will verify</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can a record on a blockchain be altered?</h3><p>The anchored hash cannot be changed on a public ledger in practice, but the record itself lives elsewhere and can be edited. The edit is detectable because the edited record no longer hashes to the anchored value.</p><h3>What does tamper-evident not cover?</h3><p>It does not cover a record that was false when it was signed, a physical item swapped for a different one, or a compromised signing key; revocation is planned for v0.2.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Tamper-Evident Vs Tamper-Proof Product Record",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "A signed, anchored product record is tamper-evident, not tamper-proof: anyone can alter a copy, but the Ed25519 signature stops verifying and a recomputed SHA-256 no longer matches the anchored hash, so the change shows up on any conforming verifier.",
+          "url": "https://authichain.com/p/tamper-evident-vs-tamper-proof-product-record"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Tamper-Evident Vs Tamper-Proof Product Record",
+              "item": "https://authichain.com/p/tamper-evident-vs-tamper-proof-product-record"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can a record on a blockchain be altered?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The anchored hash cannot be changed on a public ledger in practice, but the record itself lives elsewhere and can be edited. The edit is detectable because the edited record no longer hashes to the anchored value."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does tamper-evident not cover?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It does not cover a record that was false when it was signed, a physical item swapped for a different one, or a compromised signing key; revocation is planned for v0.2."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "dpp-data-carrier-qr-code-vs-nfc-vs-rfid",
+    "keyword": "dpp data carrier qr code vs nfc vs rfid",
+    "brand": "QRON",
+    "domain": "qron.space",
+    "title": "DPP Data Carrier QR Code Vs Nfc Vs Rfid | QRON",
+    "metaDescription": "A QR code carrying a GS1 Digital Link URL is the data carrier QRON issues; it needs only a phone camera, costs nothing per unit beyond printing, and the.",
+    "h1": "DPP Data Carrier QR Code Vs Nfc Vs Rfid",
+    "bodyHtml": "<p>A QR code carrying a GS1 Digital Link URL is the data carrier QRON issues; it needs only a phone camera, costs nothing per unit beyond printing, and the signed record it points to verifies without an account.</p><h2>Why QRON</h2><ul><li>The identifier in the code is the GS1 Digital Link URL that protocol/SPEC.md §2 uses for item identity, so the same code serves a warehouse scanner and a consumer phone</li><li>NFC and RFID tags can carry the same URL, and the record behind it does not change with the carrier</li><li>Which carrier a product group must use is set in the delegated act for that group; confirm it there before you print</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. QRON packs from $29 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. QRON packs from $29 one-time.</p><h2>FAQ</h2><h3>Does the ESPR require a QR code specifically?</h3><p>The ESPR requires a data carrier linked to a unique product identifier, and the delegated act for each product group specifies the carrier type. Check the act for your group.</p><h3>Can I switch from QR to NFC later?</h3><p>The record is addressed by the identifier, not by the carrier, so a new carrier can point at the same URL. Printed codes already in the field would still need to resolve.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "QRON — DPP Data Carrier QR Code Vs Nfc Vs Rfid",
+          "provider": {
+            "@type": "Organization",
+            "name": "QRON",
+            "url": "https://qron.space"
+          },
+          "description": "A QR code carrying a GS1 Digital Link URL is the data carrier QRON issues; it needs only a phone camera, costs nothing per unit beyond printing, and the signed record it points to verifies without an account.",
+          "url": "https://qron.space/p/dpp-data-carrier-qr-code-vs-nfc-vs-rfid"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "QRON",
+              "item": "https://qron.space"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DPP Data Carrier QR Code Vs Nfc Vs Rfid",
+              "item": "https://qron.space/p/dpp-data-carrier-qr-code-vs-nfc-vs-rfid"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the ESPR require a QR code specifically?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The ESPR requires a data carrier linked to a unique product identifier, and the delegated act for each product group specifies the carrier type. Check the act for your group."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I switch from QR to NFC later?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The record is addressed by the identifier, not by the carrier, so a new carrier can point at the same URL. Printed codes already in the field would still need to resolve."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
