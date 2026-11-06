@@ -74,7 +74,7 @@ export const REPO_JWS_CLI =
 export const REPO_LIVE_JWKS_CLI =
   "node protocol/bin/authichain-verify.mjs --jwks jwks.json sample.record.json";
 export const JWKS_CLI_NOTE =
-  "Live npm authichain-verify@0.1.1 only accepts <record.json> [anchor.json]. --jwks and .jws crash with ENOENT: open '--jwks'. Use the repo CLI from an undone0603/authichain-unified checkout until >=0.2.0 is published to npm.";
+  "Published authichain-verify@0.1.1 on npm verifies <record.json> [anchor.json]; --jwks pinning and compact JWS checks are on main in protocol/bin/authichain-verify.mjs (unreleased on npm).";
 
 const HTML_PATHS = new Set([SAMPLE_PATH, `${SAMPLE_PATH}/`]);
 const ARTIFACT_PATHS = new Set([
@@ -678,7 +678,7 @@ console.log(await crypto.subtle.verify({ name: "Ed25519" }, key, Uint8Array.from
   <section class="estate-section" id="verify">
     <div class="wrap">
       <h2>Offline CLI verification</h2>
-      <p class="section-sub">Same checks as <a href="https://www.npmjs.com/package/authichain-verify"><code>authichain-verify</code></a> / <code>node protocol/verifier.mjs</code>. Nothing here contacts AuthiChain to decide the signature.</p>
+      <p class="section-sub">Same checks as <a href="https://www.npmjs.com/package/authichain-verify"><code>authichain-verify</code></a> (<code>0.1.1</code> on npm verifies the <code>did:key</code> record; <code>--jwks</code> pinning and compact JWS checks are in <code>protocol/bin/authichain-verify.mjs</code> on <code>main</code>, unreleased on npm). Nothing here contacts AuthiChain to decide the signature.</p>
 <pre class="sa-code"><code>curl -sO https://authichain.com/battery-passport/sample.record.json
 curl -sO https://authichain.com/battery-passport/sample.jwks.json
 curl -sO https://authichain.com/battery-passport/sample.jws
@@ -687,8 +687,7 @@ curl -sO https://authichain.com/battery-passport/sample.jws
 # Live npm authichain-verify@0.1.1 only accepts record.json [anchor.json]
 ${NPM_VERIFY_CLI}
 
-# --jwks / .jws are not on npm 0.1.1 (ENOENT: open '--jwks').
-# From an undone0603/authichain-unified checkout until >=0.2.0 is on npm:
+# --jwks is in protocol/bin/authichain-verify.mjs on main, not on npm 0.1.1 yet:
 ${REPO_JWKS_PIN_CLI}
 
 # Compact JWS against the demonstration JWKS. Expected verdict: valid-offline

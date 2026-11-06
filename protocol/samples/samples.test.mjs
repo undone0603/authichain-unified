@@ -153,7 +153,11 @@ describe('SAMPLE-ONLY key hygiene', () => {
     expect(bundle.offlineVerifier.jwksPinCli).not.toMatch(/^npx authichain-verify --jwks/);
     expect(bundle.offlineVerifier.jwsCli).not.toMatch(/^npx authichain-verify --jwks/);
     expect(bundle.offlineVerifier.jwksCliNote).toMatch(/0\.1\.1/);
-    expect(bundle.offlineVerifier.jwksCliNote).toMatch(/>=0\.2\.0/);
+    expect(bundle.offlineVerifier.jwksCliNote).toMatch(
+      /protocol\/bin\/authichain-verify\.mjs/
+    );
+    expect(bundle.offlineVerifier.jwksCliNote).toMatch(/on main/);
+    expect(bundle.offlineVerifier.jwksCliNote).toMatch(/unreleased on npm/);
   });
 
   it('battery-passport demonstration did:key is absent from live JWKS / issuer surfaces', () => {

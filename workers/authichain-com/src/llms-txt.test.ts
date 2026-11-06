@@ -24,7 +24,9 @@ describe("llms.txt", () => {
     expect(text).toContain("https://authichain.com/openapi.json");
     expect(text).toContain("https://authichain.com/mcp");
     expect(text).toContain("https://authichain.com/battery-passport");
-    expect(text).toContain("https://authichain.com/battery-passport/sample");
+    expect(text).toContain(
+      "Fictional Ed25519-signed LMT demonstration record (signed by bundled demo key https://authichain.com/battery-passport/sample.jwks.json, not live /.well-known/jwks.json; not an Article 77 passport): https://authichain.com/battery-passport/sample"
+    );
     expect(text).toContain("18 February 2027");
     expect(text).toContain("e-bike / LMT");
     expect(text).toContain(planPaymentLink("qron_launch"));

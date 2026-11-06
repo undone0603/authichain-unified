@@ -129,6 +129,12 @@ describe("battery passport demonstration sample", () => {
     expect(html).toContain(REPO_JWS_CLI);
     expect(html).toContain(REPO_LIVE_JWKS_CLI);
     expect(html).not.toContain("npx authichain-verify --jwks");
+    expect(html).toContain(
+      "protocol/bin/authichain-verify.mjs</code> on <code>main</code>, unreleased on npm"
+    );
+    expect(html).toContain(
+      "--jwks is in protocol/bin/authichain-verify.mjs on main, not on npm 0.1.1 yet"
+    );
     expect(html).toContain("if (ch !== &quot;1&quot;) break; sig.unshift(0);");
     expect(html).toContain("crypto.subtle.verify");
     expect(html).toContain(`$${plan.price}`);

@@ -27,7 +27,7 @@
     "npmCli": "npx authichain-verify sample.record.json",
     "jwksPinCli": "node protocol/bin/authichain-verify.mjs --jwks sample.jwks.json sample.record.json",
     "jwsCli": "node protocol/bin/authichain-verify.mjs --jwks sample.jwks.json sample.jws",
-    "jwksCliNote": "Live npm authichain-verify@0.1.1 only accepts <record.json> [anchor.json]. --jwks and .jws crash with ENOENT: open '--jwks'. Use the repo CLI from an undone0603/authichain-unified checkout until >=0.2.0 is published to npm.",
+    "jwksCliNote": "Published authichain-verify@0.1.1 on npm verifies <record.json> [anchor.json]; --jwks pinning and compact JWS checks are on main in protocol/bin/authichain-verify.mjs (unreleased on npm).",
     "expectedRecordVerdict": "valid-unanchored",
     "expectedJwsVerdict": "valid-offline"
   },
