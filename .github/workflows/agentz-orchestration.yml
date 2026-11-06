@@ -89,6 +89,12 @@ jobs:
           else
             echo "ping_agentz=true" >> "$GITHUB_OUTPUT"
           fi
+      - name: Restore full tree after sparse checkout
+        if: always()
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
 
   # ── Phase 0: Live claw + AgentZ (health; architect dry-run if keyed) ────────
   ping-claw-agentz:
