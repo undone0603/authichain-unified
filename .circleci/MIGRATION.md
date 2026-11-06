@@ -1,34 +1,38 @@
 # Staged CircleCI migration and recovery
 
-This draft was reconciled against `main` at `0fa5f1829ff6c19a6522e0bf6aefffc90ad5f1ef` following the merge conflict in PR #2368. It changes only the CI configuration and this document. The prior Launch/Farm pricing and checkout edits are intentionally **not** part of this CI migration; review those in separate feature/checkout PRs rather than overwriting the currently green main branch.
+This draft was reconciled against `main` at `0fa5f1829ff6c19a6522e0bf6aefffc90ad5f1ef` following the merge conflict in PR #2368. Checkout, pricing, and Launch/Farm behavior changes are deliberately out of scope. Follow [risk-based change and release gates](../.github/CHANGE_RELEASE_GATES.md) rather than requiring the same approvals for every change.
 
-## Exact coverage
+## Scope and evidence
 
-- Existing successful CircleCI jobs remain: `quality`, `typecheck-ratchet`, `test-workers`, `test-other`, and `build`. Main at `0fa5f1829ff6c19a6522e0bf6aefffc90ad5f1ef` showed success for all five in CircleCI.
-- New `extras` checks the Drizzle migration source of truth and runs AgentZ pytest in a dedicated Python venv.
-- New `main-quality-gate` depends on all six jobs. Do **not** make it required until its real integration-provided check name is observed and the gate genuinely passes.
-- Each source-executing job verifies the checked-out revision matches `CIRCLE_SHA1` before installing repository dependencies.
-- Shared pnpm caches were removed to avoid unreviewed cross-branch cache reuse. The existing known-green large executor and main job commands remain intact.
-- The existing `test-workers` job is the first prerequisite for other jobs, to avoid wasting credits on downstream work after worker failures.
-- No deploy, production, payment, or secret-bearing job is added. No existing GitHub job is disabled.
+- The five core CircleCI jobs on `main` (`quality`, `typecheck-ratchet`, `test-workers`, `test-other`, and `build`) reported success at `0fa5f1829ff6c19a6522e0bf6aefffc90ad5f1ef`. **This is not evidence for this PR head.**
+- The draft preserves those jobs and adds `extras`: Drizzle migration-source checking plus AgentZ pytest in a dedicated Python venv.
+- The new `main-quality-gate` depends on all six jobs. Its actual provider-reported name, success, and correct branch-protection source must be verified before it becomes a required check.
+- Each repository-code-executing job compares checkout HEAD to `CIRCLE_SHA1` before installing dependencies. Cross-branch pnpm caches were removed on this draft.
+- `test-workers` runs first; dependent jobs do not start if it fails. No production deployment, signing, financial, merge, or credentials job was added. Existing GitHub workflows are unchanged.
 
-## Acceptance order
+## Risk classification for this PR
 
-1. Verify CircleCI project and org credits plus free-plan/OSS eligibility. Maintain the 5,000-credit reserve and disable paid overage/refill.
-2. Audit CircleCI environment variables, contexts, checkout keys, project tokens, OIDC trust, and fork settings. Confirm production credentials are inaccessible to PR code.
-3. Independently review YAML, checkout SHA verification, root-source test commands, required-job graph, cache policy, and source-only scope.
-4. On a credential-isolated eligible hosted executor, validate `.circleci/config.yml` with CircleCI CLI, run this PR's **exact head** and collect job IDs, logs and JUnit artifacts from all six jobs plus the aggregate.
-5. Audit effective main branch protections and their DeployKey bypass. Require independently attributable human APPROVED review on the exact head before merge. The repository ruleset currently shows zero mandatory approvals; the operator must establish real enforced protections rather than merely trusting that setting.
-6. After all gates pass, merge through reviewed protected path. Any actual production deployment needs a separate protected workflow and evidence.
+**Tier B, conditional.** A CI migration changes where untrusted repository source executes; it is eligible for ordinary maintainer acceptance **only after** independent evidence shows the new CircleCI project and hosted executor are credential-isolated and do not gain privileged contexts, deploy keys, broad repository tokens, OIDC cloud trust, production secrets, or self-hosted access. If any access expands or the boundary remains uncertain, escalate to **Tier C**, with qualified independent human security approval.
 
-## Not yet established
+This is not merely a documentation PR. A source-only review does not establish provider configuration, execution eligibility, or security containment.
 
-- CircleCI project credential isolation and exact-head migration CI.
-- GitHub Actions hosted billing eligibility or independent credential-isolated runner attestation.
-- An eligible independent human approval.
-- Effective branch protection independent of the active DeployKey bypass.
-- Production deployment authorization and post-deploy checks.
+## Shortest legitimate acceptance path
+
+1. Check CircleCI's actual free-plan eligibility, current credit balance, and the operator's 5,000-credit reserve. No paid overage/automatic upgrade or repeated full-suite runs without need.
+2. Inspect CircleCI project secrets, contexts, tokens/checkout key, SSH, OIDC trust, fork policies, runner class, and branch source; confirm PR code cannot access privileged credentials. Reuse a current attestation if still valid.
+3. Validate configuration syntax with the actual CircleCI CLI. Run the candidate's **exact head** in an eligible credential-free executor and collect actual statuses/logs, Drizzle/AgentZ pytest JUnit, all six jobs, and aggregate. No skipped/pending states counted as passes.
+4. If the config is non-privilege-expanding after step 2, obtain a recorded acceptance from an authorized maintainer and comply with **actual** enforced GitHub rules. A separate security review is optional for Tier B unless rules require it. If step 2 finds a trust-boundary change, obtain independent qualified human approval under Tier C instead.
+5. Merge through the authorized PR path only if required exact-head checks pass and effective branch protection is satisfied. GitHub Actions billing/runner recovery is **not** an extra mandatory gate if equivalent required checks genuinely run on safe CircleCI; do not silently remove enforced GitHub checks.
+6. Keep all production, payment, outbound, and auto-merge controls held. Any future release uses a separate protected decision and evidence record.
+
+## Known gaps as of this draft
+
+- No successful exact-head CircleCI run (including `extras` and `main-quality-gate`) on this migration candidate.
+- CircleCI project credential settings, current free credits, and fully isolated execution have not been verified from this connection.
+- GitHub Actions jobs remain queued/unavailable; do not send PR code to an unattested persistent runner.
+- Main's accessible ruleset shows zero required reviews and a DeployKey bypass; this risk is documented, **not repaired or verified as safe**.
+- No protected release or payment change is authorized or implied by this draft.
 
 ## Rollback
 
-Revert the migration commit only after reviewing its replacement checks; do not remove a failing required check merely to unblock a merge. No production changes are made by this draft.
+If the reviewed migration is later found unsafe or fails validation, revert the CI-only commit and restore approved required checks via the normal protected path. Never remove a failing required check merely to force a merge.
