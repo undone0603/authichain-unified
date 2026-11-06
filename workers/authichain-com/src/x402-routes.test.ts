@@ -97,9 +97,8 @@ describe("tryHandleX402", () => {
       )
     ).toBe(false);
     expect(body.humanCheckout.farmUsd).toBe(149);
-    expect(body.humanCheckout.farmPaymentLink).toBe(
-      "https://authichain.com/checkout/strainchain_farm"
-    );
+    // Unlisted Farm checkout must not be advertised by public x402 discovery.
+    expect(body.humanCheckout.farmPaymentLink).toBeUndefined();
     expect(body.humanCheckout.starterPaymentLink).toBe(
       "https://authichain.com/checkout/starter"
     );
