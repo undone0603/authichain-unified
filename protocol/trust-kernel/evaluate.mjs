@@ -84,7 +84,7 @@ export function evaluate(input = {}) {
   const crypto = input.crypto || {};
   const evidence = [...(input.evidence || []), ...((att && att.evidence) || [])];
 
-  if (!input.objectFound && !att && !input.crypto) {
+  if (input.objectFound === false || (!input.objectFound && !att && !input.crypto)) {
     return {
       decision: "not_found",
       vector,
@@ -135,11 +135,21 @@ export function evaluate(input = {}) {
     vector.revocation = "failed";
     reasons.push("attestation_revoked");
   }
+  if (["inactive", "suspended", "blocked", "pending", "disabled"].includes(att?.status)) {
+    vector.revocation = "failed";
+    reasons.push("attestation_inactive_or_blocked");
+  }
   if (att?.status === "expired" || att?.decision === "expired") {
     vector.freshness = "failed";
     reasons.push("attestation_expired");
   }
   if (att?.decision === "blocked") reasons.push("attestation_blocked");
+  // Contradictory record-level decisions must not be overridden by a
+  // caller-supplied positive crypto tuple. This is still NOT signature
+  // verification: trusted flags must be derived upstream.
+  if (att?.decision === "invalid" || att?.decision === "not_found") {
+    reasons.push("attestation_decision_conflict");
+  }
 
   const inspected = realEvidence.some((e) => e.type === "inspection");
   if (inspected) {
@@ -164,14 +174,30 @@ export function evaluate(input = {}) {
 
   let decision;
   if (reasons.includes("object_not_found")) decision = "not_found";
-  else if (reasons.includes("signature_invalid") || reasons.includes("issuer_untrusted"))
+  else if (
+    reasons.includes("signature_invalid") ||
+    reasons.includes("issuer_untrusted") ||
+    reasons.includes("identity_mismatch") ||
+    reasons.includes("attestation_decision_conflict")
+  )
     decision = "invalid";
-  else if (reasons.includes("attestation_revoked") || reasons.includes("attestation_blocked"))
+  else if (
+    reasons.includes("attestation_revoked") ||
+    reasons.includes("attestation_blocked") ||
+    reasons.includes("attestation_inactive_or_blocked")
+  )
     decision = "blocked";
   else if (reasons.includes("attestation_expired")) decision = "expired";
   else if (vector.scan_behavior === "anomalous" || att?.decision === "anomaly")
     decision = "anomaly";
-  else if (vector.signature === "verified" && vector.revocation === "clear")
+  else if (
+    input.objectFound === true &&
+    vector.signature === "verified" &&
+    vector.issuer === "verified" &&
+    vector.identity === "verified" &&
+    crypto.statusActive === true &&
+    vector.revocation === "clear"
+  )
     decision = "verified";
   else decision = "invalid";
 
