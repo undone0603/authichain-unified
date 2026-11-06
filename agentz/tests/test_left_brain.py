@@ -1778,6 +1778,24 @@ def test_priority_score_rejects_nonfinite_floats():
         assert not (isinstance(poisoned["score"], float) and not math.isfinite(poisoned["score"]))
 
 
+def test_priority_score_rejects_unrepresentable_arithmetic():
+    cases = (
+        (1e308, 1e308, 1, 1, 1, 1),  # numerator overflow
+        (1, 1, 1, 1e-300, 1e-300, 1e-300),  # denominator underflow
+        (10**400, 1, 1, 1, 1, 1),  # float conversion overflow
+        (1, 1, 1, 1e308, 1e308, 1),  # denominator overflow
+        (1e-300, 1e-300, 1, 1, 1, 1),  # numerator underflow
+        (1e308, 1, 1, 1e-308, 1, 1),  # division overflow
+        (1e-300, 1, 1, 1, 1, 1),  # rounds to zero
+    )
+    for factors in cases:
+        result = priority_score(*factors)
+        assert result["rankable"] is False
+        assert result["score"] is None
+    ordinary = priority_score(4, 0.5, 2, 2, 2, 1)
+    assert ordinary == {"rankable": True, "score": 1.0, "reason": "ranked"}
+
+
 def test_a_zero_value_opportunity_does_not_move_the_stage(tmp_path: Path):
     """A zero value, probability, or urgency is not rankable, so it does not advance."""
     for scored in (

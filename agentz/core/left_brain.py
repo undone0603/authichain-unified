@@ -144,26 +144,30 @@ def priority_score(
     risk: float,
     reversibility: float,
 ) -> dict[str, Any]:
-    """(Value x Probability x Urgency) / (Cost x Risk x Reversibility)."""
-    numerator = (value, probability, urgency)
-    denominator = (cost, risk, reversibility)
-    factors = numerator + denominator
+    """Rank only positive factors with finite intermediate and final results."""
+    factors = (value, probability, urgency, cost, risk, reversibility)
     if any(not isinstance(item, (int, float)) or isinstance(item, bool) for item in factors):
         return {"rankable": False, "score": None, "reason": "priority factors must be numbers"}
-    if any(not math.isfinite(float(item)) for item in factors):
-        return {
-            "rankable": False,
-            "score": None,
-            "reason": "priority factors must be finite numbers",
-        }
-    if any(item <= 0 for item in factors):
-        return {
-            "rankable": False,
-            "score": None,
-            "reason": "every priority factor must be positive",
-        }
-    score = (value * probability * urgency) / (cost * risk * reversibility)
-    return {"rankable": True, "score": round(float(score), 6), "reason": "ranked"}
+    try:
+        values = tuple(float(item) for item in factors)
+    except (OverflowError, TypeError, ValueError):
+        return {"rankable": False, "score": None, "reason": "priority factors must be finite numbers"}
+    if any(not math.isfinite(item) for item in values):
+        return {"rankable": False, "score": None, "reason": "priority factors must be finite numbers"}
+    if any(item <= 0 for item in values):
+        return {"rankable": False, "score": None, "reason": "every priority factor must be positive"}
+    try:
+        numerator = values[0] * values[1] * values[2]
+        denominator = values[3] * values[4] * values[5]
+        if not math.isfinite(numerator) or not math.isfinite(denominator) or denominator <= 0:
+            return {"rankable": False, "score": None, "reason": "priority arithmetic must remain finite and positive"}
+        score = numerator / denominator
+        rounded = round(score, 6)
+    except (OverflowError, ZeroDivisionError):
+        return {"rankable": False, "score": None, "reason": "priority arithmetic must remain finite and positive"}
+    if not math.isfinite(score) or score <= 0 or rounded <= 0:
+        return {"rankable": False, "score": None, "reason": "priority arithmetic must remain finite and positive"}
+    return {"rankable": True, "score": rounded, "reason": "ranked"}
 
 
 def separate_value(raw: Mapping[str, Any] | None) -> dict[str, float | None]:
