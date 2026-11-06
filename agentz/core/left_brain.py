@@ -11,6 +11,7 @@ change a guardrail, or book revenue.
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -109,16 +110,29 @@ _OPTIMIZATION_FIELDS = (
 _FAILURE_LIMIT = 2
 
 
+def _claim_key(text: str) -> str:
+    """One claim identity. Case and internal spacing do not make a second claim."""
+    return " ".join(text.split()).casefold()
+
+
 def classify_facts(signal: Mapping[str, Any] | None) -> dict[str, list[str]]:
-    """Split a signal into fact classes. Non-facts never enter verified facts."""
+    """Split a signal into fact classes. Non-facts never enter verified facts.
+
+    Caller-labeled verified facts still need a non-empty evidence intersection.
+    Omitting the evidence key, or supplying an empty one, leaves those claims unverified.
+    """
     raw = signal if isinstance(signal, Mapping) else {}
     buckets = {kind: _strings(raw.get(kind)) for kind in FACT_KINDS}
-    blocked = set(buckets["observations"])
-    blocked.update(buckets["assumptions"])
-    blocked.update(buckets["estimates"])
-    blocked.update(buckets["hypotheses"])
-    blocked.update(buckets["unknowns"])
-    buckets["verified_facts"] = [item for item in buckets["verified_facts"] if item not in blocked]
+    blocked = {
+        _claim_key(item)
+        for kind in FACT_KINDS
+        if kind != "verified_facts"
+        for item in buckets[kind]
+    }
+    kept = [item for item in buckets["verified_facts"] if _claim_key(item) not in blocked]
+    support = {_claim_key(item) for item in _strings(raw.get("evidence"))}
+    kept = [item for item in kept if _claim_key(item) in support]
+    buckets["verified_facts"] = kept
     return buckets
 
 
@@ -133,13 +147,20 @@ def priority_score(
     """(Value x Probability x Urgency) / (Cost x Risk x Reversibility)."""
     numerator = (value, probability, urgency)
     denominator = (cost, risk, reversibility)
-    if any(not isinstance(item, (int, float)) or isinstance(item, bool) for item in numerator + denominator):
+    factors = numerator + denominator
+    if any(not isinstance(item, (int, float)) or isinstance(item, bool) for item in factors):
         return {"rankable": False, "score": None, "reason": "priority factors must be numbers"}
-    if any(item < 0 for item in numerator) or any(item <= 0 for item in denominator):
+    if any(not math.isfinite(float(item)) for item in factors):
         return {
             "rankable": False,
             "score": None,
-            "reason": "cost, risk, and reversibility must be positive, and the numerator cannot be negative",
+            "reason": "priority factors must be finite numbers",
+        }
+    if any(item <= 0 for item in factors):
+        return {
+            "rankable": False,
+            "score": None,
+            "reason": "every priority factor must be positive",
         }
     score = (value * probability * urgency) / (cost * risk * reversibility)
     return {"rankable": True, "score": round(float(score), 6), "reason": "ranked"}
@@ -295,9 +316,38 @@ class LeftBrain:
                 reason=" ".join(reasons) or "The cycle stopped.",
             )]
             base["mode"] = "STOP"
+            _note_decision_accuracy(base["optimization"], True)
+            _note_execution_success(base["optimization"], base["verification"]["executed"] is True)
+            _note_verification_rate(base["optimization"], base["verification"]["success"] is True)
+            _note_recovery_rate(
+                base["optimization"],
+                bool(base["verification"]["success"] is True and self.failures > 0),
+            )
+            _note_human_escalation_rate(base["optimization"], data)
+            _note_mission_violations(
+                base["optimization"],
+                data,
+                violated=True if "mission_drift" in risks else None,
+            )
+            _note_unauthorized_actions(
+                base["optimization"],
+                data,
+                unauthorized=True if any(
+                    name in risks for name in ("authority_violation", "authority_boundary")
+                ) else None,
+            )
+            _note_realized_revenue(base["optimization"], economics)
+            _note_verified_value(base["optimization"], data)
+            _note_net_value(base["optimization"], data)
             return base
         if not _worthwhile(data):
             base["execution"] = {"status": "idle", "attempts": self.execution_attempts}
+            _note_human_escalation_rate(base["optimization"], data)
+            _note_mission_violations(base["optimization"], data)
+            _note_unauthorized_actions(base["optimization"], data)
+            _note_realized_revenue(base["optimization"], economics)
+            _note_verified_value(base["optimization"], data)
+            _note_net_value(base["optimization"], data)
             return base
 
         ranked = _rank(data.get("opportunities"))
@@ -314,8 +364,9 @@ class LeftBrain:
             if any(row["rankable"] for row in ranked):
                 top = next(row for row in ranked if row["rankable"])
                 if _asks_for_spend(top):
-                    base["risks"] = ["abnormal_spending"]
-                    record["reason"] = "The opportunity asks to spend. Spend is denied."
+                    risk, reason = _spend_or_authority(top)
+                    base["risks"] = [risk]
+                    record["reason"] = reason
                 else:
                     base["risks"] = ["resource_exhaustion"]
                     record["reason"] = "Rankable work does not fit the resources still available."
@@ -323,19 +374,42 @@ class LeftBrain:
                 base["mode"] = "STOP"
                 record["decision"] = "stop"
                 base["execution"] = {"status": "stopped", "attempts": self.execution_attempts}
-                base["resources"] = self._resource_view(data.get("resources"), top)
+                named = None if base["risks"] == ["resource_exhaustion"] else top
+                base["resources"] = self._resource_view(data.get("resources"), named)
+                if (
+                    base["risks"] in (["abnormal_spending"], ["resource_exhaustion"])
+                    or _is_founder_law_rewrite(top)
+                    or _is_send(top)
+                    or _is_deploy(top)
+                    or _is_guardrail_change(top)
+                    or _is_irreversible_commitment(top)
+                    or _is_mode_auto(top)
+                ):
+                    _note_known_stop_metrics(base, data, economics, self.failures)
                 return base
             record["decision"] = "withhold"
             record["reason"] = "No supplied opportunity is rankable within the resources on hand."
             base["execution"] = {"status": "withheld", "attempts": self.execution_attempts}
+            _note_known_stop_metrics(base, data, economics, self.failures)
             return base
         if _asks_for_spend(choice):
-            base["risks"] = ["abnormal_spending"]
+            risk, reason = _spend_or_authority(choice)
+            base["risks"] = [risk]
             base["stopped"] = True
             base["mode"] = "STOP"
             record["decision"] = "stop"
-            record["reason"] = "The opportunity asks to spend. Spend is denied."
+            record["reason"] = reason
             base["execution"] = {"status": "stopped", "attempts": self.execution_attempts}
+            if (
+                risk == "abnormal_spending"
+                or _is_founder_law_rewrite(choice)
+                or _is_send(choice)
+                or _is_deploy(choice)
+                or _is_guardrail_change(choice)
+                or _is_irreversible_commitment(choice)
+                or _is_mode_auto(choice)
+            ):
+                _note_known_stop_metrics(base, data, economics, self.failures)
             return base
         if not _fits(choice, resources["available"]):
             base["risks"] = ["resource_exhaustion"]
@@ -344,14 +418,66 @@ class LeftBrain:
             record["decision"] = "stop"
             record["reason"] = "The highest-value opportunity does not fit the resources still available."
             base["execution"] = {"status": "stopped", "attempts": self.execution_attempts}
+            _note_known_stop_metrics(base, data, economics, self.failures)
             return base
 
         action = str(choice.get("action") or "read_state")
         record["decision"] = action
         if action == "read_state":
+            supplied_id = data.get("decision_id")
+            if isinstance(supplied_id, str) and supplied_id.strip() and supplied_id.strip() in self.applied:
+                record["reason"] = "This decision already ran. It was not repeated."
+                base["execution"] = {
+                    "status": "idempotent_skip",
+                    "attempts": self.execution_attempts,
+                    "decision_id": supplied_id.strip(),
+                }
+                base["risks"] = []
+                _note_known_stop_metrics(base, data, economics, self.failures)
+                return base
+            missing = _missing_prerequisites(choice, self.applied)
+            if missing:
+                decision_id = _decision_id(data, action, gate_context)
+                record["decision"] = "withhold"
+                record["reason"] = "A prerequisite has not been completed. The state read did not run."
+                base["execution"] = {
+                    "status": "prerequisite_blocked",
+                    "attempts": self.execution_attempts,
+                    "missing": missing,
+                    "decision_id": decision_id,
+                }
+                _note_known_stop_metrics(base, data, economics, self.failures)
+                return base
             record["reason"] = "A state read is the smallest evidence step. It does not change the stage."
             base["verification"] = _verification(True, False, True, [state["current_stage"]], economics)
             base["execution"] = {"status": "read", "attempts": self.execution_attempts}
+            _note_decision_accuracy(base["optimization"], True)
+            _note_execution_success(base["optimization"], base["verification"]["executed"] is True)
+            _note_verification_rate(base["optimization"], base["verification"]["success"] is True)
+            _note_recovery_rate(
+                base["optimization"],
+                bool(base["verification"]["success"] is True and self.failures > 0),
+            )
+            _note_cost_per_useful_outcome(base["optimization"], True, choice.get("cost"))
+            _note_resource_efficiency(base["optimization"], True, choice.get("cost"))
+            _note_human_escalation_rate(base["optimization"], data)
+            _note_mission_violations(base["optimization"], data)
+            _note_unauthorized_actions(base["optimization"], data)
+            _note_realized_revenue(base["optimization"], economics)
+            _note_verified_value(base["optimization"], data)
+            _note_net_value(base["optimization"], data)
+            self._consume(choice)
+            view = self._resource_view(data.get("resources"), choice)
+            base["resources"] = view
+            base["state"] = self._read_state(
+                gate_context,
+                economics=economics,
+                approval=data.get("approval"),
+                resources=view,
+                opportunities=data.get("opportunities"),
+            )
+            if isinstance(supplied_id, str) and supplied_id.strip():
+                self.applied.add(supplied_id.strip())
             return base
         if action != "advance_if_gates_pass":
             record["decision"] = "stop"
@@ -360,11 +486,13 @@ class LeftBrain:
             base["stopped"] = True
             base["risks"] = ["unrecognized_action"]
             base["execution"] = {"status": "stopped", "attempts": self.execution_attempts}
+            _note_known_stop_metrics(base, data, economics, self.failures)
             return base
         if data.get("approval") is not True:
             record["decision"] = "withhold"
             record["reason"] = "The state machine can advance only with explicit approval, and only if its gates pass."
             base["execution"] = {"status": "approval_required", "attempts": self.execution_attempts}
+            _note_known_stop_metrics(base, data, economics, self.failures)
             return base
 
         other = _other_brain(data)
@@ -394,6 +522,7 @@ class LeftBrain:
             }
             base["verification"] = _verification(False, False, False, [], economics)
             base["execution"] = {"status": "escalated", "attempts": self.execution_attempts}
+            _note_known_stop_metrics(base, data, economics, self.failures, escalated=True)
             return base
 
         decision_id = _decision_id(data, action, gate_context)
@@ -405,6 +534,20 @@ class LeftBrain:
                 "decision_id": decision_id,
             }
             base["risks"] = []
+            _note_known_stop_metrics(base, data, economics, self.failures)
+            return base
+
+        missing = _missing_prerequisites(choice, self.applied)
+        if missing:
+            record["decision"] = "withhold"
+            record["reason"] = "A prerequisite has not been completed. The advance did not run."
+            base["execution"] = {
+                "status": "prerequisite_blocked",
+                "attempts": self.execution_attempts,
+                "missing": missing,
+                "decision_id": decision_id,
+            }
+            _note_known_stop_metrics(base, data, economics, self.failures)
             return base
 
         firewall = assess_workflow(
@@ -438,6 +581,17 @@ class LeftBrain:
             base["risks"] = ["execution_failure"]
             base["verification"] = _verification(False, False, False, [str(exc)], economics)
             base["execution"] = {"status": "failed", "attempts": self.execution_attempts}
+            _note_decision_accuracy(base["optimization"], True)
+            _note_execution_success(base["optimization"], base["verification"]["executed"] is True)
+            _note_verification_rate(base["optimization"], base["verification"]["success"] is True)
+            _note_recovery_rate(
+                base["optimization"],
+                bool(base["verification"]["success"] is True and self.failures > 0),
+            )
+            _note_human_escalation_rate(base["optimization"], data)
+            _note_mission_violations(base["optimization"], data)
+            _note_unauthorized_actions(base["optimization"], data)
+            _note_realized_revenue(base["optimization"], economics)
             return base
 
         reread = LaunchStateMachine(state_file=self.sm.state_file)
@@ -472,6 +626,12 @@ class LeftBrain:
             if self.failures >= _FAILURE_LIMIT:
                 base["risks"] = ["repeated_failures"]
                 base["stopped"] = True
+                base["mode"] = "STOP"
+                record["decision"] = "stop"
+                record["reason"] = (
+                    "The state machine did not advance. No success is claimed. "
+                    "Repeated failures reached the limit. The cycle stopped."
+                )
         view = self._resource_view(data.get("resources"), choice)
         base["resources"] = view
         base["state"] = self._read_state(
@@ -483,7 +643,7 @@ class LeftBrain:
         )
         base["verification"] = _verification(True, changed, after == self.sm.current_stage, evidence, economics)
         base["verification"]["success"] = verified
-        _note_decision_accuracy(base["optimization"], verified)
+        _note_decision_accuracy(base["optimization"], verified or record.get("decision") == "stop")
         _note_execution_success(base["optimization"], base["verification"]["executed"] is True)
         _note_verification_rate(base["optimization"], verified)
         recovered_now = bool(verified and self.failures > 0)
@@ -494,6 +654,8 @@ class LeftBrain:
         _note_verified_value(base["optimization"], data)
         _note_net_value(base["optimization"], data)
         _note_human_escalation_rate(base["optimization"], data)
+        _note_mission_violations(base["optimization"], data)
+        _note_unauthorized_actions(base["optimization"], data)
         base["economics"] = economics
         base["execution"] = {
             "status": "advanced" if verified else "failed",
@@ -580,16 +742,17 @@ def cycle(
 
 
 def _unverified_claims(data: Mapping[str, Any]) -> bool:
-    """True when a verified fact is also an observation, assumption, estimate, hypothesis, or unknown."""
-    verified = set(_strings(data.get("verified_facts")))
+    """True when a caller-labeled verified fact lacks evidence or collides with a non-fact."""
+    verified = {_claim_key(item) for item in _strings(data.get("verified_facts"))}
     if not verified:
         return False
     for kind in FACT_KINDS:
         if kind == "verified_facts":
             continue
-        if verified.intersection(_strings(data.get(kind))):
+        if verified.intersection(_claim_key(item) for item in _strings(data.get(kind))):
             return True
-    return False
+    support = {_claim_key(item) for item in _strings(data.get("evidence"))}
+    return any(key not in support for key in verified)
 
 
 def _circular_execution(data: Mapping[str, Any]) -> bool:
@@ -650,7 +813,35 @@ def _note_live_metric(report: dict[str, Any], name: str, value: int) -> None:
     report[name] = value
 
 
+def _note_known_stop_metrics(
+    base: dict[str, Any],
+    data: Mapping[str, Any],
+    economics: Mapping[str, Any],
+    failures: int,
+    *,
+    escalated: bool = False,
+) -> None:
+    """Record internal control flags on a stop. This is not measured ground-truth performance.
+
+    Copy only explicit cash and value amounts supplied by the caller.
+    """
+    del escalated  # control-stop flag; do not invent an escalation rate
+    report = base["optimization"]
+    verified = base["verification"]["success"] is True
+    _note_decision_accuracy(report, True)
+    _note_execution_success(report, base["verification"]["executed"] is True)
+    _note_verification_rate(report, verified)
+    _note_recovery_rate(report, bool(verified and failures > 0))
+    _note_human_escalation_rate(report, data)
+    _note_mission_violations(report, data)
+    _note_unauthorized_actions(report, data)
+    _note_realized_revenue(report, economics)
+    _note_verified_value(report, data)
+    _note_net_value(report, data)
+
+
 def _note_decision_accuracy(report: dict[str, Any], correct: bool) -> None:
+    """Internal stop-control flag for this attempt. Not measured ground-truth performance."""
     _note_live_metric(report, "decision_accuracy", 1 if correct else 0)
 
 
@@ -722,15 +913,61 @@ def _note_net_value(report: dict[str, Any], data: Mapping[str, Any]) -> None:
     report["net_value"] = round(amount, 6)
 
 
-def _note_human_escalation_rate(report: dict[str, Any], data: Mapping[str, Any]) -> None:
-    """Copy an explicit escalation rate. Do not infer one from this attempt."""
+def _note_human_escalation_rate(
+    report: dict[str, Any],
+    data: Mapping[str, Any],
+    *,
+    escalated: bool | None = None,
+) -> None:
+    """Copy an explicit rate. A live decision records 1 or 0. Idle stays unknown."""
     if report.get("source") != "no_supplied_history":
         return
     raw = data.get("economics") if isinstance(data.get("economics"), Mapping) else {}
     amount = _number(raw.get("human_escalation_rate"))
-    if amount is None:
+    if amount is not None:
+        report["human_escalation_rate"] = round(amount, 6)
         return
-    report["human_escalation_rate"] = round(amount, 6)
+    if escalated is None:
+        return
+    report["human_escalation_rate"] = 1 if escalated else 0
+
+
+def _note_mission_violations(
+    report: dict[str, Any],
+    data: Mapping[str, Any],
+    *,
+    violated: bool | None = None,
+) -> None:
+    """Copy an explicit count. A live decision records 1 or 0. Idle stays unknown."""
+    if report.get("source") != "no_supplied_history":
+        return
+    raw = data.get("economics") if isinstance(data.get("economics"), Mapping) else {}
+    amount = _number(raw.get("mission_violations"))
+    if amount is not None:
+        report["mission_violations"] = round(amount, 6)
+        return
+    if violated is None:
+        return
+    report["mission_violations"] = 1 if violated else 0
+
+
+def _note_unauthorized_actions(
+    report: dict[str, Any],
+    data: Mapping[str, Any],
+    *,
+    unauthorized: bool | None = None,
+) -> None:
+    """Copy an explicit count. A live decision records 1 or 0. Idle stays unknown."""
+    if report.get("source") != "no_supplied_history":
+        return
+    raw = data.get("economics") if isinstance(data.get("economics"), Mapping) else {}
+    amount = _number(raw.get("unauthorized_actions"))
+    if amount is not None:
+        report["unauthorized_actions"] = round(amount, 6)
+        return
+    if unauthorized is None:
+        return
+    report["unauthorized_actions"] = 1 if unauthorized else 0
 
 
 def _mission_drift(data: Mapping[str, Any], stage: LaunchStage) -> bool:
@@ -758,7 +995,9 @@ def _worthwhile(data: Mapping[str, Any]) -> bool:
     if _one_text(data.get("bottleneck")) or _one_text(data.get("problem")):
         return True
     opportunities = data.get("opportunities")
-    return isinstance(opportunities, list) and any(isinstance(item, Mapping) for item in opportunities)
+    return isinstance(opportunities, list) and any(
+        isinstance(item, Mapping) and item for item in opportunities
+    )
 
 
 def _rank(opportunities: Any) -> list[dict[str, Any]]:
@@ -786,11 +1025,16 @@ def _rank(opportunities: Any) -> list[dict[str, Any]]:
             "cost": item.get("cost"),
             "risk": item.get("risk"),
             "reversibility": item.get("reversibility"),
+            "prerequisites": list(item.get("prerequisites")) if isinstance(item.get("prerequisites"), list) else [],
             "rankable": scored["rankable"],
             "score": scored["score"],
             "reason": scored["reason"],
         })
-    rows.sort(key=lambda row: (-(row["score"] if isinstance(row["score"], float) else -1.0), str(row["id"])))
+    rows.sort(key=lambda row: (
+        -(row["score"] if isinstance(row["score"], float) else -1.0),
+        0 if str(row.get("action") or "read_state") == "read_state" else 1,
+        str(row["id"]),
+    ))
     return rows
 
 
@@ -811,12 +1055,72 @@ def _fits(choice: Mapping[str, Any], available: Mapping[str, float]) -> bool:
     return True
 
 
+def _missing_prerequisites(choice: Mapping[str, Any], applied: set[str]) -> list[str]:
+    """Names that must already have been applied. An empty list blocks nothing."""
+    raw = choice.get("prerequisites")
+    if not isinstance(raw, list):
+        return []
+    missing: list[str] = []
+    for item in raw:
+        if not isinstance(item, str) or not item.strip():
+            continue
+        name = item.strip()
+        if name not in applied and name not in missing:
+            missing.append(name)
+    return missing
+
+
+def _is_founder_law_rewrite(choice: Mapping[str, Any]) -> bool:
+    action = str(choice.get("action") or "").strip().lower()
+    return action in {"founder_law_rewrite", "founder-law rewrite", "founder law rewrite"}
+
+
+def _is_send(choice: Mapping[str, Any]) -> bool:
+    return str(choice.get("action") or "").strip().lower() == "send"
+
+
+def _is_deploy(choice: Mapping[str, Any]) -> bool:
+    return str(choice.get("action") or "").strip().lower() == "deploy"
+
+
+def _is_guardrail_change(choice: Mapping[str, Any]) -> bool:
+    action = str(choice.get("action") or "").strip().lower()
+    return action in {"guardrail_change", "guardrail change"}
+
+
+def _is_irreversible_commitment(choice: Mapping[str, Any]) -> bool:
+    action = str(choice.get("action") or "").strip().lower()
+    return action in {"irreversible", "irreversible_commitment", "irreversible commitment"}
+
+
+def _is_mode_auto(choice: Mapping[str, Any]) -> bool:
+    action = str(choice.get("action") or "").strip().lower()
+    return action in {
+        "mode_auto",
+        "auto",
+        "agentz --mode auto",
+        "agentz mode auto",
+        "--mode auto",
+    }
+
+
 def _asks_for_spend(choice: Mapping[str, Any]) -> bool:
     if str(choice.get("action") or "").strip().lower() in _DENIED_REQUESTS:
         return True
     needs = choice.get("resources") if isinstance(choice.get("resources"), Mapping) else {}
     money = needs.get("money", 0)
     return isinstance(money, (int, float)) and not isinstance(money, bool) and money > 0
+
+
+def _spend_or_authority(choice: Mapping[str, Any]) -> tuple[str, str]:
+    """A non-spend denied action is an authority boundary. Money remains a spend."""
+    action = str(choice.get("action") or "").strip().lower()
+    if action in _DENIED_REQUESTS and action != "spend":
+        return (
+            "authority_violation",
+            "The opportunity asks to cross an authority boundary. That is denied.",
+        )
+    return ("abnormal_spending", "The opportunity asks to spend. Spend is denied.")
 
 
 def _decision_record(
@@ -955,21 +1259,43 @@ def _recommendations(rows: list[Mapping[str, Any]]) -> dict[str, Any]:
         useful = row.get("useful") is True
         verified = row.get("verified") is True
         executed = row.get("executed") is True
-        if useful and verified and executed:
+        violated = row.get("mission_violation") is True or row.get("unauthorized") is True
+        if useful and verified and executed and not violated:
             works.append(row_id)
-            success_count[row_id] = success_count.get(row_id, 0) + 1
-        if row.get("useful") is False or row.get("executed") is False:
+            if row.get("escalated") is not True:
+                success_count[row_id] = success_count.get(row_id, 0) + 1
+        if (
+            row.get("useful") is False
+            or row.get("executed") is False
+            or row.get("verified") is False
+        ):
             does_not.append(row_id)
-        if row.get("mission_violation") is True or row.get("unauthorized") is True:
+        if violated:
             stop.append(row_id)
             blocked.add(row_id)
         if row.get("escalated") is True:
             escalate.append(row_id)
         cost = _number(row.get("cost"))
-        if useful and cost is not None:
+        if (
+            useful
+            and verified
+            and executed
+            and not violated
+            and row.get("escalated") is not True
+            and cost is not None
+        ):
             useful_costs.append(cost)
         cash = _number(row.get("cash_realized"))
-        if cash is not None and (best_cash is None or cash > best_cash):
+        if (
+            cash is not None
+            and cash > 0
+            and not violated
+            and row.get("useful") is True
+            and row.get("verified") is True
+            and row.get("executed") is True
+            and row.get("escalated") is not True
+            and (best_cash is None or cash > best_cash)
+        ):
             best_cash = cash
             best_id = row_id
     too_much: list[str] | None = None
@@ -979,7 +1305,18 @@ def _recommendations(rows: list[Mapping[str, Any]]) -> dict[str, Any]:
         for row in rows:
             row_id = _row_id(row)
             cost = _number(row.get("cost"))
-            if row_id is None or cost is None or row.get("useful") is True:
+            if row_id is None or cost is None:
+                continue
+            violated_row = (
+                row.get("mission_violation") is True or row.get("unauthorized") is True
+            )
+            if (
+                row.get("useful") is True
+                and row.get("executed") is True
+                and row.get("verified") is True
+                and not violated_row
+                and row.get("escalated") is not True
+            ):
                 continue
             if cost > floor:
                 costly.append(row_id)

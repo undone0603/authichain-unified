@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import pytest
@@ -49,9 +50,52 @@ def _advance_signal(**overrides):
     return signal
 
 
+def _read_opportunity(opportunity_id: str) -> dict:
+    return {
+        "id": opportunity_id,
+        "action": "read_state",
+        "value": 1,
+        "probability": 1,
+        "urgency": 1,
+        "cost": 1,
+        "risk": 1,
+        "reversibility": 1,
+        "resources": {"human_attention": 1},
+    }
+
+
+def _same_score(step_id: str, action: str, value: int = 4) -> dict:
+    return {
+        "id": step_id,
+        "action": action,
+        "value": value,
+        "probability": 1,
+        "urgency": 1,
+        "cost": 1,
+        "risk": 1,
+        "reversibility": 1,
+        "resources": {"human_attention": 1},
+    }
+
+
+def _denied_action(step_id: str, action: str) -> dict:
+    return {
+        "id": step_id,
+        "action": action,
+        "value": 4,
+        "probability": 1,
+        "urgency": 1,
+        "cost": 1,
+        "risk": 1,
+        "reversibility": 1,
+        "resources": {"human_attention": 1},
+    }
+
+
 def test_assumptions_do_not_become_facts():
     facts = classify_facts({
         "verified_facts": ["A buyer exists somewhere", "The caller checked one gate."],
+        "evidence": ["The caller checked one gate."],
         "observations": ["A buyer exists somewhere"],
         "assumptions": ["A buyer exists somewhere"],
         "estimates": ["Maybe three pilots"],
@@ -171,6 +215,7 @@ def test_decision_record_and_separated_economics(tmp_path: Path):
         {
             "bottleneck": "Pilot count is the open gate",
             "verified_facts": ["Two pilots are already on the record"],
+            "evidence": ["Two pilots are already on the record"],
             "assumptions": ["A third pilot is about to pay"],
             "gate_context": {"active_pilots": 2},
             "economics": {
@@ -1531,6 +1576,7 @@ def test_unverified_claim_stops_before_the_machine_moves(tmp_path: Path):
         _advance_signal(
             decision_id="fact-kept-separate",
             verified_facts=["The caller checked the pilot gate"],
+            evidence=["The caller checked the pilot gate"],
             assumptions=["A third pilot is about to pay"],
         ),
         state_machine=sm,
@@ -1627,3 +1673,520 @@ def test_discovery_disagreement_escalates_and_leaves_the_stage(tmp_path: Path):
     assert moved["economics"]["cash_realized"] is None
     assert sm.current_stage == LaunchStage.FIRST_REVENUE
     assert brain.execution_attempts == 1
+
+
+def test_caller_labeled_verified_facts_without_evidence_are_unverified():
+    """Missing, omitted, or empty evidence cannot turn a caller label into a verified fact."""
+    kept = "The caller checked the pilot gate"
+    omitted = classify_facts({"verified_facts": [kept]})
+    assert omitted["verified_facts"] == []
+
+    missing_key = classify_facts({"verified_facts": [kept], "assumptions": []})
+    assert missing_key["verified_facts"] == []
+
+    empty_list = classify_facts({"verified_facts": [kept], "evidence": []})
+    assert empty_list["verified_facts"] == []
+
+    empty_string = classify_facts({"verified_facts": [kept], "evidence": "   "})
+    assert empty_string["verified_facts"] == []
+
+    supported = classify_facts({"verified_facts": [kept], "evidence": [kept]})
+    assert supported["verified_facts"] == [kept]
+
+
+def test_caller_labeled_verified_facts_with_missing_evidence_stop_the_cycle(tmp_path: Path):
+    """A verified-fact label with omitted or empty evidence is unverified and does not advance."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    claim = "A buyer already paid"
+    omitted = cycle(
+        _advance_signal(verified_facts=[claim]),
+        state_machine=sm,
+    )
+    assert claim not in omitted["fact_separation"]["verified_facts"]
+    assert omitted["mode"] == "STOP"
+    assert omitted["risks"] == ["unverified_claims"]
+    assert omitted["stopped"] is True
+    assert omitted["verification"]["success"] is False
+    assert omitted["execution"]["status"] == "not_run"
+    assert omitted["execution"]["attempts"] == 0
+    assert omitted["decisions"][0]["decision"] == "stop"
+    assert "unverified" in omitted["decisions"][0]["reason"].lower()
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    empty = cycle(
+        _advance_signal(decision_id="empty-evidence", verified_facts=[claim], evidence=[]),
+        state_machine=sm,
+    )
+    assert claim not in empty["fact_separation"]["verified_facts"]
+    assert empty["mode"] == "STOP"
+    assert empty["risks"] == ["unverified_claims"]
+    assert empty["verification"]["success"] is False
+    assert empty["execution"]["attempts"] == 0
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+
+def test_an_assumption_does_not_become_a_fact_by_case_or_spacing(tmp_path: Path):
+    """The same claim with different case or spacing is still an assumption, not evidence."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    claim = "A buyer already paid"
+    assumption = "a  buyer   already paid"
+    blocked = cycle(
+        _advance_signal(
+            verified_facts=[claim, "The caller checked the pilot gate"],
+            evidence=["The caller checked the pilot gate"],
+            assumptions=[assumption],
+        ),
+        state_machine=sm,
+    )
+    assert claim not in blocked["fact_separation"]["verified_facts"]
+    assert blocked["fact_separation"]["verified_facts"] == ["The caller checked the pilot gate"]
+    assert assumption in blocked["fact_separation"]["assumptions"]
+    assert claim not in blocked["decisions"][0]["evidence"]
+    assert assumption not in blocked["decisions"][0]["evidence"]
+    assert blocked["mode"] == "STOP"
+    assert blocked["risks"] == ["unverified_claims"]
+    assert blocked["stopped"] is True
+    assert blocked["verification"]["success"] is False
+    assert blocked["execution"]["status"] == "not_run"
+    assert blocked["execution"]["attempts"] == 0
+    assert blocked["decisions"][0]["decision"] == "stop"
+    assert "unverified" in blocked["decisions"][0]["reason"].lower()
+    assert blocked["economics"]["cash_realized"] is None
+    assert blocked["revenue_ledger_written"] is False
+    assert blocked["authority_boundary_modified"] is False
+    assert blocked["state"]["mission_state"]["stage"] == "3_PILOTS"
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
+
+
+def test_priority_score_rejects_nonfinite_floats():
+    """NaN and inf cannot poison ranking."""
+    for poisoned in (
+        priority_score(float("nan"), 1, 1, 1, 1, 1),
+        priority_score(1, float("inf"), 1, 1, 1, 1),
+        priority_score(1, 1, float("-inf"), 1, 1, 1),
+        priority_score(1, 1, 1, float("nan"), 1, 1),
+        priority_score(1, 1, 1, 1, float("inf"), 1),
+        priority_score(1, 1, 1, 1, 1, float("-inf")),
+    ):
+        assert poisoned["rankable"] is False
+        assert poisoned["score"] is None
+        assert "finite" in poisoned["reason"]
+        assert poisoned["score"] is not poisoned["score"] or poisoned["score"] is None
+        assert not (isinstance(poisoned["score"], float) and not math.isfinite(poisoned["score"]))
+
+
+def test_a_zero_value_opportunity_does_not_move_the_stage(tmp_path: Path):
+    """A zero value, probability, or urgency is not rankable, so it does not advance."""
+    for scored in (
+        priority_score(0, 1, 1, 1, 1, 1),
+        priority_score(1, 0, 1, 1, 1, 1),
+        priority_score(1, 1, 0, 1, 1, 1),
+    ):
+        assert scored["rankable"] is False
+        assert scored["score"] is None
+
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    zero = dict(_advance_signal()["opportunities"][0])
+    zero["id"] = "zero-value"
+    zero["value"] = 0
+    held = cycle(
+        _advance_signal(decision_id="zero-value", opportunities=[zero]),
+        state_machine=sm,
+    )
+    assert held["execution"]["status"] == "withheld"
+    assert held["decisions"][0]["decision"] == "withhold"
+    assert held["priorities"][0]["rankable"] is False
+    assert held["verification"]["success"] is False
+    assert held["verification"]["executed"] is False
+    assert held["execution"]["attempts"] == 0
+    assert held["economics"]["cash_realized"] is None
+    assert held["revenue_ledger_written"] is False
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
+
+    kept = LaunchStateMachine(state_file=tmp_path / "zero_beside_positive.json")
+    kept.set_stage(LaunchStage.THREE_PILOTS)
+    positive = dict(_advance_signal()["opportunities"][0])
+    positive["id"] = "real-advance"
+    positive["value"] = 4
+    moved = cycle(
+        _advance_signal(
+            decision_id="positive-beside-zero",
+            opportunities=[zero, positive],
+        ),
+        state_machine=kept,
+    )
+    assert moved["verification"]["success"] is True
+    assert moved["resources"]["highest_value_use"] == "real-advance"
+    assert moved["economics"]["cash_realized"] is None
+    assert moved["revenue_ledger_written"] is False
+    assert kept.current_stage == LaunchStage.FIRST_REVENUE
+    assert LaunchStateMachine(state_file=kept.state_file).current_stage == LaunchStage.FIRST_REVENUE
+
+
+def test_a_blank_opportunity_idles_and_leaves_the_machine(tmp_path: Path):
+    """An empty opportunity mapping is not worthwhile work. The cycle idles and does not rewrite authority."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    reviewed = cycle({"opportunities": [{}]}, state_machine=sm)
+    assert reviewed["mode"] == "IDLE / MONITOR"
+    assert reviewed["decisions"] == []
+    assert reviewed["verification"]["success"] is False
+    assert reviewed["execution"]["status"] == "idle"
+    assert reviewed["execution"]["attempts"] == 0
+    assert reviewed["economics"]["cash_realized"] is None
+    assert reviewed["revenue_ledger_written"] is False
+    assert reviewed["authority_boundary_modified"] is False
+    assert all(value == "denied" for value in reviewed["authority_denials"].values())
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
+
+
+def test_unmet_prerequisite_blocks_a_state_read(tmp_path: Path):
+    """A state read with an unmet prerequisite does not execute and does not debit attention."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    brain = LeftBrain(sm)
+    blocked = brain.cycle(
+        {
+            "bottleneck": "The prior decision has not run",
+            "gate_context": {"active_pilots": 2},
+            "resources": {"human_attention": 5, "money": 0},
+            "opportunities": [
+                {
+                    "id": "read-later",
+                    "action": "read_state",
+                    "prerequisites": ["read-first"],
+                    "value": 1,
+                    "probability": 1,
+                    "urgency": 1,
+                    "cost": 1,
+                    "risk": 1,
+                    "reversibility": 1,
+                    "resources": {"human_attention": 1},
+                }
+            ],
+        }
+    )
+    assert blocked["execution"]["status"] == "prerequisite_blocked"
+    assert blocked["execution"]["missing"] == ["read-first"]
+    assert blocked["execution"]["attempts"] == 0
+    assert blocked["verification"]["executed"] is False
+    assert blocked["verification"]["success"] is False
+    assert blocked["verification"]["external_state_changed"] is False
+    assert blocked["resources"]["used"]["human_attention"] == 0
+    assert blocked["state"]["resources"]["used"]["human_attention"] == 0
+    assert brain.used["human_attention"] == 0
+    assert blocked["economics"]["cash_realized"] is None
+    assert blocked["revenue_ledger_written"] is False
+    assert blocked["authority_boundary_modified"] is False
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
+
+    opened = brain.cycle(_advance_signal(decision_id="read-first"))
+    assert opened["verification"]["success"] is True
+    assert opened["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+
+    followed = brain.cycle(
+        {
+            "bottleneck": "The prior decision has run",
+            "resources": {"human_attention": 5, "money": 0},
+            "opportunities": [
+                {
+                    "id": "read-later",
+                    "action": "read_state",
+                    "prerequisites": ["read-first"],
+                    "value": 1,
+                    "probability": 1,
+                    "urgency": 1,
+                    "cost": 1,
+                    "risk": 1,
+                    "reversibility": 1,
+                    "resources": {"human_attention": 1},
+                }
+            ],
+        }
+    )
+    assert followed["execution"]["status"] == "read"
+    assert followed["verification"]["executed"] is True
+    assert followed["verification"]["success"] is False
+    assert followed["resources"]["used"]["human_attention"] == 2
+    assert followed["economics"]["cash_realized"] is None
+    assert followed["revenue_ledger_written"] is False
+    assert brain.execution_attempts == 1
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.FIRST_REVENUE
+
+
+def test_completed_state_read_satisfies_a_later_prerequisite(tmp_path: Path):
+    """A state read that ran is an applied decision. A later advance may depend on it."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    brain = LeftBrain(sm)
+    survey = brain.cycle(
+        {
+            "decision_id": "survey",
+            "bottleneck": "Read the pilot gate before advancing",
+            "gate_context": {"active_pilots": 2},
+            "resources": {"human_attention": 5, "money": 0},
+            "opportunities": [_read_opportunity("survey-read")],
+        }
+    )
+    assert survey["execution"]["status"] == "read"
+    assert survey["verification"]["executed"] is True
+    assert survey["verification"]["success"] is False
+    assert survey["resources"]["used"]["human_attention"] == 1
+    assert survey["economics"]["cash_realized"] is None
+    assert survey["revenue_ledger_written"] is False
+    assert brain.execution_attempts == 0
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    opportunity = dict(_advance_signal()["opportunities"][0])
+    opportunity["id"] = "advance-after-survey"
+    opportunity["prerequisites"] = ["survey"]
+    followed = brain.cycle(
+        _advance_signal(decision_id="advance-after-survey", opportunities=[opportunity])
+    )
+    assert followed["execution"]["status"] == "advanced"
+    assert followed["verification"]["success"] is True
+    assert followed["verification"]["external_state_changed"] is True
+    assert followed["economics"]["cash_realized"] is None
+    assert followed["revenue_ledger_written"] is False
+    assert brain.execution_attempts == 1
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.FIRST_REVENUE
+
+
+def test_repeated_state_read_does_not_run_again(tmp_path: Path):
+    """The same explicit state-read decision does not execute or debit attention twice."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    brain = LeftBrain(sm)
+    signal = {
+        "decision_id": "survey",
+        "bottleneck": "Read the pilot gate",
+        "gate_context": {"active_pilots": 2},
+        "resources": {"human_attention": 5, "money": 0},
+        "opportunities": [_read_opportunity("survey-read")],
+    }
+    first = brain.cycle(signal)
+    assert first["execution"]["status"] == "read"
+    assert first["verification"]["executed"] is True
+    assert first["resources"]["used"]["human_attention"] == 1
+    assert first["economics"]["cash_realized"] is None
+    assert first["revenue_ledger_written"] is False
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    second = brain.cycle(signal)
+    assert second["execution"]["status"] == "idempotent_skip"
+    assert second["execution"]["decision_id"] == "survey"
+    assert second["execution"]["attempts"] == 0
+    assert second["decisions"][0]["reason"] == "This decision already ran. It was not repeated."
+    assert second["mode"] == "DECIDE"
+    assert second["verification"]["executed"] is False
+    assert second["verification"]["success"] is False
+    assert second["verification"]["external_state_changed"] is False
+    assert second["resources"]["used"]["human_attention"] == 1
+    assert second["state"]["resources"]["used"]["human_attention"] == 1
+    assert brain.used["human_attention"] == 1
+    assert second["economics"]["cash_realized"] is None
+    assert second["revenue_ledger_written"] is False
+    assert second["authority_boundary_modified"] is False
+    assert brain.execution_attempts == 0
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
+
+    other = brain.cycle({**signal, "decision_id": "survey-again"})
+    assert other["execution"]["status"] == "read"
+    assert other["verification"]["executed"] is True
+    assert other["resources"]["used"]["human_attention"] == 2
+    assert other["economics"]["cash_realized"] is None
+    assert other["revenue_ledger_written"] is False
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+
+def test_equal_priority_prefers_the_smallest_evidence_step(tmp_path: Path):
+    """When scores tie, a state read is chosen ahead of a stage change."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    tied = cycle(
+        _advance_signal(
+            decision_id="tie-read",
+            opportunities=[
+                _same_score("a-advance", "advance_if_gates_pass"),
+                _same_score("z-read", "read_state"),
+            ],
+        ),
+        state_machine=sm,
+    )
+    assert tied["priorities"][0]["id"] == "z-read"
+    assert tied["priorities"][0]["score"] == tied["priorities"][1]["score"]
+    assert tied["decisions"][0]["decision"] == "read_state"
+    assert tied["resources"]["highest_value_use"] == "z-read"
+    assert tied["execution"]["status"] == "read"
+    assert tied["verification"]["executed"] is True
+    assert tied["verification"]["success"] is False
+    assert tied["verification"]["external_state_changed"] is False
+    assert tied["economics"]["cash_realized"] is None
+    assert tied["revenue_ledger_written"] is False
+    assert tied["execution"]["attempts"] == 0
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
+
+    stronger_machine = LaunchStateMachine(state_file=tmp_path / "tie_stronger_advance.json")
+    stronger_machine.set_stage(LaunchStage.THREE_PILOTS)
+    stronger = cycle(
+        _advance_signal(
+            decision_id="tie-stronger-advance",
+            opportunities=[
+                _same_score("z-read", "read_state", value=1),
+                _same_score("a-advance", "advance_if_gates_pass", value=8),
+            ],
+        ),
+        state_machine=stronger_machine,
+    )
+    assert stronger["priorities"][0]["id"] == "a-advance"
+    assert stronger["priorities"][0]["score"] > stronger["priorities"][1]["score"]
+    assert stronger["verification"]["success"] is True
+    assert stronger["economics"]["cash_realized"] is None
+    assert stronger["revenue_ledger_written"] is False
+    assert stronger_machine.current_stage == LaunchStage.FIRST_REVENUE
+
+    read_machine = LaunchStateMachine(state_file=tmp_path / "tie_two_reads.json")
+    read_machine.set_stage(LaunchStage.THREE_PILOTS)
+    reads = cycle(
+        {
+            "bottleneck": "Two pilots are recorded",
+            "gate_context": {"active_pilots": 2},
+            "resources": {"human_attention": 5, "money": 0},
+            "opportunities": [
+                _same_score("m-read", "read_state"),
+                _same_score("b-read", "read_state"),
+            ],
+        },
+        state_machine=read_machine,
+    )
+    assert reads["resources"]["highest_value_use"] == "b-read"
+    assert reads["execution"]["status"] == "read"
+    assert reads["verification"]["success"] is False
+    assert reads["economics"]["cash_realized"] is None
+    assert read_machine.current_stage == LaunchStage.THREE_PILOTS
+
+
+def test_founder_law_rewrite_stops_as_an_authority_boundary(tmp_path: Path):
+    """A rewrite opportunity is an authority boundary, not a spend, and the stage stays."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    blocked = cycle(
+        _advance_signal(
+            decision_id="rewrite-founder-law",
+            opportunities=[
+                {
+                    "id": "rewrite-founder-law",
+                    "action": "founder law rewrite",
+                    "value": 4,
+                    "probability": 0.5,
+                    "urgency": 2,
+                    "cost": 2,
+                    "risk": 2,
+                    "reversibility": 1,
+                    "resources": {"human_attention": 1},
+                }
+            ],
+        ),
+        state_machine=sm,
+    )
+    assert blocked["mode"] == "STOP"
+    assert blocked["risks"] == ["authority_violation"]
+    assert "abnormal_spending" not in blocked["risks"]
+    assert blocked["stopped"] is True
+    assert blocked["verification"]["success"] is False
+    assert blocked["execution"]["status"] == "stopped"
+    assert blocked["execution"]["attempts"] == 0
+    assert blocked["decisions"][0]["decision"] == "stop"
+    assert blocked["authority_denials"]["founder_law_rewrite"] == "denied"
+    assert blocked["authority_boundary_modified"] is False
+    assert blocked["economics"]["cash_realized"] is None
+    assert blocked["revenue_ledger_written"] is False
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
+
+
+def test_unmet_prerequisite_blocks_the_advance(tmp_path: Path):
+    """An advance does not run until each named prerequisite has already been applied."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    brain = LeftBrain(sm)
+    prereq = "read-pilots"
+    opportunity = dict(_advance_signal()["opportunities"][0])
+    opportunity["id"] = "advance-after-read"
+    opportunity["prerequisites"] = [prereq]
+    blocked = brain.cycle(
+        _advance_signal(decision_id="advance-blocked", opportunities=[opportunity])
+    )
+    assert blocked["execution"]["status"] == "prerequisite_blocked"
+    assert blocked["execution"]["attempts"] == 0
+    assert blocked["execution"]["missing"] == [prereq]
+    assert blocked["verification"]["success"] is False
+    assert blocked["mode"] != "VERIFIED"
+    assert blocked["economics"]["cash_realized"] is None
+    assert blocked["revenue_ledger_written"] is False
+    assert brain.failures == 0
+    assert brain.execution_attempts == 0
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
+
+    opened = brain.cycle(_advance_signal(decision_id="advance-open"))
+    assert opened["verification"]["success"] is True
+    assert opened["execution"]["status"] == "advanced"
+    assert brain.execution_attempts == 1
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+
+    followed = brain.cycle(
+        _advance_signal(
+            decision_id="advance-next",
+            opportunities=[{**opportunity, "prerequisites": ["advance-open"]}],
+        )
+    )
+    assert followed["execution"]["status"] == "failed"
+    assert followed["execution"]["attempts"] == 2
+    assert "prerequisite_blocked" != followed["execution"]["status"]
+    assert brain.execution_attempts == 2
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+    assert followed["economics"]["cash_realized"] is None
+    assert followed["revenue_ledger_written"] is False
+
+
+def test_send_and_deploy_remain_denied_authority_boundaries(tmp_path: Path):
+    """Send and deploy stay denied. They are authority stops, not spends, and they do not move the stage."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    brain = LeftBrain(sm)
+    for action in ("send", "deploy"):
+        blocked = brain.cycle(
+            _advance_signal(
+                decision_id=f"{action}-denied",
+                opportunities=[_denied_action(f"{action}-denied", action)],
+            )
+        )
+        assert blocked["mode"] == "STOP"
+        assert blocked["risks"] == ["authority_violation"]
+        assert "abnormal_spending" not in blocked["risks"]
+        assert blocked["stopped"] is True
+        assert blocked["authority_denials"][action] == "denied"
+        assert blocked["verification"]["success"] is False
+        assert blocked["verification"]["executed"] is False
+        assert blocked["execution"]["status"] == "stopped"
+        assert blocked["execution"]["attempts"] == 0
+        assert blocked["decisions"][0]["decision"] == "stop"
+        assert blocked["revenue_ledger_written"] is False
+        assert blocked["authority_boundary_modified"] is False
+        assert blocked["economics"]["cash_realized"] is None
+        assert sm.current_stage == LaunchStage.THREE_PILOTS
+        assert brain.execution_attempts == 0
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
