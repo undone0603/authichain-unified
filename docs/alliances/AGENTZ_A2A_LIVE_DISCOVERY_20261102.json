@@ -1,0 +1,75 @@
+{
+  "schema": "authichain.agentz_a2a_public_observation.v1",
+  "observed_at_utc": "2026-11-02T14:16:20.619Z",
+  "source": "fresh_read_only_external_GET",
+  "agentz_code_branch": "feat/agentz-httpx-mcp-readonly-probe-20261102",
+  "a2a": {
+    "card_accessible": true,
+    "name": "AuthiChain",
+    "version": "1.3.2",
+    "protocol_binding": "JSONRPC",
+    "protocol_version": "1.0",
+    "interface_url": "https://authichain.com/api/a2a",
+    "skills": [
+      "paid-evidence-check",
+      "qron-launch-subscription"
+    ],
+    "declaration_checks": [
+      {
+        "id": "name",
+        "pass": true
+      },
+      {
+        "id": "description",
+        "pass": true
+      },
+      {
+        "id": "version",
+        "pass": true
+      },
+      {
+        "id": "interface_https_owned",
+        "pass": true
+      },
+      {
+        "id": "skills_nonempty",
+        "pass": true
+      },
+      {
+        "id": "mode_arrays",
+        "pass": true
+      },
+      {
+        "id": "capabilities_map",
+        "pass": true
+      }
+    ],
+    "declared_shape_ok": true,
+    "card_signature_verified": false,
+    "full_official_tck_executed": false,
+    "jsonrpc_post_tested": false
+  },
+  "authichain_demo": {
+    "reachable": true,
+    "reported_decision": "verified",
+    "demonstration": true,
+    "physical_binding": "unknown",
+    "independently_reverified_signature": false,
+    "independently_reverified_chain": false
+  },
+  "agentz_edge": {
+    "reachable": true,
+    "service": "agentz-edge-learning",
+    "alarm_armed": true,
+    "read_only": true,
+    "python_daemon": false,
+    "independent_validation_proven": false
+  },
+  "boundaries": {
+    "no_payment": true,
+    "no_tasks_created": true,
+    "no_outbound_messages": true,
+    "independent_peer_review": false,
+    "production_deployment_changed": false
+  }
+}
