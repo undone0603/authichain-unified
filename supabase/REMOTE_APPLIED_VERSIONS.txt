@@ -6,11 +6,12 @@
 # refreshed 2026-11-06 (read-only schema_migrations: 72 remote versions). Added the five
 # remote versions that now have a local file; the three 2026-10-14 ai_adapt files are
 # md5-matched to remote schema_migrations.statements.
-# Remote-only, NOT listed below because no local file carries that version (owner decision:
-# local holds the same change under a different version number):
-#   20261015061249 govchain_public_views_restore_definer_semantics (cf. 20261014200000_*)
-#   20261016213335 x402_claim_free_call (cf. 20261016200000_*)
-#   20261031195157 authichain_signed_product_records (cf. 20261016000000_*)
+# Reconciled 2026-11-06 so local mirrors remote history (remote is what ran):
+#   20261015061249 recorded verbatim; the never-applied competing fix
+#     20261014200000_govchain_public_views_invoker_grants moved to migrations.archive.
+#   20261016213335 is 20261016200000_x402_claim_free_call renamed (identical bytes).
+#   20261031195157 recorded verbatim; the superseded draft 20261016000000_* moved to
+#     migrations.archive (its extra revoke landed live as 20261031195247).
 # Every version here MUST have a matching supabase/migrations/<version>_*.sql
 # or GitHub branching / `supabase db push` fails with:
 #   Remote migration versions not found in local migrations directory.
@@ -82,6 +83,9 @@
 20261014195307
 20261014195334
 20261014195349
+20261015061249
+20261016213335
+20261031195157
 20261031195247
 
 # Not on remote (keep in migrations.archive only; do not restore):
