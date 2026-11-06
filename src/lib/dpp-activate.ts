@@ -3,7 +3,7 @@
  * POST /api/dpp/activate is not a 404.
  */
 
-import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "./dpp-loop";
+import { DPP_PRICE_ID, dppActivateUrl, isDppOffer, recordDppLoopEvent } from "./dpp-loop";
 import {
   buildDppImporterFile,
   parseImporterPackFigures,
@@ -89,7 +89,9 @@ export async function activateDppMerchant(opts: {
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
     expand: ["line_items"],
   });
-  if (session.payment_status !== "paid" && session.status !== "complete") {
+  // Checkout may be "complete" before an asynchronous payment actually clears.
+  // Both payment success and completion are required to mark a merchant active.
+  if (session.payment_status !== "paid" || session.status !== "complete") {
     return { ok: false, status: 402, error: "Checkout session is not paid" };
   }
 
@@ -101,11 +103,14 @@ export async function activateDppMerchant(opts: {
   if (otherPlan && !isDppOffer(md)) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
-  const linePriceId = session.line_items?.data?.[0]?.price?.id ?? null;
-  if (linePriceId && !isDppOffer(md, linePriceId)) {
-    return { ok: false, status: 400, error: "Not a DPP workspace session" };
-  }
-  if (!isDppOffer(md) && session.amount_total !== 29900) {
+  // A $299 amount or checkout metadata is not proof of the product purchased.
+  // Another $299 offer can set the same amount (or metadata); require the
+  // canonical DPP price in the actual Stripe line item, and fail closed if
+  // expanded line items are absent. Checkout currently sells one DPP item.
+  const lineItems = session.line_items?.data ?? [];
+  const isExactDppPurchase =
+    lineItems.length === 1 && lineItems[0]?.price?.id === DPP_PRICE_ID;
+  if (!isExactDppPurchase) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
 
@@ -174,22 +179,36 @@ export async function activateDppMerchant(opts: {
       : buildDppImporterFile({ categories, markets, labeling, pack });
 
   if (!alreadyActivated) {
-    await recordDppLoopEvent(opts.supabase, {
-      visitId,
-      stage: "merchant_activated",
-      source: String(md.source || "direct"),
-      email,
-      profileId,
-      stripeSessionId: sessionId,
-      metadata: {
-        categories,
-        markets,
-        labeling,
-        call_windows: (opts.body.call_windows || "").trim() || null,
-        activated_at: new Date().toISOString(),
-        importer_file,
-      },
-    });
+    try {
+      await recordDppLoopEvent(
+        opts.supabase,
+        {
+          visitId,
+          stage: "merchant_activated",
+          source: String(md.source || "direct"),
+          email,
+          profileId,
+          stripeSessionId: sessionId,
+          metadata: {
+            categories,
+            markets,
+            labeling,
+            call_windows: (opts.body.call_windows || "").trim() || null,
+            activated_at: new Date().toISOString(),
+            importer_file,
+          },
+        },
+        { requirePersisted: true }
+      );
+    } catch {
+      // A paid customer must never receive a success response for an
+      // activation that was not durably recorded. Safe to retry.
+      return {
+        ok: false,
+        status: 503,
+        error: "Merchant activation could not be persisted",
+      };
+    }
   }
 
   return {
