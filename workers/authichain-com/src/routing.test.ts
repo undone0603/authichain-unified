@@ -107,10 +107,9 @@ test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const html = await res.text();
-    // Since effc8b12 the homepage links the $19/mo Launch confirm page beside
-    // Starter (asserted in "the apex still renders the homepage"); the
-    // Starter confirm page itself stays free of Launch copy.
-    const launchLinks = path === "/" ? [] : ["$19", "qron_launch"];
+    // Launch is retired for new buyers; homepage and Starter confirm stay
+    // free of $19/mo Launch copy.
+    const launchLinks = ["$19", "qron_launch"];
     for (const banned of [
       ...launchLinks,
       "Launch subscription",
@@ -169,6 +168,7 @@ test("CFA-758: money routes have no 50-workspace-generation or never-expire pack
     "/checkout/dpp_readiness",
     "/dpp",
     "/battery-passport",
+    "/battery-passport/sample",
     "/trumark",
     "/docs/dpp-architecture",
   ]) {
@@ -220,10 +220,16 @@ test("the apex still renders the homepage", async () => {
   // LOOP-03: hero + bottom email checkout lead Starter $29; DPP stays lower.
   assert.match(html, /Buy Starter Pack/);
   assert.doesNotMatch(html, /Start Launch/);
-  assert.match(html, /href="https:\/\/authichain.com\/checkout\/qron_launch"/);
-  assert.match(html, /QRON Launch \$19\/mo/);
-  assert.match(html, /href="https:\/\/authichain.com\/checkout\/qron_launch_annual"/);
-  assert.match(html, /QRON Launch \$190\/yr/);
+  assert.doesNotMatch(
+    html,
+    /href="https:\/\/authichain\.com\/checkout\/qron_launch"/
+  );
+  assert.doesNotMatch(html, /QRON Launch \$19\/mo/);
+  assert.doesNotMatch(
+    html,
+    /href="https:\/\/authichain\.com\/checkout\/qron_launch_annual"/
+  );
+  assert.doesNotMatch(html, /QRON Launch \$190\/yr/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Signed QR seals for real products\./);
   assert.doesNotMatch(html, /Agent consensus/);
@@ -251,6 +257,14 @@ test("the apex still renders the homepage", async () => {
     /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
   );
   assert.match(html, /The authentic agentic economy/);
+  assert.match(html, /id="lead-capture"/);
+  assert.match(html, /Request follow-up/);
+  assert.match(html, /1-to-1 follow-up/);
+  assert.match(html, /consent:"yes"/);
+  assert.match(html, /novalidate/);
+  assert.match(html, /lead_captures/);
+  assert.match(html, /https:\/\/authichain\.com\/api\/leads\/capture/);
+  assert.match(html, /https:\/\/authichain\.com\/privacy/);
   // AE-20261002-CFD-09: no Apollo visitor tracker anywhere on authichain.com.
   assert.ok(!html.includes("6ab2b3b358b37e000c06b0fa"));
   assert.ok(!html.includes("tracker.iife.js"));
@@ -1085,13 +1099,9 @@ test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async
     assert.equal(body.protocol, "x402", path);
     assert.equal(body.catalog, "/api/x402/catalog", path);
     assert.equal(body.health, "/api/x402/health", path);
-    // Since 6606362f the catalog publishes a checkout offer for every paid
-    // plan, Farm included (asserted in x402-routes.test.ts).
-    assert.equal(
-      body.humanCheckout?.farmPaymentLink,
-      planPaymentLink("strainchain_farm"),
-      path
-    );
+    // Farm's price stays on the catalog. Its checkout link does not
+    // (x402-routes.test.ts).
+    assert.equal(body.humanCheckout?.farmPaymentLink, undefined, path);
     assert.equal(
       body.humanCheckout?.farmUsd,
       planUsd("strainchain_farm"),
@@ -1585,10 +1595,10 @@ test("sitemap lists the open Launch checkout pages", async () => {
   const xml = await res.text();
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
   assert.ok(
-    xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
+    !xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
   );
   assert.ok(
-    xml.includes(
+    !xml.includes(
       "<loc>https://authichain.com/checkout/qron_launch_annual</loc>"
     )
   );
@@ -1631,10 +1641,10 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/generate</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/checkout/starter</loc>"));
   assert.ok(
-    xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
+    !xml.includes("<loc>https://authichain.com/checkout/qron_launch</loc>")
   );
   assert.ok(
-    xml.includes(
+    !xml.includes(
       "<loc>https://authichain.com/checkout/qron_launch_annual</loc>"
     )
   );
@@ -1940,4 +1950,26 @@ test("GET /dpp/scan returns 301 to /dpp-check through the Worker fetch", async (
   );
   assert.equal(res.status, 301);
   assert.match(res.headers.get("Location") ?? "", /\/dpp-check$/);
+});
+
+// CFA-772: the sample HTML path must not shadow POST (405) or JSON artifacts.
+test("POST /battery-passport/sample returns 405 through the Worker fetch", async () => {
+  const res = await worker.fetch(
+    new Request("https://authichain.com/battery-passport/sample", {
+      method: "POST",
+    }),
+    ENV
+  );
+  assert.equal(res.status, 405);
+  assert.match(await res.text(), /method_not_allowed/);
+});
+
+test("GET /battery-passport/sample.json returns 200 through the Worker fetch", async () => {
+  const res = await worker.fetch(
+    new Request("https://authichain.com/battery-passport/sample.json"),
+    ENV
+  );
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") ?? "", /application\/json/);
+  assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
 });

@@ -210,10 +210,8 @@ function strainchainCatalogueCard(plan: Plan, featured: boolean): string {
 function strainchainPricingGrid(): string {
   const catalogue = listedPlans("strainchain");
   const passport = catalogue.find(p => p.id === "strainchain_passport");
-  const farm = catalogue.find(p => p.id === "strainchain_farm");
   const cards = [
     ...(passport ? [strainchainCatalogueCard(passport, true)] : []),
-    ...(farm ? [strainchainCatalogueCard(farm, false)] : []),
   ].join("");
   return `<div class="pricing-grid">${cards}</div>`;
 }
@@ -258,7 +256,6 @@ function pricingPage(origin: PricingOrigin): PricingPage {
   if (origin === "strainchain") {
     const catalogue = listedPlans("strainchain");
     const passport = catalogue.find(p => p.id === "strainchain_passport");
-    const farm = catalogue.find(p => p.id === "strainchain_farm");
     const catalogueOffers = catalogue.map(p => ({
       "@type": "Offer" as const,
       name: p.name,
@@ -303,9 +300,6 @@ function pricingPage(origin: PricingOrigin): PricingPage {
                 label: passport.name,
               },
             ]
-          : []),
-        ...(farm?.stripe_payment_link
-          ? [{ href: gatedCheckoutUrl(farm.id), label: farm.name }]
           : []),
         { href: "/onboard", label: "Onboard" },
         { href: "/pricing", label: "Pricing" },
@@ -373,8 +367,6 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       footerNote: "",
       footerStart: [
         { href: "/checkout/starter", label: "Starter checkout" },
-        { href: "/checkout/qron_launch", label: "QRON Launch $19/mo" },
-        { href: "/checkout/qron_launch_annual", label: "QRON Launch $190/yr" },
         { href: "/pricing", label: "Pricing" },
       ],
       footerMore: [
@@ -415,14 +407,6 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       "qron.space/generate is proxied to the AuthiChain app. That is the first-dollar path for this brand — Starter $29.",
     footerStart: [
       { href: "/generate", label: "Generate Living QR" },
-      {
-        href: "https://authichain.com/checkout/qron_launch",
-        label: "QRON Launch $19/mo",
-      },
-      {
-        href: "https://authichain.com/checkout/qron_launch_annual",
-        label: "QRON Launch $190/yr",
-      },
       {
         href: "https://authichain.com/checkout/starter",
         label: "Buy Starter $29",
