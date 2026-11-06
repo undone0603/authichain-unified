@@ -22,6 +22,32 @@ from agentz.core.modes import ExecutionContext, Mode
 
 QUERY = "Agent2Agent A2A open-source agent interoperability tools repositories 2026"
 MAX_URLS = 5
+_TRUTHY = frozenset({"1", "true", "yes"})
+_PAID_OR_METERED_FLAGS = (
+    "TINYFISH_ALLOW_PAID",
+    "TINYFISH_METERED",
+    "TINYFISH_PAID",
+    "TINYFISH_PAID_TIER",
+    "AGENTZ_TINYFISH_ALLOW_METERED",
+    "TINYFISH_BROWSER",
+    "TINYFISH_ENABLE_BROWSER",
+    "TINYFISH_BROWSER_AUTOMATION",
+)
+
+
+def _flag_on(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in _TRUTHY
+
+
+def _skipped_disabled() -> dict:
+    """CLI --all / AUTO must see a skip, never a live TinyFish call."""
+    return {
+        "status": "skipped",
+        "reason": "disabled",
+        "network": False,
+        "outbound": 0,
+        "external_side_effects": "none",
+    }
 
 
 def _public_references(response: dict) -> list[str]:
@@ -78,9 +104,25 @@ def _public_references(response: dict) -> list[str]:
     return urls
 
 
-def run(ctx: ExecutionContext) -> str:
+def run(ctx: ExecutionContext) -> str | dict:
     if ctx.mode == Mode.DRY_RUN:
         return "TinyFish A2A scout would run one public read-only search; no network call."
+    # Opt-in is enforced here, not only in the daemon. CLI `--all` and
+    # Mode.AUTO with confirm_before_run: false cannot bypass this check.
+    if not _flag_on("AGENTZ_TINYFISH_SCOUT_ENABLED"):
+        return _skipped_disabled()
+    # runner.financial_limit_usd == 0 means *unlimited*, not $0. Live
+    # dispatch is fail-closed free-tier only.
+    if not _flag_on("AGENTZ_TINYFISH_FREE_TIER_CONFIRMED"):
+        raise RuntimeError(
+            "TinyFish scout blocked: AGENTZ_TINYFISH_FREE_TIER_CONFIRMED "
+            "must be 1/true/yes; live dispatch is $0/free-tier only"
+        )
+    for name in _PAID_OR_METERED_FLAGS:
+        if _flag_on(name):
+            raise RuntimeError(
+                "TinyFish scout blocked: paid/metered TinyFish flags are not permitted"
+            )
     # A long-running daemon must never open interactive OAuth or consume an
     # unapproved metered browser product. The key must be bound on its host.
     if not os.getenv("TINYFISH_API_KEY", "").strip():

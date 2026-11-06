@@ -1266,6 +1266,9 @@ workflows:
     prerequisites: []
     confirm_before_run: false
     risk_class: low
+    # runner.py treats financial_limit_usd 0 as *unlimited* (no cap), not $0.
+    # Live $0/free-tier is fail-closed in tinyfish_a2a_scout.run() via
+    # AGENTZ_TINYFISH_FREE_TIER_CONFIRMED=true. Paid/metered TinyFish is refused.
     financial_limit_usd: 0
     reputational_impact: low
     requires_human_approval: false
@@ -1274,7 +1277,8 @@ workflows:
     description: |
       Opt-in read-only A2A scout: one public TinyFish search, never browser
       automation or any paid run. In dry-run, no HTTP. Live requires a
-      TinyFish key on the AgentZ host plus AGENTZ_TINYFISH_SCOUT_ENABLED.
-      Emits unverified source URLs only. Sends 0 outbound messages, 0
-      comments, and 0 posts. Untrusted search text is never executed
-      (prompt-injection refusal). No hardcoded secrets.
+      TinyFish key on the AgentZ host plus AGENTZ_TINYFISH_SCOUT_ENABLED
+      and AGENTZ_TINYFISH_FREE_TIER_CONFIRMED (handler-enforced $0/free-tier;
+      registry 0 is not a spend cap). Emits unverified source URLs only.
+      Sends 0 outbound messages, 0 comments, and 0 posts. Untrusted search
+      text is never executed (prompt-injection refusal). No hardcoded secrets.

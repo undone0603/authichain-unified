@@ -21,15 +21,96 @@ class Context:
         self.state = data
 
 
+def _arm_live_scout(monkeypatch, *, enabled="true", free_tier="true", key="dummy-test-key"):
+    if enabled is None:
+        monkeypatch.delenv("AGENTZ_TINYFISH_SCOUT_ENABLED", raising=False)
+    else:
+        monkeypatch.setenv("AGENTZ_TINYFISH_SCOUT_ENABLED", enabled)
+    if free_tier is None:
+        monkeypatch.delenv("AGENTZ_TINYFISH_FREE_TIER_CONFIRMED", raising=False)
+    else:
+        monkeypatch.setenv("AGENTZ_TINYFISH_FREE_TIER_CONFIRMED", free_tier)
+    if key is None:
+        monkeypatch.delenv("TINYFISH_API_KEY", raising=False)
+    else:
+        monkeypatch.setenv("TINYFISH_API_KEY", key)
+
+
 def test_dry_run_never_requires_auth_or_calls_network(monkeypatch):
     monkeypatch.delenv("TINYFISH_API_KEY", raising=False)
     assert "no network" in run(Context(Mode.DRY_RUN)).lower()
 
 
 def test_live_requires_key_before_ever_connecting(monkeypatch):
-    monkeypatch.delenv("TINYFISH_API_KEY", raising=False)
+    _arm_live_scout(monkeypatch, key=None)
     with pytest.raises(RuntimeError, match="missing"):
         run(Context(Mode.CONFIRM))
+
+
+@pytest.mark.parametrize("flag", ["", "0", "false", "no", "off"])
+def test_run_skips_without_calling_tinyfish_unless_enabled(monkeypatch, flag):
+    import agentz.integrations.tinyfish_mcp as adapter
+
+    calls = []
+
+    async def fake_call(*_args, **_kwargs):
+        calls.append(1)
+        raise AssertionError("call_tinyfish must not run when scout is not opted in")
+
+    monkeypatch.setattr(adapter, "call_tinyfish", fake_call)
+    _arm_live_scout(monkeypatch, enabled=flag or None)
+    result = run(Context(Mode.CONFIRM))
+    assert result == {
+        "status": "skipped",
+        "reason": "disabled",
+        "network": False,
+        "outbound": 0,
+        "external_side_effects": "none",
+    }
+    assert calls == []
+
+
+@pytest.mark.parametrize("flag", ["1", "true", "yes"])
+def test_run_refuses_live_dispatch_unless_enabled_and_free_tier(monkeypatch, flag):
+    import agentz.integrations.tinyfish_mcp as adapter
+
+    calls = []
+
+    async def fake_call(*_args, **_kwargs):
+        calls.append(1)
+        return {
+            "ok": True,
+            "structured_content": {"results": []},
+            "content": [],
+        }
+
+    monkeypatch.setattr(adapter, "call_tinyfish", fake_call)
+    _arm_live_scout(monkeypatch, enabled=flag, free_tier=None)
+    with pytest.raises(RuntimeError, match="FREE_TIER"):
+        run(Context(Mode.CONFIRM))
+    assert calls == []
+
+    _arm_live_scout(monkeypatch, enabled=flag, free_tier="true")
+    result = run(Context(Mode.CONFIRM))
+    assert "no outreach or payments" in result
+    assert calls == [1]
+
+
+def test_run_rejects_paid_metered_flags_before_network(monkeypatch):
+    import agentz.integrations.tinyfish_mcp as adapter
+
+    calls = []
+
+    async def fake_call(*_args, **_kwargs):
+        calls.append(1)
+        return {"ok": True, "structured_content": {"results": []}, "content": []}
+
+    monkeypatch.setattr(adapter, "call_tinyfish", fake_call)
+    _arm_live_scout(monkeypatch)
+    monkeypatch.setenv("TINYFISH_METERED", "true")
+    with pytest.raises(RuntimeError, match="paid/metered"):
+        run(Context(Mode.CONFIRM))
+    assert calls == []
 
 
 def test_only_https_source_links_are_printable():
@@ -105,7 +186,7 @@ def test_success_response_reports_count_without_sending(monkeypatch):
             },
             "content": [],
         }
-    monkeypatch.setenv("TINYFISH_API_KEY", "dummy-test-key")
+    _arm_live_scout(monkeypatch)
     monkeypatch.setattr(adapter, "call_tinyfish", fake_call)
     ctx = Context(Mode.CONFIRM)
     result = run(ctx)
@@ -173,7 +254,7 @@ def test_api_failure_is_fail_closed(monkeypatch):
 
     async def fake_call(_action, _values):
         return {"ok": False}
-    monkeypatch.setenv("TINYFISH_API_KEY", "dummy-test-key")
+    _arm_live_scout(monkeypatch)
     monkeypatch.setattr(adapter, "call_tinyfish", fake_call)
     with pytest.raises(RuntimeError, match="search failed"):
         run(Context(Mode.CONFIRM))
@@ -281,10 +362,23 @@ def test_scout_masks_secret_bearing_transport_failure(monkeypatch):
     async def fake_call(_action, _values):
         raise OSError("Authorization: Bearer private-key-do-not-log")
 
-    monkeypatch.setenv("TINYFISH_API_KEY", "private-key-do-not-log")
+    _arm_live_scout(monkeypatch, key="private-key-do-not-log")
     monkeypatch.setattr(adapter, "call_tinyfish", fake_call)
     with pytest.raises(RuntimeError) as captured:
         run(Context(Mode.CONFIRM))
     assert "private-key-do-not-log" not in str(captured.value)
     assert str(captured.value) == "TinyFish scout transport failed"
     assert captured.value.__cause__ is None
+
+
+def test_mcp_json_pins_tinyfish_and_omits_unpinned_a2a():
+    """#2246 a2a-mcp-server stays deferred until a read-only tool allowlist is pinned."""
+    root = Path(__file__).resolve().parents[1]
+    mcp = json.loads((root / ".mcp.json").read_text(encoding="utf-8"))
+    servers = mcp["mcpServers"]
+    assert "a2a" not in servers
+    tiny = servers["tinyfish"]
+    assert tiny["tools"] == ["search", "fetch_content"]
+    assert "*" not in tiny["tools"]
+    cursor = root / ".cursor" / "mcp.json"
+    assert not cursor.exists()

@@ -95,13 +95,20 @@ python -m agentz.cli run tinyfish_a2a_scout --mode confirm
 
 The existing AgentZ daemon retains its original dry-run GovChain task.
 TinyFish **does not start automatically**. To opt into one research query
-per day in the long-running daemon, bind both runtime variables:
+per day in the long-running daemon, bind these runtime variables:
 
 ```
 TINYFISH_API_KEY=<secret set in host secret manager>
 AGENTZ_TINYFISH_SCOUT_STATE_DIR=/absolute/path/to/host-persistent-volume/agentz
 AGENTZ_TINYFISH_SCOUT_ENABLED=true
+AGENTZ_TINYFISH_FREE_TIER_CONFIRMED=true
 ```
+
+`run()` itself refuses live dispatch unless `AGENTZ_TINYFISH_SCOUT_ENABLED`
+is `1`/`true`/`yes`. Registry `financial_limit_usd: 0` means _unlimited_ in
+`agentz/core/runner.py`, not a $0 cap. The handler therefore also requires
+`AGENTZ_TINYFISH_FREE_TIER_CONFIRMED=true` and rejects paid/metered TinyFish
+flags so metered calls are impossible by default.
 
 Only set these on the **real Python AgentZ service**, not on the similarly
 named Cloudflare Worker. Provision the **state directory on a durable shared

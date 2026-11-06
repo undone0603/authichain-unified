@@ -61,7 +61,8 @@ python -m agentz.cli run tinyfish_a2a_scout --mode confirm
 ```
 
 Its daemon schedule remains disabled until the host sets
-`AGENTZ_TINYFISH_SCOUT_ENABLED=true`, secures `TINYFISH_API_KEY`,
+`AGENTZ_TINYFISH_SCOUT_ENABLED=true`, `AGENTZ_TINYFISH_FREE_TIER_CONFIRMED=true`,
+secures `TINYFISH_API_KEY`,
 and configures `AGENTZ_TINYFISH_SCOUT_STATE_DIR` on a durable mounted volume.
 The daemon permits one research _attempt_ per UTC date, without outreach.
 If the state volume is missing, it refuses to run.
