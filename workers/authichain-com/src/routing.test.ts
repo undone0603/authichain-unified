@@ -169,6 +169,7 @@ test("CFA-758: money routes have no 50-workspace-generation or never-expire pack
     "/dpp",
     "/battery-passport",
     "/battery-passport/sample",
+    "/coffee",
     "/trumark",
     "/docs/dpp-architecture",
   ]) {
@@ -1652,6 +1653,8 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/genetics</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/passport</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/coffee</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/coffee</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/trumark</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/made-in-america</loc>"));
   assert.ok(!xml.includes("mendo"));
@@ -1972,4 +1975,52 @@ test("GET /battery-passport/sample.json returns 200 through the Worker fetch", a
   assert.equal(res.status, 200);
   assert.match(res.headers.get("content-type") ?? "", /application\/json/);
   assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
+});
+
+test("GET /coffee is the Proof-of-Support page with security headers", async () => {
+  const res = await get("/coffee");
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("X-Frame-Options"), "DENY");
+  assert.match(
+    res.headers.get("Content-Security-Policy") ?? "",
+    /frame-ancestors 'none'/
+  );
+  const html = await res.text();
+  assert.match(html, /id="coffee-heading">Buy AuthiChain a coffee/);
+  assert.match(html, /data-coffee-state="buy"/);
+  assert.match(html, /FREE-PREVIEW-V1/);
+  assert.match(html, /id="lead-capture"/);
+  assert.doesNotMatch(html, /AuthiChain, Inc\./);
+  assert.equal(html.includes("Proof-of-Coffee receipt"), false);
+});
+
+test("GET /coffee?thanks=1 alone does not flip to Thanks for the coffee", async () => {
+  const res = await get("/coffee?thanks=1");
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /id="coffee-heading">Buy AuthiChain a coffee/);
+  assert.match(html, /data-coffee-state="buy"/);
+  assert.equal(html.includes("Proof-of-Coffee receipt"), false);
+});
+
+test("GET /coffee Accept:application/json is HTTP 402 x402", async () => {
+  const res = await worker.fetch(
+    new Request("https://authichain.com/coffee", {
+      headers: { accept: "application/json" },
+    }),
+    ENV
+  );
+  assert.equal(res.status, 402);
+  assert.ok(res.headers.get("PAYMENT-REQUIRED"));
+  const body = (await res.json()) as {
+    accepts: Array<{ payTo: string }>;
+  };
+  assert.equal(body.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
+});
+
+test("GET /coffee/jwks.json and sample-receipt.json answer 200", async () => {
+  const jwks = await get("/coffee/jwks.json");
+  assert.equal(jwks.status, 200);
+  const sample = await get("/coffee/sample-receipt.json");
+  assert.equal(sample.status, 200);
 });

@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "worker-app/**"
+      - "src/lib/support-coffee.ts"
       - ".github/workflows/deploy-authichain-edge-router.yml"
       - "scripts/ci/parse-wrangler-version-id.mjs"
       - "scripts/ci/promote-worker-version.mjs"
