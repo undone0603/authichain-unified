@@ -199,6 +199,11 @@ export const PLANS: Plan[] = [
       "One-time checkout that opens an AuthiChain workspace. Not an audit, not a certification, not legal advice.",
     generations: 50,
     stripe_price_id: "price_1TwmD8GqTruSqV8TpAF8dfyA",
+    // 2026-11-02: the earlier link was deleted and every card rendered dead.
+    // This one is active on the same $299 one-time price (verified live in
+    // Stripe: active=true, line item price_1TwmD8GqTruSqV8TpAF8dfyA), so the
+    // workspace can be sold again without creating a new Stripe object.
+    stripe_payment_link: "https://buy.stripe.com/5kQdR9fzP4t85iaePO1ND43",
     stripe_mode: "payment",
     tier: "pro",
     features: [

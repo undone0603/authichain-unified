@@ -195,9 +195,9 @@ export const SHOWCASES: readonly Showcase[] = [
     title: "Ask what a call costs before making it",
     call: { tool: "get_pricing", args: {} },
     returns:
-      "Verification is free: no API key, no payment header, no account. Returns the free tool list and the status of the paid plans, which are currently on hold.",
+      "Verification is free: no API key, no payment header, no account. Returns the free tool list and the live x402 agent price ($0.05 USDC on Base). Stripe catalogue SKUs are not listed.",
     limit:
-      "The legacy x402 seal verify tool is a separate rail and answers 402 on an unpaid call. Use verify_record instead.",
+      "The x402 seal verify tool is a separate rail: unpaid empty POST is HTTP 402, then $0.05 USDC on Base. Use verify_record for free verification.",
     evidence: null,
   },
 ];

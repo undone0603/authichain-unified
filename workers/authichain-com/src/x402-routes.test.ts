@@ -97,9 +97,7 @@ describe("tryHandleX402", () => {
       )
     ).toBe(false);
     expect(body.humanCheckout.farmUsd).toBe(149);
-    expect(body.humanCheckout.farmPaymentLink).toBe(
-      "https://authichain.com/checkout/strainchain_farm"
-    );
+    expect(body.humanCheckout.farmPaymentLink).toBeUndefined();
     expect(body.humanCheckout.starterPaymentLink).toBe(
       "https://authichain.com/checkout/starter"
     );
@@ -239,7 +237,12 @@ describe("tryHandleX402", () => {
     expect(res).not.toBeNull();
     expect(res!.status).toBe(200);
     const body = (await res!.json()) as {
-      result: { task: { status: { state: string }; artifacts: Array<{ parts: Array<{ text: string }> }> } };
+      result: {
+        task: {
+          status: { state: string };
+          artifacts: Array<{ parts: Array<{ text: string }> }>;
+        };
+      };
     };
     expect(body.result.task.status.state).toBe("TASK_STATE_COMPLETED");
     expect(body.result.task.artifacts[0].parts[0].text).toContain(

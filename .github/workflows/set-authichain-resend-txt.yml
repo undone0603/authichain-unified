@@ -9,7 +9,7 @@ permissions:
 jobs:
   add-txt-record:
     name: Create Resend ownership TXT record
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     steps:
       - name: Look up zone and create record
         env:
