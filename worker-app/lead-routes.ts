@@ -581,6 +581,14 @@ async function handleLeadCapture(c: LeadContext) {
     return c.json({ error: "Could not store the request" }, 500);
   }
 
+  // GovChain's contractor form is an explicit inquiry, but production
+  // autonomous outreach is still held. Persist the row without triggering
+  // enrichment, CRM sync, n8n/Make or any potential automatic email.
+  // A separately reviewed, authorized follow-up workflow can be enabled later.
+  if (lead.source === "govchain_onboard") {
+    return c.json({ ok: true });
+  }
+
   await background(c, runLeadAutomation(c, lead));
   return c.json({ ok: true });
 }

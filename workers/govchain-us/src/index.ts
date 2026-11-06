@@ -33,6 +33,7 @@ import {
   tryRedirectSeoRootCanonical,
 } from "../../_shared/seo-hub-routes.ts";
 import { tryHandleNftMetadata } from "./nft-metadata.ts";
+import { renderGovchainOnboard, submitGovchainOnboard } from "./govchain-onboard.ts";
 
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <rect x="2" y="2" width="60" height="60" rx="8" fill="#05060b" stroke="#3b82f6" stroke-width="1.5"/>
@@ -2240,6 +2241,35 @@ export default {
     }
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "govchain.us", ts: Date.now() });
+    }
+    // GovChain needs a contractor-specific intake, not the generic shared
+    // AuthiChain pilot form. Only this exact path changes; passport/SEO paths
+    // still use the existing proxy and all economic routes stay unchanged.
+    if (url.pathname === "/onboard" || url.pathname === "/onboard/") {
+      if (request.method === "GET") return renderGovchainOnboard();
+      if (request.method === "HEAD") {
+        const page = renderGovchainOnboard();
+        return new Response(null, { status: 200, headers: page.headers });
+      }
+      if (request.method === "POST") {
+        if (!env?.APP_ORIGIN || !env.APP_ORIGIN.startsWith("https://")) {
+          return Response.json({ error: "lead_service_unavailable" }, {
+            status: 503, headers: { "cache-control": "no-store" },
+          });
+        }
+        return submitGovchainOnboard(request, lead => {
+          const captureUrl = new URL("/api/leads/capture", url);
+          const upstreamRequest = new Request(captureUrl, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(lead),
+          });
+          return proxyToApp(upstreamRequest, captureUrl, env.APP_ORIGIN);
+        });
+      }
+      return new Response("Method Not Allowed", {
+        status: 405, headers: { "Allow": "GET, HEAD, POST", "cache-control": "no-store" },
+      });
     }
     if (/^\/onboard(?:\/|$)/.test(url.pathname) || isSeoPassportPath(url.pathname)) {
       if (!env?.APP_ORIGIN) {
