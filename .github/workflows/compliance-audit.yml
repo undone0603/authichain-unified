@@ -28,7 +28,7 @@ concurrency:
 jobs:
   compliance-audit:
     name: Run EU DPP Compliance Audit
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
     timeout-minutes: 30
     # This job requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY repository
     # secrets to talk to the live product ledger. Those secrets are not
@@ -42,6 +42,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v7

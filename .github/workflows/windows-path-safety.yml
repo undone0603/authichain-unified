@@ -18,9 +18,11 @@ concurrency:
 jobs:
   paths:
     name: Reject NTFS-illegal filenames
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Scan index
         run: bash scripts/check-windows-paths.sh

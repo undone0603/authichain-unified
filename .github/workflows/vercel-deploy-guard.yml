@@ -19,10 +19,12 @@ permissions:
 jobs:
   guard:
     name: No Vercel deploy steps
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: "22"

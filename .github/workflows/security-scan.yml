@@ -24,7 +24,7 @@ concurrency:
 jobs:
   gitleaks:
     name: Secret scan (gitleaks)
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
     # Skip Dependabot PRs - its GITHUB_TOKEN is read-only on PR events
     if: github.actor != 'dependabot[bot]'
     permissions:
@@ -32,6 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          persist-credentials: false
           # The Monday history scan needs every commit. Tree scans do not.
           # A bare 0 is falsy in an expression, so the depths are strings.
           fetch-depth: ${{ github.event_name == 'schedule' && '0' || '1' }}
