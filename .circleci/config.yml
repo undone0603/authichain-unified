@@ -198,7 +198,7 @@ workflows:
           filters:
             branches:
               ignore:
-                - /dependabot\\/.*/
+                - /dependabot\/.*/
       - main-quality-gate:
           requires:
             - quality
@@ -210,4 +210,4 @@ workflows:
           filters:
             branches:
               ignore:
-                - /dependabot\\/.*/
+                - /dependabot\/.*/
