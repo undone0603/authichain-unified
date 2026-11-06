@@ -38,10 +38,10 @@ def run(ctx: ExecutionContext) -> str:
             
         for inf in infringements:
             notice = ctx.step(
-                f"Draft Cease & Desist for {inf['seller']}",
+                "Prepare private evidence-review memo for marketplace lead",
                 action=lambda: asyncio.run(draft_enforcement_notice(inf, brand_to_protect))
             )
-            ctx.step(f"   -> Legal enforcement queued for {inf['seller']}.")
+            ctx.step("   -> Internal review only; no legal enforcement or outbound action queued.")
 
         # 3. Strategic Alliances (Partnerships)
         ctx.step("Phase 2: Strategic Alliances - Expanding Trust Network...")
