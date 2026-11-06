@@ -66,3 +66,9 @@ Replies resolve by conversation id created at capture. The reply itself is not a
 Production mail stays off until a human sets `production_send`, sets `human_send_approved` on a campaign, and configures a sender. This tree does not do those three things. The kill switch and attestation revocation block the next send. No mail is sent by the dogfood path.
 
 Human authorization is still required for a real charge, a contract, a refund, a purchase, mass outreach, and sensitive personal targeting. The mocked dogfood in `runAgentZDogfood` uses `standards@example.test` and the test transport.
+
+## Restricted public forum transport (proposed in PR #2248, 2026-11-01)
+
+`forum` is a distinct one-time, **non-targeted public technical introduction** transport within `authorizeOutbound`, not an email transport and not a substitute for a commercial buyer qualification. It requires signed `authichain-agent/1` `SEND_OUTBOUND`, policy grant and revocation/replay checks, matching content hash and full disclosure, a separately authorized campaign with `allow_public_forum=true` and `human_send_approved=true`, `production_send=true`, no kill switch, one of the fixed scope keys, and the exact publicly documented Agentic SuperHero lobby endpoint. There is no arbitrary-URL post path. Without an explicitly injected sender or a platform-issued message ID, no external delivery is claimed. A local one-shot runner and its fail-closed receipt lock are in `scripts/agentz-a2a-introduction.ts`.
+
+**Current-code note:** `defaultOutboundPolicy().production_send` is `true` on the inspected 2026-11-01 branch, despite the older launch documentation stating `false`. This does **not** mean production email sends are enabled: default email campaign approval remains `false`, and the default email sender is still `null`. The public-forum campaign flag is off by default. No send was performed during this PR.

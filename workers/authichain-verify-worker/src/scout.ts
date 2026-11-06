@@ -142,6 +142,8 @@ export async function executeDiscover(input: {
     resolver: input.registry,
     replayStore: input.replay,
     now,
+    requiredCapability: "DISCOVER_PROSPECT",
+    expectedIntent: "DISCOVER_PROSPECT",
   });
   if (!verified.valid) {
     const code: OutboundDenial = verified.reasons.includes("CAPABILITY_NOT_GRANTED")
@@ -228,6 +230,8 @@ export async function executeCreateOpportunity(input: {
     resolver: input.registry,
     replayStore: input.replay,
     now,
+    requiredCapability: "CREATE_OPPORTUNITY",
+    expectedIntent: "CREATE_OPPORTUNITY",
   });
   if (!verified.valid) {
     const code: OutboundDenial = verified.reasons.includes("CAPABILITY_NOT_GRANTED")

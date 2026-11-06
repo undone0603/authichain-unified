@@ -137,7 +137,7 @@ export async function runAgentZDogfood(now = DOGFOOD_NOW): Promise<DogfoodTrace>
     evidence_ids: [EVIDENCE.evidence_id],
     payload: { subject: "self" },
   }, agentz.privateKey);
-  const selfVerified = await verifyAgentMessage(selfMessage, { resolver: registry, replayStore: replay, now });
+  const selfVerified = await verifyAgentMessage(selfMessage, { resolver: registry, replayStore: replay, now, requiredCapability: "READ_EVIDENCE", expectedIntent: "READ_EVIDENCE" });
   const guardianMessage = await signAgentMessage({
     protocol: "authichain-agent/1",
     message_id: "msg:guardian:verify-agentz",
@@ -153,7 +153,7 @@ export async function runAgentZDogfood(now = DOGFOOD_NOW): Promise<DogfoodTrace>
     evidence_ids: [agentz.attestation.attestation_id],
     payload: { subject_attestation_id: agentz.attestation.attestation_id },
   }, guardian.privateKey);
-  const guardianVerified = await verifyAgentMessage(guardianMessage, { resolver: registry, replayStore: replay, now });
+  const guardianVerified = await verifyAgentMessage(guardianMessage, { resolver: registry, replayStore: replay, now, requiredCapability: "VERIFY_ATTESTATION", expectedIntent: "VERIFY_ATTESTATION" });
 
   const discoverPayload: DiscoverProspectPayload = {
     action: "DISCOVER_PROSPECT",
