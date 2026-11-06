@@ -46,15 +46,20 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Restore full tree after sparse checkout
         if: runner.environment == 'self-hosted'
         run: |
           git sparse-checkout disable
           git reset --hard HEAD
-          test -f package.json
+          test -f scripts/autonomy/reconcile.mjs
+          test -f .github/autonomy.json
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+      - name: Regression-test classification and operator holds
+        run: node --test scripts/autonomy/reconcile-manifest.test.mjs
       - run: node scripts/autonomy/reconcile.mjs --check
 
   reconcile:
@@ -76,7 +81,8 @@ jobs:
         run: |
           git sparse-checkout disable
           git reset --hard HEAD
-          test -f package.json
+          test -f scripts/autonomy/reconcile.mjs
+          test -f .github/autonomy.json
       - uses: actions/setup-node@v7
         with:
           node-version: 22
