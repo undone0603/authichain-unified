@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   LIVE_JWKS_URL,
+  NPM_VERIFY_CLI,
+  REPO_JWS_CLI,
+  REPO_JWKS_PIN_CLI,
+  REPO_LIVE_JWKS_CLI,
   SAMPLE_JSON_PATH,
   SAMPLE_JWS,
   SAMPLE_JWS_PATH,
@@ -120,7 +124,12 @@ describe("battery passport demonstration sample", () => {
     expect(html).toContain("valid-unanchored");
     expect(html).toContain("valid-offline");
     expect(html).toContain(LIVE_JWKS_URL);
-    expect(html).toContain("npx authichain-verify");
+    expect(html).toContain(NPM_VERIFY_CLI);
+    expect(html).toContain(REPO_JWKS_PIN_CLI);
+    expect(html).toContain(REPO_JWS_CLI);
+    expect(html).toContain(REPO_LIVE_JWKS_CLI);
+    expect(html).not.toContain("npx authichain-verify --jwks");
+    expect(html).toContain("if (ch !== &quot;1&quot;) break; sig.unshift(0);");
     expect(html).toContain("crypto.subtle.verify");
     expect(html).toContain(`$${plan.price}`);
     expect(html).toContain(
@@ -144,26 +153,36 @@ describe("battery passport demonstration sample", () => {
     expect(html).not.toBeNull();
     expect(html!.status).toBe(200);
     expect(html!.headers.get("Content-Type")).toContain("text/html");
+    expect(html!.headers.get("X-Frame-Options")).toBe("DENY");
+    expect(html!.headers.get("Content-Security-Policy")).toContain(
+      "frame-ancestors 'none'"
+    );
     expect(await html!.text()).toContain(SAMPLE_LABEL);
 
     const bundleRes = await tryHandleBatteryPassportSample(
       req(SAMPLE_JSON_PATH)
     );
     expect(bundleRes!.status).toBe(200);
+    expect(bundleRes!.headers.get("Access-Control-Allow-Origin")).toBe("*");
     const bundle = (await bundleRes!.json()) as {
       signatureStatus: string;
       verification: { recordVerdict: string; recordIssuerInLiveJwks: boolean };
       record: { proof: { proofValue: string } };
+      offlineVerifier: { npmCli: string; jwksPinCli: string; jwsCli: string };
     };
     expect(bundle.signatureStatus).toBe("signed");
     expect(bundle.verification.recordVerdict).toBe("valid-unanchored");
     expect(bundle.verification.recordIssuerInLiveJwks).toBe(false);
     expect(bundle.record.proof.proofValue.startsWith("z")).toBe(true);
+    expect(bundle.offlineVerifier.npmCli).toBe(NPM_VERIFY_CLI);
+    expect(bundle.offlineVerifier.jwksPinCli).toBe(REPO_JWKS_PIN_CLI);
+    expect(bundle.offlineVerifier.jwsCli).toBe(REPO_JWS_CLI);
 
     const recordRes = await tryHandleBatteryPassportSample(
       req(SAMPLE_RECORD_PATH)
     );
     expect(recordRes!.status).toBe(200);
+    expect(recordRes!.headers.get("Access-Control-Allow-Origin")).toBe("*");
     const record = (await recordRes!.json()) as typeof SAMPLE_RECORD;
     expect(verifyRecord(record, null, { now }).verdict).toBe(
       "valid-unanchored"
@@ -172,12 +191,14 @@ describe("battery passport demonstration sample", () => {
     const jwsRes = await tryHandleBatteryPassportSample(req(SAMPLE_JWS_PATH));
     expect(jwsRes!.status).toBe(200);
     expect(jwsRes!.headers.get("Content-Type")).toContain("application/jose");
+    expect(jwsRes!.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect((await jwsRes!.text()).trim()).toBe(SAMPLE_JWS);
 
     const head = await tryHandleBatteryPassportSample(
       req(SAMPLE_JSON_PATH, "HEAD")
     );
     expect(head!.status).toBe(200);
+    expect(head!.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect(await head!.text()).toBe("");
     const post = await tryHandleBatteryPassportSample(req(SAMPLE_PATH, "POST"));
     expect(post!.status).toBe(405);

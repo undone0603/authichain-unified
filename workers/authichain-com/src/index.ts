@@ -77,11 +77,7 @@ import {
   isSampleAuditPath,
   renderSampleAuditPage,
 } from "./battery-sample-audit-page";
-import {
-  isBatteryPassportSamplePath,
-  renderBatteryPassportSamplePage,
-  tryHandleBatteryPassportSample,
-} from "./battery-passport-sample-page";
+import { tryHandleBatteryPassportSample } from "./battery-passport-sample-page";
 import {
   dppCheckCompleteEvent,
   dppCheckoutClickEvent,
@@ -3533,11 +3529,6 @@ async function handleAuthichainCom(
           'Content-Type': 'text/html; charset=utf-8',
           ...(thanks ? { 'Cache-Control': 'private, no-store' } : {}),
         },
-      });
-    }
-    if (isBatteryPassportSamplePath(p)) {
-      return new Response(await renderBatteryPassportSamplePage(), {
-        headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
     }
     const batterySample = await tryHandleBatteryPassportSample(request);

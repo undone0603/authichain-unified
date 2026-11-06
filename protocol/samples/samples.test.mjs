@@ -139,6 +139,23 @@ describe('SAMPLE-ONLY key hygiene', () => {
     }
   });
 
+  it('battery-passport demonstration bundle documents npm 0.1.1 vs repo --jwks CLI', () => {
+    const bundle = json('battery-passport-demo.bundle.json');
+    expect(bundle.offlineVerifier.npmCli).toBe(
+      'npx authichain-verify sample.record.json'
+    );
+    expect(bundle.offlineVerifier.jwksPinCli).toBe(
+      'node protocol/bin/authichain-verify.mjs --jwks sample.jwks.json sample.record.json'
+    );
+    expect(bundle.offlineVerifier.jwsCli).toBe(
+      'node protocol/bin/authichain-verify.mjs --jwks sample.jwks.json sample.jws'
+    );
+    expect(bundle.offlineVerifier.jwksPinCli).not.toMatch(/^npx authichain-verify --jwks/);
+    expect(bundle.offlineVerifier.jwsCli).not.toMatch(/^npx authichain-verify --jwks/);
+    expect(bundle.offlineVerifier.jwksCliNote).toMatch(/0\.1\.1/);
+    expect(bundle.offlineVerifier.jwksCliNote).toMatch(/>=0\.2\.0/);
+  });
+
   it('battery-passport demonstration did:key is absent from live JWKS / issuer surfaces', () => {
     const demo = json('battery-passport-demo.record.json');
     const did = demo.issuer;

@@ -49,6 +49,33 @@ export const SAMPLE_UTM = {
   utm_campaign: "battery-passport-sample",
 } as const;
 
+/** Same landing-HTML headers as `workers/authichain-com/src/index.ts`. */
+const HTML_SECURITY_HEADERS: Record<string, string> = {
+  "Content-Security-Policy":
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-ancestors 'none'",
+  "X-Frame-Options": "DENY",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Cache-Control": "private, no-store",
+  "CDN-Cache-Control": "no-store",
+};
+
+const SAMPLE_CORS = {
+  "Access-Control-Allow-Origin": "*",
+} as const;
+
+/** npm 0.1.1 positional form — works today. `--jwks` is not on that release. */
+export const NPM_VERIFY_CLI = "npx authichain-verify sample.record.json";
+/** Repo CLI until authichain-verify >=0.2.0 is published to npm. */
+export const REPO_JWKS_PIN_CLI =
+  "node protocol/bin/authichain-verify.mjs --jwks sample.jwks.json sample.record.json";
+export const REPO_JWS_CLI =
+  "node protocol/bin/authichain-verify.mjs --jwks sample.jwks.json sample.jws";
+export const REPO_LIVE_JWKS_CLI =
+  "node protocol/bin/authichain-verify.mjs --jwks jwks.json sample.record.json";
+export const JWKS_CLI_NOTE =
+  "Live npm authichain-verify@0.1.1 only accepts <record.json> [anchor.json]. --jwks and .jws crash with ENOENT: open '--jwks'. Use the repo CLI from an undone0603/authichain-unified checkout until >=0.2.0 is published to npm.";
+
 const HTML_PATHS = new Set([SAMPLE_PATH, `${SAMPLE_PATH}/`]);
 const ARTIFACT_PATHS = new Set([
   SAMPLE_JSON_PATH,
@@ -425,10 +452,10 @@ export async function buildSampleBundle(now: Date = new Date()) {
       package: "authichain-verify",
       repoCli:
         "node protocol/verifier.mjs protocol/samples/battery-passport-demo.record.json",
-      npmCli: "npx authichain-verify sample.record.json",
-      jwksPinCli:
-        "npx authichain-verify --jwks sample.jwks.json sample.record.json",
-      jwsCli: "npx authichain-verify --jwks sample.jwks.json sample.jws",
+      npmCli: NPM_VERIFY_CLI,
+      jwksPinCli: REPO_JWKS_PIN_CLI,
+      jwsCli: REPO_JWS_CLI,
+      jwksCliNote: JWKS_CLI_NOTE,
       expectedRecordVerdict: "valid-unanchored",
       expectedJwsVerdict: "valid-offline",
     },
@@ -524,10 +551,12 @@ const canonicalize = (value) => {
 };
 const data = new TextEncoder().encode(canonicalize({ ...rest, proof: proofRest }));
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+const b58 = proofValue.slice(1);
 let n = 0n;
-for (const ch of proofValue.slice(1)) n = n * 58n + BigInt(B58.indexOf(ch));
+for (const ch of b58) n = n * 58n + BigInt(B58.indexOf(ch));
 const sig = [];
 while (n > 0n) { sig.unshift(Number(n & 0xffn)); n >>= 8n; }
+for (const ch of b58) { if (ch !== "1") break; sig.unshift(0); }
 const key = await crypto.subtle.importKey("jwk", { kty: "OKP", crv: "Ed25519", x: jwk.x }, { name: "Ed25519" }, false, ["verify"]);
 console.log(await crypto.subtle.verify({ name: "Ed25519" }, key, Uint8Array.from(sig), data));`;
 
@@ -655,17 +684,19 @@ curl -sO https://authichain.com/battery-passport/sample.jwks.json
 curl -sO https://authichain.com/battery-passport/sample.jws
 
 # Record carries its signer as did:key. Expected verdict: valid-unanchored
-npx authichain-verify sample.record.json
+# Live npm authichain-verify@0.1.1 only accepts record.json [anchor.json]
+${NPM_VERIFY_CLI}
 
-# Pin the signer to the bundled demonstration JWKS. Expected: issuerInJwks true
-npx authichain-verify --jwks sample.jwks.json sample.record.json
+# --jwks / .jws are not on npm 0.1.1 (ENOENT: open '--jwks').
+# From an undone0603/authichain-unified checkout until >=0.2.0 is on npm:
+${REPO_JWKS_PIN_CLI}
 
 # Compact JWS against the demonstration JWKS. Expected verdict: valid-offline
-npx authichain-verify --jwks sample.jwks.json sample.jws
+${REPO_JWS_CLI}
 
 # Live AuthiChain JWKS. Expected reason: issuer_not_in_jwks
 curl -sO https://authichain.com/.well-known/jwks.json
-npx authichain-verify --jwks jwks.json sample.record.json</code></pre>
+${REPO_LIVE_JWKS_CLI}</code></pre>
       <p class="bp-note">From this repository: <code>node protocol/verifier.mjs protocol/samples/battery-passport-demo.record.json</code>. Edit any field in the JSON and run it again: the verdict becomes <code>invalid</code> with <code>signature_invalid</code>.</p>
     </div>
   </section>
@@ -728,6 +759,7 @@ function jsonResponse(
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "public, max-age=300",
     "X-Content-Type-Options": "nosniff",
+    ...SAMPLE_CORS,
     Allow: "GET, HEAD",
     ...extra,
   };
@@ -754,8 +786,8 @@ export async function tryHandleBatteryPassportSample(
   if (html) {
     const page = await renderBatteryPassportSamplePage();
     const headers = {
+      ...HTML_SECURITY_HEADERS,
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "public, max-age=300",
     };
     if (request.method === "HEAD")
       return new Response(null, { status: 200, headers });
@@ -771,6 +803,7 @@ export async function tryHandleBatteryPassportSample(
       "Content-Type": "application/jose",
       "Cache-Control": "public, max-age=300",
       "X-Content-Type-Options": "nosniff",
+      ...SAMPLE_CORS,
       Allow: "GET, HEAD",
     };
     if (request.method === "HEAD")
