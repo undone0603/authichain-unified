@@ -47,6 +47,8 @@ type Env = {
   AUTHICHAIN_ATTESTATION_KEY_ID?: string;
   AUTHICHAIN_ATTESTATION_PUBLIC_JWK?: string;
   STRIPE_SECRET_KEY?: string;
+  COFFEE_PAYMENT_LINK_URL?: string;
+  COFFEE_RECEIPT_PRIVATE_JWK?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_WEBHOOK_AUTHICHAIN_SECRET?: string;
   NEXT_PUBLIC_SUPABASE_URL?: string;
@@ -87,6 +89,8 @@ function hydrateProcessEnv(env?: Env) {
   if (!env) return;
   const copy: Array<[string, string | undefined]> = [
     ["STRIPE_SECRET_KEY", env.STRIPE_SECRET_KEY],
+    ["COFFEE_PAYMENT_LINK_URL", env.COFFEE_PAYMENT_LINK_URL],
+    ["COFFEE_RECEIPT_PRIVATE_JWK", env.COFFEE_RECEIPT_PRIVATE_JWK],
     ["STRIPE_WEBHOOK_SECRET", env.STRIPE_WEBHOOK_SECRET],
     ["STRIPE_WEBHOOK_AUTHICHAIN_SECRET", env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET],
     [
@@ -350,6 +354,30 @@ app.get("/api/checkout", c => {
     webhook: "POST /api/stripe/webhook",
     thanks: "/dpp/thanks",
     activate: "/dpp/activate",
+  });
+});
+
+app.get("/api/coffee/checkout", async c => {
+  const { coffeeCheckoutResponse } = await import("../src/lib/support-coffee");
+  return coffeeCheckoutResponse(c.req.raw, {
+    STRIPE_SECRET_KEY:
+      c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY,
+    COFFEE_PAYMENT_LINK_URL:
+      c.env?.COFFEE_PAYMENT_LINK_URL || process.env.COFFEE_PAYMENT_LINK_URL,
+  });
+});
+
+app.post("/api/coffee/checkout", async c => {
+  hydrateProcessEnv(c.env);
+  const { coffeeCheckoutResponse } = await import("../src/lib/support-coffee");
+  return coffeeCheckoutResponse(c.req.raw, {
+    STRIPE_SECRET_KEY:
+      c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY,
+    COFFEE_PAYMENT_LINK_URL:
+      c.env?.COFFEE_PAYMENT_LINK_URL || process.env.COFFEE_PAYMENT_LINK_URL,
+    COFFEE_RECEIPT_PRIVATE_JWK:
+      c.env?.COFFEE_RECEIPT_PRIVATE_JWK ||
+      process.env.COFFEE_RECEIPT_PRIVATE_JWK,
   });
 });
 

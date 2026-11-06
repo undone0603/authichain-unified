@@ -107,6 +107,16 @@ zone_name = "authichain.com"
 pattern = "authichain.com/api/checkout/*"
 zone_name = "authichain.com"
 
+# Proof-of-Support coffee checkout. More specific than authichain-com's
+# authichain.com/* glob. Rollback: delete these two [[routes]] blocks.
+[[routes]]
+pattern = "authichain.com/api/coffee"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/coffee/*"
+zone_name = "authichain.com"
+
 # More specific than landing authichain.com/* so POST /api/generate is not
 # answered by ASSETS 404 when APP_WORKER is unbound. Same pattern as checkout.
 [[routes]]
@@ -214,6 +224,14 @@ zone_name = "govchain.us"
 
 [[routes]]
 pattern = "authichain.govchain.us/api/checkout/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/coffee"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/coffee/*"
 zone_name = "govchain.us"
 
 [[routes]]

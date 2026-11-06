@@ -78,6 +78,7 @@ import {
   renderSampleAuditPage,
 } from "./battery-sample-audit-page";
 import { tryHandleBatteryPassportSample } from "./battery-passport-sample-page";
+import { tryHandleCoffee } from "./coffee-page";
 import {
   dppCheckCompleteEvent,
   dppCheckoutClickEvent,
@@ -3234,6 +3235,10 @@ interface Env {
   APP_WORKER_TIMEOUT_MS?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_PRICE_ID?: string;
+  /** Optional override of the live coffee Payment Link fallback. */
+  COFFEE_PAYMENT_LINK_URL?: string;
+  /** Optional live Proof-of-Coffee Ed25519 private JWK. Unset uses the bundled sample key. */
+  COFFEE_RECEIPT_PRIVATE_JWK?: string;
   /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
   DPP_SMOKE_SECRET?: string;
   X402_PAY_TO?: string;
@@ -3487,6 +3492,7 @@ async function handleAuthichainCom(
         { loc: 'https://authichain.com/passport', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/dpp', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/dpp-check', freq: 'weekly', pri: '0.9' },
+        { loc: 'https://authichain.com/coffee', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/trumark', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/made-in-america', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/made-in-usa-claim-file', freq: 'weekly', pri: '0.9' },
@@ -3539,6 +3545,8 @@ async function handleAuthichainCom(
         },
       });
     }
+    const coffee = await tryHandleCoffee(request, env);
+    if (coffee) return coffee;
     const batterySample = await tryHandleBatteryPassportSample(request);
     if (batterySample) return batterySample;
     if (isSampleAuditPath(p)) {

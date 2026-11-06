@@ -68,6 +68,7 @@ export function renderLlmsTxt(): string {
     "- Battery passport gap map (e-bike / LMT example; passport required from 18 February 2027 under Regulation (EU) 2023/1542): https://authichain.com/battery-passport",
     "- Fictional Ed25519-signed LMT demonstration record (signed by bundled demo key https://authichain.com/battery-passport/sample.jwks.json, not live /.well-known/jwks.json; not an Article 77 passport): https://authichain.com/battery-passport/sample",
     "- Fictional e-bike battery walkthrough (not a document the $299 checkout sends): https://authichain.com/battery-passport/sample-audit",
+    "- Proof-of-Support (human coffee / agent USDC tip, zero platform cut, not tax-deductible): https://authichain.com/coffee — unpaid agents GET Accept: application/json or ?rail=x402 for HTTP 402 Base USDC. POST https://authichain.com/api/coffee/checkout creates a Stripe Checkout Session.",
     "",
     ...humanCheckout,
     "",
