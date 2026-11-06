@@ -55,6 +55,11 @@ jobs:
             .github/autonomy.json
             scripts/autonomy/launch-mode.mjs
           sparse-checkout-cone-mode: false
+      # The WSL runner's PATH has no Linux node (run 42226910776:
+      # "node: command not found"), so install one rather than rely on it.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
       - id: launch
         run: node scripts/autonomy/launch-mode.mjs
       - id: mode
@@ -193,6 +198,13 @@ jobs:
           git sparse-checkout disable
           git reset --hard HEAD
           test -f package.json
+      # Put a Linux Node on PATH before anything runs node or npm. The WSL
+      # runner's service PATH has no Linux node, so npm resolved to the
+      # Windows shim ("WSL 1 is not supported", run 42226910776). These
+      # jobs only run self-hosted, which never used the pnpm cache.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
       # Install the pinned pnpm instead of trusting the runner's PATH pnpm,
       # which drifted to 12.15.0 on both WSL runners (run 41862666846).
       # Same step as typecheck-ratchet.yml: a per-runner dest so concurrent
@@ -201,10 +213,6 @@ jobs:
         with:
           version: "${{ env.PNPM_VERSION }}"
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "${{ env.NODE_VERSION }}"
-          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Qualify leads with AI scoring
         run: pnpm exec tsx scripts/qualify-leads.ts
@@ -239,6 +247,13 @@ jobs:
           git sparse-checkout disable
           git reset --hard HEAD
           test -f package.json
+      # Put a Linux Node on PATH before anything runs node or npm. The WSL
+      # runner's service PATH has no Linux node, so npm resolved to the
+      # Windows shim ("WSL 1 is not supported", run 42226910776). These
+      # jobs only run self-hosted, which never used the pnpm cache.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
       # Install the pinned pnpm instead of trusting the runner's PATH pnpm,
       # which drifted to 12.15.0 on both WSL runners (run 41862666846).
       # Same step as typecheck-ratchet.yml: a per-runner dest so concurrent
@@ -247,10 +262,6 @@ jobs:
         with:
           version: "${{ env.PNPM_VERSION }}"
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "${{ env.NODE_VERSION }}"
-          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Sync MI leads to HubSpot CRM
         run: pnpm exec tsx scripts/sync-mi-leads-hubspot.ts
@@ -282,6 +293,13 @@ jobs:
           git sparse-checkout disable
           git reset --hard HEAD
           test -f package.json
+      # Put a Linux Node on PATH before anything runs node or npm. The WSL
+      # runner's service PATH has no Linux node, so npm resolved to the
+      # Windows shim ("WSL 1 is not supported", run 42226910776). These
+      # jobs only run self-hosted, which never used the pnpm cache.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
       # Install the pinned pnpm instead of trusting the runner's PATH pnpm,
       # which drifted to 12.15.0 on both WSL runners (run 41862666846).
       # Same step as typecheck-ratchet.yml: a per-runner dest so concurrent
@@ -290,10 +308,6 @@ jobs:
         with:
           version: "${{ env.PNPM_VERSION }}"
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "${{ env.NODE_VERSION }}"
-          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Generate funnel performance report
         run: pnpm exec tsx scripts/funnel-report.ts
