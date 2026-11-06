@@ -250,11 +250,15 @@ function pageShell(title: string, body: string): string {
  * bundles it), so its Starter description, Stripe and prices stay unchanged; this
  * overrides only what the confirm page and the authichain.com home JSON-LD show.
  */
+const PLAN_DISPLAY_DESCRIPTION: Partial<Record<string, string>> = {
+  starter:
+    "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits.",
+};
 
 export function displayPlanDescription(
   plan: Pick<Plan, "id" | "description">
 ): string {
-  return plan.description;
+  return PLAN_DISPLAY_DESCRIPTION[plan.id] ?? plan.description;
 }
 
 export function renderCheckoutConfirmPage(opts: {

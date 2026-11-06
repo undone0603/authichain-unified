@@ -86,8 +86,9 @@ describe("canonical web3 identity lock", () => {
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
       planPaymentLink("dpp_readiness")
     );
-    // Direct plan configuration does not authorize public x402 catalogue listing.
-    expect(catalog.humanCheckout.farmPaymentLink).toBeUndefined();
+    expect(catalog.humanCheckout.farmPaymentLink).toBe(
+      planPaymentLink("strainchain_farm")
+    );
     expect(catalog.humanCheckout.starterPaymentLink).toBe(
       planPaymentLink("starter")
     );
