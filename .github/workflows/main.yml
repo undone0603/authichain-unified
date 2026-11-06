@@ -271,8 +271,14 @@ jobs:
       # machine-wide build lock for the whole attempt loop. A second
       # invocation here would drop that lock during the pause.
       # 4096 MB heap: next build --webpack aborted with exit 134 under ~2 GB.
+      # The self-hosted runner lives in a 3.9 GB VM with a 2.8 GB memory cap. next
+      # build needs about 3 GB there, was OOM-killed, and coincided with VM hangs.
+      - name: "Skipped on self-hosted: production build"
+        if: steps.baseline.outputs.skip != 'true' && runner.environment == 'self-hosted'
+        run: echo "::warning title=Production build not run::This change affects the Next app, but next build does not fit on the self-hosted runner. Build it elsewhere before relying on it."
+
       - name: Production build
-        if: steps.baseline.outputs.skip != 'true'
+        if: steps.baseline.outputs.skip != 'true' && runner.environment != 'self-hosted'
         env:
           NODE_OPTIONS: --max-old-space-size=4096
         run: pnpm build
