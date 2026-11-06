@@ -14,12 +14,13 @@ import timeline from '../../content/dpp/regulatory-timeline.json';
  * so the behaviour is testable at any point in time and the tests never expire.
  */
 
-export type Precision = 'day' | 'month' | 'quarter' | 'year';
+/** `tbd`: no EU act sets a date yet. Such entries carry `date: null` and render no date. */
+export type Precision = 'day' | 'month' | 'quarter' | 'year' | 'tbd';
 
 export type Milestone = {
   id: string;
-  /** ISO yyyy-mm-dd. For ranged entries this is the start. */
-  date: string;
+  /** ISO yyyy-mm-dd. For ranged entries this is the start. `null` when precision is `tbd`. */
+  date: string | null;
   /** ISO yyyy-mm-dd. Present only for ranged entries. */
   endDate?: string;
   precision: Precision;
@@ -42,7 +43,14 @@ export type MilestoneStatus = 'in-force' | 'imminent' | 'upcoming';
 export const IMMINENT_MONTHS = 12;
 
 export function listMilestones(): Milestone[] {
-  return [...(timeline.milestones as Milestone[])].sort((a, b) => a.date.localeCompare(b.date));
+  // Dated entries in date order; undated (`tbd`) entries keep their JSON order, after them.
+  const all = timeline.milestones as Milestone[];
+  const dated = all.filter((m) => m.date !== null).sort((a, b) => a.date!.localeCompare(b.date!));
+  return [...dated, ...all.filter((m) => m.date === null)];
+}
+
+export function isDateNotSet(m: Milestone): boolean {
+  return m.date === null || m.precision === 'tbd';
 }
 
 export function timelineUpdatedAt(): string {
@@ -75,16 +83,18 @@ export function daysUntil(iso: string, now: Date): number {
 }
 
 export function milestoneStatus(m: Milestone, now: Date): MilestoneStatus {
-  const days = daysUntil(m.date, now);
+  if (isDateNotSet(m)) return 'upcoming';
+  const days = daysUntil(m.date!, now);
   if (days <= 0) return 'in-force';
-  return monthsUntil(m.date, now) < IMMINENT_MONTHS ? 'imminent' : 'upcoming';
+  return monthsUntil(m.date!, now) < IMMINENT_MONTHS ? 'imminent' : 'upcoming';
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** Renders at the precision the regulation actually specifies — never invents a day. */
 export function formatMilestoneDate(m: Milestone): string {
-  const d = parseISO(m.date);
+  if (isDateNotSet(m)) return '';
+  const d = parseISO(m.date!);
   const year = d.getUTCFullYear();
   switch (m.precision) {
     case 'day':
@@ -101,6 +111,8 @@ export function formatMilestoneDate(m: Milestone): string {
       const endYear = m.endDate ? parseISO(m.endDate).getUTCFullYear() : year;
       return endYear === year ? `${year}` : `${year}–${endYear}`;
     }
+    default:
+      return '';
   }
 }
 
@@ -109,13 +121,14 @@ export function formatMilestoneDate(m: Milestone): string {
  * the page stops advertising a deadline it has already crossed.
  */
 export function countdownLabel(m: Milestone, now: Date): string {
+  if (isDateNotSet(m)) return 'Date not set';
   const status = milestoneStatus(m, now);
   if (status === 'in-force') return `In force since ${formatMilestoneDate(m)}`;
 
-  const days = daysUntil(m.date, now);
+  const days = daysUntil(m.date!, now);
   if (days <= 31) return days === 1 ? '1 day to comply' : `${days} days to comply`;
 
-  const months = monthsUntil(m.date, now);
+  const months = monthsUntil(m.date!, now);
   if (months < 12) return months === 1 ? '1 month to comply' : `${months} months to comply`;
 
   const years = Math.floor(months / 12);
@@ -124,11 +137,11 @@ export function countdownLabel(m: Milestone, now: Date): string {
 
 /** The next milestone still ahead — what the page should lead its urgency with. */
 export function nextDeadline(now: Date): Milestone | null {
-  return listMilestones().find((m) => milestoneStatus(m, now) !== 'in-force') ?? null;
+  return listMilestones().find((m) => !isDateNotSet(m) && milestoneStatus(m, now) !== 'in-force') ?? null;
 }
 
 /** The most recent milestone already in force, for "registry is live" messaging. */
 export function mostRecentInForce(now: Date): Milestone | null {
-  const past = listMilestones().filter((m) => milestoneStatus(m, now) === 'in-force');
+  const past = listMilestones().filter((m) => !isDateNotSet(m) && milestoneStatus(m, now) === 'in-force');
   return past.length ? past[past.length - 1] : null;
 }
