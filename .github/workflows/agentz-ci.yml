@@ -43,10 +43,8 @@ jobs:
           "$VENV/bin/pip" install -r requirements-agentz.txt
           echo "AGENTZ_VENV=$VENV" >> "$GITHUB_ENV"
 
-      # agentz/tests is a pytest suite (fixtures + runtime imports). unittest
-      # discovery reports import errors instead of real failures (#2156).
       - name: Run AgentZ control-plane tests
-        run: PYTHONPATH="${GITHUB_WORKSPACE}" "$AGENTZ_VENV/bin/python" -m pytest agentz/tests
+        run: PYTHONPATH="${GITHUB_WORKSPACE}" "$AGENTZ_VENV/bin/python" -m unittest discover -s agentz/tests -p 'test_*.py'
 
       - name: Confirm the web-client stub is not sold as an ABI
         run: |
