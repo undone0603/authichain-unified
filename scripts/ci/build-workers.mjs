@@ -126,6 +126,20 @@ function changedPaths(range) {
   return out.split("\n").filter(Boolean);
 }
 
+/** Never propagate Cloudflare credentials into a compile-only child process. */
+export function compileEnvironment(env = process.env) {
+  const clean = { ...env };
+  for (const key of [
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_API_KEY",
+    "CLOUDFLARE_EMAIL",
+    "CF_API_TOKEN",
+    "CF_ACCOUNT_ID",
+  ]) delete clean[key];
+  return clean;
+}
+
 function compileWorker(name) {
   const cwd = path.join(ROOT, "workers", name);
   const config = CONFIGS.find(file => existsSync(path.join(cwd, file)));
@@ -143,7 +157,7 @@ function compileWorker(name) {
       "--config",
       config,
     ],
-    { cwd, stdio: "inherit", env: process.env }
+    { cwd, stdio: "inherit", env: compileEnvironment() }
   );
   return result.status === 0;
 }
@@ -174,13 +188,6 @@ function main() {
     console.log("[build] no workers to compile");
     return;
   }
-  if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID) {
-    console.error(
-      "::error::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is empty. Refusing a hollow pass."
-    );
-    process.exit(1);
-  }
-
   const failed = [];
   for (const name of names) {
     if (!compileWorker(name)) failed.push(name);
