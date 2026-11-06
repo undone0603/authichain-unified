@@ -17,6 +17,8 @@ import {
   LIVE_COFFEE_RECEIPT_PUBLIC_JWK,
   SAMPLE_COFFEE_JWKS,
   SAMPLE_COFFEE_KID,
+  SAMPLE_COFFEE_PUBLIC_JWK,
+  SAMPLE_COFFEE_RECEIPT,
   SUPPORT_KIND,
   SUPPORT_SKU,
   THANKS_COPY,
@@ -25,6 +27,7 @@ import {
   centsToUsdcAtomic,
   coffeeCheckoutResponse,
   createCoffeeCheckoutSession,
+  coffeeJwsSigningInput,
   coffeeJwksForEnv,
   generateSupportReceiptKeypair,
   isCoffeePaidSession,
@@ -368,11 +371,99 @@ describe("Proof-of-Coffee Ed25519 receipts", () => {
     const sample = buildSampleCoffeeReceipt();
     expect(sample.sampleOnly).toBe(true);
     expect(sample.signer.kid).toBe(SAMPLE_COFFEE_KID);
+    expect(SAMPLE_COFFEE_PUBLIC_JWK.kid).toBe(SAMPLE_COFFEE_KID);
+    expect(SAMPLE_COFFEE_PUBLIC_JWK.d).toBeUndefined();
     const verified = await verifyProofOfCoffeeReceipt(
       sample.jws,
       SAMPLE_COFFEE_JWKS
     );
     expect(verified.ok).toBe(true);
+  });
+
+  it("RFC 7515 §5.1 WebCrypto verifies minted and sample receipts on header.payload", async () => {
+    const keys = await generateSupportReceiptKeypair();
+    const minted = await mintProofOfCoffeeReceipt({
+      rail: "fiat",
+      paymentStatus: "paid",
+      amountCents: 500,
+      receiptId: "poc_rfc7515",
+      kid: keys.kid,
+      privateJwk: keys.privateJwk,
+    });
+
+    const verifySigningInput = async (
+      jws: string,
+      publicJwk: { x: string }
+    ) => {
+      const [h64, p64, s64] = jws.split(".");
+      const pubKey = await crypto.subtle.importKey(
+        "jwk",
+        { kty: "OKP", crv: "Ed25519", x: publicJwk.x },
+        { name: "Ed25519" },
+        false,
+        ["verify"]
+      );
+      const sigBytes = Buffer.from(s64, "base64url");
+      const signingInput = new TextEncoder().encode(`${h64}.${p64}`);
+      expect(Buffer.from(coffeeJwsSigningInput(h64, p64))).toEqual(
+        Buffer.from(signingInput)
+      );
+      return crypto.subtle.verify("Ed25519", pubKey, sigBytes, signingInput);
+    };
+
+    expect(await verifySigningInput(minted.jws, keys.publicJwk)).toBe(true);
+    expect(
+      await verifySigningInput(
+        SAMPLE_COFFEE_RECEIPT.jws,
+        SAMPLE_COFFEE_PUBLIC_JWK
+      )
+    ).toBe(true);
+    expect(
+      await verifySigningInput(
+        buildSampleCoffeeReceipt().jws,
+        SAMPLE_COFFEE_JWKS.keys[0]!
+      )
+    ).toBe(true);
+  });
+
+  it("rejects a tampered protected header with the same payload and signature", async () => {
+    const keys = await generateSupportReceiptKeypair();
+    const minted = await mintProofOfCoffeeReceipt({
+      rail: "fiat",
+      paymentStatus: "paid",
+      amountCents: 500,
+      receiptId: "poc_header_tamper",
+      kid: keys.kid,
+      privateJwk: keys.privateJwk,
+    });
+    const [h64, p64, s64] = minted.jws.split(".");
+    const header = JSON.parse(
+      Buffer.from(h64, "base64url").toString("utf8")
+    ) as Record<string, unknown>;
+    const swappedKid = Buffer.from(
+      JSON.stringify({ ...header, kid: "forged-kid" }),
+      "utf8"
+    ).toString("base64url");
+    const extraField = Buffer.from(
+      JSON.stringify({ ...header, cty: "json" }),
+      "utf8"
+    ).toString("base64url");
+    expect(
+      (
+        await verifyProofOfCoffeeReceipt(
+          `${swappedKid}.${p64}.${s64}`,
+          minted.jwks
+        )
+      ).ok
+    ).toBe(false);
+    expect(
+      (
+        await verifyProofOfCoffeeReceipt(
+          `${extraField}.${p64}.${s64}`,
+          minted.jwks
+        )
+      ).ok
+    ).toBe(false);
   });
 
   it("publishes bound live public key plus the sample kid", async () => {

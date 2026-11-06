@@ -89,8 +89,9 @@ export const SAMPLE_COFFEE_RECEIPT = sampleCoffeeReceiptJson as {
   jws: string;
   jwks: { keys: CoffeeJwk[] };
 };
+export const SAMPLE_COFFEE_PUBLIC_JWK = SAMPLE_COFFEE_JWKS.keys[0] as CoffeeJwk;
 export const SAMPLE_COFFEE_KID = String(
-  SAMPLE_COFFEE_JWKS.keys[0]?.kid || "support-receipt-sample"
+  SAMPLE_COFFEE_PUBLIC_JWK?.kid || "support-receipt-sample"
 );
 
 /** Public half of the live receipt key CF Deploy binds as COFFEE_RECEIPT_PRIVATE_JWK. */
@@ -501,6 +502,14 @@ function b64urlJson(obj: unknown): string {
   return b64url(Buffer.from(JSON.stringify(obj), "utf8"));
 }
 
+/** RFC 7515 §5.1 JWS Signing Input: ASCII(BASE64URL(header) || '.' || BASE64URL(payload)). */
+export function coffeeJwsSigningInput(
+  headerB64: string,
+  payloadB64: string
+): Uint8Array {
+  return new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+}
+
 function signingJwkFromPrivate(jwk: CoffeePrivateJwk): JsonWebKey {
   return {
     kty: "OKP",
@@ -756,6 +765,10 @@ export async function mintProofOfCoffeeReceipt(
   };
 
   const payloadBytes = Buffer.from(canonicalJson(record), "utf8");
+  const jwsHeader = { alg: "EdDSA", typ: "POC+JSON", kid };
+  const headerB64 = b64urlJson(jwsHeader);
+  const payloadB64 = b64url(payloadBytes);
+  const signingInput = coffeeJwsSigningInput(headerB64, payloadB64);
   const key = await crypto.subtle.importKey(
     "jwk",
     signingJwkFromPrivate(jwk),
@@ -766,10 +779,9 @@ export async function mintProofOfCoffeeReceipt(
   const signature = await crypto.subtle.sign(
     { name: "Ed25519" },
     key,
-    payloadBytes
+    signingInput
   );
-  const jwsHeader = { alg: "EdDSA", typ: "POC+JSON", kid };
-  const jws = `${b64urlJson(jwsHeader)}.${b64url(payloadBytes)}.${b64url(signature)}`;
+  const jws = `${headerB64}.${payloadB64}.${b64url(signature)}`;
   const jwks = { keys: [publicJwkFromPrivate(jwk, kid)] };
 
   return {
@@ -837,11 +849,12 @@ export async function verifyProofOfCoffeeReceipt(
       false,
       ["verify"]
     );
+    const signingInput = coffeeJwsSigningInput(parts[0], parts[1]);
     const valid = await crypto.subtle.verify(
       { name: "Ed25519" },
       publicKey,
       Buffer.from(parts[2], "base64url"),
-      payloadBytes
+      signingInput
     );
     if (!valid) return { ok: false, error: "invalid signature" };
   } catch {
