@@ -139,6 +139,17 @@ describe('SAMPLE-ONLY key hygiene', () => {
     }
   });
 
+  it('battery-passport demonstration did:key is absent from live JWKS / issuer surfaces', () => {
+    const demo = json('battery-passport-demo.record.json');
+    const did = demo.issuer;
+    expect(did).toMatch(/^did:key:z6Mk/);
+    expect(did).not.toBe(SAMPLE_ISSUER_DID);
+    for (const rel of PRODUCTION_SURFACES) {
+      const text = readFileSync(join(ROOT, rel), 'utf8');
+      expect(text, `${rel} must not list the battery demo did:key`).not.toContain(did);
+    }
+  });
+
   it('sign script refuses to invent a key when env is unset', () => {
     const env = { ...process.env };
     delete env.SAMPLE_PASSPORT_SIGNING_KEY;

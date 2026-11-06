@@ -1,0 +1,93 @@
+{
+  "sampleOnly": true,
+  "signatureStatus": "signed",
+  "label": "DEMONSTRATION SAMPLE — FICTIONAL DATA, NOT AN ARTICLE 77 PASSPORT OR LEGAL ADVICE",
+  "notArticle77": true,
+  "notLegalAdvice": true,
+  "notACustomerRecord": true,
+  "notCertifiedConformityAssessment": true,
+  "signer": {
+    "kind": "dedicated_demonstration_ed25519",
+    "did": "did:key:z6MksmTCGMGYrU5oBLyTXVdpYBTegKhFjeXjnnAfmsm7F7TV",
+    "kid": "z042TDrUe3FpsIbzMITdbEmxtcG5meP4o_SMPnjAJ-I",
+    "verificationMethod": "did:key:z6MksmTCGMGYrU5oBLyTXVdpYBTegKhFjeXjnnAfmsm7F7TV#z6MksmTCGMGYrU5oBLyTXVdpYBTegKhFjeXjnnAfmsm7F7TV",
+    "note": "Signed by a dedicated demonstration Ed25519 key generated for this fictional sample. The live AuthiChain issuer private keys are not in this repository and were not used."
+  },
+  "liveJwks": {
+    "urls": [
+      "https://authichain.com/.well-known/jwks.json",
+      "https://authichain.com/protocol/jwks.json"
+    ],
+    "expectedWhenPinned": "issuer_not_in_jwks",
+    "reason": "This demonstration key is not the live AuthiChain issuer. Pinning the sample to the live JWKS is expected to report issuer_not_in_jwks. Do not add this key to live JWKS. GET /battery-passport/sample.json recomputes verification at request time; do not treat a copied verification object as proof."
+  },
+  "offlineVerifier": {
+    "package": "authichain-verify",
+    "repoCli": "node protocol/verifier.mjs protocol/samples/battery-passport-demo.record.json",
+    "npmCli": "npx authichain-verify sample.record.json",
+    "jwksPinCli": "npx authichain-verify --jwks sample.jwks.json sample.record.json",
+    "jwsCli": "npx authichain-verify --jwks sample.jwks.json sample.jws",
+    "expectedRecordVerdict": "valid-unanchored",
+    "expectedJwsVerdict": "valid-offline"
+  },
+  "jwks": {
+    "keys": [
+      {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "x": "xdD9z4zhfemnPPrFxHuaAqfMUbDwmgKCxWln490Vu2g",
+        "kid": "z042TDrUe3FpsIbzMITdbEmxtcG5meP4o_SMPnjAJ-I",
+        "use": "sig",
+        "alg": "EdDSA"
+      }
+    ]
+  },
+  "record": {
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+      "https://authichain.com/protocol/v1"
+    ],
+    "type": [
+      "VerifiableCredential",
+      "ProvenanceRecord",
+      "BatteryPassportDemonstrationSample"
+    ],
+    "issuer": "did:key:z6MksmTCGMGYrU5oBLyTXVdpYBTegKhFjeXjnnAfmsm7F7TV",
+    "validFrom": "2026-11-06T00:00:00Z",
+    "validUntil": "2028-12-31T00:00:00Z",
+    "credentialSubject": {
+      "id": "https://authichain.com/battery-passport/sample",
+      "demonstration": true,
+      "label": "DEMONSTRATION SAMPLE — FICTIONAL DATA, NOT AN ARTICLE 77 PASSPORT OR LEGAL ADVICE",
+      "claim": "fictional_demonstration_sample_only",
+      "productClass": "LMT battery pack (e-bike / light means of transport)",
+      "brand": "Fictional Demonstration Brand (not a company)",
+      "name": "EXAMPLE-LMT-48V-14Ah fictional e-bike battery pack",
+      "model": "EXAMPLE-LMT-48V-14Ah",
+      "serial": "DEMO-LMT-SAMPLE-0001",
+      "category": "LMT",
+      "chemistry": "NMC (fictional demonstration value)",
+      "weightKg": 3.2,
+      "statedEnergyWh": 672,
+      "ratedCapacityAh": 14,
+      "nominalVoltageV": 48,
+      "expectedLifetimeCycles": "800–1000 (fictional datasheet range)",
+      "manufacturer": "Fictional Demonstration Pack Assembler (not a company)",
+      "placeOfManufacture": "Example City (fictional; not a street address)",
+      "dateOfManufacture": "2026-01-15",
+      "statement": "DEMONSTRATION SAMPLE — FICTIONAL DATA, NOT AN ARTICLE 77 PASSPORT OR LEGAL ADVICE",
+      "notArticle77": true,
+      "notLegalAdvice": true,
+      "notACustomerRecord": true,
+      "notCertifiedConformityAssessment": true
+    },
+    "proof": {
+      "type": "Ed25519Signature2020",
+      "created": "2026-11-06T00:00:00Z",
+      "verificationMethod": "did:key:z6MksmTCGMGYrU5oBLyTXVdpYBTegKhFjeXjnnAfmsm7F7TV#z6MksmTCGMGYrU5oBLyTXVdpYBTegKhFjeXjnnAfmsm7F7TV",
+      "proofPurpose": "assertionMethod",
+      "proofValue": "z9AWyqN4mUimbgMu3bEucDJD9ZZjuWSeEf2k3TNdmyMe5vrXPXiGJftnYbMyPG4RFcpK6PmcVmPcorDPJcbaZXZ4"
+    }
+  },
+  "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6InowNDJURHJVZTNGcHNJYnpNSVRkYkVteHRjRzVtZVA0b19TTVBuakFKLUkiLCJ0eXAiOiJBQy1BVFRFU1RBVElPTitKV1MifQ.eyJhdHRlc3RhdGlvbl9pZCI6InVybjphdXRoaWNoYWluOnNhbXBsZTpiYXR0ZXJ5LXBhc3Nwb3J0OmRlbW8tbG10LTEiLCJkZWNpc2lvbiI6InZlcmlmaWVkIiwiZXZpZGVuY2UiOlt7ImRpZ2VzdCI6InNoYTI1Njo0YzM0YzBiZmI0MWIxMmJkMGYxMTc5NWVjNzQ2MmYxNzdkMzYwZDIyMzBmNWNlZWQyNGVjZGE5NjZkM2E2ZDE3IiwiaWQiOiJldmlkZW5jZS1kZW1vLWxhYmVsIiwidHlwZSI6ImRlbW9uc3RyYXRpb24tc2FtcGxlLWxhYmVsIn1dLCJleHBpcmVzX2F0IjoiMjAyOC0xMi0zMVQwMDowMDowMFoiLCJpc3N1ZWRfYXQiOiIyMDI2LTExLTA2VDAwOjAwOjAwWiIsImlzc3VlciI6eyJpZCI6Imh0dHBzOi8vYXV0aGljaGFpbi5jb20vYmF0dGVyeS1wYXNzcG9ydC9zYW1wbGUiLCJuYW1lIjoiQXV0aGlDaGFpbiBkZW1vbnN0cmF0aW9uIHNhbXBsZSBpc3N1ZXIgKG5vdCB0aGUgbGl2ZSBBdXRoaUNoYWluIGlzc3VlcikifSwic3RhdHVzIjoiYWN0aXZlIiwic3ViamVjdCI6eyJvYmplY3RfaWQiOiJ1cm46YXV0aGljaGFpbjpzYW1wbGU6YmF0dGVyeS1wYXNzcG9ydDpkZW1vLWxtdC0xIiwicHJvZHVjdF9jbGFzcyI6IkxNVCBiYXR0ZXJ5IChmaWN0aW9uYWwgZGVtb25zdHJhdGlvbikiLCJzZXJpYWwiOiJERU1PLUxNVC1TQU1QTEUtMDAwMSJ9LCJ2ZXJzaW9uIjoiMC4xIn0.xTJoN-O93BGJ0KpiM0jh4owGW0nOJBlSAyUEEnyvI7ZAMUWYzg6MIgjv8gfMbMKdrPNg7DtVfEaZjOORdF4oDw"
+}

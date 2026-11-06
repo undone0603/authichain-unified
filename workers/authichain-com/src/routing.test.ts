@@ -169,6 +169,7 @@ test("CFA-758: money routes have no 50-workspace-generation or never-expire pack
     "/checkout/dpp_readiness",
     "/dpp",
     "/battery-passport",
+    "/battery-passport/sample",
     "/trumark",
     "/docs/dpp-architecture",
   ]) {

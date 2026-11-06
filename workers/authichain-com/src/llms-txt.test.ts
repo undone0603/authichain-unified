@@ -24,6 +24,7 @@ describe("llms.txt", () => {
     expect(text).toContain("https://authichain.com/openapi.json");
     expect(text).toContain("https://authichain.com/mcp");
     expect(text).toContain("https://authichain.com/battery-passport");
+    expect(text).toContain("https://authichain.com/battery-passport/sample");
     expect(text).toContain("18 February 2027");
     expect(text).toContain("e-bike / LMT");
     expect(text).toContain(planPaymentLink("qron_launch"));

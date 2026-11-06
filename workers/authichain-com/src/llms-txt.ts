@@ -66,6 +66,7 @@ export function renderLlmsTxt(): string {
     "- EU DPP readiness check (score, gaps, dated obligation): https://authichain.com/dpp-check",
     "- Same check for agents: MCP tools/call dpp_readiness_check on https://authichain.com/mcp",
     "- Battery passport gap map (e-bike / LMT example; passport required from 18 February 2027 under Regulation (EU) 2023/1542): https://authichain.com/battery-passport",
+    "- Fictional Ed25519-signed LMT demonstration record (not an Article 77 passport): https://authichain.com/battery-passport/sample",
     "- Fictional e-bike battery walkthrough (not a document the $299 checkout sends): https://authichain.com/battery-passport/sample-audit",
     "",
     ...humanCheckout,
