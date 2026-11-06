@@ -1,0 +1,36 @@
+name: AgentZ evidence-only security triage
+
+on:
+  pull_request:
+    paths:
+      - 'agentz/core/alerts.py'
+      - 'agentz/core/agent_threats.py'
+      - 'agentz/core/trust.py'
+      - 'agentz/api/main.py'
+      - 'agentz/tests/test_scan_alerts.py'
+      - 'agentz/tests/test_agent_threats.py'
+      - 'agentz/tests/test_offline_scan_cannot_certify.py'
+      - 'agentz/tests/test_geo_unknown.py'
+      - 'agentz/tests/test_geo_no_punitive_side_effects.py'
+      - 'agentz/tests/test_scan_redeem_auth.py'
+      - '.github/workflows/agent-evidence-triage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-triage:
+    name: Agent evidence-only triage (no secrets)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install isolated test dependency
+        run: python3 -m pip install --disable-pip-version-check "pytest>=8,<10"
+      - name: Verify agent threat and QR scan anomaly classifiers
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python3 -m pytest -q agentz/tests/test_agent_threats.py agentz/tests/test_scan_alerts.py agentz/tests/test_offline_scan_cannot_certify.py agentz/tests/test_geo_unknown.py agentz/tests/test_geo_no_punitive_side_effects.py

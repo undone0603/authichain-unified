@@ -133,12 +133,35 @@ def test_invalid_signature_zeroes_score():
     assert result["verified"] is False
 
 
-def test_all_checks_passing_is_verified():
+def test_offline_signature_and_geography_cannot_certify_physical_goods():
     sb = _supabase()
     result = asyncio.run(trust.assess_scans(sb, "prod-1", signature_valid=True))
-    assert result["checks"] == {"signature": "valid", "location": "clear", "velocity": 1}
-    assert result["verified"] is True
-    assert _timeline(sb)[-1]["event"] == "Verified Scan"
+    assert result["checks"] == {
+        "signature": "valid", "location": "clear", "velocity": 1,
+        "canonical_registry": "not_checked",
+    }
+    assert result["verified"] is False
+    assert _timeline(sb)[-1]["event"] == "Unverified Scan"
+
+
+@pytest.mark.parametrize("verdict", ["valid-unanchored", "verified"])
+def test_legacy_offline_verifier_never_issues_qron_reward(client, verdict):
+    c, _ = client
+    reward = AsyncMock()
+    with _secret(SECRET), \
+            patch("agentz.core.signature.check_scan_signature", AsyncMock(return_value={
+                "signature_valid": True, "reason": "ok", "verdict": verdict,
+            })), \
+            patch("agentz.core.media.generate_story_mode", AsyncMock(return_value=None)), \
+            patch("agentz.core.growth.reward_repeat_scans", reward):
+        r = c.post("/scan", json=SCAN, headers={"Authorization": f"Bearer {SECRET}"})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["verified"] is False
+    assert data["checks"]["signature"] == "valid"
+    assert data["checks"]["canonical_registry"] == "not_checked"
+    assert data["reward"] is None
+    reward.assert_not_called()
 
 
 def test_monitor_scans_still_returns_a_float_for_workflows():

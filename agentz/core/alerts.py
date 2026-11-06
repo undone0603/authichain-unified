@@ -1,48 +1,140 @@
-"""
-agentz.core.alerts
-------------------
-Alerts Agent: Detects suspicious activity and triggers real-time notifications.
+"""Read-only anomaly triage for QR scan events, not counterfeit verdicts.
+
+A scan burst may result from a popular code, a copied label, retry traffic,
+or many other benign causes. No action here revokes a product, blocks a
+person, makes a medical determination, or sends a third-party notification.
 """
 from __future__ import annotations
+
 import logging
-from typing import Dict, Any, List
-from agentz.core.credentials import get
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
+from typing import Any
 
 logger = logging.getLogger("agentz.alerts")
+WINDOW_MINUTES = 10
+MIN_SCANS = 11
+MIN_LOCATIONS = 2
+MIN_SESSIONS = 3
 
-async def detect_suspicious_activity(supabase) -> List[Dict[str, Any]]:
+
+def _timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        result = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return result.astimezone(timezone.utc) if result.tzinfo else None
+
+
+def _location(scan: dict[str, Any]) -> tuple[str, str] | None:
+    city, country = scan.get("city"), scan.get("country")
+    if not isinstance(city, str) or not isinstance(country, str):
+        return None
+    city, country = city.strip().casefold(), country.strip().casefold()
+    if not city or not country or len(city) > 100 or len(country) > 100:
+        return None
+    return city, country
+
+
+def analyze_scan_events(
+    scans: list[dict[str, Any]], *, now: datetime | None = None
+) -> list[dict[str, Any]]:
+    """Find time-bounded, deduplicated multi-location scan bursts.
+
+    The QRON-v2 ``scan_events`` schema has id, qron_id, scanned_at, city,
+    country, session_id. It does NOT prove the identifier uniquely binds one physical
+    item; therefore even a valid burst can only request investigation.
     """
-    Analyzes recent scans for patterns indicating counterfeit or bot activity.
-    """
-    # 1. Fetch recent scans with business/product context
-    # In a real query, we'd look for velocity spikes or impossible geo-jumps
-    scans = supabase.table("scan_events").select("*").order("scanned_at", desc=True).limit(50).execute().data
-    
-    alerts = []
-    
-    # Simple Velocity Logic
-    qron_counts = {}
-    for s in scans:
-        qid = s.get("qron_id")
-        qron_counts[qid] = qron_counts.get(qid, 0) + 1
-        
-    for qid, count in qron_counts.items():
-        if count > 10: # Threshold for 50 scans (simplified)
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        raise ValueError("now must include timezone")
+    now = now.astimezone(timezone.utc)
+    grouped: dict[str, list[tuple[datetime, tuple[str, str], str]]] = defaultdict(list)
+    seen: set[str] = set()
+    for scan in scans:
+        if not isinstance(scan, dict):
+            continue
+        qid, event_id = scan.get("qron_id"), scan.get("id")
+        if isinstance(qid, bool) or not isinstance(qid, (str, int)) or not str(qid).strip():
+            continue
+        if isinstance(event_id, bool) or not isinstance(event_id, (str, int)) or not str(event_id).strip():
+            continue
+        qid = str(qid).strip()
+        if len(qid) > 96:
+            continue
+        session = scan.get("session_id")
+        if not isinstance(session, str) or not (0 < len(session.strip()) <= 128):
+            continue
+        observed, location = _timestamp(scan.get("scanned_at")), _location(scan)
+        if observed is None or location is None:
+            continue
+        if not (now - timedelta(minutes=WINDOW_MINUTES) <= observed <= now):
+            continue
+        key = str(event_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        grouped[qid].append((observed, location, session.strip()))
+
+    alerts: list[dict[str, Any]] = []
+    for qid, events in sorted(grouped.items()):
+        distinct = len({location for _, location, _ in events})
+        distinct_sessions = len({session for _, _, session in events})
+        if len(events) >= MIN_SCANS and distinct >= MIN_LOCATIONS and distinct_sessions >= MIN_SESSIONS:
             alerts.append({
-                "type": "VELOCITY_SPIKE",
+                "type": "MULTI_LOCATION_SCAN_BURST",
                 "qron_id": qid,
-                "count": count,
-                "severity": "CRITICAL"
+                "count": len(events),
+                "distinct_locations": distinct,
+                "distinct_sessions": distinct_sessions,
+                "window_minutes": WINDOW_MINUTES,
+                "first_seen": min(ts for ts, _, _ in events).isoformat(),
+                "last_seen": max(ts for ts, _, _ in events).isoformat(),
+                "severity": "REVIEW",
+                "verification": "not_performed",
+                "counterfeit_verdict": None,
+                "recommended_action": "investigate_provenance_and_source_data",
             })
-            
     return alerts
 
-async def trigger_notifications(alerts: List[Dict[str, Any]]):
+
+async def detect_suspicious_activity(supabase, *, now: datetime | None = None) -> list[dict[str, Any]]:
+    """Read a bounded UTC window and fail closed on incomplete source coverage.
+
+    One extra row is the truncation sentinel. If the query reaches that row,
+    do not issue a falsely reassuring empty alert list: pagination or an
+    aggregate per-product query is required for high-volume deployments.
     """
-    Sends alerts to configured channels (Simulated).
-    """
+    checked_at = now if now is not None else datetime.now(timezone.utc)
+    if checked_at.tzinfo is None:
+        raise ValueError("now must include timezone")
+    checked_at = checked_at.astimezone(timezone.utc)
+    start = checked_at - timedelta(minutes=WINDOW_MINUTES)
+    result = (
+        supabase.table("scan_events")
+        .select("id,qron_id,scanned_at,city,country,session_id")
+        .gte("scanned_at", start.isoformat())
+        .lte("scanned_at", checked_at.isoformat())
+        .order("scanned_at", desc=True)
+        .limit(201)
+        .execute()
+    )
+    data = getattr(result, "data", None)
+    if not isinstance(data, list):
+        raise RuntimeError("scan_events query unavailable; anomaly coverage unknown")
+    if len(data) >= 201:
+        raise RuntimeError("scan_events window truncated; anomaly coverage unknown")
+    return analyze_scan_events(data, now=checked_at)
+
+
+async def trigger_notifications(alerts: list[dict[str, Any]]) -> None:
+    """Log review tickets locally only. No automatic sends or accusations."""
     for alert in alerts:
-        msg = f"🚨 [AgentZ Alert] {alert['type']} detected for QR {alert['qron_id']}. Severity: {alert['severity']}"
-        logger.warning(msg)
-        # In production, this would call Resend/Slack/Discord
-        print(f"  [alerts] NOTIFY: {msg}")
+        if alert.get("type") != "MULTI_LOCATION_SCAN_BURST":
+            continue
+        logger.warning(
+            "AgentZ investigation requested: %s events=%s; not a counterfeit verdict",
+            alert.get("type"), alert.get("count"),
+        )

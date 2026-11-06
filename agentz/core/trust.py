@@ -1,7 +1,7 @@
 """
 agentz.core.trust
 -----------------
-Trust Agent: Computes authenticity scores and detects counterfeit patterns.
+Trust Agent: Computes scan heuristics only; not physical authenticity.
 Enhanced with Geospatial Anomaly Detection (Phase 19).
 """
 from __future__ import annotations
@@ -10,12 +10,12 @@ from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger("agentz.trust")
 
-# Anything above this, with every check actually run and passed, is "verified".
+# Historical heuristic threshold, never an authenticity or authorization gate.
 VERIFIED_THRESHOLD = 90.0
 
 def calculate_authenticity(scan_history: Dict[str, Any]) -> float:
     """
-    Computes an authenticity score (0-100) based on scan history and patterns.
+    Computes a risk heuristic (0-100) from incomplete scan observations.
     """
     score = 100.0
     
@@ -36,33 +36,39 @@ def calculate_authenticity(scan_history: Dict[str, Any]) -> float:
         
     return max(score, 0.0)
 
-async def detect_geospatial_anomalies(supabase, qron_id: int, expected_region: str = "US") -> Dict[str, Any]:
+async def detect_geospatial_anomalies(supabase, qron_id: int, expected_region: Optional[str] = None) -> Dict[str, Any]:
+    """Return a review heuristic, never physical authenticity proof.
+
+    Missing market/country data means the check is unknown, not clear and not
+    evidence of counterfeiting. Scan locations are caller-controlled metadata.
     """
-    Analyzes scan locations for a product to detect unauthorized distribution or counterfeiting.
-    """
+    if not isinstance(expected_region, str) or not expected_region.strip():
+        return {"anomaly": None, "checked": False, "reason": "Target market not configured"}
+    expected = expected_region.strip().casefold()
     try:
         res = supabase.table("scan_events").select("city, country").eq("qron_id", qron_id).execute()
-        scans = res.data or []
-        
-        if len(scans) < 3:
-            return {"anomaly": False, "reason": "Insufficient data"}
-            
-        # Count unexpected regions
-        anomalous_scans = [s for s in scans if s.get("country") != expected_region]
-        
-        if len(anomalous_scans) >= 3:
-            return {
-                "anomaly": True, 
-                "reason": f"Detected {len(anomalous_scans)} scans outside {expected_region}",
-                "count": len(anomalous_scans)
-            }
-            
-        return {"anomaly": False, "reason": "Locations within expected range"}
+        scans = res.data
+        if not isinstance(scans, list) or len(scans) < 3:
+            return {"anomaly": None, "checked": False, "reason": "Insufficient location observations"}
+        countries = []
+        for scan in scans:
+            country = scan.get("country") if isinstance(scan, dict) else None
+            if not isinstance(country, str) or not country.strip():
+                return {"anomaly": None, "checked": False, "reason": "Incomplete country observations"}
+            countries.append(country.strip().casefold())
+        unexpected = sum(country != expected for country in countries)
+        if unexpected >= 3:
+            return {"anomaly": True, "checked": True,
+                    "reason": f"Observed {unexpected} scans outside configured region",
+                    "count": unexpected}
+        return {"anomaly": False, "checked": True, "reason": "No multi-scan region anomaly in observations"}
     except Exception as e:
         # A check that did not run is not a clean result. Report it as an
         # error so callers cannot read it as "no anomaly".
-        logger.error(f"Geospatial check failed for {qron_id}: {e}")
-        return {"anomaly": None, "error": True, "reason": f"Check error: {e}"}
+        # Storage/SDK exceptions can include sensitive query or credential
+        # details. Keep the raw exception out of logs and API-visible results.
+        logger.error("Geospatial scan check unavailable; evidence coverage unknown")
+        return {"anomaly": None, "error": True, "reason": "Geospatial data unavailable"}
 
 async def assess_scans(
     supabase, product_id: str, signature_valid: Optional[bool] = None
@@ -73,8 +79,9 @@ async def assess_scans(
 
     `signature_valid` is the result of a real signature check done by the
     caller, or None when no check was done. It is never assumed: a scan is
-    only "verified" when the signature was checked and valid, the location
-    check ran without error, and the score clears VERIFIED_THRESHOLD.
+    not "verified" merely because a signature and location heuristic pass.
+    Canonical issuer trust, current lifecycle/revocation, and physical binding
+    are not established by this legacy endpoint.
     """
     # 0. Fetch qron_id from product
     product_res = supabase.table("products").select("qron_id, metadata, authenticity_score").eq("id", product_id).single().execute()
@@ -95,18 +102,19 @@ async def assess_scans(
     scans = scans_res.data
 
     # 2. Geospatial Anomaly Pass (Phase 19)
-    # Default to US for pilot, but in production this would be set in product metadata
-    target_market = product_metadata.get("target_market", "US")
+    # Do not invent a product's intended market from missing metadata.
+    target_market = product_metadata.get("target_market")
     geo_check = await detect_geospatial_anomalies(supabase, qron_id, expected_region=target_market)
 
     if geo_check.get("error"):
         geo_status = "error"
+    elif geo_check.get("checked") is not True:
+        geo_status = "unknown"
     elif geo_check["anomaly"]:
         geo_status = "anomaly"
-        logger.warning("geo_anomaly flag set for product")
-        product_metadata["security_flag"] = "geo_anomaly"
-        product_metadata["geo_alert"] = geo_check["reason"]
-        score = max(0.0, score - 25.0)
+        # A location heuristic is not proof of illegitimate goods, and should
+        # not impose a persistent security flag or authenticity penalty.
+        logger.warning("Geospatial review candidate; no counterfeit verdict")
     else:
         geo_status = "clear"
 
@@ -126,11 +134,11 @@ async def assess_scans(
     else:
         signature_status = "valid" if signature_valid else "invalid"
 
-    verified = (
-        signature_status == "valid"
-        and geo_status == "clear"
-        and final_score > VERIFIED_THRESHOLD
-    )
+    # A trusted offline signature + a location heuristic cannot establish
+    # current issuer authorization, revocation status, on-chain anchoring, or
+    # physical-world product binding. Until the canonical verifier checks all
+    # required conditions, this legacy scan endpoint must fail closed.
+    verified = False
 
     # 4. Update Timeline in Metadata
     if "timeline" not in product_metadata:
@@ -165,6 +173,7 @@ async def assess_scans(
             "signature": signature_status,
             "location": geo_status,
             "velocity": velocity,
+            "canonical_registry": "not_checked",
         },
     }
 
