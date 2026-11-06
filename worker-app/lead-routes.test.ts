@@ -2,6 +2,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Hono } from "hono";
 import {
+  ESTATE_LEAD_CAPTURE_ORIGINS,
+  estateLeadCaptureAllowedOrigin,
   registerLeadRoutes,
   syncContactToHubSpot,
   type LeadEnv,
@@ -287,6 +289,92 @@ describe("POST /api/lead-capture and /api/leads/capture", () => {
     expect(body).toEqual({ error: "Could not store the request" });
     expect(inserts.some(i => i.table === "lead_captures")).toBe(false);
     expect(hubspotCalls()).toHaveLength(0);
+  });
+
+  it("answers OPTIONS preflight for estate origins and echoes that Origin", async () => {
+    for (const origin of ESTATE_LEAD_CAPTURE_ORIGINS) {
+      const res = await makeApp().request(
+        "/api/leads/capture",
+        {
+          method: "OPTIONS",
+          headers: {
+            Origin: origin,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+          },
+        },
+        env
+      );
+      expect(res.status).toBe(204);
+      expect(res.headers.get("Access-Control-Allow-Origin")).toBe(origin);
+      expect(res.headers.get("Access-Control-Allow-Methods")).toMatch(/POST/);
+      expect(res.headers.get("Access-Control-Allow-Headers")).toMatch(
+        /Content-Type/i
+      );
+      expect(res.headers.get("Vary")).toMatch(/Origin/);
+    }
+  });
+
+  it("refuses OPTIONS from an origin outside the estate allowlist", async () => {
+    const res = await makeApp().request(
+      "/api/leads/capture",
+      {
+        method: "OPTIONS",
+        headers: { Origin: "https://evil.example" },
+      },
+      env
+    );
+    expect(res.status).toBe(403);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
+  });
+
+  it.each([...ESTATE_LEAD_CAPTURE_ORIGINS])(
+    "stores a capture from %s and returns CORS headers",
+    async origin => {
+      const hostname = new URL(origin).hostname;
+      const res = await makeApp().request(
+        "/api/leads/capture",
+        {
+          method: "POST",
+          headers: {
+            Origin: origin,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: `buyer@${hostname}`,
+            source: hostname,
+            product_interest: hostname.split(".")[0],
+          }),
+        },
+        env
+      );
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+      expect(res.headers.get("Access-Control-Allow-Origin")).toBe(origin);
+      const row = inserts.find(i => i.table === "lead_captures")!.row as Record<
+        string,
+        unknown
+      >;
+      expect(row.source).toBe(hostname);
+      expect(row.email).toBe(`buyer@${hostname}`);
+    }
+  );
+
+  it("still stores a same-origin capture without CORS headers", async () => {
+    const res = await post("/api/leads/capture", {
+      email: "buyer@acme.com",
+      source: "authichain.com",
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
+  });
+
+  it("estateLeadCaptureAllowedOrigin only allows the four live apexes", () => {
+    expect(estateLeadCaptureAllowedOrigin("https://qron.space")).toBe(
+      "https://qron.space"
+    );
+    expect(estateLeadCaptureAllowedOrigin("https://evil.example")).toBeNull();
+    expect(estateLeadCaptureAllowedOrigin(undefined)).toBeNull();
   });
 
   it("keeps the lead when the form-field migration is not applied yet", async () => {

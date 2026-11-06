@@ -8,6 +8,7 @@
  */
 
 import { emailCheckoutWithPaymentLinkHtml } from "../../src/lib/checkout-email";
+import { EMAIL_OPTIN_CONSENT_TEXT } from "./email-optin-copy.ts";
 
 export type EstateBrandId = "authichain" | "qron" | "govchain" | "strainchain";
 
@@ -526,6 +527,52 @@ footer, .estate-footer {
   .hero, .estate-hero { text-align: left; }
 }
 section[id] { scroll-margin-top: 84px; }
+.estate-lead-capture {
+  padding: 48px 20px 24px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+}
+.estate-lead-capture .wrap { max-width: 560px; }
+.estate-lead-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 16px;
+}
+.estate-lead-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.estate-lead-consent {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  font-weight: 500;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+}
+.estate-lead-consent input[type="checkbox"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+.estate-lead-privacy, .estate-lead-status {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0;
+}
+.estate-lead-status.is-error { color: #b91c1c; }
+.estate-lead-status.is-ok { color: #166534; }
+.estate-lead-form .btn { align-self: flex-start; width: auto; min-width: 8rem; }
+@media (max-width: 768px) {
+  .estate-lead-form .btn { width: 100%; }
+}
 `;
 
 function esc(value: string): string {
@@ -692,6 +739,111 @@ export function estateCtaBand(opts: {
 </section>`;
 }
 
+/** Canonical capture endpoint on authichain.com (worker-app/lead-routes.ts). */
+export const ESTATE_LEAD_CAPTURE_ID = "lead-capture";
+export const ESTATE_LEAD_CAPTURE_ENDPOINT =
+  "https://authichain.com/api/leads/capture";
+export const ESTATE_LEAD_CAPTURE_PRIVACY_HREF =
+  "https://authichain.com/privacy";
+
+export const ESTATE_LEAD_CAPTURE_ORIGINS = [
+  "https://authichain.com",
+  "https://qron.space",
+  "https://strainchain.io",
+  "https://govchain.us",
+] as const;
+
+const ESTATE_LEAD_CAPTURE_SCRIPT = `(function(){
+  var form=document.getElementById(${JSON.stringify(ESTATE_LEAD_CAPTURE_ID)});
+  var status=document.getElementById("lead-capture-status");
+  if(!form||!status||!window.fetch)return;
+  var btn=form.querySelector("button[type=submit]");
+  var btnLabel=btn?btn.textContent:"";
+  function show(msg,kind){
+    status.textContent=msg;
+    status.className="estate-lead-status is-"+kind;
+    status.setAttribute("role",kind==="error"?"alert":"status");
+    status.hidden=false;
+  }
+  form.addEventListener("submit",function(ev){
+    ev.preventDefault();
+    var emailEl=form.elements.namedItem("email");
+    var consentEl=form.elements.namedItem("consent");
+    var email=String(emailEl&&emailEl.value||"").trim();
+    if(!email||(emailEl&&emailEl.checkValidity&&!emailEl.checkValidity())){
+      if(form.reportValidity)form.reportValidity();
+      show("Enter a valid email address.","error");
+      return;
+    }
+    if(!consentEl||!consentEl.checked){
+      show("Tick the box to confirm we may email you.","error");
+      if(consentEl&&consentEl.focus)consentEl.focus();
+      return;
+    }
+    if(btn){btn.disabled=true;btn.textContent="Sending\\u2026";}
+    var loc=window.location;
+    var body={
+      email:email.slice(0,254),
+      source:String(loc.hostname||form.elements.namedItem("source").value||""),
+      product_interest:String(form.elements.namedItem("product_interest").value||""),
+      page_url:String(loc.origin||"")+String(loc.pathname||"")
+    };
+    var q=new URLSearchParams(loc.search||"");
+    ["utm_source","utm_medium","utm_campaign"].forEach(function(k){
+      var v=String(q.get(k)||"").replace(/\\s+/g," ").trim().slice(0,120);
+      if(v)body[k]=v;
+    });
+    fetch(${JSON.stringify(ESTATE_LEAD_CAPTURE_ENDPOINT)},{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(body)
+    }).then(function(res){
+      return res.json().catch(function(){return {};}).then(function(data){
+        if(res.ok&&data&&data.ok===true){
+          form.hidden=true;
+          show("Thanks. We have saved your email.","ok");
+        } else {
+          show("That did not go through. Please try again.","error");
+        }
+      });
+    }).catch(function(){
+      show("That did not go through. Please try again.","error");
+    }).then(function(){
+      if(btn){btn.disabled=false;btn.textContent=btnLabel;}
+    });
+  });
+})();`;
+
+/**
+ * Lightweight email form rendered above every estate footer so GET / on
+ * authichain.com, qron.space, strainchain.io, and govchain.us includes
+ * id="lead-capture". Posts JSON to the canonical capture endpoint.
+ */
+export function estateLeadCapture(brand: EstateBrandId): string {
+  const b = ESTATE_BRANDS[brand];
+  return `<section class="estate-lead-capture" aria-labelledby="lead-capture-heading">
+  <div class="wrap">
+    <h2 id="lead-capture-heading">Email updates</h2>
+    <p class="section-sub">Leave your email if you want us to follow up about ${esc(b.name)}. We do not sell your address, and we do not send spam.</p>
+    <form class="estate-lead-form" id="${ESTATE_LEAD_CAPTURE_ID}" action="${ESTATE_LEAD_CAPTURE_ENDPOINT}" method="post">
+      <input type="hidden" name="source" value="${esc(b.domain)}">
+      <input type="hidden" name="product_interest" value="${esc(b.id)}">
+      <label for="lead-capture-email">Email
+        <input class="estate-field" id="lead-capture-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email">
+      </label>
+      <label class="estate-lead-consent" for="lead-capture-consent">
+        <input id="lead-capture-consent" type="checkbox" name="consent" value="yes">
+        <span>${esc(EMAIL_OPTIN_CONSENT_TEXT)}</span>
+      </label>
+      <p class="estate-lead-privacy">We store your email, which site you came from, and the page address so we can follow up. See the <a href="${ESTATE_LEAD_CAPTURE_PRIVACY_HREF}">privacy policy</a>.</p>
+      <button class="btn btn-primary" type="submit">Send</button>
+    </form>
+    <p id="lead-capture-status" class="estate-lead-status" role="status" aria-live="polite" hidden></p>
+  </div>
+  <script>${ESTATE_LEAD_CAPTURE_SCRIPT}</script>
+</section>`;
+}
+
 export function estateFooter(
   brand: EstateBrandId,
   columns: Array<{ heading: string; links: EstateLink[] }>,
@@ -711,7 +863,7 @@ export function estateFooter(
       return `<div><div class="footer-heading">${esc(col.heading)}</div><ul class="footer-links">${lis}</ul></div>`;
     })
     .join("");
-  return `<footer class="estate-footer">
+  return `${estateLeadCapture(brand)}<footer class="estate-footer">
   <div class="footer-grid">
     <div>
       <a class="nav-logo" href="/">${estateMark(brand)}${esc(b.wordmark)}</a>

@@ -107,6 +107,9 @@ test("the apex still renders the marketing page", async () => {
     assert.match(html, /\$299/);
     assert.doesNotMatch(html, /\$2,990/);
     assert.match(html, /--bg: #ffffff/);
+    assert.match(html, /id="lead-capture"/);
+    assert.match(html, /https:\/\/authichain\.com\/api\/leads\/capture/);
+    assert.match(html, /https:\/\/authichain\.com\/privacy/);
   } finally {
     f.restore();
   }
@@ -186,7 +189,7 @@ test("POST /api/verify fails closed with the canonical decision contract", async
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({}),
-    }),
+    })
   );
   assert.equal(res.status, 400);
   assert.equal(res.headers.get("cache-control"), "no-store");
@@ -211,7 +214,7 @@ test("POST /api/verify forwards a blocked canonical decision as non-success", as
         decision_contract: "AuthiChain Verification Decision v1",
         reasons: ["decision_blocked"],
       }),
-      { status: 200, headers: { "content-type": "application/json" } },
+      { status: 200, headers: { "content-type": "application/json" } }
     );
   }) as typeof fetch;
   try {
@@ -220,7 +223,7 @@ test("POST /api/verify forwards a blocked canonical decision as non-success", as
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ jws: "signed-attestation" }),
-      }),
+      })
     );
     assert.equal(res.status, 409);
     const body = (await res.json()) as {
@@ -294,11 +297,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
       planPaymentLink("strainchain_passport"),
       path
     );
-    assert.equal(
-      body.pricing.humanCheckout.farmPaymentLink,
-      undefined,
-      path
-    );
+    assert.equal(body.pricing.humanCheckout.farmPaymentLink, undefined, path);
     assert.equal(
       body.pricing.humanCheckout.starterPaymentLink,
       planPaymentLink("starter"),
@@ -379,11 +378,11 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.match(html, /\$299/);
   assert.match(html, /href="\/generate"/);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
-  assert.doesNotMatch(
+  assert.match(
     html,
-    /href="(?:https:\/\/[^"]*)?\/api\/checkout\//
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
   );
+  assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
   // Theater is unlisted since the #1234 catalog freeze.
   assert.equal(html.includes("checkout/theater_1"), false);
   assert.equal(html.includes("checkout/theater_3"), false);
@@ -433,8 +432,14 @@ test("POST /generate sends an anonymous submit to the $29 Starter checkout", asy
     assert.equal(res.status, 303);
     assert.equal(called, false);
     const location = new URL(res.headers.get("location") || "");
-    assert.equal(location.origin + location.pathname, "https://authichain.com/checkout/starter");
-    assert.equal(location.searchParams.get("targetUrl"), "https://example.com/sku");
+    assert.equal(
+      location.origin + location.pathname,
+      "https://authichain.com/checkout/starter"
+    );
+    assert.equal(
+      location.searchParams.get("targetUrl"),
+      "https://example.com/sku"
+    );
     assert.equal(location.searchParams.get("prompt"), "neon");
   } finally {
     globalThis.fetch = real;
@@ -542,7 +547,6 @@ test("the 404 escapes the path, so a hostile URL cannot inject markup", async ()
   );
 });
 
-
 test("Nightstamp pages and APIs are proxied to the app worker", async () => {
   const real = globalThis.fetch;
   const calls: Request[] = [];
@@ -570,7 +574,11 @@ test("Nightstamp pages and APIs are proxied to the app worker", async () => {
         { APP_ORIGIN: "https://app.example.com" }
       );
       assert.equal(res.status, 200, pathname);
-      assert.equal(res.headers.get("x-served-by"), "qron-space-proxy", pathname);
+      assert.equal(
+        res.headers.get("x-served-by"),
+        "qron-space-proxy",
+        pathname
+      );
       assert.equal(calls.length, 1, pathname);
       assert.equal(new URL(calls[0].url).pathname, pathname);
       assert.equal(calls[0].method, method);
@@ -588,10 +596,16 @@ test("qron.space carries no $QRON token, staking, or governance copy (PM-375)", 
     "<entry><yt:videoId>PdCibPadCxE</yt:videoId><title>Validating Origin with QRON</title><published>2026-01-02T00:00:00Z</published></entry>" +
     "</feed>";
   globalThis.fetch = (async () =>
-    new Response(feed, { status: 200, headers: { "content-type": "application/xml" } })) as typeof fetch;
+    new Response(feed, {
+      status: 200,
+      headers: { "content-type": "application/xml" },
+    })) as typeof fetch;
   try {
     const html = await (await get("/")).text();
-    assert.doesNotMatch(html, /\$QRON|[Ss]taking|[Gg]overnance|0xAebfA6b08fb25b59748c93273aB8880e20FfE437/);
+    assert.doesNotMatch(
+      html,
+      /\$QRON|[Ss]taking|[Gg]overnance|0xAebfA6b08fb25b59748c93273aB8880e20FfE437/
+    );
     assert.doesNotMatch(html, /70KG5d2fFUo/);
     assert.match(html, /PdCibPadCxE/);
   } finally {
@@ -607,12 +621,18 @@ test("qron.space carries no $QRON token, staking, or governance copy (PM-375)", 
 test("qron.space home links QRON Launch and still links Starter", async () => {
   const real = globalThis.fetch;
   globalThis.fetch = (async () =>
-    new Response("<feed></feed>", { status: 200, headers: { "content-type": "application/xml" } })) as typeof fetch;
+    new Response("<feed></feed>", {
+      status: 200,
+      headers: { "content-type": "application/xml" },
+    })) as typeof fetch;
   try {
     const html = await (await get("/")).text();
     assert.match(html, /https:\/\/authichain.com\/checkout\/qron_launch/);
     assert.match(html, /QRON Launch \$19\/mo/);
-    assert.match(html, /https:\/\/authichain.com\/checkout\/qron_launch_annual/);
+    assert.match(
+      html,
+      /https:\/\/authichain.com\/checkout\/qron_launch_annual/
+    );
     assert.match(html, /QRON Launch \$190\/yr/);
     assert.match(html, /https:\/\/authichain.com\/checkout\/starter/);
   } finally {
@@ -623,7 +643,10 @@ test("qron.space home links QRON Launch and still links Starter", async () => {
 test("qron.space home meta no longer claims a Polygon certificate contract (PM-437, CFA-164)", async () => {
   const real = globalThis.fetch;
   globalThis.fetch = (async () =>
-    new Response("<feed></feed>", { status: 200, headers: { "content-type": "application/xml" } })) as typeof fetch;
+    new Response("<feed></feed>", {
+      status: 200,
+      headers: { "content-type": "application/xml" },
+    })) as typeof fetch;
   try {
     const html = await (await get("/")).text();
     assert.doesNotMatch(html, /certificate contract on Polygon/i);

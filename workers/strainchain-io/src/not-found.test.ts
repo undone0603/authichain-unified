@@ -32,12 +32,18 @@ test("the apex still renders the marketing page", async () => {
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /href="\/pricing"/);
   assert.match(html, /--bg: #ffffff/);
+  assert.match(html, /id="lead-capture"/);
+  assert.match(html, /https:\/\/authichain\.com\/api\/leads\/capture/);
+  assert.match(html, /https:\/\/authichain\.com\/privacy/);
 });
 
 test("the sitemap lists only real URLs and no fragments", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
-  assert.ok(!xml.includes("mendo"), "the withdrawn Mendo library is not advertised");
+  assert.ok(
+    !xml.includes("mendo"),
+    "the withdrawn Mendo library is not advertised"
+  );
   assert.ok(xml.includes("<loc>https://strainchain.io/passport</loc>"));
   assert.ok(xml.includes("<loc>https://strainchain.io/pricing</loc>"));
 });

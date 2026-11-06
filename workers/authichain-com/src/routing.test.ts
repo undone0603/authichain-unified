@@ -222,7 +222,10 @@ test("the apex still renders the homepage", async () => {
   assert.doesNotMatch(html, /Start Launch/);
   assert.match(html, /href="https:\/\/authichain.com\/checkout\/qron_launch"/);
   assert.match(html, /QRON Launch \$19\/mo/);
-  assert.match(html, /href="https:\/\/authichain.com\/checkout\/qron_launch_annual"/);
+  assert.match(
+    html,
+    /href="https:\/\/authichain.com\/checkout\/qron_launch_annual"/
+  );
   assert.match(html, /QRON Launch \$190\/yr/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Signed QR seals for real products\./);
@@ -251,6 +254,9 @@ test("the apex still renders the homepage", async () => {
     /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
   );
   assert.match(html, /The authentic agentic economy/);
+  assert.match(html, /id="lead-capture"/);
+  assert.match(html, /https:\/\/authichain\.com\/api\/leads\/capture/);
+  assert.match(html, /https:\/\/authichain\.com\/privacy/);
   // AE-20261002-CFD-09: no Apollo visitor tracker anywhere on authichain.com.
   assert.ok(!html.includes("6ab2b3b358b37e000c06b0fa"));
   assert.ok(!html.includes("tracker.iife.js"));

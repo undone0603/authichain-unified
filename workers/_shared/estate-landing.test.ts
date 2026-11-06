@@ -1,15 +1,21 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { EMAIL_OPTIN_CONSENT_TEXT } from "./email-optin-copy.ts";
 import {
   ESTATE_BASE_CSS,
   ESTATE_BRANDS,
   ESTATE_INDEXNOW_KEY,
   ESTATE_INDEXNOW_PATH,
+  ESTATE_LEAD_CAPTURE_ENDPOINT,
+  ESTATE_LEAD_CAPTURE_ID,
+  ESTATE_LEAD_CAPTURE_ORIGINS,
+  ESTATE_LEAD_CAPTURE_PRIVACY_HREF,
   estateCtaBand,
   estateCssVars,
   estateFooter,
   estateHero,
   estateIndexNowResponse,
+  estateLeadCapture,
   estateNav,
   estateSteps,
   estateTrust,
@@ -62,11 +68,17 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
     lede: "Lede",
     actions: [
       { href: "/generate", label: "Generate Living QR", primary: true },
-      { href: "https://authichain.com/checkout/dpp_readiness", label: "Start DPP checkout" },
+      {
+        href: "https://authichain.com/checkout/dpp_readiness",
+        label: "Start DPP checkout",
+      },
     ],
   });
   assert.match(hero, /href="\/generate"/);
-  assert.match(hero, /href="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    hero,
+    /href="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
 
   const emailHero = estateHero({
     eyebrow: "Test",
@@ -79,7 +91,10 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
     actions: [{ href: "/pricing", label: "View pricing", primary: false }],
   });
   assert.match(emailHero, /name="email"/);
-  assert.match(emailHero, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    emailHero,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.doesNotMatch(emailHero, /Checkout without saving a recovery email/);
   assert.ok(
     emailHero.includes('href="https://authichain.com/checkout/dpp_readiness"')
@@ -107,7 +122,10 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
     actions: [{ href: "/pricing", label: "View pricing", primary: false }],
   });
   assert.match(emailCta, /name="email"/);
-  assert.match(emailCta, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    emailCta,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.match(emailCta, /href="\/pricing"/);
   assert.ok(
     emailCta.includes('href="https://authichain.com/checkout/dpp_readiness"')
@@ -120,6 +138,53 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
     "note"
   );
   assert.match(footer, /href="\/generate"/);
+  assert.match(footer, /id="lead-capture"/);
+});
+
+test("estate footer lead capture is on every brand and posts hostname as source", () => {
+  assert.equal(ESTATE_LEAD_CAPTURE_ID, "lead-capture");
+  assert.equal(
+    ESTATE_LEAD_CAPTURE_ENDPOINT,
+    "https://authichain.com/api/leads/capture"
+  );
+  assert.deepEqual(
+    [...ESTATE_LEAD_CAPTURE_ORIGINS].sort(),
+    Object.values(ESTATE_BRANDS)
+      .map(b => b.url)
+      .sort()
+  );
+  assert.match(ESTATE_BASE_CSS, /\.estate-lead-capture/);
+  assert.match(ESTATE_BASE_CSS, /\.estate-lead-consent/);
+
+  for (const id of Object.keys(ESTATE_BRANDS) as Array<
+    keyof typeof ESTATE_BRANDS
+  >) {
+    const html = estateLeadCapture(id);
+    const footer = estateFooter(
+      id,
+      [{ heading: "Start", links: [{ href: "/", label: "Home" }] }],
+      "note"
+    );
+    assert.match(html, /id="lead-capture"/);
+    assert.match(footer, /id="lead-capture"/);
+    assert.equal(html.includes('id="lead-capture"'), true);
+    assert.match(html, new RegExp(`id="${ESTATE_LEAD_CAPTURE_ID}"`));
+    assert.ok(html.includes(`action="${ESTATE_LEAD_CAPTURE_ENDPOINT}"`));
+    assert.ok(html.includes(`fetch("${ESTATE_LEAD_CAPTURE_ENDPOINT}"`));
+    assert.ok(html.includes('type="email"'));
+    assert.ok(html.includes("required"));
+    assert.ok(html.includes('name="consent"'));
+    assert.doesNotMatch(html, /id="lead-capture-consent"[^>]*\bchecked\b/);
+    assert.ok(html.includes(EMAIL_OPTIN_CONSENT_TEXT));
+    assert.ok(html.includes(`href="${ESTATE_LEAD_CAPTURE_PRIVACY_HREF}"`));
+    assert.ok(html.includes(`value="${ESTATE_BRANDS[id].domain}"`));
+    assert.ok(html.includes(`value="${id}"`));
+    assert.ok(html.includes("loc.hostname"));
+    assert.ok(html.includes('role="status"'));
+    assert.ok(html.includes("aria-live"));
+    assert.doesNotMatch(html, /AuthiChain, Inc/);
+    assert.doesNotMatch(html, /limited time|act now|only today/i);
+  }
 });
 
 test("IndexNow key file is exact-path plain text with a short cache", async () => {
