@@ -84,7 +84,7 @@ export function evaluate(input = {}) {
   const crypto = input.crypto || {};
   const evidence = [...(input.evidence || []), ...((att && att.evidence) || [])];
 
-  if (!input.objectFound && !att && !input.crypto) {
+  if (input.objectFound === false || (!input.objectFound && !att && !input.crypto)) {
     return {
       decision: "not_found",
       vector,
@@ -164,14 +164,25 @@ export function evaluate(input = {}) {
 
   let decision;
   if (reasons.includes("object_not_found")) decision = "not_found";
-  else if (reasons.includes("signature_invalid") || reasons.includes("issuer_untrusted"))
+  else if (
+    reasons.includes("signature_invalid") ||
+    reasons.includes("issuer_untrusted") ||
+    reasons.includes("identity_mismatch")
+  )
     decision = "invalid";
   else if (reasons.includes("attestation_revoked") || reasons.includes("attestation_blocked"))
     decision = "blocked";
   else if (reasons.includes("attestation_expired")) decision = "expired";
   else if (vector.scan_behavior === "anomalous" || att?.decision === "anomaly")
     decision = "anomaly";
-  else if (vector.signature === "verified" && vector.revocation === "clear")
+  else if (
+    input.objectFound === true &&
+    vector.signature === "verified" &&
+    vector.issuer === "verified" &&
+    vector.identity === "verified" &&
+    crypto.statusActive === true &&
+    vector.revocation === "clear"
+  )
     decision = "verified";
   else decision = "invalid";
 
