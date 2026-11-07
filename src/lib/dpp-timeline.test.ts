@@ -186,7 +186,7 @@ describe('nextDeadline / mostRecentInForce', () => {
   });
 });
 
-describe('regulatory-timeline.json gate (Research, 2026-10-24)', () => {
+describe('regulatory-timeline.json source gate (verified, 2026-11-07)', () => {
   it('every non-battery, non-registry entry is indicative and sourced to the EC DPP page', () => {
     for (const m of listMilestones()) {
       if (m.id === 'batteries' || m.id === 'central-registry') continue;
