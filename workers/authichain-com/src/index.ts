@@ -77,6 +77,8 @@ import {
   isSampleAuditPath,
   renderSampleAuditPage,
 } from "./battery-sample-audit-page";
+import { tryHandleBatteryPassportSample } from "./battery-passport-sample-page";
+import { tryHandleCoffee } from "./coffee-page";
 import {
   dppCheckCompleteEvent,
   dppCheckoutClickEvent,
@@ -2228,6 +2230,7 @@ function seoMeta(): string {
       'strainchain_passport',
       'creator',
       'dpp_readiness',
+      'musa_claim_file',
     ] as const
   )
     .map(catalogJsonLdOffer)
@@ -2266,6 +2269,19 @@ function seoMeta(): string {
       'https://github.com/AuthiChain2026',
     ],
     makesOffer,
+  })}
+  ${ld({
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: BRANDS.authichain.name,
+    url,
+    offers: {
+      '@type': 'AggregateOffer',
+      offerCount: 5,
+      lowPrice: '29.00',
+      highPrice: '299.00',
+      priceCurrency: 'USD',
+    },
   })}
   ${ld({
     '@context': 'https://schema.org',
@@ -2563,8 +2579,6 @@ const HTML = `<!DOCTYPE html>
     actions: [
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/generate", label: "Generate Living QR", primary: false },
-      { href: "https://authichain.com/checkout/qron_launch", label: "QRON Launch $19/mo", primary: false },
-      { href: "https://authichain.com/checkout/qron_launch_annual", label: "QRON Launch $190/yr", primary: false },
     ],
   })}
   ${estateTrust([
@@ -2637,8 +2651,6 @@ const HTML = `<!DOCTYPE html>
     actions: [
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/x402", label: "x402 agent pay", primary: false },
-      { href: "https://authichain.com/checkout/qron_launch", label: "QRON Launch $19/mo", primary: false },
-      { href: "https://authichain.com/checkout/qron_launch_annual", label: "QRON Launch $190/yr", primary: false },
     ],
   })}
   </main>
@@ -3223,6 +3235,10 @@ interface Env {
   APP_WORKER_TIMEOUT_MS?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_PRICE_ID?: string;
+  /** Optional override of the live coffee Payment Link fallback. */
+  COFFEE_PAYMENT_LINK_URL?: string;
+  /** Optional live Proof-of-Coffee Ed25519 private JWK. Unset fails closed on JWS minting. */
+  COFFEE_RECEIPT_PRIVATE_JWK?: string;
   /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
   DPP_SMOKE_SECRET?: string;
   X402_PAY_TO?: string;
@@ -3466,8 +3482,6 @@ async function handleAuthichainCom(
         // First-dollar LOOP-03 paths (live 200; generate proxies to APP_WORKER).
         { loc: 'https://authichain.com/generate', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/checkout/starter', freq: 'weekly', pri: '0.95' },
-        { loc: 'https://authichain.com/checkout/qron_launch', freq: 'weekly', pri: '0.95' },
-        { loc: 'https://authichain.com/checkout/qron_launch_annual', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/checkout/creator', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },
@@ -3478,6 +3492,7 @@ async function handleAuthichainCom(
         { loc: 'https://authichain.com/passport', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/dpp', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/dpp-check', freq: 'weekly', pri: '0.9' },
+        { loc: 'https://authichain.com/coffee', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/trumark', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/made-in-america', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/made-in-usa-claim-file', freq: 'weekly', pri: '0.9' },
@@ -3530,6 +3545,10 @@ async function handleAuthichainCom(
         },
       });
     }
+    const coffee = await tryHandleCoffee(request, env);
+    if (coffee) return coffee;
+    const batterySample = await tryHandleBatteryPassportSample(request);
+    if (batterySample) return batterySample;
     if (isSampleAuditPath(p)) {
       return new Response(renderSampleAuditPage(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },

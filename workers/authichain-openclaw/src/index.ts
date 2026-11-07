@@ -37,7 +37,9 @@ import {
   withModeQuery,
 } from "./agentz-mode";
 import { cloudflareAccessHeaders } from "./access-headers";
+import { checkAgentzDependency } from "./agentz-dependency-health";
 import { inboundDppOffer } from "./dpp-offer";
+import { gatewayHookRequest } from "./gateway-request";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -120,6 +122,15 @@ app.get("/health", c => {
     agentz_api: c.env.AGENTZ_API_URL ? "configured" : "not_set",
     version: "1.1.0",
   });
+});
+
+// The M2M probe is read-only, but remains bearer-protected to prevent
+// unauthenticated callers from amplifying requests into the private origin.
+app.get("/health/agentz", async c => {
+  if (!bearerOk(c)) return unauthorized(c);
+  const result = await checkAgentzDependency(c.env);
+  c.header("Cache-Control", "no-store");
+  return c.json(result, result.state === "healthy" ? 200 : 503);
 });
 
 app.get("/gateway/status", c => {
@@ -210,30 +221,15 @@ async function openclawNotify(
     .replace(/^ws:/i, "http:")
     .replace(/\/$/, "");
 
-  const wakeMode = body.mode === "next-heartbeat" ? "next-heartbeat" : "now";
-  const payload: Record<string, unknown> = {
-    text: body.text,
-    mode: wakeMode,
-  };
-  const useAgent = Boolean(body.channel || body.to);
-  const path = useAgent ? "/hooks/agent" : "/hooks/wake";
-  if (useAgent) {
-    payload.message = body.text;
-    payload.deliver = true;
-    if (body.channel) payload.channel = body.channel;
-    if (body.to) payload.to = body.to;
-    payload.wakeMode = wakeMode;
-    if (body.idempotency_key)
-      payload.sessionKey = `hook:agentz:${body.idempotency_key}`;
-  }
+  const { path, headers, payload } = gatewayHookRequest(
+    env.OPENCLAW_API_KEY,
+    cloudflareAccessHeaders(env),
+    body
+  );
 
   const res = await fetch(`${httpBase}${path}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.OPENCLAW_API_KEY}`,
-      "x-openclaw-token": env.OPENCLAW_API_KEY,
-    },
+    headers,
     body: JSON.stringify(payload),
   });
   const raw = await res.text();

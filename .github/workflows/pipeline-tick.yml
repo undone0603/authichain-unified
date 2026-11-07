@@ -169,6 +169,7 @@ jobs:
         with:
           name: authichain-launch-proof-qron
           path: artifacts/launch-proof-qron.png
+          retention-days: 14 # transient screenshot; production proof JSON retention remains unchanged
           if-no-files-found: warn
 
       - name: Job summary
