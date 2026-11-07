@@ -26,6 +26,7 @@ import {
   RETIRED_OCT31_ISSUER_DID,
   RETIRED_OCT31_ISSUER_KID,
   RETIRED_OCT31_ISSUER_RETIRED_AT,
+  GLAMA_CONNECTOR_CLAIM,
   isMcpPath,
   scanLivingQr,
   tryHandleMcp,
@@ -69,10 +70,35 @@ describe("mcp discovery", () => {
     expect(isMcpPath("/mcp/")).toBe(true);
     expect(isMcpPath("/api/mcp")).toBe(true);
     expect(isMcpPath("/.well-known/mcp.json")).toBe(true);
+    expect(isMcpPath("/mcp/.well-known/glama.json")).toBe(false);
     expect(isMcpPath("/api/x402")).toBe(false);
     expect(isMcpPath("https://authichain.com/checkout/dpp_readiness")).toBe(
       false
     );
+  });
+
+  it("GET /mcp/.well-known/glama.json is the claim file, not MCP discovery", async () => {
+    for (const path of [
+      "/mcp/.well-known/glama.json",
+      "/mcp/.well-known/glama.json/",
+      "/api/mcp/.well-known/glama.json",
+    ]) {
+      const res = await tryHandleMcp(req(path));
+      expect(res, path).not.toBeNull();
+      expect(res!.status, path).toBe(200);
+      expect(res!.headers.get("content-type"), path).toContain("application/json");
+      const body = (await res!.json()) as { $schema: string; claim: string };
+      expect(body, path).toEqual(GLAMA_CONNECTOR_CLAIM);
+      expect(Object.keys(body), path).toEqual(["$schema", "claim"]);
+    }
+    const post = await tryHandleMcp(
+      req("/mcp/.well-known/glama.json", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize" }),
+      })
+    );
+    expect(post?.status).toBe(405);
   });
 
   it("GET discovery says verify is free and lists no prices or Payment Links", async () => {
