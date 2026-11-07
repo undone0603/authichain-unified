@@ -4,7 +4,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { listedPlans, planById } from "../../../src/lib/plans.ts";
+import { listedPlans, planById, planPaymentLink } from "../../../src/lib/plans.ts";
 import worker from "./index.ts";
 
 type Env = Parameters<typeof worker.fetch>[1];
@@ -12,12 +12,14 @@ const env = {
   APP_WORKER: { fetch: async () => new Response("app", { status: 200 }) },
 } as unknown as Env;
 
-test("verified live $299 DPP price is explicitly listed under the accurate workspace offer", () => {
+test("DPP catalog configuration explicitly lists the accurate $299 workspace offer", () => {
   const plan = planById("dpp_readiness");
   assert.ok(plan);
   assert.equal(plan.listed, true);
   assert.equal(plan.price, 299);
   assert.equal(plan.stripe_price_id, "price_1TwmD8GqTruSqV8TpAF8dfyA");
+  assert.equal(plan.stripe_payment_link, "https://buy.stripe.com/5kQdR9fzP4t85iaePO1ND43");
+  assert.equal(planPaymentLink("dpp_readiness"), plan.stripe_payment_link);
   assert.equal(listedPlans().some(p => p.id === "dpp_readiness"), true);
   assert.match(plan.description, /Not an audit/);
 });
@@ -35,7 +37,8 @@ test("public DPP page does not advertise universal compliance, NFT equivalence, 
   assert.match(html, /confirmed payment and entitlement grant/);
   assert.match(html, /not an issued or registered passport/);
   assert.match(html, /Product-specific obligations depend on adopted delegated acts/);
-  assert.match(html, /Regulatory exports \(planned\)/);
+  assert.match(html, /Regulatory exports \\(planned\\)/);
+  assert.ok(html.includes("EV, LMT, and industrial batteries over 2 kWh have passport requirements from 18 Feb 2027"));
   for (const forbidden of [
     "EU Digital Product Passport Compliance",
     "/checkout/qron_launch",
@@ -65,6 +68,10 @@ test("homepage FAQ schema does not promise issued passports from workspace check
   assert.ok(html.includes("A one-time $299 checkout for a DPP readiness workspace"));
   assert.match(html, /Activation requires confirmed payment and entitlement grant/);
   assert.equal(html.includes("publish a first Digital Product Passport"), false);
+  assert.ok(html.includes("they do not automatically apply to every good sold in Europe"));
+  assert.ok(html.includes("Activation is conditional on confirmed payment and a durable entitlement grant"));
+  assert.equal(html.includes("EU ESPR requires a machine-readable product passport for goods sold in Europe"), false);
+  assert.equal(html.includes("checkout opens an AuthiChain workspace with self-serve activation"), false);
 });
 
 test("DPP Stripe return is no-store and does not turn session ID into payment proof", async () => {
