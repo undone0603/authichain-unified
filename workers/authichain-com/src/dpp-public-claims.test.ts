@@ -66,3 +66,21 @@ test("homepage FAQ schema does not promise issued passports from workspace check
   assert.match(html, /Activation requires confirmed payment and entitlement grant/);
   assert.equal(html.includes("publish a first Digital Product Passport"), false);
 });
+
+test("DPP Stripe return is no-store and does not turn session ID into payment proof", async () => {
+  const marker = "cs_test_never_echo_this_marker";
+  const request = new Request("https://authichain.com/dpp/thanks?session_id=" + marker);
+  const response = await worker.fetch(request, env);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Cache-Control"), "no-store");
+  assert.match(response.headers.get("X-Robots-Tag") ?? "", /noindex/);
+  const html = await response.text();
+  assert.match(html, /Returning from Stripe does not confirm payment/);
+  assert.match(html, /verified Stripe payment event and a durable entitlement grant/);
+  assert.equal(html.includes(marker), false);
+  assert.equal(html.includes("Payment successful"), false);
+
+  const denied = await worker.fetch(new Request("https://authichain.com/dpp/thanks", { method: "POST" }), env);
+  assert.equal(denied.status, 405);
+  assert.equal(denied.headers.get("Allow"), "GET, HEAD");
+});
