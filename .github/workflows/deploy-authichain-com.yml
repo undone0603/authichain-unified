@@ -11,6 +11,7 @@ on:
 permissions:
   contents: read
   statuses: read
+  actions: read
 
 concurrency:
   group: deploy-authichain-com
@@ -35,6 +36,28 @@ jobs:
           [[ "$TARGET_SHA" =~ ^[[:xdigit:]]{40}$ ]]
           test "$TARGET_SHA" = "$DISPATCH_SHA"
           echo "sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+      - name: Require a preconfigured protected production-cloudflare environment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          node --input-type=module <<'NODE'
+          const repo = process.env.REPOSITORY;
+          if (repo !== 'undone0603/authichain-unified') throw Error('wrong repository');
+          const res = await fetch('https://api.github.com/repos/' + repo + '/environments/production-cloudflare', {
+            headers: {authorization: 'Bearer ' + process.env.GH_TOKEN,
+              accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28'}
+          });
+          if (!res.ok) throw Error('production environment missing or inaccessible, HTTP ' + res.status);
+          const policy = await res.json();
+          if (policy.name !== 'production-cloudflare') throw Error('wrong deployment environment');
+          if (policy.deployment_branch_policy?.protected_branches !== true)
+            throw Error('production environment must allow protected branches only');
+          const reviewers = policy.protection_rules?.find(rule => rule.type === 'required_reviewers');
+          if (!reviewers || reviewers.prevent_self_review !== true || !Array.isArray(reviewers.reviewers) || reviewers.reviewers.length < 1)
+            throw Error('production environment needs independent approval with self-review blocked');
+          console.log('Protected production-cloudflare environment verified without changing settings');
+          NODE
       - name: Require seven successful CircleCI statuses at exact commit
         env:
           GH_TOKEN: ${{ github.token }}
