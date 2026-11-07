@@ -194,7 +194,7 @@ const SEO = {
     },
     {
       q: 'What is EU DPP Readiness?',
-      a: 'A one-time checkout that opens an AuthiChain workspace with self-serve activation, so you can publish a first Digital Product Passport.',
+      a: 'A one-time $299 checkout for a DPP readiness workspace. Activation requires confirmed payment and entitlement grant; it does not itself issue, register, or guarantee a compliant Digital Product Passport.',
     },
     {
       q: 'What else is live in the estate?',
