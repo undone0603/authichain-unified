@@ -206,6 +206,7 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/5kQdR9fzP4t85iaePO1ND43",
     stripe_mode: "payment",
     tier: "pro",
+    listed: true,
     features: [
       "AuthiChain workspace",
       "Self-serve activation",
