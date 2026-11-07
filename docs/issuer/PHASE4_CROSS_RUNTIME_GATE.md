@@ -26,7 +26,16 @@ Exact checksums of the locally tested additions:
 - Pinned public demo JWKS `demo-output/test-only-jwks.json` SHA-256: `d1d11d0b071c34cc3eed90f3b3e8f7b48f361a5408e0a6ca67f957f264b722f2`.
 - Local raw fixture observation SHA-256: `77a5635ee1edbe651b34b01328aae0f83605db6d4b43dc53f5eab366f7c48a9a`.
 
-**Publishing state:** Python source/test files have not been added to this GitHub branch in this commit; the downloadable reviewed handoff ZIP lives in the generating ChatGPT conversation. Do not claim public source-exact Python CI until those exact SHA-256 files are published and reproduced. Existing Node source on the pinned branch remains the public independent-review target.
+**Publishing state — revised:** Both Python files are now published on this review-only branch, and their Git blob hashes match the 22/22 locally tested source bytes exactly. [Python verifier](../../protocol/evidence-seal-verify.py) Git blob `626d2ad676c11bd2fbf96143478379856c250262`; [Python cross-runtime tests](../../protocol/evidence-seal-verify.test.py) Git blob `ebfd6cebdfdf173a8bccafdd6054a41bdad5d386`. These are **local source-exact tests**, not GitHub CI or an independent security approval. In a network-free, credential-free checkout with preinstalled `cryptography` 46.0.4 and Node 22 run:
+
+```sh
+python3 protocol/evidence-seal-verify.test.py -v
+node --test protocol/evidence-seal.test.mjs protocol/third-party-service-seal.test.mjs scripts/evidence-seal-demo-server.test.mjs
+node protocol/evidence-seal-cli.mjs demo /tmp/aec-cross-runtime
+python3 protocol/evidence-seal-verify.py /tmp/aec-cross-runtime/test-only.jws /tmp/aec-cross-runtime/test-only-jwks.json https://issuer.example https://service.example/mcp --at 1794000001 --evidence /tmp/aec-cross-runtime/test-only-observation.json
+```
+
+The verifier returns `evidence_digest_match:true` but **never** `evidence_independently_reproduced:true`. The local attestation is test-only and expired at real present time. Do not use the fixture key for production.
 
 ## Requested non-author peer review
 
