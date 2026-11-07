@@ -3621,6 +3621,40 @@ async function handleAuthichainCom(
 
     const genetics = tryHandleGeneticsRoutes(request);
     if (genetics) return genetics;
+    // Stripe's live DPP Payment Link redirects here after checkout.
+    // Never infer settlement or grant an entitlement from a client-controlled GET.
+    if (p === '/dpp/thanks') {
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return new Response('method not allowed', {
+          status: 405,
+          headers: { Allow: 'GET, HEAD', 'Cache-Control': 'no-store' },
+        });
+      }
+      const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<title>DPP checkout return — AuthiChain</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#101827;color:#edf3ff;font:16px/1.6 system-ui,sans-serif;padding:1.5rem}
+main{max-width:580px;padding:2rem;border:1px solid #45536b;border-radius:16px;background:#17243a}
+h1{font-size:clamp(1.5rem,4vw,2rem);line-height:1.2}a{color:#e8c768}</style></head><body>
+<main><h1>DPP checkout return received</h1>
+<p>Returning from Stripe does not confirm payment or activate a workspace.
+Access depends on a verified Stripe payment event and a durable entitlement grant.</p>
+<p>Check your payment receipt and <a href="/dashboard">AuthiChain dashboard</a>.
+If access is missing after payment, <a href="/contact">contact support</a> with your
+receipt reference. Do not send card details.</p>
+<p><a href="/digital-product-passport">Back to DPP readiness</a></p></main>
+</body></html>`;
+      return new Response(request.method === 'HEAD' ? null : html, {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store',
+          'X-Robots-Tag': 'noindex, nofollow',
+          'Referrer-Policy': 'no-referrer',
+        },
+      });
+    }
     if (p === '/digital-product-passport' || p === '/dpp') {
       return new Response(dppHtml(new Date()), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
