@@ -19,7 +19,7 @@ test("DPP catalog configuration explicitly lists the accurate $299 workspace off
   assert.equal(plan.price, 299);
   assert.equal(plan.stripe_price_id, "price_1TwmD8GqTruSqV8TpAF8dfyA");
   assert.equal(plan.stripe_payment_link, "https://buy.stripe.com/5kQdR9fzP4t85iaePO1ND43");
-  assert.equal(planPaymentLink("dpp_readiness"), plan.stripe_payment_link);
+  assert.equal(planPaymentLink("dpp_readiness"), "https://authichain.com/checkout/dpp_readiness");
   assert.equal(listedPlans().some(p => p.id === "dpp_readiness"), true);
   assert.match(plan.description, /Not an audit/);
 });
