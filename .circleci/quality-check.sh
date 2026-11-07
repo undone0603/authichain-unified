@@ -17,16 +17,6 @@ corepack prepare pnpm@10.28.2 --activate
 pnpm config set store-dir ~/.pnpm-store
 pnpm install --frozen-lockfile --prefer-offline
 
-# Temporary formatting-evidence probe: emit the generated YAML only as base64,
-# then fail this job so no uncommitted formatting can count as passing CI.
-if [[ "$task" == "quality" ]]; then
-  pnpm exec prettier --write .github/workflows/deploy-authichain-com.yml
-  echo AUTHICHAIN_PRETTIER_B64_BEGIN
-  base64 -w0 .github/workflows/deploy-authichain-com.yml
-  printf '\nAUTHICHAIN_PRETTIER_B64_END\n'
-  exit 77
-fi
-
 case "$task" in
   quality)
     pnpm check
