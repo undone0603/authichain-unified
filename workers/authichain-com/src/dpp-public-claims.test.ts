@@ -62,7 +62,7 @@ test("homepage FAQ schema does not promise issued passports from workspace check
   );
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /A one-time \\$299 checkout for a DPP readiness workspace/);
+  assert.ok(html.includes("A one-time $299 checkout for a DPP readiness workspace"));
   assert.match(html, /Activation requires confirmed payment and entitlement grant/);
   assert.equal(html.includes("publish a first Digital Product Passport"), false);
 });
