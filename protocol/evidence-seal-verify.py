@@ -7,8 +7,8 @@ or constitute a SEAL Standard v9 verifier. A signature proves integrity of a
 self-issued evidence statement, not that the service, product or payment is safe.
 
 Example:
-  python3 protocol/evidence-seal-verify.py demo/test-only.jws \
-    demo/test-only-jwks.json https://issuer.example https://service.example/mcp \
+  python3 protocol/evidence-seal-verify.py demo/test-only.jws \\
+    demo/test-only-jwks.json https://issuer.example https://service.example/mcp \\
     --at 1794000001 --evidence demo/test-only-observation.json
 """
 from __future__ import annotations
