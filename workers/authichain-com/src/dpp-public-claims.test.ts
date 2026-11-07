@@ -30,12 +30,16 @@ test("public DPP page does not advertise universal compliance, NFT equivalence, 
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /EU Digital Product Passport Readiness/);
+  assert.ok(html.includes('"name":"EU Digital Product Passport Readiness"'), "JSON-LD must describe readiness, not certification");
   assert.match(html, /One-time \$299 workspace/);
   assert.match(html, /confirmed payment and entitlement grant/);
   assert.match(html, /not an issued or registered passport/);
   assert.match(html, /Product-specific obligations depend on adopted delegated acts/);
   assert.match(html, /Regulatory exports \(planned\)/);
   for (const forbidden of [
+    "EU Digital Product Passport Compliance",
+    "/checkout/qron_launch",
+    "/checkout/strainchain_farm",
     "blockchain-readable product passport for every item",
     "EU DPP REGISTRY LAUNCH — IN FORCE SINCE JUL 19",
     "automatic provisioning",
