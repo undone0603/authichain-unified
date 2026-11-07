@@ -158,7 +158,7 @@ describe('countdownLabel', () => {
 
   it('summarises distant milestones in years', () => {
     const electronics = listMilestones().find((m) => m.id === 'electronics')!;
-    expect(countdownLabel(electronics, AUG_2026)).toMatch(/years out/);
+    expect(countdownLabel(electronics, AUG_2026)).toBe('Indicative timing only — not adopted law');
   });
 });
 
@@ -167,9 +167,18 @@ describe('nextDeadline / mostRecentInForce', () => {
     expect(nextDeadline(AUG_2026)?.id).toBe('batteries');
   });
 
-  it('moves on once the battery mandate lands', () => {
-    expect(nextDeadline(MAR_2027)?.id).toBe('construction');
+  it('does not convert indicative sector projections into enacted deadlines', () => {
+    expect(nextDeadline(MAR_2027)).toBeNull();
     expect(mostRecentInForce(MAR_2027)?.id).toBe('batteries');
+  });
+
+  it('never claims an indicative forecast is in force, even after its target year', () => {
+    const construction = listMilestones().find((m) => m.id === 'construction')!;
+    const after = new Date(Date.UTC(2035, 0, 1));
+    expect(milestoneStatus(construction, after)).toBe('upcoming');
+    expect(countdownLabel(construction, after)).toBe('Indicative timing only — not adopted law');
+    expect(mostRecentInForce(after)?.id).toBe('batteries');
+    expect(nextDeadline(after)).toBeNull();
   });
 
   it('reports the registry as the live milestone in Aug 2026', () => {
