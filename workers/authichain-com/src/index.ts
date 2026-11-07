@@ -2919,15 +2919,15 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EU Digital Product Passport Compliance | AuthiChain</title>
-  <meta name="description" content="AuthiChain EU Digital Product Passport readiness tooling. Our goal: one integration for ESPR, EUDR, and CSRD.">
+  <title>EU Digital Product Passport Readiness | AuthiChain</title>
+  <meta name="description" content="AuthiChain self-serve EU Digital Product Passport readiness tooling. Not a certification, issued passport, or EU registry filing.">
   <meta name="keywords" content="EU Digital Product Passport, DPP compliance, digital product passport 2026, DPP blockchain, ESPR regulation, EU battery regulation, supply chain compliance, product passport">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <link rel="canonical" href="https://authichain.com/digital-product-passport">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <meta name="theme-color" content="#c9a227">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="EU Digital Product Passport Compliance | AuthiChain">
+  <meta property="og:title" content="EU Digital Product Passport Readiness | AuthiChain">
   <meta property="og:description" content="EU DPP readiness tooling. On our roadmap: offline verification with no account required.">
   <meta property="og:url" content="https://authichain.com/digital-product-passport">
   <meta property="og:image" content="https://authichain.com/og-image.png">
@@ -3012,7 +3012,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         <a class="btn btn-outline" href="/battery-passport/sample-audit">See a fictional walkthrough</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
-        Pay once. Self-serve activation opens your workspace.
+        One-time $299 workspace. Activation follows confirmed payment and entitlement grant. This is not an issued or registered passport.
         Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the public gaps.
       </p>
     </div>
@@ -3128,8 +3128,8 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <section class="section" id="solution" style="background:var(--bg2)">
     <div class="container">
       <div class="section-label">THE AUTHICHAIN SOLUTION</div>
-      <h2 class="section-title">One Integration. Every Standard.</h2>
-      <p class="section-sub">AuthiChain is building passport tooling. Our goal: the certificate NFT serves as the passport, with no retrofitting or middleware.</p>
+      <h2 class="section-title">Readiness tools and development goals</h2>
+      <p class="section-sub">AuthiChain is building passport tooling. Signed records may support passport data; an NFT does not by itself constitute an EU passport or replace the responsible operator's registration duties.</p>
 
       <div class="feature-row">
         <div class="feature-item">
@@ -3139,13 +3139,13 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         </div>
         <div class="feature-item">
           <div class="feature-icon">📱</div>
-          <div class="feature-title">QR Scan → Instant Passport</div>
-          <div class="feature-desc">A QR code on the label links to the product's passport record, and our goal is to log every scan against the serial. Also our goal: consumers, regulators, and resellers all see the same on-chain record.</div>
+          <div class="feature-title">QR-linked records (in development)</div>
+          <div class="feature-desc">A QR code can point to a product record. Any future passport must respect the public and restricted access rights in applicable law; a scan alone does not authenticate a physical product.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">📊</div>
-          <div class="feature-title">Audit-Ready Exports</div>
-          <div class="feature-desc">One-click compliance exports for EU CSRD, EUDR, FDA DSCSA, USMCA, and ISO 22005. Formatted for EU customs authorities and DPP registry submission.</div>
+          <div class="feature-title">Regulatory exports (planned)</div>
+          <div class="feature-desc">Interoperable data exports are planned. The $299 workspace does not include automated regulatory filing, a compliance opinion, or guaranteed compatibility with other legal frameworks.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">⛓️</div>
@@ -3159,8 +3159,8 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         </div>
         <div class="feature-item">
           <div class="feature-icon">🌍</div>
-          <div class="feature-title">Multi-Standard Coverage</div>
-          <div class="feature-desc">Our goal: a single AuthiChain integration that supports ESPR, EUDR, and CSRD.</div>
+          <div class="feature-title">Cross-standard mappings (planned)</div>
+          <div class="feature-desc">Planned mappings may help organize data across distinct regulations. Each framework has separate applicability and compliance requirements.</div>
         </div>
       </div>
     </div>
@@ -3172,19 +3172,19 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <h2 class="section-title">Industries we're building for</h2>
       <div class="industries">
         <div class="industry-card"><div class="industry-name">⚡ EV Batteries</div><div class="industry-deadline">Mandatory ${escHtml(formatMilestoneDate(listMilestones().find((m) => m.id === 'batteries') ?? listMilestones()[0]))}</div></div>
-        <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Mandatory 2028–29</div></div>
-        <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">FDA DSCSA + DPP</div></div>
-        <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">Mandatory 2027</div></div>
-        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Product authenticity + DPP</div><div class="industry-deadline">Goal: counterfeit detection for luxury goods</div></div>
-        <div class="industry-card"><div class="industry-name">🌿 Cannabis</div><div class="industry-deadline">State + EU compliance</div></div>
+        <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Product-specific obligations depend on adopted delegated acts.</div></div>
+        <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">Sector-specific requirements apply; no blanket EU DPP claim.</div></div>
+        <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">ESPR timetable indicative; no blanket 2027 DPP mandate.</div></div>
+        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Optional provenance; EU DPP scope depends on applicable law.</div><div class="industry-deadline">Goal: counterfeit detection for luxury goods</div></div>
+        <div class="industry-card"><div class="industry-name">🌿 Cannabis</div><div class="industry-deadline">Requirements depend on product and jurisdiction.</div></div>
       </div>
     </div>
   </section>
 
   <section class="section cta-section" style="background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); text-align:center">
     <div class="container" style="max-width:700px">
-      <h2 class="section-title">Start DPP Compliance Today</h2>
-      <p class="section-sub">Checkout opens an AuthiChain workspace for your product line. It is self-serve.</p>
+      <h2 class="section-title">Map your DPP readiness</h2>
+      <p class="section-sub">The $299 one-time checkout is for a self-serve workspace, not an audit, issued passport, legal opinion, or EU registry filing. Activation requires a confirmed payment and a durable entitlement grant.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
         ${catalogPaymentLinkHtml({
           planId: "dpp_readiness",
