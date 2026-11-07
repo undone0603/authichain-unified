@@ -2392,7 +2392,7 @@ function techStack() {
     "What AuthiChain already does",
     "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. The checkout opens an AuthiChain workspace with self-serve activation." },
+      { title: "EU DPP Readiness", body: "Live one-time $299 Stripe Payment Link for a DPP readiness workspace, or enter a work email for recoverable checkout. Activation is conditional on confirmed payment and a durable entitlement grant; checkout alone does not issue or register a passport." },
       { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
     "technology",
@@ -2469,7 +2469,7 @@ function marketReality() {
   <div class="wrap">
     <p class="section-tag">Regulatory context</p>
     <h2>EU Digital Product Passport</h2>
-    <p class="section-sub">EU ESPR requires a machine-readable product passport for goods sold in Europe, phased in by category. The $299 checkout opens an AuthiChain workspace with self-serve activation. It does not issue a certificate.</p>
+    <p class="section-sub">Under EU ESPR, Digital Product Passport requirements apply only when the relevant product-specific rules take effect; they do not automatically apply to every good sold in Europe. The $299 checkout is for a readiness workspace, not an issued or registered passport. Activation requires confirmed payment and durable entitlement.</p>
     <div class="estate-actions">
       ${checkoutEmailFormHtml({
         action: "https://authichain.com/checkout/dpp_readiness",
@@ -3013,7 +3013,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
         One-time $299 workspace. Activation follows confirmed payment and entitlement grant. This is not an issued or registered passport.
-        Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the public gaps.
+        EV, LMT, and industrial batteries over 2 kWh have passport requirements from 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> illustrates readiness gaps.
       </p>
     </div>
   </section>
