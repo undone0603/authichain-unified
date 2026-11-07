@@ -1,0 +1,15 @@
+# AuthiChain Evidence Issuer protected release checklist
+
+**Immutable artifact:** a tested Git commit/PR containing this directory; the local test fixture alone is NOT a deployment artifact.
+
+1. **Review source:** exact-head `node --test protocol/evidence-seal.test.mjs scripts/evidence-seal-demo-server.test.mjs` and current repository's full checks on a network-capable, credential-isolated executor. Verify checksum manifest. Scan added source for private keys, tokens, paid endpoints, redirects, GitHub Actions deploy triggers and unknown host bindings.
+2. **Independent validation:** eligible outside security reviewer reads the schema, test vectors, source evidence, UI disclosures and schema-v9 distinctions, then independently reproduces at exact HEAD. A founder-controlled second GitHub identity is NOT independent.
+3. **Keys:** new non-exportable/strictly controlled Ed25519 issuer identity, NEVER existing AuthiChain product attestation private key; dedicated `kid`, pinned public JWKS, key replacement and emergency withdrawal procedure. Demo seed and public examples must be rejected in production. No `kid` reuse with product JWKS.
+4. **Routing:** public `GET /.well-known/seal.json` to a fully vetted read-only Worker with no payment/production secret bindings; initial issuance/verification pages under narrowly scoped paths. Do not replace the entire production `authichain-com` script with the demo HTTP server. Do not reassign Stripe webhook, checkout, x402 or JWKS product routes.
+5. **Evidence:** versioned raw public read-only source artifact and SHA-256 digest; privacy review and retention. No assertion of a third-party witness unless its own signed report and public key verify. Fail-closed for stale/unavailable source.
+6. **Presentation:** QRON label links to exact record and verifier. No universal 'safe/authentic/certified' wording. Test expired, revoked, unknown, missing, network outage, tampering, duplicate and forged issuer. Smartphone and physical-print acceptance needed before a mark is advertised.
+7. **Deployment:** Cloudflare **staged version upload only** after exact-head build/review and explicit operator authorization. Verify binding and route parity, capture previous version ID, execute bounded canary with no production sends/charges, then separately promote via protected workflow. Abort/rollback on divergence.
+8. **Economic controls:** never change `humanHold=true`, `production_send=false`, pricing, Stripe, x402 settlement, webhook, worker secret or billing settings in this PR. If future paid receipt issuance is desired, develop a separate payment-safe PR and test genuine signed Stripe events end to end, idempotent entitlements and refunds.
+9. **External go-live evidence:** independent `GET` of the issuer keys, credential, verification page; third-party offline `verify` against pinned keys; compatible scanner/QRON acceptance and trust-policy disclosure. Record SHA, UTC and observer.
+
+**Default verdict until every critical item is satisfied:** `HOLD — no production issuance, no certification, no paid settlement claims`. Use the local preview only.
