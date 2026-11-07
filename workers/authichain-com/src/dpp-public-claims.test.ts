@@ -37,7 +37,7 @@ test("public DPP page does not advertise universal compliance, NFT equivalence, 
   assert.match(html, /confirmed payment and entitlement grant/);
   assert.match(html, /not an issued or registered passport/);
   assert.match(html, /Product-specific obligations depend on adopted delegated acts/);
-  assert.match(html, /Regulatory exports \\(planned\\)/);
+  assert.match(html, /Regulatory exports \(planned\)/);
   assert.ok(html.includes("EV, LMT, and industrial batteries over 2 kWh have passport requirements from 18 Feb 2027"));
   for (const forbidden of [
     "EU Digital Product Passport Compliance",
