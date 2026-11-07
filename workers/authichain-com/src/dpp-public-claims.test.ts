@@ -54,3 +54,15 @@ test("public DPP page does not advertise universal compliance, NFT equivalence, 
     assert.equal(html.includes(forbidden), false, `Live DPP copy must not contain: ${forbidden}`);
   }
 });
+
+test("homepage FAQ schema does not promise issued passports from workspace checkout", async () => {
+  const response = await worker.fetch(
+    new Request("https://authichain.com/"),
+    env
+  );
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /A one-time \\$299 checkout for a DPP readiness workspace/);
+  assert.match(html, /Activation requires confirmed payment and entitlement grant/);
+  assert.equal(html.includes("publish a first Digital Product Passport"), false);
+});
