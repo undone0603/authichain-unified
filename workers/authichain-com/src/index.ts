@@ -3104,7 +3104,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="container">
       <div class="section-label">REGULATION TIMELINE</div>
       <h2 class="section-title">When Does Your Industry Need DPP?</h2>
-      <p class="section-sub">ESPR rolls out in phases. ${nextDeadline(now) ? `Next: ${escHtml(nextDeadline(now)!.label)} — ${escHtml(countdownLabel(nextDeadline(now)!, now))}.` : 'All published deadlines are now in force.'} Reviewed ${escHtml(timelineUpdatedAt())}.</p>
+      <p class="section-sub">ESPR rolls out in phases. ${nextDeadline(now) ? `Next: ${escHtml(nextDeadline(now)!.label)} — ${escHtml(countdownLabel(nextDeadline(now)!, now))}.` : 'No further enacted DPP dates are listed here; other sector dates are indicative.'} Reviewed ${escHtml(timelineUpdatedAt())}.</p>
 
       <div class="dpp-timeline" style="margin-top:48px">
         ${listMilestones().map((m) => {
