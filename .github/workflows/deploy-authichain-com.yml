@@ -126,11 +126,14 @@ jobs:
           pnpm exec tsx --import ./test/register-md.mjs --test src/routing.test.ts
       - name: Embed microsite HTML
         run: node scripts/sync-microsite-packs.mjs
+      # Require these names to be configured ONLY as production-cloudflare environment secrets.
+      # Never define these aliases as repository/org secrets: GitHub falls back to broader scope.
+      # Provision a Workers-only scoped Cloudflare token; no D1/zone/DNS rights.
       - name: Upload and promote this exact Worker version only
         working-directory: workers/authichain-com
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           test -n "${CLOUDFLARE_API_TOKEN:-}"
