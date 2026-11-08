@@ -31,6 +31,7 @@ import {
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
+import { NEGOTIATE_TOOL, negotiateQuote } from "./mcp-negotiate";
 
 type McpEnv = X402Env & {
   /** Service binding to authichain-edge-router. Public fetch of this zone returns 522. */
@@ -226,6 +227,7 @@ export const TOOLS = [
       required: ["object_id"],
     },
   },
+  NEGOTIATE_TOOL,
 ];
 
 const DPP_CHECK_URL = "https://authichain.com/dpp-check";
@@ -450,6 +452,54 @@ function normalizePath(pathname: string): string {
 export function isMcpPath(pathname: string): boolean {
   const p = normalizePath(pathname);
   return p === "/mcp" || p === "/api/mcp" || p === "/.well-known/mcp.json";
+}
+
+/**
+ * Glama connector claim for https://authichain.com/mcp.
+ * The token is bound to the Glama account and has no personal data.
+ * Glama fetches this exact document with a public GET and requires it
+ * to be answered before the MCP handler, with no auth and no redirect.
+ * Keep it published for as long as the listing should stay verified.
+ */
+export const GLAMA_CONNECTOR_CLAIM_PATHS = [
+  "/mcp/.well-known/glama.json",
+  "/api/mcp/.well-known/glama.json",
+] as const;
+
+export const GLAMA_CONNECTOR_CLAIM = {
+  $schema: "https://glama.ai/mcp/schemas/connector.json",
+  claim: "glama_claim_qG_mMcrFR1lzuDEif09a9hSoM4Hu4v56",
+} as const;
+
+function glamaClaimResponse(method: string): Response {
+  if (method === "HEAD") {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, max-age=300",
+        "CDN-Cache-Control": "public, max-age=300",
+        "Content-Type": "application/json; charset=utf-8",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  }
+  if (method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Max-Age": "86400",
+      },
+    });
+  }
+  if (method !== "GET") {
+    return json(405, { error: "method not allowed" });
+  }
+  return json(200, GLAMA_CONNECTOR_CLAIM, {
+    "Cache-Control": "public, max-age=300",
+    "CDN-Cache-Control": "public, max-age=300",
+  });
 }
 
 function json(
@@ -1448,6 +1498,14 @@ async function handleRpc(
       arguments?: Record<string, unknown>;
     };
     const name = params.name ?? "";
+    if (name === "negotiate") {
+      const quote = negotiateQuote(params.arguments ?? {});
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(quote.body, null, 2) }],
+        structuredContent: quote.body,
+        ...(quote.isError ? { isError: true } : {}),
+      });
+    }
     if (name === "get_pricing" || name === "authichain_get_pricing") {
       hydrateX402(env);
       return rpcResult(id, {
@@ -1548,7 +1606,7 @@ async function handleRpc(
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use verify_attestation (free, published signed JWS), verify_record (free reference protocol), get_pricing (free), dpp_readiness_check (free), query_provenance (free registration lookup), or verify (legacy x402).",
+          text: "Unknown tool. Use negotiate (free, non-binding quote), verify_attestation (free, published signed JWS), verify_record (free reference protocol), get_pricing (free), dpp_readiness_check (free), query_provenance (free registration lookup), or verify (legacy x402).",
         },
       ],
       isError: true,
@@ -1643,7 +1701,11 @@ export async function tryHandleMcp(
   env: McpEnv = {},
   verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
-  if (!isMcpPath(new URL(request.url).pathname)) return null;
+  const pathname = normalizePath(new URL(request.url).pathname);
+  if ((GLAMA_CONNECTOR_CLAIM_PATHS as readonly string[]).includes(pathname)) {
+    return glamaClaimResponse(request.method);
+  }
+  if (!isMcpPath(pathname)) return null;
 
   if (request.method === "OPTIONS") {
     return new Response(null, {
