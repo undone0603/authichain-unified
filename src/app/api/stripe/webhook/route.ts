@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import Stripe from "stripe";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { provisionPurchase } from "@/lib/provisioning";
+import { isX402PackCandidate } from "@/lib/x402-agent-pack";
 import { renderBillingEmail } from "@/lib/billing-emails";
 import { getBrandIdFromMetadata } from "@/lib/brand-billing";
 import { sendEmail } from "@/lib/email";
@@ -312,6 +313,12 @@ export async function POST(req: NextRequest) {
         if (dppOffer) {
           await fulfillDppPaidSession(getSupabase(), session, linePriceId);
           break;
+        }
+        // The canonical /api/stripe/webhook on authichain-edge-router owns
+        // prepaid verification grants; the Next mirror must never route them
+        // through generic profile/QR-generation provisioning.
+        if (isX402PackCandidate(md, linePriceId)) {
+          throw new Error("x402_pack_requires_canonical_edge_webhook");
         }
 
         // Hands-off provisioning for BOTH authenticated and guest checkouts.
