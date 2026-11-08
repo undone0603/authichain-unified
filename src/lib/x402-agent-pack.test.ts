@@ -14,6 +14,7 @@ const valid: PackPurchaseEvidence = {
   paymentStatus: "paid",
   currency: "usd",
   amountSubtotal: 500,
+  amountTotal: 500,
   items: [{
     priceId: X402_AGENT_PACK_PRICE_ID,
     quantity: 1,
@@ -52,6 +53,7 @@ describe("x402 Stripe prepaid verification pack", () => {
     { currency: "eur" },
     { amountSubtotal: 0 },
     { amountSubtotal: 100 },
+    { amountTotal: 0 },
     { items: [] },
     { items: [...valid.items, ...valid.items] },
     { items: [{ ...valid.items[0], priceId: "price_other" }] },
