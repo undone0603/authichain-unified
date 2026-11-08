@@ -39,6 +39,7 @@ export type PackPurchaseEvidence = {
   paymentStatus: string | null;
   currency: string | null;
   amountSubtotal: number | null;
+  amountTotal: number | null;
   items: readonly VerifiedPackLineItem[];
 };
 
@@ -48,7 +49,7 @@ export function validX402PackPurchase(
   if (!evidence.livemode || evidence.mode !== "payment") return false;
   if (evidence.paymentStatus !== "paid") return false;
   if (evidence.currency?.toLowerCase() !== "usd") return false;
-  if (evidence.amountSubtotal !== 500 || evidence.items.length !== 1) return false;
+  if (evidence.amountSubtotal !== 500 || (evidence.amountTotal ?? 0) < 500 || evidence.items.length !== 1) return false;
   const item = evidence.items[0];
   return (
     item.priceId === X402_AGENT_PACK_PRICE_ID &&
