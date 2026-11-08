@@ -31,6 +31,7 @@ import {
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
+import { NEGOTIATE_TOOL, negotiateQuote } from "./mcp-negotiate";
 
 type McpEnv = X402Env & {
   /** Service binding to authichain-edge-router. Public fetch of this zone returns 522. */
@@ -226,6 +227,7 @@ export const TOOLS = [
       required: ["object_id"],
     },
   },
+  NEGOTIATE_TOOL,
 ];
 
 const DPP_CHECK_URL = "https://authichain.com/dpp-check";
@@ -1496,6 +1498,14 @@ async function handleRpc(
       arguments?: Record<string, unknown>;
     };
     const name = params.name ?? "";
+    if (name === "negotiate") {
+      const quote = negotiateQuote(params.arguments ?? {});
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(quote.body, null, 2) }],
+        structuredContent: quote.body,
+        ...(quote.isError ? { isError: true } : {}),
+      });
+    }
     if (name === "get_pricing" || name === "authichain_get_pricing") {
       hydrateX402(env);
       return rpcResult(id, {
@@ -1596,7 +1606,7 @@ async function handleRpc(
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use verify_attestation (free, published signed JWS), verify_record (free reference protocol), get_pricing (free), dpp_readiness_check (free), query_provenance (free registration lookup), or verify (legacy x402).",
+          text: "Unknown tool. Use negotiate (free, non-binding quote), verify_attestation (free, published signed JWS), verify_record (free reference protocol), get_pricing (free), dpp_readiness_check (free), query_provenance (free registration lookup), or verify (legacy x402).",
         },
       ],
       isError: true,
