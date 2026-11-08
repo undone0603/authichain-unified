@@ -24,7 +24,9 @@ create index if not exists x402_agent_pack_email_active_idx
   where status = 'active';
 
 create table if not exists public.x402_agent_pack_spends (
-  api_key_id uuid not null references public.api_keys(id) on delete restrict,
+  -- Opaque historical key ID; do not prevent a customer deleting a compromised API key.
+  -- The RPC independently validates the active key before inserting a spend.
+  api_key_id uuid not null,
   idempotency_key text not null check (length(idempotency_key) between 16 and 128),
   checkout_session_id text not null references public.x402_agent_pack_grants(checkout_session_id),
   seal_id uuid not null,
