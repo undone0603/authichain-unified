@@ -3248,6 +3248,9 @@ interface Env {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  X402_PACK_PRICE_ID?: string;
+  X402_PACK_CREDITS?: string;
+  X402_PACK_ENABLED?: string;
   /** Public auth_seals read for paid verify. Service role stays a secret. */
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
