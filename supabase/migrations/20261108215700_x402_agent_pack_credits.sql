@@ -90,6 +90,14 @@ begin
     if v_prior.seal_id <> p_seal_id then
       return pg_catalog.jsonb_build_object('allowed', false, 'reason', 'idempotency_conflict');
     end if;
+    -- A refund/dispute revokes even a previously redeemed idempotency key:
+    -- no refreshed evidence may be served after the purchase was reversed.
+    if not exists (
+      select 1 from public.x402_agent_pack_grants g
+      where g.checkout_session_id = v_prior.checkout_session_id and g.status = 'active'
+    ) then
+      return pg_catalog.jsonb_build_object('allowed', false, 'reason', 'grant_revoked');
+    end if;
     return pg_catalog.jsonb_build_object(
       'allowed', true, 'replayed', true, 'checkout_session_id', v_prior.checkout_session_id
     );
