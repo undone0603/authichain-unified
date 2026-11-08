@@ -24,6 +24,8 @@ case "$task" in
     node scripts/check-workflow-cannot-fail.mjs
     node scripts/ci/check-deploy-invariants.mjs
     node scripts/ci/check-node-test-runners.mjs
+    # Independent negative-case tests for the human-free production release policy.
+    node --test scripts/ci/autonomous-release-gate.test.mjs
     ;;
   typecheck-ratchet) node scripts/typecheck-ratchet.mjs ;;
   test-workers) pnpm test --filter='./workers/*' --continue=dependencies-successful ;;
