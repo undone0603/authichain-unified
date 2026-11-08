@@ -82,3 +82,31 @@ export async function fulfillX402AgentPackIfPaid(
   if (error) throw new Error("x402_pack_grant_write_failed");
   return "granted";
 }
+
+/**
+ * Idempotent refund/dispute handling. A protected webhook can safely retry
+ * this update even after it has claimed the Stripe event ID.
+ * Keep revocation active when the Checkout kill switch is OFF: previously
+ * sold credits must still be revoked after a payment reversal.
+ */
+export async function revokeX402AgentPackOnReversal(
+  event: Stripe.Event,
+  supabase: SupabaseClient | null,
+  expectedPriceId: string | undefined = process.env.X402_PACK_PRICE_ID
+): Promise<void> {
+  if (event.type !== "charge.refunded" && event.type !== "charge.dispute.created") return;
+  // Before the approved pack release, never make unrelated refunds depend on a
+  // table which has not yet been migrated.
+  if (expectedPriceId !== X402_AGENT_PACK_PRICE_ID) return;
+  const object = event.data.object as Stripe.Charge | Stripe.Dispute;
+  const intentId = typeof object.payment_intent === "string"
+    ? object.payment_intent
+    : object.payment_intent?.id ?? null;
+  if (!intentId) return;
+  if (!supabase) throw new Error("x402_pack_revocation_database_unavailable");
+  const status = event.type === "charge.refunded" ? "refunded" : "disputed";
+  const { error } = await supabase.from("x402_agent_pack_grants").update({
+    status, updated_at: new Date().toISOString(),
+  }).eq("payment_intent_id", intentId);
+  if (error) throw new Error("x402_pack_revocation_failed");
+}
