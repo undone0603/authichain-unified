@@ -72,6 +72,12 @@ import {
   unpaidSealRefusal,
 } from "../../../src/lib/agent-verify";
 import {
+  STRIPE_CREDIT_RAIL_HEADER,
+  STRIPE_CREDIT_RAIL_VALUE,
+  verifyUsingX402StripeCredits,
+  type PrepaidVerifyEnv,
+} from "../../../src/lib/x402-agent-pack-verify";
+import {
   claimFreeCall,
   FREE_CALLS_HEADER,
   freeDailyCalls,
@@ -80,7 +86,7 @@ import {
 } from "../../../src/lib/x402-free-tier";
 
 export type X402Env = X402EnvVars &
-  SealLookupEnv & {
+  PrepaidVerifyEnv & {
     X402_FREE_DAILY_CALLS?: string;
     X402_FREE_IP_SALT?: string;
     /** [vars] in wrangler.toml; edge router derives the same via paidVerifyPath. */
@@ -405,6 +411,14 @@ async function agentVerify(
   verifyApp?: X402VerifyBinding,
   opts?: X402Options
 ): Promise<Response> {
+  // Explicit opt-in only: prepaid Stripe verification must never be mistaken
+  // for an on-chain x402 settlement or silently consume a different rail.
+  if (request.headers.get(STRIPE_CREDIT_RAIL_HEADER) === STRIPE_CREDIT_RAIL_VALUE) {
+    if (readPaymentProofHeader(name => request.headers.get(name))) {
+      return json(400, { error: "mixed_payment_rails_not_allowed", settled: false });
+    }
+    return verifyUsingX402StripeCredits(request, env ?? {}, opts?.fetchImpl);
+  }
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(request.url).toString();
