@@ -72,6 +72,9 @@ type Env = {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  X402_PACK_PRICE_ID?: string;
+  X402_PACK_CREDITS?: string;
+  X402_PACK_ENABLED?: string;
   /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
   VERIFY_APP?: Fetcher;
   QRON_WORKER_URL?: string;
@@ -118,6 +121,9 @@ function hydrateProcessEnv(env?: Env) {
     ["X402_USDC_ASSET", env.X402_USDC_ASSET],
     ["X402_PRICE_USD", env.X402_PRICE_USD],
     ["X402_DAILY_CAP_USD", env.X402_DAILY_CAP_USD],
+    ["X402_PACK_PRICE_ID", env.X402_PACK_PRICE_ID],
+    ["X402_PACK_CREDITS", env.X402_PACK_CREDITS],
+    ["X402_PACK_ENABLED", env.X402_PACK_ENABLED],
     ["QRON_WORKER_URL", env.QRON_WORKER_URL],
     ["NEXT_PUBLIC_SUPABASE_ANON_KEY", env.NEXT_PUBLIC_SUPABASE_ANON_KEY],
     [
