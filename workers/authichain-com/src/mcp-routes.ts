@@ -2,12 +2,12 @@
  * Live /mcp and /api/mcp 404 today — landing 404s /mcp, APP_WORKER 404s
  * /api/mcp. Agents that probe those paths never see a pay rail.
  *
- * Verification is free (verify_record, GET /api/verify). Stripe catalogue
- * SKUs stay on hold, so get_pricing lists no Payment Links. When
+ * Verification is free (verify_record, GET /api/verify). Human Stripe
+ * checkouts are live: $29 Starter Pack and $299 EU DPP Readiness. When
  * X402_PAID_VERIFY_PATH is bound (wrangler seal_lookup), get_pricing and GET
- * discovery quote the live $0.05 USDC-on-Base x402 rail that health already
- * reports. tools/call verify is the same unpaid 402 as /api/x402 — not a fake
- * "SECURED" JSON. Do not tell agents to GET /api/checkout.
+ * discovery also quote the live $0.05 USDC-on-Base x402 rail that health
+ * already reports. tools/call verify is the same unpaid 402 as /api/x402 —
+ * not a fake "SECURED" JSON. Do not tell agents to GET /api/checkout.
  *
  * Do not import authentic-economy here — that pulls supabase-js into the
  * landing worker. plans.ts + x402.ts are already on this worker.
@@ -31,6 +31,7 @@ import {
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
+import { NEGOTIATE_TOOL, negotiateQuote } from "./mcp-negotiate";
 
 type McpEnv = X402Env & {
   /** Service binding to authichain-edge-router. Public fetch of this zone returns 522. */
@@ -64,6 +65,7 @@ import {
   findPublishedPack,
   packUrl,
 } from "./published-packs";
+import { gatedCheckoutUrl, planById, planUsd } from "../../../src/lib/plans";
 
 /**
  * Protocol versions this endpoint can speak, newest first. `initialize`
@@ -103,7 +105,7 @@ export const TOOLS = [
   {
     name: "get_pricing",
     description:
-      "Free. AuthiChain verification is free: use the verify_record tool, or GET https://authichain.com/api/verify. Paid plans are on hold, so no prices or Payment Links are listed.",
+      "Free. Lists live human Stripe checkouts ($29 Living QR Starter Pack at /checkout/starter, $299 EU DPP Readiness at /checkout/dpp_readiness) and free verification tools.",
     inputSchema: { type: "object", properties: {} },
   },
   {
@@ -225,6 +227,7 @@ export const TOOLS = [
       required: ["object_id"],
     },
   },
+  NEGOTIATE_TOOL,
 ];
 
 const DPP_CHECK_URL = "https://authichain.com/dpp-check";
@@ -451,6 +454,54 @@ export function isMcpPath(pathname: string): boolean {
   return p === "/mcp" || p === "/api/mcp" || p === "/.well-known/mcp.json";
 }
 
+/**
+ * Glama connector claim for https://authichain.com/mcp.
+ * The token is bound to the Glama account and has no personal data.
+ * Glama fetches this exact document with a public GET and requires it
+ * to be answered before the MCP handler, with no auth and no redirect.
+ * Keep it published for as long as the listing should stay verified.
+ */
+export const GLAMA_CONNECTOR_CLAIM_PATHS = [
+  "/mcp/.well-known/glama.json",
+  "/api/mcp/.well-known/glama.json",
+] as const;
+
+export const GLAMA_CONNECTOR_CLAIM = {
+  $schema: "https://glama.ai/mcp/schemas/connector.json",
+  claim: "glama_claim_qG_mMcrFR1lzuDEif09a9hSoM4Hu4v56",
+} as const;
+
+function glamaClaimResponse(method: string): Response {
+  if (method === "HEAD") {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, max-age=300",
+        "CDN-Cache-Control": "public, max-age=300",
+        "Content-Type": "application/json; charset=utf-8",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  }
+  if (method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Max-Age": "86400",
+      },
+    });
+  }
+  if (method !== "GET") {
+    return json(405, { error: "method not allowed" });
+  }
+  return json(200, GLAMA_CONNECTOR_CLAIM, {
+    "Cache-Control": "public, max-age=300",
+    "CDN-Cache-Control": "public, max-age=300",
+  });
+}
+
 function json(
   status: number,
   body: unknown,
@@ -506,7 +557,7 @@ function mcpTools(env?: X402Env) {
       return {
         ...tool,
         description:
-          "Free. Quotes the live x402 agent rail ($0.05 USDC on Base) and lists free verification tools. Stripe catalogue SKUs are not listed.",
+          "Free. Quotes the live x402 agent rail ($0.05 USDC on Base) and live human Stripe checkouts: $29 Starter Pack (100 generations, paid once) at https://authichain.com/checkout/starter and $299 EU DPP Readiness at https://authichain.com/checkout/dpp_readiness. Starting a monthly plan replaces unused pack credits.",
       };
     }
     if (tool.name === "verify") {
@@ -520,14 +571,39 @@ function mcpTools(env?: X402Env) {
   });
 }
 
+function humanStripeCheckout() {
+  const starter = planById("starter");
+  const dpp = planById("dpp_readiness");
+  return {
+    status: "live" as const,
+    rail: "stripe",
+    note: "Starting a monthly plan replaces unused Starter pack credits.",
+    starter: {
+      usd: planUsd("starter"),
+      generations: starter?.generations ?? 100,
+      billing: "one_time",
+      checkout: gatedCheckoutUrl("starter"),
+      name: starter?.name ?? "Starter Pack",
+    },
+    dpp_readiness: {
+      usd: planUsd("dpp_readiness"),
+      billing: "one_time",
+      checkout: gatedCheckoutUrl("dpp_readiness"),
+      name: dpp?.name ?? "EU DPP Workspace",
+    },
+  };
+}
+
 /**
- * get_pricing and GET discovery. verify_record stays free. Stripe SKUs stay
- * on hold (no Payment Links). When the seal registry path is bound, quote the
- * same $0.05 x402 rail as /api/x402/health.
+ * get_pricing and GET discovery. verify_record stays free. Human Stripe
+ * checkouts are live ($29 Starter, $299 DPP Readiness). When the seal
+ * registry path is bound, also quote the same $0.05 x402 rail as
+ * /api/x402/health. Do not mix the rails.
  */
 export function mcpPricingDiscovery(env?: X402Env) {
   hydrateX402(env);
   const paidVerify = mcpPaidVerifyStatus(env);
+  const stripe = humanStripeCheckout();
   const free = {
     verify: {
       price: "free",
@@ -543,13 +619,15 @@ export function mcpPricingDiscovery(env?: X402Env) {
       "get_pricing",
       "scan_living_qr",
     ],
+    humanCheckout: stripe,
   };
   if (!paidVerify.bound) {
     return {
       ...free,
       paidPlans: {
-        status: "on_hold",
-        note: "Prices are on hold. No Payment Links or per-call prices are offered here.",
+        status: "live",
+        stripe,
+        note: "Human Stripe checkouts are live. Agent x402 verify is quoted when the seal registry path is bound.",
       },
       legacySealVerify: {
         tool: "verify",
@@ -577,11 +655,8 @@ export function mcpPricingDiscovery(env?: X402Env) {
       health: "https://authichain.com/api/x402/health",
       catalog: "https://authichain.com/api/x402/catalog",
       paidVerify,
-      note: "Metered agent verify is $0.05 USDC on Base. Unpaid POST returns HTTP 402. Three free UUID calls per IP per UTC day, then 402. Stripe catalogue SKUs are not listed.",
-      stripe: {
-        status: "on_hold",
-        note: "Human Stripe catalogue stays wait_buyer. Not mixed into x402.",
-      },
+      note: "Metered agent verify is $0.05 Circle USDC on Base. Unpaid POST returns HTTP 402. Three free UUID calls per IP per UTC day, then 402. Human Stripe checkouts are a separate live rail.",
+      stripe,
     },
     legacySealVerify: {
       tool: "verify",
@@ -695,57 +770,108 @@ type AuthSealLookup =
 
 const SAFE_REGISTRY_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,179}$/;
 
+type PublicRegistryEnv = X402Env & {
+  NEXT_PUBLIC_SUPABASE_URL?: string;
+  NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
+};
+
+function supabasePublicConfig(
+  env?: PublicRegistryEnv
+): { baseUrl: string; anonKey: string } | null {
+  const baseUrl = (env?.SUPABASE_URL || env?.NEXT_PUBLIC_SUPABASE_URL || "")
+    .trim()
+    .replace(/\/+$/, "");
+  const anonKey = (
+    env?.SUPABASE_ANON_KEY ||
+    env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    ""
+  ).trim();
+  if (!baseUrl || !/^https:\/\//i.test(baseUrl) || !anonKey) return null;
+  return { baseUrl, anonKey };
+}
+
+function missingRelationResponse(status: number, body: string): boolean {
+  if (status === 404) return true;
+  if (status !== 400 && status !== 406 && status !== 422) return false;
+  const text = body.toLowerCase();
+  return (
+    text.includes("does not exist") ||
+    text.includes("schema cache") ||
+    text.includes("could not find") ||
+    text.includes("pgrst204") ||
+    text.includes("pgrst205")
+  );
+}
+
 /**
  * Read the canonical auth_seals registry using only the public Supabase key.
- * A missing setting, HTTP error, schema error, or timeout is never converted
- * into "not registered". This lookup is registration evidence only; it does
- * not fetch or attest a signed record and must never set verified=true.
+ * A missing table or column is "not found" (nothing published), not an
+ * outage. This lookup is registration evidence only; it does not fetch or
+ * attest a signed record and must never set verified=true.
  */
 async function lookupAuthSeal(
   assetId: string,
-  env?: X402Env
+  env?: PublicRegistryEnv
 ): Promise<AuthSealLookup> {
-  const baseUrl = (env?.SUPABASE_URL || "").trim().replace(/\/+$/, "");
-  const anonKey = (env?.SUPABASE_ANON_KEY || "").trim();
-  if (!baseUrl || !/^https:\/\//i.test(baseUrl) || !anonKey) {
-    return { kind: "not_configured" };
-  }
+  const cfg = supabasePublicConfig(env);
+  if (!cfg) return { kind: "not_configured" };
   if (!SAFE_REGISTRY_IDENTIFIER.test(assetId)) {
     return { kind: "invalid_identifier" };
   }
 
-  const query = new URLSearchParams({
-    select: "id,product_id,batch_id,brand,polygon_tx,created_at",
-    limit: "1",
-    or: `(id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId},qr_payload.eq.${assetId})`,
-  });
+  const filters = [
+    `(id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId},qr_payload.eq.${assetId})`,
+    `(id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId})`,
+  ];
   try {
-    const response = await fetch(
-      `${baseUrl}/rest/v1/auth_seals?${query.toString()}`,
-      {
-        method: "GET",
-        headers: {
-          apikey: anonKey,
-          Authorization: `Bearer ${anonKey}`,
-          Accept: "application/json",
-        },
-        signal: AbortSignal.timeout(8000),
+    for (const or of filters) {
+      const query = new URLSearchParams({
+        select: "id,product_id,batch_id,brand,polygon_tx,created_at",
+        limit: "1",
+        or,
+      });
+      const response = await fetch(
+        `${cfg.baseUrl}/rest/v1/auth_seals?${query.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            apikey: cfg.anonKey,
+            Authorization: `Bearer ${cfg.anonKey}`,
+            Accept: "application/json",
+          },
+          signal: AbortSignal.timeout(8000),
+        }
+      );
+      const raw = await response.text();
+      if (!response.ok) {
+        if (
+          missingRelationResponse(response.status, raw) &&
+          !raw.toLowerCase().includes("qr_payload")
+        ) {
+          return { kind: "not_found" };
+        }
+        continue;
       }
-    );
-    if (!response.ok) return { kind: "unavailable" };
-    const rows: unknown = await response.json();
-    if (!Array.isArray(rows)) return { kind: "unavailable" };
-    if (rows.length === 0) return { kind: "not_found" };
-    const row = rows[0] as AuthSealRegistryRow;
-    if (
-      !row ||
-      typeof row !== "object" ||
-      typeof row.id !== "string" ||
-      !row.id
-    ) {
-      return { kind: "unavailable" };
+      let rows: unknown;
+      try {
+        rows = JSON.parse(raw);
+      } catch {
+        return { kind: "unavailable" };
+      }
+      if (!Array.isArray(rows)) return { kind: "unavailable" };
+      if (rows.length === 0) return { kind: "not_found" };
+      const row = rows[0] as AuthSealRegistryRow;
+      if (
+        !row ||
+        typeof row !== "object" ||
+        typeof row.id !== "string" ||
+        !row.id
+      ) {
+        return { kind: "unavailable" };
+      }
+      return { kind: "found", row };
     }
-    return { kind: "found", row };
+    return { kind: "unavailable" };
   } catch {
     return { kind: "unavailable" };
   }
@@ -786,13 +912,10 @@ type PublishedAttestationLookup =
 /** Resolve an exact identifier against published signed records only. */
 async function lookupPublishedAttestation(
   assetId: string,
-  env?: X402Env
+  env?: PublicRegistryEnv
 ): Promise<PublishedAttestationLookup> {
-  const baseUrl = (env?.SUPABASE_URL || "").trim().replace(/\/+$/, "");
-  const anonKey = (env?.SUPABASE_ANON_KEY || "").trim();
-  if (!baseUrl || !/^https:\/\//i.test(baseUrl) || !anonKey) {
-    return { kind: "not_configured" };
-  }
+  const cfg = supabasePublicConfig(env);
+  if (!cfg) return { kind: "not_configured" };
   if (!SAFE_REGISTRY_IDENTIFIER.test(assetId)) {
     return { kind: "invalid_identifier" };
   }
@@ -806,19 +929,33 @@ async function lookupPublishedAttestation(
   });
   try {
     const response = await fetch(
-      `${baseUrl}/rest/v1/authichain_attestation_records?${query.toString()}`,
+      `${cfg.baseUrl}/rest/v1/authichain_attestation_records?${query.toString()}`,
       {
         method: "GET",
         headers: {
-          apikey: anonKey,
-          Authorization: `Bearer ${anonKey}`,
+          apikey: cfg.anonKey,
+          Authorization: `Bearer ${cfg.anonKey}`,
           Accept: "application/json",
         },
         signal: AbortSignal.timeout(8000),
       }
     );
-    if (!response.ok) return { kind: "unavailable" };
-    const rows: unknown = await response.json();
+    const raw = await response.text();
+    if (!response.ok) {
+      // A missing signed-record table is "no published attestations", not an
+      // outage that should poison query_provenance.
+      return {
+        kind: missingRelationResponse(response.status, raw)
+          ? "not_found"
+          : "unavailable",
+      };
+    }
+    let rows: unknown;
+    try {
+      rows = JSON.parse(raw);
+    } catch {
+      return { kind: "unavailable" };
+    }
     if (!Array.isArray(rows)) return { kind: "unavailable" };
     if (rows.length === 0) return { kind: "not_found" };
     if (rows.length > 1)
@@ -837,7 +974,7 @@ async function lookupPublishedAttestation(
       typeof row.payload !== "object" ||
       row.issuer_id !== "https://authichain.com"
     ) {
-      return { kind: "unavailable" };
+      return { kind: "not_found" };
     }
     return { kind: "found", row };
   } catch {
@@ -846,7 +983,10 @@ async function lookupPublishedAttestation(
 }
 
 /** Registry-backed MCP lookup; all answers remain explicitly non-verified. */
-async function queryProvenanceWithRegistry(assetIdRaw: unknown, env?: X402Env) {
+async function queryProvenanceWithRegistry(
+  assetIdRaw: unknown,
+  env?: PublicRegistryEnv
+) {
   const assetId = String(assetIdRaw ?? "").trim();
   const fallback = queryProvenance(assetId);
   if (!assetId) return fallback;
@@ -916,57 +1056,6 @@ async function queryProvenanceWithRegistry(assetIdRaw: unknown, env?: X402Env) {
   }
 
   const lookup = await lookupAuthSeal(assetId, env);
-  if (signedLookup.kind === "unavailable") {
-    if (lookup.kind !== "found") {
-      return {
-        ...fallback,
-        status: "registry_unavailable",
-        verified: false,
-        registry: {
-          ...fallback.registry,
-          state: "signed_record_registry_unavailable",
-          note: "The signed-record registry could not be read. No conclusion about signed-record existence or verification was reached.",
-        },
-      };
-    }
-  }
-  if (lookup.kind === "not_configured") {
-    return {
-      ...fallback,
-      registry: {
-        ...fallback.registry,
-        state: "not_configured",
-        note: "No public Supabase registry configuration was supplied; this result uses only published-pack/sample fallback data.",
-      },
-    };
-  }
-  if (lookup.kind === "invalid_identifier") {
-    return {
-      ...fallback,
-      registry: {
-        ...fallback.registry,
-        state: "invalid_identifier",
-        note: "This identifier contains unsupported characters for an exact registry lookup; no registry query was made.",
-      },
-    };
-  }
-  if (lookup.kind === "unavailable") {
-    return {
-      ...fallback,
-      status:
-        fallback.status === "published_pack" ||
-        fallback.status === "desk_sample"
-          ? fallback.status
-          : "registry_unavailable",
-      verified: false,
-      registry: {
-        ...fallback.registry,
-        state: "unavailable",
-        note: "The canonical auth_seals registry could not be read. No conclusion about registration was reached.",
-      },
-    };
-  }
-
   if (lookup.kind === "found") {
     const row = lookup.row;
     const registered = {
@@ -1010,45 +1099,74 @@ async function queryProvenanceWithRegistry(assetIdRaw: unknown, env?: X402Env) {
     };
   }
 
+  if (lookup.kind === "invalid_identifier") {
+    return {
+      ...fallback,
+      status:
+        fallback.status === "published_pack" ||
+        fallback.status === "desk_sample"
+          ? fallback.status
+          : "unknown",
+      verified: false,
+      registry: {
+        ...fallback.registry,
+        state: "invalid_identifier",
+        note: "This identifier contains unsupported characters for an exact registry lookup; no registry query was made.",
+      },
+    };
+  }
+
   if (
     fallback.status === "published_pack" ||
     fallback.status === "desk_sample"
   ) {
     return {
       ...fallback,
+      verified: false,
       registry: {
         ...fallback.registry,
-        state: "checked_no_matching_seal",
-        source: "auth_seals",
-        note: "This published pack/sample did not match an auth_seals row. Published status is not a cryptographic attestation.",
+        state:
+          lookup.kind === "unavailable" || signedLookup.kind === "unavailable"
+            ? "lookup_degraded"
+            : lookup.kind === "not_configured"
+              ? "not_configured"
+              : "checked_no_matching_seal",
+        source: lookup.kind === "not_found" ? "auth_seals" : undefined,
+        note:
+          lookup.kind === "not_found"
+            ? "This published pack/sample did not match an auth_seals row. Published status is not a cryptographic attestation."
+            : "Published pack/sample fallback. Live registry lookup did not return a matching seal. This is not an authenticity verdict.",
       },
     };
   }
 
-  if (signedLookup.kind === "unavailable") {
-    return {
-      ...fallback,
-      status: "registry_unavailable",
-      registered: false,
-      verified: false,
-      registry: {
-        ...fallback.registry,
-        state: "signed_record_registry_unavailable",
-        note: "The signed-record registry could not be read. No conclusion about the signed record was reached.",
-      },
-    };
-  }
+  // Unregistered IDs answer unknown. Never "fake". Never
+  // registry_unavailable for a public lookup — a missing signed-record
+  // table or a degraded read is not evidence of counterfeit.
   return {
     ...fallback,
-    status: "not_registered",
+    status: "unknown",
     registered: false,
     verified: false,
     registry: {
       ...fallback.registry,
-      state: "available",
-      source: "auth_seals",
+      state:
+        lookup.kind === "not_configured" &&
+        signedLookup.kind === "not_configured"
+          ? "not_configured"
+          : lookup.kind === "unavailable" && signedLookup.kind === "unavailable"
+            ? "lookup_degraded"
+            : "available",
+      source:
+        lookup.kind === "not_found" || lookup.kind === "unavailable"
+          ? "auth_seals"
+          : undefined,
       signedRecordState: signedLookup.kind,
-      note: "No matching published signed attestation or auth_seals row was found. This is a registry lookup result, not a cryptographic verification result.",
+      note:
+        lookup.kind === "not_configured" &&
+        signedLookup.kind === "not_configured"
+          ? "No public Supabase registry configuration was supplied; this result uses only published-pack/sample fallback data."
+          : "No matching published signed attestation or auth_seals row was found. This is a registry lookup result, not a cryptographic verification result.",
     },
   };
 }
@@ -1380,6 +1498,14 @@ async function handleRpc(
       arguments?: Record<string, unknown>;
     };
     const name = params.name ?? "";
+    if (name === "negotiate") {
+      const quote = negotiateQuote(params.arguments ?? {});
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(quote.body, null, 2) }],
+        structuredContent: quote.body,
+        ...(quote.isError ? { isError: true } : {}),
+      });
+    }
     if (name === "get_pricing" || name === "authichain_get_pricing") {
       hydrateX402(env);
       return rpcResult(id, {
@@ -1465,7 +1591,7 @@ async function handleRpc(
           isError: true,
         });
       }
-      // Stripe catalogue stays on hold (see mcpPricingDiscovery): no audit pitch.
+      // Live Stripe SKUs are listed on get_pricing; this tool still never pitches an audit.
       const result = scoreDppReadiness(input, { offerAudit: false });
       return rpcResult(id, {
         content: [
@@ -1480,7 +1606,7 @@ async function handleRpc(
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use verify_attestation (free, published signed JWS), verify_record (free reference protocol), get_pricing (free), dpp_readiness_check (free), query_provenance (free registration lookup), or verify (legacy x402).",
+          text: "Unknown tool. Use negotiate (free, non-binding quote), verify_attestation (free, published signed JWS), verify_record (free reference protocol), get_pricing (free), dpp_readiness_check (free), query_provenance (free registration lookup), or verify (legacy x402).",
         },
       ],
       isError: true,
@@ -1575,7 +1701,11 @@ export async function tryHandleMcp(
   env: McpEnv = {},
   verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
-  if (!isMcpPath(new URL(request.url).pathname)) return null;
+  const pathname = normalizePath(new URL(request.url).pathname);
+  if ((GLAMA_CONNECTOR_CLAIM_PATHS as readonly string[]).includes(pathname)) {
+    return glamaClaimResponse(request.method);
+  }
+  if (!isMcpPath(pathname)) return null;
 
   if (request.method === "OPTIONS") {
     return new Response(null, {

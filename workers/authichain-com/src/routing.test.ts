@@ -822,11 +822,13 @@ test("a malformed certificate id is a 404", async () => {
   assert.equal((await get("/cert/garbage")).status, 404);
 });
 
-test("/thanks and /success serve the DPP thanks page", async () => {
+test("/thanks and /success never claim payment without a checkout reference", async () => {
   for (const path of ["/thanks", "/success"]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
-    assert.match(await res.text(), /Payment received/);
+    const html = await res.text();
+    assert.match(html, /No checkout reference provided/);
+    assert.doesNotMatch(html, /Payment received|Workspace opened/);
   }
 });
 
@@ -1018,15 +1020,28 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
   }
 });
 
-test("/mcp and /api/mcp discovery stays on_hold without a bound registry path", async () => {
+test("/mcp and /api/mcp discovery lists live Stripe checkouts without a bound x402 path", async () => {
   for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const body = (await res.json()) as {
-      pricing: { paidPlans: { status: string } };
+      pricing: { paidPlans: { status: string; stripe?: { status: string } } };
     };
-    assert.equal(body.pricing.paidPlans.status, "on_hold", path);
-    assert.equal(JSON.stringify(body).includes("$0.05"), false, path);
+    assert.equal(body.pricing.paidPlans.status, "live", path);
+    const text = JSON.stringify(body);
+    assert.equal(text.includes("$0.05"), false, path);
+    assert.equal(text.includes("on_hold"), false, path);
+    assert.equal(text.includes("wait_buyer"), false, path);
+    assert.equal(
+      text.includes("https://authichain.com/checkout/starter"),
+      true,
+      path
+    );
+    assert.equal(
+      text.includes("https://authichain.com/checkout/dpp_readiness"),
+      true,
+      path
+    );
   }
 });
 
@@ -1068,18 +1083,25 @@ test("/mcp and /api/mcp discovery quotes the bound x402 $0.05 rail", async () =>
     assert.equal(body.pricing.paidPlans.payTo, X402_PUBLISHED_PAY_TO, path);
     assert.equal(body.pricing.paidPlans.paidVerify?.bound, true, path);
     assert.equal(body.pricing.paidPlans.paidVerify?.status, "bound", path);
-    assert.equal(body.pricing.paidPlans.stripe?.status, "on_hold", path);
+    assert.equal(body.pricing.paidPlans.stripe?.status, "live", path);
     assert.equal(body.pricing.legacySealVerify.status, "bound", path);
-    assert.equal(body.pricing.humanCheckout, undefined, path);
     const text = JSON.stringify(body);
     assert.equal(text.includes("$0.05"), true, path);
     assert.equal(text.includes("USDC"), true, path);
     assert.equal(text.includes("QRON"), false, path);
-    for (const plan of [
-      "dpp_readiness",
-      "strainchain_passport",
-      "strainchain_farm",
-    ] as const) {
+    assert.equal(text.includes("on_hold"), false, path);
+    assert.equal(text.includes("wait_buyer"), false, path);
+    assert.equal(
+      text.includes("https://authichain.com/checkout/starter"),
+      true,
+      path
+    );
+    assert.equal(
+      text.includes("https://authichain.com/checkout/dpp_readiness"),
+      true,
+      path
+    );
+    for (const plan of ["strainchain_passport", "strainchain_farm"] as const) {
       const link = planPaymentLink(plan);
       if (link) assert.equal(text.includes(link), false, `${path} ${plan}`);
     }
