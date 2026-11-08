@@ -36,55 +36,27 @@ jobs:
           [[ "$TARGET_SHA" =~ ^[[:xdigit:]]{40}$ ]]
           test "$TARGET_SHA" = "$DISPATCH_SHA"
           echo "sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
-      - name: Require a preconfigured protected production-cloudflare environment
+      # Separately tested, fail-closed automated protection instead of a human
+      # environment reviewer. Missing/stale evidence stops the release.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.head.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test fail-closed automated release policy
+        run: node --test scripts/ci/autonomous-release-gate.test.mjs
+      - name: Enforce automated exact-main release policy
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-        run: |
-          node --input-type=module <<'NODE'
-          const repo = process.env.REPOSITORY;
-          if (repo !== 'undone0603/authichain-unified') throw Error('wrong repository');
-          const res = await fetch('https://api.github.com/repos/' + repo + '/environments/production-cloudflare', {
-            headers: {authorization: 'Bearer ' + process.env.GH_TOKEN,
-              accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28'}
-          });
-          if (!res.ok) throw Error('production environment missing or inaccessible, HTTP ' + res.status);
-          const policy = await res.json();
-          if (policy.name !== 'production-cloudflare') throw Error('wrong deployment environment');
-          if (policy.deployment_branch_policy?.protected_branches !== true)
-            throw Error('production environment must allow protected branches only');
-          const reviewers = policy.protection_rules?.find(rule => rule.type === 'required_reviewers');
-          if (!reviewers || reviewers.prevent_self_review !== true || !Array.isArray(reviewers.reviewers) || reviewers.reviewers.length < 1)
-            throw Error('production environment needs independent approval with self-review blocked');
-          console.log('Protected production-cloudflare environment verified without changing settings');
-          NODE
-      - name: Require seven successful CircleCI statuses at exact commit
-        env:
-          GH_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ steps.head.outputs.sha }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          node --input-type=module <<'NODE'
-          const sha = process.env.TARGET_SHA;
-          const repo = process.env.REPOSITORY;
-          if (!/^[a-f0-9]{40}$/i.test(sha ?? '') || repo !== 'undone0603/authichain-unified') throw Error('wrong target');
-          const required = ['test-workers', 'test-other', 'typecheck-ratchet', 'quality', 'extras', 'build', 'main-quality-gate'].map(x => 'ci/circleci: ' + x);
-          const url = 'https://api.github.com/repos/' + repo + '/commits/' + sha + '/status?per_page=100';
-          const response = await fetch(url, { headers: { authorization: 'Bearer ' + process.env.GH_TOKEN, accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28' } });
-          if (!response.ok) throw Error('status query ' + response.status);
-          const data = await response.json();
-          if (!Array.isArray(data.statuses) || data.total_count > 100 || data.statuses.length < 7) throw Error('incomplete status response');
-          const statuses = new Map();
-          for (const status of data.statuses) if (!statuses.has(status.context)) statuses.set(status.context, status);
-          for (const context of required) {
-            const status = statuses.get(context);
-            if (status?.state !== 'success' || !status?.target_url?.startsWith('https://circleci.com/gh/undone0603/authichain-unified/')) throw Error('required CircleCI check not verified: ' + context);
-          }
-          console.log('Exact ' + sha + ': seven required CircleCI statuses successful');
-          NODE
+          DISPATCH_SHA: ${{ github.sha }}
+        run: node scripts/ci/autonomous-release-gate.mjs
 
   deploy:
-    name: Review and publish exact approved Worker
+    name: Publish exact automatically policy-approved Worker
     needs: verify
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
@@ -126,6 +98,13 @@ jobs:
           pnpm exec tsx --import ./test/register-md.mjs --test src/routing.test.ts
       - name: Embed microsite HTML
         run: node scripts/sync-microsite-packs.mjs
+      - name: Recheck automated release policy immediately before publishing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ needs.verify.outputs.sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: node scripts/ci/autonomous-release-gate.mjs
       # Require these names to be configured ONLY as production-cloudflare environment secrets.
       # Never define these aliases as repository/org secrets: GitHub falls back to broader scope.
       # Provision a Workers-only scoped Cloudflare token; no D1/zone/DNS rights.
