@@ -66,6 +66,7 @@ export async function parsePrepaidRequest(request: Request): Promise<
 
 type ApiKeyRow = {
   id?: unknown;
+  user_id?: unknown;
   is_active?: unknown;
   expires_at?: unknown;
   scopes?: unknown;
@@ -99,7 +100,7 @@ export async function verifyUsingX402StripeCredits(
   const keyHash = createHash("sha256").update(parsed.rawKey).digest("hex");
   const lookup = await readJson(
     fetchImpl,
-    `${creds.url}/rest/v1/api_keys?key_hash=eq.${keyHash}&select=id,is_active,expires_at,scopes&limit=2`,
+    `${creds.url}/rest/v1/api_keys?key_hash=eq.${keyHash}&select=id,user_id,is_active,expires_at,scopes&limit=2`,
     creds.key
   );
   if (!lookup.ok || !Array.isArray(lookup.body)) {
@@ -108,6 +109,9 @@ export async function verifyUsingX402StripeCredits(
   const keys = lookup.body as ApiKeyRow[];
   if (keys.length !== 1 || keys[0].is_active !== true || typeof keys[0].id !== "string" || !UUID.test(keys[0].id)) {
     return prepaidJson(401, { error: "api_key_invalid", settled: false });
+  }
+  if (typeof keys[0].user_id !== "string" || !UUID.test(keys[0].user_id)) {
+    return prepaidJson(403, { error: "api_key_missing_verified_owner", settled: false });
   }
   const scopes = Array.isArray(keys[0].scopes) ? keys[0].scopes : [];
   if (!scopes.includes("read") && !scopes.includes("verify")) {
@@ -118,6 +122,23 @@ export async function verifyUsingX402StripeCredits(
     if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
       return prepaidJson(403, { error: "api_key_expired", settled: false });
     }
+  }
+
+  // The owner identity comes from Auth Admin, never the mutable profiles.email.
+  // An agent cannot claim another buyer's credits by editing profile fields.
+  const userResult = await readJson(
+    fetchImpl,
+    `${creds.url}/auth/v1/admin/users/${keys[0].user_id}`,
+    creds.key
+  );
+  if (!userResult.ok || !userResult.body || typeof userResult.body !== "object" || Array.isArray(userResult.body)) {
+    return prepaidJson(503, { error: "verified_identity_unavailable", settled: false });
+  }
+  const user = userResult.body as Record<string, unknown>;
+  const buyerEmail = typeof user.email === "string" ? user.email.trim().toLowerCase() : "";
+  if (user.id !== keys[0].user_id || !buyerEmail.includes("@") ||
+      !user.email_confirmed_at || user.is_anonymous === true) {
+    return prepaidJson(403, { error: "verified_buyer_email_required", settled: false });
   }
 
   const sealResult = await readSeal(fetchImpl, creds, parsed.sealId);
@@ -139,6 +160,7 @@ export async function verifyUsingX402StripeCredits(
         p_api_key_id: keys[0].id,
         p_idempotency_key: parsed.idempotencyKey,
         p_seal_id: parsed.sealId,
+        p_verified_email: buyerEmail,
       }),
       signal: AbortSignal.timeout(8000),
     });
