@@ -101,14 +101,14 @@ function VerifyContent() {
               </p>
               <div className="mt-3 flex gap-2">
                 <a
-                  href="/onboard?plan=starter-pack-29"
+                  href="/checkout/starter"
                   className="rounded bg-navy px-3 py-1.5 text-ivory text-xs font-medium"
                   onClick={() => (window as any).track?.('verify_cta_clicked', { plan: '29' })}
                 >
                   Buy Starter Pack — $29
                 </a>
                 <a
-                  href="/onboard?plan=launch-19"
+                  href="/checkout/qron_launch"
                   className="rounded border border-steel px-3 py-1.5 text-xs"
                   onClick={() => (window as any).track?.('verify_cta_clicked', { plan: '19' })}
                 >
@@ -116,7 +116,7 @@ function VerifyContent() {
                 </a>
               </div>
               <p className="mt-2 text-xs text-steel">
-                A verified result confirms the on-chain record. It does not by itself prove the physical item is authentic.
+                A verification result reflects the available record and cryptographic evidence; it does not by itself prove the physical item is authentic.
               </p>
             </div>
           </div>
