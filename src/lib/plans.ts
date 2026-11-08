@@ -63,7 +63,7 @@ export const PLANS: Plan[] = [
     generations: 0,
     stripe_price_id: "price_1UZdq5GqTruSqV8TsaDtFBPF",
     stripe_mode: "payment",
-    tier: "pro",
+    tier: "free",
     listed: false,
     return_path: "/x402",
     features: ["120 agent verification requests", "One-time purchase", "Prepaid Stripe credits; separate from x402 USDC"],
@@ -545,7 +545,7 @@ export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
   battery_gap_report: "pro",
   battery_gap_report_extra: "pro",
   gov_provenance_pilot: "enterprise",
-  x402_agent_credits_120: "pro",
+  x402_agent_credits_120: "free",
 };
 
 /**
