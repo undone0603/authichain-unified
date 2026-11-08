@@ -448,6 +448,9 @@ export type CatalogOffer = {
 /** Every paid plan that has a gated checkout. Free is not an offer. */
 export function catalogOffers(): CatalogOffer[] {
   return PLANS.flatMap(plan => {
+    // This SKU is staged but deliberately unadvertised until its purchase,
+    // verified-owner grant and atomic redemption path have passed review.
+    if (plan.id === "x402_agent_credits_120") return [];
     if (plan.price <= 0) return [];
     const checkout = planPaymentLink(plan.id);
     if (!checkout) return [];
