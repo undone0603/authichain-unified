@@ -4,6 +4,7 @@
  * Env (never log secret values):
  *   POLYGON_PRIVATE_KEY | WALLET_PRIVATE_KEY  funded smoke payer (not live payTo)
  *   DRY_RUN              anything except "false" is a dry run (default dry)
+ *   ALLOW_LIVE_SMOKE     must be "1" in addition to DRY_RUN=false for live settlement
  *   X402_ENDPOINT        default https://authichain.com/api/x402
  *   X402_PAY_TO          default owner-authorized treasury (same as live health payTo)
  *   X402_SEAL_ID        required: real, registered seal UUID (never fake smoke ID)
@@ -18,7 +19,7 @@
  *
  * Usage:
  *   DRY_RUN=true  pnpm exec tsx scripts/x402-smoke.ts
- *   DRY_RUN=false pnpm exec tsx scripts/x402-smoke.ts
+ *   DRY_RUN=false ALLOW_LIVE_SMOKE=1 pnpm exec tsx scripts/x402-smoke.ts
  */
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -53,6 +54,9 @@ async function jsonOrText(res: Response): Promise<unknown> {
 
 export async function runX402Smoke(): Promise<void> {
   const dry = isDryRun();
+  if (!dry && process.env.ALLOW_LIVE_SMOKE !== "1") {
+    fail("live smoke requires ALLOW_LIVE_SMOKE=1 in addition to DRY_RUN=false");
+  }
   const endpoint = (process.env.X402_ENDPOINT || DEFAULT_ENDPOINT).replace(
     /\/$/,
     ""
