@@ -454,6 +454,54 @@ export function isMcpPath(pathname: string): boolean {
   return p === "/mcp" || p === "/api/mcp" || p === "/.well-known/mcp.json";
 }
 
+/**
+ * Glama connector claim for https://authichain.com/mcp.
+ * The token is bound to the Glama account and has no personal data.
+ * Glama fetches this exact document with a public GET and requires it
+ * to be answered before the MCP handler, with no auth and no redirect.
+ * Keep it published for as long as the listing should stay verified.
+ */
+export const GLAMA_CONNECTOR_CLAIM_PATHS = [
+  "/mcp/.well-known/glama.json",
+  "/api/mcp/.well-known/glama.json",
+] as const;
+
+export const GLAMA_CONNECTOR_CLAIM = {
+  $schema: "https://glama.ai/mcp/schemas/connector.json",
+  claim: "glama_claim_qG_mMcrFR1lzuDEif09a9hSoM4Hu4v56",
+} as const;
+
+function glamaClaimResponse(method: string): Response {
+  if (method === "HEAD") {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, max-age=300",
+        "CDN-Cache-Control": "public, max-age=300",
+        "Content-Type": "application/json; charset=utf-8",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  }
+  if (method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Max-Age": "86400",
+      },
+    });
+  }
+  if (method !== "GET") {
+    return json(405, { error: "method not allowed" });
+  }
+  return json(200, GLAMA_CONNECTOR_CLAIM, {
+    "Cache-Control": "public, max-age=300",
+    "CDN-Cache-Control": "public, max-age=300",
+  });
+}
+
 function json(
   status: number,
   body: unknown,
@@ -1653,7 +1701,11 @@ export async function tryHandleMcp(
   env: McpEnv = {},
   verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
-  if (!isMcpPath(new URL(request.url).pathname)) return null;
+  const pathname = normalizePath(new URL(request.url).pathname);
+  if ((GLAMA_CONNECTOR_CLAIM_PATHS as readonly string[]).includes(pathname)) {
+    return glamaClaimResponse(request.method);
+  }
+  if (!isMcpPath(pathname)) return null;
 
   if (request.method === "OPTIONS") {
     return new Response(null, {

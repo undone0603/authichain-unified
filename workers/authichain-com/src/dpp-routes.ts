@@ -56,57 +56,89 @@ function esc(value: unknown): string {
 }
 
 /**
- * The thanks page names a product, so it has to know which one was bought.
- * `plan` comes from the checkout success_url; it only selects copy (the real
- * entitlement is granted by the Stripe webhook), so a tampered value cannot
- * grant anything. No `plan` means a link issued before this param existed:
- * those keep the original DPP copy unchanged.
+ * A Stripe redirect is not a signed receipt. URL query parameters are fully
+ * user-controlled; they can select informational copy, NEVER payment status,
+ * a generation grant, or verified access. Do not imply delivery here.
+ *
+ * A missing `plan` is expected for the live Starter Payment Link return.
+ * Treat that route as a generic unverified checkout return; do not infer DPP.
+ * The explicit /dpp/thanks route can offer activation navigation, but its
+ * server-side payment and durable-fulfillment checks remain authoritative.
  */
 function thanksHtml(
   sessionId: string,
   visitId: string,
   planId: string
 ): string {
+  if (!sessionId) {
+    return pageShell(
+      "Checkout status unavailable | AuthiChain",
+      `<p class="kicker">Checkout status unavailable</p>
+       <h1>No checkout reference provided</h1>
+       <p>This page cannot verify a payment or grant access. Open the link from
+       your Stripe checkout confirmation or contact support with your receipt.</p>
+       <a class="btn" href="/pricing">View plans</a>`
+    );
+  }
+
   const qs = new URLSearchParams({ session_id: sessionId });
   if (visitId) qs.set("visit_id", visitId);
 
-  if (planId && planId !== "dpp_readiness") {
+  // The live Starter Payment Link redirects to /success?session_id=... with
+  // NO plan parameter. Do not infer DPP merely because plan is absent.
+  if (!planId) {
+    return pageShell(
+      "Checkout return | AuthiChain",
+      `<p class="kicker">Checkout return</p>
+       <h1>Checkout status needs verification</h1>
+       <p>This redirect does not identify which product was purchased or verify
+       that Stripe collected payment. Customer access is provided only after
+       a signed webhook and a persisted entitlement or operator-reviewed order.</p>
+       <a class="btn" href="/generate">Check generation balance</a>
+       <p>If you purchased another product, use your receipt or contact support
+       for the correct next steps.</p>`
+    );
+  }
+
+  if (planId !== "dpp_readiness") {
     const plan = PLANS.find(p => p.id === planId);
     const credits = plan ? PLAN_CREDITS[plan.id] : 0;
-    const name = plan ? plan.name : "";
 
     if (plan && credits > 0) {
-      const generateQs = new URLSearchParams({ paid: "1" });
-      if (sessionId) generateQs.set("session_id", sessionId);
-      if (visitId) generateQs.set("visit_id", visitId);
       return pageShell(
-        `Payment received | AuthiChain`,
-        `<p class="kicker">Payment received</p>
-     <h1>${esc(name)} is ready</h1>
-     <p>Your payment added ${credits} generations to this account. Open the generator to use them.</p>
-     <a class="btn" href="/generate?${generateQs.toString()}">Open the generator</a>
-     <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email is also on the way.</p>`
+        "Checkout return | AuthiChain",
+        `<p class="kicker">Checkout return</p>
+         <h1>${esc(plan.name)} checkout returned</h1>
+         <p>A return link cannot prove payment or delivery.
+         Your generation balance is available only after the signed Stripe webhook
+         confirms payment and the credit grant has been persisted.</p>
+         <p>If you paid, sign in to check your balance. If it has not updated,
+         contact support with your Stripe receipt.</p>
+         <a class="btn" href="/generate">Check generation balance</a>`
       );
     }
 
-    // Known plan with no generation credits, or an id this worker does not
-    // recognise. Confirm the payment without claiming a product.
     return pageShell(
-      "Payment received | AuthiChain",
-      `<p class="kicker">Payment received</p>
-     <h1>Payment received</h1>
-     <p>${name ? `Your ${esc(name)} purchase is confirmed. ` : ""}A confirmation email with your next steps is on the way.</p>
-     <a class="btn" href="/">Back to AuthiChain</a>`
+      "Checkout return | AuthiChain",
+      `<p class="kicker">Checkout return</p>
+       <h1>Checkout status is not verified</h1>
+       <p>${plan ? `For ${esc(plan.name)}: ` : ""}This return link
+       does not verify payment, delivery, or operator approval.
+       Check your Stripe receipt and contact support about next steps.</p>
+       <a class="btn" href="/pricing">View plans</a>`
     );
   }
 
   return pageShell(
-    "Payment received | AuthiChain",
-    `<p class="kicker">Payment received</p>
-     <h1>Workspace opened</h1>
-     <p>Your payment opens an AuthiChain workspace with self-serve activation. Activate it below. The same link is in the confirmation email.</p>
-     <a class="btn" href="/dpp/activate?${qs.toString()}">Activate workspace</a>
-     <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email with the same link is also on the way.</p>`
+    "Checkout return | AuthiChain",
+    `<p class="kicker">Checkout return</p>
+     <h1>Verify before workspace activation</h1>
+     <p>Returning from checkout does not confirm payment or an open workspace.
+     Access requires a verified Stripe payment and persisted fulfillment.
+     Activating the workspace is a separate step; its server checks still apply.</p>
+     <a class="btn" href="/dpp/activate?${qs.toString()}">Continue to activation</a>
+     <p style="margin-top:1.5rem;font-size:.875rem">If you did not complete
+     payment, return to the checkout or contact support.</p>`
   );
 }
 
@@ -203,7 +235,10 @@ export function tryHandleDppRoute(request: Request): Response | null {
       thanksHtml(
         url.searchParams.get("session_id") || "",
         url.searchParams.get("visit_id") || "",
-        url.searchParams.get("plan") || ""
+        url.searchParams.get("plan") ||
+          (p === "/dpp/thanks" || p.startsWith("/dpp/thanks/")
+            ? "dpp_readiness"
+            : "")
       )
     );
   }
