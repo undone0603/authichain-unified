@@ -1,0 +1,84 @@
+/**
+ * Canonical Stripe webhook grant for one prepaid 120-verification pack.
+ * Never reuse the QR-generation provisionPurchase path. The price, paid status,
+ * mode, livemode, quantity and actual Stripe line items must all match.
+ *
+ * A unique Stripe checkout-session ID makes duplicate webhook deliveries
+ * idempotent. The amount metadata is never trusted to mint verifications.
+ */
+import type Stripe from "stripe";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  X402_AGENT_PACK_CREDITS,
+  X402_AGENT_PACK_PRICE_ID,
+  isX402PackCandidate,
+  validX402PackPurchase,
+} from "./x402-agent-pack";
+
+export type PackGrantResult =
+  | "not_pack"
+  | "unpaid"
+  | "reconciliation_required"
+  | "granted";
+
+export async function fulfillX402AgentPackIfPaid(
+  session: Stripe.Checkout.Session,
+  stripe: Stripe,
+  supabase: SupabaseClient | null
+): Promise<PackGrantResult> {
+  const seenPrice =
+    session.line_items?.data?.[0]?.price?.id ??
+    session.metadata?.stripe_price_id ??
+    null;
+  if (!isX402PackCandidate(session.metadata, seenPrice)) return "not_pack";
+  if (session.payment_status !== "paid") return "unpaid";
+
+  // Verify against Stripe's actual line items, never the request metadata.
+  const response = await stripe.checkout.sessions.listLineItems(session.id, {
+    limit: 2,
+  });
+  const items = response.data.map(item => ({
+    priceId: item.price?.id ?? null,
+    quantity: item.quantity ?? null,
+    unitAmount: item.price?.unit_amount ?? null,
+    currency: item.price?.currency ?? null,
+    recurring: item.price?.type === "recurring",
+  }));
+  if (!validX402PackPurchase({
+    livemode: session.livemode,
+    mode: session.mode,
+    paymentStatus: session.payment_status,
+    currency: session.currency,
+    amountSubtotal: session.amount_subtotal,
+    amountTotal: session.amount_total,
+    items,
+  })) {
+    // A paid wrong-account/wrong-price/discounted checkout must not mint credits.
+    throw new Error("x402_pack_payment_evidence_mismatch");
+  }
+
+  const email = (
+    session.customer_details?.email || session.customer_email || ""
+  ).trim().toLowerCase();
+  if (!email || !email.includes("@") || !supabase) {
+    return "reconciliation_required";
+  }
+
+  const intentId = typeof session.payment_intent === "string"
+    ? session.payment_intent
+    : session.payment_intent?.id ?? null;
+  const { error } = await supabase.from("x402_agent_pack_grants").upsert({
+    checkout_session_id: session.id,
+    buyer_email: email,
+    payment_intent_id: intentId,
+    price_id: X402_AGENT_PACK_PRICE_ID,
+    credits_total: X402_AGENT_PACK_CREDITS,
+    credits_used: 0,
+    status: "active",
+  }, {
+    onConflict: "checkout_session_id",
+    ignoreDuplicates: true,
+  });
+  if (error) throw new Error("x402_pack_grant_write_failed");
+  return "granted";
+}
