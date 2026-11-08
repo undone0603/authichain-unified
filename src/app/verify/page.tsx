@@ -27,6 +27,7 @@ function VerifyContent() {
       const body = await res.json();
       setVerdict(body.verdict || body.decision || body.error || "indeterminate");
       setReasons(Array.isArray(body.reasons) ? body.reasons.map(String) : []);
+      (window as any).track?.('verify_result_viewed', { id: sealId });
     } catch {
       setVerdict("verification_failed");
     } finally {
@@ -93,6 +94,31 @@ function VerifyContent() {
             <p className="text-xs text-zinc-500 mt-4 leading-relaxed">
               A “verified” verdict means the signature is valid and the hash matches the anchor. It does not prove the physical product is authentic.
             </p>
+            <div className="mt-6 rounded-lg border border-steel/20 bg-ivory/50 p-4 text-sm">
+              <h3 className="font-medium text-ink">Protect your own products</h3>
+              <p className="mt-1 text-charcoal">
+                Start with 100 AI QR generations. $29 one-time or $19/mo Launch. Self-serve Stripe. No call.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <a
+                  href="/onboard?plan=starter-pack-29"
+                  className="rounded bg-navy px-3 py-1.5 text-ivory text-xs font-medium"
+                  onClick={() => (window as any).track?.('verify_cta_clicked', { plan: '29' })}
+                >
+                  Buy Starter Pack — $29
+                </a>
+                <a
+                  href="/onboard?plan=launch-19"
+                  className="rounded border border-steel px-3 py-1.5 text-xs"
+                  onClick={() => (window as any).track?.('verify_cta_clicked', { plan: '19' })}
+                >
+                  $19/mo Launch
+                </a>
+              </div>
+              <p className="mt-2 text-xs text-steel">
+                A verified result confirms the on-chain record. It does not by itself prove the physical item is authentic.
+              </p>
+            </div>
           </div>
         )}
 
