@@ -178,7 +178,7 @@ export async function verifyUsingX402StripeCredits(
     const status =
       reason === "credits_exhausted" ? 402 :
       reason === "idempotency_conflict" ? 409 :
-      reason === "invalid_key_or_identity" ? 403 : 503;
+      reason === "invalid_key_or_identity" || reason === "grant_revoked" ? 403 : 503;
     return prepaidJson(status, {
       error: reason,
       settled: false,
