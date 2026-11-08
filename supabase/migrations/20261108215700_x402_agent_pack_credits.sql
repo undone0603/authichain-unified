@@ -49,7 +49,8 @@ grant select, insert on public.x402_agent_pack_spends to service_role;
 create or replace function public.consume_x402_agent_pack_credit(
   p_api_key_id uuid,
   p_idempotency_key text,
-  p_seal_id uuid
+  p_seal_id uuid,
+  p_verified_email text
 ) returns jsonb
 language plpgsql security invoker set search_path = ''
 as $$
@@ -66,16 +67,17 @@ begin
     return pg_catalog.jsonb_build_object('allowed', false, 'reason', 'invalid_request');
   end if;
 
-  select lower(btrim(p.email)) into v_email
-  from public.api_keys k
-  join public.profiles p on p.user_id = k.user_id
-  where k.id = p_api_key_id
-    and k.is_active is true
-    and (k.expires_at is null or k.expires_at > now())
-    and ('read' = any(k.scopes) or 'verify' = any(k.scopes))
-    and nullif(btrim(p.email), '') is not null
-  limit 1;
-  if v_email is null then
+  -- Only the server-side verifier may supply p_verified_email. It first
+  -- retrieves the API key owner's confirmed email via Supabase Auth Admin.
+  -- Never trust public.profiles.email: authenticated users may edit it.
+  v_email := lower(btrim(p_verified_email));
+  if v_email is null or length(v_email) not between 3 and 254 or
+     position('@' in v_email) <= 1 or not exists (
+       select 1 from public.api_keys k
+       where k.id = p_api_key_id and k.is_active is true
+         and (k.expires_at is null or k.expires_at > now())
+         and ('read' = any(k.scopes) or 'verify' = any(k.scopes))
+     ) then
     return pg_catalog.jsonb_build_object('allowed', false, 'reason', 'invalid_key_or_identity');
   end if;
 
@@ -122,7 +124,7 @@ begin
 end
 $$;
 
-revoke all on function public.consume_x402_agent_pack_credit(uuid, text, uuid)
+revoke all on function public.consume_x402_agent_pack_credit(uuid, text, uuid, text)
   from public, anon, authenticated;
-grant execute on function public.consume_x402_agent_pack_credit(uuid, text, uuid)
+grant execute on function public.consume_x402_agent_pack_credit(uuid, text, uuid, text)
   to service_role;
