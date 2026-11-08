@@ -100,7 +100,7 @@ jobs:
             "authichain-api",
             "authichain-api-gateway",
             "authichain-automation",
-            "authichain-com",
+            # authichain-com uses only the protected manual Worker release path
             "authichain-dashboard",
             "qron-automation",
             "qron-image-gen",
@@ -153,6 +153,10 @@ jobs:
             target="${DISPATCH_WORKER:-}"
             target="${target#"${target%%[![:space:]]*}"}"
             target="${target%"${target##*[![:space:]]}"}"
+          if [ "${target}" = "authichain-com" ]; then
+            echo "::error::authichain-com is only released through the protected dedicated workflow"
+            exit 1
+          fi
             if [ -n "${target}" ]; then
               if ! echo "${workers}" | jq -e --arg t "${target}" 'index($t) != null' >/dev/null; then
                 echo "::error::Unknown worker '${target}'. Pass a directory under workers/ from the deploy matrix (or leave blank for all)."
