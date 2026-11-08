@@ -94,3 +94,17 @@ See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and 
 The read-only deployment control plane is available at `GET /control-plane/state` and returns normalized GitHub, GitLab, Vercel, and optionally Cloudflare Workers/Pages state. It correlates provider commits to the authoritative GitHub `main` commit and emits a conservative release gate: `deploy_eligible`, `blocked`, or `observe_only`.
 
 Cloudflare Worker deployment APIs expose the active deployment and version IDs; Cloudflare Pages deployments expose the trigger branch and commit hash. These APIs are observation-only here. Provider mutations remain in the existing governed workflows.
+
+
+## LocalOps — no paid browser credits required
+
+Run `python -m agentz.cli localops doctor` to inspect locally installed
+GitHub CLI/Playwright capabilities without network access. Use `plan`,
+`github-audit`, or `browser-inspect` for read-only, exact-head release and
+isolated Edge evidence. Automa, Power Automate Desktop, and Browser Use/Ollama
+are available as *manual handoff* recipes, not unattended action drivers.
+
+See [LocalOps safety, commands and tests](LOCALOPS.md). Browser Use actions
+in `confirm` mode now require successful per-action approval; `auto` and
+missing interception fail closed. There are **no** GitHub/Stripe/Cloudflare
+write commands or production secret access in LocalOps.
