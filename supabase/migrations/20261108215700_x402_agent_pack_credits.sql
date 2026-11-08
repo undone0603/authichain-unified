@@ -97,7 +97,7 @@ begin
   where lower(buyer_email) = v_email and status = 'active'
     and credits_used < credits_total
   order by created_at, checkout_session_id
-  for update limit 1;
+  limit 1 for update;
   if not found then
     return pg_catalog.jsonb_build_object('allowed', false, 'reason', 'credits_exhausted');
   end if;
