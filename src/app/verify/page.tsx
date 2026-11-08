@@ -27,7 +27,7 @@ function VerifyContent() {
       const body = await res.json();
       setVerdict(body.verdict || body.decision || body.error || "indeterminate");
       setReasons(Array.isArray(body.reasons) ? body.reasons.map(String) : []);
-      (window as any).track?.('verify_result_viewed', { id: sealId });
+      (window as any).track?.('verify_result_viewed');
     } catch {
       setVerdict("verification_failed");
     } finally {
@@ -97,7 +97,7 @@ function VerifyContent() {
             <div className="mt-6 rounded-lg border border-steel/20 bg-ivory/50 p-4 text-sm">
               <h3 className="font-medium text-ink">Protect your own products</h3>
               <p className="mt-1 text-charcoal">
-                Start with 100 AI QR generations. $29 one-time or $19/mo Launch. Self-serve Stripe. No call.
+                Start with 100 AI QR generations for $29 once. Self-serve checkout; no subscription or call.
               </p>
               <div className="mt-3 flex gap-2">
                 <a
@@ -106,13 +106,6 @@ function VerifyContent() {
                   onClick={() => (window as any).track?.('verify_cta_clicked', { plan: '29' })}
                 >
                   Buy Starter Pack — $29
-                </a>
-                <a
-                  href="/checkout/qron_launch"
-                  className="rounded border border-steel px-3 py-1.5 text-xs"
-                  onClick={() => (window as any).track?.('verify_cta_clicked', { plan: '19' })}
-                >
-                  $19/mo Launch
                 </a>
               </div>
               <p className="mt-2 text-xs text-steel">
