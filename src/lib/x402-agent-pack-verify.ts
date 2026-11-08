@@ -81,6 +81,9 @@ export async function verifyUsingX402StripeCredits(
   env: PrepaidVerifyEnv,
   fetchImpl: typeof fetch = fetch
 ): Promise<Response> {
+  if (request.headers.get(STRIPE_CREDIT_RAIL_HEADER) !== STRIPE_CREDIT_RAIL_VALUE) {
+    return prepaidJson(400, { error: "explicit_prepaid_rail_required", settled: false });
+  }
   if (!x402PackReady(env)) {
     return prepaidJson(503, { error: "stripe_credit_rail_unavailable", settled: false });
   }
@@ -122,6 +125,9 @@ export async function verifyUsingX402StripeCredits(
     return prepaidJson(503, { error: "registry_unavailable", settled: false });
   }
 
+  // Verify/serialize the evidence BEFORE the paid credit is consumed.
+  // Verifier failures must never debit without a deliverable answer.
+  const answer = sealBaseline(sealResult.seal);
   let decision: Record<string, unknown>;
   try {
     const response = await fetchImpl(`${creds.url}/rest/v1/rpc/consume_x402_agent_pack_credit`, {
@@ -157,7 +163,6 @@ export async function verifyUsingX402StripeCredits(
       ...(status === 402 ? { creditPack: X402_AGENT_PACK_PLAN_ID, alternative: "x402_usdc" } : {}),
     });
   }
-  const answer = sealBaseline(sealResult.seal);
   return prepaidJson(200, {
     ...answer,
     subject: parsed.sealId,
