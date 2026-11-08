@@ -8,6 +8,7 @@ import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
 import { checkoutReturnOrigin } from "./checkout-gate";
 import { PLANS, type PlanId } from "./plans";
+import { X402_AGENT_PACK_PLAN_ID, x402PackReady } from "./x402-agent-pack";
 
 export type PlanCheckoutOk = { ok: true; url: string; planId: string };
 export type PlanCheckoutErr = {
@@ -58,6 +59,9 @@ export async function createPlanCheckoutSession(opts: {
   ) {
     return { ok: false, status: 400, error: "Plan is no longer available" };
   }
+  if (plan.id === X402_AGENT_PACK_PLAN_ID && !x402PackReady(process.env)) {
+    return { ok: false, status: 400, error: "Pack fulfillment not enabled" };
+  }
   if (!plan.stripe_price_id || !plan.stripe_mode) {
     return {
       ok: false,
@@ -69,6 +73,10 @@ export async function createPlanCheckoutSession(opts: {
   const email = pickCheckoutEmail(
     typeof body.email === "string" ? body.email : ""
   );
+  // An email must be verified and linked to an API key before pack redemption.
+  if (plan.id === X402_AGENT_PACK_PLAN_ID && !email) {
+    return { ok: false, status: 400, error: "Work email required for agent credits" };
+  }
   if (opts.requireEmail && !email) {
     const visitId =
       typeof body.prospectId === "string" ? body.prospectId.trim() : "";
