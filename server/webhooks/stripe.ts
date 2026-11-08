@@ -43,6 +43,8 @@ import {
   markRetryableFulfillment,
 } from "../../src/lib/retryable-fulfillment";
 import { accrueAffiliateCommission } from "../../src/lib/affiliate-accrual";
+import { isX402PackCandidate } from "../../src/lib/x402-agent-pack";
+import { fulfillX402AgentPackIfPaid } from "../../src/lib/x402-agent-pack-fulfill";
 import {
   claimStripeEvent,
   StripeEventClaimUnavailableError,
@@ -162,6 +164,8 @@ async function fulfillCatalogCreditsIfPaid(
   // DPP is handled separately; do not grant paid catalog credits for $0/unknown totals.
   if (session.amount_total == null || session.amount_total <= 0) return false;
   const linePriceId = checkoutLinePriceId(session);
+  // Verification packs are NOT QR image-generation packs.
+  if (isX402PackCandidate(session.metadata, linePriceId)) return false;
   const { isDppOffer } = await import("../../src/lib/dpp-loop");
   if (isDppOffer(session.metadata || {}, linePriceId)) return false;
 
@@ -677,6 +681,13 @@ export async function handleStripeWebhook(
     const session = event.data.object as Stripe.Checkout.Session;
     try {
       await fulfillDppCheckoutIfPaid(session);
+      // Session-keyed upsert is safe to replay, unlike generation grants.
+      if (isX402PackCandidate(session.metadata, checkoutLinePriceId(session))) {
+        const result = await fulfillX402AgentPackIfPaid(session, getStripeClient(), supabase);
+        if (result === "reconciliation_required") {
+          throw new Error("x402_pack_missing_buyer_identity_or_database");
+        }
+      }
       // A duplicate catalog delivery does not replay a credit grant. The
       // existing receipt may be a reconciliation hold: never overwrite it
       // with a false success or claim that this event fulfilled a customer.
@@ -1051,7 +1062,17 @@ export async function handleStripeWebhook(
         // when DATABASE_URL / activity_log is unavailable on the edge Worker.
         try {
           await fulfillDppCheckoutIfPaid(session);
-          const catalogFulfilled = await fulfillCatalogCreditsIfPaid(session);
+          // Actual live price, paid status, amount and Stripe line items are
+          // verified by the separate, session-idempotent verification ledger.
+          // Never send 120 verification units to profiles.generations_limit.
+          const packFulfillment = isX402PackCandidate(
+            session.metadata, checkoutLinePriceId(session)
+          ) ? await fulfillX402AgentPackIfPaid(session, getStripeClient(), supabase) : "not_pack";
+          if (packFulfillment === "reconciliation_required") {
+            throw new Error("x402_pack_missing_buyer_identity_or_database");
+          }
+          const catalogFulfilled = packFulfillment === "not_pack"
+            ? await fulfillCatalogCreditsIfPaid(session) : false;
           if (catalogFulfilled === "reconciliation_required") {
             // Deterministic missing identity: durable operator hold, not an
             // unbounded Stripe retry. If the hold cannot be persisted, fail
@@ -1215,6 +1236,38 @@ export async function handleStripeWebhook(
         break;
       }
 
+      case "charge.refunded": {
+        // Revoke remaining prepaid verification credits after a card refund.
+        // Keep this dormant until the three explicit pack bindings are set.
+        if (process.env.X402_PACK_ENABLED === "true") {
+          const charge = event.data.object as Stripe.Charge;
+          const paymentIntentId = typeof charge.payment_intent === "string"
+            ? charge.payment_intent : charge.payment_intent?.id ?? null;
+          if (paymentIntentId) {
+            if (!supabase) throw new Error("x402_pack_refund_database_unavailable");
+            const { error } = await supabase.from("x402_agent_pack_grants")
+              .update({ status: "refunded", updated_at: new Date().toISOString() })
+              .eq("payment_intent_id", paymentIntentId);
+            if (error) throw new Error("x402_pack_refund_revoke_failed");
+          }
+        }
+        break;
+      }
+      case "charge.dispute.created": {
+        if (process.env.X402_PACK_ENABLED === "true") {
+          const dispute = event.data.object as Stripe.Dispute;
+          const paymentIntentId = typeof dispute.payment_intent === "string"
+            ? dispute.payment_intent : dispute.payment_intent?.id ?? null;
+          if (paymentIntentId) {
+            if (!supabase) throw new Error("x402_pack_dispute_database_unavailable");
+            const { error } = await supabase.from("x402_agent_pack_grants")
+              .update({ status: "disputed", updated_at: new Date().toISOString() })
+              .eq("payment_intent_id", paymentIntentId);
+            if (error) throw new Error("x402_pack_dispute_revoke_failed");
+          }
+        }
+        break;
+      }
       default:
         console.log(`[stripe-webhook] Unhandled event type: ${event.type}`);
         handled = false;
