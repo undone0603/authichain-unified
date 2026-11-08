@@ -44,7 +44,7 @@ import {
 } from "../../src/lib/retryable-fulfillment";
 import { accrueAffiliateCommission } from "../../src/lib/affiliate-accrual";
 import { isX402PackCandidate } from "../../src/lib/x402-agent-pack";
-import { fulfillX402AgentPackIfPaid } from "../../src/lib/x402-agent-pack-fulfill";
+import { fulfillX402AgentPackIfPaid, revokeX402AgentPackOnReversal } from "../../src/lib/x402-agent-pack-fulfill";
 import {
   claimStripeEvent,
   StripeEventClaimUnavailableError,
@@ -667,6 +667,13 @@ export async function handleStripeWebhook(
   );
   const alreadyProcessed = drizzleSeen || claim === "duplicate";
   if (alreadyProcessed && !isReplayableCheckoutEvent(event.type)) {
+    // A failed refund/dispute attempt may have claimed its event ID before
+    // its grant update succeeded. Its idempotent reversal MUST replay on retry.
+    try {
+      await revokeX402AgentPackOnReversal(event, supabase);
+    } catch (reversalErr) {
+      throw markRetryableFulfillment(reversalErr);
+    }
     console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
     await logDelivery("duplicate", { httpStatus: 200 });
     return { received: true, type: event.type, duplicate: true };
@@ -1236,35 +1243,12 @@ export async function handleStripeWebhook(
         break;
       }
 
-      case "charge.refunded": {
-        // Revoke remaining prepaid verification credits after a card refund.
-        // Keep this dormant until the three explicit pack bindings are set.
-        if (process.env.X402_PACK_ENABLED === "true") {
-          const charge = event.data.object as Stripe.Charge;
-          const paymentIntentId = typeof charge.payment_intent === "string"
-            ? charge.payment_intent : charge.payment_intent?.id ?? null;
-          if (paymentIntentId) {
-            if (!supabase) throw new Error("x402_pack_refund_database_unavailable");
-            const { error } = await supabase.from("x402_agent_pack_grants")
-              .update({ status: "refunded", updated_at: new Date().toISOString() })
-              .eq("payment_intent_id", paymentIntentId);
-            if (error) throw new Error("x402_pack_refund_revoke_failed");
-          }
-        }
-        break;
-      }
+      case "charge.refunded":
       case "charge.dispute.created": {
-        if (process.env.X402_PACK_ENABLED === "true") {
-          const dispute = event.data.object as Stripe.Dispute;
-          const paymentIntentId = typeof dispute.payment_intent === "string"
-            ? dispute.payment_intent : dispute.payment_intent?.id ?? null;
-          if (paymentIntentId) {
-            if (!supabase) throw new Error("x402_pack_dispute_database_unavailable");
-            const { error } = await supabase.from("x402_agent_pack_grants")
-              .update({ status: "disputed", updated_at: new Date().toISOString() })
-              .eq("payment_intent_id", paymentIntentId);
-            if (error) throw new Error("x402_pack_dispute_revoke_failed");
-          }
+        try {
+          await revokeX402AgentPackOnReversal(event, supabase);
+        } catch (reversalErr) {
+          throw markRetryableFulfillment(reversalErr);
         }
         break;
       }
