@@ -407,6 +407,7 @@ app.post("/api/checkout", async c => {
     const result = await createPlanCheckoutSession({
       request: c.req.raw,
       body,
+      packEnv: c.env,
       stripeSecretKey:
         c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY || "",
     });
