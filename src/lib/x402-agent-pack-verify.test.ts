@@ -10,6 +10,7 @@ import { X402_AGENT_PACK_PRICE_ID } from "./x402-agent-pack";
 
 const id = "123e4567-e89b-42d3-a456-426614174000";
 const apiKeyId = "94e51c84-b504-4625-99f2-7f182c8d88d1";
+const userId = "305a82f7-079b-43cb-8294-8656f85287a2";
 const env = {
   X402_PACK_PRICE_ID: X402_AGENT_PACK_PRICE_ID,
   X402_PACK_CREDITS: "120",
@@ -74,8 +75,9 @@ describe("prepaid Stripe credit rail", () => {
     let debits = 0;
     const fake = vi.fn(async (url: string, init?: RequestInit) => {
       if (url.includes("/api_keys?")) {
-        return Response.json([{ id: apiKeyId, is_active: true, expires_at: null, scopes: ["read"] }]);
+        return Response.json([{ id: apiKeyId, user_id: userId, is_active: true, expires_at: null, scopes: ["read"] }]);
       }
+      if (url.includes("/auth/v1/admin/users/")) return Response.json({ id: userId, email: "buyer@example.com", email_confirmed_at: "2026-01-01T00:00:00Z" });
       if (url.includes("/auth_seals?")) return new Response("offline", { status: 503 });
       if (url.includes("/rpc/")) debits++;
       return new Response("unexpected", { status: 500 });
@@ -85,12 +87,30 @@ describe("prepaid Stripe credit rail", () => {
     expect(debits).toBe(0);
   });
 
+  it("rejects an unconfirmed buyer without spending a credit", async () => {
+    let debits = 0;
+    const fake = vi.fn(async (url: string) => {
+      if (url.includes("/api_keys?")) return Response.json([
+        { id: apiKeyId, user_id: userId, is_active: true, expires_at: null, scopes: ["read"] },
+      ]);
+      if (url.includes("/auth/v1/admin/users/")) return Response.json({
+        id: userId, email: "mutable@example.com", email_confirmed_at: null,
+      });
+      if (url.includes("/rpc/")) debits++;
+      return Response.json([]);
+    });
+    const result = await verifyUsingX402StripeCredits(req(), env, fake as unknown as typeof fetch);
+    expect(result.status).toBe(403);
+    expect(debits).toBe(0);
+  });
+
   it("returns evidence with Stripe-prepaid accounting and no USDC settlement claim", async () => {
     let debits = 0;
     const fake = vi.fn(async (url: string, init?: RequestInit) => {
       if (url.includes("/api_keys?")) {
-        return Response.json([{ id: apiKeyId, is_active: true, expires_at: null, scopes: ["verify"] }]);
+        return Response.json([{ id: apiKeyId, user_id: userId, is_active: true, expires_at: null, scopes: ["verify"] }]);
       }
+      if (url.includes("/auth/v1/admin/users/")) return Response.json({ id: userId, email: "buyer@example.com", email_confirmed_at: "2026-01-01T00:00:00Z" });
       if (url.includes("/auth_seals?")) return Response.json([]);
       if (url.includes("/rpc/consume_x402_agent_pack_credit")) {
         debits++;
@@ -98,6 +118,7 @@ describe("prepaid Stripe credit rail", () => {
         const body = JSON.parse(String(init?.body));
         expect(body.p_api_key_id).toBe(apiKeyId);
         expect(body.p_seal_id).toBe(id);
+        expect(body.p_verified_email).toBe("buyer@example.com");
         return Response.json({ allowed: true, replayed: false, remaining_credits: 119 });
       }
       return new Response("unexpected", { status: 500 });
