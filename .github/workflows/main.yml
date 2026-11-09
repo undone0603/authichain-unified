@@ -216,8 +216,8 @@ jobs:
         env:
           # qron-platform:build exits 134 at the default heap (CI Main
           # 42640209495 shard 2, and 42650083621). The production build
-          # step already raises this to 4096 for the same next/webpack abort.
-          NODE_OPTIONS: --max-old-space-size=4096 --dns-result-order=ipv4first --no-network-family-autoselection
+          # step already raises this to 3072 for the same next/webpack abort.
+          NODE_OPTIONS: --max-old-space-size=3072 --dns-result-order=ipv4first --no-network-family-autoselection
         run: |
           if pnpm test ${{ matrix.filter }} --log-order=stream --continue=dependencies-successful; then
             exit 0
@@ -289,11 +289,13 @@ jobs:
       # Retries live in scripts/build-with-retry.sh, which holds the
       # machine-wide build lock for the whole attempt loop. A second
       # invocation here would drop that lock during the pause.
-      # 4096 MB heap: next build --webpack aborted with exit 134 under ~2 GB.
+      # 3072 MB heap: under ~2 GB the next/webpack build exits 134, and
+      # 4096 MB left this 3.8 GB runner with an empty step conclusion
+      # (CI Main job 129363461477).
       - name: Production build
         if: steps.baseline.outputs.skip != 'true'
         env:
-          NODE_OPTIONS: --max-old-space-size=4096
+          NODE_OPTIONS: --max-old-space-size=3072 --dns-result-order=ipv4first --no-network-family-autoselection
         run: pnpm build
 
       # Persistent self-hosted runner: drop deps and build outputs so state
