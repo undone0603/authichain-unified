@@ -20,6 +20,7 @@ export type DppProofSession = {
   payment_link?: string | { id: string } | null;
   line_items?: {
     data: Array<{ quantity?: number | null; price?: { id: string } | null }>;
+    has_more?: boolean;
   } | null;
 };
 
@@ -54,11 +55,15 @@ export function dppGrantDecision(session: DppProofSession): DppGrantDecision {
       (session.amount_total ?? 0) <= 0 ||
       session.currency?.toLowerCase() !== "usd") return "invalid_product";
 
-  const lines = session.line_items?.data ?? [];
+  // Stripe expands line_items as a paginated list. Unknown completeness and
+  // unknown item quantity must both fail closed before any paid grant.
+  const lineItems = session.line_items;
+  const lines = lineItems?.data ?? [];
   const line = lines[0];
-  if (lines.length !== 1 ||
+  if (lineItems?.has_more !== false ||
+      lines.length !== 1 ||
       line?.price?.id !== DPP_PRICE_ID ||
-      (line.quantity != null && line.quantity !== 1) ||
+      line.quantity !== 1 ||
       (md.plan && md.plan !== "dpp_readiness")) return "invalid_product";
   return "paid";
 }
