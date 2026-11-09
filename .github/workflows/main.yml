@@ -213,6 +213,11 @@ jobs:
       # --continue=dependencies-successful keeps other packages' tests
       # running after one fails; turbo still exits non-zero.
       - name: Run tests
+        env:
+          # qron-platform:build exits 134 at the default heap (CI Main
+          # 42640209495 shard 2, and 42650083621). The production build
+          # step already raises this to 4096 for the same next/webpack abort.
+          NODE_OPTIONS: --max-old-space-size=4096 --dns-result-order=ipv4first --no-network-family-autoselection
         run: |
           if pnpm test ${{ matrix.filter }} --log-order=stream --continue=dependencies-successful; then
             exit 0
