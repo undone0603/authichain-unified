@@ -54,6 +54,7 @@ import {
   A2A_RPC_PATH,
   a2aMethodList,
   handleA2aJsonRpc,
+  memoryA2aStore,
 } from "../../../src/lib/a2a-jsonrpc";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
 import { sealBaseline } from "../../../src/lib/seal-baseline";
@@ -112,6 +113,42 @@ function json(
     status,
     headers: { ...JSON_HEADERS, ...extraHeaders },
   });
+}
+
+// Public, unauthenticated A2A demonstration: bound memory consumption before
+// parsing JSON or constructing tasks. No auth/tenant scoped persistence exists.
+const MAX_ANONYMOUS_A2A_BYTES = 64 * 1024;
+
+async function readBoundedA2aBody(request: Request): Promise<string | null> {
+  const claimedLength = request.headers.get("content-length");
+  if (claimedLength && Number(claimedLength) > MAX_ANONYMOUS_A2A_BYTES) {
+    return null;
+  }
+  const reader = request.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_ANONYMOUS_A2A_BYTES) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 function normalizePath(pathname: string): string {
@@ -523,10 +560,19 @@ export async function tryHandleX402(
   if (normalizePath(url.pathname) === A2A_RPC_PATH) {
     if (request.method === "GET") return json(200, a2aMethodList());
     if (request.method === "POST") {
-      const body = await request.text();
+      const body = await readBoundedA2aBody(request);
+      if (body === null) {
+        return json(413, { error: "a2a_request_too_large" });
+      }
+      // Public A2A is an immediate, unauthenticated demonstration. Using the
+      // module-global task store would let one anonymous caller enumerate
+      // another caller's task history via ListTasks/GetTask. Until a real
+      // authenticated tenant-scoped store exists, keep each HTTP request
+      // isolated; the completed task is returned to its sender immediately.
       const answered = handleA2aJsonRpc(body, {
         now: opts?.now,
         a2aVersion: request.headers.get("A2A-Version"),
+        store: memoryA2aStore(),
       });
       if (answered.body === null) return new Response(null, { status: 204 });
       return json(answered.status, answered.body);
