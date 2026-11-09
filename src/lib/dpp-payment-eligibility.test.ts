@@ -9,7 +9,7 @@ const paid: DppProofSession = {
   id: "cs_test_dpp",
   mode: "payment", status: "complete", payment_status: "paid",
   amount_total: 29900, currency: "usd", metadata: { plan: "dpp_readiness" },
-  line_items: { data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }] },
+  line_items: { data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }], has_more: false },
 };
 
 describe("DPP paid entitlement boundary", () => {
@@ -25,6 +25,10 @@ describe("DPP paid entitlement boundary", () => {
     ["zero-dollar purchase", { amount_total: 0 }, "invalid_product"],
     ["wrong currency", { currency: "eur" }, "invalid_product"],
     ["missing line items", { line_items: null }, "invalid_product"],
+    ["missing line-item has_more proof", { line_items: { data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }] } }, "invalid_product"],
+    ["truncated line-item list", { line_items: { data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }], has_more: true } }, "invalid_product"],
+    ["missing purchased quantity", { line_items: { data: [{ price: { id: DPP_PRICE_ID } }], has_more: false } }, "invalid_product"],
+    ["null purchased quantity", { line_items: { data: [{ price: { id: DPP_PRICE_ID }, quantity: null }], has_more: false } }, "invalid_product"],
     ["wrong price", { line_items: { data: [{ price: { id: "price_other" } }] } }, "invalid_product"],
     ["multiple items", { line_items: { data: [{ price: { id: DPP_PRICE_ID } }, { price: { id: DPP_PRICE_ID } }] } }, "invalid_product"],
     ["quantity two", { line_items: { data: [{ price: { id: DPP_PRICE_ID }, quantity: 2 }] } }, "invalid_product"],
