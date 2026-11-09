@@ -104,6 +104,8 @@ workflows:
             branches:
               ignore:
                 - /dependabot\/.*/
+                # Evidence-only hosted proof branch: never allocate OSS credit-intensive jobs.
+                - ci/dpp-proof-1a567a3
       - quality:
           requires: [test-workers]
           filters: *quality-branches

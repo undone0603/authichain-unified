@@ -1,0 +1,62 @@
+# Isolated, free-tier verification of an exact historical DPP PR commit.
+# On a disposable public GitHub-hosted VM only: no secrets, no environments,
+# no self-hosted runner, no deployment, no paid Stripe checkout.
+name: DPP Native Proof (hosted, credential-free)
+on:
+  push:
+    branches: [ci/dpp-proof-1a567a3]
+permissions:
+  contents: read
+concurrency:
+  group: dpp-native-proof
+  cancel-in-progress: true
+jobs:
+  native:
+    name: Native DPP, webhook and renewal regression suites
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      CI: "true"
+      HUSKY: "0"
+    steps:
+      - name: Checkout exact requested DPP candidate
+        uses: actions/checkout@v4
+        with:
+          ref: 1a567a30421b26596086013f800c6e2057f43375
+          persist-credentials: false
+      - name: Assert exact candidate SHA and clean tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "1a567a30421b26596086013f800c6e2057f43375"
+          test -z "$(git status --porcelain)"
+          echo "Verified application source SHA: $actual"
+          echo "Runner: $RUNNER_ENVIRONMENT ($RUNNER_OS / $RUNNER_ARCH)"
+          test "$RUNNER_ENVIRONMENT" = "github-hosted"
+      - name: Install pnpm 10.28.2
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+          run_install: false
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install locked dependencies, without environment secrets
+        run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0
+      - name: Native paid DPP predicate and fulfillment
+        run: pnpm exec vitest run src/lib/dpp-payment-eligibility.test.ts src/lib/dpp-fulfill-checkout.test.ts
+      - name: Native canonical webhook and monthly signup/renewal/failed-pay/cancel
+        run: |
+          pnpm exec vitest run             server/webhooks/stripe.test.ts             src/app/api/stripe/webhook/route.test.ts             src/lib/provisioning.test.ts             src/lib/plan-checkout.test.ts             src/lib/checkout-gate.test.ts             workers/stripe-webhook/src/index.test.ts
+      - name: Native DPP Worker routes
+        working-directory: workers/authichain-com
+        run: |
+          pnpm exec vitest run src/dpp-routes.test.ts
+          pnpm exec tsx --import ./test/register-md.mjs --test src/routing.test.ts
+      - name: Record test provenance
+        if: always()
+        shell: bash
+        run: |
+          printf 'Candidate: %s\nRunner: %s\nJob: %s\n'             "1a567a30421b26596086013f800c6e2057f43375"             "$RUNNER_ENVIRONMENT"             "$GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
