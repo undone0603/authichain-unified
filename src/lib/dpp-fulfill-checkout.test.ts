@@ -156,7 +156,7 @@ const paidSession = {
   payment_status: "paid",
   amount_total: 29900,
   currency: "usd",
-  line_items: { data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }] },
+  line_items: { data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }], has_more: false },
   customer_details: { email: "buyer@example.com" },
   client_reference_id: "smoke_check_1",
   metadata: {
@@ -280,7 +280,7 @@ describe("fulfillDppPaidSession", () => {
         payment_status: "paid",
         amount_total: 29900,
         currency: "usd",
-        line_items: { data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }] },
+        line_items: { data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }], has_more: false },
         customer_details: { email: "buyer@example.com" },
         client_reference_id: "plink_visit",
         metadata: {},
@@ -565,6 +565,28 @@ describe("fulfillDppPaidSession", () => {
       line_items: { data: [{ price: { id: "price_other" } }] },
     })).rejects.toThrow(/DPP grant blocked/);
     expect(profileUpdates).toHaveLength(0);
+  });
+
+  it("holds a paid checkout with a truncated Stripe line-item list", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    await expect(fulfillDppPaidSession(supabase, {
+      ...paidSession,
+      line_items: { data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }], has_more: true },
+    })).rejects.toThrow(/DPP grant blocked/);
+    expect(rows).toHaveLength(0);
+    expect(profileUpdates).toHaveLength(0);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("holds a paid checkout without explicit quantity", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    await expect(fulfillDppPaidSession(supabase, {
+      ...paidSession,
+      line_items: { data: [{ price: { id: DPP_PRICE_ID } }], has_more: false },
+    })).rejects.toThrow(/DPP grant blocked/);
+    expect(rows).toHaveLength(0);
+    expect(profileUpdates).toHaveLength(0);
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
   it("holds a paid but incomplete checkout", async () => {
