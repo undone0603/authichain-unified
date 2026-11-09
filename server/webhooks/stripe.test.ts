@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockConstructEvent = vi.fn();
 const mockCustomersRetrieve = vi.fn();
+const mockCheckoutRetrieve = vi.fn();
 
 vi.mock("stripe", () => {
   class MockStripe {
@@ -22,6 +23,7 @@ vi.mock("stripe", () => {
         Promise.resolve(mockConstructEvent(...args)),
     };
     customers = { retrieve: mockCustomersRetrieve };
+    checkout = { sessions: { retrieve: mockCheckoutRetrieve } };
   }
   return { default: MockStripe };
 });
@@ -167,6 +169,19 @@ beforeEach(async () => {
   vi.mocked(db.logAutomationAudit).mockResolvedValue(undefined);
   growthRecordRpc.mockResolvedValue({ error: null });
   claimStripeEventMock.mockResolvedValue("claimed");
+  // Simulates an independent Stripe read, including expanded line items.
+  mockCheckoutRetrieve.mockImplementation(async () => {
+    const event = mockConstructEvent.mock.results.at(-1)?.value;
+    const source = event?.data?.object ?? {};
+    return {
+      ...source,
+      status: source.status ?? "complete",
+      currency: source.currency ?? "usd",
+      line_items: source.line_items ?? {
+        data: [{ quantity: 1, price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+      },
+    };
+  });
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
   delete process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET;
   process.env.STRIPE_SECRET_KEY = "sk_test";
@@ -441,10 +456,13 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     const result = await handleStripeWebhook(RAW_BODY, SIG);
     expect(result.received).toBe(true);
     expect(result.handled).toBe(true);
+    expect(mockCheckoutRetrieve).toHaveBeenCalledWith("cs_live_smoke_check", {
+      expand: ["line_items"],
+    });
     expect(fulfillDppPaidSession).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ id: "cs_live_smoke_check" }),
-      null
+      "price_1TwmD8GqTruSqV8TpAF8dfyA"
     );
   });
 
@@ -475,7 +493,7 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         id: "cs_live_a1y4Tu_smoke",
         amount_total: 0,
       }),
-      null
+      "price_1TwmD8GqTruSqV8TpAF8dfyA"
     );
   });
 

@@ -151,7 +151,12 @@ function fakeSupabase(opts?: {
 
 const paidSession = {
   id: "cs_live_smoke_check",
-  amount_total: 0,
+  mode: "payment",
+  status: "complete",
+  payment_status: "paid",
+  amount_total: 29900,
+  currency: "usd",
+  line_items: { data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }] },
   customer_details: { email: "buyer@example.com" },
   client_reference_id: "smoke_check_1",
   metadata: {
@@ -270,6 +275,12 @@ describe("fulfillDppPaidSession", () => {
       supabase,
       {
         id: "cs_price_only",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        amount_total: 29900,
+        currency: "usd",
+        line_items: { data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }] },
         customer_details: { email: "buyer@example.com" },
         client_reference_id: "plink_visit",
         metadata: {},
@@ -287,6 +298,10 @@ describe("fulfillDppPaidSession", () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, {
       id: "cs_live_a1y4TuVXsdPVbXgPejLnXYpSWD5RvpmO273RUC3BxOHnAZ5JwlARbBMxQS",
+      mode: "payment",
+      status: "complete",
+      payment_status: "paid",
+      currency: "usd",
       amount_total: 0,
       customer_details: { email: "authichain@gmail.com" },
       client_reference_id: "smoke_check_1789786486",
@@ -317,7 +332,7 @@ describe("fulfillDppPaidSession", () => {
     expect(sendEmail).toHaveBeenCalledOnce();
   });
 
-  it("writes payment_succeeded before provision on a $0 promo session", async () => {
+  it("writes payment_succeeded before provision on a paid session", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);
     expect(result).toEqual({
@@ -395,7 +410,8 @@ describe("fulfillDppPaidSession", () => {
       ...paidSession,
       customer_details: null,
       customer_email: null,
-      metadata: { ...paidSession.metadata, user_id: undefined, is_demo: "true" },
+      metadata: { ...paidSession.metadata, user_id: undefined, is_demo: "true", promo: "DPP-SMOKE-E2E" },
+      amount_total: 0,
     });
     expect(result).toEqual({
       handled: true,
@@ -437,6 +453,10 @@ describe("fulfillDppPaidSession", () => {
     await expect(
       fulfillDppPaidSession(supabase, {
         id: "cs_live_a1y4Tu_user_id",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        currency: "usd",
         amount_total: 0,
         customer_details: { email: "authichain@gmail.com" },
         client_reference_id: "smoke_check_1789786486",
@@ -459,6 +479,10 @@ describe("fulfillDppPaidSession", () => {
     });
     const result = await fulfillDppPaidSession(supabase, {
       id: "cs_live_a1y4Tu_guest",
+      mode: "payment",
+      status: "complete",
+      payment_status: "paid",
+      currency: "usd",
       amount_total: 0,
       customer_details: { email: "authichain@gmail.com" },
       client_reference_id: "smoke_check_1789786486",
@@ -511,4 +535,44 @@ describe("fulfillDppPaidSession", () => {
     expect(actions[0]?.state).toBe("succeeded");
     expect(continuity.get("founder_exit_side_effects")).toHaveLength(1);
   });
+
+  it("does not provision a complete-but-unpaid checkout", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, {
+      ...paidSession, payment_status: "unpaid",
+    });
+    expect(result.handled).toBe(false);
+    expect(rows).toHaveLength(0);
+    expect(profileUpdates).toHaveLength(0);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("holds a paid session that only claims its price in metadata", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    await expect(fulfillDppPaidSession(supabase, {
+      ...paidSession,
+      line_items: null,
+      metadata: { ...paidSession.metadata, stripe_price_id: DPP_PRICE_ID },
+    })).rejects.toThrow(/DPP grant blocked/);
+    expect(rows).toHaveLength(0);
+    expect(profileUpdates).toHaveLength(0);
+  });
+
+  it("holds a wrong-product DPP claim before any entitlement write", async () => {
+    const { supabase, profileUpdates } = fakeSupabase();
+    await expect(fulfillDppPaidSession(supabase, {
+      ...paidSession,
+      line_items: { data: [{ price: { id: "price_other" } }] },
+    })).rejects.toThrow(/DPP grant blocked/);
+    expect(profileUpdates).toHaveLength(0);
+  });
+
+  it("holds a paid but incomplete checkout", async () => {
+    const { supabase, profileUpdates } = fakeSupabase();
+    await expect(fulfillDppPaidSession(supabase, {
+      ...paidSession, status: "open",
+    })).rejects.toThrow(/DPP grant blocked/);
+    expect(profileUpdates).toHaveLength(0);
+  });
+
 });

@@ -12,8 +12,6 @@ import { getBrandIdFromMetadata } from "./brand-billing";
 import { sendEmail } from "./email";
 import {
   dppActivateUrl,
-  isDppDemoSession,
-  isDppOffer,
   recordDppLoopEventOnce,
 } from "./dpp-loop";
 import {
@@ -21,6 +19,7 @@ import {
   finishProvisionContinuity,
 } from "./founder-exit/supabase-log";
 import { markRetryableFulfillment } from "./retryable-fulfillment";
+import { dppGrantDecision, type DppProofSession } from "./dpp-payment-eligibility";
 import { emitTrustEvent } from "../../shared/trust-events";
 
 type SupabaseLike = {
@@ -28,16 +27,10 @@ type SupabaseLike = {
   from: (table: string) => any;
 };
 
-export type DppCheckoutSessionLike = {
-  id: string;
-  mode?: string | null;
-  metadata?: Record<string, string> | null;
-  client_reference_id?: string | null;
+export type DppCheckoutSessionLike = DppProofSession & {
   customer_email?: string | null;
   customer_details?: { email?: string | null } | null;
   customer?: string | { id: string } | null;
-  subscription?: string | { id: string } | null;
-  amount_total?: number | null;
 };
 
 function toId(
@@ -79,20 +72,21 @@ async function fulfillDppPaidSessionOnce(
   session: DppCheckoutSessionLike,
   priceId?: string | null
 ): Promise<DppFulfillResult> {
+  // Legacy priceId is a routing hint, never Stripe-paid product evidence.
+  void priceId;
   const md = session.metadata || {};
-  const linePriceId =
-    (typeof priceId === "string" && priceId) ||
-    (typeof md.stripe_price_id === "string" ? md.stripe_price_id : null);
-  if (!isDppOffer(md, linePriceId)) {
+  const decision = dppGrantDecision(session);
+  if (decision === "not_dpp" || decision === "recurring") {
     return { handled: false, profileId: null, activationEmail: "skipped" };
   }
-
-  const subscriptionId = toId(session.subscription);
-  if (session.mode === "subscription" || subscriptionId) {
-    console.error(
-      `[dpp-fulfill] refusing DPP grant for recurring checkout: session=${session.id} mode=${session.mode ?? "unknown"}`
-    );
+  if (decision === "unverified" && session.payment_status !== "paid") {
+    // Async payment can complete before funds arrive.
     return { handled: false, profileId: null, activationEmail: "skipped" };
+  }
+  if (decision !== "paid" && decision !== "authorized_smoke") {
+    throw markRetryableFulfillment(
+      new Error("DPP grant blocked: unverified completion or Stripe product")
+    );
   }
 
   const visitId =
@@ -106,7 +100,7 @@ async function fulfillDppPaidSessionOnce(
     .trim();
   const brand = getBrandIdFromMetadata(md);
   const plan = md.plan || "dpp_readiness";
-  const demo = isDppDemoSession(md);
+  const demo = decision === "authorized_smoke";
   emitTrustEvent("fulfillment.started", { session_id: session.id, plan, demo });
   const loopMeta = {
     plan,
