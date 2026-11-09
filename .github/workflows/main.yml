@@ -291,14 +291,15 @@ jobs:
       # Retries live in scripts/build-with-retry.sh, which holds the
       # machine-wide build lock for the whole attempt loop. A second
       # invocation here would drop that lock during the pause.
-      # One Next process. 4096 MB dumped the 3.8 GB VM (CI Main job
-      # 129363461477). 3072 MB crossed the runner unit MemoryMax of 2800 MiB.
-      # 2048 is the single-process cap; the test shards use 1536 because
-      # turbo was compiling several packages at once.
+      # 4096 MB dumped the 3.8 GB VM (CI Main job 129363461477).
+      # 3072 MB, and a single Next process at 2048 MB, both crossed the
+      # runner unit MemoryMax of 2800 MiB (OOM at 23:01Z, peak 2.7G,
+      # run 42713702955). 1536 matches the test shards. Do not raise
+      # MemoryMax.
       - name: Production build
         if: steps.baseline.outputs.skip != 'true'
         env:
-          NODE_OPTIONS: --max-old-space-size=2048 --dns-result-order=ipv4first --no-network-family-autoselection
+          NODE_OPTIONS: --max-old-space-size=1536 --dns-result-order=ipv4first --no-network-family-autoselection
         run: pnpm build
 
       # Persistent self-hosted runner: drop deps and build outputs so state
