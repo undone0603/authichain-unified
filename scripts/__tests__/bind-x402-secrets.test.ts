@@ -39,6 +39,8 @@ describe("x402 facilitator bind matches authichain-com", () => {
         /FACILITATOR[^'\n]*['"]https:\/\/x402\.org\/facilitator['"]/
       );
     }
+    expect(landing).toContain("--keep-vars");
+    expect(landing).not.toContain("secret put X402_PAY_TO");
   });
 
   it("bind-x402-secrets.yml puts the pair on sisters as well as the landing pair", () => {
