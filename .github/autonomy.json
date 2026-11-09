@@ -27,8 +27,8 @@
     }
   },
   "launch_mode": {
-    "$comment": "Time-boxed loosening until first revenue (docs/OPERATING_CHARTER.md, Launch mode). Read by scripts/autonomy/launch-mode.mjs. After 'expires', or with enabled=false, every loop falls back to its normal gate. Max window 90 days (CI-enforced).",
-    "enabled": true,
+    "$comment": "Time-boxed loosening until first revenue (docs/OPERATING_CHARTER.md, Launch mode). Read by scripts/autonomy/launch-mode.mjs. After 'expires', or with enabled=false, every loop falls back to its normal gate. Max window 90 days (CI-enforced). The 2026-10-31 window has ended, so enabled is false.",
+    "enabled": false,
     "expires": "2026-10-31",
     "cold_outreach_cap": 25
   },

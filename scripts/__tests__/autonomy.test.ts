@@ -175,6 +175,7 @@ describe("launch mode", () => {
   });
 
   it("the real manifest's launch window is within bounds", () => {
+    expect(loadManifest().launch_mode.enabled).toBe(false);
     expect(validateLaunchMode(loadManifest())).toEqual([]);
   });
 
