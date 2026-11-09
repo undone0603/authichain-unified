@@ -1,130 +1,70 @@
-# Credential-free quality checks only. This configuration does not deploy.
-# Do not add production tokens or contexts to this pipeline.
+# Evidence-only native DPP payment/webhook validation; no deploy.
+# This branch is separate from PR #2411. It changes ONLY this CI config.
 version: 2.1
 
-executors:
-  node:
+jobs:
+  dpp-proof:
     docker:
       - image: cimg/node:22.23.3
-    resource_class: large
+    resource_class: medium
     working_directory: ~/project
-
-commands:
-  bounded-check:
-    parameters:
-      task:
-        type: enum
-        enum: [quality, typecheck-ratchet, test-workers, test-other, build, extras]
-      seconds:
-        type: integer
+    environment:
+      CI: "true"
+      HUSKY: "0"
+      NODE_OPTIONS: "--max-old-space-size=3072"
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
-            - pnpm-store-v1-
       - run:
-          name: "Bounded << parameters.task >> (<< parameters.seconds >>s)"
-          # A single wall-clock deadline includes installation and all checks.
-          # GNU timeout signals the process group; KILL follows TERM after 10s.
-          # Expiry fails the job (124/137); there are no automatic retries.
-          command: timeout --signal=TERM --kill-after=10s << parameters.seconds >>s /bin/bash .circleci/quality-check.sh << parameters.task >>
-          no_output_timeout: 35m
-      - save_cache:
-          key: pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
-          paths:
-            - ~/.pnpm-store
-
-jobs:
-  quality:
-    executor: node
-    steps:
-      - bounded-check:
-          task: quality
-          seconds: 900
-
-  typecheck-ratchet:
-    executor: node
-    environment:
-      NODE_OPTIONS: --max-old-space-size=6144
-    steps:
-      - bounded-check:
-          task: typecheck-ratchet
-          seconds: 900
-
-  test-workers:
-    executor: node
-    steps:
-      - bounded-check:
-          task: test-workers
-          seconds: 1200
-
-  test-other:
-    executor: node
-    steps:
-      - bounded-check:
-          task: test-other
-          seconds: 1800
-
-  build:
-    executor: node
-    environment:
-      NODE_OPTIONS: --max-old-space-size=4096
-    steps:
-      - bounded-check:
-          task: build
-          seconds: 1200
-
-  extras:
-    executor: node
-    steps:
-      - bounded-check:
-          task: extras
-          seconds: 1500
-      - store_test_results:
-          path: /tmp/pytest-results
-
-  main-quality-gate:
-    docker:
-      - image: cimg/base:stable
-    resource_class: small
-    steps:
-      - run:
-          name: Six required jobs succeeded
+          name: Confirm parent is exact PR #2411 source and no app files differ
           command: |
-            timeout --signal=TERM --kill-after=10s 60s /bin/bash -eu -o pipefail -c 'echo "CircleCI six-job quality gate completed for ${CIRCLE_SHA1:?missing pipeline revision}"'
-          no_output_timeout: 2m
+            set -euo pipefail
+            source_sha="7fa7ad6f3310d0a8195f8d630d446ed4c5a27e57"
+            test "$(git rev-parse HEAD^)" = "$source_sha"
+            test "$(git diff --name-only HEAD^ HEAD)" = ".circleci/config.yml"
+            test -z "$(git status --porcelain)"
+            echo "Verified PR source parent: $source_sha"
+            echo "CircleCI checkout: $CIRCLE_SHA1"
+      - run:
+          name: Reject production credentials and install locked dependencies
+          command: |
+            set -euo pipefail
+            for name in STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET STRIPE_WEBHOOK_AUTHICHAIN_SECRET SUPABASE_SERVICE_ROLE_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID RESEND_API_KEY; do
+              if [ -n "${!name:-}" ]; then
+                echo "Forbidden production credential injected: $name" >&2
+                exit 1
+              fi
+            done
+            mkdir -p "$HOME/.local/bin"
+            export PATH="$HOME/.local/bin:$PATH"
+            corepack enable --install-directory "$HOME/.local/bin"
+            corepack prepare pnpm@10.28.2 --activate
+            timeout --signal=TERM --kill-after=10s 420s pnpm install --frozen-lockfile --prefer-offline
+      - run:
+          name: Native exact-source DPP webhook and return-page tests
+          command: |
+            set -euo pipefail
+            mkdir -p "$HOME/.local/bin"
+            export PATH="$HOME/.local/bin:$PATH"
+            timeout --signal=TERM --kill-after=10s 240s pnpm exec vitest run \
+              src/lib/dpp-payment-eligibility.test.ts \
+              src/lib/dpp-fulfill-checkout.test.ts \
+              server/webhooks/stripe.test.ts \
+              src/app/api/stripe/webhook/route.test.ts \
+              src/app/checkout-return-truth.test.ts \
+              src/lib/stripe-construct-event.test.ts
+      - run:
+          name: Report immutable evidence
+          when: always
+          command: |
+            echo "CircleCI commit: ${CIRCLE_SHA1:-unknown}"
+            echo "Application PR parent: 7fa7ad6f3310d0a8195f8d630d446ed4c5a27e57"
+            echo "NOTE: this test-only branch is NOT the protected six-job release gate."
 
 workflows:
-  quality-gate:
+  focused-dpp:
     jobs:
-      # Fail early before starting the other five large executors.
-      - test-workers:
-          filters: &quality-branches
+      - dpp-proof:
+          filters:
             branches:
-              ignore:
-                - /dependabot\/.*/
-      - quality:
-          requires: [test-workers]
-          filters: *quality-branches
-      - typecheck-ratchet:
-          requires: [test-workers]
-          filters: *quality-branches
-      - test-other:
-          requires: [test-workers]
-          filters: *quality-branches
-      - build:
-          requires: [test-workers]
-          filters: *quality-branches
-      - extras:
-          requires: [test-workers]
-          filters: *quality-branches
-      - main-quality-gate:
-          requires:
-            - quality
-            - typecheck-ratchet
-            - test-workers
-            - test-other
-            - build
-            - extras
-          filters: *quality-branches
+              only:
+                - ci/circleci-dpp-proof-7fa7ad6
