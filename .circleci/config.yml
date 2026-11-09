@@ -15,14 +15,16 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Confirm parent is exact PR #2411 source and no app files differ
+          name: Confirm exact PR #2411 source ancestry and no app files differ
           command: |
             set -euo pipefail
             source_sha="7fa7ad6f3310d0a8195f8d630d446ed4c5a27e57"
-            test "$(git rev-parse HEAD^)" = "$source_sha"
-            test "$(git diff --name-only HEAD^ HEAD)" = ".circleci/config.yml"
+            # The code under test is the exact PR source ancestor. Allow
+            # a later manual-trigger commit without changing product code.
+            git merge-base --is-ancestor "$source_sha" HEAD
+            test "$(git diff --name-only "$source_sha" HEAD)" = ".circleci/config.yml"
             test -z "$(git status --porcelain)"
-            echo "Verified PR source parent: $source_sha"
+            echo "Verified PR source ancestor: $source_sha"
             echo "CircleCI checkout: $CIRCLE_SHA1"
       - run:
           name: Reject production credentials and install locked dependencies
