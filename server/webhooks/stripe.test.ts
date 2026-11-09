@@ -727,7 +727,7 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     expect(fulfillDppPaidSession).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ id: "cs_live_a1y4Tu_replay" }),
-      null
+      "price_1TwmD8GqTruSqV8TpAF8dfyA"
     );
     expect(vi.mocked(upsertStripeSubscription)).not.toHaveBeenCalled();
     expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
