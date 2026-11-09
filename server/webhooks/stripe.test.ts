@@ -442,7 +442,9 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         id: "cs_live_smoke_check",
         mode: "payment",
         payment_status: "paid",
-        amount_total: 0,
+        status: "complete",
+        amount_total: 29900,
+        currency: "usd",
         customer_details: { email: "authichain@gmail.com" },
         client_reference_id: "smoke_check_1789786486",
         metadata: {
@@ -497,6 +499,50 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     );
   });
 
+
+  it("recognizes the live $299 Payment Link with no metadata and fetches the real Stripe price", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_dpp_link", {
+        id: "cs_live_dpp_link",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        amount_total: 29900,
+        currency: "usd",
+        metadata: {},
+        payment_link: "plink_1UNd1FGqTruSqV8TWahMUQ3l",
+        customer_details: { email: "buyer@example.com" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(mockCheckoutRetrieve).toHaveBeenCalledWith("cs_live_dpp_link", {
+      expand: ["line_items"],
+    });
+    expect(fulfillDppPaidSession).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: "cs_live_dpp_link" }),
+      "price_1TwmD8GqTruSqV8TpAF8dfyA"
+    );
+  });
+
+  it("retries a DPP checkout when its Stripe proof cannot be fetched", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_dpp_proof_down", {
+        id: "cs_live_dpp_proof_down",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        amount_total: 29900,
+        metadata: { plan: "dpp_readiness" },
+      })
+    );
+    mockCheckoutRetrieve.mockRejectedValueOnce(new Error("Stripe read unavailable"));
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(/Stripe read unavailable/);
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
   it("does not fulfill checkout.session.completed until payment_status is paid", async () => {
     mockConstructEvent.mockReturnValue(
       makeEvent("checkout.session.completed", "evt_dpp_unpaid", {

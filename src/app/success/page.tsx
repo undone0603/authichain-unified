@@ -14,8 +14,12 @@ export default function SuccessPage() {
           on an order. Contact support if your payment succeeded but delivery
           is not visible.
         </p>
-        <a href="/pricing" className="mt-8 inline-block rounded-lg border
-          border-zinc-500 px-5 py-3 font-semibold">View plans</a>
+        <a
+          href="/pricing"
+          className="mt-8 inline-block rounded-lg border border-zinc-500 px-5 py-3 font-semibold"
+        >
+          View plans
+        </a>
       </div>
     </main>
   );

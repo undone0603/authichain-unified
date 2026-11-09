@@ -18,8 +18,12 @@ export default function DppThanksPage() {
           to a workspace. Use your verified activation instructions after
           payment processing completes. Contact support if you need help.
         </p>
-        <a href="/pricing" className="mt-8 inline-flex rounded-lg bg-cyan-300
-          px-5 py-3 font-semibold text-black">View plans</a>
+        <a
+          href="/pricing"
+          className="mt-8 inline-flex rounded-lg bg-cyan-300 px-5 py-3 font-semibold text-black"
+        >
+          View plans
+        </a>
       </div>
     </main>
   );
