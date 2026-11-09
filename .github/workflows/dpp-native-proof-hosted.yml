@@ -34,6 +34,17 @@ jobs:
           echo "Verified application source SHA: $actual"
           echo "Runner: $RUNNER_ENVIRONMENT ($RUNNER_OS / $RUNNER_ARCH)"
           test "$RUNNER_ENVIRONMENT" = "github-hosted"
+      - name: Refuse injected production credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET STRIPE_WEBHOOK_AUTHICHAIN_SECRET CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID SUPABASE_SERVICE_ROLE_KEY RESEND_API_KEY; do
+            if test -n "${!name:-}"; then
+              echo "::error::Forbidden CI credential variable was injected: $name"
+              exit 1
+            fi
+          done
+          echo "No production secret variable is available to the test job."
       - name: Install pnpm 10.28.2
         uses: pnpm/action-setup@v4
         with:
