@@ -588,7 +588,8 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     const res = await postInvoice(dppCheckoutEvent());
 
     expect(res.status).toBe(200);
-    expect(mockCheckoutSessionRetrieve).toHaveBeenCalledExactlyOnceWith(
+    expect(mockCheckoutSessionRetrieve).toHaveBeenCalledOnce();
+    expect(mockCheckoutSessionRetrieve).toHaveBeenCalledWith(
       "cs_dpp_next_mock",
       { expand: ["line_items"] }
     );
