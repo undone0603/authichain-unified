@@ -1,62 +1,97 @@
-name: Deploy authichain-edge-router
+name: Deploy authichain-edge-router (protected)
+
+# Never auto-publish the payment webhook on a push. Explicit exact-main SHA
+# dispatch follows seven successful real CircleCI status contexts and
+# automated fail-closed branch/environment policy.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "worker-app/**"
-      - "src/lib/support-coffee.ts"
-      - ".github/workflows/deploy-authichain-edge-router.yml"
-      - "scripts/ci/parse-wrangler-version-id.mjs"
-      - "scripts/ci/promote-worker-version.mjs"
-      - "scripts/ci/upload-worker-version.mjs"
+    inputs:
+      expected_sha:
+        description: Exact 40-character main commit to release, after verified CircleCI
+        type: string
+        required: true
+
 permissions:
   contents: read
-# Queue behind an in-flight publish. PM-328 forbids cancelling a
-# push-to-main deploy that is already uploading.
+  statuses: read
+  actions: read
+
 concurrency:
-  group: deploy-authichain-edge-router-${{ github.ref }}
+  group: deploy-authichain-edge-router
   cancel-in-progress: false
+
 jobs:
-  deploy:
-    # Publish runner only: authichain-wsl. CI stays on authichain-ops (laptop).
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
-    timeout-minutes: 40
-    env:
-      # WSL has no IPv6. Node 22 Happy Eyeballs races AAAA (ENETUNREACH) with
-      # Cloudflare anycast A records and aborts in ~1.6s. ipv4first alone still
-      # tries AAAA. Proven on runner node v22.23.4 with this combo.
-      NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
+  verify:
+    name: Verify exact-main commit and CircleCI gate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.head.outputs.sha }}
     steps:
-      - uses: actions/checkout@v7
-      # Sparse-checkout settings persist in the shared self-hosted work dir
-      # (agentz-orchestration.yml and gov-engine.yml check out two files), so a
-      # job that inherits them sees a partial tree while HEAD still names the
-      # right commit. Run 41898073168 died with "Cannot find module
-      # .../scripts/ci/live-worker-version.mjs" for a file that was in the
-      # commit. Same guard launch-gates.yml, ci.yml and main.yml use, plus
-      # checks that this job runs and bundles exactly what the commit holds.
-      - name: Restore full tree after sparse checkout
-        if: runner.environment == 'self-hosted'
+      - name: Pin dispatch commit
+        id: head
+        env:
+          TARGET_SHA: ${{ inputs.expected_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          git sparse-checkout disable
-          git reset --hard HEAD
-          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
-          test -z "$(git ls-files -v | awk '$1 == "S" { print }')"
-          test -f scripts/ci/live-worker-version.mjs
-          test -f scripts/ci/upload-worker-version.mjs
-          test -f scripts/ci/promote-worker-version.mjs
-          test -f worker-app/wrangler.toml
-      - uses: pnpm/action-setup@v6
-        if: runner.environment != 'self-hosted'
+          [[ "$TARGET_SHA" =~ ^[[:xdigit:]]{40}$ ]]
+          test "$TARGET_SHA" = "$DISPATCH_SHA"
+          echo "sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+      # Separately tested, fail-closed automated protection instead of a human
+      # environment reviewer. Missing/stale evidence stops the release.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.head.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test fail-closed automated release policy
+        run: node --test scripts/ci/autonomous-release-gate.test.mjs
+      - name: Enforce automated exact-main release policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ steps.head.outputs.sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: node scripts/ci/autonomous-release-gate.mjs
+
+  deploy:
+    name: Publish exact automatically policy-approved edge router
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    environment:
+      name: production-cloudflare
+    permissions:
+      contents: read
+      statuses: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+          persist-credentials: false
+      - name: Confirm checkout and live main both equal approved SHA
+        env:
+          EXPECTED_SHA: ${{ needs.verify.outputs.sha }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          HEAD_SHA=$(node --input-type=module -e "const r=await fetch('https://api.github.com/repos/' + process.env.REPOSITORY + '/branches/main',{headers:{authorization:'Bearer ' + process.env.GH_TOKEN,accept:'application/vnd.github+json'}});if(!r.ok)process.exit(1);const d=await r.json();console.log(d.commit.sha)")
+          test "$HEAD_SHA" = "$EXPECTED_SHA"
+      - uses: pnpm/action-setup@v4
         with:
           version: "10.28.2"
           run_install: false
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
+          cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       # Must run after setup-node. The runner's pnpm is a corepack shim with a
       # "#!/usr/bin/env node" shebang, and the runner process has no node on
@@ -64,23 +99,26 @@ jobs:
       # (run 42162800026: "/usr/bin/env: 'node': No such file or directory",
       # exit 127, after the WSL restart on 2026-11-05). setup-node puts the
       # cached node 22 on PATH, the same node every later step already uses.
-      - name: Use runner pnpm (self-hosted)
-        if: runner.environment == 'self-hosted'
-        run: |
-          set -euo pipefail
-          command -v node
-          command -v pnpm
-          pnpm --version
       - name: Install node-gyp (native builds)
         run: npm i -g node-gyp@11
       - name: Install
         env:
           npm_config_build_from_source: "false"
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0
+      - name: Native DPP and canonical Stripe webhook regressions
+        run: |
+          set -euo pipefail
+          pnpm exec vitest run \
+            src/lib/dpp-payment-eligibility.test.ts \
+            src/lib/dpp-fulfill-checkout.test.ts \
+            src/lib/stripe-construct-event.test.ts \
+            server/webhooks/stripe.test.ts \
+            src/app/api/stripe/webhook/route.test.ts \
+            src/app/checkout-return-truth.test.ts
       - name: Preflight uplink probe (fail fast on a stalled runner)
         if: runner.environment == 'self-hosted'
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
           # A floor, not a target. Measured on this runner on 2026-11-04: about
           # 120-140 KB/s sustained to Cloudflare, so the 8.8 MiB bundle needs
           # roughly 75 s. The stalls this gate exists for ran at 7-11 KB/s.
@@ -106,10 +144,25 @@ jobs:
             exit 1
           fi
 
+      - name: Recheck release gate before any Cloudflare credential use
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ needs.verify.outputs.sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: node scripts/ci/autonomous-release-gate.mjs
+      - name: Confirm dedicated production environment credentials exist
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
       - name: Record live version (rollback target)
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           # Fails closed: when the live version cannot be named, nothing deploys.
@@ -120,8 +173,8 @@ jobs:
       - name: Publish authichain-edge-router
         working-directory: worker-app
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           # Versions API wants uncompressed JS in the multipart. HTTP gzip
@@ -213,8 +266,8 @@ jobs:
       - name: Roll back to previous version (smoke failed after promotion)
         if: failure() && env.PROMOTED_VERSION_ID != '' && env.PREV_VERSION_ID != ''
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           echo "::warning::Smoke failed after promotion; restoring ${PREV_VERSION_ID} (rejecting ${PROMOTED_VERSION_ID})"
