@@ -179,6 +179,7 @@ beforeEach(async () => {
       currency: source.currency ?? "usd",
       line_items: source.line_items ?? {
         data: [{ quantity: 1, price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+        has_more: false,
       },
     };
   });
