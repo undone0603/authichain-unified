@@ -110,4 +110,15 @@ test('payment Worker edge release remains manual-only, SHA-pinned and policy-pro
       workflow.indexOf('Record live version (rollback target)'),
     'policy must pass before any production upload or promotion'
   );
+  const publish = workflow.slice(
+    workflow.indexOf('      - name: Publish authichain-edge-router'),
+    workflow.indexOf('      - name: Smoke JWKS current + retired kids')
+  );
+  const guards = [...publish.matchAll(/node \.\.\/scripts\/ci\/autonomous-release-gate\.mjs/g)]
+    .map(match => match.index);
+  assert.equal(guards.length, 2, 're-check exact main before upload and before promotion');
+  const upload = publish.indexOf('upload-worker-version.mjs authichain-edge-router');
+  const promotion = publish.indexOf('promote-worker-version.mjs authichain-edge-router');
+  assert.ok(guards[0] < upload && upload < guards[1] && guards[1] < promotion,
+    'slow upload must not permit an unapproved newer main SHA to be published');
 });
