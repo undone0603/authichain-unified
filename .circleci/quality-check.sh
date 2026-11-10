@@ -28,7 +28,13 @@ case "$task" in
     node --test scripts/ci/autonomous-release-gate.test.mjs
     ;;
   typecheck-ratchet) node scripts/typecheck-ratchet.mjs ;;
-  test-workers) pnpm test --filter='./workers/*' --continue=dependencies-successful ;;
+  test-workers)
+    pnpm test --filter='./workers/*' --continue=dependencies-successful
+    # Run the real AgentZ edge/scheduler integration tests on the exact CircleCI SHA.
+    # GitHub Actions hosted runners may be unavailable; this independent gate
+    # remains credential-free and never deploys.
+    node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs
+    ;;
   test-other)
     pnpm --filter agent-browser exec playwright install --with-deps chromium
     pnpm test --filter='!./workers/*' --continue=dependencies-successful
