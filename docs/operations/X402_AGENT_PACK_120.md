@@ -31,6 +31,20 @@ This is a **new Stripe prepaid rail**, not the live x402 USDC Base 8453 per-call
 
 The Stripe prepaid Checkout redirects to a neutral `/x402?checkout=returned` page, not to a DPP activation or payment-success claim. The signed webhook alone controls ledger grants.
 
+## No-charge integration rehearsal (prepared, not executed)
+
+The production PostgreSQL 17.6 project confirms the `api_keys` UUID/text[] schema and the `service_role` RLS-bypass role, as well as the availability of transaction advisory locks. The active project is healthy; the separate default Supabase development-branch metadata reports `MIGRATIONS_FAILED`. Do not confuse that branch's historical status with a failure of this **unapplied** migration.
+
+Run the exact grant/debit/reversal fixture **after migrating an isolated, disposable PostgreSQL database with the existing AuthiChain `api_keys` schema**:
+
+```bash
+psql "$DISPOSABLE_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/x402_agent_pack_grants.sql
+```
+
+The test starts a transaction and ends in `ROLLBACK`. It exercises one paid grant, duplicate grant, exact 120-credit consumption, replay without double-debit, key reuse for another seal, the rejected 121st lookup, refund/replay revocation, refund-before-success, and dispute-before-success. Its fake `api_keys` row is solely a disposable SQL fixture; the separate API tests check confirmed Auth owner binding. This tests sequential state transitions, **not true parallel transaction concurrency**; concurrent clients must still be tested with genuine parallel sessions before activation.
+
+CircleCI's `test-workers` now also runs `node --test scripts/ci/x402-ledger-contract.test.mjs` and the four prepaid Vitest suites. Those static SQL invariants have passed read-only source checks, but **the candidate's actual native CI and PostgreSQL integration fixture have not yet been executed**.
+
 ## Required release sequence
 
 1. Isolated executor: run native tests (Vitest for `x402-agent-pack*.test.ts`, checkout gate, webhook, x402 routes, Worker TypeScript); validate the exact candidate SHA, not an old green check.
