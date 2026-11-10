@@ -42,6 +42,12 @@ export function isTestOnlyPath(file) {
   return /\.(test|spec)\.(cjs|mjs|js|jsx|ts|tsx)$/.test(rel);
 }
 
+/** CI harness under scripts/ci/ is not compiled by `next build`. */
+export function isCiHarnessPath(file) {
+  const rel = file.replace(/\\/g, "/").replace(/^\.\//, "");
+  return rel.startsWith("scripts/ci/");
+}
+
 /**
  * Pure. `skip` is true only when there is at least one file and every file
  * is under a skip root or is a test-only path. `outside` is the files that
@@ -52,7 +58,7 @@ export function decide(files, skipRoots) {
   const outside = [];
   for (const file of files) {
     const rel = file.replace(/\\/g, "/").replace(/^\.\//, "");
-    if (isTestOnlyPath(rel)) continue;
+    if (isTestOnlyPath(rel) || isCiHarnessPath(rel)) continue;
     if (!roots.some((root) => underRoot(rel, root))) outside.push(rel);
   }
   if (files.length === 0) {
