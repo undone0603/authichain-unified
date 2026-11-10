@@ -114,7 +114,7 @@ export const TOOLS = [
     description: x402PaidVerifyStatus().bound
       ? "Legacy x402 seal verify for separately authorized paid seal UUID requests, not free discovery. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. For free verification use verify_record."
       : "Legacy x402 seal verify, not answering; do not attempt to pay. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     inputSchema: {
       type: "object",
       properties: {
