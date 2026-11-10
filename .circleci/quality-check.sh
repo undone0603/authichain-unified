@@ -28,7 +28,18 @@ case "$task" in
     node --test scripts/ci/autonomous-release-gate.test.mjs
     ;;
   typecheck-ratchet) node scripts/typecheck-ratchet.mjs ;;
-  test-workers) pnpm test --filter='./workers/*' --continue=dependencies-successful ;;
+  test-workers)
+    # Explicitly exercise new root-level x402 Stripe prepaid paths. Turbo's
+    # worker package filter alone does not prove these root modules executed.
+    # Keep this first to fail fast on incorrect grants or cross-rail behavior.
+    pnpm exec vitest run \
+      src/lib/x402-agent-pack.test.ts \
+      src/lib/x402-agent-pack-fulfill.test.ts \
+      src/lib/x402-agent-pack-verify.test.ts \
+      src/lib/checkout-gate.test.ts \
+      workers/authichain-com/src/x402-routes.test.ts
+    pnpm test --filter='./workers/*' --continue=dependencies-successful
+    ;;
   test-other)
     pnpm --filter agent-browser exec playwright install --with-deps chromium
     pnpm test --filter='!./workers/*' --continue=dependencies-successful
