@@ -9,7 +9,7 @@ async function runScheduled(statuses, failureAt = -1) {
   const logs = [];
   let task;
   globalThis.fetch = async (url, init) => {
-    requests.push({ url, method: init.method, redirect: init.redirect });
+    requests.push({ url, method: init.method, redirect: init.redirect, signal: init.signal });
     if (requests.length === failureAt) throw new Error("network unavailable");
     return { status: statuses[requests.length - 1] ?? 200 };
   };
@@ -31,6 +31,8 @@ test("healthy public rails only trigger wait_buyer, not purchase", async () => {
   assert.equal(logs[0].rails_ok, true);
   assert.deepEqual(requests.map(x => x.method), ["GET", "GET", "HEAD"]);
   assert.ok(requests.every(x => x.redirect === "manual"));
+  assert.ok(requests.every(x => x.signal instanceof AbortSignal), "every probe must have a timeout signal");
+  assert.match(logs[0].reason, /payment and fulfillment unverified/);
   assert.ok(requests.every(x => x.url.startsWith("https://authichain.com/")));
 });
 
