@@ -104,6 +104,39 @@ describe("prepaid Stripe credit rail", () => {
     expect(debits).toBe(0);
   });
 
+  it("replayed purchase credit keeps the server-owned balance and never claims on-chain settlement", async () => {
+    let rpcRequests = 0;
+    const fake = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes("/api_keys?")) return Response.json([
+        { id: apiKeyId, user_id: userId, is_active: true, expires_at: null, scopes: ["verify"] },
+      ]);
+      if (url.includes("/auth/v1/admin/users/")) return Response.json({
+        id: userId, email: "buyer@example.com", email_confirmed_at: "2026-01-01T00:00:00Z",
+      });
+      if (url.includes("/auth_seals?")) return Response.json([]);
+      if (url.includes("/rpc/consume_x402_agent_pack_credit")) {
+        rpcRequests++;
+        expect(init?.method).toBe("POST");
+        const payload = JSON.parse(String(init?.body));
+        expect(payload.p_idempotency_key).toBe("test_no_charge_0001");
+        return Response.json({ allowed: true, replayed: rpcRequests > 1, remaining_credits: 119 });
+      }
+      return new Response("unexpected", { status: 500 });
+    });
+    const first = await verifyUsingX402StripeCredits(req(), env, fake as unknown as typeof fetch);
+    const replay = await verifyUsingX402StripeCredits(req(), env, fake as unknown as typeof fetch);
+    expect(first.status).toBe(200);
+    expect(replay.status).toBe(200);
+    const firstBody = await first.json();
+    const replayBody = await replay.json();
+    expect(firstBody.billing.replayed).toBe(false);
+    expect(replayBody.billing.replayed).toBe(true);
+    expect(firstBody.billing.remainingCredits).toBe(119);
+    expect(replayBody.billing.remainingCredits).toBe(119);
+    expect(replayBody.settlement).toBeUndefined();
+    expect(rpcRequests).toBe(2); // every HTTP attempt consults the durable idempotency RPC
+  });
+
   it("returns evidence with Stripe-prepaid accounting and no USDC settlement claim", async () => {
     let debits = 0;
     const fake = vi.fn(async (url: string, init?: RequestInit) => {
