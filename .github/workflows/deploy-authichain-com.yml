@@ -38,11 +38,11 @@ jobs:
           echo "sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
       # Separately tested, fail-closed automated protection instead of a human
       # environment reviewer. Missing/stale evidence stops the release.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ steps.head.outputs.sha }}
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Test fail-closed automated release policy
@@ -67,7 +67,7 @@ jobs:
       contents: read
       statuses: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.verify.outputs.sha }}
           persist-credentials: false
@@ -81,11 +81,11 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           HEAD_SHA=$(node --input-type=module -e "const r=await fetch('https://api.github.com/repos/' + process.env.REPOSITORY + '/branches/main',{headers:{authorization:'Bearer ' + process.env.GH_TOKEN,accept:'application/vnd.github+json'}});if(!r.ok)process.exit(1);const d=await r.json();console.log(d.commit.sha)")
           test "$HEAD_SHA" = "$EXPECTED_SHA"
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.28.2
           run_install: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Install pinned dependencies
