@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {assertReleasePolicy, REQUIRED, REPO, ENV, RULESET, verifyLive} from './autonomous-release-gate.mjs';
 const SHA = 'a'.repeat(40);
-const URL = 'https://circleci.com/gh/undone0603/authichain-unified/2914';
+// Job destination shape is verified against actual CircleCI statuses on main.
+const WORKFLOW = '49ccea43-060d-4fcb-b0fe-a1229ceb7512';
+const JOB = 'fa56472c-4a4b-4348-bda2-ef4cbbd1be9d';
+const URL = 'https://app.circleci.com/workflow/' + WORKFLOW + '/job/' + JOB;
 function fixture() {
   return {
     repo: REPO, expectedSha: SHA, dispatchSha: SHA,
@@ -53,8 +56,12 @@ test('fails when any required status is absent, failed, pending or has a fake de
   rejects(x => {x.statuses.statuses.pop();x.statuses.total_count = 6;}, /status evidence/);
   rejects(x => {x.statuses.statuses[0].state = 'pending';}, /test-workers/);
   rejects(x => {x.statuses.statuses[0].state = 'failure';}, /test-workers/);
-  rejects(x => {x.statuses.statuses[0].target_url = 'https://circleci.com.evil.test/gh/undone0603/authichain-unified/2914';}, /test-workers/);
-  rejects(x => {x.statuses.statuses[0].target_url = 'https://circleci.com/gh/undone0603/authichain-unified/2914/evil';}, /test-workers/);
+  rejects(x => {x.statuses.statuses[0].target_url = URL.replace('app.circleci.com', 'app.circleci.com.evil.test');}, /test-workers/);
+  rejects(x => {x.statuses.statuses[0].target_url = URL + '/evil';}, /test-workers/);
+  rejects(x => {x.statuses.statuses[0].target_url = 'https://circleci.com/gh/undone0603/authichain-unified/2914';}, /test-workers/);
+  rejects(x => {x.statuses.statuses[0].target_url = URL.replace('/job/', '/task/');}, /test-workers/);
+  rejects(x => {x.statuses.statuses[0].target_url = URL.replace(JOB, 'invalid-uuid');}, /test-workers/);
+  rejects(x => {x.statuses.statuses[0].target_url = URL.replace(WORKFLOW, '11111111-2222-3333-4444-555555555555');}, /mixed CircleCI workflows/);
   rejects(x => {x.statuses.total_count = 101;}, /status evidence/);
 });
 test('newest status for each context wins over previously green result', () => {
