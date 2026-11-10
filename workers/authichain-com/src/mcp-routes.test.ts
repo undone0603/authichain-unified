@@ -92,6 +92,7 @@ describe("mcp discovery", () => {
       expect(tools.get(name)?.annotations?.destructiveHint, name).toBe(false);
     }
     expect(tools.get("verify")?.annotations?.readOnlyHint).toBe(false);
+    expect(tools.get("verify")?.annotations?.destructiveHint).toBe(true);
     expect(tools.get("verify")?.description).toMatch(/paid|x402/i);
     expect(tools.get("verify_record")?.description).toContain("published JWS");
     expect(tools.get("verify_attestation")?.description).toContain("published");
