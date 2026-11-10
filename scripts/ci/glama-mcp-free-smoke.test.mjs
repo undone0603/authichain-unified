@@ -25,7 +25,7 @@ function mockTransport({ toolList = tools } = {}) {
     calls.push({ url, method: options.method, headers: options.headers ?? {}, body: options.body });
     assert.equal(url, "https://authichain.com/mcp");
     if (options.method === "GET") {
-      return json({ serverInfo: { version }, tools: toolList });
+      return json({ serverInfo: { version }, tools: toolList, pricing: { freeTools: EXPECTED_TOOLS.filter(name => name !== "verify") } });
     }
     assert.equal(options.method, "POST");
     const request = JSON.parse(options.body);
