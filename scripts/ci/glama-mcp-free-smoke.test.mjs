@@ -8,7 +8,7 @@ const tools = EXPECTED_TOOLS.map(name => ({
   description: name,
   annotations: {
     readOnlyHint: name !== "verify",
-    destructiveHint: false,
+    destructiveHint: name === "verify",
   },
 }));
 
