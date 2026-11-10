@@ -15,14 +15,17 @@ export const REVENUE_PROBES = Object.freeze([
 /** Only inspect evidence exposed by the unpaid public surfaces. */
 export function checkSignalContract(id, body) {
   const text = String(body ?? "");
+  // Match exact amounts: 100000 ($0.10) is NOT 10000 ($0.01).
+  const atomic10000 = /(?:^|[^0-9])10000(?:$|[^0-9])/.test(text);
+  const dollars001 = /(?:^|[^0-9])0\.01(?:$|[^0-9])/.test(text);
+  const wrongAmount = /(?:^|[^0-9])(?:50000|100000)(?:$|[^0-9])/.test(text);
   if (id === "signal_offer" || id === "signal_discovery") {
     if (!/PEPKIN|ranked\s+tape/i.test(text)) return "missing TAPE / PEPKIN product identity";
-    if (!/10000|0\.01/i.test(text)) return "missing expected 0.01 USDC / 10000 atomic price";
-    // Do not allow an old 0.05/50000 discovery price to appear in place of the tape.
-    if (/\b50000\b/.test(text) && !/\b10000\b/.test(text)) return "legacy 50000 atomic price in tape offer";
+    if (wrongAmount) return "stale 50000 / 100000 atomic price in TAPE offer";
+    if (!atomic10000 && !dollars001) return "missing expected 0.01 USDC / 10000 atomic price";
   }
   if (id === "signal_health") {
-    if (!/discovery/i.test(text) || !/10000/i.test(text)) {
+    if (!/discovery/i.test(text) || !atomic10000) {
       return "missing idle discovery SKU / 10000 atomic evidence";
     }
   }
