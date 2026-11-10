@@ -458,22 +458,19 @@ async def api_agentz_public_navigate(data: PublicNavigateInput):
 
 class ProtectedDispatchInput(BaseModel):
     expected_sha: str
-    authorized: bool = False
-    release_gate_passed: bool = False
 
 
 @app.post("/agentz/github/dispatch-protected", dependencies=[Depends(verify_token)], tags=["AgentZ Release"])
 async def api_agentz_dispatch_protected(data: ProtectedDispatchInput):
     """Dispatch existing SHA-pinned workflow only after scoped authorization.
 
-    Boolean claims must come from a trusted operator, not untrusted browser
-    content. Deploy workflow performs its own independent release checks.
+    Remote callers cannot assert authorization or release gate status.\n    Dispatch is disabled until server-side verified attestations are wired.
     """
     from agentz.core.protected_dispatch import dispatch_protected_release
     try:
         return await run_in_threadpool(
             dispatch_protected_release, data.expected_sha,
-            authorized=data.authorized, release_gate_passed=data.release_gate_passed
+            authorized=False, release_gate_passed=False
         )
     except (ValueError, PermissionError) as exc:
         raise HTTPException(status_code=403, detail=str(exc))
