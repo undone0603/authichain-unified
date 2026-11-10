@@ -1,4 +1,5 @@
 name: Isolated Worker DPP test proof
+# Trigger a PR-only hosted-runner proof; no deployment jobs or production secrets.
 
 on:
   pull_request:
