@@ -120,7 +120,8 @@ jobs:
           # vitest and tsx are root devDependencies, not Worker package dependencies.
           test -x node_modules/.bin/vitest
           test -x node_modules/.bin/tsx
-          pnpm exec vitest run workers/authichain-com/src/dpp-routes.test.ts
+          # Preserve the Worker cwd so its relative fixtures and config resolve.
+          (cd workers/authichain-com && ../../node_modules/.bin/vitest run src/dpp-routes.test.ts)
           (cd workers/authichain-com && ../../node_modules/.bin/tsx --import ./test/register-md.mjs --test src/routing.test.ts)
       - name: Embed microsite HTML
         run: node scripts/sync-microsite-packs.mjs
