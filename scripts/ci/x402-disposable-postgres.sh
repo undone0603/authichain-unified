@@ -55,6 +55,9 @@ CREATE TABLE public.api_keys (
   is_active boolean DEFAULT true,
   expires_at timestamptz NULL
 );
+-- Production has pre-existing API-key SELECT privileges for service_role.
+-- Rehearse the same principal, not a permissive postgres superuser.
+GRANT SELECT ON public.api_keys TO service_role;
 SQL
 
 echo '[x402] applying exact staged migration on disposable PostgreSQL 17'
@@ -87,15 +90,17 @@ BEGIN
 END $$;
 INSERT INTO public.api_keys(id,name,key_hash,scopes,is_active)
 VALUES ('00000000-0000-4000-8000-000000000999', 'parallel_fixture', repeat('a',64), ARRAY['verify'],true);
+SET ROLE service_role;
 SELECT public.grant_x402_agent_pack(
   'cs_live_parallel_acceptance_001', 'pi_parallel_acceptance_001', 'parallel@example.invalid'
 );
+RESET ROLE;
 SQL
 
-echo '[x402] running 140 distinct verification debit requests with up to 12 concurrent clients'
+echo '[x402] running 140 concurrent debit requests as service_role (not postgres)'
 seq -w 1 140 | xargs -P 12 -I '{}' docker exec "$container" \
   psql -X -Atq -v ON_ERROR_STOP=1 -U postgres -d postgres -c \
-  "SELECT public.consume_x402_agent_pack_credit('00000000-0000-4000-8000-000000000999'::uuid, 'parallel_case_{}_aaaa', '123e4567-e89b-42d3-a456-426614174000'::uuid, 'parallel@example.invalid');" \
+  "SET ROLE service_role; SELECT public.consume_x402_agent_pack_credit('00000000-0000-4000-8000-000000000999'::uuid, 'parallel_case_{}_aaaa', '123e4567-e89b-42d3-a456-426614174000'::uuid, 'parallel@example.invalid');" \
   > "$work/debits.jsonl"
 
 python3 - "$work/debits.jsonl" <<'PY'
@@ -118,6 +123,7 @@ rows="$(docker exec "$container" psql -X -Atq -v ON_ERROR_STOP=1 -U postgres -d 
 
 echo '[x402] refunding exhausted pack; a replay must now be blocked'
 docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL'
+SET ROLE service_role;
 DO $$
 DECLARE j jsonb;
 BEGIN
@@ -131,6 +137,7 @@ BEGIN
     RAISE EXCEPTION 'refunded grant authorized old receipt: %', j;
   END IF;
 END $$;
+RESET ROLE;
 SQL
 
 echo '[x402] PASS: disposable PG17 migration, SQL fixture, RLS and parallel 120/121 grant/spend/refund checks'
