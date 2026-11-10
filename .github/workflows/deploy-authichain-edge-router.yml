@@ -145,6 +145,10 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ inputs.expected_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           # Versions API wants uncompressed JS in the multipart. HTTP gzip
@@ -158,8 +162,13 @@ jobs:
           mkdir -p /tmp/er-bundle
           npx --yes wrangler@4.149.0 versions upload --minify --keep-vars --dry-run --outdir /tmp/er-bundle --config wrangler.toml \
             2>&1 | tee /tmp/er-versions-upload.log
+          # Main can advance while installing/building: re-check before upload.
+          node ../scripts/ci/autonomous-release-gate.mjs
           vid=$(node ../scripts/ci/upload-worker-version.mjs authichain-edge-router /tmp/er-bundle)
           echo "uploaded authichain-edge-router version $vid"
+          # A slow upload can outlive approved main. Leave an unused version
+          # rather than promoting a stale commit; verify again immediately.
+          node ../scripts/ci/autonomous-release-gate.mjs
           # Record the checkout SHA and promoted version for later source/runtime audit.
           # This is provenance metadata, not proof of successful paid fulfillment.
           promotion=$(node ../scripts/ci/promote-worker-version.mjs authichain-edge-router "$vid")
