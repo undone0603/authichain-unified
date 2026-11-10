@@ -368,6 +368,31 @@ describe("decideOperatorAction", () => {
     expect(decision.action).toBe("wait_buyer");
   });
 
+  it("returns wait_buyer when a paid payout has only founder livemode charges", () => {
+    const decision = decideOperatorAction({
+      rails: railsOk,
+      snapshot: snap({
+        payouts: [
+          { id: "po_1UKS6fGqTruSqV8T7EnyFyxX", amount: 931, status: "paid" },
+        ],
+        charges: [
+          {
+            id: "ch_founder",
+            amount: 2900,
+            paid: true,
+            livemode: true,
+            email: "undone.k@gmail.com",
+          },
+        ],
+      }),
+    });
+    expect(decision.action).toBe("wait_buyer");
+    expect(decision.revenue.qualifying).toBe(false);
+    expect(decision.revenue.reason).toMatch(
+      /payout po_1UKS6fGqTruSqV8T7EnyFyxX has no non-founder paid charge/
+    );
+  });
+
   it("returns send_one only when classifySend allows", () => {
     const allowed = decideOperatorAction({
       rails: railsOk,
