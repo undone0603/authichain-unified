@@ -8,7 +8,7 @@ Install [CodeRabbit's GitHub App](https://github.com/apps/coderabbitai) on **onl
 
 ## Important approval boundary
 
-An automated GitHub App review or PR comment is supplemental technical evidence. It does not satisfy the independent human/eligible-collaborator approval rule unless the repository's actual existing branch-protection/ruleset policy explicitly accepts it. Do **not** disable required reviews, grant bypass permissions, alter financial controls, or mark a bot comment as approval.
+Automated GitHub App review is optional supplemental technical evidence, **not a release prerequisite** for this standalone read-only Worker. The owner explicitly removed the extra independent-review gate. The two observed active `main` rulesets each require **zero approving reviews**, while still requiring PR-based changes and no bypass actors. This does not change either ruleset, and any additional applicable branch protection must still be honored. Do **not** grant bypass permissions, alter financial controls, or misrepresent bot comments as approvals.
 
 ## Review checklist
 
@@ -21,4 +21,4 @@ An automated GitHub App review or PR comment is supplemental technical evidence.
 
 ## Release status
 
-**HOLD:** third-party App installation and eligible review not yet verified. No merge/deploy is authorized by this document.
+**HOLD for engineering verification only:** automated/human independent review is optional, not a gate. Require source-matched tests on final head, accurate cron documentation, current-main reconciliation, and actual approved production deployment configuration before release. No merge/deploy is authorized by this document.
