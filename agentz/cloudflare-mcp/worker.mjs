@@ -20,6 +20,14 @@ async function equalSecret(a,b){
 export default {
  async scheduled(event,env,ctx){ctx.waitUntil(runQueue(env,3));},
  async fetch(request,env){
+  if(request.method==="POST"&&new URL(request.url).pathname==="/internal/cron"){
+   if(!env.AGENTZ_MCP_TOKEN)return json({error:"not configured"},503);
+   const bearer=(request.headers.get("authorization")||"").replace(/^Bearer /i,"");
+   if(!bearer||!(await equalSecret(bearer,env.AGENTZ_MCP_TOKEN)))return json({error:"unauthorized"},401);
+   if(request.headers.get("x-agentz-dispatch")!=="authichain-automation")return json({error:"invalid dispatcher"},403);
+   const execution=await runQueue(env,3);
+   return json({service:"agentz-mcp-edge",...execution});
+  }
   if(request.method==="GET"&&new URL(request.url).pathname==="/health")return json({service:"agentz-mcp-edge",status:"up",authenticated_tools:true});
   if(!env.AGENTZ_MCP_TOKEN)return json({error:"not configured"},503);
   const supplied=(request.headers.get("authorization")||"").replace(/^Bearer /i,"");
