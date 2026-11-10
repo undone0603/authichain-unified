@@ -46,6 +46,8 @@ jobs:
         with:
           ref: ${{ steps.head.outputs.sha }}
           persist-credentials: false
+          clean: true
+          fetch-depth: 1
       - name: Use runner Node 22
         run: |
           set -euo pipefail
@@ -60,14 +62,20 @@ jobs:
           echo "NODE=$(command -v node)" >> "$GITHUB_ENV"
           echo "PATH=$PATH" >> "$GITHUB_ENV"
       - name: Test fail-closed automated release policy
-        run: node --test scripts/ci/autonomous-release-gate.test.mjs
+        run: |
+          set -euo pipefail
+          test -f scripts/ci/autonomous-release-gate.test.mjs
+          test -f scripts/ci/autonomous-release-gate.mjs
+          pwd
+          ls -la scripts/ci/autonomous-release-gate*
+          node --test "$GITHUB_WORKSPACE/scripts/ci/autonomous-release-gate.test.mjs"
       - name: Enforce automated exact-main release policy
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
           TARGET_SHA: ${{ steps.head.outputs.sha }}
           DISPATCH_SHA: ${{ github.sha }}
-        run: node scripts/ci/autonomous-release-gate.mjs
+        run: node "$GITHUB_WORKSPACE/scripts/ci/autonomous-release-gate.mjs"
 
   deploy:
     name: Publish exact automatically policy-approved Worker
@@ -87,6 +95,8 @@ jobs:
         with:
           ref: ${{ needs.verify.outputs.sha }}
           persist-credentials: false
+          clean: true
+          fetch-depth: 1
       - name: Confirm checked-out and current main SHA
         env:
           EXPECTED_SHA: ${{ needs.verify.outputs.sha }}
@@ -118,8 +128,10 @@ jobs:
         working-directory: workers/authichain-com
         run: |
           set -euo pipefail
-          pnpm exec vitest run src/dpp-routes.test.ts
-          pnpm exec tsx --import ./test/register-md.mjs --test src/routing.test.ts
+          # Worker package has empty devDependencies; vitest/tsx live at the
+          # monorepo root. Match package.json "test" (npx), not pnpm exec.
+          npx vitest run src/dpp-routes.test.ts
+          npx tsx --import ./test/register-md.mjs --test src/routing.test.ts
       - name: Embed microsite HTML
         run: node scripts/sync-microsite-packs.mjs
       - name: Recheck automated release policy immediately before publishing
@@ -128,7 +140,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           TARGET_SHA: ${{ needs.verify.outputs.sha }}
           DISPATCH_SHA: ${{ github.sha }}
-        run: node scripts/ci/autonomous-release-gate.mjs
+        run: node "$GITHUB_WORKSPACE/scripts/ci/autonomous-release-gate.mjs"
       # Require these names to be configured ONLY as production-cloudflare environment secrets.
       # Never define these aliases as repository/org secrets: GitHub falls back to broader scope.
       # Provision a Workers-only scoped Cloudflare token; no D1/zone/DNS rights.
