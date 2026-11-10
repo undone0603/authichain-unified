@@ -23,6 +23,9 @@ jobs:
     if: github.ref == 'refs/heads/main'
     # Protected-branches-only environment. The automated release policy
     # checks its actual policy, protected main and seven CircleCI contexts.
+    # Production Cloudflare token/account must come from the same protected
+    # environment secret pair as authichain-com. Never consume the broad
+    # repository CLOUDFLARE_* secrets for a payment Worker deployment.
     environment:
       name: production-cloudflare
     # Publish runner only: authichain-wsl. CI stays on authichain-ops (laptop).
@@ -100,7 +103,7 @@ jobs:
       - name: Preflight uplink probe (fail fast on a stalled runner)
         if: runner.environment == 'self-hosted'
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
           # A floor, not a target. Measured on this runner on 2026-11-04: about
           # 120-140 KB/s sustained to Cloudflare, so the 8.8 MiB bundle needs
           # roughly 75 s. The stalls this gate exists for ran at 7-11 KB/s.
@@ -128,8 +131,8 @@ jobs:
 
       - name: Record live version (rollback target)
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           # Fails closed: when the live version cannot be named, nothing deploys.
@@ -140,8 +143,8 @@ jobs:
       - name: Publish authichain-edge-router
         working-directory: worker-app
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           # Versions API wants uncompressed JS in the multipart. HTTP gzip
@@ -233,8 +236,8 @@ jobs:
       - name: Roll back to previous version (smoke failed after promotion)
         if: failure() && env.PROMOTED_VERSION_ID != '' && env.PREV_VERSION_ID != ''
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           echo "::warning::Smoke failed after promotion; restoring ${PREV_VERSION_ID} (rejecting ${PROMOTED_VERSION_ID})"
