@@ -25,6 +25,10 @@ case "$task" in
     node scripts/ci/check-deploy-invariants.mjs
     node scripts/ci/check-node-test-runners.mjs
     # Independent negative-case tests for the human-free production release policy.
+    # Fail early if the offline exact-head or disposable PostgreSQL
+    # acceptance runners are syntactically invalid; does not run Docker here.
+    bash -n scripts/ci/x402-native-release-acceptance.sh
+    bash -n scripts/ci/x402-disposable-postgres.sh
     node --test scripts/ci/autonomous-release-gate.test.mjs
     ;;
   typecheck-ratchet) node scripts/typecheck-ratchet.mjs ;;
