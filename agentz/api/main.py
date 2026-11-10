@@ -420,6 +420,26 @@ from agentz.api.sse import router as sse_router
 app.include_router(sse_router)
 
 
+# --- Local AgentZ browser executor (read-only, allowlisted) ---
+class BrowserTaskInput(BaseModel):
+    task: str
+
+
+@app.post("/agentz/browser/tasks", dependencies=[Depends(verify_token)], tags=["AgentZ Browser"])
+async def api_agentz_browser_task(data: BrowserTaskInput):
+    """Inspect fixed GitHub pages using the configured local browser executor.
+
+    Never accepts arbitrary URLs, browser commands, or deployment actions.
+    """
+    from agentz.core.browser_executor import execute_browser_task
+    try:
+        return await run_in_threadpool(execute_browser_task, data.task)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
