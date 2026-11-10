@@ -57,7 +57,13 @@ import { DESK_SITEMAP, tryHandleDesk } from "./desk.ts";
 import { tryHandleGeneration } from "./generation-check";
 // Extensionless on purpose. tsconfig.workers.json counts each ".ts" import.
 import { attestationSchemaResponse } from "./attestation-schema";
-import { tryHandleLlmsTxt } from "./llms-txt.ts";
+import {
+  prefersMarkdown,
+  renderNotFoundMarkdown,
+  markdownResponse,
+  tryHandleHomepageMarkdown,
+  tryHandleLlmsTxt,
+} from "./llms-txt.ts";
 import { tryHandle402IndexVerify } from "./index402-verify.ts";
 import {
   isDppManufacturerArticlePath,
@@ -3387,7 +3393,14 @@ function escapeHtml(value: unknown): string {
  * tell a live page from a dead one: crawlers indexed phantom URLs, link checkers
  * reported clean, and the sitemap could claim anything without being wrong.
  */
-function notFound(pathname: string): Response {
+function notFound(pathname: string, request?: Request): Response {
+  if (request && prefersMarkdown(request)) {
+    return markdownResponse(
+      renderNotFoundMarkdown(pathname),
+      404,
+      request.method
+    );
+  }
   const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
@@ -3770,7 +3783,7 @@ receipt reference. Do not send card details.</p>
       }
       // An unknown competitor slug is a 404, not the /vs index — otherwise every
       // invented slug would answer 200 and the sitemap would be unfalsifiable.
-      return notFound(p);
+      return notFound(p, request);
     }
     // Committed SEO hubs are served here. /p/<serial> that is not a slug still
     // falls through to APP_WORKER. The deployed edge router is behind
@@ -3825,8 +3838,10 @@ receipt reference. Do not send card details.</p>
     if (seoRedirect) return seoRedirect;
     const attestationSchema = attestationSchemaResponse(p);
     if (attestationSchema) return attestationSchema;
-    if (p !== '/') return notFound(p);
-    return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    if (p !== '/') return notFound(p, request);
+    const homeMd = tryHandleHomepageMarkdown(request);
+    if (homeMd) return homeMd;
+    return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8', Vary: 'Accept' } });
 }
 
 export default {
