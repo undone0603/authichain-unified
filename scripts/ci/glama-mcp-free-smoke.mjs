@@ -124,6 +124,7 @@ export async function runFreeMcpSmoke({
       ensure(toolMap.get(name).annotations?.destructiveHint === false, name + " missing destructiveHint=false");
     }
     ensure(toolMap.get("verify").annotations?.readOnlyHint === false, "Paid verify lacks readOnlyHint=false");
+    ensure(toolMap.get("verify").annotations?.destructiveHint === true, "Paid verify must warn about payment consequences");
   }
   log("PASS POST tools/list, tools " + toolMap.size + ", hints " + (requireHints ? "required" : "optional"));
 
