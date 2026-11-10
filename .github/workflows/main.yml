@@ -220,8 +220,7 @@ jobs:
       # running after one fails; turbo still exits non-zero.
       - name: Run tests
         env:
-          # Shard 1 keeps 1792. Shard 2 uses 1664: 1536 aborted inside V8,
-          # and 1792 OOM-killed this unit at peak 2.7G (run 42735444994).
+          # Shard 1 keeps 1792. Shard 2 uses 1280 under MemoryMax 2800 MiB.
           # Do not raise MemoryMax. Do not go back to 2048.
           NODE_OPTIONS: --max-old-space-size=${{ matrix.heap }} --dns-result-order=ipv4first --no-network-family-autoselection
         run: |
