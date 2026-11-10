@@ -416,7 +416,7 @@ describe("verifiable outbound", () => {
     const wrong = await signed(ctx.agentz, "msg:wrong-cap", "SEND_OUTBOUND", ["PROPOSE_OFFER"], [EVIDENCE_ID], (await ctx.sendMessage("payload-only")).payload);
     const wrongDecision = await gate(ctx, wrong);
     expect(wrongDecision.code).toBe("CAPABILITY_MISSING");
-    expect(wrongDecision.reasons).toContain("SEND_OUTBOUND");
+    expect(wrongDecision.reasons).toContain("CAPABILITY_NOT_GRANTED");
 
     const policy = defaultOutboundPolicy();
     policy.allowed_capabilities = policy.allowed_capabilities.filter((cap) => cap !== "SEND_OUTBOUND");
@@ -507,7 +507,8 @@ describe("verifiable outbound", () => {
       registry: email.registry, replay: email.replay, ledger: email.ledger,
       policy: email.policy, campaign: email.campaign, transport: "email", now: NOW,
     });
-    expect(blocked.decision.code).toBe("PRODUCTION_SEND_DISABLED");
+    expect(blocked.decision.code).toBe("CAMPAIGN_UNAUTHORIZED");
+    expect(blocked.decision.reasons).toContain("human_send_not_approved");
     expect(blocked.result.delivered).toBe(false);
   });
 

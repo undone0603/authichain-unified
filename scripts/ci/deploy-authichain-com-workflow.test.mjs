@@ -19,25 +19,27 @@ function step(title) {
 }
 
 test("Publish uses versions upload + API promote, not wrangler deploy", () => {
-  const publish = step("Publish authichain-com");
+  const publish = step("Upload and promote this exact Worker version only");
   assert.match(publish, /wrangler@4\.149\.0 versions upload --minify --keep-vars/);
   assert.match(publish, /parse-wrangler-version-id\.mjs/);
   assert.match(publish, /promote-worker-version\.mjs authichain-com/);
   assert.doesNotMatch(publish, /npx wrangler deploy /);
+  assert.doesNotMatch(publish, /secret put /);
   assert.doesNotMatch(yml, /secret put AUTHICHAIN_ATTESTATION_PRIVATE_KEY/);
 });
 
-test("job keeps WSL IPv4 NODE_OPTIONS", () => {
-  assert.match(
-    yml,
-    /NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"/
-  );
+test("publish job runs on hosted ubuntu-24.04", () => {
+  assert.match(yml, /runs-on: ubuntu-24\.04/);
+  assert.doesNotMatch(yml, /NODE_OPTIONS:/);
 });
 
-test("x402 bind stays on authichain-com and skips edge-router", () => {
-  const bind = step("Bind X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET");
-  assert.match(bind, /secret put X402_PAY_TO --name authichain-com/);
-  assert.doesNotMatch(bind, /secret put X402_PAY_TO --name authichain-edge-router/);
+test("x402 secrets stay pinned and this publish does not re-put them", () => {
+  assert.match(yml, /--keep-vars/);
+  assert.match(yml, /must not re-put these secrets/);
+  assert.doesNotMatch(yml, /secret put X402_PAY_TO/);
+  assert.doesNotMatch(yml, /secret put X402_FACILITATOR_URL/);
+  assert.doesNotMatch(yml, /secret put X402_USDC_ASSET/);
+  assert.doesNotMatch(yml, /secret put X402_PAY_TO --name authichain-edge-router/);
 });
 
 test("authichain-com package.json is valid JSON with one test script", () => {
@@ -54,7 +56,11 @@ test("agent-verify exports coerceSealBody and listedSealId for the worker bundle
   const src = readFileSync(path.join(ROOT, "src/lib/agent-verify.ts"), "utf8");
   assert.match(src, /export function coerceSealBody/);
   assert.match(src, /export function listedSealId/);
-  assert.match(yml, /src\/lib\/agent-verify\.ts/);
-  assert.match(yml, /src\/lib\/paid-seal-verify\.ts/);
+  const routes = readFileSync(
+    path.join(ROOT, "workers/authichain-com/src/x402-routes.ts"),
+    "utf8"
+  );
+  assert.match(routes, /from "\.\.\/\.\.\/\.\.\/src\/lib\/agent-verify"/);
+  assert.match(routes, /from "\.\.\/\.\.\/\.\.\/src\/lib\/paid-seal-verify"/);
 });
 

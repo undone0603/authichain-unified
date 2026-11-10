@@ -63,23 +63,25 @@ jobs:
           git sparse-checkout disable
           git reset --hard HEAD
           test -f package.json
-      # Self-hosted WSL already has pnpm. action-setup@v6 with version
-      # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
-      # (CI Main run 40865371118). GitHub-hosted still uses the pin.
-      # Install the repo-pinned manager for every runner; never trust global PATH.
+      # Self-hosted WSL cannot use pnpm/action-setup for 10.28.2. The
+      # download ETIMEDOUT and the signature check then refuses to run
+      # (CI Main run 42616342706). GitHub-hosted runners still use the pin.
+      - name: Use the runner Node and pnpm
+        if: runner.environment == 'self-hosted'
+        run: bash scripts/ci/use-runner-pnpm.sh
+
       - name: Install pnpm
+        if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
+        if: runner.environment != 'self-hosted'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
-          # Self-hosted runners keep a persistent pnpm store. Uploading it
-          # through actions/cache packs ~1 GB and stalls the runner.
-          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
@@ -137,23 +139,25 @@ jobs:
           git sparse-checkout disable
           git reset --hard HEAD
           test -f package.json
-      # Self-hosted WSL already has pnpm. action-setup@v6 with version
-      # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
-      # (CI Main run 40865371118). GitHub-hosted still uses the pin.
-      # Install the repo-pinned manager for every runner; never trust global PATH.
+      # Self-hosted WSL cannot use pnpm/action-setup for 10.28.2. The
+      # download ETIMEDOUT and the signature check then refuses to run
+      # (CI Main run 42616342706). GitHub-hosted runners still use the pin.
+      - name: Use the runner Node and pnpm
+        if: runner.environment == 'self-hosted'
+        run: bash scripts/ci/use-runner-pnpm.sh
+
       - name: Install pnpm
+        if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
+        if: runner.environment != 'self-hosted'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
-          # Self-hosted runners keep a persistent pnpm store. Uploading it
-          # through actions/cache packs ~1 GB and stalls the runner.
-          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
@@ -209,13 +213,20 @@ jobs:
       # --continue=dependencies-successful keeps other packages' tests
       # running after one fails; turbo still exits non-zero.
       - name: Run tests
+        env:
+          # qron-platform:build exits 134 at the default heap (CI Main
+          # 42640209495 shard 2, and 42650083621). 3072 MB and then 2048 MB
+          # with turbo's default parallelism both OOM-killed this unit
+          # (MemoryMax 2800 MiB, peak 2.7G at 21:07Z, 22:04Z, and 22:16Z).
+          # One package at 1536 stays inside that cap. Do not raise MemoryMax.
+          NODE_OPTIONS: --max-old-space-size=1536 --dns-result-order=ipv4first --no-network-family-autoselection
         run: |
-          if pnpm test ${{ matrix.filter }} --log-order=stream --continue=dependencies-successful; then
+          if pnpm test ${{ matrix.filter }} --concurrency=1 --log-order=stream --continue=dependencies-successful; then
             exit 0
           fi
           echo "Tests failed; retrying once for a possible next/font fetch flake in a workspace build"
           sleep 15
-          pnpm test ${{ matrix.filter }} --log-order=stream --continue=dependencies-successful
+          pnpm test ${{ matrix.filter }} --concurrency=1 --log-order=stream --continue=dependencies-successful
 
       # Persistent self-hosted runner: drop deps and build outputs so state
       # never leaks into the next run. Workspace-only; never outside it.
@@ -243,23 +254,25 @@ jobs:
           git sparse-checkout disable
           git reset --hard HEAD
           test -f package.json
-      # Self-hosted WSL already has pnpm. action-setup@v6 with version
-      # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
-      # (CI Main run 40865371118). GitHub-hosted still uses the pin.
-      # Install the repo-pinned manager for every runner; never trust global PATH.
+      # Self-hosted WSL cannot use pnpm/action-setup for 10.28.2. The
+      # download ETIMEDOUT and the signature check then refuses to run
+      # (CI Main run 42616342706). GitHub-hosted runners still use the pin.
+      - name: Use the runner Node and pnpm
+        if: runner.environment == 'self-hosted'
+        run: bash scripts/ci/use-runner-pnpm.sh
+
       - name: Install pnpm
+        if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
+        if: runner.environment != 'self-hosted'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
-          # Self-hosted runners keep a persistent pnpm store. Uploading it
-          # through actions/cache packs ~1 GB and stalls the runner.
-          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
@@ -278,11 +291,15 @@ jobs:
       # Retries live in scripts/build-with-retry.sh, which holds the
       # machine-wide build lock for the whole attempt loop. A second
       # invocation here would drop that lock during the pause.
-      # 4096 MB heap: next build --webpack aborted with exit 134 under ~2 GB.
+      # 4096 MB dumped the 3.8 GB VM (CI Main job 129363461477).
+      # 3072 MB, and a single Next process at 2048 MB, both crossed the
+      # runner unit MemoryMax of 2800 MiB (OOM at 23:01Z, peak 2.7G,
+      # run 42713702955). 1536 matches the test shards. Do not raise
+      # MemoryMax.
       - name: Production build
         if: steps.baseline.outputs.skip != 'true'
         env:
-          NODE_OPTIONS: --max-old-space-size=4096
+          NODE_OPTIONS: --max-old-space-size=1536 --dns-result-order=ipv4first --no-network-family-autoselection
         run: pnpm build
 
       # Persistent self-hosted runner: drop deps and build outputs so state
@@ -347,17 +364,21 @@ jobs:
           git sparse-checkout disable
           git reset --hard HEAD
           test -f package.json
-      # Self-hosted WSL already has pnpm. action-setup@v6 with version
-      # 10.28.2 downloads from npm and ETIMEDOUT, then refuses the signature
-      # (CI Main run 40865371118). GitHub-hosted still uses the pin.
-      # Install the repo-pinned manager for every runner; never trust global PATH.
+      # Self-hosted WSL cannot use pnpm/action-setup for 10.28.2. The
+      # download ETIMEDOUT and the signature check then refuses to run
+      # (CI Main run 42616342706). GitHub-hosted runners still use the pin.
+      - name: Use the runner Node and pnpm
+        if: runner.environment == 'self-hosted'
+        run: bash scripts/ci/use-runner-pnpm.sh
+
       - name: Install pnpm
+        if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
       - name: Setup Node.js
+        if: runner.environment != 'self-hosted'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
