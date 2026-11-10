@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { planPaymentLink, planUsd } from "../../../src/lib/plans";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402";
+import { X402_AGENT_PACK_PRICE_ID } from "../../../src/lib/x402-agent-pack";
 import {
   isX402DocsPath,
   renderX402DocsPage,
@@ -95,6 +96,38 @@ describe("x402 public docs page", () => {
     expect(html.toLowerCase()).not.toContain("facilitator.payai");
     expect(html).not.toMatch(/X402_FACILITATOR_URL/);
     expect(html).not.toMatch(/0x[a-fA-F0-9]{64}/);
+  });
+
+
+  it("hides Stripe prepaid offer until all exact production pack settings are enabled", () => {
+    const action = 'action="https://authichain.com/checkout/x402_agent_credits_120"';
+    expect(renderX402DocsPage()).not.toContain(action);
+    expect(renderX402DocsPage({
+      X402_PACK_ENABLED: "true",
+      X402_PACK_PRICE_ID: "price_other",
+      X402_PACK_CREDITS: "120",
+    })).not.toContain(action);
+    expect(renderX402DocsPage({
+      X402_PACK_ENABLED: "false",
+      X402_PACK_PRICE_ID: X402_AGENT_PACK_PRICE_ID,
+      X402_PACK_CREDITS: "120",
+    })).not.toContain(action);
+  });
+
+  it("exposes the safe confirmed-email prepaid checkout only when ready", () => {
+    const html = renderX402DocsPage({
+      X402_PACK_ENABLED: "true",
+      X402_PACK_PRICE_ID: X402_AGENT_PACK_PRICE_ID,
+      X402_PACK_CREDITS: "120",
+    });
+    expect(html).toContain('action="https://authichain.com/checkout/x402_agent_credits_120"');
+    expect(html).toContain('id="x402-agent-pack-checkout"');
+    expect(html).toContain('method="post"');
+    expect(html).toContain("120 prepaid agent verifications — $5 once");
+    expect(html).toContain("confirmed and match the checkout email");
+    expect(html).toContain("Checkout redirect is not a receipt or a credit grant");
+    expect(html).toContain("not a USDC settlement");
+    expect(html).toContain("Buy 120 verification credits — $5");
   });
 
   it("uses semantic landmarks and restyleable --ac-* tokens", () => {

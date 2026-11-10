@@ -3664,7 +3664,7 @@ receipt reference. Do not send card details.</p>
     // TODO(wonder): restyle from Wonder artboard tokens once the owner opens
     // the editor. Page markup is semantic; tokens live in x402-docs-page.ts.
     if (isX402DocsPath(p)) {
-      return new Response(renderX402DocsPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+      return new Response(renderX402DocsPage(env), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     // /mcp/install is the human install surface. It must be checked before
     // tryHandleMcp, which owns the agent-facing /mcp JSON-RPC endpoint.
