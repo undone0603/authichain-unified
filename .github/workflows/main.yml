@@ -128,8 +128,12 @@ jobs:
         include:
           - shard: 1
             filter: "--filter=./workers/*"
+            # Shard 1 passed at 1792 (run 42735444994).
+            heap: 1792
           - shard: 2
             filter: "--filter=!./workers/* --filter=!*worker*"
+            # 1536 aborted inside V8. 1792 OOM-killed the unit at peak 2.7G.
+            heap: 1664
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -214,11 +218,10 @@ jobs:
       # running after one fails; turbo still exits non-zero.
       - name: Run tests
         env:
-          # qron-platform:build exits 134 at 1536 (CI Main run 42726252670,
-          # shard 2, twice). 2048 MB with turbo parallelism OOM-killed this
-          # unit at peak 2.7G. 1792 stays under MemoryMax 2800 MiB.
+          # Shard 1 keeps 1792. Shard 2 uses 1664: 1536 aborted inside V8,
+          # and 1792 OOM-killed this unit at peak 2.7G (run 42735444994).
           # Do not raise MemoryMax. Do not go back to 2048.
-          NODE_OPTIONS: --max-old-space-size=1792 --dns-result-order=ipv4first --no-network-family-autoselection
+          NODE_OPTIONS: --max-old-space-size=${{ matrix.heap }} --dns-result-order=ipv4first --no-network-family-autoselection
         run: |
           if pnpm test ${{ matrix.filter }} --concurrency=1 --log-order=stream --continue=dependencies-successful; then
             exit 0
