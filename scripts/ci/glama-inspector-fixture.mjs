@@ -7,6 +7,8 @@
  * Never market it as evidence that production verification works.
  */
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
@@ -128,7 +130,7 @@ async function main() {
   console.error("Fixture-only AuthiChain inspector server on stdio: NO production access");
 }
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch(error => {
     console.error("Fixture startup failed:", error?.message ?? "unknown");
     process.exitCode = 1;
