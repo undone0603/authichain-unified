@@ -2,7 +2,8 @@
 # Credential-free, disposable proof for AuthiChain PR #2430.
 # Run on a Docker-capable machine with network access; no host volumes or secrets.
 set -euo pipefail
-SHA="7c36c017490c8f888ea808f3d94fcfca08f8d71c"
+SHA="${2:?Usage: bash scripts/ci/run-disposable-worker-proof.sh OUTPUT_DIR EXACT_40_CHAR_PR_HEAD_SHA}"
+[[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid commit SHA" >&2; exit 2; }
 OUT="${1:-./evidence/pr-2430-${SHA}}"
 mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd)"
