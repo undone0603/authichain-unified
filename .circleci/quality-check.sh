@@ -36,8 +36,7 @@ case "$task" in
       src/lib/x402-agent-pack.test.ts \
       src/lib/x402-agent-pack-fulfill.test.ts \
       src/lib/x402-agent-pack-verify.test.ts \
-      src/lib/checkout-gate.test.ts \
-      workers/authichain-com/src/x402-routes.test.ts
+      src/lib/checkout-gate.test.ts
     pnpm test --filter='./workers/*' --continue=dependencies-successful
     ;;
   test-other)
