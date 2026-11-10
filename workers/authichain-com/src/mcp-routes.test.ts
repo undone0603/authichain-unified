@@ -65,6 +65,39 @@ const BOUND_X402 = {
 } as const;
 
 describe("mcp discovery", () => {
+  it("advertises free read-only tools separately from paid seal verification", async () => {
+    const response = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 99, method: "tools/list" }),
+      })
+    );
+    expect(response?.status).toBe(200);
+    const data = (await response!.json()) as {
+      result: {
+        tools: Array<{
+          name: string;
+          description: string;
+          annotations?: { readOnlyHint?: boolean; destructiveHint?: boolean };
+        }>;
+      };
+    };
+    const tools = new Map(data.result.tools.map(tool => [tool.name, tool]));
+    for (const name of [
+      "get_pricing", "query_provenance", "verify_attestation",
+      "verify_record", "dpp_readiness_check", "scan_living_qr", "negotiate",
+    ]) {
+      expect(tools.get(name)?.annotations?.readOnlyHint, name).toBe(true);
+      expect(tools.get(name)?.annotations?.destructiveHint, name).toBe(false);
+    }
+    expect(tools.get("verify")?.annotations?.readOnlyHint).toBe(false);
+    expect(tools.get("verify")?.description).toMatch(/paid|x402/i);
+    expect(tools.get("verify_record")?.description).toContain("published JWS");
+    expect(tools.get("verify_attestation")?.description).toContain("published");
+    expect(tools.get("get_pricing")?.description).toMatch(/never starts a checkout|without charging/);
+  });
+
   it("recognizes agent MCP paths and ignores checkout", () => {
     expect(isMcpPath("/mcp")).toBe(true);
     expect(isMcpPath("/mcp/")).toBe(true);
