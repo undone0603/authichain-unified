@@ -70,8 +70,9 @@
       "note": "Static site plus a USGS earthquake feed proxy. Not an AuthiChain surface."
     },
     "grok-cloudflare-toolchain": {
-      "disposition": "unknown",
-      "note": "Live Cloudflare Worker with no in-repo source (Issue #1817). Awaiting owner confirmation to archive or retire."
+      "disposition": "archive",
+      "archive": "docs/archive/cf-workers/grok-cloudflare-toolchain.js",
+      "note": "Source recovered from sibling repo projects/grok-cloudflare-toolchain (Grok Build SSE chat demo on workers.dev). Archived in-tree 2026-11-10. Live Worker left for owner to retire or keep; not an AuthiChain product surface (issues #1817 / #2335)."
     }
   },
   "expected_not_live": {

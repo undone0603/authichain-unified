@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { planPaymentLink } from "../../../src/lib/plans.ts";
-import { isLlmsTxtPath, renderLlmsTxt, tryHandleLlmsTxt } from "./llms-txt";
+import {
+  isLlmsTxtPath,
+  prefersMarkdown,
+  renderHomepageMarkdown,
+  renderLlmsTxt,
+  renderNotFoundMarkdown,
+  tryHandleHomepageMarkdown,
+  tryHandleLlmsTxt,
+} from "./llms-txt";
 
 describe("llms.txt", () => {
   it("recognizes agent discovery paths", () => {
@@ -94,5 +102,81 @@ describe("llms.txt", () => {
       "https://authichain.com/protocol/examples/polygon-anchor-1.anchor.json"
     );
     expect(text).not.toContain("polygonscan.com");
+  });
+
+  it("names when to use AuthiChain", () => {
+    const text = renderLlmsTxt();
+    expect(text).toContain("## When to use this");
+    expect(text).toContain(
+      "paid, machine-readable check of a signed product seal"
+    );
+    expect(text).toContain("POST https://authichain.com/api/v1/agent-verify");
+  });
+
+  it("prefers markdown only when Accept names text/markdown", () => {
+    expect(
+      prefersMarkdown(
+        new Request("https://authichain.com/", {
+          headers: { Accept: "text/markdown" },
+        })
+      )
+    ).toBe(true);
+    expect(
+      prefersMarkdown(
+        new Request("https://authichain.com/", {
+          headers: { Accept: "text/html,application/xhtml+xml,*/*;q=0.8" },
+        })
+      )
+    ).toBe(false);
+    expect(
+      prefersMarkdown(new Request("https://authichain.com/"))
+    ).toBe(false);
+    expect(
+      prefersMarkdown(
+        new Request("https://authichain.com/", {
+          headers: { Accept: "text/html;q=0.9, text/markdown;q=1" },
+        })
+      )
+    ).toBe(true);
+  });
+
+  it("homepage markdown states what, cost, pay, receive, and verify", () => {
+    const text = renderHomepageMarkdown();
+    expect(text).toContain("WHAT IS SOLD");
+    expect(text).toContain("WHAT IT COSTS");
+    expect(text).toContain("HOW TO PAY");
+    expect(text).toContain("WHAT YOU RECEIVE");
+    expect(text).toContain("HOW DELIVERY IS VERIFIED");
+    expect(text).toContain("X-PAYMENT");
+    expect(text).toContain("/checkout/starter");
+    expect(text.length).toBeGreaterThan(20);
+  });
+
+  it("404 markdown points agents at llms.txt", () => {
+    const text = renderNotFoundMarkdown("/__missing-agent-path");
+    expect(text).toContain("404");
+    expect(text).toContain("/__missing-agent-path");
+    expect(text).toContain("https://authichain.com/llms.txt");
+    expect(text.length).toBeGreaterThan(20);
+  });
+
+  it("serves homepage markdown for Accept text/markdown", async () => {
+    const hit = tryHandleHomepageMarkdown(
+      new Request("https://authichain.com/", {
+        headers: { Accept: "text/markdown" },
+      })
+    );
+    expect(hit).not.toBeNull();
+    expect(hit?.status).toBe(200);
+    expect(hit?.headers.get("content-type")).toMatch(/text\/markdown/);
+    expect(hit?.headers.get("vary")).toMatch(/Accept/i);
+    expect(await hit!.text()).toContain("WHAT IS SOLD");
+    expect(
+      tryHandleHomepageMarkdown(
+        new Request("https://authichain.com/", {
+          headers: { Accept: "text/html" },
+        })
+      )
+    ).toBeNull();
   });
 });
