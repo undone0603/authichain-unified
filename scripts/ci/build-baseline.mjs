@@ -32,14 +32,27 @@ export const NEVER_SKIP = [
 ];
 
 /**
+ * Vitest / node:test files are not Next inputs. A PR that only touches them
+ * must not run `pnpm build` on wsl-zac-arm64: 1792 MB next-build still
+ * memcg-kills the 2800 MiB runner (lost communication, CI Main 42862738121).
+ */
+export function isTestOnlyPath(file) {
+  const rel = file.replace(/\\/g, "/").replace(/^\.\//, "");
+  if (rel.includes("/__tests__/") || rel.startsWith("__tests__/")) return true;
+  return /\.(test|spec)\.(cjs|mjs|js|jsx|ts|tsx)$/.test(rel);
+}
+
+/**
  * Pure. `skip` is true only when there is at least one file and every file
- * is under a skip root. `outside` is the files that force a build.
+ * is under a skip root or is a test-only path. `outside` is the files that
+ * force a build.
  */
 export function decide(files, skipRoots) {
   const roots = (skipRoots ?? []).map(normalizeRoot);
   const outside = [];
   for (const file of files) {
     const rel = file.replace(/\\/g, "/").replace(/^\.\//, "");
+    if (isTestOnlyPath(rel)) continue;
     if (!roots.some((root) => underRoot(rel, root))) outside.push(rel);
   }
   if (files.length === 0) {
