@@ -462,6 +462,7 @@ export function isMcpPath(pathname: string): boolean {
  * Keep it published for as long as the listing should stay verified.
  */
 export const GLAMA_CONNECTOR_CLAIM_PATHS = [
+  "/.well-known/glama.json",
   "/mcp/.well-known/glama.json",
   "/api/mcp/.well-known/glama.json",
 ] as const;
