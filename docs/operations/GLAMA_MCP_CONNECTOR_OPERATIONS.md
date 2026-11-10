@@ -65,22 +65,22 @@ Reference: https://github.com/punkpeye/mcp-proxy · https://glama.ai/mcp/inspect
 
 ## $0 browser automation choice: AgentZ + local Playwright
 
-Do not pay to replenish TinyFish or substitute a meter-billed browser for this public protocol audit. **AgentZ already has local browser infrastructure** and Python Playwright is already included in \`requirements-agentz.txt\`. The draft introduces \`agentz/workflows/handlers/glama_browser_audit.py\` and one opt-in \`glama_browser_audit\` registry entry with a one-run-per-day limit. The workflow is not automatically scheduled.
+Do not pay to replenish TinyFish or substitute a meter-billed browser for this public protocol audit. **AgentZ already has local browser infrastructure** and Python Playwright is already included in `requirements-agentz.txt`. The draft introduces `agentz/workflows/handlers/glama_browser_audit.py` and one opt-in `glama_browser_audit` registry entry with a one-run-per-day limit. The workflow is not automatically scheduled.
 
 From a network-connected, credential-isolated local/WSL clone **at this PR's exact head**, with Playwright and Chromium present:
 
-\`\`\`bash
+```bash
 python -m pip install -r requirements-agentz.txt
 python -m playwright install chromium
 python -m pytest -q tests/test_agentz_glama_browser_audit.py
 node --test scripts/ci/glama-mcp-free-smoke.test.mjs
 python -m agentz.cli run glama_browser_audit --mode dry-run
 python -m agentz.cli run glama_browser_audit --mode confirm
-\`\`\`
+```
 
-The confirm mode asks before opening the browser. It uses a **fresh, unauthenticated Chromium context**, permitting only GET/HEAD/OPTIONS to \`glama.ai\` and its first-party subdomains, blocking off-domain navigation, POST forms, downloads, and service workers. It captures the publicly visible Inspector and an optional screenshot. Its separate Node subprocess has no inherited credentials and calls **only** the static free no-payment smoke: GET MCP discovery, POST initialize, POST tools/list and POST nonbinding negotiate for the free reference verifier. It checks for eight published tools, zero paid calls, and zero settlement attempts.
+The confirm mode asks before opening the browser. It uses a **fresh, unauthenticated Chromium context**, permitting only GET/HEAD/OPTIONS to `glama.ai` and its first-party subdomains, blocking off-domain navigation, POST forms, downloads, and service workers. It captures the publicly visible Inspector and an optional screenshot. Its separate Node subprocess has no inherited credentials and calls **only** the static free no-payment smoke: GET MCP discovery, POST initialize, POST tools/list and POST nonbinding negotiate for the free reference verifier. It checks for eight published tools, zero paid calls, and zero settlement attempts.
 
-Redacted UTC JSON evidence and the public-page screenshot are stored locally under \`agentz/logs/glama-browser/\` (do not commit those files). Failed browser, HTTP, DNS, or MCP responses remain **failed/unresolved**, never counted as verified. No logged-in Glama profile, no publisher-profile edits, no paid verify, and no actual production payment/fulfillment are exercised. The workflow's $0 cost comes from its **explicitly nonpaid operations**, not its registry field: \`financial_limit_usd: 0\` means **unlimited** in the generic AgentZ runner, so this must stay a narrowly allowlisted handler.
+Redacted UTC JSON evidence and the public-page screenshot are stored locally under `agentz/logs/glama-browser/` (do not commit those files). Failed browser, HTTP, DNS, or MCP responses remain **failed/unresolved**, never counted as verified. No logged-in Glama profile, no publisher-profile edits, no paid verify, and no actual production payment/fulfillment are exercised. The workflow's $0 cost comes from its **explicitly nonpaid operations**, not its registry field: `financial_limit_usd: 0` means **unlimited** in the generic AgentZ runner, so this must stay a narrowly allowlisted handler.
 
 This is an **AgentZ integration draft**, not evidence that the real AgentZ host, self-hosted runner, or currently connected browser has executed it. Capture exact tested SHA, local host identity, native test logs, UTC timestamps and real HTTP traces before accepting it. If the public UI changes, the workflow fails rather than trying arbitrary selectors or bypassing authentication.
 
