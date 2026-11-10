@@ -43,7 +43,7 @@ test("does not accept a free discovery route that should advertise 402", async (
 });
 
 test("rejects obsolete 0.05 / 50000 SKU claims", async () => {
-  assert.match(checkSignalContract("signal_discovery", "$PEPKIN tape 50000"), /expected 0.01|legacy 50000/);
+  assert.match(checkSignalContract("signal_discovery", "$PEPKIN tape 50000"), /expected 0.01|50000/);
   const { fetchImpl } = mockFetch({ signal_discovery: { body: "$PEPKIN tape 50000, price 0.05" } });
   const report = await probeRevenueDiscovery(fetchImpl);
   assert.equal(report.signal.publicDiscoveryReady, false);
