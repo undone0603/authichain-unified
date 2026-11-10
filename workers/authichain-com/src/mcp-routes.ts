@@ -621,11 +621,13 @@ export function mcpPricingDiscovery(env?: X402Env) {
       docs: "https://authichain.com/protocol",
     },
     freeTools: [
-      "verify_record",
-      "query_provenance",
-      "dpp_readiness_check",
       "get_pricing",
+      "query_provenance",
+      "verify_attestation",
+      "verify_record",
+      "dpp_readiness_check",
       "scan_living_qr",
+      "negotiate",
     ],
     humanCheckout: stripe,
   };
@@ -1486,7 +1488,7 @@ async function handleRpc(
       capabilities: { tools: { listChanged: false } },
       serverInfo: { name: "authichain", version: SERVER_VERSION },
       instructions:
-        "AuthiChain verification is free. verify_attestation fetches a published v0.1 JWS and delegates signature, issuer trust, lifecycle, and expiry checks to the canonical verifier. query_provenance is registration-only; verify_record checks the separate reference protocol. No tool proves physical authenticity. dpp_readiness_check scores EU Digital Product Passport readiness and is not legal advice.",
+        "Free verification: verify_attestation fetches a published v0.1 JWS and checks issuer trust, signature, lifecycle and expiry; verify_record checks the separate reference protocol. Paid verification: verify is an x402 seal-registry tool requiring separately authorized payment. query_provenance is registration-only. No tool proves physical authenticity. dpp_readiness_check is informational EU Digital Product Passport readiness scoring, not legal advice.",
     });
   }
 
