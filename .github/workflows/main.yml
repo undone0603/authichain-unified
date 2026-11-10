@@ -132,8 +132,10 @@ jobs:
             heap: 1792
           - shard: 2
             filter: "--filter=!./workers/* --filter=!*worker*"
-            # 1536 aborted inside V8. 1792 OOM-killed the unit at peak 2.7G.
-            heap: 1664
+            # 1536 aborted inside V8. 1664 still memcg-OOM'd the runner
+            # (node rss ~2.6G, lost communication, run 42845030613). 1280
+            # leaves headroom under the unit MemoryMax.
+            heap: 1280
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
