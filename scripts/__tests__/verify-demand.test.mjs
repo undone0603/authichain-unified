@@ -70,3 +70,16 @@ test("a discovery result must identify tape and 0.01/10000 price", async () => {
   assert.equal(report.signal.publicDiscoveryReady, false);
   assert.match(report.results.find(r => r.id === "signal_discovery").reason, /PEPKIN/);
 });
+
+test("rejects 100000 atomic as 0.10 instead of the paid 0.01 TAPE", async () => {
+  const { fetchImpl } = mockFetch({ signal_discovery: { body: "ranked TAPE $PEPKIN sku discovery 100000 atomic" } });
+  const report = await probeRevenueDiscovery(fetchImpl);
+  assert.equal(report.signal.publicDiscoveryReady, false);
+  assert.match(report.results.find(r => r.id === "signal_discovery").reason, /100000/);
+});
+
+test("does not accept contradictory 10000 and 50000 amounts on the tape card", async () => {
+  const { fetchImpl } = mockFetch({ signal_offer: { body: "ranked TAPE $PEPKIN 10000 / 50000 atomic" } });
+  const report = await probeRevenueDiscovery(fetchImpl);
+  assert.equal(report.signal.publicDiscoveryReady, false);
+});
