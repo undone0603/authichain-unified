@@ -1,10 +1,10 @@
 let meta = #{
     name: "revenue-cycle",
-    description: "Run the AuthiChain revenue operator cycle without sending mail",
-    when_to_use: "Revenue goal, subscriber check, founder payout, wait-buyer",
+    description: "Read-only AuthiChain and Signal revenue readiness without sales or charges",
+    when_to_use: "Outside income goal, subscriber check, verified first buyer, wait-buyer",
     phases: [
-        #{ title: "Rails", detail: "Farm Payment Link 200 and Farm HEAD 204" },
-        #{ title: "Decide", detail: "classifyRevenue; wait-buyer unless a stranger paid" },
+        #{ title: "Rails", detail: "Starter/DPP and Signal discovery read-only" },
+        #{ title: "Decide", detail: "Source-specific settled outside + fulfillment proof" },
     ],
 };
 
@@ -28,11 +28,15 @@ let decide_schema = #{
 
 phase("Rails");
 let rails_prompt = "";
-rails_prompt += "Check AuthiChain Farm rails with read-only HTTP. ";
-rails_prompt += "GET the strainchain_farm Payment Link from src/lib/plans.ts and expect 200. ";
-rails_prompt += "HEAD https://authichain.com/api/checkout/plan/strainchain_farm and expect 204. ";
-rails_prompt += "Do not GET /api/checkout/dpp. Do not GET farm checkout with an email. ";
-rails_prompt += "Do not send mail. Return {ok, reason}.";
+rails_prompt += "Check the public, no-charge revenue surfaces with read-only HTTP. ";
+rails_prompt += "GET https://authichain.com/checkout/starter and /checkout/dpp_readiness expect 200. ";
+rails_prompt += "GET the Starter Payment Link from src/lib/plans.ts expect 200. ";
+rails_prompt += "HEAD https://authichain.com/api/checkout/dpp expect 204; never GET that API. ";
+rails_prompt += "GET https://signal.authichain.com/offer expect 200 and /api/x402/discovery expect 402. ";
+rails_prompt += "Read their TAPE / PEPKIN 0.01 USDC (10000 atomic) discovery claims, not the legacy 50000 pass. ";
+rails_prompt += "GET https://signal.authichain.com/health.live expect idle sku discovery / 10000. ";
+rails_prompt += "Never POST or pay, never send, never create a checkout session. ";
+rails_prompt += "If network evidence is missing, return ok=false and say unknown. Return {ok, reason}.";
 let rails = agent(rails_prompt, #{
     label: "farm-rails",
     capability_mode: "read-only",
@@ -42,16 +46,20 @@ let rails = agent(rails_prompt, #{
 phase("Decide");
 let decide_prompt = "";
 decide_prompt += "You are the AuthiChain revenue operator. ";
-decide_prompt += "Use classifyRevenue / decideOperatorAction in scripts/revenue-operator.ts. ";
+decide_prompt += "Use classifyRevenue / decideOperatorAction in scripts/revenue-operator.ts for triage only. ";
+decide_prompt += "Legacy active Stripe subscriptions are NOT paid renewal proof. ";
+decide_prompt += "Independently verify matched live paid invoice or positive settled Checkout, signed webhook, and fulfilled entitlement before declaring AuthiChain revenue. ";
+decide_prompt += "For Signal use only a fresh revenue.outside read with independent buyer attribution, settled X-Payment-Tx, TAPE fulfillment and actual costs. ";
+decide_prompt += "Do not merge Signal USDC with AuthiChain Stripe figures. ";
 decide_prompt += "A founder charge (undone.k@gmail.com, authichain@gmail.com, the $10 self-test) is not revenue. ";
 decide_prompt += "Do not send email. Do not dispatch b2b-outreach, outreach-trigger, dpp-outreach-trigger, pipeline-tick, or gov-mint. ";
 decide_prompt += "Do not set REQUIRE_OUTREACH_APPROVAL=false. ";
 if args != () && args.snapshot != () {
     decide_prompt += " Classify this snapshot JSON: " + json_encode(args.snapshot);
 } else {
-    decide_prompt += " No snapshot was passed. Action must be wait_buyer unless you independently read live Stripe and found a non-founder subscription or payout.";
+    decide_prompt += " No snapshot was passed. Action must be wait_buyer unless fresh independently attributable paid AND fulfilled evidence is read from authoritative sources.";
 }
-decide_prompt += " Return {action, reason} where action is one of fix_rails, qualifying, wait_buyer, refuse_send.";
+decide_prompt += " Prioritise free inbound distribution if outside revenue remains unknown. Never email, post, spend, deploy, or charge. Return {action, reason} where action is fix_rails, qualifying, wait_buyer, or refuse_send.";
 let decision = agent(decide_prompt, #{
     label: "decide",
     capability_mode: "read-only",
@@ -73,4 +81,4 @@ if rails != () && rails.success && rails.output.ok == false {
     }
 }
 
-complete(#{ action: action, reason: reason, sent: false });
+complete(#{ action: action, reason: reason, sent: false, charged: false, deployed: false });
