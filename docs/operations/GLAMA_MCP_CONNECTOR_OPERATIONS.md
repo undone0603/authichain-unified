@@ -39,6 +39,20 @@ A reproducible *proposed* test matrix, to be executed in an isolated environment
 
 Never call the **paid** `verify` tool with a valid payment token, `X-Payment-Tx`, or wallet. Avoid making live human Checkout sessions as a test. Record any unexpected behavior as a failing/pending test, not success. See the existing independent interoperability challenge [PR #2416](https://github.com/undone0603/authichain-unified/pull/2416) for broader MCP transport and adversarial scenarios.
 
+## Reusable payment-free live smoke
+
+The draft includes `scripts/ci/glama-mcp-free-smoke.mjs`. It is pinned to `https://authichain.com/mcp` and invokes only GET discovery, JSON-RPC `initialize`, `tools/list`, and the free `negotiate` tool with `{"service":"verify_record","mode":"quote_only"}`. It has **no code path** to call the paid `verify` tool or supply a payment header. Run it from a credential-isolated executor after release approval:
+
+```sh
+node scripts/ci/glama-mcp-free-smoke.mjs
+REQUIRE_MCP_HINTS=1 node scripts/ci/glama-mcp-free-smoke.mjs
+node --test scripts/ci/glama-mcp-free-smoke.test.mjs
+```
+
+The strict-hints version is designed to **fail against the old production tool catalogue** until the reviewed changes are actually deployed. It verifies all seven free names are advertised and paid `verify` carries financial-consequence hints. Do not misinterpret a baseline failure as a production outage. Record actual commands, UTC, SHA, response codes, and logs. The JavaScript mock suite does not establish live compatibility, and neither smoke mode proves paid fulfillment.
+
+Note: Glama states that its Gateway logs full JSON-RPC inputs and outputs for proxied calls. Only send public demo identifiers and synthetic, nonsensitive information through connector tests. See https://glama.ai/mcp/faq.
+
 ## Tool-selection contract
 
 | User/agent intent | Tool | Free vs paid and limitation |
