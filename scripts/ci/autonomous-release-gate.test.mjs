@@ -42,6 +42,11 @@ test('requires the exact environment and protected branch restrictions', () => {
   rejects(x => x.environment.deployment_branch_policy.custom_branch_policies = true, /environment/);
   rejects(x => x.environment.protection_rules = [{type: 'required_reviewers'}], /environment/);
   rejects(x => x.environment.protection_rules = [{type: 'wait_timer'}], /environment/);
+  // GitHub API echo of protected_branches — must still pass.
+  const withBranchPolicy = fixture();
+  withBranchPolicy.environment.protection_rules = [{type: 'branch_policy'}];
+  assert.deepEqual(assertReleasePolicy(withBranchPolicy), {sha: SHA, checks: 7, environment: ENV});
+  rejects(x => x.environment.protection_rules = [{type: 'branch_policy'}, {type: 'wait_timer'}], /environment/);
 });
 test('fails when any required status is absent, failed, pending or has a fake destination', () => {
   rejects(x => {x.statuses.statuses.pop();x.statuses.total_count = 6;}, /status evidence/);
