@@ -45,6 +45,20 @@ revoke all on public.x402_agent_pack_spends from public, anon, authenticated;
 grant select, insert, update on public.x402_agent_pack_grants to service_role;
 grant select, insert on public.x402_agent_pack_spends to service_role;
 
+-- A reversal can arrive BEFORE checkout.session.completed. Remember it so
+-- late delivery cannot issue credits for a refunded/disputed PaymentIntent.
+create table if not exists public.x402_agent_pack_reversals (
+  payment_intent_id text primary key,
+  status text not null check (status in ('refunded', 'disputed')),
+  created_at timestamptz not null default now()
+);
+create unique index if not exists x402_agent_pack_grants_payment_intent_idx
+  on public.x402_agent_pack_grants(payment_intent_id)
+  where payment_intent_id is not null;
+alter table public.x402_agent_pack_reversals enable row level security;
+revoke all on public.x402_agent_pack_reversals from public, anon, authenticated;
+grant select, insert, update on public.x402_agent_pack_reversals to service_role;
+
 -- One transaction/lock for duplicate requests and concurrent purchases by the
 -- same verified API key owner. A failed DB transaction consumes zero credits.
 -- SECURITY INVOKER, never SECURITY DEFINER: only the service role may call.
@@ -138,3 +152,87 @@ revoke all on function public.consume_x402_agent_pack_credit(uuid, text, uuid, t
   from public, anon, authenticated;
 grant execute on function public.consume_x402_agent_pack_credit(uuid, text, uuid, text)
   to service_role;
+
+
+-- Grant and reversal MUST take the same transaction-scoped lock. Stripe
+-- delivery is asynchronous and cannot guarantee payment/refund event order.
+create or replace function public.grant_x402_agent_pack(
+  p_checkout_session_id text,
+  p_payment_intent_id text,
+  p_buyer_email text
+) returns text
+language plpgsql security invoker set search_path = ''
+as $$
+declare
+  v_email text := lower(btrim(p_buyer_email));
+  v_existing public.x402_agent_pack_grants%rowtype;
+begin
+  if p_checkout_session_id is null or p_checkout_session_id !~ '^cs_live_' or
+     p_payment_intent_id is null or p_payment_intent_id !~ '^pi_' or
+     v_email is null or length(v_email) not between 3 and 254 or
+     position('@' in v_email) <= 1 then
+    raise exception 'invalid_x402_pack_grant_input';
+  end if;
+
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(p_payment_intent_id, 0)
+  );
+  if exists (
+    select 1 from public.x402_agent_pack_reversals
+    where payment_intent_id = p_payment_intent_id
+  ) then
+    return 'reversed';
+  end if;
+
+  insert into public.x402_agent_pack_grants(
+    checkout_session_id, buyer_email, payment_intent_id,
+    price_id, credits_total, credits_used, status
+  ) values (
+    p_checkout_session_id, v_email, p_payment_intent_id,
+    'price_1UZdq5GqTruSqV8TsaDtFBPF', 120, 0, 'active'
+  ) on conflict (checkout_session_id) do nothing;
+
+  if found then return 'granted'; end if;
+
+  select * into v_existing from public.x402_agent_pack_grants
+    where checkout_session_id = p_checkout_session_id;
+  if not found or v_existing.payment_intent_id is distinct from p_payment_intent_id
+     or lower(v_existing.buyer_email) <> v_email then
+    raise exception 'x402_pack_conflicting_session';
+  end if;
+  if v_existing.status <> 'active' then return 'reversed'; end if;
+  return 'existing';
+end
+$$;
+
+create or replace function public.reverse_x402_agent_pack(
+  p_payment_intent_id text,
+  p_status text
+) returns boolean
+language plpgsql security invoker set search_path = ''
+as $$
+begin
+  if p_payment_intent_id is null or p_payment_intent_id !~ '^pi_' or
+     p_status not in ('refunded', 'disputed') then
+    raise exception 'invalid_x402_pack_reversal_input';
+  end if;
+
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(p_payment_intent_id, 0)
+  );
+  insert into public.x402_agent_pack_reversals(payment_intent_id, status)
+    values (p_payment_intent_id, p_status)
+    on conflict(payment_intent_id) do update set status = excluded.status;
+  update public.x402_agent_pack_grants
+    set status = p_status, updated_at = now()
+    where payment_intent_id = p_payment_intent_id and status = 'active';
+  return true;
+end
+$$;
+
+revoke all on function public.grant_x402_agent_pack(text, text, text)
+  from public, anon, authenticated;
+revoke all on function public.reverse_x402_agent_pack(text, text)
+  from public, anon, authenticated;
+grant execute on function public.grant_x402_agent_pack(text, text, text) to service_role;
+grant execute on function public.reverse_x402_agent_pack(text, text) to service_role;

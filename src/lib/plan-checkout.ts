@@ -126,16 +126,21 @@ export async function createPlanCheckoutSession(opts: {
       mode: plan.stripe_mode,
       ...hostedCheckoutRecoveryParams(plan.stripe_mode),
       line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
-      success_url: `${origin}${
-        plan.id === "starter" ||
-        plan.id === "creator" ||
-        plan.id === "qron_launch" ||
-        plan.id === "qron_launch_annual"
-          ? "/generate?paid=1&"
-          : "/dpp/thanks?"
-      }session_id={CHECKOUT_SESSION_ID}${
-        prospectId ? `&prospect_id=${encodeURIComponent(prospectId)}` : ""
-      }${source ? `&utm_source=${encodeURIComponent(source)}` : ""}&plan=${encodeURIComponent(plan.id)}`,
+      // Prepaid agent-credit returns are never DPP activation pages. A browser
+      // redirect proves neither settlement nor an entitlement; the signed
+      // webhook is the sole grant authority.
+      success_url: plan.id === X402_AGENT_PACK_PLAN_ID
+        ? `${origin}/x402?checkout=returned&plan=${encodeURIComponent(plan.id)}`
+        : `${origin}${
+          plan.id === "starter" ||
+          plan.id === "creator" ||
+          plan.id === "qron_launch" ||
+          plan.id === "qron_launch_annual"
+            ? "/generate?paid=1&"
+            : "/dpp/thanks?"
+        }session_id={CHECKOUT_SESSION_ID}${
+          prospectId ? `&prospect_id=${encodeURIComponent(prospectId)}` : ""
+        }${source ? `&utm_source=${encodeURIComponent(source)}` : ""}&plan=${encodeURIComponent(plan.id)}`,
       cancel_url: `${origin}/#pricing`,
       ...(email ? { customer_email: email } : {}),
       metadata: {

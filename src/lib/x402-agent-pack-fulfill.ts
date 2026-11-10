@@ -19,7 +19,8 @@ export type PackGrantResult =
   | "not_pack"
   | "unpaid"
   | "reconciliation_required"
-  | "granted";
+  | "granted"
+  | "revoked";
 
 export async function fulfillX402AgentPackIfPaid(
   session: Stripe.Checkout.Session,
@@ -67,19 +68,19 @@ export async function fulfillX402AgentPackIfPaid(
   const intentId = typeof session.payment_intent === "string"
     ? session.payment_intent
     : session.payment_intent?.id ?? null;
-  const { error } = await supabase.from("x402_agent_pack_grants").upsert({
-    checkout_session_id: session.id,
-    buyer_email: email,
-    payment_intent_id: intentId,
-    price_id: X402_AGENT_PACK_PRICE_ID,
-    credits_total: X402_AGENT_PACK_CREDITS,
-    credits_used: 0,
-    status: "active",
-  }, {
-    onConflict: "checkout_session_id",
-    ignoreDuplicates: true,
+  if (!intentId) return "reconciliation_required";
+  // One server-side transaction serializes grants against earlier/later
+  // refunds and disputes on the same PaymentIntent. A late paid webhook
+  // can never resurrect a reversed purchase.
+  const { data, error } = await supabase.rpc("grant_x402_agent_pack", {
+    p_checkout_session_id: session.id,
+    p_payment_intent_id: intentId,
+    p_buyer_email: email,
   });
-  if (error) throw new Error("x402_pack_grant_write_failed");
+  if (error || !["granted", "existing", "reversed"].includes(String(data))) {
+    throw new Error("x402_pack_grant_write_failed");
+  }
+  if (data === "reversed") return "revoked";
   return "granted";
 }
 
@@ -105,8 +106,11 @@ export async function revokeX402AgentPackOnReversal(
   if (!intentId) return;
   if (!supabase) throw new Error("x402_pack_revocation_database_unavailable");
   const status = event.type === "charge.refunded" ? "refunded" : "disputed";
-  const { error } = await supabase.from("x402_agent_pack_grants").update({
-    status, updated_at: new Date().toISOString(),
-  }).eq("payment_intent_id", intentId);
-  if (error) throw new Error("x402_pack_revocation_failed");
+  // Record the reversal even if the grant has not arrived yet. The DB
+  // transaction uses the same PaymentIntent lock as grant_x402_agent_pack.
+  const { data, error } = await supabase.rpc("reverse_x402_agent_pack", {
+    p_payment_intent_id: intentId,
+    p_status: status,
+  });
+  if (error || data !== true) throw new Error("x402_pack_revocation_failed");
 }

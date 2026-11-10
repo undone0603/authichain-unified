@@ -22,12 +22,14 @@ This is a **new Stripe prepaid rail**, not the live x402 USDC Base 8453 per-call
 ## Buy and redeem
 
 1. The buyer opens the confirm page, provides a work email and deliberately submits the form. No GET may create a Checkout Session.
-2. The canonical signed webhook accepts only paid, live, USD, one-time Stripe Session with the **actual** matching price ID, exactly one line, quantity one, $5 subtotal and at least $5 total. Metadata and amount alone never constitute proof. The session-ID primary key makes retries idempotent.
+2. The canonical signed webhook accepts only paid, live, USD, one-time Stripe Session with the **actual** matching price ID, exactly one line, quantity one, $5 subtotal and at least $5 total. Metadata and amount alone never constitute proof. The session-ID primary key makes retries idempotent. Atomic grant/reversal SQL functions share a PaymentIntent advisory lock and maintain a reversal tombstone, so a refund or dispute delivered before payment-success cannot be reactivated by a delayed webhook.
 3. The new grant records **120 verification credits** under the buyer email; it does not alter `profiles.generations_limit`. A buyer must create/sign into an AuthiChain account using the **same confirmed email**, then issue an active verification-capable API key belonging to that account.
 4. Request `POST /api/x402` with `x-authichain-payment-rail: stripe_credits`, `x-api-key: <API_KEY>`, `x-idempotency-key: <unique 16–128 character token>`, and JSON `{"sealId":"<real seal UUID>"}`. This is an explicit alternative, not a silent fallback from USDC.
 5. The verifier confirms the API key, its scopes and expiry, and the *confirmed Auth email* through Supabase Auth Admin (never a mutable `profiles.email`). It checks the registry and prepares the bounded evidence result before any credit debit.
 6. The service-role RPC serializes the buyer's available credits, checks the idempotency key, atomically records one debit, and refuses exhausted balances. Same key + seal retry is free; key reuse for a different seal is 409. No successful unpaid fallback.
 7. On a full/partial charge refund or dispute, the corresponding grant is disabled; ledger history is retained. **Verified 2026-11-08:** canonical live webhook `we_1UGTCSGqTruSqV8ThM9bXVWp` subscribes to `charge.refunded` but **not** `charge.dispute.created`; add the dispute event only through approved Stripe configuration at release. The separate Supabase webhook receives disputes but cannot substitute for this canonical entitlement revocation. Retries of the same reversal are idempotent.
+
+The Stripe prepaid Checkout redirects to a neutral `/x402?checkout=returned` page, not to a DPP activation or payment-success claim. The signed webhook alone controls ledger grants.
 
 ## Required release sequence
 
