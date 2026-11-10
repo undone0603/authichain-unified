@@ -519,9 +519,11 @@ export default {
     // Service binding prevents public-network dependency; separate secret scopes access.
     if (event.cron !== "14 * * * *" || !env.AGENTZ_EDGE || !env.AGENTZ_DISPATCH_TOKEN) return;
     ctx.waitUntil((async () => {
+      const timeout = AbortSignal.timeout(8000);
       try {
         const response = await env.AGENTZ_EDGE.fetch(new Request("https://agentz.internal/internal/cron", {
           method: "POST",
+          signal: timeout,
           headers: {
             authorization: "Bearer " + env.AGENTZ_DISPATCH_TOKEN,
             "x-agentz-dispatch": "authichain-automation"
