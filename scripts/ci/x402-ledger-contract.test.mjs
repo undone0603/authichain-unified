@@ -25,7 +25,17 @@ test("three separate prepaid tables are inaccessible to public callers", () => {
     assert.match(migration, new RegExp("alter table public\\." + table + " enable row level security"));
     assert.match(migration, new RegExp("revoke all on public\\." + table + " from public, anon, authenticated"));
   }
-  assert.doesNotMatch(migration, /create policy[\\s\\S]*?x402_agent_pack_/i);
+  // Protect against accidentally exposing prepaid grant or spend tables via
+  // an added RLS policy. A regex literal needs \s (not \\s): the old form
+  // matched only literal backslash, s and S characters and missed real SQL.
+  const exposedLedgerPolicy = /\bcreate\s+policy\b[\s\S]*?\bon\s+(?:public\.)?x402_agent_pack_(?:grants|spends|reversals)\b/i;
+  assert.doesNotMatch(migration, exposedLedgerPolicy);
+  for (const table of ["grants", "spends", "reversals"]) {
+    const deliberatelyExposed = migration + "\nCREATE POLICY allow_everyone ON public.x402_agent_pack_" +
+      table + " FOR SELECT TO authenticated USING (true);";
+    assert.match(deliberatelyExposed, exposedLedgerPolicy,
+      "negative-case test must detect a real public RLS policy on " + table);
+  }
 });
 
 test("grant is pinned to a paid live Stripe session and unique PaymentIntent", () => {
