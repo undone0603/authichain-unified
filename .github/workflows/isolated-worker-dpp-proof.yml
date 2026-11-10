@@ -1,0 +1,47 @@
+name: Isolated Worker DPP test proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/isolated-worker-dpp-proof.yml'
+      - '.github/workflows/deploy-authichain-com.yml'
+      - 'workers/authichain-com/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    name: Credential-free Worker Vitest and TSX
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head without persistent credentials
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Assert exact source commit
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install locked dependencies without production secrets
+        run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0
+      - name: Focused Worker native tests
+        run: |
+          set -euo pipefail
+          test -x node_modules/.bin/vitest
+          test -x node_modules/.bin/tsx
+          (cd workers/authichain-com && ../../node_modules/.bin/vitest run src/dpp-routes.test.ts)
+          (cd workers/authichain-com && ../../node_modules/.bin/tsx --import ./test/register-md.mjs --test src/routing.test.ts)
