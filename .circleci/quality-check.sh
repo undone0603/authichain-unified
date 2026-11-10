@@ -32,6 +32,7 @@ case "$task" in
     # Explicitly exercise new root-level x402 Stripe prepaid paths. Turbo's
     # worker package filter alone does not prove these root modules executed.
     # Keep this first to fail fast on incorrect grants or cross-rail behavior.
+    node --test scripts/ci/x402-ledger-contract.test.mjs
     pnpm exec vitest run \
       src/lib/x402-agent-pack.test.ts \
       src/lib/x402-agent-pack-fulfill.test.ts \
