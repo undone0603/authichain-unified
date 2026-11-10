@@ -71,6 +71,7 @@ describe("mcp discovery", () => {
     expect(isMcpPath("/api/mcp")).toBe(true);
     expect(isMcpPath("/.well-known/mcp.json")).toBe(true);
     expect(isMcpPath("/mcp/.well-known/glama.json")).toBe(false);
+    expect(isMcpPath("/.well-known/glama.json")).toBe(false);
     expect(isMcpPath("/api/x402")).toBe(false);
     expect(isMcpPath("https://authichain.com/checkout/dpp_readiness")).toBe(
       false
@@ -79,6 +80,8 @@ describe("mcp discovery", () => {
 
   it("GET /mcp/.well-known/glama.json is the claim file, not MCP discovery", async () => {
     for (const path of [
+      "/.well-known/glama.json",
+      "/.well-known/glama.json/",
       "/mcp/.well-known/glama.json",
       "/mcp/.well-known/glama.json/",
       "/api/mcp/.well-known/glama.json",
