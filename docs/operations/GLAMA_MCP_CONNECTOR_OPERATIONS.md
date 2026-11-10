@@ -39,6 +39,29 @@ A reproducible *proposed* test matrix, to be executed in an isolated environment
 
 Never call the **paid** `verify` tool with a valid payment token, `X-Payment-Tx`, or wallet. Avoid making live human Checkout sessions as a test. Record any unexpected behavior as a failing/pending test, not success. See the existing independent interoperability challenge [PR #2416](https://github.com/undone0603/authichain-unified/pull/2416) for broader MCP transport and adversarial scenarios.
 
+## Glama Inspector and mcp-proxy: distinguish real HTTP and local stdio
+
+**The production MCP server is already remote HTTP:** connect https://authichain.com/mcp directly in https://glama.ai/mcp/inspector . It is **not** a local stdio process and does not require `mcp-proxy`. Inspect the eight real published tool definitions; run only `initialize`, `tools/list`, and the free non-binding `negotiate` tool until authenticated provenance and pricing boundaries are verified. Do not invoke paid `verify`, provide settlement proofs, or create a Stripe checkout. Source revisions and actual live versions may differ.
+
+**Local stdio is a separate implementation:** `mcp/src/index.ts` starts an SDK stdio server with QRON database lookup tools and imports `DATABASE_URL`; `server/mcp/api.ts` imports optional `AUTHICHAIN_API_KEY` and exposes `verify_paid`. Neither should be exposed over an open public tunnel backed by live DB/production credentials. `server/mcp/index.ts` also exposes stubs, not production verification, and writes a startup message on stdout; avoid treating it as a validated public server.
+
+### Safe zero-payment tunnel rehearsal
+
+From a clean, local checkout at this PR's exact source revision, with Node and repository dependencies installed (no production database, payment tokens or credentials in the shell), run:
+
+```sh
+node --test scripts/ci/glama-inspector-fixture.test.mjs
+npx mcp-proxy --port 8080 --server stream --tunnel -- node scripts/ci/glama-inspector-fixture.mjs
+```
+
+This uses the fixture-only `StdioServerTransport`, not the real production services. `mcp-proxy` starts the subprocess and exposes streamable HTTP at `/mcp`. **Read the actual** `tunnel established at https://...tunnel.gla.ma` line; never make up or assume a subdomain. With the tunnel process still running, open https://glama.ai/mcp/inspector and connect to `https://<actual-assigned-host>.tunnel.gla.ma/mcp`. The fixture advertises only two synthetic tools: `get_pricing` and `negotiate`. Test both and assert all results are marked `fixture=true`, `production=false`, `payment_authorized=false`, `settled=false`, `side_effects=false`. An unknown or paid tool should fail safely. This tests the **transport/Inspector** only, not AuthiChain's full eight-tool implementation or live paid fulfillment.
+
+The optional `--tunnelSubdomain` requests a preferred name but cannot guarantee it. A stable subdomain is not a security control. A tunnel is **public by default**; never expose a DB-backed MCP server, wallet, customer secrets, destructive tools or real paid tools through it. `mcp-proxy` supports `--apiKey` / `MCP_PROXY_API_KEY` and the `X-API-Key` transport header when authentication is needed, but Glama Inspector encodes configuration and can include headers/tool arguments in shareable bookmark URLs; never share those URLs with credentials. For this static fixture, use no secrets at all. End the tunnel using Ctrl-C immediately after validation; record its actual URL and start/stop UTC time in the private evidence ledger.
+
+If package download or network/DNS is blocked, record **tunnel not established / test not run**. Do not claim Inspector success based on the source code or a local mock alone. Keep Glama's production connector pointed at `https://authichain.com/mcp`; never replace the real listing with the test tunnel.
+
+Reference: https://github.com/punkpeye/mcp-proxy · https://glama.ai/mcp/inspector
+
 ## Reusable payment-free live smoke
 
 The draft includes `scripts/ci/glama-mcp-free-smoke.mjs`. It is pinned to `https://authichain.com/mcp` and invokes only GET discovery, JSON-RPC `initialize`, `tools/list`, and the free `negotiate` tool with `{"service":"verify_record","mode":"quote_only"}`. It has **no code path** to call the paid `verify` tool or supply a payment header. Run it from a credential-isolated executor after release approval:
