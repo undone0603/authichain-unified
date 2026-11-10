@@ -98,6 +98,42 @@ describe("mcp discovery", () => {
     expect(tools.get("get_pricing")?.description).toMatch(/never starts a checkout|without charging/);
   });
 
+  it("GET discovery and initialize distinguish seven free tools from paid x402 verification", async () => {
+    const response = await tryHandleMcp(req("/mcp"));
+    expect(response?.status).toBe(200);
+    const discovery = (await response!.json()) as {
+      pricing: { freeTools: string[] };
+    };
+    expect(discovery.pricing.freeTools).toEqual([
+      "get_pricing",
+      "query_provenance",
+      "verify_attestation",
+      "verify_record",
+      "dpp_readiness_check",
+      "scan_living_qr",
+      "negotiate",
+    ]);
+    expect(discovery.pricing.freeTools).not.toContain("verify");
+
+    const initResponse = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 77,
+          method: "initialize",
+          params: { protocolVersion: "2025-06-18", clientInfo: { name: "glama-test", version: "1" }, capabilities: {} },
+        }),
+      })
+    );
+    expect(initResponse?.status).toBe(200);
+    const initialized = (await initResponse!.json()) as { result: { instructions: string } };
+    expect(initialized.result.instructions).toContain("Paid verification:");
+    expect(initialized.result.instructions).toContain("separately authorized payment");
+    expect(initialized.result.instructions).toContain("Free verification:");
+  });
+
   it("recognizes agent MCP paths and ignores checkout", () => {
     expect(isMcpPath("/mcp")).toBe(true);
     expect(isMcpPath("/mcp/")).toBe(true);
