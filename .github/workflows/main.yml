@@ -128,8 +128,12 @@ jobs:
         include:
           - shard: 1
             filter: "--filter=./workers/*"
+            # Shard 1 passed at 1792 (run 42735444994).
+            heap: 1792
           - shard: 2
             filter: "--filter=!./workers/* --filter=!*worker*"
+            # 1536 aborted inside V8. 1792 OOM-killed the unit at peak 2.7G.
+            heap: 1664
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -214,12 +218,10 @@ jobs:
       # running after one fails; turbo still exits non-zero.
       - name: Run tests
         env:
-          # qron-platform:build exits 134 at the default heap (CI Main
-          # 42640209495 shard 2, and 42650083621). 3072 MB and then 2048 MB
-          # with turbo's default parallelism both OOM-killed this unit
-          # (MemoryMax 2800 MiB, peak 2.7G at 21:07Z, 22:04Z, and 22:16Z).
-          # One package at 1536 stays inside that cap. Do not raise MemoryMax.
-          NODE_OPTIONS: --max-old-space-size=1536 --dns-result-order=ipv4first --no-network-family-autoselection
+          # Shard 1 keeps 1792. Shard 2 uses 1664: 1536 aborted inside V8,
+          # and 1792 OOM-killed this unit at peak 2.7G (run 42735444994).
+          # Do not raise MemoryMax. Do not go back to 2048.
+          NODE_OPTIONS: --max-old-space-size=${{ matrix.heap }} --dns-result-order=ipv4first --no-network-family-autoselection
         run: |
           if pnpm test ${{ matrix.filter }} --concurrency=1 --log-order=stream --continue=dependencies-successful; then
             exit 0
@@ -292,14 +294,14 @@ jobs:
       # machine-wide build lock for the whole attempt loop. A second
       # invocation here would drop that lock during the pause.
       # 4096 MB dumped the 3.8 GB VM (CI Main job 129363461477).
-      # 3072 MB, and a single Next process at 2048 MB, both crossed the
-      # runner unit MemoryMax of 2800 MiB (OOM at 23:01Z, peak 2.7G,
-      # run 42713702955). 1536 matches the test shards. Do not raise
-      # MemoryMax.
+      # 2048 MB crossed MemoryMax 2800 MiB (peak 2.7G, run 42713702955).
+      # 1536 aborted inside V8 three times on next-build (run 42726252670)
+      # and the retry wrapper then exited 1. 1792 is the step that still
+      # fits. Do not raise MemoryMax.
       - name: Production build
         if: steps.baseline.outputs.skip != 'true'
         env:
-          NODE_OPTIONS: --max-old-space-size=1536 --dns-result-order=ipv4first --no-network-family-autoselection
+          NODE_OPTIONS: --max-old-space-size=1792 --dns-result-order=ipv4first --no-network-family-autoselection
         run: pnpm build
 
       # Persistent self-hosted runner: drop deps and build outputs so state
