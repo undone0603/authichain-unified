@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {assertReleasePolicy, REQUIRED, REPO, ENV, RULESET, verifyLive} from './autonomous-release-gate.mjs';
 const SHA = 'a'.repeat(40);
 const URL = 'https://circleci.com/gh/undone0603/authichain-unified/2914';
@@ -75,4 +76,26 @@ test('read-only live verifier accepts only four scoped GitHub reads', async () =
 test('missing GitHub response rejects the release before deployment', async () => {
   await assert.rejects(verifyLive({GH_TOKEN:'token',REPOSITORY:REPO,TARGET_SHA:SHA,DISPATCH_SHA:SHA},
     async()=>({ok:false,status:404})),/HTTP 404/);
+});
+
+test('payment Worker edge release remains manual-only, SHA-pinned and policy-protected', () => {
+  const workflow = readFileSync(
+    new URL('../../.github/workflows/deploy-authichain-edge-router.yml', import.meta.url),
+    'utf8'
+  );
+  assert.match(workflow, /^on:\n  workflow_dispatch:\n    inputs:\n      expected_sha:/m);
+  assert.doesNotMatch(workflow, /^  push:/m);
+  assert.match(workflow, /if: github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow, /environment:\s*\n\s+name: production-cloudflare/);
+  assert.match(workflow, /TARGET_SHA: \$\{\{ inputs\.expected_sha \}\}/);
+  assert.match(workflow, /DISPATCH_SHA: \$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$TARGET_SHA"/);
+  assert.match(workflow, /node --test scripts\/ci\/autonomous-release-gate\.test\.mjs/);
+  assert.match(workflow, /node scripts\/ci\/autonomous-release-gate\.mjs/);
+  assert.match(workflow, /persist-credentials: false/);
+  assert.ok(
+    workflow.indexOf('node scripts/ci/autonomous-release-gate.mjs') <
+      workflow.indexOf('Record live version (rollback target)'),
+    'policy must pass before any production upload or promotion'
+  );
 });
