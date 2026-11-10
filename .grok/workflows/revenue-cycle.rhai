@@ -23,6 +23,11 @@ let decide_schema = #{
     "properties": #{
         "action": #{ "type": "string" },
         "reason": #{ "type": "string" },
+        "evidenceVerified": #{ "type": "boolean" },
+        "fulfillmentVerified": #{ "type": "boolean" },
+        "independentBuyerVerified": #{ "type": "boolean" },
+        "evidenceRefs": #{ "type": "string" },
+        "observedAtUtc": #{ "type": "string" },
     },
 };
 
@@ -59,7 +64,10 @@ if args != () && args.snapshot != () {
 } else {
     decide_prompt += " No snapshot was passed. Action must be wait_buyer unless fresh independently attributable paid AND fulfilled evidence is read from authoritative sources.";
 }
-decide_prompt += " Prioritise free inbound distribution if outside revenue remains unknown. Never email, post, spend, deploy, or charge. Return {action, reason} where action is fix_rails, qualifying, wait_buyer, or refuse_send.";
+decide_prompt += " Prioritise free inbound distribution if outside revenue remains unknown. Never email, post, spend, deploy, or charge. ";
+decide_prompt += " Return {action, reason, evidenceVerified, fulfillmentVerified, independentBuyerVerified, evidenceRefs, observedAtUtc}. ";
+decide_prompt += " Set every evidence flag false unless you personally confirmed provider-side settlement, actual fulfillment and independent buyer attribution from authoritative fresh sources. ";
+decide_prompt += " evidenceRefs must cite provider and fulfillment sources, not 402 discovery or the operator snapshot. ";
 let decision = agent(decide_prompt, #{
     label: "decide",
     capability_mode: "read-only",
@@ -74,6 +82,24 @@ if decision != () && decision.success && decision.output.action != () {
         reason = decision.output.reason;
     }
 }
+// A legacy subscription classifier is NOT a financial proof gate.
+if action == "qualifying" {
+    let proved = false;
+    if decision != () && decision.success && decision.output != () {
+        let d = decision.output;
+        if d.evidenceVerified == true && d.fulfillmentVerified == true &&
+           d.independentBuyerVerified == true && d.evidenceRefs != () &&
+           d.evidenceRefs != "" && d.observedAtUtc != () &&
+           d.observedAtUtc != "" {
+            proved = true;
+        }
+    }
+    if proved == false {
+        action = "wait_buyer";
+        reason = "Cannot qualify: fresh outside settlement + fulfillment + independent buyer proof absent";
+    }
+}
+
 if rails != () && rails.success && rails.output.ok == false {
     action = "fix_rails";
     if rails.output.reason != () {
