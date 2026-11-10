@@ -1,17 +1,18 @@
 name: Deploy authichain-edge-router
+# Payment/checkout Worker may contain real-money and entitlement changes.
+# Never deploy automatically on merge. Dispatch only after the exact main
+# commit passed the already-established seven-context CircleCI release policy.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "worker-app/**"
-      - "src/lib/support-coffee.ts"
-      - ".github/workflows/deploy-authichain-edge-router.yml"
-      - "scripts/ci/parse-wrangler-version-id.mjs"
-      - "scripts/ci/promote-worker-version.mjs"
-      - "scripts/ci/upload-worker-version.mjs"
+    inputs:
+      expected_sha:
+        description: "Exact approved 40-character main commit to deploy"
+        type: string
+        required: true
 permissions:
   contents: read
+  statuses: read
+  actions: read
 # Queue behind an in-flight publish. PM-328 forbids cancelling a
 # push-to-main deploy that is already uploading.
 concurrency:
@@ -19,6 +20,11 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
+    # Protected-branches-only environment. The automated release policy
+    # checks its actual policy, protected main and seven CircleCI contexts.
+    environment:
+      name: production-cloudflare
     # Publish runner only: authichain-wsl. CI stays on authichain-ops (laptop).
     runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 40
@@ -29,6 +35,9 @@ jobs:
       NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 1
       # Sparse-checkout settings persist in the shared self-hosted work dir
       # (agentz-orchestration.yml and gov-engine.yml check out two files), so a
       # job that inherits them sees a partial tree while HEAD still names the
@@ -71,6 +80,17 @@ jobs:
           command -v node
           command -v pnpm
           pnpm --version
+      - name: Verify exact SHA and seven-context automated release policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ inputs.expected_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          node --test scripts/ci/autonomous-release-gate.test.mjs
+          node scripts/ci/autonomous-release-gate.mjs
       - name: Install node-gyp (native builds)
         run: npm i -g node-gyp@11
       - name: Install
