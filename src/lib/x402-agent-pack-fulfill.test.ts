@@ -51,7 +51,7 @@ describe("Stripe prepaid grant and reversal ordering",()=>{
   });
   it("stores a refund tombstone even if no grant was created yet",async()=>{
     const db=store(true);
-    const evt={type:"charge.refunded",data:{object:{payment_intent:session.payment_intent}}} as Stripe.Event;
+    const evt={type:"charge.refunded",data:{object:{payment_intent:session.payment_intent}}} as unknown as Stripe.Event;
     await revokeX402AgentPackOnReversal(evt,db.client,X402_AGENT_PACK_PRICE_ID);
     expect(db.rpc).toHaveBeenCalledWith("reverse_x402_agent_pack",{
       p_payment_intent_id:session.payment_intent,p_status:"refunded",
@@ -59,7 +59,7 @@ describe("Stripe prepaid grant and reversal ordering",()=>{
   });
   it("rejects failed reversal writes for Stripe retry",async()=>{
     const db=store(false);
-    const evt={type:"charge.dispute.created",data:{object:{payment_intent:session.payment_intent}}} as Stripe.Event;
+    const evt={type:"charge.dispute.created",data:{object:{payment_intent:session.payment_intent}}} as unknown as Stripe.Event;
     await expect(revokeX402AgentPackOnReversal(evt,db.client,X402_AGENT_PACK_PRICE_ID)).rejects.toThrow(/revocation_failed/);
   });
 });

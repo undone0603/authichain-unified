@@ -211,6 +211,12 @@ service = "authichain-app"
 # if SUPABASE_SERVICE_ROLE_KEY is set as a secret, the paid path prefers it.
 # Deploy with --keep-vars so dashboard x402 vars stay.
 [vars]
+# Staged only: public one-time Stripe SKU, verification count, and default-off
+# release switch. This is NOT a QR-generation pack and cannot grant credits
+# until the protected migration + both Worker releases pass review.
+X402_PACK_PRICE_ID = "price_1UZdq5GqTruSqV8TsaDtFBPF"
+X402_PACK_CREDITS = "120"
+X402_PACK_ENABLED = "false"
 SUPABASE_URL = "https://nhdnkzhtadfkkluiulhs.supabase.co"
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oZG5remh0YWRma2tsdWl1bGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MzgyNTUsImV4cCI6MjA4OTUxNDI1NX0.akaWgxRilnjavzpsLqU149nBJqxDjbYOnRdAqrwz4J8"
 # Paid verify reads auth_seals here (SUPABASE_URL + key above, VERIFY_APP

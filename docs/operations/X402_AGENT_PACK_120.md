@@ -37,11 +37,11 @@ The Stripe prepaid Checkout redirects to a neutral `/x402?checkout=returned` pag
 2. Get independent security review for the prepaid verifier and DB transaction: confirm Auth Admin binding, RLS/GRANTs, idempotency, fulfillment retries, refund and dispute handling. Inspect Cloudflare Worker secret isolation.
 3. Apply `supabase/migrations/20261108215700_x402_agent_pack_credits.sql` on the authorized production project `nhdnkzhtadfkkluiulhs` only through its protected migration workflow. Test table policies, RPC grants and atomic concurrent spends. Ensure no grant is created on unpaid or $0 test sessions.
 4. Release the approved code through the protected Cloudflare deployment workflow. Do not run `npx wrangler secret put` directly: it immediately deploys a new Worker version.
-5. Stage **exact values** in both `authichain-com` (checkout + verifier) and `authichain-edge-router` (Checkout API + webhook):
+5. The **public price and credit count are already staged** as default-off `[vars]` in both `authichain-com` (checkout + verifier) and `authichain-edge-router` (Checkout API + webhook). Verify the exact deployed version retains them, and after approval deliberately enable checkout through a separate protected configuration release:
    - `X402_PACK_PRICE_ID=price_1UZdq5GqTruSqV8TsaDtFBPF`
    - `X402_PACK_CREDITS=120`
-   - `X402_PACK_ENABLED=true` **only after** migration, code, security and worker smoke tests pass.
-   Use `wrangler versions secret put` / save version and deploy the exact approved version through the protected workflow. Do not overwrite other bindings.
+   - `X402_PACK_ENABLED=true` **only after** migration, code, security and worker smoke tests pass (currently `false` in both `wrangler.toml` files).
+   These two values are **non-secret**; don't write them as Worker secrets. Change the staged flag through the approved PR/Worker promotion workflow and retain other bindings. Do not run direct `wrangler secret put`.
 6. Read-only checks: GET confirm page (200 after enable); GET /api/x402/health (200); an unpaid x402 POST still yields its normal USDC 402 quote; a malformed prepaid body must return 400 without spending.
 7. Prove the paid flow with a consented external buyer in live mode (never charge the founder/test card for evidence): check paid session, one grant, receipt, API key verified against confirmed buyer email, one decrement from 120 to 119, replay no double decrement, and 120th then exhausted call. Prove refund disables unspent credits. The first real buyer is not verified until this evidence exists.
 8. Capture actual deployed code SHA, Cloudflare version/deployment IDs, Stripe event/session IDs, database row IDs, native CI run links and independent review. Missing evidence is BLOCKED, not GO.
