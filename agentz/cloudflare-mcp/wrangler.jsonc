@@ -3,11 +3,6 @@
   "main": "worker.mjs",
   "compatibility_date": "2026-11-01",
   "workers_dev": true,
-  "triggers": {
-    "crons": [
-      "*/15 * * * *"
-    ]
-  },
   "d1_databases": [
     {
       "binding": "AGENTZ_DB",
