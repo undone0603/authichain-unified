@@ -28,7 +28,7 @@ export async function runQueue(env, max=3){
  if(!env.AGENTZ_DB) return {processed:0,reason:"D1 not configured"};
  let processed=0;
  for(let i=0;i<Math.min(max,3);i++){
-  const now=new Date().toISOString();
+  const now=new Date().toISOString().replace('T',' ').replace('Z','').slice(0,19);
   const row=await env.AGENTZ_DB.prepare("SELECT id,target,attempts FROM agentz_tasks WHERE status='pending' AND next_run_at <= ? ORDER BY priority DESC,created_at ASC LIMIT 1").bind(now).first();
   if(!row)break;
   const claim=await env.AGENTZ_DB.prepare("UPDATE agentz_tasks SET status='running',attempts=attempts+1,updated_at=? WHERE id=? AND status='pending'").bind(now,row.id).run();
@@ -45,10 +45,10 @@ export async function runQueue(env, max=3){
    detail="GitHub public endpoint responded HTTP "+response.status;
    evidenceUrl=target;
   }catch(e){outcome="failure";detail=safe(e.message);}
-  const status=outcome==="success"?"succeeded":row.attempts>=2?"failed":"pending";
-  const nextRun=new Date(Date.now()+Math.min(60,5*(row.attempts+1))*60000).toISOString();
+  const status=outcome==="success"?"succeeded":row.attempts+1>=3?"failed":"pending";
+  const nextRun=new Date(Date.now()+Math.min(60,5*(row.attempts+1))*60000).toISOString().replace('T',' ').replace('Z','').slice(0,19);
   await env.AGENTZ_DB.batch([
-   env.AGENTZ_DB.prepare("UPDATE agentz_tasks SET status=?,updated_at=?,next_run_at=?,last_error=? WHERE id=?").bind(status,new Date().toISOString(),nextRun,outcome==="failure"?detail:null,row.id),
+   env.AGENTZ_DB.prepare("UPDATE agentz_tasks SET status=?,updated_at=?,next_run_at=?,last_error=? WHERE id=?").bind(status,new Date().toISOString().replace('T',' ').replace('Z','').slice(0,19),nextRun,outcome==="failure"?detail:null,row.id),
    env.AGENTZ_DB.prepare("INSERT INTO agentz_task_events(task_id,event_type,outcome,evidence_url,detail) VALUES (?,'public_probe',?,?,?)").bind(row.id,outcome,evidenceUrl,detail)
   ]);
   const event=await env.AGENTZ_DB.prepare("SELECT id FROM agentz_task_events WHERE task_id=? ORDER BY id DESC LIMIT 1").bind(row.id).first();
