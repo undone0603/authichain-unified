@@ -481,6 +481,28 @@ async def api_agentz_dispatch_protected(data: ProtectedDispatchInput):
         raise HTTPException(status_code=503, detail=str(exc))
 
 
+class CodeProposalInput(BaseModel):
+    branch_ref: str
+    path: str
+    content: str
+    expected_blob_sha: Optional[str] = None
+
+
+@app.post("/agentz/github/code-proposal", dependencies=[Depends(verify_token)], tags=["AgentZ Development"])
+async def api_agentz_code_proposal(data: CodeProposalInput):
+    """Propose a change to a restricted feature branch; never touch main."""
+    from agentz.core.code_proposals import propose_code_change
+    try:
+        return await run_in_threadpool(
+            propose_code_change, data.branch_ref, data.path, data.content,
+            expected_blob_sha=data.expected_blob_sha
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
