@@ -131,11 +131,11 @@ jobs:
             # Shard 1 passed at 1792 (run 42735444994).
             heap: 1792
           - shard: 2
-            filter: "--filter=!./workers/* --filter=!*worker*"
-            # 1536 aborted inside V8. 1664 still memcg-OOM'd the runner
-            # (node rss ~2.6G, lost communication, run 42845030613). 1280
-            # leaves headroom under the unit MemoryMax.
-            heap: 1280
+            # Exclude qron-platform: its Next build OOMs or V8-aborts on
+            # this 2800 MiB unit at every heap we tried (1280–1792).
+            # CircleCI test-other still builds and tests it.
+            filter: "--filter=!./workers/* --filter=!*worker* --filter=!qron-platform"
+            heap: 1536
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
