@@ -218,7 +218,7 @@ create or replace function public.reverse_x402_agent_pack(
   p_status text
 ) returns boolean
 language plpgsql security invoker set search_path = ''
-as $
+as $$
 declare
   v_buyer_email text;
 begin

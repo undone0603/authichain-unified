@@ -70,6 +70,19 @@ test("redemption checks active API key before debit and cannot overspend", () =>
   assert.match(migration, /check \(credits_used >= 0 and credits_used <= credits_total\)/);
 });
 
+test("all three functions have correctly paired PL/pgSQL dollar-quoted bodies", () => {
+  assert.doesNotMatch(migration, /^as \$(?!\$)/m, "one-dollar AS is a fatal SQL syntax error");
+  const starts = [...migration.matchAll(/^as \$\$$/gm)];
+  const ends = [...migration.matchAll(/^\$\$;$/gm)];
+  assert.equal(starts.length, 3, "expected 3 function AS $$ delimiters");
+  assert.equal(ends.length, 3, "expected 3 matching closing $$ delimiters");
+  for (const fn of ["consume_x402_agent_pack_credit", "grant_x402_agent_pack", "reverse_x402_agent_pack"]) {
+    const body = rpc(fn);
+    assert.match(body, /^as \$\$$/m);
+    assert.match(body, /^\$\$;$/m);
+  }
+});
+
 test("all three RPCs are service-role-only and invoker security", () => {
   for (const fn of ["consume_x402_agent_pack_credit", "grant_x402_agent_pack", "reverse_x402_agent_pack"]) {
     assert.match(rpc(fn), /language plpgsql security invoker set search_path = ''/);
