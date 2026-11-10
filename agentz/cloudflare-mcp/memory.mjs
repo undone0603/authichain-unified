@@ -36,9 +36,8 @@ export async function runQueue(env, max=3){
   let outcome="success",detail="",evidenceUrl=null;
   try{
    const target=validTarget(row.target);
-   const controller=new AbortController();
-   // Cloudflare fetch has no arbitrary redirect following; target is pinned to GitHub.
-   const response=await fetch(target,{method:"GET",redirect:"manual",signal:controller.signal,headers:{"accept":"text/html"}});
+   // Abort slow upstream reads rather than occupying the hourly queue indefinitely.
+   const response=await fetch(target,{method:"GET",redirect:"manual",signal:AbortSignal.timeout(8000),headers:{"accept":"text/html"}});
    if(response.body)await response.body.cancel();
    if(response.status>=300&&response.status<400)throw Error("redirect refused");
    if(!response.ok)throw Error("HTTP "+response.status);
