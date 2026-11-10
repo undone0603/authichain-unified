@@ -56,14 +56,14 @@ to the same transaction.
 ## Near-term priority order
 
 1. **Protect trustworthy money paths.** Hold DPP grant changes in
-   [PR #2411](../../pull/2411) until native exact-head tests and
+   [PR #2411](https://github.com/undone0603/authichain-unified/pull/2411) until native exact-head tests and
    independent review; sequence the protected edge-router release
-   [PR #2415](../../pull/2415) first if its acceptance criteria are met.
-   Resolve [issue #2394](../../issues/2394) environment/runner blockers.
+   [PR #2415](https://github.com/undone0603/authichain-unified/pull/2415) first if its acceptance criteria are met.
+   Resolve [issue #2394](https://github.com/undone0603/authichain-unified/issues/2394) environment/runner blockers.
    Do not deploy a webhook fix just because the Next.js page passes.
 2. **Keep the sellable offer truthful.** Resolve checkout watchdog
    pricing-copy findings and live DPP compliance overclaims
-   [#2370](../../issues/2370). Keep $299 workspace terminology honest;
+   [#2370](https://github.com/undone0603/authichain-unified/issues/2370). Keep $299 workspace terminology honest;
    no certification or audit claim without delivery.
 3. **Acquire demand on existing free routes.** Put accurate TAPE/PEPKIN
    discovery and /offer before independently operated x402 agents with
@@ -74,7 +74,7 @@ to the same transaction.
    provenance-backed outreach *drafts*. Existing send gates stay on.
 4. **Fulfill and retain.** For each actual outside purchase, measure
    purchase-to-delivery latency, retries, idempotency, refunds, and
-   next-product utility. Add prepaid x402 packs [PR #2403](../../pull/2403)
+   next-product utility. Add prepaid x402 packs [PR #2403](https://github.com/undone0603/authichain-unified/pull/2403)
    only after the independent native/SQL concurrency and protected-release
    evidence it explicitly requires.
 5. **Reinvest net surplus, not gross receipts.** Reconcile settlement
@@ -146,6 +146,6 @@ Unset numbers remain `null`, never fabricated. Do not change
 - No promotion or success claim based on missing tests, stale ledgers,
   unreviewed deployment, or forecasts.
 
-Related: [Launch Control #1986](../../issues/1986),
-[Internal subscription proof #2264](../../issues/2264), and
-[Current paid pack hold #2404](../../issues/2404).
+Related: [Launch Control #1986](https://github.com/undone0603/authichain-unified/issues/1986),
+[Internal subscription proof #2264](https://github.com/undone0603/authichain-unified/issues/2264), and
+[Current paid pack hold #2404](https://github.com/undone0603/authichain-unified/issues/2404).
