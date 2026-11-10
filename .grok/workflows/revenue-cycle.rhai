@@ -19,7 +19,7 @@ let rails_schema = #{
 
 let decide_schema = #{
     "type": "object",
-    "required": ["action", "reason"],
+    "required": ["action", "reason", "evidenceVerified", "fulfillmentVerified", "independentBuyerVerified", "evidenceRefs", "observedAtUtc"],
     "properties": #{
         "action": #{ "type": "string" },
         "reason": #{ "type": "string" },
