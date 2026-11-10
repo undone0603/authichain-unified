@@ -7,5 +7,13 @@
     "crons": [
       "*/15 * * * *"
     ]
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "AGENTZ_DB",
+      "database_name": "authichain-staging-db",
+      "database_id": "7cc833bb-32ed-47a3-aba8-df44657ca510",
+      "migrations_dir": "migrations"
+    }
+  ]
 }
