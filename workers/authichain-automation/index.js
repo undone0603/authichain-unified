@@ -513,5 +513,25 @@ async function handleRequest(request, env) {
 export { RateLimiter, handleStripeWebhook };
 export default {
   async fetch(request, env) { return handleRequest(request, env); },
-  async scheduled(event, env) { console.log("Cron trigger fired at:", new Date(event.scheduledTime).toISOString()); }
+  async scheduled(event, env, ctx) {
+    console.log("Cron trigger fired at:", new Date(event.scheduledTime).toISOString());
+    // Independent best-effort AgentZ dispatch. Preserve existing cron logging.
+    // Service binding prevents public-network dependency; separate secret scopes access.
+    if (event.cron !== "14 * * * *" || !env.AGENTZ_EDGE || !env.AGENTZ_DISPATCH_TOKEN) return;
+    ctx.waitUntil((async () => {
+      try {
+        const response = await env.AGENTZ_EDGE.fetch(new Request("https://agentz.internal/internal/cron", {
+          method: "POST",
+          headers: {
+            authorization: "Bearer " + env.AGENTZ_DISPATCH_TOKEN,
+            "x-agentz-dispatch": "authichain-automation"
+          }
+        }));
+        if (!response.ok) console.warn("AgentZ dispatch failed", response.status);
+        else console.log("AgentZ dispatch completed", response.status);
+      } catch (error) {
+        console.warn("AgentZ dispatch unavailable", String(error?.name || "error"));
+      }
+    })());
+  }
 };
