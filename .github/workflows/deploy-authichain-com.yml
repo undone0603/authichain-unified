@@ -115,11 +115,13 @@ jobs:
           npm_config_build_from_source: "false"
         run: pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
       - name: Native receipt and full Worker routing tests
-        working-directory: workers/authichain-com
         run: |
           set -euo pipefail
-          pnpm exec vitest run src/dpp-routes.test.ts
-          pnpm exec tsx --import ./test/register-md.mjs --test src/routing.test.ts
+          # vitest and tsx are root devDependencies, not Worker package dependencies.
+          test -x node_modules/.bin/vitest
+          test -x node_modules/.bin/tsx
+          pnpm exec vitest run workers/authichain-com/src/dpp-routes.test.ts
+          (cd workers/authichain-com && ../../node_modules/.bin/tsx --import ./test/register-md.mjs --test src/routing.test.ts)
       - name: Embed microsite HTML
         run: node scripts/sync-microsite-packs.mjs
       - name: Recheck automated release policy immediately before publishing
