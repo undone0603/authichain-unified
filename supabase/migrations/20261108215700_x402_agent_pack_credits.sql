@@ -114,8 +114,16 @@ begin
     ) then
       return pg_catalog.jsonb_build_object('allowed', false, 'reason', 'grant_revoked');
     end if;
+    -- The replay is free, but must report the buyer's current balance.
+    -- Refund processing takes the same buyer lock; this balance cannot
+    -- accidentally count a concurrently revoked purchase.
+    select coalesce(sum(credits_total - credits_used), 0)::integer into v_remaining
+    from public.x402_agent_pack_grants
+    where lower(buyer_email) = v_email and status = 'active';
     return pg_catalog.jsonb_build_object(
-      'allowed', true, 'replayed', true, 'checkout_session_id', v_prior.checkout_session_id
+      'allowed', true, 'replayed', true,
+      'remaining_credits', v_remaining,
+      'checkout_session_id', v_prior.checkout_session_id
     );
   end if;
 
@@ -210,7 +218,9 @@ create or replace function public.reverse_x402_agent_pack(
   p_status text
 ) returns boolean
 language plpgsql security invoker set search_path = ''
-as $$
+as $
+declare
+  v_buyer_email text;
 begin
   if p_payment_intent_id is null or p_payment_intent_id !~ '^pi_' or
      p_status not in ('refunded', 'disputed') then
@@ -220,6 +230,18 @@ begin
   perform pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended(p_payment_intent_id, 0)
   );
+  -- Debit and replay hold an email-scoped advisory lock. A reversal must
+  -- take the same lock to make payment revocation linearizable with a
+  -- concurrent verification. Always lock PaymentIntent first, then email;
+  -- the grant RPC takes only the PaymentIntent lock.
+  select lower(buyer_email) into v_buyer_email
+  from public.x402_agent_pack_grants
+  where payment_intent_id = p_payment_intent_id;
+  if v_buyer_email is not null then
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended(v_buyer_email, 0)
+    );
+  end if;
   insert into public.x402_agent_pack_reversals(payment_intent_id, status)
     values (p_payment_intent_id, p_status)
     on conflict(payment_intent_id) do update set status = excluded.status;
