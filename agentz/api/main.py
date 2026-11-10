@@ -440,6 +440,47 @@ async def api_agentz_browser_task(data: BrowserTaskInput):
         raise HTTPException(status_code=503, detail=str(exc))
 
 
+class PublicNavigateInput(BaseModel):
+    url: str
+
+
+@app.post("/agentz/browser/navigate", dependencies=[Depends(verify_token)], tags=["AgentZ Browser"])
+async def api_agentz_public_navigate(data: PublicNavigateInput):
+    """Read public HTTPS pages using a network-isolated local browser."""
+    from agentz.core.public_navigation import navigate_public
+    try:
+        return await run_in_threadpool(navigate_public, data.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
+class ProtectedDispatchInput(BaseModel):
+    expected_sha: str
+    authorized: bool = False
+    release_gate_passed: bool = False
+
+
+@app.post("/agentz/github/dispatch-protected", dependencies=[Depends(verify_token)], tags=["AgentZ Release"])
+async def api_agentz_dispatch_protected(data: ProtectedDispatchInput):
+    """Dispatch existing SHA-pinned workflow only after scoped authorization.
+
+    Boolean claims must come from a trusted operator, not untrusted browser
+    content. Deploy workflow performs its own independent release checks.
+    """
+    from agentz.core.protected_dispatch import dispatch_protected_release
+    try:
+        return await run_in_threadpool(
+            dispatch_protected_release, data.expected_sha,
+            authorized=data.authorized, release_gate_passed=data.release_gate_passed
+        )
+    except (ValueError, PermissionError) as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
