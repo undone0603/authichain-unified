@@ -670,7 +670,7 @@ export async function handleStripeWebhook(
     // A failed refund/dispute attempt may have claimed its event ID before
     // its grant update succeeded. Its idempotent reversal MUST replay on retry.
     try {
-      await revokeX402AgentPackOnReversal(event, supabase);
+      await revokeX402AgentPackOnReversal(event, supabase, process.env.X402_PACK_PRICE_ID, stripe);
     } catch (reversalErr) {
       throw markRetryableFulfillment(reversalErr);
     }
@@ -1246,7 +1246,7 @@ export async function handleStripeWebhook(
       case "charge.refunded":
       case "charge.dispute.created": {
         try {
-          await revokeX402AgentPackOnReversal(event, supabase);
+          await revokeX402AgentPackOnReversal(event, supabase, process.env.X402_PACK_PRICE_ID, stripe);
         } catch (reversalErr) {
           throw markRetryableFulfillment(reversalErr);
         }

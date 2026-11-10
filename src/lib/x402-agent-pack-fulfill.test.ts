@@ -13,7 +13,12 @@ const session = {
   metadata: { plan: "x402_agent_credits_120" },
 };
 const line = { data: [{price: {id:X402_AGENT_PACK_PRICE_ID, unit_amount:500, currency:"usd", type:"one_time"}, quantity:1}] };
-const stripe = (items=line) => ({checkout:{sessions:{listLineItems:vi.fn(async()=>items)}}}) as unknown as Stripe;
+const stripe = (items=line, metadata: Record<string, string> = {
+  plan: "x402_agent_credits_120", stripe_price_id: X402_AGENT_PACK_PRICE_ID,
+}) => ({
+  checkout: { sessions: { listLineItems: vi.fn(async () => items) } },
+  paymentIntents: { retrieve: vi.fn(async () => ({ id: session.payment_intent, metadata })) },
+}) as unknown as Stripe;
 function store(response: unknown) {
   const rpc=vi.fn(async()=>({data:response,error:null}));
   return {rpc, client:{rpc} as unknown as SupabaseClient};
@@ -52,14 +57,31 @@ describe("Stripe prepaid grant and reversal ordering",()=>{
   it("stores a refund tombstone even if no grant was created yet",async()=>{
     const db=store(true);
     const evt={type:"charge.refunded",data:{object:{payment_intent:session.payment_intent}}} as unknown as Stripe.Event;
-    await revokeX402AgentPackOnReversal(evt,db.client,X402_AGENT_PACK_PRICE_ID);
+    await revokeX402AgentPackOnReversal(evt,db.client,X402_AGENT_PACK_PRICE_ID,stripe());
     expect(db.rpc).toHaveBeenCalledWith("reverse_x402_agent_pack",{
       p_payment_intent_id:session.payment_intent,p_status:"refunded",
     });
   });
+  it("ignores a refund for unrelated Stripe plans without changing pack credits", async () => {
+    const db = store(true);
+    const evt = {type: "charge.refunded",data: {object: {payment_intent: session.payment_intent}}} as unknown as Stripe.Event;
+    const unrelated = stripe(line, {plan: "starter", stripe_price_id: "price_other"});
+    await revokeX402AgentPackOnReversal(evt, db.client, X402_AGENT_PACK_PRICE_ID, unrelated);
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when Stripe cannot establish which SKU was reversed", async () => {
+    const db = store(true);
+    const evt = {type: "charge.refunded", data: {object: {payment_intent: session.payment_intent}}} as unknown as Stripe.Event;
+    const broken = stripe();
+    vi.mocked(broken.paymentIntents.retrieve).mockRejectedValueOnce(new Error("temporary outage"));
+    await expect(revokeX402AgentPackOnReversal(evt, db.client, X402_AGENT_PACK_PRICE_ID, broken)).rejects.toThrow(/payment_intent_lookup_failed/);
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+
   it("rejects failed reversal writes for Stripe retry",async()=>{
     const db=store(false);
     const evt={type:"charge.dispute.created",data:{object:{payment_intent:session.payment_intent}}} as unknown as Stripe.Event;
-    await expect(revokeX402AgentPackOnReversal(evt,db.client,X402_AGENT_PACK_PRICE_ID)).rejects.toThrow(/revocation_failed/);
+    await expect(revokeX402AgentPackOnReversal(evt,db.client,X402_AGENT_PACK_PRICE_ID,stripe())).rejects.toThrow(/revocation_failed/);
   });
 });

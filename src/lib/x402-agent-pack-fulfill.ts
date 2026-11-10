@@ -93,7 +93,8 @@ export async function fulfillX402AgentPackIfPaid(
 export async function revokeX402AgentPackOnReversal(
   event: Stripe.Event,
   supabase: SupabaseClient | null,
-  expectedPriceId: string | undefined = process.env.X402_PACK_PRICE_ID
+  expectedPriceId: string | undefined = process.env.X402_PACK_PRICE_ID,
+  stripe: Stripe | null = null
 ): Promise<void> {
   if (event.type !== "charge.refunded" && event.type !== "charge.dispute.created") return;
   // Before the approved pack release, never make unrelated refunds depend on a
@@ -104,6 +105,18 @@ export async function revokeX402AgentPackOnReversal(
     ? object.payment_intent
     : object.payment_intent?.id ?? null;
   if (!intentId) return;
+  // Refunds and disputes for unrelated SKUs must not depend on the pack
+  // database. Check the Stripe-owned PaymentIntent, not charge metadata.
+  // Both checkout entry points attach the approved plan and price ID.
+  if (!stripe) throw new Error("x402_pack_reversal_stripe_unavailable");
+  let paymentIntent: Stripe.PaymentIntent;
+  try {
+    paymentIntent = await stripe.paymentIntents.retrieve(intentId);
+  } catch {
+    throw new Error("x402_pack_payment_intent_lookup_failed");
+  }
+  if (paymentIntent.metadata?.plan !== "x402_agent_credits_120" ||
+      paymentIntent.metadata?.stripe_price_id !== X402_AGENT_PACK_PRICE_ID) return;
   if (!supabase) throw new Error("x402_pack_revocation_database_unavailable");
   const status = event.type === "charge.refunded" ? "refunded" : "disputed";
   // Record the reversal even if the grant has not arrived yet. The DB

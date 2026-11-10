@@ -53,3 +53,7 @@ The Stripe prepaid Checkout redirects to a neutral `/x402?checkout=returned` pag
 - Do not enable public copy or offer promotion until customer fulfillment is independently proven.
 
 **Current evidence:** Live Stripe price exists. New code and SQL are staged only on a GitHub branch, not merged, not migrated, not active or deployed. No new charge, checkout session, customer credit or verification debit has been attempted.
+
+### Hardening on November 10
+
+Both Checkout surfaces must send a **neutral** x402 return; even a valid Stripe redirect is not payment/grant proof. Pack-created PaymentIntents carry the server-assigned `plan` and `stripe_price_id` metadata. On refunds/disputes, the canonical Stripe webhook retrieves the PaymentIntent from Stripe before touching the x402 ledger. An unrelated refund must not be held hostage by an unavailable pack ledger or recorded as an x402 reversal; Stripe lookup outages fail with a retryable error. Independent tests cover this distinction.

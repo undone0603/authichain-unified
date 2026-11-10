@@ -462,7 +462,9 @@ export function buildGatedSessionBody(opts: {
   body.set(
     "success_url",
     ret
-      ? `${ret}?paid=1&session_id={CHECKOUT_SESSION_ID}&plan=${encodeURIComponent(plan.id)}`
+      ? plan.id === X402_AGENT_PACK_PLAN_ID
+        ? `${ret}?checkout=returned&plan=${encodeURIComponent(plan.id)}`
+        : `${ret}?paid=1&session_id={CHECKOUT_SESSION_ID}&plan=${encodeURIComponent(plan.id)}`
       : isClaimFile
         ? `${origin}/made-in-usa-claim-file/thanks?session_id={CHECKOUT_SESSION_ID}`
         : isGenerationPack
@@ -517,7 +519,7 @@ export function buildGatedSessionBody(opts: {
   }
   // $29 Starter is one-time: also tag the PaymentIntent so the plan travels
   // with the payment itself, and the webhook never needs the amount fallback.
-  if (isStarter && mode === "payment") {
+  if ((isStarter || plan.id === X402_AGENT_PACK_PLAN_ID) && mode === "payment") {
     body.set("payment_intent_data[metadata][plan]", plan.id);
     body.set(
       "payment_intent_data[metadata][stripe_price_id]",
