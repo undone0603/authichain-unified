@@ -8,7 +8,7 @@ Cloudflare account `4c1869b90f13f86940aa3747839bf420`, separate **new** static-o
 
 ## Source and review
 
-Source artifact prepared in the ChatGPT session: `authichain-first-purchase-site.zip` with `index.html` (standalone HTML, CSS, JS). **Artifact has not been committed here**, so this is a deployment plan, not a releasable source tree. Attach and review exact source in a subsequent source-only commit. Confirm HTML is read-only, inspect any fetch origins and CORS, check for script injection and exposed personal data, and test fail-closed unknown/stale status. Pin the reviewed artifact hash and obtain eligible independent review and exact-head applicable checks before any hosted publication.
+Source artifact is committed at `sites/first-purchase-evidence/index.html` (standalone HTML, CSS, JS), byte-for-byte identical to the original session ZIP's `index.html` (SHA-256 `f1d61f6e33c0d91105f4fad9bae522eb922845631640d80b406184e5f9c49f0c`). Static safety checks 11/11 and `node --check` passed locally; these do not substitute for a real browser test, exact-head CI or independent review. Confirm HTML is read-only, inspect any fetch origins and CORS, check for script injection and exposed personal data, and test fail-closed unknown/stale status. Pin the reviewed artifact hash and obtain eligible independent review and exact-head applicable checks before any hosted publication.
 
 ## Feed scope
 
