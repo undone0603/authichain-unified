@@ -2,7 +2,7 @@
  * Daily revenue-cycle Cron Worker.
  * Read-only: public rails check (Starter + DPP checkout) + decision log.
  * Never sends mail, never creates Stripe sessions, no secrets required.
- * Cron: 0 13 * * * UTC (08:30 America/Detroit).
+ * Cron: 0 13 * * * UTC (08:00 EST / 09:00 EDT in America/Detroit).
  */
 
 interface Env {}
@@ -32,7 +32,7 @@ async function checkMoneyRails(origin = DEFAULT_ORIGIN): Promise<{ ok: boolean; 
   const results: RailsResult[] = [];
   for (const step of steps) {
     try {
-      const res = await fetch(step.url, { method: step.method, redirect: "manual" });
+      const res = await fetch(step.url, { method: step.method, redirect: "manual", signal: AbortSignal.timeout(5000) });
       const ok = step.accept.includes(res.status);
       results.push({
         id: step.id,
@@ -56,7 +56,7 @@ async function checkMoneyRails(origin = DEFAULT_ORIGIN): Promise<{ ok: boolean; 
   const failed = results.filter(r => !r.ok);
   return {
     ok: failed.length === 0,
-    reason: failed.length === 0 ? "Starter $29 and DPP $299 checkout rails up" : failed.map(f => `${f.id}: ${f.detail ?? "failed"}`).join("; "),
+    reason: failed.length === 0 ? "Starter and DPP public checkout endpoints returned expected HTTP statuses; payment and fulfillment unverified" : failed.map(f => `${f.id}: ${f.detail ?? "failed"}`).join("; "),
     results,
   };
 }
@@ -79,7 +79,6 @@ export default {
           results: rails.results,
         };
         console.log(JSON.stringify(log));
-        // Optional: POST to ntfy.sh if secret is later added. Not required for v1.
       })()
     );
   },
