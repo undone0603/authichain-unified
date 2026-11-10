@@ -93,6 +93,11 @@ test('payment Worker edge release remains manual-only, SHA-pinned and policy-pro
   assert.match(workflow, /node --test scripts\/ci\/autonomous-release-gate\.test\.mjs/);
   assert.match(workflow, /node scripts\/ci\/autonomous-release-gate\.mjs/);
   assert.match(workflow, /persist-credentials: false/);
+  // Payment Worker releases must not inherit broad repository token aliases.
+  assert.match(workflow, /secrets\.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN/);
+  assert.match(workflow, /secrets\.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID/);
+  assert.doesNotMatch(workflow, /secrets\.CLOUDFLARE_API_TOKEN/);
+  assert.doesNotMatch(workflow, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
   assert.ok(
     workflow.indexOf('node scripts/ci/autonomous-release-gate.mjs') <
       workflow.indexOf('Record live version (rollback target)'),
