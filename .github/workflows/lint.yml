@@ -43,19 +43,24 @@ jobs:
           git sparse-checkout disable
           git reset --hard HEAD
           test -f package.json
-      # Install the repo-pinned manager for every runner; never trust global PATH.
+      # Self-hosted WSL cannot use pnpm/action-setup for 10.28.2. The
+      # download ETIMEDOUT and the signature check then refuses to run.
+      - name: Use the runner Node and pnpm
+        if: runner.environment == 'self-hosted'
+        run: bash scripts/ci/use-runner-pnpm.sh
+
       - name: Install pnpm
+        if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+      - name: Setup Node.js
+        if: runner.environment != 'self-hosted'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
-          # Self-hosted runners keep a persistent pnpm store. Uploading it
-          # through actions/cache packs ~1 GB and stalls the runner.
-          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
+          cache: pnpm
 
       # CFA-737: node --check one file at a time. `node --check a.mjs b.mjs`
       # only parses the first argument, which is how a SyntaxError in

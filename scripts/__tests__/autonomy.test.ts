@@ -53,9 +53,9 @@ describe("autonomy manifest", () => {
     expect(validateManifest(loadManifest(), listWorkflowFiles())).toEqual([]);
   });
 
-  it("has cold outreach switched on by the owner (2026-11-09), a cap, and a strict breaker", () => {
+  it("has cold outreach off again (2026-11-09), a cap, and a strict breaker", () => {
     const co = loadManifest().cold_outreach;
-    expect(co.enabled).toBe(true);
+    expect(co.enabled).toBe(false);
     expect(co.max_new_prospects_per_day).toBeLessThanOrEqual(10);
     expect(co.breaker.max_bounce_rate).toBeLessThanOrEqual(0.03);
     expect(co.breaker.max_complaints).toBe(0);
@@ -175,6 +175,7 @@ describe("launch mode", () => {
   });
 
   it("the real manifest's launch window is within bounds", () => {
+    expect(loadManifest().launch_mode.enabled).toBe(false);
     expect(validateLaunchMode(loadManifest())).toEqual([]);
   });
 
