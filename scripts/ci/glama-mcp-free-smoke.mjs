@@ -96,6 +96,13 @@ export async function runFreeMcpSmoke({
     JSON.stringify(discoveredNames.slice().sort()) === JSON.stringify(EXPECTED_TOOLS.slice().sort()),
     "Discovery tool list differs from eight expected names"
   );
+  if (requireHints) {
+    const advertised = discovery.pricing?.freeTools ?? [];
+    ensure(
+      JSON.stringify(advertised.slice().sort()) === JSON.stringify(SAFE_READ_ONLY.slice().sort()),
+      "GET freeTools must list all seven free tools and exclude paid verify"
+    );
+  }
   log("PASS GET discovery, version " + discovery.serverInfo.version + ", tools " + discoveredNames.length);
 
   const initialized = await jsonRpc(fetchImpl, url, 1, "initialize", {
