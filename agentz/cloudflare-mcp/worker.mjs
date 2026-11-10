@@ -1,8 +1,11 @@
+import {enqueue,recent,runQueue} from "./memory.mjs";
 /** AgentZ Cloudflare edge MCP gateway, read-only foundation.
  * No secrets or privileged GitHub operations are exposed.
  * Configure AGENTZ_MCP_TOKEN as a Worker secret before deployment.
  */
 const TOOLS = [
+  {name:"agentz_enqueue_probe",description:"Queue a bounded public GitHub repository inspection",inputSchema:{type:"object",properties:{target:{type:"string"},priority:{type:"integer"}},required:["target"],additionalProperties:false}},
+  {name:"agentz_memory_recent",description:"Read recent task outcomes and learned observations",inputSchema:{type:"object",properties:{limit:{type:"integer"}},additionalProperties:false}},
   {name:"agentz_readiness",description:"Check the read-only AgentZ Cloudflare gateway",inputSchema:{type:"object",properties:{},additionalProperties:false}},
   {name:"agentz_public_fetch",description:"Fetch a bounded public HTTPS page as untrusted text",inputSchema:{type:"object",properties:{url:{type:"string"}},required:["url"],additionalProperties:false}},
 ];
@@ -25,6 +28,7 @@ async function equalSecret(a,b){
   return diff===0;
 }
 export default {
+ async scheduled(event,env,ctx){ctx.waitUntil(runQueue(env,3));},
  async fetch(request,env){
   if(request.method==="GET"&&new URL(request.url).pathname==="/health")return json({service:"agentz-mcp-edge",status:"up",authenticated_tools:true});
   if(!env.AGENTZ_MCP_TOKEN)return json({error:"not configured"},503);
@@ -40,6 +44,10 @@ export default {
   if(call.method==="tools/list")return result({tools:TOOLS});
   if(call.method!=="tools/call")return error(-32601,"method not found");
   const name=call.params?.name;
+  if(name==="agentz_enqueue_probe"||name==="agentz_memory_recent"){
+   try {const value=name==="agentz_enqueue_probe"?await enqueue(env,call.params?.arguments):await recent(env,call.params?.arguments);return result({content:[{type:"text",text:JSON.stringify(value)}]})}
+   catch(e){return error(-32000,String(e.message).slice(0,200))}
+  }
   if(name==="agentz_readiness")return result({content:[{type:"text",text:JSON.stringify({cloudflare_edge:true,browser_inspect:false,code_write:false,production_dispatch:false})}]});
   if(name==="agentz_public_fetch"){
    try{
