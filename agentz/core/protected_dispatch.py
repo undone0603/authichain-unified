@@ -23,6 +23,8 @@ def dispatch_protected_release(expected_sha: str, *, authorized: bool = False,
         raise PermissionError(decision.reason)
     if not isinstance(expected_sha, str) or not SHA.fullmatch(expected_sha):
         raise ValueError("full lowercase 40-character SHA required")
+    if os.environ.get("AGENTZ_RELEASE_DISPATCH_ENABLED") != "true":
+        raise PermissionError("host release dispatch is disabled")
     token = os.environ.get("AGENTZ_GITHUB_WORKFLOW_TOKEN")
     if not token:
         raise RuntimeError("dedicated GitHub workflow token unavailable")
