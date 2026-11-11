@@ -9,9 +9,16 @@ export async function scrapeBatteryPassport(env: any, targetUrl: string) {
 
   // Extract attributes based on the CIRPASS / Battery Pass Data Model
   const passportData = await page.evaluate(() => {
+    const document = (
+      globalThis as {
+        document?: {
+          querySelector(selector: string): { textContent: string | null } | null;
+        };
+      }
+    ).document;
     // Helper to safely extract text content based on generic or semantic selectors
     const getText = (selector: string) =>
-      document.querySelector(selector)?.textContent?.trim() || null;
+      document?.querySelector(selector)?.textContent?.trim() || null;
 
     return {
       // 1. General Product Identity

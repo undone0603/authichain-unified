@@ -420,6 +420,86 @@ from agentz.api.sse import router as sse_router
 app.include_router(sse_router)
 
 
+# --- Local AgentZ browser executor (read-only, allowlisted) ---
+class BrowserTaskInput(BaseModel):
+    task: str
+
+
+@app.post("/agentz/browser/tasks", dependencies=[Depends(verify_token)], tags=["AgentZ Browser"])
+async def api_agentz_browser_task(data: BrowserTaskInput):
+    """Inspect fixed GitHub pages using the configured local browser executor.
+
+    Never accepts arbitrary URLs, browser commands, or deployment actions.
+    """
+    from agentz.core.browser_executor import execute_browser_task
+    try:
+        return await run_in_threadpool(execute_browser_task, data.task)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
+class PublicNavigateInput(BaseModel):
+    url: str
+
+
+@app.post("/agentz/browser/navigate", dependencies=[Depends(verify_token)], tags=["AgentZ Browser"])
+async def api_agentz_public_navigate(data: PublicNavigateInput):
+    """Read public HTTPS pages using a network-isolated local browser."""
+    from agentz.core.public_navigation import navigate_public
+    try:
+        return await run_in_threadpool(navigate_public, data.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
+class ProtectedDispatchInput(BaseModel):
+    expected_sha: str
+
+
+@app.post("/agentz/github/dispatch-protected", dependencies=[Depends(verify_token)], tags=["AgentZ Release"])
+async def api_agentz_dispatch_protected(data: ProtectedDispatchInput):
+    """Dispatch existing SHA-pinned workflow only after scoped authorization.
+
+    Remote callers cannot assert authorization or release gate status.\n    Dispatch is disabled until server-side verified attestations are wired.
+    """
+    from agentz.core.protected_dispatch import dispatch_protected_release
+    try:
+        return await run_in_threadpool(
+            dispatch_protected_release, data.expected_sha,
+            authorized=False, release_gate_passed=False
+        )
+    except (ValueError, PermissionError) as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
+class CodeProposalInput(BaseModel):
+    branch_ref: str
+    path: str
+    content: str
+    expected_blob_sha: Optional[str] = None
+
+
+@app.post("/agentz/github/code-proposal", dependencies=[Depends(verify_token)], tags=["AgentZ Development"])
+async def api_agentz_code_proposal(data: CodeProposalInput):
+    """Propose a change to a restricted feature branch; never touch main."""
+    from agentz.core.code_proposals import propose_code_change
+    try:
+        return await run_in_threadpool(
+            propose_code_change, data.branch_ref, data.path, data.content,
+            expected_blob_sha=data.expected_blob_sha
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

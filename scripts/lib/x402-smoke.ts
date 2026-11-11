@@ -13,6 +13,15 @@ export const BASE_CHAIN_ID = 8453;
 export const DEFAULT_ENDPOINT = "https://authichain.com/api/x402";
 export const DEFAULT_RPC = "https://mainnet.base.org";
 
+/** Never submit a payment against invented / malformed seal identifiers. */
+export function validSmokeSealId(value: string | undefined): string | null {
+  const trimmed = (value ?? "").trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)
+    ? trimmed.toLowerCase()
+    : null;
+}
+
+
 const BALANCE_OF = new ethers.Interface([
   "function balanceOf(address owner) view returns (uint256)",
 ]);

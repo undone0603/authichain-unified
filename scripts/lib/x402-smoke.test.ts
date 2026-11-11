@@ -8,6 +8,7 @@ import {
   recoverExactSigner,
   signExactPayment,
   usdcBalanceOfCalldata,
+  validSmokeSealId,
 } from "./x402-smoke.ts";
 import { TOKENOMICS_PAY_TO } from "./evm-chains.ts";
 
@@ -98,5 +99,15 @@ describe("signExactPayment", () => {
       Buffer.from(headerB64, "base64").toString("utf8")
     ) as { resource?: string };
     expect(decoded.resource).toBe(resource);
+  });
+});
+
+
+describe("x402 live smoke seal gate", () => {
+  it("accepts only an explicit UUID, never invented smoke IDs", () => {
+    expect(validSmokeSealId("550e8400-e29b-41d4-a716-446655440000")).toBe("550e8400-e29b-41d4-a716-446655440000");
+    expect(validSmokeSealId("x402-smoke-challenge")).toBeNull();
+    expect(validSmokeSealId("x402-smoke-123")).toBeNull();
+    expect(validSmokeSealId(undefined)).toBeNull();
   });
 });

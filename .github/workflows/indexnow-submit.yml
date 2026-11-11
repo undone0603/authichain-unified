@@ -28,12 +28,20 @@ concurrency:
 jobs:
   submit:
     name: Submit sitemap URLs to IndexNow
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
+      # setup-node's installer hits the Windows npm shim on this WSL host.
+      # The runner already has Linux arm64 Node 22.
+      - name: Use the runner Node
+        run: |
+          set -euo pipefail
+          node_bin="${HOME}/.nvm/versions/node/v22.23.4/bin"
+          test -x "${node_bin}/node"
+          echo "${node_bin}" >> "$GITHUB_PATH"
+          "${node_bin}/node" -v | grep -q '^v22\.'
       - name: Submit
+        env:
+          NODE_OPTIONS: --dns-result-order=ipv4first --no-network-family-autoselection
         run: node scripts/seo/indexnow-submit.mjs ${{ inputs.dry_run && '--dry-run' || '' }}

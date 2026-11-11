@@ -55,6 +55,11 @@ jobs:
             .github/autonomy.json
             scripts/autonomy/launch-mode.mjs
           sparse-checkout-cone-mode: false
+      # The WSL runner's PATH has no Linux node (run 42226910776:
+      # "node: command not found"), so install one rather than rely on it.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
       - id: launch
         run: node scripts/autonomy/launch-mode.mjs
       - id: mode
@@ -89,6 +94,12 @@ jobs:
           else
             echo "ping_agentz=true" >> "$GITHUB_OUTPUT"
           fi
+      - name: Restore full tree after sparse checkout
+        if: always()
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
 
   # ── Phase 0: Live claw + AgentZ (health; architect dry-run if keyed) ────────
   ping-claw-agentz:
@@ -110,6 +121,14 @@ jobs:
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@v7
+      # resolve-mode leaves the shared self-hosted workspace sparse; restore
+      # the full tree (same step as agentz-ci.yml / typecheck-ratchet.yml).
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -171,10 +190,29 @@ jobs:
     if: needs.preflight.outputs.ready == 'true'
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
-        with: { version: "${{ env.PNPM_VERSION }}" }
+      # resolve-mode leaves the shared self-hosted workspace sparse; restore
+      # the full tree (same step as agentz-ci.yml / typecheck-ratchet.yml).
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+      # Put a Linux Node on PATH before anything runs node or npm. The WSL
+      # runner's service PATH has no Linux node, so npm resolved to the
+      # Windows shim ("WSL 1 is not supported", run 42226910776). These
+      # jobs only run self-hosted, which never used the pnpm cache.
       - uses: actions/setup-node@v7
-        with: { node-version: "${{ env.NODE_VERSION }}", cache: pnpm }
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+      # Install the pinned pnpm instead of trusting the runner's PATH pnpm,
+      # which drifted to 12.15.0 on both WSL runners (run 41862666846).
+      # Same step as typecheck-ratchet.yml: a per-runner dest so concurrent
+      # self-hosted jobs do not race on one directory.
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: "${{ env.PNPM_VERSION }}"
+          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Qualify leads with AI scoring
         run: pnpm exec tsx scripts/qualify-leads.ts
@@ -201,10 +239,29 @@ jobs:
     if: needs.resolve-mode.outputs.dry_run != 'true'
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
-        with: { version: "${{ env.PNPM_VERSION }}" }
+      # resolve-mode leaves the shared self-hosted workspace sparse; restore
+      # the full tree (same step as agentz-ci.yml / typecheck-ratchet.yml).
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+      # Put a Linux Node on PATH before anything runs node or npm. The WSL
+      # runner's service PATH has no Linux node, so npm resolved to the
+      # Windows shim ("WSL 1 is not supported", run 42226910776). These
+      # jobs only run self-hosted, which never used the pnpm cache.
       - uses: actions/setup-node@v7
-        with: { node-version: "${{ env.NODE_VERSION }}", cache: pnpm }
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+      # Install the pinned pnpm instead of trusting the runner's PATH pnpm,
+      # which drifted to 12.15.0 on both WSL runners (run 41862666846).
+      # Same step as typecheck-ratchet.yml: a per-runner dest so concurrent
+      # self-hosted jobs do not race on one directory.
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: "${{ env.PNPM_VERSION }}"
+          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Sync MI leads to HubSpot CRM
         run: pnpm exec tsx scripts/sync-mi-leads-hubspot.ts
@@ -228,10 +285,29 @@ jobs:
     if: always() && needs.qualify-leads.result != 'cancelled'
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
-        with: { version: "${{ env.PNPM_VERSION }}" }
+      # resolve-mode leaves the shared self-hosted workspace sparse; restore
+      # the full tree (same step as agentz-ci.yml / typecheck-ratchet.yml).
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+      # Put a Linux Node on PATH before anything runs node or npm. The WSL
+      # runner's service PATH has no Linux node, so npm resolved to the
+      # Windows shim ("WSL 1 is not supported", run 42226910776). These
+      # jobs only run self-hosted, which never used the pnpm cache.
       - uses: actions/setup-node@v7
-        with: { node-version: "${{ env.NODE_VERSION }}", cache: pnpm }
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+      # Install the pinned pnpm instead of trusting the runner's PATH pnpm,
+      # which drifted to 12.15.0 on both WSL runners (run 41862666846).
+      # Same step as typecheck-ratchet.yml: a per-runner dest so concurrent
+      # self-hosted jobs do not race on one directory.
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: "${{ env.PNPM_VERSION }}"
+          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Generate funnel performance report
         run: pnpm exec tsx scripts/funnel-report.ts
