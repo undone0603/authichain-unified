@@ -110,9 +110,29 @@ describe("probePublic", () => {
       }
       return new Response(null, { status: probe.accept[0] });
     });
-    const hit = stripe.find(r => r.id === "checkout_launch_annual_confirm_head");
+    const hit = stripe.find(
+      r => r.id === "checkout_launch_annual_confirm_head"
+    );
     expect(hit.ok).toBe(false);
     expect(hit.location).toBe("https://checkout.stripe.com/c/pay/cs_test");
+  });
+
+  it("fails a 303 whose Location is a different host, even when the path is /pricing", async () => {
+    const otherHost = await probePublic(async url => {
+      const probe = PUBLIC_PROBES.find(p => p.url === url);
+      if (probe.id === "checkout_launch_annual_confirm_head") {
+        return new Response(null, {
+          status: 303,
+          headers: { Location: "https://evil.example/pricing" },
+        });
+      }
+      return new Response(null, { status: probe.accept[0] });
+    });
+    const hit = otherHost.find(
+      r => r.id === "checkout_launch_annual_confirm_head"
+    );
+    expect(hit.ok).toBe(false);
+    expect(hit.location).toBe("https://evil.example/pricing");
   });
 
   it("uses HEAD for checkout probes so the check can never open a Stripe session", async () => {
