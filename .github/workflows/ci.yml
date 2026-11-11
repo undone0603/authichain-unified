@@ -32,8 +32,8 @@ env:
 jobs:
   extras:
     name: Drizzle + Pytest Extras
-    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
-    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.base.repo.full_name == github.repository
+    runs-on: ${{ github.event_name == 'push' && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@v4
       - name: Restore full tree after sparse checkout
