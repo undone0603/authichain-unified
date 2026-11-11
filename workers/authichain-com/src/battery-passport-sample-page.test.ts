@@ -109,6 +109,13 @@ describe("battery passport demonstration sample", () => {
     const bundle = await buildSampleBundle(now);
     expect(bundle.signatureStatus).toBe("signed");
     expect(bundle.verification.recordSignature).toBe(true);
+    expect(bundle.missingFields.map(row => row.field)).toEqual([
+      "Carbon footprint",
+      "Recycled content",
+      "Due diligence",
+      "Economic operator who places the battery on the EU market",
+    ]);
+    expect(bundle.record).toEqual(SAMPLE_RECORD);
   });
 
   it("renders the demonstration banner, estate chrome, and honest JWKS status", async () => {
@@ -116,6 +123,15 @@ describe("battery passport demonstration sample", () => {
     const plan = planById("dpp_readiness")!;
     expect(html).toContain(SAMPLE_LABEL);
     expect(html).toContain("EXAMPLE-LMT-48V-14Ah");
+    expect(html).toContain('id="missing"');
+    expect(html).toContain("Carbon footprint");
+    expect(html).toContain("Recycled content");
+    expect(html).toContain("Due diligence");
+    expect(html).toContain(
+      "Economic operator who places the battery on the EU market"
+    );
+    expect(html).toContain("Article 77 passport issued");
+    expect(html).toContain("does not mean a passport was issued");
     expect(html).toContain("Fictional Demonstration Brand");
     expect(html).toContain('id="lead-capture"');
     expect(html).toContain("estate-nav");
