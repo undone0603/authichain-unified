@@ -82,6 +82,7 @@
       "managed": true,
       "workflows": {
         "agentz-ci.yml": "on",
+        "agentz-mcp-verify.yml": "on",
         "ci.yml": "on",
         "main.yml": "on",
         "lint.yml": "on",

@@ -118,6 +118,7 @@ jobs:
           node --experimental-strip-types --test
           scripts/autonomy/*.test.mjs
           scripts/ci/*.test.mjs
+          scripts/__tests__/verify-demand.test.mjs
           protocol/qfs/envelope.test.mjs
           scripts/lib/b2b-send-policy.test.ts
           src/lib/generation-seal.test.ts
