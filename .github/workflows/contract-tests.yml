@@ -30,7 +30,7 @@ concurrency:
 jobs:
   hardhat:
     name: Contract tests (Hardhat)
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: ${{ github.event_name == 'push' && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
     timeout-minutes: 20
     steps:
       - name: Checkout
