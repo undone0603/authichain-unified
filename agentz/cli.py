@@ -14,7 +14,7 @@ Usage:
 
 `run` dispatches through the registry runner (credential preflight,
 risk firewall, audit log). Default mode is confirm — never auto.
-`--all --mode auto` is refused.
+`--mode auto` is refused for one workflow and for `--all`.
 """
 
 from __future__ import annotations
@@ -134,10 +134,10 @@ def cmd_creds(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     mode = parse_mode(args.mode)
-    if args.all and mode == Mode.AUTO:
+    if mode == Mode.AUTO:
         print(
-            "Refusing `run --all --mode auto`. Re-run with --mode dry-run "
-            "(or confirm a single workflow id).",
+            "Refusing `--mode auto`. AgentZ auto stays frozen. "
+            "Re-run with --mode confirm or --mode dry-run.",
             file=sys.stderr,
         )
         return 2
@@ -165,7 +165,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         with open(args.json_out, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2)
 
-    if any(r.status == "failed" for r in results):
+    # A blocked launch attempt must never look successful to the daemon,
+    # a scheduler, or an external orchestrator just because nothing ran.
+    if any(r.status in {"failed", "blocked"} for r in results):
         return 1
     return 0
 
@@ -248,6 +250,13 @@ def cmd_openclaw(args: argparse.Namespace) -> int:
     return 2
 
 
+def cmd_tinyfish(args: argparse.Namespace) -> int:
+    """Run one read-only TinyFish MCP operation through AgentZ."""
+    from agentz.integrations.tinyfish_mcp import cli_action
+
+    return cli_action(args.tinyfish_action, args.values, dry_run=args.dry_run)
+
+
 def build_parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog="agentz",
@@ -302,7 +311,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument(
         "--all",
         action="store_true",
-        help="Run every matching workflow (refuses --mode auto)",
+        help="Run every matching workflow (--mode auto stays refused)",
     )
     run_p.add_argument(
         "--revenue-only",
@@ -331,6 +340,21 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Write run results to a JSON file",
     )
+
+    tf = sub.add_parser(
+        "tinyfish",
+        help="Read-only TinyFish MCP research (search/fetch only; no browser actions)",
+    )
+    tf_sub = tf.add_subparsers(dest="tinyfish_action", required=True)
+    tf_search = tf_sub.add_parser("search", help="Search the public web via MCP")
+    tf_search.add_argument("values", nargs=1, metavar="QUERY")
+    tf_fetch = tf_sub.add_parser("fetch_content", help="Fetch 1-10 public HTTP(S) URLs")
+    tf_fetch.add_argument("values", nargs="+", metavar="URL")
+    for tf_action in (tf_search, tf_fetch):
+        tf_action.add_argument(
+            "--dry-run", action="store_true",
+            help="Validate and print the request; do not connect to TinyFish",
+        )
 
     oc = sub.add_parser(
         "openclaw",
@@ -388,6 +412,8 @@ def main(argv: list[str] | None = None) -> int:
         if not args.all and not args.workflow_id:
             parser.error("run requires a workflow id or --all")
         return cmd_run(args)
+    if args.command == "tinyfish":
+        return cmd_tinyfish(args)
     if args.command == "openclaw":
         return cmd_openclaw(args)
 

@@ -235,6 +235,9 @@ export default {
           amountTotal: session.amount_total,
         });
         const plan = grant?.plan || session.metadata?.plan || "starter";
+        if (grant?.canonicalFulfillment && !email) {
+          return grantRetry("canonical DPP buyer identity missing");
+        }
 
         if (email) {
           const upserted = await supabaseUpsert(
@@ -251,12 +254,36 @@ export default {
             "email"
           );
           if (!upserted) return grantRetry("profile upsert failed");
-          // humanHold prices (DPP workspace, passport, MUSA) record the plan
-          // here and nothing else. generations_limit 50 is applied by
-          // provisionPurchase on POST /api/stripe/webhook. Stamping
-          // last_grant_session_id, or writing generations_used 0, would make
-          // that grant look finished or wipe it.
-          if (grant?.humanHold) {
+          // Human-held custom deliverables (passport/MUSA) remain ungranted.
+          // DPP Workspace is now delegated to the canonical apex webhook.
+          // This secondary handler checks the apex persisted receipt, never
+          // writes the 50 credits or marks its own grant as complete.
+          // DPP hold released only for the existing self-serve workspace.
+          // The canonical apex webhook performs the CAS-protected 50-credit
+          // grant and activation. This secondary webhook must NEVER rewrite
+          // that profile, stamp the session, or acknowledge success before
+          // durable canonical fulfillment is visible. Return 500 to let
+          // Stripe retry if the apex delivery has not finished.
+          if (grant?.canonicalFulfillment) {
+            const canonical = await supabaseSelectOne(
+              env,
+              "profiles",
+              { email },
+              "last_grant_session_id,generations_limit"
+            );
+            const fulfilled =
+              canonical.ok &&
+              canonical.row?.last_grant_session_id === session.id &&
+              Number(canonical.row?.generations_limit) >= grant.generations;
+            if (!fulfilled) {
+              return grantRetry("canonical DPP entitlement pending");
+            }
+            console.log(JSON.stringify({
+              evt: "stripe_grant_delegated_verified",
+              plan: grant.plan,
+              session: session.id,
+            }));
+          } else if (grant?.humanHold) {
             console.log(
               JSON.stringify({
                 evt: "stripe_grant_human_hold",

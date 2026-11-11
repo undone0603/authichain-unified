@@ -1,0 +1,130 @@
+# Credential-free quality checks only. This configuration does not deploy.
+# Do not add production tokens or contexts to this pipeline.
+version: 2.1
+
+executors:
+  node:
+    docker:
+      - image: cimg/node:22.23.3
+    resource_class: large
+    working_directory: ~/project
+
+commands:
+  bounded-check:
+    parameters:
+      task:
+        type: enum
+        enum: [quality, typecheck-ratchet, test-workers, test-other, build, extras]
+      seconds:
+        type: integer
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
+            - pnpm-store-v1-
+      - run:
+          name: "Bounded << parameters.task >> (<< parameters.seconds >>s)"
+          # A single wall-clock deadline includes installation and all checks.
+          # GNU timeout signals the process group; KILL follows TERM after 10s.
+          # Expiry fails the job (124/137); there are no automatic retries.
+          command: timeout --signal=TERM --kill-after=10s << parameters.seconds >>s /bin/bash .circleci/quality-check.sh << parameters.task >>
+          no_output_timeout: 35m
+      - save_cache:
+          key: pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
+          paths:
+            - ~/.pnpm-store
+
+jobs:
+  quality:
+    executor: node
+    steps:
+      - bounded-check:
+          task: quality
+          seconds: 900
+
+  typecheck-ratchet:
+    executor: node
+    environment:
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - bounded-check:
+          task: typecheck-ratchet
+          seconds: 900
+
+  test-workers:
+    executor: node
+    steps:
+      - bounded-check:
+          task: test-workers
+          seconds: 1200
+
+  test-other:
+    executor: node
+    steps:
+      - bounded-check:
+          task: test-other
+          seconds: 1800
+
+  build:
+    executor: node
+    environment:
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - bounded-check:
+          task: build
+          seconds: 1200
+
+  extras:
+    executor: node
+    steps:
+      - bounded-check:
+          task: extras
+          seconds: 1500
+      - store_test_results:
+          path: /tmp/pytest-results
+
+  main-quality-gate:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - run:
+          name: Six required jobs succeeded
+          command: |
+            timeout --signal=TERM --kill-after=10s 60s /bin/bash -eu -o pipefail -c 'echo "CircleCI six-job quality gate completed for ${CIRCLE_SHA1:?missing pipeline revision}"'
+          no_output_timeout: 2m
+
+workflows:
+  quality-gate:
+    jobs:
+      # Fail early before starting the other five large executors.
+      - test-workers:
+          filters: &quality-branches
+            branches:
+              ignore:
+                - /dependabot\/.*/
+      - quality:
+          requires: [test-workers]
+          filters: *quality-branches
+      - typecheck-ratchet:
+          requires: [test-workers]
+          filters: *quality-branches
+      - test-other:
+          requires: [test-workers]
+          filters: *quality-branches
+      - build:
+          requires: [test-workers]
+          filters: *quality-branches
+      - extras:
+          requires: [test-workers]
+          filters: *quality-branches
+      - main-quality-gate:
+          requires:
+            - quality
+            - typecheck-ratchet
+            - test-workers
+            - test-other
+            - build
+            - extras
+          filters: *quality-branches

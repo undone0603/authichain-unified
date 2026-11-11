@@ -199,8 +199,14 @@ export const PLANS: Plan[] = [
       "One-time checkout that opens an AuthiChain workspace. Not an audit, not a certification, not legal advice.",
     generations: 50,
     stripe_price_id: "price_1TwmD8GqTruSqV8TpAF8dfyA",
+    // 2026-11-02: the earlier link was deleted and every card rendered dead.
+    // This one is active on the same $299 one-time price (verified live in
+    // Stripe: active=true, line item price_1TwmD8GqTruSqV8TpAF8dfyA), so the
+    // workspace can be sold again without creating a new Stripe object.
+    stripe_payment_link: "https://buy.stripe.com/5kQdR9fzP4t85iaePO1ND43",
     stripe_mode: "payment",
     tier: "pro",
+    listed: true,
     features: [
       "AuthiChain workspace",
       "Self-serve activation",
@@ -412,6 +418,32 @@ export function planPaymentLink(id: PlanId): string | undefined {
   if (!plan || !(plan.stripe_price_id || plan.stripe_payment_link))
     return undefined;
   return gatedCheckoutUrl(id);
+}
+
+export type CatalogOffer = {
+  id: PlanId;
+  name: string;
+  usd: number;
+  priceSuffix: string | null;
+  checkout: string;
+};
+
+/** Every paid plan that has a gated checkout. Free is not an offer. */
+export function catalogOffers(): CatalogOffer[] {
+  return PLANS.flatMap(plan => {
+    if (plan.price <= 0) return [];
+    const checkout = planPaymentLink(plan.id);
+    if (!checkout) return [];
+    return [
+      {
+        id: plan.id,
+        name: plan.name,
+        usd: plan.price,
+        priceSuffix: plan.price_suffix ?? null,
+        checkout,
+      },
+    ];
+  });
 }
 
 export function planStripePaymentLink(id: PlanId): string | undefined {

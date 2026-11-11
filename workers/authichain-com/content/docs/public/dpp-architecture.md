@@ -62,7 +62,7 @@ Live and citeable:
 - Open verification protocol at [/protocol](/protocol) (v0.1.0 draft).
 - Free readiness tool at [/dpp-check](/dpp-check).
 - Battery gap map at [/battery-passport](/battery-passport).
-- Agent verification at [/x402](/x402) — $0.05 USDC per call on Base. Unpaid `POST /api/x402` returns HTTP 402.
+- Agent verification at [/x402](/x402) — $0.05 USDC per call on Base. An empty JSON body is the unpaid HTTP 402. A seal UUID inside the daily free allowance is HTTP 200 with `free: true`, `verified: false`, and `settlement: null`. That answer is not a paid receipt. A non-UUID seal id is HTTP 400 before payment.
 - Human commercial path: EU DPP Readiness, $299 one-time.
 
 EU DPP Readiness opens an AuthiChain workspace with self-serve activation, so you can publish a first passport. Checkout is on [/pricing](/pricing).

@@ -25,9 +25,14 @@ import {
 import {
   QRON_RESOLVE_ORIGIN,
   qronResolveUrl,
-  scannableQrDataUrl,
   type StoredQronPresentation,
 } from "./qron-resolve";
+import {
+  LIVING_QR_SCAN_DISCLAIMER,
+  artPromptForQronImageGen,
+  composeScannableLivingQr,
+  type ScannableLivingQr,
+} from "./scannable-living-qr";
 
 export const QRON_IMAGE_GEN_DEFAULT =
   "https://qron-image-gen.undone-k.workers.dev";
@@ -384,10 +389,11 @@ export async function handleGeneratePost(opts: {
   const resolveUrl = qronResolveUrl(objectId);
 
   try {
+    const scanPayload = anonymous ? targetUrl : resolveUrl;
     const generated = await opts.generateImage({
       // Free samples are never attested, so encode the destination directly
       // (a resolve_url would scan to presentation_not_found).
-      targetUrl: anonymous ? targetUrl : resolveUrl,
+      targetUrl: scanPayload,
       prompt,
       mode,
       ...(presetId ? { presetId } : {}),
@@ -396,6 +402,20 @@ export async function handleGeneratePost(opts: {
     if (!generated.imageUrl) {
       return { status: 502, body: { message: "No image returned" } };
     }
+    let living: ScannableLivingQr;
+    try {
+      living = composeScannableLivingQr({
+        payload: scanPayload,
+        artworkDataUrl: generated.imageUrl,
+        style,
+      });
+    } catch {
+      living = composeScannableLivingQr({
+        payload: scanPayload,
+        style,
+      });
+    }
+    const imageUrl = living.imageUrl;
     const deducted = anonymous
       ? { ok: false, remaining: undefined }
       : await opts.deductCredit(opts.userId!);
@@ -405,7 +425,7 @@ export async function handleGeneratePost(opts: {
       try {
         bind = await opts.bindAttestation({
           destinationUrl: targetUrl,
-          imageUrl: generated.imageUrl,
+          imageUrl,
           objectId,
           userId: opts.userId,
         });
@@ -416,16 +436,14 @@ export async function handleGeneratePost(opts: {
 
     const presentation = buildQronPresentation({
       destinationUrl: targetUrl,
-      imageUrl: generated.imageUrl,
+      imageUrl,
       mode,
       prompt,
       jws: bind?.jws,
       kid: bind?.kid,
       jwksUrl: bind?.jwks_url,
     });
-    const qrDataUrl = await scannableQrDataUrl(
-      anonymous ? targetUrl : presentation.resolve_url
-    );
+    const qrDataUrl = imageUrl;
     if (bind && opts.rememberPresentation) {
       try {
         await opts.rememberPresentation({
@@ -445,13 +463,15 @@ export async function handleGeneratePost(opts: {
       status: 200,
       body: {
         qron: {
-          imageUrl: generated.imageUrl,
+          imageUrl,
           destinationUrl: targetUrl,
           qrDataUrl,
           resolveUrl: anonymous ? null : presentation.resolve_url,
           prompt,
           mode,
           objectId: presentation.object_id,
+          disclaimer: LIVING_QR_SCAN_DISCLAIMER,
+          ecl: living.ecl,
         },
         ...(anonymous ? {} : { presentation }),
         remaining_credits: remaining,
@@ -507,7 +527,7 @@ export async function proxyQronImageGen(opts: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      prompt: `${opts.prompt}. Scannable QR code that encodes ${opts.targetUrl}`,
+      prompt: artPromptForQronImageGen(opts.prompt),
       ...(style ? { style } : {}),
     }),
   });

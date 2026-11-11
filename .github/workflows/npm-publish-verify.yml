@@ -26,7 +26,7 @@ concurrency:
 jobs:
   publish:
     name: Publish authichain-verify
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 10
     defaults:
       run:
