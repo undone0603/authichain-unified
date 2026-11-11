@@ -173,7 +173,10 @@ jobs:
           gh run watch "$RUN_ID" --interval 30 --exit-status
 
       - name: Enable auto-merge for content-only changes
-        if: steps.scope.outputs.content_only == 'true' && success()
+        # Hold this write action until content-only PRs have independently
+        # verified exact-head quality and human approval requirements.
+        # PR creation and all content/CI validation steps remain enabled.
+        if: ${{ false }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NUMBER: ${{ steps.pr.outputs.number }}

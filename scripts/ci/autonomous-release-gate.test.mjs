@@ -22,6 +22,19 @@ function rejects(change, why) {const x=fixture();change(x);assert.throws(() => a
 test('accepts exact main SHA, protected branch, no human gate and all seven successful jobs', () => {
   assert.deepEqual(assertReleasePolicy(fixture()), {sha: SHA, checks: 7, environment: ENV});
 });
+test('accepts successful CircleCI app workflow/job links on current main', () => {
+  const x = fixture();
+  const currentMainJob = 'https://app.circleci.com/workflow/e99fd4ba-7989-4a70-978b-d54f184a9e18/job/87f65d57-d79f-4b16-bc74-bc212fb2c9ea';
+  x.statuses.statuses.forEach(s => { s.target_url = currentMainJob; });
+  assert.equal(assertReleasePolicy(x).checks, 7);
+});
+
+test('rejects impersonated CircleCI app hosts and extra job URL paths', () => {
+  const legitimate = 'https://app.circleci.com/workflow/e99fd4ba-7989-4a70-978b-d54f184a9e18/job/87f65d57-d79f-4b16-bc74-bc212fb2c9ea';
+  rejects(x => { x.statuses.statuses[0].target_url = legitimate.replace('app.circleci.com/', 'app.circleci.com.evil.test/'); }, /test-workers/);
+  rejects(x => { x.statuses.statuses[0].target_url = legitimate + '/extra'; }, /test-workers/);
+});
+
 test('rejects wrong repository, malformed SHA, dispatch mismatch and stale main', () => {
   rejects(x => x.repo = 'someone/else', /wrong repository/);
   rejects(x => x.expectedSha = 'invalid', /SHA mismatch/);
