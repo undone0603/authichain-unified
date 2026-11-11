@@ -43,8 +43,8 @@ test("a diff builds only the worker it touches, including an archived one", () =
 });
 
 test("a workers/_shared diff builds the sisters that import it", () => {
+  // authichain-com is a protected manual release, not a _shared consumer.
   assert.deepEqual(workersToBuild(buildable, ["_shared"]), [
-    "authichain-com",
     "govchain-us",
     "qron-space",
     "strainchain-io",

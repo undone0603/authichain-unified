@@ -76,6 +76,13 @@ async function db(
   return init.method === "POST" ? null : r.json();
 }
 
+/** Stripe metadata values are strings; never forward an untyped value to the ledger. */
+function testPaymentMetadata(metadata: unknown): Record<string, string> {
+  if (metadata === null || typeof metadata !== "object") return {};
+  const value = (metadata as { test_payment?: unknown }).test_payment;
+  return typeof value === "string" ? { test_payment: value } : {};
+}
+
 export async function gather(env: Env, now: Date): Promise<ReconInput> {
   const full = isFullHistory(env) || now.getUTCDay() === 0;
   const start = full ? new Date(0) : new Date(now.getTime() - 48 * 3600e3);
@@ -120,9 +127,7 @@ export async function gather(env: Env, now: Date): Promise<ReconInput> {
       status: c.status,
       refunded: c.refunded,
       livemode: c.livemode,
-      metadata: (c.metadata?.test_payment
-        ? { test_payment: c.metadata.test_payment }
-        : {}) as Record<string, string>,
+      metadata: testPaymentMetadata(c.metadata),
     })),
     sessions: sessions.map(s => ({
       id: s.id,

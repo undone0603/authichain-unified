@@ -8,7 +8,8 @@
 import { execFileSync } from "node:child_process";
 
 // Same set as the full matrix in deploy-workers.yml, minus
-// authichain-agentz (Cloudflare Containers, Workers Paid, dispatch-only).
+// authichain-agentz (Cloudflare Containers, Workers Paid, dispatch-only)
+// and authichain-com (protected manual production release only).
 // A push deploys the members of this list that the push actually changed.
 // passport-demo, qron-portfolio, and first-dollar-desk stay off: they are
 // archived and not in the matrix.
@@ -18,7 +19,6 @@ import { execFileSync } from "node:child_process";
  */
 export const SHARED_WORKER_DIR = "_shared";
 export const SHARED_DIR_CONSUMERS = [
-  "authichain-com",
   "qron-space",
   "strainchain-io",
   "govchain-us",
@@ -36,7 +36,6 @@ export const AUTO_DEPLOY_ALLOWLIST = [
   "authichain-api",
   "authichain-api-gateway",
   "authichain-automation",
-  "authichain-com",
   "authichain-dashboard",
   "qron-automation",
   "qron-image-gen",
