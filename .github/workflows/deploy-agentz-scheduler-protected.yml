@@ -67,6 +67,15 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           node --input-type=module -e 'const r=await fetch(`https://api.github.com/repos/${process.env.REPOSITORY}/branches/main`,{headers:{authorization:`Bearer ${process.env.GH_TOKEN}`,accept:"application/vnd.github+json"}});if(!r.ok)process.exit(1);const j=await r.json();if(j.commit.sha!==process.env.EXPECTED_SHA)process.exit(1)'
+      - name: Set up Node and pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: "10.28.2"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install pinned dependencies
+        run: pnpm install --frozen-lockfile
       - name: Deploy scheduler only, preserving secrets and vars
         working-directory: workers/authichain-automation
         env:
