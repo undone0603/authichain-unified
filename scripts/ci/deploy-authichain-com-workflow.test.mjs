@@ -28,9 +28,23 @@ test("Publish uses versions upload + API promote, not wrangler deploy", () => {
   assert.doesNotMatch(yml, /secret put AUTHICHAIN_ATTESTATION_PRIVATE_KEY/);
 });
 
-test("publish job runs on hosted ubuntu-24.04", () => {
-  assert.match(yml, /runs-on: ubuntu-24\.04/);
-  assert.doesNotMatch(yml, /NODE_OPTIONS:/);
+test("deployment remains manual, main-only, and on the protected WSL runner", () => {
+  const triggers = yml.match(/^on:\n([\s\S]*?)(?=^permissions:)/m)?.[1] ?? "";
+  assert.match(triggers, /^  workflow_dispatch:/m);
+  assert.doesNotMatch(
+    triggers,
+    /^  (?:pull_request(?:_target)?|push|schedule|workflow_run):/m
+  );
+  assert.equal(
+    (yml.match(/runs-on: \[self-hosted, Linux, ARM64, authichain-wsl\]/g) || [])
+      .length,
+    2
+  );
+  assert.equal(
+    (yml.match(/if: github\.ref == 'refs\/heads\/main'/g) || []).length,
+    2
+  );
+  assert.match(yml, /environment:\s*\n\s+name: production-cloudflare/);
 });
 
 test("x402 secrets stay pinned and this publish does not re-put them", () => {
@@ -63,4 +77,3 @@ test("agent-verify exports coerceSealBody and listedSealId for the worker bundle
   assert.match(routes, /from "\.\.\/\.\.\/\.\.\/src\/lib\/agent-verify"/);
   assert.match(routes, /from "\.\.\/\.\.\/\.\.\/src\/lib\/paid-seal-verify"/);
 });
-
