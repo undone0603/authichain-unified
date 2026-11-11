@@ -15,7 +15,7 @@ test("AgentZ dispatch failure remains visible to the scheduler runtime",()=>{
  assert.match(source,/try \{/);
  assert.match(source,/catch \(error\) \{/);
  assert.match(source,/AgentZ dispatch unavailable/);
- assert.match(source,/if \(!response\.ok\) throw new Error/);
+ assert.match(source,/if \(!response\.ok\)\s*throw new Error/);
  assert.match(source,/throw error/);
 });
 test("private service binding and distinct token",()=>{
