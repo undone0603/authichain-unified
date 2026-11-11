@@ -34,6 +34,8 @@ export const PROTECTED_PATHS = [
   "bun.lockb",
   "bun.lock",
   "npm-shrinkwrap.json",
+  "scripts/ci/",
+  ".npmrc",
 ];
 
 export function isProtectedChange(file) {

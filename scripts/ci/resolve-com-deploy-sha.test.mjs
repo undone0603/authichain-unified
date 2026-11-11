@@ -106,6 +106,11 @@ test("ancestor fails when newly protected lockfiles or bundled modules changed",
     "bun.lockb",
     "bun.lock",
     "npm-shrinkwrap.json",
+    "scripts/ci/resolve-com-deploy-sha.mjs",
+    "scripts/ci/autonomous-release-gate.mjs",
+    "scripts/ci/parse-wrangler-version-id.mjs",
+    "scripts/ci/promote-worker-version.mjs",
+    ".npmrc",
   ];
   for (const file of newProtected) {
     assert.throws(
