@@ -12,11 +12,7 @@
 name: B2B Cold Outreach
 
 on:
-  schedule:
-    # Weekdays 10:00 ET (14:00 UTC). Scheduled runs are governed by
-    # .github/autonomy.json -> cold_outreach (switch, daily cap, segments,
-    # deliverability breaker). Live send also needs vars.OWNER_LIVE_SEND=true.
-    - cron: "0 14 * * 1-5"
+  # Schedule removed 2026-11-11 at the owner's request (cold outreach stays off per #2412; re-adding needs owner approval).
   workflow_dispatch:
     inputs:
       segment:
