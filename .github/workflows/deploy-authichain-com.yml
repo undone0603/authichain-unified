@@ -21,8 +21,12 @@ jobs:
   verify:
     name: Verify exact-main commit and CircleCI gate
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
+    # Self-hosted: GitHub-hosted ubuntu is billing-locked on this account.
+    # Free path is the local WSL runner (wsl-zac-arm64 / authichain-wsl).
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 5
+    env:
+      NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
     outputs:
       sha: ${{ steps.head.outputs.sha }}
     steps:
@@ -42,27 +46,47 @@ jobs:
         with:
           ref: ${{ steps.head.outputs.sha }}
           persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+          clean: true
+          fetch-depth: 1
+      - name: Use runner Node 22
+        run: |
+          set -euo pipefail
+          # Prefer nvm Node 22 when present; fall back to PATH node.
+          if [ -s "$HOME/.nvm/nvm.sh" ]; then
+            # shellcheck disable=SC1091
+            . "$HOME/.nvm/nvm.sh"
+            nvm use 22 >/dev/null
+          fi
+          command -v node
+          node --version
+          echo "NODE=$(command -v node)" >> "$GITHUB_ENV"
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
       - name: Test fail-closed automated release policy
-        run: node --test scripts/ci/autonomous-release-gate.test.mjs
+        run: |
+          set -euo pipefail
+          test -f scripts/ci/autonomous-release-gate.test.mjs
+          test -f scripts/ci/autonomous-release-gate.mjs
+          pwd
+          ls -la scripts/ci/autonomous-release-gate*
+          node --test "$GITHUB_WORKSPACE/scripts/ci/autonomous-release-gate.test.mjs"
       - name: Enforce automated exact-main release policy
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
           TARGET_SHA: ${{ steps.head.outputs.sha }}
           DISPATCH_SHA: ${{ github.sha }}
-        run: node scripts/ci/autonomous-release-gate.mjs
+        run: node "$GITHUB_WORKSPACE/scripts/ci/autonomous-release-gate.mjs"
 
   deploy:
     name: Publish exact automatically policy-approved Worker
     needs: verify
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 30
     environment:
       name: production-cloudflare
+    env:
+      NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
     permissions:
       contents: read
       statuses: read
@@ -71,6 +95,8 @@ jobs:
         with:
           ref: ${{ needs.verify.outputs.sha }}
           persist-credentials: false
+          clean: true
+          fetch-depth: 1
       - name: Confirm checked-out and current main SHA
         env:
           EXPECTED_SHA: ${{ needs.verify.outputs.sha }}
@@ -81,19 +107,32 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           HEAD_SHA=$(node --input-type=module -e "const r=await fetch('https://api.github.com/repos/' + process.env.REPOSITORY + '/branches/main',{headers:{authorization:'Bearer ' + process.env.GH_TOKEN,accept:'application/vnd.github+json'}});if(!r.ok)process.exit(1);const d=await r.json();console.log(d.commit.sha)")
           test "$HEAD_SHA" = "$EXPECTED_SHA"
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.28.2
-          run_install: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Install pinned dependencies
-        run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0
-      - name: Native receipt and full Worker routing tests
-        working-directory: workers/authichain-com
+      - name: Use runner pnpm + Node 22
         run: |
           set -euo pipefail
+          if [ -s "$HOME/.nvm/nvm.sh" ]; then
+            # shellcheck disable=SC1091
+            . "$HOME/.nvm/nvm.sh"
+            nvm use 22 >/dev/null
+          fi
+          command -v pnpm
+          pnpm --version
+          command -v node
+          node --version
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+      - name: Install pinned dependencies
+        env:
+          npm_config_build_from_source: "false"
+        run: pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
+      - name: Native receipt and full Worker routing tests
+        working-directory: workers/authichain-com
+        env:
+          npm_config_build_from_source: "false"
+        run: |
+          set -euo pipefail
+          # Nested workspace: root pnpm exec cannot see these binaries.
+          # Install this package's lockfile so local vitest/tsx resolve.
+          pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
           pnpm exec vitest run src/dpp-routes.test.ts
           pnpm exec tsx --import ./test/register-md.mjs --test src/routing.test.ts
       - name: Embed microsite HTML
@@ -104,10 +143,15 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           TARGET_SHA: ${{ needs.verify.outputs.sha }}
           DISPATCH_SHA: ${{ github.sha }}
-        run: node scripts/ci/autonomous-release-gate.mjs
+        run: node "$GITHUB_WORKSPACE/scripts/ci/autonomous-release-gate.mjs"
       # Require these names to be configured ONLY as production-cloudflare environment secrets.
       # Never define these aliases as repository/org secrets: GitHub falls back to broader scope.
       # Provision a Workers-only scoped Cloudflare token; no D1/zone/DNS rights.
+      # Pinned x402 pair, same values as bind-x402-secrets.yml. This publish
+      # passes --keep-vars and must not re-put these secrets.
+      # PAY_TO='0x5db511706FB6317cd23A7655F67450c5AC6e6AA2' # pragma: allowlist secret
+      # FACILITATOR='https://facilitator.payai.network'
+      # USDC_ASSET='0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
       - name: Upload and promote this exact Worker version only
         working-directory: workers/authichain-com
         env:
@@ -127,7 +171,10 @@ jobs:
           set -euo pipefail
           for path in success dpp/thanks; do
             body=$(curl --fail --silent --show-error --max-time 25 "https://authichain.com/$path")
-            grep -q 'No checkout reference provided' <<< "$body"
+            if ! grep -Eq 'No checkout reference provided|does not confirm payment' <<< "$body"; then
+              echo "::error::Missing honesty marker at /$path"
+              exit 1
+            fi
             if grep -Eq 'Payment received|Workspace opened|Your payment added' <<< "$body"; then
               echo "::error::Unverified payment claim at /$path"
               exit 1

@@ -1282,3 +1282,30 @@ workflows:
       registry 0 is not a spend cap). Emits unverified source URLs only.
       Sends 0 outbound messages, 0 comments, and 0 posts. Untrusted search
       text is never executed (prompt-injection refusal). No hardcoded secrets.
+
+  - id: glama_browser_audit
+    title: "AgentZ: free, isolated Glama Inspector browser + MCP protocol audit"
+    priority: low
+    blocks_revenue: false
+    handler: handlers.glama_browser_audit
+    type: browser
+    estimated_minutes: 2
+    requires: []
+    prerequisites: []
+    confirm_before_run: true
+    risk_class: low
+    # financial_limit_usd: 0 is UNLIMITED in runner.py, not a $0 cap.
+    # This handler calls no billed services; its browser is strictly first-party,
+    # its MCP smoke has an allowlist and a clean subprocess environment.
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: true
+    max_runs_per_day: 1
+    rollback_strategy: "Do not dispatch this opt-in workflow; no external state is mutated."
+    description: |
+      Local Playwright/Chromium only; no paid browser provider, LLM, credentials,
+      authenticated profile, wallet, x402, Stripe or arbitrary navigation.
+      Read the public Glama Inspector page and execute only the existing
+      zero-payment AuthiChain MCP initialize/list/nonbinding-quote smoke.
+      In dry-run, do nothing; live runs require individual confirmation.
+      Persist redacted UTC evidence locally; unknown or failed checks fail.

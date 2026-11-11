@@ -22,6 +22,19 @@ function rejects(change, why) {const x=fixture();change(x);assert.throws(() => a
 test('accepts exact main SHA, protected branch, no human gate and all seven successful jobs', () => {
   assert.deepEqual(assertReleasePolicy(fixture()), {sha: SHA, checks: 7, environment: ENV});
 });
+test('accepts successful CircleCI app workflow/job links on current main', () => {
+  const x = fixture();
+  const currentMainJob = 'https://app.circleci.com/workflow/e99fd4ba-7989-4a70-978b-d54f184a9e18/job/87f65d57-d79f-4b16-bc74-bc212fb2c9ea';
+  x.statuses.statuses.forEach(s => { s.target_url = currentMainJob; });
+  assert.equal(assertReleasePolicy(x).checks, 7);
+});
+
+test('rejects impersonated CircleCI app hosts and extra job URL paths', () => {
+  const legitimate = 'https://app.circleci.com/workflow/e99fd4ba-7989-4a70-978b-d54f184a9e18/job/87f65d57-d79f-4b16-bc74-bc212fb2c9ea';
+  rejects(x => { x.statuses.statuses[0].target_url = legitimate.replace('app.circleci.com/', 'app.circleci.com.evil.test/'); }, /test-workers/);
+  rejects(x => { x.statuses.statuses[0].target_url = legitimate + '/extra'; }, /test-workers/);
+});
+
 test('rejects wrong repository, malformed SHA, dispatch mismatch and stale main', () => {
   rejects(x => x.repo = 'someone/else', /wrong repository/);
   rejects(x => x.expectedSha = 'invalid', /SHA mismatch/);
@@ -42,6 +55,11 @@ test('requires the exact environment and protected branch restrictions', () => {
   rejects(x => x.environment.deployment_branch_policy.custom_branch_policies = true, /environment/);
   rejects(x => x.environment.protection_rules = [{type: 'required_reviewers'}], /environment/);
   rejects(x => x.environment.protection_rules = [{type: 'wait_timer'}], /environment/);
+  // GitHub API echo of protected_branches — must still pass.
+  const withBranchPolicy = fixture();
+  withBranchPolicy.environment.protection_rules = [{type: 'branch_policy'}];
+  assert.deepEqual(assertReleasePolicy(withBranchPolicy), {sha: SHA, checks: 7, environment: ENV});
+  rejects(x => x.environment.protection_rules = [{type: 'branch_policy'}, {type: 'wait_timer'}], /environment/);
 });
 test('fails when any required status is absent, failed, pending or has a fake destination', () => {
   rejects(x => {x.statuses.statuses.pop();x.statuses.total_count = 6;}, /status evidence/);
