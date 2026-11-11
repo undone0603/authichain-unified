@@ -172,6 +172,23 @@ export async function POST(req: NextRequest) {
 }
 
 /**
+ * Stripe Checkout amount_total uses API charge units, not always ISO's currency
+ * fraction digits. Keep the explicit Stripe zero-decimal *charge* list to avoid
+ * runtime/ICU differences (notably HUF). ISK and UGX have a special two-decimal
+ * charge representation even though they are zero-decimal ISO currencies.
+ * https://docs.stripe.com/currencies#zero-decimal
+ */
+const STRIPE_ZERO_DECIMAL_CHARGE_CURRENCIES = new Set([
+  "bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga",
+  "pyg", "rwf", "vnd", "vuv", "xaf", "xof", "xpf",
+]);
+
+function stripeAmountToMajorUnits(amountMinor: number, currency: string): number {
+  const divisor = STRIPE_ZERO_DECIMAL_CHARGE_CURRENCIES.has(currency.toLowerCase()) ? 1 : 100;
+  return amountMinor / divisor;
+}
+
+/**
  * Handle checkout.session.completed
  * - Record payment in payments table (session_id, customer_email, amount, status='paid')
  * - Tag lead as customer in lead_captures (status='customer')
@@ -202,7 +219,7 @@ async function handleCheckoutSessionCompleted(
   const { error: paymentError } = await supabase.from("payments").insert({
     session_id: sessionId,
     customer_email: customerEmail,
-    amount_cents: amountCents,
+    amount: stripeAmountToMajorUnits(amountCents, currency),
     currency,
     status: "paid",
     created_at: new Date().toISOString(),
