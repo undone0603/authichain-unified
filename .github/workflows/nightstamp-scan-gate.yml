@@ -10,11 +10,16 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
 
+permissions:
+  contents: read
+
 jobs:
   scan-gate:
     runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v6
         with:
           version: 10.28.2
