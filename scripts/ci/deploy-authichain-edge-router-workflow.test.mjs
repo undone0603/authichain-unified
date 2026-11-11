@@ -157,3 +157,25 @@ test("public pages are smoke-tested after promotion and before any rollback deci
   assert.ok(at("Smoke JWKS current + retired kids") < at("Smoke public pages"));
   assert.ok(at("Smoke public pages") < at("Roll back to previous version"));
 });
+
+test("runner pnpm is checked only after setup-node has put node on PATH", () => {
+  const at = name => yml.indexOf(`- name: ${name}`);
+  const setupNode = yml.indexOf("uses: actions/setup-node@v7");
+  const runnerPnpm = at("Use runner pnpm (self-hosted)");
+  assert.ok(setupNode > -1 && runnerPnpm > -1, "both steps must exist");
+  assert.ok(
+    setupNode < runnerPnpm,
+    "pnpm is a corepack shim with an env-node shebang; the listener PATH may have no node",
+  );
+  assert.ok(runnerPnpm < at("Install node-gyp (native builds)"));
+  assert.ok(runnerPnpm < at("Install\n"), "version check must precede pnpm install");
+  const s = step("Use runner pnpm (self-hosted)");
+  assert.match(s, /if: runner\.environment == 'self-hosted'/);
+  assert.match(s, /set -euo pipefail/);
+  assert.match(s, /command -v node/);
+  assert.match(s, /command -v pnpm/);
+  assert.match(s, /pnpm --version/);
+  // Nothing that needs node may run before setup-node (comments excluded).
+  const before = yml.slice(0, setupNode).replace(/#.*$/gm, "");
+  assert.doesNotMatch(before, /pnpm --version|\bnode scripts\/|\bnpm /);
+});

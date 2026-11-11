@@ -23,9 +23,12 @@ const ENV = {
   APP_WORKER: { fetch: async () => new Response("app", { status: 200 }) },
 } as unknown as Env;
 
-async function get(path: string, env: Env = ENV) {
+async function get(path: string, env: Env = ENV, headers?: HeadersInit) {
   return worker.fetch(
-    new Request(`https://authichain.govchain.us${path}`),
+    new Request(
+      `https://authichain.govchain.us${path}`,
+      headers ? { headers } : undefined
+    ),
     env
   );
 }
@@ -41,6 +44,42 @@ test("an unknown path is a 404, not the homepage at 200", async () => {
     const res = await get(path);
     assert.equal(res.status, 404, `${path} should 404`);
   }
+});
+
+test("homepage Accept text/markdown states the paid offer", async () => {
+  const res = await get("/", ENV, { Accept: "text/markdown" });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") ?? "", /text\/markdown/);
+  assert.match(res.headers.get("vary") ?? "", /Accept/i);
+  const body = await res.text();
+  assert.match(body, /WHAT IS SOLD/);
+  assert.match(body, /WHAT IT COSTS/);
+  assert.match(body, /HOW TO PAY/);
+  assert.match(body, /WHAT YOU RECEIVE/);
+  assert.match(body, /HOW DELIVERY IS VERIFIED/);
+  assert.match(body, /X-PAYMENT/);
+  assert.match(body, /\/api\/v1\/agent-verify/);
+  assert.ok(body.length > 20);
+});
+
+test("homepage without markdown Accept stays HTML", async () => {
+  const res = await get("/", ENV, { Accept: "text/html" });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") ?? "", /text\/html/);
+  const body = await res.text();
+  assert.match(body, /<!DOCTYPE html>/i);
+});
+
+test("unknown path Accept text/markdown is a markdown 404", async () => {
+  const res = await get("/__ora-404-probe-s5rhi5v1", ENV, {
+    Accept: "text/markdown",
+  });
+  assert.equal(res.status, 404);
+  assert.match(res.headers.get("content-type") ?? "", /text\/markdown/);
+  const body = await res.text();
+  assert.ok(body.length > 20);
+  assert.match(body, /llms\.txt/);
+  assert.match(body, /__ora-404-probe-s5rhi5v1/);
 });
 
 test("unknown 404s still offer catalogue Payment Links", async () => {
@@ -169,6 +208,7 @@ test("CFA-758: money routes have no 50-workspace-generation or never-expire pack
     "/dpp",
     "/battery-passport",
     "/battery-passport/sample",
+    "/coffee",
     "/trumark",
     "/docs/dpp-architecture",
   ]) {
@@ -821,11 +861,13 @@ test("a malformed certificate id is a 404", async () => {
   assert.equal((await get("/cert/garbage")).status, 404);
 });
 
-test("/thanks and /success serve the DPP thanks page", async () => {
+test("/thanks and /success never claim payment without a checkout reference", async () => {
   for (const path of ["/thanks", "/success"]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
-    assert.match(await res.text(), /Payment received/);
+    const html = await res.text();
+    assert.match(html, /No checkout reference provided/);
+    assert.doesNotMatch(html, /Payment received|Workspace opened/);
   }
 });
 
@@ -1017,15 +1059,28 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
   }
 });
 
-test("/mcp and /api/mcp discovery stays on_hold without a bound registry path", async () => {
+test("/mcp and /api/mcp discovery lists live Stripe checkouts without a bound x402 path", async () => {
   for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const body = (await res.json()) as {
-      pricing: { paidPlans: { status: string } };
+      pricing: { paidPlans: { status: string; stripe?: { status: string } } };
     };
-    assert.equal(body.pricing.paidPlans.status, "on_hold", path);
-    assert.equal(JSON.stringify(body).includes("$0.05"), false, path);
+    assert.equal(body.pricing.paidPlans.status, "live", path);
+    const text = JSON.stringify(body);
+    assert.equal(text.includes("$0.05"), false, path);
+    assert.equal(text.includes("on_hold"), false, path);
+    assert.equal(text.includes("wait_buyer"), false, path);
+    assert.equal(
+      text.includes("https://authichain.com/checkout/starter"),
+      true,
+      path
+    );
+    assert.equal(
+      text.includes("https://authichain.com/checkout/dpp_readiness"),
+      true,
+      path
+    );
   }
 });
 
@@ -1067,18 +1122,25 @@ test("/mcp and /api/mcp discovery quotes the bound x402 $0.05 rail", async () =>
     assert.equal(body.pricing.paidPlans.payTo, X402_PUBLISHED_PAY_TO, path);
     assert.equal(body.pricing.paidPlans.paidVerify?.bound, true, path);
     assert.equal(body.pricing.paidPlans.paidVerify?.status, "bound", path);
-    assert.equal(body.pricing.paidPlans.stripe?.status, "on_hold", path);
+    assert.equal(body.pricing.paidPlans.stripe?.status, "live", path);
     assert.equal(body.pricing.legacySealVerify.status, "bound", path);
-    assert.equal(body.pricing.humanCheckout, undefined, path);
     const text = JSON.stringify(body);
     assert.equal(text.includes("$0.05"), true, path);
     assert.equal(text.includes("USDC"), true, path);
     assert.equal(text.includes("QRON"), false, path);
-    for (const plan of [
-      "dpp_readiness",
-      "strainchain_passport",
-      "strainchain_farm",
-    ] as const) {
+    assert.equal(text.includes("on_hold"), false, path);
+    assert.equal(text.includes("wait_buyer"), false, path);
+    assert.equal(
+      text.includes("https://authichain.com/checkout/starter"),
+      true,
+      path
+    );
+    assert.equal(
+      text.includes("https://authichain.com/checkout/dpp_readiness"),
+      true,
+      path
+    );
+    for (const plan of ["strainchain_passport", "strainchain_farm"] as const) {
       const link = planPaymentLink(plan);
       if (link) assert.equal(text.includes(link), false, `${path} ${plan}`);
     }
@@ -1652,6 +1714,8 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/genetics</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/passport</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/coffee</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/coffee</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/trumark</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/made-in-america</loc>"));
   assert.ok(!xml.includes("mendo"));
@@ -1972,4 +2036,52 @@ test("GET /battery-passport/sample.json returns 200 through the Worker fetch", a
   assert.equal(res.status, 200);
   assert.match(res.headers.get("content-type") ?? "", /application\/json/);
   assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
+});
+
+test("GET /coffee is the Proof-of-Support page with security headers", async () => {
+  const res = await get("/coffee");
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("X-Frame-Options"), "DENY");
+  assert.match(
+    res.headers.get("Content-Security-Policy") ?? "",
+    /frame-ancestors 'none'/
+  );
+  const html = await res.text();
+  assert.match(html, /id="coffee-heading">Buy AuthiChain a coffee/);
+  assert.match(html, /data-coffee-state="buy"/);
+  assert.match(html, /FREE-PREVIEW-V1/);
+  assert.match(html, /id="lead-capture"/);
+  assert.doesNotMatch(html, /AuthiChain, Inc\./);
+  assert.equal(html.includes("Proof-of-Coffee receipt"), false);
+});
+
+test("GET /coffee?thanks=1 alone does not flip to Thanks for the coffee", async () => {
+  const res = await get("/coffee?thanks=1");
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /id="coffee-heading">Buy AuthiChain a coffee/);
+  assert.match(html, /data-coffee-state="buy"/);
+  assert.equal(html.includes("Proof-of-Coffee receipt"), false);
+});
+
+test("GET /coffee Accept:application/json is HTTP 402 x402", async () => {
+  const res = await worker.fetch(
+    new Request("https://authichain.com/coffee", {
+      headers: { accept: "application/json" },
+    }),
+    ENV
+  );
+  assert.equal(res.status, 402);
+  assert.ok(res.headers.get("PAYMENT-REQUIRED"));
+  const body = (await res.json()) as {
+    accepts: Array<{ payTo: string }>;
+  };
+  assert.equal(body.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
+});
+
+test("GET /coffee/jwks.json and sample-receipt.json answer 200", async () => {
+  const jwks = await get("/coffee/jwks.json");
+  assert.equal(jwks.status, 200);
+  const sample = await get("/coffee/sample-receipt.json");
+  assert.equal(sample.status, 200);
 });

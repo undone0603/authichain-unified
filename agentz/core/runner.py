@@ -215,11 +215,19 @@ def execute(
     while attempts < max_attempts:
         attempts += 1
         try:
-            notes = module.run(ctx) or ""
+            outcome = module.run(ctx)
+            if isinstance(outcome, dict) and outcome.get("status") in {
+                "ok", "skipped", "failed", "blocked",
+            }:
+                notes = str(outcome.get("notes") or outcome.get("reason") or "")
+                status = str(outcome["status"])
+            else:
+                notes = outcome or ""
+                status = "ok" if effective_mode != Mode.DRY_RUN else "skipped"
             token_usage, cost_usd = ctx.get_usage()
             res = RunResult(
                 workflow_id=wf.id,
-                status="ok" if effective_mode != Mode.DRY_RUN else "skipped",
+                status=status,
                 started_at=started_iso,
                 finished_at=datetime.now(timezone.utc).isoformat(),
                 duration_s=time.time() - started,

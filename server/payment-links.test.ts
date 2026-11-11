@@ -5,13 +5,15 @@ import { PAYMENT_LINKS } from "./payment-links";
 /**
  * server/payment-links.ts builds PAYMENT_LINKS at import time, and
  * worker-app/dynamic-pages.ts imports it. If any offer() throws, the
- * production Worker fails to load. Stripe deactivated the EU DPP Workspace
- * Payment Link on 2026-10-08; the plan still sells by Stripe price ID through
- * the gated checkout, so it must not need a raw buy.stripe.com link.
+ * production Worker fails to load. The 2026-10-08 EU DPP Payment Link was
+ * replaced on 2026-11-02 by the active $299 link in src/lib/plans.ts. The
+ * offer URL itself stays on the gated authichain.com checkout.
  */
 describe("PAYMENT_LINKS", () => {
-  it("loads when dpp_readiness has no raw Stripe Payment Link", () => {
-    expect(planById("dpp_readiness")?.stripe_payment_link).toBeUndefined();
+  it("loads the active dpp_readiness Payment Link and the gated checkout URL", () => {
+    expect(planById("dpp_readiness")?.stripe_payment_link).toBe(
+      "https://buy.stripe.com/5kQdR9fzP4t85iaePO1ND43",
+    );
     expect(PAYMENT_LINKS.authichain.starter).toEqual({
       name: "EU DPP Workspace",
       price: "$299",

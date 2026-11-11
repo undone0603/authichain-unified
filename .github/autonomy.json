@@ -14,7 +14,7 @@
     "label": "ops-alert"
   },
   "cold_outreach": {
-    "$comment": "Master switch for autonomous first-touch email. Live send needs BOTH this flag AND repo variable OWNER_LIVE_SEND=true, a clear breaker, and no pending breaker-latch approval. Switched on by the owner 2026-09-23. Switched off 2026-10-09 as containment (PM-420, approved by Projects Manager and Admin); turning it back on needs the owner.",
+    "$comment": "Master switch for autonomous first-touch email. Live send needs BOTH this flag AND repo variable OWNER_LIVE_SEND=true, a clear breaker, and no pending breaker-latch approval. Switched on by the owner 2026-09-23. Switched off 2026-10-09 as containment (PM-420). Owner turned it back on 2026-11-09, then off again the same day so OWNER_LIVE_SEND alone cannot send.",
     "enabled": false,
     "max_new_prospects_per_day": 10,
     "max_followups_per_prospect": 1,
@@ -27,8 +27,8 @@
     }
   },
   "launch_mode": {
-    "$comment": "Time-boxed loosening until first revenue (docs/OPERATING_CHARTER.md, Launch mode). Read by scripts/autonomy/launch-mode.mjs. After 'expires', or with enabled=false, every loop falls back to its normal gate. Max window 90 days (CI-enforced).",
-    "enabled": true,
+    "$comment": "Time-boxed loosening until first revenue (docs/OPERATING_CHARTER.md, Launch mode). Read by scripts/autonomy/launch-mode.mjs. After 'expires', or with enabled=false, every loop falls back to its normal gate. Max window 90 days (CI-enforced). The 2026-10-31 window has ended, so enabled is false.",
+    "enabled": false,
     "expires": "2026-10-31",
     "cold_outreach_cap": 25
   },
@@ -58,7 +58,9 @@
       "content-publish.yml",
       "gov-mint.yml",
       "marketing-autonomous.yml",
-      "pipeline-tick.yml"
+      "pipeline-tick.yml",
+      "deploy-authichain-edge-router.yml",
+      "deploy-qron-space.yml"
     ]
   },
   "bot_fleet": {
@@ -95,6 +97,7 @@
       "managed": true,
       "workflows": {
         "agentz-ci.yml": "on",
+        "agentz-mcp-verify.yml": "on",
         "ci.yml": "on",
         "main.yml": "on",
         "lint.yml": "on",
@@ -108,6 +111,8 @@
         "vercel-deploy-guard.yml": "on",
         "verified-deployment-commit.yml": "on",
         "deploy-authichain-com.yml": "on",
+        "deploy-authichain-edge-router.yml": "on",
+        "deploy-qron-space.yml": "on",
         "deploy-cloudflare.yml": "on",
         "deploy-edge-worker.yml": "on",
         "deploy-workers.yml": "on",
@@ -241,6 +246,7 @@
         "upload-microsites-kv.yml": "manual",
         "verify-outreach-secrets.yml": "manual",
         "verify-scheduled-jobs.yml": "manual",
+        "wsl-net-check.yml": "manual",
         "x402-smoke.yml": "manual",
         "anchor-polygon-record.yml": "manual"
       }
