@@ -11,7 +11,7 @@ Before submitting:
 
 ## 1. The Technology Innovation
 
-2459 of 3500 characters.
+2452 of 3500 characters.
 
 AuthiChain publishes signed, machine-checkable provenance records for physical products. A record is canonicalized under RFC 8785 and signed with Ed25519; its hash can be anchored on a public blockchain. Anyone can verify a record offline with our open-source verifier (authichain-verify on npm, with a Python port that passes the same 28 conformance fixtures). This part works today and is not the research.
 
@@ -45,7 +45,7 @@ Phase I does not depend on blockchain performance, token mechanics or new crypto
 
 ## 3. The Market Opportunity
 
-1511 of 1750 characters.
+1512 of 1750 characters.
 
 The customer is a small or mid-sized manufacturer or brand that needs a buyer to be able to check an item and cannot afford serialized security printing or a hardware tag on every unit. Today its choices are a plain QR code, which can be copied freely, or proprietary secure-print and tagging systems sold to large enterprises.
 
