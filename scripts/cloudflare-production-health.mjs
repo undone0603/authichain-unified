@@ -17,18 +17,38 @@ export const PUBLIC_PROBES = [
     method: "HEAD",
   },
   {
-    // Unlisted Launch annual (plans.ts listed:false; HOLD #1905). checkout-gate
-    // HEAD never calls Stripe and 303s closed checkouts to /pricing. Accept 303
-    // as the healthy off-sale signal. A 200 would mean the confirm page is back
-    // on sale without updating this probe. Canonical /checkout/<planId> path —
-    // aliases such as /checkout/launch answer 301. Earlier /api/checkout/launch
-    // 404 failed the scheduled pipeline on 2026-10-22.
+    // Retired for new buyers (RES-86c). tryHandleGatedCheckout answers every
+    // method, including HEAD, with 303 to /pricing and never calls Stripe.
+    // A 200 would mean the confirm page reopened. Any other Location, including
+    // a Stripe host, is a failure. Aliases such as /checkout/launch answer 301.
     id: "checkout_launch_annual_confirm_head",
     url: `${ORIGIN}/checkout/qron_launch_annual`,
     accept: [303],
+    locationPath: "/pricing",
     method: "HEAD",
   },
 ];
+
+function failureDetail(err) {
+  if (!(err instanceof Error)) return String(err);
+  const cause = err.cause;
+  const code =
+    cause && typeof cause === "object" && "code" in cause ? cause.code : "";
+  return code ? `${err.message}: ${code}` : err.message;
+}
+
+function redirectMatches(res, probe) {
+  if (!probe.locationPath) return true;
+  const raw = res.headers.get("location");
+  if (!raw) return false;
+  try {
+    const loc = new URL(raw, probe.url);
+    const expected = new URL(probe.locationPath, probe.url);
+    return loc.origin === expected.origin && loc.pathname === expected.pathname;
+  } catch {
+    return false;
+  }
+}
 
 export async function probePublic(fetchImpl = fetch) {
   const results = [];
@@ -38,11 +58,13 @@ export async function probePublic(fetchImpl = fetch) {
         method: p.method || "GET",
         redirect: "manual",
       });
+      const location = res.headers.get("location") || undefined;
       results.push({
         id: p.id,
         url: p.url,
         status: res.status,
-        ok: p.accept.includes(res.status),
+        ok: p.accept.includes(res.status) && redirectMatches(res, p),
+        ...(location ? { location } : {}),
       });
     } catch (err) {
       results.push({
@@ -50,7 +72,7 @@ export async function probePublic(fetchImpl = fetch) {
         url: p.url,
         status: 0,
         ok: false,
-        detail: err instanceof Error ? err.message : String(err),
+        detail: failureDetail(err),
       });
     }
   }

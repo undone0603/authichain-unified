@@ -57,15 +57,23 @@ npx wrangler d1 create authichain-provenance   # only if it doesn't exist; paste
 (path-filtered) or via **Actions → Deploy Workers → Run workflow** (optionally one worker).
 Requires repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 
-For the root Cloudflare deploy workflow, also set the repository variable
-`CLOUDFLARE_DEPLOY_ENABLED=true`. Scheduled GitHub Actions that call internal
-cron endpoints use `vars.APP_URL` (defaults to `https://authichain.com`) and
-`CRON_SECRET`; no Vercel secrets are required.
+The current `deploy-cloudflare.yml` does not check `CLOUDFLARE_DEPLOY_ENABLED`;
+that variable is not evidence that a Worker was deployed. Scheduled Actions
+calling internal cron endpoints use `vars.APP_URL` (default
+`https://authichain.com`) and `CRON_SECRET`; no Vercel secrets are required.
 
-`deploy-cloudflare.yml` publishes `authichain-edge-router` from `worker-app/`.
-`pnpm run build` is Next (`next build --webpack`) and does **not** emit repo-root
-`dist/`; the workflow stubs `dist/` so wrangler `assets.directory` exists. JWKS
-is served by the Worker script, not those assets.
+`deploy-cloudflare.yml` currently deploys `workers/manufacturer-status` only.
+It does **not** deploy the canonical `worker-app` webhook handler or
+`authichain-edge-router`. The separate
+`.github/workflows/deploy-authichain-edge-router.yml` uploads and promotes a
+Worker version using the `authichain-wsl` runner. Only after successful
+promotion does it write the source commit, GitHub run ID/attempt, and Worker
+version ID to the job summary. Compare that version with Cloudflare's active
+100% deployment and check the signed webhook-to-grant path separately.
+A secret-triggered version, queued job, green CI, or HTTP 200 alone is not
+source provenance or successful paid fulfillment. Respect exact-head CI and
+normal deployment gates; never dispatch this publish as a workaround for
+unallocated runners.
 
 ## 3. Remaining founder-only items
 
@@ -88,10 +96,11 @@ Live JWKS (never cached as landing HTML):
 Canonical `/.well-known/jwks.json` stays HIT HTML until someone Custom-Purges
 in the dashboard. Same for `/api/checkout/dpp`.
 
-Attestation key: `deploy-cloudflare.yml` runs `wrangler secret put
-AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64` after publish (Workers Scripts:Edit
-already works). If the GitHub secret is set, that value is used; otherwise a
-v0.1 Ed25519 key is generated once and stored only on the worker.
+Attestation key: `deploy-cloudflare.yml` does **not** install, rotate, or
+generate the edge-router signing key. The canonical edge-router publish
+workflow only probes the existing JWKS after promotion. Key rotation and
+secret binding are separate operator-held operations; a failing JWKS probe
+must not trigger automatic key replacement.
 
 ## 5. Production launch proof (no private key in Actions)
 

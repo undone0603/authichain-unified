@@ -31,12 +31,24 @@ jobs:
   watch:
     name: pricing cards lead to live plans
     # Self-hosted WSL runner label authichain-ops (public-repo: no PR jobs on this host).
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    # authichain-ops has no online runner; jobs on that label queue and get
+    # cancelled. authichain-wsl (wsl-zac-arm64) is the live self-hosted box.
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
           ref: main
+
+      # Self-hosted runner may keep a sparse working tree from another job, which
+      # makes setup-node's pnpm cache step fail with "pnpm-lock.yaml not found"
+      # even though the file is tracked at this commit (runs 41368399808, 41378253038).
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f pnpm-lock.yaml
 
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:

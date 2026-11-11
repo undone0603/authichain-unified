@@ -758,9 +758,7 @@ describe("x402Catalog", () => {
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
       planPaymentLink("dpp_readiness")
     );
-    expect(catalog.humanCheckout.farmPaymentLink).toBe(
-      planPaymentLink("strainchain_farm")
-    );
+    expect(catalog.humanCheckout.farmPaymentLink).toBeUndefined();
     expect(catalog.humanCheckout.starterPaymentLink).toBe(
       planPaymentLink("starter")
     );
@@ -773,6 +771,13 @@ describe("x402Catalog", () => {
     expect(catalog.humanCheckout.offers.map(offer => offer.id)).toContain(
       "musa_audit_bundle"
     );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).not.toContain(
+      "qron_launch"
+    );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).not.toContain(
+      "qron_launch_annual"
+    );
+    expect(JSON.stringify(catalog)).not.toContain("/checkout/qron_launch");
     expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
     expect(JSON.stringify(catalog)).not.toContain("/api/checkout");
     expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
@@ -835,6 +840,11 @@ describe("x402AgentCard", () => {
       protocolVersion: "1.0",
     });
     expect(card.skills.length).toBeGreaterThan(0);
+    const launchSkill = card.skills.find(
+      s => s.id === "qron-launch-subscription"
+    );
+    expect(launchSkill).toBeUndefined();
+    expect(JSON.stringify(card)).not.toContain("/checkout/qron_launch");
     const skill = card.skills.find(s => s.id === "paid-evidence-check");
     expect(skill?.tags).toEqual(
       expect.arrayContaining(["verification", "authenticity", "evidence"])

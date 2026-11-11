@@ -30,22 +30,44 @@ concurrency:
 jobs:
   hardhat:
     name: Contract tests (Hardhat)
-    runs-on: ubuntu-latest
+    # No untrusted PR checkout on the production publisher.
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+
+      # Self-hosted WSL cannot use pnpm/action-setup for 10.28.2. The
+      # download ETIMEDOUT and the signature check then refuses to run.
+      # GitHub-hosted runners still use the pin.
+      - name: Use the runner Node and pnpm
+        if: runner.environment == 'self-hosted'
+        run: bash scripts/ci/use-runner-pnpm.sh
 
       - name: Install pnpm
+        if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@v6
         with:
           version: "10.28.2"
 
       - name: Setup Node
+        if: runner.environment != 'self-hosted'
         uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline

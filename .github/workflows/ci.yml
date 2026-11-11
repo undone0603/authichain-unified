@@ -32,10 +32,13 @@ env:
 jobs:
   extras:
     name: Drizzle + Pytest Extras
-    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
-    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Restore full tree after sparse checkout
         if: runner.environment == 'self-hosted'
         run: |
@@ -43,25 +46,28 @@ jobs:
           git reset --hard HEAD
           test -f package.json
 
-      # Self-hosted ARM64 already has pnpm; the next step requires the
-      # 10.28.2 pin. pnpm/action-setup with version 10.28.2 downloads from
-      # npm and ETIMEDOUT / signature-fails. GitHub-hosted still uses the pin.
-      # Install the repo-pinned manager for every runner; never trust global PATH.
+      # Self-hosted WSL cannot use pnpm/action-setup for 10.28.2. The
+      # download ETIMEDOUT and the signature check then refuses to run.
+      # GitHub-hosted runners still use the pin.
+      - name: Use the runner Node and pnpm
+        if: runner.environment == 'self-hosted'
+        run: bash scripts/ci/use-runner-pnpm.sh
+
       - name: Install pnpm
+        if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
-          dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
-
 
       - name: Setup Node
+        if: runner.environment != 'self-hosted'
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
       - name: Setup Python virtual environment
         run: |
-          VENV_DIR="/home/zac/.cache/agentz-venv-${{ runner.name }}"
+          VENV_DIR="${RUNNER_TEMP}/agentz-venv"
           if [ ! -d "$VENV_DIR" ]; then
             python3 -m venv "$VENV_DIR"
           fi
@@ -82,7 +88,7 @@ jobs:
             echo "::warning::Skipping AgentZ pytest on self-hosted ARM64 runner (tooling incomplete)."
             exit 0
           fi
-          PYTHONPATH="${GITHUB_WORKSPACE}" /home/zac/.cache/agentz-venv-${{ runner.name }}/bin/pytest agentz/tests
+          PYTHONPATH="${GITHUB_WORKSPACE}" "${RUNNER_TEMP}/agentz-venv/bin/pytest" agentz/tests
 
       # Persistent self-hosted runner: drop deps and build outputs so state
       # never leaks into the next run. Workspace-only; never outside it.
