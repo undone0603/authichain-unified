@@ -7,11 +7,8 @@
  * unpaid 402 itself is served by estate-x402.ts. Do not tell them to GET
  * /api/checkout.
  */
-import {
-  catalogOffers,
-  planPaymentLink,
-  planUsd,
-} from "../../src/lib/plans.ts";
+import { planPaymentLink, planUsd } from "../../src/lib/plans.ts";
+import { openCatalogOffers } from "../../src/lib/retired-plans.ts";
 import { x402PriceUsd } from "../../src/lib/x402.ts";
 import { ESTATE_BRANDS, type EstateBrandId } from "./estate-landing.ts";
 
@@ -63,7 +60,7 @@ export function isEstateAgentDiscoveryPath(pathname: string): boolean {
 function humanCheckoutLines(brand: SisterDiscoveryBrand): string[] {
   const lines = [
     "## Human checkout (Stripe Payment Links)",
-    ...catalogOffers().map(offer => {
+    ...openCatalogOffers().map(offer => {
       const suffix = offer.priceSuffix ?? "";
       return `- ${offer.name} $${offer.usd}${suffix}: ${offer.checkout}`;
     }),
