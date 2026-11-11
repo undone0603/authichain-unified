@@ -1,0 +1,15 @@
+{
+  "windowStart": "2026-09-19T00:00:00.000Z",
+  "windowEnd": "2026-09-21T00:00:00.000Z",
+  "charges": [
+    { "id": "ch_fixture_ten_dollar", "payment_intent": "pi_fixture_ten_dollar", "amount": 1000,
+      "amount_refunded": 0, "currency": "usd", "status": "succeeded", "refunded": false, "livemode": true }
+  ],
+  "sessions": [
+    { "id": "cs_fixture_ten_dollar", "payment_intent": "pi_fixture_ten_dollar", "livemode": true, "status": "complete" }
+  ],
+  "payouts": [],
+  "ledger": [],
+  "events": [],
+  "allowlist": []
+}

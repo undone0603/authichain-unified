@@ -29,6 +29,12 @@
         "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
       },
       "tools": ["*"]
+    },
+    "tinyfish": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://agent.tinyfish.ai/mcp"],
+      "tools": ["search", "fetch_content"]
     }
   }
 }

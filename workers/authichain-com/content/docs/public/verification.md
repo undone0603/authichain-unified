@@ -90,7 +90,7 @@ Representation: compact JWS, protected header `typ=AC-ATTESTATION+JWS`, algorith
 GET https://authichain.com/.well-known/jwks.json
 ```
 
-kid `T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ`, `kty=OKP`, `crv=Ed25519`, `alg=EdDSA`.
+Current kid `jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM`, `kty=OKP`, `crv=Ed25519`, `alg=EdDSA`. Retired kid `T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ` remains in JWKS for attestations it signed before `2026-10-31T20:38:07Z`.
 
 v0.1 has no live status list. The status in the signed payload is the status at issuance.
 
@@ -113,13 +113,13 @@ Accept: application/json
 
 The object id form is `qron:url:` plus 8 hex characters.
 
-| HTTP | `decision` | Meaning |
-|---|---|---|
-| 200 | `verified` | Signature valid, issuer trusted, presentation active and unexpired |
-| 409 | `warning`, `blocked`, `revoked`, `expired`, `risk`, or `indeterminate` | Signature valid, but the presentation is not verified |
-| 400 | `indeterminate` with `cryptographic_status: "invalid"` | The signature or object id check failed |
-| 404 | `indeterminate` with `error: "presentation_not_found"` | No stored presentation for that id |
-| 422, 502, or 503 | `indeterminate` | The check did not finish |
+| HTTP             | `decision`                                                             | Meaning                                                            |
+| ---------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 200              | `verified`                                                             | Signature valid, issuer trusted, presentation active and unexpired |
+| 409              | `warning`, `blocked`, `revoked`, `expired`, `risk`, or `indeterminate` | Signature valid, but the presentation is not verified              |
+| 400              | `indeterminate` with `cryptographic_status: "invalid"`                 | The signature or object id check failed                            |
+| 404              | `indeterminate` with `error: "presentation_not_found"`                 | No stored presentation for that id                                 |
+| 422, 502, or 503 | `indeterminate`                                                        | The check did not finish                                           |
 
 qron.space, strainchain.io, and govchain.us each proxy that GET. Each host does not verify the signature. Their responses set `x-qron-resolve-origin: https://authichain.com`.
 
@@ -178,14 +178,14 @@ See [examples](/docs/examples).
 
 ## Failure cases
 
-| Input | Expected |
-|---|---|
-| Tampered payload, original signature | protocol `invalid` / HTTP 400 on attestation verify |
-| Expired `expires_at` | trust `expired` or attestation `valid=false` with status `expired` |
-| Revoked status in payload | `valid=false`, cryptographically inspectable |
-| Unknown object | `not_found` |
-| Living QR id with no stored presentation | HTTP 404 `presentation_not_found` |
-| Scan graph burst | `anomaly` (kernel) or `clone_suspected` (resolver, when live) |
+| Input                                    | Expected                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------ |
+| Tampered payload, original signature     | protocol `invalid` / HTTP 400 on attestation verify                |
+| Expired `expires_at`                     | trust `expired` or attestation `valid=false` with status `expired` |
+| Revoked status in payload                | `valid=false`, cryptographically inspectable                       |
+| Unknown object                           | `not_found`                                                        |
+| Living QR id with no stored presentation | HTTP 404 `presentation_not_found`                                  |
+| Scan graph burst                         | `anomaly` (kernel) or `clone_suspected` (resolver, when live)      |
 
 ## Security considerations
 
@@ -215,7 +215,7 @@ The statement was signed by that key and the hash matches the anchor. A false st
 A scan-graph anomaly (repo resolver). Investigate. Do not treat it as a counterfeit conviction.
 
 **Can an agent verify without an API key?**
-Yes. `POST https://authichain.com/api/x402` with an empty body returns HTTP 402 with the Base USDC requirement. A body that is not a seal UUID is HTTP 400 before payment. Health: `GET /api/x402/health`.
+Yes. `GET https://authichain.com/api/verify?id=polygon-anchor-1` returns the published demonstration record with no API key and no payment. That record is not a customer product and not a physical inspection. The human page does not itself read the anchor transaction. `POST https://authichain.com/api/x402` with an empty body returns HTTP 402 with the Base USDC requirement. A seal UUID inside the daily free allowance is HTTP 200 with `free: true`, `verified: false`, and `settlement: null`, and is not a paid receipt. A body that is not a seal UUID is HTTP 400 before payment. Health: `GET /api/x402/health`.
 
 **How does an agent scan a Living QR?**
 `GET https://authichain.com/qron/r/{object_id}` with `Accept: application/json`. The apex verifies the signature. qron.space, strainchain.io, and govchain.us proxy that GET and do not verify it.

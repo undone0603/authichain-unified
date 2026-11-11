@@ -31,7 +31,7 @@ env:
 jobs:
   email-proposals:
     name: Email opportunity digest to owner
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 15
 
     steps:

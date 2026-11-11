@@ -3,13 +3,17 @@
  * Agents that probe `{origin}/mcp` the way they do on authichain.com get
  * nothing.
  *
- * GET is free discovery: Payment Links from plans.ts (Passport, DPP;
- * QRON also Starter+Creator). Farm is not a public checkout link. tools/call verify is
+ * GET is free discovery: Payment Links from plans.ts for every paid plan.
+ * tools/call verify is
  * the same unpaid 402 as estate-x402.ts. Catalog stays on authichain.com
  * (#1171 owns sister catalog). Do not tell agents to GET /api/checkout.
  * Do not invent Stripe links. Do not list theater.
  */
-import { planPaymentLink, planUsd } from "../../src/lib/plans.ts";
+import {
+  catalogOffers,
+  planPaymentLink,
+  planUsd,
+} from "../../src/lib/plans.ts";
 import {
   BASE_USDC_ASSET,
   X402_PUBLISHED_PAY_TO,
@@ -23,7 +27,11 @@ import {
   type X402EnvVars,
   type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
-import { unpaidSealRefusal } from "../../src/lib/agent-verify.ts";
+import {
+  coerceSealBody,
+  parseSealRequest,
+  unpaidSealRefusal,
+} from "../../src/lib/agent-verify.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
 import { sisterOrigin, type SisterX402Env } from "./estate-x402.ts";
 import {
@@ -155,6 +163,7 @@ export function sisterMcpPricingDiscovery(brand: SisterDiscoveryBrand) {
     farmUsd: planUsd("strainchain_farm"),
     passportPaymentLink: PASSPORT_LINK,
     dppPaymentLink: DPP_LINK,
+    offers: catalogOffers(),
     emailCapture: {
       passport: "https://authichain.com/passport",
       dpp: "https://authichain.com/dpp",
@@ -247,6 +256,13 @@ async function unpaidOrRefusedVerify(
   if (!proof || !proofHeader) {
     const refusal = unpaidSealRefusal(args);
     if (refusal) return json(refusal.status, refusal.body);
+    // HTTP quote crawlers get 402 for probe JSON with no sealId. This MCP
+    // tool still refuses a non-empty argument that is not a seal UUID
+    // before payment. Empty arguments stay the unpaid 402 quote.
+    if (Object.keys(args).length > 0) {
+      const parsed = parseSealRequest(coerceSealBody(args));
+      if (!parsed.ok) return json(parsed.status, parsed.body);
+    }
     return json(402, required.v2, required.headers);
   }
 

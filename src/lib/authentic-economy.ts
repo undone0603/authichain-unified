@@ -23,7 +23,7 @@ import {
   TOKENOMICS_PAY_TO,
 } from "../../scripts/lib/evm-chains";
 import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "./x402";
-import { planPaymentLink, planUsd } from "./plans";
+import { catalogOffers, planPaymentLink, planUsd } from "./plans";
 import {
   FIRST_SCAN_GIFT_URL,
   FIRST_SCAN_REWARD_QRON,
@@ -143,10 +143,15 @@ export function agentPricingDiscovery() {
       strainchain_passport: `$${MONEY_RAILS.stripe.skus.passportUsd} one-time`,
       dpp_readiness: `$${MONEY_RAILS.stripe.skus.dppUsd} one-time`,
       strainchain_farm: `$${MONEY_RAILS.stripe.skus.farmUsd}/month`,
+      starter: `$${planUsd("starter")} one-time`,
+      creator: `$${planUsd("creator")} one-time`,
+      offers: catalogOffers(),
       checkout: {
         passport: planPaymentLink("strainchain_passport"),
         dpp: planPaymentLink("dpp_readiness"),
         farm: planPaymentLink("strainchain_farm"),
+        starter: planPaymentLink("starter"),
+        creator: planPaymentLink("creator"),
         emailCapture: {
           passport: "https://authichain.com/passport",
           dpp: "https://authichain.com/dpp",

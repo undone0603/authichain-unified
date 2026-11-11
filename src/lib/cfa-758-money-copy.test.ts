@@ -30,6 +30,8 @@ const MONEY_SOURCES = [
   "workers/authichain-com/src/money-surfaces.ts",
   "workers/authichain-com/src/dpp-routes.ts",
   "workers/authichain-com/src/battery-passport-page.ts",
+  "workers/authichain-com/src/coffee-page.ts",
+  "src/lib/support-coffee.ts",
   "workers/authichain-com/src/desk.ts",
   "workers/authichain-com/src/legal-pages.ts",
   "workers/authichain-com/content/docs/public/dpp-architecture.md",

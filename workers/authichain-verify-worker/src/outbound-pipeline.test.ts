@@ -416,7 +416,7 @@ describe("verifiable outbound", () => {
     const wrong = await signed(ctx.agentz, "msg:wrong-cap", "SEND_OUTBOUND", ["PROPOSE_OFFER"], [EVIDENCE_ID], (await ctx.sendMessage("payload-only")).payload);
     const wrongDecision = await gate(ctx, wrong);
     expect(wrongDecision.code).toBe("CAPABILITY_MISSING");
-    expect(wrongDecision.reasons).toContain("SEND_OUTBOUND");
+    expect(wrongDecision.reasons).toContain("CAPABILITY_NOT_GRANTED");
 
     const policy = defaultOutboundPolicy();
     policy.allowed_capabilities = policy.allowed_capabilities.filter((cap) => cap !== "SEND_OUTBOUND");
@@ -507,7 +507,8 @@ describe("verifiable outbound", () => {
       registry: email.registry, replay: email.replay, ledger: email.ledger,
       policy: email.policy, campaign: email.campaign, transport: "email", now: NOW,
     });
-    expect(blocked.decision.code).toBe("PRODUCTION_SEND_DISABLED");
+    expect(blocked.decision.code).toBe("CAMPAIGN_UNAUTHORIZED");
+    expect(blocked.decision.reasons).toContain("human_send_not_approved");
     expect(blocked.result.delivered).toBe(false);
   });
 
@@ -697,7 +698,7 @@ describe("verifiable outbound", () => {
     expect(trace.prospect?.status).toBe("QUALIFIED");
     expect(trace.opportunity?.recommended_agent).toBe("agent:authichain:agentz-sales-01");
     expect(trace.decision.code).toBe("ALLOW");
-    expect(trace.decision.production_send).toBe(false);
+    expect(trace.decision.production_send).toBe(true);
     expect(trace.capture?.delivered).toBe(true);
     expect(trace.capture?.external).toBe(false);
     expect(trace.capture?.signature.length).toBeGreaterThan(20);
@@ -729,5 +730,19 @@ describe("verifiable outbound", () => {
     expect(markUnresponsive(ctx.ledger, "conv:msg:quiet", "2026-10-10T19:00:00.000Z").reasons).toContain("horizon_not_reached");
     expect(markUnresponsive(ctx.ledger, "conv:msg:quiet", "2026-10-15T20:00:00.000Z").status).toBe("UNRESPONSIVE");
     expect(acquisitionReport(ctx.ledger).unresponsive).toBe(1);
+  });
+});
+
+describe("restricted outbound defaults", () => {
+  it("requires campaign approval and caps the only authorized offer", () => {
+    const policy = defaultOutboundPolicy();
+    const campaign = defaultOutboundCampaign();
+    expect(policy.production_send).toBe(true);
+    expect(policy.public_offers).toEqual(["dpp_readiness"]);
+    expect(policy.max_sends_per_agent).toBe(2);
+    expect(policy.max_sends_per_campaign).toBe(5);
+    expect(policy.max_sends_per_recipient).toBe(1);
+    expect(policy.cooldown_ms).toBe(30 * 24 * 60 * 60 * 1000);
+    expect(campaign.human_send_approved).toBe(false);
   });
 });

@@ -1,0 +1,24 @@
+name: WSL net check
+
+# One curl on the publish runner. workflow_dispatch is inert until this file
+# is on main. The push branch below is what actually runs it.
+on:
+  push:
+    branches: [ops/wsl-net-check]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  curl:
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 5
+    steps:
+      - name: Cloudflare API over IPv4
+        run: |
+          echo "host=$(hostname)"
+          uname -a
+          set +e
+          curl -4 -sS -o /dev/null -w 'ipv4 http:%{http_code} time:%{time_total} ip:%{remote_ip}\n' --max-time 20 https://api.cloudflare.com/client/v4/user/tokens/verify
+          echo "curl_exit:$?"

@@ -6,6 +6,7 @@
  *   DRY_RUN              anything except "false" is a dry run (default dry)
  *   X402_ENDPOINT        default https://authichain.com/api/x402
  *   X402_PAY_TO          default owner-authorized treasury (same as live health payTo)
+ *   X402_SEAL_ID        required: real, registered seal UUID (never fake smoke ID)
  *   X402_RPC             optional Base RPC (public mainnet.base.org fallback)
  *
  * Live payTo is the owner's keyed EOA (0x5db5…6AA2), not the $QRON
@@ -31,6 +32,7 @@ import {
   describePayer,
   fetchUsdcBalance,
   isDryRun,
+  validSmokeSealId,
   readPrivateKey,
   signExactPayment,
 } from "./lib/x402-smoke.ts";
@@ -57,6 +59,27 @@ export async function runX402Smoke(): Promise<void> {
   );
   const payTo = (process.env.X402_PAY_TO || OPS_PAY_TO).trim();
   const rpc = process.env.X402_RPC || DEFAULT_RPC;
+  const sealId = validSmokeSealId(process.env.X402_SEAL_ID);
+  if (!sealId) fail("X402_SEAL_ID must be a real registered UUID");
+  // Require a published, issuer-signed record BEFORE signing a spendable
+  // EIP-3009 authorization. A registered URL or guessed UUID is insufficient.
+  const origin = new URL(endpoint).origin;
+  const registryUrl = `${origin}/api/authichain/attestations?assetId=${encodeURIComponent(sealId)}`;
+  const registryResponse = await fetch(registryUrl, {
+    headers: { accept: "application/json" },
+  });
+  if (!registryResponse.ok) fail(`published_attestation_unavailable http=${registryResponse.status}`);
+  const registry = (await jsonOrText(registryResponse)) as {
+    source?: string;
+    record?: { seal_id?: string; jws?: string };
+  };
+  if (
+    registry.source !== "authichain_attestation_records" ||
+    registry.record?.seal_id?.toLowerCase() !== sealId ||
+    !registry.record?.jws
+  ) {
+    fail("published_attestation_invalid");
+  }
   const healthUrl = `${endpoint}/health`;
 
   const healthRes = await fetch(healthUrl, {
@@ -72,18 +95,17 @@ export async function runX402Smoke(): Promise<void> {
     fail(`health_not_ready http=${healthRes.status} status=${health.status}`);
   }
 
-  const challengePayTo = health.payTo || payTo;
-  const amountAtomic = health.pricePerCall?.atomic || MIN_ATOMIC.toString();
-  const asset =
-    typeof health.asset === "string" && /^0x[a-fA-F0-9]{40}$/.test(health.asset)
-      ? health.asset
-      : BASE_USDC_ASSET;
+  // Fail closed on an incomplete or inconsistent quote; never infer token,
+  // recipient, or amount before signing a spendable authorization.
+  if (!health.payTo || !ethers.isAddress(health.payTo)) fail("health_missing_payTo");
+  const challengePayTo = health.payTo;
+  const amountAtomic = health.pricePerCall?.atomic;
+  if (amountAtomic !== MIN_ATOMIC.toString()) fail("unexpected_x402_price_not_0_05_USDC");
+  if (health.payTo.toLowerCase() !== payTo.toLowerCase()) fail("payTo_unexpected");
+  if (!health.asset || !ethers.isAddress(health.asset)) fail("health_missing_asset");
+  const asset = health.asset;
 
-  if (
-    !dry &&
-    health.asset &&
-    health.asset.toLowerCase() !== asset.toLowerCase()
-  ) {
+  if (asset.toLowerCase() !== BASE_USDC_ASSET.toLowerCase()) {
     fail(
       `live_asset_not_contract health.asset is not Base USDC (expected ${BASE_USDC_ASSET})`
     );
@@ -130,16 +152,22 @@ export async function runX402Smoke(): Promise<void> {
   const challengeRes = await fetch(endpoint, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ sealId: "x402-smoke-challenge" }),
+    body: JSON.stringify({ sealId }),
   });
   const challenge = (await jsonOrText(challengeRes)) as {
     x402Version?: number;
-    accepts?: Array<{ payTo?: string; maxAmountRequired?: string }>;
+    accepts?: Array<{ payTo?: string; maxAmountRequired?: string; amount?: string; asset?: string; network?: string }>;
     extensions?: unknown;
   };
   if (challengeRes.status !== 402) {
     fail(`unpaid_challenge_not_402 http=${challengeRes.status}`);
   }
+  const offer = challenge.accepts?.[0];
+  const quoted = offer?.amount ?? offer?.maxAmountRequired;
+  if (quoted !== MIN_ATOMIC.toString()) fail("challenge_price_not_0_05_USDC");
+  if (offer?.payTo?.toLowerCase() !== payTo.toLowerCase()) fail("challenge_payTo_unexpected");
+  if (offer?.asset?.toLowerCase() !== BASE_USDC_ASSET.toLowerCase()) fail("challenge_asset_unexpected");
+  if (offer?.network && !["base", "eip155:8453"].includes(offer.network)) fail("challenge_network_unexpected");
 
   const signed = await signExactPayment({
     wallet: new ethers.Wallet(key),
@@ -157,7 +185,6 @@ export async function runX402Smoke(): Promise<void> {
     return;
   }
 
-  const sealId = `x402-smoke-${Date.now()}`;
   const paid = await fetch(endpoint, {
     method: "POST",
     headers: {

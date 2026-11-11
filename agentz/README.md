@@ -25,6 +25,51 @@ Repo integration audit (writes nothing in dry-run; `auto` refreshes only `docs/N
 python -m agentz.cli run repo_audit_integrate --mode dry-run
 ```
 
+Taskmarket (read-only pick; the CLI signs later, this workflow never does):
+
+```bash
+python -m agentz.cli run taskmarket_cycle --mode dry-run
+```
+
+The picker is `agentz/core/taskmarket.py`. It chooses one open Base USDC worker task and prints the CLI command. It does not claim, submit, stake, or treat the task as Stripe revenue. Procedure: `agentz/knowledge/TASKMARKET.md`.
+Power-user product automations (public rails, wait_buyer, X draft pack, OpenClaw handoff; dry-run sends no HTTP):
+
+```bash
+python -m agentz.cli run power_user_ops --mode dry-run
+```
+
+OpenClaw drop-in: `agentz/openclaw/POWER_USER.md`. Live X publish stays on AgentZ `xurl`, not this CLI.
+
+TinyFish MCP read-only search/fetch (on headless hosts, supply a protected
+`TINYFISH_API_KEY`; Node.js/npx is only needed for local OAuth fallback):
+
+```bash
+python -m agentz.cli tinyfish search 'Agent2Agent protocol' --dry-run
+python -m agentz.cli tinyfish search 'Agent2Agent protocol'
+python -m agentz.cli tinyfish fetch_content https://github.com/a2aproject/a2a
+```
+
+The optional AgentZ discovery workflow is an **opt-in read-only A2A scout**.
+It is disabled by default. Live dispatch still sends **0 outbound messages,
+0 comments, and 0 posts**. Search snippets are untrusted; prompt-injection
+and any instruction to send or disclose secrets are refused. No hardcoded
+secrets, street address, or phone number are stored in this path.
+
+```bash
+python -m agentz.cli run tinyfish_a2a_scout --mode dry-run
+python -m agentz.cli run tinyfish_a2a_scout --mode confirm
+```
+
+Its daemon schedule remains disabled until the host sets
+`AGENTZ_TINYFISH_SCOUT_ENABLED=true`, `AGENTZ_TINYFISH_FREE_TIER_CONFIRMED=true`,
+secures `TINYFISH_API_KEY`,
+and configures `AGENTZ_TINYFISH_SCOUT_STATE_DIR` on a durable mounted volume.
+The daemon permits one research _attempt_ per UTC date, without outreach.
+If the state volume is missing, it refuses to run.
+
+See [AgentZ + TinyFish MCP](../docs/operations/AGENTZ_TINYFISH_MCP.md) for
+OAuth setup and the explicit boundary excluding browser automations and paid actions.
+
 See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and workflow details.
 
 ## Running the API
@@ -43,7 +88,6 @@ See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and 
   Anything missing leaves the signature `not_checked` and the scan unverified.
 - `$QRON` rewards on `/scan` and redemptions on `/redeem` are simulated and say
   so (`simulated: true`); nothing is minted or burned on-chain.
-
 
 ## Control plane
 

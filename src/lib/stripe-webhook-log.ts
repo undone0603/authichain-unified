@@ -17,7 +17,7 @@ type SupabaseLike = {
 };
 
 export type StripeWebhookDeliveryStatus =
-  "received" | "success" | "error" | "duplicate";
+  "received" | "success" | "error" | "duplicate" | "reconciliation_required";
 
 export type StripeWebhookDelivery = {
   eventId: string;

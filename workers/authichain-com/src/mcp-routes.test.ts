@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { planPaymentLink } from "../../../src/lib/plans.ts";
+import {
+  BASE_USDC_ASSET,
+  X402_PUBLISHED_PAY_TO,
+} from "../../../src/lib/x402.ts";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
   publicKeyFromDidKey,
@@ -19,6 +23,10 @@ import {
   RETIRED_ISSUER_DID,
   RETIRED_ISSUER_KID,
   RETIRED_ISSUER_RETIRED_AT,
+  RETIRED_OCT31_ISSUER_DID,
+  RETIRED_OCT31_ISSUER_KID,
+  RETIRED_OCT31_ISSUER_RETIRED_AT,
+  GLAMA_CONNECTOR_CLAIM,
   isMcpPath,
   scanLivingQr,
   tryHandleMcp,
@@ -46,18 +54,124 @@ afterEach(() => {
   delete process.env.X402_FACILITATOR_URL;
   delete process.env.X402_PAY_TO;
   delete process.env.X402_NETWORK;
+  delete process.env.X402_PRICE_USD;
+  delete process.env.X402_PAID_VERIFY_PATH;
 });
 
+const BOUND_X402 = {
+  X402_PAID_VERIFY_PATH: "seal_lookup",
+  X402_PAY_TO: X402_PUBLISHED_PAY_TO,
+  X402_PRICE_USD: "0.05",
+} as const;
+
 describe("mcp discovery", () => {
+  it("advertises free read-only tools separately from paid seal verification", async () => {
+    const response = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 99, method: "tools/list" }),
+      })
+    );
+    expect(response?.status).toBe(200);
+    const data = (await response!.json()) as {
+      result: {
+        tools: Array<{
+          name: string;
+          description: string;
+          annotations?: { readOnlyHint?: boolean; destructiveHint?: boolean };
+        }>;
+      };
+    };
+    const tools = new Map(data.result.tools.map(tool => [tool.name, tool]));
+    for (const name of [
+      "get_pricing", "query_provenance", "verify_attestation",
+      "verify_record", "dpp_readiness_check", "scan_living_qr", "negotiate",
+    ]) {
+      expect(tools.get(name)?.annotations?.readOnlyHint, name).toBe(true);
+      expect(tools.get(name)?.annotations?.destructiveHint, name).toBe(false);
+    }
+    expect(tools.get("verify")?.annotations?.readOnlyHint).toBe(false);
+    expect(tools.get("verify")?.annotations?.destructiveHint).toBe(true);
+    expect(tools.get("verify")?.description).toMatch(/paid|x402/i);
+    expect(tools.get("verify_record")?.description).toContain("published JWS");
+    expect(tools.get("verify_attestation")?.description).toContain("published");
+    expect(tools.get("get_pricing")?.description).toMatch(/never starts a checkout|without charging/);
+  });
+
+  it("GET discovery and initialize distinguish seven free tools from paid x402 verification", async () => {
+    const response = await tryHandleMcp(req("/mcp"));
+    expect(response?.status).toBe(200);
+    const discovery = (await response!.json()) as {
+      pricing: { freeTools: string[] };
+    };
+    expect(discovery.pricing.freeTools).toEqual([
+      "get_pricing",
+      "query_provenance",
+      "verify_attestation",
+      "verify_record",
+      "dpp_readiness_check",
+      "scan_living_qr",
+      "negotiate",
+    ]);
+    expect(discovery.pricing.freeTools).not.toContain("verify");
+
+    const initResponse = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 77,
+          method: "initialize",
+          params: { protocolVersion: "2025-06-18", clientInfo: { name: "glama-test", version: "1" }, capabilities: {} },
+        }),
+      })
+    );
+    expect(initResponse?.status).toBe(200);
+    const initialized = (await initResponse!.json()) as { result: { instructions: string } };
+    expect(initialized.result.instructions).toContain("Paid verification:");
+    expect(initialized.result.instructions).toContain("separately authorized payment");
+    expect(initialized.result.instructions).toContain("Free verification:");
+  });
+
   it("recognizes agent MCP paths and ignores checkout", () => {
     expect(isMcpPath("/mcp")).toBe(true);
     expect(isMcpPath("/mcp/")).toBe(true);
     expect(isMcpPath("/api/mcp")).toBe(true);
     expect(isMcpPath("/.well-known/mcp.json")).toBe(true);
+    expect(isMcpPath("/mcp/.well-known/glama.json")).toBe(false);
+    expect(isMcpPath("/.well-known/glama.json")).toBe(false);
     expect(isMcpPath("/api/x402")).toBe(false);
     expect(isMcpPath("https://authichain.com/checkout/dpp_readiness")).toBe(
       false
     );
+  });
+
+  it("GET /mcp/.well-known/glama.json is the claim file, not MCP discovery", async () => {
+    for (const path of [
+      "/.well-known/glama.json",
+      "/.well-known/glama.json/",
+      "/mcp/.well-known/glama.json",
+      "/mcp/.well-known/glama.json/",
+      "/api/mcp/.well-known/glama.json",
+    ]) {
+      const res = await tryHandleMcp(req(path));
+      expect(res, path).not.toBeNull();
+      expect(res!.status, path).toBe(200);
+      expect(res!.headers.get("content-type"), path).toContain("application/json");
+      const body = (await res!.json()) as { $schema: string; claim: string };
+      expect(body, path).toEqual(GLAMA_CONNECTOR_CLAIM);
+      expect(Object.keys(body), path).toEqual(["$schema", "claim"]);
+    }
+    const post = await tryHandleMcp(
+      req("/mcp/.well-known/glama.json", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize" }),
+      })
+    );
+    expect(post?.status).toBe(405);
   });
 
   it("GET discovery says verify is free and lists no prices or Payment Links", async () => {
@@ -78,14 +192,28 @@ describe("mcp discovery", () => {
       expect(body.pay.x402).toBe("POST https://authichain.com/api/x402");
       expect(body.pricing.verify.price).toBe("free");
       expect(body.pricing.verify.mcpTool).toBe("verify_record");
-      expect(body.pricing.paidPlans.status).toBe("on_hold");
-      expect(body.pricing.humanCheckout).toBeUndefined();
+      expect(body.pricing.paidPlans.status).toBe("live");
+      expect(body.pricing.humanCheckout).toMatchObject({
+        status: "live",
+        starter: {
+          usd: 29,
+          checkout: "https://authichain.com/checkout/starter",
+        },
+        dpp_readiness: {
+          usd: 299,
+          checkout: "https://authichain.com/checkout/dpp_readiness",
+        },
+      });
       const text = JSON.stringify(body);
       expect(text).not.toContain("$0.05");
       expect(text).not.toContain("PaymentLink");
       expect(text).not.toContain("USDC");
+      expect(text).not.toContain("on_hold");
+      expect(text).not.toContain("wait_buyer");
+      expect(text).not.toContain("never expire");
+      expect(text).toContain("https://authichain.com/checkout/starter");
+      expect(text).toContain("https://authichain.com/checkout/dpp_readiness");
       for (const plan of [
-        "dpp_readiness",
         "strainchain_passport",
         "strainchain_farm",
       ] as const) {
@@ -109,7 +237,12 @@ describe("mcp discovery", () => {
       result: { tools: Array<{ name: string }> };
     };
     expect(listed.result.tools.map(t => t.name)).toEqual(
-      expect.arrayContaining(["get_pricing", "verify", "query_provenance", "verify_attestation"])
+      expect.arrayContaining([
+        "get_pricing",
+        "verify",
+        "query_provenance",
+        "verify_attestation",
+      ])
     );
 
     const call = await tryHandleMcp(
@@ -136,14 +269,18 @@ describe("mcp discovery", () => {
     expect(pricing.verify.http).toBe(
       "GET https://authichain.com/api/verify?id=polygon-anchor-1"
     );
-    expect(pricing.paidPlans.status).toBe("on_hold");
+    expect(pricing.paidPlans.status).toBe("live");
     expect(priced.result.content[0].text).not.toContain("$0.05");
     expect(priced.result.content[0].text).not.toContain("USDC");
-    for (const plan of [
-      "dpp_readiness",
-      "strainchain_passport",
-      "strainchain_farm",
-    ] as const) {
+    expect(priced.result.content[0].text).not.toContain("on_hold");
+    expect(priced.result.content[0].text).not.toContain("wait_buyer");
+    expect(priced.result.content[0].text).toContain(
+      "https://authichain.com/checkout/starter"
+    );
+    expect(priced.result.content[0].text).toContain(
+      "https://authichain.com/checkout/dpp_readiness"
+    );
+    for (const plan of ["strainchain_passport", "strainchain_farm"] as const) {
       const link = planPaymentLink(plan);
       if (link) expect(priced.result.content[0].text).not.toContain(link);
     }
@@ -159,6 +296,145 @@ describe("mcp discovery", () => {
     expect(tools.find(t => t.name === "get_pricing")?.description).toMatch(
       /^Free\./
     );
+  });
+
+  it("GET discovery and get_pricing quote the bound $0.05 x402 rail", async () => {
+    for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
+      const res = await tryHandleMcp(req(path), { ...BOUND_X402 });
+      expect(res, path).not.toBeNull();
+      expect(res!.status, path).toBe(200);
+      const body = (await res!.json()) as {
+        pricing: {
+          verify: { price: string; mcpTool: string };
+          paidPlans: {
+            status: string;
+            rail?: string;
+            pricePerCall?: { usd: number; atomic: string };
+            asset?: string;
+            payTo?: string;
+            paidVerify?: { bound: boolean; status: string };
+            stripe?: { status: string };
+          };
+          legacySealVerify: { status: string; bound?: boolean };
+          humanCheckout?: unknown;
+        };
+        tools: Array<{ name: string; description?: string }>;
+      };
+      expect(body.pricing.verify.price, path).toBe("free");
+      expect(body.pricing.verify.mcpTool, path).toBe("verify_record");
+      expect(body.pricing.paidPlans.status, path).toBe("live");
+      expect(body.pricing.paidPlans.rail, path).toBe("x402");
+      expect(body.pricing.paidPlans.pricePerCall?.usd, path).toBe(0.05);
+      expect(body.pricing.paidPlans.pricePerCall?.atomic, path).toBe("50000");
+      expect(body.pricing.paidPlans.asset?.toLowerCase(), path).toBe(
+        BASE_USDC_ASSET.toLowerCase()
+      );
+      expect(body.pricing.paidPlans.payTo, path).toBe(X402_PUBLISHED_PAY_TO);
+      expect(body.pricing.paidPlans.paidVerify?.bound, path).toBe(true);
+      expect(body.pricing.paidPlans.paidVerify?.status, path).toBe("bound");
+      expect(body.pricing.paidPlans.stripe?.status, path).toBe("live");
+      expect(body.pricing.legacySealVerify.status, path).toBe("bound");
+      expect(body.pricing.humanCheckout).toMatchObject({
+        status: "live",
+        starter: {
+          usd: 29,
+          checkout: "https://authichain.com/checkout/starter",
+        },
+        dpp_readiness: {
+          usd: 299,
+          checkout: "https://authichain.com/checkout/dpp_readiness",
+        },
+      });
+      const text = JSON.stringify(body);
+      expect(text, path).toContain("$0.05");
+      expect(text, path).toContain("USDC");
+      expect(text, path).toContain("https://authichain.com/checkout/starter");
+      expect(text, path).toContain(
+        "https://authichain.com/checkout/dpp_readiness"
+      );
+      expect(text, path).not.toContain("QRON");
+      expect(text, path).not.toContain("/api/checkout");
+      expect(text, path).not.toContain("on_hold");
+      expect(text, path).not.toContain("wait_buyer");
+      expect(text, path).not.toContain("never expire");
+      for (const plan of [
+        "strainchain_passport",
+        "strainchain_farm",
+      ] as const) {
+        const link = planPaymentLink(plan);
+        if (link) expect(text, path).not.toContain(link);
+      }
+      expect(
+        body.tools.find(t => t.name === "get_pricing")?.description,
+        path
+      ).toMatch(/\$0\.05 USDC on Base/);
+      expect(
+        body.tools.find(t => t.name === "verify")?.description,
+        path
+      ).toMatch(/\$0\.05 USDC on Base/);
+    }
+
+    const list = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+      }),
+      { ...BOUND_X402 }
+    );
+    const listed = (await list!.json()) as {
+      result: { tools: Array<{ name: string; description?: string }> };
+    };
+    expect(
+      listed.result.tools.find(t => t.name === "get_pricing")?.description
+    ).toMatch(/\$0\.05 USDC on Base/);
+
+    const call = await tryHandleMcp(
+      req("/api/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/call",
+          params: { name: "get_pricing" },
+        }),
+      }),
+      { ...BOUND_X402 }
+    );
+    const priced = (await call!.json()) as {
+      result: { content: Array<{ text: string }> };
+    };
+    const pricing = JSON.parse(priced.result.content[0].text) as {
+      paidPlans: {
+        status: string;
+        pricePerCall: { usd: number; atomic: string };
+        paidVerify: { bound: boolean; status: string };
+        stripe: { status: string };
+      };
+      legacySealVerify: { status: string; bound: boolean };
+    };
+    expect(pricing.paidPlans.status).toBe("live");
+    expect(pricing.paidPlans.pricePerCall.usd).toBe(0.05);
+    expect(pricing.paidPlans.pricePerCall.atomic).toBe("50000");
+    expect(pricing.paidPlans.paidVerify.bound).toBe(true);
+    expect(pricing.paidPlans.paidVerify.status).toBe("bound");
+    expect(pricing.paidPlans.stripe.status).toBe("live");
+    expect(pricing.legacySealVerify.status).toBe("bound");
+    expect(pricing.legacySealVerify.bound).toBe(true);
+    expect(priced.result.content[0].text).toContain("$0.05");
+    expect(priced.result.content[0].text).toContain("USDC");
+    expect(priced.result.content[0].text).toContain(
+      "https://authichain.com/checkout/starter"
+    );
+    expect(priced.result.content[0].text).toContain(
+      "https://authichain.com/checkout/dpp_readiness"
+    );
+    expect(priced.result.content[0].text).not.toContain("QRON");
+    expect(priced.result.content[0].text).not.toContain("/api/checkout");
+    expect(priced.result.content[0].text).not.toContain("on_hold");
+    expect(priced.result.content[0].text).not.toContain("wait_buyer");
+    expect(priced.result.content[0].text).not.toContain("never expire");
   });
 
   it("tools/call dpp_readiness_check is free and scores the answers", async () => {
@@ -189,7 +465,7 @@ describe("mcp discovery", () => {
     expect(result.score).toBe(40);
     expect(result.category.date).toBe("2027-02-18");
     expect(result.web).toBe("https://authichain.com/dpp-check");
-    // Paid plans are on hold: the MCP result names no audit, price or link.
+    // This tool never pitches an audit even though Stripe checkouts are live.
     expect(result.nextStep).not.toContain(planPaymentLink("dpp_readiness"));
     expect(result.nextStep).not.toMatch(/\$\d|audit/i);
 
@@ -408,8 +684,12 @@ describe("mcp discovery", () => {
       expect(calls).toHaveLength(2);
       const paths = calls.map(call => new URL(call).pathname);
       expect(paths).toContain("/rest/v1/authichain_attestation_records");
-      const registryUrl = new URL(calls.find(call => new URL(call).pathname === "/rest/v1/auth_seals")!);
-      expect(registryUrl.searchParams.get("or")).toContain("product_id.eq.NOPE-XYZ");
+      const registryUrl = new URL(
+        calls.find(call => new URL(call).pathname === "/rest/v1/auth_seals")!
+      );
+      expect(registryUrl.searchParams.get("or")).toContain(
+        "product_id.eq.NOPE-XYZ"
+      );
     } finally {
       globalThis.fetch = orig;
     }
@@ -418,7 +698,10 @@ describe("mcp discovery", () => {
   it("query_provenance reads auth_seals and never labels registration as verified", async () => {
     const orig = globalThis.fetch;
     const calls: string[] = [];
-    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = (async (
+      input: RequestInfo | URL,
+      init?: RequestInit
+    ) => {
       calls.push(String(input));
       const url = new URL(String(input));
       expect(url.searchParams.get("or")).toContain("product_id.eq.PRODUCT-123");
@@ -431,17 +714,22 @@ describe("mcp discovery", () => {
         return new Response("[]", { status: 200 });
       }
       expect(url.pathname).toBe("/rest/v1/auth_seals");
-      return new Response(JSON.stringify([{
-        id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
-        product_id: "PRODUCT-123",
-        batch_id: "batch-2026-A",
-        brand: "Example Brand",
-        polygon_tx: null,
-        created_at: "2026-10-01T12:00:00.000Z",
-      }]), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify([
+          {
+            id: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
+            product_id: "PRODUCT-123",
+            batch_id: "batch-2026-A",
+            brand: "Example Brand",
+            polygon_tx: null,
+            created_at: "2026-10-01T12:00:00.000Z",
+          },
+        ]),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }
+      );
     }) as typeof fetch;
     try {
       const res = await tryHandleMcp(
@@ -471,9 +759,19 @@ describe("mcp discovery", () => {
         status: string;
         registered: boolean;
         verified: boolean;
-        product: { id: string; sealId: string; batchId: string; brand: string; source: string };
+        product: {
+          id: string;
+          sealId: string;
+          batchId: string;
+          brand: string;
+          source: string;
+        };
         registry: { state: string; source: string; semantics: string };
-        verification: { signature: string; revocation: string; physicalBinding: string };
+        verification: {
+          signature: string;
+          revocation: string;
+          physicalBinding: string;
+        };
       };
       expect(data.status).toBe("registered");
       expect(data.registered).toBe(true);
@@ -516,7 +814,8 @@ describe("mcp discovery", () => {
       decision: "verified",
       payload: { version: "0.1", subject: { object_id: "SKU-123" } },
       jws: "header.payload.signature",
-      record_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      record_hash:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       published_at: "2026-10-16T00:00:00.000Z",
     };
     globalThis.fetch = (async (input: RequestInfo | URL) => {
@@ -534,19 +833,37 @@ describe("mcp discovery", () => {
             jsonrpc: "2.0",
             id: 31,
             method: "tools/call",
-            params: { name: "query_provenance", arguments: { assetId: "SKU-123" } },
+            params: {
+              name: "query_provenance",
+              arguments: { assetId: "SKU-123" },
+            },
           }),
         }),
-        { SUPABASE_URL: "https://example.supabase.co", SUPABASE_ANON_KEY: "anon-test" },
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
       );
-      const body = await res!.json() as { result: { content: Array<{ text: string }> } };
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }> };
+      };
       const data = JSON.parse(body.result.content[0].text) as {
-        status: string; verified: boolean; signedRecord: { jws: string; record_hash: string };
-        verification: { signature: string; issuerTrust: string; revocation: string; physicalBinding: string };
+        status: string;
+        verified: boolean;
+        signedRecord: { jws: string; record_hash: string };
+        verification: {
+          signature: string;
+          issuerTrust: string;
+          revocation: string;
+          physicalBinding: string;
+        };
       };
       expect(data.status).toBe("published_attestation");
       expect(data.verified).toBe(false);
-      expect(data.signedRecord).toMatchObject({ jws: row.jws, record_hash: row.record_hash });
+      expect(data.signedRecord).toMatchObject({
+        jws: row.jws,
+        record_hash: row.record_hash,
+      });
       expect(data.verification).toEqual({
         signature: "not_checked",
         issuerTrust: "not_checked",
@@ -573,7 +890,8 @@ describe("mcp discovery", () => {
       decision: "verified",
       payload: { version: "0.1", subject: { object_id: "SKU-123" } },
       jws: "header.payload.signature",
-      record_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      record_hash:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       published_at: "2026-10-16T00:00:00.000Z",
     };
     globalThis.fetch = (async (input: RequestInfo | URL) => {
@@ -584,17 +902,23 @@ describe("mcp discovery", () => {
     const verifyFetch = vi.fn(async (request: Request) => {
       const url = new URL(request.url);
       expect(url.pathname).toBe("/api/v1/attestation/verify");
-      const body = await request.json() as { jws: string; expected_object_id?: string };
+      const body = (await request.json()) as {
+        jws: string;
+        expected_object_id?: string;
+      };
       expect(body.jws).toBe(row.jws);
       expect(body.expected_object_id).toBe("SKU-123");
-      return new Response(JSON.stringify({
-        valid: true,
-        decision: "verified",
-        cryptographic_status: "valid",
-        issuer_status: "trusted",
-        claim_status: "active",
-        reasons: [],
-      }), { status: 200 });
+      return new Response(
+        JSON.stringify({
+          valid: true,
+          decision: "verified",
+          cryptographic_status: "valid",
+          issuer_status: "trusted",
+          claim_status: "active",
+          reasons: [],
+        }),
+        { status: 200 }
+      );
     });
     try {
       const res = await tryHandleMcp(
@@ -615,11 +939,16 @@ describe("mcp discovery", () => {
           SUPABASE_URL: "https://example.supabase.co",
           SUPABASE_ANON_KEY: "anon-test",
           APP_WORKER: { fetch: verifyFetch },
-        } as unknown as NonNullable<Parameters<typeof tryHandleMcp>[1]>,
+        } as unknown as NonNullable<Parameters<typeof tryHandleMcp>[1]>
       );
-      const body = await res!.json() as { result: { content: Array<{ text: string }>; isError?: boolean } };
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }>; isError?: boolean };
+      };
       const data = JSON.parse(body.result.content[0].text) as {
-        verified: boolean; status: string; physicalBinding: string; physical_authenticity: string;
+        verified: boolean;
+        status: string;
+        physicalBinding: string;
+        physical_authenticity: string;
       };
       expect(verifyFetch).toHaveBeenCalledTimes(1);
       expect(data).toMatchObject({
@@ -643,9 +972,11 @@ describe("mcp discovery", () => {
       issuer_id: "https://authichain.com",
       payload: { subject: { object_id: "SKU-123" } },
       jws: "header.payload.signature",
-      record_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      record_hash:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     };
-    globalThis.fetch = (async () => new Response(JSON.stringify([row]), { status: 200 })) as typeof fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify([row]), { status: 200 })) as typeof fetch;
     try {
       const res = await tryHandleMcp(
         req("/mcp", {
@@ -655,13 +986,24 @@ describe("mcp discovery", () => {
             jsonrpc: "2.0",
             id: 33,
             method: "tools/call",
-            params: { name: "verify_attestation", arguments: { assetId: "SKU-123" } },
+            params: {
+              name: "verify_attestation",
+              arguments: { assetId: "SKU-123" },
+            },
           }),
         }),
-        { SUPABASE_URL: "https://example.supabase.co", SUPABASE_ANON_KEY: "anon-test" },
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
       );
-      const body = await res!.json() as { result: { content: Array<{ text: string }>; isError?: boolean } };
-      const data = JSON.parse(body.result.content[0].text) as { verified: boolean; status: string };
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }>; isError?: boolean };
+      };
+      const data = JSON.parse(body.result.content[0].text) as {
+        verified: boolean;
+        status: string;
+      };
       expect(data.verified).toBe(false);
       expect(data.status).toBe("verifier_not_configured");
       expect(body.result.isError).toBe(true);
@@ -670,9 +1012,10 @@ describe("mcp discovery", () => {
     }
   });
 
-  it("does not turn a registry outage into a false not_registered result", async () => {
+  it("does not turn a registry outage into a fake or registered result", async () => {
     const orig = globalThis.fetch;
-    globalThis.fetch = (async () => new Response("unavailable", { status: 503 })) as typeof fetch;
+    globalThis.fetch = (async () =>
+      new Response("unavailable", { status: 503 })) as typeof fetch;
     try {
       const res = await tryHandleMcp(
         req("/mcp", {
@@ -699,12 +1042,105 @@ describe("mcp discovery", () => {
       const data = JSON.parse(body.result.content[0].text) as {
         status: string;
         verified: boolean;
+        registered?: boolean;
         registry: { state: string; note: string };
       };
-      expect(data.status).toBe("registry_unavailable");
+      expect(data.status).toBe("unknown");
       expect(data.verified).toBe(false);
-      expect(data.registry.state).toBe("signed_record_registry_unavailable");
-      expect(data.registry.note).toContain("No conclusion about signed-record existence");
+      expect(data.registered).toBe(false);
+      expect(data.status).not.toBe("fake");
+      expect(data.status).not.toBe("registry_unavailable");
+      expect(data.registry.state).toBe("lookup_degraded");
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("keeps published packs even when both registries 503", async () => {
+    const orig = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response("unavailable", { status: 503 })) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 22,
+            method: "tools/call",
+            params: {
+              name: "query_provenance",
+              arguments: { assetId: "BAT-2026-001" },
+            },
+          }),
+        }),
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
+      );
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }> };
+      };
+      const data = JSON.parse(body.result.content[0].text) as {
+        status: string;
+        verified: boolean;
+      };
+      expect(data.status).toBe("published_pack");
+      expect(data.verified).toBe(false);
+      expect(data.status).not.toBe("registry_unavailable");
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("treats a missing signed-record table as unknown, not registry_unavailable", async () => {
+    const orig = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/rest/v1/authichain_attestation_records") {
+        return new Response(
+          JSON.stringify({
+            code: "PGRST205",
+            message: "Could not find the table in the schema cache",
+          }),
+          { status: 404 }
+        );
+      }
+      return new Response("[]", { status: 200 });
+    }) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 23,
+            method: "tools/call",
+            params: {
+              name: "query_provenance",
+              arguments: { assetId: "NOPE-XYZ" },
+            },
+          }),
+        }),
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
+      );
+      const data = JSON.parse(
+        (
+          (await res!.json()) as {
+            result: { content: Array<{ text: string }> };
+          }
+        ).result.content[0].text
+      ) as { status: string; verified: boolean };
+      expect(data.status).toBe("unknown");
+      expect(data.verified).toBe(false);
+      expect(data.status).not.toBe("registry_unavailable");
+      expect(data.status).not.toBe("fake");
     } finally {
       globalThis.fetch = orig;
     }
@@ -1076,7 +1512,7 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
     expect(sha256Hex(signingBytes(recordJson))).toBe(DEMONSTRATION_RECORD_HASH);
   });
 
-  it("production issuer did:key matches JWKS kid T3AL7c4w… (RFC 7638)", () => {
+  it("production issuer did:key matches JWKS kid jWTo5QsZ… (RFC 7638)", () => {
     const jwk = publicKeyFromDidKey(PRODUCTION_ISSUER_DID).export({
       format: "jwk",
     }) as { crv: string; kty: string; x: string };
@@ -1085,9 +1521,9 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
       .digest("base64url");
     expect(thumb).toBe(PRODUCTION_ISSUER_KID);
     expect(PRODUCTION_ISSUER_KID).toBe(
-      "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ"
+      "jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM"
     );
-    expect(jwk.x).toBe("T36jnq2kRJRxGBhtyGG3PSboG_Vb6f-l8TixLr95vG0");
+    expect(jwk.x).toBe("MCKE_tTFsmcYVr2PTJgo8X2F3gJTXXrwZev_1UtE5Nk");
   });
 
   it("retired issuer did:key matches its RFC 7638 kid lue84w… (pre-Oct-9 key)", () => {
@@ -1100,7 +1536,45 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
     expect(thumb).toBe(RETIRED_ISSUER_KID);
     expect(jwk.x).toBe("mJx2TLqUmUnxAJW_L-EQ1f28M8B6t9x-9VJPjJxbj7k");
     expect(RETIRED_ISSUER_DID).not.toBe(PRODUCTION_ISSUER_DID);
+    expect(RETIRED_ISSUER_DID).not.toBe(RETIRED_OCT31_ISSUER_DID);
     expect(RETIRED_ISSUER_RETIRED_AT).toBe("2026-10-09T05:12:01Z");
+  });
+
+  it("retired Oct 31 issuer did:key matches its RFC 7638 kid T3AL7c4w…", () => {
+    const jwk = publicKeyFromDidKey(RETIRED_OCT31_ISSUER_DID).export({
+      format: "jwk",
+    }) as { crv: string; kty: string; x: string };
+    const thumb = createHash("sha256")
+      .update(JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x }))
+      .digest("base64url");
+    expect(thumb).toBe(RETIRED_OCT31_ISSUER_KID);
+    expect(jwk.x).toBe("T36jnq2kRJRxGBhtyGG3PSboG_Vb6f-l8TixLr95vG0");
+    expect(RETIRED_OCT31_ISSUER_DID).not.toBe(PRODUCTION_ISSUER_DID);
+    expect(RETIRED_OCT31_ISSUER_RETIRED_AT).toBe("2026-10-31T20:38:07Z");
+  });
+
+  it("Oct 31 retired issuer is allowlisted only for records issued before the rotation", async () => {
+    const vm =
+      RETIRED_OCT31_ISSUER_DID + "#" + RETIRED_OCT31_ISSUER_DID.slice(8);
+    const mk = (validFrom: string) => ({
+      ...forgedRecord().record,
+      issuer: RETIRED_OCT31_ISSUER_DID,
+      validFrom,
+      proof: { ...forgedRecord().record.proof, verificationMethod: vm },
+    });
+    const before = (await verifyRecordTool({
+      record: mk("2026-10-31T20:38:06Z"),
+    })) as any;
+    expect(before.signer).toMatchObject({
+      allowlisted: true,
+      role: "retired_issuer",
+      productionIssuer: false,
+      kid: RETIRED_OCT31_ISSUER_KID,
+    });
+    const after = (await verifyRecordTool({
+      record: mk("2026-10-31T20:38:07Z"),
+    })) as any;
+    expect(after.signer).toMatchObject({ allowlisted: false, role: null });
   });
 
   it("retired issuer is allowlisted only for records issued before Oct 9", async () => {
