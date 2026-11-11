@@ -210,10 +210,8 @@ function strainchainCatalogueCard(plan: Plan, featured: boolean): string {
 function strainchainPricingGrid(): string {
   const catalogue = listedPlans("strainchain");
   const passport = catalogue.find(p => p.id === "strainchain_passport");
-  const farm = catalogue.find(p => p.id === "strainchain_farm");
   const cards = [
     ...(passport ? [strainchainCatalogueCard(passport, true)] : []),
-    ...(farm ? [strainchainCatalogueCard(farm, false)] : []),
   ].join("");
   return `<div class="pricing-grid">${cards}</div>`;
 }
@@ -258,7 +256,6 @@ function pricingPage(origin: PricingOrigin): PricingPage {
   if (origin === "strainchain") {
     const catalogue = listedPlans("strainchain");
     const passport = catalogue.find(p => p.id === "strainchain_passport");
-    const farm = catalogue.find(p => p.id === "strainchain_farm");
     const catalogueOffers = catalogue.map(p => ({
       "@type": "Offer" as const,
       name: p.name,
@@ -303,9 +300,6 @@ function pricingPage(origin: PricingOrigin): PricingPage {
                 label: passport.name,
               },
             ]
-          : []),
-        ...(farm?.stripe_payment_link
-          ? [{ href: gatedCheckoutUrl(farm.id), label: farm.name }]
           : []),
         { href: "/onboard", label: "Onboard" },
         { href: "/pricing", label: "Pricing" },

@@ -16,7 +16,7 @@ permissions:
 jobs:
   verify:
     name: Smoke-test all integrations
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
