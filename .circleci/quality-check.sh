@@ -21,6 +21,7 @@ case "$task" in
   quality)
     pnpm check
     pnpm lint:ci
+    node scripts/ci/check-pr-runner-isolation.mjs
     node scripts/check-workflow-cannot-fail.mjs
     node scripts/ci/check-deploy-invariants.mjs
     node scripts/ci/check-node-test-runners.mjs
