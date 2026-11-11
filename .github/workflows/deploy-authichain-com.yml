@@ -126,12 +126,15 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
       - name: Native receipt and full Worker routing tests
         working-directory: workers/authichain-com
+        env:
+          npm_config_build_from_source: "false"
         run: |
           set -euo pipefail
-          # Worker package has empty devDependencies; vitest/tsx live at the
-          # monorepo root. Match package.json "test" (npx), not pnpm exec.
-          npx vitest run src/dpp-routes.test.ts
-          npx tsx --import ./test/register-md.mjs --test src/routing.test.ts
+          # Nested workspace: root pnpm exec cannot see these binaries.
+          # Install this package's lockfile so local vitest/tsx resolve.
+          pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
+          pnpm exec vitest run src/dpp-routes.test.ts
+          pnpm exec tsx --import ./test/register-md.mjs --test src/routing.test.ts
       - name: Embed microsite HTML
         run: node scripts/sync-microsite-packs.mjs
       - name: Recheck automated release policy immediately before publishing
