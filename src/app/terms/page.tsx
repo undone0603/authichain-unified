@@ -77,10 +77,9 @@ export default function TermsPage() {
             </p>
             <ul className="list-disc pl-6 text-zinc-400 space-y-2">
               <li>Subscription plans renew automatically unless cancelled.</li>
-              <li>
-                One-time purchases are non-refundable once assets are delivered.
-              </li>
-              <li>Starting a monthly plan replaces unused pack credits.</li>
+              <li>One-time purchases are non-refundable once assets are delivered.</li>
+              <li>Credits purchased in one-time packs do not expire. Each new pack adds to any unused credits on your account.</li>
+              <li>Starting a subscription plan sets your credit balance to that plan&apos;s allowance and replaces any unused pack credits. Packs bought while you are subscribed add to your balance.</li>
             </ul>
           </section>
 

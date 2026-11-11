@@ -53,7 +53,7 @@ describe("autonomy manifest", () => {
     expect(validateManifest(loadManifest(), listWorkflowFiles())).toEqual([]);
   });
 
-  it("has cold outreach switched off (containment, 2026-10-09), a cap, and a strict breaker", () => {
+  it("has cold outreach off again (2026-11-09), a cap, and a strict breaker", () => {
     const co = loadManifest().cold_outreach;
     expect(co.enabled).toBe(false);
     expect(co.max_new_prospects_per_day).toBeLessThanOrEqual(10);
@@ -175,6 +175,7 @@ describe("launch mode", () => {
   });
 
   it("the real manifest's launch window is within bounds", () => {
+    expect(loadManifest().launch_mode.enabled).toBe(false);
     expect(validateLaunchMode(loadManifest())).toEqual([]);
   });
 
@@ -183,6 +184,8 @@ describe("launch mode", () => {
     expect([...(manifest.operator_hold?.workflows ?? [])].sort()).toEqual([
       "b2b-outreach.yml",
       "content-publish.yml",
+      "deploy-authichain-edge-router.yml",
+      "deploy-qron-space.yml",
       "gov-mint.yml",
       "marketing-autonomous.yml",
       "pipeline-tick.yml",
@@ -488,7 +491,9 @@ describe("ops pulse", () => {
     const report = { at: "t", probes: [], workflows: [], ...f };
     expect(signature(report)).toBe("monitor:fulfilment:credentials_missing");
     expect(decideIssueAction(null, report).action).toBe("create");
-    expect(renderReport(report)).toContain("required read credentials are missing");
+    expect(renderReport(report)).toContain(
+      "required read credentials are missing"
+    );
   });
 
   it("redacts monitoring read failures and only clears alert after a successful read", async () => {
@@ -515,7 +520,12 @@ describe("ops pulse", () => {
     expect(ok.monitoring).toEqual([]);
     const greenReport = { at: "t", probes: [], workflows: [], ...ok };
     expect(signature(greenReport)).toBe("");
-    expect(decideIssueAction({ number: 1, body: renderReport(redReport) }, greenReport).action).toBe("close");
+    expect(
+      decideIssueAction(
+        { number: 1, body: renderReport(redReport) },
+        greenReport
+      ).action
+    ).toBe("close");
   });
 
   const red = {
@@ -565,7 +575,8 @@ describe("ops pulse", () => {
 });
 
 describe("fulfilment watchdog", async () => {
-  const { findUnfulfilled, checkFulfilment } = await import("../autonomy/revenue-watch.mjs");
+  const { findUnfulfilled, checkFulfilment } =
+    await import("../autonomy/revenue-watch.mjs");
   const now = Date.parse("2026-09-23T12:00:00Z");
   const s = (
     id: string,
@@ -590,7 +601,9 @@ describe("fulfilment watchdog", async () => {
       s("cs_founder", 60, { customer_details: { email: "Me@Founder.com" } }),
       s("cs_unpaid", 60, { payment_status: "unpaid" }),
       s("cs_zero", 60, { amount_total: 0 }),
-      s("cs_no_payment_required", 60, { payment_status: "no_payment_required" }),
+      s("cs_no_payment_required", 60, {
+        payment_status: "no_payment_required",
+      }),
       s("cs_demo", 60, { metadata: { is_demo: "true" } }),
       s("cs_smoke", 60, {
         customer_details: { email: "smoke+dpp@authichain.com" },
@@ -628,10 +641,7 @@ describe("fulfilment watchdog", async () => {
   });
 
   it("never treats an expired-checkout receipt as paid-checkout delivery", () => {
-    const sessions = [
-      s("cs_expired_receipt", 60),
-      s("cs_async_paid", 60),
-    ];
+    const sessions = [s("cs_expired_receipt", 60), s("cs_async_paid", 60)];
     const events = [
       {
         session_id: "cs_expired_receipt",
@@ -671,7 +681,9 @@ describe("fulfilment watchdog", async () => {
     ];
     const out = findUnfulfilled(sessions, events, { now });
     expect(
-      out.map((p: { session: string; reason: string }) => `${p.session}:${p.reason}`)
+      out.map(
+        (p: { session: string; reason: string }) => `${p.session}:${p.reason}`
+      )
     ).toEqual(["cs_duplicate_only:webhook ran but did not succeed"]);
   });
 
@@ -692,7 +704,10 @@ describe("fulfilment watchdog", async () => {
       supabaseKey: "test-only",
       fetchImpl: async (url: string) => {
         if (url.startsWith("https://api.stripe.com/"))
-          return { ok: true, json: async () => ({ data: sessions, has_more: false }) };
+          return {
+            ok: true,
+            json: async () => ({ data: sessions, has_more: false }),
+          };
         if (url.includes("/rest/v1/stripe_events?"))
           return { ok: true, json: async () => [] };
         throw new Error("unexpected URL");
@@ -813,11 +828,11 @@ describe("fulfilment watchdog", async () => {
 
   it("never copies an upstream error body into the public alert", () => {
     expect(
-      blindReason(new Error("Supabase stripe_events -> 500 {\"hint\":\"secret\"}"))
+      blindReason(new Error('Supabase stripe_events -> 500 {"hint":"secret"}'))
     ).toBe("Supabase stripe_events answered HTTP 500");
-    expect(blindReason(new Error("fetch failed: getaddrinfo api.stripe.com"))).toBe(
-      "the check failed before it could read Stripe and Supabase"
-    );
+    expect(
+      blindReason(new Error("fetch failed: getaddrinfo api.stripe.com"))
+    ).toBe("the check failed before it could read Stripe and Supabase");
   });
 });
 
