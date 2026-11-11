@@ -2,6 +2,7 @@ name: trust-lab
 on:
   pull_request:
   push:
+    branches: [main]
     paths:
       - "protocol/trust-kernel/**"
       - "protocol/adversarial/**"
@@ -9,12 +10,17 @@ on:
       - "packages/verifier/**"
       - "packages/policy/**"
       - ".github/workflows/trust-lab.yml"
+permissions:
+  contents: read
+
 jobs:
   adversarial:
     runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
