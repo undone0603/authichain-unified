@@ -11,10 +11,12 @@ test("existing schedule is unchanged and still logs",()=>{
  assert.match(source,/event\.cron !== "14 \* \* \* \*"/);
  assert.match(source,/ctx\.waitUntil\(/);
 });
-test("AgentZ failure is isolated from existing handler",()=>{
+test("AgentZ dispatch failure remains visible to the scheduler runtime",()=>{
  assert.match(source,/try \{/);
  assert.match(source,/catch \(error\) \{/);
  assert.match(source,/AgentZ dispatch unavailable/);
+ assert.match(source,/if \(!response\.ok\) throw new Error/);
+ assert.match(source,/throw error/);
 });
 test("private service binding and distinct token",()=>{
  assert.match(wrangler,/binding = "AGENTZ_EDGE"/);
