@@ -47,6 +47,7 @@ import { getQronById } from "../server/identity-db-helpers";
 import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
+import { detectBot } from "../src/app/api/book/bot-detection";
 import { reportGrowthEvent } from "./growth-record";
 import { listedPlans, planPaymentLink } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
@@ -1181,6 +1182,17 @@ function renderLanding(c: Context): Response {
 // contact, work email, vertical, and first product, writes a lead_captures
 // row, then 303s to /onboard/received. The founder alert is extra; a submit
 // is recorded only when the table write succeeds.
+//
+// Spam gate. Every onboard row written between 2026-10-20 and 2026-11-11 (28
+// of 28) was automated: casino and "deposit available" links in the company
+// field, or script-injection probes in the contact field. Each one was stored
+// as a `new` lead and paged the founder by ntfy, email and SMS. Two checks,
+// both structural, same reasoning as src/app/api/book/bot-detection.ts:
+//   - the `company_website` decoy field (detectBot). A filled decoy gets the
+//     normal 303 and nothing is written or sent, as /api/book does.
+//   - a link or markup in a plain-text field. No company, person, product,
+//     SKU or serial contains "://" or an angle bracket. That gets a 400 with
+//     the reason, so a person who pasted a URL can fix it; nothing is written.
 
 const ONBOARD_VERTICALS = [
   "authichain",
@@ -1275,12 +1287,24 @@ function onboardFormHtml(error?: string, host = ""): string {
       '<input id="sku" name="sku" type="text" maxlength="40">\n' +
       '<label for="serial">Serial (optional)</label>\n' +
       '<input id="serial" name="serial" type="text" maxlength="40">\n' +
+      // Decoy for automated submitters; see the spam gate note above.
+      '<div aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden">\n' +
+      '<label for="company_website">Company website (leave blank)</label>\n' +
+      '<input id="company_website" name="company_website" type="text" tabindex="-1" autocomplete="off">\n' +
+      "</div>\n" +
       '<button type="submit">Request a free pilot seal</button>\n' +
       "</form>\n" +
       onboardPayNowHtml() +
       '<p>Questions? <a href="https://authichain.com/contact">Talk to us</a></p>\n' +
       "</main>",
   });
+}
+
+const ONBOARD_LINK_OR_MARKUP_RE = /:\/\/|[<>]/;
+
+/** True when a plain-text intake field carries a link or markup. Pure. */
+export function hasLinkOrMarkup(...fields: string[]): boolean {
+  return fields.some(field => ONBOARD_LINK_OR_MARKUP_RE.test(field));
 }
 
 type PilotLeadRow = {
@@ -1331,8 +1355,10 @@ async function handleOnboardPost(c: Context): Promise<Response> {
   let productName = "";
   let sku = "";
   let serial = "";
+  let decoy: unknown = "";
   try {
     const form = await c.req.parseBody();
+    decoy = form.company_website;
     company = String(form.company || "")
       .trim()
       .slice(0, 80);
@@ -1388,6 +1414,16 @@ async function handleOnboardPost(c: Context): Promise<Response> {
       400
     );
   }
+  if (hasLinkOrMarkup(company, contactName, productName, sku, serial)) {
+    return htmlResponse(
+      c,
+      onboardFormHtml(
+        "Use plain text for company, contact, product, SKU and serial. Links and markup are not accepted.",
+        onboardHost(c)
+      ),
+      400
+    );
+  }
   const refBytes = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(`${email}|${company}|${productName}`)
@@ -1396,6 +1432,16 @@ async function handleOnboardPost(c: Context): Promise<Response> {
     .slice(0, 8)
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
+  const dest = new URL("/onboard/received", c.req.url);
+  dest.searchParams.set("ref", ref);
+  dest.searchParams.set("vertical", vertical);
+  dest.searchParams.set("company", company);
+  // Indistinguishable 303 for bots: nothing written, nothing sent.
+  const botReason = detectBot({ company_website: decoy });
+  if (botReason) {
+    console.info("[onboard] dropped automated submission:", botReason);
+    return c.redirect(dest.pathname + dest.search, 303);
+  }
   try {
     await recordPilotLead(c, {
       company,
@@ -1418,10 +1464,6 @@ async function handleOnboardPost(c: Context): Promise<Response> {
       500
     );
   }
-  const dest = new URL("/onboard/received", c.req.url);
-  dest.searchParams.set("ref", ref);
-  dest.searchParams.set("vertical", vertical);
-  dest.searchParams.set("company", company);
   scheduleOnboardNotify(c, {
     company,
     contact: contactName,

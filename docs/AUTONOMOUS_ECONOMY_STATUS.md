@@ -2,6 +2,19 @@
 
 Profile and `stripe_events` counts below were read on 2026-10-13 from Supabase project `nhdnkzhtadfkkluiulhs` and were not re-read on 2026-10-29. Later paragraphs name their own dates. This is not a claim that the autonomous economy is complete.
 
+## Read on 2026-11-11
+
+These reads supersede the 2026-10-29 "Stripe livemode list" block below. They are reads only. Nothing was charged, sent, migrated or deployed.
+
+- **Stripe livemode, account `acct_1SXIyEGqTruSqV8T`, through the Stripe connector.** `GET /v1/charges` returns 5 charges, all time. One succeeded: 1000 cents, paid by a founder address. Four failed, all on founder addresses. `GET /v1/subscriptions?status=all` returns 0. `GET /v1/balance` is 0 available and 0 pending. Independent customer revenue is $0. The provider list is readable again, so the Supabase tables are no longer the only evidence.
+- **Checkout sessions created from 2026-11-01T21:09Z to 2026-11-11T11:50Z: 86, none paid.** 54 carry `checkout_gate=confirm_post` on a preview host with `example.com` or founder addresses, which is test traffic. 29 are opens for products outside `src/lib/plans.ts` (23 for a store tool, 4 for a contractor invoice, 2 for the $1 agent desk). 2 are opens of the $299 DPP payment link and 1 is a $29 session with no metadata. Every session is `unpaid`; 84 expired and 2 are still open.
+- **`public.funnel_events`, last 30 days:** 37 `dpp_loop:attributed_visit` (16 in the last 7 days), 8 `checkout_started` (0 in the last 7 days), 1 `payment_succeeded` and 1 `provisioned` (both the 2026-10-13 rows described below).
+- **`public.lead_captures`, last 30 days: 32 rows, 0 from a prospect.** 28 came from the `/onboard` form: casino and "deposit available" links in the company field from throwaway mail domains, and one script-injection scan on 2026-11-02. 4 are `system_activation` rows on a founder address. Each `/onboard` row was stored as `new` and paged the founder. The form now refuses links and markup and has a decoy field (`worker-app/dynamic-pages.ts`). The 28 rows are still in the table with status `new`; they were not edited.
+- **Older `lead_captures` rows carry outcomes nothing else supports:** 21 `active_partner` and 1 `closed_won`, from sources such as `NMIP-Autonomous-Outreach`, `Starlink Terminal Scan` and `autonomous_blitz`. Stripe has no customer behind any of them. The seed scripts under `scripts/ops/` write rows of this shape. Treat those statuses as seeded until a row is tied to a payment, and do not quote them as partners or wins.
+- **Live probes at 2026-11-11T13:00Z:** `authichain.com/`, `/pricing`, `/llms.txt` and `qron.space/` return 200. Unpaid `GET /api/x402` returns 402 with a Base USDC quote of 50000 atomic units. That is a quote, not a settlement.
+
+What this adds up to: the checkout and the webhook answer, and nobody outside the company has reached them. The constraint is demand, not another payment feature.
+
 ## VERIFIED
 
 - `POST https://authichain.com/api/stripe/webhook` with a dummy `stripe-signature` returns HTTP 400 and reports `STRIPE_WEBHOOK_SECRET=set` and `STRIPE_WEBHOOK_AUTHICHAIN_SECRET=set`. That shows the secrets are bound. It does not show a signature-verified payment delivery.
