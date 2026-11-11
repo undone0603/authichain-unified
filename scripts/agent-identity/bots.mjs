@@ -27,4 +27,5 @@ export const BOTS = [
   b('CF Deploy', 'cf-deploy', 'Prepares and runs Cloudflare deploys'),
   b('AE Fleet Watch', 'ae-fleet-watch', 'Read-only morning check on the bot fleet'),
   b('Bankz', 'bankz', 'Keeps the evidence bank'),
+  b('AgentZ', 'agentz', 'Operator-authorized AI agent for AuthiChain brand publishing and directory submissions within stated $0 scope'),
 ];

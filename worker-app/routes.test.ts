@@ -1,4 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach, onTestFinished } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  onTestFinished,
+} from "vitest";
 
 vi.mock("../server/webhooks/stripe", () => ({
   handleStripeWebhook: vi.fn().mockResolvedValue({ received: true }),
@@ -162,6 +170,47 @@ describe("GET /api/checkout", () => {
       "GET /api/checkout/dpp?promo=DPP-SMOKE-E2E requires x-dpp-smoke-secret"
     );
     expect(body.webhook).toBe("POST /api/stripe/webhook");
+  });
+});
+
+describe("GET /api/coffee/checkout", () => {
+  it("is health JSON and never creates a Stripe session", async () => {
+    const res = await app.request("/api/coffee/checkout");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.methods).toContain("POST");
+    expect(body.page).toContain("/coffee");
+  });
+});
+
+describe("POST /api/coffee/checkout", () => {
+  it("falls back to the live Payment Link without STRIPE_SECRET_KEY", async () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    const res = await app.request("/api/coffee/checkout", {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X)",
+      },
+      body: "units=1",
+    });
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe(
+      "https://buy.stripe.com/8x24gz4Vb6BgdOGePO1NE09"
+    );
+  });
+
+  it("rejects card-testing $0.50 with 400", async () => {
+    const res = await app.request("/api/coffee/checkout", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X)",
+      },
+      body: JSON.stringify({ customUsd: 0.5 }),
+    });
+    expect(res.status).toBe(400);
   });
 });
 
@@ -1057,7 +1106,9 @@ describe("GET /api/generate requires the service role", () => {
     });
     expect(res.status).toBe(401);
     expect(authFetch).toHaveBeenCalled();
-    expect(String(authFetch.mock.calls[0]?.[0])).toContain("example.supabase.co/auth/");
+    expect(String(authFetch.mock.calls[0]?.[0])).toContain(
+      "example.supabase.co/auth/"
+    );
   });
 });
 
