@@ -28,20 +28,28 @@ There are **two separate tills**:
    GET /api/x402/discovery (402), GET /offer (buy card), GET /health.live
    (idle discovery/10000) are discovery surfaces, *not* revenue proof.
    The authoritative external-sales till is **revenue.outside**, not the
-   full treasury/house till. The last *reported*, not freshly verified,
-   state was 7 outside payers, 9 payments, $0.39 gross. Do not merge
-   these figures into AuthiChain Stripe customers or MRR.
+   full treasury/house till. A prior note of 7 outside payers / 9 payments
+   / $0.39 gross is **UNVERIFIED — not revenue, not MRR.** Do not merge
+   those figures into Stripe customers or estate MRR. Signal USDC stays
+   separate.
 
 ## Safe operating cycle
 
 1. Run `node scripts/revenue/verify-demand.mjs` for public, read-only
-   surface checks. It deliberately reports outside income and net income as
-   `unverified`; even a green probe proves discoverability only.
+   surface checks (Starter/DPP pages, Starter `buy.stripe.com` Payment
+   Link, Signal `/offer` + discovery 402 + `/health.live`). It
+   deliberately reports outside income and net income as `unverified`;
+   even a green probe proves discoverability only. Offer/discovery must
+   show **both** 0.01 USDC **and** 10000 atomic plus TAPE / `$PEPKIN`
+   identity (not English "ranked tape"). `/health.live` must show the
+   same identity.
 2. For AuthiChain, inspect `checkMoneyRails` in
    `scripts/revenue-operator.ts`: GET `/checkout/starter` 200,
    GET `/checkout/dpp_readiness` 200, GET the listed Starter Stripe
    Payment Link 200, HEAD `/api/checkout/dpp` 204. **Never GET the
    anonymous DPP checkout API**, and Farm is not a public money rail.
+   The Node probe includes that same Payment Link GET so skill, Rhai,
+   and `verify-demand.mjs` stay aligned.
 3. Reconcile live provider settlement with the actual SKU and **idempotent
    fulfilled entitlement**. `classifyRevenue` in
    `scripts/revenue-operator.ts` is a *legacy triage signal*, not

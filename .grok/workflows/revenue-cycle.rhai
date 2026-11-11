@@ -38,8 +38,9 @@ rails_prompt += "GET https://authichain.com/checkout/starter and /checkout/dpp_r
 rails_prompt += "GET the Starter Payment Link from src/lib/plans.ts expect 200. ";
 rails_prompt += "HEAD https://authichain.com/api/checkout/dpp expect 204; never GET that API. ";
 rails_prompt += "GET https://signal.authichain.com/offer expect 200 and /api/x402/discovery expect 402. ";
-rails_prompt += "Read their TAPE / PEPKIN 0.01 USDC (10000 atomic) discovery claims, not the legacy 50000 pass. ";
-rails_prompt += "GET https://signal.authichain.com/health.live expect idle sku discovery / 10000. ";
+rails_prompt += "Offer and discovery must show BOTH 0.01 USDC AND 10000 atomic, plus TAPE and $PEPKIN identity — not merely the English words ranked tape. ";
+rails_prompt += "GET https://signal.authichain.com/health.live and require the same TAPE / $PEPKIN identity. ";
+rails_prompt += "Treat any shop-reported 7 payers / 9 payments / $0.39 as UNVERIFIED, not revenue, not MRR, and keep Signal USDC separate from Stripe. ";
 rails_prompt += "Never POST or pay, never send, never create a checkout session. ";
 rails_prompt += "If network evidence is missing, return ok=false and say unknown. Return {ok, reason}.";
 let rails = agent(rails_prompt, #{

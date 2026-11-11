@@ -25,10 +25,14 @@ requires a real buyer; positive net income requires costs and refunds.
 | AuthiChain unified | Live Stripe Starter $29; DPP workspace $299 | Non-founder live paid Stripe Checkout/charge **with matched SKU and signed webhook**, durable entitlement, successful fulfillment, unique receipt, UTC timestamp | Founder $10 test; redirect `success`; internal `subscriptions.status=active`; pending payout; historical `stripe_events.status=success` |
 | Signal Node x402 | Base USDC ranked TAPE ($PEPKIN); 0.01 USDC / 10000 atomic; `GET /api/x402/discovery` 402; `GET /offer` public buy card | A new external buyer, settled and unique on-chain `X-Payment-Tx`, matching paid TAPE delivery, independent attribution in the actual `revenue.outside` ledger | House/self-pay; full treasury till; public 402 challenges; a crawler opening /offer; unfulfilled transfers |
 
-The user reported **seven** outside payers, **nine** payments and **$0.39
-gross** for Signal `2.2.0-paper`. This is an *unverified report*, not a
-fresh connected ledger read and **not** AuthiChain Stripe revenue or MRR.
-Signal is a different runtime and may not be deployed from this monorepo.
+**UNVERIFIED — not revenue, not MRR:** a prior operator note said Signal
+`2.2.0-paper` had 7 outside payers / 9 payments / $0.39 gross. That figure
+is **not** a connected ledger read, **not** Stripe revenue, and **must not**
+be copied into Stripe MRR or combined with Starter/DPP cash. Signal
+USDC stays on its own till. The shop is a different runtime and may not be
+deployed from this monorepo. Public `/offer` JSON may also echo a shop-side
+`outside` object; the Node probe ignores it and still reports
+`revenueOutside.status = "unverified"`.
 
 ## Repeatable zero-charge evidence
 
