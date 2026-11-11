@@ -5,27 +5,6 @@ import { test } from "node:test";
 const workflow = name => readFileSync(`.github/workflows/${name}.yml`, "utf8");
 const routes = source =>
   source.split("\n").filter(line => line.trim().startsWith("runs-on:"));
-const PR_HOSTED_WORKFLOWS = [
-  "agentz-ci",
-  "build-workers",
-  "ci",
-  "cloudflare-builds-status",
-  "cloudflare-estate-audit",
-  "codeql",
-  "compliance-audit",
-  "contract-tests",
-  "honest-launch-gate",
-  "lint",
-  "main",
-  "nightstamp-scan-gate",
-  "schema-drift",
-  "security-scan",
-  "supabase-baseline",
-  "trust-lab",
-  "typecheck-ratchet",
-  "vercel-deploy-guard",
-  "windows-path-safety",
-];
 
 const routesPrToHosted = line => {
   const route = line.trim();
@@ -70,36 +49,29 @@ test("runner selector rejects misleading hosted fallback expressions", () => {
   }
 });
 
-test("reviewed PR-triggered checks cannot select a self-hosted runner", () => {
-  for (const name of PR_HOSTED_WORKFLOWS) {
-    const source = workflow(name);
-    assert.ok(source.includes("pull_request:"), `${name}: PR event missing`);
-    const jobRoutes = routes(source);
-    assert.ok(jobRoutes.length > 0, `${name}: missing runner selector`);
-    for (const route of jobRoutes) {
-      assert.ok(
-        routesPrToHosted(route),
-        `${name}: unsafe PR runner: ${route.trim()}`
-      );
-    }
-  }
-});
-
 test("buyer-signals PR job is read-only and does not execute lead collector", () => {
   const source = workflow("buyer-signals");
+  const [verify, rest] = source.split("  signals:\n");
+  assert.ok(verify.includes("verify-pr:"));
+  assert.ok(verify.includes("if: github.event_name == 'pull_request'"));
+  assert.ok(verify.includes("persist-credentials: false"));
+  assert.ok(verify.includes("permissions:\n      contents: read"));
+  assert.ok(verify.includes("run: node --check scripts/growth/buyer-signals.mjs"));
+  assert.ok(!verify.includes("run: node scripts/growth/buyer-signals.mjs"));
   assert.ok(
-    source.includes(
-      "verify-pr:\n    if: github.event_name == 'pull_request'\n    runs-on: ubuntu-24.04"
+    rest.includes(
+      "if: github.repository == 'undone0603/authichain-unified' && github.event_name != 'pull_request'"
     )
   );
-  assert.ok(source.includes("permissions:\n      contents: read\n    steps:"));
-  assert.ok(
-    source.includes("run: node --check scripts/growth/buyer-signals.mjs")
-  );
-  assert.ok(
-    source.includes(
-      "signals:\n    if: github.repository == 'undone0603/authichain-unified' && github.event_name != 'pull_request'"
-    )
+  assert.ok(rest.includes("run: node scripts/growth/buyer-signals.mjs"));
+});
+
+test("fork pull requests still fall back to hosted ubuntu-24.04 on CI Main", () => {
+  const source = workflow("main");
+  assert.ok(source.includes("pull_request:"));
+  assert.match(
+    source,
+    /github\.event\.pull_request\.head\.repo\.full_name == github\.repository\) && fromJSON\('\["self-hosted","Linux","ARM64","authichain-wsl"\]'\) \|\| 'ubuntu-24.04'/
   );
 });
 

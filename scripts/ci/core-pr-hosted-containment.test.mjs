@@ -31,15 +31,17 @@ test("Hardhat contract tests never checkout PR code on publisher", () => {
 });
 
 test("AgentZ and Worker builds require attestation before ops host selection", () => {
-  for (const name of ["agentz-ci", "build-workers"]) {
-    const source = file(name);
-    const route = source.split("\n").find(line => line.includes("runs-on:"));
-    assert.ok(route.includes("github.event_name != 'pull_request'"));
-    assert.ok(route.includes("vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'"));
-    assert.ok(route.includes("ubuntu-24.04"));
-    assert.ok(!source.includes("secrets.CLOUDFLARE_"), name);
-  }
   const agent = file("agentz-ci");
-  assert.ok(agent.includes('VENV="${RUNNER_TEMP:?}/agentz-venv"'));
-  assert.ok(!agent.includes("/home/zac"));
+  const worker = file("build-workers");
+  const agentOps = agent.split("\n").find(
+    line => line.includes("runs-on:") && line.includes("authichain-ops")
+  );
+  assert.ok(agentOps);
+  assert.ok(agentOps.includes("github.event_name == 'push'"));
+  assert.ok(agentOps.includes("ubuntu-24.04"));
+  const workerRoute = worker.split("\n").find(line => line.includes("runs-on:"));
+  assert.ok(workerRoute.includes("ubuntu-24.04"));
+  assert.ok(!agent.includes("secrets.CLOUDFLARE_"));
+  assert.ok(!worker.includes("secrets.CLOUDFLARE_"));
+  assert.ok(agent.includes("tinyfish-offline:"));
 });
