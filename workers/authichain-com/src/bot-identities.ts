@@ -1459,6 +1459,69 @@ export const BOT_IDENTITIES = {
           "proofValue": "z4XDmDHXpLJ8NhcDmjaCH3xTHriMD4tuZte4VRZpaZBxgH29XVXViSj1Bvbd7gUJFdgSAazadgm5Ek7ETEkM7PdsF"
         }
       }
+    },
+    {
+      "name": "AgentZ",
+      "slug": "agentz",
+      "role": "Operator-authorized AI agent for AuthiChain brand publishing and directory submissions within stated $0 scope",
+      "did": "did:web:authichain.com:agents:agentz",
+      "didKey": "did:key:z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82",
+      "publicKeyMultibase": "z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82",
+      "publicKeyJwkX": "uidcNVRZYplEAL8ydA1LXrvEiiJetZ8VirXaDpHOoVs",
+      "kid": "_iJ-a7FDIX5LEMrFG0ADfRayWUnGstvghoJlOldBFIs",
+      "record": {
+        "@context": [
+          "https://www.w3.org/ns/credentials/v2",
+          "https://authichain.com/protocol/v1"
+        ],
+        "type": [
+          "VerifiableCredential",
+          "AgentIdentityRecord"
+        ],
+        "issuer": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
+        "validFrom": "2026-10-17T18:00:00Z",
+        "validUntil": "2027-01-17T18:00:00Z",
+        "credentialSubject": {
+          "id": "did:web:authichain.com:agents:agentz",
+          "name": "AgentZ",
+          "role": "Operator-authorized AI agent for AuthiChain brand publishing and directory submissions within stated $0 scope",
+          "operator": "AuthiChain",
+          "isHuman": false,
+          "agentKey": "did:key:z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82",
+          "profile": "https://authichain.com/agents/agentz"
+        },
+        "proof": {
+          "type": "Ed25519Signature2020",
+          "created": "2026-10-17T18:00:00Z",
+          "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
+          "proofPurpose": "assertionMethod",
+          "proofValue": "z568rELmQN1AuGw6mkABHgfK3Vn3CaGuiEcTzcx5xqtxHyys3Uh3vaJPbKvLG4wmFenkEuosz2QGchiBurHStdkmD"
+        }
+      },
+      "selfStatement": {
+        "@context": [
+          "https://www.w3.org/ns/credentials/v2",
+          "https://authichain.com/protocol/v1"
+        ],
+        "type": [
+          "VerifiableCredential",
+          "AgentKeyControlStatement"
+        ],
+        "issuer": "did:key:z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82",
+        "validFrom": "2026-10-17T18:00:00Z",
+        "validUntil": "2027-01-17T18:00:00Z",
+        "credentialSubject": {
+          "id": "did:web:authichain.com:agents:agentz",
+          "statement": "I am AgentZ, an AI agent operated by AuthiChain. I am not a person."
+        },
+        "proof": {
+          "type": "Ed25519Signature2020",
+          "created": "2026-10-17T18:00:00Z",
+          "verificationMethod": "did:key:z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82#z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82",
+          "proofPurpose": "assertionMethod",
+          "proofValue": "z2kdafRMpCV4xKsKHeiur7dSX6aF5XhCvb8ahnrBeBGpZw9uwoR8iqZ3bPezpTSkUVRGY9Svc44V2isHzHosaKEjA"
+        }
+      }
     }
   ]
 };

@@ -1232,10 +1232,14 @@ export async function x402Catalog(
       creatorUsd: planUsd("creator"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
-      farmPaymentLink: planPaymentLink("strainchain_farm"),
       starterPaymentLink: planPaymentLink("starter"),
       creatorPaymentLink: planPaymentLink("creator"),
-      offers: catalogOffers(),
+      offers: catalogOffers().filter(
+        offer =>
+          offer.id !== "qron_launch" &&
+          offer.id !== "qron_launch_annual" &&
+          offer.id !== "strainchain_farm"
+      ),
       source: "src/lib/plans.ts",
     },
     discovery: {

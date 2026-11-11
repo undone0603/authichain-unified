@@ -8,6 +8,7 @@
 --   * Read access is column-level SELECT on the ledger tables, excluding PII
 --     columns (e.g. payments.customer_email is NOT granted).
 
+-- supabase-grants-exempt: public.reconciliation_runs dedicated stripe_reconciler role only; no service_role key
 CREATE TABLE IF NOT EXISTS public.reconciliation_runs (
   id                       BIGSERIAL   PRIMARY KEY,
   run_at                   TIMESTAMPTZ NOT NULL DEFAULT now(),

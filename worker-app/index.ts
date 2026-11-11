@@ -22,7 +22,10 @@ import { registerX402Routes } from "./x402-routes";
 import { registerUnsubscribeRoutes } from "./unsubscribe-routes";
 import { registerInboundRoutes } from "./inbound-routes";
 import { registerGuardrailApi } from "./guardrail-api";
-import { registerLeadRoutes } from "./lead-routes";
+import {
+  estateLeadCaptureCorsMiddleware,
+  registerLeadRoutes,
+} from "./lead-routes";
 import { registerResendInbound } from "./resend-inbound";
 import { registerNurtureReplies } from "./nurture-replies";
 import type { WorkersAIBinding } from "../src/lib/sentiment-classifier";
@@ -44,6 +47,8 @@ type Env = {
   AUTHICHAIN_ATTESTATION_KEY_ID?: string;
   AUTHICHAIN_ATTESTATION_PUBLIC_JWK?: string;
   STRIPE_SECRET_KEY?: string;
+  COFFEE_PAYMENT_LINK_URL?: string;
+  COFFEE_RECEIPT_PRIVATE_JWK?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_WEBHOOK_AUTHICHAIN_SECRET?: string;
   INSTANTLY_WEBHOOK_SECRET?: string;
@@ -85,6 +90,8 @@ function hydrateProcessEnv(env?: Env) {
   if (!env) return;
   const copy: Array<[string, string | undefined]> = [
     ["STRIPE_SECRET_KEY", env.STRIPE_SECRET_KEY],
+    ["COFFEE_PAYMENT_LINK_URL", env.COFFEE_PAYMENT_LINK_URL],
+    ["COFFEE_RECEIPT_PRIVATE_JWK", env.COFFEE_RECEIPT_PRIVATE_JWK],
     ["STRIPE_WEBHOOK_SECRET", env.STRIPE_WEBHOOK_SECRET],
     ["STRIPE_WEBHOOK_AUTHICHAIN_SECRET", env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET],
     [
@@ -213,6 +220,8 @@ app.use("/api/gpt/*", rateLimitMiddleware("gpt", 60, 60_000));
 app.use("/api/admin/*", rateLimitMiddleware("admin", 30, 15 * 60_000));
 // Public lead forms (/book, /contact, lead-capture popups): 10 per hour per IP
 app.use("/api/book", rateLimitMiddleware("book", 10, 60 * 60_000));
+app.use("/api/lead-capture", estateLeadCaptureCorsMiddleware);
+app.use("/api/leads/capture", estateLeadCaptureCorsMiddleware);
 app.use(
   "/api/lead-capture",
   rateLimitMiddleware("lead-capture", 10, 60 * 60_000)
@@ -346,6 +355,30 @@ app.get("/api/checkout", c => {
     webhook: "POST /api/stripe/webhook",
     thanks: "/dpp/thanks",
     activate: "/dpp/activate",
+  });
+});
+
+app.get("/api/coffee/checkout", async c => {
+  const { coffeeCheckoutResponse } = await import("../src/lib/support-coffee");
+  return coffeeCheckoutResponse(c.req.raw, {
+    STRIPE_SECRET_KEY:
+      c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY,
+    COFFEE_PAYMENT_LINK_URL:
+      c.env?.COFFEE_PAYMENT_LINK_URL || process.env.COFFEE_PAYMENT_LINK_URL,
+  });
+});
+
+app.post("/api/coffee/checkout", async c => {
+  hydrateProcessEnv(c.env);
+  const { coffeeCheckoutResponse } = await import("../src/lib/support-coffee");
+  return coffeeCheckoutResponse(c.req.raw, {
+    STRIPE_SECRET_KEY:
+      c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY,
+    COFFEE_PAYMENT_LINK_URL:
+      c.env?.COFFEE_PAYMENT_LINK_URL || process.env.COFFEE_PAYMENT_LINK_URL,
+    COFFEE_RECEIPT_PRIVATE_JWK:
+      c.env?.COFFEE_RECEIPT_PRIVATE_JWK ||
+      process.env.COFFEE_RECEIPT_PRIVATE_JWK,
   });
 });
 
@@ -544,7 +577,7 @@ app.all("/qron/r/*", async c => {
             expected_object_id: objectId,
           }),
         }),
-        c.env,
+        c.env
       );
       const parsed = await res.json().catch(() => null);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -1318,7 +1351,11 @@ app.post("/api/gpt/verify", async c => {
     // A registry lookup never verifies (docs/attestation/verification-decision.md):
     // not found is not counterfeit, and a matching row is not authentic.
     if (!product) {
-      return c.json({ verified: false, trustScore: null, ...registryLookupDecision(null) });
+      return c.json({
+        verified: false,
+        trustScore: null,
+        ...registryLookupDecision(null),
+      });
     }
     const [cert] = await db
       .select()
@@ -1400,7 +1437,9 @@ app.post("/api/gpt/cannabis/verify", async c => {
           .limit(1)
       : [];
     // A name match is not a lab result and says nothing about METRC.
-    const decision = registryLookupDecision(product ? { status: "name_match" } : null);
+    const decision = registryLookupDecision(
+      product ? { status: "name_match" } : null
+    );
     return c.json({
       verified: decision.valid,
       strainName: strainName || null,
@@ -1426,7 +1465,8 @@ app.post("/api/gpt/trust-score", async c => {
       .from(products)
       .where(eq(products.id, Number(productId)))
       .limit(1);
-    if (!product) return c.json({ trustScore: null, ...registryLookupDecision(null) });
+    if (!product)
+      return c.json({ trustScore: null, ...registryLookupDecision(null) });
     const [cert] = await db
       .select()
       .from(certificates)
@@ -1602,7 +1642,8 @@ app.post("/api/internal/cannabis/verify", async c => {
       dispensaryId: dispensaryId || null,
       complianceStatus: "not_assessed",
       rarityScore,
-      rarity_basis: rarityScore === null ? "not_computed" : "caller_supplied_panel",
+      rarity_basis:
+        rarityScore === null ? "not_computed" : "caller_supplied_panel",
       truthLayer,
     });
   } catch (err: any) {
@@ -1673,7 +1714,8 @@ app.get("/api/internal/analytics", async c => {
       verifications: null,
       qrCodesGenerated: null,
       certificatesIssued: null,
-      message: "Usage metering is not active, so there are no counts to report.",
+      message:
+        "Usage metering is not active, so there are no counts to report.",
     });
   } catch (err: any) {
     console.error("[Internal API] analytics error:", err.message);
