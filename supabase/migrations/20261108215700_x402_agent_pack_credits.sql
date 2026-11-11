@@ -221,6 +221,7 @@ language plpgsql security invoker set search_path = ''
 as $$
 declare
   v_buyer_email text;
+  v_effective_status text;
 begin
   if p_payment_intent_id is null or p_payment_intent_id !~ '^pi_' or
      p_status not in ('refunded', 'disputed') then
@@ -242,12 +243,22 @@ begin
       pg_catalog.hashtextextended(v_buyer_email, 0)
     );
   end if;
-  insert into public.x402_agent_pack_reversals(payment_intent_id, status)
+  -- The order of Stripe's refunded/disputed notifications is not guaranteed.
+  -- Once a payment is disputed, a late refund must never downgrade its
+  -- historical status. Both states remain permanently non-redeemable.
+  insert into public.x402_agent_pack_reversals as prior(payment_intent_id, status)
     values (p_payment_intent_id, p_status)
-    on conflict(payment_intent_id) do update set status = excluded.status;
+    on conflict(payment_intent_id) do update
+      set status = case
+        when prior.status = 'disputed' or excluded.status = 'disputed'
+          then 'disputed'
+        else 'refunded'
+      end
+    returning status into v_effective_status;
   update public.x402_agent_pack_grants
-    set status = p_status, updated_at = now()
-    where payment_intent_id = p_payment_intent_id and status = 'active';
+    set status = v_effective_status, updated_at = now()
+    where payment_intent_id = p_payment_intent_id
+      and status is distinct from v_effective_status;
   return true;
 end
 $$;

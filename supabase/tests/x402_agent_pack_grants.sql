@@ -87,6 +87,18 @@ BEGIN
   SELECT count(*) INTO v_count FROM public.x402_agent_pack_grants
     WHERE payment_intent_id = v_paid_intent AND status = 'refunded';
   IF v_count <> 1 THEN RAISE EXCEPTION 'refund status missing'; END IF;
+  -- A later dispute must upgrade the ledger, and a later refund cannot
+  -- downgrade either the tombstone or the existing grant from disputed.
+  IF NOT public.reverse_x402_agent_pack(v_paid_intent, 'disputed') THEN
+    RAISE EXCEPTION 'dispute failed to supersede refund'; END IF;
+  IF NOT public.reverse_x402_agent_pack(v_paid_intent, 'refunded') THEN
+    RAISE EXCEPTION 'late refund failed'; END IF;
+  SELECT count(*) INTO v_count FROM public.x402_agent_pack_grants
+    WHERE payment_intent_id = v_paid_intent AND status = 'disputed';
+  IF v_count <> 1 THEN RAISE EXCEPTION 'late refund downgraded disputed grant'; END IF;
+  SELECT count(*) INTO v_count FROM public.x402_agent_pack_reversals
+    WHERE payment_intent_id = v_paid_intent AND status = 'disputed';
+  IF v_count <> 1 THEN RAISE EXCEPTION 'late refund downgraded dispute tombstone'; END IF;
   v_decision := public.consume_x402_agent_pack_credit(v_api_key_id, v_idem, v_seal_id, v_buyer);
   IF v_decision->>'reason' <> 'grant_revoked' THEN
     RAISE EXCEPTION 'revoked purchase still authorizes replay: %', v_decision;
@@ -104,6 +116,11 @@ BEGIN
   -- Dispute-first protection is independent of the ordinary refund event.
   IF NOT public.reverse_x402_agent_pack(v_dispute_first_intent, 'disputed') THEN
     RAISE EXCEPTION 'early dispute tombstone failed'; END IF;
+  IF NOT public.reverse_x402_agent_pack(v_dispute_first_intent, 'refunded') THEN
+    RAISE EXCEPTION 'late refund after dispute failed'; END IF;
+  SELECT count(*) INTO v_count FROM public.x402_agent_pack_reversals
+    WHERE payment_intent_id = v_dispute_first_intent AND status = 'disputed';
+  IF v_count <> 1 THEN RAISE EXCEPTION 'dispute-first tombstone was downgraded'; END IF;
   v_result := public.grant_x402_agent_pack(v_dispute_first_session, v_dispute_first_intent, v_buyer);
   IF v_result <> 'reversed' THEN RAISE EXCEPTION 'disputed purchase was re-granted'; END IF;
 

@@ -4,6 +4,7 @@ import { test } from "node:test";
 
 const fromRepo = relative => readFileSync(new URL("../../" + relative, import.meta.url), "utf8");
 const migration = fromRepo("supabase/migrations/20261108215700_x402_agent_pack_credits.sql");
+const fixture = fromRepo("supabase/tests/x402_agent_pack_grants.sql");
 const edge = fromRepo("worker-app/wrangler.toml");
 const apex = fromRepo("workers/authichain-com/wrangler.toml");
 
@@ -68,6 +69,17 @@ test("refunds serialize with spending and idempotent replays using the buyer loc
     reversal.indexOf("hashtextextended(v_buyer_email, 0)")
   );
   assert.match(spend, /'replayed', true,[\s\S]*?'remaining_credits', v_remaining/);
+});
+
+test("disputes supersede refunds regardless of Stripe event delivery order", () => {
+  const reversal = rpc("reverse_x402_agent_pack");
+  assert.match(reversal, /insert into public\.x402_agent_pack_reversals as prior/);
+  assert.match(reversal, /prior\.status = 'disputed' or excluded\.status = 'disputed'/);
+  assert.match(reversal, /returning status into v_effective_status/);
+  assert.match(reversal, /set status = v_effective_status, updated_at = now\(\)/);
+  assert.match(fixture, /late refund downgraded disputed grant/);
+  assert.match(fixture, /late refund downgraded dispute tombstone/);
+  assert.match(fixture, /dispute-first tombstone was downgraded/);
 });
 
 test("redemption checks active API key before debit and cannot overspend", () => {
