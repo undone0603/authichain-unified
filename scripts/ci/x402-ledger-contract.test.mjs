@@ -4,6 +4,7 @@ import { test } from "node:test";
 
 const fromRepo = relative => readFileSync(new URL("../../" + relative, import.meta.url), "utf8");
 const migration = fromRepo("supabase/migrations/20261108215700_x402_agent_pack_credits.sql");
+const autonomy = JSON.parse(fromRepo(".github/autonomy.json"));
 const fixture = fromRepo("supabase/tests/x402_agent_pack_grants.sql");
 const edge = fromRepo("worker-app/wrangler.toml");
 const apex = fromRepo("workers/authichain-com/wrangler.toml");
@@ -111,6 +112,18 @@ test("all three RPCs are service-role-only and invoker security", () => {
     assert.match(migration, new RegExp("revoke all on function public\\." + fn + "[\\s\\S]*?from public, anon, authenticated"));
     assert.match(migration, new RegExp("grant execute on function public\\." + fn + "[\\s\\S]*?to service_role"));
   }
+});
+
+test("Stripe dispute notifications are declared for the canonical protected webhook", () => {
+  const endpoint = autonomy.stripe_webhooks.find(
+    entry => entry.id === "we_1UGTCSGqTruSqV8ThM9bXVWp"
+  );
+  assert.ok(endpoint, "canonical Stripe webhook endpoint missing");
+  assert.equal(endpoint.url, "https://authichain.com/api/stripe/webhook");
+  assert.ok(endpoint.ensure_events.includes("checkout.session.completed"));
+  assert.ok(endpoint.ensure_events.includes("charge.refunded"));
+  assert.ok(endpoint.ensure_events.includes("charge.dispute.created"));
+  assert.equal(endpoint.ensure_events.filter(event => event === "charge.dispute.created").length, 1);
 });
 
 test("neither Worker can sell prepaid credits until approved enabled config is promoted", () => {
