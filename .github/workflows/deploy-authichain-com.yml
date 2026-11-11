@@ -42,7 +42,7 @@ jobs:
           echo "sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
       # Separately tested, fail-closed automated protection instead of a human
       # environment reviewer. Missing/stale evidence stops the release.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ steps.head.outputs.sha }}
           persist-credentials: false
@@ -91,7 +91,7 @@ jobs:
       contents: read
       statuses: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.verify.outputs.sha }}
           persist-credentials: false
