@@ -26,6 +26,20 @@ function rejects(change, why) {const x=fixture();change(x);assert.throws(() => a
 test('accepts exact main SHA, protected branch, no human gate and all seven successful jobs', () => {
   assert.deepEqual(assertReleasePolicy(fixture()), {sha: SHA, checks: 7, environment: ENV});
 });
+test('preserves legacy CircleCI URL support from main without accepting mixed formats', () => {
+  const x = fixture();
+  const legacyURL = 'https://circleci.com/gh/undone0603/authichain-unified/2914';
+  for (const status of x.statuses.statuses) status.target_url = legacyURL;
+  assert.equal(assertReleasePolicy(x).checks, 7);
+  x.statuses.statuses[0].target_url = URL;
+  assert.throws(() => assertReleasePolicy(x), /mixed CircleCI workflows/);
+});
+test('accepts the current CircleCI app job format from main', () => {
+  const x = fixture();
+  const currentMainJob = 'https://app.circleci.com/workflow/e99fd4ba-7989-4a70-978b-d54f184a9e18/job/87f65d57-d79f-4b16-bc74-bc212fb2c9ea';
+  for (const status of x.statuses.statuses) status.target_url = currentMainJob;
+  assert.equal(assertReleasePolicy(x).checks, 7);
+});
 test('rejects wrong repository, malformed SHA, dispatch mismatch and stale main', () => {
   rejects(x => x.repo = 'someone/else', /wrong repository/);
   rejects(x => x.expectedSha = 'invalid', /SHA mismatch/);
@@ -58,7 +72,9 @@ test('fails when any required status is absent, failed, pending or has a fake de
   rejects(x => {x.statuses.statuses[0].state = 'failure';}, /test-workers/);
   rejects(x => {x.statuses.statuses[0].target_url = URL.replace('app.circleci.com', 'app.circleci.com.evil.test');}, /test-workers/);
   rejects(x => {x.statuses.statuses[0].target_url = URL + '/evil';}, /test-workers/);
-  rejects(x => {x.statuses.statuses[0].target_url = 'https://circleci.com/gh/undone0603/authichain-unified/2914';}, /test-workers/);
+  rejects(x => {x.statuses.statuses[0].target_url = 'https://circleci.com/gh/undone0603/authichain-unified/2914/extra';}, /test-workers/);
+  rejects(x => {x.statuses.statuses[0].target_url = 'https://circleci.com/gh/other-owner/authichain-unified/2914';}, /test-workers/);
+  rejects(x => {x.statuses.statuses[0].target_url = 'https://circleci.com/gh/undone0603/authichain-unified/2914';}, /mixed CircleCI workflows/);
   rejects(x => {x.statuses.statuses[0].target_url = URL.replace('/job/', '/task/');}, /test-workers/);
   rejects(x => {x.statuses.statuses[0].target_url = URL.replace(JOB, 'invalid-uuid');}, /test-workers/);
   rejects(x => {x.statuses.statuses[0].target_url = URL.replace(WORKFLOW, '11111111-2222-3333-4444-555555555555');}, /mixed CircleCI workflows/);

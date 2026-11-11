@@ -43,6 +43,8 @@ case "$task" in
       src/lib/x402-agent-pack-verify.test.ts \
       src/lib/checkout-gate.test.ts
     pnpm test --filter='./workers/*' --continue=dependencies-successful
+    # Preserve main's separate AgentZ edge/scheduler integration gate.
+    node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs
     ;;
   test-other)
     pnpm --filter agent-browser exec playwright install --with-deps chromium

@@ -7,7 +7,7 @@
 **Brand:** AuthiChain (brand only — there is no AuthiChain, Inc. corporation)
 **UEI:** R34XKWRJY9A5
 **CAGE Code:** 1PUJ6  
-**Physical Address:** 109 N 4th St, Roscommon, MI 48653
+**Physical Address:** [MAILING_ADDRESS]
 
 ---
 

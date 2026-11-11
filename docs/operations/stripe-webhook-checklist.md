@@ -1,5 +1,14 @@
 # Stripe Webhook Implementation Checklist
 
+> **Current execution boundary (2026-11-01):** This file includes historical
+> migration and replay notes. The live endpoint is the Cloudflare
+> `authichain-edge-router` (`worker-app/index.ts`), **not** the retired Next.js
+> handler or Vercel. Do not run production DDL, resend old live events, push
+> directly to `main`, or redeploy as a CI workaround. The canonical deployment
+> workflow is `.github/workflows/deploy-authichain-edge-router.yml`; require
+> exact-head checks, approved deployment, version-to-SHA evidence and an
+> independently verified signed payment-to-grant result.
+
 > **Live bind (2026-09-20):** Dashboard `we_1UGTCSGqTruSqV8ThM9bXVWp` →
 > `https://authichain.com/api/stripe/webhook` is **`authichain-edge-router`**.
 > A 400 `No signatures found matching the expected signature` after #1084
@@ -11,51 +20,36 @@
 
 ## Files Created
 
-- [x] `src/app/api/webhooks/stripe/route.ts` — Main webhook handler (400+ lines)
+- [x] `src/app/api/webhooks/stripe/route.ts` — legacy Next.js handler (not the live apex webhook)
 - [x] `supabase/migrations/00003_stripe_payment_tracking.sql` — Database schema
 - [x] `stripe-webhook-setup.md` — Comprehensive setup guide
 - [x] This checklist
 
 ## Quick Setup (5 Steps)
 
-### 1. Apply Supabase Migration
+### 1. Inspect existing Supabase schema (read-only)
 
-```bash
-cd supabase
-supabase migration up          # Local test
-supabase db push              # Push to production
-```
+Check the migration history and relevant tables, including `public.stripe_events`,
+`public.entitlements`, and DPP grant/loop evidence. Schema presence is not
+proof that a payment was fulfilled. Production migrations and DDL require
+separate operator approval; do not run `supabase db push` in reconciliation.
 
-**Verify:**
+### 2. Verify the canonical Worker publish path
 
-```bash
-supabase db list-tables
-```
-
-Should show: `payments`, `subscriptions`, `alerts`, `audit_log`, `stripe_events`
-
-### 2. Deploy Webhook Handler
-
-```bash
-# Build and test locally
-pnpm build
-pnpm preview
-
-# Deploy to Vercel
-git add src/app/api/webhooks/stripe/route.ts supabase/migrations/00003_stripe_payment_tracking.sql
-git commit -m "Add Stripe webhook handlers for payment tracking"
-git push origin main
-```
-
-**Verify in Vercel:**
-
-- Deployment is green
-- New endpoint appears in logs
+The live code path is `worker-app/index.ts` → `handleStripeWebhook` →
+`fulfillDppPaidSession`. Review and test on a branch; never push directly to
+`main`. The audited publish workflow is
+`.github/workflows/deploy-authichain-edge-router.yml`, not
+`deploy-cloudflare.yml` (which currently deploys manufacturer-status only).
+After a normally authorized publish, compare the GitHub job summary's
+`GITHUB_SHA` and promoted version ID against Cloudflare's active deployment.
+Confirm signature verification and persisted grant/access evidence separately.
+A queued, skipped or failed job proves no successful promotion.
 
 ### 3. Get Webhook Secret from Stripe
 
 1. Go to [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks)
-2. Click **Add endpoint** (if new) or edit existing
+2. Inspect the existing endpoint and its event subscriptions; do not create a duplicate endpoint
 3. URL: `https://authichain.com/api/stripe/webhook` (not the retired `/api/webhooks/stripe`)
 4. Events:
    - `checkout.session.completed` (required for DPP fulfill)
@@ -63,7 +57,7 @@ git push origin main
    - `invoice.payment_succeeded`
    - `invoice.payment_failed`
    - `customer.subscription.deleted`
-5. Click **Create** or **Save**
+5. Record the existing configuration; any changes to live event subscriptions require a separate authorized review
 6. **Reveal signing secret** → Copy (starts with `whsec_`)
 
 ### 4. Set the signing secret on `authichain-edge-router` (not Vercel)
@@ -75,12 +69,13 @@ See [stripe-webhook-signing-secret.md](./stripe-webhook-signing-secret.md). Name
 
 Do not paste `whsec_` values into git or workflow_dispatch inputs.
 
-### 5. Redeploy to Pick Up Environment Variable
+### 5. Verify Worker bindings and runtime revision
 
-1. Go to Vercel → Deployments
-2. Click the latest deployment
-3. Click **Redeploy**
-4. Wait for deployment to succeed
+Check that the required secret **names** exist on `authichain-edge-router`;
+never read or paste their values into logs. Cloudflare secret updates may create
+new Worker versions without deploying a new source commit. Compare the active
+version with an audited, successfully promoted GitHub deployment before
+attributing source. No Vercel redeploy is involved.
 
 ## Verification Tests
 
@@ -170,7 +165,7 @@ Canonical path: Stripe Dashboard → `POST https://authichain.com/api/stripe/web
 - Do **not** revive `workers/stripe-webhook` or `workers/dpp-fulfillment` for this path.
 - `isDppOffer` matches `metadata.offer=dpp_readiness_2026`, `metadata.plan=dpp_readiness`, or catalog `price_1TwmD8GqTruSqV8TpAF8dfyA` (webhook payloads omit `line_items` unless expanded; checkout now also stamps `metadata.stripe_price_id`).
 
-### Owner: Resend the missed smoke (`we_1UGTCS…`)
+### Historical incident — do not automatically resend the missed smoke (`we_1UGTCS…`)
 
 Live endpoint: `we_1UGTCS…` → `https://authichain.com/api/stripe/webhook` (enabled; events include `checkout.session.completed`).
 
@@ -180,7 +175,7 @@ Live endpoint: `we_1UGTCS…` → `https://authichain.com/api/stripe/webhook` (e
 
 1. Stripe Dashboard → Developers → Webhooks → `we_1UGTCS…` (authichain-com DPP + billing).
 2. Open the `checkout.session.completed` delivery for session `cs_live_a1y4Tu…`. Historical non-2xx: first `DATABASE_URL` (fixed), then `SubtleCryptoProvider cannot be used in a synchronous context` until this async verify lands.
-3. After this Worker **and** migration `20260920000002` (profiles.user_id nullable) deploy: **Resend** `evt_1UHERPGqTruSqV8TMtUYKAF0` (or the `cs_live_a1y4Tu…` delivery). Expect 2xx. Replay is safe — fulfill is idempotent on session id. A prior `payment_succeeded` row does **not** block `provisioned`.
+3. This is historical diagnostic evidence, **not** permission to resend a live event. Check event retention, current Worker source provenance, the signed handler, and idempotent fulfillment behavior. Any live replay requires separate operator approval; HTTP 2xx alone does not prove provisioning.
 4. Confirm Supabase:
    ```sql
    -- delivery visible even if fulfill later throws
@@ -229,7 +224,7 @@ LIMIT 20;
 
 ### Problem: Webhook returns 500 "Internal Server Error"
 
-- [ ] Check Vercel Logs for stack trace
+- [ ] Check Cloudflare Worker runtime logs for the canonical edge-router
 - [ ] Verify `STRIPE_SECRET_KEY` is still set
 - [ ] Verify `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set
 - [ ] Verify database tables exist: `supabase db list-tables`
@@ -240,7 +235,7 @@ LIMIT 20;
 - [ ] Check Stripe Dashboard → Webhooks → **Event deliveries**
 - [ ] Look for red ✗ status (failed delivery)
 - [ ] Click the event to see error response
-- [ ] If 500 error, check Vercel Logs
+- [ ] If 500 error, check Cloudflare edge-router runtime logs
 - [ ] If 400 error, check that webhook secret is correct
 
 ### Problem: Duplicate payments in database
@@ -254,10 +249,7 @@ LIMIT 20;
 - [ ] Check if lead exists with payment's customer_email
 - [ ] Check `audit_log` for errors during the update
 - [ ] Verify `lead_captures` table has `status` column
-- [ ] Manually update if needed:
-  ```sql
-  UPDATE lead_captures SET status = 'customer' WHERE email = 'customer@example.com';
-  ```
+- [ ] Do not manually promote a lead to `customer` without verified payment and fulfillment evidence; CRM writes require separate authorization.
 
 ## Monitoring
 
@@ -277,9 +269,9 @@ LIMIT 7;
 
 ### Active Subscriptions
 
-```sql
-SELECT COUNT(*) as active_subscriptions FROM subscriptions WHERE status = 'active';
-```
+`public.subscriptions.status='active'` is **not** a Stripe billing assertion.
+Cross-check live Stripe subscription IDs, successful invoices, and access grants
+before counting genuine subscribers or renewals.
 
 ### Failed Payments Alerting
 

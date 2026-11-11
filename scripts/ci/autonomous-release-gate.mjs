@@ -17,6 +17,7 @@ const SHA = /^[a-f0-9]{40}$/;
 // Require exact host, exact URL shape and one shared workflow across the
 // seven statuses. Never accept a lookalike origin or a mixed run.
 const CIRCLE_UUID = '[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}';
+const LEGACY_CIRCLE_JOB = /^https:\/\/circleci\.com\/gh\/undone0603\/authichain-unified\/([0-9]+)\/?$/;
 const CIRCLE_JOB = new RegExp(
   '^https://app\\.circleci\\.com/workflow/(' + CIRCLE_UUID +
   ')/job/(' + CIRCLE_UUID + ')/?$', 'i'
@@ -53,11 +54,14 @@ export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, rul
   let workflowId = null;
   for (const name of REQUIRED) {
     const status = recent.get(name);
-    const match = typeof status?.target_url === 'string'
-      ? status.target_url.match(CIRCLE_JOB) : null;
-    guard(status?.state === 'success' && match,
+    const url = typeof status?.target_url === 'string' ? status.target_url : '';
+    const match = url.match(CIRCLE_JOB);
+    const legacy = url.match(LEGACY_CIRCLE_JOB);
+    guard(status?.state === 'success' && (match || legacy),
           'unverified exact-commit CircleCI status: ' + name);
-    const currentWorkflow = match[1].toLowerCase();
+    // The old CircleCI status URL had no shared workflow ID. Accept it only
+    // when every required status uses that legacy format; never mix formats.
+    const currentWorkflow = match ? match[1].toLowerCase() : 'legacy';
     if (workflowId === null) workflowId = currentWorkflow;
     guard(workflowId === currentWorkflow,
           'mixed CircleCI workflows for exact-commit seven-context gate');
