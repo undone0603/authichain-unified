@@ -14,7 +14,7 @@ import {
 const EXPECTED = "a".repeat(40);
 const MAIN = "b".repeat(40);
 const WORKER_DIR = PROTECTED_PATHS[0];
-const WORKFLOW = PROTECTED_PATHS[1];
+const WORKFLOW = ".github/workflows/deploy-authichain-com.yml";
 const WORKER_ROOT = WORKER_DIR.replace(/\/$/, "");
 
 test("exact HEAD match deploys expected_sha", () => {
@@ -62,6 +62,52 @@ test("ancestor fails when the deploy workflow or root package files changed", ()
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
   ]) {
+    assert.throws(
+      () =>
+        resolveDeploySha({
+          expectedSha: EXPECTED,
+          mainSha: MAIN,
+          isAncestor: true,
+          changedFiles: [file],
+        }),
+      /protected paths changed/
+    );
+  }
+});
+
+test("ancestor fails closed when git diff reports no files", () => {
+  for (const changedFiles of [[], null]) {
+    assert.throws(
+      () =>
+        resolveDeploySha({
+          expectedSha: EXPECTED,
+          mainSha: MAIN,
+          isAncestor: true,
+          changedFiles,
+        }),
+      /git diff was empty/
+    );
+  }
+});
+
+test("ancestor fails when newly protected lockfiles or bundled modules changed", () => {
+  const newProtected = [
+    "workers/_shared/estate-landing.ts",
+    "workers/authichain-verify-worker/mcp-routes.ts",
+    "src/lib/plans.ts",
+    "worker-app/checkout-growth.ts",
+    "schemas/example.json",
+    "protocol/example.ts",
+    "content/seo/page.md",
+    "content/microsites/pack.json",
+    "scripts/sync-microsite-packs.mjs",
+    "package-lock.json",
+    "yarn.lock",
+    "bun.lockb",
+    "bun.lock",
+    "npm-shrinkwrap.json",
+  ];
+  for (const file of newProtected) {
     assert.throws(
       () =>
         resolveDeploySha({

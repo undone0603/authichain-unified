@@ -16,10 +16,24 @@ const SHA = /^[a-f0-9]{40}$/;
 
 export const PROTECTED_PATHS = [
   "workers/authichain-com/", // pragma: allowlist secret
+  "workers/_shared/",
+  "workers/authichain-verify-worker/",
+  "src/lib/",
+  "worker-app/",
+  "schemas/",
+  "protocol/",
+  "content/seo/",
+  "content/microsites/",
+  "scripts/sync-microsite-packs.mjs",
   ".github/workflows/deploy-authichain-com.yml", // pragma: allowlist secret
   "package.json",
   "pnpm-lock.yaml",
   "pnpm-workspace.yaml",
+  "package-lock.json",
+  "yarn.lock",
+  "bun.lockb",
+  "bun.lock",
+  "npm-shrinkwrap.json",
 ];
 
 export function isProtectedChange(file) {
@@ -55,6 +69,11 @@ export function resolveDeploySha({
   const files = Array.isArray(changedFiles)
     ? changedFiles.map((f) => String(f || "").trim()).filter(Boolean)
     : [];
+  if (files.length === 0) {
+    throw new Error(
+      "deploy SHA check: ancestor of main, but git diff was empty; fail closed"
+    );
+  }
   const protectedHits = files.filter(isProtectedChange);
   if (protectedHits.length) {
     throw new Error(
