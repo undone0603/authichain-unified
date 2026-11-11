@@ -13,7 +13,8 @@ export const REQUIRED = [
   'extras', 'build', 'main-quality-gate',
 ].map(s => 'ci/circleci: ' + s);
 const SHA = /^[a-f0-9]{40}$/;
-const CIRCLE_JOB = /^https:\/\/circleci\.com\/gh\/undone0603\/authichain-unified\/[0-9]+\/?$/;
+// Accept the current CircleCI app job URL and the older repository-scoped job URL.
+const CIRCLE_JOB = /^(?:https:\/\/circleci\.com\/gh\/undone0603\/authichain-unified\/[0-9]+\/?|https:\/\/app\.circleci\.com\/workflow\/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\/job\/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})$/;
 function guard(ok, message) { if (!ok) throw new Error('release policy: ' + message); }
 
 export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, ruleset, environment, statuses}) {
@@ -27,9 +28,13 @@ export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, rul
         ruleset?.rules?.some(rule => rule.type === 'pull_request') &&
         (!Array.isArray(ruleset?.bypass_actors) || ruleset.bypass_actors.length === 0),
         'protected main PR ruleset missing, disabled, or bypassable');
+  // GitHub mirrors protected_branches into protection_rules as type
+  // branch_policy. Allow that echo; reject wait_timer / required_reviewers.
+  const envRules = Array.isArray(environment?.protection_rules) ? environment.protection_rules : null;
+  const humanEnvRules = (envRules || []).filter(rule => rule?.type !== 'branch_policy');
   guard(environment?.name === ENV && environment?.deployment_branch_policy?.protected_branches === true &&
         environment?.deployment_branch_policy?.custom_branch_policies === false &&
-        Array.isArray(environment?.protection_rules) && environment.protection_rules.length === 0,
+        envRules !== null && humanEnvRules.length === 0,
         'environment must be protected-branches-only with no manual approval, wait timer, or unknown rule');
   guard(Number.isInteger(statuses?.total_count) && statuses.total_count >= REQUIRED.length &&
         statuses.total_count <= 100 && Array.isArray(statuses?.statuses) &&
