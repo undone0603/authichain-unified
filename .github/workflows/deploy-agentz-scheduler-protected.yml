@@ -1,0 +1,99 @@
+name: Deploy AgentZ scheduler (protected)
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact approved main SHA with green CircleCI gate
+        required: true
+        type: string
+permissions:
+  contents: read
+  statuses: read
+concurrency:
+  group: deploy-agentz-scheduler
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify exact main SHA and complete CircleCI gate
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[a-fA-F0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          node --input-type=module <<'NODE'
+          const {GH_TOKEN,REPOSITORY,EXPECTED_SHA}=process.env;
+          const headers={authorization:`Bearer ${GH_TOKEN}`,accept:"application/vnd.github+json"};
+          const read=async(path)=>{const r=await fetch(`https://api.github.com/repos/${REPOSITORY}/${path}`,{headers});if(!r.ok)throw Error(`GitHub ${path}: ${r.status}`);return r.json()};
+          const main=await read("branches/main");
+          if(main.commit.sha!==EXPECTED_SHA)throw Error("main moved");
+          const data=await read(`commits/${EXPECTED_SHA}/status`);
+          const required=["test-workers","quality","typecheck-ratchet","build","extras","test-other","main-quality-gate"];
+          for(const name of required){if(!data.statuses.some(s=>s.context===`ci/circleci: ${name}`&&s.state==="success"))throw Error(`Missing green CircleCI ${name}`)}
+          console.log("Exact-main and seven CircleCI statuses verified");
+          NODE
+      - name: Verify private service binding and unchanged Cron configuration
+        run: |
+          set -euo pipefail
+          grep -F 'binding = "AGENTZ_EDGE"' workers/authichain-automation/wrangler.toml
+          grep -F 'service = "authichain-agentz-mcp-edge"' workers/authichain-automation/wrangler.toml
+          grep -F 'workers_dev = false' workers/authichain-automation/wrangler.toml
+          node --test agentz/cloudflare-mcp/automation-integration.test.mjs
+  deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    environment: production-cloudflare
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Recheck approved main SHA
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          node --input-type=module -e 'const r=await fetch(`https://api.github.com/repos/${process.env.REPOSITORY}/branches/main`,{headers:{authorization:`Bearer ${process.env.GH_TOKEN}`,accept:"application/vnd.github+json"}});if(!r.ok)process.exit(1);const j=await r.json();if(j.commit.sha!==process.env.EXPECTED_SHA)process.exit(1)'
+      - name: Deploy scheduler only, preserving secrets and vars
+        working-directory: workers/authichain-automation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          npx --yes wrangler@4.149.0 deploy --keep-vars --config wrangler.toml
+      - name: Verify live service binding and Cron without exposing secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const base=`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/authichain-automation`;
+          const headers={authorization:`Bearer ${process.env.CLOUDFLARE_API_TOKEN}`};
+          const get=async(s)=>{const r=await fetch(base+s,{headers});if(!r.ok)throw Error(`Cloudflare read failed: ${r.status}`);const j=await r.json();if(!j.success)throw Error("Cloudflare API error");return j.result};
+          const settings=await get("/settings");
+          const bindings=settings.bindings||[];
+          const required=["AGENTZ_EDGE","AGENTZ_DISPATCH_TOKEN","DB","RATE_LIMITER","STRIPE_SECRET_KEY","STRIPE_WEBHOOK_SECRET"];
+          for(const name of required)if(!bindings.some(b=>b.name===name))throw Error(`Missing binding ${name}`);
+          const edge=bindings.find(b=>b.name==="AGENTZ_EDGE");
+          if(edge.type!=="service"||edge.service!=="authichain-agentz-mcp-edge")throw Error("Incorrect service target");
+          const cron=await get("/schedules");
+          if(!cron.schedules?.some(s=>s.cron==="14 * * * *"))throw Error("Existing Cron missing");
+          console.log("Live AgentZ service binding, critical bindings and existing Cron verified");
+          NODE
