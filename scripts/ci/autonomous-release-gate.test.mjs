@@ -42,6 +42,29 @@ test('rejects wrong repository, malformed SHA, dispatch mismatch and stale main'
   rejects(x => x.branch.commit.sha = 'b'.repeat(40), /main has moved/);
   rejects(x => x.branch.protected = false, /not protected/);
 });
+test('accepts ancestor match when live main is ahead and SHA_MATCH_PATH is ancestor', () => {
+  const x = fixture();
+  x.shaMatchPath = 'ancestor';
+  x.dispatchSha = 'b'.repeat(40);
+  x.branch.commit.sha = 'b'.repeat(40);
+  assert.deepEqual(assertReleasePolicy(x), {sha: SHA, checks: 7, environment: ENV});
+});
+test('ancestor path still requires all seven CircleCI jobs on expected_sha', () => {
+  const x = fixture();
+  x.shaMatchPath = 'ancestor';
+  x.dispatchSha = 'b'.repeat(40);
+  x.branch.commit.sha = 'b'.repeat(40);
+  x.statuses.statuses[0].state = 'pending';
+  assert.throws(() => assertReleasePolicy(x), /test-workers/);
+});
+test('ancestor path rejects when expected_sha is still live main HEAD', () => {
+  const x = fixture();
+  x.shaMatchPath = 'ancestor';
+  assert.throws(() => assertReleasePolicy(x), /behind main HEAD/);
+});
+test('unknown SHA match path is rejected', () => {
+  rejects(x => x.shaMatchPath = 'maybe', /unknown SHA match path/);
+});
 test('requires active main PR ruleset with no explicit bypass actor', () => {
   rejects(x => x.ruleset.enforcement = 'disabled', /ruleset/);
   rejects(x => x.ruleset.conditions.ref_name.include = ['refs/heads/dev'], /ruleset/);
@@ -88,4 +111,19 @@ test('read-only live verifier accepts only four scoped GitHub reads', async () =
 test('missing GitHub response rejects the release before deployment', async () => {
   await assert.rejects(verifyLive({GH_TOKEN:'token',REPOSITORY:REPO,TARGET_SHA:SHA,DISPATCH_SHA:SHA},
     async()=>({ok:false,status:404})),/HTTP 404/);
+});
+test('live verifier on ancestor path still reads CircleCI statuses for expected_sha', async () => {
+  const x = fixture();
+  x.branch.commit.sha = 'b'.repeat(40);
+  const paths=[];
+  const responses = {'/branches/main':x.branch,
+    ['/rulesets/' + RULESET]:x.ruleset,
+    ['/environments/' + ENV]:x.environment,
+    ['/commits/' + SHA + '/status?per_page=100']:x.statuses};
+  const fakeFetch = async url => {const path = url.replace('https://api.github.com/repos/' + REPO, '');
+    paths.push(path);return {ok:true,json:async()=>responses[path]};};
+  assert.equal((await verifyLive({GH_TOKEN:'test-token',REPOSITORY:REPO,TARGET_SHA:SHA,
+    DISPATCH_SHA:'b'.repeat(40),SHA_MATCH_PATH:'ancestor'},fakeFetch)).checks,7);
+  assert.equal(paths.filter(p => p.startsWith('/commits/')).join(),
+    '/commits/' + SHA + '/status?per_page=100');
 });
