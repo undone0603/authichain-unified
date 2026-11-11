@@ -11909,5 +11909,261 @@
         }
       ]
     }
+  },
+  {
+    "slug": "qr-code-error-correction-level-for-product-labels-iso-iec-18004",
+    "keyword": "qr code error correction level for product labels iso/iec 18004",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "QR Code Error Correction Level For Product | AuthiChain",
+    "metaDescription": "ISO/IEC 18004 defines four QR Code error correction levels, L, M, Q and H, which restore roughly 7, 15, 25 and 30 percent of damaged codewords respectively.",
+    "h1": "QR Code Error Correction Level For Product Labels ISO/IEC 18004",
+    "bodyHtml": "<p>ISO/IEC 18004 defines four QR Code error correction levels, L, M, Q and H, which restore roughly 7, 15, 25 and 30 percent of damaged codewords respectively; a higher level adds redundancy and makes the symbol denser at the same payload.</p><h2>Why AuthiChain</h2><ul><li>A short GS1 Digital Link URL keeps the symbol small, so you can choose a higher correction level without shrinking modules below what your printer and scanner resolve</li><li>Level choice is a trade between damage tolerance and density; test the printed label with the scanners your users actually hold</li><li>The signed record lives behind the URL, not inside the symbol, so a damaged code is a retrieval problem and never changes what the signature covers</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Which level should a product label use?</h3><p>The standard leaves the choice to you. Labels exposed to abrasion or partial coverage tend to justify a higher level; clean packaging may not. Print samples and scan them before committing.</p><h3>Does error correction affect record verification?</h3><p>No. Correction recovers the URL from the symbol. Verification then runs on the record that URL returns, using the issuer public key.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — QR Code Error Correction Level For Product Labels ISO/IEC 18004",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "ISO/IEC 18004 defines four QR Code error correction levels, L, M, Q and H, which restore roughly 7, 15, 25 and 30 percent of damaged codewords respectively; a higher level adds redundancy and makes the symbol denser at the same payload.",
+          "url": "https://authichain.com/p/qr-code-error-correction-level-for-product-labels-iso-iec-18004"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "QR Code Error Correction Level For Product Labels ISO/IEC 18004",
+              "item": "https://authichain.com/p/qr-code-error-correction-level-for-product-labels-iso-iec-18004"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Which level should a product label use?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The standard leaves the choice to you. Labels exposed to abrasion or partial coverage tend to justify a higher level; clean packaging may not. Print samples and scan them before committing."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does error correction affect record verification?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Correction recovers the URL from the symbol. Verification then runs on the record that URL returns, using the issuer public key."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "who-issues-the-digital-product-passport-manufacturer-importer-authorised-representative",
+    "keyword": "who issues the digital product passport manufacturer importer authorised representative",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Who Issues The Digital Product Passport | AuthiChain",
+    "metaDescription": "Under the ESPR the economic operator placing a product on the Union market is responsible for its passport, so a manufacturer in the EU, an importer, or an.",
+    "h1": "Who Issues The Digital Product Passport Manufacturer Importer Authorised Representative",
+    "bodyHtml": "<p>Under the ESPR the economic operator placing a product on the Union market is responsible for its passport, so a manufacturer in the EU, an importer, or an authorised representative can each be the party that must ensure the passport exists; the delegated act for your product group sets the detail.</p><h2>Why AuthiChain</h2><ul><li>An importer cannot assume the non-EU manufacturer already holds a usable passport, so ask for the signed record and check it before you place goods on the market</li><li>A signed record names its issuer by key, so an importer can see whether the party that signed is the manufacturer or someone else</li><li>Verification runs offline with the open reference verifier, which needs no account with the supplier</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can an importer reuse a supplier record?</h3><p>Often the record is the starting point. Check the signature, confirm the fields the delegated act requires are present, and confirm who is legally responsible. A valid signature shows authorship and integrity, not legal responsibility.</p><h3>Where is the exact allocation of duties?</h3><p>In the ESPR text and in the delegated act for your product group. Read those instead of relying on a summary, including this one.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Who Issues The Digital Product Passport Manufacturer Importer Authorised Representative",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Under the ESPR the economic operator placing a product on the Union market is responsible for its passport, so a manufacturer in the EU, an importer, or an authorised representative can each be the party that must ensure the passport exists; the delegated act for your product group sets the detail.",
+          "url": "https://authichain.com/p/who-issues-the-digital-product-passport-manufacturer-importer-authorised-representative"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Who Issues The Digital Product Passport Manufacturer Importer Authorised Representative",
+              "item": "https://authichain.com/p/who-issues-the-digital-product-passport-manufacturer-importer-authorised-representative"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can an importer reuse a supplier record?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Often the record is the starting point. Check the signature, confirm the fields the delegated act requires are present, and confirm who is legally responsible. A valid signature shows authorship and integrity, not legal responsibility."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Where is the exact allocation of duties?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "In the ESPR text and in the delegated act for your product group. Read those instead of relying on a summary, including this one."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "dpp-issuer-signing-key-custody-hsm-kms-ed25519",
+    "keyword": "dpp issuer signing key custody hsm kms ed25519",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DPP Issuer Signing Key Custody Hsm Kms Ed25519 | AuthiChain",
+    "metaDescription": "The security of every record you issue rests on one Ed25519 private key, so keep it in a hardware security module or a cloud key management service that.",
+    "h1": "DPP Issuer Signing Key Custody Hsm Kms Ed25519",
+    "bodyHtml": "<p>The security of every record you issue rests on one Ed25519 private key, so keep it in a hardware security module or a cloud key management service that signs on request and never exports the key.</p><h2>Why AuthiChain</h2><ul><li>Ed25519 is specified in FIPS 186-5 and RFC 8032; whether your HSM or KMS supports it is a product question to confirm with the vendor</li><li>Records are verified against the public key in the issuer did:key, so rotating to a new key means issuing under a new identifier</li><li>The specification defines no revocation in v0.1, so a signature from a compromised key stays cryptographically valid; credentialStatus is planned for v0.2, which makes custody the control that matters now</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can I keep the key in an environment variable?</h3><p>It works technically, but any process or person that can read the variable can issue records in your name. A signing service with access controls and logs narrows that exposure.</p><h3>Is Ed25519 safe against quantum computers?</h3><p>No. Like other elliptic-curve signatures it is vulnerable to Shor's algorithm. It is the right choice for current interoperability, and it is not post-quantum secure.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DPP Issuer Signing Key Custody Hsm Kms Ed25519",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The security of every record you issue rests on one Ed25519 private key, so keep it in a hardware security module or a cloud key management service that signs on request and never exports the key.",
+          "url": "https://authichain.com/p/dpp-issuer-signing-key-custody-hsm-kms-ed25519"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DPP Issuer Signing Key Custody Hsm Kms Ed25519",
+              "item": "https://authichain.com/p/dpp-issuer-signing-key-custody-hsm-kms-ed25519"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can I keep the key in an environment variable?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It works technically, but any process or person that can read the variable can issue records in your name. A signing service with access controls and logs narrows that exposure."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is Ed25519 safe against quantum computers?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Like other elliptic-curve signatures it is vulnerable to Shor's algorithm. It is the right choice for current interoperability, and it is not post-quantum secure."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verifiable-credential-issuer-holder-verifier-roles-product-passport",
+    "keyword": "verifiable credential issuer holder verifier roles product passport",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verifiable Credential Issuer Holder Verifier | AuthiChain",
+    "metaDescription": "The W3C Verifiable Credentials model has three roles: an issuer signs a credential, a holder keeps and presents it, and a verifier checks it; in a product.",
+    "h1": "Verifiable Credential Issuer Holder Verifier Roles Product Passport",
+    "bodyHtml": "<p>The W3C Verifiable Credentials model has three roles: an issuer signs a credential, a holder keeps and presents it, and a verifier checks it; in a product passport the manufacturer issues, the product or its owner carries the link, and anyone scanning the code verifies.</p><h2>Why AuthiChain</h2><ul><li>The verifier needs only the record and the issuer public key, which did:key places inside the identifier, so no call to the issuer is required</li><li>One party can fill several roles; a brand can both issue and verify its own records</li><li>The open reference verifier is zero-dependency and Apache-2.0, so a verifier role costs a retailer or inspector no licence negotiation</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does the holder have to be a person?</h3><p>No. In a product passport the credential describes a product, so the record travels with the product through its link or carrier.</p><h3>What does the verifier learn?</h3><p>Who signed the record, and whether it is unchanged since signing. It does not learn whether the issuer's statements are true.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verifiable Credential Issuer Holder Verifier Roles Product Passport",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The W3C Verifiable Credentials model has three roles: an issuer signs a credential, a holder keeps and presents it, and a verifier checks it; in a product passport the manufacturer issues, the product or its owner carries the link, and anyone scanning the code verifies.",
+          "url": "https://authichain.com/p/verifiable-credential-issuer-holder-verifier-roles-product-passport"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credential Issuer Holder Verifier Roles Product Passport",
+              "item": "https://authichain.com/p/verifiable-credential-issuer-holder-verifier-roles-product-passport"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the holder have to be a person?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. In a product passport the credential describes a product, so the record travels with the product through its link or carrier."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does the verifier learn?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Who signed the record, and whether it is unchanged since signing. It does not learn whether the issuer's statements are true."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]

@@ -49,6 +49,7 @@
     "digital-product-passport-access-rights",
     "digital-product-passport-paints-lubricants-detergents-timeline",
     "digital-product-passport-verified-economic-operator-registration",
+    "dpp-issuer-signing-key-custody-hsm-kms-ed25519",
     "dsa-marketplace-seller-verification-vs-product-authentication",
     "dscsa-authorized-trading-partner-verification-requirement",
     "dscsa-compliance-blockchain-serialization",
@@ -131,6 +132,7 @@
     "product-authentication-for-medical-devices",
     "product-registry-404-unknown-serial-number-counterfeit-check",
     "products-excluded-from-eu-digital-product-passport-requirement",
+    "qr-code-error-correction-level-for-product-labels-iso-iec-18004",
     "qr-code-phishing-product-packaging-security",
     "rfc-8785-json-canonicalization-signature-verification",
     "right-to-repair-spare-parts-verification",
@@ -153,6 +155,7 @@
     "vechain-alternative-without-tokens-or-gas-fees",
     "verifiable-credential-confidence-method-identity-binding",
     "verifiable-credential-forgery-defense-key-compromise",
+    "verifiable-credential-issuer-holder-verifier-roles-product-passport",
     "verifiable-credential-proofvalue-multibase-base58btc-ed25519",
     "verifiable-credential-revocation-bitstring-status-list",
     "verifiable-credential-signed-false-claim-what-verification-proves",
@@ -165,7 +168,8 @@
     "w3c-verifiable-credentials-data-model-2-1-changes",
     "w3c-verifiable-credentials-product-authentication",
     "weee-directive-revision-2026-electronics-traceability",
-    "what-is-a-digital-product-passport"
+    "what-is-a-digital-product-passport",
+    "who-issues-the-digital-product-passport-manufacturer-importer-authorised-representative"
   ],
   "strainchain.io": [
     "biotrack-integration-blockchain-provenance",
