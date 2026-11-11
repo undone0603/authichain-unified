@@ -528,6 +528,26 @@ describe("ops pulse", () => {
     ).toBe("close");
   });
 
+  it("pages a silent bot fleet through the same ops-alert issue", () => {
+    const report = {
+      at: "t",
+      probes: [],
+      workflows: [],
+      fleet: [
+        {
+          bot: "ai-adapt-research",
+          kind: "silent",
+          detail: "no ops_bot_log run in the last 36h",
+        },
+      ],
+    };
+    expect(signature(report)).toBe("fleet:ai-adapt-research:silent");
+    expect(decideIssueAction(null, report).action).toBe("create");
+    expect(renderReport(report)).toContain("#### Bot fleet");
+    expect(renderReport(report)).toContain("`ai-adapt-research` (silent)");
+    expect(signature({ ...report, fleet: [] })).toBe("");
+  });
+
   const red = {
     at: "t",
     probes: [{ name: "site", url: "u", expect: [200], ok: false, status: 502 }],

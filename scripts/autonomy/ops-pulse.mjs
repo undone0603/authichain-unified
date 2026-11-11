@@ -20,6 +20,7 @@ import {
   operatorHold,
 } from "./reconcile.mjs";
 import { checkFulfilment } from "./revenue-watch.mjs";
+import { monitorFleet } from "./bot-fleet-watch.mjs";
 
 import { PROBES, runProbes } from "./probes.mjs";
 export { PROBES, runProbes };
@@ -173,6 +174,7 @@ export function signature(report) {
     ...(report.revenue ?? []).map(r => `pay:${r.session}`),
     ...(report.fulfilmentBlind ? ["watchdog:fulfilment"] : []),
     ...(report.monitoring ?? []).map(m => `monitor:${m.name}:${m.kind}`),
+    ...(report.fleet ?? []).map(b => `fleet:${b.bot}:${b.kind}`),
   ].sort();
   return keys.join("|");
 }
@@ -208,6 +210,13 @@ export function renderReport(report) {
       lines.push(
         `- Checkout \`${r.session}\` paid ${r.paid_at}: ${r.reason}. Check the customer received what they bought, then replay the event from the Stripe dashboard.`
       );
+  }
+  if (report.fleet?.length) {
+    lines.push("", "#### Bot fleet");
+    for (const b of report.fleet) lines.push(`- \`${b.bot}\` (${b.kind}): ${b.detail}`);
+    lines.push(
+      "- A silent fleet cannot report itself. Check the scheduled tasks and the account's usage limits; the pg_cron heartbeat only logs to ops_bot_log."
+    );
   }
   if (report.fulfilmentBlind) {
     lines.push(
@@ -365,6 +374,19 @@ async function main() {
       ? `fulfilment: UNVERIFIED (${f.monitoring[0].kind})`
       : `fulfilment: ${f.checked} chargeable paid checkouts checked, ${f.problems.length} missing webhook receipts`
   );
+
+  const fleet = await monitorFleet({
+    manifest,
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  });
+  report.fleet = fleet.problems;
+  if (fleet.configured)
+    console.log(
+      fleet.problems.length
+        ? `bot fleet: ${fleet.problems.map(p => `${p.bot}:${p.kind}`).join(", ")}`
+        : "bot fleet: green"
+    );
 
   const sig = signature(report);
   out(
