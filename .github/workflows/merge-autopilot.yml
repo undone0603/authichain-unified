@@ -55,10 +55,11 @@ permissions:
 jobs:
   sweep:
     name: Merge autopilot
-    if: >-
-      github.repository == 'undone0603/authichain-unified' &&
-      (github.event_name != 'workflow_run' ||
-       github.event.workflow_run.head_repository.full_name == github.repository)
+    # Security hold: successful CI alone is not independent human approval.
+    # The decision script currently has no verified reviewer-evidence input.
+    # Keep disabled until exact-head CI, branch rules and independent review
+    # are enforced. Do not remove the hold merely to restore scheduling.
+    if: ${{ false }}
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     timeout-minutes: 10
     steps:
