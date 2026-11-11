@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   CANARY_WORKER,
   SKIP_BY_DEFAULT,
@@ -105,4 +106,28 @@ test("diff ranges match the event", () => {
   assert.deepEqual(diffRange("pull_request"), ["FETCH_HEAD", "HEAD"]);
   assert.deepEqual(diffRange("push", { before: "abc123" }), ["abc123", "HEAD"]);
   assert.deepEqual(diffRange("push", { before: "0000000" }), ["HEAD~1", "HEAD"]);
+});
+
+test("Worker dry-run uses supported step workdirs and lockfile cache path", () => {
+  const workflow = readFileSync(".github/workflows/build-workers.yml", "utf8");
+  const checkout = "worker-build-" + "$" + "{{ github.run_id }}-" + "$" + "{{ github.run_attempt }}";
+  assert.ok(!workflow.includes("    defaults:\n      run:\n        working-directory:"));
+  assert.ok(workflow.includes("path: " + checkout));
+  for (const name of ["Verify isolated checkout","Fetch pull request base","Install dependencies","Compile changed workers"]) {
+    const expected = "- name: " + name + "\n        working-directory: " +
+      "$" + "{{ github.workspace }}/" + checkout;
+    assert.ok(workflow.includes(expected), name);
+  }
+  assert.ok(workflow.includes("cache-dependency-path: " + checkout + "/pnpm-lock.yaml"));
+  assert.ok(workflow.includes("vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'"));
+  assert.ok(!workflow.includes("/home/zac"));
+  assert.ok(!workflow.includes("secrets.CLOUDFLARE_"));
+});
+
+test("Worker compilation clears Cloudflare credentials when spawning Wrangler", () => {
+  const source = readFileSync("scripts/ci/build-workers.mjs", "utf8");
+  assert.ok(source.includes('"--dry-run",'));
+  assert.ok(source.includes('CLOUDFLARE_API_TOKEN: ""'));
+  assert.ok(source.includes('CLOUDFLARE_ACCOUNT_ID: ""'));
+  assert.ok(!source.includes("Refusing a hollow pass."));
 });
