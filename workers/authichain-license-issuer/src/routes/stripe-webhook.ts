@@ -83,7 +83,11 @@ export async function stripeWebhook(
   // signing key, line_items not expanded). Stripe will not retry a 200.
   let outcome: EventOutcome;
   try {
-    outcome = await handleEvent(env, event);
+    outcome = await handleEvent(env, {
+      ...event,
+      id: event.id,
+      type: event.type,
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     await DB.logEvent(env, event.id, event.type, "error", message);
@@ -210,7 +214,7 @@ async function fulfillGenerations(env: Env, session: CheckoutSession, priceId: s
   if (!email) throw new Error("missing email for generations fulfillment");
 
   // Current entitlement model: users.generations_limit
-  await env.DB.prepare(`
+  await env.DATABASE.prepare(`
     UPDATE users
     SET generations_limit = COALESCE(generations_limit, 0) + ?,
         updatedAt = now()

@@ -7,15 +7,16 @@
  * unpaid 402 itself is served by estate-x402.ts. Do not tell them to GET
  * /api/checkout.
  */
-import { planPaymentLink, planUsd } from "../../src/lib/plans.ts";
+import {
+  catalogOffers,
+  planPaymentLink,
+  planUsd,
+} from "../../src/lib/plans.ts";
 import { x402PriceUsd } from "../../src/lib/x402.ts";
 import { ESTATE_BRANDS, type EstateBrandId } from "./estate-landing.ts";
 
 const PASSPORT_LINK = planPaymentLink("strainchain_passport") ?? "";
 const DPP_LINK = planPaymentLink("dpp_readiness") ?? "";
-
-const STARTER_LINK = planPaymentLink("starter") ?? "";
-const CREATOR_LINK = planPaymentLink("creator") ?? "";
 const X402_USD = x402PriceUsd();
 
 const LLMS_PATHS = new Set([
@@ -62,15 +63,11 @@ export function isEstateAgentDiscoveryPath(pathname: string): boolean {
 function humanCheckoutLines(brand: SisterDiscoveryBrand): string[] {
   const lines = [
     "## Human checkout (Stripe Payment Links)",
-    `- EU DPP Readiness $${planUsd("dpp_readiness")}: ${DPP_LINK}`,
-    `- StrainChain Passport $${planUsd("strainchain_passport")}: ${PASSPORT_LINK}`,
+    ...catalogOffers().map(offer => {
+      const suffix = offer.priceSuffix ?? "";
+      return `- ${offer.name} $${offer.usd}${suffix}: ${offer.checkout}`;
+    }),
   ];
-  if (brand === "qron") {
-    lines.push(
-      `- QRON Starter $${planUsd("starter")}: ${STARTER_LINK}`,
-      `- QRON Creator $${planUsd("creator")}: ${CREATOR_LINK}`
-    );
-  }
   lines.push(
     `- Pricing: https://${brand === "qron" ? "qron.space" : brand === "strainchain" ? "strainchain.io" : "govchain.us"}/pricing`,
     "- Canonical catalogue: https://authichain.com/pricing"
@@ -86,6 +83,7 @@ export function renderEstateLlmsTxt(brand: SisterDiscoveryBrand): string {
     "",
     "## Agent pay (x402)",
     `- Unpaid POST ${ESTATE_BRANDS[brand].url}/api/x402 returns HTTP 402 ($${X402_USD} USDC on Base)`,
+    "- An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment.",
     "- Canonical rail: https://authichain.com/api/x402",
     "- Canonical paid verify: POST https://authichain.com/api/v1/agent-verify",
     "- Read https://authichain.com/api/x402/health first. paidVerify.bound false means HTTP 503 before settlement and no payment is taken.",
@@ -145,7 +143,7 @@ export function renderEstateOpenApi(
     info: {
       title: `${meta.title} agent pay (AuthiChain rails)`,
       version: "1.0.0",
-      description: `Unpaid POST ${origin}/api/x402 returns HTTP 402. Human SKUs are Stripe Payment Links from src/lib/plans.ts. Canonical paid verify is POST https://authichain.com/api/v1/agent-verify (this host does not serve that path). Canonical spec: https://authichain.com/openapi.json.`,
+      description: `Unpaid POST ${origin}/api/x402 returns HTTP 402. An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment. Human SKUs are Stripe Payment Links from src/lib/plans.ts. Canonical paid verify is POST https://authichain.com/api/v1/agent-verify (this host does not serve that path). Canonical spec: https://authichain.com/openapi.json.`,
       "x-human-checkout": {
         source: "src/lib/plans.ts",
         passportUsd: planUsd("strainchain_passport"),

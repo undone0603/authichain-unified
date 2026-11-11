@@ -24,6 +24,7 @@ def _isolate_env(monkeypatch, tmp_path):
         "TWITTER_SESSION_COOKIE",
     ):
         monkeypatch.delenv(env_name, raising=False)
+    monkeypatch.delenv(creds.CRED_KEY_TO_ENV["stripe_secret"], raising=False)
 
 
 def test_allowed_keys_are_session_cookies_only():

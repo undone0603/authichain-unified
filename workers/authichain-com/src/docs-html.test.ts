@@ -14,6 +14,10 @@ test("rendered docs HTML passes the claim guard", () => {
     assert.equal(html.includes("id.authichain.com/01/"), false, path);
   }
   const hub = renderDocsPage("/docs");
+  assert.ok(hub.includes('href="/api/verify?id=polygon-anchor-1"'));
+  assert.ok(hub.includes('href="/verify?id=polygon-anchor-1"'));
+  assert.ok(hub.includes("Not a customer product"));
+  assert.equal(hub.includes("polygonscan.com"), false);
   assert.ok(hub.includes("utm_source=docs"));
   assert.ok(hub.includes("utm_campaign=docs-hub"));
   assert.ok(hub.includes("/battery-passport"));
@@ -27,6 +31,21 @@ test("rendered docs HTML passes the claim guard", () => {
   assert.ok(architecture.includes("with self-serve activation"));
   assert.equal(architecture.includes("50 workspace generations"), false);
   assert.ok(architecture.includes("Not legal advice"));
+});
+
+test("dpp architecture separates a free seal answer from the unpaid 402", () => {
+  const html = renderDocsPage("/docs/dpp-architecture");
+  assert.match(html, /An empty JSON body is the unpaid HTTP 402/);
+  assert.match(html, /daily free allowance/);
+  assert.match(html, /free: true/);
+  assert.match(html, /verified: false/);
+  assert.match(html, /settlement: null/);
+  assert.match(html, /not a paid receipt/);
+  assert.match(html, /non-UUID seal id is HTTP 400 before payment/);
+  assert.equal(html.includes("Unpaid POST /api/x402 returns HTTP 402"), false);
+  assert.equal(html.includes('{"sealId":"demo"}'), false);
+  assert.equal(html.includes("polygonscan.com"), false);
+  assert.equal(html.includes("polygon-anchor-1"), false);
 });
 
 test("an unknown docs slug is not a rendered article", () => {
@@ -46,4 +65,22 @@ test("docs links keep query strings escaped exactly once", () => {
       'href="/dpp-check?utm_source=docs&amp;utm_medium=authority&amp;utm_campaign=docs-hub"'
     )
   );
+});
+
+test("verification FAQ names the free demonstration check", () => {
+  const html = renderDocsPage("/docs/verification");
+  assert.match(html, /\/api\/verify\?id=polygon-anchor-1/);
+  assert.match(html, /not a customer product/);
+  assert.match(html, /not a physical inspection/);
+  assert.match(html, /does not itself read the anchor transaction/);
+  assert.match(html, /empty body returns HTTP 402/);
+  assert.match(html, /daily free allowance/);
+  assert.match(html, /free: true/);
+  assert.match(html, /verified: false/);
+  assert.match(html, /settlement: null/);
+  assert.match(html, /not a paid receipt/);
+  assert.match(html, /not a seal UUID is HTTP 400/);
+  assert.equal(html.includes("freeCalls"), false);
+  assert.equal(html.includes("polygonscan.com"), false);
+  assert.equal(html.includes('{"sealId":"demo"}'), false);
 });

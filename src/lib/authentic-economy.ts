@@ -23,7 +23,7 @@ import {
   TOKENOMICS_PAY_TO,
 } from "../../scripts/lib/evm-chains";
 import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "./x402";
-import { planPaymentLink, planUsd } from "./plans";
+import { catalogOffers, planPaymentLink, planUsd } from "./plans";
 import {
   FIRST_SCAN_GIFT_URL,
   FIRST_SCAN_REWARD_QRON,
@@ -135,7 +135,7 @@ export function agentPricingDiscovery() {
       docs: "https://authichain.com/x402",
       tokenomics: AGENT_TOKENOMICS_DOC,
       identity: WEB3_IDENTITY_DOC,
-      note: "Prefer GET catalog/health for live payTo and price. Runtime payTo is env X402_PAY_TO. Unpaid POST returns HTTP 402; pay Base USDC and retry with X-PAYMENT. Do not use Polygon or $QRON on this rail.",
+      note: "Prefer GET catalog/health for live payTo and price. Runtime payTo is env X402_PAY_TO. An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment. After settlement, retry with X-PAYMENT and a seal UUID. Do not use Polygon or $QRON on this rail.",
     },
     humanCheckout: {
       rail: MONEY_RAILS.stripe.rail,
@@ -143,10 +143,15 @@ export function agentPricingDiscovery() {
       strainchain_passport: `$${MONEY_RAILS.stripe.skus.passportUsd} one-time`,
       dpp_readiness: `$${MONEY_RAILS.stripe.skus.dppUsd} one-time`,
       strainchain_farm: `$${MONEY_RAILS.stripe.skus.farmUsd}/month`,
+      starter: `$${planUsd("starter")} one-time`,
+      creator: `$${planUsd("creator")} one-time`,
+      offers: catalogOffers(),
       checkout: {
         passport: planPaymentLink("strainchain_passport"),
         dpp: planPaymentLink("dpp_readiness"),
         farm: planPaymentLink("strainchain_farm"),
+        starter: planPaymentLink("starter"),
+        creator: planPaymentLink("creator"),
         emailCapture: {
           passport: "https://authichain.com/passport",
           dpp: "https://authichain.com/dpp",

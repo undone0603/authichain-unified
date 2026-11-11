@@ -2,13 +2,14 @@
 
 Recorded 2026-09-18 after `AUTHICHAIN_ATTESTATION_KEY_ID` was added and #1043 shipped.
 Updated 2026-09-19: public `/onboard` and `/story` are real dynamic handlers.
+Updated 2026-10-31: signing key rotated; current kid `jWTo5QsZ…`. Prior kid `T3AL7c4w…` stays on the retired allowlist and in `AUTHICHAIN_ATTESTATION_RETIRED_PUBLIC_JWKS` (retiredAt `2026-10-31T20:38:07Z`).
 
 ```json
 {
   "contract": "AuthiChain Attestation Contract v0.1",
   "alg": "EdDSA",
   "crv": "Ed25519",
-  "kid": "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ",
+  "kid": "jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM",
   "issuer": "https://authichain.com",
   "jwks": "https://authichain.com/protocol/jwks.json",
   "ready": true,

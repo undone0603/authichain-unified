@@ -94,9 +94,39 @@ export async function getInscriptionStatus(inscriptionId: string) {
   if (!INSCRIPTION_ID_RE.test(inscriptionId)) {
     return { status: "invalid", error: "Invalid inscription ID format" };
   }
-  const res = await fetch(`https://api.hiro.so/ordinals/v1/inscriptions/${inscriptionId}`);
-  if (!res.ok) return { status: "pending" };
-  return await res.json();
+
+  // Hiro API v1 was deprecated/shut down on March 9, 2026 (410 Gone).
+  // Attempt canonical ordinals.com indexer first.
+  try {
+    const ordinalsUrl = `https://ordinals.com/r/inscription/${encodeURIComponent(inscriptionId)}`;
+    const res = await fetch(ordinalsUrl, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { status: "confirmed", ...data };
+    }
+    if (res.status === 404) {
+      return { status: "pending" };
+    }
+  } catch (err) {
+    console.warn(`[Ordinals] Fallback indexer lookup failed for ${inscriptionId}:`, err);
+  }
+
+  // Secondary check against Hiro API with explicit 410 handling
+  try {
+    const res = await fetch(`https://api.hiro.so/ordinals/v1/inscriptions/${inscriptionId}`);
+    if (res.status === 410) {
+      return {
+        status: "deprecated",
+        error: "Hiro Ordinals API v1 is sunset (410 Gone). Public indexer lookup did not resolve.",
+      };
+    }
+    if (!res.ok) return { status: "pending" };
+    return await res.json();
+  } catch {
+    return { status: "pending" };
+  }
 }
 
 /**

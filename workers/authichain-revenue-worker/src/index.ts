@@ -1,6 +1,14 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import Stripe from 'stripe';
 
+interface Env {
+  STRIPE_SECRET_KEY: string;
+  STRIPE_PRICE_ENTERPRISE: string;
+  STRIPE_PRICE_BASIC: string;
+  NEXT_PUBLIC_APP_URL: string;
+  ANTHROPIC_API_KEY: string;
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
@@ -11,13 +19,23 @@ export default {
       const authHeader = request.headers.get('Authorization');
       
       if (!authHeader) {
-        const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
+        const stripe = new Stripe(env.STRIPE_SECRET_KEY);
         
         const session = await stripe.checkout.sessions.create({
           line_items: [{ price: env.STRIPE_PRICE_ENTERPRISE, quantity: 1 }],
           mode: 'subscription',
           success_url: `${env.NEXT_PUBLIC_APP_URL}/docs/api-keys`,
         });
+
+        if (!session.url) {
+          return new Response(JSON.stringify({
+            error: "Payment Required",
+            message: "This endpoint requires an active AuthiChain subscription.",
+          }), {
+            status: 402,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
 
         return new Response(JSON.stringify({
           error: "Payment Required",
@@ -40,7 +58,7 @@ export default {
   // 2. AUTONOMOUS OUTBOUND LOOP
   // Fires via the 0 * * * * Cron Trigger you configured earlier
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
+    const stripe = new Stripe(env.STRIPE_SECRET_KEY);
     const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
     const targetLead = { email: "founder@target-brand.com", company: "Target Brand" };

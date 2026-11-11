@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
-import { syncMetrcTransfers, anchorPackageToTruthLayer } from "../metrc-service";
+import { metrcUnavailable } from "../metrc-unavailable";
 
 export const metrcRouter = router({
   /**
-   * Sync active transfers from METRC for a vendor
+   * METRC sync is off. This does not call the network.
    */
   sync: protectedProcedure
     .input(z.object({
@@ -12,37 +12,26 @@ export const metrcRouter = router({
       vendorKey: z.string().optional(),
       userKey: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
-      // Logic would typically pull keys from the white_label_clients table if not provided
-      const result = await syncMetrcTransfers({
-        licenseNumber: input.licenseNumber,
-        vendorKey: input.vendorKey || process.env.METRC_VENDOR_KEY || "",
-        userKey: input.userKey || process.env.METRC_USER_KEY || "",
-      });
-      return { success: true, itemsSynced: result.length };
+    .mutation(async () => {
+      return metrcUnavailable();
     }),
 
   /**
-   * Anchor a specific METRC package to the Bitcoin Truth Layer
+   * METRC anchoring is off. This does not write a chain transaction.
    */
   anchor: protectedProcedure
     .input(z.object({
       packageTag: z.string(),
       manifestId: z.string(),
     }))
-    .mutation(async ({ input }) => {
-      return await anchorPackageToTruthLayer(input.packageTag, input.manifestId);
+    .mutation(async () => {
+      return metrcUnavailable();
     }),
 
   /**
-   * Get sync status for the state-wide truth layer
+   * No live METRC census. The old counts were invented.
    */
   stats: publicProcedure.query(async () => {
-    return {
-      activeLicenses: 42,
-      manifestsReconciled: 1042,
-      taxIntegrityScore: 98.4,
-      network: "METRC Michigan (LARA)"
-    };
+    return metrcUnavailable();
   }),
 });

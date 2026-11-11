@@ -69,18 +69,35 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
     assert.ok(text.includes("paidVerify.bound false"));
     assert.ok(text.includes(`$${x402PriceUsd()} USDC`));
     assert.ok(
+      text.includes(
+        "An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment."
+      )
+    );
+    assert.ok(
       hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/mcp")
     );
     assert.ok(hasHttpsPath(text, "authichain.com", "/mcp"));
     assert.ok(hasHttpsPath(text, "authichain.com", "/openapi.json"));
     assert.ok(
-      hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/protocol/jwks.json")
+      hasHttpsPath(
+        text,
+        new URL(sisterOrigin(brand)).hostname,
+        "/protocol/jwks.json"
+      )
     );
     assert.ok(
-      hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/protocol/issuer.json")
+      hasHttpsPath(
+        text,
+        new URL(sisterOrigin(brand)).hostname,
+        "/protocol/issuer.json"
+      )
     );
     assert.ok(
-      hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/.well-known/jwks.json")
+      hasHttpsPath(
+        text,
+        new URL(sisterOrigin(brand)).hostname,
+        "/.well-known/jwks.json"
+      )
     );
     assert.ok(
       hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/api/verify")
@@ -88,10 +105,15 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
     assert.ok(text.includes(`${sisterOrigin(brand)}/qron/r/{object_id}`));
     assert.ok(text.includes("https://authichain.com/qron/r/{object_id}"));
     assert.ok(text.includes("does not verify the signature"));
-    assert.ok(text.includes("POST https://authichain.com/api/v1/attestation/verify"));
+    assert.ok(
+      text.includes("POST https://authichain.com/api/v1/attestation/verify")
+    );
     assert.ok(text.includes(PASSPORT));
     assert.ok(text.includes(DPP));
-    assert.equal(text.includes(FARM), false);
+    assert.equal(text.includes(FARM), true);
+    assert.ok(text.includes(planPaymentLink("starter") ?? ""));
+    assert.ok(text.includes(planPaymentLink("creator") ?? ""));
+    assert.ok(text.includes(planPaymentLink("musa_claim_file") ?? ""));
     assert.equal(httpsUrl(PASSPORT).hostname, "authichain.com");
     assert.equal(httpsUrl(DPP).hostname, "authichain.com");
     assert.doesNotMatch(text, /GET \/api\/checkout/);
@@ -107,8 +129,11 @@ test("QRON llms.txt also lists Starter and Creator Payment Links from plans.ts",
   assert.ok(text.includes(`$${planUsd("creator")}`));
   assert.ok(text.includes("# QRON"));
   assert.ok(
-    !renderEstateLlmsTxt("govchain").includes(
-      planPaymentLink("starter") ?? "NOPE"
+    renderEstateLlmsTxt("govchain").includes(planPaymentLink("starter") ?? "")
+  );
+  assert.ok(
+    renderEstateLlmsTxt("strainchain").includes(
+      planPaymentLink("creator") ?? ""
     )
   );
 });

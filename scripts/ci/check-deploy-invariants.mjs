@@ -206,7 +206,7 @@ export function checkPreviewUrls(root = ROOT, targets = PREVIEW_URLS_OFF) {
 }
 
 const DEPLOY_CMD =
-  /\bwrangler(?:@[\w.^~-]+)?\s+(?:deploy|versions\s+deploy)\b|cloudflare\/wrangler-action/;
+  /\bwrangler(?:@[\w.^~-]+)?\s+(?:deploy|versions\s+(?:deploy|upload))\b|cloudflare\/wrangler-action/;
 
 /** Lines of the top-level `on:` block (handles `on:` and `"on":`). */
 function onBlock(text) {

@@ -57,7 +57,7 @@ const probes = live
   ? await Promise.all([
       probe("https://authichain.com/.well-known/jwks.json", {
         status: 200,
-        includes: "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ",
+        includes: "jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM",
       }),
       probe("https://authichain.com/checkout/starter", {
         status: 200,
@@ -67,9 +67,14 @@ const probes = live
         status: 200,
         excludes: "EU DPP Readiness Audit",
       }),
+      // Live /verify is the product form (demo polygon-anchor-1), not a
+      // placeholder "in development" page. Keep the banned-claim scan above
+      // for source honesty; here require the real heading and refuse payment
+      // language on the empty form.
       probe("https://authichain.com/verify", {
         status: 200,
-        includes: "in development",
+        includes: "Verify a Product",
+        excludes: "Payment received",
       }),
     ])
   : [];

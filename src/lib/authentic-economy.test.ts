@@ -67,6 +67,12 @@ describe("authentic-economy identity join", () => {
     expect(d.agentRail.tokenomics).toBe(AGENT_TOKENOMICS_DOC);
     expect(d.agentRail.note).toMatch(/X402_PAY_TO/);
     expect(d.agentRail.note).toMatch(/\$QRON/);
+    expect(d.agentRail.note).toContain(
+      "An empty JSON body is the unpaid HTTP 402."
+    );
+    expect(d.agentRail.note).toContain(
+      "A non-UUID sealId is HTTP 400 before payment."
+    );
     expect(d.humanCheckout.source).toBe("src/lib/plans.ts");
     expect(d.humanCheckout.checkout.passport).toBe(
       "https://authichain.com/checkout/strainchain_passport"

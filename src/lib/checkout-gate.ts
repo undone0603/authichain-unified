@@ -50,6 +50,15 @@ const PLAN_ALIASES: Record<string, PlanId> = {
   launch: "qron_launch",
 };
 
+/**
+ * Retired for new buyers (RES-86c). Existing subscribers keep billing,
+ * webhooks, and plan lookups; this route must not mint new sessions.
+ */
+export const RETIRED_GATED_PLAN_IDS: readonly PlanId[] = [
+  "qron_launch",
+  "qron_launch_annual",
+];
+
 /** Query/form keys carried from the landing into Stripe metadata. */
 export const CHECKOUT_CARRY_KEYS = [
   "visit_id",
@@ -331,9 +340,10 @@ export function renderCheckoutChooserPage(
     ...listedPlans("qron"),
     ...listedPlans("strainchain"),
     ...listedPlans("musa"),
-  ].filter(
-    p => publicIds.has(p.id) && Boolean(p.stripe_price_id && p.stripe_mode)
-  );
+  ].filter(p => {
+    if (RETIRED_GATED_PLAN_IDS.includes(p.id)) return false;
+    return publicIds.has(p.id) && Boolean(p.stripe_price_id && p.stripe_mode);
+  });
   const items = plans
     .map(
       p =>
@@ -466,7 +476,7 @@ export function buildGatedSessionBody(opts: {
         ? `${origin}/dpp?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
         : isClaimFile
           ? `${origin}/made-in-usa-claim-file?cancelled=1`
-          : isStarter
+          : isGenerationPack
             ? `${origin}/generate?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
             : `${origin}/pricing?cancelled=1`
   );
@@ -726,13 +736,6 @@ async function readFormFields(request: Request): Promise<URLSearchParams> {
  *   GET/HEAD → confirm page (200) or chooser; unknown plan 404. Never Stripe.
  *   POST     → validate (email, honeypot, origin, bot/prefetch) → 303 Stripe.
  */
-/** Plans whose /checkout/<plan> page is closed to new buyers. */
-// TODO: inject gated/retired plan lists so the 403 + Stripe hand-off stay unit-testable with every QRON plan retired.
-export const RETIRED_GATED_PLAN_IDS: readonly PlanId[] = [
-  "qron_launch",
-  "qron_launch_annual",
-];
-
 export async function tryHandleGatedCheckout(
   request: Request,
   env: GatedCheckoutEnv,
@@ -763,9 +766,6 @@ export async function tryHandleGatedCheckout(
       ? new Response(null, { status: 404, headers: HTML_HEADERS })
       : htmlResponse(html, 404);
   }
-  // Retired for new buyers (Advisor RES-86c, Oct 17 2026): no confirm form
-  // and no session for any method. Existing subscribers are unaffected;
-  // billing, webhooks and plan lookups do not use this route.
   if (RETIRED_GATED_PLAN_IDS.includes(plan.id)) {
     return new Response(null, {
       status: 303,
@@ -847,7 +847,6 @@ export async function tryHandleGatedCheckout(
   }
   report("checkout_email_captured", email);
 
-  // --- QRON Interdiction Gate ---
   if (isQronGatedPlan(plan.id)) {
     const attestationToken = fields.get("qron_attestation");
     const secret = env.QRON_INTERDICTION_SECRET;
@@ -867,7 +866,6 @@ export async function tryHandleGatedCheckout(
       );
     }
   }
-  // ------------------------------
 
   const result = await createGatedCheckoutSession({
     plan,
@@ -915,7 +913,12 @@ export async function tryHandleGatedCheckout(
 
 /** Every catalogue plan that the gate can sell (for tests/inventory). */
 export function gatedCheckoutPlanIds(): PlanId[] {
-  return PLANS.filter(p => p.stripe_price_id && p.stripe_mode).map(p => p.id);
+  return PLANS.filter(
+    p =>
+      p.stripe_price_id &&
+      p.stripe_mode &&
+      !RETIRED_GATED_PLAN_IDS.includes(p.id)
+  ).map(p => p.id);
 }
 
 /** Upgrade-prompt sources whose Starter link carries ?src=. Allowlisted so

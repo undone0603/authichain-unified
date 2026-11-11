@@ -19,7 +19,7 @@ concurrency:
 jobs:
   run:
     name: Process pending vision tasks
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 15
     steps:
       - name: Skip if DATABASE_URL not configured
