@@ -163,7 +163,7 @@ export class IOSManager {
               udid: device.udid,
               state: device.state,
               runtime: runtime,
-              isAvailable: true,
+              isAvailable: (device as unknown as { isAvailable?: boolean }).isAvailable ?? true,
               isRealDevice: false,
             });
           }

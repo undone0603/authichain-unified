@@ -1544,12 +1544,19 @@ export class BrowserManager {
       cdpUrl = `http://localhost:${cdpEndpoint}`;
     }
 
+    // isLocal:true (Playwright 1.58+) enables local file system optimisation
+    // (file uploads/downloads) when connecting to a same-machine browser.
+    const isLocal =
+      cdpUrl.startsWith('http://localhost:') ||
+      cdpUrl.startsWith('ws://localhost:') ||
+      cdpUrl === 'http://localhost';
+
     const browser = await chromium
-      .connectOverCDP(cdpUrl, { timeout: options?.timeout })
+      .connectOverCDP(cdpUrl, { timeout: options?.timeout, isLocal })
       .catch(() => {
         throw new Error(
           `Failed to connect via CDP to ${cdpUrl}. ` +
-            (cdpUrl.includes('localhost')
+            (/^\d+$/.test(cdpEndpoint)
               ? `Make sure the app is running with --remote-debugging-port=${cdpEndpoint}`
               : 'Make sure the remote browser is accessible and the URL is correct.')
         );
@@ -2311,24 +2318,7 @@ export class BrowserManager {
     }
 
     // Capture state from current context (cookies + storage)
-    let storageState:
-      | {
-          cookies: Array<{
-            name: string;
-            value: string;
-            domain: string;
-            path: string;
-            expires: number;
-            httpOnly: boolean;
-            secure: boolean;
-            sameSite: 'Strict' | 'Lax' | 'None';
-          }>;
-          origins: Array<{
-            origin: string;
-            localStorage: Array<{ name: string; value: string }>;
-          }>;
-        }
-      | undefined;
+    let storageState: Awaited<ReturnType<BrowserContext['storageState']>> | undefined;
 
     if (currentContext) {
       try {

@@ -21,6 +21,7 @@ const PATHS = [
   "/",
   "/contact",
   "/battery-passport",
+  "/battery-passport/sample",
   "/battery-passport/sample-audit",
   "/pricing",
   "/dpp",
