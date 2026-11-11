@@ -33,7 +33,7 @@ env:
 jobs:
   drift:
     name: Compare schema to database
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7

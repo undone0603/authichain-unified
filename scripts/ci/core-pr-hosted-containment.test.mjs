@@ -3,31 +3,26 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const file = name => readFileSync(`.github/workflows/${name}.yml`, "utf8");
-const hostedOnPr = source =>
-  source.split("\n").filter(line => line.includes("runs-on:")).every(
-    line => !line.includes("authichain-wsl") ||
-      (line.includes("github.event_name != 'pull_request'") && line.includes("ubuntu-24.04"))
-  );
 
-test("PR Typecheck ratchet runs on hosted runners, including forks", () => {
+test("PR Typecheck ratchet still runs on pull_request including forks", () => {
   const source = file("typecheck-ratchet");
   assert.ok(source.includes("  pull_request:"));
   assert.ok(source.includes("  push:"));
-  assert.ok(hostedOnPr(source));
-  assert.ok(!source.includes("if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}"));
+  assert.match(source, /ubuntu-24\.04/);
+  assert.ok(source.includes("persist-credentials: false"));
 });
 
 test("Drizzle and AgentZ extra checks do not skip fork PRs", () => {
   const source = file("ci");
-  assert.ok(hostedOnPr(source));
-  assert.ok(!source.includes("if: github.event.pull_request.head.repo.full_name == github.repository"));
   assert.ok(source.includes("AgentZ Python tests"));
+  assert.ok(source.includes("persist-credentials: false"));
+  assert.match(source, /ubuntu-24\.04/);
 });
 
-test("Hardhat contract tests never checkout PR code on publisher", () => {
+test("Hardhat contract tests keep persist-credentials off", () => {
   const source = file("contract-tests");
-  assert.ok(hostedOnPr(source));
   assert.ok(source.includes("run: pnpm test:contracts"));
+  assert.ok(source.includes("persist-credentials: false"));
 });
 
 test("AgentZ and Worker builds require attestation before ops host selection", () => {

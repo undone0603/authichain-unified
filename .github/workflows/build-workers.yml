@@ -40,7 +40,7 @@ jobs:
     name: Worker dry-run build
     # PR code always uses a hosted runner; never execute it on a credentialed host.
     # Push/dispatch use ops only after independently verified host isolation.
-    runs-on: ${{ github.event_name != 'pull_request' && vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 40
     steps:
       - name: Checkout

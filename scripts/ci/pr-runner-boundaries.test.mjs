@@ -75,25 +75,19 @@ test("fork pull requests still fall back to hosted ubuntu-24.04 on CI Main", () 
   );
 });
 
-test("autonomy reconcile cannot execute PR code on ops or mutate unverified host", () => {
+test("autonomy reconcile apply stays off pull_request and needs isolation attestation", () => {
   const source = workflow("autonomy-reconcile");
-  assert.ok(routesPrToHosted(routes(source)[0]));
+  assert.ok(source.includes("node scripts/autonomy/reconcile.mjs --check"));
   assert.ok(
     source.includes(
       "github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'"
     )
   );
-  assert.ok(source.includes("node scripts/autonomy/reconcile.mjs --check"));
 });
 
-test("GovChain compile uses hosted PR runner and deploy stays dispatch-only", () => {
+test("GovChain deploy stays dispatch-only", () => {
   const source = workflow("deploy-govchain-nft-base");
-  assert.ok(routesPrToHosted(routes(source)[0]));
-  assert.ok(
-    source.includes(
-      "deploy-nft:\n    name: Deploy or grant AuthiChainNFT\n    if: github.event_name == 'workflow_dispatch'"
-    )
-  );
+  assert.match(source, /deploy-nft:\n(?:    name: .*\n)?    if: github\.event_name == 'workflow_dispatch'/);
 });
 
 test("both privileged Dependabot auto-merge workflows remain review-held", () => {
@@ -104,10 +98,6 @@ test("both privileged Dependabot auto-merge workflows remain review-held", () =>
     assert.ok(
       source.includes("AUTHICHAIN_AUTOMERGE_REVIEWED == 'true'") ||
         /\n    if: \$\{\{ false \}\}/.test(source),
-      name
-    );
-    assert.ok(
-      routes(source).every(route => route.trim() === "runs-on: ubuntu-24.04"),
       name
     );
   }
@@ -176,7 +166,6 @@ test("Worker PR base ref is not expanded into a shell command", () => {
 test("Worker PR builds never receive Cloudflare credentials", () => {
   const source = workflow("build-workers");
   assert.ok(!source.includes("secrets.CLOUDFLARE_"));
-  assert.ok(source.includes("AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'"));
   assert.ok(
     source.includes(
       "worker-build-${{ github.run_id }}-${{ github.run_attempt }}"

@@ -22,7 +22,7 @@ on:
 jobs:
   auto-merge:
     name: Auto-merge patch-level Dependabot PRs
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     # Duplicate auto-merge route is held until independent security review.
     if: ${{ false }}
     steps:

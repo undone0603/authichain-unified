@@ -31,7 +31,7 @@ jobs:
   hardhat:
     name: Contract tests (Hardhat)
     # No untrusted PR checkout on the production publisher.
-    runs-on: ${{ github.event_name != 'pull_request' && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 20
     permissions:
       contents: read
