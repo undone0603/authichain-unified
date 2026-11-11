@@ -54,6 +54,7 @@ import {
   A2A_RPC_PATH,
   a2aMethodList,
   handleA2aJsonRpc,
+  memoryA2aStore,
 } from "../../../src/lib/a2a-jsonrpc";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
 import { sealBaseline } from "../../../src/lib/seal-baseline";
@@ -112,6 +113,42 @@ function json(
     status,
     headers: { ...JSON_HEADERS, ...extraHeaders },
   });
+}
+
+// Public, unauthenticated A2A demonstration: bound memory consumption before
+// parsing JSON or constructing tasks. No auth/tenant scoped persistence exists.
+const MAX_ANONYMOUS_A2A_BYTES = 64 * 1024;
+
+async function readBoundedA2aBody(request: Request): Promise<string | null> {
+  const claimedLength = request.headers.get("content-length");
+  if (claimedLength && Number(claimedLength) > MAX_ANONYMOUS_A2A_BYTES) {
+    return null;
+  }
+  const reader = request.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_ANONYMOUS_A2A_BYTES) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 function normalizePath(pathname: string): string {
@@ -309,16 +346,23 @@ async function tryFreeCall(
   env: X402Env | undefined,
   opts: X402Options | undefined
 ): Promise<{ response: Response | null; remaining: number | null }> {
-  const raw = parseJsonObject(await request.clone().text());
+  const raw = coerceSealBody(parseJsonObject(await request.clone().text()));
+  // A named seal that cannot exist is refused before the 402 (400). Listing
+  // samples (`demo` / bazaar UUID) and no-sealId crawler probes are not
+  // refused: they get the 402 so the price can be read (c7aebe90, 5e807fab).
+  const refusal = unpaidSealRefusal(raw);
+  if (refusal) {
+    return { response: json(refusal.status, refusal.body), remaining: null };
+  }
   const parsed = parseSealRequest(raw);
   if (!parsed.ok) {
-    // No body: 402 so a scanner can read the price. A named seal that cannot
-    // exist, or productId/serial used as the key, is refused here. The paid
-    // path does the same before settlement. This runs before the registry
-    // credential check so a bad id is not a payment challenge.
-    if (Object.keys(raw).length > 0) {
-      return { response: json(parsed.status, parsed.body), remaining: null };
-    }
+    // Empty body or listing sample: 402 so a scanner can read the price.
+    return { response: null, remaining: null };
+  }
+  // Listing example UUID: crawlers POST this body. A free 200 is classified
+  // as payability=free so they never buy. Do not consume the real-UUID
+  // allowance. Paid lookup of this id is still missing-seal evidence.
+  if (isDiscoveryExampleSealId(parsed.sealId)) {
     return { response: null, remaining: null };
   }
   const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);
@@ -516,10 +560,19 @@ export async function tryHandleX402(
   if (normalizePath(url.pathname) === A2A_RPC_PATH) {
     if (request.method === "GET") return json(200, a2aMethodList());
     if (request.method === "POST") {
-      const body = await request.text();
+      const body = await readBoundedA2aBody(request);
+      if (body === null) {
+        return json(413, { error: "a2a_request_too_large" });
+      }
+      // Public A2A is an immediate, unauthenticated demonstration. Using the
+      // module-global task store would let one anonymous caller enumerate
+      // another caller's task history via ListTasks/GetTask. Until a real
+      // authenticated tenant-scoped store exists, keep each HTTP request
+      // isolated; the completed task is returned to its sender immediately.
       const answered = handleA2aJsonRpc(body, {
         now: opts?.now,
         a2aVersion: request.headers.get("A2A-Version"),
+        store: memoryA2aStore(),
       });
       if (answered.body === null) return new Response(null, { status: 204 });
       return json(answered.status, answered.body);

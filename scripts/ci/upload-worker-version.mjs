@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 /**
- * POST a bundled Worker version over IPv4 HTTP/2 (curl), then print the
+ * POST a bundled Worker version over IPv4 HTTP/1.1 (curl), then print the
  * version id. The versions API parses uncompressed JS in the multipart:
  * part-level gzip eval'd as JS (41297825503), HTTP gzip of the body
  * returned multipart NextPart EOF (41298894966). HTTP/1.1 uncompressed
- * RST after ~96s (41264005567). Send raw JS over HTTP/2 with a longer
- * max-time so the 8.8 MiB POST can finish.
+ * RST after ~96s (41264005567). HTTP/2 later stalled with PROTOCOL_ERROR
+ * and 0 bytes received (41303592477, 41341161323), so the transport is now
+ * HTTP/1.1 with a stall guard, more retries, and a 600s ceiling. A failed POST appends curl's
+ * size_upload, speed_upload, size_download, http_code, and time_total.
+ * Run 41303592477 exited 28 with 0 bytes received and no version id.
  *
  * keep_bindings secret_text inherits AUTHICHAIN_ATTESTATION_*. keep_assets
  * keeps client/public. Does not print the API token or secret values.
@@ -129,21 +132,46 @@ export function buildMultipartBody({ metadata, moduleBuf, boundary }) {
   return Buffer.concat([head, meta, mid, moduleBuf, tail]);
 }
 
+export const CURL_WRITE_OUT =
+  "\nauthichain-curl size_upload=%{size_upload} speed_upload=%{speed_upload} size_download=%{size_download} http_code=%{http_code} time_total=%{time_total}\n";
+
+export function splitCurlOutput(stdout) {
+  const text = String(stdout ?? "");
+  const marker = "\nauthichain-curl ";
+  const at = text.lastIndexOf(marker);
+  if (at === -1) return { body: text.trim(), writeOut: "" };
+  return {
+    body: text.slice(0, at).trim(),
+    writeOut: text.slice(at + 1).trim(),
+  };
+}
+
 export function curlArgv({ url, bodyPath, headerPath, contentType }) {
+  // A stalled upload used to sit for 480s and then report 0 bytes received,
+  // so abort once throughput collapses: that way the retry budget is spent
+  // retrying instead of waiting out one dead socket.
   return [
     "curl",
     "--ipv4",
-    "--http2",
+    "--http1.1",
     "--tcp-nodelay",
+    "--connect-timeout",
+    "30",
     "--retry",
-    "2",
+    "4",
     "--retry-delay",
-    "5",
+    "10",
     "--retry-all-errors",
+    "--speed-limit",
+    "20480",
+    "--speed-time",
+    "120",
     "--silent",
     "--show-error",
     "--max-time",
-    "480",
+    "600",
+    "--write-out",
+    CURL_WRITE_OUT,
     "-X",
     "POST",
     url,
@@ -223,11 +251,14 @@ export function uploadWorkerVersion({
       encoding: "utf8",
       maxBuffer: 4 * 1024 * 1024,
     });
+    const { body, writeOut } = splitCurlOutput(result.stdout);
     if (result.status !== 0) {
-      const err = String(result.stderr || result.stdout || "").trim();
-      throw new Error(`curl versions POST exit ${result.status}: ${err || "no output"}`);
+      const err = String(result.stderr || "").trim();
+      const snippet = body.length > 0 && body.length <= 500 ? body : "";
+      const detail = [err, writeOut, snippet].filter(Boolean).join(" | ");
+      throw new Error(`curl versions POST exit ${result.status}: ${detail || "no output"}`);
     }
-    return parseVersionUploadResponse(result.stdout);
+    return parseVersionUploadResponse(body);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

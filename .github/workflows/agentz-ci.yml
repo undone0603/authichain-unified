@@ -15,17 +15,73 @@ permissions:
   contents: read
 
 jobs:
-  verify-and-heal:
-    runs-on: ${{ vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+  tinyfish-offline:
+    name: TinyFish offline safety (no credentials or service calls)
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install declared AgentZ Python dependencies
+        run: python3 -m pip install --disable-pip-version-check -r requirements-agentz.txt
+      - name: Validate read-only MCP, scout, daemon and CLI regression
+        env:
+          TINYFISH_API_KEY: ""
+          AGENTZ_TINYFISH_SCOUT_ENABLED: ""
+        run: |
+          PYTHONPATH="${GITHUB_WORKSPACE}" python3 -m pytest -q \
+            tests/test_agentz_tinyfish_mcp.py \
+            tests/test_agentz_tinyfish_scout.py \
+            tests/test_agentz_cli_exit_status.py \
+            tests/test_agentz_ci_runner_policy.py \
+            tests/test_agentz_peer_learning.py
+      - name: Verify real AgentZ dry-run and missing-key failure
+        env:
+          TINYFISH_API_KEY: ""
+          AGENTZ_TINYFISH_SCOUT_ENABLED: ""
+        run: |
+          python3 -m agentz.cli run tinyfish_a2a_scout --mode dry-run
+          if python3 -m agentz.cli run tinyfish_a2a_scout --mode confirm; then
+            echo "FAIL: TinyFish scout ran without a credential" >&2
+            exit 1
+          fi
+          echo "PASS: missing TinyFish key blocks live scout"
+          python3 - <<'PY'
+          import json
+          from agentz.core.runner import DEFAULT_AUDIT_LOG
+          rows = DEFAULT_AUDIT_LOG.read_text(encoding="utf-8").splitlines()
+          assert rows, "AgentZ wrote no run audit"
+          last = json.loads(rows[-1])
+          assert last["workflow_id"] == "tinyfish_a2a_scout", last
+          assert last["status"] == "blocked", last
+          print("PASS: audit records a blocked TinyFish live attempt")
+          PY
+  verify-and-heal:
+    # Never execute unreviewed pull-request code on the [REDACTED]-capable
+    # self-hosted runner. Only main-branch pushes may opt into authichain-ops.
+    runs-on: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Restore full tree after sparse checkout
         if: runner.environment == 'self-hosted'
         run: |
           git sparse-checkout disable
           git reset --hard HEAD
           test -f package.json
+
+      # Hosted runners need an explicit interpreter. Self-hosted ARM64 already
+      # has python3; setup-python downloads have been unreliable there (#2156).
+      - uses: actions/setup-python@v7
+        if: runner.environment != 'self-hosted'
+        with:
+          python-version: "3.12"
 
       - name: Compile AgentZ Python sources
         run: python3 -m compileall -q agentz
@@ -43,8 +99,11 @@ jobs:
           "$VENV/bin/pip" install -r requirements-agentz.txt
           echo "AGENTZ_VENV=$VENV" >> "$GITHUB_ENV"
 
-      - name: Run AgentZ control-plane tests
-        run: PYTHONPATH="${GITHUB_WORKSPACE}" "$AGENTZ_VENV/bin/python" -m unittest discover -s agentz/tests -p 'test_*.py'
+      - name: Run AgentZ pytest suites
+        run: |
+          PYTHONPATH="${GITHUB_WORKSPACE}" "$AGENTZ_VENV/bin/python" -m pytest -q \
+            agentz/tests \
+            tests/test_agentz_*.py
 
       - name: Confirm the web-client stub is not sold as an ABI
         run: |

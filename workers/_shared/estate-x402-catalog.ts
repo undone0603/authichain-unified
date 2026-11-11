@@ -87,7 +87,12 @@ function humanCheckout(
     farmUsd: planUsd("strainchain_farm"),
     passportPaymentLink: planPaymentLink("strainchain_passport"),
     dppPaymentLink: planPaymentLink("dpp_readiness"),
-    offers: catalogOffers(),
+    offers: catalogOffers().filter(
+      offer =>
+        offer.id !== "qron_launch" &&
+        offer.id !== "qron_launch_annual" &&
+        offer.id !== "strainchain_farm"
+    ),
     source: "src/lib/plans.ts",
   };
   if (brand === "qron") {

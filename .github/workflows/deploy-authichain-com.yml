@@ -1,134 +1,182 @@
-name: Deploy authichain-com
+name: Deploy authichain-com (protected)
+
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "workers/authichain-com/**"
-      - "src/lib/generation-seal.ts"
-      - "src/lib/plans.ts"
-      - "src/lib/checkout-gate.ts"
-      - "src/lib/agent-verify.ts"
-      - "src/lib/paid-seal-verify.ts"
-      - "content/microsites/**"
-      - "scripts/sync-microsite-packs.mjs"
-      - ".github/workflows/deploy-authichain-com.yml"
-      - "scripts/ci/parse-wrangler-version-id.mjs"
-      - "scripts/ci/promote-worker-version.mjs"
+    inputs:
+      expected_sha:
+        description: Exact 40-character main commit to release, after verified CI
+        type: string
+        required: true
+
 permissions:
   contents: read
+  statuses: read
+  actions: read
+
+concurrency:
+  group: deploy-authichain-com
+  cancel-in-progress: false
+
 jobs:
+  verify:
+    name: Verify exact-main commit and CircleCI gate
+    if: github.ref == 'refs/heads/main'
+    # Self-hosted: GitHub-hosted ubuntu is billing-locked on this account.
+    # Free path is the local WSL runner (wsl-zac-arm64 / authichain-wsl).
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 5
+    env:
+      NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
+    outputs:
+      sha: ${{ steps.head.outputs.sha }}
+    steps:
+      - name: Pin dispatch commit
+        id: head
+        env:
+          TARGET_SHA: ${{ inputs.expected_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[[:xdigit:]]{40}$ ]]
+          test "$TARGET_SHA" = "$DISPATCH_SHA"
+          echo "sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+      # Separately tested, fail-closed automated protection instead of a human
+      # environment reviewer. Missing/stale evidence stops the release.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.head.outputs.sha }}
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+      - name: Use runner Node 22
+        run: |
+          set -euo pipefail
+          # Prefer nvm Node 22 when present; fall back to PATH node.
+          if [ -s "$HOME/.nvm/nvm.sh" ]; then
+            # shellcheck disable=SC1091
+            . "$HOME/.nvm/nvm.sh"
+            nvm use 22 >/dev/null
+          fi
+          command -v node
+          node --version
+          echo "NODE=$(command -v node)" >> "$GITHUB_ENV"
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+      - name: Test fail-closed automated release policy
+        run: |
+          set -euo pipefail
+          test -f scripts/ci/autonomous-release-gate.test.mjs
+          test -f scripts/ci/autonomous-release-gate.mjs
+          pwd
+          ls -la scripts/ci/autonomous-release-gate*
+          node --test "$GITHUB_WORKSPACE/scripts/ci/autonomous-release-gate.test.mjs"
+      - name: Enforce automated exact-main release policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ steps.head.outputs.sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: node "$GITHUB_WORKSPACE/scripts/ci/autonomous-release-gate.mjs"
+
   deploy:
-    # Publish runner only: authichain-wsl. CI stays on authichain-ops (laptop).
+    name: Publish exact automatically policy-approved Worker
+    needs: verify
+    if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 30
+    environment:
+      name: production-cloudflare
     env:
-      # WSL has no IPv6. Node 22 Happy Eyeballs races AAAA (ENETUNREACH) with
-      # Cloudflare anycast A records and aborts in ~1.6s (wrangler fetch failed
-      # on 40874574341). ipv4first alone still tries AAAA. This flag makes
-      # undici connect IPv4-only. Proven on runner node v22.23.4: default
-      # fetch fail 1596ms, this combo HTTP 400 (unauthenticated verify) 4415ms.
       NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
+    permissions:
+      contents: read
+      statuses: read
     steps:
-      - uses: actions/checkout@v7
-      # Self-hosted WSL already has pnpm (11.x). pnpm/action-setup@v6 with
-      # version 10.28.2 downloads from npm and ETIMEDOUT / signature-fails
-      # (runs 40865371006). GitHub-hosted still uses the pin.
-      - uses: pnpm/action-setup@v6
-        if: runner.environment != 'self-hosted'
+      - uses: actions/checkout@v4
         with:
-          version: "10.28.2"
-          run_install: false
-      - name: Use runner pnpm (self-hosted)
-        if: runner.environment == 'self-hosted'
+          ref: ${{ needs.verify.outputs.sha }}
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+      - name: Confirm checked-out and current main SHA
+        env:
+          EXPECTED_SHA: ${{ needs.verify.outputs.sha }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
         run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          HEAD_SHA=$(node --input-type=module -e "const r=await fetch('https://api.github.com/repos/' + process.env.REPOSITORY + '/branches/main',{headers:{authorization:'Bearer ' + process.env.GH_TOKEN,accept:'application/vnd.github+json'}});if(!r.ok)process.exit(1);const d=await r.json();console.log(d.commit.sha)")
+          test "$HEAD_SHA" = "$EXPECTED_SHA"
+      - name: Use runner pnpm + Node 22
+        run: |
+          set -euo pipefail
+          if [ -s "$HOME/.nvm/nvm.sh" ]; then
+            # shellcheck disable=SC1091
+            . "$HOME/.nvm/nvm.sh"
+            nvm use 22 >/dev/null
+          fi
           command -v pnpm
           pnpm --version
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "22"
-          # Self-hosted runners already keep a local pnpm store. Saving it
-          # through actions/cache packs ~1 GB and the post-step fails the
-          # deploy after wrangler publish has already succeeded.
-          cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
-          cache-dependency-path: pnpm-lock.yaml
-      - name: Install node-gyp (native builds)
-        run: npm i -g node-gyp@11
-      - name: Install
+          command -v node
+          node --version
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+      - name: Install pinned dependencies
         env:
-          # bufferutil/utf-8-validate are optional ws speedups; ws falls back to JS.
-          # Skip their native builds here instead of installing toolchains on the runner.
           npm_config_build_from_source: "false"
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
+      - name: Native receipt and full Worker routing tests
+        working-directory: workers/authichain-com
+        env:
+          npm_config_build_from_source: "false"
+        run: |
+          set -euo pipefail
+          # Nested workspace: root pnpm exec cannot see these binaries.
+          # Install this package's lockfile so local vitest/tsx resolve.
+          pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
+          pnpm exec vitest run src/dpp-routes.test.ts
+          pnpm exec tsx --import ./test/register-md.mjs --test src/routing.test.ts
       - name: Embed microsite HTML
         run: node scripts/sync-microsite-packs.mjs
-      - name: Apply D1 migrations (authichain-db, email_optins)
+      - name: Recheck automated release policy immediately before publishing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ needs.verify.outputs.sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: node "$GITHUB_WORKSPACE/scripts/ci/autonomous-release-gate.mjs"
+      # Require these names to be configured ONLY as production-cloudflare environment secrets.
+      # Never define these aliases as repository/org secrets: GitHub falls back to broader scope.
+      # Provision a Workers-only scoped Cloudflare token; no D1/zone/DNS rights.
+      # Pinned x402 pair, same values as bind-x402-secrets.yml. This publish
+      # passes --keep-vars and must not re-put these secrets.
+      # PAY_TO='0x5db511706FB6317cd23A7655F67450c5AC6e6AA2' # pragma: allowlist secret
+      # FACILITATOR='https://facilitator.payai.network'
+      # USDC_ASSET='0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+      - name: Upload and promote this exact Worker version only
         working-directory: workers/authichain-com
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler d1 migrations apply authichain-db --remote --config wrangler.toml
-      - name: Publish authichain-com
-        working-directory: workers/authichain-com
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          # wrangler deploy on 40895854176 uploaded 1707 KiB then fetch-failed
-          # ~6.5 min later while listing bindings. versions upload --keep-vars
-          # stores the bundle; Cloudflare API POST deployments promotes it
-          # (same path as edge-router 1989 / authichain-com 1ee6d701).
-          # Do not rotate AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64.
-          # wrangler 4.153.0 hung then cancelled at 30m (41242803226).
-          # 4.83.0 rejects --keep-vars on versions upload (41248692011).
-          # Pin 4.149.0: has --keep-vars, before 4.150 source-map uploads.
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
           npx --yes wrangler@4.149.0 versions upload --minify --keep-vars --config wrangler.toml \
-            2>&1 | tee /tmp/ac-versions-upload.log
-          vid=$(node ../../scripts/ci/parse-wrangler-version-id.mjs /tmp/ac-versions-upload.log)
-          echo "uploaded authichain-com version $vid"
+            2>&1 | tee /tmp/ac-protected-version-upload.log
+          vid=$(node ../../scripts/ci/parse-wrangler-version-id.mjs /tmp/ac-protected-version-upload.log)
+          test -n "$vid"
           node ../../scripts/ci/promote-worker-version.mjs authichain-com "$vid"
-      - name: Bind STRIPE_SECRET_KEY from GitHub secrets
-        working-directory: workers/authichain-com
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-          STRIPE_PRICE_ID: ${{ secrets.STRIPE_PRICE_ID }}
+      - name: Read-only truthful checkout return smoke
         run: |
           set -euo pipefail
-          if [ -z "${STRIPE_SECRET_KEY:-}" ]; then
-            echo "::error::GitHub secret STRIPE_SECRET_KEY is empty"
-            exit 1
-          fi
-          printf '%s' "$STRIPE_SECRET_KEY" | npx wrangler secret put STRIPE_SECRET_KEY --name authichain-com
-          if [ -n "${STRIPE_PRICE_ID:-}" ]; then
-            printf '%s' "$STRIPE_PRICE_ID" | npx wrangler secret put STRIPE_PRICE_ID --name authichain-com
-          fi
-          echo "bound STRIPE_SECRET_KEY on authichain-com"
-
-      # Owner-directed live x402 pair (public pay-to + public facilitator URL).
-      # Same values as bind-x402-secrets.yml. Not invented. Landing intercept
-      # reads these on /api/x402; secret put after deploy keeps them attached.
-      - name: Bind X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET
-        working-directory: workers/authichain-com
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          set -euo pipefail
-          PAY_TO='0x5db511706FB6317cd23A7655F67450c5AC6e6AA2' # pragma: allowlist secret
-          FACILITATOR='https://facilitator.payai.network'
-          USDC_ASSET='0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-          printf '%s' "$PAY_TO" | npx wrangler secret put X402_PAY_TO --name authichain-com
-          printf '%s' "$FACILITATOR" | npx wrangler secret put X402_FACILITATOR_URL --name authichain-com
-          printf '%s' "$USDC_ASSET" | npx wrangler secret put X402_USDC_ASSET --name authichain-com
-          echo "bound X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET on authichain-com (values not logged)"
-          # Do not secret-put authichain-edge-router here: wrangler secret put
-          # deploys a new version and would move live traffic off 1989.
-      - name: Smoke farm checkout
-        run: |
-          set -euo pipefail
-          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://authichain.com/checkout/strainchain_farm)
-          echo "farm checkout HTTP $code"
-          test "$code" = "200"
+          for path in success dpp/thanks; do
+            body=$(curl --fail --silent --show-error --max-time 25 "https://authichain.com/$path")
+            if ! grep -Eq 'No checkout reference provided|does not confirm payment' <<< "$body"; then
+              echo "::error::Missing honesty marker at /$path"
+              exit 1
+            fi
+            if grep -Eq 'Payment received|Workspace opened|Your payment added' <<< "$body"; then
+              echo "::error::Unverified payment claim at /$path"
+              exit 1
+            fi
+          done

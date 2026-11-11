@@ -214,7 +214,7 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("Product Not Found");
   });
 
-  it("handles passport lookup timeout gracefully with 404 guidance", async () => {
+  it("answers a retryable 503 when the passport lookup times out", async () => {
     (getCertificateByNumber as any).mockRejectedValue(
       new Error("passport-lookup-timeout")
     );
@@ -222,8 +222,9 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     const res = await app.request("/p/timeout-serial", {}, makeEnv() as any);
     const body = await res.text();
 
-    expect(res.status).toBe(404);
-    expect(body).toContain("The registry lookup timed out");
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("30");
+    expect(body).toContain("Registry Temporarily Unavailable");
   });
 
   it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {
