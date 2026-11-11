@@ -87,7 +87,7 @@ jobs:
           echo "cwd=$(pwd) head=$(git rev-parse HEAD) node=$(command -v node)"
           if ! test -f scripts/ci/autonomous-release-gate.test.mjs || ! test -f scripts/ci/autonomous-release-gate.mjs; then
             echo "::error::Release-gate files missing from the worktree after checkout."
-            ls -la scripts/ci || ls -la scripts || true
+            if [ -d scripts/ci ]; then ls -la scripts/ci; elif [ -d scripts ]; then ls -la scripts; else echo "no scripts directory"; fi
             git status --short | head -50
             git ls-files -v | awk '$1 == "S" { print }' | head -50
             exit 1
