@@ -5,7 +5,7 @@ const buyer={buyerCompany:'Synthetic Example',buyerContact:'Synthetic Buyer',hum
 const paid={packageId:'mcp_connect',buyerAuthorization:e('buyer',{accepted:true,buyerId:'nonfounder'}),checkoutEvidence:e('session',{status:'complete',payment_status:'paid',amount_total:150000,payment_intent:'pi_1'}),paymentIntentEvidence:e('pi',{id:'pi_1',status:'succeeded',amount_received:150000,latest_charge:'ch_1'}),balanceTransactionEvidence:e('balance',{source:'ch_1',status:'available',amount:145000}),nonFounderEvidence:e('outside',{independentBuyer:true,buyerId:'nonfounder'}),fulfillmentEvidence:e('delivery',{accepted:true,artifactSha256:'sha256:'+'a'.repeat(64)}),payoutEvidence:e('payout',{status:'paid',reconciledToBank:true,amount:145000})};
 test('missing evidence is unverified',()=>assert.equal(qualifyBuyer().status,'UNVERIFIED'));
 test('bot ack is not human interest',()=>assert.equal(qualifyBuyer({...buyer,humanReply:e('auto',{kind:'automated',expressedNeed:true})}).status,'UNVERIFIED'));
-test('qualified evidence passes',()=>assert.equal(qualifyBuyer(buyer).status,'QUALIFIED'));
+test('qualified evidence passes',()=>assert.equal(qualifyBuyer(buyer).status,'EVIDENCE_CONSISTENT_UNATTESTED'));
 test('insufficient budget rejected',()=>assert.equal(qualifyBuyer({...buyer,budgetEvidence:e('low',{approved:true,currency:'USD',approvedCents:149999})}).status,'UNVERIFIED'));
 test('DNC rejected',()=>assert.equal(qualifyBuyer({...buyer,doNotContact:true}).status,'UNVERIFIED'));
 test('agent self-claim rejected',()=>assert.equal(qualifyBuyer({...buyer,authorityEvidence:e('a',{canCommit:true,verifiedBy:'agent_claim_only'})}).status,'UNVERIFIED'));
@@ -13,7 +13,7 @@ test('missing authority rejected',()=>assert.equal(qualifyBuyer({...buyer,author
 test('operator hold prevents quote release',()=>assert.equal(quoteReadiness({buyerEvidence:buyer,packageId:'mcp_connect',priceCents:150000}).status,'HOLD'));
 test('quote review never creates payment',()=>assert.equal(quoteReadiness({buyerEvidence:buyer,packageId:'mcp_connect',priceCents:150000,scopeVersion:'v1',sowAcceptance:e('sow',{accepted:true,scopeVersion:'v1'}),operatorHoldReleased:true,productionSendEnabled:true}).createsCharge,false));
 test('wrong price rejected',()=>assert.equal(quoteReadiness({buyerEvidence:buyer,packageId:'mcp_connect',priceCents:0}).status,'HOLD'));
-test('complete synthetic outside payment passes only with bank proof',()=>{const r=reconcilePaidFulfillment(paid);assert.equal(r.win,true);assert.equal(r.automaticCrmClose,false)});
+test('complete synthetic outside payment passes only with bank proof',()=>{const r=reconcilePaidFulfillment(paid);assert.equal(r.win,false);assert.equal(r.status,'EVIDENCE_CONSISTENT_UNATTESTED');assert.equal(r.automaticCrmClose,false)});
 test('zero dollar paid session not sale',()=>assert.equal(reconcilePaidFulfillment({...paid,checkoutEvidence:e('free',{status:'complete',payment_status:'paid',amount_total:0,payment_intent:null})}).win,false));
 test('open unpaid session not sale',()=>assert.equal(reconcilePaidFulfillment({...paid,checkoutEvidence:e('unpaid',{status:'open',payment_status:'unpaid',amount_total:150000})}).win,false));
 test('founder payment not sale',()=>assert.equal(reconcilePaidFulfillment({...paid,nonFounderEvidence:e('outside',{independentBuyer:false,buyerId:'nonfounder'})}).win,false));
@@ -21,3 +21,6 @@ test('no delivery not win',()=>assert.equal(reconcilePaidFulfillment({...paid,fu
 test('paid Stripe payout without bank matching not win',()=>assert.equal(reconcilePaidFulfillment({...paid,payoutEvidence:e('payout',{status:'paid',reconciledToBank:false,amount:145000})}).win,false));
 test('wrong payment intent not win',()=>assert.equal(reconcilePaidFulfillment({...paid,paymentIntentEvidence:e('pi',{id:'pi_wrong',status:'succeeded',amount_received:150000,latest_charge:'ch_1'})}).win,false));
 test('stable evidence digest',()=>assert.equal(evidenceDigest({a:1}),evidenceDigest({a:1})));
+
+test('forged human need, budget, and authority never enable outbound send',()=>{const q=qualifyBuyer(buyer);assert.equal(q.sendAuthorized,false);assert.equal(q.paymentAuthorized,false);assert.equal(q.status,'EVIDENCE_CONSISTENT_UNATTESTED')});
+test('even complete claimed quote cannot authorize payment',()=>{const q=quoteReadiness({buyerEvidence:buyer,packageId:'mcp_connect',priceCents:150000,scopeVersion:'v1',sowAcceptance:e('sow',{accepted:true,scopeVersion:'v1'}),operatorHoldReleased:true,productionSendEnabled:true});assert.equal(q.status,'HOLD');assert.equal(q.createsCharge,false)});
