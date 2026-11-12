@@ -17,10 +17,10 @@ export function createReplayGuard({ provenanceGate, claimOnce, namespace='agentz
   async reserve(request) {
    const checked = provenanceGate.inspect(request);
    if(checked.status !== 'AUTHENTICATED_RECEIPTS_READY_FOR_INDEPENDENT_REVIEW') return hold('provenance_not_authenticated');
-   const identifiers = request.receipts.map(r => r.kid+':'+r.signature).sort();
-   const key = namespace+':'+createHash('sha256').update(JSON.stringify([
-    request.orderId,request.buyerId,request.scopeVersion,request.contentDigest,identifiers
-   ])).digest('hex');
+   // Host must provide a globally unique immutable orderId. Re-signing,
+   // changing evidence fields, or renewing receipts cannot mint a second claim.
+   if (!valid(request?.orderId)) return hold('missing_canonical_order_id');
+   const key = namespace+':'+createHash('sha256').update(request.orderId).digest('hex');
    let claimed=false;
    try {claimed = await claimOnce(key,ttlMs) === true;} catch {return hold('durable_replay_store_unavailable');}
    if (!claimed) return hold('receipt_replay_or_claim_unconfirmed');
