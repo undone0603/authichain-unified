@@ -211,6 +211,9 @@ describe("fulfillDppPaidSession", () => {
     expect(JSON.stringify(failed[0])).not.toContain("buyer@example.com");
     // Not a loop event: loop reconstruction and stall reports are unchanged.
     expect(stageOf(failed[0] as never)).toBeNull();
+    expect(rows.some(r => r.event_type === "dpp_activation_email:sent")).toBe(
+      false
+    );
   });
 
   it("records a failed status when the send throws instead of swallowing it", async () => {
@@ -231,15 +234,37 @@ describe("fulfillDppPaidSession", () => {
     expect(
       rows.filter(r => r.event_type === "dpp_activation_email:failed")
     ).toHaveLength(1);
+    expect(rows.some(r => r.event_type === "dpp_activation_email:sent")).toBe(
+      false
+    );
   });
 
-  it("writes no failure row when the send succeeds", async () => {
+  it("writes a success row when the send succeeds and no failure row", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);
     expect(result.activationEmail).toBe("sent");
     expect(rows.some(r => r.event_type === "dpp_activation_email:failed")).toBe(
       false
     );
+    const sent = rows.filter(r => r.event_type === "dpp_activation_email:sent");
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({
+      prospect_id: "smoke_check_1",
+      stage: "complete_checkout",
+    });
+    expect(sent[0].metadata).toMatchObject({
+      activation_email_status: "sent",
+      stripe_session_id: "cs_live_smoke_check",
+      profile_id: "prof_1",
+      provider: "resend",
+      http_status: 200,
+    });
+    expect(
+      (sent[0].metadata as Record<string, unknown>).reason
+    ).toBeUndefined();
+    expect(JSON.stringify(sent[0])).not.toContain("buyer@example.com");
+    expect(JSON.stringify(sent[0])).not.toContain("<p>ok</p>");
+    expect(stageOf(sent[0] as never)).toBeNull();
   });
 
   it("redactForLog strips addresses and caps length", () => {
@@ -279,7 +304,9 @@ describe("fulfillDppPaidSession", () => {
     expect(result.handled).toBe(true);
     expect(result.profileId).toBe("prof_1");
     expect(
-      rows.map(r => (r.metadata as { loop_stage?: string }).loop_stage)
+      rows
+        .filter(r => String(r.event_type).startsWith("dpp_loop:"))
+        .map(r => (r.metadata as { loop_stage?: string }).loop_stage)
     ).toEqual(["payment_succeeded", "provisioned"]);
   });
 
@@ -325,12 +352,13 @@ describe("fulfillDppPaidSession", () => {
       profileId: "prof_1",
       activationEmail: "sent",
     });
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toMatchObject({
+    const loop = rows.filter(r => String(r.event_type).startsWith("dpp_loop:"));
+    expect(loop).toHaveLength(2);
+    expect(loop[0]).toMatchObject({
       prospect_id: "smoke_check_1",
       event_type: "dpp_loop:payment_succeeded",
     });
-    expect(rows[1]).toMatchObject({
+    expect(loop[1]).toMatchObject({
       prospect_id: "smoke_check_1",
       event_type: "dpp_loop:provisioned",
     });
@@ -377,13 +405,17 @@ describe("fulfillDppPaidSession", () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     try {
       await fulfillDppPaidSession(supabase, paidSession);
-      const lines = log.mock.calls.map(c => String(c[0])).filter(l => l.includes("authichain.trust-event/1"));
+      const lines = log.mock.calls
+        .map(c => String(c[0]))
+        .filter(l => l.includes("authichain.trust-event/1"));
       expect(lines.map(l => JSON.parse(l).event)).toEqual([
         "fulfillment.started",
         "entitlement.granted",
         "fulfillment.completed",
       ]);
-      expect(lines.join(String.fromCharCode(10))).not.toContain("buyer@example.com");
+      expect(lines.join(String.fromCharCode(10))).not.toContain(
+        "buyer@example.com"
+      );
     } finally {
       log.mockRestore();
     }
@@ -395,7 +427,11 @@ describe("fulfillDppPaidSession", () => {
       ...paidSession,
       customer_details: null,
       customer_email: null,
-      metadata: { ...paidSession.metadata, user_id: undefined, is_demo: "true" },
+      metadata: {
+        ...paidSession.metadata,
+        user_id: undefined,
+        is_demo: "true",
+      },
     });
     expect(result).toEqual({
       handled: true,
@@ -510,5 +546,105 @@ describe("fulfillDppPaidSession", () => {
     expect(actions).toHaveLength(1);
     expect(actions[0]?.state).toBe("succeeded");
     expect(continuity.get("founder_exit_side_effects")).toHaveLength(1);
+    expect(
+      rows.filter(r => r.event_type === "dpp_activation_email:sent")
+    ).toHaveLength(1);
+  });
+
+  it("records payment_succeeded and provisioned keyed by session id for a Payment Link with no visit_id", async () => {
+    const { supabase, rows } = fakeSupabase();
+    const session = {
+      id: "cs_live_plink_no_visit",
+      amount_total: 29900,
+      customer_details: { email: "buyer@example.com" },
+      client_reference_id: null,
+      metadata: {
+        offer: DPP_OFFER_KEY,
+        plan: "dpp_readiness",
+        source: "direct",
+      },
+    };
+    const result = await fulfillDppPaidSession(supabase, session);
+    expect(result).toEqual({
+      handled: true,
+      profileId: "prof_1",
+      activationEmail: "sent",
+    });
+    const loop = rows.filter(r => String(r.event_type).startsWith("dpp_loop:"));
+    expect(loop.map(r => r.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+      "dpp_loop:provisioned",
+    ]);
+    expect(loop[0]).toMatchObject({
+      prospect_id: "cs_live_plink_no_visit",
+    });
+    expect(loop[1]).toMatchObject({
+      prospect_id: "cs_live_plink_no_visit",
+    });
+    expect(loop[0].metadata).toMatchObject({
+      loop_stage: "payment_succeeded",
+      stripe_session_id: "cs_live_plink_no_visit",
+      dedupe_key: "cs_live_plink_no_visit",
+      email: "buyer@example.com",
+    });
+    expect(loop[1].metadata).toMatchObject({
+      loop_stage: "provisioned",
+      stripe_session_id: "cs_live_plink_no_visit",
+      dedupe_key: "cs_live_plink_no_visit",
+      profile_id: "prof_1",
+    });
+    const sent = rows.filter(r => r.event_type === "dpp_activation_email:sent");
+    expect(sent).toHaveLength(1);
+    expect(sent[0].prospect_id).toBe("cs_live_plink_no_visit");
+    expect(JSON.stringify(sent[0])).not.toContain("buyer@example.com");
+  });
+
+  it("does not double-count Payment Link loop events on webhook replay", async () => {
+    const { supabase, rows } = fakeSupabase();
+    const session = {
+      id: "cs_live_plink_replay",
+      amount_total: 29900,
+      customer_details: { email: "buyer@example.com" },
+      client_reference_id: null,
+      metadata: {
+        offer: DPP_OFFER_KEY,
+        plan: "dpp_readiness",
+        source: "direct",
+      },
+    };
+    await fulfillDppPaidSession(supabase, session);
+    await fulfillDppPaidSession(supabase, session);
+    expect(
+      rows.filter(r => r.event_type === "dpp_loop:payment_succeeded")
+    ).toHaveLength(1);
+    expect(
+      rows.filter(r => r.event_type === "dpp_loop:provisioned")
+    ).toHaveLength(1);
+    expect(rows.every(r => r.prospect_id === "cs_live_plink_replay")).toBe(
+      true
+    );
+  });
+
+  it("keeps visit_id as the loop key when the session already has one", async () => {
+    const { supabase, rows } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+    expect(result.handled).toBe(true);
+    const loop = rows.filter(r => String(r.event_type).startsWith("dpp_loop:"));
+    expect(loop.map(r => r.prospect_id)).toEqual([
+      "smoke_check_1",
+      "smoke_check_1",
+    ]);
+    expect(loop.map(r => r.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+      "dpp_loop:provisioned",
+    ]);
+    expect(
+      loop.every(
+        r =>
+          (r.metadata as { stripe_session_id?: string }).stripe_session_id ===
+          "cs_live_smoke_check"
+      )
+    ).toBe(true);
+    expect(loop.some(r => r.prospect_id === "cs_live_smoke_check")).toBe(false);
   });
 });
