@@ -23,6 +23,8 @@ describe("DPP paid entitlement boundary", () => {
     ["subscription mode", { mode: "subscription" }, "recurring"],
     ["subscription id", { subscription: "sub_test_1" }, "recurring"],
     ["zero-dollar purchase", { amount_total: 0 }, "invalid_product"],
+    ["underpaid DPP amount", { amount_total: 29899 }, "invalid_product"],
+    ["overpaid DPP amount", { amount_total: 30000 }, "invalid_product"],
     ["wrong currency", { currency: "eur" }, "invalid_product"],
     ["missing line items", { line_items: null }, "invalid_product"],
     ["missing line-item has_more proof", { line_items: { data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }] } }, "invalid_product"],

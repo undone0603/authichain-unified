@@ -4,8 +4,10 @@
  * with expanded line_items from Stripe before granting.
  */
 import { DPP_PRICE_ID, isDppDemoSession, isDppOffer } from "./dpp-loop";
+import { PLANS } from "./plans";
 
 export const DPP_PAYMENT_LINK_ID = "plink_1UNd1FGqTruSqV8TWahMUQ3l";
+const DPP_PLAN = PLANS.find(plan => plan.id === "dpp_readiness");
 
 export type DppProofSession = {
   id: string;
@@ -52,7 +54,8 @@ export function dppGrantDecision(session: DppProofSession): DppGrantDecision {
   if (smoke) return "authorized_smoke";
 
   if (!Number.isInteger(session.amount_total) ||
-      (session.amount_total ?? 0) <= 0 ||
+      !DPP_PLAN ||
+      session.amount_total !== Math.round(DPP_PLAN.price * 100) ||
       session.currency?.toLowerCase() !== "usd") return "invalid_product";
 
   // Stripe expands line_items as a paginated list. Unknown completeness and
