@@ -12,6 +12,8 @@ from pathlib import Path
 _ALLOWED = {
     "github-environment-audit": "https://github.com/undone0603/authichain-unified/settings/environments",
     "github-workflow-inspect": "https://github.com/undone0603/authichain-unified/actions/workflows/deploy-authichain-com.yml",
+    "github-main-protection-inspect": "https://github.com/undone0603/authichain-unified/settings/branches",
+    "github-repository-rulesets-inspect": "https://github.com/undone0603/authichain-unified/settings/rules",
 }
 _SHA = re.compile(r"^[0-9a-f]{40}$")
 
