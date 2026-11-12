@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { generateKeyPairSync, sign } from 'node:crypto';
+import { createHostProvenanceGate, payloadDigest } from './agentz-host-provenance.mjs';
+const canonical = x => x === null || typeof x !== 'object' ? JSON.stringify(x) : Array.isArray(x) ? '['+x.map(canonical).join(',')+']' : '{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+canonical(x[k])).join(',')+'}';
+const roles=['buyer','payment','bank','fulfillment'];const keys={},signers={};
+for(const role of roles){const {publicKey,privateKey}=generateKeyPairSync('ed25519');keys[role]={key:publicKey.export({type:'spki',format:'pem'}),role,issuer:'host-'+role};signers[role]=privateKey;}
+const clock=()=>1794500000000;
+const gate=()=>createHostProvenanceGate({trustedKeys:keys,audience:'authichain:commercial:read',clock});
+const input=()=>{const contentDigest=payloadDigest({order:'o1',buyer:'b1',amount:150000});return {orderId:'o1',buyerId:'b1',scopeVersion:'v1',contentDigest,receipts:roles.map(role=>{const payload={role,issuer:'host-'+role,audience:'authichain:commercial:read',orderId:'o1',buyerId:'b1',scopeVersion:'v1',contentDigest,issuedAt:clock(),providerRecordId:'source-'+role,providerRecordDigest:payloadDigest({role})};return {kid:role,payload,signature:sign(null,Buffer.from(canonical(payload)),signers[role]).toString('base64url')}})}};
+test('valid host-signed synthetic receipts do not authorize a WIN',()=>{const result=gate().inspect(input());assert.equal(result.status,'AUTHENTICATED_RECEIPTS_READY_FOR_INDEPENDENT_REVIEW');assert.equal(result.commercialTransitionAuthorized,false)});
+test('forged self-declared verified:true cannot pass signatures',()=>{const x=input();x.receipts[0].payload.verified=true;assert.equal(gate().inspect(x).status,'HOLD')});
+test('caller cannot swap public keys by payload',()=>{const x=input();const other=generateKeyPairSync('ed25519');x.receipts[0].publicKey=other.publicKey.export({type:'spki',format:'pem'});x.receipts[0].signature=sign(null,Buffer.from(canonical(x.receipts[0].payload)),other.privateKey).toString('base64url');assert.equal(gate().inspect(x).reason,'invalid_signature')});
+test('tampered paid amount digest is rejected',()=>{const x=input();x.contentDigest=payloadDigest({order:'o1',buyer:'b1',amount:0});assert.equal(gate().inspect(x).reason,'cross_source_binding_mismatch')});
+test('wrong scope is rejected',()=>{const x=input();x.scopeVersion='v2';assert.equal(gate().inspect(x).reason,'cross_source_binding_mismatch')});
+test('one missing receipt is rejected',()=>{const x=input();x.receipts.pop();assert.equal(gate().inspect(x).reason,'missing_attestation_roles')});
+test('duplicate issuer is rejected',()=>{const x=input();x.receipts[1]=x.receipts[0];assert.equal(gate().inspect(x).reason,'duplicate_role_or_issuer')});
+test('expired receipt is rejected',()=>{const x=input();x.receipts[0].payload.issuedAt=clock()-86400001;assert.equal(gate().inspect(x).reason,'expired_or_future_attestation')});
+test('no host trusted keys fails closed',()=>assert.throws(()=>createHostProvenanceGate({trustedKeys:{},audience:'a'})));
+test('unsigned fake envelope fails closed',()=>{const x=input();x.receipts[2].signature='fake';assert.equal(gate().inspect(x).reason,'invalid_signature')});
