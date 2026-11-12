@@ -10,16 +10,16 @@ import { provisionPurchase } from "./provisioning";
 import { renderBillingEmail } from "./billing-emails";
 import { getBrandIdFromMetadata } from "./brand-billing";
 import { sendEmail } from "./email";
-import {
-  dppActivateUrl,
-  recordDppLoopEventOnce,
-} from "./dpp-loop";
+import { dppActivateUrl, recordDppLoopEventOnce } from "./dpp-loop";
 import {
   beginProvisionContinuity,
   finishProvisionContinuity,
 } from "./founder-exit/supabase-log";
 import { markRetryableFulfillment } from "./retryable-fulfillment";
-import { dppGrantDecision, type DppProofSession } from "./dpp-payment-eligibility";
+import {
+  dppGrantDecision,
+  type DppProofSession,
+} from "./dpp-payment-eligibility";
 import { emitTrustEvent } from "../../shared/trust-events";
 
 type SupabaseLike = {
@@ -52,7 +52,9 @@ export async function fulfillDppPaidSession(
         session_id: session.id,
         profile_id: result.profileId,
         plan: session.metadata?.plan || "dpp_readiness",
-        outcome: `activation_email_${result.activationEmail}`,
+        outcome: result.alreadyFulfilled
+          ? "already_fulfilled"
+          : `activation_email_${result.activationEmail}`,
       });
     }
     return result;
@@ -121,8 +123,9 @@ async function fulfillDppPaidSessionOnce(
     });
   }
 
+  let continuityState: Awaited<ReturnType<typeof beginProvisionContinuity>>;
   try {
-    await beginProvisionContinuity(supabase, {
+    continuityState = await beginProvisionContinuity(supabase, {
       sessionId: session.id,
       amountCents: session.amount_total ?? null,
       isDemo: demo,
@@ -130,6 +133,35 @@ async function fulfillDppPaidSessionOnce(
     });
   } catch (err) {
     throw markRetryableFulfillment(err);
+  }
+
+  if (continuityState === "already_succeeded") {
+    return {
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      alreadyFulfilled: true,
+    };
+  }
+  if (continuityState === "grant_recorded") {
+    try {
+      await finishProvisionContinuity(supabase, {
+        sessionId: session.id,
+        amountCents: session.amount_total ?? null,
+        isDemo: demo,
+        plan,
+        grantAlreadyPresent: true,
+        grantApplied: true,
+      });
+    } catch (err) {
+      throw markRetryableFulfillment(err);
+    }
+    return {
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      alreadyFulfilled: true,
+    };
   }
 
   const prov = await provisionPurchase(supabase, {
@@ -140,6 +172,7 @@ async function fulfillDppPaidSessionOnce(
     stripeCustomerId: toId(session.customer),
     stripeSubscriptionId: toId(session.subscription),
     sessionId: session.id,
+    atomicDppSessionGrant: true,
   });
 
   // A resolved profile id does not mean the entitlement write succeeded.
@@ -183,6 +216,7 @@ async function fulfillDppPaidSessionOnce(
       isDemo: demo,
       plan,
       grantAlreadyPresent: prov.skippedIdempotent === true,
+      grantApplied: Boolean(prov.profileId),
     });
   } catch (err) {
     throw markRetryableFulfillment(err);
@@ -281,6 +315,8 @@ export type DppFulfillResult = {
   profileId: string | null;
   /** Outcome of the activation email: skipped = not attempted (no email, demo, or not a DPP grant). */
   activationEmail: ActivationEmailStatus;
+  /** This session's durable continuity record proves fulfillment already ran. */
+  alreadyFulfilled?: boolean;
 };
 
 const EMAIL_LIKE = /[^\s@<>"'(),;:]+@[^\s@<>"'(),;:]+\.[^\s@<>"'(),;:]+/g;
