@@ -439,6 +439,25 @@ describe("fulfillDppPaidSession", () => {
     expect(mismatch.error).not.toBeNull();
   });
 
+  it.each([429, 503])("holds uncertain provider HTTP %i for reconciliation", async status => {
+    vi.mocked(sendEmail).mockResolvedValueOnce({
+      ok: false, provider: "resend", status, error: "provider uncertain",
+    } as never);
+    const { supabase, deliveries, profileUpdates } = fakeSupabase();
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(fulfillDppPaidSession(supabase, paidSession))
+        .rejects.toMatchObject({ name: "RetryableFulfillmentError" });
+      expect(deliveries.get(paidSession.id)?.state).toBe("unknown");
+      await expect(fulfillDppPaidSession(supabase, paidSession))
+        .rejects.toMatchObject({ name: "RetryableFulfillmentError" });
+      expect(sendEmail).toHaveBeenCalledOnce();
+      expect(profileUpdates).toHaveLength(1);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("writes no failure row when the send succeeds", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);
