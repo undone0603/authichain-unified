@@ -56,3 +56,15 @@ test("malformed and unsupported events cannot create subscription",()=>{
   assert.equal(transition(null,{...base,periodEnd:999}).reason,"unsettled_or_invalid_invoice");
   assert.equal(transition(null,{...base,currency:"eur"}).reason,"unsettled_or_invalid_invoice");
 });
+
+test("old-period failure cannot suspend a newly paid renewal",()=>{
+  const renewal={...base,id:"evt_renew999",invoiceId:"in_renew999",periodStart:2000,periodEnd:3000};
+  const active=transition(paid().state,renewal).state;
+  assert.equal(active.status,"active");
+  const late=transition(active,{...base,id:"evt_fail999",type:"invoice.payment_failed"});
+  assert.equal(late.ok,false);assert.equal(late.reason,"stale_or_unknown_failed_period");
+  assert.equal(active.status,"active");
+  assert.equal(canVerify(active,2200),true);
+  const invalid=transition(active,{...base,id:"evt_failbad",type:"invoice.payment_failed",periodEnd:null});
+  assert.equal(invalid.reason,"invalid_failed_period");
+});
