@@ -26,7 +26,7 @@ No-fee funding and program opportunities, ranked. Nothing here has been submitte
 
 **1. Michigan SBDC Tech Team.** One-on-one consulting at no cost, with consultants who review SBIR/STTR proposals. It costs an hour and commits to nothing. It is first because it improves the odds of row 2 and is the door to rows 4 and 6. Next step: the founder requests a consultant at michigansbdc.org.
 
-**2. NSF SBIR Project Pitch.** Four text boxes: innovation (3,500 characters), technical objectives and challenges (3,500), market (1,750), company and team (1,750). NSF answers in about one to two months. Limits: one pitch under review at a time, two per 12 months, three ever for the same project. A draft that stays inside the facts above is in `NSF_SBIR_Project_Pitch_2026-11-11_DRAFT.md`.
+**2. NSF SBIR Project Pitch.** Four text boxes: innovation (3,500 characters), technical objectives and challenges (3,500), market (1,750), company and team (1,750). NSF answers in about one to two months. Limits: one pitch under review at a time, two per 12 months, three ever for the same project. (Draft removed from public repo 2026-11-11.)
 
 Why the odds are low: NSF funds high-risk research, not product engineering, and it asks for a team that is technically qualified to do that research. Most of what AuthiChain has built is integration work. The draft is built around the one open research problem the product has. A reviewer may still read it as engineering. Because only three pitches are ever allowed per project, get the SBDC review (row 1) before spending one.
 
