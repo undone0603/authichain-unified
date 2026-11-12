@@ -60,3 +60,12 @@ Each pack requires source ownership, permitted data, agreed acceptance matrix, t
 #### Prospect-safe phrasing
 
 "Do you already operate an MCP endpoint or A2A agent for supplier-quality evaluations? If so, we can first verify read-only discovery and determine whether provenance checks fit your existing workflow. If not, AuthiChain can quote a bounded MCP or A2A setup package with a synthetic evidence test, documented authentication boundaries and a deployment acceptance plan. No flight certification or autonomous procurement is implied."
+
+### Selected introductory setup pricing (proposal, not an existing checkout SKU)
+
+- **MCP Connect OR A2A Connect:** **$1,500 USD one-time**, for one sandbox, one read-only synthetic operation, auth design, negative-path verification and handoff.
+- **Combined MCP + A2A Launch Kit:** **$2,500 USD one-time**, covering both protocol adapters to one sandbox, equivalent read-only synthetic responses, a regression matrix, and a documented evidence package.
+- **Proposed commercial terms:** 50% upon signed SOW and 50% on accepted delivery. No quote, invoice or payment link should be issued until a real buyer confirms scope and authority. Do not claim that these are live SKUs or that the client has agreed.
+- These figures exclude aerospace certification, independent hardware testing, export-controlled data, production hosting, long-term support, enterprise OAuth infrastructure and regulated security accreditation.
+
+An independent localhost demonstration was assembled and tested on Node 22 with **12/12 tests passing**: isolated synthetic MCP initialize/list/read, A2A Agent Card and SendMessage subset, matching HOLD decisions for identical inputs, unauthorized rejection and unsupported payment calls rejected. This evidence is **not** an exact-head CI run for this PR and does not validate real supplier evidence, full protocol conformance, or client integration. Its ZIP and logs are attached to the ChatGPT implementation conversation, not deployed. Preserve that distinction during review and buyer negotiation.
