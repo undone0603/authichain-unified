@@ -124,6 +124,17 @@ async function loadByKey(
   return rowToAction(data as Record<string, unknown>);
 }
 
+export async function provisionContinuityProfileId(
+  supabase: ContinuitySupabase,
+  sessionId: string
+): Promise<string | null> {
+  const existing = await loadByKey(supabase, `dpp_fulfill:${sessionId}`);
+  const profileRef = existing?.output_evidence_refs.find(ref =>
+    ref.startsWith("profile:")
+  );
+  return profileRef?.slice("profile:".length) || null;
+}
+
 async function persistAction(
   supabase: ContinuitySupabase,
   row: ActionRecord,
@@ -250,6 +261,7 @@ export async function finishProvisionContinuity(
   input: ProvisionContinuityInput & {
     grantAlreadyPresent: boolean;
     grantApplied: boolean;
+    profileId?: string | null;
   }
 ): Promise<"recorded" | "duplicate" | "not_applicable"> {
   const now = input.now ?? new Date();
@@ -274,7 +286,10 @@ export async function finishProvisionContinuity(
           : "grant_persisted",
       verification_status: "observed_unverified",
       output_evidence_refs: input.grantApplied
-        ? [`side-effect:${sideEffectKey}`]
+        ? [
+            `side-effect:${sideEffectKey}`,
+            ...(input.profileId ? [`profile:${input.profileId}`] : []),
+          ]
         : [],
     },
     now

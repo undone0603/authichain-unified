@@ -14,6 +14,7 @@ import { dppActivateUrl, recordDppLoopEventOnce } from "./dpp-loop";
 import {
   beginProvisionContinuity,
   finishProvisionContinuity,
+  provisionContinuityProfileId,
 } from "./founder-exit/supabase-log";
 import { markRetryableFulfillment } from "./retryable-fulfillment";
 import {
@@ -38,6 +39,61 @@ function toId(
 ): string | null {
   if (!value) return null;
   return typeof value === "string" ? value : value.id;
+}
+
+async function findGrantedProfileId(
+  supabase: SupabaseLike,
+  sessionId: string
+): Promise<string | null> {
+  const recordedProfileId = await provisionContinuityProfileId(
+    supabase,
+    sessionId
+  );
+  if (recordedProfileId) return recordedProfileId;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("last_grant_session_id", sessionId)
+    .maybeSingle();
+  if (error) throw new Error("DPP grant recovery profile lookup failed");
+  return typeof data?.id === "string" ? data.id : null;
+}
+
+async function recordRecoveredProvisionedEvent(
+  supabase: SupabaseLike,
+  input: {
+    visitId: string | null;
+    source: string;
+    email: string;
+    profileId: string | null;
+    sessionId: string;
+    plan: string;
+    demo: boolean;
+    allowNoIdentityDemo?: boolean;
+  }
+): Promise<void> {
+  if (!input.visitId) return;
+  if (!input.profileId && !(input.demo && input.allowNoIdentityDemo)) {
+    throw new Error("DPP grant recovery profile not found");
+  }
+
+  await recordDppLoopEventOnce(supabase, {
+    visitId: input.visitId,
+    stage: "provisioned",
+    source: input.source,
+    email: input.email || null,
+    profileId: input.profileId ?? undefined,
+    stripeSessionId: input.sessionId,
+    dedupeKey: input.sessionId,
+    metadata: {
+      plan: input.plan,
+      ...(input.profileId
+        ? { recovered: true }
+        : { skip_reason: "no_identity" }),
+      ...(input.demo ? { is_demo: true } : {}),
+    },
+  });
 }
 
 export async function fulfillDppPaidSession(
@@ -136,15 +192,36 @@ async function fulfillDppPaidSessionOnce(
   }
 
   if (continuityState === "already_succeeded") {
+    let profileId: string | null = null;
+    try {
+      if (visitId) {
+        profileId = await findGrantedProfileId(supabase, session.id);
+        await recordRecoveredProvisionedEvent(supabase, {
+          visitId: String(visitId),
+          source: md.source || "direct",
+          email,
+          profileId,
+          sessionId: session.id,
+          plan,
+          demo,
+          allowNoIdentityDemo: true,
+        });
+      }
+    } catch (err) {
+      throw markRetryableFulfillment(err);
+    }
     return {
       handled: true,
-      profileId: null,
+      profileId,
       activationEmail: "skipped",
       alreadyFulfilled: true,
     };
   }
   if (continuityState === "grant_recorded") {
+    let profileId: string | null;
     try {
+      profileId = await findGrantedProfileId(supabase, session.id);
+      if (!profileId) throw new Error("DPP grant recovery profile not found");
       await finishProvisionContinuity(supabase, {
         sessionId: session.id,
         amountCents: session.amount_total ?? null,
@@ -152,13 +229,23 @@ async function fulfillDppPaidSessionOnce(
         plan,
         grantAlreadyPresent: true,
         grantApplied: true,
+        profileId,
+      });
+      await recordRecoveredProvisionedEvent(supabase, {
+        visitId: visitId ? String(visitId) : null,
+        source: md.source || "direct",
+        email,
+        profileId,
+        sessionId: session.id,
+        plan,
+        demo,
       });
     } catch (err) {
       throw markRetryableFulfillment(err);
     }
     return {
       handled: true,
-      profileId: null,
+      profileId,
       activationEmail: "skipped",
       alreadyFulfilled: true,
     };
@@ -217,6 +304,7 @@ async function fulfillDppPaidSessionOnce(
       plan,
       grantAlreadyPresent: prov.skippedIdempotent === true,
       grantApplied: Boolean(prov.profileId),
+      profileId: prov.profileId,
     });
   } catch (err) {
     throw markRetryableFulfillment(err);

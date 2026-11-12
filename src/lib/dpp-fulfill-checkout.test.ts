@@ -26,15 +26,31 @@ function fakeSupabase(opts?: {
   existingProfile?: boolean;
   insertError?: { message: string } | null;
   updateError?: { message: string } | null;
+  failContinuityUpdateOnce?: boolean;
+  failProvisionedEventOnce?: boolean;
+  preGrantedSessionId?: string;
 }) {
   const rows: Array<Record<string, unknown>> = [];
   const profileUpdates: Array<Record<string, unknown>> = [];
   const profileId = opts?.profileId === undefined ? "prof_1" : opts.profileId;
   const existingProfile = opts?.existingProfile ?? profileId != null;
   const profile: Record<string, unknown> | null =
-    existingProfile && profileId ? { id: profileId } : null;
+    existingProfile && profileId
+      ? {
+          id: profileId,
+          ...(opts?.preGrantedSessionId
+            ? {
+                last_grant_session_id: opts.preGrantedSessionId,
+                generations_limit: 100,
+                generations_used: 20,
+              }
+            : {}),
+        }
+      : null;
   const continuity = new Map<string, Record<string, unknown>[]>();
   const grantedSessions = new Set<string>();
+  let continuityUpdateFailed = false;
+  let provisionedEventFailed = false;
   const from = (table: string) => {
     if (
       table === "founder_exit_actions" ||
@@ -69,6 +85,16 @@ function fakeSupabase(opts?: {
         },
         update: (patch: Record<string, unknown>) => ({
           eq: async (col: string, val: unknown) => {
+            if (
+              table === "founder_exit_actions" &&
+              opts?.failContinuityUpdateOnce &&
+              !continuityUpdateFailed
+            ) {
+              continuityUpdateFailed = true;
+              return {
+                error: { message: "injected continuity update failure" },
+              };
+            }
             const found = bucket.find(row => row[col] === val);
             if (found) Object.assign(found, patch);
             return { error: null };
@@ -81,6 +107,16 @@ function fakeSupabase(opts?: {
     const builder: Record<string, unknown> = {
       insert: (row: Record<string, unknown>) => {
         if (table === "funnel_events") {
+          if (
+            row.event_type === "dpp_loop:provisioned" &&
+            opts?.failProvisionedEventOnce &&
+            !provisionedEventFailed
+          ) {
+            provisionedEventFailed = true;
+            return Promise.resolve({
+              error: { message: "injected provisioned event failure" },
+            });
+          }
           rows.push(row);
           return Promise.resolve({ error: null });
         }
@@ -133,6 +169,12 @@ function fakeSupabase(opts?: {
       },
       maybeSingle: async () => {
         if (table === "profiles") {
+          if (
+            filters.some(([col]) => col === "last_grant_session_id") &&
+            !filters.every(([col, val]) => profile?.[col] === val)
+          ) {
+            return { data: null, error: null };
+          }
           return {
             data: profile,
             error: null,
@@ -155,6 +197,8 @@ function fakeSupabase(opts?: {
       return { data: null, error: opts.updateError };
     }
     const sessionId = String(args.p_session_id);
+    const effects = continuity.get("founder_exit_side_effects") ?? [];
+    continuity.set("founder_exit_side_effects", effects);
     if (grantedSessions.has(sessionId)) {
       return {
         data: { status: "already_granted", profile_id: args.p_profile_id },
@@ -162,6 +206,13 @@ function fakeSupabase(opts?: {
       };
     }
     grantedSessions.add(sessionId);
+    if (profile?.last_grant_session_id === sessionId) {
+      effects.push({ idempotency_key: `grant:${sessionId}` });
+      return {
+        data: { status: "already_granted", profile_id: args.p_profile_id },
+        error: null,
+      };
+    }
     const limit = Number(profile?.generations_limit ?? 0);
     const used = Number(profile?.generations_used ?? 0);
     const patch = {
@@ -173,8 +224,6 @@ function fakeSupabase(opts?: {
     };
     if (profile) Object.assign(profile, patch);
     profileUpdates.push(patch);
-    const effects = continuity.get("founder_exit_side_effects") ?? [];
-    continuity.set("founder_exit_side_effects", effects);
     effects.push({ idempotency_key: `grant:${sessionId}` });
     return {
       data: { status: "granted", profile_id: args.p_profile_id },
@@ -614,6 +663,86 @@ describe("fulfillDppPaidSession", () => {
     expect(actions).toHaveLength(1);
     expect(actions[0]?.state).toBe("succeeded");
     expect(continuity.get("founder_exit_side_effects")).toHaveLength(1);
+  });
+
+  it("does not regrant a legacy session already marked on the profile", async () => {
+    const { supabase, rows, profileUpdates, continuity } = fakeSupabase({
+      preGrantedSessionId: paidSession.id,
+    });
+
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+
+    expect(result).toMatchObject({
+      handled: true,
+      profileId: "prof_1",
+    });
+    expect(profileUpdates).toHaveLength(0);
+    expect(
+      continuity
+        .get("founder_exit_side_effects")
+        ?.map(row => row.idempotency_key)
+    ).toEqual([`grant:${paidSession.id}`]);
+    expect(rows.map(row => row.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+      "dpp_loop:provisioned",
+    ]);
+  });
+
+  it("recovers provisioned recording after the atomic grant receipt was committed", async () => {
+    const { supabase, rows, profileUpdates, continuity } = fakeSupabase({
+      failContinuityUpdateOnce: true,
+    });
+
+    await expect(
+      fulfillDppPaidSession(supabase, paidSession)
+    ).rejects.toMatchObject({ name: "RetryableFulfillmentError" });
+    expect(rows.map(row => row.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+    ]);
+    expect(profileUpdates).toHaveLength(1);
+
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+
+    expect(result).toMatchObject({
+      handled: true,
+      profileId: "prof_1",
+      alreadyFulfilled: true,
+    });
+    expect(rows.map(row => row.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+      "dpp_loop:provisioned",
+    ]);
+    expect(profileUpdates).toHaveLength(1);
+    expect(continuity.get("founder_exit_actions")?.[0]?.state).toBe(
+      "succeeded"
+    );
+  });
+
+  it("recovers a missing provisioned event after continuity already succeeded", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase({
+      failProvisionedEventOnce: true,
+    });
+
+    await expect(
+      fulfillDppPaidSession(supabase, paidSession)
+    ).resolves.toMatchObject({ handled: true });
+    expect(rows.map(row => row.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+    ]);
+    expect(profileUpdates).toHaveLength(1);
+
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+
+    expect(result).toMatchObject({
+      handled: true,
+      profileId: "prof_1",
+      alreadyFulfilled: true,
+    });
+    expect(rows.map(row => row.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+      "dpp_loop:provisioned",
+    ]);
+    expect(profileUpdates).toHaveLength(1);
   });
 
   it("does not provision a complete-but-unpaid checkout", async () => {

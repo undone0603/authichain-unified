@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   beginProvisionContinuity,
   finishProvisionContinuity,
+  provisionContinuityProfileId,
   type ContinuitySupabase,
 } from "./supabase-log";
 
@@ -108,6 +109,7 @@ describe("provision continuity", () => {
       ...input,
       grantAlreadyPresent: false,
       grantApplied: true,
+      profileId: "prof_1",
       now: new Date("2026-10-13T22:00:02.000Z"),
     });
     const second = await finishProvisionContinuity(db, {
@@ -128,6 +130,9 @@ describe("provision continuity", () => {
       "plan:dpp_readiness",
       "is_demo:false",
     ]);
+    await expect(
+      provisionContinuityProfileId(db, input.sessionId)
+    ).resolves.toBe("prof_1");
   });
 
   it("recognizes an already-recorded grant while recovering a running action", async () => {
