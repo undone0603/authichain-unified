@@ -58,6 +58,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      # Sparse-checkout settings persist in the shared self-hosted worktree.
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f pnpm-lock.yaml
+
       - name: Setup pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
