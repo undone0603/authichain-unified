@@ -23,7 +23,8 @@ import {
   TOKENOMICS_PAY_TO,
 } from "../../scripts/lib/evm-chains";
 import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "./x402";
-import { catalogOffers, planPaymentLink, planUsd } from "./plans";
+import { planPaymentLink, planUsd } from "./plans";
+import { openCatalogOffers } from "./retired-plans";
 import {
   FIRST_SCAN_GIFT_URL,
   FIRST_SCAN_REWARD_QRON,
@@ -145,7 +146,7 @@ export function agentPricingDiscovery() {
       strainchain_farm: `$${MONEY_RAILS.stripe.skus.farmUsd}/month`,
       starter: `$${planUsd("starter")} one-time`,
       creator: `$${planUsd("creator")} one-time`,
-      offers: catalogOffers(),
+      offers: openCatalogOffers(),
       checkout: {
         passport: planPaymentLink("strainchain_passport"),
         dpp: planPaymentLink("dpp_readiness"),

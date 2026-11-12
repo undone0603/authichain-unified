@@ -119,7 +119,15 @@ test("Worker dry-run uses supported step workdirs and lockfile cache path", () =
     assert.ok(workflow.includes(expected), name);
   }
   assert.ok(workflow.includes("cache-dependency-path: " + checkout + "/pnpm-lock.yaml"));
-  assert.ok(workflow.includes("vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'"));
+  // Hosted ubuntu-24.04 is billing-locked. Dry-run uses the CI self-hosted
+  // var (not the isolation-attested apply gate on autonomy-reconcile).
+  assert.ok(
+    workflow.includes("vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON(")
+  );
+  assert.match(
+    workflow,
+    /fromJSON\('\["self-hosted","Linux","ARM64",".+"\]'\) \|\| 'ubuntu-24\.04'/
+  );
   assert.ok(!workflow.includes("/home/zac"));
   assert.ok(!workflow.includes("secrets.CLOUDFLARE_"));
 });
