@@ -40,7 +40,7 @@
       "type": "local",
       "command": "a2a-mcp-server",
       "args": [],
-      "tools": ["*"]
+      "tools": ["a2a_get_agent_card", "a2a_get_task"]
     }
   }
 }
