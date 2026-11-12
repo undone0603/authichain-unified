@@ -14,8 +14,20 @@ create table if not exists public.dpp_activation_email_delivery (
 );
 
 alter table public.dpp_activation_email_delivery enable row level security;
-revoke all on public.dpp_activation_email_delivery from public, anon, authenticated;
-grant select, insert, update on public.dpp_activation_email_delivery to service_role;
+revoke all on public.dpp_activation_email_delivery from public;
+do $roles$
+begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then
+    revoke all on public.dpp_activation_email_delivery from anon;
+  end if;
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then
+    revoke all on public.dpp_activation_email_delivery from authenticated;
+  end if;
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    grant select, insert, update on public.dpp_activation_email_delivery to service_role;
+  end if;
+end
+$roles$;
 
 -- Atomic claim prevents concurrent webhook replays sending the same purpose.
 -- A process crash while 'sending' is deliberately UNKNOWN: never resend blindly,
@@ -76,10 +88,24 @@ begin
 end;
 $$;
 
-revoke all on function public.claim_dpp_activation_email(text,text,text) from public, anon, authenticated;
-revoke all on function public.finish_dpp_activation_email(text,text,text) from public, anon, authenticated;
-grant execute on function public.claim_dpp_activation_email(text,text,text) to service_role;
-grant execute on function public.finish_dpp_activation_email(text,text,text) to service_role;
+revoke all on function public.claim_dpp_activation_email(text,text,text) from public;
+revoke all on function public.finish_dpp_activation_email(text,text,text) from public;
+do $roles$
+begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then
+    revoke all on function public.claim_dpp_activation_email(text,text,text) from anon;
+    revoke all on function public.finish_dpp_activation_email(text,text,text) from anon;
+  end if;
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then
+    revoke all on function public.claim_dpp_activation_email(text,text,text) from authenticated;
+    revoke all on function public.finish_dpp_activation_email(text,text,text) from authenticated;
+  end if;
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    grant execute on function public.claim_dpp_activation_email(text,text,text) to service_role;
+    grant execute on function public.finish_dpp_activation_email(text,text,text) to service_role;
+  end if;
+end
+$roles$;
 
 comment on table public.dpp_activation_email_delivery is
   'Delivery claims are distinct from DPP grant receipts. Unknown sends require reconciliation, never blind retry.';
