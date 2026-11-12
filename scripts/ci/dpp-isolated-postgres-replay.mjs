@@ -63,6 +63,11 @@ try {
   assert.equal(s.profile.generations_limit,50);
   assert.equal(s.profile.generations_used,0);
   assert.deepEqual(s.receipts,["grant:cs_ci_parallel"]);
+  // The newest migration binds the receipt to its original profile.
+  let receipt = await query(main,
+    "SELECT profile_id FROM public.founder_exit_side_effects WHERE idempotency_key=$1",
+    ["grant:cs_ci_parallel"]);
+  assert.equal(receipt[0].profile_id, "buyer-a", "grant receipt missing buyer association");
   assert.equal((await grant("buyer-a","cs_ci_parallel")).status,"already_granted");
   s=await state(main,"buyer-a");
   assert.equal(s.profile.generations_limit,50);
@@ -75,6 +80,10 @@ try {
   s=await state(main,"legacy");
   assert.equal(s.profile.generations_limit,50);
   assert.ok(s.receipts.includes("grant:cs_ci_legacy"));
+  receipt = await query(main,
+    "SELECT profile_id FROM public.founder_exit_side_effects WHERE idempotency_key=$1",
+    ["grant:cs_ci_legacy"]);
+  assert.equal(receipt[0].profile_id, "legacy", "legacy receipt missing profile");
   await main.query("UPDATE public.profiles SET generations_used=10 WHERE id='buyer-a'");
   assert.equal((await grant("buyer-a","cs_ci_second")).status,"granted");
   s=await state(main,"buyer-a");
