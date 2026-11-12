@@ -10,14 +10,14 @@ export function qualifyBuyer(b = {}) {
  if (!evidence(b.budgetEvidence) || b.budgetEvidence.approved !== true || b.budgetEvidence.currency !== 'USD' || !Number.isInteger(b.budgetEvidence.approvedCents) || b.budgetEvidence.approvedCents < 150000) missing.push('approved_budget');
  if (!evidence(b.authorityEvidence) || b.authorityEvidence.canCommit !== true) missing.push('authorized_purchaser');
  if (!okText(b.suppressionCheckedAt) || !Number.isFinite(Date.parse(b.suppressionCheckedAt)) || b.doNotContact !== false) missing.push('contact_eligibility');
- return { status: missing.length ? 'UNVERIFIED' : 'QUALIFIED', missing, sendAuthorized:false, paymentAuthorized:false };
+ return { status: missing.length ? 'UNVERIFIED' : 'EVIDENCE_CONSISTENT_UNATTESTED', missing:missing.length?missing:['authoritative_buyer_confirmation_required'], sendAuthorized:false, paymentAuthorized:false };
 }
 export function quoteReadiness(q = {}) {
  const missing = [...qualifyBuyer(q.buyerEvidence).missing];
  if (!PRICES[q.packageId] || q.priceCents !== PRICES[q.packageId]) missing.push('package_price');
  if (!evidence(q.sowAcceptance) || q.sowAcceptance.accepted !== true || q.sowAcceptance.scopeVersion !== q.scopeVersion) missing.push('accepted_sow');
  if (q.operatorHoldReleased !== true || q.productionSendEnabled !== true) missing.push('outbound_authorization');
- return { status: missing.length ? 'HOLD' : 'READY_FOR_HUMAN_AUTHORIZED_PAYMENT_REQUEST', missing, createsCharge:false };
+ return { status:'HOLD', missing:missing.length?missing:['independently_authenticated_authorization_required'], createsCharge:false };
 }
 export function reconcilePaidFulfillment(x = {}) {
  const missing=[]; const expected=PRICES[x.packageId];
@@ -29,6 +29,6 @@ export function reconcilePaidFulfillment(x = {}) {
  if (!evidence(x.nonFounderEvidence) || x.nonFounderEvidence.independentBuyer !== true || x.nonFounderEvidence.buyerId !== x.buyerAuthorization?.buyerId) missing.push('outside_buyer');
  if (!evidence(x.fulfillmentEvidence) || x.fulfillmentEvidence.accepted !== true || !/^sha256:[0-9a-f]{64}$/.test(x.fulfillmentEvidence.artifactSha256 || '')) missing.push('accepted_fulfillment_digest');
  if (!evidence(x.payoutEvidence) || x.payoutEvidence.status !== 'paid' || x.payoutEvidence.reconciledToBank !== true || !(x.payoutEvidence.amount > 0)) missing.push('reconciled_bank_payout');
- return { status:missing.length?'UNVERIFIED':'WIN_VERIFIED', win:!missing.length, missing, automaticCrmClose:false };
+ // Input evidence may be wholly fabricated by the caller; only an independent authenticated verifier can attest a WIN.\n return { status:missing.length?'UNVERIFIED':'EVIDENCE_CONSISTENT_UNATTESTED', win:false, missing:missing.length?missing:['authoritative_source_and_bank_attestation_required'], automaticCrmClose:false };
 }
 export const evidenceDigest = value => 'sha256:' + createHash('sha256').update(JSON.stringify(value)).digest('hex');
