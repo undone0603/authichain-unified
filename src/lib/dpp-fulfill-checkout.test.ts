@@ -388,6 +388,57 @@ describe("fulfillDppPaidSession", () => {
     }
   });
 
+  it("allows only one concurrent activation claim per paid session", async () => {
+    const { supabase } = fakeSupabase();
+    const [first, second] = await Promise.all([
+      supabase.rpc("claim_dpp_activation_email", {
+        p_session_id: paidSession.id,
+        p_profile_id: "prof_1",
+        p_claim_token: "claim-token-first",
+      }),
+      supabase.rpc("claim_dpp_activation_email", {
+        p_session_id: paidSession.id,
+        p_profile_id: "prof_1",
+        p_claim_token: "claim-token-second",
+      }),
+    ]);
+    expect([first.data, second.data].sort()).toEqual(["claimed", "reconcile"]);
+    const wrong = await supabase.rpc("finish_dpp_activation_email", {
+      p_session_id: paidSession.id,
+      p_claim_token: "claim-token-second",
+      p_outcome: "sent",
+    });
+    expect(wrong.data).toBe(false);
+    const correct = await supabase.rpc("finish_dpp_activation_email", {
+      p_session_id: paidSession.id,
+      p_claim_token: "claim-token-first",
+      p_outcome: "sent",
+    });
+    expect(correct.data).toBe(true);
+    const later = await supabase.rpc("claim_dpp_activation_email", {
+      p_session_id: paidSession.id,
+      p_profile_id: "prof_1",
+      p_claim_token: "claim-token-third",
+    });
+    expect(later.data).toBe("sent");
+  });
+
+  it("refuses delivery claims for a different granted profile", async () => {
+    const { supabase } = fakeSupabase();
+    const first = await supabase.rpc("claim_dpp_activation_email", {
+      p_session_id: paidSession.id,
+      p_profile_id: "prof_1",
+      p_claim_token: "claim-token-first",
+    });
+    expect(first.data).toBe("claimed");
+    const mismatch = await supabase.rpc("claim_dpp_activation_email", {
+      p_session_id: paidSession.id,
+      p_profile_id: "prof_2",
+      p_claim_token: "claim-token-second",
+    });
+    expect(mismatch.error).not.toBeNull();
+  });
+
   it("writes no failure row when the send succeeds", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);
