@@ -1546,6 +1546,7 @@ describe("handleStripeWebhook — Starter amount fallback gate (#1890 parity, ed
           sessionId: `cs_gate_zero_${String(label).replace(/\W+/g, "_")}`,
         })
       );
+      expect(growthRecordRpc).not.toHaveBeenCalled();
     }
   );
 
