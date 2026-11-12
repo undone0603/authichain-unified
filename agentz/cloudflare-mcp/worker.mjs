@@ -1,4 +1,5 @@
 import {enqueue,recent,runQueue} from "./memory.mjs";
+import {accessChatConfigured,verifyAccessChatAssertion} from "./access-auth.mjs";
 /** AgentZ Cloudflare edge MCP gateway, read-only foundation.
  * No secrets or privileged GitHub operations are exposed.
  * Configure AGENTZ_MCP_TOKEN as a Worker secret before deployment.
@@ -29,9 +30,18 @@ export default {
    return json({service:"agentz-mcp-edge",...execution});
   }
   if(request.method==="GET"&&new URL(request.url).pathname==="/health")return json({service:"agentz-mcp-edge",status:"up",authenticated_tools:true});
-  if(!env.AGENTZ_MCP_TOKEN)return json({error:"not configured"},503);
+  // Machine-token callers retain their existing permissions. For browser/hosted
+  // OAuth clients, accept only a signed, audience-bound, short-lived Cloudflare
+  // Access assertion for the configured founder account. A caller can supply
+  // Cf-Access-Jwt-Assertion directly on workers.dev, so NEVER trust this header
+  // without independent issuer/JWKS signature + identity verification.
+  if(!env.AGENTZ_MCP_TOKEN&&!accessChatConfigured(env))return json({error:"not configured"},503);
   const supplied=(request.headers.get("authorization")||"").replace(/^Bearer /i,"");
-  if(!supplied||!(await equalSecret(supplied,env.AGENTZ_MCP_TOKEN)))return json({error:"unauthorized"},401);
+  const machineAuthenticated=Boolean(env.AGENTZ_MCP_TOKEN&&supplied&&await equalSecret(supplied,env.AGENTZ_MCP_TOKEN));
+  const chatAuthenticated=!machineAuthenticated&&await verifyAccessChatAssertion(
+   request.headers.get("Cf-Access-Jwt-Assertion"),env
+  );
+  if(!machineAuthenticated&&!chatAuthenticated)return json({error:"unauthorized"},401);
   if(request.method!=="POST"||new URL(request.url).pathname!=="/mcp")return json({error:"not found"},404);
   let call;try{call=await request.json()}catch{return json({error:"invalid JSON"},400)}
   if(call?.jsonrpc!=="2.0"||typeof call.method!=="string")return json({error:"invalid JSON-RPC"},400);
@@ -42,6 +52,9 @@ export default {
   if(call.method==="tools/list")return result({tools:TOOLS});
   if(call.method!=="tools/call")return error(-32601,"method not found");
   const name=call.params?.name;
+  // Hosted chat OAuth identity is deliberately read-only; the existing machine
+  // credential is the only principal authorized to queue work.
+  if(chatAuthenticated&&name==="agentz_enqueue_probe")return error(-32001,"tool requires separate machine authorization");
   if(name==="agentz_enqueue_probe"||name==="agentz_memory_recent"){
    try {const value=name==="agentz_enqueue_probe"?await enqueue(env,call.params?.arguments):await recent(env,call.params?.arguments);return result({content:[{type:"text",text:JSON.stringify(value)}]})}
    catch(e){return error(-32000,String(e.message).slice(0,200))}
