@@ -132,7 +132,15 @@ export async function provisionContinuityProfileId(
   const profileRef = existing?.output_evidence_refs.find(ref =>
     ref.startsWith("profile:")
   );
-  return profileRef?.slice("profile:".length) || null;
+  if (profileRef) return profileRef.slice("profile:".length);
+
+  const { data, error } = await supabase
+    .from("founder_exit_side_effects")
+    .select("profile_id")
+    .eq("idempotency_key", `grant:${sessionId}`)
+    .maybeSingle();
+  fail("grant_profile_lookup", error);
+  return typeof data?.profile_id === "string" ? data.profile_id : null;
 }
 
 async function persistAction(

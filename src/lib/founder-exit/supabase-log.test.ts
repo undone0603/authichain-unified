@@ -170,4 +170,16 @@ describe("provision continuity", () => {
     );
     expect(db.rows("founder_exit_side_effects")).toHaveLength(1);
   });
+
+  it("recovers the profile from the atomic grant receipt", async () => {
+    const db = memorySupabase();
+    await db.from("founder_exit_side_effects").insert({
+      idempotency_key: "grant:cs_test_continuity",
+      profile_id: "prof_1",
+    });
+
+    await expect(
+      provisionContinuityProfileId(db, input.sessionId)
+    ).resolves.toBe("prof_1");
+  });
 });

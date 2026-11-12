@@ -207,7 +207,10 @@ function fakeSupabase(opts?: {
     }
     grantedSessions.add(sessionId);
     if (profile?.last_grant_session_id === sessionId) {
-      effects.push({ idempotency_key: `grant:${sessionId}` });
+      effects.push({
+        idempotency_key: `grant:${sessionId}`,
+        profile_id: String(args.p_profile_id),
+      });
       return {
         data: { status: "already_granted", profile_id: args.p_profile_id },
         error: null,
@@ -224,13 +227,16 @@ function fakeSupabase(opts?: {
     };
     if (profile) Object.assign(profile, patch);
     profileUpdates.push(patch);
-    effects.push({ idempotency_key: `grant:${sessionId}` });
+    effects.push({
+      idempotency_key: `grant:${sessionId}`,
+      profile_id: String(args.p_profile_id),
+    });
     return {
       data: { status: "granted", profile_id: args.p_profile_id },
       error: null,
     };
   };
-  return { supabase: { from, rpc }, rows, profileUpdates, continuity };
+  return { supabase: { from, rpc }, rows, profileUpdates, continuity, profile };
 }
 
 const paidSession = {
@@ -689,9 +695,10 @@ describe("fulfillDppPaidSession", () => {
   });
 
   it("recovers provisioned recording after the atomic grant receipt was committed", async () => {
-    const { supabase, rows, profileUpdates, continuity } = fakeSupabase({
-      failContinuityUpdateOnce: true,
-    });
+    const { supabase, rows, profileUpdates, continuity, profile } =
+      fakeSupabase({
+        failContinuityUpdateOnce: true,
+      });
 
     await expect(
       fulfillDppPaidSession(supabase, paidSession)
@@ -700,6 +707,7 @@ describe("fulfillDppPaidSession", () => {
       "dpp_loop:payment_succeeded",
     ]);
     expect(profileUpdates).toHaveLength(1);
+    if (profile) profile.last_grant_session_id = "cs_later_checkout";
 
     const result = await fulfillDppPaidSession(supabase, paidSession);
 

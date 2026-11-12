@@ -1,4 +1,25 @@
 -- Preserve credits already granted by the pre-atomic fulfillment path.
+ALTER TABLE public.founder_exit_side_effects
+  ADD COLUMN IF NOT EXISTS profile_id text;
+
+WITH unique_profile_grants AS (
+  SELECT
+    last_grant_session_id,
+    min(id::text) AS profile_id
+  FROM public.profiles
+  WHERE last_grant_session_id IS NOT NULL
+  GROUP BY last_grant_session_id
+  HAVING count(*) = 1
+)
+UPDATE public.founder_exit_side_effects AS side_effect
+SET profile_id = unique_profile_grants.profile_id
+FROM unique_profile_grants
+WHERE side_effect.profile_id IS NULL
+  AND side_effect.idempotency_key = 'grant:' || unique_profile_grants.last_grant_session_id;
+
+COMMENT ON COLUMN public.founder_exit_side_effects.profile_id IS
+  'Profile associated with a grant receipt; null when a historical mapping is unavailable.';
+
 CREATE OR REPLACE FUNCTION public.grant_dpp_checkout_session(
   p_profile_id text,
   p_session_id text,
@@ -17,6 +38,7 @@ DECLARE
   v_new_used integer;
   v_keep_subscription boolean;
   v_grant_key text;
+  v_receipt_profile_id text;
 BEGIN
   IF p_profile_id IS NULL OR btrim(p_profile_id) = ''
      OR p_session_id IS NULL OR btrim(p_session_id) = ''
@@ -25,11 +47,14 @@ BEGIN
   END IF;
 
   v_grant_key := 'grant:' || p_session_id;
-  INSERT INTO public.founder_exit_side_effects (idempotency_key)
-  VALUES (v_grant_key)
-  ON CONFLICT (idempotency_key) DO NOTHING;
-  IF NOT FOUND THEN
-    RETURN jsonb_build_object('status', 'already_granted');
+  SELECT profile_id INTO v_receipt_profile_id
+  FROM public.founder_exit_side_effects
+  WHERE idempotency_key = v_grant_key;
+  IF FOUND THEN
+    RETURN jsonb_build_object(
+      'status', 'already_granted',
+      'profile_id', v_receipt_profile_id
+    );
   END IF;
 
   SELECT * INTO v_profile
@@ -41,7 +66,35 @@ BEGIN
   END IF;
 
   IF v_profile.last_grant_session_id = p_session_id THEN
-    RETURN jsonb_build_object('status', 'already_granted');
+    INSERT INTO public.founder_exit_side_effects (idempotency_key, profile_id)
+    VALUES (v_grant_key, v_profile.id::text)
+    ON CONFLICT (idempotency_key) DO NOTHING;
+    IF NOT FOUND THEN
+      SELECT profile_id INTO v_receipt_profile_id
+      FROM public.founder_exit_side_effects
+      WHERE idempotency_key = v_grant_key;
+      RETURN jsonb_build_object(
+        'status', 'already_granted',
+        'profile_id', v_receipt_profile_id
+      );
+    END IF;
+    RETURN jsonb_build_object(
+      'status', 'already_granted',
+      'profile_id', v_profile.id
+    );
+  END IF;
+
+  INSERT INTO public.founder_exit_side_effects (idempotency_key, profile_id)
+  VALUES (v_grant_key, v_profile.id::text)
+  ON CONFLICT (idempotency_key) DO NOTHING;
+  IF NOT FOUND THEN
+    SELECT profile_id INTO v_receipt_profile_id
+    FROM public.founder_exit_side_effects
+    WHERE idempotency_key = v_grant_key;
+    RETURN jsonb_build_object(
+      'status', 'already_granted',
+      'profile_id', v_receipt_profile_id
+    );
   END IF;
 
   v_limit := COALESCE(v_profile.generations_limit, 0);
