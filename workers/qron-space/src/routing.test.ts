@@ -552,6 +552,24 @@ test("the 404 escapes the path, so a hostile URL cannot inject markup", async ()
   );
 });
 
+test("Nightstamp Digital /order?preset=starmap&sku=digital redirects to /starmap", async () => {
+  const res = await get("/order?preset=starmap&sku=digital");
+  assert.equal(res.status, 302);
+  assert.equal(
+    res.headers.get("location"),
+    "https://qron.space/starmap?preset=starmap&sku=digital"
+  );
+});
+
+test("trailing-slash /order/ also redirects to /starmap and keeps the query", async () => {
+  const res = await get("/order/?preset=starmap&sku=digital");
+  assert.equal(res.status, 302);
+  assert.equal(
+    res.headers.get("location"),
+    "https://qron.space/starmap?preset=starmap&sku=digital"
+  );
+});
+
 test("Nightstamp pages and APIs are proxied to the app worker", async () => {
   const real = globalThis.fetch;
   const calls: Request[] = [];

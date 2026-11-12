@@ -154,13 +154,21 @@ async function getWebhookSupabase() {
   return createClient(url, key);
 }
 
+function isDemoCheckoutSession(session: Stripe.Checkout.Session): boolean {
+  const metadata = (session.metadata || {}) as Record<string, unknown>;
+  const demo = metadata.is_demo ?? metadata.demo;
+  return demo === true || demo === "true" || demo === "1";
+}
+
 async function fulfillCatalogCreditsIfPaid(
   session: Stripe.Checkout.Session
 ): Promise<boolean | "reconciliation_required"> {
   if (session.payment_status !== "paid") return false;
-  // Stripe marks fully discounted $0 sessions as paid without collecting money.
-  // DPP is handled separately; do not grant paid catalog credits for $0/unknown totals.
-  if (session.amount_total == null || session.amount_total <= 0) return false;
+  // Demo / is_demo sessions must never receive catalog credits. A 100% promo
+  // still arrives as payment_status=paid with amount_total=0 — grant those,
+  // matching the DPP path. Unknown (null) totals stay ungranted.
+  if (isDemoCheckoutSession(session)) return false;
+  if (session.amount_total == null || session.amount_total < 0) return false;
   const linePriceId = checkoutLinePriceId(session);
   const { isDppOffer } = await import("../../src/lib/dpp-loop");
   if (isDppOffer(session.metadata || {}, linePriceId)) return false;

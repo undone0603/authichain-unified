@@ -56,7 +56,7 @@ CREATE POLICY "stripe_reconciler inserts runs" ON public.reconciliation_runs
   FOR INSERT TO stripe_reconciler WITH CHECK (true);
 
 -- Read-only, non-PII columns on ledger tables.
-GRANT SELECT (session_id, amount_cents, currency, status, created_at)
+GRANT SELECT (session_id, amount, currency, status, created_at)
   ON public.payments TO stripe_reconciler;
 CREATE POLICY "stripe_reconciler reads payments" ON public.payments
   FOR SELECT TO stripe_reconciler USING (true);

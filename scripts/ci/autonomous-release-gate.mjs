@@ -13,7 +13,8 @@ export const REQUIRED = [
   'extras', 'build', 'main-quality-gate',
 ].map(s => 'ci/circleci: ' + s);
 const SHA = /^[a-f0-9]{40}$/;
-const CIRCLE_JOB = /^https:\/\/circleci\.com\/gh\/undone0603\/authichain-unified\/[0-9]+\/?$/;
+// Accept the current CircleCI app job URL and the older repository-scoped job URL.
+const CIRCLE_JOB = /^(?:https:\/\/circleci\.com\/gh\/undone0603\/authichain-unified\/[0-9]+\/?|https:\/\/app\.circleci\.com\/workflow\/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\/job\/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})$/;
 function guard(ok, message) { if (!ok) throw new Error('release policy: ' + message); }
 
 export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, ruleset, environment, statuses}) {

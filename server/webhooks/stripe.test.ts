@@ -1588,17 +1588,60 @@ describe("handleStripeWebhook — Starter amount fallback gate (#1890 parity, ed
   });
 
   it.each([
-    ["Starter metadata", { metadata: { plan: "starter" } }],
-    ["Creator metadata", { metadata: { plan: "creator" } }],
-    ["known Starter price", { metadata: { stripe_price_id: "price_1UIoEVGqTruSqV8T61lp48wB" } }],
-  ])("zero-total paid %s checkout never grants catalog credits", async (label, over) => {
-    await run(`gate_zero_${String(label).replace(/\W+/g, "_")}`, {
+    ["Starter metadata", { metadata: { plan: "starter" } }, "starter"],
+    ["Creator metadata", { metadata: { plan: "creator" } }, "creator"],
+    [
+      "known Starter price",
+      { metadata: { stripe_price_id: "price_1UIoEVGqTruSqV8T61lp48wB" } },
+      "starter",
+    ],
+  ])(
+    "paid + amount_total 0 grants catalog credits for a 100%% promo (%s)",
+    async (label, over, plan) => {
+      await run(`gate_zero_${String(label).replace(/\W+/g, "_")}`, {
+        amount_total: 0,
+        amount_subtotal: 2900,
+        total_details: { amount_discount: 2900 },
+        ...over,
+      });
+      expect(provisionPurchase).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          plan,
+          sessionId: `cs_gate_zero_${String(label).replace(/\W+/g, "_")}`,
+        })
+      );
+      expect(growthRecordRpc).not.toHaveBeenCalled();
+    }
+  );
+
+  it("does not grant catalog credits for a paid demo / is_demo session, including $0", async () => {
+    await run("gate_zero_demo", {
       amount_total: 0,
-      amount_subtotal: 0,
-      ...over,
+      amount_subtotal: 2900,
+      total_details: { amount_discount: 2900 },
+      metadata: { plan: "starter", is_demo: "true" },
+    });
+    await run("gate_paid_demo", {
+      amount_total: 2900,
+      metadata: { plan: "starter", is_demo: "true" },
+    });
+    await run("gate_paid_demo_flag", {
+      amount_total: 2900,
+      metadata: { plan: "starter", demo: "true" },
     });
     expect(provisionPurchase).not.toHaveBeenCalled();
-    expect(growthRecordRpc).not.toHaveBeenCalled();
+  });
+
+  it("does not grant catalog credits when payment_status is unpaid, including $0", async () => {
+    await run("gate_zero_unpaid", {
+      payment_status: "unpaid",
+      amount_total: 0,
+      amount_subtotal: 2900,
+      total_details: { amount_discount: 2900 },
+      metadata: { plan: "starter" },
+    });
+    expect(provisionPurchase).not.toHaveBeenCalled();
   });
 
   it("unknown total with explicit Starter metadata never grants credits", async () => {
