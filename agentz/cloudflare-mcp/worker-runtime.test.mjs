@@ -57,6 +57,7 @@ test("signed Cloudflare Access identity can read tools but cannot queue work",as
   };
   const listing=await invoke("list");
   assert.ok(listing.result.tools.some(t=>t.name==="agentz_readiness"));
+  assert.ok(!listing.result.tools.some(t=>t.name==="agentz_enqueue_probe"));
   const rejection=await invoke("agentz_enqueue_probe");
   assert.equal(rejection.error.code,-32001);
   const readiness=await invoke("agentz_readiness");
