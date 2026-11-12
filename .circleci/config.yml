@@ -60,7 +60,18 @@ jobs:
           seconds: 1200
 
   test-other:
-    executor: node
+    # Isolated Docker services, no production contexts, persistent mounts or secrets.
+    docker:
+      - image: cimg/node:22.23.3
+      - image: postgres:17-alpine
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: dpp_disposable_ci_only
+          POSTGRES_DB: dpp_activation_test
+    resource_class: large
+    working_directory: ~/project
+    environment:
+      DPP_TEST_DATABASE_URL: postgresql://postgres:dpp_disposable_ci_only@127.0.0.1:5432/dpp_activation_test
     steps:
       - bounded-check:
           task: test-other
