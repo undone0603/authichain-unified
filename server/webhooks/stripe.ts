@@ -424,9 +424,12 @@ async function fulfillDppCheckoutIfPaid(
 
   // The webhook payload usually lacks expanded line items. Retrieve the
   // current Stripe record; event metadata and amount alone are not price proof.
-  const verified = await getStripeClient().checkout.sessions.retrieve(session.id, {
-    expand: ["line_items"],
-  });
+  const verified = await getStripeClient().checkout.sessions.retrieve(
+    session.id,
+    {
+      expand: ["line_items"],
+    }
+  );
   if (verified.payment_status !== "paid" || verified.status !== "complete") {
     throw markRetryableFulfillment(
       new Error("DPP payment not complete in Stripe")
