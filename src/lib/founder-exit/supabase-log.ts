@@ -184,12 +184,22 @@ function ids(input: ProvisionContinuityInput): {
 export async function beginProvisionContinuity(
   supabase: ContinuitySupabase,
   input: ProvisionContinuityInput
-): Promise<void> {
+): Promise<"provision" | "grant_recorded" | "already_succeeded"> {
   const now = input.now ?? new Date();
-  const { actionId, idempotencyKey } = ids(input);
+  const { actionId, idempotencyKey, sideEffectKey } = ids(input);
   const existing = await loadByKey(supabase, idempotencyKey);
-  if (existing?.state === "running" || existing?.state === "succeeded") {
-    return;
+  if (existing?.state === "succeeded") {
+    return "already_succeeded";
+  }
+  if (existing?.state === "running") {
+    const { data, error } = await supabase
+      .from("founder_exit_side_effects")
+      .select("idempotency_key")
+      .eq("idempotency_key", sideEffectKey)
+      .maybeSingle();
+    fail("side_effect_lookup", error);
+    if (data) return "grant_recorded";
+    return "provision";
   }
   // A denied, blocked, or otherwise non-resumable row must not fall through
   // into provisionPurchase. This writer only inserts running or succeeded.
@@ -227,6 +237,7 @@ export async function beginProvisionContinuity(
   const row = log.ledger.get(actionId);
   if (!row) throw new Error("continuity_action_missing");
   await persistAction(supabase, row, existing != null);
+  return "provision";
 }
 
 /**
@@ -236,13 +247,18 @@ export async function beginProvisionContinuity(
  */
 export async function finishProvisionContinuity(
   supabase: ContinuitySupabase,
-  input: ProvisionContinuityInput & { grantAlreadyPresent: boolean }
-): Promise<"recorded" | "duplicate"> {
+  input: ProvisionContinuityInput & {
+    grantAlreadyPresent: boolean;
+    grantApplied: boolean;
+  }
+): Promise<"recorded" | "duplicate" | "not_applicable"> {
   const now = input.now ?? new Date();
   const { actionId, idempotencyKey, sideEffectKey } = ids(input);
   const existing = await loadByKey(supabase, idempotencyKey);
   if (!existing) throw new Error("continuity_action_missing");
-  const recorded = await insertSideEffect(supabase, sideEffectKey);
+  const recorded = input.grantApplied
+    ? await insertSideEffect(supabase, sideEffectKey)
+    : "not_applicable";
   if (existing.state === "succeeded") return recorded;
   const log = new ContinuityLog();
   log.ledger.loadRows([existing]);
@@ -251,11 +267,15 @@ export async function finishProvisionContinuity(
     actionId,
     WEBHOOK_AGENT,
     {
-      measurement_result: input.grantAlreadyPresent
-        ? "grant_already_present"
-        : "grant_persisted",
+      measurement_result: !input.grantApplied
+        ? "grant_not_applied"
+        : input.grantAlreadyPresent
+          ? "grant_already_present"
+          : "grant_persisted",
       verification_status: "observed_unverified",
-      output_evidence_refs: [`side-effect:${sideEffectKey}`],
+      output_evidence_refs: input.grantApplied
+        ? [`side-effect:${sideEffectKey}`]
+        : [],
     },
     now
   );

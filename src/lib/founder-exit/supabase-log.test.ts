@@ -107,11 +107,13 @@ describe("provision continuity", () => {
     const first = await finishProvisionContinuity(db, {
       ...input,
       grantAlreadyPresent: false,
+      grantApplied: true,
       now: new Date("2026-10-13T22:00:02.000Z"),
     });
     const second = await finishProvisionContinuity(db, {
       ...input,
       grantAlreadyPresent: true,
+      grantApplied: true,
       now: new Date("2026-10-13T22:00:03.000Z"),
     });
     const action = db.rows("founder_exit_actions")[0];
@@ -126,5 +128,41 @@ describe("provision continuity", () => {
       "plan:dpp_readiness",
       "is_demo:false",
     ]);
+  });
+
+  it("recognizes an already-recorded grant while recovering a running action", async () => {
+    const db = memorySupabase();
+    await beginProvisionContinuity(db, input);
+    await db
+      .from("founder_exit_side_effects")
+      .insert({ idempotency_key: "grant:cs_test_continuity" });
+
+    await expect(beginProvisionContinuity(db, input)).resolves.toBe(
+      "grant_recorded"
+    );
+    const recovered = await finishProvisionContinuity(db, {
+      ...input,
+      grantAlreadyPresent: true,
+      grantApplied: true,
+      now: new Date("2026-10-13T22:00:04.000Z"),
+    });
+    expect(recovered).toBe("duplicate");
+    expect(db.rows("founder_exit_actions")[0]?.state).toBe("succeeded");
+    expect(db.rows("founder_exit_side_effects")).toHaveLength(1);
+  });
+
+  it("identifies a completed session without starting a second grant", async () => {
+    const db = memorySupabase();
+    await beginProvisionContinuity(db, input);
+    await finishProvisionContinuity(db, {
+      ...input,
+      grantAlreadyPresent: false,
+      grantApplied: true,
+    });
+
+    await expect(beginProvisionContinuity(db, input)).resolves.toBe(
+      "already_succeeded"
+    );
+    expect(db.rows("founder_exit_side_effects")).toHaveLength(1);
   });
 });

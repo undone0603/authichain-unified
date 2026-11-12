@@ -316,14 +316,17 @@ export async function POST(req: NextRequest) {
           const verified = await stripe.checkout.sessions.retrieve(session.id, {
             expand: ["line_items"],
           });
-          const verifiedPrice = verified.line_items?.data?.[0]?.price?.id ?? null;
+          const verifiedPrice =
+            verified.line_items?.data?.[0]?.price?.id ?? null;
           const grant = await fulfillDppPaidSession(
             getSupabase(),
             verified,
             verifiedPrice
           );
           if (verified.payment_status === "paid" && !grant.handled) {
-            throw new Error("DPP payment requires product and entitlement reconciliation");
+            throw new Error(
+              "DPP payment requires product and entitlement reconciliation"
+            );
           }
           break;
         }
