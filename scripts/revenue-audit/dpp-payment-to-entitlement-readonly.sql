@@ -38,7 +38,16 @@ SELECT
   f.funnel_payment,
   f.funnel_provisioned,
   f.activation_failure,
-  coalesce(r.webhook_success, false) AS webhook_success,
+  -- NULL means no session-linked receipt was available for this session;
+  -- the alternate Next.js webhook stores events without session_id.
+  -- Do not report a missing link as a proven failed webhook.
+  CASE WHEN r.session_id IS NULL THEN NULL
+       ELSE coalesce(r.webhook_success, false)
+  END AS webhook_success,
+  CASE WHEN r.session_id IS NULL THEN 'session_link_unavailable'
+       WHEN r.webhook_success THEN 'linked_success'
+       ELSE 'linked_no_success'
+  END AS webhook_linkage,
   (
     p.last_grant_session_id IS NOT NULL
     AND p.generations_limit >= 50
