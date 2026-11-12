@@ -1,0 +1,46 @@
+name: AgentZ MCP focused verification
+
+on:
+  pull_request:
+    paths:
+      - "agentz/**"
+      - "workers/authichain-automation/**"
+      - "tests/test_agentz_*"
+      - ".github/workflows/agentz-mcp-verify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install MCP runtime
+        run: python -m pip install 'mcp>=1,<2'
+      - name: Run AgentZ focused tests
+        run: |
+          python -m unittest discover -s tests -p 'test_agentz_capability_policy.py'
+          python -m unittest discover -s tests -p 'test_agentz_browser_executor.py'
+          python -m unittest discover -s tests -p 'test_agentz_navigation_dispatch.py'
+          python -m unittest discover -s tests -p 'test_agentz_code_proposals.py'
+          python -m unittest discover -s tests -p 'test_agentz_mcp_readiness.py'
+      - name: AgentZ edge and scheduler Node integration tests
+        run: |
+          node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs
+      - name: MCP tool registration smoke
+        run: |
+          python - <<'PY'
+          from agentz.mcp_browser_server import mcp
+          assert mcp is not None
+          print('MCP server imports successfully')
+          PY

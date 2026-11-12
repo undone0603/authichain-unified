@@ -57,6 +57,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Restore full tree after sparse checkout
         if: runner.environment == 'self-hosted'
         run: |
@@ -139,6 +141,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Restore full tree after sparse checkout
         if: runner.environment == 'self-hosted'
         run: |
@@ -251,6 +255,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Restore full tree after sparse checkout
         if: runner.environment == 'self-hosted'
         run: |
@@ -277,33 +283,45 @@ jobs:
           node-version: "22"
           cache: pnpm
 
+      # Same-repo runs land on the 3.8 GiB WSL runner and do not install or
+      # next-build there. Fork PRs stay on ubuntu-24.04 and still install.
       - name: Install dependencies
+        if: runner.environment != 'self-hosted'
         run: pnpm install --frozen-lockfile --prefer-offline
 
       # Next build is ~218s. The baseline lists roots Next does not compile
       # (.github, docs, workers). A diff that stays inside them skips the
       # build. Any other path, a missing base, or workflow_dispatch still
-      # runs pnpm build. A bad baseline fails this step.
+      # runs pnpm build. A bad baseline fails this step. Self-hosted skips
+      # this; CircleCI is the Next-build gate (see the next steps).
       - name: Build baseline
+        if: runner.environment != 'self-hosted'
         id: baseline
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: node scripts/ci/build-baseline.mjs --ci
 
-      # Retries live in scripts/build-with-retry.sh, which holds the
-      # machine-wide build lock for the whole attempt loop. A second
-      # invocation here would drop that lock during the pause.
-      # 4096 MB dumped the 3.8 GB VM (CI Main job 129363461477).
-      # 2048 MB crossed MemoryMax 2800 MiB (peak 2.7G, run 42713702955).
-      # 1536 aborted inside V8 three times on next-build (run 42726252670)
-      # and the retry wrapper then exited 1. 1792 is the step that still
-      # fits. Do not raise MemoryMax.
+      # Next build (pnpm build) does not run on the self-hosted WSL runner.
+      # The VM is 3.8 GiB total and the runner service MemoryMax is ~2.86 GiB;
+      # next-build peaked at 2.7 GiB RSS and OOM-killed the runner at 3:38 AM
+      # EST on 2026-11-11. Do not raise MemoryMax. Fork PRs still run
+      # `pnpm build` on ubuntu-24.04. Same-repo push, workflow_dispatch and
+      # PR runs skip here so the job stays green (`needs.build.result` must
+      # stay `success` for "Main quality gate"); CircleCI `ci/circleci: build`
+      # already gates every main commit. Hosted path keeps 1792 MB.
+      # Retries live in scripts/build-with-retry.sh (a second invocation
+      # here would drop the machine-wide build lock during the pause).
       - name: Production build
-        if: steps.baseline.outputs.skip != 'true'
+        if: runner.environment != 'self-hosted' && steps.baseline.outputs.skip != 'true'
         env:
           NODE_OPTIONS: --max-old-space-size=1792 --dns-result-order=ipv4first --no-network-family-autoselection
         run: pnpm build
+
+      - name: "Skipped on self-hosted: pnpm build"
+        if: runner.environment == 'self-hosted'
+        run: >-
+          echo "::notice title=Skipped on self-hosted::Next build (pnpm build) does not run on the 3.8 GiB WSL runner (MemoryMax ~2.86 GiB; next-build 2.7 GiB RSS OOM-killed the runner). CircleCI ci/circleci: build gates every main commit."
 
       # Persistent self-hosted runner: drop deps and build outputs so state
       # never leaks into the next run. Workspace-only; never outside it.
@@ -361,6 +379,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Restore full tree after sparse checkout
         if: runner.environment == 'self-hosted'
         run: |

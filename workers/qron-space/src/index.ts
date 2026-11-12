@@ -2204,6 +2204,17 @@ export default {
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "qron.space", ts: Date.now() });
     }
+    // Nightstamp Digital Payment Link success URL historically pointed at
+    // /order?preset=starmap&sku=digital, which 404s. Send it to the live
+    // /starmap builder (query preserved). Do not change the Stripe link.
+    if (/^\/order\/?$/.test(url.pathname)) {
+      const dest = new URL("/starmap", url.origin);
+      dest.search = url.search;
+      return new Response(null, {
+        status: 302,
+        headers: { location: dest.toString(), "cache-control": "no-store" },
+      });
+    }
     if (request.method === "POST" && /^\/generate\/?$/.test(url.pathname)) {
       // The app behind APP_ORIGIN still answers this POST with /onboard.
       // Loop 2 is the $29 Starter checkout on authichain.com.
