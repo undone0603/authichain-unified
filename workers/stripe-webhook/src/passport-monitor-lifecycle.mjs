@@ -28,8 +28,10 @@ export function transition(current, event) {
     if (state.lastInvoiceId === event.invoiceId) return { ok: true, action: 'unchanged', state };
     if (state.periodStart !== null && event.periodStart < state.periodStart) return { ok: false, reason: 'stale_invoice' };
     if (state.periodStart !== null && event.periodStart === state.periodStart) {
-      // Same billing period must never reset a consumed quota, even after an
-      // invoice replay with a new event ID or a separate paid adjustment.
+      // A successfully paid retry in the SAME period may restore access after
+      // past_due, but must not reset already consumed verifications. Only an
+      // authenticated, durable webhook adapter may call this transition.
+      if (state.status === 'past_due') return { ok: true, action: 'restored', state: { ...state, status: 'active', lastInvoiceId: event.invoiceId } };
       return { ok: true, action: 'unchanged', state };
     }
     return { ok: true, action: 'activated', state: {
