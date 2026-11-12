@@ -164,7 +164,15 @@ async function sendActivationEmailOnce(
       error: err instanceof Error ? err.message : String(err),
     };
   }
-  const outcome = result.ok ? "sent" : ambiguous ? "unknown" : "failed";
+  // A transport exception, provider 5xx, timeout or rate limit may have
+  // accepted the request before acknowledgement. Never resend blindly.
+  const status = result.status;
+  const uncertainResponse =
+    !result.ok &&
+    (ambiguous ||
+      (status != null && (status >= 500 || [408, 409, 429].includes(status))) ||
+      (status == null && result.provider !== "none"));
+  const outcome = result.ok ? "sent" : uncertainResponse ? "unknown" : "failed";
   const finished = await deliveryDb.rpc("finish_dpp_activation_email", {
     p_session_id: input.sessionId,
     p_claim_token: claimToken,
@@ -189,7 +197,7 @@ async function sendActivationEmailOnce(
     httpStatus: result.status ?? null,
     reason,
   });
-  if (ambiguous) {
+  if (uncertainResponse) {
     throw markRetryableFulfillment(new Error("DPP activation delivery outcome unknown"));
   }
   return "failed";
@@ -310,6 +318,9 @@ async function fulfillDppPaidSessionOnce(
       }
     } catch (err) {
       throw markRetryableFulfillment(err);
+    }
+    if (!demo && !profileId) {
+      throw markRetryableFulfillment(new Error("DPP activation recovery profile missing"));
     }
     const activationEmail = await sendActivationEmailOnce(supabase, {
       sessionId: session.id,
