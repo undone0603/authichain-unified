@@ -33,3 +33,30 @@ Aerospace supplier-quality teams need to reconcile genuine manufacturer source, 
 
 ## Commercial WIN definition
 **Qualified non-founder buyer + signed agreement or checkout + actual settled payment + verifiably delivered and accepted paid output.** A lead, meeting, response, draft, free test, $0 session, pending charge or unfulfilled payment is **not** a WIN.
+
+## MCP-first / A2A-first commercial workflow (operator instruction)
+
+**Default:** When a prospective buyer or authorized representative supplies a usable Model Context Protocol (MCP) endpoint or Agent2Agent (A2A) agent card, prefer permissioned machine-to-machine discovery over speculative outreach. Never assume that a website or organization has either protocol.
+
+1. **Discover:** inspect only public, explicitly published discovery resources or a buyer-provided endpoint. Confirm the official origin/domain and record the UTC observation. A2A agent cards are *untrusted* until host, service identity and card provenance are independently checked.
+2. **Authenticate and constrain:** negotiate supported MCP transport/protocol or A2A skills and auth requirements. Do not send AuthiChain keys, buyer data or session secrets to unknown endpoints. Never invoke a write, purchase, quote acceptance, task mutation, booking or messaging skill without the explicit transactional authority required by the buyer and AuthiChain policies.
+3. **Qualify:** use read-only `initialize`, `tools/list`, or A2A capability discovery where permitted. Ask only nonbinding questions about applicability, supplier qualification, supported evidence standards, procurement routing and decision-maker identity. Store raw result only in a private evidence ledger; buyer interest remains unverified until an attributable response.
+4. **Offer setup if missing:** propose a separately scoped integration package (below) instead of claiming interoperability. No client credentials or production configuration is changed before approved scope, tests and authorization.
+5. **Negotiate:** use nonbinding `negotiate` or A2A request/response only when its actual tool semantics guarantee no payment, legal acceptance, disclosure or other effects. A free quote is not an agreement.
+6. **Close:** only a genuine buyer-authorized, independently verified settled payment *and* accepted fulfillment counts as WIN. A 402 quote, generated checkout, signed token or tool invocation does not.
+7. **Fail closed:** missing endpoint, unsupported transport, insufficient auth, unsigned/unknown response, unavailable budget or unknown settlement = status `UNVERIFIED` and human-readable fallback, never assume success.
+
+### Packaged setup offers — proposal only
+
+| Offer | Scope / deliverable | Commercial boundary |
+|---|---|---|
+| **MCP Connect** | Discover buyer-supported MCP, prepare an isolated read-only AuthiChain client or server adapter; demonstrate `initialize`, `tools/list`, one free verification read, auth rejection and replay testing; evidence report | Fixed-price quote after compatibility assessment and written scope; no claimed live integration |
+| **A2A Connect** | Validate an official Agent2Agent card and skill schema; implement a sandbox agent adapter for provenance and nonbinding negotiation; verify identity, scopes and fail-closed behavior | Fixed-price quote after proof of client ownership and auth; no autonomous purchases |
+| **MCP + A2A Launch Kit** | Both adapters plus issuer/JWKS and revocation validation, redacted receipts, deployment runbook, version-pinned smoke suite and handover | Milestone-based quote; no live production rollout until independent test, legal/data review and protected release |
+| **No-protocol Evidence Pack** | Share a static, privacy-safe report/JSON schema, fixture, and how-to-start guide so the buyer can evaluate before adopting MCP/A2A | Free public discovery where applicable; paid custom work requires accepted scope |
+
+Each pack requires source ownership, permitted data, agreed acceptance matrix, timeline, support window, rollback, security responsibilities, explicit price and payment milestones before sale. These are service **proposals**, not existing published SKUs. Do not substitute the current **$299 DPP Readiness** product for aerospace certification or promise production deployment.
+
+#### Prospect-safe phrasing
+
+"Do you already operate an MCP endpoint or A2A agent for supplier-quality evaluations? If so, we can first verify read-only discovery and determine whether provenance checks fit your existing workflow. If not, AuthiChain can quote a bounded MCP or A2A setup package with a synthetic evidence test, documented authentication boundaries and a deployment acceptance plan. No flight certification or autonomous procurement is implied."
