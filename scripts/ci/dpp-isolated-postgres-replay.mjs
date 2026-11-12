@@ -71,6 +71,14 @@ try {
   assert.equal((await grant("buyer-a","cs_ci_parallel")).status,"already_granted");
   s=await state(main,"buyer-a");
   assert.equal(s.profile.generations_limit,50);
+  // Reusing a real Stripe session for a different buyer must be idempotent
+  // against the original profile, never issue a second entitlement.
+  await main.query("INSERT INTO public.profiles(id,generations_limit) VALUES ('buyer-b',0)");
+  const crossProfileReplay = await grant("buyer-b","cs_ci_parallel");
+  assert.equal(crossProfileReplay.status,"already_granted");
+  assert.equal(crossProfileReplay.profile_id,"buyer-a","receipt reassigned to another buyer");
+  let otherBuyer = await state(main,"buyer-b");
+  assert.equal(otherBuyer.profile.generations_limit,0,"cross-profile replay granted duplicate credits");
   await assert.rejects(grant("missing","cs_ci_rollback"),/dpp_grant_profile_not_found/);
   assert.equal((await query(main,"SELECT count(*)::int n FROM public.founder_exit_side_effects WHERE idempotency_key='grant:cs_ci_rollback'"))[0].n,0,"receipt not rolled back");
   await main.query("INSERT INTO public.profiles(id) VALUES ('missing')");
