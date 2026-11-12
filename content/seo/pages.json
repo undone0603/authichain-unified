@@ -11909,5 +11909,325 @@
         }
       ]
     }
+  },
+  {
+    "slug": "dscsa-small-dispenser-exemption-extended-november-2027",
+    "keyword": "dscsa small dispenser exemption extended november 2027",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DSCSA Small Dispenser Exemption: Nov 2027 | AuthiChain",
+    "metaDescription": "The FDA small dispenser exemption from enhanced DSCSA electronic tracing now runs to 27 November 2027, under an extension announced on 6 August 2026.",
+    "h1": "DSCSA Small Dispenser Exemption Extended November 2027",
+    "bodyHtml": "<p>The FDA exemption that relieves small dispensers of the enhanced, electronic interoperable tracing requirements of the DSCSA now runs to 27 November 2027, under an extension FDA announced on 6 August 2026. It covers a dispenser whose owning company has 25 or fewer full-time employees who are licensed pharmacists or qualified pharmacy technicians.</p><h2>Why AuthiChain</h2><ul><li>The exemption is narrow: it covers the enhanced drug distribution security requirements, while dealing only with authorized trading partners and quarantining and investigating suspect product still apply today</li><li>Eligibility is self-determined against the 25-employee test and needs no filing with FDA, so the record a pharmacy keeps of how it counted is its own evidence</li><li>An AuthiChain record is a signed statement about one serialised item that anyone can check offline; it sits beside DSCSA transaction data exchanged over EPCIS and does not replace it</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is the small dispenser DSCSA deadline still 27 November 2026?</h3><p>No. FDA announced on 6 August 2026 that the small dispenser exemption is extended to 27 November 2027. Larger dispensers, wholesale distributors and manufacturers are outside it. Read the FDA exemption notice itself before planning against any date.</p><h3>Does the extension pause DSCSA for small pharmacies?</h3><p>No. It defers the enhanced electronic tracing requirements only. Authorized trading partner checks, product identifier requirements and suspect and illegitimate product procedures continue to apply during the exemption.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DSCSA Small Dispenser Exemption Extended November 2027",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The FDA exemption that relieves small dispensers of the enhanced, electronic interoperable tracing requirements of the DSCSA now runs to 27 November 2027, under an extension FDA announced on 6 August 2026. It covers a dispenser whose owning company has 25 or fewer full-time employees who are licensed pharmacists or qualified pharmacy technicians.",
+          "url": "https://authichain.com/p/dscsa-small-dispenser-exemption-extended-november-2027"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DSCSA Small Dispenser Exemption Extended November 2027",
+              "item": "https://authichain.com/p/dscsa-small-dispenser-exemption-extended-november-2027"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is the small dispenser DSCSA deadline still 27 November 2026?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. FDA announced on 6 August 2026 that the small dispenser exemption is extended to 27 November 2027. Larger dispensers, wholesale distributors and manufacturers are outside it. Read the FDA exemption notice itself before planning against any date."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the extension pause DSCSA for small pharmacies?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It defers the enhanced electronic tracing requirements only. Authorized trading partner checks, product identifier requirements and suspect and illegitimate product procedures continue to apply during the exemption."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "battery-passport-environmental-omnibus-delay-february-2027",
+    "keyword": "battery passport environmental omnibus delay february 2027",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Battery Passport and the Omnibus: Feb 2027 | AuthiChain",
+    "metaDescription": "The EU battery passport still applies from 18 February 2027. The environmental omnibus proposal leaves Article 77 of Regulation (EU) 2023/1542 as it is.",
+    "h1": "Battery Passport Environmental Omnibus Delay February 2027",
+    "bodyHtml": "<p>The battery passport obligation in Article 77 of Regulation (EU) 2023/1542 applies from 18 February 2027, and the environmental omnibus proposal published by the Commission in December 2025 leaves that date where it is. The proposal amends other parts of the Battery Regulation; industry associations have asked for the passport to be phased, and a request is not a change in law.</p><h2>Why AuthiChain</h2><ul><li>Article 77 covers electric vehicle batteries, light means of transport batteries and industrial batteries above 2 kWh placed on the EU market, each carrying a QR code that links to its passport</li><li>The date that did move is supply chain due diligence: Regulation (EU) 2025/1561 postponed that obligation to 18 August 2027 and left Article 77 untouched</li><li>A passport record signed with Ed25519 and checked by an Apache-2.0 verifier can be audited by a customer or an authority without an account, whichever way the omnibus negotiations end</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><p>Want to see a fictional walkthrough first? <a href=\"https://authichain.com/battery-passport/sample-audit\">Read the fictional e-bike walkthrough</a>.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Has the EU battery passport been postponed?</h3><p>Not as of November 2026. The obligation in Article 77 still applies from 18 February 2027. An amendment only takes effect once Parliament and Council adopt it and it is published in the Official Journal, so check EUR-Lex for the current text.</p><h3>Should we wait for the omnibus before building the passport?</h3><p>Plan against the date in force. The data a passport needs comes from cell suppliers and your own production records, and that collection work is the same under every amendment proposed so far.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Battery Passport Environmental Omnibus Delay February 2027",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The battery passport obligation in Article 77 of Regulation (EU) 2023/1542 applies from 18 February 2027, and the environmental omnibus proposal published by the Commission in December 2025 leaves that date where it is. The proposal amends other parts of the Battery Regulation; industry associations have asked for the passport to be phased, and a request is not a change in law.",
+          "url": "https://authichain.com/p/battery-passport-environmental-omnibus-delay-february-2027"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Battery Passport Environmental Omnibus Delay February 2027",
+              "item": "https://authichain.com/p/battery-passport-environmental-omnibus-delay-february-2027"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Has the EU battery passport been postponed?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not as of November 2026. The obligation in Article 77 still applies from 18 February 2027. An amendment only takes effect once Parliament and Council adopt it and it is published in the Official Journal, so check EUR-Lex for the current text."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Should we wait for the omnibus before building the passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Plan against the date in force. The data a passport needs comes from cell suppliers and your own production records, and that collection work is the same under every amendment proposed so far."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verifiable-credential-verifier-conformance-test-suite-fixtures",
+    "keyword": "verifiable credential verifier conformance test suite fixtures",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Conformance Test Suite for VC Verifiers | AuthiChain",
+    "metaDescription": "A verifier conformance suite is a set of records with known correct verdicts, most of them deliberately broken. Ours has 28 fixtures and runs on any language.",
+    "h1": "Verifiable Credential Verifier Conformance Test Suite Fixtures",
+    "bodyHtml": "<p>A conformance suite for a credential verifier is a set of records with known correct verdicts, most of them deliberately broken, run against an implementation through its command line. The AuthiChain suite has 28 fixtures and an implementation conforms when all 28 pass.</p><h2>Why AuthiChain</h2><ul><li>The contract is one command that takes a record and an optional anchor and prints a JSON verdict on stdout, so a verifier written in any language can be tested with the same runner</li><li>Four fixtures present records whose serialised key order is unsorted, which catches an implementation that signs raw JSON bytes instead of the RFC 8785 canonical form</li><li>The suite README records what broken implementations score: a stub that always answers verified passes 4 of 28, which is how you know the suite can fail</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>How do I claim conformance for my own verifier?</h3><p>Run the suite in strict mode with JSON output against your command and publish the result together with the manifest version. Strict mode also compares reason strings, because a right verdict reached for the wrong reason is still suspect.</p><h3>Does passing the suite show that my records are true?</h3><p>No. It shows the verifier applies the specification correctly. A signature shows who signed a record and that it is unchanged; whether the statements in it are accurate is a judgement about the issuer.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verifiable Credential Verifier Conformance Test Suite Fixtures",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "A conformance suite for a credential verifier is a set of records with known correct verdicts, most of them deliberately broken, run against an implementation through its command line. The AuthiChain suite has 28 fixtures and an implementation conforms when all 28 pass.",
+          "url": "https://authichain.com/p/verifiable-credential-verifier-conformance-test-suite-fixtures"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credential Verifier Conformance Test Suite Fixtures",
+              "item": "https://authichain.com/p/verifiable-credential-verifier-conformance-test-suite-fixtures"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How do I claim conformance for my own verifier?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Run the suite in strict mode with JSON output against your command and publish the result together with the manifest version. Strict mode also compares reason strings, because a right verdict reached for the wrong reason is still suspect."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does passing the suite show that my records are true?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It shows the verifier applies the specification correctly. A signature shows who signed a record and that it is unchanged; whether the statements in it are accurate is a judgement about the issuer."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verify-ed25519-signed-json-record-in-python",
+    "keyword": "verify ed25519 signed json record in python",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verify an Ed25519-Signed JSON Record in Python | AuthiChain",
+    "metaDescription": "Canonicalise per RFC 8785, decode the base58btc signature and key, verify with RFC 8032. A Python port of the reference verifier does it offline.",
+    "h1": "Verify Ed25519 Signed Json Record In Python",
+    "bodyHtml": "<p>To verify an Ed25519-signed JSON record in Python, canonicalise the record without its proofValue per RFC 8785, decode the signature and the public key from their base58btc multibase strings, and call an RFC 8032 verify function. The AuthiChain repository carries a Python port of the reference verifier that does this with the cryptography package as its only dependency.</p><h2>Why AuthiChain</h2><ul><li>The port returns the same three verdicts and the same exit codes as the JavaScript command line tool, so a pipeline can swap one for the other</li><li>It passes the same 28 conformance fixtures in strict mode, and its unit tests are ported case for case from the JavaScript tests</li><li>It is Apache-2.0, runs on Python 3.9 or later and installs from a checkout of the repository; it is not on PyPI, while the JavaScript verifier is published on npm as authichain-verify</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does the Python verifier contact a server?</h3><p>No. For a did:key issuer the public key is inside the identifier, so the signature, field and validity checks run offline. Confirming that an anchor transaction exists on a chain is a separate lookup you do yourself.</p><h3>What does a valid signature tell me?</h3><p>Who signed the record and that it has not changed since. It does not tell you the statements are true, and version 0.1 has no revocation, so a record signed by a compromised key still verifies. Ed25519 is not post-quantum secure.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verify Ed25519 Signed Json Record In Python",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "To verify an Ed25519-signed JSON record in Python, canonicalise the record without its proofValue per RFC 8785, decode the signature and the public key from their base58btc multibase strings, and call an RFC 8032 verify function. The AuthiChain repository carries a Python port of the reference verifier that does this with the cryptography package as its only dependency.",
+          "url": "https://authichain.com/p/verify-ed25519-signed-json-record-in-python"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verify Ed25519 Signed Json Record In Python",
+              "item": "https://authichain.com/p/verify-ed25519-signed-json-record-in-python"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the Python verifier contact a server?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. For a did:key issuer the public key is inside the identifier, so the signature, field and validity checks run offline. Confirming that an anchor transaction exists on a chain is a separate lookup you do yourself."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does a valid signature tell me?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Who signed the record and that it has not changed since. It does not tell you the statements are true, and version 0.1 has no revocation, so a record signed by a compromised key still verifies. Ed25519 is not post-quantum secure."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "apache-2-0-patent-grant-open-verification-specification",
+    "keyword": "apache 2.0 patent grant open verification specification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Apache-2.0 Patent Grant and an Open Spec | AuthiChain",
+    "metaDescription": "Apache-2.0 gives each user an explicit patent licence from every contributor. The AuthiChain specification, verifier and conformance suite ship under it.",
+    "h1": "Apache 2.0 Patent Grant Open Verification Specification",
+    "bodyHtml": "<p>Apache-2.0 gives each user an explicit patent licence from every contributor, in section 3 of the licence, covering the contributions they made. The AuthiChain verification specification, reference verifier and conformance suite are published under it, so a competitor or a customer can implement the format without asking.</p><h2>Why AuthiChain</h2><ul><li>MIT and BSD licences are silent on patents, which is the clause a legal team asks about before approving an implementation of someone else's wire format</li><li>The grant covers the protocol directory: the specification, the zero-dependency verifier and the 28 conformance fixtures</li><li>The platform behind the specification and the AuthiChain trademarks are outside the grant, and the specification says so in its opening section</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can a competitor implement the specification?</h3><p>Yes. The licence permits it and the conformance suite exists so an independent implementation can show it reaches the same verdicts as the reference verifier.</p><h3>Does the patent licence ever end?</h3><p>Section 3 of Apache-2.0 ends the patent licence for a party that files patent litigation alleging the work infringes. Read the LICENSE file in the protocol directory for the exact terms.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Apache 2.0 Patent Grant Open Verification Specification",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Apache-2.0 gives each user an explicit patent licence from every contributor, in section 3 of the licence, covering the contributions they made. The AuthiChain verification specification, reference verifier and conformance suite are published under it, so a competitor or a customer can implement the format without asking.",
+          "url": "https://authichain.com/p/apache-2-0-patent-grant-open-verification-specification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Apache 2.0 Patent Grant Open Verification Specification",
+              "item": "https://authichain.com/p/apache-2-0-patent-grant-open-verification-specification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can a competitor implement the specification?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. The licence permits it and the conformance suite exists so an independent implementation can show it reaches the same verdicts as the reference verifier."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the patent licence ever end?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Section 3 of Apache-2.0 ends the patent licence for a party that files patent litigation alleging the work infringes. Read the LICENSE file in the protocol directory for the exact terms."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
