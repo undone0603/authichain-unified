@@ -20,7 +20,12 @@ export function assessStrictWin(x={}) {
  fail(proof(bank)&&bank.reconciled===true&&eq(bank.payoutId,payout?.id)&&eq(bank.currency,'usd')&&bank.amount===payout?.amount&&text(bank.bankReference), 'bank_reconciliation');
  fail(proof(delivery)&&delivery.delivered===true&&eq(delivery.orderId,order?.orderId)&&eq(delivery.buyerId,order?.buyerId)&&/^sha256:[a-f0-9]{64}$/.test(delivery.sha256||'')&&text(delivery.artifactId), 'fulfillment_order_link');
  fail(proof(acceptance)&&acceptance.humanAccepted===true&&eq(acceptance.orderId,order?.orderId)&&eq(acceptance.buyerId,order?.buyerId)&&eq(acceptance.artifactSha256,delivery?.sha256)&&eq(acceptance.sowVersion,order?.sowVersion), 'accepted_delivery_link');
- return {decision:fails.length?'UNVERIFIED':'WIN_VERIFIED',win:fails.length===0,missing:fails,evidenceFingerprint:digest({orderId:order?.orderId||null,paymentIntentId:payment?.id||null,chargeId:charge?.id||null,bankReference:bank?.bankReference||null,artifactSha256:delivery?.sha256||null}),sideEffects:false};
+ // Caller-controlled evidence metadata is not a trusted source attestation.
+ // This pure classifier can establish consistency only, NEVER a commercial WIN.
+ // A distinct authenticated operator process must independently verify raw
+ // connector records, bank reconciliation, and buyer acceptance before closure.
+ const consistent=fails.length===0;
+ return {decision:consistent?'EVIDENCE_CONSISTENT_UNATTESTED':'UNVERIFIED',win:false,consistencyChecksPassed:consistent,missing:consistent?['authoritative_source_and_bank_attestation_required']:fails,evidenceFingerprint:digest({orderId:order?.orderId||null,paymentIntentId:payment?.id||null,chargeId:charge?.id||null,bankReference:bank?.bankReference||null,artifactSha256:delivery?.sha256||null}),sideEffects:false};
 }
 /** Adapters are dependency-injected, limited to read operations; caller authenticates each source separately. */
 export async function collectReadOnlyEvidence(adapters, ids) {
