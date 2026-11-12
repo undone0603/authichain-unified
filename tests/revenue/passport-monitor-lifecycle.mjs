@@ -35,7 +35,14 @@ export function transition(current,event) {
   }
   if (!state.subscriptionId) return {ok:false,reason:"subscription_not_active"};
   if (event.type === "invoice.payment_failed") {
+    // Prevent out-of-order failure notices from suspending a newer paid period.
+    // The trusted Stripe adapter must supply the invoice line's period bounds.
+    if (!validTime(event.periodStart) || !validTime(event.periodEnd) ||
+        event.periodEnd <= event.periodStart)
+      return {ok:false,reason:"invalid_failed_period"};
     if (state.status === "cancelled") return {ok:true,action:"unchanged",state};
+    if (state.periodStart !== event.periodStart || state.periodEnd !== event.periodEnd)
+      return {ok:false,reason:"stale_or_unknown_failed_period"};
     return {ok:true,action:"suspended",state:{...state,status:"past_due"}};
   }
   if (event.type === "customer.subscription.deleted") return {ok:true,action:"cancelled",state:{...state,status:"cancelled"}};
