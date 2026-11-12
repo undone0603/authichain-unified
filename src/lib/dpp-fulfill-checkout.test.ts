@@ -549,10 +549,17 @@ describe("fulfillDppPaidSession", () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
-  it("sends the provisioned email for a non-demo paid session", async () => {
+  it("sends through only one provider for a non-demo paid activation", async () => {
     const { supabase } = fakeSupabase();
     await fulfillDppPaidSession(supabase, paidSession);
     expect(sendEmail).toHaveBeenCalledOnce();
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "buyer@example.com",
+        from: "billing@authichain.com",
+      }),
+      { allowFallback: false }
+    );
   });
 
   it("does not grant a completed demo session again after a later purchase", async () => {

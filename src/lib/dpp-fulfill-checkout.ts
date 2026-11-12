@@ -156,7 +156,7 @@ async function sendActivationEmailOnce(
       subject: mail.subject,
       html: mail.html,
       text: mail.text,
-    });
+    }, { allowFallback: false });
   } catch (err) {
     ambiguous = true;
     result = {
