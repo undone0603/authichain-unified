@@ -36,6 +36,9 @@ case "$task" in
     node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs
     ;;
   test-other)
+    # Database is a credential-free disposable Postgres sidecar in CircleCI.
+    # Wait for readiness without restarting/retrying the quality workflow.
+    node scripts/ci/dpp-activation-postgres.test.mjs
     pnpm --filter agent-browser exec playwright install --with-deps chromium
     pnpm test --filter='!./workers/*' --continue=dependencies-successful
     ;;
