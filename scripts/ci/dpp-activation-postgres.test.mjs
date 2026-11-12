@@ -33,6 +33,19 @@ const token = n => "claim-token-" + n;
 const id = n => "cs_test_activation_" + n;
 
 try {
+  // PostgreSQL sidecar may start after the Node primary container.
+  let ready = false;
+  for (let attempt = 0; attempt < 30; attempt++) {
+    try {
+      await query("select 1");
+      ready = true;
+      break;
+    } catch (err) {
+      if (attempt === 29) throw err;
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  assert.ok(ready, "disposable PostgreSQL readiness");
   // This is a disposable database. Create Supabase-shaped roles to validate ACLs.
   for (const role of ["anon","authenticated","service_role"]) {
     await query(`do $$ begin if not exists (select from pg_roles where rolname = '${role}') then create role ${role} nologin; end if; end $$`);
