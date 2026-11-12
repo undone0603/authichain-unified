@@ -29,6 +29,7 @@ export function reconcilePaidFulfillment(x = {}) {
  if (!evidence(x.nonFounderEvidence) || x.nonFounderEvidence.independentBuyer !== true || x.nonFounderEvidence.buyerId !== x.buyerAuthorization?.buyerId) missing.push('outside_buyer');
  if (!evidence(x.fulfillmentEvidence) || x.fulfillmentEvidence.accepted !== true || !/^sha256:[0-9a-f]{64}$/.test(x.fulfillmentEvidence.artifactSha256 || '')) missing.push('accepted_fulfillment_digest');
  if (!evidence(x.payoutEvidence) || x.payoutEvidence.status !== 'paid' || x.payoutEvidence.reconciledToBank !== true || !(x.payoutEvidence.amount > 0)) missing.push('reconciled_bank_payout');
- // Input evidence may be wholly fabricated by the caller; only an independent authenticated verifier can attest a WIN.\n return { status:missing.length?'UNVERIFIED':'EVIDENCE_CONSISTENT_UNATTESTED', win:false, missing:missing.length?missing:['authoritative_source_and_bank_attestation_required'], automaticCrmClose:false };
+ // Input evidence may be wholly fabricated by the caller; only an independent authenticated verifier can attest a WIN.
+ return { status:missing.length?'UNVERIFIED':'EVIDENCE_CONSISTENT_UNATTESTED', win:false, missing:missing.length?missing:['authoritative_source_and_bank_attestation_required'], automaticCrmClose:false };
 }
 export const evidenceDigest = value => 'sha256:' + createHash('sha256').update(JSON.stringify(value)).digest('hex');
