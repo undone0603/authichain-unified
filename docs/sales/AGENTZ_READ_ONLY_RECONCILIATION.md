@@ -23,3 +23,15 @@ A separate no-dependency local MCP/A2A subset is distributed as the client evalu
 
 ## Production invariant
 Zero discretionary spend; no direct-main push; no new invoice, payment, email, or CRM status mutation; no production deployment; no weakening `humanHold`, `production_send=false`, `OWNER_LIVE_SEND=false`, required checks or SHA-pinned release. A qualified lead, received reply, or $0 Stripe session is not revenue. Qualified WIN requires independently attributable, settled, accepted fulfillment and bank payout.
+
+## Trust-boundary hardening (November 12, 2026)
+All pure classifiers in this PR now **refuse to assert a commercial WIN or payment-send authorization** from caller-controlled metadata, even when every user-supplied `verified`, `humanConfirmed`, `canCommit`, bank-status, and accepted-delivery field claims success. `EVIDENCE_CONSISTENT_UNATTESTED` means only that field relationships matched; it is never a revenue-recognition event, permission to charge, or permission to close CRM.
+
+An independent authenticated execution layer must prove that:
+1. Buyer human reply and authority came from independently validated communication or signed procurement evidence, not an object created by an agent.
+2. Stripe records were retrieved from the correct authenticated Stripe context and every order/customer/charge/payout identifier matched authoritative receipts.
+3. Bank payout inclusion and arrival were independently reconciled to original financial records, rather than caller assertions.
+4. Artifact and written buyer acceptance were authenticated and linked to the identical order and scope.
+5. Only an explicitly authorized operator records a WIN; the evaluator has no method that can do so.
+
+Native credential-free tests are useful regression evidence, not a substitute for complete exact-head CircleCI or authoritative connector verification. No live send or payment action is enabled here.
