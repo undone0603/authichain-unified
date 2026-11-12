@@ -14,6 +14,7 @@ _ALLOWED = {
     "github-workflow-inspect": "https://github.com/undone0603/authichain-unified/actions/workflows/deploy-authichain-com.yml",
     "github-main-protection-inspect": "https://github.com/undone0603/authichain-unified/settings/branches",
     "github-repository-rulesets-inspect": "https://github.com/undone0603/authichain-unified/settings/rules",
+    "circleci-dpp-2479-test-other-inspect": "https://app.circleci.com/workflow/31696fe1-369b-40f9-9fe4-0a60cc8da9b8/job/d4197b70-f190-4de2-9668-a22fbfc9ba73",
 }
 _SHA = re.compile(r"^[0-9a-f]{40}$")
 
