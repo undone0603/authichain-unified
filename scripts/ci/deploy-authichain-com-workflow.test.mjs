@@ -103,8 +103,9 @@ test("SHA pin checks out expected_sha and allows ancestor of main", () => {
   assert.match(yml, /SHA_MATCH_PATH: \$\{\{ steps\.match\.outputs\.path \}\}/);
   assert.match(yml, /^\s+cancel-in-progress: false\s*$/m);
   // Resolver needs history: merge-base --is-ancestor and git diff vs main.
-  assert.equal((yml.match(/fetch-depth: 0/g) || []).length, 2);
-  assert.doesNotMatch(yml, /fetch-depth: 1/);
+  // Count YAML keys only; the checkout comment also mentions fetch-depth: 0.
+  assert.equal((yml.match(/^[ \t]+fetch-depth: 0[ \t]*$/gm) || []).length, 2);
+  assert.doesNotMatch(yml, /^[ \t]+fetch-depth: 1[ \t]*$/m);
 });
 
 test("x402 secrets stay pinned and this publish does not re-put them", () => {
