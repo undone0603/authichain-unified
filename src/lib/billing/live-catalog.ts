@@ -53,12 +53,15 @@ type LiveTierRow = {
   grant: 0;
 };
 
-export const LIVE_PRICE_MAP: Record<Exclude<PublicPlanId, "free">, LivePriceRow> & {
+export const LIVE_PRICE_MAP: Record<
+  Exclude<PublicPlanId, "free">,
+  LivePriceRow
+> & {
   storepilot_pro: LiveTierRow;
 } = {
   /** StorePilot Pro (prod_VIMWy4q5ImqEkm): tier=pro, catalog_limit=200. Never Starter. */
   storepilot_pro: {
-    priceId: "price_1UTxvpGqTruSqV8TQu5gkqyc",
+    priceId: "price_1UYrxSGqTruSqV8TKZDxvSiL",
     productId: "prod_VIMWy4q5ImqEkm",
     tier: "pro",
     catalogLimit: 200,
@@ -139,9 +142,7 @@ export function isFounderEmail(
   const at = e.lastIndexOf("@");
   if (at < 0) return false;
   const domainEntry = e.slice(at);
-  return founderEmails.some(
-    item => item.trim().toLowerCase() === domainEntry
-  );
+  return founderEmails.some(item => item.trim().toLowerCase() === domainEntry);
 }
 
 export function isPublicPlanId(id: string): id is PublicPlanId {
@@ -173,10 +174,16 @@ export function liveTierGrantForPriceId(
   const tier = liveTierForPriceId(priceId);
   const key = email?.toLowerCase().trim() || "";
   if (!tier || !key) return null;
-  return { email: key, tier, catalog_limit: LIVE_PRICE_MAP.storepilot_pro.catalogLimit };
+  return {
+    email: key,
+    tier,
+    catalog_limit: LIVE_PRICE_MAP.storepilot_pro.catalogLimit,
+  };
 }
 
-export function isUnlistedSmokePrice(priceId: string | null | undefined): boolean {
+export function isUnlistedSmokePrice(
+  priceId: string | null | undefined
+): boolean {
   return Boolean(priceId && UNLISTED_PRICE_SET.has(priceId));
 }
 
@@ -185,7 +192,7 @@ export function isUnlistedSmokePrice(priceId: string | null | undefined): boolea
  * still grant so a paid Farm session is not lost. Unlisted smoke = ignore.
  */
 export function grantForPriceId(
-  priceId: string | null | undefined,
+  priceId: string | null | undefined
 ): { planId: PlanId; grant: number } | null {
   if (!priceId || isUnlistedSmokePrice(priceId)) return null;
   const plan = planByStripePriceId(priceId);

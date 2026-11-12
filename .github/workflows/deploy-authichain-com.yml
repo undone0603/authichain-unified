@@ -48,6 +48,25 @@ jobs:
           persist-credentials: false
           clean: true
           fetch-depth: 1
+      # Sparse-checkout settings persist in the shared self-hosted work dir
+      # (gov-engine.yml and agentz-orchestration.yml check out two files), so a
+      # job that inherits them sees a partial tree while HEAD still names the
+      # right commit. Run 43046291702 failed this way: the gate test step exited
+      # 1 in ~6ms with no output because test -f of scripts/ci/autonomous-release-gate
+      # files failed. Same guard deploy-authichain-edge-router.yml uses.
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test "$(git rev-parse HEAD)" = "${{ steps.head.outputs.sha }}"
+          test -z "$(git ls-files -v | awk '$1 == "S" { print }')"
+          test -f scripts/ci/autonomous-release-gate.test.mjs
+          test -f scripts/ci/autonomous-release-gate.mjs
+          test -f scripts/ci/parse-wrangler-version-id.mjs
+          test -f scripts/ci/promote-worker-version.mjs
+          test -f workers/authichain-com/wrangler.toml
       - name: Use runner Node 22
         run: |
           set -euo pipefail
@@ -64,9 +83,15 @@ jobs:
       - name: Test fail-closed automated release policy
         run: |
           set -euo pipefail
-          test -f scripts/ci/autonomous-release-gate.test.mjs
-          test -f scripts/ci/autonomous-release-gate.mjs
-          pwd
+          cd "$GITHUB_WORKSPACE"
+          echo "cwd=$(pwd) head=$(git rev-parse HEAD) node=$(command -v node)"
+          if ! test -f scripts/ci/autonomous-release-gate.test.mjs || ! test -f scripts/ci/autonomous-release-gate.mjs; then
+            echo "::error::Release-gate files missing from the worktree after checkout."
+            if [ -d scripts/ci ]; then ls -la scripts/ci; elif [ -d scripts ]; then ls -la scripts; else echo "no scripts directory"; fi
+            git status --short | head -50
+            git ls-files -v | awk '$1 == "S" { print }' | head -50
+            exit 1
+          fi
           ls -la scripts/ci/autonomous-release-gate*
           node --test "$GITHUB_WORKSPACE/scripts/ci/autonomous-release-gate.test.mjs"
       - name: Enforce automated exact-main release policy
@@ -97,6 +122,25 @@ jobs:
           persist-credentials: false
           clean: true
           fetch-depth: 1
+      # Sparse-checkout settings persist in the shared self-hosted work dir
+      # (gov-engine.yml and agentz-orchestration.yml check out two files), so a
+      # job that inherits them sees a partial tree while HEAD still names the
+      # right commit. Run 43046291702 failed this way: the gate test step exited
+      # 1 in ~6ms with no output because test -f of scripts/ci/autonomous-release-gate
+      # files failed. Same guard deploy-authichain-edge-router.yml uses.
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test "$(git rev-parse HEAD)" = "${{ needs.verify.outputs.sha }}"
+          test -z "$(git ls-files -v | awk '$1 == "S" { print }')"
+          test -f scripts/ci/autonomous-release-gate.test.mjs
+          test -f scripts/ci/autonomous-release-gate.mjs
+          test -f scripts/ci/parse-wrangler-version-id.mjs
+          test -f scripts/ci/promote-worker-version.mjs
+          test -f workers/authichain-com/wrangler.toml
       - name: Confirm checked-out and current main SHA
         env:
           EXPECTED_SHA: ${{ needs.verify.outputs.sha }}
