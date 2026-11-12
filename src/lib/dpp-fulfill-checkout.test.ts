@@ -49,6 +49,7 @@ function fakeSupabase(opts?: {
       : null;
   const continuity = new Map<string, Record<string, unknown>[]>();
   const grantedSessions = new Set<string>();
+  const deliveries = new Map<string, { profileId: string; state: string; token: string | null }>();
   let continuityUpdateFailed = false;
   let provisionedEventFailed = false;
   const from = (table: string) => {
@@ -190,6 +191,37 @@ function fakeSupabase(opts?: {
     return builder;
   };
   const rpc = async (fn: string, args: Record<string, unknown>) => {
+    if (fn === "claim_dpp_activation_email") {
+      const sessionId = String(args.p_session_id);
+      const profileId = String(args.p_profile_id);
+      const token = String(args.p_claim_token);
+      let delivery = deliveries.get(sessionId);
+      if (!delivery) {
+        delivery = { profileId, state: "pending", token: null };
+        deliveries.set(sessionId, delivery);
+      }
+      if (delivery.profileId !== profileId) {
+        return { data: null, error: { message: "profile mismatch" } };
+      }
+      if (delivery.state === "sent") return { data: "sent", error: null };
+      if (delivery.state === "sending" || delivery.state === "unknown") {
+        return { data: "reconcile", error: null };
+      }
+      delivery.state = "sending";
+      delivery.token = token;
+      return { data: "claimed", error: null };
+    }
+    if (fn === "finish_dpp_activation_email") {
+      const delivery = deliveries.get(String(args.p_session_id));
+      const matched = Boolean(delivery &&
+        delivery.state === "sending" &&
+        delivery.token === String(args.p_claim_token));
+      if (matched && delivery) {
+        delivery.state = String(args.p_outcome);
+        delivery.token = null;
+      }
+      return { data: matched, error: null };
+    }
     if (fn !== "grant_dpp_checkout_session") {
       return { data: null, error: { message: "unexpected RPC" } };
     }
@@ -236,7 +268,7 @@ function fakeSupabase(opts?: {
       error: null,
     };
   };
-  return { supabase: { from, rpc }, rows, profileUpdates, continuity, profile };
+  return { supabase: { from, rpc }, rows, profileUpdates, continuity, deliveries, profile };
 }
 
 const paidSession = {
@@ -317,18 +349,43 @@ describe("fulfillDppPaidSession", () => {
     );
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { supabase, rows } = fakeSupabase();
-    const result = await fulfillDppPaidSession(supabase, paidSession);
+    await expect(fulfillDppPaidSession(supabase, paidSession))
+      .rejects.toMatchObject({ name: "RetryableFulfillmentError" });
     const logged = errSpy.mock.calls
       .map(c => c.map(String).join(" "))
       .join("\n");
     errSpy.mockRestore();
 
-    expect(result.activationEmail).toBe("failed");
+    // Unknown external outcome: never blindly re-send on webhook retry.
+    expect(await supabase.rpc("claim_dpp_activation_email", {
+      p_session_id: paidSession.id,
+      p_profile_id: "prof_1",
+      p_claim_token: "new-token-after-timeout",
+    })).toMatchObject({ data: "reconcile", error: null });
     expect(logged).toContain("ETIMEDOUT");
     expect(logged).not.toContain("buyer@example.com");
     expect(
       rows.filter(r => r.event_type === "dpp_activation_email:failed")
     ).toHaveLength(1);
+  });
+
+  it("retries only a definitively failed email attempt, without re-grant", async () => {
+    vi.mocked(sendEmail).mockResolvedValueOnce({
+      ok: false, provider: "resend", status: 422, error: "rejected",
+    } as never);
+    const { supabase, profileUpdates, deliveries } = fakeSupabase();
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect((await fulfillDppPaidSession(supabase, paidSession)).activationEmail).toBe("failed");
+      expect(deliveries.get(paidSession.id)?.state).toBe("failed");
+      expect((await fulfillDppPaidSession(supabase, paidSession)).activationEmail).toBe("sent");
+      expect(deliveries.get(paidSession.id)?.state).toBe("sent");
+      await fulfillDppPaidSession(supabase, paidSession);
+      expect(sendEmail).toHaveBeenCalledTimes(2);
+      expect(profileUpdates).toHaveLength(1);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("writes no failure row when the send succeeds", async () => {
