@@ -26,8 +26,6 @@ import { emitTrustEvent } from "../../shared/trust-events";
 type SupabaseLike = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   from: (table: string) => any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  rpc?: (name: string, args: Record<string, string>) => Promise<any>;
 };
 
 export type DppCheckoutSessionLike = DppProofSession & {
@@ -116,10 +114,17 @@ async function sendActivationEmailOnce(
   }
 ): Promise<ActivationEmailStatus> {
   if (input.demo || !input.email || !input.profileId) return "skipped";
-  const rpc = supabase.rpc;
-  if (!rpc) throw markRetryableFulfillment(new Error("DPP activation delivery RPC unavailable"));
+  const deliveryDb = supabase as SupabaseLike & {
+    rpc?: (
+      name: string,
+      args: Record<string, string>
+    ) => PromiseLike<{ data: unknown; error: { message?: string } | null }>;
+  };
+  if (!deliveryDb.rpc) {
+    throw markRetryableFulfillment(new Error("DPP activation delivery RPC unavailable"));
+  }
   const claimToken = crypto.randomUUID();
-  const claimed = await rpc("claim_dpp_activation_email", {
+  const claimed = await deliveryDb.rpc("claim_dpp_activation_email", {
     p_session_id: input.sessionId,
     p_profile_id: input.profileId,
     p_claim_token: claimToken,
@@ -160,7 +165,7 @@ async function sendActivationEmailOnce(
     };
   }
   const outcome = result.ok ? "sent" : ambiguous ? "unknown" : "failed";
-  const finished = await rpc("finish_dpp_activation_email", {
+  const finished = await deliveryDb.rpc("finish_dpp_activation_email", {
     p_session_id: input.sessionId,
     p_claim_token: claimToken,
     p_outcome: outcome,
