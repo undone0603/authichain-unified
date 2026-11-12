@@ -724,6 +724,13 @@ describe("fulfillDppPaidSession", () => {
     expect(continuity.get("founder_exit_actions")?.[0]?.state).toBe(
       "succeeded"
     );
+    // The atomic grant completed before the first continuity bookkeeping
+    // failure. Recovery must still deliver access instructions exactly once.
+    expect(sendEmail).toHaveBeenCalledOnce();
+    expect(result.activationEmail).toBe("sent");
+    await fulfillDppPaidSession(supabase, paidSession);
+    expect(sendEmail).toHaveBeenCalledOnce();
+    expect(profileUpdates).toHaveLength(1);
   });
 
   it("recovers a missing provisioned event after continuity already succeeded", async () => {
