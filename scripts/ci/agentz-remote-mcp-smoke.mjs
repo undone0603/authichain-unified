@@ -3,8 +3,8 @@
 const endpoint = process.env.AGENTZ_MCP_URL || "https://authichain-agentz-mcp-edge.undone-k.workers.dev/mcp";
 const token = process.env.AGENTZ_MCP_TOKEN || "";
 const url = new URL(endpoint);
-if (url.protocol !== "https:" || url.pathname !== "/mcp" || url.username || url.password || url.search || url.hash) {
-  throw new Error("Refusing non-HTTPS, non-/mcp or credential-bearing endpoint");
+if (url.protocol !== "https:" || url.hostname !== "authichain-agentz-mcp-edge.undone-k.workers.dev" || url.pathname !== "/mcp" || url.username || url.password || url.search || url.hash) {
+  throw new Error("Refusing unapproved host, non-HTTPS, non-/mcp or credential-bearing endpoint");
 }
 const health = new URL("/health", url);
 const controller = new AbortController();
