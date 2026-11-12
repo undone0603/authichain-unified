@@ -49,7 +49,7 @@ export default {
   const error=(code,message)=>json({jsonrpc:"2.0",id:call.id??null,error:{code,message}});
   if(call.method==="initialize")return result({protocolVersion:"2025-03-26",capabilities:{tools:{}},serverInfo:{name:"agentz-cloudflare-edge",version:"0.1.0"}});
   if(call.method==="notifications/initialized")return new Response(null,{status:202});
-  if(call.method==="tools/list")return result({tools:TOOLS});
+  if(call.method==="tools/list")return result({tools:chatAuthenticated?TOOLS.filter(t=>t.name!=="agentz_enqueue_probe"):TOOLS});
   if(call.method!=="tools/call")return error(-32601,"method not found");
   const name=call.params?.name;
   // Hosted chat OAuth identity is deliberately read-only; the existing machine
