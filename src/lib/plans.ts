@@ -27,7 +27,8 @@ export type PlanId =
   | "enterprise_compliance"
   | "battery_gap_report"
   | "battery_gap_report_extra"
-  | "gov_provenance_pilot";
+  | "gov_provenance_pilot"
+  | "x402_agent_credits_120";
 
 export interface Plan {
   id: PlanId;
@@ -367,6 +368,22 @@ export const PLANS: Plan[] = [
     features: ["60-day pilot", "Fixed price"],
     cta: "Start the pilot — $7,500",
   },
+  {
+    // Unlisted. Checkout is fail-closed until the independent verification
+    // ledger and server-side feature bindings are ready for production.
+    id: "x402_agent_credits_120",
+    name: "x402 Agent Credits – 120 verifications",
+    price: 5,
+    description: "120 prepaid agent seal-registry verifications for $5 once. No subscription. This is not QR image-generation credit and not Base USDC settlement.",
+    generations: 0,
+    stripe_price_id: "price_1UZdq5GqTruSqV8TsaDtFBPF",
+    stripe_mode: "payment",
+    tier: "free",
+    listed: false,
+    return_path: "/x402",
+    features: ["120 agent verification requests", "One-time purchase", "Prepaid Stripe credits; separate from x402 USDC"],
+    cta: "Buy 120 verification credits — $5",
+  },
 ];
 
 export const PUBLIC_PLAN_IDS = [
@@ -431,6 +448,9 @@ export type CatalogOffer = {
 /** Every paid plan that has a gated checkout. Free is not an offer. */
 export function catalogOffers(): CatalogOffer[] {
   return PLANS.flatMap(plan => {
+    // This SKU is staged but deliberately unadvertised until its purchase,
+    // verified-owner grant and atomic redemption path have passed review.
+    if (plan.id === "x402_agent_credits_120") return [];
     if (plan.price <= 0) return [];
     const checkout = planPaymentLink(plan.id);
     if (!checkout) return [];
@@ -503,6 +523,7 @@ export const PLAN_CREDITS: Record<PlanId, number> = {
   battery_gap_report: 0,
   battery_gap_report_extra: 0,
   gov_provenance_pilot: 0,
+  x402_agent_credits_120: 0,
 };
 
 export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
@@ -524,6 +545,7 @@ export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
   battery_gap_report: "pro",
   battery_gap_report_extra: "pro",
   gov_provenance_pilot: "enterprise",
+  x402_agent_credits_120: "free",
 };
 
 /**

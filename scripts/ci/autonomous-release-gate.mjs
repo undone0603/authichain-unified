@@ -13,8 +13,15 @@ export const REQUIRED = [
   'extras', 'build', 'main-quality-gate',
 ].map(s => 'ci/circleci: ' + s);
 const SHA = /^[a-f0-9]{40}$/;
-// Accept the current CircleCI app job URL and the older repository-scoped job URL.
-const CIRCLE_JOB = /^(?:https:\/\/circleci\.com\/gh\/undone0603\/authichain-unified\/[0-9]+\/?|https:\/\/app\.circleci\.com\/workflow\/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\/job\/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})$/;
+// Current CircleCI commit statuses link to workflow/job UUIDs.
+// Require exact host, exact URL shape and one shared workflow across the
+// seven statuses. Never accept a lookalike origin or a mixed run.
+const CIRCLE_UUID = '[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}';
+const LEGACY_CIRCLE_JOB = /^https:\/\/circleci\.com\/gh\/undone0603\/authichain-unified\/([0-9]+)\/?$/;
+const CIRCLE_JOB = new RegExp(
+  '^https://app\\.circleci\\.com/workflow/(' + CIRCLE_UUID +
+  ')/job/(' + CIRCLE_UUID + ')/?$', 'i'
+);
 function guard(ok, message) { if (!ok) throw new Error('release policy: ' + message); }
 
 export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, ruleset, environment, statuses}) {
@@ -44,10 +51,20 @@ export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, rul
   for (const entry of statuses.statuses) {
     if (typeof entry.context === 'string' && !recent.has(entry.context)) recent.set(entry.context, entry);
   }
+  let workflowId = null;
   for (const name of REQUIRED) {
     const status = recent.get(name);
-    guard(status?.state === 'success' && CIRCLE_JOB.test(status?.target_url || ''),
+    const url = typeof status?.target_url === 'string' ? status.target_url : '';
+    const match = url.match(CIRCLE_JOB);
+    const legacy = url.match(LEGACY_CIRCLE_JOB);
+    guard(status?.state === 'success' && (match || legacy),
           'unverified exact-commit CircleCI status: ' + name);
+    // The old CircleCI status URL had no shared workflow ID. Accept it only
+    // when every required status uses that legacy format; never mix formats.
+    const currentWorkflow = match ? match[1].toLowerCase() : 'legacy';
+    if (workflowId === null) workflowId = currentWorkflow;
+    guard(workflowId === currentWorkflow,
+          'mixed CircleCI workflows for exact-commit seven-context gate');
   }
   return {sha: expectedSha, checks: REQUIRED.length, environment: ENV};
 }

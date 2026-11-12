@@ -3254,6 +3254,9 @@ interface Env {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  X402_PACK_PRICE_ID?: string;
+  X402_PACK_CREDITS?: string;
+  X402_PACK_ENABLED?: string;
   /** Public auth_seals read for paid verify. Service role stays a secret. */
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
@@ -3674,7 +3677,7 @@ receipt reference. Do not send card details.</p>
     // TODO(wonder): restyle from Wonder artboard tokens once the owner opens
     // the editor. Page markup is semantic; tokens live in x402-docs-page.ts.
     if (isX402DocsPath(p)) {
-      return new Response(renderX402DocsPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+      return new Response(renderX402DocsPage(env), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     // /mcp/install is the human install surface. It must be checked before
     // tryHandleMcp, which owns the agent-facing /mcp JSON-RPC endpoint.

@@ -25,14 +25,25 @@ case "$task" in
     node scripts/ci/check-deploy-invariants.mjs
     node scripts/ci/check-node-test-runners.mjs
     # Independent negative-case tests for the human-free production release policy.
+    # Fail early if the offline exact-head or disposable PostgreSQL
+    # acceptance runners are syntactically invalid; does not run Docker here.
+    bash -n scripts/ci/x402-native-release-acceptance.sh
+    bash -n scripts/ci/x402-disposable-postgres.sh
     node --test scripts/ci/autonomous-release-gate.test.mjs
     ;;
   typecheck-ratchet) node scripts/typecheck-ratchet.mjs ;;
   test-workers)
+    # Explicitly exercise new root-level x402 Stripe prepaid paths. Turbo's
+    # worker package filter alone does not prove these root modules executed.
+    # Keep this first to fail fast on incorrect grants or cross-rail behavior.
+    node --test scripts/ci/x402-ledger-contract.test.mjs
+    pnpm exec vitest run \
+      src/lib/x402-agent-pack.test.ts \
+      src/lib/x402-agent-pack-fulfill.test.ts \
+      src/lib/x402-agent-pack-verify.test.ts \
+      src/lib/checkout-gate.test.ts
     pnpm test --filter='./workers/*' --continue=dependencies-successful
-    # Run the real AgentZ edge/scheduler integration tests on the exact CircleCI SHA.
-    # GitHub Actions hosted runners may be unavailable; this independent gate
-    # remains credential-free and never deploys.
+    # Preserve main's separate AgentZ edge/scheduler integration gate.
     node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs
     ;;
   test-other)

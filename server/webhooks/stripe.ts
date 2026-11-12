@@ -43,6 +43,8 @@ import {
   markRetryableFulfillment,
 } from "../../src/lib/retryable-fulfillment";
 import { accrueAffiliateCommission } from "../../src/lib/affiliate-accrual";
+import { isX402PackCandidate } from "../../src/lib/x402-agent-pack";
+import { fulfillX402AgentPackIfPaid, revokeX402AgentPackOnReversal } from "../../src/lib/x402-agent-pack-fulfill";
 import {
   claimStripeEvent,
   StripeEventClaimUnavailableError,
@@ -170,6 +172,8 @@ async function fulfillCatalogCreditsIfPaid(
   if (isDemoCheckoutSession(session)) return false;
   if (session.amount_total == null || session.amount_total < 0) return false;
   const linePriceId = checkoutLinePriceId(session);
+  // Verification packs are NOT QR image-generation packs.
+  if (isX402PackCandidate(session.metadata, linePriceId)) return false;
   const { isDppOffer } = await import("../../src/lib/dpp-loop");
   if (isDppOffer(session.metadata || {}, linePriceId)) return false;
 
@@ -671,6 +675,13 @@ export async function handleStripeWebhook(
   );
   const alreadyProcessed = drizzleSeen || claim === "duplicate";
   if (alreadyProcessed && !isReplayableCheckoutEvent(event.type)) {
+    // A failed refund/dispute attempt may have claimed its event ID before
+    // its grant update succeeded. Its idempotent reversal MUST replay on retry.
+    try {
+      await revokeX402AgentPackOnReversal(event, supabase, process.env.X402_PACK_PRICE_ID, stripe);
+    } catch (reversalErr) {
+      throw markRetryableFulfillment(reversalErr);
+    }
     console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
     await logDelivery("duplicate", { httpStatus: 200 });
     return { received: true, type: event.type, duplicate: true };
@@ -685,6 +696,13 @@ export async function handleStripeWebhook(
     const session = event.data.object as Stripe.Checkout.Session;
     try {
       await fulfillDppCheckoutIfPaid(session);
+      // Session-keyed upsert is safe to replay, unlike generation grants.
+      if (isX402PackCandidate(session.metadata, checkoutLinePriceId(session))) {
+        const result = await fulfillX402AgentPackIfPaid(session, getStripeClient(), supabase);
+        if (result === "reconciliation_required") {
+          throw new Error("x402_pack_missing_buyer_identity_or_database");
+        }
+      }
       // A duplicate catalog delivery does not replay a credit grant. The
       // existing receipt may be a reconciliation hold: never overwrite it
       // with a false success or claim that this event fulfilled a customer.
@@ -1059,7 +1077,17 @@ export async function handleStripeWebhook(
         // when DATABASE_URL / activity_log is unavailable on the edge Worker.
         try {
           await fulfillDppCheckoutIfPaid(session);
-          const catalogFulfilled = await fulfillCatalogCreditsIfPaid(session);
+          // Actual live price, paid status, amount and Stripe line items are
+          // verified by the separate, session-idempotent verification ledger.
+          // Never send 120 verification units to profiles.generations_limit.
+          const packFulfillment = isX402PackCandidate(
+            session.metadata, checkoutLinePriceId(session)
+          ) ? await fulfillX402AgentPackIfPaid(session, getStripeClient(), supabase) : "not_pack";
+          if (packFulfillment === "reconciliation_required") {
+            throw new Error("x402_pack_missing_buyer_identity_or_database");
+          }
+          const catalogFulfilled = packFulfillment === "not_pack"
+            ? await fulfillCatalogCreditsIfPaid(session) : false;
           if (catalogFulfilled === "reconciliation_required") {
             // Deterministic missing identity: durable operator hold, not an
             // unbounded Stripe retry. If the hold cannot be persisted, fail
@@ -1223,6 +1251,15 @@ export async function handleStripeWebhook(
         break;
       }
 
+      case "charge.refunded":
+      case "charge.dispute.created": {
+        try {
+          await revokeX402AgentPackOnReversal(event, supabase, process.env.X402_PACK_PRICE_ID, stripe);
+        } catch (reversalErr) {
+          throw markRetryableFulfillment(reversalErr);
+        }
+        break;
+      }
       default:
         console.log(`[stripe-webhook] Unhandled event type: ${event.type}`);
         handled = false;

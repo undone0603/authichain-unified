@@ -8,6 +8,7 @@ import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
 import { checkoutReturnOrigin } from "./checkout-gate";
 import { PLANS, type PlanId } from "./plans";
+import { X402_AGENT_PACK_PLAN_ID, x402PackReady, type X402PackEnv } from "./x402-agent-pack";
 
 export type PlanCheckoutOk = { ok: true; url: string; planId: string };
 export type PlanCheckoutErr = {
@@ -37,6 +38,7 @@ export async function createPlanCheckoutSession(opts: {
     source?: string;
   };
   stripeSecretKey: string;
+  packEnv?: X402PackEnv;
   /** GET attributed checkout must collect email; POST JSON may omit it. */
   requireEmail?: boolean;
 }): Promise<PlanCheckoutResult> {
@@ -58,6 +60,9 @@ export async function createPlanCheckoutSession(opts: {
   ) {
     return { ok: false, status: 400, error: "Plan is no longer available" };
   }
+  if (plan.id === X402_AGENT_PACK_PLAN_ID && !x402PackReady(opts.packEnv)) {
+    return { ok: false, status: 400, error: "Pack fulfillment not enabled" };
+  }
   if (!plan.stripe_price_id || !plan.stripe_mode) {
     return {
       ok: false,
@@ -69,6 +74,10 @@ export async function createPlanCheckoutSession(opts: {
   const email = pickCheckoutEmail(
     typeof body.email === "string" ? body.email : ""
   );
+  // An email must be verified and linked to an API key before pack redemption.
+  if (plan.id === X402_AGENT_PACK_PLAN_ID && !email) {
+    return { ok: false, status: 400, error: "Work email required for agent credits" };
+  }
   if (opts.requireEmail && !email) {
     const visitId =
       typeof body.prospectId === "string" ? body.prospectId.trim() : "";
@@ -117,16 +126,21 @@ export async function createPlanCheckoutSession(opts: {
       mode: plan.stripe_mode,
       ...hostedCheckoutRecoveryParams(plan.stripe_mode),
       line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
-      success_url: `${origin}${
-        plan.id === "starter" ||
-        plan.id === "creator" ||
-        plan.id === "qron_launch" ||
-        plan.id === "qron_launch_annual"
-          ? "/generate?paid=1&"
-          : "/dpp/thanks?"
-      }session_id={CHECKOUT_SESSION_ID}${
-        prospectId ? `&prospect_id=${encodeURIComponent(prospectId)}` : ""
-      }${source ? `&utm_source=${encodeURIComponent(source)}` : ""}&plan=${encodeURIComponent(plan.id)}`,
+      // Prepaid agent-credit returns are never DPP activation pages. A browser
+      // redirect proves neither settlement nor an entitlement; the signed
+      // webhook is the sole grant authority.
+      success_url: plan.id === X402_AGENT_PACK_PLAN_ID
+        ? `${origin}/x402?checkout=returned&plan=${encodeURIComponent(plan.id)}`
+        : `${origin}${
+          plan.id === "starter" ||
+          plan.id === "creator" ||
+          plan.id === "qron_launch" ||
+          plan.id === "qron_launch_annual"
+            ? "/generate?paid=1&"
+            : "/dpp/thanks?"
+        }session_id={CHECKOUT_SESSION_ID}${
+          prospectId ? `&prospect_id=${encodeURIComponent(prospectId)}` : ""
+        }${source ? `&utm_source=${encodeURIComponent(source)}` : ""}&plan=${encodeURIComponent(plan.id)}`,
       cancel_url: `${origin}/#pricing`,
       ...(email ? { customer_email: email } : {}),
       metadata: {
@@ -157,7 +171,7 @@ export async function createPlanCheckoutSession(opts: {
         : {}),
       // #1890 parity: tag the $29 Starter PaymentIntent with the plan so the
       // webhook never has to guess Starter from the amount.
-      ...(plan.id === "starter" && plan.stripe_mode === "payment"
+      ...((plan.id === "starter" || plan.id === X402_AGENT_PACK_PLAN_ID) && plan.stripe_mode === "payment"
         ? {
             payment_intent_data: {
               metadata: {

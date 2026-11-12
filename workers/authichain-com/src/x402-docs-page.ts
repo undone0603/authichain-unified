@@ -30,6 +30,7 @@ import {
 } from "../../../src/lib/checkout-email";
 import { planUsd } from "../../../src/lib/plans";
 import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402";
+import { x402PackReady, type X402PackEnv } from "../../../src/lib/x402-agent-pack";
 
 export const X402_DOCS_PATHS = [
   "/x402",
@@ -170,8 +171,9 @@ footer.site{margin-top:auto;border-top:1px solid var(--ac-border);padding:1.75re
 .foot-inner{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.75rem}`;
 
 /** Renders the public x402 discovery page. */
-export function renderX402DocsPage(): string {
+export function renderX402DocsPage(packEnv: X402PackEnv = {}): string {
   const p = X402_PUBLIC;
+  const prepaidPackAvailable = x402PackReady(packEnv);
   const rows = [
     { label: "Price", value: `${p.priceUsd} USDC per call` },
     { label: "Network", value: `${p.network} (chain id ${p.chainId})` },
@@ -380,12 +382,25 @@ ${CHECKOUT_EMAIL_FORM_CSS}
     </section>
     <section class="card" aria-labelledby="human-title">
       <h2 id="human-title">Human checkout vs agent rail</h2>
-      <p>Stripe is for people. x402 is for machines. They do not share a wallet, a SKU, or a receipt.</p>
+      <p>${prepaidPackAvailable ? "Stripe prepaid verification credits are a separate explicit agent rail, not a USDC settlement. The two rails never share a wallet, SKU or receipt." : "Stripe is for people. x402 is for machines. They do not share a wallet, a SKU, or a receipt."}</p>
       <ul>
         <li>StrainChain Passport — <strong>$${planUsd("strainchain_passport")}</strong> one-time. Enter a work email so Stripe can recover the cart.</li>
         <li>EU DPP Readiness — <strong>$${planUsd("dpp_readiness")}</strong> one-time. Same recovery path.</li>
         <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}. <strong>$QRON is not this rail.</strong></li>
       </ul>
+      ${prepaidPackAvailable ? `
+      <div class="note" data-offer="stripe-prepaid-agent-credits">
+        <h3>120 prepaid agent verifications — $5 once</h3>
+        <p>A separate Stripe purchase grants registry-lookups only. It does not add QR image generations or settle Base USDC. Your Supabase Auth email must be confirmed and match the checkout email, and your API key must belong to that account with verification scope before redemption.</p>
+        <p>A Checkout redirect is not a receipt or a credit grant. Only the signed Stripe webhook credits the ledger after confirmed payment.</p>
+        ${checkoutEmailFormHtml({
+          action: "https://authichain.com/checkout/x402_agent_credits_120",
+          label: "Buy 120 verification credits — $5",
+          inputId: "x402-agent-pack-email",
+          formId: "x402-agent-pack-checkout",
+          hint: "Use the confirmed email on your AuthiChain API-key account. No subscription.",
+        })}
+      </div>` : ""}
       ${checkoutEmailFormHtml({
         action: "https://authichain.com/checkout/strainchain_passport",
         label: `Passport checkout — $${planUsd("strainchain_passport")}`,

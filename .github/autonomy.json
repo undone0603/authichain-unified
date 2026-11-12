@@ -44,6 +44,7 @@
         "invoice.payment_failed",
         "invoice.voided",
         "charge.refunded",
+        "charge.dispute.created",
         "customer.subscription.deleted",
         "customer.subscription.updated",
         "customer.subscription.trial_will_end"

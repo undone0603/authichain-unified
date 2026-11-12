@@ -16,6 +16,7 @@
  *   optional ?email=you@co.com&utm_*=…&visit_id=… prefill the form.
  */
 import { applyHostedCheckoutRecovery } from "./checkout-recovery";
+import { X402_AGENT_PACK_PLAN_ID, x402PackReady, type X402PackEnv } from "./x402-agent-pack";
 import {
   claimCheckoutAttempt,
   recordCheckoutSession,
@@ -461,7 +462,9 @@ export function buildGatedSessionBody(opts: {
   body.set(
     "success_url",
     ret
-      ? `${ret}?paid=1&session_id={CHECKOUT_SESSION_ID}&plan=${encodeURIComponent(plan.id)}`
+      ? plan.id === X402_AGENT_PACK_PLAN_ID
+        ? `${ret}?checkout=returned&plan=${encodeURIComponent(plan.id)}`
+        : `${ret}?paid=1&session_id={CHECKOUT_SESSION_ID}&plan=${encodeURIComponent(plan.id)}`
       : isClaimFile
         ? `${origin}/made-in-usa-claim-file/thanks?session_id={CHECKOUT_SESSION_ID}`
         : isGenerationPack
@@ -516,7 +519,7 @@ export function buildGatedSessionBody(opts: {
   }
   // $29 Starter is one-time: also tag the PaymentIntent so the plan travels
   // with the payment itself, and the webhook never needs the amount fallback.
-  if (isStarter && mode === "payment") {
+  if ((isStarter || plan.id === X402_AGENT_PACK_PLAN_ID) && mode === "payment") {
     body.set("payment_intent_data[metadata][plan]", plan.id);
     body.set(
       "payment_intent_data[metadata][stripe_price_id]",
@@ -613,7 +616,7 @@ export async function createGatedCheckoutSession(opts: {
 
 // ─── Request handler ────────────────────────────────────────────────────────
 
-export type GatedCheckoutEnv = {
+export type GatedCheckoutEnv = X402PackEnv & {
   STRIPE_SECRET_KEY?: string;
   QRON_INTERDICTION_SECRET?: string;
 };
@@ -765,6 +768,12 @@ export async function tryHandleGatedCheckout(
     return method === "HEAD"
       ? new Response(null, { status: 404, headers: HTML_HEADERS })
       : htmlResponse(html, 404);
+  }
+  // A catalog entry alone must never expose a paid checkout that cannot
+  // grant and redeem the promised verification credits. Fail closed on GET
+  // and POST until all 3 runtime bindings match the approved live SKU.
+  if (plan.id === X402_AGENT_PACK_PLAN_ID && !x402PackReady(env)) {
+    return new Response(null, { status: 404, headers: HTML_HEADERS });
   }
   if (RETIRED_GATED_PLAN_IDS.includes(plan.id)) {
     return new Response(null, {

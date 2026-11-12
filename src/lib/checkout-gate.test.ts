@@ -306,6 +306,20 @@ describe("tryHandleGatedCheckout — POST", () => {
     expect(body.get("customer_creation")).toBe("always");
   });
 
+  it("prepaid x402 checkout has neutral return and signed-payment metadata", () => {
+    const body = buildGatedSessionBody({
+      plan: planById("x402_agent_credits_120")!,
+      email: "buyer@example.org",
+      fields: new URLSearchParams(),
+    });
+    expect(body.get("success_url")).toContain("/x402?checkout=returned");
+    expect(body.get("success_url")).not.toContain("paid=1");
+    expect(body.get("success_url")).not.toContain("session_id=");
+    expect(body.get("success_url")).not.toContain("/dpp/thanks");
+    expect(body.get("payment_intent_data[metadata][plan]")).toBe("x402_agent_credits_120");
+    expect(body.get("payment_intent_data[metadata][stripe_price_id]")).toBe("price_1UZdq5GqTruSqV8TsaDtFBPF");
+  });
+
   it("Starter lands on /generate, not the DPP workspace page", () => {
     const body = buildGatedSessionBody({
       plan: planById("starter")!,
