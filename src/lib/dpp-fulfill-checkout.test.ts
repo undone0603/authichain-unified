@@ -276,13 +276,28 @@ describe("fulfillDppPaidSession", () => {
     ).toHaveLength(1);
   });
 
-  it("writes no failure row when the send succeeds", async () => {
+  it("records an email success receipt with no buyer PII", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);
     expect(result.activationEmail).toBe("sent");
     expect(rows.some(r => r.event_type === "dpp_activation_email:failed")).toBe(
       false
     );
+    const sent = rows.filter(r => r.event_type === "dpp_activation_email:sent");
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({
+      prospect_id: "smoke_check_1",
+      stage: "complete_checkout",
+    });
+    expect(sent[0].metadata).toMatchObject({
+      activation_email_status: "sent",
+      stripe_session_id: paidSession.id,
+      profile_id: "prof_1",
+      provider: "resend",
+      http_status: 200,
+    });
+    expect(JSON.stringify(sent[0])).not.toContain("buyer@example.com");
+    expect(stageOf(sent[0] as never)).toBeNull();
   });
 
   it("redactForLog strips addresses and caps length", () => {
@@ -331,7 +346,9 @@ describe("fulfillDppPaidSession", () => {
     expect(result.handled).toBe(true);
     expect(result.profileId).toBe("prof_1");
     expect(
-      rows.map(r => (r.metadata as { loop_stage?: string }).loop_stage)
+      rows
+        .filter(r => String(r.event_type).startsWith("dpp_loop:"))
+        .map(r => (r.metadata as { loop_stage?: string }).loop_stage)
     ).toEqual(["payment_succeeded", "provisioned"]);
   });
 
@@ -411,12 +428,13 @@ describe("fulfillDppPaidSession", () => {
       profileId: "prof_1",
       activationEmail: "sent",
     });
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toMatchObject({
+    const loop = rows.filter(r => String(r.event_type).startsWith("dpp_loop:"));
+    expect(loop).toHaveLength(2);
+    expect(loop[0]).toMatchObject({
       prospect_id: "smoke_check_1",
       event_type: "dpp_loop:payment_succeeded",
     });
-    expect(rows[1]).toMatchObject({
+    expect(loop[1]).toMatchObject({
       prospect_id: "smoke_check_1",
       event_type: "dpp_loop:provisioned",
     });
@@ -614,6 +632,29 @@ describe("fulfillDppPaidSession", () => {
     expect(actions).toHaveLength(1);
     expect(actions[0]?.state).toBe("succeeded");
     expect(continuity.get("founder_exit_side_effects")).toHaveLength(1);
+  });
+
+  it("logs a paid Payment Link without visit metadata and avoids a replayed grant", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    const session = {
+      ...paidSession,
+      id: "cs_test_plink_no_visit",
+      client_reference_id: null,
+      metadata: { plan: "dpp_readiness", offer: DPP_OFFER_KEY, source: "direct" },
+    };
+    const first = await fulfillDppPaidSession(supabase, session);
+    const replay = await fulfillDppPaidSession(supabase, session);
+    expect(first.handled).toBe(true);
+    expect(replay.alreadyFulfilled).toBe(true);
+    const loops = rows.filter(r => String(r.event_type).startsWith("dpp_loop:"));
+    expect(loops.map(r => r.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+      "dpp_loop:provisioned",
+    ]);
+    expect(loops.every(r => r.prospect_id === session.id)).toBe(true);
+    expect(rows.filter(r => r.event_type === "dpp_activation_email:sent")).toHaveLength(1);
+    expect(profileUpdates).toHaveLength(1);
+    expect(sendEmail).toHaveBeenCalledOnce();
   });
 
   it("does not provision a complete-but-unpaid checkout", async () => {
