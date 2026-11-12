@@ -38,7 +38,7 @@ case "$task" in
   test-other)
     # Database is a credential-free disposable Postgres sidecar in CircleCI.
     # Wait for readiness without restarting/retrying the quality workflow.
-    node scripts/ci/dpp-activation-postgres.test.mjs
+    node scripts/ci/dpp-activation-postgres.acceptance.mjs
     pnpm --filter agent-browser exec playwright install --with-deps chromium
     pnpm test --filter='!./workers/*' --continue=dependencies-successful
     ;;
