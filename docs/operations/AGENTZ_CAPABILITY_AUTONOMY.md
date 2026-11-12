@@ -77,3 +77,30 @@ python -m unittest discover -s tests -p 'test_agentz_browser_executor.py'
 For ChatGPT callability, a separate authenticated remote MCP bridge or
 supported connector must be deployed and connected. The local FastAPI route
 alone is not callable through ChatGPT's currently installed tools.
+
+## GitHub `main` protection audit (read-only, 2026-11-12)
+
+AgentZ's fixed-url browser task allowlist additionally supports:
+
+- `github-main-protection-inspect` -> `https://github.com/undone0603/authichain-unified/settings/branches`
+- `github-repository-rulesets-inspect` -> `https://github.com/undone0603/authichain-unified/settings/rules`
+
+Both tasks use the same authenticated `AGENT_SECRET` endpoint and local
+`AGENTZ_BROWSER_BIN`, run only `open`, `snapshot`, `close` and save
+private `0600` evidence. They do **not** click, edit, submit or manage
+repository configuration. The API returns `verified:false` because browser
+snapshots can be unauthenticated redirects or stale client content.
+
+On an authorized signed-in AgentZ host, execute each task through
+`POST /agentz/browser/tasks` using the existing private operator token.
+Have the operator inspect captured snapshot URLs and current-page content
+for any login redirect; only after authoritative inspection identify actual
+required contexts and integration source. For `ae/rule18-gate`, prefer
+restoring its genuine check producer if it still exists. If independently
+confirmed orphaned, a repository admin may remove **only** that obsolete
+required context in GitHub's UI, retaining seven CircleCI status checks and
+all other protections. Do not synthesize a check, change rules through this
+read-only adapter, bypass protection, or report success from a synthetic test.
+
+No AgentZ host connection, signed-in browser session, privilege elevation,
+remote deployment or GitHub settings change is implied by adding these tasks.
