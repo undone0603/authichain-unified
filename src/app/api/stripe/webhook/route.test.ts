@@ -512,3 +512,118 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     expect(logged).not.toContain("whsec_");
   });
 });
+
+/**
+ * Subscription lifecycle contract for the canonical Next.js receiver.
+ * IMPORTANT: these are isolated unit tests with faked Stripe and Supabase.
+ * They do NOT prove exactly-once behavior across the independent Workers
+ * and Supabase webhook receivers registered on the live Stripe account.
+ * A cross-receiver, signed test-mode integration test is still required.
+ */
+describe("POST /api/stripe/webhook subscription lifecycle (isolated receiver)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAfterCalls.length = 0;
+    calls.profileUpdates.length = 0;
+    calls.paymentInserts.length = 0;
+    calls.eventInserts.length = 0;
+    calls.rpcCalls.length = 0;
+    db.seenEvent = null;
+    db.profile = { id: "prof_lifecycle", subscription_plan: "qron_launch" };
+    db.affiliate = null;
+    mockRetrieve.mockResolvedValue({
+      id: "sub_lifecycle",
+      metadata: {},
+    });
+    process.env.STRIPE_SECRET_KEY = "sk_test_dummy";
+    process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service_role_test";
+  });
+
+  it("initial invoice plus renewal records each distinct invoice but never grants a second checkout entitlement", async () => {
+    const created = invoiceEvent("subscription_create", {
+      event: "evt_lifecycle_create",
+      invoice: "in_lifecycle_create",
+    });
+    const renewed = invoiceEvent("subscription_cycle", {
+      event: "evt_lifecycle_cycle",
+      invoice: "in_lifecycle_cycle",
+    });
+
+    expect((await postInvoice(created)).status).toBe(200);
+    expect((await postInvoice(renewed)).status).toBe(200);
+    await flushAfter();
+
+    expect(calls.paymentInserts.map(x => x.stripe_invoice_id)).toEqual([
+      "in_lifecycle_create",
+      "in_lifecycle_cycle",
+    ]);
+    expect(calls.profileUpdates.filter(x =>
+      (x.payload as { subscription_status?: string }).subscription_status === "active"
+    )).toHaveLength(2);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(mockAnchorSale).toHaveBeenCalledTimes(1);
+  });
+
+  it("failed renewal records past_due, not paid, with no entitlement grant", async () => {
+    const event = {
+      id: "evt_lifecycle_failed",
+      type: "invoice.payment_failed",
+      livemode: false,
+      data: {
+        object: {
+          id: "in_lifecycle_failed",
+          customer: "cus_123",
+          subscription: "sub_lifecycle",
+          amount_paid: 0,
+          currency: "usd",
+        },
+      },
+    };
+
+    expect((await postInvoice(event)).status).toBe(200);
+    await flushAfter();
+
+    expect(calls.profileUpdates).toEqual([
+      expect.objectContaining({
+        payload: expect.objectContaining({ subscription_status: "past_due" }),
+        filters: expect.arrayContaining([["id", "prof_lifecycle"]]),
+      }),
+    ]);
+    expect(calls.paymentInserts).toHaveLength(0);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(mockAnchorSale).not.toHaveBeenCalled();
+  });
+
+  it("deleted subscription transitions to free/cancelled without any new grant", async () => {
+    const event = {
+      id: "evt_lifecycle_deleted",
+      type: "customer.subscription.deleted",
+      livemode: false,
+      data: {
+        object: {
+          id: "sub_lifecycle",
+          customer: "cus_123",
+          status: "canceled",
+        },
+      },
+    };
+
+    expect((await postInvoice(event)).status).toBe(200);
+    await flushAfter();
+
+    expect(calls.profileUpdates).toEqual([
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          subscription_status: "cancelled",
+          subscription_plan: "free",
+        }),
+        filters: expect.arrayContaining([["stripe_customer_id", "cus_123"]]),
+      }),
+    ]);
+    expect(calls.paymentInserts).toHaveLength(0);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(mockAnchorSale).not.toHaveBeenCalled();
+  });
+});
