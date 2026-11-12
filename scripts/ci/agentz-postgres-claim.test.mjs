@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { createPostgresClaimOnce, CLAIM_INSERT_SQL } from './agentz-postgres-claim.mjs';
+const key='agentz-commercial-attestation-v1:fixture';
+test('SQL uses bound values and immutable ON CONFLICT',()=>{assert.match(CLAIM_INSERT_SQL,/ON CONFLICT \(claim_sha256\) DO NOTHING/);assert.match(CLAIM_INSERT_SQL,/RETURNING claim_sha256/);assert.doesNotMatch(CLAIM_INSERT_SQL,/UPDATE|DELETE/i)});
+test('first reservation needs matching returned digest',async()=>{const digest=createHash('sha256').update(key).digest('hex');const c=createPostgresClaimOnce({query:async(_,args)=>{assert.equal(args[0],digest);return {rows:[{claim_sha256:digest}]}}});assert.equal(await c(key,86400000),true)});
+test('duplicate cannot reserve',async()=>{const c=createPostgresClaimOnce({query:async()=>({rows:[]})});assert.equal(await c(key,86400000),false)});
+test('untrusted database response fails closed',async()=>{const c=createPostgresClaimOnce({query:async()=>({})});await assert.rejects(c(key,86400000))});
+test('unexpected returned digest fails closed',async()=>{const c=createPostgresClaimOnce({query:async()=>({rows:[{claim_sha256:'bad'}]})});await assert.rejects(c(key,86400000))});
+test('database outage fails closed',async()=>{const c=createPostgresClaimOnce({query:async()=>{throw Error('offline')}});await assert.rejects(c(key,86400000))});
+test('untrusted namespace rejects without query',async()=>{let calls=0;const c=createPostgresClaimOnce({query:async()=>{calls++;return {rows:[]}}});await assert.rejects(c('unknown:key',86400000));assert.equal(calls,0)});
+test('too-long retention horizon rejected',async()=>{const c=createPostgresClaimOnce({query:async()=>({rows:[]})});await assert.rejects(c(key,31536000001))});
