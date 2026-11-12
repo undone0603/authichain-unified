@@ -97,6 +97,10 @@ async function fulfillDppPaidSessionOnce(
 
   const visitId =
     md.visit_id || md.prospect_id || session.client_reference_id || null;
+  // Payment Link checkouts often have no visit_id or client_reference_id.
+  // Key loop events on the Stripe session id so they still land in
+  // funnel_events. Sessions that already have a visit id are unchanged.
+  const loopVisitId = String(visitId || session.id);
   const email = (
     session.customer_email ||
     session.customer_details?.email ||
@@ -115,17 +119,15 @@ async function fulfillDppPaidSessionOnce(
     ...(demo ? { is_demo: true } : {}),
   };
 
-  if (visitId) {
-    await recordDppLoopEventOnce(supabase, {
-      visitId: String(visitId),
-      stage: "payment_succeeded",
-      source: md.source || "direct",
-      email: email || null,
-      stripeSessionId: session.id,
-      dedupeKey: session.id,
-      metadata: loopMeta,
-    });
-  }
+  await recordDppLoopEventOnce(supabase, {
+    visitId: loopVisitId,
+    stage: "payment_succeeded",
+    source: md.source || "direct",
+    email: email || null,
+    stripeSessionId: session.id,
+    dedupeKey: session.id,
+    metadata: loopMeta,
+  });
 
   try {
     await beginProvisionContinuity(supabase, {
@@ -194,9 +196,9 @@ async function fulfillDppPaidSessionOnce(
     throw markRetryableFulfillment(err);
   }
 
-  if (visitId && prov.profileId) {
+  if (prov.profileId) {
     await recordDppLoopEventOnce(supabase, {
-      visitId: String(visitId),
+      visitId: loopVisitId,
       stage: "provisioned",
       source: md.source || "direct",
       email: email || null,
@@ -209,9 +211,9 @@ async function fulfillDppPaidSessionOnce(
         ...(demo ? { is_demo: true } : {}),
       },
     });
-  } else if (visitId && prov.status === "no_identity") {
+  } else if (prov.status === "no_identity") {
     await recordDppLoopEventOnce(supabase, {
-      visitId: String(visitId),
+      visitId: loopVisitId,
       stage: "provisioned",
       source: md.source || "direct",
       email: email || null,
@@ -255,8 +257,18 @@ async function fulfillDppPaidSessionOnce(
         error: err instanceof Error ? err.message : String(err),
       };
     }
+    const emailProspectId = visitId ? String(visitId) : session.id;
     if (result && result.ok) {
       activationEmail = "sent";
+      await recordActivationEmailStatus(supabase, {
+        prospectId: emailProspectId,
+        source: md.source || "direct",
+        stripeSessionId: session.id,
+        profileId: prov.profileId,
+        provider: result?.provider ?? null,
+        httpStatus: result?.status ?? null,
+        status: "sent",
+      });
     } else {
       activationEmail = "failed";
       const reason = redactForLog(result?.error ?? "no send result");
@@ -265,14 +277,15 @@ async function fulfillDppPaidSessionOnce(
       console.error(
         `[dpp-fulfill] activation email failed: session=${session.id} profile=${prov.profileId} provider=${result?.provider ?? "unknown"} status=${result?.status ?? "n/a"} reason=${reason}`
       );
-      await recordActivationEmailFailed(supabase, {
-        prospectId: visitId ? String(visitId) : session.id,
+      await recordActivationEmailStatus(supabase, {
+        prospectId: emailProspectId,
         source: md.source || "direct",
         stripeSessionId: session.id,
         profileId: prov.profileId,
         provider: result?.provider ?? null,
         httpStatus: result?.status ?? null,
         reason,
+        status: "failed",
       });
     }
   }
@@ -301,11 +314,12 @@ export function redactForLog(message: string | undefined | null): string {
 }
 
 /**
- * Durable failed-status record for a dead activation email. Deliberately not a
- * dpp_loop:* event and no metadata.loop_stage, so loop reconstruction and stall
- * reports are unchanged. No email address is stored. Never throws.
+ * Durable status record for the activation email (sent or failed).
+ * Deliberately not a dpp_loop:* event and no metadata.loop_stage, so loop
+ * reconstruction and stall reports are unchanged. No email address or email
+ * body is stored. Never throws.
  */
-async function recordActivationEmailFailed(
+async function recordActivationEmailStatus(
   supabase: SupabaseLike,
   input: {
     prospectId: string;
@@ -314,7 +328,8 @@ async function recordActivationEmailFailed(
     profileId: string | null;
     provider: string | null;
     httpStatus: number | null;
-    reason: string;
+    reason?: string;
+    status: "sent" | "failed";
   }
 ): Promise<void> {
   try {
@@ -332,26 +347,26 @@ async function recordActivationEmailFailed(
       ].includes(input.source)
         ? input.source
         : "direct",
-      event_type: "dpp_activation_email:failed",
+      event_type: `dpp_activation_email:${input.status}`,
       metadata: {
-        activation_email_status: "failed",
+        activation_email_status: input.status,
         stripe_session_id: input.stripeSessionId,
         ...(input.profileId ? { profile_id: input.profileId } : {}),
         ...(input.provider ? { provider: input.provider } : {}),
         ...(input.httpStatus != null ? { http_status: input.httpStatus } : {}),
-        reason: input.reason,
+        ...(input.status === "failed" ? { reason: input.reason } : {}),
       },
       timestamp: new Date().toISOString(),
     });
     if (error) {
       console.error(
-        `[dpp-fulfill] could not record activation email failure: session=${input.stripeSessionId}`,
+        `[dpp-fulfill] could not record activation email ${input.status}: session=${input.stripeSessionId}`,
         error?.message ?? error
       );
     }
   } catch (err) {
     console.error(
-      `[dpp-fulfill] could not record activation email failure: session=${input.stripeSessionId}`,
+      `[dpp-fulfill] could not record activation email ${input.status}: session=${input.stripeSessionId}`,
       err instanceof Error ? err.message : err
     );
   }
