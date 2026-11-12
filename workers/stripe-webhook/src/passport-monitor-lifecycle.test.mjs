@@ -43,3 +43,22 @@ test('cross-customer and cross-subscription event fails closed',()=>{
   assert.equal(transition(paid().state,{...base,id:'evt_new002',customerId:'cus_foreign'}).reason,'customer_mismatch');
   assert.equal(transition(paid().state,{...base,id:'evt_new002',subscriptionId:'sub_foreign'}).reason,'subscription_mismatch');
 });
+
+test('successful payment retry in same period restores status without refunding quota',()=>{
+  let s=paid().state;
+  s=consumeOne(s,1500).state;
+  s=transition(s,{...base,id:'evt_failure_11',type:'invoice.payment_failed'}).state;
+  const restored=transition(s,{...base,id:'evt_retry_12',invoiceId:'in_retry_12'});
+  assert.equal(restored.action,'restored');
+  assert.equal(restored.state.status,'active');
+  assert.equal(restored.state.used,1);
+  assert.equal(canVerify(restored.state,1500),true);
+});
+
+test('unrecognized and malformed events cannot create a subscription',()=>{
+  assert.equal(transition(null,{...base,id:'bad id'}).reason,'invalid_identity');
+  assert.equal(transition(null,{...base,type:'customer.subscription.deleted'}).reason,'subscription_not_active');
+  assert.equal(transition(null,{...base,type:'customer.subscription.updated'}).reason,'subscription_not_active');
+  assert.equal(transition(null,{...base,periodEnd:999}).reason,'unsettled_or_invalid_invoice');
+  assert.equal(transition(null,{...base,currency:'eur'}).reason,'unsettled_or_invalid_invoice');
+});
