@@ -388,9 +388,10 @@ async function fulfillDppCheckoutIfPaid(
   // and it would drop every current smoke.
   if (session.payment_status !== "paid") return;
 
-  const { isDppOffer } = await import("../../src/lib/dpp-loop");
+  const { isDppCheckoutCandidate } =
+    await import("../../src/lib/dpp-payment-eligibility");
+  if (!isDppCheckoutCandidate(session)) return;
   const linePriceId = checkoutLinePriceId(session);
-  if (!isDppOffer(session.metadata || {}, linePriceId)) return;
 
   // Collision guard: DPP readiness is a one-time $299 audit. A recurring
   // (subscription-mode) Session must never enter the DPP grant path, even
@@ -421,17 +422,33 @@ async function fulfillDppCheckoutIfPaid(
     return;
   }
 
+  // The webhook payload usually lacks expanded line items. Retrieve the
+  // current Stripe record; event metadata and amount alone are not price proof.
+  const verified = await getStripeClient().checkout.sessions.retrieve(session.id, {
+    expand: ["line_items"],
+  });
+  if (verified.payment_status !== "paid" || verified.status !== "complete") {
+    throw markRetryableFulfillment(
+      new Error("DPP payment not complete in Stripe")
+    );
+  }
+
   const supabase = await getWebhookSupabase();
   if (!supabase) {
-    console.error(
-      "[stripe-webhook] DPP session paid but Supabase is not configured"
+    throw markRetryableFulfillment(
+      new Error("DPP paid but entitlement store unavailable")
     );
-    return;
   }
 
   const { fulfillDppPaidSession } =
     await import("../../src/lib/dpp-fulfill-checkout");
-  await fulfillDppPaidSession(supabase, session, linePriceId);
+  const actualPrice = verified.line_items?.data?.[0]?.price?.id ?? null;
+  const grant = await fulfillDppPaidSession(supabase, verified, actualPrice);
+  if (!grant.handled) {
+    throw markRetryableFulfillment(
+      new Error("DPP paid Checkout not reconciled to an authorized product")
+    );
+  }
 }
 
 /**

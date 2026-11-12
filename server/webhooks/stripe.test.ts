@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockConstructEvent = vi.fn();
 const mockCustomersRetrieve = vi.fn();
+const mockCheckoutRetrieve = vi.fn();
 
 vi.mock("stripe", () => {
   class MockStripe {
@@ -22,6 +23,7 @@ vi.mock("stripe", () => {
         Promise.resolve(mockConstructEvent(...args)),
     };
     customers = { retrieve: mockCustomersRetrieve };
+    checkout = { sessions: { retrieve: mockCheckoutRetrieve } };
   }
   return { default: MockStripe };
 });
@@ -167,6 +169,20 @@ beforeEach(async () => {
   vi.mocked(db.logAutomationAudit).mockResolvedValue(undefined);
   growthRecordRpc.mockResolvedValue({ error: null });
   claimStripeEventMock.mockResolvedValue("claimed");
+  // Simulates an independent Stripe read, including expanded line items.
+  mockCheckoutRetrieve.mockImplementation(async () => {
+    const event = mockConstructEvent.mock.results.at(-1)?.value;
+    const source = event?.data?.object ?? {};
+    return {
+      ...source,
+      status: source.status ?? "complete",
+      currency: source.currency ?? "usd",
+      line_items: source.line_items ?? {
+        data: [{ quantity: 1, price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+        has_more: false,
+      },
+    };
+  });
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
   delete process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET;
   process.env.STRIPE_SECRET_KEY = "sk_test";
@@ -427,7 +443,9 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         id: "cs_live_smoke_check",
         mode: "payment",
         payment_status: "paid",
-        amount_total: 0,
+        status: "complete",
+        amount_total: 29900,
+        currency: "usd",
         customer_details: { email: "authichain@gmail.com" },
         client_reference_id: "smoke_check_1789786486",
         metadata: {
@@ -441,10 +459,13 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     const result = await handleStripeWebhook(RAW_BODY, SIG);
     expect(result.received).toBe(true);
     expect(result.handled).toBe(true);
+    expect(mockCheckoutRetrieve).toHaveBeenCalledWith("cs_live_smoke_check", {
+      expand: ["line_items"],
+    });
     expect(fulfillDppPaidSession).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ id: "cs_live_smoke_check" }),
-      null
+      "price_1TwmD8GqTruSqV8TpAF8dfyA"
     );
   });
 
@@ -475,10 +496,54 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         id: "cs_live_a1y4Tu_smoke",
         amount_total: 0,
       }),
-      null
+      "price_1TwmD8GqTruSqV8TpAF8dfyA"
     );
   });
 
+
+  it("recognizes the live $299 Payment Link with no metadata and fetches the real Stripe price", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_dpp_link", {
+        id: "cs_live_dpp_link",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        amount_total: 29900,
+        currency: "usd",
+        metadata: {},
+        payment_link: "plink_1UNd1FGqTruSqV8TWahMUQ3l",
+        customer_details: { email: "buyer@example.com" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(mockCheckoutRetrieve).toHaveBeenCalledWith("cs_live_dpp_link", {
+      expand: ["line_items"],
+    });
+    expect(fulfillDppPaidSession).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: "cs_live_dpp_link" }),
+      "price_1TwmD8GqTruSqV8TpAF8dfyA"
+    );
+  });
+
+  it("retries a DPP checkout when its Stripe proof cannot be fetched", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_dpp_proof_down", {
+        id: "cs_live_dpp_proof_down",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        amount_total: 29900,
+        metadata: { plan: "dpp_readiness" },
+      })
+    );
+    mockCheckoutRetrieve.mockRejectedValueOnce(new Error("Stripe read unavailable"));
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(/Stripe read unavailable/);
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
   it("does not fulfill checkout.session.completed until payment_status is paid", async () => {
     mockConstructEvent.mockReturnValue(
       makeEvent("checkout.session.completed", "evt_dpp_unpaid", {
@@ -663,7 +728,7 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     expect(fulfillDppPaidSession).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ id: "cs_live_a1y4Tu_replay" }),
-      null
+      "price_1TwmD8GqTruSqV8TpAF8dfyA"
     );
     expect(vi.mocked(upsertStripeSubscription)).not.toHaveBeenCalled();
     expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
