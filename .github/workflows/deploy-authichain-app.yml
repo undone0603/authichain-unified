@@ -17,13 +17,148 @@ on:
         required: false
         type: string
         default: ""
+      supabase_project_ref:
+        description: "Required expected production Supabase project ID for forward release"
+        type: string
+        required: false
+        default: ""
 permissions:
   contents: read
+  statuses: read
+  actions: read
+  deployments: read
+  checks: read
 concurrency:
   group: deploy-authichain-app
   cancel-in-progress: false
 jobs:
+  preflight:
+    name: Validate exact-main CI and protected release environments
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 8
+    steps:
+      - name: Validate dispatch mode and exact SHA
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+          ROLLBACK_VERSION: ${{ inputs.rollback_version }}
+          EXPECTED_SUPABASE_REF: ${{ inputs.supabase_project_ref }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          if [ -n "$ROLLBACK_VERSION" ]; then
+            test -z "$EXPECTED_SHA"
+            test -z "$EXPECTED_SUPABASE_REF"
+            [[ "$ROLLBACK_VERSION" =~ ^([a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}|[a-f0-9]{8,32})$ ]]
+            exit 0
+          fi
+          [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$EXPECTED_SHA" = "$DISPATCH_SHA"
+          [[ "$EXPECTED_SUPABASE_REF" =~ ^[a-z0-9]{20}$ ]]
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: ${{ inputs.rollback_version == '' }}
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+      - name: Verify fully restored exact-head source
+        if: ${{ inputs.rollback_version == '' }}
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test -f scripts/ci/autonomous-release-gate.mjs
+          test -f scripts/ci/verify-dpp-release-env.mjs
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        if: ${{ inputs.rollback_version == '' }}
+        with:
+          node-version: "22"
+      - name: Enforce existing release policy and production-supabase environment
+        if: ${{ inputs.rollback_version == '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ inputs.expected_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -s "$HOME/.nvm/nvm.sh" ]; then
+            . "$HOME/.nvm/nvm.sh"
+            nvm use 22 >/dev/null
+          fi
+          node --test scripts/ci/autonomous-release-gate.test.mjs scripts/ci/verify-dpp-release-env.test.mjs scripts/ci/protected-dpp-release.test.mjs
+          node scripts/ci/autonomous-release-gate.mjs
+          node scripts/ci/verify-dpp-release-env.mjs
+      - name: Require successful exact-head GitHub Main quality gate
+        if: ${{ inputs.rollback_version == '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.expected_sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const sha=process.env.TARGET_SHA;
+          const url="https://api.github.com/repos/"+process.env.REPOSITORY+"/commits/"+sha+"/check-runs?per_page=100";
+          const resp=await fetch(url,{headers:{Authorization:"Bearer "+process.env.GH_TOKEN,
+            Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"}});
+          if(!resp.ok){console.error("::error::Cannot read exact-main GitHub quality check");process.exit(1)}
+          const data=await resp.json();
+          const passed=(data.check_runs||[]).some(run=>run.name==="Main quality gate"&&run.head_sha===sha&&
+            run.status==="completed"&&run.conclusion==="success");
+          if(!passed){console.error("::error::Exact-main GitHub quality gate is missing or not successful");process.exit(1)}
+          NODE
+      - name: Verify protected rollback environment exists
+        if: ${{ inputs.rollback_version != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ -s "$HOME/.nvm/nvm.sh" ]; then
+            . "$HOME/.nvm/nvm.sh"
+            nvm use 22 >/dev/null
+          fi
+          node -e 'const https=require("https"),url="https://api.github.com/repos/"+process.env.REPOSITORY+"/environments/production-cloudflare";const req=https.get(url,{headers:{"Authorization":"Bearer "+process.env.GH_TOKEN,"Accept":"application/vnd.github+json","User-Agent":"dpp-release-gate"}},r=>{let s="";r.on("data",d=>s+=d);r.on("end",()=>{try{const x=JSON.parse(s);if(r.statusCode!==200||x.name!=="production-cloudflare"||x.deployment_branch_policy?.protected_branches!==true||x.deployment_branch_policy?.custom_branch_policies!==false)process.exitCode=1}catch{process.exitCode=1}})});req.on("error",()=>{process.exitCode=1})'
+
+  db_preflight:
+    name: Read-only production DPP migration attestation
+    needs: preflight
+    if: ${{ inputs.rollback_version == '' }}
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 8
+    environment:
+      name: production-supabase
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "22"
+      - name: Require applied schema before allowing Worker publish
+        env:
+          AUTHICHAIN_PRODUCTION_SUPABASE_DB_URL: ${{ secrets.AUTHICHAIN_PRODUCTION_SUPABASE_DB_URL }}
+          AUTHICHAIN_PRODUCTION_SUPABASE_PROJECT_REF: ${{ secrets.AUTHICHAIN_PRODUCTION_SUPABASE_PROJECT_REF }}
+          EXPECTED_SUPABASE_REF: ${{ inputs.supabase_project_ref }}
+        run: |
+          set -euo pipefail
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test "$(git rev-parse HEAD)" = "${{ inputs.expected_sha }}"
+          bash scripts/ci/verify-dpp-outbox-production.sh
   deploy:
+    needs: [preflight, db_preflight]
+    if: ${{ always() && needs.preflight.result == 'success' && ((inputs.rollback_version == '' && needs.db_preflight.result == 'success') || (inputs.rollback_version != '' && needs.db_preflight.result == 'skipped')) }}
+    environment:
+      name: production-cloudflare
     # Publish runner only: authichain-wsl, same as deploy-authichain-com.yml.
     runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 45
@@ -78,8 +213,8 @@ jobs:
             echo "::error::HEAD $HEAD_SHA != expected $EXPECTED_SHA"; exit 1
           fi
           git fetch --no-tags origin main
-          if ! git merge-base --is-ancestor "$EXPECTED_SHA" origin/main; then
-            echo "::error::$EXPECTED_SHA is not an ancestor of origin/main"; exit 1
+          if [ "$(git rev-parse origin/main)" != "$EXPECTED_SHA" ]; then
+            echo "::error::current main does not equal exact release SHA"; exit 1
           fi
           # setup-node has not run yet. The self-hosted runner has no node on PATH here.
           NAME="$(sed -n 's/^[[:space:]]*"name":[[:space:]]*"\([^"]*\)".*/\1/p' wrangler.app.jsonc | head -n 1)"
@@ -105,8 +240,8 @@ jobs:
       - name: Rollback authichain-app
         if: ${{ inputs.rollback_version != '' }}
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
           ROLLBACK_VERSION: ${{ inputs.rollback_version }}
         run: |
           set -euo pipefail
@@ -126,11 +261,35 @@ jobs:
             if [ -z "${!n:-}" ]; then echo "::error::secret $n is empty"; exit 1; fi
           done
           bash scripts/with-build-lock.sh pnpm exec opennextjs-cloudflare build --config wrangler.app.jsonc
+      - name: Recheck exact-current-main protected release policy before publish
+        if: ${{ inputs.rollback_version == '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ inputs.expected_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          node scripts/ci/autonomous-release-gate.mjs
+      - name: Verify application Supabase endpoint matches attested database
+        if: ${{ inputs.rollback_version == '' }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          EXPECTED_SUPABASE_REF: ${{ inputs.supabase_project_ref }}
+        run: |
+          set -euo pipefail
+          node --input-type=module -e '
+            const u = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL);
+            if(u.protocol !== "https:" || u.hostname !== process.env.EXPECTED_SUPABASE_REF + ".supabase.co"){
+              console.error("::error::App Supabase URL differs from protected DB migration target");
+              process.exit(1);
+            }
+          '
       - name: Publish authichain-app
         if: ${{ inputs.rollback_version == '' }}
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
         # --keep-vars keeps dashboard vars/secrets attached. No secret put, no --var.
         run: |
           set -euo pipefail
