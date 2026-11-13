@@ -9,6 +9,11 @@
  * material only: names, roles, did:key / did:web ids, and one Ed25519-signed
  * identity record per bot that protocol/verifier.mjs checks offline.
  *
+ * AgentZ readiness signing (PR2) reuses KEY_DIR/agentz.ed25519.pem. Bind it
+ * on the apex Worker as AGENTZ_READINESS_PRIVATE_JWK; do not add a new in-repo
+ * key. After VALID_UNTIL, regenerate with an updated date before signing
+ * resumes. See workers/authichain-com/src/agentz-readiness-sign.ts. // pragma: allowlist secret
+ *
  * The AuthiChain agent issuer key signs each bot's record. Each bot key also
  * signs a short self-statement, proving the bot's key pair is controlled by us.
  */

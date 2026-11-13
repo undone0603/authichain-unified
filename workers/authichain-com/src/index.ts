@@ -12,6 +12,7 @@ import { handleSalesInquiry } from './routes/sales';
 import { tryHandleDppRoute } from "./dpp-routes";
 import { tryHandleAgentPresentation } from "./agent-present-page";
 import { tryHandleBotIdentity } from "./bot-identity-routes";
+import { tryHandleReadinessSign } from "./agentz-readiness-sign";
 import {
   tryHandleApiCheckoutEmailGate,
   tryHandleProtocolCheckout,
@@ -3245,6 +3246,14 @@ interface Env {
   COFFEE_PAYMENT_LINK_URL?: string;
   /** Optional live Proof-of-Coffee Ed25519 private JWK. Unset fails closed on JWS minting. */
   COFFEE_RECEIPT_PRIVATE_JWK?: string;
+  /** PR2 readiness signing. Default false in wrangler.toml; unset is off. */
+  READINESS_SIGNING_ENABLED?: string;
+  /** StorePilot FEATURE_ENABLED. Explicit false refuses signing even if the signing flag is on. */
+  FEATURE_ENABLED?: string;
+  /** AgentZ Ed25519 private JWK from KEY_DIR/agentz.ed25519.pem. Never commit. */
+  AGENTZ_READINESS_PRIVATE_JWK?: string;
+  /** Alternate PKCS#8 PEM for the same AgentZ key. Never commit. */
+  AGENTZ_READINESS_PRIVATE_KEY_PEM?: string;
   /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
   DPP_SMOKE_SECRET?: string;
   X402_PAY_TO?: string;
@@ -3707,6 +3716,9 @@ receipt reference. Do not send card details.</p>
     if (agentPage) return agentPage;
     const botIdentity = tryHandleBotIdentity(request);
     if (botIdentity) return botIdentity;
+    // PR2 signed readiness records. Intercept before APP_PREFIXES (/api → APP_WORKER).
+    const readinessSign = await tryHandleReadinessSign(request, env);
+    if (readinessSign) return readinessSign;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
     // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the

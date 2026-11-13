@@ -198,6 +198,8 @@ service = "authichain-api"
 # DPP_SMOKE_SECRET (16+ chars) gates the $0 DPP-SMOKE-E2E session. Unset fails closed.
 # IP_HASH_SALT (optional): wrangler secret put IP_HASH_SALT --name authichain-com
 # Unset or empty fails closed: 503, no write.
+# AGENTZ_READINESS_PRIVATE_JWK (optional): wrangler secret put AGENTZ_READINESS_PRIVATE_JWK --name authichain-com # pragma: allowlist secret
+# Source: KEY_DIR/agentz.ed25519.pem exported as a JWK. Never commit. Unset fails closed on POST /api/agentz/readiness-sign.
 
 # VERIFY_APP: service binding to the Next app worker `authichain-app`
 # (wrangler.app.jsonc). Paid verify prefers the Supabase read below. This
@@ -216,6 +218,8 @@ SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 # Paid verify reads auth_seals here (SUPABASE_URL + key above, VERIFY_APP
 # fallback), so discovery reports paidVerify bound. Rollback: delete this line.
 X402_PAID_VERIFY_PATH = "seal_lookup"
+# PR2 AgentZ readiness signing. Stay false until Research smoke-checks the merged SHA.
+READINESS_SIGNING_ENABLED = "false"
 
 [browser]
 binding = "MYBROWSER"
