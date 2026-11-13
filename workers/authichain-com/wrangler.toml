@@ -218,8 +218,10 @@ SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 # Paid verify reads auth_seals here (SUPABASE_URL + key above, VERIFY_APP
 # fallback), so discovery reports paidVerify bound. Rollback: delete this line.
 X402_PAID_VERIFY_PATH = "seal_lookup"
-# PR2 AgentZ readiness signing. Stay false until Research smoke-checks the merged SHA.
+# PR2 AgentZ readiness signing. Both must be the string "true" or nothing is signed.
+# Stay false until Research smoke-checks the merged SHA.
 READINESS_SIGNING_ENABLED = "false"
+FEATURE_ENABLED = "false"
 
 [browser]
 binding = "MYBROWSER"

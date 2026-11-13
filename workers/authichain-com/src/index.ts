@@ -3246,10 +3246,19 @@ interface Env {
   COFFEE_PAYMENT_LINK_URL?: string;
   /** Optional live Proof-of-Coffee Ed25519 private JWK. Unset fails closed on JWS minting. */
   COFFEE_RECEIPT_PRIVATE_JWK?: string;
-  /** PR2 readiness signing. Default false in wrangler.toml; unset is off. */
+  /** PR2 readiness signing. Must be the string "true" together with FEATURE_ENABLED. */
   READINESS_SIGNING_ENABLED?: string;
-  /** StorePilot FEATURE_ENABLED. Explicit false refuses signing even if the signing flag is on. */
+  /** Must be the string "true" together with READINESS_SIGNING_ENABLED. Unset is off. */
   FEATURE_ENABLED?: string;
+  /** Replay KV, reused for readiness-sign POST rate limits (prefixed keys). */
+  X402_REPLAY_KV?: {
+    get(key: string): Promise<string | null>;
+    put(
+      key: string,
+      value: string,
+      options?: { expirationTtl?: number }
+    ): Promise<void>;
+  };
   /** AgentZ Ed25519 private JWK from KEY_DIR/agentz.ed25519.pem. Never commit. */
   AGENTZ_READINESS_PRIVATE_JWK?: string;
   /** Alternate PKCS#8 PEM for the same AgentZ key. Never commit. */

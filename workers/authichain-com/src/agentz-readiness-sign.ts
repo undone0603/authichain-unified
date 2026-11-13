@@ -8,9 +8,9 @@
  * `wrangler secret put`. Signing refuses unless that key's public x matches
  * the published AgentZ key in bot-identities.ts / identity.json.
  *
- * Flag: READINESS_SIGNING_ENABLED (default false), separate from StorePilot's
- * FEATURE_ENABLED. When this flag is off, or when FEATURE_ENABLED is explicitly
- * false, nothing is signed.
+ * Flags: both FEATURE_ENABLED and READINESS_SIGNING_ENABLED must be the string
+ * "true". Unset or any other value means off. Nothing is signed unless both
+ * are on. POST is rate-limited 10/min/IP on X402_REPLAY_KV before the key loads.
  *
  * Re-sign / rotate before 2027-01-17T18:00:00Z (R4):
  *   1. Update VALID_UNTIL in scripts/agent-identity/bots.mjs.
@@ -38,7 +38,15 @@ import {
   signingBytes,
   sha256Hex,
 } from "../../../protocol/verifier.mjs";
-import { DPP_QUESTIONS, type QuestionId } from "../../../src/lib/dpp-readiness";
+import {
+  DPP_QUESTIONS,
+  categoryById,
+  parseDppReadinessInput,
+  scoreDppReadiness,
+  type DppCategory,
+  type DppReadinessInput,
+  type QuestionId,
+} from "../../../src/lib/dpp-readiness";
 import { BOT_IDENTITIES } from "./bot-identities";
 
 export const READINESS_SIGN_PATH = "/api/agentz/readiness-sign";
@@ -49,10 +57,7 @@ export const READINESS_SIGNING_FLAG = "READINESS_SIGNING_ENABLED";
 export const READINESS_PRIVATE_JWK_SECRET = "AGENTZ_READINESS_PRIVATE_JWK";
 export const READINESS_PRIVATE_PEM_SECRET = "AGENTZ_READINESS_PRIVATE_KEY_PEM";
 
-export const SIGNABLE_TOOLS = [
-  "dpp_check",
-  "catalog_readiness_preview",
-] as const;
+export const SIGNABLE_TOOLS = ["dpp_check"] as const;
 export type SignableTool = (typeof SIGNABLE_TOOLS)[number];
 
 export const READINESS_GAP_CODES = DPP_QUESTIONS.map(q => q.id);
@@ -106,10 +111,21 @@ export const SIGNED_PAYLOAD_KEYS = [
 export const REQUEST_KEYS = [
   "tool",
   "toolVersion",
-  "inputsSha256",
+  "category",
+  "sells_in_eu",
+  ...READINESS_GAP_CODES,
+] as const;
+
+/** Posted results are refused. The server recomputes these from the scorer. */
+export const REFUSED_POSTED_RESULT_KEYS = [
   "score",
   "gapCodes",
+  "inputsSha256",
 ] as const;
+
+export const RATE_LIMIT_MAX = 10;
+export const RATE_LIMIT_WINDOW_MS = 60_000;
+export const RATE_LIMIT_KV_PREFIX = "readiness-sign:rl:";
 
 export const INPUT_HASH_KEYS = [
   "category",
@@ -142,10 +158,9 @@ const CORS_HEADERS = {
 };
 
 const TOOL_VERSION_RE = /^\d{1,3}\.\d{1,3}\.\d{1,3}$/;
-const SHA256_HEX_RE = /^[a-f0-9]{64}$/;
-const GAP_CODE_SET = new Set<string>(READINESS_GAP_CODES);
 const SIGNABLE_TOOL_SET = new Set<string>(SIGNABLE_TOOLS);
 const REQUEST_KEY_SET = new Set<string>(REQUEST_KEYS);
+const REFUSED_POSTED_RESULT_KEY_SET = new Set<string>(REFUSED_POSTED_RESULT_KEYS);
 const FORBIDDEN_FREE_TEXT_KEYS = [
   "product_name",
   "productName",
@@ -160,20 +175,33 @@ const FORBIDDEN_FREE_TEXT_KEYS = [
   "instructions",
 ] as const;
 
+export type ReadinessSignKv = {
+  get(key: string): Promise<string | null>;
+  put(
+    key: string,
+    value: string,
+    options?: { expirationTtl?: number }
+  ): Promise<void>;
+};
+
 export type ReadinessSignEnv = {
   READINESS_SIGNING_ENABLED?: string;
   FEATURE_ENABLED?: string;
   AGENTZ_READINESS_PRIVATE_JWK?: string;
   AGENTZ_READINESS_PRIVATE_KEY_PEM?: string;
+  /** Reuses the existing apex KV. Keys are prefixed RATE_LIMIT_KV_PREFIX. */
+  X402_REPLAY_KV?: ReadinessSignKv;
 };
+
+export type CanonicalReadinessInputs = {
+  category: DppCategory;
+  sells_in_eu: boolean;
+} & Record<QuestionId, boolean>;
 
 export type ReadinessSignRequest = {
   tool: SignableTool;
   toolVersion: string;
-  inputsSha256: string;
-  score: number;
-  gapCodes: ReadinessGapCode[];
-};
+} & CanonicalReadinessInputs;
 
 export type SignedReadinessPayload = {
   tool: SignableTool;
@@ -193,7 +221,9 @@ export type ReadinessSignFailureCode =
   | "IDENTITY_EXPIRED"
   | "KEY_UNBOUND"
   | "KEY_MISMATCH"
-  | "INVALID_SCHEMA";
+  | "INVALID_SCHEMA"
+  | "RATE_LIMITED"
+  | "RATE_LIMIT_UNBOUND";
 
 export type ReadinessSignFailure = {
   signed: false;
@@ -236,6 +266,8 @@ export type SignReadinessDeps = {
   privateKey?: KeyObject;
   privateJwk?: string;
   privatePem?: string;
+  kv?: ReadinessSignKv;
+  clientIp?: string;
   /** Tests only. Live signing always requires the AgentZ published public key. */
   allowMismatchedKey?: boolean;
 };
@@ -252,41 +284,79 @@ export function isReadinessSignPath(pathname: string): boolean {
   return p === READINESS_SIGN_PATH;
 }
 
+function envFlagTrue(
+  depsValue: boolean | undefined,
+  envValue: string | undefined
+): boolean {
+  if (depsValue !== undefined) return depsValue === true;
+  return envValue === "true";
+}
+
+export function isFeatureFlagOn(
+  env: ReadinessSignEnv = {},
+  deps: SignReadinessDeps = {}
+): boolean {
+  return envFlagTrue(deps.featureEnabled, env.FEATURE_ENABLED);
+}
+
+export function isSigningFlagOn(
+  env: ReadinessSignEnv = {},
+  deps: SignReadinessDeps = {}
+): boolean {
+  return envFlagTrue(deps.signingEnabled, env.READINESS_SIGNING_ENABLED);
+}
+
 export function isReadinessSigningEnabled(
   env: ReadinessSignEnv = {},
   deps: SignReadinessDeps = {}
 ): boolean {
-  if (deps.featureEnabled === false) return false;
-  if (deps.signingEnabled === false) return false;
-  if (env.FEATURE_ENABLED === "false") return false;
-  if (deps.signingEnabled === true) return true;
-  return env.READINESS_SIGNING_ENABLED === "true";
+  return isFeatureFlagOn(env, deps) && isSigningFlagOn(env, deps);
 }
 
 export function publishedAgentzJwks(): { keys: typeof AGENTZ_PUBLISHED_JWK[] } {
   return { keys: [{ ...AGENTZ_PUBLISHED_JWK }] };
 }
 
+export function toDppReadinessInput(
+  request: CanonicalReadinessInputs
+): DppReadinessInput {
+  const answers: DppReadinessInput["answers"] = {};
+  for (const q of DPP_QUESTIONS) answers[q.id] = request[q.id] === true;
+  return {
+    category: request.category,
+    sellsInEu: request.sells_in_eu,
+    answers,
+  };
+}
+
 export function pickCanonicalInputs(
-  raw: Record<string, unknown>
-): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  if (typeof raw.category === "string") out.category = raw.category;
-  if (typeof raw.sells_in_eu === "boolean") out.sells_in_eu = raw.sells_in_eu;
-  for (const code of READINESS_GAP_CODES) {
-    if (typeof raw[code] === "boolean") out[code] = raw[code];
+  input: DppReadinessInput
+): CanonicalReadinessInputs {
+  const out = {
+    category: input.category,
+    sells_in_eu: input.sellsInEu === true,
+  } as CanonicalReadinessInputs;
+  for (const q of DPP_QUESTIONS) {
+    out[q.id] = input.answers[q.id] === true;
   }
   return out;
 }
 
-export function hashReadinessInputs(raw: Record<string, unknown>): string {
-  return sha256Hex(Buffer.from(canonicalize(pickCanonicalInputs(raw)), "utf8"));
+export function hashReadinessInputs(input: DppReadinessInput): string {
+  return sha256Hex(Buffer.from(canonicalize(pickCanonicalInputs(input)), "utf8"));
 }
 
-export function gapCodesFromAnswers(
-  raw: Record<string, unknown>
-): ReadinessGapCode[] {
-  return READINESS_GAP_CODES.filter(code => raw[code] !== true);
+export function gapCodesFromAnswers(input: DppReadinessInput): ReadinessGapCode[] {
+  return DPP_QUESTIONS.filter(q => input.answers[q.id] !== true).map(q => q.id);
+}
+
+export function scoreCanonicalInputs(input: DppReadinessInput) {
+  const scored = scoreDppReadiness(input, { offerAudit: false });
+  return {
+    score: scored.score,
+    gapCodes: gapCodesFromAnswers(input),
+    inputsSha256: hashReadinessInputs(input),
+  };
 }
 
 export function rfc7638Kid(x: string): string {
@@ -311,6 +381,7 @@ function failure(
 function httpStatusFor(error: ReadinessSignFailureCode): number {
   if (error === "INVALID_SCHEMA") return 400;
   if (error === "IDENTITY_EXPIRED") return 403;
+  if (error === "RATE_LIMITED") return 429;
   return 503;
 }
 
@@ -324,6 +395,14 @@ export function parseReadinessSignRequest(
 ): { ok: true; request: ReadinessSignRequest } | { ok: false; error: string } {
   const raw = asRecord(value);
   if (!raw) return { ok: false, error: "body must be a JSON object" };
+  for (const key of REFUSED_POSTED_RESULT_KEYS) {
+    if (key in raw) {
+      return {
+        ok: false,
+        error: `posted ${key} refused; the server computes score, gapCodes, and inputsSha256`,
+      };
+    }
+  }
   const keys = Object.keys(raw);
   for (const key of keys) {
     if (!REQUEST_KEY_SET.has(key)) {
@@ -333,11 +412,8 @@ export function parseReadinessSignRequest(
   for (const key of FORBIDDEN_FREE_TEXT_KEYS) {
     if (key in raw) return { ok: false, error: `free text field refused: ${key}` };
   }
-  for (const required of REQUEST_KEYS) {
-    if (!(required in raw)) return { ok: false, error: `missing field: ${required}` };
-  }
-  if (!SIGNABLE_TOOL_SET.has(String(raw.tool))) {
-    return { ok: false, error: "tool must be dpp_check or catalog_readiness_preview" };
+  if (raw.tool !== "dpp_check" || !SIGNABLE_TOOL_SET.has(String(raw.tool))) {
+    return { ok: false, error: "tool must be dpp_check" };
   }
   if (
     typeof raw.toolVersion !== "string" ||
@@ -345,39 +421,26 @@ export function parseReadinessSignRequest(
   ) {
     return { ok: false, error: "toolVersion must be a dotted numeric version" };
   }
-  if (typeof raw.inputsSha256 !== "string" || !SHA256_HEX_RE.test(raw.inputsSha256)) {
-    return { ok: false, error: "inputsSha256 must be a lowercase sha256 hex digest" };
+  if (typeof raw.category !== "string" || !categoryById(raw.category)) {
+    return { ok: false, error: "category must be a known DPP category" };
   }
-  if (
-    typeof raw.score !== "number" ||
-    !Number.isInteger(raw.score) ||
-    raw.score < 0 ||
-    raw.score > 100
-  ) {
-    return { ok: false, error: "score must be an integer 0-100" };
+  if ("sells_in_eu" in raw && typeof raw.sells_in_eu !== "boolean") {
+    return { ok: false, error: "sells_in_eu must be a boolean" };
   }
-  if (!Array.isArray(raw.gapCodes)) {
-    return { ok: false, error: "gapCodes must be an array of known codes" };
-  }
-  const seen = new Set<string>();
-  const gapCodes: ReadinessGapCode[] = [];
-  for (const code of raw.gapCodes) {
-    if (typeof code !== "string" || !GAP_CODE_SET.has(code)) {
-      return { ok: false, error: `unknown gap code: ${String(code)}` };
+  for (const q of DPP_QUESTIONS) {
+    if (q.id in raw && typeof raw[q.id] !== "boolean") {
+      return { ok: false, error: `${q.id} must be a boolean` };
     }
-    if (seen.has(code)) continue;
-    seen.add(code);
-    gapCodes.push(code as ReadinessGapCode);
   }
-  gapCodes.sort();
+  const parsed = parseDppReadinessInput(k => raw[k]);
+  if (!parsed) return { ok: false, error: "category must be a known DPP category" };
+  const canonical = pickCanonicalInputs(parsed);
   return {
     ok: true,
     request: {
-      tool: raw.tool as SignableTool,
+      tool: "dpp_check",
       toolVersion: raw.toolVersion,
-      inputsSha256: raw.inputsSha256,
-      score: raw.score,
-      gapCodes,
+      ...canonical,
     },
   };
 }
@@ -529,13 +592,16 @@ export function signReadinessRecord(
   env: ReadinessSignEnv = {},
   deps: SignReadinessDeps = {}
 ): ReadinessSignResult {
-  if (deps.featureEnabled === false || env.FEATURE_ENABLED === "false") {
-    return failure("FEATURE_DISABLED", "FEATURE_ENABLED is false; nothing is signed");
+  if (!isFeatureFlagOn(env, deps)) {
+    return failure(
+      "FEATURE_DISABLED",
+      "FEATURE_ENABLED is not true; nothing is signed"
+    );
   }
-  if (!isReadinessSigningEnabled(env, deps)) {
+  if (!isSigningFlagOn(env, deps)) {
     return failure(
       "SIGNING_DISABLED",
-      "READINESS_SIGNING_ENABLED is false; nothing is signed"
+      "READINESS_SIGNING_ENABLED is not true; nothing is signed"
     );
   }
   const now = deps.now ?? new Date();
@@ -547,6 +613,7 @@ export function signReadinessRecord(
   }
   const parsed = parseReadinessSignRequest(input);
   if (!parsed.ok) return failure("INVALID_SCHEMA", parsed.error);
+  const scored = scoreCanonicalInputs(toDppReadinessInput(parsed.request));
   const loaded = loadSigningKey(env, deps);
   if (!loaded.ok) {
     return failure(
@@ -564,10 +631,10 @@ export function signReadinessRecord(
   const signedAt = now.toISOString();
   const payload: SignedReadinessPayload = {
     disclaimer: SIGNED_DISCLAIMER,
-    gapCodes: parsed.request.gapCodes,
+    gapCodes: scored.gapCodes,
     identityStatus: IDENTITY_STATUS_UNANCHORED,
-    inputsSha256: parsed.request.inputsSha256,
-    score: parsed.request.score,
+    inputsSha256: scored.inputsSha256,
+    score: scored.score,
     signedAt,
     tool: parsed.request.tool,
     toolVersion: parsed.request.toolVersion,
@@ -696,6 +763,56 @@ export function readinessSignDiscovery(): Record<string, unknown> {
   };
 }
 
+export function clientIpFromRequest(
+  request: Request,
+  deps: SignReadinessDeps = {}
+): string {
+  if (deps.clientIp) return deps.clientIp;
+  const cf = request.headers.get("CF-Connecting-IP")?.trim();
+  if (cf) return cf;
+  const xff = request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim();
+  if (xff) return xff;
+  return "unknown";
+}
+
+export function rateLimitKey(ip: string, now: Date): string {
+  const window = Math.floor(now.getTime() / RATE_LIMIT_WINDOW_MS);
+  return `${RATE_LIMIT_KV_PREFIX}${ip}:${window}`;
+}
+
+export async function consumeReadinessSignRateLimit(
+  request: Request,
+  env: ReadinessSignEnv,
+  deps: SignReadinessDeps = {}
+): Promise<ReadinessSignFailure | null> {
+  const kv = deps.kv ?? env.X402_REPLAY_KV;
+  if (!kv) {
+    return failure(
+      "RATE_LIMIT_UNBOUND",
+      "rate-limit KV is not bound; nothing is signed"
+    );
+  }
+  const now = deps.now ?? new Date();
+  const key = rateLimitKey(clientIpFromRequest(request, deps), now);
+  let count = 0;
+  try {
+    count = parseInt((await kv.get(key)) || "0", 10);
+    if (!Number.isFinite(count) || count < 0) count = 0;
+  } catch {
+    return failure(
+      "RATE_LIMIT_UNBOUND",
+      "rate-limit KV is not bound; nothing is signed"
+    );
+  }
+  if (count >= RATE_LIMIT_MAX) {
+    return failure("RATE_LIMITED", "rate limited");
+  }
+  await kv.put(key, String(count + 1), {
+    expirationTtl: Math.ceil(RATE_LIMIT_WINDOW_MS / 1000) * 2,
+  });
+  return null;
+}
+
 export async function tryHandleReadinessSign(
   request: Request,
   env: ReadinessSignEnv = {},
@@ -718,6 +835,12 @@ export async function tryHandleReadinessSign(
   if (request.method !== "POST") {
     return jsonResponse({ error: "method not allowed", signed: false }, 405);
   }
+  if (!isReadinessSigningEnabled(env, deps)) {
+    const result = signReadinessRecord({}, env, deps);
+    return jsonResponse(result, httpStatusFor(result.error));
+  }
+  const limited = await consumeReadinessSignRateLimit(request, env, deps);
+  if (limited) return jsonResponse(limited, httpStatusFor(limited.error));
   let body: unknown;
   try {
     body = await request.json();
