@@ -66,6 +66,7 @@ import {
   tryHandleHomepageMarkdown,
   tryHandleLlmsTxt,
 } from "./llms-txt.ts";
+import { tryHandleOffersFeed } from "./offers-feed.ts";
 import { tryHandle402IndexVerify } from "./index402-verify.ts";
 import {
   isDppManufacturerArticlePath,
@@ -3558,6 +3559,8 @@ async function handleAuthichainCom(
     }
     const llms = tryHandleLlmsTxt(request);
     if (llms) return llms;
+    const feed = tryHandleOffersFeed(request);
+    if (feed) return feed;
     const index402Verify = tryHandle402IndexVerify(request);
     if (index402Verify) return index402Verify;
     const indexNow = tryHandleEstateIndexNow(request);
