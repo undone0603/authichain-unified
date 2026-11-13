@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    # Only a manufacturer-status source change may publish this Worker.
+    # Do NOT include this workflow path: workflow-only/docs merges are inert.
+    paths:
+      - "workers/manufacturer-status/**"
   workflow_dispatch:
 
 permissions:
