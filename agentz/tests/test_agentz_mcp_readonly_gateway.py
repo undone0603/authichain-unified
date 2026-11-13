@@ -66,3 +66,27 @@ async def test_duplicate_authorization_and_mixed_case_origin_fail_closed():
     for headers in ([valid, valid], [valid, (b"Origin", b"https://evil.example")]):
         result = await request(app, headers)
         assert result[0]["status"] == 401
+
+
+def test_browser_subprocess_does_not_inherit_gateway_token(tmp_path, monkeypatch):
+    """No browser child may receive the MCP bearer token."""
+    from types import SimpleNamespace
+    from agentz.core import browser_executor, capability_policy
+    browser_bin = tmp_path / "dummy-browser"
+    browser_bin.write_text("stub")
+    evidence_dir = tmp_path / "evidence"
+    evidence_dir.mkdir(mode=0o700)
+    monkeypatch.setenv("AGENTZ_BROWSER_BIN", str(browser_bin))
+    monkeypatch.setenv("AGENTZ_BROWSER_EVIDENCE_DIR", str(evidence_dir))
+    monkeypatch.setenv("AGENTZ_MCP_GATEWAY_TOKEN", "x" * 40)
+    monkeypatch.setattr(capability_policy, "decide", lambda _: SimpleNamespace(allowed=True))
+    observed = []
+    def fake_run(argv, *, env, **kwargs):
+        observed.append((argv, env))
+        return SimpleNamespace(returncode=0, stdout="read-only snapshot", stderr="")
+    monkeypatch.setattr(browser_executor.subprocess, "run", fake_run)
+    result = browser_executor.execute_browser_task("github-main-protection-inspect")
+    assert result["verified"] is False
+    assert len(observed) == 3
+    assert all("AGENTZ_MCP_GATEWAY_TOKEN" not in env for _, env in observed)
+    assert all(env["AGENT_BROWSER_SESSION"].startswith("agentz-") for _, env in observed)
