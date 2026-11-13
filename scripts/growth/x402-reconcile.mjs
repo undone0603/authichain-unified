@@ -11,11 +11,9 @@ const amount = '10000';
 const recipient = '0x5db511706fb6317cd23a7655f67450c5ac6e6aa2';
 const resource = 'https://signal.authichain.com/api/x402/discovery';
 const validDate = x => typeof x === 'string' && !Number.isNaN(Date.parse(x));
-const unique = xs => xs.length === new Set(xs).size;
 const norm = x => typeof x === 'string' ? x.toLowerCase() : '';
 const evidence = x => x && typeof x.source === 'string' && x.source.startsWith('https://') && validDate(x.observedAt);
 const ok = x => typeof x === 'string' && x.length > 0;
-const key = x => norm(x.txHash) + ':' + x.requestId;
 
 export function reconcile(data) {
   if (!data || !Array.isArray(data.settlements) || !Array.isArray(data.deliveries)) throw Error('Expected settlements and deliveries arrays');
