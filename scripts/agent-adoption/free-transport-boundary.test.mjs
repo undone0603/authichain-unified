@@ -93,3 +93,21 @@ test('HTTP 402 on free tools/call causes failure with no retry or paid fallback'
   await assert.rejects(run({ fetchImpl: h.fetchImpl, log() {} }), /HTTP 402/);
   assert.equal(h.requests.length, 4);
 });
+
+
+test('JSON-RPC response ID mismatch fails closed before tools/list', async () => {
+  const h = harness({ initializeResponse: json(result(999, {
+    protocolVersion: '2025-06-18', serverInfo,
+  })) });
+  await assert.rejects(run({ fetchImpl: h.fetchImpl, log() {} }), /invalid\/error JSON-RPC envelope/);
+  assert.deepEqual(h.requests.map(r => r.method), ['GET', 'POST']);
+});
+
+test('free tool application error cannot be counted as a successful verification', async () => {
+  const h = harness({ callResponse: json(result(3, {
+    isError: true,
+    content: [{ type: 'text', text: 'not verified' }],
+  })) });
+  await assert.rejects(run({ fetchImpl: h.fetchImpl, log() {} }), /Free record tool reported an error/);
+  assert.deepEqual(h.requests.map(r => r.method), ['GET', 'POST', 'POST', 'POST']);
+});
