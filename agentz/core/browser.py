@@ -55,38 +55,14 @@ async def take_native_snapshot(session_id: str, compact: bool = True, interactiv
         return f"Error taking snapshot: {str(e)}"
 
 def attach_interceptor(controller: Controller, ctx: ExecutionContext):
+    """Require verifiable per-action approval; deny AUTO and missing hooks.
 
+    Delegates to the tested, fail-closed interceptor in browser_guard. Page
+    content and action arguments never become approval tokens or audit text.
     """
-    Wraps all actions in the controller to route through ctx.step.
-    In confirm mode, this will prompt the user before each browser action.
-    """
-    
-    def intercept_wrapper(action_func: Callable):
-        @functools.wraps(action_func)
-        async def wrapper(*args, **kwargs):
-            action_name = action_func.__name__
-            params = ", ".join(f"{k}={v}" for k, v in kwargs.items() if v and k != "browser_session")
-            description = f"browser: {action_name}({params})"
-            
-            # ctx.step with just a description returns None and handles logging/confirmation
-            ctx.step(description)
-            
-            from agentz.core.modes import Mode
-            if ctx.mode == Mode.DRY_RUN:
-                from browser_use import ActionResult
-                return ActionResult(extracted_content=f"Dry-run: would {description}")
-            
-            # If in confirm mode, we'd need a separate mechanism if we wanted to abort,
-            # but for now we proceed.
-            
-            return await action_func(*args, **kwargs)
+    from agentz.core.browser_guard import attach_interceptor as secure_attach
 
-        return wrapper
-
-    if hasattr(controller.registry, "wrap_all"):
-        controller.registry.wrap_all(intercept_wrapper)
-    else:
-        logger.warning("Controller.registry.wrap_all not available; skipping action interception.")
+    return secure_attach(controller, ctx)
 
 
 async def run_browser_task(task: str, ctx: ExecutionContext) -> Any:

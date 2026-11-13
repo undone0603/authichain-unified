@@ -8,6 +8,7 @@ Usage:
     python -m agentz.cli run --all [--revenue-only] --mode dry-run
     python -m agentz.cli health
     python -m agentz.cli list-agents
+    python -m agentz.cli localops doctor
     python -m agentz.cli openclaw status
     python -m agentz.cli openclaw notify "message" [--dry-run|--send]
     python -m agentz.cli openclaw command agents
@@ -393,6 +394,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print the request without sending",
     )
 
+    # Local-first, read-only GH/Edge auditing; no generic action runner.
+    ops = sub.add_parser("localops", help="Local-first release and browser observation")
+    ops.add_argument("localops_args", nargs=argparse.REMAINDER)
+
     return root
 
 
@@ -416,6 +421,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_tinyfish(args)
     if args.command == "openclaw":
         return cmd_openclaw(args)
+
+    if args.command == "localops":
+        from agentz.localops import main as localops_main
+        return localops_main(args.localops_args)
 
     parser.print_help()
     return 1
