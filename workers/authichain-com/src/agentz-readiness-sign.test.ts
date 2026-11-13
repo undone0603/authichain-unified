@@ -25,6 +25,7 @@ import {
   IDENTITY_STATUS_UNANCHORED,
   ISSUER_DID_DOCUMENT_URL,
   RATE_LIMIT_MAX,
+  RATE_LIMIT_PERIOD_SEC,
   READINESS_GAP_CODES,
   READINESS_JWS_TYP,
   READINESS_SCHEMA_ID,
@@ -97,12 +98,15 @@ const FLAGS_ON = {
   FEATURE_ENABLED: "true",
 };
 
-function kvStub() {
-  const m = new Map<string, string>();
+function limiterStub(limit = RATE_LIMIT_MAX) {
+  const counts = new Map<string, number>();
   return {
-    get: async (k: string) => m.get(k) ?? null,
-    put: async (k: string, v: string) => void m.set(k, v),
-    store: m,
+    limit: async ({ key }: { key: string }) => {
+      const n = (counts.get(key) ?? 0) + 1;
+      counts.set(key, n);
+      return { success: n <= limit };
+    },
+    counts,
   };
 }
 
@@ -588,7 +592,7 @@ describe("AgentZ readiness signing — HTTP", () => {
         privateKey: keys.key,
         allowMismatchedKey: true,
         now: new Date("2026-11-13T01:00:00Z"),
-        kv: kvStub(),
+        rateLimiter: limiterStub(),
       }
     );
     expect(res?.status).toBe(200);
@@ -611,7 +615,8 @@ describe("AgentZ readiness signing — HTTP", () => {
   });
 
   it("POST is 429 after 10 requests per IP per minute, before the key loads", async () => {
-    const kv = kvStub();
+    expect(RATE_LIMIT_PERIOD_SEC).toBe(60);
+    const limiter = limiterStub();
     const keys = testKey();
     const now = new Date("2026-11-13T01:00:00Z");
     async function post() {
@@ -627,7 +632,7 @@ describe("AgentZ readiness signing — HTTP", () => {
         FLAGS_ON,
         {
           now,
-          kv,
+          rateLimiter: limiter,
           clientIp: "203.0.113.9",
         }
       );
@@ -660,10 +665,32 @@ describe("AgentZ readiness signing — HTTP", () => {
         privateKey: keys.key,
         allowMismatchedKey: true,
         now,
-        kv,
+        rateLimiter: limiter,
         clientIp: "203.0.113.10",
       }
     );
     expect(withKey?.status).toBe(200);
+  });
+
+  it("POST fails closed when the rate-limit binding is missing, before the key loads", async () => {
+    const keys = testKey();
+    const res = await tryHandleReadinessSign(
+      new Request(`https://authichain.com${READINESS_SIGN_PATH}`, { // pragma: allowlist secret
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(BASE_REQUEST),
+      }),
+      FLAGS_ON,
+      {
+        privateKey: keys.key,
+        allowMismatchedKey: true,
+        now: new Date("2026-11-13T01:00:00Z"),
+      }
+    );
+    expect(res?.status).toBe(503);
+    const body = await res!.json();
+    expect(body.signed).toBe(false);
+    expect(body.error).toBe("RATE_LIMIT_UNBOUND");
+    expect(body.message).toBe("rate-limit binding is not bound; nothing is signed");
   });
 });

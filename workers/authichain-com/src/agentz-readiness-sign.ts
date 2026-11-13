@@ -1,16 +1,19 @@
 /**
  * PR2 — AgentZ signed readiness records (plan 07fe3b8d).
  *
- * After a successful StorePilot `dpp_check` or `catalog_readiness_preview`,
- * the apex host can optionally return a compact Ed25519 VC + JWS signed by
- * AgentZ's roster identity. Private keys stay out of git: the Worker binds
- * AGENTZ_READINESS_PRIVATE_JWK (or PEM) from KEY_DIR/agentz.ed25519.pem via
- * `wrangler secret put`. Signing refuses unless that key's public x matches
- * the published AgentZ key in bot-identities.ts / identity.json.
+ * After a successful StorePilot `dpp_check`, the apex host can optionally
+ * return a compact Ed25519 VC + JWS signed by AgentZ's roster identity.
+ * `catalog_readiness_preview` is not a signable tool. Private keys stay out
+ * of git: the Worker binds AGENTZ_READINESS_PRIVATE_JWK (or PEM) from
+ * KEY_DIR/agentz.ed25519.pem via `wrangler secret put`. Signing refuses unless
+ * that key's public x matches the published AgentZ key in bot-identities.ts /
+ * identity.json.
  *
  * Flags: both FEATURE_ENABLED and READINESS_SIGNING_ENABLED must be the string
  * "true". Unset or any other value means off. Nothing is signed unless both
- * are on. POST is rate-limited 10/min/IP on X402_REPLAY_KV before the key loads.
+ * are on. POST is rate-limited 10/60s/IP on the READINESS_SIGN_RATE_LIMITER
+ * Workers Rate Limiting binding before the key loads. Missing binding fails
+ * closed. KV is not used: missing-key reads cache at the edge.
  *
  * Re-sign / rotate before 2027-01-17T18:00:00Z (R4):
  *   1. Update VALID_UNTIL in scripts/agent-identity/bots.mjs.
@@ -124,8 +127,7 @@ export const REFUSED_POSTED_RESULT_KEYS = [
 ] as const;
 
 export const RATE_LIMIT_MAX = 10;
-export const RATE_LIMIT_WINDOW_MS = 60_000;
-export const RATE_LIMIT_KV_PREFIX = "readiness-sign:rl:";
+export const RATE_LIMIT_PERIOD_SEC = 60;
 
 export const INPUT_HASH_KEYS = [
   "category",
@@ -175,13 +177,8 @@ const FORBIDDEN_FREE_TEXT_KEYS = [
   "instructions",
 ] as const;
 
-export type ReadinessSignKv = {
-  get(key: string): Promise<string | null>;
-  put(
-    key: string,
-    value: string,
-    options?: { expirationTtl?: number }
-  ): Promise<void>;
+export type ReadinessSignRateLimiter = {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
 };
 
 export type ReadinessSignEnv = {
@@ -189,8 +186,8 @@ export type ReadinessSignEnv = {
   FEATURE_ENABLED?: string;
   AGENTZ_READINESS_PRIVATE_JWK?: string;
   AGENTZ_READINESS_PRIVATE_KEY_PEM?: string;
-  /** Reuses the existing apex KV. Keys are prefixed RATE_LIMIT_KV_PREFIX. */
-  X402_REPLAY_KV?: ReadinessSignKv;
+  /** Workers Rate Limiting binding. Unset fails closed on POST. */
+  READINESS_SIGN_RATE_LIMITER?: ReadinessSignRateLimiter;
 };
 
 export type CanonicalReadinessInputs = {
@@ -266,7 +263,7 @@ export type SignReadinessDeps = {
   privateKey?: KeyObject;
   privateJwk?: string;
   privatePem?: string;
-  kv?: ReadinessSignKv;
+  rateLimiter?: ReadinessSignRateLimiter;
   clientIp?: string;
   /** Tests only. Live signing always requires the AgentZ published public key. */
   allowMismatchedKey?: boolean;
@@ -775,41 +772,32 @@ export function clientIpFromRequest(
   return "unknown";
 }
 
-export function rateLimitKey(ip: string, now: Date): string {
-  const window = Math.floor(now.getTime() / RATE_LIMIT_WINDOW_MS);
-  return `${RATE_LIMIT_KV_PREFIX}${ip}:${window}`;
-}
-
 export async function consumeReadinessSignRateLimit(
   request: Request,
   env: ReadinessSignEnv,
   deps: SignReadinessDeps = {}
 ): Promise<ReadinessSignFailure | null> {
-  const kv = deps.kv ?? env.X402_REPLAY_KV;
-  if (!kv) {
+  const limiter = deps.rateLimiter ?? env.READINESS_SIGN_RATE_LIMITER;
+  if (!limiter || typeof limiter.limit !== "function") {
     return failure(
       "RATE_LIMIT_UNBOUND",
-      "rate-limit KV is not bound; nothing is signed"
+      "rate-limit binding is not bound; nothing is signed"
     );
   }
-  const now = deps.now ?? new Date();
-  const key = rateLimitKey(clientIpFromRequest(request, deps), now);
-  let count = 0;
+  const key = `ip:${clientIpFromRequest(request, deps)}`;
+  let success = false;
   try {
-    count = parseInt((await kv.get(key)) || "0", 10);
-    if (!Number.isFinite(count) || count < 0) count = 0;
+    const result = await limiter.limit({ key });
+    success = result?.success === true;
   } catch {
     return failure(
       "RATE_LIMIT_UNBOUND",
-      "rate-limit KV is not bound; nothing is signed"
+      "rate-limit binding is not bound; nothing is signed"
     );
   }
-  if (count >= RATE_LIMIT_MAX) {
+  if (!success) {
     return failure("RATE_LIMITED", "rate limited");
   }
-  await kv.put(key, String(count + 1), {
-    expirationTtl: Math.ceil(RATE_LIMIT_WINDOW_MS / 1000) * 2,
-  });
   return null;
 }
 
