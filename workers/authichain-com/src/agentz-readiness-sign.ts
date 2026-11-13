@@ -547,7 +547,7 @@ function compactJws(header: unknown, payload: unknown, key: KeyObject): string {
     Buffer.from(`${headerB64}.${payloadB64}`, "ascii"),
     key
   );
-  return `${headerB64}.${payloadB64}.${sig.toString("base64url")}`;
+  return `${headerB64}.${payloadB64}.${Buffer.from(sig).toString("base64url")}`;
 }
 
 function signProtocolRecord(
@@ -837,7 +837,8 @@ export async function tryHandleReadinessSign(
   }
   if (!isReadinessSigningEnabled(env, deps)) {
     const result = signReadinessRecord({}, env, deps);
-    return jsonResponse(result, httpStatusFor(result.error));
+    if (!result.signed) return jsonResponse(result, httpStatusFor(result.error));
+    return jsonResponse(result, 200);
   }
   const limited = await consumeReadinessSignRateLimit(request, env, deps);
   if (limited) return jsonResponse(limited, httpStatusFor(limited.error));
