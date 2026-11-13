@@ -47,6 +47,7 @@ import {
   scopedReplayStore,
   resolvePaidSealVerify,
 } from "../../../src/lib/paid-seal-verify";
+import { resolveTierRequest } from "../../../src/lib/x402-tiers";
 import {
   expectedRecordHash,
   readAnchorOnChain,
@@ -123,6 +124,12 @@ export const TOOLS = [
           format: "uuid",
           description:
             "Required seal UUID. productId and serial are not registry keys.",
+        },
+        tier: {
+          type: "string",
+          enum: ["ping", "verify", "evidence"],
+          description:
+            "Signal tier. ping: registry existence only. verify (default): signature and validity baseline. evidence: the baseline plus a SHA-256 digest of the returned answer. The HTTP 402 quote states the exact price. No tier claims real-world authenticity.",
         },
       },
     },
@@ -1354,14 +1361,23 @@ function rpcError(id: unknown, message: string, code = -32601): Response {
 async function unpaidOrRefusedVerify(
   request: Request,
   env: X402Env | undefined,
-  args: Record<string, unknown>,
+  rawArgs: Record<string, unknown>,
   id: unknown,
   verifyApp?: X402VerifyBinding
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(request.url).toString();
-  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  // `tier` selects the price; it is not a seal argument, so strip it before
+  // the seal-UUID checks (otherwise {tier:"ping"} would be refused as a bad seal).
+  const { tier: tierArg, ...args } = rawArgs;
+  const verifyUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  const tierReq = resolveTierRequest(
+    typeof tierArg === "string" ? tierArg : resource,
+    verifyUsd
+  );
+  if (!tierReq.ok) return json(tierReq.status, tierReq.body);
+  const priceUsd = tierReq.priceUsd;
   if (!payTo) {
     return json(503, {
       error: "payments_not_configured",
@@ -1397,6 +1413,8 @@ async function unpaidOrRefusedVerify(
     bodyText: JSON.stringify(args),
     resource,
     priceUsd,
+    tier: tierReq.tier,
+    verifyPriceUsd: verifyUsd,
     payTo,
     description: "AuthiChain MCP verify",
     env,

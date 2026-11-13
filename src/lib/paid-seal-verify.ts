@@ -10,6 +10,13 @@ import {
 } from "./agent-verify";
 import { sealBaseline } from "./seal-baseline";
 import {
+  SIGNAL_LEDGER,
+  SIGNAL_LEDGER_NAMES,
+  shapeTierAnswer,
+  spendAtomicFromRows,
+  type SignalTier,
+} from "./x402-tiers";
+import {
   buildPaymentRequired,
   dailyCapUsd,
   isDiscoveryExampleSealId,
@@ -96,16 +103,22 @@ export async function readJson(
   }
 }
 
+/**
+ * Per-payer 24h spend across every tier. One ledger row == one priced call,
+ * and each tier has its own workflow_name, so the cap sums rows x that
+ * tier's price (legacy `x402_spend` rows are the verify tier).
+ */
 async function dailySpentAtomic(
   fetchImpl: typeof fetch,
   creds: SealLookupCredentials,
   payer: string,
-  priceAtomic: bigint
+  verifyPriceUsd: number
 ): Promise<bigint | null> {
   const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const names = SIGNAL_LEDGER_NAMES;
   const query = [
-    "automation_logs?select=id",
-    "workflow_name=eq.x402_spend",
+    "automation_logs?select=workflow_name",
+    `workflow_name=in.(${names.join(",")})`,
     `payload=eq.${encodeURIComponent(payer)}`,
     `created_at=gt.${encodeURIComponent(windowStart)}`,
     "limit=1000",
@@ -118,7 +131,10 @@ async function dailySpentAtomic(
   // A failed ledger read must never look like zero spend: zero would allow a
   // caller to bypass the daily cap during an outage or RLS/config regression.
   if (!read.ok || !Array.isArray(read.body)) return null;
-  return BigInt(read.body.length) * priceAtomic;
+  return spendAtomicFromRows(
+    read.body as Array<{ workflow_name?: unknown }>,
+    verifyPriceUsd
+  );
 }
 
 export async function readSeal(
@@ -143,7 +159,8 @@ export async function readSeal(
 async function recordSpend(
   fetchImpl: typeof fetch,
   creds: SealLookupCredentials,
-  payer: string
+  payer: string,
+  tier: SignalTier
 ): Promise<void> {
   if (creds.role !== "service") return;
   try {
@@ -154,7 +171,7 @@ async function recordSpend(
         Prefer: "return=minimal",
       }),
       body: JSON.stringify({
-        workflow_name: "x402_spend",
+        workflow_name: SIGNAL_LEDGER[tier],
         trigger_type: "event",
         status: "success",
         payload: payer,
@@ -472,7 +489,12 @@ export async function resolvePaidSealVerify(input: {
   proofHeader: string;
   bodyText: string;
   resource: string;
+  /** Price of THIS call (the tier's price). */
   priceUsd: number;
+  /** Which signal tier is being sold. Default "verify" (unchanged behavior). */
+  tier?: SignalTier;
+  /** X402_PRICE_USD, the verify tier's price, used to price legacy ledger rows. */
+  verifyPriceUsd?: number;
   payTo: string;
   description: string;
   env?: SealLookupEnv;
@@ -546,11 +568,12 @@ export async function resolvePaidSealVerify(input: {
 
   const priceAtomic = BigInt(usdToAtomic(input.priceUsd));
   const capAtomic = BigInt(usdToAtomic(dailyCapUsd()));
+  const tier: SignalTier = input.tier ?? "verify";
   const spent = await dailySpentAtomic(
     fetchImpl,
     creds,
     proof.payer,
-    priceAtomic
+    input.verifyPriceUsd ?? (tier === "verify" ? input.priceUsd : 0.05)
   );
   if (spent === null) {
     return {
@@ -618,12 +641,12 @@ export async function resolvePaidSealVerify(input: {
     sealId,
     txHash: settlement.txHash ?? proof.txHash ?? null,
   });
-  await recordSpend(fetchImpl, creds, proof.payer);
+  await recordSpend(fetchImpl, creds, proof.payer, tier);
   return {
     action: "answer",
     status: 200,
     body: {
-      ...answer,
+      ...shapeTierAnswer(tier, answer),
       subject: sealId ?? (discoveryAlias ? listed : null),
       settlement: {
         payer: proof.payer,

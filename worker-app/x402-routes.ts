@@ -57,6 +57,7 @@ import {
   type SealLookupEnv,
 } from "../src/lib/paid-seal-verify";
 import { growthDiscovery, x402ListingPack } from "../src/lib/x402-growth";
+import { resolveTierRequest } from "../src/lib/x402-tiers";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
@@ -145,7 +146,10 @@ function unpaidQuote(c: QuoteCtx): Response {
   hydrateX402(c.env);
   const payTo = (c.env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(c.req.url, "https://authichain.com").toString();
-  const priceUsd = x402PriceUsd(c.env?.X402_PRICE_USD);
+  const verifyUsd = x402PriceUsd(c.env?.X402_PRICE_USD);
+  const tierReq = resolveTierRequest(resource, verifyUsd);
+  if (!tierReq.ok) return c.json(tierReq.body, tierReq.status, NO_STORE);
+  const priceUsd = tierReq.priceUsd;
   if (!payTo) {
     return c.json(
       {
@@ -173,10 +177,16 @@ function unpaidHead(c: QuoteCtx): Response {
     return new Response(null, { status: 503, headers: NO_STORE });
   }
   const resource = new URL(c.req.url, "https://authichain.com").toString();
-  const priceUsd = x402PriceUsd(c.env?.X402_PRICE_USD);
+  const tierReq = resolveTierRequest(
+    resource,
+    x402PriceUsd(c.env?.X402_PRICE_USD)
+  );
+  if (!tierReq.ok) {
+    return new Response(null, { status: tierReq.status, headers: NO_STORE });
+  }
   const required = buildPaymentRequired({
     resource,
-    priceUsd,
+    priceUsd: tierReq.priceUsd,
     payTo,
     description: X402_RESOURCE_DESCRIPTION,
   });
@@ -298,7 +308,10 @@ async function agentVerify(c: {
   hydrateX402(c.env);
   const payTo = (c.env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(c.req.url).toString();
-  const priceUsd = x402PriceUsd(c.env?.X402_PRICE_USD);
+  const verifyUsd = x402PriceUsd(c.env?.X402_PRICE_USD);
+  const tierReq = resolveTierRequest(resource, verifyUsd);
+  if (!tierReq.ok) return c.json(tierReq.body, tierReq.status, NO_STORE);
+  const priceUsd = tierReq.priceUsd;
   if (!payTo) {
     return c.json(
       {
@@ -333,6 +346,8 @@ async function agentVerify(c: {
     bodyText,
     resource,
     priceUsd,
+    tier: tierReq.tier,
+    verifyPriceUsd: verifyUsd,
     payTo,
     description: X402_RESOURCE_DESCRIPTION,
     env: c.env,
