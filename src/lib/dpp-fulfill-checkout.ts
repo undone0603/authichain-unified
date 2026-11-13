@@ -19,6 +19,7 @@ import {
 import { markRetryableFulfillment } from "./retryable-fulfillment";
 import {
   dppGrantDecision,
+  dppInvalidSettlementIsPermanent,
   type DppProofSession,
 } from "./dpp-payment-eligibility";
 import { emitTrustEvent } from "../../shared/trust-events";
@@ -103,6 +104,15 @@ export async function fulfillDppPaidSession(
 ): Promise<DppFulfillResult> {
   try {
     const result = await fulfillDppPaidSessionOnce(supabase, session, priceId);
+    if (result.refused) {
+      emitTrustEvent("fulfillment.failed", {
+        session_id: session.id,
+        plan: session.metadata?.plan || "dpp_readiness",
+        error_class: "IneligibleSettlement",
+        outcome: "ineligible_settlement",
+      });
+      return result;
+    }
     if (result.handled) {
       emitTrustEvent("fulfillment.completed", {
         session_id: session.id,
@@ -140,6 +150,20 @@ async function fulfillDppPaidSessionOnce(
   if (decision === "unverified" && session.payment_status !== "paid") {
     // Async payment can complete before funds arrive.
     return { handled: false, profileId: null, activationEmail: "skipped" };
+  }
+  if (
+    decision === "invalid_product" &&
+    dppInvalidSettlementIsPermanent(session)
+  ) {
+    // The line item is already the DPP price. A discount or an unexplained
+    // total will not change on Stripe's next delivery, so do not grant and
+    // do not ask Stripe to retry.
+    return {
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    };
   }
   if (decision !== "paid" && decision !== "authorized_smoke") {
     throw markRetryableFulfillment(
@@ -405,6 +429,8 @@ export type DppFulfillResult = {
   activationEmail: ActivationEmailStatus;
   /** This session's durable continuity record proves fulfillment already ran. */
   alreadyFulfilled?: boolean;
+  /** Permanent money refusal. Stripe must stop; nothing was granted. */
+  refused?: "ineligible_settlement";
 };
 
 const EMAIL_LIKE = /[^\s@<>"'(),;:]+@[^\s@<>"'(),;:]+\.[^\s@<>"'(),;:]+/g;
