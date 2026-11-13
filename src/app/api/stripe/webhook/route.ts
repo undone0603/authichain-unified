@@ -182,7 +182,12 @@ async function claimStripeEvent(
     .eq("event_id", event.id)
     .maybeSingle();
   if (readError) throw readError;
-  if (!existing || existing.status === "success" || !existing.status) {
+  if (
+    !existing ||
+    existing.status === "success" ||
+    existing.status === "reconciliation_required" ||
+    !existing.status
+  ) {
     return "duplicate";
   }
 
@@ -323,6 +328,31 @@ export async function POST(req: NextRequest) {
             verified,
             verifiedPrice
           );
+          if (grant.refused) {
+            // Permanent money refusal: nothing was granted and Stripe must not
+            // retry, but the event must never be recorded as success. Persist
+            // an actionable hold; fail closed (500, retry) if that fails.
+            const { data: held, error: holdError } = await getSupabase()
+              .from("stripe_events")
+              .update({
+                status: "reconciliation_required",
+                processed_at: new Date().toISOString(),
+                error: "dpp_ineligible_settlement",
+              })
+              .eq("event_id", event.id)
+              .select("event_id");
+            if (holdError || !held?.length) {
+              throw new Error(
+                "Could not persist DPP ineligible-settlement hold"
+              );
+            }
+            return NextResponse.json({
+              received: true,
+              type: event.type,
+              handled: false,
+              reconciliationRequired: true,
+            });
+          }
           if (verified.payment_status === "paid" && !grant.handled) {
             throw new Error(
               "DPP payment requires product and entitlement reconciliation"

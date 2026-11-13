@@ -38,6 +38,7 @@ const {
   const mockConstructEvent = vi.fn();
   const db = {
     seenEvent: null as null | { event_id: string },
+    failEventUpdate: false,
     profile: { id: "prof_1" } as Record<string, unknown> | null,
     affiliate: {
       id: "aff_1",
@@ -58,6 +59,7 @@ const {
       filters: Array<[string, unknown]>;
     }>,
     eventInserts: [] as Array<Record<string, unknown>>,
+    eventUpdates: [] as Array<Record<string, unknown>>,
     rpcCalls: [] as Array<{ fn: string; args: unknown }>,
   };
 
@@ -119,6 +121,18 @@ const {
               payload: updatePayload,
               filters: [...filters],
             });
+          else if (table === "stripe_events") {
+            calls.eventUpdates.push(updatePayload);
+            if (db.failEventUpdate)
+              return Promise.resolve({
+                data: null,
+                error: { message: "update failed" },
+              }).then(resolve as never, reject);
+            return Promise.resolve({
+              data: [{ event_id: "evt" }],
+              error: null,
+            }).then(resolve as never, reject);
+          }
         }
         return Promise.resolve({ error: null }).then(resolve, reject);
       },
@@ -297,6 +311,8 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     calls.affiliateSelects = 0;
     calls.affiliateUpdates.length = 0;
     calls.eventInserts.length = 0;
+    calls.eventUpdates.length = 0;
+    db.failEventUpdate = false;
     db.seenEvent = null;
     db.profile = { id: "prof_1" };
     db.affiliate = {
@@ -647,6 +663,51 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
       expect(res.status).toBe(500);
       expect(res.body.error).toMatch(/requires product and entitlement reconciliation/);
       expect(mockDppFulfill).toHaveBeenCalledOnce();
+      expect(provisionPurchase).not.toHaveBeenCalled();
+    } finally {
+      err.mockRestore();
+    }
+  });
+
+  it("DPP: a permanently refused positive-value payment becomes a durable hold, never success", async () => {
+    mockCheckoutSessionRetrieve.mockResolvedValue(verifiedDppCheckout());
+    mockDppFulfill.mockResolvedValue({
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    });
+
+    const res = await postInvoice(dppCheckoutEvent());
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(calls.eventUpdates).toHaveLength(1);
+    expect(calls.eventUpdates[0]).toMatchObject({
+      status: "reconciliation_required",
+      error: "dpp_ineligible_settlement",
+    });
+    expect(calls.eventUpdates.some(u => u.status === "success")).toBe(false);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("DPP: fails closed (500, retryable) when the refusal hold cannot be persisted", async () => {
+    mockCheckoutSessionRetrieve.mockResolvedValue(verifiedDppCheckout());
+    mockDppFulfill.mockResolvedValue({
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    });
+    db.failEventUpdate = true;
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await postInvoice(dppCheckoutEvent());
+      expect(res.status).toBe(500);
+      expect(res.body.error).toMatch(/ineligible-settlement hold/);
       expect(provisionPurchase).not.toHaveBeenCalled();
     } finally {
       err.mockRestore();

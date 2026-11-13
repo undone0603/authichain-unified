@@ -1539,6 +1539,85 @@ describe("handleStripeWebhook — paid Starter missing-identity hold (#2122)", (
   });
 });
 
+describe("handleStripeWebhook — DPP ineligible-settlement hold", () => {
+  const refusedGrant = {
+    handled: true,
+    profileId: null,
+    activationEmail: "skipped",
+    refused: "ineligible_settlement",
+  };
+  function discountedEvent(eventId: string) {
+    return makeEvent("checkout.session.completed", eventId, {
+      id: "cs_dpp_discounted",
+      mode: "payment",
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 0,
+      currency: "usd",
+      customer_details: { email: "buyer@example.test" },
+      metadata: { offer: "dpp_readiness_2026", plan: "dpp_readiness" },
+    });
+  }
+
+  it("persists a reconciliation hold and never reports success for a refused payment", async () => {
+    fulfillDppPaidSession.mockResolvedValueOnce(refusedGrant);
+    mockConstructEvent.mockReturnValue(discountedEvent("evt_dpp_refused"));
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true,
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_dpp_refused",
+        sessionId: "cs_dpp_discounted",
+        status: "reconciliation_required",
+        httpStatus: 200,
+        error: "dpp_ineligible_settlement",
+      })
+    );
+    expect(recordStripeWebhookDelivery).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: "success" })
+    );
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("fails closed and retryable when only legacy base columns persist", async () => {
+    fulfillDppPaidSession.mockResolvedValueOnce(refusedGrant);
+    recordStripeWebhookDelivery
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, detail: "base_columns_only" });
+    mockConstructEvent.mockReturnValue(discountedEvent("evt_dpp_refused_legacy"));
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("keeps the hold on a replayed duplicate delivery without a false success", async () => {
+    fulfillDppPaidSession.mockResolvedValueOnce(refusedGrant);
+    claimStripeEventMock.mockResolvedValueOnce("duplicate");
+    mockConstructEvent.mockReturnValue(discountedEvent("evt_dpp_refused_dup"));
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true,
+      duplicate: true,
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(recordStripeWebhookDelivery).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: "success" })
+    );
+  });
+});
+
 describe("handleStripeWebhook — Starter amount fallback gate (#1890 parity, edge-router)", () => {
   const base = {
     mode: "payment",
