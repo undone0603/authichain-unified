@@ -25,6 +25,7 @@ export function reconcile(data) {
   }
   const seenTx = new Set();
   const seenRequest = new Set();
+  const seenReceipt = new Set();
   const results = [];
   for (const s of data.settlements) {
     const reasons = [];
@@ -44,6 +45,10 @@ export function reconcile(data) {
     const matches = deliveries.get(s.requestId) || [];
     if (matches.length !== 1) reasons.push('delivery_missing_or_ambiguous');
     const d = matches.length === 1 ? matches[0] : null;
+    if (d && ok(d.receiptId)) {
+      if (seenReceipt.has(d.receiptId)) reasons.push('duplicate_delivery_receipt');
+      seenReceipt.add(d.receiptId);
+    }
     if (d && (norm(d.txHash) !== norm(s.txHash) || d.paymentId !== s.paymentId ||
         d.resource !== resource || d.status !== 200 || d.delivered !== true ||
         !evidence(d.deliveryEvidence) || d.deliveryEvidence.independentlyValidated !== true || !ok(d.receiptId))) reasons.push('delivery_not_proven');
