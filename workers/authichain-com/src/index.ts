@@ -3251,8 +3251,12 @@ interface Env {
   READINESS_SIGNING_ENABLED?: string;
   /** Must be the string "true" together with READINESS_SIGNING_ENABLED. Unset is off. */
   FEATURE_ENABLED?: string;
-  /** Replay KV, reused for readiness-sign POST rate limits (prefixed keys). */
+  /** Replay KV for x402. Not used for readiness-sign rate limits. */
   X402_REPLAY_KV?: ReplayStore;
+  /** Workers Rate Limiting binding. POST /api/agentz/readiness-sign fails closed if unset. */
+  READINESS_SIGN_RATE_LIMITER?: {
+    limit(options: { key: string }): Promise<{ success: boolean }>;
+  };
   /** AgentZ Ed25519 private JWK from KEY_DIR/agentz.ed25519.pem. Never commit. */
   AGENTZ_READINESS_PRIVATE_JWK?: string;
   /** Alternate PKCS#8 PEM for the same AgentZ key. Never commit. */
