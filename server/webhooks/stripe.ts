@@ -172,6 +172,11 @@ async function fulfillCatalogCreditsIfPaid(
   const linePriceId = checkoutLinePriceId(session);
   const { isDppOffer } = await import("../../src/lib/dpp-loop");
   if (isDppOffer(session.metadata || {}, linePriceId)) return false;
+  // Certificate fee checkouts (server/certificates/fee-gate.ts) are redeemed
+  // by re-reading the session, never by plan provisioning. Skip them so an
+  // amount that happens to equal a plan price can't grant that plan.
+  const feeKind = session.metadata?.kind;
+  if (feeKind === "receipt" || feeKind === "evidence") return false;
 
   const { PLAN_CREDITS, planByAmountCents, planByStripePriceId } =
     await import("../../src/lib/plans");

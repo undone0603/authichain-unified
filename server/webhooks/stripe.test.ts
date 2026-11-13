@@ -426,6 +426,30 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     );
   });
 
+  it("does not provision a plan for a certificate fee priced like Starter ($29)", async () => {
+    provisionPurchase.mockClear();
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_cert_fee_001", {
+        id: "cs_cert_fee_001",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 2900,
+        livemode: true,
+        currency: "usd",
+        customer_details: { email: "buyer@example.com" },
+        metadata: {
+          user_id: "30",
+          kind: "evidence",
+          certificateNumber: "AC-1",
+        },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
   it("fulfills a paid DPP session even when Drizzle DATABASE_URL is missing", async () => {
     const { hasWebhookEventProcessed, logActivity, logAutomationAudit } =
       await import("../db.js");
