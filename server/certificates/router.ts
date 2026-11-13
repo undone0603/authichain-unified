@@ -4,6 +4,7 @@ import * as db from "../db";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
+import { buildEvidenceBundle } from "./evidence";
 import {
   createFeeCheckout,
   feeCents,
@@ -102,11 +103,15 @@ export const certificatesRouter = router({
         sessionId: input.sessionId,
       });
       const product = await db.getProductById(cert.productId);
-      return {
-        generatedAt: new Date().toISOString(),
+      const auth = cert.authenticationId
+        ? await db.getAuthenticationById(cert.authenticationId)
+        : undefined;
+      return buildEvidenceBundle({
         certificate: cert,
         product,
-      };
+        // The AI analysis behind the receipt; only if it is the owner's own record.
+        authentication: auth && auth.userId === cert.userId ? auth : null,
+      });
     }),
   makePublic: protectedProcedure
     .input(
