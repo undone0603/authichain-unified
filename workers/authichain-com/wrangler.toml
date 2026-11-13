@@ -226,6 +226,20 @@ FEATURE_ENABLED = "false"
 [browser]
 binding = "MYBROWSER"
 
+# POST /api/agentz/readiness-sign: 10 requests / 60s / client IP.
+# Workers Rate Limiting binding — included with Workers, $0 extra. Same
+# [[ratelimits]] surface as api/wrangler.toml SALES_RATE_LIMITER (namespace
+# 2401). Unique namespace_id so counters are not shared. KV cannot hold a
+# strict per-minute counter (eventually consistent; missing-key reads cache
+# at the edge for ~60s). Fail closed in code if this binding is missing.
+# Durable Objects would also be $0 on this free-plan account (sqlite classes)
+# but are not needed: sequential same-location POSTs increment the local
+# count, which is the live-smoke failure mode.
+[[ratelimits]]
+name = "READINESS_SIGN_RATE_LIMITER"
+namespace_id = "8491"
+simple = { limit = 10, period = 60 }
+
 # x402 replay guard (CFA-343/351). Namespace created 2026-10-16 (PM-approved);
 # delete it if #1900 does not ship.
 [[kv_namespaces]]
