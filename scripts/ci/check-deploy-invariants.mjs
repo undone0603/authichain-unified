@@ -205,6 +205,55 @@ export function checkPreviewUrls(root = ROOT, targets = PREVIEW_URLS_OFF) {
   return errors;
 }
 
+/** Existing direct push deploys may run ONLY for their own Worker source.
+ * No workflow-file trigger: changing a workflow is not permission to deploy.
+ * A read-only CI invariant keeps an unfiltered main push from silently
+ * reappearing on these two high-impact workflows.
+ */
+export const DIRECT_DEPLOY_PUSH_SCOPES = [
+  { workflow: "deploy-cloudflare.yml", path: "workers/manufacturer-status/**" },
+  { workflow: "deploy-edge-worker.yml", path: "api/**" },
+];
+
+export function checkDirectDeployPushScopes(root = ROOT, scopes = DIRECT_DEPLOY_PUSH_SCOPES) {
+  const errors = [];
+  for (const { workflow, path: allowed } of scopes) {
+    const rel = `.github/workflows/${workflow}`;
+    let source;
+    try {
+      source = readFileSync(path.join(root, rel), "utf8");
+    } catch {
+      errors.push(`${rel}: missing or unreadable`);
+      continue;
+    }
+    const block = onBlock(source);
+    const pushIndex = block.findIndex(line => /^  push:\s*$/.test(line));
+    // Manual-only is always safer than an uncontrolled push.
+    if (pushIndex === -1) continue;
+    const pushLines = [];
+    for (const line of block.slice(pushIndex + 1)) {
+      if (/^  [\w-]+:/.test(line)) break;
+      if (line.trim() && !/^\s*#/.test(line)) pushLines.push(line);
+    }
+    const pathsIndex = pushLines.findIndex(line => /^    paths:\s*$/.test(line));
+    if (pathsIndex === -1) {
+      errors.push(`${rel}: push trigger is not path-restricted`);
+      continue;
+    }
+    const values = [];
+    for (const line of pushLines.slice(pathsIndex + 1)) {
+      if (/^    [\w-]+:/.test(line)) break;
+      const m = line.match(/^      -\s+["']?([^"'#\s]+)["']?\s*(?:#.*)?$/);
+      if (m) values.push(m[1]);
+      else if (line.trim()) values.push("[unsupported-path-syntax]");
+    }
+    if (values.length !== 1 || values[0] !== allowed) {
+      errors.push(`${rel}: push paths must be exactly ${allowed}, got ${JSON.stringify(values)}`);
+    }
+  }
+  return errors;
+}
+
 const DEPLOY_CMD =
   /\bwrangler(?:@[\w.^~-]+)?\s+(?:deploy|versions\s+(?:deploy|upload))\b|cloudflare\/wrangler-action/;
 
@@ -330,6 +379,7 @@ function main() {
   const errors = [
     ...checkWorkersDev(),
     ...checkPreviewUrls(),
+    ...checkDirectDeployPushScopes(),
     ...checkCancelInProgress(),
     ...checkCiGateWorkflows(),
   ];

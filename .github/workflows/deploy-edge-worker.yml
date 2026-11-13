@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    # Only the authichain-revenue-worker source may bind its secrets/deploy.
+    # A docs or workflow-only merge must never write production secrets.
+    paths:
+      - "api/**"
   workflow_dispatch:
 
 permissions:
