@@ -141,7 +141,7 @@ test("/vs/* and /mcp/install make no Polygon contract claim (RES-162)", async ()
 
 test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
   const starterDesc =
-    "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits.";
+    "100 AI QR generations for $29, paid once. No subscription, and one-time pack credits never expire.";
   for (const path of ["/", "/checkout/starter"]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
@@ -164,10 +164,6 @@ test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
   const starter = await (await get("/checkout/starter")).text();
   assert.ok(starter.includes(starterDesc));
   assert.ok(
-    !starter.includes("never expire"),
-    "/checkout/starter must not say never expire"
-  );
-  assert.ok(
     !starter.includes("never-expire"),
     "/checkout/starter must not say never-expire"
   );
@@ -186,19 +182,19 @@ test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
   const home = await (await get("/")).text();
   assert.ok(
     home.includes(starterDesc),
-    "home JSON-LD Starter offer uses the Research PASS FREE-PREVIEW sentence"
+    "home JSON-LD Starter offer uses the Advisor C sentence"
   );
 });
 
-test("CFA-758: money routes have no 50-workspace-generation or never-expire pack claims", async () => {
+test("CFA-758: money routes have no 50-workspace-generation or bare pack-credit expiry slogan", async () => {
   const banned = [
     "50 workspace generations",
     "50 workspace generation",
-    "never expire",
     "never-expire",
     "no expiry",
     "no-expiry",
   ];
+  const advisorCNeverExpire = new Set(["/", "/pricing", "/checkout/starter"]);
   for (const path of [
     "/",
     "/pricing",
@@ -215,6 +211,11 @@ test("CFA-758: money routes have no 50-workspace-generation or never-expire pack
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const html = await res.text();
+    assert.equal(
+      html.includes("Pack credits never expire."),
+      false,
+      `${path} must have 0 hits on Pack credits never expire.`
+    );
     for (const phrase of banned) {
       assert.equal(
         html.toLowerCase().includes(phrase),
@@ -222,7 +223,27 @@ test("CFA-758: money routes have no 50-workspace-generation or never-expire pack
         `${path} must have 0 hits on ${phrase}`
       );
     }
+    if (!advisorCNeverExpire.has(path)) {
+      assert.equal(
+        html.toLowerCase().includes("never expire"),
+        false,
+        `${path} must have 0 hits on never expire`
+      );
+    }
   }
+  const pricing = await (await get("/pricing")).text();
+  assert.ok(
+    pricing.includes(
+      "One-time pack credits (Starter and Creator) never expire."
+    ),
+    "/pricing uses Advisor C sentence A"
+  );
+  assert.ok(
+    pricing.includes(
+      "<li>One-time pack credits (Starter and Creator) never expire</li>"
+    ),
+    "/pricing list item uses Advisor C sentence A without a trailing period"
+  );
 });
 
 test("the apex still renders the homepage", async () => {
