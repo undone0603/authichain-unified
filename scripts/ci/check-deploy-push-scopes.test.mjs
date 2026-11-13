@@ -65,3 +65,45 @@ test("manual-only workflow is permitted as fail-closed", () => {
   );
   assert.deepEqual(check(manual), []);
 });
+
+test("inline on: push trigger cannot disguise a broad deployment", () => {
+  const inline = safeCloudflare.replace(
+    'on:\n  push:\n    branches:\n      - main\n    paths:\n      - "workers/manufacturer-status/**"\n  workflow_dispatch:',
+    "on: [push, workflow_dispatch]"
+  );
+  assert.match(check(inline).join(" "), /unsupported inline/);
+});
+
+test("inline event map with unknown branches fails closed", () => {
+  const inline = safeCloudflare.replace(
+    '  push:\n    branches:\n      - main\n    paths:\n      - "workers/manufacturer-status/**"',
+    "  push: { branches: ['*'], paths: ['**'] }"
+  );
+  assert.match(check(inline).join(" "), /only one explicit push/);
+});
+
+test("push trigger may only target main, never wildcard branches", () => {
+  const broad = safeRevenue.replace("      - main", '      - "*"');
+  assert.match(check(safeCloudflare, broad).join(" "), /branches must be exactly main/);
+});
+
+test("pull-request event cannot borrow production deploy secrets", () => {
+  const broad = safeCloudflare.replace(
+    "  workflow_dispatch:",
+    "  pull_request:\n  workflow_dispatch:"
+  );
+  assert.match(check(broad).join(" "), /only one explicit push/);
+});
+
+test("extra push filters or duplicate push events are rejected", () => {
+  const extraFilter = safeRevenue.replace(
+    '      - "api/**"',
+    '      - "api/**"\n    paths-ignore:\n      - "docs/**"'
+  );
+  assert.match(check(safeCloudflare, extraFilter).join(" "), /only branches and paths/);
+  const duplicate = safeCloudflare.replace(
+    "  workflow_dispatch:",
+    "  push:\n    branches:\n      - main\n  workflow_dispatch:"
+  );
+  assert.match(check(duplicate).join(" "), /only one explicit push/);
+});

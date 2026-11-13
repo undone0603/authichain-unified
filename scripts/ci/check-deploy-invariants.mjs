@@ -218,37 +218,67 @@ export const DIRECT_DEPLOY_PUSH_SCOPES = [
 export function checkDirectDeployPushScopes(root = ROOT, scopes = DIRECT_DEPLOY_PUSH_SCOPES) {
   const errors = [];
   for (const { workflow, path: allowed } of scopes) {
-    const rel = `.github/workflows/${workflow}`;
+    const rel = ".github/workflows/" + workflow;
     let source;
     try {
       source = readFileSync(path.join(root, rel), "utf8");
     } catch {
-      errors.push(`${rel}: missing or unreadable`);
+      errors.push(rel + ": missing or unreadable");
+      continue;
+    }
+    // A compact or rewritten on: trigger must never silently be classified
+    // as manual-only. Require the event map explicitly and fail closed.
+    const topLevelOn = source.split(/\r?\n/).find(line => /^on\s*:/.test(line));
+    if (!topLevelOn || topLevelOn.trim() !== "on:") {
+      errors.push(rel + ": unsupported inline or missing on trigger");
       continue;
     }
     const block = onBlock(source);
+    const eventHeaders = block.filter(line => /^  [A-Za-z0-9_-]+:/.test(line));
+    const eventNames = eventHeaders.map(line => line.trim().split(":")[0]);
+    if (eventNames.length === 0 ||
+        !eventNames.includes("workflow_dispatch") ||
+        eventNames.some(name => !["push", "workflow_dispatch"].includes(name)) ||
+        new Set(eventNames).size !== eventNames.length ||
+        eventHeaders.some(line => !/^  (?:push|workflow_dispatch):\s*$/.test(line))) {
+      errors.push(rel + ": only one explicit push and one workflow_dispatch trigger are allowed");
+      continue;
+    }
     const pushIndex = block.findIndex(line => /^  push:\s*$/.test(line));
-    // Manual-only is always safer than an uncontrolled push.
+    // Manual-only is a supported fail-closed fallback.
     if (pushIndex === -1) continue;
     const pushLines = [];
     for (const line of block.slice(pushIndex + 1)) {
-      if (/^  [\w-]+:/.test(line)) break;
+      if (/^  [A-Za-z0-9_-]+:/.test(line)) break;
       if (line.trim() && !/^\s*#/.test(line)) pushLines.push(line);
     }
-    const pathsIndex = pushLines.findIndex(line => /^    paths:\s*$/.test(line));
-    if (pathsIndex === -1) {
-      errors.push(`${rel}: push trigger is not path-restricted`);
+    const keys = pushLines
+      .filter(line => /^    [A-Za-z0-9_-]+:/.test(line))
+      .map(line => line.trim().split(":")[0]);
+    if (keys.length !== 2 ||
+        keys.some(key => !["branches", "paths"].includes(key)) ||
+        new Set(keys).size !== keys.length) {
+      errors.push(rel + ": push must define only branches and paths");
       continue;
     }
-    const values = [];
-    for (const line of pushLines.slice(pathsIndex + 1)) {
-      if (/^    [\w-]+:/.test(line)) break;
-      const m = line.match(/^      -\s+["']?([^"'#\s]+)["']?\s*(?:#.*)?$/);
-      if (m) values.push(m[1]);
-      else if (line.trim()) values.push("[unsupported-path-syntax]");
+    function listValues(key) {
+      const start = pushLines.findIndex(line => line === "    " + key + ":");
+      if (start < 0) return null;
+      const result = [];
+      for (const line of pushLines.slice(start + 1)) {
+        if (/^    [A-Za-z0-9_-]+:/.test(line)) break;
+        const m = line.match(/^      -\s+(?:"([^"]+)"|'([^']+)'|([^"'#\s]+))\s*(?:#.*)?$/);
+        result.push(m ? (m[1] || m[2] || m[3]) : "[unsupported]");
+      }
+      return result;
     }
-    if (values.length !== 1 || values[0] !== allowed) {
-      errors.push(`${rel}: push paths must be exactly ${allowed}, got ${JSON.stringify(values)}`);
+    const branches = listValues("branches");
+    if (!branches || branches.length !== 1 || branches[0] !== "main") {
+      errors.push(rel + ": push branches must be exactly main");
+    }
+    const paths = listValues("paths");
+    if (!paths || paths.length !== 1 || paths[0] !== allowed) {
+      errors.push(rel + ": push paths must be exactly " + allowed);
     }
   }
   return errors;
