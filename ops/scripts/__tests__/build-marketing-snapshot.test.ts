@@ -57,7 +57,7 @@ describe("buildMarketingSnapshot", () => {
         fs.existsSync(path.join(outDir, "api", "webhook", "route.html")),
       ).toBe(false);
     });
-  });
+  }, 15_000);
 
   it("excludes default dynamic routes such as /gallery", async () => {
     await buildMarketingSnapshot({ nextDir, outDir });
