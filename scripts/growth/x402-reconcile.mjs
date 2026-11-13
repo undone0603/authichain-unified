@@ -8,6 +8,7 @@ const ADDRESS = /^0x[a-fA-F0-9]{40}$/;
 const CHAIN = 'eip155:8453';
 const USDC = '0x833589fcd6edb6e08f4c7c32d4f71b54bdA02913'.toLowerCase();
 const amount = '10000';
+const recipient = '0x5db511706fb6317cd23a7655f67450c5ac6e6aa2';
 const resource = 'https://signal.authichain.com/api/x402/discovery';
 const validDate = x => typeof x === 'string' && !Number.isNaN(Date.parse(x));
 const unique = xs => xs.length === new Set(xs).size;
@@ -36,9 +37,10 @@ export function reconcile(data) {
     if (seenRequest.has(s.requestId)) reasons.push('duplicate_request');
     seenTx.add(norm(s.txHash)); seenRequest.add(s.requestId);
     if (s.chain !== CHAIN || norm(s.token) !== USDC || s.amountAtomic !== amount ||
-        !ADDRESS.test(s.to || '') || !ADDRESS.test(s.from || '')) reasons.push('incorrect_transfer');
+        norm(s.to) !== recipient || !ADDRESS.test(s.from || '')) reasons.push('incorrect_transfer');
     if (s.confirmed !== true || s.success !== true || !ok(s.blockHash) || !HEX.test(s.blockHash || '') ||
         !Number.isInteger(s.confirmations) || s.confirmations < 1 || !evidence(s.chainEvidence)) reasons.push('unconfirmed_chain');
+    if (s.chainEvidence?.independentlyValidated !== true) reasons.push('chain_not_independently_validated');
     if (s.payerClass !== 'external' || s.houseOrTest === true) reasons.push('not_external');
     if (s.refunded !== false || s.disputed !== false) reasons.push('refund_dispute_unknown_or_true');
     const matches = deliveries.get(s.requestId) || [];
@@ -46,7 +48,7 @@ export function reconcile(data) {
     const d = matches.length === 1 ? matches[0] : null;
     if (d && (norm(d.txHash) !== norm(s.txHash) || d.paymentId !== s.paymentId ||
         d.resource !== resource || d.status !== 200 || d.delivered !== true ||
-        !evidence(d.deliveryEvidence) || !ok(d.receiptId))) reasons.push('delivery_not_proven');
+        !evidence(d.deliveryEvidence) || d.deliveryEvidence.independentlyValidated !== true || !ok(d.receiptId))) reasons.push('delivery_not_proven');
     // Source independence: provider receipt alone cannot attest to chain settlement.
     if (d && s.chainEvidence?.source === d.deliveryEvidence?.source) reasons.push('non_independent_evidence');
     results.push({ transaction: HEX.test(s.txHash || '') ? s.txHash.slice(0, 10) + '…' : 'invalid',
