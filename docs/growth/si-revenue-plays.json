@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "signals": [
+    {"id":"eu-battery-dpp","lane":"passport","kind":"official","review":"source_checked","claim":"EU Digital Product Passport guidance lists 18 February 2027 for certain batteries; verify product scope and current law before any customer advice.","source":"https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en","observed":"2026-11-12","support":[]},
+    {"id":"commonplace-agent-pattern","lane":"agent","kind":"repository","review":"source_checked","claim":"The Commonplace repository describes versioned evidence and agent knowledge; its ideas may improve a free integration tutorial, without constituting AuthiChain adoption.","source":"https://github.com/zby/commonplace","observed":"2026-11-12","support":["https://zby.github.io/commonplace/index.html"]},
+    {"id":"qron-verification-share","lane":"qron","kind":"repository","review":"source_checked","claim":"Public verification UI can support an opt-in evidence-sharing tutorial, not a physical authenticity guarantee.","source":"https://github.com/undone0603/authichain-unified","observed":"2026-11-12","support":["https://authichain.com/verify"]},
+    {"id":"seek-ai-research","lane":"passport","kind":"ai_generated","review":"unreviewed","claim":"Explore AI-authored claim graphs as hypotheses for DPP provenance gaps; not independent regulatory evidence.","source":"https://www.talk-about.ai/","observed":"2026-11-12","support":[]}
+  ]
+}
