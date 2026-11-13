@@ -47,3 +47,23 @@ def test_gateway_refuses_missing_or_short_secret():
         with patch.dict(os.environ, {"AGENTZ_MCP_GATEWAY_TOKEN": value}):
             with pytest.raises(RuntimeError):
                 create_app()
+
+@pytest.mark.asyncio
+async def test_authorized_request_reaches_readonly_app():
+    async def downstream(scope, receive, send):
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b"ok"})
+    app = BearerGuard(downstream, "x" * 40)
+    result = await request(app, [(b"authorization", b"Bearer " + b"x" * 40)])
+    assert result[0]["status"] == 200
+
+
+@pytest.mark.asyncio
+async def test_duplicate_authorization_and_mixed_case_origin_fail_closed():
+    async def downstream(scope, receive, send):
+        raise AssertionError("unsafe request reached MCP")
+    app = BearerGuard(downstream, "x" * 40)
+    valid = (b"authorization", b"Bearer " + b"x" * 40)
+    for headers in ([valid, valid], [valid, (b"Origin", b"https://evil.example")]):
+        result = await request(app, headers)
+        assert result[0]["status"] == 401
