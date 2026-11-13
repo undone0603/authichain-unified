@@ -49,7 +49,7 @@ for p in "${PATHS[@]:-}"; do
       bad=1
       break
     fi
-    upper=$(printf '%s' "$part" | tr '[:lower:]' '[:upper:]')
+    upper=${part^^}
     stem=${upper%%.*}
     case "$stem" in
       CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])
