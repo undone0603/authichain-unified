@@ -60,12 +60,14 @@ test("shared self-hosted workspace is restored to a full tree after every checko
   assert.equal(checkouts.length, 2);
   assert.ok(checkouts[0] < first && first < checkouts[1], "first restore follows the verify checkout");
   assert.ok(checkouts[1] < second, "second restore follows the deploy checkout");
+  assert.ok(first < yml.indexOf("- name: Resolve expected SHA vs current main"));
   assert.ok(first < yml.indexOf("- name: Test fail-closed automated release policy"));
-  assert.ok(second < yml.indexOf("- name: Confirm checked-out and current main SHA"));
+  assert.ok(second < yml.indexOf("- name: Use runner pnpm + Node 22"));
+  assert.ok(second < yml.indexOf("- name: Confirm checked-out SHA and main identity"));
   assert.ok(second < yml.indexOf("- name: Install pinned dependencies"));
 
   const verifyRestore = step("Restore full tree after sparse checkout");
-  const deployRestore = yml.slice(second, yml.indexOf("- name: Confirm checked-out and current main SHA"));
+  const deployRestore = yml.slice(second, yml.indexOf("- name: Use runner pnpm + Node 22"));
   for (const block of [verifyRestore, deployRestore]) {
     assert.match(block, /if: runner\.environment == 'self-hosted'/);
     assert.match(block, /set -euo pipefail/);
@@ -83,6 +85,27 @@ test("shared self-hosted workspace is restored to a full tree after every checko
   }
   assert.match(verifyRestore, /steps\.head\.outputs\.sha/);
   assert.match(deployRestore, /needs\.verify\.outputs\.sha/);
+});
+
+test("SHA pin checks out expected_sha and allows ancestor of main", () => {
+  const pin = step("Pin dispatch commit");
+  assert.match(pin, /\[\[ "\$TARGET_SHA" =~ \^\[\[:xdigit:\]\]\{40\}\$ \]\]/);
+  assert.doesNotMatch(pin, /test "\$TARGET_SHA" = "\$DISPATCH_SHA"/);
+  const resolve = step("Resolve expected SHA vs current main");
+  assert.match(resolve, /git fetch --no-tags origin main/);
+  assert.match(resolve, /resolve-com-deploy-sha\.mjs/);
+  const confirm = step("Confirm checked-out SHA and main identity");
+  assert.match(confirm, /test "\$\(git rev-parse HEAD\)" = "\$TARGET_SHA"/);
+  assert.match(confirm, /resolve-com-deploy-sha\.mjs/);
+  assert.doesNotMatch(confirm, /test "\$HEAD_SHA" = "\$EXPECTED_SHA"/);
+  assert.match(yml, /ref: \$\{\{ steps\.head\.outputs\.sha \}\}/);
+  assert.match(yml, /ref: \$\{\{ needs\.verify\.outputs\.sha \}\}/);
+  assert.match(yml, /SHA_MATCH_PATH: \$\{\{ steps\.match\.outputs\.path \}\}/);
+  assert.match(yml, /^\s+cancel-in-progress: false\s*$/m);
+  // Resolver needs history: merge-base --is-ancestor and git diff vs main.
+  // Count YAML keys only; the checkout comment also mentions fetch-depth: 0.
+  assert.equal((yml.match(/^[ \t]+fetch-depth: 0[ \t]*$/gm) || []).length, 2);
+  assert.doesNotMatch(yml, /^[ \t]+fetch-depth: 1[ \t]*$/m);
 });
 
 test("x402 secrets stay pinned and this publish does not re-put them", () => {
@@ -115,4 +138,3 @@ test("agent-verify exports coerceSealBody and listedSealId for the worker bundle
   assert.match(routes, /from "\.\.\/\.\.\/\.\.\/src\/lib\/agent-verify"/);
   assert.match(routes, /from "\.\.\/\.\.\/\.\.\/src\/lib\/paid-seal-verify"/);
 });
-
