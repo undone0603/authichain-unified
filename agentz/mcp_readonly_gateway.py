@@ -45,12 +45,13 @@ class BearerGuard:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        headers = dict(scope.get("headers", []))
-        authorization = headers.get(b"authorization", b"")
+        headers = scope.get("headers", [])
+        auth_values = [value for name, value in headers if name.lower() == b"authorization"]
+        origin_present = any(name.lower() == b"origin" for name, _ in headers)
         expected = b"Bearer " + self.token
-        origin = headers.get(b"origin")
-        if (not hmac.compare_digest(authorization, expected)
-                or origin is not None):
+        if (len(auth_values) != 1
+                or not hmac.compare_digest(auth_values[0], expected)
+                or origin_present):
             await send({"type": "http.response.start", "status": 401,
                         "headers": [(b"content-type", b"text/plain"),
                                     (b"cache-control", b"no-store")]})
