@@ -12,6 +12,7 @@ import { handleSalesInquiry } from './routes/sales';
 import { tryHandleDppRoute } from "./dpp-routes";
 import { tryHandleAgentPresentation } from "./agent-present-page";
 import { tryHandleBotIdentity } from "./bot-identity-routes";
+import { tryHandleReadinessSign } from "./agentz-readiness-sign";
 import {
   tryHandleApiCheckoutEmailGate,
   tryHandleProtocolCheckout,
@@ -22,6 +23,7 @@ import {
   deliverDppCheckoutStarted,
 } from "./checkout-growth";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
+import type { ReplayStore } from "../../../src/lib/paid-seal-verify";
 import { tryHandleCertificateRegistry } from "./certificate-registry";
 import { tryHandleMcp } from "./mcp-routes";
 import { tryHandleMcpFree } from "./mcp-free-routes";
@@ -3245,6 +3247,16 @@ interface Env {
   COFFEE_PAYMENT_LINK_URL?: string;
   /** Optional live Proof-of-Coffee Ed25519 private JWK. Unset fails closed on JWS minting. */
   COFFEE_RECEIPT_PRIVATE_JWK?: string;
+  /** PR2 readiness signing. Must be the string "true" together with FEATURE_ENABLED. */
+  READINESS_SIGNING_ENABLED?: string;
+  /** Must be the string "true" together with READINESS_SIGNING_ENABLED. Unset is off. */
+  FEATURE_ENABLED?: string;
+  /** Replay KV, reused for readiness-sign POST rate limits (prefixed keys). */
+  X402_REPLAY_KV?: ReplayStore;
+  /** AgentZ Ed25519 private JWK from KEY_DIR/agentz.ed25519.pem. Never commit. */
+  AGENTZ_READINESS_PRIVATE_JWK?: string;
+  /** Alternate PKCS#8 PEM for the same AgentZ key. Never commit. */
+  AGENTZ_READINESS_PRIVATE_KEY_PEM?: string;
   /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
   DPP_SMOKE_SECRET?: string;
   X402_PAY_TO?: string;
@@ -3707,6 +3719,9 @@ receipt reference. Do not send card details.</p>
     if (agentPage) return agentPage;
     const botIdentity = tryHandleBotIdentity(request);
     if (botIdentity) return botIdentity;
+    // PR2 signed readiness records. Intercept before APP_PREFIXES (/api → APP_WORKER).
+    const readinessSign = await tryHandleReadinessSign(request, env);
+    if (readinessSign) return readinessSign;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
     // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the
