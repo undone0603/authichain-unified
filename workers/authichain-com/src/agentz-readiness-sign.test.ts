@@ -1,13 +1,13 @@
+// @vitest-environment node
 import { execFileSync } from "node:child_process";
 import {
   createPrivateKey,
   generateKeyPairSync,
   type KeyObject,
 } from "node:crypto";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   parseDppReadinessInput,
@@ -48,8 +48,19 @@ import {
   verifyReadinessJws,
 } from "./agentz-readiness-sign";
 
-const HERE = fileURLToPath(new URL(".", import.meta.url));
-const VERIFY_CLI = join(HERE, "../../../protocol/bin/authichain-verify.mjs"); // pragma: allowlist secret
+function findRepoFile(rel: string): string {
+  let dir = process.cwd();
+  for (let i = 0; i < 8; i++) {
+    const candidate = join(dir, rel);
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  throw new Error(`missing ${rel} from ${process.cwd()}`);
+}
+
+const VERIFY_CLI = findRepoFile("protocol/bin/authichain-verify.mjs"); // pragma: allowlist secret
 const agentz = BOT_IDENTITIES.bots.find(b => b.slug === "agentz")!;
 
 function testKey(): { key: KeyObject; x: string; jwk: string; didKey: string } {
