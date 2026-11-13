@@ -6,6 +6,7 @@ import { TRPCError } from "@trpc/server";
 
 import {
   createFeeCheckout,
+  feeCents,
   isFeeGateEnabled,
   requireFeePaid,
 } from "./fee-gate";
@@ -41,6 +42,12 @@ export const certificatesRouter = router({
       const product = await db.getProductById(cert.productId);
       return { valid: true, certificate: cert, product };
     }),
+  /** Lets the UI know whether fees apply and what they are. */
+  pricing: publicProcedure.query(() => ({
+    gateEnabled: isFeeGateEnabled(),
+    receiptCents: feeCents("receipt"),
+    evidenceCents: feeCents("evidence"),
+  })),
   /** Start the one-time checkout for recording a receipt (shareable public certificate). */
   receiptCheckout: protectedProcedure
     .input(

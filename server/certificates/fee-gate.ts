@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { planByAmountCents } from "../../src/lib/plans";
 import { createPaymentCheckout, getStripe } from "../stripe-service";
 
 /**
@@ -16,7 +17,10 @@ export type FeeKind = "receipt" | "evidence";
 
 const DEFAULT_FEE_CENTS: Record<FeeKind, number> = {
   receipt: 199,
-  evidence: 2900,
+  // Must not equal any catalogue plan price: the Stripe webhook matches
+  // one-time payments to plans by amount (planByAmountCents), so a collision
+  // would provision a plan for a fee payer. $29 is Starter, hence $39.
+  evidence: 3900,
 };
 
 const LABEL: Record<FeeKind, string> = {
@@ -30,7 +34,9 @@ export function isFeeGateEnabled(): boolean {
 
 export function feeCents(kind: FeeKind): number {
   const raw = Number(process.env[`CERT_${kind.toUpperCase()}_FEE_CENTS`]);
-  return Number.isInteger(raw) && raw > 0 ? raw : DEFAULT_FEE_CENTS[kind];
+  const ok =
+    Number.isInteger(raw) && raw > 0 && planByAmountCents(raw) === undefined;
+  return ok ? raw : DEFAULT_FEE_CENTS[kind];
 }
 
 export async function createFeeCheckout(params: {
@@ -46,6 +52,7 @@ export async function createFeeCheckout(params: {
     description: `${LABEL[params.kind]} — ${params.certificateNumber}`,
     amount: feeCents(params.kind),
     origin: params.origin,
+    returnPath: "/certificates",
     metadata: {
       kind: params.kind,
       certificateNumber: params.certificateNumber,

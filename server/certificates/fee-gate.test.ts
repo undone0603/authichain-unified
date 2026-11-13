@@ -2,15 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const retrieve = vi.fn();
 vi.mock("../stripe-service", () => ({
-  createPaymentCheckout: vi
-    .fn()
-    .mockResolvedValue({
-      url: "https://checkout.stripe.com/x",
-      sessionId: "cs_1",
-    }),
+  createPaymentCheckout: vi.fn().mockResolvedValue({
+    url: "https://checkout.stripe.com/x",
+    sessionId: "cs_1",
+  }),
   getStripe: () => ({ checkout: { sessions: { retrieve } } }),
 }));
 
+import { planByAmountCents } from "../../src/lib/plans";
 import { feeCents, requireFeePaid } from "./fee-gate";
 
 const base = {
@@ -62,6 +61,13 @@ describe("fee-gate", () => {
         requireFeePaid({ ...base, sessionId: "cs_1" })
       ).rejects.toThrow(/Payment required/);
     });
+  });
+
+  it("never lets a fee collide with a catalogue plan price (webhook amount-matching)", () => {
+    expect(planByAmountCents(feeCents("receipt"))).toBeUndefined();
+    expect(planByAmountCents(feeCents("evidence"))).toBeUndefined();
+    vi.stubEnv("CERT_EVIDENCE_FEE_CENTS", "2900"); // Starter's price
+    expect(feeCents("evidence")).toBe(3900);
   });
 
   it("uses defaults and honours valid overrides only", () => {
