@@ -1,0 +1,3 @@
+# Local/offline evidence review only. No network or external model inference.
+opencv-python-headless>=4.10,<5
+numpy>=1.26,<3
