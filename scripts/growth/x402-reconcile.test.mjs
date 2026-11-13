@@ -25,3 +25,11 @@ test('refund is not revenue',()=>assert.equal(audit([{...settlement(),refunded:t
 test('mismatched payment id is not revenue',()=>assert.equal(audit(undefined,[{...delivery(),paymentId:'other'}]).verifiedTransactions,0));
 test('duplicate tx cannot count twice',()=>assert.equal(audit([settlement(),{...settlement(),requestId:'req-2'}],[delivery(),{...delivery(),requestId:'req-2'}]).verifiedTransactions,1));
 test('missing delivery independent validation is not revenue',()=>assert.equal(audit(undefined,[{...delivery(),deliveryEvidence:{...delivery().deliveryEvidence,independentlyValidated:false}}]).verifiedTransactions,0));
+
+test('reused delivery receipt cannot certify a second payment', () => {
+ const second = {...settlement(), txHash:'0x'+'d'.repeat(64),requestId:'req-2',paymentId:'pay-2'};
+ const otherDelivery = {...delivery(),txHash:second.txHash,requestId:'req-2',paymentId:'pay-2'};
+ const result = audit([settlement(),second],[delivery(),otherDelivery]);
+ assert.equal(result.verifiedTransactions,1);
+ assert.ok(result.results[1].reasons.includes('duplicate_delivery_receipt'));
+});
