@@ -67,14 +67,14 @@ test('JSON-only happy path stays free and emits exactly three POSTs', async () =
 });
 
 test('SSE initialize is advertised but rejected; no follow-up requests', async () => {
-  const event = 'event: message\\ndata: ' + JSON.stringify(result(1, {
+  const event = ['event: message', 'data: ' + JSON.stringify(result(1, {
     protocolVersion: '2025-06-18', serverInfo,
-  })) + '\\n\\n';
+  }))].join(String.fromCharCode(10)) + String.fromCharCode(10, 10);
   const h = harness({ initializeResponse: new Response(event, {
     status: 200, headers: { 'content-type': 'text/event-stream' },
   }) });
-  await assert.rejects(run({ fetchImpl: h.fetchImpl, log() {} }), /expected application\\/json/);
-  assert.match(h.requests[1].headers.accept, /text\\/event-stream/);
+  await assert.rejects(run({ fetchImpl: h.fetchImpl, log() {} }), new RegExp('expected application/json'));
+  assert.match(h.requests[1].headers.accept, new RegExp('text/event-stream'));
   assert.equal(h.requests.length, 2);
 });
 
