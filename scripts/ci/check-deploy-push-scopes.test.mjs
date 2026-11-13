@@ -1,9 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { checkDirectDeployPushScopes } from "./check-deploy-invariants.mjs";
+import {
+  checkDirectDeployPushScopes,
+  DIRECT_DEPLOY_PUSH_SCOPES,
+} from "./check-deploy-invariants.mjs";
+
+const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 
 const safeCloudflare = [
   "name: Deploy to Cloudflare",
@@ -18,7 +23,8 @@ const safeCloudflare = [
 ].join("\n");
 
 const safeRevenue = safeCloudflare.replace(
-  'workers/manufacturer-status/**', 'api/**'
+  '      - "workers/manufacturer-status/**"',
+  '      - "api/**"\n      - "src/lib/plans.ts"'
 );
 
 function check(cloudflare = safeCloudflare, revenue = safeRevenue) {
@@ -97,8 +103,8 @@ test("pull-request event cannot borrow production deploy secrets", () => {
 
 test("extra push filters or duplicate push events are rejected", () => {
   const extraFilter = safeRevenue.replace(
-    '      - "api/**"',
-    '      - "api/**"\n    paths-ignore:\n      - "docs/**"'
+    '      - "src/lib/plans.ts"',
+    '      - "src/lib/plans.ts"\n    paths-ignore:\n      - "docs/**"'
   );
   assert.match(check(safeCloudflare, extraFilter).join(" "), /only branches and paths/);
   const duplicate = safeCloudflare.replace(
@@ -106,4 +112,53 @@ test("extra push filters or duplicate push events are rejected", () => {
     "  push:\n    branches:\n      - main\n  workflow_dispatch:"
   );
   assert.match(check(duplicate).join(" "), /only one explicit push/);
+});
+
+test("a scope that drops one of its required paths is rejected", () => {
+  const narrowed = safeRevenue.replace('      - "src/lib/plans.ts"\n', "");
+  assert.match(check(safeCloudflare, narrowed).join(" "), /paths must be exactly/);
+});
+
+test("the real workflows satisfy their declared scopes", () => {
+  assert.deepEqual(checkDirectDeployPushScopes(REPO_ROOT), []);
+});
+
+// A path filter is only safe if it covers everything the Worker bundles.
+// Walk each Worker's relative imports from its entry point and require every
+// file reached to sit inside the declared scope, so a new import from outside
+// the Worker's directory fails here instead of silently never redeploying.
+function bundledFiles(entry) {
+  const seen = new Set();
+  const queue = [entry];
+  const specifier = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)["'](\.{1,2}\/[^"']+)["']/g;
+  while (queue.length > 0) {
+    const rel = queue.pop();
+    if (seen.has(rel)) continue;
+    seen.add(rel);
+    const source = readFileSync(path.join(REPO_ROOT, rel), "utf8");
+    for (const [, spec] of source.matchAll(specifier)) {
+      const base = path.posix.join(path.posix.dirname(rel), spec);
+      const resolved = [
+        base, base + ".ts", base + ".tsx", base + ".mjs", base + ".js",
+        base + "/index.ts", base + "/index.js",
+      ].find(candidate => /\.[a-z]+$/.test(candidate) &&
+        existsSync(path.join(REPO_ROOT, candidate)));
+      assert.ok(resolved, rel + " imports " + spec + ", which could not be resolved");
+      queue.push(resolved);
+    }
+  }
+  return [...seen];
+}
+
+function inScope(file, paths) {
+  return paths.some(pattern => pattern.endsWith("/**")
+    ? file.startsWith(pattern.slice(0, -2))
+    : file === pattern);
+}
+
+test("each scope covers every file its Worker bundles", () => {
+  for (const { workflow, entry, paths } of DIRECT_DEPLOY_PUSH_SCOPES) {
+    const outside = bundledFiles(entry).filter(file => !inScope(file, paths));
+    assert.deepEqual(outside, [], workflow + " would not redeploy for a change to: " + outside.join(", "));
+  }
 });

@@ -6,8 +6,11 @@ on:
       - main
     # Only the authichain-revenue-worker source may bind its secrets/deploy.
     # A docs or workflow-only merge must never write production secrets.
+    # src/lib/plans.ts is bundled into this Worker (api/worker.ts imports it),
+    # so a price change must redeploy it too.
     paths:
       - "api/**"
+      - "src/lib/plans.ts"
   workflow_dispatch:
 
 permissions:

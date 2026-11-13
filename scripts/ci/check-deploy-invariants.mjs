@@ -211,13 +211,24 @@ export function checkPreviewUrls(root = ROOT, targets = PREVIEW_URLS_OFF) {
  * reappearing on these two high-impact workflows.
  */
 export const DIRECT_DEPLOY_PUSH_SCOPES = [
-  { workflow: "deploy-cloudflare.yml", path: "workers/manufacturer-status/**" },
-  { workflow: "deploy-edge-worker.yml", path: "api/**" },
+  {
+    workflow: "deploy-cloudflare.yml",
+    entry: "workers/manufacturer-status/src/index.ts",
+    paths: ["workers/manufacturer-status/**"],
+  },
+  {
+    workflow: "deploy-edge-worker.yml",
+    entry: "api/worker.ts",
+    // The revenue Worker bundles src/lib/plans.ts, the pricing source of
+    // truth. Leaving it out would let a price change merge without the
+    // Worker that quotes those prices ever being redeployed.
+    paths: ["api/**", "src/lib/plans.ts"],
+  },
 ];
 
 export function checkDirectDeployPushScopes(root = ROOT, scopes = DIRECT_DEPLOY_PUSH_SCOPES) {
   const errors = [];
-  for (const { workflow, path: allowed } of scopes) {
+  for (const { workflow, paths: allowed } of scopes) {
     const rel = ".github/workflows/" + workflow;
     let source;
     try {
@@ -255,6 +266,12 @@ export function checkDirectDeployPushScopes(root = ROOT, scopes = DIRECT_DEPLOY_
     const keys = pushLines
       .filter(line => /^    [A-Za-z0-9_-]+:/.test(line))
       .map(line => line.trim().split(":")[0]);
+    // Name the case this check exists for, instead of folding it into the
+    // generic shape error below.
+    if (!keys.includes("paths")) {
+      errors.push(rel + ": push to main is not path-restricted");
+      continue;
+    }
     if (keys.length !== 2 ||
         keys.some(key => !["branches", "paths"].includes(key)) ||
         new Set(keys).size !== keys.length) {
@@ -277,8 +294,9 @@ export function checkDirectDeployPushScopes(root = ROOT, scopes = DIRECT_DEPLOY_
       errors.push(rel + ": push branches must be exactly main");
     }
     const paths = listValues("paths");
-    if (!paths || paths.length !== 1 || paths[0] !== allowed) {
-      errors.push(rel + ": push paths must be exactly " + allowed);
+    if (!paths || paths.length !== allowed.length ||
+        allowed.some(entry => !paths.includes(entry))) {
+      errors.push(rel + ": push paths must be exactly " + allowed.join(", "));
     }
   }
   return errors;
