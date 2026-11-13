@@ -39,7 +39,9 @@ def execute_browser_task(task: str, *, timeout: int = 60) -> dict:
     # A separate session prevents cross-task browser state leakage. CLI is
     # intentionally invoked with a fixed argv, never a shell or user command.
     session = "agentz-" + run_id
-    env = {**os.environ, "AGENT_BROWSER_SESSION": session}
+    env = {key: value for key, value in os.environ.items()
+           if key != "AGENTZ_MCP_GATEWAY_TOKEN"}
+    env["AGENT_BROWSER_SESSION"] = session
     def call(*args):
         return subprocess.run(
             [executable, *args], capture_output=True, text=True,
