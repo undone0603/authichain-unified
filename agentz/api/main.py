@@ -133,6 +133,25 @@ async def api_scan(data: ScanInput, supabase: Client = Depends(get_supabase)):
         "reward": reward
     }
 
+@app.get("/taskmap")
+async def api_taskmap(
+    lat: float = 30.2672,
+    lng: float = -97.7431,
+    range_km: float = 40,
+    skills: str = "python,a2a",
+):
+    """Local board of gigs this worker can reach. Does not charge or escrow."""
+    from datetime import datetime, timezone
+
+    from fastapi.responses import HTMLResponse
+
+    from agentz.core.local_taskmap import Gig, Place, Worker, render_board
+
+    quals = frozenset(part.strip() for part in skills.split(",") if part.strip())
+    viewer = Worker("viewer", Place(lat, lng, "viewer"), quals, range_km)
+    return HTMLResponse(render_board(viewer, [], datetime.now(timezone.utc)))
+
+
 @app.get("/marketplace")
 async def api_marketplace(supabase: Client = Depends(get_supabase)):
     from agentz.core.aggregator import generate_marketplace_manifest
