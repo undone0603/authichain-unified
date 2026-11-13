@@ -1,0 +1,22 @@
+{
+  "name": "AuthiChain GENIUS Evidence Passport Pilot (DRAFT)",
+  "description": "Nonbinding public-document evidence review; not an issuer or compliance certification",
+  "url": "https://example.invalid/a2a",
+  "version": "0.1.0-draft",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false
+  },
+  "skills": [
+    {
+      "id": "genius_evidence_review",
+      "name": "GENIUS public evidence review",
+      "description": "Review authorized public-document references and produce integrity receipts without regulatory conclusions",
+      "tags": [
+        "stablecoin",
+        "evidence",
+        "read-only"
+      ]
+    }
+  ]
+}
