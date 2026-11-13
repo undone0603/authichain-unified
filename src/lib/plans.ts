@@ -2,6 +2,7 @@
 // Products and prices are pre-created in the Stripe dashboard.
 // priceId values are LIVE; keep in sync with Stripe.
 //
+// 2026-11-08: QRON Launch is the primary listed recurring offer; original catalog preserved.
 // 2026-10-19: qron_launch_annual $190/yr (price_1USNoSGqTruSqV8ThTIW7Ej8),
 // 1,200 generations. The other catalogue rows stay in this file.
 // 2026-10-06: homepage paid product is starter $29. dpp_readiness stays
@@ -67,9 +68,50 @@ export const PLANS: Plan[] = [
       "Limit 5 per visitor every 30 days, while the daily sample limit lasts",
       "No account, no card",
       "Lookup verify only (no GPT-4V)",
-      "Then Starter: $29 once, no subscription",
+      "Then Launch: $19/mo or Starter: $29 once",
     ],
     cta: "Start free, no card",
+  },
+  {
+    id: "qron_launch",
+    name: "QRON Launch",
+    price: 19,
+    price_suffix: "/mo",
+    description: "100 AI QR generations each month. Cancel any time. Primary recurring offer.",
+    generations: 100,
+    stripe_price_id: "price_1UJjzPGqTruSqV8TmhFSc8vh",
+    stripe_mode: "subscription",
+    tier: "pro",
+    brand: "qron",
+    listed: true,
+    highlighted: true,
+    features: [
+      "100 generations / month",
+      "Designed for AuthiChain signed verification (in development)",
+      "Self-serve Stripe. Cancel any time",
+    ],
+    cta: "Start Launch — $19/mo",
+  },
+  {
+    id: "qron_launch_annual",
+    name: "QRON Launch Annual",
+    price: 190,
+    price_suffix: "/yr",
+    description:
+      "1,200 AI QR generations (100/mo equivalent). Two months free vs monthly. Cancel any time.",
+    generations: 1200,
+    stripe_price_id: "price_1USNoSGqTruSqV8ThTIW7Ej8",
+    stripe_mode: "subscription",
+    tier: "pro",
+    brand: "qron",
+    listed: true,
+    features: [
+      "1,200 generations per year",
+      "Two months free vs $19/mo",
+      "Designed for AuthiChain signed verification (in development)",
+      "Cancel any time",
+    ],
+    cta: "Annual Launch — $190/yr",
   },
   {
     id: "starter",
@@ -91,46 +133,6 @@ export const PLANS: Plan[] = [
     listed: true,
   },
   {
-    id: "qron_launch",
-    name: "QRON Launch",
-    price: 19,
-    price_suffix: "/mo",
-    description: "100 AI QR generations each month. Cancel any time.",
-    generations: 100,
-    stripe_price_id: "price_1UJjzPGqTruSqV8TmhFSc8vh",
-    stripe_mode: "subscription",
-    tier: "pro",
-    brand: "qron",
-    listed: false,
-    features: [
-      "100 generations / month",
-      "Designed for AuthiChain signed verification (in development)",
-      "Cancel any time",
-    ],
-    cta: "See pricing",
-  },
-  {
-    id: "qron_launch_annual",
-    name: "QRON Launch Annual",
-    price: 190,
-    price_suffix: "/yr",
-    description:
-      "1,200 AI QR generations (100/mo equivalent). Two months free vs monthly. Cancel any time.",
-    generations: 1200,
-    stripe_price_id: "price_1USNoSGqTruSqV8ThTIW7Ej8",
-    stripe_mode: "subscription",
-    tier: "pro",
-    brand: "qron",
-    listed: false,
-    features: [
-      "1,200 generations per year",
-      "Two months free vs $19/mo",
-      "Designed for AuthiChain signed verification (in development)",
-      "Cancel any time",
-    ],
-    cta: "See pricing",
-  },
-  {
     id: "creator",
     name: "Creator Pack",
     price: 99,
@@ -147,7 +149,7 @@ export const PLANS: Plan[] = [
       "Designed for AuthiChain signed verification (in development)",
     ],
     cta: "Buy Creator Pack",
-    highlighted: true,
+    highlighted: false,
   },
   {
     id: "theater_1",
