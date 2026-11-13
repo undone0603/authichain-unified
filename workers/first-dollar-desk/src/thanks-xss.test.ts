@@ -115,4 +115,23 @@ describe("/buy/thanks XSS (RES-81)", () => {
     });
     expect(html).not.toContain("<b>bad</b>");
   });
+
+  it("shows a fixed note, not Stripe's error text, when the lookup fails (C2)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ error: { message: "No such checkout.session: cs_test_x; acct_123" } }),
+            { status: 404 }
+          )
+      )
+    );
+    const { html } = await thanks("cs_test_a1B2c3D4", {
+      STRIPE_SECRET_KEY: "sk_test_dummy",
+    });
+    expect(html).toContain("Stripe lookup failed. Session queued for retry.");
+    expect(html).not.toContain("No such checkout.session");
+    expect(html).not.toContain("acct_123");
+  });
 });
