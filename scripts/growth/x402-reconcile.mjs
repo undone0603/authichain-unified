@@ -9,6 +9,25 @@ const ADDRESS = /^0x[a-fA-F0-9]{40}$/;
 const BASE = 'eip155:8453';
 const USDC = '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
 const reject = reason => ({ status: 'unverified', reason });
+
+const OFFER_VERSION = /^[a-zA-Z0-9._:-]{1,128}$/;
+function datedOfferMatches(offer, request) {
+  if (!offer || typeof offer !== 'object' || !OFFER_VERSION.test(offer.version || '') ||
+      typeof offer.source !== 'string' || !offer.source.startsWith('https://') ||
+      typeof offer.observedAt !== 'string' || typeof offer.validFrom !== 'string' ||
+      typeof offer.validUntil !== 'string' || typeof request.occurredAt !== 'string') return false;
+  const observed = Date.parse(offer.observedAt), from = Date.parse(offer.validFrom),
+    until = Date.parse(offer.validUntil), occurred = Date.parse(request.occurredAt);
+  if (![observed, from, until, occurred].every(Number.isFinite) ||
+      from >= until || observed < from || observed > until ||
+      occurred < from || occurred > until) return false;
+  return offer.network === BASE && String(offer.token).toLowerCase() === USDC &&
+    offer.resource === request.resource && String(offer.payTo).toLowerCase() ===
+      String(request.payTo).toLowerCase() &&
+    ADDRESS.test(offer.payTo || '') && /^[1-9][0-9]*$/.test(String(offer.amount)) &&
+    String(offer.amount) === String(request.amount);
+}
+
 function validId(x) { return typeof x === 'string' && /^[a-zA-Z0-9:_-]{1,128}$/.test(x); }
 // The synchronous join is a consistency check, not an authenticated revenue verdict.
 // Authenticated reconciliation must use reconcileAuthenticated() below.
@@ -34,6 +53,7 @@ export function reconcile(input) {
     if (!validId(id)) return { requestId: null, ...reject('invalid_request_id') };
     if (seenRequests.has(id)) return { requestId: id, ...reject('duplicate_request_id') };
     seenRequests.add(id);
+    if (!datedOfferMatches(input.offerEvidence, r)) return { requestId: id, ...reject('missing_stale_or_mismatched_offer') };
     const tx = r.txHash;
     if (!HASH.test(tx || '')) return { requestId: id, ...reject('missing_valid_tx_hash') };
     const key = tx.toLowerCase();
@@ -117,7 +137,7 @@ export async function reconcileAuthenticated(input, { trustedDeliveryPublicKey, 
       amount:String(r.amount), confirmed:true, success:true, source:'independent_chain_rpc',
       blockNumber:1 });
   }
-  const result = reconcile({ requests:input.requests, transfers, deliveries:authenticatedDeliveries });
+  const result = reconcile({ requests:input.requests, transfers, deliveries:authenticatedDeliveries, offerEvidence:input.offerEvidence });
   // Signed delivery and RPC settlement do not verify external-payer identity,
   // authorization, refund/dispute finality or independent attribution.
   const matched = result.rows.filter(row => row.status === 'manifest_consistent_claim');
