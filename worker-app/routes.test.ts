@@ -628,12 +628,15 @@ describe("POST /api/paddle/webhook", () => {
 });
 
 describe("POST /api/webhooks/instantly", () => {
-  it("forwards the parsed JSON payload to the handler", async () => {
+  it("forwards the parsed JSON payload to the handler with a valid webhook secret", async () => {
     const res = await app.request("/api/webhooks/instantly", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "x-webhook-secret": "isolated-test-secret",
+      },
       body: JSON.stringify({ event: "email_opened", email: "a@b.com" }),
-    });
+    }, { INSTANTLY_WEBHOOK_SECRET: "isolated-test-secret" });
     expect(res.status).toBe(200);
     const { handleInstantlyWebhook } =
       await import("../server/webhooks/instantly");
