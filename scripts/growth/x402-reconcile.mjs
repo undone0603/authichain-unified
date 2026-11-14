@@ -79,9 +79,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
  * supplied independently, not copied from the evidence manifest.
  * No wallet signing, sends, or mutations.
  */
-export async function reconcileAuthenticated(input, { trustedDeliveryPublicKey, fetchImpl, rpcUrl, minConfirmations = 12 } = {}) {
+export async function reconcileAuthenticated(input, { trustedDeliveryPublicKey, trustedRecipient, fetchImpl, rpcUrl, minConfirmations = 12 } = {}) {
   if (!trustedDeliveryPublicKey || !input || !Array.isArray(input.requests) ||
       !Array.isArray(input.deliveries) || input.requests.length > 10000) throw Error('Missing trusted delivery key or evidence');
+  // Expected recipient must be independently configured, never accepted solely from a payer manifest.
+  if (!ADDRESS.test(trustedRecipient || '')) throw Error('Missing trusted recipient');
   const publicKey = createPublicKey(trustedDeliveryPublicKey);
   if (publicKey.asymmetricKeyType !== 'ed25519') throw Error('Expected Ed25519 delivery key');
   const authenticatedDeliveries = [];
@@ -99,7 +101,7 @@ export async function reconcileAuthenticated(input, { trustedDeliveryPublicKey, 
   }
   const transfers = [];
   for (const r of input.requests) {
-    if (!r || !HASH.test(r.txHash || '') || !ADDRESS.test(r.payTo || '') ||
+    if (!r || !HASH.test(r.txHash || '') || String(r.payTo).toLowerCase() !== trustedRecipient.toLowerCase() ||
         !/^[1-9][0-9]*$/.test(String(r.amount))) continue;
     let proof;
     try {
