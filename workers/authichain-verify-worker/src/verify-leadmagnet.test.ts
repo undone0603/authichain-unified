@@ -33,6 +33,7 @@ describe("/verify lead magnet", () => {
     stubFetch();
     const ok = (await (await worker.fetch(new Request("https://authichain.com/verify?id=polygon-anchor-1"), env)).json()) as any;
     expect(ok.cta.url).toBe(ONBOARD_URL);
+    expect(ok.cta.track_url).toBe("/api/verify/cta");
     expect(ok.emailCapture).toBe("not_requested");
     const bad = await worker.fetch(new Request("https://authichain.com/verify"), env);
     expect(bad.status).toBe(400);
@@ -61,9 +62,9 @@ describe("/verify lead magnet", () => {
     expect(calls.some((c) => c.url.includes("verify_email_captures"))).toBe(false);
   });
 
-  it("GET /verify/cta logs verify_cta_clicked and 302s to onboard", async () => {
+  it("GET /api/verify/cta logs verify_cta_clicked and 302s to onboard", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
-    const res = await worker.fetch(new Request("https://authichain.com/verify/cta?id=ABC123"), env);
+    const res = await worker.fetch(new Request("https://authichain.com/api/verify/cta?id=ABC123"), env);
     expect(res.status).toBe(302);
     expect(res.headers.get("Location")).toBe(ONBOARD_URL);
     expect(JSON.parse(String(log.mock.calls[0][0])).evt).toBe("verify_cta_clicked");
