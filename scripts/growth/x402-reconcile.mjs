@@ -133,7 +133,8 @@ export async function reconcileAuthenticated(input, { trustedDeliveryPublicKey, 
   }
   const transfers = [];
   for (const r of input.requests) {
-    if (!datedOfferMatches(input.offerEvidence, r) || !HASH.test(r.txHash || '') ||\n        String(r.payTo).toLowerCase() !== trustedRecipient.toLowerCase() ||
+    if (!datedOfferMatches(input.offerEvidence, r) || !HASH.test(r.txHash || '') ||
+        String(r.payTo).toLowerCase() !== trustedRecipient.toLowerCase() ||
         !/^[1-9][0-9]*$/.test(String(r.amount))) continue;
     let proof;
     try {
