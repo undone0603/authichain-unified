@@ -40,7 +40,7 @@ case "$task" in
     # Run the real AgentZ edge/scheduler integration tests on the exact CircleCI SHA.
     # GitHub Actions hosted runners may be unavailable; this independent gate
     # remains credential-free and never deploys.
-    node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs
+    node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs agentz/cloudflare-mcp/memory-recovery.test.mjs agentz/cloudflare-mcp/binding-preflight.test.mjs
     ;;
   test-other)
     pnpm --filter agent-browser exec playwright install --with-deps chromium

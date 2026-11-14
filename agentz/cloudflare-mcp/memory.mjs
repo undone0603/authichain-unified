@@ -1,58 +1,138 @@
-// Bounded, read-only task execution. No arbitrary shell, deployment or payment operations.
+// Bounded read-only AgentZ memory. No deployments, payments, or arbitrary HTTP targets.
+// D1 lease fencing and event/learning writes are atomic; no replay of side effects.
+const safe = (s, n = 400) => String(s ?? "").slice(0, n);
+const utcSql = (ms = Date.now()) => new Date(ms).toISOString().replace('T', ' ').slice(0, 19);
+const RETRY_LIMIT = 3;
+const LEASE_MS = 30000;
+const RETRY_MS = 5 * 60000;
+
 const validTarget = (s) => {
-  if (typeof s !== "string" || s.length > 1024) throw Error("invalid target");
+  if (typeof s !== 'string' || s.length > 1024) throw Error('invalid target');
   const u = new URL(s);
-  if (u.protocol !== "https:" || u.username || u.password || u.port || u.hash) throw Error("invalid HTTPS target");
-  // Fixed public domain prevents private-address SSRF and redirect pivoting.
-  if (u.hostname !== "github.com" || !/^\/(undone0603\/authichain-unified)(\/|$)/.test(u.pathname)) throw Error("target not allowlisted");
+  if (u.protocol !== 'https:' || u.username || u.password || u.port || u.hash ||
+      u.hostname !== 'github.com' || !/^\/undone0603\/authichain-unified(?:\/|$)/.test(u.pathname)) {
+    throw Error('target not allowlisted');
+  }
   return u.toString();
 };
-const safe = (s,n=400) => String(s ?? "").slice(0,n);
+
 export async function enqueue(env, args) {
-  if (!env.AGENTZ_DB) throw Error("D1 not configured");
-  const target=validTarget(args?.target);
-  const priority=Number.isInteger(args?.priority)?args.priority:50;
-  if(priority<0||priority>100)throw Error("priority out of range");
-  const id=crypto.randomUUID();
-  await env.AGENTZ_DB.prepare("INSERT INTO agentz_tasks(id,kind,target,priority) VALUES (?,'public_probe',?,?)").bind(id,target,priority).run();
-  return {id,status:"pending",target,priority};
+  if (!env.AGENTZ_DB) throw Error('D1 not configured');
+  const target = validTarget(args?.target);
+  const priority = Number.isInteger(args?.priority) ? args.priority : 50;
+  if (priority < 0 || priority > 100) throw Error('priority out of range');
+  const key = args?.idempotency_key;
+  if (key !== undefined && (typeof key !== 'string' || !/^[A-Za-z0-9:_-]{8,128}$/.test(key))) {
+    throw Error('invalid idempotency key');
+  }
+  const id = crypto.randomUUID();
+  const sql = key === undefined
+    ? "INSERT INTO agentz_tasks(id,kind,target,priority,idempotency_key) VALUES (?,'public_probe',?,?,?)"
+    : "INSERT INTO agentz_tasks(id,kind,target,priority,idempotency_key) VALUES (?,'public_probe',?,?,?) ON CONFLICT(kind,idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING";
+  await env.AGENTZ_DB.prepare(sql).bind(id, target, priority, key ?? null).run();
+  if (key !== undefined) {
+    const existing = await env.AGENTZ_DB.prepare(
+      "SELECT id,target,priority,status FROM agentz_tasks WHERE kind='public_probe' AND idempotency_key=?"
+    ).bind(key).first();
+    if (!existing || existing.target !== target || existing.priority !== priority) {
+      throw Error('idempotency key reused for different operation');
+    }
+    return { id: existing.id, target, priority, status: existing.status, deduplicated: existing.id !== id };
+  }
+  return { id, target, priority, status: 'pending', deduplicated: false };
 }
-export async function recent(env,args){
-  if(!env.AGENTZ_DB)throw Error("D1 not configured");
-  const limit=Math.min(30,Math.max(1,Number.isInteger(args?.limit)?args.limit:10));
-  const tasks=await env.AGENTZ_DB.prepare("SELECT id,kind,target,priority,status,attempts,created_at,updated_at,last_error FROM agentz_tasks ORDER BY created_at DESC LIMIT ?").bind(limit).all();
-  const learnings=await env.AGENTZ_DB.prepare("SELECT task_kind,fingerprint,outcome,strategy,observation,created_at FROM agentz_learnings ORDER BY id DESC LIMIT ?").bind(limit).all();
-  return {tasks:tasks.results,learnings:learnings.results};
+
+export async function recent(env, args) {
+  if (!env.AGENTZ_DB) throw Error('D1 not configured');
+  const limit = Math.min(30, Math.max(1, Number.isInteger(args?.limit) ? args.limit : 10));
+  const tasks = await env.AGENTZ_DB.prepare(
+    'SELECT id,kind,target,priority,status,attempts,created_at,updated_at,last_error FROM agentz_tasks ORDER BY created_at DESC LIMIT ?'
+  ).bind(limit).all();
+  const events = await env.AGENTZ_DB.prepare(
+    'SELECT task_id,event_type,outcome,evidence_url,detail,created_at FROM agentz_task_events ORDER BY id DESC LIMIT ?'
+  ).bind(limit).all();
+  const learnings = await env.AGENTZ_DB.prepare(
+    'SELECT task_kind,fingerprint,outcome,strategy,observation,source_event_id,created_at FROM agentz_learnings ORDER BY id DESC LIMIT ?'
+  ).bind(limit).all();
+  return { tasks: tasks.results, events: events.results, learnings: learnings.results };
 }
-export async function runQueue(env, max=3){
- if(!env.AGENTZ_DB) return {processed:0,reason:"D1 not configured"};
- let processed=0;
- for(let i=0;i<Math.min(max,3);i++){
-  const now=new Date().toISOString().replace('T',' ').replace('Z','').slice(0,19);
-  const row=await env.AGENTZ_DB.prepare("SELECT id,target,attempts FROM agentz_tasks WHERE status='pending' AND next_run_at <= ? ORDER BY priority DESC,created_at ASC LIMIT 1").bind(now).first();
-  if(!row)break;
-  const claim=await env.AGENTZ_DB.prepare("UPDATE agentz_tasks SET status='running',attempts=attempts+1,updated_at=? WHERE id=? AND status='pending'").bind(now,row.id).run();
-  if(!claim.meta?.changes)continue;
-  let outcome="success",detail="",evidenceUrl=null;
-  try{
-   const target=validTarget(row.target);
-   // Abort slow upstream reads rather than occupying the hourly queue indefinitely.
-   const response=await fetch(target,{method:"GET",redirect:"manual",signal:AbortSignal.timeout(8000),headers:{"accept":"text/html"}});
-   if(response.body)await response.body.cancel();
-   if(response.status>=300&&response.status<400)throw Error("redirect refused");
-   if(!response.ok)throw Error("HTTP "+response.status);
-   detail="GitHub public endpoint responded HTTP "+response.status;
-   evidenceUrl=target;
-  }catch(e){outcome="failure";detail=safe(e.message);}
-  const status=outcome==="success"?"succeeded":row.attempts+1>=3?"failed":"pending";
-  const nextRun=new Date(Date.now()+Math.min(60,5*(row.attempts+1))*60000).toISOString().replace('T',' ').replace('Z','').slice(0,19);
-  await env.AGENTZ_DB.batch([
-   env.AGENTZ_DB.prepare("UPDATE agentz_tasks SET status=?,updated_at=?,next_run_at=?,last_error=? WHERE id=?").bind(status,new Date().toISOString().replace('T',' ').replace('Z','').slice(0,19),nextRun,outcome==="failure"?detail:null,row.id),
-   env.AGENTZ_DB.prepare("INSERT INTO agentz_task_events(task_id,event_type,outcome,evidence_url,detail) VALUES (?,'public_probe',?,?,?)").bind(row.id,outcome,evidenceUrl,detail)
-  ]);
-  const event=await env.AGENTZ_DB.prepare("SELECT id FROM agentz_task_events WHERE task_id=? ORDER BY id DESC LIMIT 1").bind(row.id).first();
-  if(event)await env.AGENTZ_DB.prepare("INSERT INTO agentz_learnings(task_kind,fingerprint,outcome,strategy,observation,source_event_id) VALUES ('public_probe',?,?,'fixed-github-read-only',?,?)").bind(row.target,outcome,detail,event.id).run();
-  processed++;
- }
- return {processed};
+
+// Recovery is bounded and only requeues read-only public_probe work. An expired
+// lease is *unknown*, not a verified failure or success. Guard the transition
+// using claim_id, so a late old worker cannot finalize the replacement attempt.
+export async function recoverLeases(env, max = 3, clock = Date.now) {
+  if (!env.AGENTZ_DB) return { recovered: 0, reason: 'D1 not configured' };
+  let recovered = 0;
+  for (let i = 0; i < Math.min(3, Math.max(0, max)); i++) {
+    const now = clock(), time = utcSql(now);
+    const stale = await env.AGENTZ_DB.prepare(
+      "SELECT id,attempts,claim_id FROM agentz_tasks WHERE status='running' AND lease_expires_at<=? ORDER BY lease_expires_at ASC LIMIT 1"
+    ).bind(time).first();
+    if (!stale) break;
+    const next = stale.attempts >= RETRY_LIMIT ? 'failed' : 'pending';
+    const id = crypto.randomUUID();
+    const detail = 'lease expired; prior public probe outcome unknown';
+    const batch = await env.AGENTZ_DB.batch([
+      env.AGENTZ_DB.prepare(
+        "UPDATE agentz_tasks SET status=?,claim_id=NULL,lease_expires_at=NULL,updated_at=?,next_run_at=?,last_error=?,audit_marker=? WHERE id=? AND status='running' AND claim_id=? AND lease_expires_at<=?"
+      ).bind(next, time, utcSql(now + RETRY_MS), detail, id, stale.id, stale.claim_id, time),
+      env.AGENTZ_DB.prepare(
+        "INSERT INTO agentz_task_events(task_id,event_type,outcome,evidence_url,detail,event_key) SELECT id,'lease_recovered','unknown',NULL,?,? FROM agentz_tasks WHERE id=? AND claim_id IS NULL AND audit_marker=?"
+      ).bind(detail, id, stale.id, id),
+    ]);
+    if (batch[0]?.meta?.changes) recovered++;
+  }
+  return { recovered };
+}
+
+export async function runQueue(env, max = 3, options = {}) {
+  if (!env.AGENTZ_DB) return { processed: 0, reason: 'D1 not configured' };
+  const clock = options.clock || Date.now;
+  const httpFetch = options.fetch || fetch;
+  const { recovered } = await recoverLeases(env, 3, clock);
+  let processed = 0;
+  for (let i = 0; i < Math.min(3, Math.max(0, max)); i++) {
+    const now = clock();
+    const claimId = crypto.randomUUID();
+    // Atomic queue claim: two cron triggers cannot both select the same row.
+    const claim = await env.AGENTZ_DB.prepare(
+      "UPDATE agentz_tasks SET status='running',attempts=attempts+1,claim_id=?,lease_expires_at=?,updated_at=? WHERE id=(SELECT id FROM agentz_tasks WHERE status='pending' AND next_run_at<=? ORDER BY priority DESC,created_at ASC LIMIT 1) AND status='pending' RETURNING id,target,attempts"
+    ).bind(claimId, utcSql(now + LEASE_MS), utcSql(now), utcSql(now)).all();
+    const row = claim.results?.[0];
+    if (!row) break;
+    let outcome = 'success', detail = '', evidenceUrl = null;
+    try {
+      const target = validTarget(row.target);
+      const response = await httpFetch(target, {
+        method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(8000),
+        headers: { accept: 'text/html' },
+      });
+      if (response.body) await response.body.cancel();
+      if (response.status >= 300 && response.status < 400) throw Error('redirect refused');
+      if (!response.ok) throw Error('HTTP ' + response.status);
+      detail = 'GitHub public endpoint responded HTTP ' + response.status;
+      evidenceUrl = target;
+    } catch (e) {
+      outcome = 'failure';
+      detail = safe(e?.message);
+    }
+    const doneAt = clock();
+    const status = outcome === 'success' ? 'succeeded' : row.attempts >= RETRY_LIMIT ? 'failed' : 'pending';
+    const eventKey = crypto.randomUUID();
+    // D1 batch is transactional. The claim_id fence prevents any late old
+    // attempt from overwriting a recovered task or claiming success.
+    const batch = await env.AGENTZ_DB.batch([
+      env.AGENTZ_DB.prepare(
+        "UPDATE agentz_tasks SET status=?,updated_at=?,next_run_at=?,claim_id=NULL,lease_expires_at=NULL,last_error=?,audit_marker=? WHERE id=? AND status='running' AND claim_id=?"
+      ).bind(status, utcSql(doneAt), utcSql(doneAt + RETRY_MS), outcome === 'failure' ? detail : null, eventKey, row.id, claimId),
+      env.AGENTZ_DB.prepare(
+        'INSERT INTO agentz_task_events(task_id,event_type,outcome,evidence_url,detail,event_key) SELECT id,\'public_probe\',?,?,?,? FROM agentz_tasks WHERE id=? AND status=? AND claim_id IS NULL AND audit_marker=?'
+      ).bind(outcome, evidenceUrl, detail, eventKey, row.id, status, eventKey),
+      env.AGENTZ_DB.prepare(
+        "INSERT INTO agentz_learnings(task_kind,fingerprint,outcome,strategy,observation,source_event_id) SELECT 'public_probe',?,?, 'fixed-github-read-only',?,id FROM agentz_task_events WHERE event_key=?"
+      ).bind(row.target, outcome, detail, eventKey),
+    ]);
+    if (batch[0]?.meta?.changes) processed++;
+  }
+  return { processed, recovered };
 }
