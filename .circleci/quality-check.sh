@@ -39,6 +39,9 @@ case "$task" in
     node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs
     ;;
   test-other)
+    # The Node executor has an ephemeral, synthetic PostgreSQL sidecar.
+    # Exercise actual committed PL/pgSQL and concurrency before wider tests.
+    node scripts/ci/dpp-isolated-postgres-replay.mjs
     pnpm --filter agent-browser exec playwright install --with-deps chromium
     pnpm test --filter='!./workers/*' --continue=dependencies-successful
     ;;
