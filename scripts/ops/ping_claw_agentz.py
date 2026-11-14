@@ -7,8 +7,9 @@ Public hosts (not secrets):
 
 Auth (Actions/Cloudflare secrets — never invent values):
   OPENCLAW_API_KEY / AGENTZ_API_KEY / AGENT_SECRET / CLAW_BRIDGE_API_KEY
-  Optional Access service token: CF_ACCESS_CLIENT_ID + CF_ACCESS_CLIENT_SECRET
-    (aliases: CLOUDFLARE_ACCESS_CLIENT_ID / CLOUDFLARE_ACCESS_CLIENT_SECRET)
+  Required Access service token: CF_ACCESS_CLIENT_ID + CF_ACCESS_CLIENT_SECRET
+    (aliases: CLOUDFLARE_ACCESS_CLIENT_ID / CLOUDFLARE_ACCESS_CLIENT_SECRET).
+    Missing either secret is a hard failure. Do not add an Access bypass.
 
 Does not read or set OPENCLAW_GATEWAY_URL. Architect is dry-run only.
 """
@@ -77,6 +78,46 @@ def access_headers() -> dict[str, str]:
     return {}
 
 
+def require_access_headers() -> dict[str, str]:
+    """Fail closed when the Access service-token secrets are missing."""
+    headers = access_headers()
+    if headers:
+        return headers
+    raise SystemExit(
+        "missing Cloudflare Access service-token secrets. "
+        "Set repo secrets CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET "
+        "(aliases: CLOUDFLARE_ACCESS_CLIENT_ID / CLOUDFLARE_ACCESS_CLIENT_SECRET). "
+        "Do not add an Access bypass."
+    )
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Surface 3xx (including Access login redirects) instead of following them."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[override]
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
+def _parse_json_body(url: str, status: int, raw: str) -> Any:
+    if not raw or not raw.strip():
+        raise SystemExit(
+            f"{url} returned HTTP {status} with an empty body; expected JSON."
+        )
+    stripped = raw.lstrip()
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        kind = "HTML" if stripped[:1] == "<" or "<html" in stripped[:200].lower() else "non-JSON"
+        raise SystemExit(
+            f"{url} returned HTTP {status} but the body is {kind}, not JSON. "
+            "If this is a Cloudflare Access login page, the service-token secrets "
+            "may be missing or not authorized for this hostname."
+        ) from exc
+
+
 def bearer_token() -> str:
     return _env_first(*BEARER_SECRET_NAMES)
 
@@ -92,7 +133,7 @@ def request_json(
     headers = {
         "Accept": "application/json",
         "User-Agent": "authichain-agentz-orchestration-ping",
-        **access_headers(),
+        **require_access_headers(),
     }
     if body is not None:
         headers["Content-Type"] = "application/json"
@@ -108,29 +149,25 @@ def request_json(
     data = json.dumps(body).encode("utf-8") if body is not None else None
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+        with _OPENER.open(req, timeout=timeout_s) as resp:
             raw = resp.read().decode("utf-8", errors="replace")
-            payload: Any
-            try:
-                payload = json.loads(raw) if raw else {}
-            except json.JSONDecodeError:
-                payload = {"raw": raw[:500]}
-            return int(resp.status), payload
+            return int(resp.status), _parse_json_body(url, int(resp.status), raw)
     except urllib.error.HTTPError as exc:
         raw = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
         if exc.code in (301, 302, 303, 307, 308):
             loc = exc.headers.get("Location", "")
-            if "cloudflareaccess.com" in loc:
+            if "cloudflareaccess.com" in loc.lower() or "cloudflareaccess.com" in raw.lower():
                 raise SystemExit(
                     f"{url} is behind Cloudflare Access (HTTP {exc.code}). "
-                    "Set repo secrets CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET "
-                    "(Access service token) if Actions should call this host."
+                    "The request did not follow the redirect. Confirm repo secrets "
+                    "CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET are a service "
+                    "token authorized for this hostname. Do not add an Access bypass."
                 ) from exc
-        try:
-            payload = json.loads(raw) if raw else {"raw": raw[:500]}
-        except json.JSONDecodeError:
-            payload = {"raw": raw[:500]}
-        return int(exc.code), payload
+            raise SystemExit(
+                f"{url} returned HTTP {exc.code} redirect to {loc or '(no Location)'}; "
+                "expected JSON and the check does not follow redirects."
+            ) from exc
+        return int(exc.code), _parse_json_body(url, int(exc.code), raw)
 
 
 def ping_health() -> dict[str, Any]:
