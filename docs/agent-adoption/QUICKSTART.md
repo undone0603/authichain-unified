@@ -19,9 +19,11 @@ curl -fsS https://authichain.com/.well-known/agent-card.json \
 # Uses only the published demonstration record and a pinned free endpoint.
 node scripts/agent-adoption/free-record-smoke.mjs
 
-# Seven isolated tests without network, credentials, or payment.
+# Ten isolated tests without network, credentials, or payment.
 node --test scripts/agent-adoption/free-record-smoke.test.mjs
 ```
+
+The ten offline regression cases include mismatched JSON-RPC IDs, incompatible initialized protocol versions, and SSE rejection before a downstream tool call. Passing these mocked cases does not establish live endpoint compatibility or independent external adoption.
 
 This example calls only `verify_record` with the published demonstration ID
 `polygon-anchor-1`. The service may return `verified`, `unverified`, `invalid`,
