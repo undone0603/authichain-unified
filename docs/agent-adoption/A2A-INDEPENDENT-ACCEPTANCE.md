@@ -44,3 +44,7 @@ The card was previously observed as HTTP 200 advertising A2A JSONRPC 1.0; **it w
 - GitLab peer lane: draft MR !2030 at observed source SHA `ee272b52ad44086276d8714bf2ea614006fcf7fc` — not evidence of external acceptance.
 
 **Status: protocol-acceptance fixture documented, live A2A conformance UNKNOWN.** Do not trigger CI, merge, deploy, charge, solicit, or claim a certified listing on the strength of this document.
+
+## Offline executable boundary regression (added 2026-11-14 UTC)
+
+Run `node --test scripts/agent-adoption/a2a-envelope-boundary.test.mjs` against the exact PR head. This is a **synthetic, no-network** fixture using Node built-ins. Seven cases cover explicit JSONRPC 1.0 interface selection, absence of interfaces, unsupported binding/version, unsafe URL, successful correlated JSON-RPC result, error result, and malformed/mismatched/ambiguous envelopes. The fixture intentionally reports `taskCompletionVerified: false` for every generic JSON-RPC success. **Do not claim the tests passed until an actual runner result is recorded.** It is not a full AgentCard schema validator, a live POST result, an independent peer reproduction, or certification.
