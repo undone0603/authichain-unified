@@ -112,6 +112,38 @@ jobs:
           # Do not publish an older commit if main advanced while waiting.
           REMOTE_MAIN="$(git ls-remote --exit-code origin refs/heads/main | awk '{print $1}')"
           test "$REMOTE_MAIN" = "$EXPECTED_SHA"
+      - name: Prepare pinned Node 22 and pnpm
+        run: |
+          set -euo pipefail
+          if [ -s "$HOME/.nvm/nvm.sh" ]; then
+            . "$HOME/.nvm/nvm.sh"
+            nvm use 22 >/dev/null
+          fi
+          command -v node
+          command -v pnpm
+          node --version
+          test "$(node --version | cut -d. -f1)" = "v22"
+          test "$(pnpm --version)" = "10.28.2"
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+      - name: Install locked verify-worker dependencies
+        env:
+          npm_config_build_from_source: "false"
+        run: pnpm install --frozen-lockfile --filter 'authichain-verify-worker...' --prefer-offline --config.minimumReleaseAge=0
+      - name: Confirm Worker bundles without publishing
+        working-directory: workers/authichain-verify-worker
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.149.0 deploy --dry-run --minify --outdir /tmp/authichain-verify-worker-preflight --config wrangler.toml
+      - name: Recheck pinned main immediately before publish
+        env:
+          EXPECTED_SHA: ${{ needs.verify.outputs.sha }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          ACTUAL_SHA=$(node --input-type=module -e "const r=await fetch('https://api.github.com/repos/' + process.env.REPO + '/branches/main',{headers:{authorization:'Bearer ' + process.env.GH_TOKEN,accept:'application/vnd.github+json'}});if(!r.ok)process.exit(1);const d=await r.json();console.log(d.commit.sha)")
+          test "$ACTUAL_SHA" = "$EXPECTED_SHA"
       - name: Verify deployment secrets are present
         env:
           CF_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
