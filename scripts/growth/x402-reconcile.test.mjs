@@ -7,7 +7,7 @@ function fixture() { return {
     observedAt:'2026-11-13T19:00:00Z',validFrom:'2026-11-13T00:00:00Z',
     validUntil:'2026-11-14T00:00:00Z',network:'eip155:8453',token,
     amount:'10000',payTo,resource:'/api/x402/discovery'},
-  requests:[{requestId:'req-1',txHash:tx,network:'eip155:8453',token,payTo,amount:'10000',resource:'/api/x402/discovery',payerClass:'external',payerClassEvidence:'independently_verified',authorized:true,occurredAt:'2026-11-13T20:00:00Z'}],
+  requests:[{requestId:'req-1',offerVersion:'signal-2026-11-13',txHash:tx,network:'eip155:8453',token,payTo,amount:'10000',resource:'/api/x402/discovery',payerClass:'external',payerClassEvidence:'independently_verified',authorized:true,occurredAt:'2026-11-13T20:00:00Z'}],
   transfers:[{txHash:tx,network:'eip155:8453',token,to:payTo,amount:'10000',confirmed:true,success:true,source:'independent_chain_rpc',blockNumber:100}],
   deliveries:[{requestId:'req-1',txHash:tx,status:'fulfilled',httpStatus:200,resource:'/api/x402/discovery',receiptVerified:true,source:'server_delivery_log'}]
 }; }
@@ -38,4 +38,20 @@ for (const [label, mutate] of [
   const x=fixture(); mutate(x);
   assert.equal(reconcile(x).totals.manifestConsistentClaims,0);
   assert.equal(reconcile(x).totals.verifiedExternalFulfilled,0);
+});
+
+for (const [label, mutate] of [
+  ['missing request offer version', x => delete x.requests[0].offerVersion],
+  ['mismatched offer version', x => x.requests[0].offerVersion='another-version'],
+  ['request exactly at exclusive expiry', x => x.requests[0].occurredAt=x.offerEvidence.validUntil],
+  ['observation exactly at exclusive expiry', x => x.offerEvidence.observedAt=x.offerEvidence.validUntil],
+  ['impossible calendar date', x => x.requests[0].occurredAt='2026-02-30T12:00:00Z'],
+  ['non-UTC timestamp', x => x.requests[0].occurredAt='2026-11-13T20:00:00+00:00'],
+  ['credentialed HTTPS source', x => x.offerEvidence.source='https://user:pass@signal.authichain.com/offer'],
+  ['offer source fragment', x => x.offerEvidence.source='https://signal.authichain.com/offer#fake']
+]) test('distinct dated-offer boundary: '+label, () => {
+  const x=fixture();mutate(x);
+  const result=reconcile(x);
+  assert.equal(result.totals.manifestConsistentClaims,0);
+  assert.equal(result.totals.verifiedExternalFulfilled,0);
 });

@@ -11,21 +11,29 @@ const USDC = '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
 const reject = reason => ({ status: 'unverified', reason });
 
 const OFFER_VERSION = /^[a-zA-Z0-9._:-]{1,128}$/;
+function utcMillis(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) return null;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 19) === value.slice(0, 19) ? timestamp : null;
+}
 function datedOfferMatches(offer, request) {
-  if (!offer || typeof offer !== 'object' || !OFFER_VERSION.test(offer.version || '') ||
-      typeof offer.source !== 'string' || !offer.source.startsWith('https://') ||
-      typeof offer.observedAt !== 'string' || typeof offer.validFrom !== 'string' ||
-      typeof offer.validUntil !== 'string' || typeof request.occurredAt !== 'string') return false;
-  const observed = Date.parse(offer.observedAt), from = Date.parse(offer.validFrom),
-    until = Date.parse(offer.validUntil), occurred = Date.parse(request.occurredAt);
-  if (![observed, from, until, occurred].every(Number.isFinite) ||
-      from >= until || observed < from || observed > until ||
-      occurred < from || occurred > until) return false;
-  return offer.network === BASE && String(offer.token).toLowerCase() === USDC &&
-    offer.resource === request.resource && String(offer.payTo).toLowerCase() ===
-      String(request.payTo).toLowerCase() &&
-    ADDRESS.test(offer.payTo || '') && /^[1-9][0-9]*$/.test(String(offer.amount)) &&
-    String(offer.amount) === String(request.amount);
+  if (!offer || typeof offer !== 'object' || !request || typeof request !== 'object' ||
+      !OFFER_VERSION.test(offer.version || '') || request.offerVersion !== offer.version ||
+      typeof offer.source !== 'string') return false;
+  try {
+    const source = new URL(offer.source);
+    if (source.protocol !== 'https:' || !source.hostname || source.username || source.password || source.hash) return false;
+  } catch { return false; }
+  const observed = utcMillis(offer.observedAt), from = utcMillis(offer.validFrom),
+    until = utcMillis(offer.validUntil), occurred = utcMillis(request.occurredAt);
+  if ([observed, from, until, occurred].some(value => value === null) ||
+      from >= until || observed < from || observed >= until ||
+      occurred < from || occurred >= until) return false;
+  return offer.network === BASE && request.network === BASE &&
+    String(offer.token).toLowerCase() === USDC && String(request.token).toLowerCase() === USDC &&
+    offer.resource === request.resource && typeof offer.resource === 'string' && !!offer.resource &&
+    ADDRESS.test(offer.payTo || '') && String(offer.payTo).toLowerCase() === String(request.payTo).toLowerCase() &&
+    /^[1-9][0-9]*$/.test(String(offer.amount)) && String(offer.amount) === String(request.amount);
 }
 
 function validId(x) { return typeof x === 'string' && /^[a-zA-Z0-9:_-]{1,128}$/.test(x); }
@@ -125,7 +133,8 @@ export async function reconcileAuthenticated(input, { trustedDeliveryPublicKey, 
   }
   const transfers = [];
   for (const r of input.requests) {
-    if (!r || !HASH.test(r.txHash || '') || String(r.payTo).toLowerCase() !== trustedRecipient.toLowerCase() ||
+    if (!datedOfferMatches(input.offerEvidence, r) || !HASH.test(r.txHash || '') ||
+        String(r.payTo).toLowerCase() !== trustedRecipient.toLowerCase() ||
         !/^[1-9][0-9]*$/.test(String(r.amount))) continue;
     let proof;
     try {
