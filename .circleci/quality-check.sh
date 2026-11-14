@@ -26,6 +26,8 @@ case "$task" in
     node scripts/ci/check-node-test-runners.mjs
     # Mirror GitHub Actions Windows path safety in the existing offline gate.
     bash scripts/check-windows-paths.sh
+    # Mirrors GitHub's gitleaks PR/push tree scan; SHA-pinned binary.
+    bash .circleci/gitleaks-check.sh
     # Run x402's offline receipt and signed-delivery tests on the exact CircleCI SHA.
     # The static runner check alone does not execute these tests.
     node --test scripts/growth/x402-authenticated.test.mjs scripts/growth/x402-base-receipt.test.mjs scripts/growth/x402-reconcile.test.mjs
