@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "token_id_sha256": "49049344a4aa14808dd741ed5dcd8797908488c14fda3b3138c4b6d301c3bbaf",
+  "account_id": "4c1869b90f13f86940aa3747839bf420",
+  "worker": "authichain-verify-worker",
+  "token_kind": "account-owned",
+  "scope": "Specified Workers",
+  "role": "Editor",
+  "policy_source": "independent-cloudflare-account-token-detail",
+  "additional_permissions": [],
+  "observed_at": "2026-11-14T21:53:42.100Z"
+}
