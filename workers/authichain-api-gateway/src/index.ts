@@ -44,8 +44,21 @@ export default {
       return handleV2(request, path, url, env, cors);
     }
 
-    // ── Public endpoints — no API key required ────────────────────────────
+    // Certificate records need ANCHOR_API_KEY; fails closed when it is unset.
     if (path === "/api/v1/anchor" && request.method === "POST") {
+      const anchorKey =
+        request.headers.get("X-API-Key") ||
+        request.headers.get("Authorization")?.replace("Bearer ", "") ||
+        "";
+      if (
+        !env.ANCHOR_API_KEY ||
+        !timingSafeEqual(anchorKey, env.ANCHOR_API_KEY)
+      ) {
+        return json({ error: "Valid API key required." }, cors, 401);
+      }
+      if (!env.RATE_LIMITS) {
+        return json({ error: "Storage unavailable" }, cors, 503);
+      }
       const body: any = await request.json().catch(() => ({}));
       const { name, brand, description, sku, industry, hash } = body;
       if (!name || !brand || !hash) {
@@ -69,12 +82,10 @@ export default {
         industry: String(industry || "general").slice(0, 50),
         hash: hash.toLowerCase(),
         ts,
-        anchored: true,
+        anchored: false,
         version: 1,
       };
-      if (env.RATE_LIMITS) {
-        await env.RATE_LIMITS.put("cert:" + id, JSON.stringify(cert));
-      }
+      await env.RATE_LIMITS.put("cert:" + id, JSON.stringify(cert));
       return json(
         {
           success: true,
