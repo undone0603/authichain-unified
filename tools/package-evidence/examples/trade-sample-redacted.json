@@ -1,0 +1,44 @@
+{
+  "case_id": "MI_trade_sample_demo_20261102",
+  "issuer_authorized": false,
+  "files": [
+    {
+      "id": "pouch",
+      "kind": "photo",
+      "path": "not-in-public-repo/pouch.jpg"
+    },
+    {
+      "id": "backing_label",
+      "kind": "photo",
+      "path": "not-in-public-repo/backing-label.jpg"
+    }
+  ],
+  "observations": [
+    {
+      "source_id": "pouch",
+      "field": "product_name",
+      "scope": "pouch",
+      "value": "Sherb Cream Pie"
+    },
+    {
+      "source_id": "pouch",
+      "field": "package_tracking_id",
+      "scope": "pouch",
+      "value": "SAMPLE-REDACTED-0256"
+    },
+    {
+      "source_id": "backing_label",
+      "field": "package_tracking_id",
+      "scope": "detached_label",
+      "value": "SAMPLE-REDACTED-0494"
+    },
+    {
+      "source_id": "pouch",
+      "field": "sale_status",
+      "scope": "pouch",
+      "value": "Trade sample — not for resale"
+    }
+  ],
+  "qr_observations": [],
+  "coa_documents": []
+}
