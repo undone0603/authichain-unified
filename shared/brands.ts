@@ -53,7 +53,7 @@ export const BRANDS: Record<BrandId, Brand> = {
     ctaLabel: "Start Authenticating",
     ctaHref: "/dashboard",
     billing: {
-      emailFrom: "AuthiChain <billing@authichain.com>",
+      emailFrom: "AuthiChain <billing@send.authichain.com>",
       supportEmail: "support@authichain.com",
       appUrl: "https://authichain.com",
       webhookSecretEnv: "STRIPE_WEBHOOK_AUTHICHAIN_SECRET",
