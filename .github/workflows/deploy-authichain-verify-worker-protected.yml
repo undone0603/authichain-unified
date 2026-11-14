@@ -48,7 +48,7 @@ jobs:
           EXPECTED_SHA: ${{ steps.pin.outputs.sha }}
         run: |
           set -euo pipefail
-          git sparse-checkout disable || true
+          git sparse-checkout disable
           git reset --hard HEAD
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test -f workers/authichain-verify-worker/wrangler.toml
@@ -105,7 +105,7 @@ jobs:
           EXPECTED_SHA: ${{ needs.verify.outputs.sha }}
         run: |
           set -euo pipefail
-          git sparse-checkout disable || true
+          git sparse-checkout disable
           git reset --hard HEAD
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
       - name: Verify deployment secrets are present
