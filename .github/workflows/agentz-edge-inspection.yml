@@ -1,0 +1,29 @@
+name: AgentZ edge read-only source inspection
+
+on:
+  pull_request:
+    paths:
+      - "workers/agentz-learning-cron/**"
+      - ".github/workflows/agentz-edge-inspection.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-credential-source-inspection:
+    name: AgentZ public source safety (offline)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Run zero-network, zero-dependency source inspection tests
+        run: |
+          node --test \
+            workers/agentz-learning-cron/index.test.mjs \
+            workers/agentz-learning-cron/source-inspection.test.mjs
