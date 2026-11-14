@@ -137,7 +137,7 @@ export async function reconcileAuthenticated(input, { trustedDeliveryPublicKey, 
       amount:String(r.amount), confirmed:true, success:true, source:'independent_chain_rpc',
       blockNumber:1 });
   }
-  const result = reconcile({ requests:input.requests, transfers, deliveries:authenticatedDeliveries });
+  const result = reconcile({ requests:input.requests, transfers, deliveries:authenticatedDeliveries, offerEvidence:input.offerEvidence });
   // Signed delivery and RPC settlement do not verify external-payer identity,
   // authorization, refund/dispute finality or independent attribution.
   const matched = result.rows.filter(row => row.status === 'manifest_consistent_claim');
