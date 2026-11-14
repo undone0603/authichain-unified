@@ -22,6 +22,7 @@ class BrowserExecutorTests(unittest.TestCase):
         urls = {
             "github-main-protection-inspect": "https://github.com/undone0603/authichain-unified/settings/branches",
             "github-repository-rulesets-inspect": "https://github.com/undone0603/authichain-unified/settings/rules",
+            "circleci-dpp-2479-test-other-inspect": "https://app.circleci.com/workflow/31696fe1-369b-40f9-9fe4-0a60cc8da9b8/job/d4197b70-f190-4de2-9668-a22fbfc9ba73",
         }
         with tempfile.TemporaryDirectory() as tmp:
             binary = Path(tmp) / "agent-browser"
@@ -47,6 +48,14 @@ class BrowserExecutorTests(unittest.TestCase):
                 self.assertEqual(commands[0][2], url)
                 self.assertFalse(result["verified"])
                 self.assertEqual(Path(result["evidence_path"]).stat().st_mode & 0o777, 0o600)
+
+    def test_rejects_unlisted_circleci_job(self):
+        with self.assertRaises(ValueError):
+            execute_browser_task("circleci-arbitrary-job-inspect")
+
+    def test_rejects_url_substitution(self):
+        with self.assertRaises(ValueError):
+            execute_browser_task("https://app.circleci.com/workflow/other/job/other")
 
     def test_invalid_timeout_rejected(self):
         with self.assertRaises(ValueError):
