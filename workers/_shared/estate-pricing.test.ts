@@ -63,10 +63,14 @@ test("every listed card renders its wording from the plan catalogue", () => {
     assertCardWording(strainHtml, p);
     assert.equal(
       authHtml.includes(escHtml(p.cta)),
-      false,
-      `${p.id} stays off AuthiChain`
+      p.id === "strainchain_passport",
+      `only the Passport crosses onto AuthiChain, not ${p.id}`
     );
   }
+  for (const p of listedPlans("musa")) {
+    assertCardWording(authHtml, p);
+  }
+  assertCardWording(authHtml, plan("strainchain_passport"));
 });
 
 test("authichain pricing names the battery passport deadline", () => {
@@ -224,8 +228,36 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.match(html, /need_email/);
   assert.doesNotMatch(html, /\$2,990/);
   assert.doesNotMatch(html, /\$0\.004/);
-  assert.equal(html.includes(escHtml(plan("strainchain_passport").cta)), false);
   assert.equal(html.includes(escHtml(plan("strainchain_farm").cta)), false);
+});
+
+test("authichain /pricing sells Made in USA and the Passport, not Farm", () => {
+  const html = renderEstatePricingPage("authichain");
+  for (const id of [
+    "musa_claim_file",
+    "musa_audit_bundle",
+    "strainchain_passport",
+  ] as const) {
+    assert.ok(html.includes(escHtml(plan(id).name)), id);
+    assert.ok(html.includes(escHtml(plan(id).cta)), id);
+    assert.ok(html.includes(`https://authichain.com/checkout/${id}`), id);
+    assert.ok(html.includes(`${id}-checkout-email`), id);
+    assert.ok(html.includes(`"name":"${plan(id).name}"`), id);
+  }
+  assert.match(html, /\$2,500/);
+  assert.equal(
+    html.includes('href="https://authichain.com/checkout/strainchain_farm"'),
+    false
+  );
+});
+
+test("qron /pricing stays on the QRON catalogue", () => {
+  const html = renderEstatePricingPage("qron");
+  assert.equal(html.includes(escHtml(plan("musa_claim_file").name)), false);
+  assert.equal(
+    html.includes(escHtml(plan("strainchain_passport").cta)),
+    false
+  );
 });
 
 test("qron /pricing HTML does not advertise the AuthiChain Starter Payment Link", () => {
