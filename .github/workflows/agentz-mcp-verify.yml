@@ -18,28 +18,39 @@ concurrency:
 
 jobs:
   unit:
-    runs-on: ubuntu-latest
+    # Hosted ubuntu-latest is billing-locked (jobs complete with zero steps).
+    # Same-repo PRs use WSL like other quality gates; forks stay hosted.
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+      - uses: actions/setup-python@v7
+        if: runner.environment != 'self-hosted'
         with:
           python-version: "3.11"
       - name: Install MCP runtime
-        run: python -m pip install 'mcp>=1,<2'
+        run: python3 -m pip install 'mcp>=1,<2'
       - name: Run AgentZ focused tests
         run: |
-          python -m unittest discover -s tests -p 'test_agentz_capability_policy.py'
-          python -m unittest discover -s tests -p 'test_agentz_browser_executor.py'
-          python -m unittest discover -s tests -p 'test_agentz_navigation_dispatch.py'
-          python -m unittest discover -s tests -p 'test_agentz_code_proposals.py'
-          python -m unittest discover -s tests -p 'test_agentz_mcp_readiness.py'
+          python3 -m unittest discover -s tests -p 'test_agentz_capability_policy.py'
+          python3 -m unittest discover -s tests -p 'test_agentz_browser_executor.py'
+          python3 -m unittest discover -s tests -p 'test_agentz_navigation_dispatch.py'
+          python3 -m unittest discover -s tests -p 'test_agentz_code_proposals.py'
+          python3 -m unittest discover -s tests -p 'test_agentz_mcp_readiness.py'
       - name: AgentZ edge and scheduler Node integration tests
         run: |
           node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs
       - name: MCP tool registration smoke
         run: |
-          python - <<'PY'
+          python3 - <<'PY'
           from agentz.mcp_browser_server import mcp
           assert mcp is not None
           print('MCP server imports successfully')
