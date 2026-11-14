@@ -7,9 +7,6 @@ const HEX = /^0x[a-fA-F0-9]{64}$/;
 const ADDRESS = /^0x[a-fA-F0-9]{40}$/;
 const CHAIN = 'eip155:8453';
 const USDC = '0x833589fcd6edb6e08f4c7c32d4f71b54bdA02913'.toLowerCase();
-const LEGACY_AMOUNT = '10000';
-const recipient = '0x5db511706fb6317cd23a7655f67450c5ac6e6aa2';
-const resource = 'https://signal.authichain.com/api/x402/discovery';
 const validDate = x => typeof x === 'string' && !Number.isNaN(Date.parse(x));
 const norm = x => typeof x === 'string' ? x.toLowerCase() : '';
 const evidence = x => x && typeof x.source === 'string' && x.source.startsWith('https://') && validDate(x.observedAt);
@@ -26,7 +23,7 @@ export function reconcile(data) {
     Date.parse(offer.observedAt) <= Date.parse(offer.validUntil) &&
     Date.parse(offer.validFrom) < Date.parse(offer.validUntil) &&
     offer.chain === CHAIN && norm(offer.token) === USDC &&
-    /^\\d+$/.test(offer.amountAtomic || '') && BigInt(offer.amountAtomic || '0') > 0n &&
+    /^[0-9]+$/.test(offer.amountAtomic || '') && BigInt(offer.amountAtomic || '0') > 0n &&
     ADDRESS.test(offer.recipient || '') && ok(offer.resource);
   const deliveries = new Map();
   for (const d of data.deliveries) {
