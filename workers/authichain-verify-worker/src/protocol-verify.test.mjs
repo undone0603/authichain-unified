@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { assessChainRead, expectedRecordHash, verifySubmitted, readAnchorOnChain } from "./protocol-verify.mjs";
+import { PUBLIC_RPC, assessChainRead, expectedRecordHash, verifySubmitted, readAnchorOnChain } from "./protocol-verify.mjs";
 
 const fixtures = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -109,4 +109,32 @@ test("RPC diagnostics fail closed without changing signed-record verdict", async
   assert.equal(confirmed.onChain, true);
   assert.deepEqual(calls.sort(), ["eth_getTransactionByHash", "eth_getTransactionReceipt"]);
   assert.deepEqual(verifySubmitted(fx.record, fx.anchor), verdict);
+});
+
+
+test("Polygon defaults use the keyless historical-receipt RPC on both chain aliases", async () => {
+  const endpoint = "https://polygon.drpc.org";
+  assert.equal(PUBLIC_RPC["polygon:137"], endpoint);
+  assert.equal(PUBLIC_RPC["eip155:137"], endpoint);
+  const fx = load("valid-anchored-polygon.json");
+  const methods = [];
+  const fetchImpl = async (url, request) => {
+    assert.equal(url, endpoint);
+    assert.equal(request.method, "POST");
+    const { method, params } = JSON.parse(request.body);
+    assert.equal(params[0], fx.anchor.txHash);
+    methods.push(method);
+    const result = method === "eth_getTransactionByHash"
+      ? { input: "0x" + expectedRecordHash(fx.record) }
+      : { status: "0x1", blockNumber: "0x5a4b714" };
+    return { ok: true, json: async () => ({ jsonrpc: "2.0", id: 1, result }) };
+  };
+  const verified = await readAnchorOnChain(fx.record, fx.anchor, { fetchImpl });
+  assert.equal(verified.onChain, true);
+  assert.equal(verified.status, "tx_contains_record_hash");
+  assert.deepEqual(methods.sort(), ["eth_getTransactionByHash", "eth_getTransactionReceipt"]);
+  const denied = await readAnchorOnChain(fx.record, fx.anchor, {
+    fetchImpl: async () => ({ ok: false, status: 403 }),
+  });
+  assert.deepEqual(denied, { queried: false, onChain: false, status: "rpc_http_error" });
 });
