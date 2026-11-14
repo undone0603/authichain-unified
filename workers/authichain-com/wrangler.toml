@@ -234,7 +234,8 @@ binding = "MYBROWSER"
 # at the edge for ~60s). Fail closed in code if this binding is missing.
 # Durable Objects would also be $0 on this free-plan account (sqlite classes)
 # but are not needed: sequential same-location POSTs increment the local
-# count, which is the live-smoke failure mode.
+# count, which is the live-smoke failure mode. IPv6 keys on the /64 (first
+# 4 hextets); IPv4 and IPv4-mapped IPv6 (::ffff:a.b.c.d) key on the IPv4.
 [[ratelimits]]
 name = "READINESS_SIGN_RATE_LIMITER"
 namespace_id = "8491"

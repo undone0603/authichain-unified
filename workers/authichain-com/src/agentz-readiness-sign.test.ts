@@ -41,6 +41,7 @@ import {
   isReadinessSigningEnabled,
   parseReadinessSignRequest,
   publishedAgentzJwks,
+  rateLimitClientKey,
   readinessSignDiscovery,
   scoreCanonicalInputs,
   signReadinessRecord,
@@ -692,5 +693,103 @@ describe("AgentZ readiness signing — HTTP", () => {
     expect(body.signed).toBe(false);
     expect(body.error).toBe("RATE_LIMIT_UNBOUND");
     expect(body.message).toBe("rate-limit binding is not bound; nothing is signed");
+  });
+
+  it("rate-limit key is the IPv4 address or the IPv6 /64", () => {
+    expect(rateLimitClientKey("203.0.113.7")).toBe("203.0.113.7");
+    expect(rateLimitClientKey("unknown")).toBe("unknown");
+    expect(rateLimitClientKey("2001:db8:abcd:12:1:2:3:4")).toBe(
+      "2001:db8:abcd:12::/64"
+    );
+    expect(rateLimitClientKey("2001:DB8:ABCD:0012::ffff")).toBe(
+      "2001:db8:abcd:12::/64"
+    );
+    expect(rateLimitClientKey("2001:db8::1")).toBe("2001:db8:0:0::/64");
+    expect(rateLimitClientKey("::ffff:203.0.113.7")).toBe("203.0.113.7");
+    expect(rateLimitClientKey("2001:db8:abcd:13::1")).not.toBe(
+      rateLimitClientKey("2001:db8:abcd:12::1")
+    );
+  });
+
+  it("POST is 429 after 10 requests from different IPv6 addresses in one /64", async () => {
+    const limiter = limiterStub();
+    const now = new Date("2026-11-13T01:00:00Z");
+    const addrs = Array.from(
+      { length: RATE_LIMIT_MAX + 1 },
+      (_, i) => `2001:db8:abcd:12::${(i + 1).toString(16)}`
+    );
+
+    async function post(ip: string) {
+      return tryHandleReadinessSign(
+        new Request(`https://authichain.com${READINESS_SIGN_PATH}`, { // pragma: allowlist secret
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "CF-Connecting-IP": ip,
+          },
+          body: JSON.stringify(BASE_REQUEST),
+        }),
+        FLAGS_ON,
+        { now, rateLimiter: limiter }
+      );
+    }
+
+    for (const ip of addrs.slice(0, RATE_LIMIT_MAX)) {
+      const res = await post(ip);
+      expect(res?.status).toBe(503);
+      const body = await res!.json();
+      expect(body.error).toBe("KEY_UNBOUND");
+    }
+    const limited = await post(addrs[RATE_LIMIT_MAX]);
+    expect(limited?.status).toBe(429);
+    const limitedBody = await limited!.json();
+    expect(limitedBody.signed).toBe(false);
+    expect(limitedBody.error).toBe("RATE_LIMITED");
+    expect(limiter.counts.size).toBe(1);
+    expect(limiter.counts.get("ip:2001:db8:abcd:12::/64")).toBe(
+      RATE_LIMIT_MAX + 1
+    );
+  });
+
+  it("POST counts two IPv6 /64 prefixes separately", async () => {
+    const limiter = limiterStub();
+    const now = new Date("2026-11-13T01:00:00Z");
+
+    async function post(ip: string) {
+      return tryHandleReadinessSign(
+        new Request(`https://authichain.com${READINESS_SIGN_PATH}`, { // pragma: allowlist secret
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "CF-Connecting-IP": ip,
+          },
+          body: JSON.stringify(BASE_REQUEST),
+        }),
+        FLAGS_ON,
+        { now, rateLimiter: limiter }
+      );
+    }
+
+    for (let i = 0; i < RATE_LIMIT_MAX; i++) {
+      const res = await post(`2001:db8:abcd:12::${(i + 1).toString(16)}`);
+      expect(res?.status).toBe(503);
+    }
+    const other = await post("2001:db8:abcd:13::1");
+    expect(other?.status).toBe(503);
+    const otherBody = await other!.json();
+    expect(otherBody.error).toBe("KEY_UNBOUND");
+
+    const limited = await post("2001:db8:abcd:12:dead:beef:0:1");
+    expect(limited?.status).toBe(429);
+    const limitedBody = await limited!.json();
+    expect(limitedBody.error).toBe("RATE_LIMITED");
+
+    const stillOther = await post("2001:db8:abcd:13::2");
+    expect(stillOther?.status).toBe(503);
+    expect(limiter.counts.size).toBe(2);
+    expect(limiter.counts.get("ip:2001:db8:abcd:12::/64")).toBe(
+      RATE_LIMIT_MAX + 1
+    );
+    expect(limiter.counts.get("ip:2001:db8:abcd:13::/64")).toBe(2);
   });
 });

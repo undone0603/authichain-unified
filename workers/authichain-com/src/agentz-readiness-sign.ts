@@ -11,9 +11,10 @@
  *
  * Flags: both FEATURE_ENABLED and READINESS_SIGNING_ENABLED must be the string
  * "true". Unset or any other value means off. Nothing is signed unless both
- * are on. POST is rate-limited 10/60s/IP on the READINESS_SIGN_RATE_LIMITER
- * Workers Rate Limiting binding before the key loads. Missing binding fails
- * closed. KV is not used: missing-key reads cache at the edge.
+ * are on. POST is rate-limited 10/60s per IPv4 address or IPv6 /64 on the
+ * READINESS_SIGN_RATE_LIMITER Workers Rate Limiting binding before the key
+ * loads. Missing binding fails closed. KV is not used: missing-key reads
+ * cache at the edge.
  *
  * Re-sign / rotate before 2027-01-17T18:00:00Z (R4):
  *   1. Update VALID_UNTIL in scripts/agent-identity/bots.mjs.
@@ -772,6 +773,46 @@ export function clientIpFromRequest(
   return "unknown";
 }
 
+/**
+ * Rate-limit key for one client. IPv4 is the full address. IPv6 expands `::`
+ * and uses the /64 (first 4 hextets, lowercase, no leading zeros) because a
+ * subscriber can rotate the low 64 bits at will. IPv4-mapped IPv6
+ * (`::ffff:a.b.c.d`) is treated as IPv4. Missing/unknown IPs stay "unknown".
+ */
+export function rateLimitClientKey(ip: string): string {
+  const raw = ip.trim().toLowerCase().replace(/^\[|\]$/g, "").split("%")[0];
+  if (!raw.includes(":")) return raw;
+  const mapped = raw.match(/^(?:0*:)*:?ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (mapped) return mapped[1];
+  let body = raw;
+  let tail: string[] = [];
+  const v4 = body.match(/:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (v4) {
+    const o = v4[1].split(".").map(Number);
+    tail = [
+      ((o[0] << 8) | o[1]).toString(16),
+      ((o[2] << 8) | o[3]).toString(16),
+    ];
+    body = body.slice(0, -v4[1].length) + "0";
+  }
+  const halves = body.split("::");
+  if (halves.length > 2) return raw;
+  const head = halves[0] ? halves[0].split(":") : [];
+  const rest = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  if (v4) rest.length ? rest.splice(-1, 1, ...tail) : head.splice(-1, 1, ...tail);
+  const fill = halves.length === 2 ? 8 - head.length - rest.length : 0;
+  const groups = [...head, ...Array(Math.max(0, fill)).fill("0"), ...rest];
+  if (groups.length !== 8 || groups.some(g => !/^[0-9a-f]{1,4}$/.test(g))) {
+    return raw;
+  }
+  return (
+    groups
+      .slice(0, 4)
+      .map(g => parseInt(g, 16).toString(16))
+      .join(":") + "::/64"
+  );
+}
+
 export async function consumeReadinessSignRateLimit(
   request: Request,
   env: ReadinessSignEnv,
@@ -784,7 +825,7 @@ export async function consumeReadinessSignRateLimit(
       "rate-limit binding is not bound; nothing is signed"
     );
   }
-  const key = `ip:${clientIpFromRequest(request, deps)}`;
+  const key = `ip:${rateLimitClientKey(clientIpFromRequest(request, deps))}`;
   let success = false;
   try {
     const result = await limiter.limit({ key });
