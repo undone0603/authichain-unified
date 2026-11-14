@@ -10,12 +10,47 @@ const BASE = 'eip155:8453';
 const USDC = '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
 const reject = reason => ({ status: 'unverified', reason });
 function validId(x) { return typeof x === 'string' && /^[a-zA-Z0-9:_-]{1,128}$/.test(x); }
+// Dated offer snapshots and request timestamps are supplied by a manifest.
+// Matching them is a fail-closed *consistency* check, not independent offer authentication.
+function utcMillis(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) return null;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 19) === value.slice(0, 19) ? timestamp : null;
+}
+function validatedOffer(input) {
+  if (!input || !validId(input.version) || typeof input.source !== 'string') return null;
+  try {
+    const source = new URL(input.source);
+    if (source.protocol !== 'https:' || !source.hostname || source.username || source.password) return null;
+  } catch { return null; }
+  const observedAt = utcMillis(input.observedAt);
+  const validFrom = utcMillis(input.validFrom);
+  const validUntil = utcMillis(input.validUntil);
+  if (observedAt === null || validFrom === null || validUntil === null ||
+      validFrom >= validUntil || observedAt < validFrom || observedAt >= validUntil ||
+      input.network !== BASE || String(input.token).toLowerCase() !== USDC ||
+      !ADDRESS.test(input.payTo || '') || !/^[1-9][0-9]*$/.test(String(input.amountAtomic)) ||
+      typeof input.resource !== 'string' || !input.resource) return null;
+  return { version:input.version, network:BASE, token:USDC,
+    payTo:input.payTo.toLowerCase(), amountAtomic:String(input.amountAtomic),
+    resource:input.resource, validFrom, validUntil };
+}
+function requestMatchesDatedOffer(request, offer) {
+  if (!request || !offer) return false;
+  const occurredAt = utcMillis(request.occurredAt);
+  return occurredAt !== null && occurredAt >= offer.validFrom && occurredAt < offer.validUntil &&
+    request.offerVersion === offer.version && request.network === offer.network &&
+    String(request.token).toLowerCase() === offer.token &&
+    String(request.payTo).toLowerCase() === offer.payTo &&
+    String(request.amount) === offer.amountAtomic && request.resource === offer.resource;
+}
 // The synchronous join is a consistency check, not an authenticated revenue verdict.
 // Authenticated reconciliation must use reconcileAuthenticated() below.
 export function reconcile(input) {
   if (!input || !Array.isArray(input.requests) || !Array.isArray(input.transfers) ||
       !Array.isArray(input.deliveries) || input.requests.length > 10000 ||
       input.transfers.length > 10000 || input.deliveries.length > 10000) throw Error('Invalid bounded evidence manifest');
+  const offer = validatedOffer(input.offerEvidence);
   const transfers = new Map(), deliveries = new Map();
   for (const t of input.transfers) {
     if (!HASH.test(t.txHash || '')) continue;
@@ -34,6 +69,7 @@ export function reconcile(input) {
     if (!validId(id)) return { requestId: null, ...reject('invalid_request_id') };
     if (seenRequests.has(id)) return { requestId: id, ...reject('duplicate_request_id') };
     seenRequests.add(id);
+    if (!requestMatchesDatedOffer(r, offer)) return { requestId:id, ...reject('missing_stale_or_mismatched_offer') };
     const tx = r.txHash;
     if (!HASH.test(tx || '')) return { requestId: id, ...reject('missing_valid_tx_hash') };
     const key = tx.toLowerCase();
@@ -90,6 +126,7 @@ export async function reconcileAuthenticated(input, { trustedDeliveryPublicKey, 
   if (!ADDRESS.test(trustedRecipient || '')) throw Error('Missing trusted recipient');
   const publicKey = createPublicKey(trustedDeliveryPublicKey);
   if (publicKey.asymmetricKeyType !== 'ed25519') throw Error('Expected Ed25519 delivery key');
+  const offer = validatedOffer(input.offerEvidence);
   const authenticatedDeliveries = [];
   for (const d of input.deliveries) {
     if (!d || typeof d.requestId !== 'string' || typeof d.txHash !== 'string' ||
@@ -105,7 +142,8 @@ export async function reconcileAuthenticated(input, { trustedDeliveryPublicKey, 
   }
   const transfers = [];
   for (const r of input.requests) {
-    if (!r || !HASH.test(r.txHash || '') || String(r.payTo).toLowerCase() !== trustedRecipient.toLowerCase() ||
+    if (!requestMatchesDatedOffer(r, offer) || !HASH.test(r.txHash || '') ||
+        String(r.payTo).toLowerCase() !== trustedRecipient.toLowerCase() ||
         !/^[1-9][0-9]*$/.test(String(r.amount))) continue;
     let proof;
     try {
@@ -117,7 +155,8 @@ export async function reconcileAuthenticated(input, { trustedDeliveryPublicKey, 
       amount:String(r.amount), confirmed:true, success:true, source:'independent_chain_rpc',
       blockNumber:1 });
   }
-  const result = reconcile({ requests:input.requests, transfers, deliveries:authenticatedDeliveries });
+  const result = reconcile({ requests:input.requests, transfers, deliveries:authenticatedDeliveries,
+    offerEvidence:input.offerEvidence });
   // Signed delivery and RPC settlement do not verify external-payer identity,
   // authorization, refund/dispute finality or independent attribution.
   const matched = result.rows.filter(row => row.status === 'manifest_consistent_claim');

@@ -10,10 +10,31 @@ const topic='0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
 const word=x=>'0x'+x.slice(2).padStart(64,'0');
 function fixture(){const delivery={requestId:'req-1',txHash,resource,status:'fulfilled',httpStatus:200};
 const message=JSON.stringify(delivery);delivery.signature=sign(null,Buffer.from(message),privateKey).toString('base64url');
-return {requests:[{requestId:'req-1',txHash,network:'eip155:8453',token,payTo,amount:'10000',resource,payerClass:'external',payerClassEvidence:'independently_verified',authorized:true}],deliveries:[delivery]};}
+return {offerEvidence:{version:'signal-2026-11-13-v1',source:'https://signal.authichain.com/offer',observedAt:'2026-11-13T19:00:00Z',validFrom:'2026-11-13T00:00:00Z',validUntil:'2026-11-14T00:00:00Z',network:'eip155:8453',token,payTo,amountAtomic:'10000',resource},requests:[{requestId:'req-1',offerVersion:'signal-2026-11-13-v1',occurredAt:'2026-11-13T20:00:00Z',txHash,network:'eip155:8453',token,payTo,amount:'10000',resource,payerClass:'external',payerClassEvidence:'independently_verified',authorized:true}],deliveries:[delivery]};}
 const receipt={transactionHash:txHash,status:'0x1',blockNumber:'0x64',logs:[{address:token,topics:[topic,word(sender),word(payTo)],data:'0x'+BigInt(10000).toString(16).padStart(64,'0')}]};
 function mockFetch(result=receipt){return async(_url,options)=>{const {method}=JSON.parse(options.body);return {ok:true,json:async()=>({jsonrpc:'2.0',id:1,result:method==='eth_getTransactionReceipt'?result:'0x70'})};};}
 test('authenticated receipt and signed delivery remain partial evidence',async()=>{const x=await reconcileAuthenticated(fixture(),{trustedDeliveryPublicKey:pub,trustedRecipient:payTo,fetchImpl:mockFetch()});assert.equal(x.totals.verifiedExternalFulfilled,0);assert.equal(x.totals.verifiedAtomicUSDC,'0');assert.equal(x.totals.settlementDeliveryVerified,1);assert.equal(x.totals.settlementDeliveryAtomicUSDC,'10000');assert.equal(x.rows[0].status,'settlement_delivery_verified_payer_unconfirmed');});
+
+test('no RPC on absent, stale, or mismatched dated offer manifest',async()=>{
+  for(const mutate of [
+    x=>delete x.offerEvidence,
+    x=>x.offerEvidence.observedAt='2026-11-15T00:00:00Z',
+    x=>x.offerEvidence.amountAtomic='20000',
+    x=>x.offerEvidence.source='http://signal.authichain.com/offer',
+    x=>x.requests[0].offerVersion='mismatched-version',
+    x=>x.requests[0].occurredAt='2026-11-14T00:00:00Z'
+  ]) {
+    const x=fixture();mutate(x);
+    let rpcCalls=0;
+    const result=await reconcileAuthenticated(x,{
+      trustedDeliveryPublicKey:pub,trustedRecipient:payTo,
+      fetchImpl:async()=>{rpcCalls++;throw Error('invalid offer triggered RPC');}
+    });
+    assert.equal(rpcCalls,0);
+    assert.equal(result.totals.settlementDeliveryVerified,0);
+    assert.equal(result.totals.verifiedExternalFulfilled,0);
+  }
+});
 test('forged delivery signature fails closed',async()=>{const x=fixture();x.deliveries[0].httpStatus=402;assert.equal((await reconcileAuthenticated(x,{trustedDeliveryPublicKey:pub,trustedRecipient:payTo,fetchImpl:mockFetch()})).totals.settlementDeliveryVerified,0);});
 test('wrong trusted key fails closed',async()=>{const other=generateKeyPairSync('ed25519').publicKey.export({type:'spki',format:'pem'});assert.equal((await reconcileAuthenticated(fixture(),{trustedDeliveryPublicKey:other,trustedRecipient:payTo,fetchImpl:mockFetch()})).totals.settlementDeliveryVerified,0);});
 test('RPC failure never becomes revenue',async()=>{const x=await reconcileAuthenticated(fixture(),{trustedDeliveryPublicKey:pub,trustedRecipient:payTo,fetchImpl:async()=>{throw Error('offline');}});assert.equal(x.totals.settlementDeliveryVerified,0);});
