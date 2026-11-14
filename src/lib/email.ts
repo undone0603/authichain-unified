@@ -89,10 +89,15 @@ async function viaSendGrid(args: SendArgs, key: string): Promise<SendResult> {
 
 /**
  * Send an email through whichever transactional provider is configured.
- * Tries Resend → Brevo → SendGrid; returns the first ok=true, otherwise
+ * Tries Gmail → Resend → Brevo → SendGrid; returns the first ok=true, otherwise
  * the last attempt's failure. Skips providers whose env var is unset.
+ * DPP activation disables fallback so uncertain provider responses cannot be
+ * masked by a second send in the same durable delivery claim.
  */
-export async function sendEmail(args: SendArgs): Promise<SendResult> {
+export async function sendEmail(
+  args: SendArgs,
+  options: { allowFallback?: boolean } = {}
+): Promise<SendResult> {
   const providers: Array<[string | undefined, (a: SendArgs, k: string) => Promise<SendResult>]> = [
     [process.env.GMAIL_APP_PASSWORD, viaGmail],
     [process.env.RESEND_API_KEY, viaResend],
@@ -104,7 +109,10 @@ export async function sendEmail(args: SendArgs): Promise<SendResult> {
   for (const [key, fn] of providers) {
     if (!key) continue;
     last = await fn(args, key);
-    if (last.ok) return last;
+    // DPP activation has its own durable delivery claim. An earlier provider
+    // may have accepted a request despite an uncertain response, so never
+    // switch providers within that single claim when fallback is disabled.
+    if (last.ok || options.allowFallback === false) return last;
   }
   return last;
 }

@@ -49,6 +49,7 @@ function fakeSupabase(opts?: {
       : null;
   const continuity = new Map<string, Record<string, unknown>[]>();
   const grantedSessions = new Set<string>();
+  const deliveries = new Map<string, { profileId: string; state: string; token: string | null }>();
   let continuityUpdateFailed = false;
   let provisionedEventFailed = false;
   const from = (table: string) => {
@@ -190,6 +191,37 @@ function fakeSupabase(opts?: {
     return builder;
   };
   const rpc = async (fn: string, args: Record<string, unknown>) => {
+    if (fn === "claim_dpp_activation_email") {
+      const sessionId = String(args.p_session_id);
+      const profileId = String(args.p_profile_id);
+      const token = String(args.p_claim_token);
+      let delivery = deliveries.get(sessionId);
+      if (!delivery) {
+        delivery = { profileId, state: "pending", token: null };
+        deliveries.set(sessionId, delivery);
+      }
+      if (delivery.profileId !== profileId) {
+        return { data: null, error: { message: "profile mismatch" } };
+      }
+      if (delivery.state === "sent") return { data: "sent", error: null };
+      if (delivery.state === "sending" || delivery.state === "unknown") {
+        return { data: "reconcile", error: null };
+      }
+      delivery.state = "sending";
+      delivery.token = token;
+      return { data: "claimed", error: null };
+    }
+    if (fn === "finish_dpp_activation_email") {
+      const delivery = deliveries.get(String(args.p_session_id));
+      const matched = Boolean(delivery &&
+        delivery.state === "sending" &&
+        delivery.token === String(args.p_claim_token));
+      if (matched && delivery) {
+        delivery.state = String(args.p_outcome);
+        delivery.token = null;
+      }
+      return { data: matched, error: null };
+    }
     if (fn !== "grant_dpp_checkout_session") {
       return { data: null, error: { message: "unexpected RPC" } };
     }
@@ -236,7 +268,7 @@ function fakeSupabase(opts?: {
       error: null,
     };
   };
-  return { supabase: { from, rpc }, rows, profileUpdates, continuity, profile };
+  return { supabase: { from, rpc }, rows, profileUpdates, continuity, deliveries, profile };
 }
 
 const paidSession = {
@@ -317,18 +349,113 @@ describe("fulfillDppPaidSession", () => {
     );
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { supabase, rows } = fakeSupabase();
-    const result = await fulfillDppPaidSession(supabase, paidSession);
+    await expect(fulfillDppPaidSession(supabase, paidSession))
+      .rejects.toMatchObject({ name: "RetryableFulfillmentError" });
     const logged = errSpy.mock.calls
       .map(c => c.map(String).join(" "))
       .join("\n");
     errSpy.mockRestore();
 
-    expect(result.activationEmail).toBe("failed");
+    // Unknown external outcome: never blindly re-send on webhook retry.
+    expect(await supabase.rpc("claim_dpp_activation_email", {
+      p_session_id: paidSession.id,
+      p_profile_id: "prof_1",
+      p_claim_token: "new-token-after-timeout",
+    })).toMatchObject({ data: "reconcile", error: null });
     expect(logged).toContain("ETIMEDOUT");
     expect(logged).not.toContain("buyer@example.com");
     expect(
       rows.filter(r => r.event_type === "dpp_activation_email:failed")
     ).toHaveLength(1);
+  });
+
+  it("retries only a definitively failed email attempt, without re-grant", async () => {
+    vi.mocked(sendEmail).mockResolvedValueOnce({
+      ok: false, provider: "resend", status: 422, error: "rejected",
+    } as never);
+    const { supabase, profileUpdates, deliveries } = fakeSupabase();
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect((await fulfillDppPaidSession(supabase, paidSession)).activationEmail).toBe("failed");
+      expect(deliveries.get(paidSession.id)?.state).toBe("failed");
+      expect((await fulfillDppPaidSession(supabase, paidSession)).activationEmail).toBe("sent");
+      expect(deliveries.get(paidSession.id)?.state).toBe("sent");
+      await fulfillDppPaidSession(supabase, paidSession);
+      expect(sendEmail).toHaveBeenCalledTimes(2);
+      expect(profileUpdates).toHaveLength(1);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("allows only one concurrent activation claim per paid session", async () => {
+    const { supabase } = fakeSupabase();
+    const [first, second] = await Promise.all([
+      supabase.rpc("claim_dpp_activation_email", {
+        p_session_id: paidSession.id,
+        p_profile_id: "prof_1",
+        p_claim_token: "claim-token-first",
+      }),
+      supabase.rpc("claim_dpp_activation_email", {
+        p_session_id: paidSession.id,
+        p_profile_id: "prof_1",
+        p_claim_token: "claim-token-second",
+      }),
+    ]);
+    expect([first.data, second.data].sort()).toEqual(["claimed", "reconcile"]);
+    const wrong = await supabase.rpc("finish_dpp_activation_email", {
+      p_session_id: paidSession.id,
+      p_claim_token: "claim-token-second",
+      p_outcome: "sent",
+    });
+    expect(wrong.data).toBe(false);
+    const correct = await supabase.rpc("finish_dpp_activation_email", {
+      p_session_id: paidSession.id,
+      p_claim_token: "claim-token-first",
+      p_outcome: "sent",
+    });
+    expect(correct.data).toBe(true);
+    const later = await supabase.rpc("claim_dpp_activation_email", {
+      p_session_id: paidSession.id,
+      p_profile_id: "prof_1",
+      p_claim_token: "claim-token-third",
+    });
+    expect(later.data).toBe("sent");
+  });
+
+  it("refuses delivery claims for a different granted profile", async () => {
+    const { supabase } = fakeSupabase();
+    const first = await supabase.rpc("claim_dpp_activation_email", {
+      p_session_id: paidSession.id,
+      p_profile_id: "prof_1",
+      p_claim_token: "claim-token-first",
+    });
+    expect(first.data).toBe("claimed");
+    const mismatch = await supabase.rpc("claim_dpp_activation_email", {
+      p_session_id: paidSession.id,
+      p_profile_id: "prof_2",
+      p_claim_token: "claim-token-second",
+    });
+    expect(mismatch.error).not.toBeNull();
+  });
+
+  it.each([429, 503])("holds uncertain provider HTTP %i for reconciliation", async status => {
+    vi.mocked(sendEmail).mockResolvedValueOnce({
+      ok: false, provider: "resend", status, error: "provider uncertain",
+    } as never);
+    const { supabase, deliveries, profileUpdates } = fakeSupabase();
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(fulfillDppPaidSession(supabase, paidSession))
+        .rejects.toMatchObject({ name: "RetryableFulfillmentError" });
+      expect(deliveries.get(paidSession.id)?.state).toBe("unknown");
+      await expect(fulfillDppPaidSession(supabase, paidSession))
+        .rejects.toMatchObject({ name: "RetryableFulfillmentError" });
+      expect(sendEmail).toHaveBeenCalledOnce();
+      expect(profileUpdates).toHaveLength(1);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("writes no failure row when the send succeeds", async () => {
@@ -422,10 +549,17 @@ describe("fulfillDppPaidSession", () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
-  it("sends the provisioned email for a non-demo paid session", async () => {
+  it("sends through only one provider for a non-demo paid activation", async () => {
     const { supabase } = fakeSupabase();
     await fulfillDppPaidSession(supabase, paidSession);
     expect(sendEmail).toHaveBeenCalledOnce();
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "buyer@example.com",
+        from: "billing@authichain.com",
+      }),
+      { allowFallback: false }
+    );
   });
 
   it("does not grant a completed demo session again after a later purchase", async () => {
@@ -724,6 +858,13 @@ describe("fulfillDppPaidSession", () => {
     expect(continuity.get("founder_exit_actions")?.[0]?.state).toBe(
       "succeeded"
     );
+    // The atomic grant completed before the first continuity bookkeeping
+    // failure. Recovery must still deliver access instructions exactly once.
+    expect(sendEmail).toHaveBeenCalledOnce();
+    expect(result.activationEmail).toBe("sent");
+    await fulfillDppPaidSession(supabase, paidSession);
+    expect(sendEmail).toHaveBeenCalledOnce();
+    expect(profileUpdates).toHaveLength(1);
   });
 
   it("recovers a missing provisioned event after continuity already succeeded", async () => {

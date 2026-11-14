@@ -97,6 +97,113 @@ async function recordRecoveredProvisionedEvent(
   });
 }
 
+/**
+ * Activation delivery uses a different durable claim from the entitlement grant.
+ * A sending/unknown claim must be reconciled, never blindly resent: the provider
+ * could have accepted the email before the webhook crashed.
+ */
+async function sendActivationEmailOnce(
+  supabase: SupabaseLike,
+  input: {
+    sessionId: string;
+    profileId: string | null;
+    email: string;
+    brand: string;
+    visitId: string | null;
+    source: string;
+    demo: boolean;
+  }
+): Promise<ActivationEmailStatus> {
+  if (input.demo || !input.email || !input.profileId) return "skipped";
+  const deliveryDb = supabase as SupabaseLike & {
+    rpc?: (
+      name: string,
+      args: Record<string, string>
+    ) => PromiseLike<{ data: unknown; error: { message?: string } | null }>;
+  };
+  if (!deliveryDb.rpc) {
+    throw markRetryableFulfillment(new Error("DPP activation delivery RPC unavailable"));
+  }
+  const claimToken = crypto.randomUUID();
+  const claimed = await deliveryDb.rpc("claim_dpp_activation_email", {
+    p_session_id: input.sessionId,
+    p_profile_id: input.profileId,
+    p_claim_token: claimToken,
+  });
+  if (claimed.error) throw markRetryableFulfillment(new Error("DPP activation claim failed"));
+  if (claimed.data === "sent") return "skipped";
+  if (claimed.data === "reconcile") {
+    throw markRetryableFulfillment(new Error("DPP activation delivery requires reconciliation"));
+  }
+  if (claimed.data !== "claimed") {
+    throw markRetryableFulfillment(new Error("DPP activation claim returned unexpected state"));
+  }
+
+  const mail = renderBillingEmail("dpp_audit_provisioned", input.brand, {
+    planName: "EU DPP Workspace",
+    activateUrl: dppActivateUrl(input.sessionId, input.visitId),
+  });
+  let result: {
+    ok: boolean;
+    provider?: string;
+    status?: number;
+    error?: string;
+  };
+  let ambiguous = false;
+  try {
+    result = await sendEmail({
+      to: input.email,
+      from: mail.from,
+      subject: mail.subject,
+      html: mail.html,
+      text: mail.text,
+    }, { allowFallback: false });
+  } catch (err) {
+    ambiguous = true;
+    result = {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+  // A transport exception, provider 5xx, timeout or rate limit may have
+  // accepted the request before acknowledgement. Never resend blindly.
+  const status = result.status;
+  const uncertainResponse =
+    !result.ok &&
+    (ambiguous ||
+      (status != null && (status >= 500 || [408, 409, 429].includes(status))) ||
+      (status == null && result.provider !== "none"));
+  const outcome = result.ok ? "sent" : uncertainResponse ? "unknown" : "failed";
+  const finished = await deliveryDb.rpc("finish_dpp_activation_email", {
+    p_session_id: input.sessionId,
+    p_claim_token: claimToken,
+    p_outcome: outcome,
+  });
+  if (finished.error || finished.data !== true) {
+    // Do not re-send if a successful provider response could not be recorded.
+    throw markRetryableFulfillment(new Error("DPP activation delivery result not persisted"));
+  }
+  if (result.ok) return "sent";
+
+  const reason = redactForLog(result.error ?? "no send result");
+  console.error(
+    `[dpp-fulfill] activation email failed: session=${input.sessionId} profile=${input.profileId} provider=${result.provider ?? "unknown"} status=${result.status ?? "n/a"} reason=${reason}`
+  );
+  await recordActivationEmailFailed(supabase, {
+    prospectId: input.visitId ?? input.sessionId,
+    source: input.source,
+    stripeSessionId: input.sessionId,
+    profileId: input.profileId,
+    provider: result.provider ?? null,
+    httpStatus: result.status ?? null,
+    reason,
+  });
+  if (uncertainResponse) {
+    throw markRetryableFulfillment(new Error("DPP activation delivery outcome unknown"));
+  }
+  return "failed";
+}
+
 export async function fulfillDppPaidSession(
   supabase: SupabaseLike,
   session: DppCheckoutSessionLike,
@@ -218,8 +325,10 @@ async function fulfillDppPaidSessionOnce(
   if (continuityState === "already_succeeded") {
     let profileId: string | null = null;
     try {
-      if (visitId) {
+      if (visitId || (!demo && email)) {
         profileId = await findGrantedProfileId(supabase, session.id);
+      }
+      if (visitId) {
         await recordRecoveredProvisionedEvent(supabase, {
           visitId: String(visitId),
           source: md.source || "direct",
@@ -234,12 +343,19 @@ async function fulfillDppPaidSessionOnce(
     } catch (err) {
       throw markRetryableFulfillment(err);
     }
-    return {
-      handled: true,
+    if (!demo && !profileId) {
+      throw markRetryableFulfillment(new Error("DPP activation recovery profile missing"));
+    }
+    const activationEmail = await sendActivationEmailOnce(supabase, {
+      sessionId: session.id,
       profileId,
-      activationEmail: "skipped",
-      alreadyFulfilled: true,
-    };
+      email,
+      brand,
+      visitId: visitId ? String(visitId) : null,
+      source: md.source || "direct",
+      demo,
+    });
+    return { handled: true, profileId, activationEmail, alreadyFulfilled: true };
   }
   if (continuityState === "grant_recorded") {
     let profileId: string | null;
@@ -267,12 +383,16 @@ async function fulfillDppPaidSessionOnce(
     } catch (err) {
       throw markRetryableFulfillment(err);
     }
-    return {
-      handled: true,
+    const activationEmail = await sendActivationEmailOnce(supabase, {
+      sessionId: session.id,
       profileId,
-      activationEmail: "skipped",
-      alreadyFulfilled: true,
-    };
+      email,
+      brand,
+      visitId: visitId ? String(visitId) : null,
+      source: md.source || "direct",
+      demo,
+    });
+    return { handled: true, profileId, activationEmail, alreadyFulfilled: true };
   }
 
   const prov = await provisionPurchase(supabase, {
@@ -365,57 +485,15 @@ async function fulfillDppPaidSessionOnce(
     });
   }
 
-  let activationEmail: ActivationEmailStatus = "skipped";
-  if (prov.profileId && email && !demo && !prov.skippedIdempotent) {
-    const mail = renderBillingEmail("dpp_audit_provisioned", brand, {
-      planName: "EU DPP Workspace",
-      activateUrl: dppActivateUrl(session.id, visitId ? String(visitId) : null),
-    });
-    // A paid buyer who never gets this email has no way into the workspace, so
-    // a failed send must be visible (log + funnel_events row), never swallowed.
-    // The payment and the grant above are already done; we do not throw here,
-    // because a Stripe retry would re-run provisioning, not just the email.
-    let result: {
-      ok: boolean;
-      provider?: string;
-      status?: number;
-      error?: string;
-    };
-    try {
-      result = await sendEmail({
-        to: email,
-        from: mail.from,
-        subject: mail.subject,
-        html: mail.html,
-        text: mail.text,
-      });
-    } catch (err) {
-      result = {
-        ok: false,
-        error: err instanceof Error ? err.message : String(err),
-      };
-    }
-    if (result && result.ok) {
-      activationEmail = "sent";
-    } else {
-      activationEmail = "failed";
-      const reason = redactForLog(result?.error ?? "no send result");
-      // No recipient address in logs: session and profile ids are enough to
-      // find the buyer from the service side.
-      console.error(
-        `[dpp-fulfill] activation email failed: session=${session.id} profile=${prov.profileId} provider=${result?.provider ?? "unknown"} status=${result?.status ?? "n/a"} reason=${reason}`
-      );
-      await recordActivationEmailFailed(supabase, {
-        prospectId: visitId ? String(visitId) : session.id,
-        source: md.source || "direct",
-        stripeSessionId: session.id,
-        profileId: prov.profileId,
-        provider: result?.provider ?? null,
-        httpStatus: result?.status ?? null,
-        reason,
-      });
-    }
-  }
+  const activationEmail = await sendActivationEmailOnce(supabase, {
+    sessionId: session.id,
+    profileId: prov.profileId,
+    email,
+    brand,
+    visitId: visitId ? String(visitId) : null,
+    source: md.source || "direct",
+    demo,
+  });
 
   return { handled: true, profileId: prov.profileId, activationEmail };
 }
