@@ -25,6 +25,7 @@ export function reconcile(data) {
   }
   const seenTx = new Set();
   const seenRequest = new Set();
+  const seenPayment = new Set();
   const seenReceipt = new Set();
   const results = [];
   for (const s of data.settlements) {
@@ -34,7 +35,8 @@ export function reconcile(data) {
     if (!ok(s.paymentId)) reasons.push('missing_payment_id');
     if (seenTx.has(norm(s.txHash))) reasons.push('duplicate_tx');
     if (seenRequest.has(s.requestId)) reasons.push('duplicate_request');
-    seenTx.add(norm(s.txHash)); seenRequest.add(s.requestId);
+    if (seenPayment.has(s.paymentId)) reasons.push('duplicate_payment_id');
+    seenTx.add(norm(s.txHash)); seenRequest.add(s.requestId); seenPayment.add(s.paymentId);
     if (s.chain !== CHAIN || norm(s.token) !== USDC || s.amountAtomic !== amount ||
         norm(s.to) !== recipient || !ADDRESS.test(s.from || '')) reasons.push('incorrect_transfer');
     if (s.confirmed !== true || s.success !== true || !ok(s.blockHash) || !HEX.test(s.blockHash || '') ||
