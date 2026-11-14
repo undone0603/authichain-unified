@@ -33,3 +33,11 @@ test('reused delivery receipt cannot certify a second payment', () => {
  assert.equal(result.verifiedTransactions,1);
  assert.ok(result.results[1].reasons.includes('duplicate_delivery_receipt'));
 });
+
+test('reused payment identifier cannot certify a second distinct settlement', () => {
+ const second = {...settlement(),txHash:'0x'+'d'.repeat(64),requestId:'req-2'};
+ const otherDelivery = {...delivery(),txHash:second.txHash,requestId:'req-2'};
+ const result = audit([settlement(),second],[delivery(),otherDelivery]);
+ assert.equal(result.verifiedTransactions,1);
+ assert.ok(result.results[1].reasons.includes('duplicate_payment_id'));
+});
