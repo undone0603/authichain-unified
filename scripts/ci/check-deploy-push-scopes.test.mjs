@@ -119,6 +119,53 @@ test("a scope that drops one of its required paths is rejected", () => {
   assert.match(check(safeCloudflare, narrowed).join(" "), /paths must be exactly/);
 });
 
+test("single-quoted push event key is normalized and cannot skip the path filter", () => {
+  const quoted = [
+    "name: Deploy to Cloudflare",
+    "on:",
+    "  'push':",
+    "    branches:",
+    "      - main",
+    "  workflow_dispatch:",
+    "",
+  ].join("\n");
+  const errors = check(quoted);
+  assert.ok(errors.length > 0, "quoted unfiltered push must not be treated as manual-only");
+  assert.match(errors.join(" "), /not path-restricted/);
+});
+
+test("double-quoted push event key is normalized and cannot skip the path filter", () => {
+  const quoted = [
+    "name: Deploy to Cloudflare",
+    "on:",
+    '  "push":',
+    "    branches:",
+    "      - main",
+    "  workflow_dispatch:",
+    "",
+  ].join("\n");
+  const errors = check(quoted);
+  assert.ok(errors.length > 0, "quoted unfiltered push must not be treated as manual-only");
+  assert.match(errors.join(" "), /not path-restricted/);
+});
+
+test("an unrecognized on: event-header shape fails closed", () => {
+  const unknown = safeCloudflare.replace(
+    "  push:",
+    "  <<: *legacy-on"
+  );
+  const errors = check(unknown);
+  assert.ok(errors.length > 0, "unknown event-header shape must error");
+  assert.match(errors.join(" "), /unrecognized on: event-header shape/);
+});
+
+test("quoted path-restricted push still satisfies the scope", () => {
+  const quoted = safeCloudflare
+    .replace("  push:", "  'push':")
+    .replace("  workflow_dispatch:", '  "workflow_dispatch":');
+  assert.deepEqual(check(quoted), []);
+});
+
 test("the real workflows satisfy their declared scopes", () => {
   assert.deepEqual(checkDirectDeployPushScopes(REPO_ROOT), []);
 });
