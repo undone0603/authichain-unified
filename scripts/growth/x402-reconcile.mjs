@@ -58,13 +58,16 @@ export function reconcile(input) {
         d.source !== 'server_delivery_log') return { requestId: id, ...reject('delivery_not_correlated') };
     if (r.refunded === true || t.reversed === true || d.refunded === true ||
         r.disputed === true || d.disputed === true) return { requestId: id, ...reject('refunded_or_disputed') };
-    return { requestId: id, status: 'verified_external_fulfilled', txHash: key, amountAtomic: String(t.amount) };
+    // All evidence assertions above come from the manifest, not verified sources.
+    return { requestId: id, status: 'manifest_consistent_claim', txHash: key, amountAtomic: String(t.amount) };
   });
-  const verified = rows.filter(x => x.status === 'verified_external_fulfilled');
-  return { rows, totals: { verifiedExternalFulfilled: verified.length,
-    verifiedAtomicUSDC: verified.reduce((n, x) => n + BigInt(x.amountAtomic), 0n).toString(),
-    unverified: rows.length - verified.length },
-    disclosure: 'Offline evidence join only. Input assertions, independent RPC provenance, and delivery logs must be authenticated separately; this tool never fetches or validates chain state.' };
+  const consistent = rows.filter(x => x.status === 'manifest_consistent_claim');
+  return { rows, totals: { verifiedExternalFulfilled: 0,
+    verifiedAtomicUSDC: '0',
+    manifestConsistentClaims: consistent.length,
+    manifestConsistentAtomicUSDC: consistent.reduce((n, x) => n + BigInt(x.amountAtomic), 0n).toString(),
+    unverified: rows.length },
+    disclosure: 'Offline consistency only: untrusted manifest assertions cannot certify external-payer revenue, refund/dispute absence, settlement, or delivery.' };
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
@@ -81,7 +84,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
  */
 export async function reconcileAuthenticated(input, { trustedDeliveryPublicKey, trustedRecipient, fetchImpl, rpcUrl, minConfirmations = 12 } = {}) {
   if (!trustedDeliveryPublicKey || !input || !Array.isArray(input.requests) ||
-      !Array.isArray(input.deliveries) || input.requests.length > 10000) throw Error('Missing trusted delivery key or evidence');
+      !Array.isArray(input.deliveries) || input.requests.length > 10000 ||
+      input.deliveries.length > 10000) throw Error('Missing trusted delivery key or bounded evidence');
   // Expected recipient must be independently configured, never accepted solely from a payer manifest.
   if (!ADDRESS.test(trustedRecipient || '')) throw Error('Missing trusted recipient');
   const publicKey = createPublicKey(trustedDeliveryPublicKey);
@@ -114,6 +118,16 @@ export async function reconcileAuthenticated(input, { trustedDeliveryPublicKey, 
       blockNumber:1 });
   }
   const result = reconcile({ requests:input.requests, transfers, deliveries:authenticatedDeliveries });
-  return { ...result, evidenceMode:'authenticated_rpc_and_ed25519_delivery',
-    disclosure:'RPC receipt and signed delivery are verified here. External-payer identity, authorization, and refund/dispute assertions still require independent attestation; do not claim certified revenue from this output alone.' };
+  // Signed delivery and RPC settlement do not verify external-payer identity,
+  // authorization, refund/dispute finality or independent attribution.
+  const matched = result.rows.filter(row => row.status === 'manifest_consistent_claim');
+  const rows = result.rows.map(row => row.status === 'manifest_consistent_claim'
+    ? { ...row, status: 'settlement_delivery_verified_payer_unconfirmed' } : row);
+  return { ...result, rows,
+    totals: { verifiedExternalFulfilled: 0, verifiedAtomicUSDC: '0',
+      settlementDeliveryVerified: matched.length,
+      settlementDeliveryAtomicUSDC: matched.reduce((n, x) => n + BigInt(x.amountAtomic), 0n).toString(),
+      unverified: rows.length },
+    evidenceMode:'authenticated_rpc_and_ed25519_delivery',
+    disclosure:'Base settlement and signed delivery are only partial evidence. Independent external payer, authorization, refund/dispute finality and attribution remain unverified; qualified outside revenue is zero.' };
 }

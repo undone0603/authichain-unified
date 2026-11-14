@@ -7,7 +7,7 @@ function fixture() { return {
   transfers:[{txHash:tx,network:'eip155:8453',token,to:payTo,amount:'10000',confirmed:true,success:true,source:'independent_chain_rpc',blockNumber:100}],
   deliveries:[{requestId:'req-1',txHash:tx,status:'fulfilled',httpStatus:200,resource:'/api/x402/discovery',receiptVerified:true,source:'server_delivery_log'}]
 }; }
-test('joins only matching independently evidenced settlement and fulfillment',()=>{const x=reconcile(fixture());assert.equal(x.totals.verifiedExternalFulfilled,1);assert.equal(x.totals.verifiedAtomicUSDC,'10000');});
+test('offline manifest consistency cannot qualify outside revenue',()=>{const x=reconcile(fixture());assert.equal(x.totals.verifiedExternalFulfilled,0);assert.equal(x.totals.verifiedAtomicUSDC,'0');assert.equal(x.totals.manifestConsistentClaims,1);assert.equal(x.totals.manifestConsistentAtomicUSDC,'10000');assert.equal(x.totals.unverified,1);assert.equal(x.rows[0].status,'manifest_consistent_claim');});
 test('no evidence is zero revenue',()=>{const x=reconcile({requests:[],transfers:[],deliveries:[]});assert.equal(x.totals.verifiedExternalFulfilled,0);});
 for(const [label,mutate] of [
   ['missing delivery',x=>x.deliveries=[]],['wrong transaction receipt',x=>x.deliveries[0].txHash='0x'+'c'.repeat(64)],
@@ -17,6 +17,6 @@ for(const [label,mutate] of [
   ['duplicate delivery',x=>x.deliveries.push({...x.deliveries[0]})],['missing authorization',x=>x.requests[0].authorized=false],
   ['wrong token',x=>x.transfers[0].token='0x'+'0'.repeat(40)],['failed HTTP',x=>x.deliveries[0].httpStatus=402],
   ['missing independent RPC source',x=>x.transfers[0].source='public_counter']
-]) test('fails closed: '+label,()=>{const x=fixture();mutate(x);assert.equal(reconcile(x).totals.verifiedExternalFulfilled,0);});
-test('duplicate requests and reused transaction cannot double count',()=>{const x=fixture();x.requests.push({...x.requests[0],requestId:'req-2'});assert.equal(reconcile(x).totals.verifiedExternalFulfilled,1);});
+]) test('fails closed: '+label,()=>{const x=fixture();mutate(x);assert.equal(reconcile(x).totals.manifestConsistentClaims,0);});
+test('duplicate requests and reused transaction cannot double count',()=>{const x=fixture();x.requests.push({...x.requests[0],requestId:'req-2'});const result=reconcile(x);assert.equal(result.totals.manifestConsistentClaims,1);assert.equal(result.totals.verifiedExternalFulfilled,0);});
 test('rejects malformed manifest',()=>assert.throws(()=>reconcile({requests:[],transfers:[]})));
