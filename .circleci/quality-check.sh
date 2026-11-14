@@ -24,6 +24,7 @@ case "$task" in
     node scripts/check-workflow-cannot-fail.mjs
     node scripts/ci/check-deploy-invariants.mjs
     node scripts/ci/check-node-test-runners.mjs
+    node --test scripts/ci/check-node-test-runners.test.mjs
     # Mirror GitHub Actions Windows path safety in the existing offline gate.
     bash scripts/check-windows-paths.sh
     # Mirrors GitHub's gitleaks PR/push tree scan; SHA-pinned binary.
