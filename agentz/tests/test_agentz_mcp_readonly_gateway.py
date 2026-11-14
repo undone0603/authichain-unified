@@ -79,6 +79,10 @@ def test_browser_subprocess_does_not_inherit_gateway_token(tmp_path, monkeypatch
     monkeypatch.setenv("AGENTZ_BROWSER_BIN", str(browser_bin))
     monkeypatch.setenv("AGENTZ_BROWSER_EVIDENCE_DIR", str(evidence_dir))
     monkeypatch.setenv("AGENTZ_MCP_GATEWAY_TOKEN", "x" * 40)
+    for name in ("STRIPE_SECRET_KEY", "RESEND_API_KEY", "GITHUB_TOKEN",
+                 "CLOUDFLARE_API_TOKEN", "UNRELATED_PRIVATE_CREDENTIAL"):
+        monkeypatch.setenv(name, "sensitive-test-value")
+    monkeypatch.setenv("AGENT_BROWSER_SESSION", "should-not-be-reused")
     monkeypatch.setattr(capability_policy, "decide", lambda _: SimpleNamespace(allowed=True))
     observed = []
     def fake_run(argv, *, env, **kwargs):
@@ -89,4 +93,12 @@ def test_browser_subprocess_does_not_inherit_gateway_token(tmp_path, monkeypatch
     assert result["verified"] is False
     assert len(observed) == 3
     assert all("AGENTZ_MCP_GATEWAY_TOKEN" not in env for _, env in observed)
+    assert all(set(env) <= browser_executor._BROWSER_ENV_KEYS | {"AGENT_BROWSER_SESSION"}
+               for _, env in observed)
+    assert all(not any(name in env for name in (
+        "STRIPE_SECRET_KEY", "RESEND_API_KEY", "GITHUB_TOKEN",
+        "CLOUDFLARE_API_TOKEN", "UNRELATED_PRIVATE_CREDENTIAL"))
+        for _, env in observed)
+    assert all(env["AGENT_BROWSER_SESSION"] != "should-not-be-reused"
+               for _, env in observed)
     assert all(env["AGENT_BROWSER_SESSION"].startswith("agentz-") for _, env in observed)
