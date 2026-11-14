@@ -108,6 +108,10 @@ jobs:
           git sparse-checkout disable
           git reset --hard HEAD
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          # This job may have waited for protected-environment approval.
+          # Do not publish an older commit if main advanced while waiting.
+          REMOTE_MAIN="$(git ls-remote --exit-code origin refs/heads/main | awk '{print $1}')"
+          test "$REMOTE_MAIN" = "$EXPECTED_SHA"
       - name: Verify deployment secrets are present
         env:
           CF_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
