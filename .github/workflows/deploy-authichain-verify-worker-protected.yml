@@ -71,8 +71,9 @@ jobs:
           if(branch.commit?.sha!==sha || branch.protected!==true) throw new Error('Protected main SHA mismatch');
           const env=await get('/environments/production-cloudflare');
           if(env.deployment_branch_policy?.protected_branches!==true ||
-             env.deployment_branch_policy?.custom_branch_policies!==false)
-            throw new Error('Environment must allow protected branches only');
+             env.deployment_branch_policy?.custom_branch_policies!==false ||
+             env.can_admins_bypass!==false)
+            throw new Error('Environment must allow protected branches only and prohibit administrator bypass');
           // Enforced approval rules remain effective; never bypass them.
           const statuses=await get('/commits/'+sha+'/status');
           const required=['ci/circleci: test-workers','ci/circleci: test-other',
