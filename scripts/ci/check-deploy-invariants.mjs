@@ -205,6 +205,24 @@ export function checkPreviewUrls(root = ROOT, targets = PREVIEW_URLS_OFF) {
   return errors;
 }
 
+
+/**
+ * Bare event name from a 2-space `on:` header after unquoting
+ * (`push:`, `'push':`, `"push":`). Returns null for inline or
+ * unrecognized shapes so the checker can fail closed.
+ */
+export function parseOnEventHeader(line) {
+  const m = String(line).match(
+    /^  (?:([A-Za-z0-9_-]+)|'([A-Za-z0-9_-]+)'|"([A-Za-z0-9_-]+)"):\s*$/
+  );
+  return m ? (m[1] || m[2] || m[3]) : null;
+}
+
+/** True for a 2-space mapping entry in the top-level `on:` block. */
+function isOnEventHeaderLine(line) {
+  return /^  \S/.test(line) && !/^\s*#/.test(line);
+}
+
 /** Existing direct push deploys may run ONLY for their own Worker source.
  * No workflow-file trigger: changing a workflow is not permission to deploy.
  * A read-only CI invariant keeps an unfiltered main push from silently
@@ -245,22 +263,40 @@ export function checkDirectDeployPushScopes(root = ROOT, scopes = DIRECT_DEPLOY_
       continue;
     }
     const block = onBlock(source);
-    const eventHeaders = block.filter(line => /^  [A-Za-z0-9_-]+:/.test(line));
-    const eventNames = eventHeaders.map(line => line.trim().split(":")[0]);
+    // Quoted keys such as 'push': / "push": must be normalized, not dropped.
+    // Any event-header shape we cannot recognize fails closed (never
+    // classified as manual-only).
+    const eventHeaderLines = block.filter(isOnEventHeaderLine);
+    const eventNames = [];
+    let unrecognizedHeader = false;
+    for (const line of eventHeaderLines) {
+      const name = parseOnEventHeader(line);
+      if (!name) {
+        unrecognizedHeader = true;
+        break;
+      }
+      eventNames.push(name);
+    }
+    if (unrecognizedHeader) {
+      errors.push(
+        rel +
+          ": unrecognized on: event-header shape; only one explicit push and one workflow_dispatch trigger are allowed"
+      );
+      continue;
+    }
     if (eventNames.length === 0 ||
         !eventNames.includes("workflow_dispatch") ||
         eventNames.some(name => !["push", "workflow_dispatch"].includes(name)) ||
-        new Set(eventNames).size !== eventNames.length ||
-        eventHeaders.some(line => !/^  (?:push|workflow_dispatch):\s*$/.test(line))) {
+        new Set(eventNames).size !== eventNames.length) {
       errors.push(rel + ": only one explicit push and one workflow_dispatch trigger are allowed");
       continue;
     }
-    const pushIndex = block.findIndex(line => /^  push:\s*$/.test(line));
+    const pushIndex = block.findIndex(line => parseOnEventHeader(line) === "push");
     // Manual-only is a supported fail-closed fallback.
     if (pushIndex === -1) continue;
     const pushLines = [];
     for (const line of block.slice(pushIndex + 1)) {
-      if (/^  [A-Za-z0-9_-]+:/.test(line)) break;
+      if (isOnEventHeaderLine(line)) break;
       if (line.trim() && !/^\s*#/.test(line)) pushLines.push(line);
     }
     const keys = pushLines
