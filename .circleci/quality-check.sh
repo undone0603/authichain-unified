@@ -24,6 +24,9 @@ case "$task" in
     node scripts/check-workflow-cannot-fail.mjs
     node scripts/ci/check-deploy-invariants.mjs
     node scripts/ci/check-node-test-runners.mjs
+    # Run x402's offline receipt and signed-delivery tests on the exact CircleCI SHA.
+    # The static runner check alone does not execute these tests.
+    node --test scripts/growth/x402-authenticated.test.mjs scripts/growth/x402-base-receipt.test.mjs scripts/growth/x402-reconcile.test.mjs
     # Independent negative-case tests for the human-free production release policy.
     node --test scripts/ci/autonomous-release-gate.test.mjs
     ;;

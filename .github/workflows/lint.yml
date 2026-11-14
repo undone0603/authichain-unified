@@ -119,6 +119,9 @@ jobs:
           scripts/autonomy/*.test.mjs
           scripts/ci/*.test.mjs
           scripts/agent-adoption/*.test.mjs
+          scripts/growth/x402-authenticated.test.mjs
+          scripts/growth/x402-base-receipt.test.mjs
+          scripts/growth/x402-reconcile.test.mjs
           scripts/__tests__/verify-demand.test.mjs
           protocol/qfs/envelope.test.mjs
           scripts/lib/b2b-send-policy.test.ts
