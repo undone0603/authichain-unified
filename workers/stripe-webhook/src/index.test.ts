@@ -67,6 +67,8 @@ function installFetch(opts?: {
   updateOk?: boolean;
   receiptInsertOk?: boolean;
   updateRows?: unknown[];
+  rpcStatus?: number;
+  rpcResultStatus?: "granted" | "already_granted" | "invalid";
 }) {
   const calls: Array<{
     method: string;
@@ -83,6 +85,17 @@ function installFetch(opts?: {
       const prefer = headers.get("Prefer");
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       calls.push({ method, url, body, prefer });
+      if (url.includes("/rpc/grant_stripe_pack_session")) {
+        const args = body as { p_profile_id: string; p_session_id: string; p_plan: string };
+        if ((opts?.rpcStatus ?? 200) >= 400) return new Response("rpc unavailable", { status: opts?.rpcStatus });
+        const repeat = receipts.has(args.p_session_id) || opts?.prior === args.p_session_id;
+        receipts.add(args.p_session_id);
+        return new Response(JSON.stringify({
+          status: opts?.rpcResultStatus ?? (repeat ? "already_granted" : "granted"),
+          profile_id: args.p_profile_id, plan: args.p_plan,
+          credits: args.p_plan === "creator" ? 500 : 100,
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
       if (url.includes("founder_exit_side_effects")) {
         if (method === "GET") {
           if ((opts?.receiptSelectStatus ?? 200) >= 400) {
@@ -121,6 +134,7 @@ function installFetch(opts?: {
             ? []
             : [
                 {
+                  id: "prof_1",
                   last_grant_session_id: opts.prior,
                   generations_limit: opts.grantLimit ?? 0,
                   generations_used: opts.grantUsed ?? 0,
@@ -188,6 +202,22 @@ function installStatefulFetch(profile: {
       const prefer = headers.get("Prefer");
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       calls.push({ method, url, body, prefer });
+      if (url.includes("/rpc/grant_stripe_pack_session")) {
+        const args = body as { p_profile_id: string; p_session_id: string; p_plan: string };
+        const repeat = receipts.has(args.p_session_id);
+        if (!repeat) {
+          receipts.add(args.p_session_id);
+          const credits = args.p_plan === "creator" ? 500 : 100;
+          profile.generations_limit = Math.max(0, profile.generations_limit - profile.generations_used) + credits;
+          profile.generations_used = 0;
+          profile.last_grant_session_id = args.p_session_id;
+        }
+        return new Response(JSON.stringify({
+          status: repeat ? "already_granted" : "granted",
+          profile_id: args.p_profile_id, plan: args.p_plan,
+          credits: args.p_plan === "creator" ? 500 : 100,
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
       if (url.includes("founder_exit_side_effects")) {
         if (method === "GET") {
           const hit = [...receipts].find(
@@ -213,6 +243,7 @@ function installStatefulFetch(profile: {
         return new Response(
           JSON.stringify([
             {
+              id: "prof_1",
               last_grant_session_id: profile.last_grant_session_id,
               generations_limit: profile.generations_limit,
               generations_used: profile.generations_used,
