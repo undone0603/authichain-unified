@@ -75,6 +75,47 @@ async function supabaseSelectOne(
   }
 }
 
+/** Fail-closed service-role RPC. No legacy PATCH/receipt fallback for paid packs. */
+async function atomicPackGrant(
+  env: Env,
+  profileId: string,
+  sessionId: string,
+  plan: "starter" | "creator",
+  customerId: string | null
+): Promise<"granted" | "already_granted" | null> {
+  try {
+    const res = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/rpc/grant_qron_pack_checkout_session`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({
+          p_profile_id: profileId,
+          p_session_id: sessionId,
+          p_plan: plan,
+          p_credits: plan === "starter" ? 100 : 500,
+          p_stripe_customer_id: customerId,
+        }),
+      }
+    );
+    if (!res.ok) return null;
+    const result = (await res.json()) as {
+      status?: unknown;
+      profile_id?: unknown;
+    };
+    if (result.profile_id !== profileId) return null;
+    if (result.status === "granted" || result.status === "already_granted")
+      return result.status;
+  } catch {
+    // Fail closed. Stripe redelivers after a transient RPC failure.
+  }
+  return null;
+}
+
 function grantRetry(error: string): Response {
   return new Response(JSON.stringify({ error }), {
     status: 500,
@@ -379,6 +420,26 @@ export default {
                 session: session.id,
               })
             );
+          } else if (
+            grant &&
+            (grant.plan === "starter" || grant.plan === "creator")
+          ) {
+            const existing = await supabaseSelectOne(
+              env,
+              "profiles",
+              { email },
+              "id"
+            );
+            if (!existing.ok || typeof existing.row?.id !== "string")
+              return grantRetry("atomic pack profile lookup failed");
+            const result = await atomicPackGrant(
+              env,
+              existing.row.id,
+              session.id,
+              grant.plan,
+              customerId
+            );
+            if (!result) return grantRetry("atomic pack grant failed");
           } else if (grant) {
             const stackPack = grantStacksOnRepeat(grant);
             let wroteGrant = false;
