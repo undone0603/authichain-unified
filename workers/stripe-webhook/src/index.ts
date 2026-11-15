@@ -4,6 +4,7 @@ import {
   GRANT_CAS_RETRIES,
   grantForCheckout,
   grantForPrice,
+  grantReceiptKey,
   grantReplayAction,
   grantStacksOnRepeat,
   isFounderEmail,
@@ -158,6 +159,31 @@ function sessionIdFromRow(
   return typeof row?.last_grant_session_id === "string"
     ? row.last_grant_session_id
     : null;
+}
+
+/** Insert-once. A unique conflict means this session already has a receipt. */
+async function supabaseInsertIgnore(
+  env: Env,
+  table: string,
+  data: Record<string, unknown>
+): Promise<{ ok: true } | { ok: false }> {
+  const url = `${env.SUPABASE_URL}/rest/v1/${table}`;
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        Prefer: "return=representation,resolution=ignore-duplicates",
+      },
+      body: JSON.stringify(data),
+    });
+    if (res.status === 409) return { ok: true };
+    return res.ok ? { ok: true } : { ok: false };
+  } catch {
+    return { ok: false };
+  }
 }
 
 async function sha256Hex(value: string): Promise<string> {
@@ -357,6 +383,7 @@ export default {
             const stackPack = grantStacksOnRepeat(grant);
             let wroteGrant = false;
             let skippedIdempotent = false;
+            let skippedNeedsReceipt = false;
             for (let attempt = 0; attempt <= GRANT_CAS_RETRIES; attempt++) {
               const existing = await supabaseSelectOne(
                 env,
@@ -365,13 +392,25 @@ export default {
                 "last_grant_session_id,generations_limit,generations_used"
               );
               if (!existing.ok) return grantRetry("grant lookup failed");
+              const receipt = await supabaseSelectOne(
+                env,
+                "founder_exit_side_effects",
+                { idempotency_key: grantReceiptKey(session.id) },
+                "idempotency_key"
+              );
+              if (!receipt.ok) return grantRetry("grant lookup failed");
               const action = grantReplayAction(
-                { ok: true, sessionId: sessionIdFromRow(existing.row) },
+                {
+                  ok: true,
+                  sessionId: sessionIdFromRow(existing.row),
+                  receiptExists: Boolean(receipt.row),
+                },
                 session.id
               );
               if (action === "retry") return grantRetry("grant lookup failed");
               if (action === "skip") {
                 skippedIdempotent = true;
+                skippedNeedsReceipt = !receipt.row;
                 break;
               }
               const credits = stackPack
@@ -443,20 +482,37 @@ export default {
                   plan: grant.plan,
                 })
               );
+              if (skippedNeedsReceipt) {
+                const recorded = await supabaseInsertIgnore(
+                  env,
+                  "founder_exit_side_effects",
+                  { idempotency_key: grantReceiptKey(session.id) }
+                );
+                if (!recorded.ok)
+                  return grantRetry("grant receipt write failed");
+              }
             } else if (!wroteGrant) {
               return grantRetry("concurrent profile update; retry");
-            } else if (grant.plan === "qron_launch_annual") {
-              console.log(
-                JSON.stringify({
-                  evt: "checkout_paid_qron_annual",
-                  plan_id: "qron_launch_annual",
-                  session_id: session.id,
-                  amount_usd: 190,
-                  generations: grant.generations,
-                  brand: grant.brand,
-                  ts: Date.now(),
-                })
+            } else {
+              const recorded = await supabaseInsertIgnore(
+                env,
+                "founder_exit_side_effects",
+                { idempotency_key: grantReceiptKey(session.id) }
               );
+              if (!recorded.ok) return grantRetry("grant receipt write failed");
+              if (grant.plan === "qron_launch_annual") {
+                console.log(
+                  JSON.stringify({
+                    evt: "checkout_paid_qron_annual",
+                    plan_id: "qron_launch_annual",
+                    session_id: session.id,
+                    amount_usd: 190,
+                    generations: grant.generations,
+                    brand: grant.brand,
+                    ts: Date.now(),
+                  })
+                );
+              }
             }
           }
         }

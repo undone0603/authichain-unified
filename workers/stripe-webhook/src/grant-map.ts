@@ -150,6 +150,11 @@ export const FOUNDER_EMAILS = [
   "@authichain.com",
 ] as const;
 
+/** Durable per-session receipt. Lockstep with src/lib/provisioning.ts and the DPP RPC. */
+export function grantReceiptKey(sessionId: string): string {
+  return `grant:${sessionId}`;
+}
+
 /** True when this checkout session already wrote the generation grant. */
 export function alreadyGrantedSession(
   existingSessionId: string | null | undefined,
@@ -159,14 +164,22 @@ export function alreadyGrantedSession(
 }
 
 /**
- * Same checkout session must not reset generations_used.
+ * Same checkout session must not add credits again.
+ * last_grant_session_id is only the latest stamp; a receipt survives later purchases.
  * A failed lookup is a retry, not a fresh grant.
  */
 export function grantReplayAction(
-  lookup: { ok: true; sessionId: string | null | undefined } | { ok: false },
+  lookup:
+    | {
+        ok: true;
+        sessionId: string | null | undefined;
+        receiptExists?: boolean;
+      }
+    | { ok: false },
   sessionId: string
 ): "skip" | "grant" | "retry" {
   if (!lookup.ok) return "retry";
+  if (lookup.receiptExists) return "skip";
   if (alreadyGrantedSession(lookup.sessionId, sessionId)) return "skip";
   return "grant";
 }

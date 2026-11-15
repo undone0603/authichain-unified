@@ -61,8 +61,11 @@ function installFetch(opts?: {
   prior?: string | null;
   grantLimit?: number;
   grantUsed?: number;
+  receipts?: string[];
+  receiptSelectStatus?: number;
   upsertOk?: boolean;
   updateOk?: boolean;
+  receiptInsertOk?: boolean;
   updateRows?: unknown[];
 }) {
   const calls: Array<{
@@ -71,6 +74,7 @@ function installFetch(opts?: {
     body?: unknown;
     prefer?: string | null;
   }> = [];
+  const receipts = new Set(opts?.receipts ?? []);
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
@@ -79,6 +83,35 @@ function installFetch(opts?: {
       const prefer = headers.get("Prefer");
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       calls.push({ method, url, body, prefer });
+      if (url.includes("founder_exit_side_effects")) {
+        if (method === "GET") {
+          if ((opts?.receiptSelectStatus ?? 200) >= 400) {
+            return new Response("no", {
+              status: opts?.receiptSelectStatus ?? 500,
+            });
+          }
+          const hit = [...receipts].find(
+            id =>
+              url.includes(encodeURIComponent(`grant:${id}`)) ||
+              url.includes(`grant:${id}`)
+          );
+          return new Response(
+            JSON.stringify(hit ? [{ idempotency_key: `grant:${hit}` }] : []),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        if (method === "POST" && opts?.receiptInsertOk === false) {
+          return new Response("no", { status: 500 });
+        }
+        if (method === "POST" && body && typeof body === "object") {
+          const key = String(
+            (body as { idempotency_key?: string }).idempotency_key ?? ""
+          );
+          if (key.startsWith("grant:"))
+            receipts.add(key.slice("grant:".length));
+        }
+        return new Response("[]", { status: 201 });
+      }
       if (method === "GET") {
         if ((opts?.selectStatus ?? 200) >= 400) {
           return new Response("no", { status: opts?.selectStatus ?? 500 });
@@ -204,6 +237,15 @@ describe("stripe-webhook checkout grant", () => {
     expect(first.find(c => c.method === "PATCH")?.prefer).toMatch(
       /return=representation/
     );
+    expect(
+      first.some(
+        c =>
+          c.method === "POST" &&
+          c.url.includes("founder_exit_side_effects") &&
+          (c.body as { idempotency_key?: string })?.idempotency_key ===
+            "grant:cs_new"
+      )
+    ).toBe(true);
 
     state.event = sessionEvent({ price: STARTER, id: "cs_new" });
     const second = installFetch({ prior: "cs_new" });
@@ -381,6 +423,24 @@ describe("stripe-webhook checkout grant", () => {
     ]);
   });
 
+  it("does not add again when an older session is replayed after a newer purchase", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_old" });
+    const calls = installFetch({
+      prior: "cs_new",
+      grantLimit: 200,
+      grantUsed: 0,
+      receipts: ["cs_old"],
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(200);
+    expect(patches(calls)).toEqual([]);
+    expect(
+      calls.some(
+        c => c.method === "GET" && c.url.includes("founder_exit_side_effects")
+      )
+    ).toBe(true);
+  });
+
   it("adds a second Starter pack on top of unused credits", async () => {
     state.event = sessionEvent({ price: STARTER, id: "cs_repeat" });
     const calls = installFetch({
@@ -477,8 +537,14 @@ describe("stripe-webhook checkout grant", () => {
     const granted: unknown[] = [];
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (_url: string, init?: RequestInit) => {
+      vi.fn(async (url: string, init?: RequestInit) => {
         const method = init?.method ?? "GET";
+        if (String(url).includes("founder_exit_side_effects")) {
+          return new Response("[]", {
+            status: method === "GET" ? 200 : 201,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
         if (method === "GET") {
           gets += 1;
           const row =

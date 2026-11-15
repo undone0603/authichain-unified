@@ -11,6 +11,7 @@ import {
   alreadyGrantedSession,
   grantForCheckout,
   grantForPrice,
+  grantReceiptKey,
   grantReplayAction,
   grantStacksOnRepeat,
   isFounderEmail,
@@ -21,6 +22,7 @@ import { GROWTH_LOOPS } from "../../../src/lib/growth/loops";
 import { FOUNDER_EMAILS as CANONICAL_FOUNDERS } from "../../../src/lib/billing/live-catalog";
 import {
   PROVISION_CAS_RETRIES,
+  grantReceiptKey as apexGrantReceiptKey,
   stackedPackCredits as apexStackedPackCredits,
 } from "../../../src/lib/provisioning";
 
@@ -40,6 +42,26 @@ describe("checkout grant replay", () => {
     expect(grantReplayAction({ ok: true, sessionId: null }, "cs_123")).toBe(
       "grant"
     );
+  });
+
+  it("skips an older session after a newer purchase stamped last_grant_session_id", () => {
+    expect(
+      grantReplayAction(
+        { ok: true, sessionId: "cs_new", receiptExists: false },
+        "cs_old"
+      )
+    ).toBe("grant");
+    expect(
+      grantReplayAction(
+        { ok: true, sessionId: "cs_new", receiptExists: true },
+        "cs_old"
+      )
+    ).toBe("skip");
+  });
+
+  it("uses the same grant receipt key as provisioning.ts", () => {
+    expect(grantReceiptKey("cs_1")).toBe("grant:cs_1");
+    expect(grantReceiptKey("cs_1")).toBe(apexGrantReceiptKey("cs_1"));
   });
 });
 

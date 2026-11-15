@@ -20,6 +20,11 @@
 import { PLAN_CREDITS, planById, type PlanId } from "./plans";
 import { type BrandId } from "@shared/brands";
 
+/** Durable per-session receipt. Lockstep with workers/stripe-webhook grantReceiptKey. */
+export function grantReceiptKey(sessionId: string): string {
+  return `grant:${sessionId}`;
+}
+
 // The webhook passes its existing service-role Supabase client (loosely typed).
 type SupabaseLike = {
   from: (table: string) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -250,7 +255,9 @@ export async function provisionPurchase(
   // A failed read must not look like "no prior grant" — that resets usage on retry.
   // The same read loads the credit/subscription columns a one-time pack stacks on.
   // Dual-path: workers/stripe-webhook stacks the same pack formula then stamps
-  // last_grant_session_id. Skipping here is success, not a missed add.
+  // last_grant_session_id and writes grant:{sessionId} on founder_exit_side_effects.
+  // last_grant_session_id is only the latest stamp; the receipt is what stops an
+  // older session from being added again after a newer purchase. Skipping is success.
   //
   // Lost-update guard (CFA-346, no migration): the write is conditional on the
   // generations_limit / generations_used / last_grant_session_id values read.
@@ -285,24 +292,63 @@ export async function provisionPurchase(
         };
       }
       current = (existingGrant as Record<string, unknown> | null) ?? null;
-      if (
-        input.sessionId &&
-        existingGrant?.last_grant_session_id === input.sessionId
-      ) {
-        console.log(
-          JSON.stringify({
-            evt: "provision_skipped_idempotent",
-            session: input.sessionId,
+      if (input.sessionId) {
+        const { data: receipt, error: receiptError } = await supabase
+          .from("founder_exit_side_effects")
+          .select("idempotency_key")
+          .eq("idempotency_key", grantReceiptKey(input.sessionId))
+          .maybeSingle();
+        if (receiptError) {
+          console.error(
+            "[provisioning] grant receipt read failed:",
+            receiptError
+          );
+          return {
             profileId,
-            attempt,
-          })
-        );
-        return {
-          profileId,
-          created,
-          status: "provisioned",
-          skippedIdempotent: true,
-        };
+            created,
+            status: "upsert_failed",
+            error: receiptError.message || "grant receipt lookup failed",
+          };
+        }
+        const lastMatches =
+          existingGrant?.last_grant_session_id === input.sessionId;
+        if (receipt || lastMatches) {
+          if (!receipt) {
+            const { error: backfillError } = await supabase
+              .from("founder_exit_side_effects")
+              .insert({
+                idempotency_key: grantReceiptKey(input.sessionId),
+                profile_id: profileId,
+              });
+            if (
+              backfillError &&
+              backfillError.code !== "23505" &&
+              !/duplicate/i.test(backfillError.message || "")
+            ) {
+              return {
+                profileId,
+                created,
+                status: "upsert_failed",
+                error: backfillError.message || "grant receipt write failed",
+              };
+            }
+          }
+          console.log(
+            JSON.stringify({
+              evt: "provision_skipped_idempotent",
+              session: input.sessionId,
+              profileId,
+              attempt,
+              receipt: Boolean(receipt),
+            })
+          );
+          return {
+            profileId,
+            created,
+            status: "provisioned",
+            skippedIdempotent: true,
+          };
+        }
       }
     }
 
@@ -359,6 +405,26 @@ export async function provisionPurchase(
       };
     }
     if (!conditional || (Array.isArray(written) && written.length > 0)) {
+      if (input.sessionId) {
+        const { error: receiptWriteError } = await supabase
+          .from("founder_exit_side_effects")
+          .insert({
+            idempotency_key: grantReceiptKey(input.sessionId),
+            profile_id: profileId,
+          });
+        if (
+          receiptWriteError &&
+          receiptWriteError.code !== "23505" &&
+          !/duplicate/i.test(receiptWriteError.message || "")
+        ) {
+          return {
+            profileId,
+            created,
+            status: "upsert_failed",
+            error: receiptWriteError.message || "grant receipt write failed",
+          };
+        }
+      }
       return { profileId, created, status: "provisioned" };
     }
     console.warn(

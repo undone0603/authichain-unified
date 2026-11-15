@@ -8,16 +8,68 @@ function fakeProfiles(opts?: {
   lastGrantSessionId?: string | null;
   lookupError?: { message: string } | null;
   grantReadError?: { message: string } | null;
+  receiptLookupError?: { message: string } | null;
+  receiptWriteError?: { message: string; code?: string } | null;
+  receipts?: string[];
   updateError?: { message: string } | null;
   rpcError?: { message: string } | null;
   rpcAlreadyGranted?: boolean;
   row?: Record<string, unknown>;
 }) {
   const inserts: Array<Record<string, unknown>> = [];
+  const receiptInserts: Array<Record<string, unknown>> = [];
+  const receipts = new Set(opts?.receipts ?? []);
   const updates: Array<{ id: string; patch: Record<string, unknown> }> = [];
   const rpcCalls: Array<{ fn: string; args: Record<string, unknown> }> = [];
   let reads = 0;
-  const from = () => {
+  const from = (table?: string) => {
+    if (table === "founder_exit_side_effects") {
+      let key = "";
+      const builder: Record<string, unknown> = {
+        select: () => builder,
+        eq: (col: string, val: string) => {
+          if (col === "idempotency_key") key = val;
+          return builder;
+        },
+        maybeSingle: async () => {
+          if (opts?.receiptLookupError) {
+            return { data: null, error: opts.receiptLookupError };
+          }
+          return {
+            data: receipts.has(key) ? { idempotency_key: key } : null,
+            error: null,
+          };
+        },
+        insert: (row: Record<string, unknown>) => {
+          receiptInserts.push(row);
+          if (opts?.receiptWriteError) {
+            return {
+              then: (res: (v: unknown) => unknown) =>
+                Promise.resolve({
+                  data: null,
+                  error: opts.receiptWriteError,
+                }).then(res),
+            };
+          }
+          const keyToAdd = String(row.idempotency_key ?? "");
+          if (receipts.has(keyToAdd)) {
+            return {
+              then: (res: (v: unknown) => unknown) =>
+                Promise.resolve({
+                  data: null,
+                  error: { code: "23505", message: "duplicate" },
+                }).then(res),
+            };
+          }
+          receipts.add(keyToAdd);
+          return {
+            then: (res: (v: unknown) => unknown) =>
+              Promise.resolve({ data: row, error: null }).then(res),
+          };
+        },
+      };
+      return builder;
+    }
     const builder: Record<string, unknown> = {
       select: () => builder,
       eq: () => builder,
@@ -91,7 +143,13 @@ function fakeProfiles(opts?: {
       error: opts?.rpcError ?? null,
     };
   };
-  return { supabase: { from, rpc }, inserts, updates, rpcCalls };
+  return {
+    supabase: { from, rpc },
+    inserts,
+    receiptInserts,
+    updates,
+    rpcCalls,
+  };
 }
 
 describe("provisionPurchase", () => {
@@ -445,6 +503,22 @@ describe("provisionPurchase", () => {
       expect(updates).toEqual([]);
     });
 
+    it("does not add again when an older session is replayed after a newer purchase", async () => {
+      const { supabase, updates } = fakeProfiles({
+        existingId: "prof_1",
+        lastGrantSessionId: "cs_new",
+        receipts: ["grant:cs_old"],
+        row: { generations_limit: 200, generations_used: 0 },
+      });
+      const r = await provisionPurchase(supabase, {
+        ...base,
+        plan: "starter",
+        sessionId: "cs_old",
+      });
+      expect(r.skippedIdempotent).toBe(true);
+      expect(updates).toEqual([]);
+    });
+
     it("a new Starter session adds 100; replaying that session does not add again", async () => {
       const first = fakeProfiles({
         existingId: "prof_1",
@@ -501,8 +575,41 @@ describe("provisionPurchase", () => {
     type Row = Record<string, unknown>;
     function statefulDb(row: Row, opts?: { alwaysConflict?: boolean }) {
       const state = { row: { ...row }, writes: 0, conflicts: 0 };
+      const receipts = new Set<string>();
       const tick = () => new Promise(r => setTimeout(r, 0));
-      const from = () => {
+      const from = (table?: string) => {
+        if (table === "founder_exit_side_effects") {
+          let key = "";
+          const b: Record<string, unknown> = {
+            select: () => b,
+            eq: (col: string, val: string) => {
+              if (col === "idempotency_key") key = val;
+              return b;
+            },
+            maybeSingle: async () => {
+              await tick();
+              return {
+                data: receipts.has(key) ? { idempotency_key: key } : null,
+                error: null,
+              };
+            },
+            insert: (insertRow: Record<string, unknown>) => ({
+              then: (res: (v: unknown) => unknown) =>
+                tick().then(() => {
+                  const k = String(insertRow.idempotency_key ?? "");
+                  if (receipts.has(k)) {
+                    return res({
+                      data: null,
+                      error: { code: "23505", message: "duplicate" },
+                    });
+                  }
+                  receipts.add(k);
+                  return res({ data: insertRow, error: null });
+                }),
+            }),
+          };
+          return b;
+        }
         const b: Record<string, unknown> = {
           select: () => b,
           eq: () => b,
