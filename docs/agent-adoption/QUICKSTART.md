@@ -37,13 +37,11 @@ evidence. The demonstration is owner-authored, **not** independent adoption.
 | Purpose | URL | Evidence boundary |
 | --- | --- | --- |
 | Free MCP | `https://authichain.com/mcp/free` | This script exercises one read-only free POST call |
-| Full MCP | `https://authichain.com/mcp` | Eight advertised tools include paid `verify`; discovery is not paid use |
+| Full MCP | `https://authichain.com/mcp` | Tool catalog varies by dated observation; owner-operated `tools/list` reported nine on 2026-11-14, including paid `verify`. Recheck before integration; discovery is not paid use |
 | A2A | `https://authichain.com/.well-known/agent-card.json` | An advertised JSON-RPC interface is not proven A2A task compatibility |
 | AgentZ x402 | `https://signal.authichain.com/offer` | Public offer metadata; price/SKU may change; no settlement made |
 
-The official MCP Registry publishes `com.authichain/authichain`:
-https://registry.modelcontextprotocol.io/v0.1/servers?search=com.authichain%2Fauthichain .
-This is discovery, **not** protocol certification.
+A local `server.json` manifest advertises `com.authichain/authichain` version `1.4.0`, but **current official MCP Registry publication has not been independently confirmed**. Query the official Registry API for the exact name and version, retain the dated response and registry-managed lifecycle metadata, and verify namespace ownership before claiming a published listing. Manifest existence and a search URL do not prove publication or protocol certification. See [registry acceptance #2484](https://github.com/undone0603/authichain-unified/issues/2484).
 
 The existing full MCP transport test is also available:
 
@@ -52,7 +50,7 @@ node --test scripts/ci/glama-mcp-free-smoke.test.mjs
 node scripts/ci/glama-mcp-free-smoke.mjs
 ```
 
-It exercises eight-tool GET discovery, JSON-RPC initialize, tools/list, and a
+It exercises its pinned eight-tool GET discovery fixture, JSON-RPC initialize, tools/list, and a
 zero-price, nonbinding `negotiate` quote; never paid `verify`.
 
 ## Python (no dependencies): discovery only
