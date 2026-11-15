@@ -419,6 +419,10 @@ async def get_openapi_json():
 from agentz.api.sse import router as sse_router
 app.include_router(sse_router)
 
+# Opt-in localhost-only microphone + still-image observation console.
+from agentz.api.voice_vision import router as voice_vision_router
+app.include_router(voice_vision_router)
+
 
 # --- Local AgentZ browser executor (read-only, allowlisted) ---
 class BrowserTaskInput(BaseModel):

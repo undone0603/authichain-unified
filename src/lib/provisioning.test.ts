@@ -9,10 +9,13 @@ function fakeProfiles(opts?: {
   lookupError?: { message: string } | null;
   grantReadError?: { message: string } | null;
   updateError?: { message: string } | null;
+  rpcError?: { message: string } | null;
+  rpcAlreadyGranted?: boolean;
   row?: Record<string, unknown>;
 }) {
   const inserts: Array<Record<string, unknown>> = [];
   const updates: Array<{ id: string; patch: Record<string, unknown> }> = [];
+  const rpcCalls: Array<{ fn: string; args: Record<string, unknown> }> = [];
   let reads = 0;
   const from = () => {
     const builder: Record<string, unknown> = {
@@ -76,7 +79,19 @@ function fakeProfiles(opts?: {
     };
     return builder;
   };
-  return { supabase: { from }, inserts, updates };
+  const rpc = async (fn: string, args: Record<string, unknown>) => {
+    rpcCalls.push({ fn, args });
+    return {
+      data: opts?.rpcError
+        ? null
+        : {
+            status: opts?.rpcAlreadyGranted ? "already_granted" : "granted",
+            profile_id: args.p_profile_id,
+          },
+      error: opts?.rpcError ?? null,
+    };
+  };
+  return { supabase: { from, rpc }, inserts, updates, rpcCalls };
 }
 
 describe("provisionPurchase", () => {
@@ -171,7 +186,6 @@ describe("provisionPurchase", () => {
       existingId: "prof_1",
       lastGrantSessionId: "cs_old",
     });
-
     const result = await provisionPurchase(supabase, {
       email: "buyer@example.com",
       brand: "authichain",
@@ -187,6 +201,104 @@ describe("provisionPurchase", () => {
       last_grant_session_id: "cs_new",
     });
     expect(updates[0].patch).not.toHaveProperty("subscribed_at");
+  });
+
+  it("uses the atomic RPC for DPP session grants", async () => {
+    const { supabase, updates, rpcCalls } = fakeProfiles({
+      existingId: "prof_1",
+    });
+
+    const result = await provisionPurchase(supabase, {
+      email: "buyer@example.com",
+      brand: "authichain",
+      plan: "dpp_readiness",
+      sessionId: "cs_atomic",
+      stripeCustomerId: "cus_1",
+      atomicDppSessionGrant: true,
+    });
+
+    expect(result).toMatchObject({
+      profileId: "prof_1",
+      status: "provisioned",
+    });
+    expect(rpcCalls).toEqual([
+      {
+        fn: "grant_dpp_checkout_session",
+        args: {
+          p_profile_id: "prof_1",
+          p_session_id: "cs_atomic",
+          p_brand: "authichain",
+          p_stripe_customer_id: "cus_1",
+        },
+      },
+    ]);
+    expect(updates).toHaveLength(0);
+  });
+
+  it("fails closed when the atomic DPP grant RPC fails", async () => {
+    const { supabase, updates } = fakeProfiles({
+      existingId: "prof_1",
+      rpcError: { message: "database unavailable" },
+    });
+
+    const result = await provisionPurchase(supabase, {
+      email: "buyer@example.com",
+      brand: "authichain",
+      plan: "dpp_readiness",
+      sessionId: "cs_atomic",
+      atomicDppSessionGrant: true,
+    });
+
+    expect(result).toMatchObject({
+      profileId: "prof_1",
+      status: "upsert_failed",
+      error: "database unavailable",
+    });
+    expect(updates).toHaveLength(0);
+  });
+
+  it("treats an existing atomic DPP receipt as idempotent", async () => {
+    const { supabase, updates } = fakeProfiles({
+      existingId: "prof_1",
+      rpcAlreadyGranted: true,
+    });
+
+    const result = await provisionPurchase(supabase, {
+      email: "buyer@example.com",
+      brand: "authichain",
+      plan: "dpp_readiness",
+      sessionId: "cs_atomic",
+      atomicDppSessionGrant: true,
+    });
+
+    expect(result).toMatchObject({
+      profileId: "prof_1",
+      status: "provisioned",
+      skippedIdempotent: true,
+    });
+    expect(updates).toHaveLength(0);
+  });
+
+  it("fails closed when the atomic DPP grant RPC is unavailable", async () => {
+    const { supabase, updates } = fakeProfiles({ existingId: "prof_1" });
+
+    const result = await provisionPurchase(
+      { from: supabase.from },
+      {
+        email: "buyer@example.com",
+        brand: "authichain",
+        plan: "dpp_readiness",
+        sessionId: "cs_atomic",
+        atomicDppSessionGrant: true,
+      }
+    );
+
+    expect(result).toMatchObject({
+      profileId: "prof_1",
+      status: "upsert_failed",
+      error: "atomic DPP grant RPC unavailable",
+    });
+    expect(updates).toHaveLength(0);
   });
 
   it("does not insert a second profile when the email lookup fails", async () => {

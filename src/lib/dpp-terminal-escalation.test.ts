@@ -14,7 +14,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { DPP_OFFER_KEY } from "./plans";
 import { fulfillDppPaidSession } from "./dpp-fulfill-checkout";
-import { STALL_THRESHOLDS_MS, runDppExceptionsReport } from "./dpp-loop";
+import {
+  DPP_PRICE_ID,
+  STALL_THRESHOLDS_MS,
+  runDppExceptionsReport,
+} from "./dpp-loop";
 import { NTFY_URL, publishFounderAlert } from "./founder-alerts";
 
 vi.mock("./email", () => ({
@@ -95,7 +99,15 @@ const SESSION = "cs_term_esc_1";
 function paidSession() {
   return {
     id: SESSION,
+    mode: "payment",
+    status: "complete",
+    payment_status: "paid",
     amount_total: 29900,
+    currency: "usd",
+    line_items: {
+      data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }],
+      has_more: false,
+    },
     customer_details: { email: "buyer@example.com" },
     client_reference_id: VISIT,
     metadata: {
