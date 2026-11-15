@@ -193,6 +193,65 @@ export async function provisionPurchase(
     return { profileId: null, created: false, status: "no_identity" };
   }
 
+  // The two paid QRON packs must use the shared, transactional database grant.
+  // Never fall back to two independent PostgREST writes when the RPC is absent.
+  if (
+    !input.stripeSubscriptionId &&
+    input.sessionId &&
+    (input.plan === "starter" || input.plan === "creator")
+  ) {
+    const expectedCredits = input.plan === "starter" ? 100 : 500;
+    if (
+      input.brand !== "qron" ||
+      (input.generationsGrant !== undefined &&
+        input.generationsGrant !== expectedCredits) ||
+      !supabase.rpc
+    ) {
+      return {
+        profileId,
+        created,
+        status: "upsert_failed",
+        error: "atomic QRON pack grant prerequisites unavailable",
+      };
+    }
+    const { data, error } = await supabase.rpc(
+      "grant_qron_pack_checkout_session",
+      {
+        p_profile_id: profileId,
+        p_session_id: input.sessionId,
+        p_plan: input.plan,
+        p_credits: expectedCredits,
+        p_stripe_customer_id: input.stripeCustomerId ?? null,
+      }
+    );
+    if (error) {
+      return {
+        profileId,
+        created,
+        status: "upsert_failed",
+        error: error.message || "atomic QRON pack grant failed",
+      };
+    }
+    const result = data as { status?: unknown; profile_id?: unknown } | null;
+    if (
+      result?.profile_id !== profileId ||
+      (result?.status !== "granted" && result?.status !== "already_granted")
+    ) {
+      return {
+        profileId,
+        created,
+        status: "upsert_failed",
+        error: "invalid atomic QRON pack grant evidence",
+      };
+    }
+    return {
+      profileId,
+      created,
+      status: "provisioned",
+      skippedIdempotent: result.status === "already_granted",
+    };
+  }
+
   if (input.atomicDppSessionGrant) {
     if (
       input.plan !== "dpp_readiness" ||
