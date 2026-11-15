@@ -71,6 +71,7 @@ function installFetch(opts?: {
   rpcStatus?: number;
   ambiguousProfile?: boolean;
   receiptProfile?: string;
+  rpcProfileOverride?: string | null;
 }) {
   const calls: Array<{
     method: string;
@@ -138,7 +139,7 @@ function installFetch(opts?: {
         return new Response(
           JSON.stringify({
             status: result.status,
-            profile_id: result.profileId,
+            profile_id: opts?.rpcProfileOverride === undefined ? result.profileId : opts.rpcProfileOverride,
             generations_limit: calls.profile.generations_limit,
             generations_used: calls.profile.generations_used,
             last_grant_session_id: calls.profile.last_grant_session_id,
@@ -198,6 +199,20 @@ describe("stripe-webhook checkout grant", () => {
     state.event = null;
     state.verifyError = null;
     vi.unstubAllGlobals();
+  });
+
+  it("fails closed when an atomic receipt response omits buyer identity", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_ambiguous" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      receipts: ["cs_ambiguous"],
+      rpcProfileOverride: null,
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(calls.profile.generations_limit).toBe(100);
+    expect(grantRpcs(calls)).toHaveLength(1);
   });
 
   it("rejects a missing signature", async () => {
