@@ -276,6 +276,11 @@ async function fulfillCatalogCreditsIfPaid(
     stripeSubscriptionId:
       typeof session.subscription === "string" ? session.subscription : null,
     sessionId: session.id,
+    // This server rail shares the service-role transaction with both other
+    // Stripe webhook handlers for paid Starter/Creator packs.
+    atomicPackSessionGrant:
+      (catalog === "starter" || catalog === "creator") &&
+      session.mode === "payment" && !session.subscription,
   });
   if (prov.status === "upsert_failed") {
     throw new Error(
