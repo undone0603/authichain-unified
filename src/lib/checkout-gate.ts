@@ -40,6 +40,8 @@ import {
   type PlanId,
 } from "./plans";
 
+import { RETIRED_GATED_PLAN_IDS } from "./retired-plans";
+
 export { GATED_CHECKOUT_ORIGIN, gatedCheckoutUrl };
 
 /** Friendly aliases → catalogue ids for /checkout/<alias>. */
@@ -50,14 +52,8 @@ const PLAN_ALIASES: Record<string, PlanId> = {
   launch: "qron_launch",
 };
 
-/**
- * Retired for new buyers (RES-86c). Existing subscribers keep billing,
- * webhooks, and plan lookups; this route must not mint new sessions.
- */
-export const RETIRED_GATED_PLAN_IDS: readonly PlanId[] = [
-  "qron_launch",
-  "qron_launch_annual",
-];
+// The retired list lives in ./retired-plans so discovery surfaces can share it.
+export { RETIRED_GATED_PLAN_IDS };
 
 /** Query/form keys carried from the landing into Stripe metadata. */
 export const CHECKOUT_CARRY_KEYS = [
