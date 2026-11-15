@@ -1,0 +1,8 @@
+# Free baseline CircleCI Smarter Testing for root Vitest tests only.
+# No impact analysis, dynamic splitting/parallelism, or auto-rerun (metered).
+# The mandatory two-connection PostgreSQL test stays an unconditional gate.
+name: authichain-root-vitest
+discover: pnpm exec vitest list --filesOnly
+run: pnpm exec vitest run --reporter=junit --outputFile="<< outputs.junit >>" << test.atoms >>
+outputs:
+  junit: test-reports/smarter-vitest/junit.xml
