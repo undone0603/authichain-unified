@@ -61,6 +61,20 @@ jobs:
 
   test-other:
     executor: node
+    docker:
+      - image: cimg/node:22.23.3
+      - image: postgres:16-alpine
+        environment:
+          POSTGRES_DB: dpp_ci
+          POSTGRES_USER: dpp_ci
+          POSTGRES_PASSWORD: dpp_ci_local_only
+    environment:
+      DPP_ISOLATED_POSTGRES: "true"
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: dpp_ci
+      PGPASSWORD: dpp_ci_local_only
+      PGDATABASE: dpp_ci
     steps:
       - bounded-check:
           task: test-other
