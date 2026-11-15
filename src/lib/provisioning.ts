@@ -257,7 +257,8 @@ export async function provisionPurchase(
   // Dual-path: workers/stripe-webhook stacks the same pack formula then stamps
   // last_grant_session_id and writes grant:{sessionId} on founder_exit_side_effects.
   // last_grant_session_id is only the latest stamp; the receipt is what stops an
-  // older session from being added again after a newer purchase. Skipping is success.
+  // older session from being added again after a newer purchase (CFA-869 F869-1).
+  // Skipping is success.
   //
   // Lost-update guard (CFA-346, no migration): the write is conditional on the
   // generations_limit / generations_used / last_grant_session_id values read.

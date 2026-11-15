@@ -654,6 +654,30 @@ describe("provisionPurchase", () => {
     }
     const base = { brand: "qron" as const, email: "buyer@example.com" };
 
+    it("grant A, grant B, replay A does not add A again (CFA-869 F869-1)", async () => {
+      const { supabase, state } = statefulDb({
+        generations_limit: 0,
+        generations_used: 0,
+        last_grant_session_id: null,
+      });
+      const grant = (sessionId: string) =>
+        provisionPurchase(supabase, {
+          ...base,
+          userId: "prof_1",
+          plan: "starter",
+          sessionId,
+        });
+      expect((await grant("cs_a")).status).toBe("provisioned");
+      expect((await grant("cs_b")).status).toBe("provisioned");
+      expect(state.row.generations_limit).toBe(200);
+      expect(state.row.last_grant_session_id).toBe("cs_b");
+      const writes = state.writes;
+      const replay = await grant("cs_a");
+      expect(replay.skippedIdempotent).toBe(true);
+      expect(state.writes).toBe(writes);
+      expect(state.row.generations_limit).toBe(200);
+    });
+
     it("credits two concurrent grants exactly once each (60 + 100 + 500 = 660)", async () => {
       const { supabase, state } = statefulDb({
         generations_limit: 100,

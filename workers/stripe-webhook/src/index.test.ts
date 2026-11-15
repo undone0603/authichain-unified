@@ -167,6 +167,86 @@ function patches(calls: Array<{ method: string; body?: unknown }>) {
   return calls.filter(c => c.method === "PATCH").map(c => c.body);
 }
 
+/** Mutable profile + receipts so A → B → replay A can share one store. */
+function installStatefulFetch(profile: {
+  last_grant_session_id: string | null;
+  generations_limit: number;
+  generations_used: number;
+}) {
+  const calls: Array<{
+    method: string;
+    url: string;
+    body?: unknown;
+    prefer?: string | null;
+  }> = [];
+  const receipts = new Set<string>();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      const headers = new Headers(init?.headers);
+      const prefer = headers.get("Prefer");
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      calls.push({ method, url, body, prefer });
+      if (url.includes("founder_exit_side_effects")) {
+        if (method === "GET") {
+          const hit = [...receipts].find(
+            id =>
+              url.includes(encodeURIComponent(`grant:${id}`)) ||
+              url.includes(`grant:${id}`)
+          );
+          return new Response(
+            JSON.stringify(hit ? [{ idempotency_key: `grant:${hit}` }] : []),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        if (method === "POST" && body && typeof body === "object") {
+          const key = String(
+            (body as { idempotency_key?: string }).idempotency_key ?? ""
+          );
+          if (key.startsWith("grant:"))
+            receipts.add(key.slice("grant:".length));
+        }
+        return new Response("[]", { status: 201 });
+      }
+      if (method === "GET" && url.includes("/profiles")) {
+        return new Response(
+          JSON.stringify([
+            {
+              last_grant_session_id: profile.last_grant_session_id,
+              generations_limit: profile.generations_limit,
+              generations_used: profile.generations_used,
+            },
+          ]),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      if (method === "PATCH" && url.includes("/profiles") && body) {
+        const patch = body as {
+          last_grant_session_id?: string;
+          generations_limit?: number;
+          generations_used?: number;
+        };
+        if (typeof patch.last_grant_session_id === "string") {
+          profile.last_grant_session_id = patch.last_grant_session_id;
+        }
+        if (typeof patch.generations_limit === "number") {
+          profile.generations_limit = patch.generations_limit;
+        }
+        if (typeof patch.generations_used === "number") {
+          profile.generations_used = patch.generations_used;
+        }
+        return new Response(JSON.stringify([{ id: "prof_1" }]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response("{}", { status: 200 });
+    })
+  );
+  return { calls, receipts, profile };
+}
+
 describe("stripe-webhook checkout grant", () => {
   beforeEach(() => {
     state.event = null;
@@ -439,6 +519,29 @@ describe("stripe-webhook checkout grant", () => {
         c => c.method === "GET" && c.url.includes("founder_exit_side_effects")
       )
     ).toBe(true);
+  });
+
+  it("grant A, grant B, replay A does not add A again (CFA-869 F869-1)", async () => {
+    const db = installStatefulFetch({
+      last_grant_session_id: null,
+      generations_limit: 0,
+      generations_used: 0,
+    });
+    state.event = sessionEvent({ price: STARTER, id: "cs_a" });
+    expect((await worker.fetch(signedPost(), env)).status).toBe(200);
+    expect(db.profile.generations_limit).toBe(100);
+    expect(db.receipts.has("cs_a")).toBe(true);
+
+    state.event = sessionEvent({ price: STARTER, id: "cs_b" });
+    expect((await worker.fetch(signedPost(), env)).status).toBe(200);
+    expect(db.profile.generations_limit).toBe(200);
+    expect(db.profile.last_grant_session_id).toBe("cs_b");
+    const writes = patches(db.calls).length;
+
+    state.event = sessionEvent({ price: STARTER, id: "cs_a" });
+    expect((await worker.fetch(signedPost(), env)).status).toBe(200);
+    expect(db.profile.generations_limit).toBe(200);
+    expect(patches(db.calls)).toHaveLength(writes);
   });
 
   it("adds a second Starter pack on top of unused credits", async () => {

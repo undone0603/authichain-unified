@@ -164,7 +164,7 @@ export function alreadyGrantedSession(
 }
 
 /**
- * Same checkout session must not add credits again.
+ * Same checkout session must not add credits again (CFA-869 F869-1).
  * last_grant_session_id is only the latest stamp; a receipt survives later purchases.
  * A failed lookup is a retry, not a fresh grant.
  */
