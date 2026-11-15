@@ -704,8 +704,10 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         name: "RetryableFulfillmentError",
       });
       expect(provisionPurchase).not.toHaveBeenCalled();
+      // With no Supabase configuration the delivery logger receives a null
+      // client. The handler still fails closed; no delivery row can persist.
       expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
-        expect.anything(),
+        null,
         expect.objectContaining({ status: "error", httpStatus: 500 })
       );
     } finally {
