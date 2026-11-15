@@ -380,6 +380,9 @@ export default {
               })
             );
           } else if (grant?.plan === "starter" || grant?.plan === "creator") {
+            if (session.payment_status !== "paid") {
+              return grantRetry("paid pack session evidence missing");
+            }
             // No profile PATCH or separate receipt INSERT: the shared Postgres
             // RPC serializes both webhook deliveries in one transaction.
             const profile = await supabaseSelectOne(
