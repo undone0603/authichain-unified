@@ -69,6 +69,7 @@ function installFetch(opts?: {
   receipts?: string[];
   upsertOk?: boolean;
   rpcStatus?: number;
+  rpcProfileOverride?: string;
 }) {
   const calls: Array<{
     method: string;
@@ -123,7 +124,7 @@ function installFetch(opts?: {
         return new Response(
           JSON.stringify({
             status: result.status,
-            profile_id: result.profileId,
+            profile_id: opts?.rpcProfileOverride ?? result.profileId,
             generations_limit: calls.profile.generations_limit,
             generations_used: calls.profile.generations_used,
             last_grant_session_id: calls.profile.last_grant_session_id,
@@ -178,6 +179,20 @@ describe("stripe-webhook checkout grant", () => {
     state.event = null;
     state.verifyError = null;
     vi.unstubAllGlobals();
+  });
+
+  it("rejects atomic RPC replay evidence for another profile", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_wrong_profile" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      receipts: ["cs_wrong_profile"],
+      rpcProfileOverride: "prof_other",
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(grantRpcs(calls)).toHaveLength(1);
+    expect(calls.profile.generations_limit).toBe(100);
   });
 
   it("rejects a missing signature", async () => {
