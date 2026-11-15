@@ -37,6 +37,7 @@ jobs:
           git reset --hard HEAD
           test -f package.json
       - name: Create venv and install test dependencies
+        timeout-minutes: 15
         run: |
           python3 -m venv .venv
           .venv/bin/pip install --disable-pip-version-check 'mcp>=1,<2' pytest
