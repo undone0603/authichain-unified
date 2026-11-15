@@ -24,3 +24,35 @@ test('unexpected query rejected', () => { const c=card(); c.supportedInterfaces[
 test('no interface rejected', () => { const c=card(); c.supportedInterfaces=[]; assert.ok(auditAgentCard(c).failures.includes('NO_INTERFACE')); });
 test('missing name rejected', () => { const c=card(); c.name=''; assert.ok(auditAgentCard(c).failures.includes('NAME_MISSING')); });
 test('invalid capabilities rejected', () => { const c=card(); c.capabilities=[]; assert.ok(auditAgentCard(c).failures.includes('CAPABILITIES_INVALID')); });
+test('unsafe top-level URL rejected even when supportedInterfaces contains a valid target', () => {
+  for (const bad of ['http://authichain.com/api/a2a', 'https://user:secret@authichain.com/api/a2a',
+    'https://other.example/api/a2a', 'https://authichain.com/api/a2a?token=secret', null]) {
+    const c = card(); c.url = bad;
+    const got = auditAgentCard(c);
+    assert.equal(got.status, 'REJECTED');
+    assert.ok(got.failures.includes('UNEXPECTED_TARGET'));
+  }
+});
+test('top-level URL and protocol version cannot replace required supportedInterfaces', () => {
+  const c = card(); c.supportedInterfaces = [];
+  c.url = 'https://authichain.com/api/a2a'; c.protocolVersion = '1.0';
+  const got = auditAgentCard(c);
+  assert.equal(got.status, 'REJECTED');
+  assert.ok(got.failures.includes('NO_INTERFACE'));
+  assert.ok(got.failures.includes('NO_EXPECTED_JSONRPC_V1_INTERFACE'));
+});
+test('malformed extra interface rejected even if a valid JSONRPC interface exists', () => {
+  for (const bad of [null, [], 'invalid', { protocolBinding: 'JSONRPC', protocolVersion: '1.0' }]) {
+    const c = card(); c.supportedInterfaces.push(bad);
+    const got = auditAgentCard(c);
+    assert.equal(got.status, 'REJECTED');
+    assert.ok(got.failures.includes('UNEXPECTED_TARGET'));
+  }
+});
+test('safe optional top-level URL with valid supportedInterfaces stays descriptor-only', () => {
+  const c = card(); c.url = 'https://authichain.com/api/a2a';
+  const got = auditAgentCard(c);
+  assert.equal(got.status, 'DESCRIPTOR_REVIEW_REQUIRED');
+  assert.equal(got.a2aTaskAccepted, false);
+  assert.equal(got.externalIntegrationCounted, false);
+});
