@@ -385,11 +385,7 @@ export async function provisionPurchase(
     }
     const result = data as { profile_id?: unknown; status?: unknown } | null;
     if (result?.status === "already_granted") {
-      if (
-        result.profile_id != null &&
-        result.profile_id !== profileId &&
-        String(result.profile_id) !== profileId
-      ) {
+      if (result.profile_id == null || String(result.profile_id) !== profileId) {
         return {
           profileId,
           created,
