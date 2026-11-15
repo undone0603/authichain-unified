@@ -103,12 +103,38 @@ jobs:
       - name: Check autonomy manifest, reconciler, breaker and pulse
         run: pnpm exec vitest run scripts/__tests__/autonomy.test.ts
 
+      # Owner HOLD on #2555: the two-connection suite must not skip.
+      # Self-hosted WSL has no passwordless sudo, so this is user-space
+      # only. CircleCI is left unchanged to preserve credit reserve.
+      - name: Install local PostgreSQL binaries
+        run: bash scripts/ci/install-local-postgres.sh
+
+      - name: Catalog grant two-connection PostgreSQL
+        env:
+          CATALOG_GRANT_PG_REQUIRED: "1"
+        run: |
+          set -euo pipefail
+          test -n "${PG_BINDIR:-}"
+          test -x "$PG_BINDIR/initdb"
+          test -x "$PG_BINDIR/postgres"
+          echo "git_head=$(git rev-parse HEAD)"
+          echo "migration_sha256=$(sha256sum supabase/migrations/20261115180000_atomic_catalog_session_grants.sql)"
+          echo "pg_bindir=$PG_BINDIR"
+          echo "pg_version=$("$PG_BINDIR/postgres" --version)"
+          pnpm exec vitest run src/lib/catalog-session-grant.concurrency.pg.test.ts --reporter=verbose
+
       # The root package's suites (src, server, worker-app, packages, scripts,
       # client, workers) are outside `turbo test --filter=!.`, so no other job
       # runs them. node:test files are excluded by vitest.config.ts and run on
       # their workspace runners, or in the next step when they have none.
       - name: Root Vitest suite
-        run: pnpm exec vitest run
+        env:
+          CATALOG_GRANT_PG_REQUIRED: "1"
+        run: |
+          set -euo pipefail
+          test -n "${PG_BINDIR:-}"
+          test -x "$PG_BINDIR/initdb"
+          pnpm exec vitest run
 
       # node:test files that no workspace `test` script runs. Named, not
       # globbed, past scripts/ci: scripts/lib and worker-app also hold Vitest

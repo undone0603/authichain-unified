@@ -1,14 +1,11 @@
 import Stripe from "stripe";
 import {
-  GRANT_CAS_COLUMNS,
-  GRANT_CAS_RETRIES,
+  CATALOG_GRANT_RPC,
   grantForCheckout,
   grantForPrice,
-  grantReplayAction,
   grantStacksOnRepeat,
   isFounderEmail,
   loopForPlan,
-  stackedPackCredits,
 } from "./grant-map";
 
 export interface Env {
@@ -54,7 +51,7 @@ async function supabaseSelectOne(
   const params = Object.entries(match)
     .map(([k, v]) => `${k}=eq.${encodeURIComponent(v)}`)
     .join("&");
-  const url = `${env.SUPABASE_URL}/rest/v1/${table}?${params}&select=${encodeURIComponent(columns)}&limit=1`;
+  const url = `${env.SUPABASE_URL}/rest/v1/${table}?${params}&select=${encodeURIComponent(columns)}&limit=2`;
   try {
     const res = await fetch(url, {
       headers: {
@@ -68,6 +65,7 @@ async function supabaseSelectOne(
     if (rows.length === 0 || typeof rows[0] !== "object" || rows[0] === null) {
       return { ok: true, row: null };
     }
+    if (rows.length !== 1) return { ok: false };
     return { ok: true, row: rows[0] as Record<string, unknown> };
   } catch {
     return { ok: false };
@@ -79,12 +77,6 @@ function grantRetry(error: string): Response {
     status: 500,
     headers: { "Content-Type": "application/json" },
   });
-}
-
-function postgrestFilter(value: unknown): string {
-  if (value === null || value === undefined) return "is.null";
-  if (typeof value === "number" && Number.isFinite(value)) return `eq.${value}`;
-  return `eq.${encodeURIComponent(String(value))}`;
 }
 
 async function supabaseUpdate(
@@ -113,51 +105,62 @@ async function supabaseUpdate(
   }
 }
 
-/**
- * Conditional PATCH. Fail closed unless PostgREST returns the matched rows:
- * an empty array is a CAS miss (retry), a non-array body is treated as failure.
- */
-async function supabaseUpdateIf(
+async function supabaseRpc(
   env: Env,
-  table: string,
-  match: Record<string, unknown>,
-  data: Record<string, unknown>
-): Promise<{ ok: true; matched: number } | { ok: false }> {
-  const params = Object.entries(match)
-    .map(([k, v]) => `${k}=${postgrestFilter(v)}`)
-    .join("&");
-  const url = `${env.SUPABASE_URL}/rest/v1/${table}?${params}`;
+  fn: string,
+  args: Record<string, unknown>
+): Promise<
+  | { ok: true; status: "granted" | "already_granted" }
+  | { ok: false; error: string }
+> {
+  const url = `${env.SUPABASE_URL}/rest/v1/rpc/${fn}`;
   try {
     const res = await fetch(url, {
-      method: "PATCH",
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         apikey: env.SUPABASE_SERVICE_ROLE_KEY,
         Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        Prefer: "return=representation",
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(args),
     });
-    if (!res.ok) return { ok: false };
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(await res.text());
-    } catch {
-      return { ok: false };
+    const text = await res.text();
+    if (!res.ok) {
+      if (
+        res.status === 404 ||
+        /PGRST202|does not exist|could not find the function/i.test(text)
+      ) {
+        return { ok: false, error: "catalog grant RPC unavailable" };
+      }
+      if (/catalog_grant_receipt_conflict/i.test(text)) {
+        return { ok: false, error: "catalog_grant_receipt_conflict" };
+      }
+      return { ok: false, error: "grant write failed" };
     }
-    if (!Array.isArray(parsed)) return { ok: false };
-    return { ok: true, matched: parsed.length };
+    let data: { status?: unknown; profile_id?: unknown };
+    try {
+      data = JSON.parse(text) as {
+        status?: unknown;
+        profile_id?: unknown;
+      };
+    } catch {
+      return { ok: false, error: "grant write failed" };
+    }
+    if (data?.status === "granted" || data?.status === "already_granted") {
+      // Do not acknowledge an existing session receipt for another buyer,
+      // including unmapped (null) historical receipts.
+      if (
+        data.profile_id == null ||
+        String(data.profile_id) !== String(args.p_profile_id)
+      ) {
+        return { ok: false, error: "catalog_grant_receipt_conflict" };
+      }
+      return { ok: true, status: data.status };
+    }
+    return { ok: false, error: "grant write failed" };
   } catch {
-    return { ok: false };
+    return { ok: false, error: "grant write failed" };
   }
-}
-
-function sessionIdFromRow(
-  row: Record<string, unknown> | null | undefined
-): string | null {
-  return typeof row?.last_grant_session_id === "string"
-    ? row.last_grant_session_id
-    : null;
 }
 
 async function sha256Hex(value: string): Promise<string> {
@@ -354,88 +357,31 @@ export default {
               })
             );
           } else if (grant) {
-            const stackPack = grantStacksOnRepeat(grant);
-            let wroteGrant = false;
-            let skippedIdempotent = false;
-            for (let attempt = 0; attempt <= GRANT_CAS_RETRIES; attempt++) {
-              const existing = await supabaseSelectOne(
-                env,
-                "profiles",
-                { email },
-                "last_grant_session_id,generations_limit,generations_used"
-              );
-              if (!existing.ok) return grantRetry("grant lookup failed");
-              const action = grantReplayAction(
-                { ok: true, sessionId: sessionIdFromRow(existing.row) },
-                session.id
-              );
-              if (action === "retry") return grantRetry("grant lookup failed");
-              if (action === "skip") {
-                skippedIdempotent = true;
-                break;
-              }
-              const credits = stackPack
-                ? stackedPackCredits(existing.row, grant.generations)
-                : {
-                    generations_limit: grant.generations,
-                    generations_used: 0,
-                  };
-              const patch = {
-                plan: grant.plan,
-                generations_limit: credits.generations_limit,
-                generations_used: credits.generations_used,
-                last_grant_session_id: session.id,
-                updated_at: new Date().toISOString(),
-              };
-              const logGrant = () =>
-                console.log(
-                  JSON.stringify({
-                    evt: stackPack ? "stripe_grant_stack" : "stripe_grant_set",
-                    plan: grant.plan,
-                    generations_limit: credits.generations_limit,
-                    generations_used: credits.generations_used,
-                    refill: grant.refillOnInvoicePaid,
-                    attempt,
-                  })
-                );
-              if (!stackPack) {
-                const wrote = await supabaseUpdate(
-                  env,
-                  "profiles",
-                  { email },
-                  patch
-                );
-                if (!wrote) return grantRetry("grant write failed");
-                wroteGrant = true;
-                logGrant();
-                break;
-              }
-              const casMatch: Record<string, unknown> = { email };
-              for (const col of GRANT_CAS_COLUMNS) {
-                casMatch[col] = existing.row?.[col] ?? null;
-              }
-              const wrote = await supabaseUpdateIf(
-                env,
-                "profiles",
-                casMatch,
-                patch
-              );
-              if (!wrote.ok) return grantRetry("grant write failed");
-              if (wrote.matched > 0) {
-                wroteGrant = true;
-                logGrant();
-                break;
-              }
-              console.warn(
-                JSON.stringify({
-                  evt: "stripe_grant_cas_conflict",
-                  session: session.id,
-                  plan: grant.plan,
-                  attempt,
-                })
-              );
+            const existing = await supabaseSelectOne(
+              env,
+              "profiles",
+              { email },
+              "id"
+            );
+            if (!existing.ok) return grantRetry("grant lookup failed");
+            const profileId =
+              typeof existing.row?.id === "string" ? existing.row.id : null;
+            if (!profileId) {
+              return grantRetry("grant lookup failed");
             }
-            if (skippedIdempotent) {
+            const recorded = await supabaseRpc(env, CATALOG_GRANT_RPC, {
+              p_profile_id: profileId,
+              p_session_id: session.id,
+              p_plan: grant.plan,
+              p_brand: grant.brand,
+              p_generations: grant.generations,
+              p_stack: grantStacksOnRepeat(grant),
+              p_stripe_customer_id: customerId,
+              p_stripe_subscription_id: subscriptionId,
+              p_is_trial: false,
+            });
+            if (!recorded.ok) return grantRetry(recorded.error);
+            if (recorded.status === "already_granted") {
               console.log(
                 JSON.stringify({
                   evt: "stripe_grant_skipped_idempotent",
@@ -443,20 +389,28 @@ export default {
                   plan: grant.plan,
                 })
               );
-            } else if (!wroteGrant) {
-              return grantRetry("concurrent profile update; retry");
-            } else if (grant.plan === "qron_launch_annual") {
+            } else {
+              const stackPack = grantStacksOnRepeat(grant);
               console.log(
                 JSON.stringify({
-                  evt: "checkout_paid_qron_annual",
-                  plan_id: "qron_launch_annual",
-                  session_id: session.id,
-                  amount_usd: 190,
-                  generations: grant.generations,
-                  brand: grant.brand,
-                  ts: Date.now(),
+                  evt: stackPack ? "stripe_grant_stack" : "stripe_grant_set",
+                  plan: grant.plan,
+                  refill: grant.refillOnInvoicePaid,
                 })
               );
+              if (grant.plan === "qron_launch_annual") {
+                console.log(
+                  JSON.stringify({
+                    evt: "checkout_paid_qron_annual",
+                    plan_id: "qron_launch_annual",
+                    session_id: session.id,
+                    amount_usd: 190,
+                    generations: grant.generations,
+                    brand: grant.brand,
+                    ts: Date.now(),
+                  })
+                );
+              }
             }
           }
         }

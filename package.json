@@ -151,6 +151,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261008.1",
+    "@electric-sql/pglite": "^0.5.16",
     "@nomicfoundation/hardhat-ethers": "^4.2.1",
     "@nomicfoundation/hardhat-node-test-runner": "^3.1.2",
     "@opennextjs/cloudflare": "^1.20.13",
