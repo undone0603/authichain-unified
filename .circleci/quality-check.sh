@@ -47,13 +47,13 @@ case "$task" in
     node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs
     ;;
   test-other)
+    # Fast, credential-free transactional acceptance before heavier browser tests.
+    node --test scripts/ci/atomic-stripe-pack-postgres.test.mjs
     pnpm --filter agent-browser exec playwright install --with-deps chromium
     pnpm test --filter='!./workers/*' --continue=dependencies-successful
     # The root Vitest suites are excluded from turbo test --filter='!.'.
     # GitHub's hosted lint job also runs them; do not silently skip here.
     pnpm exec vitest run
-    # Disposable Postgres 16; fails closed unless the dedicated test target is proven.
-    node --test scripts/ci/atomic-stripe-pack-postgres.test.mjs
     ;;
   build) pnpm build ;;
   extras)
