@@ -72,14 +72,14 @@ The Python snippet is metadata only. The Node script makes the actual free MCP c
 
 ## Independent reproduction
 
-An unaffiliated developer can submit a voluntary, redacted report to
-https://github.com/undone0603/authichain-unified/issues/2486 with UTC time,
-client/runtime, endpoint, protocol, method, status, safe tool name,
-redacted response, exact code SHA and check outcome. Do not disclose secrets,
-customer records, private serials, wallet data, or payment headers.
+Use the [opt-in evidence-submission guide](./INDEPENDENT_REPRODUCTION.md) and
+[GitHub independent-MCP issue form](https://github.com/undone0603/authichain-unified/issues/new?template=independent-mcp-reproduction.yml).
+The offline preflight validates the free result's SHA-256, operator consent declaration,
+pinned client SHA and paid-call boundary; it **never automatically counts adoption**.
+A separate reviewer must verify operator independence and redacted transport evidence.
 
-Count independent integration **only** after permissioned, reproducible,
-unaffiliated successful use; exclude house traffic, owner CI, and page views.
+Do not disclose secrets, customer records, private serials, wallet data,
+or payment headers. Exclude house traffic, owner CI, and page views.
 
 The script pins the free endpoint and demo identifier, rejects newly
 exposed paid/unknown tools, missing read-only hints, unexpected server
