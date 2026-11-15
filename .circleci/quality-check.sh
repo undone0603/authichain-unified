@@ -33,6 +33,8 @@ case "$task" in
     node --test scripts/growth/x402-authenticated.test.mjs scripts/growth/x402-base-receipt.test.mjs scripts/growth/x402-reconcile.test.mjs
     # Independent negative-case tests for the human-free production release policy.
     node --test scripts/ci/autonomous-release-gate.test.mjs
+    # Bounded synthetic peer negative fixture: no network, keys, or payments.
+    node --test scripts/alliances/peer-subject-binding-fixture.test.mjs
     ;;
   typecheck-ratchet) node scripts/typecheck-ratchet.mjs ;;
   test-workers)
