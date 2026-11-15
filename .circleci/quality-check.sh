@@ -48,7 +48,7 @@ case "$task" in
     ;;
   test-other)
     # Fast, credential-free transactional acceptance before heavier browser tests.
-    node --test scripts/ci/atomic-stripe-pack-postgres.test.mjs
+    node --test scripts/ci/atomic-stripe-pack-postgres.acceptance.mjs
     pnpm --filter agent-browser exec playwright install --with-deps chromium
     pnpm test --filter='!./workers/*' --continue=dependencies-successful
     # The root Vitest suites are excluded from turbo test --filter='!.'.
