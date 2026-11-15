@@ -383,6 +383,15 @@ export async function POST(req: NextRequest) {
             reasons: fallbackRefusals,
           });
         }
+        // Paid Starter/Creator packs require affirmative Stripe settlement.
+        // Never credit missing-status or no_payment_required completions.
+        // Keep trials and other subscription products on their existing rails.
+        if (
+          (resolvedPlan === "starter" || resolvedPlan === "creator") &&
+          session.payment_status !== "paid"
+        ) {
+          throw new Error("Paid pack checkout requires payment_status=paid");
+        }
         const prov = await provisionPurchase(getSupabase(), {
           email,
           userId,
