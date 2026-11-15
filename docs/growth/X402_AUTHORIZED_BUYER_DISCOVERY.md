@@ -4,7 +4,7 @@ This is a **read-only, consent-first integration example** for the AgentZ ranked
 
 ## Human or agent workflow
 
-1. **Discover without credentials:** visit [the public offer](https://signal.authichain.com/offer) and inspect the linked discovery resource `https://signal.authichain.com/api/x402/discovery` using an ordinary GET without a wallet, payment signature, or private keys. HTTP 402 is an expected payment-required challenge; HTTP 200 on the offer page is not evidence of a purchase. Do not assume that historical quoted pricing, network, asset, recipient, or settlement method remains current.
+1. **Discover without credentials:** visit [the public offer](https://signal.authichain.com/offer) and inspect the linked discovery resource `https://signal.authichain.com/api/x402/signal` using an ordinary GET without a wallet, payment signature, or private keys. The older `/api/x402/discovery` route is deprecated (previously observed HTTP 410); do not advertise it as the active SKU. HTTP 402 is an expected payment-required challenge when the current endpoint is healthy; HTTP 200 on the offer page is not evidence of a purchase. Do not assume that historical quoted pricing, network, asset, recipient, or settlement method remains current.
 2. **Review the live challenge:** inspect the actual response's network, token contract, base-unit amount, resource URL, supported x402 version, expiry, and payment facilitator. Treat missing, ambiguous, inconsistent, or changed fields as a stop condition. Do not derive wallet-transfer instructions from this guide.
 3. **Request explicit authorization:** show the payer the exact live price and currency, resource being purchased, recipient/facilitator details, network fees if any, refund limitations, and the possibility of irreversible blockchain settlement. Obtain affirmative authorization for this **specific** transaction before invoking any signer or wallet. No background purchases, autonomous retry spending, or inferred consent from visiting a URL.
 4. **After an authorized transaction:** retain a redacted receipt with transaction hash, chain/network, token and amount, payer classification (external versus house/test), timestamp, resource request identifier, facilitator result, HTTP resource-delivery result, and any refund/dispute. Do not expose wallet secrets, personal data, private API output, or customer identities publicly.
@@ -14,10 +14,10 @@ This is a **read-only, consent-first integration example** for the AgentZ ranked
 
 ```sh
 curl -i --max-time 15 https://signal.authichain.com/offer
-curl -i --max-time 15 https://signal.authichain.com/api/x402/discovery
+curl -i --max-time 15 https://signal.authichain.com/api/x402/signal
 ```
 
-These commands do not provide payment credentials or initiate a transfer. They may return errors or changed challenge metadata. Do not copy a live `PAYMENT-SIGNATURE`, authorization token, private key, or raw payer data into an issue or log.
+As of November 15, 2026, the Signal origin has previously returned HTTP 502; these commands are diagnostics, not an availability guarantee. Do not infer the live price or claim a Bazaar listing until a fresh successful response is recorded. These commands do not provide payment credentials or initiate a transfer. They may return errors or changed challenge metadata. Do not copy a live `PAYMENT-SIGNATURE`, authorization token, private key, or raw payer data into an issue or log.
 
 ## Marketplace and adoption evidence
 
