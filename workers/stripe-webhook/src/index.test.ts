@@ -328,66 +328,27 @@ describe("stripe-webhook checkout grant", () => {
   it("writes one starter grant and skips the replay", async () => {
     state.event = sessionEvent({ price: STARTER, id: "cs_new" });
     const first = installFetch({ prior: null });
-    const created = await worker.fetch(
-      new Request("https://worker.test/stripe", {
-        method: "POST",
-        body: "{}",
-        headers: { "stripe-signature": "t=1,v1=ok" },
-      }),
-      env
-    );
-    expect(created.status).toBe(200);
-    expect(patches(first)).toEqual([
-      expect.objectContaining({
-        plan: "starter",
-        generations_limit: 100,
-        generations_used: 0,
-        last_grant_session_id: "cs_new",
-      }),
+    expect((await worker.fetch(signedPost(), env)).status).toBe(200);
+    expect(patches(first)).toEqual([]);
+    expect(first.filter(c => c.url.includes("/rpc/grant_stripe_pack_session"))).toEqual([
+      expect.objectContaining({ method: "POST", body: expect.objectContaining({
+        p_profile_id: "prof_1", p_session_id: "cs_new", p_plan: "starter",
+      }) }),
     ]);
-    expect(first.find(c => c.method === "PATCH")?.prefer).toMatch(
-      /return=representation/
-    );
-    expect(
-      first.some(
-        c =>
-          c.method === "POST" &&
-          c.url.includes("founder_exit_side_effects") &&
-          (c.body as { idempotency_key?: string })?.idempotency_key ===
-            "grant:cs_new"
-      )
-    ).toBe(true);
-
     state.event = sessionEvent({ price: STARTER, id: "cs_new" });
     const second = installFetch({ prior: "cs_new" });
-    const replay = await worker.fetch(
-      new Request("https://worker.test/stripe", {
-        method: "POST",
-        body: "{}",
-        headers: { "stripe-signature": "t=1,v1=ok" },
-      }),
-      env
-    );
-    expect(replay.status).toBe(200);
+    expect((await worker.fetch(signedPost(), env)).status).toBe(200);
     expect(patches(second)).toEqual([]);
+    expect(second.some(c => c.url.includes("/rpc/grant_stripe_pack_session"))).toBe(true);
   });
-
   it("answers 500 when the prior-session lookup fails", async () => {
     state.event = sessionEvent({ price: STARTER });
     const calls = installFetch({ selectStatus: 500 });
-    const res = await worker.fetch(
-      new Request("https://worker.test/stripe", {
-        method: "POST",
-        body: "{}",
-        headers: { "stripe-signature": "t=1,v1=ok" },
-      }),
-      env
-    );
+    const res = await worker.fetch(signedPost(), env);
     expect(res.status).toBe(500);
     expect(patches(calls)).toEqual([]);
-    expect(await res.json()).toEqual({ error: "grant lookup failed" });
+    expect(await res.json()).toEqual({ error: "atomic pack profile lookup failed" });
   });
-
   it("DPP release retries until the canonical 50-credit grant is persisted", async () => {
     state.event = sessionEvent({ price: DPP, id: "cs_dpp" });
     const calls = installFetch({ prior: null });
@@ -536,99 +497,53 @@ describe("stripe-webhook checkout grant", () => {
 
   it("does not add again when an older session is replayed after a newer purchase", async () => {
     state.event = sessionEvent({ price: STARTER, id: "cs_old" });
-    const calls = installFetch({
-      prior: "cs_new",
-      grantLimit: 200,
-      grantUsed: 0,
-      receipts: ["cs_old"],
-    });
+    const calls = installFetch({ prior: "cs_new", receipts: ["cs_old"] });
     const res = await worker.fetch(signedPost(), env);
     expect(res.status).toBe(200);
     expect(patches(calls)).toEqual([]);
-    expect(
-      calls.some(
-        c => c.method === "GET" && c.url.includes("founder_exit_side_effects")
-      )
-    ).toBe(true);
+    expect(calls.some(c => c.url.includes("/rpc/grant_stripe_pack_session"))).toBe(true);
   });
-
   it("grant A, grant B, replay A does not add A again (CFA-869 F869-1)", async () => {
     const db = installStatefulFetch({
-      last_grant_session_id: null,
-      generations_limit: 0,
-      generations_used: 0,
+      last_grant_session_id: null, generations_limit: 0, generations_used: 0,
     });
     state.event = sessionEvent({ price: STARTER, id: "cs_a" });
     expect((await worker.fetch(signedPost(), env)).status).toBe(200);
     expect(db.profile.generations_limit).toBe(100);
-    expect(db.receipts.has("cs_a")).toBe(true);
-
     state.event = sessionEvent({ price: STARTER, id: "cs_b" });
     expect((await worker.fetch(signedPost(), env)).status).toBe(200);
     expect(db.profile.generations_limit).toBe(200);
-    expect(db.profile.last_grant_session_id).toBe("cs_b");
-    const writes = patches(db.calls).length;
-
     state.event = sessionEvent({ price: STARTER, id: "cs_a" });
     expect((await worker.fetch(signedPost(), env)).status).toBe(200);
     expect(db.profile.generations_limit).toBe(200);
-    expect(patches(db.calls)).toHaveLength(writes);
+    expect(db.receipts.size).toBe(2);
+    expect(db.calls.filter(c => c.method === "PATCH")).toEqual([]);
   });
-
   it("adds a second Starter pack on top of unused credits", async () => {
     state.event = sessionEvent({ price: STARTER, id: "cs_repeat" });
-    const calls = installFetch({
-      prior: "cs_old",
-      grantLimit: 100,
-      grantUsed: 40,
-    });
-    const res = await worker.fetch(signedPost(), env);
-    expect(res.status).toBe(200);
-    expect(patches(calls)).toEqual([
-      expect.objectContaining({
-        plan: "starter",
-        generations_limit: 160,
-        generations_used: 0,
-        last_grant_session_id: "cs_repeat",
-      }),
-    ]);
-    const patch = calls.find(c => c.method === "PATCH");
-    expect(patch?.url).toMatch(/generations_limit=eq\.100/);
-    expect(patch?.url).toMatch(/generations_used=eq\.40/);
-    expect(patch?.url).toMatch(/last_grant_session_id=eq\.cs_old/);
+    const calls = installFetch({ prior: "cs_old", grantLimit: 100, grantUsed: 40 });
+    expect((await worker.fetch(signedPost(), env)).status).toBe(200);
+    expect(patches(calls)).toEqual([]);
+    expect(calls.some(c => c.url.includes("/rpc/grant_stripe_pack_session") &&
+      (c.body as { p_session_id?: string }).p_session_id === "cs_repeat")).toBe(true);
   });
-
   it("does not double-grant when the same Starter event is replayed", async () => {
     state.event = sessionEvent({ price: STARTER, id: "cs_repeat" });
-    const calls = installFetch({
-      prior: "cs_repeat",
-      grantLimit: 160,
-      grantUsed: 0,
-    });
-    const res = await worker.fetch(signedPost(), env);
-    expect(res.status).toBe(200);
+    const calls = installFetch({ prior: "cs_repeat", grantLimit: 160 });
+    expect((await worker.fetch(signedPost(), env)).status).toBe(200);
     expect(patches(calls)).toEqual([]);
+    expect(calls.some(c => c.url.includes("/rpc/grant_stripe_pack_session"))).toBe(true);
   });
-
   it("adds a Creator pack on leftover Starter credits", async () => {
-    state.event = sessionEvent({ price: CREATOR, id: "cs_creator" });
-    const calls = installFetch({
-      prior: "cs_starter",
-      grantLimit: 100,
-      grantUsed: 40,
+    const db = installStatefulFetch({
+      last_grant_session_id: "cs_starter", generations_limit: 100, generations_used: 40,
     });
-    const res = await worker.fetch(signedPost(), env);
-    expect(res.status).toBe(200);
-    expect(patches(calls)).toEqual([
-      expect.objectContaining({
-        plan: "creator",
-        generations_limit: 560,
-        generations_used: 0,
-        last_grant_session_id: "cs_creator",
-      }),
-    ]);
+    state.event = sessionEvent({ price: CREATOR, id: "cs_creator" });
+    expect((await worker.fetch(signedPost(), env)).status).toBe(200);
+    expect(db.profile.generations_limit).toBe(560);
+    expect(db.profile.generations_used).toBe(0);
+    expect(db.calls.filter(c => c.method === "PATCH")).toEqual([]);
   });
-
   it("still sets a Launch Annual period grant instead of stacking", async () => {
     state.event = sessionEvent({ price: LAUNCH_ANNUAL, id: "cs_annual" });
     const calls = installFetch({
@@ -650,74 +565,21 @@ describe("stripe-webhook checkout grant", () => {
   });
 
   it("retries a pack grant when the conditional write matches no row", async () => {
-    state.event = sessionEvent({ price: STARTER, id: "cs_cas" });
-    const calls = installFetch({
-      prior: "cs_old",
-      grantLimit: 100,
-      grantUsed: 40,
-      updateRows: [],
-    });
+    state.event = sessionEvent({ price: STARTER, id: "cs_rpc_fail" });
+    const calls = installFetch({ prior: "cs_old", rpcStatus: 500 });
     const res = await worker.fetch(signedPost(), env);
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({
-      error: "concurrent profile update; retry",
-    });
-    expect(patches(calls)).toHaveLength(4);
+    expect(await res.json()).toEqual({ error: "atomic pack RPC failed" });
+    expect(patches(calls)).toEqual([]);
   });
-
   it("skips after a CAS miss once this session is already stamped", async () => {
-    state.event = sessionEvent({ price: STARTER, id: "cs_race" });
-    let gets = 0;
-    const granted: unknown[] = [];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string, init?: RequestInit) => {
-        const method = init?.method ?? "GET";
-        if (String(url).includes("founder_exit_side_effects")) {
-          return new Response("[]", {
-            status: method === "GET" ? 200 : 201,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        if (method === "GET") {
-          gets += 1;
-          const row =
-            gets === 1
-              ? {
-                  last_grant_session_id: "cs_old",
-                  generations_limit: 100,
-                  generations_used: 40,
-                }
-              : {
-                  last_grant_session_id: "cs_race",
-                  generations_limit: 160,
-                  generations_used: 0,
-                };
-          return new Response(JSON.stringify([row]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        if (method === "PATCH") {
-          granted.push(JSON.parse(String(init?.body)));
-          return new Response("[]", {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        return new Response("{}", { status: 200 });
-      })
-    );
+    state.event = sessionEvent({ price: STARTER, id: "cs_rpc_invalid" });
+    const calls = installFetch({ prior: "cs_old", rpcResultStatus: "invalid" });
     const res = await worker.fetch(signedPost(), env);
-    expect(res.status).toBe(200);
-    expect(granted).toEqual([
-      expect.objectContaining({
-        generations_limit: 160,
-        last_grant_session_id: "cs_race",
-      }),
-    ]);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "atomic pack RPC returned invalid evidence" });
+    expect(patches(calls)).toEqual([]);
   });
-
   it("does not log a second Launch Annual sale when the paid session replays", async () => {
     state.event = sessionEvent({
       price: LAUNCH_ANNUAL,
