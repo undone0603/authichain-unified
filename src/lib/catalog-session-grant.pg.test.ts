@@ -180,26 +180,25 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
     expect(limit).toBe(660);
   });
 
-  it("rolls back the receipt and credits when the function errors after claim", async () => {
+  it("rolls back the real RPC when a receipt-insert trigger aborts", async () => {
     const db = await isolatedCatalogDb();
     await insertProfile(db, PROF_A, 100, 0);
     await db.exec(`
-      CREATE OR REPLACE FUNCTION public.grant_catalog_crash_after_claim(
-        p_profile_id text, p_session_id text
-      ) RETURNS jsonb
-      LANGUAGE plpgsql AS $$
+      CREATE FUNCTION public.catalog_grant_boom_after_receipt()
+      RETURNS trigger LANGUAGE plpgsql AS $$
       BEGIN
-        INSERT INTO public.founder_exit_side_effects (idempotency_key, profile_id)
-        VALUES ('grant:' || p_session_id, p_profile_id);
-        RAISE EXCEPTION 'injected_crash_after_claim';
+        IF NEW.idempotency_key = 'grant:cs_crash' THEN
+          RAISE EXCEPTION 'injected_crash_after_claim';
+        END IF;
+        RETURN NEW;
       END;
       $$;
+      CREATE TRIGGER catalog_grant_boom_after_receipt
+        AFTER INSERT ON public.founder_exit_side_effects
+        FOR EACH ROW EXECUTE FUNCTION public.catalog_grant_boom_after_receipt();
     `);
     await expect(
-      db.query("SELECT public.grant_catalog_crash_after_claim($1, $2)", [
-        PROF_A,
-        "cs_crash",
-      ])
+      grant(db, { profileId: PROF_A, sessionId: "cs_crash" })
     ).rejects.toThrow(/injected_crash_after_claim/);
     const receipts = await db.query(
       "SELECT count(*)::int AS n FROM public.founder_exit_side_effects"
@@ -278,29 +277,25 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
     expect(a).toBe(100);
   });
 
-  it("rolls back credits when the function errors after the profile update", async () => {
+  it("rolls back the real RPC when a profile-update trigger aborts", async () => {
     const db = await isolatedCatalogDb();
     await insertProfile(db, PROF_A, 100, 0);
     await db.exec(`
-      CREATE OR REPLACE FUNCTION public.grant_catalog_crash_after_update(
-        p_profile_id text, p_session_id text
-      ) RETURNS jsonb
-      LANGUAGE plpgsql AS $$
+      CREATE FUNCTION public.catalog_grant_boom_after_update()
+      RETURNS trigger LANGUAGE plpgsql AS $$
       BEGIN
-        INSERT INTO public.founder_exit_side_effects (idempotency_key, profile_id)
-        VALUES ('grant:' || p_session_id, p_profile_id);
-        UPDATE public.profiles
-          SET generations_limit = COALESCE(generations_limit, 0) + 100
-          WHERE id = p_profile_id::uuid;
-        RAISE EXCEPTION 'injected_crash_after_update';
+        IF NEW.last_grant_session_id = 'cs_crash_update' THEN
+          RAISE EXCEPTION 'injected_crash_after_update';
+        END IF;
+        RETURN NEW;
       END;
       $$;
+      CREATE TRIGGER catalog_grant_boom_after_update
+        AFTER UPDATE ON public.profiles
+        FOR EACH ROW EXECUTE FUNCTION public.catalog_grant_boom_after_update();
     `);
     await expect(
-      db.query("SELECT public.grant_catalog_crash_after_update($1, $2)", [
-        PROF_A,
-        "cs_crash_update",
-      ])
+      grant(db, { profileId: PROF_A, sessionId: "cs_crash_update" })
     ).rejects.toThrow(/injected_crash_after_update/);
     const receipts = await db.query(
       "SELECT count(*)::int AS n FROM public.founder_exit_side_effects"
