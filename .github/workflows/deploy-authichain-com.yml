@@ -29,25 +29,30 @@ jobs:
       NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
     outputs:
       sha: ${{ steps.head.outputs.sha }}
+      path: ${{ steps.match.outputs.path }}
     steps:
       - name: Pin dispatch commit
         id: head
         env:
           TARGET_SHA: ${{ inputs.expected_sha }}
-          DISPATCH_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[[:xdigit:]]{40}$ ]]
-          test "$TARGET_SHA" = "$DISPATCH_SHA"
           echo "sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
       # Separately tested, fail-closed automated protection instead of a human
       # environment reviewer. Missing/stale evidence stops the release.
+      # Always check out expected_sha (exact HEAD or ancestor), never live main.
+      # fetch-depth: 0 is required so resolve-com-deploy-sha.mjs can run
+      # git merge-base --is-ancestor and git diff expected_sha..main. A
+      # depth-1 checkout of expected_sha plus a default fetch of origin/main
+      # does not guarantee that ancestry graph. The #2457 sparse-checkout
+      # restore below still applies after a full-history checkout.
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.head.outputs.sha }}
           persist-credentials: false
           clean: true
-          fetch-depth: 1
+          fetch-depth: 0
       # Sparse-checkout settings persist in the shared self-hosted work dir
       # (gov-engine.yml and agentz-orchestration.yml check out two files), so a
       # job that inherits them sees a partial tree while HEAD still names the
@@ -80,26 +85,37 @@ jobs:
           node --version
           echo "NODE=$(command -v node)" >> "$GITHUB_ENV"
           echo "PATH=$PATH" >> "$GITHUB_ENV"
+      - name: Resolve expected SHA vs current main
+        id: match
+        env:
+          TARGET_SHA: ${{ steps.head.outputs.sha }}
+          MAIN_REF: origin/main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          node "$GITHUB_WORKSPACE/scripts/ci/resolve-com-deploy-sha.mjs"
       - name: Test fail-closed automated release policy
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
           echo "cwd=$(pwd) head=$(git rev-parse HEAD) node=$(command -v node)"
-          if ! test -f scripts/ci/autonomous-release-gate.test.mjs || ! test -f scripts/ci/autonomous-release-gate.mjs; then
+          if ! test -f scripts/ci/autonomous-release-gate.test.mjs || ! test -f scripts/ci/autonomous-release-gate.mjs || ! test -f scripts/ci/resolve-com-deploy-sha.test.mjs || ! test -f scripts/ci/resolve-com-deploy-sha.mjs; then
             echo "::error::Release-gate files missing from the worktree after checkout."
             if [ -d scripts/ci ]; then ls -la scripts/ci; elif [ -d scripts ]; then ls -la scripts; else echo "no scripts directory"; fi
             git status --short | head -50
             git ls-files -v | awk '$1 == "S" { print }' | head -50
             exit 1
           fi
-          ls -la scripts/ci/autonomous-release-gate*
+          ls -la scripts/ci/autonomous-release-gate* scripts/ci/resolve-com-deploy-sha*
           node --test "$GITHUB_WORKSPACE/scripts/ci/autonomous-release-gate.test.mjs"
+          node --test "$GITHUB_WORKSPACE/scripts/ci/resolve-com-deploy-sha.test.mjs"
       - name: Enforce automated exact-main release policy
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
           TARGET_SHA: ${{ steps.head.outputs.sha }}
           DISPATCH_SHA: ${{ github.sha }}
+          SHA_MATCH_PATH: ${{ steps.match.outputs.path }}
         run: node "$GITHUB_WORKSPACE/scripts/ci/autonomous-release-gate.mjs"
 
   deploy:
@@ -121,7 +137,7 @@ jobs:
           ref: ${{ needs.verify.outputs.sha }}
           persist-credentials: false
           clean: true
-          fetch-depth: 1
+          fetch-depth: 0
       # Sparse-checkout settings persist in the shared self-hosted work dir
       # (gov-engine.yml and agentz-orchestration.yml check out two files), so a
       # job that inherits them sees a partial tree while HEAD still names the
@@ -141,16 +157,6 @@ jobs:
           test -f scripts/ci/parse-wrangler-version-id.mjs
           test -f scripts/ci/promote-worker-version.mjs
           test -f workers/authichain-com/wrangler.toml
-      - name: Confirm checked-out and current main SHA
-        env:
-          EXPECTED_SHA: ${{ needs.verify.outputs.sha }}
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          HEAD_SHA=$(node --input-type=module -e "const r=await fetch('https://api.github.com/repos/' + process.env.REPOSITORY + '/branches/main',{headers:{authorization:'Bearer ' + process.env.GH_TOKEN,accept:'application/vnd.github+json'}});if(!r.ok)process.exit(1);const d=await r.json();console.log(d.commit.sha)")
-          test "$HEAD_SHA" = "$EXPECTED_SHA"
       - name: Use runner pnpm + Node 22
         run: |
           set -euo pipefail
@@ -164,6 +170,16 @@ jobs:
           command -v node
           node --version
           echo "PATH=$PATH" >> "$GITHUB_ENV"
+      - name: Confirm checked-out SHA and main identity
+        id: match
+        env:
+          TARGET_SHA: ${{ needs.verify.outputs.sha }}
+          MAIN_REF: origin/main
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git fetch --no-tags origin main
+          node "$GITHUB_WORKSPACE/scripts/ci/resolve-com-deploy-sha.mjs"
       - name: Install pinned dependencies
         env:
           npm_config_build_from_source: "false"
@@ -187,6 +203,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           TARGET_SHA: ${{ needs.verify.outputs.sha }}
           DISPATCH_SHA: ${{ github.sha }}
+          SHA_MATCH_PATH: ${{ steps.match.outputs.path }}
         run: node "$GITHUB_WORKSPACE/scripts/ci/autonomous-release-gate.mjs"
       # Require these names to be configured ONLY as production-cloudflare environment secrets.
       # Never define these aliases as repository/org secrets: GitHub falls back to broader scope.
