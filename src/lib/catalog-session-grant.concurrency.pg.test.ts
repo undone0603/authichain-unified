@@ -248,12 +248,35 @@ describePg("grant_catalog_checkout_session two-connection PostgreSQL", () => {
     if (cluster) stopCluster(cluster);
   });
 
-  it("attests the live RPC name and migration SHA on the two-connection cluster", () => {
+  it("attests the live RPC name and migration SHA on the two-connection cluster", async () => {
     const migration = readFileSync(CATALOG_GRANT_MIGRATION);
-    expect(CATALOG_GRANT_RPC).toBe("grant_catalog_checkout_session");
-    expect(createHash("sha256").update(migration).digest("hex")).toHaveLength(
-      64
-    );
+    const migrationSha = createHash("sha256").update(migration).digest("hex");
+    const head = spawnSync("git", ["rev-parse", "HEAD"], {
+      encoding: "utf8",
+    }).stdout.trim();
+    const client = await connect();
+    try {
+      const ver = await client.query<{ v: string; num: string }>(
+        "SELECT version() AS v, current_setting('server_version_num') AS num"
+      );
+      console.log(
+        JSON.stringify({
+          evt: "catalog_grant_pg_attestation",
+          git_head: head,
+          migration_sha256: migrationSha,
+          pg_version: ver.rows[0].v,
+          pg_version_num: Number(ver.rows[0].num),
+          listen: "127.0.0.1",
+          tests_expected: 5,
+        })
+      );
+      expect(CATALOG_GRANT_RPC).toBe("grant_catalog_checkout_session");
+      expect(migrationSha).toHaveLength(64);
+      expect(head).toMatch(/^[0-9a-f]{40}$/);
+      expect(Number(ver.rows[0].num)).toBeGreaterThanOrEqual(140000);
+    } finally {
+      await client.end();
+    }
   });
 
   it("grants a session only once when two connections deliver it together", async () => {
