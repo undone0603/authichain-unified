@@ -379,6 +379,50 @@ export default {
                 session: session.id,
               })
             );
+          } else if (grant?.plan === "starter" || grant?.plan === "creator") {
+            // No profile PATCH or separate receipt INSERT: the shared Postgres
+            // RPC serializes both webhook deliveries in one transaction.
+            const profile = await supabaseSelectOne(
+              env, "profiles", { email }, "id"
+            );
+            const profileId = profile.ok ? profile.row?.id : null;
+            if (typeof profileId !== "string" || !profileId) {
+              return grantRetry("atomic pack profile lookup failed");
+            }
+            let response: Response;
+            try {
+              response = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/grant_stripe_pack_session`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+                  Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+                },
+                body: JSON.stringify({
+                  p_profile_id: profileId,
+                  p_session_id: session.id,
+                  p_plan: grant.plan,
+                  p_stripe_customer_id: customerId,
+                }),
+              });
+            } catch {
+              return grantRetry("atomic pack RPC unavailable");
+            }
+            if (!response.ok) return grantRetry("atomic pack RPC failed");
+            let result: unknown;
+            try { result = await response.json(); } catch {
+              return grantRetry("atomic pack RPC response invalid");
+            }
+            if (!result || typeof result !== "object") {
+              return grantRetry("atomic pack RPC response invalid");
+            }
+            const receipt = result as Record<string, unknown>;
+            if (receipt.profile_id !== profileId ||
+                (receipt.status !== "granted" && receipt.status !== "already_granted") ||
+                (receipt.status === "granted" &&
+                  (receipt.plan !== grant.plan || receipt.credits !== grant.generations))) {
+              return grantRetry("atomic pack RPC returned invalid evidence");
+            }
           } else if (grant) {
             const stackPack = grantStacksOnRepeat(grant);
             let wroteGrant = false;
