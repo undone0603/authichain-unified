@@ -35,6 +35,8 @@ case "$task" in
     node --test scripts/ci/autonomous-release-gate.test.mjs
     # Bounded synthetic peer negative fixture: no network, keys, or payments.
     node --test scripts/alliances/peer-subject-binding-fixture.test.mjs
+    # Descriptor-only A2A audit: no remote tasks, credentials, or paid calls.
+    node --test scripts/alliances/a2a-card-evidence-audit.test.mjs
     ;;
   typecheck-ratchet) node scripts/typecheck-ratchet.mjs ;;
   test-workers)
