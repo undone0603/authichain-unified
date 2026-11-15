@@ -232,6 +232,43 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
     expect(a).toBe(0);
   });
 
+  it("rejects historical grant receipts with missing profile identity", async () => {
+    const db = await isolatedCatalogDb();
+    await insertProfile(db, PROF_A, 0, 0);
+    await db.query(
+      "INSERT INTO public.founder_exit_side_effects (idempotency_key, profile_id) VALUES ($1, NULL)",
+      ["grant:cs_unmapped"]
+    );
+    await expect(
+      grant(db, { profileId: PROF_A, sessionId: "cs_unmapped" })
+    ).rejects.toThrow(/catalog_grant_receipt_conflict/);
+    const row = (
+      await db.query<{ generations_limit: number }>(
+        "SELECT generations_limit FROM public.profiles WHERE id = $1::uuid",
+        [PROF_A]
+      )
+    ).rows[0];
+    expect(row.generations_limit).toBe(0);
+  });
+
+  it("rejects a mismatched receipt during legacy-marker recovery", async () => {
+    const db = await isolatedCatalogDb();
+    await insertProfile(db, PROF_A, 100, 0, "cs_legacy");
+    await insertProfile(db, PROF_B, 0, 0);
+    await db.query(
+      "INSERT INTO public.founder_exit_side_effects (idempotency_key, profile_id) VALUES ($1, $2)",
+      ["grant:cs_legacy", PROF_B]
+    );
+    await expect(
+      grant(db, { profileId: PROF_A, sessionId: "cs_legacy" })
+    ).rejects.toThrow(/catalog_grant_receipt_conflict/);
+    const receipts = await db.query<{ profile_id: string }>(
+      "SELECT profile_id FROM public.founder_exit_side_effects WHERE idempotency_key = $1",
+      ["grant:cs_legacy"]
+    );
+    expect(receipts.rows[0].profile_id).toBe(PROF_B);
+  });
+
   it("refuses callers without service_role execute", async () => {
     const db = await isolatedCatalogDb();
     await insertProfile(db, PROF_A);
