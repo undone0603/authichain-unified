@@ -48,6 +48,8 @@ export interface ProvisionInput {
   sessionId?: string | null;
   /** Use the DPP RPC that commits the grant and idempotency key atomically. */
   atomicDppSessionGrant?: boolean;
+  /** Only for verified, settled Starter/Creator checkout sessions. */
+  atomicPackSessionGrant?: boolean;
 }
 
 export interface ProvisionResult {
@@ -247,6 +249,41 @@ export async function provisionPurchase(
         status: "upsert_failed",
         error: "atomic DPP grant returned invalid evidence",
       };
+    }
+    return { profileId, created, status: "provisioned" };
+  }
+
+  // The canonical paid-checkout rail opts into the same transaction as the
+  // secondary Stripe Worker. Never fall back to the non-atomic CAS on RPC errors.
+  if (input.atomicPackSessionGrant) {
+    const expected = input.plan === "starter" ? 100 : input.plan === "creator" ? 500 : null;
+    if (
+      expected === null || !input.sessionId || input.stripeSubscriptionId ||
+      input.isTrial || (input.generationsGrant !== undefined && input.generationsGrant !== expected)
+    ) {
+      return { profileId, created, status: "upsert_failed", error: "invalid atomic pack grant request" };
+    }
+    if (!supabase.rpc) {
+      return { profileId, created, status: "upsert_failed", error: "atomic pack grant RPC unavailable" };
+    }
+    const { data, error } = await supabase.rpc("grant_stripe_pack_session", {
+      p_profile_id: profileId,
+      p_session_id: input.sessionId,
+      p_plan: input.plan,
+      p_stripe_customer_id: input.stripeCustomerId ?? null,
+    });
+    if (error) {
+      return { profileId, created, status: "upsert_failed", error: error.message || "atomic pack grant failed" };
+    }
+    const result = data as { profile_id?: unknown; status?: unknown; plan?: unknown; credits?: unknown } | null;
+    if (result?.profile_id !== profileId) {
+      return { profileId, created, status: "upsert_failed", error: "atomic pack grant profile mismatch" };
+    }
+    if (result.status === "already_granted") {
+      return { profileId, created, status: "provisioned", skippedIdempotent: true };
+    }
+    if (result.status !== "granted" || result.plan !== input.plan || result.credits !== expected) {
+      return { profileId, created, status: "upsert_failed", error: "atomic pack grant returned invalid evidence" };
     }
     return { profileId, created, status: "provisioned" };
   }
