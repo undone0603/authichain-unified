@@ -285,6 +285,16 @@ jobs:
               process.exit(1);
             }
           '
+      - name: Require protected root-app Supabase binding value attestation
+        if: ${{ inputs.rollback_version == '' }}
+        env:
+          EXPECTED_SUPABASE_REF: ${{ inputs.supabase_project_ref }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          AUTHICHAIN_PRODUCTION_APP_SUPABASE_URL: ${{ secrets.AUTHICHAIN_PRODUCTION_APP_SUPABASE_URL }}
+          AUTHICHAIN_PRODUCTION_APP_DATABASE_URL: ${{ secrets.AUTHICHAIN_PRODUCTION_APP_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          node scripts/ci/verify-app-supabase-values.mjs
       - name: Attest live root-app Hyperdrive target against protected Supabase project
         if: ${{ inputs.rollback_version == '' }}
         env:
