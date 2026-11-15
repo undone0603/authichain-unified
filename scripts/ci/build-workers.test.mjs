@@ -125,9 +125,10 @@ test("Worker dry-run uses supported step workdirs and lockfile cache path", () =
   // autonomy-reconcile, not this dry-run.
   assert.ok(
     workflow.includes(
-      "vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON(" +
-        `'["self-hosted","Linux","ARM64","authichain-ops"]'` +
-        ") || 'ubuntu-24.04'"
+      "(github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && " +
+        "vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON(" + // pragma: allowlist secret
+        `'["self-hosted","Linux","ARM64","authichain-ops"]'` + // pragma: allowlist secret
+        ") || 'ubuntu-24.04' }} # pragma: allowlist secret"
     )
   );
   assert.equal(/^\s*runs-on:\s*\[self-hosted/m.test(workflow), false);

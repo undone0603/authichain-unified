@@ -22,7 +22,8 @@ on:
 jobs:
   auto-merge:
     name: Auto-merge patch-level Dependabot PRs
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    # pull_request_target keeps base-repo privileges; never use a persistent runner.
+    runs-on: ubuntu-24.04
     # Duplicate auto-merge route is held until independent security review.
     if: ${{ false }}
     steps:

@@ -24,7 +24,8 @@ concurrency:
 jobs:
   gitleaks:
     name: Secret scan (gitleaks)
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    # Fork PRs stay on ubuntu-24.04; same-repo PRs keep WSL.
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }} # pragma: allowlist secret
     # Skip Dependabot PRs - its GITHUB_TOKEN is read-only on PR events
     if: github.actor != 'dependabot[bot]'
     permissions:
