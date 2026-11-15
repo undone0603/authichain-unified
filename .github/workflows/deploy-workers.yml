@@ -209,10 +209,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Setup pnpm
+        timeout-minutes: 15
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
       - name: Setup Node 22
+        timeout-minutes: 15
         uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -221,6 +223,7 @@ jobs:
           # after the worker is already published.
           cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
       - name: Install dependencies
+        timeout-minutes: 15
         run: pnpm install --frozen-lockfile
 
       # Cloudflare Containers (wrangler.jsonc "containers") need a Docker

@@ -63,6 +63,7 @@ jobs:
   mint:
     runs-on: ${{ (inputs.runner || 'authichain-ops') == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
 
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -71,9 +72,11 @@ jobs:
       # Hosted runners need setup actions. Self-hosted authichain-ops already
       # has nvm Node + a persistent PNPM_HOME from the systemd unit.
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        timeout-minutes: 15
         if: runner.environment == 'github-hosted'
         with: { version: "10.28.2" }
       - uses: actions/setup-node@v7
+        timeout-minutes: 15
         if: runner.environment == 'github-hosted'
         with: { node-version: "22", cache: pnpm }
       - name: Use runner toolchain (self-hosted)
@@ -101,6 +104,7 @@ jobs:
           echo "PNPM_HOME=$PNPM_HOME_DIR store=$PNPM_HOME_DIR/store"
 
       - name: Install deps
+        timeout-minutes: 15
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       - name: Preflight getCode (no keys)

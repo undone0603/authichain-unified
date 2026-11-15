@@ -181,6 +181,7 @@ jobs:
           git fetch --no-tags origin main
           node "$GITHUB_WORKSPACE/scripts/ci/resolve-com-deploy-sha.mjs"
       - name: Install pinned dependencies
+        timeout-minutes: 15
         env:
           npm_config_build_from_source: "false"
         run: pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0

@@ -73,12 +73,14 @@ jobs:
         run: bash scripts/ci/use-runner-pnpm.sh
 
       - name: Install pnpm
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
 
       - name: Setup Node.js
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -86,6 +88,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Validate secrets format (skipped on pull_request)
@@ -157,12 +160,14 @@ jobs:
         run: bash scripts/ci/use-runner-pnpm.sh
 
       - name: Install pnpm
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
 
       - name: Setup Node.js
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -170,6 +175,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: pnpm install --frozen-lockfile --prefer-offline
 
       # The workflow-level vars flag may be unset even when the job runs on
@@ -271,12 +277,14 @@ jobs:
         run: bash scripts/ci/use-runner-pnpm.sh
 
       - name: Install pnpm
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
 
       - name: Setup Node.js
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -286,6 +294,7 @@ jobs:
       # Same-repo runs land on the 3.8 GiB WSL runner and do not install or
       # next-build there. Fork PRs stay on ubuntu-24.04 and still install.
       - name: Install dependencies
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         run: pnpm install --frozen-lockfile --prefer-offline
 
@@ -395,6 +404,7 @@ jobs:
         run: bash scripts/ci/use-runner-pnpm.sh
 
       - name: Install pnpm
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
@@ -407,6 +417,7 @@ jobs:
           node-version: "22"
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       - name: Run autonomous revenue pipeline

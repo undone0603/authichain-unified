@@ -76,10 +76,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        timeout-minutes: 15
         with: { version: "10.28.2" }
       - uses: actions/setup-node@v7
+        timeout-minutes: 15
         with: { node-version: "22", cache: pnpm }
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        timeout-minutes: 15
 
       - name: Compile AuthiChainNFT
         run: node scripts/compile-authichain-nft.cjs
@@ -116,10 +119,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        timeout-minutes: 15
         with: { version: "10.28.2" }
       - uses: actions/setup-node@v7
+        timeout-minutes: 15
         with: { node-version: "22", cache: pnpm }
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        timeout-minutes: 15
 
       - name: Compile AuthiChainNFT
         run: node scripts/compile-authichain-nft.cjs

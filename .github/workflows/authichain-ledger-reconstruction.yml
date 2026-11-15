@@ -39,13 +39,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
+        timeout-minutes: 15
         with:
           version: 10.28.2
       - uses: actions/setup-node@v7
+        timeout-minutes: 15
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        timeout-minutes: 15
       - name: Reconstruct production AuthiChain NFT ledger
         run: pnpm ledger:authichain-nft
         env:

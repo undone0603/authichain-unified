@@ -30,6 +30,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: pnpm/action-setup@v6
+        timeout-minutes: 15
         with:
           version: "10.28.2"
       - uses: actions/setup-node@v7
