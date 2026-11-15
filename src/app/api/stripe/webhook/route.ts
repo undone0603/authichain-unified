@@ -383,6 +383,12 @@ export async function POST(req: NextRequest) {
             reasons: fallbackRefusals,
           });
         }
+        // Never provision one-time pack credits from an unpaid, missing-status,
+        // or 100%-discount Checkout completion. Require settled payment evidence.
+        if ((resolvedPlan === "starter" || resolvedPlan === "creator") &&
+            session.payment_status !== "paid") {
+          throw new Error("Paid pack checkout requires payment_status=paid");
+        }
         const prov = await provisionPurchase(getSupabase(), {
           email,
           userId,
