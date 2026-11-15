@@ -249,6 +249,8 @@ export async function provisionPurchase(
   // Session-level idempotency: do not reset generations_used if this session already granted.
   // A failed read must not look like "no prior grant" — that resets usage on retry.
   // The same read loads the credit/subscription columns a one-time pack stacks on.
+  // Dual-path: workers/stripe-webhook stacks the same pack formula then stamps
+  // last_grant_session_id. Skipping here is success, not a missed add.
   //
   // Lost-update guard (CFA-346, no migration): the write is conditional on the
   // generations_limit / generations_used / last_grant_session_id values read.

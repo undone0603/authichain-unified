@@ -86,7 +86,9 @@ const UNLISTED = new Set([
   "price_1UJbwzGqTruSqV8TJlaINJyW",
 ]);
 
-export function grantForPrice(priceId: string | null | undefined): Grant | null {
+export function grantForPrice(
+  priceId: string | null | undefined
+): Grant | null {
   if (!priceId || UNLISTED.has(priceId)) return null;
   return GRANT_BY_PRICE[priceId] ?? null;
 }
@@ -117,15 +119,23 @@ export function grantForCheckout(input: {
 export type LoopIdentity = { loop: string; purchaseEvent: string };
 
 export const LOOP_BY_PLAN: Record<string, LoopIdentity> = {
-  starter: { loop: "loop_03_qron_starter", purchaseEvent: "purchase_starter_succeeded" },
-  dpp_readiness: { loop: "loop_02_dpp_check", purchaseEvent: "purchase_dpp_succeeded" },
+  starter: {
+    loop: "loop_03_qron_starter",
+    purchaseEvent: "purchase_starter_succeeded",
+  },
+  dpp_readiness: {
+    loop: "loop_02_dpp_check",
+    purchaseEvent: "purchase_dpp_succeeded",
+  },
   strainchain_passport: {
     loop: "loop_01_passport_scan",
     purchaseEvent: "purchase_passport_succeeded",
   },
 };
 
-export function loopForPlan(plan: string | null | undefined): LoopIdentity | null {
+export function loopForPlan(
+  plan: string | null | undefined
+): LoopIdentity | null {
   if (!plan) return null;
   return LOOP_BY_PLAN[plan] ?? null;
 }
@@ -153,14 +163,44 @@ export function alreadyGrantedSession(
  * A failed lookup is a retry, not a fresh grant.
  */
 export function grantReplayAction(
-  lookup:
-    | { ok: true; sessionId: string | null | undefined }
-    | { ok: false },
+  lookup: { ok: true; sessionId: string | null | undefined } | { ok: false },
   sessionId: string
 ): "skip" | "grant" | "retry" {
   if (!lookup.ok) return "retry";
   if (alreadyGrantedSession(lookup.sessionId, sessionId)) return "skip";
   return "grant";
+}
+
+/**
+ * One-time pack write. Lockstep with src/lib/provisioning.ts stackedPackCredits:
+ * remaining = max(0, limit - used), then add the pack and reset used to 0.
+ * Unlimited profiles (limit 999,999+) are left alone.
+ */
+export const UNLIMITED_SENTINEL = 999999;
+/** Re-read and retry this many times after a conditional write matches 0 rows. */
+export const GRANT_CAS_RETRIES = 3;
+export const GRANT_CAS_COLUMNS = [
+  "generations_limit",
+  "generations_used",
+  "last_grant_session_id",
+] as const;
+
+export function stackedPackCredits(
+  row: Record<string, unknown> | null | undefined,
+  pack: number
+): { generations_limit: number; generations_used: number } {
+  const limit = Number(row?.generations_limit);
+  const used = Number(row?.generations_used);
+  const l = Number.isFinite(limit) ? limit : 0;
+  const u = Number.isFinite(used) ? used : 0;
+  if (l >= UNLIMITED_SENTINEL)
+    return { generations_limit: l, generations_used: u };
+  return { generations_limit: Math.max(0, l - u) + pack, generations_used: 0 };
+}
+
+/** Checkout packs add; subscription period grants replace. */
+export function grantStacksOnRepeat(grant: Grant): boolean {
+  return !grant.refillOnInvoicePaid;
 }
 
 export function isFounderEmail(email: string | null | undefined): boolean {

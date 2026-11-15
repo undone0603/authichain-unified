@@ -445,6 +445,38 @@ describe("provisionPurchase", () => {
       expect(updates).toEqual([]);
     });
 
+    it("a new Starter session adds 100; replaying that session does not add again", async () => {
+      const first = fakeProfiles({
+        existingId: "prof_1",
+        lastGrantSessionId: "cs_old",
+        row: { generations_limit: 100, generations_used: 40 },
+      });
+      const granted = await provisionPurchase(first.supabase, {
+        ...base,
+        plan: "starter",
+        sessionId: "cs_repeat",
+      });
+      expect(granted.skippedIdempotent).toBeUndefined();
+      expect(first.updates[0].patch).toMatchObject({
+        generations_limit: 160,
+        generations_used: 0,
+        last_grant_session_id: "cs_repeat",
+      });
+
+      const replay = fakeProfiles({
+        existingId: "prof_1",
+        lastGrantSessionId: "cs_repeat",
+        row: { generations_limit: 160, generations_used: 0 },
+      });
+      const skipped = await provisionPurchase(replay.supabase, {
+        ...base,
+        plan: "starter",
+        sessionId: "cs_repeat",
+      });
+      expect(skipped.skippedIdempotent).toBe(true);
+      expect(replay.updates).toEqual([]);
+    });
+
     it("still SETs the period grant for a subscription (no stacking)", async () => {
       const { supabase, updates } = fakeProfiles({
         existingId: "prof_1",

@@ -1,10 +1,14 @@
 import Stripe from "stripe";
 import {
+  GRANT_CAS_COLUMNS,
+  GRANT_CAS_RETRIES,
   grantForCheckout,
   grantForPrice,
   grantReplayAction,
+  grantStacksOnRepeat,
   isFounderEmail,
   loopForPlan,
+  stackedPackCredits,
 } from "./grant-map";
 
 export interface Env {
@@ -46,9 +50,7 @@ async function supabaseSelectOne(
   table: string,
   match: Record<string, string>,
   columns: string
-): Promise<
-  { ok: true; row: Record<string, unknown> | null } | { ok: false }
-> {
+): Promise<{ ok: true; row: Record<string, unknown> | null } | { ok: false }> {
   const params = Object.entries(match)
     .map(([k, v]) => `${k}=eq.${encodeURIComponent(v)}`)
     .join("&");
@@ -79,6 +81,12 @@ function grantRetry(error: string): Response {
   });
 }
 
+function postgrestFilter(value: unknown): string {
+  if (value === null || value === undefined) return "is.null";
+  if (typeof value === "number" && Number.isFinite(value)) return `eq.${value}`;
+  return `eq.${encodeURIComponent(String(value))}`;
+}
+
 async function supabaseUpdate(
   env: Env,
   table: string,
@@ -103,6 +111,53 @@ async function supabaseUpdate(
   } catch {
     return false;
   }
+}
+
+/**
+ * Conditional PATCH. Fail closed unless PostgREST returns the matched rows:
+ * an empty array is a CAS miss (retry), a non-array body is treated as failure.
+ */
+async function supabaseUpdateIf(
+  env: Env,
+  table: string,
+  match: Record<string, unknown>,
+  data: Record<string, unknown>
+): Promise<{ ok: true; matched: number } | { ok: false }> {
+  const params = Object.entries(match)
+    .map(([k, v]) => `${k}=${postgrestFilter(v)}`)
+    .join("&");
+  const url = `${env.SUPABASE_URL}/rest/v1/${table}?${params}`;
+  try {
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) return { ok: false };
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(await res.text());
+    } catch {
+      return { ok: false };
+    }
+    if (!Array.isArray(parsed)) return { ok: false };
+    return { ok: true, matched: parsed.length };
+  } catch {
+    return { ok: false };
+  }
+}
+
+function sessionIdFromRow(
+  row: Record<string, unknown> | null | undefined
+): string | null {
+  return typeof row?.last_grant_session_id === "string"
+    ? row.last_grant_session_id
+    : null;
 }
 
 async function sha256Hex(value: string): Promise<string> {
@@ -139,15 +194,18 @@ async function recordPurchaseEvent(
     };
     if (email) body.p_email_hash = await sha256Hex(email);
 
-    const res = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/growth_record_event`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-      body: JSON.stringify(body),
-    });
+    const res = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/rpc/growth_record_event`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify(body),
+      }
+    );
     if (!res.ok) {
       console.error(
         JSON.stringify({
@@ -229,7 +287,9 @@ export default {
         const customerId =
           typeof session.customer === "string" ? session.customer : null;
         const subscriptionId =
-          typeof session.subscription === "string" ? session.subscription : null;
+          typeof session.subscription === "string"
+            ? session.subscription
+            : null;
         const grant = grantForCheckout({
           priceId: priceIdFromSession(session),
           amountTotal: session.amount_total,
@@ -278,11 +338,13 @@ export default {
             if (!fulfilled) {
               return grantRetry("canonical DPP entitlement pending");
             }
-            console.log(JSON.stringify({
-              evt: "stripe_grant_delegated_verified",
-              plan: grant.plan,
-              session: session.id,
-            }));
+            console.log(
+              JSON.stringify({
+                evt: "stripe_grant_delegated_verified",
+                plan: grant.plan,
+                session: session.id,
+              })
+            );
           } else if (grant?.humanHold) {
             console.log(
               JSON.stringify({
@@ -292,23 +354,88 @@ export default {
               })
             );
           } else if (grant) {
-            const existing = await supabaseSelectOne(
-              env,
-              "profiles",
-              { email },
-              "last_grant_session_id"
-            );
-            const prior =
-              existing.ok &&
-              typeof existing.row?.last_grant_session_id === "string"
-                ? existing.row.last_grant_session_id
-                : null;
-            const action = grantReplayAction(
-              existing.ok ? { ok: true, sessionId: prior } : { ok: false },
-              session.id
-            );
-            if (action === "retry") return grantRetry("grant lookup failed");
-            if (action === "skip") {
+            const stackPack = grantStacksOnRepeat(grant);
+            let wroteGrant = false;
+            let skippedIdempotent = false;
+            for (let attempt = 0; attempt <= GRANT_CAS_RETRIES; attempt++) {
+              const existing = await supabaseSelectOne(
+                env,
+                "profiles",
+                { email },
+                "last_grant_session_id,generations_limit,generations_used"
+              );
+              if (!existing.ok) return grantRetry("grant lookup failed");
+              const action = grantReplayAction(
+                { ok: true, sessionId: sessionIdFromRow(existing.row) },
+                session.id
+              );
+              if (action === "retry") return grantRetry("grant lookup failed");
+              if (action === "skip") {
+                skippedIdempotent = true;
+                break;
+              }
+              const credits = stackPack
+                ? stackedPackCredits(existing.row, grant.generations)
+                : {
+                    generations_limit: grant.generations,
+                    generations_used: 0,
+                  };
+              const patch = {
+                plan: grant.plan,
+                generations_limit: credits.generations_limit,
+                generations_used: credits.generations_used,
+                last_grant_session_id: session.id,
+                updated_at: new Date().toISOString(),
+              };
+              const logGrant = () =>
+                console.log(
+                  JSON.stringify({
+                    evt: stackPack ? "stripe_grant_stack" : "stripe_grant_set",
+                    plan: grant.plan,
+                    generations_limit: credits.generations_limit,
+                    generations_used: credits.generations_used,
+                    refill: grant.refillOnInvoicePaid,
+                    attempt,
+                  })
+                );
+              if (!stackPack) {
+                const wrote = await supabaseUpdate(
+                  env,
+                  "profiles",
+                  { email },
+                  patch
+                );
+                if (!wrote) return grantRetry("grant write failed");
+                wroteGrant = true;
+                logGrant();
+                break;
+              }
+              const casMatch: Record<string, unknown> = { email };
+              for (const col of GRANT_CAS_COLUMNS) {
+                casMatch[col] = existing.row?.[col] ?? null;
+              }
+              const wrote = await supabaseUpdateIf(
+                env,
+                "profiles",
+                casMatch,
+                patch
+              );
+              if (!wrote.ok) return grantRetry("grant write failed");
+              if (wrote.matched > 0) {
+                wroteGrant = true;
+                logGrant();
+                break;
+              }
+              console.warn(
+                JSON.stringify({
+                  evt: "stripe_grant_cas_conflict",
+                  session: session.id,
+                  plan: grant.plan,
+                  attempt,
+                })
+              );
+            }
+            if (skippedIdempotent) {
               console.log(
                 JSON.stringify({
                   evt: "stripe_grant_skipped_idempotent",
@@ -316,42 +443,20 @@ export default {
                   plan: grant.plan,
                 })
               );
-            } else {
+            } else if (!wroteGrant) {
+              return grantRetry("concurrent profile update; retry");
+            } else if (grant.plan === "qron_launch_annual") {
               console.log(
                 JSON.stringify({
-                  evt: "stripe_grant_set",
-                  plan: grant.plan,
-                  generations_limit: grant.generations,
-                  generations_used: 0,
-                  refill: grant.refillOnInvoicePaid,
+                  evt: "checkout_paid_qron_annual",
+                  plan_id: "qron_launch_annual",
+                  session_id: session.id,
+                  amount_usd: 190,
+                  generations: grant.generations,
+                  brand: grant.brand,
+                  ts: Date.now(),
                 })
               );
-              const wrote = await supabaseUpdate(
-                env,
-                "profiles",
-                { email },
-                {
-                  plan: grant.plan,
-                  generations_limit: grant.generations,
-                  generations_used: 0,
-                  last_grant_session_id: session.id,
-                  updated_at: new Date().toISOString(),
-                }
-              );
-              if (!wrote) return grantRetry("grant write failed");
-              if (grant.plan === "qron_launch_annual") {
-                console.log(
-                  JSON.stringify({
-                    evt: "checkout_paid_qron_annual",
-                    plan_id: "qron_launch_annual",
-                    session_id: session.id,
-                    amount_usd: 190,
-                    generations: grant.generations,
-                    brand: grant.brand,
-                    ts: Date.now(),
-                  })
-                );
-              }
             }
           }
         }
@@ -410,8 +515,7 @@ export default {
       const customerId =
         typeof invoice.customer === "string" ? invoice.customer : null;
       const line = invoice.lines?.data?.[0] as
-        | { price?: { id?: string } | string | null }
-        | undefined;
+        { price?: { id?: string } | string | null } | undefined;
       const price = line?.price;
       const linePrice =
         price && typeof price === "object" ? (price.id ?? null) : null;
