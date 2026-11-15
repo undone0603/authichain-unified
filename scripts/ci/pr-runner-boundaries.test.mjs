@@ -67,11 +67,22 @@ test("buyer-signals PR job is read-only and does not execute lead collector", ()
 });
 
 test("fork pull requests still fall back to hosted ubuntu-24.04 on CI Main", () => {
-  const source = workflow("main");
-  assert.ok(source.includes("pull_request:"));
-  assert.match(
-    source,
-    /github\.event\.pull_request\.head\.repo\.full_name == github\.repository\) && fromJSON\('\["self-hosted","Linux","ARM64","authichain-wsl"\]'\) \|\| 'ubuntu-24.04'/
+  const forkGuard =
+    /github\.event\.pull_request\.head\.repo\.full_name == github\.repository\) && fromJSON\('\["self-hosted","Linux","ARM64","authichain-wsl"\]'\) \|\| 'ubuntu-24.04'/; // pragma: allowlist secret
+  for (const name of ["main", "contract-tests", "agentz-mcp-verify"]) {
+    const source = workflow(name);
+    assert.ok(source.includes("pull_request:"), name);
+    assert.match(source, forkGuard, name);
+    assert.equal(
+      source.includes("runs-on: [self-hosted, Linux, ARM64, authichain-wsl]"), // pragma: allowlist secret
+      false,
+      name
+    );
+  }
+  assert.ok(
+    workflow("contract-tests").includes(
+      "runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('[\"self-hosted\",\"Linux\",\"ARM64\",\"authichain-wsl\"]') || 'ubuntu-24.04' }} # pragma: allowlist secret"
+    )
   );
 });
 

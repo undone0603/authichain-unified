@@ -30,8 +30,10 @@ concurrency:
 jobs:
   hardhat:
     name: Contract tests (Hardhat)
-    # No untrusted PR checkout on the production publisher.
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    # Fork pull requests must never execute on a persistent self-hosted runner.
+    # Keep fork CI on the hosted executor even when GitHub-hosted billing is blocked.
+    # Same-repo PRs, push to main, and authorized manual dispatch use the existing WSL labels.
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }} # pragma: allowlist secret
     timeout-minutes: 20
     permissions:
       contents: read
