@@ -17,6 +17,11 @@ vi.mock("stripe", () => ({
 }));
 
 import worker from "./index";
+import {
+  CATALOG_GRANT_RPC,
+  applyCatalogGrantState,
+  grantReceiptKey,
+} from "../../../src/lib/provisioning";
 
 const env = {
   STRIPE_SECRET_KEY: "sk_test_x",
@@ -62,19 +67,30 @@ function installFetch(opts?: {
   grantLimit?: number;
   grantUsed?: number;
   receipts?: string[];
-  receiptSelectStatus?: number;
   upsertOk?: boolean;
-  updateOk?: boolean;
-  receiptInsertOk?: boolean;
-  updateRows?: unknown[];
+  rpcStatus?: number;
 }) {
   const calls: Array<{
     method: string;
     url: string;
     body?: unknown;
     prefer?: string | null;
-  }> = [];
-  const receipts = new Set(opts?.receipts ?? []);
+  }> & {
+    profile: Record<string, unknown>;
+    receipts: Set<string>;
+  } = Object.assign([], {
+    profile: {
+      id: "prof_1",
+      last_grant_session_id: opts?.prior === undefined ? null : opts.prior,
+      generations_limit: opts?.grantLimit ?? 0,
+      generations_used: opts?.grantUsed ?? 0,
+    },
+    receipts: new Set(
+      (opts?.receipts ?? []).map(id =>
+        id.startsWith("grant:") ? id : grantReceiptKey(id)
+      )
+    ),
+  });
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
@@ -83,71 +99,52 @@ function installFetch(opts?: {
       const prefer = headers.get("Prefer");
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       calls.push({ method, url, body, prefer });
-      if (url.includes("founder_exit_side_effects")) {
-        if (method === "GET") {
-          if ((opts?.receiptSelectStatus ?? 200) >= 400) {
-            return new Response("no", {
-              status: opts?.receiptSelectStatus ?? 500,
-            });
+      if (url.includes(`/rpc/${CATALOG_GRANT_RPC}`)) {
+        if ((opts?.rpcStatus ?? 200) >= 400) {
+          return new Response("no", { status: opts?.rpcStatus ?? 500 });
+        }
+        const args = (body ?? {}) as Record<string, unknown>;
+        const result = applyCatalogGrantState(
+          { receipts: calls.receipts, row: calls.profile },
+          {
+            profileId: String(args.p_profile_id),
+            sessionId: String(args.p_session_id),
+            plan: String(args.p_plan),
+            brand: String(args.p_brand),
+            generations: Number(args.p_generations),
+            stack: Boolean(args.p_stack),
+            stripeCustomerId:
+              (args.p_stripe_customer_id as string | null) ?? null,
+            stripeSubscriptionId:
+              (args.p_stripe_subscription_id as string | null) ?? null,
+            isTrial: Boolean(args.p_is_trial),
           }
-          const hit = [...receipts].find(
-            id =>
-              url.includes(encodeURIComponent(`grant:${id}`)) ||
-              url.includes(`grant:${id}`)
-          );
-          return new Response(
-            JSON.stringify(hit ? [{ idempotency_key: `grant:${hit}` }] : []),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          );
-        }
-        if (method === "POST" && opts?.receiptInsertOk === false) {
-          return new Response("no", { status: 500 });
-        }
-        if (method === "POST" && body && typeof body === "object") {
-          const key = String(
-            (body as { idempotency_key?: string }).idempotency_key ?? ""
-          );
-          if (key.startsWith("grant:"))
-            receipts.add(key.slice("grant:".length));
-        }
-        return new Response("[]", { status: 201 });
+        );
+        return new Response(
+          JSON.stringify({
+            status: result.status,
+            profile_id: result.profileId,
+            generations_limit: calls.profile.generations_limit,
+            generations_used: calls.profile.generations_used,
+            last_grant_session_id: calls.profile.last_grant_session_id,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
       }
       if (method === "GET") {
         if ((opts?.selectStatus ?? 200) >= 400) {
-          return new Response("no", { status: opts?.selectStatus ?? 500 });
+          return new Response("no", {
+            status: opts?.selectStatus ?? 500,
+          });
         }
-        const row =
-          opts?.prior === undefined
-            ? []
-            : [
-                {
-                  last_grant_session_id: opts.prior,
-                  generations_limit: opts.grantLimit ?? 0,
-                  generations_used: opts.grantUsed ?? 0,
-                },
-              ];
-        return new Response(
-          JSON.stringify(opts?.prior === undefined ? [] : row),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }
-        );
+        const row = opts?.prior === undefined ? [] : [calls.profile];
+        return new Response(JSON.stringify(row), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
       }
       if (method === "POST" && opts?.upsertOk === false) {
         return new Response("no", { status: 500 });
-      }
-      if (method === "PATCH" && opts?.updateOk === false) {
-        return new Response("no", { status: 500 });
-      }
-      if (method === "PATCH" && prefer?.includes("return=representation")) {
-        return new Response(
-          JSON.stringify(opts?.updateRows ?? [{ id: "prof_1" }]),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }
-        );
       }
       return new Response("{}", { status: 200 });
     })
@@ -167,84 +164,13 @@ function patches(calls: Array<{ method: string; body?: unknown }>) {
   return calls.filter(c => c.method === "PATCH").map(c => c.body);
 }
 
-/** Mutable profile + receipts so A → B → replay A can share one store. */
-function installStatefulFetch(profile: {
-  last_grant_session_id: string | null;
-  generations_limit: number;
-  generations_used: number;
-}) {
-  const calls: Array<{
-    method: string;
-    url: string;
-    body?: unknown;
-    prefer?: string | null;
-  }> = [];
-  const receipts = new Set<string>();
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method ?? "GET";
-      const headers = new Headers(init?.headers);
-      const prefer = headers.get("Prefer");
-      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
-      calls.push({ method, url, body, prefer });
-      if (url.includes("founder_exit_side_effects")) {
-        if (method === "GET") {
-          const hit = [...receipts].find(
-            id =>
-              url.includes(encodeURIComponent(`grant:${id}`)) ||
-              url.includes(`grant:${id}`)
-          );
-          return new Response(
-            JSON.stringify(hit ? [{ idempotency_key: `grant:${hit}` }] : []),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          );
-        }
-        if (method === "POST" && body && typeof body === "object") {
-          const key = String(
-            (body as { idempotency_key?: string }).idempotency_key ?? ""
-          );
-          if (key.startsWith("grant:"))
-            receipts.add(key.slice("grant:".length));
-        }
-        return new Response("[]", { status: 201 });
-      }
-      if (method === "GET" && url.includes("/profiles")) {
-        return new Response(
-          JSON.stringify([
-            {
-              last_grant_session_id: profile.last_grant_session_id,
-              generations_limit: profile.generations_limit,
-              generations_used: profile.generations_used,
-            },
-          ]),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      if (method === "PATCH" && url.includes("/profiles") && body) {
-        const patch = body as {
-          last_grant_session_id?: string;
-          generations_limit?: number;
-          generations_used?: number;
-        };
-        if (typeof patch.last_grant_session_id === "string") {
-          profile.last_grant_session_id = patch.last_grant_session_id;
-        }
-        if (typeof patch.generations_limit === "number") {
-          profile.generations_limit = patch.generations_limit;
-        }
-        if (typeof patch.generations_used === "number") {
-          profile.generations_used = patch.generations_used;
-        }
-        return new Response(JSON.stringify([{ id: "prof_1" }]), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      return new Response("{}", { status: 200 });
-    })
+function grantRpcs(
+  calls: Array<{ method: string; url: string; body?: unknown }>
+) {
+  return calls.filter(
+    c =>
+      c.method === "POST" && String(c.url).includes(`/rpc/${CATALOG_GRANT_RPC}`)
   );
-  return { calls, receipts, profile };
 }
 
 describe("stripe-webhook checkout grant", () => {
@@ -306,29 +232,22 @@ describe("stripe-webhook checkout grant", () => {
       env
     );
     expect(created.status).toBe(200);
-    expect(patches(first)).toEqual([
+    expect(grantRpcs(first)).toEqual([
       expect.objectContaining({
-        plan: "starter",
-        generations_limit: 100,
-        generations_used: 0,
-        last_grant_session_id: "cs_new",
+        body: expect.objectContaining({
+          p_session_id: "cs_new",
+          p_plan: "starter",
+          p_generations: 100,
+          p_stack: true,
+        }),
       }),
     ]);
-    expect(first.find(c => c.method === "PATCH")?.prefer).toMatch(
-      /return=representation/
-    );
-    expect(
-      first.some(
-        c =>
-          c.method === "POST" &&
-          c.url.includes("founder_exit_side_effects") &&
-          (c.body as { idempotency_key?: string })?.idempotency_key ===
-            "grant:cs_new"
-      )
-    ).toBe(true);
+    expect(first.profile.generations_limit).toBe(100);
+    expect(first.receipts.has(grantReceiptKey("cs_new"))).toBe(true);
+    expect(patches(first)).toEqual([]);
 
     state.event = sessionEvent({ price: STARTER, id: "cs_new" });
-    const second = installFetch({ prior: "cs_new" });
+    const second = installFetch({ prior: "cs_new", grantLimit: 100 });
     const replay = await worker.fetch(
       new Request("https://worker.test/stripe", {
         method: "POST",
@@ -338,6 +257,7 @@ describe("stripe-webhook checkout grant", () => {
       env
     );
     expect(replay.status).toBe(200);
+    expect(second.profile.generations_limit).toBe(100);
     expect(patches(second)).toEqual([]);
   });
 
@@ -480,14 +400,13 @@ describe("stripe-webhook checkout grant", () => {
     );
     spy.mockRestore();
     expect(res.status).toBe(200);
-    expect(patches(calls)).toEqual([
-      expect.objectContaining({
-        plan: "qron_launch_annual",
-        generations_limit: 1200,
-        generations_used: 0,
-        last_grant_session_id: "cs_annual",
-      }),
-    ]);
+    expect(grantRpcs(calls)[0]?.body).toMatchObject({
+      p_plan: "qron_launch_annual",
+      p_generations: 1200,
+      p_stack: false,
+      p_session_id: "cs_annual",
+    });
+    expect(calls.profile.generations_limit).toBe(1200);
     const paid = logs
       .map(line => JSON.parse(line) as { evt: string })
       .filter(e => e.evt === "checkout_paid_qron_annual");
@@ -513,35 +432,32 @@ describe("stripe-webhook checkout grant", () => {
     });
     const res = await worker.fetch(signedPost(), env);
     expect(res.status).toBe(200);
+    expect(calls.profile.generations_limit).toBe(200);
+    expect(grantRpcs(calls)).toHaveLength(1);
     expect(patches(calls)).toEqual([]);
-    expect(
-      calls.some(
-        c => c.method === "GET" && c.url.includes("founder_exit_side_effects")
-      )
-    ).toBe(true);
   });
 
   it("grant A, grant B, replay A does not add A again (CFA-869 F869-1)", async () => {
-    const db = installStatefulFetch({
-      last_grant_session_id: null,
-      generations_limit: 0,
-      generations_used: 0,
+    const db = installFetch({
+      prior: null,
+      grantLimit: 0,
+      grantUsed: 0,
     });
     state.event = sessionEvent({ price: STARTER, id: "cs_a" });
     expect((await worker.fetch(signedPost(), env)).status).toBe(200);
     expect(db.profile.generations_limit).toBe(100);
-    expect(db.receipts.has("cs_a")).toBe(true);
+    expect(db.receipts.has(grantReceiptKey("cs_a"))).toBe(true);
 
     state.event = sessionEvent({ price: STARTER, id: "cs_b" });
     expect((await worker.fetch(signedPost(), env)).status).toBe(200);
     expect(db.profile.generations_limit).toBe(200);
     expect(db.profile.last_grant_session_id).toBe("cs_b");
-    const writes = patches(db.calls).length;
+    const writes = grantRpcs(db).length;
 
     state.event = sessionEvent({ price: STARTER, id: "cs_a" });
     expect((await worker.fetch(signedPost(), env)).status).toBe(200);
     expect(db.profile.generations_limit).toBe(200);
-    expect(patches(db.calls)).toHaveLength(writes);
+    expect(grantRpcs(db)).toHaveLength(writes + 1);
   });
 
   it("adds a second Starter pack on top of unused credits", async () => {
@@ -553,18 +469,14 @@ describe("stripe-webhook checkout grant", () => {
     });
     const res = await worker.fetch(signedPost(), env);
     expect(res.status).toBe(200);
-    expect(patches(calls)).toEqual([
-      expect.objectContaining({
-        plan: "starter",
-        generations_limit: 160,
-        generations_used: 0,
-        last_grant_session_id: "cs_repeat",
-      }),
-    ]);
-    const patch = calls.find(c => c.method === "PATCH");
-    expect(patch?.url).toMatch(/generations_limit=eq\.100/);
-    expect(patch?.url).toMatch(/generations_used=eq\.40/);
-    expect(patch?.url).toMatch(/last_grant_session_id=eq\.cs_old/);
+    expect(grantRpcs(calls)[0]?.body).toMatchObject({
+      p_plan: "starter",
+      p_generations: 100,
+      p_stack: true,
+      p_session_id: "cs_repeat",
+    });
+    expect(calls.profile.generations_limit).toBe(160);
+    expect(patches(calls)).toEqual([]);
   });
 
   it("does not double-grant when the same Starter event is replayed", async () => {
@@ -588,14 +500,12 @@ describe("stripe-webhook checkout grant", () => {
     });
     const res = await worker.fetch(signedPost(), env);
     expect(res.status).toBe(200);
-    expect(patches(calls)).toEqual([
-      expect.objectContaining({
-        plan: "creator",
-        generations_limit: 560,
-        generations_used: 0,
-        last_grant_session_id: "cs_creator",
-      }),
-    ]);
+    expect(grantRpcs(calls)[0]?.body).toMatchObject({
+      p_plan: "creator",
+      p_generations: 500,
+      p_stack: true,
+    });
+    expect(calls.profile.generations_limit).toBe(560);
   });
 
   it("still sets a Launch Annual period grant instead of stacking", async () => {
@@ -607,84 +517,44 @@ describe("stripe-webhook checkout grant", () => {
     });
     const res = await worker.fetch(signedPost(), env);
     expect(res.status).toBe(200);
-    expect(patches(calls)).toEqual([
-      expect.objectContaining({
-        plan: "qron_launch_annual",
-        generations_limit: 1200,
-        generations_used: 0,
-        last_grant_session_id: "cs_annual",
-      }),
-    ]);
-    expect(calls.find(c => c.method === "PATCH")?.prefer).toBeNull();
+    expect(grantRpcs(calls)[0]?.body).toMatchObject({
+      p_plan: "qron_launch_annual",
+      p_generations: 1200,
+      p_stack: false,
+    });
+    expect(calls.profile.generations_limit).toBe(1200);
+    expect(patches(calls)).toEqual([]);
   });
 
-  it("retries a pack grant when the conditional write matches no row", async () => {
-    state.event = sessionEvent({ price: STARTER, id: "cs_cas" });
+  it("fails closed when the catalog RPC returns 500, without changing credits", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_rpc" });
     const calls = installFetch({
       prior: "cs_old",
       grantLimit: 100,
       grantUsed: 40,
-      updateRows: [],
+      rpcStatus: 500,
     });
     const res = await worker.fetch(signedPost(), env);
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({
-      error: "concurrent profile update; retry",
+      error: "grant write failed",
     });
-    expect(patches(calls)).toHaveLength(4);
+    expect(calls.profile.generations_limit).toBe(100);
+    expect(calls.receipts.has(grantReceiptKey("cs_rpc"))).toBe(false);
   });
 
-  it("skips after a CAS miss once this session is already stamped", async () => {
+  it("treats a uniqueness conflict as already granted", async () => {
     state.event = sessionEvent({ price: STARTER, id: "cs_race" });
-    let gets = 0;
-    const granted: unknown[] = [];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string, init?: RequestInit) => {
-        const method = init?.method ?? "GET";
-        if (String(url).includes("founder_exit_side_effects")) {
-          return new Response("[]", {
-            status: method === "GET" ? 200 : 201,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        if (method === "GET") {
-          gets += 1;
-          const row =
-            gets === 1
-              ? {
-                  last_grant_session_id: "cs_old",
-                  generations_limit: 100,
-                  generations_used: 40,
-                }
-              : {
-                  last_grant_session_id: "cs_race",
-                  generations_limit: 160,
-                  generations_used: 0,
-                };
-          return new Response(JSON.stringify([row]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        if (method === "PATCH") {
-          granted.push(JSON.parse(String(init?.body)));
-          return new Response("[]", {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        return new Response("{}", { status: 200 });
-      })
-    );
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 160,
+      grantUsed: 0,
+      receipts: ["cs_race"],
+    });
     const res = await worker.fetch(signedPost(), env);
     expect(res.status).toBe(200);
-    expect(granted).toEqual([
-      expect.objectContaining({
-        generations_limit: 160,
-        last_grant_session_id: "cs_race",
-      }),
-    ]);
+    expect(calls.profile.generations_limit).toBe(160);
+    expect(grantRpcs(calls)).toHaveLength(1);
   });
 
   it("does not log a second Launch Annual sale when the paid session replays", async () => {

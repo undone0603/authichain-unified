@@ -25,6 +25,26 @@ export function grantReceiptKey(sessionId: string): string {
   return `grant:${sessionId}`;
 }
 
+/** Atomic pack/period grant. Lockstep with workers/stripe-webhook CATALOG_GRANT_RPC. */
+export const CATALOG_GRANT_RPC = "grant_catalog_checkout_session";
+
+export type CatalogGrantArgs = {
+  profileId: string;
+  sessionId: string;
+  plan: string;
+  brand: string;
+  generations: number;
+  stack: boolean;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  isTrial?: boolean;
+};
+
+export type CatalogGrantState = {
+  receipts: Set<string>;
+  row: Record<string, unknown>;
+};
+
 // The webhook passes its existing service-role Supabase client (loosely typed).
 type SupabaseLike = {
   from: (table: string) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -114,6 +134,47 @@ export function stackedPackCredits(
   if (l >= UNLIMITED_SENTINEL)
     return { generations_limit: l, generations_used: u };
   return { generations_limit: Math.max(0, l - u) + pack, generations_used: 0 };
+}
+
+/**
+ * In-memory semantics of grant_catalog_checkout_session: the receipt claim and
+ * the credit write are one step. Tests use this instead of split REST calls.
+ */
+export function applyCatalogGrantState(
+  state: CatalogGrantState,
+  args: CatalogGrantArgs
+): { status: "granted" | "already_granted"; profileId: string } {
+  const key = grantReceiptKey(args.sessionId);
+  if (
+    state.receipts.has(key) ||
+    state.row.last_grant_session_id === args.sessionId
+  ) {
+    state.receipts.add(key);
+    return { status: "already_granted", profileId: args.profileId };
+  }
+  state.receipts.add(key);
+  const credits = args.stack
+    ? stackedPackCredits(state.row, args.generations)
+    : {
+        generations_limit: args.generations,
+        generations_used: 0,
+      };
+  const keepSubscription = args.stack && hasActiveSubscription(state.row);
+  Object.assign(state.row, credits, {
+    last_grant_session_id: args.sessionId,
+    brand: args.brand,
+  });
+  if (!keepSubscription) {
+    state.row.subscription_plan = args.plan;
+    state.row.subscription_status = args.isTrial ? "trialing" : "active";
+    if (args.stripeSubscriptionId) {
+      state.row.stripe_subscription_id = args.stripeSubscriptionId;
+    }
+  }
+  if (args.stripeCustomerId) {
+    state.row.stripe_customer_id = args.stripeCustomerId;
+  }
+  return { status: "granted", profileId: args.profileId };
 }
 
 /**
@@ -251,24 +312,77 @@ export async function provisionPurchase(
     return { profileId, created, status: "provisioned" };
   }
 
-  // Session-level idempotency: do not reset generations_used if this session already granted.
-  // A failed read must not look like "no prior grant" — that resets usage on retry.
-  // The same read loads the credit/subscription columns a one-time pack stacks on.
-  // Dual-path: workers/stripe-webhook stacks the same pack formula then stamps
-  // last_grant_session_id and writes grant:{sessionId} on founder_exit_side_effects.
-  // last_grant_session_id is only the latest stamp; the receipt is what stops an
-  // older session from being added again after a newer purchase (CFA-869 F869-1).
-  // Skipping is success.
-  //
-  // Lost-update guard (CFA-346, no migration): the write is conditional on the
-  // generations_limit / generations_used / last_grant_session_id values read.
-  // If another writer (a concurrent grant or a generation spend) got there
-  // first, the update matches 0 rows; re-read and retry, then fail closed so
-  // Stripe redelivers. A re-read showing this session already granted stops
-  // with success, so a session is never credited twice.
   const oneTimePack = isOneTimePack(input);
-  const needsRead = Boolean(input.sessionId || oneTimePack);
   const grant = grantFor(input.plan, input.generationsGrant);
+
+  // Checkout sessions claim grant:{sessionId} and apply credits in one RPC.
+  // Split REST (profile write, then receipt insert) is not exactly-once: a
+  // crash between them lets a later replay restack after last_grant moves.
+  if (input.sessionId && grant !== undefined && input.plan) {
+    if (!supabase.rpc) {
+      return {
+        profileId,
+        created,
+        status: "upsert_failed",
+        error: "atomic catalog grant RPC unavailable",
+      };
+    }
+    const { data, error } = await supabase.rpc(CATALOG_GRANT_RPC, {
+      p_profile_id: profileId,
+      p_session_id: input.sessionId,
+      p_plan: input.plan,
+      p_brand: input.brand,
+      p_generations: grant,
+      p_stack: oneTimePack,
+      p_stripe_customer_id: input.stripeCustomerId ?? null,
+      p_stripe_subscription_id: input.stripeSubscriptionId ?? null,
+      p_is_trial: Boolean(input.isTrial),
+    });
+    if (error) {
+      console.error(
+        "[provisioning] atomic catalog grant failed:",
+        error.message
+      );
+      return {
+        profileId,
+        created,
+        status: "upsert_failed",
+        error: error.message || "atomic catalog grant failed",
+      };
+    }
+    const result = data as { profile_id?: unknown; status?: unknown } | null;
+    if (result?.status === "already_granted") {
+      console.log(
+        JSON.stringify({
+          evt: "provision_skipped_idempotent",
+          session: input.sessionId,
+          profileId,
+        })
+      );
+      return {
+        profileId,
+        created,
+        status: "provisioned",
+        skippedIdempotent: true,
+      };
+    }
+    if (result?.status !== "granted" || result.profile_id !== profileId) {
+      return {
+        profileId,
+        created,
+        status: "upsert_failed",
+        error: "atomic catalog grant returned invalid evidence",
+      };
+    }
+    return { profileId, created, status: "provisioned" };
+  }
+
+  // No checkout session id: invoice refill and similar writes stay on CAS.
+  // Lost-update guard (CFA-346, no extra table): the write is conditional on
+  // the generations_limit / generations_used / last_grant_session_id values
+  // read. If another writer got there first, the update matches 0 rows;
+  // re-read and retry, then fail closed so Stripe redelivers.
+  const needsRead = Boolean(oneTimePack);
 
   for (let attempt = 0; attempt <= PROVISION_CAS_RETRIES; attempt++) {
     let current: Record<string, unknown> | null = null;
@@ -293,64 +407,6 @@ export async function provisionPurchase(
         };
       }
       current = (existingGrant as Record<string, unknown> | null) ?? null;
-      if (input.sessionId) {
-        const { data: receipt, error: receiptError } = await supabase
-          .from("founder_exit_side_effects")
-          .select("idempotency_key")
-          .eq("idempotency_key", grantReceiptKey(input.sessionId))
-          .maybeSingle();
-        if (receiptError) {
-          console.error(
-            "[provisioning] grant receipt read failed:",
-            receiptError
-          );
-          return {
-            profileId,
-            created,
-            status: "upsert_failed",
-            error: receiptError.message || "grant receipt lookup failed",
-          };
-        }
-        const lastMatches =
-          existingGrant?.last_grant_session_id === input.sessionId;
-        if (receipt || lastMatches) {
-          if (!receipt) {
-            const { error: backfillError } = await supabase
-              .from("founder_exit_side_effects")
-              .insert({
-                idempotency_key: grantReceiptKey(input.sessionId),
-                profile_id: profileId,
-              });
-            if (
-              backfillError &&
-              backfillError.code !== "23505" &&
-              !/duplicate/i.test(backfillError.message || "")
-            ) {
-              return {
-                profileId,
-                created,
-                status: "upsert_failed",
-                error: backfillError.message || "grant receipt write failed",
-              };
-            }
-          }
-          console.log(
-            JSON.stringify({
-              evt: "provision_skipped_idempotent",
-              session: input.sessionId,
-              profileId,
-              attempt,
-              receipt: Boolean(receipt),
-            })
-          );
-          return {
-            profileId,
-            created,
-            status: "provisioned",
-            skippedIdempotent: true,
-          };
-        }
-      }
     }
 
     // 2. Apply entitlements. Subscriptions reset usage so the new period starts
@@ -406,26 +462,6 @@ export async function provisionPurchase(
       };
     }
     if (!conditional || (Array.isArray(written) && written.length > 0)) {
-      if (input.sessionId) {
-        const { error: receiptWriteError } = await supabase
-          .from("founder_exit_side_effects")
-          .insert({
-            idempotency_key: grantReceiptKey(input.sessionId),
-            profile_id: profileId,
-          });
-        if (
-          receiptWriteError &&
-          receiptWriteError.code !== "23505" &&
-          !/duplicate/i.test(receiptWriteError.message || "")
-        ) {
-          return {
-            profileId,
-            created,
-            status: "upsert_failed",
-            error: receiptWriteError.message || "grant receipt write failed",
-          };
-        }
-      }
       return { profileId, created, status: "provisioned" };
     }
     console.warn(

@@ -155,6 +155,9 @@ export function grantReceiptKey(sessionId: string): string {
   return `grant:${sessionId}`;
 }
 
+/** Atomic pack/period grant. Lockstep with src/lib/provisioning.ts CATALOG_GRANT_RPC. */
+export const CATALOG_GRANT_RPC = "grant_catalog_checkout_session";
+
 /** True when this checkout session already wrote the generation grant. */
 export function alreadyGrantedSession(
   existingSessionId: string | null | undefined,

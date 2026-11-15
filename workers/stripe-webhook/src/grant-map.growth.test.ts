@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  CATALOG_GRANT_RPC,
   FOUNDER_EMAILS,
   GRANT_CAS_RETRIES,
   LOOP_BY_PLAN,
@@ -21,6 +22,7 @@ import {
 import { GROWTH_LOOPS } from "../../../src/lib/growth/loops";
 import { FOUNDER_EMAILS as CANONICAL_FOUNDERS } from "../../../src/lib/billing/live-catalog";
 import {
+  CATALOG_GRANT_RPC as apexCatalogGrantRpc,
   PROVISION_CAS_RETRIES,
   grantReceiptKey as apexGrantReceiptKey,
   stackedPackCredits as apexStackedPackCredits,
@@ -62,6 +64,11 @@ describe("checkout grant replay", () => {
   it("uses the same grant receipt key as provisioning.ts", () => {
     expect(grantReceiptKey("cs_1")).toBe("grant:cs_1");
     expect(grantReceiptKey("cs_1")).toBe(apexGrantReceiptKey("cs_1"));
+  });
+
+  it("uses the same catalog grant RPC as provisioning.ts", () => {
+    expect(CATALOG_GRANT_RPC).toBe("grant_catalog_checkout_session");
+    expect(CATALOG_GRANT_RPC).toBe(apexCatalogGrantRpc);
   });
 });
 
