@@ -62,6 +62,13 @@ test('ancestor path rejects when expected_sha is still live main HEAD', () => {
   x.shaMatchPath = 'ancestor';
   assert.throws(() => assertReleasePolicy(x), /behind main HEAD/);
 });
+test('ancestor path rejects when dispatch SHA is not live main HEAD', () => {
+  const x = fixture();
+  x.shaMatchPath = 'ancestor';
+  x.dispatchSha = 'c'.repeat(40);
+  x.branch.commit.sha = 'b'.repeat(40);
+  assert.throws(() => assertReleasePolicy(x), /dispatch not from current main/);
+});
 test('unknown SHA match path is rejected', () => {
   rejects(x => x.shaMatchPath = 'maybe', /unknown SHA match path/);
 });

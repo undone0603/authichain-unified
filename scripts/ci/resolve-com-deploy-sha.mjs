@@ -4,47 +4,47 @@
  * marketing Worker.
  *
  * Passes when expected_sha is current main HEAD, or an ancestor of main
- * whose intervening commits do not touch the Worker tree, this deploy
- * workflow, or root package/lock/workspace files. Always returns the
- * expected SHA so callers check out and publish that commit, not HEAD.
+ * whose intervening commits only touch the ancestor allowlist (ops
+ * config and docs that are not bundled). Always returns the expected SHA
+ * so callers check out and publish that commit, not HEAD.
+ *
+ * The allowlist is fail-closed: any file not on it — including every
+ * Worker import, JSON/MD asset, wrangler input, and root tsconfig —
+ * blocks the ancestor path. A denylist of "protected" trees cannot stay
+ * complete as the bundle grows.
  */
-import { appendFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const SHA = /^[a-f0-9]{40}$/;
-
-export const PROTECTED_PATHS = [
-  "workers/authichain-com/", // pragma: allowlist secret
-  "workers/_shared/",
-  "workers/authichain-verify-worker/",
-  "src/lib/",
-  "worker-app/",
-  "schemas/",
-  "protocol/",
-  "content/seo/",
-  "content/microsites/",
-  "scripts/sync-microsite-packs.mjs",
-  ".github/workflows/deploy-authichain-com.yml", // pragma: allowlist secret
-  "package.json",
-  "pnpm-lock.yaml",
-  "pnpm-workspace.yaml",
-  "package-lock.json",
-  "yarn.lock",
-  "bun.lockb",
-  "bun.lock",
-  "npm-shrinkwrap.json",
-  "scripts/ci/",
-  ".npmrc",
+const WORKER_DIR = "workers/authichain-com";
+const CODE_EXT = new Set([".ts", ".tsx", ".mts", ".js", ".mjs", ".cjs"]);
+const RESOLVE_EXT = [
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".json",
+  ".md",
 ];
 
-export function isProtectedChange(file) {
+export const SAFE_ANCESTOR_PATHS = [".github/autonomy.json", "docs/"];
+
+export function pathMatches(file, prefixes) {
   const name = String(file || "");
-  return PROTECTED_PATHS.some((p) =>
+  return prefixes.some((p) =>
     p.endsWith("/")
       ? name === p.slice(0, -1) || name.startsWith(p)
       : name === p
   );
+}
+
+export function isSafeAncestorChange(file) {
+  return pathMatches(file, SAFE_ANCESTOR_PATHS);
 }
 
 export function resolveDeploySha({
@@ -76,11 +76,11 @@ export function resolveDeploySha({
       "deploy SHA check: ancestor of main, but git diff was empty; fail closed"
     );
   }
-  const protectedHits = files.filter(isProtectedChange);
-  if (protectedHits.length) {
+  const blocked = files.filter((file) => !isSafeAncestorChange(file));
+  if (blocked.length) {
     throw new Error(
-      "deploy SHA check: ancestor of main, but protected paths changed: " +
-        protectedHits.join(", ")
+      "deploy SHA check: ancestor of main, but paths outside the ancestor allowlist changed: " +
+        blocked.join(", ")
     );
   }
   return { sha: expected, path: "ancestor" };
@@ -124,6 +124,121 @@ export function inspectGit({
   return { mainSha, isAncestor, changedFiles };
 }
 
+function posixRel(root, abs) {
+  return path.relative(root, abs).split(path.sep).join("/");
+}
+
+function specifiers(source) {
+  const out = [];
+  const re =
+    /(?:\bfrom\s+|\bimport\s*\(\s*|\brequire\s*\(\s*|^\s*import\s+)['"]([^'"]+)['"]/gm;
+  let match;
+  while ((match = re.exec(source))) out.push(match[1]);
+  return out;
+}
+
+function resolveSpecifier(root, fromFile, spec) {
+  if (!spec || spec.startsWith("node:") || spec.startsWith("cloudflare:")) {
+    return null;
+  }
+  if (!spec.startsWith(".") && !spec.startsWith("/")) return null;
+  const base = spec.startsWith("/")
+    ? path.join(root, spec)
+    : path.resolve(path.dirname(fromFile), spec);
+  const candidates = [];
+  const push = (candidate) => {
+    const normalized = path.normalize(candidate);
+    if (!candidates.includes(normalized)) candidates.push(normalized);
+  };
+  push(base);
+  const ext = path.extname(base);
+  if (ext === ".js" || ext === ".mjs") {
+    push(base.replace(/\.mjs$/, ".mts").replace(/\.js$/, ".ts"));
+    push(base.replace(/\.js$/, ".tsx"));
+  } else if (!ext) {
+    for (const extra of RESOLVE_EXT) push(base + extra);
+    for (const extra of [".ts", ".mjs", ".js"]) {
+      push(path.join(base, "index" + extra));
+    }
+  }
+  const rootReal = path.resolve(root);
+  for (const candidate of candidates) {
+    if (!existsSync(candidate)) continue;
+    if (candidate.includes(`${path.sep}node_modules${path.sep}`)) continue;
+    const rel = path.relative(rootReal, candidate);
+    if (rel.startsWith("..") || path.isAbsolute(rel)) continue;
+    return candidate;
+  }
+  return null;
+}
+
+function nearestTsconfig(root, startDir) {
+  let dir = startDir;
+  const rootReal = path.resolve(root);
+  while (true) {
+    const candidate = path.join(dir, "tsconfig.json");
+    if (existsSync(candidate)) return posixRel(root, candidate);
+    const parent = path.dirname(dir);
+    if (parent === dir) return null;
+    if (path.relative(rootReal, parent).startsWith("..")) return null;
+    dir = parent;
+  }
+}
+
+function wranglerMain(root, workerDir) {
+  const tomlRel = path.posix.join(workerDir, "wrangler.toml");
+  const tomlPath = path.join(root, tomlRel);
+  const toml = readFileSync(tomlPath, "utf8");
+  const match = toml.match(/^main\s*=\s*"([^"]+)"/m);
+  if (!match) {
+    throw new Error("deploy SHA check: wrangler.toml has no main entry");
+  }
+  return path.join(root, workerDir, match[1]);
+}
+
+/**
+ * Files wrangler actually ships for authichain-com: the relative-import
+ * closure of wrangler `main`, plus wrangler.toml, the Worker package.json,
+ * and the nearest tsconfig.json (root today; there is no Worker-local one).
+ */
+export function collectAuthichainComBundleInputs(root = process.cwd()) {
+  const entry = wranglerMain(root, WORKER_DIR);
+  const seen = new Set();
+  const missing = [];
+  const queue = [entry];
+  while (queue.length) {
+    const file = queue.shift();
+    const key = posixRel(root, file);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (!CODE_EXT.has(path.extname(file))) continue;
+    const source = readFileSync(file, "utf8");
+    for (const spec of specifiers(source)) {
+      const resolved = resolveSpecifier(root, file, spec);
+      if (!resolved) {
+        if (spec.startsWith(".") || spec.startsWith("/")) {
+          missing.push({ from: key, spec });
+        }
+        continue;
+      }
+      const rel = posixRel(root, resolved);
+      if (!seen.has(rel)) queue.push(resolved);
+    }
+  }
+  if (missing.length) {
+    throw new Error(
+      "deploy SHA check: unresolved Worker import(s): " +
+        missing.map((m) => `${m.from} -> ${m.spec}`).join(", ")
+    );
+  }
+  seen.add(path.posix.join(WORKER_DIR, "wrangler.toml"));
+  const pkg = path.posix.join(WORKER_DIR, "package.json");
+  if (existsSync(path.join(root, pkg))) seen.add(pkg);
+  const tsconfig = nearestTsconfig(root, path.join(root, WORKER_DIR));
+  if (tsconfig) seen.add(tsconfig);
+  return [...seen].sort();
+}
+
 export function logMatch(result, mainSha) {
   if (result.path === "exact-head") {
     console.log(
@@ -132,7 +247,7 @@ export function logMatch(result, mainSha) {
     return;
   }
   console.log(
-    `Deploy SHA check passed (ancestor): expected_sha ${result.sha} is an ancestor of main ${mainSha}; git diff has no protected-path changes. Checking out and deploying expected_sha, not HEAD.`
+    `Deploy SHA check passed (ancestor): expected_sha ${result.sha} is an ancestor of main ${mainSha}; git diff has no paths outside the ancestor allowlist. Checking out and deploying expected_sha, not HEAD.`
   );
 }
 

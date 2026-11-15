@@ -32,6 +32,8 @@ export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, rul
   } else {
     guard(expectedSha !== branch.commit.sha,
           'ancestor path requires expected_sha behind main HEAD');
+    guard(dispatchSha === branch.commit.sha,
+          'dispatch not from current main');
   }
   guard(ruleset?.id === RULESET && ruleset?.name === 'main-no-direct-push' &&
         ruleset?.enforcement === 'active' &&

@@ -4,18 +4,29 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import {
+  collectAuthichainComBundleInputs,
   inspectGit,
-  isProtectedChange,
-  PROTECTED_PATHS,
+  isSafeAncestorChange,
   resolveDeploySha,
+  SAFE_ANCESTOR_PATHS,
 } from "./resolve-com-deploy-sha.mjs";
 
 const EXPECTED = "a".repeat(40);
 const MAIN = "b".repeat(40);
-const WORKER_DIR = PROTECTED_PATHS[0];
+const WORKER_DIR = "workers/authichain-com/";
 const WORKFLOW = ".github/workflows/deploy-authichain-com.yml";
 const WORKER_ROOT = WORKER_DIR.replace(/\/$/, "");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+const SHIPPED_GAP_FILES = [
+  "scripts/lib/evm-chains.ts",
+  "content/dpp/regulatory-timeline.json",
+  "content/strainchain/mendo-love-farms/certificates.json",
+  "content/strainchain/gtr-seeds/certificates.json",
+  "tsconfig.json",
+];
 
 test("exact HEAD match deploys expected_sha", () => {
   assert.deepEqual(
@@ -29,7 +40,7 @@ test("exact HEAD match deploys expected_sha", () => {
   );
 });
 
-test("ancestor with only unrelated paths (e.g. autonomy.json) passes", () => {
+test("ancestor with only allowlisted paths (autonomy.json, docs/) passes", () => {
   assert.deepEqual(
     resolveDeploySha({
       expectedSha: EXPECTED,
@@ -41,7 +52,7 @@ test("ancestor with only unrelated paths (e.g. autonomy.json) passes", () => {
   );
 });
 
-test("ancestor fails when the protected Worker tree changed", () => {
+test("ancestor fails when the Worker tree changed", () => {
   const touched = `${WORKER_DIR}src/index.ts`;
   assert.throws(
     () =>
@@ -51,7 +62,9 @@ test("ancestor fails when the protected Worker tree changed", () => {
         isAncestor: true,
         changedFiles: [touched],
       }),
-    new RegExp(`protected paths changed: ${touched.replaceAll("/", "\\/")}`)
+    new RegExp(
+      `paths outside the ancestor allowlist changed: ${touched.replaceAll("/", "\\/")}`
+    )
   );
 });
 
@@ -70,7 +83,7 @@ test("ancestor fails when the deploy workflow or root package files changed", ()
           isAncestor: true,
           changedFiles: [file],
         }),
-      /protected paths changed/
+      /paths outside the ancestor allowlist changed/
     );
   }
 });
@@ -90,29 +103,8 @@ test("ancestor fails closed when git diff reports no files", () => {
   }
 });
 
-test("ancestor fails when newly protected lockfiles or bundled modules changed", () => {
-  const newProtected = [
-    "workers/_shared/estate-landing.ts",
-    "workers/authichain-verify-worker/mcp-routes.ts",
-    "src/lib/plans.ts",
-    "worker-app/checkout-growth.ts",
-    "schemas/example.json",
-    "protocol/example.ts",
-    "content/seo/page.md",
-    "content/microsites/pack.json",
-    "scripts/sync-microsite-packs.mjs",
-    "package-lock.json",
-    "yarn.lock",
-    "bun.lockb",
-    "bun.lock",
-    "npm-shrinkwrap.json",
-    "scripts/ci/resolve-com-deploy-sha.mjs",
-    "scripts/ci/autonomous-release-gate.mjs",
-    "scripts/ci/parse-wrangler-version-id.mjs",
-    "scripts/ci/promote-worker-version.mjs",
-    ".npmrc",
-  ];
-  for (const file of newProtected) {
+test("ancestor fails when shipped payment, claim, or tsconfig inputs changed", () => {
+  for (const file of SHIPPED_GAP_FILES) {
     assert.throws(
       () =>
         resolveDeploySha({
@@ -121,9 +113,22 @@ test("ancestor fails when newly protected lockfiles or bundled modules changed",
           isAncestor: true,
           changedFiles: [file],
         }),
-      /protected paths changed/
+      /paths outside the ancestor allowlist changed/
     );
   }
+});
+
+test("ancestor fails when allowlisted docs mix with a shipped file", () => {
+  assert.throws(
+    () =>
+      resolveDeploySha({
+        expectedSha: EXPECTED,
+        mainSha: MAIN,
+        isAncestor: true,
+        changedFiles: [".github/autonomy.json", "scripts/lib/evm-chains.ts"],
+      }),
+    /scripts\/lib\/evm-chains\.ts/
+  );
 });
 
 test("non-ancestor behind or beside main fails", () => {
@@ -139,11 +144,17 @@ test("non-ancestor behind or beside main fails", () => {
   );
 });
 
-test("nested package.json outside the Worker is not a root lockfile hit", () => {
-  assert.equal(isProtectedChange("apps/web/package.json"), false);
-  assert.equal(isProtectedChange("package.json"), true);
-  assert.equal(isProtectedChange(`${WORKER_ROOT}-extra/x.ts`), false);
-  assert.equal(isProtectedChange(WORKER_ROOT), true);
+test("allowlist is exact prefix match, not a sibling-path hit", () => {
+  assert.equal(isSafeAncestorChange(".github/autonomy.json"), true);
+  assert.equal(isSafeAncestorChange("docs/NETWORK.md"), true);
+  assert.equal(isSafeAncestorChange("docs"), true);
+  assert.equal(isSafeAncestorChange("documentation/x.md"), false);
+  assert.equal(isSafeAncestorChange(".github/autonomy.json.bak"), false);
+  assert.equal(isSafeAncestorChange("apps/web/package.json"), false);
+  assert.equal(isSafeAncestorChange("package.json"), false);
+  assert.equal(isSafeAncestorChange(`${WORKER_ROOT}-extra/x.ts`), false);
+  assert.equal(isSafeAncestorChange(WORKER_ROOT), false);
+  assert.equal(SAFE_ANCESTOR_PATHS.length, 2);
 });
 
 test("malformed SHAs fail closed", () => {
@@ -157,6 +168,34 @@ test("malformed SHAs fail closed", () => {
       }),
     /40-character lowercase hex/
   );
+});
+
+test("every file the Worker ships is outside the ancestor allowlist", () => {
+  const shipped = collectAuthichainComBundleInputs(ROOT);
+  assert.ok(shipped.length >= 100, `bundle closure too small: ${shipped.length}`);
+  assert.ok(shipped.includes(`${WORKER_DIR}src/index.ts`));
+  assert.ok(shipped.includes(`${WORKER_DIR}wrangler.toml`));
+  for (const file of SHIPPED_GAP_FILES) {
+    assert.ok(shipped.includes(file), `missing shipped input ${file}`);
+  }
+  const leaked = shipped.filter(isSafeAncestorChange);
+  assert.deepEqual(
+    leaked,
+    [],
+    "allowlist overlaps the shipped Worker graph: " + leaked.join(", ")
+  );
+  for (const file of shipped) {
+    assert.throws(
+      () =>
+        resolveDeploySha({
+          expectedSha: EXPECTED,
+          mainSha: MAIN,
+          isAncestor: true,
+          changedFiles: [file],
+        }),
+      /paths outside the ancestor allowlist changed/
+    );
+  }
 });
 
 function gitRepo() {
@@ -221,5 +260,19 @@ test("git: ancestor with only autonomy.json is allowed; Worker edits are not", (
   assert.throws(
     () => resolveDeploySha({ expectedSha: base, ...blocked }),
     new RegExp(`${WORKER_DIR}w\\.txt`.replaceAll("/", "\\/"))
+  );
+});
+
+test("git: expected_sha missing from the repo fails closed", () => {
+  const { dir } = gitRepo();
+  const missing = "c".repeat(40);
+  assert.throws(
+    () =>
+      inspectGit({
+        expectedSha: missing,
+        mainRef: "main",
+        cwd: dir,
+      }),
+    /git merge-base --is-ancestor failed/
   );
 });
