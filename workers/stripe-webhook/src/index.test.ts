@@ -416,6 +416,15 @@ describe("stripe-webhook checkout grant", () => {
     expect(patches(calls)).toEqual([]);
   });
 
+  it("refuses a non-paid Starter session before invoking the pack RPC", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_no_payment", paymentStatus: "no_payment_required" });
+    const calls = installFetch({ prior: null });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "paid pack session evidence missing" });
+    expect(calls.some(c => c.url.includes("/rpc/grant_stripe_pack_session"))).toBe(false);
+  });
+
   it("does not grant a checkout session that is still unpaid", async () => {
     state.event = sessionEvent({
       price: LAUNCH_ANNUAL,
