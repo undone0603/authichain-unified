@@ -368,6 +368,30 @@ describe("stripe-webhook checkout grant", () => {
     expect(patches(calls)).toEqual([]);
   });
 
+  it("retries Starter with missing payment status without a profile or credit write", async () => {
+    const event = sessionEvent({ price: STARTER, id: "cs_missing_paid_status" });
+    Reflect.deleteProperty(event.data.object, "payment_status");
+    state.event = event;
+    const calls = installFetch();
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(grantRpcs(calls)).toHaveLength(0);
+    expect(calls.filter(c => c.url.includes("/profiles"))).toHaveLength(0);
+  });
+
+  it("retries Creator with no_payment_required instead of granting credits", async () => {
+    state.event = sessionEvent({
+      price: CREATOR,
+      id: "cs_creator_not_paid",
+      paymentStatus: "no_payment_required",
+    });
+    const calls = installFetch();
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(grantRpcs(calls)).toHaveLength(0);
+    expect(calls.filter(c => c.url.includes("/profiles"))).toHaveLength(0);
+  });
+
   it("does not grant a checkout session that is still unpaid", async () => {
     state.event = sessionEvent({
       price: LAUNCH_ANNUAL,

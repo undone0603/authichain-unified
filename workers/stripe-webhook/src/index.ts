@@ -297,6 +297,14 @@ export default {
           priceId: priceIdFromSession(session),
           amountTotal: session.amount_total,
         });
+        // Only a genuinely paid Stripe checkout may grant one-time pack credits.
+        // Missing payment status is not proof of settlement; retry safely.
+        if (
+          (grant?.plan === "starter" || grant?.plan === "creator") &&
+          session.payment_status !== "paid"
+        ) {
+          return grantRetry("paid pack session evidence missing");
+        }
         const plan = grant?.plan || session.metadata?.plan || "starter";
         if (grant?.canonicalFulfillment && !email) {
           return grantRetry("canonical DPP buyer identity missing");

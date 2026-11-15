@@ -481,6 +481,38 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     expect(r.warned).toBe(false);
   });
 
+  it("fails closed on a Starter checkout claiming a plan but missing payment status", async () => {
+    vi.mocked(provisionPurchase).mockResolvedValue({
+      profileId: "prof_1",
+      created: false,
+      status: "provisioned",
+    });
+    const res = await postInvoice(
+      starterSession({
+        metadata: { plan: "starter" },
+        payment_status: undefined,
+      })
+    );
+    expect(res.status).toBe(500);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("does not grant Creator from no_payment_required status", async () => {
+    vi.mocked(provisionPurchase).mockResolvedValue({
+      profileId: "prof_1",
+      created: false,
+      status: "provisioned",
+    });
+    const res = await postInvoice(
+      starterSession({
+        metadata: { plan: "creator" },
+        payment_status: "no_payment_required",
+      })
+    );
+    expect(res.status).toBe(500);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
   it("negative: unpaid session is held before any grant and logs the hold", async () => {
     // ae38cf56 (2026-10-19) intercepts payment_status "unpaid" before the
     // Starter amount fallback is reached, so the signal is the
