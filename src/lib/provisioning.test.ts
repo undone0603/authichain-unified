@@ -32,6 +32,7 @@ function fakeProfiles(opts?: {
   receiptLookupError?: { message: string } | null;
   receiptWriteError?: { message: string; code?: string } | null;
   receipts?: string[];
+  receiptProfiles?: Record<string, string>;
   updateError?: { message: string } | null;
   rpcError?: { message: string } | null;
   rpcAlreadyGranted?: boolean;
@@ -171,9 +172,19 @@ function fakeProfiles(opts?: {
     }
     if (fn === CATALOG_GRANT_RPC) {
       const result = applyCatalogGrantState(
-        { receipts, row: profileRow },
+        {
+          receipts,
+          receiptProfiles: opts?.receiptProfiles,
+          row: profileRow,
+        },
         catalogArgs(args)
       );
+      if (result.status === "conflict") {
+        return {
+          data: null,
+          error: { message: "catalog_grant_receipt_conflict" },
+        };
+      }
       if (result.status === "granted") {
         updates.push({
           id: String(args.p_profile_id),
@@ -442,6 +453,46 @@ describe("provisionPurchase", () => {
     expect(updates).toHaveLength(0);
   });
 
+  it("fails closed when PostgREST has not loaded the catalog grant RPC", async () => {
+    const { supabase, updates } = fakeProfiles({
+      existingId: "prof_1",
+      rpcError: { message: "Could not find the function", code: "PGRST202" },
+    });
+    const result = await provisionPurchase(supabase, {
+      email: "buyer@example.com",
+      brand: "authichain",
+      plan: "starter",
+      sessionId: "cs_new",
+    });
+    expect(result).toMatchObject({
+      profileId: "prof_1",
+      status: "upsert_failed",
+      error: "atomic catalog grant RPC unavailable",
+    });
+    expect(updates).toHaveLength(0);
+  });
+
+  it("fails closed when the session receipt belongs to another profile", async () => {
+    const { supabase, updates } = fakeProfiles({
+      existingId: "prof_1",
+      receipts: ["grant:cs_taken"],
+      receiptProfiles: { "grant:cs_taken": "prof_other" },
+      row: { generations_limit: 100, generations_used: 0 },
+    });
+    const result = await provisionPurchase(supabase, {
+      email: "buyer@example.com",
+      brand: "authichain",
+      plan: "starter",
+      sessionId: "cs_taken",
+    });
+    expect(result).toMatchObject({
+      profileId: "prof_1",
+      status: "upsert_failed",
+      error: "catalog_grant_receipt_conflict",
+    });
+    expect(updates).toEqual([]);
+  });
+
   it("reports upsert_failed when the atomic catalog RPC is unavailable", async () => {
     const { supabase, updates } = fakeProfiles({ existingId: "prof_1" });
 
@@ -649,6 +700,12 @@ describe("provisionPurchase", () => {
             { receipts, row: state.row },
             catalogArgs(args)
           );
+          if (result.status === "conflict") {
+            return {
+              data: null,
+              error: { message: "catalog_grant_receipt_conflict" },
+            };
+          }
           if (result.status === "granted") state.writes += 1;
           return {
             data: { status: result.status, profile_id: result.profileId },

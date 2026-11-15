@@ -69,6 +69,8 @@ function installFetch(opts?: {
   receipts?: string[];
   upsertOk?: boolean;
   rpcStatus?: number;
+  ambiguousProfile?: boolean;
+  receiptProfile?: string;
 }) {
   const calls: Array<{
     method: string;
@@ -105,7 +107,15 @@ function installFetch(opts?: {
         }
         const args = (body ?? {}) as Record<string, unknown>;
         const result = applyCatalogGrantState(
-          { receipts: calls.receipts, row: calls.profile },
+          {
+            receipts: calls.receipts,
+            receiptProfiles: opts?.receiptProfile
+              ? Object.fromEntries(
+                  [...calls.receipts].map(key => [key, opts.receiptProfile!])
+                )
+              : undefined,
+            row: calls.profile,
+          },
           {
             profileId: String(args.p_profile_id),
             sessionId: String(args.p_session_id),
@@ -120,6 +130,11 @@ function installFetch(opts?: {
             isTrial: Boolean(args.p_is_trial),
           }
         );
+        if (result.status === "conflict") {
+          return new Response("catalog_grant_receipt_conflict", {
+            status: 400,
+          });
+        }
         return new Response(
           JSON.stringify({
             status: result.status,
@@ -137,7 +152,12 @@ function installFetch(opts?: {
             status: opts?.selectStatus ?? 500,
           });
         }
-        const row = opts?.prior === undefined ? [] : [calls.profile];
+        const row =
+          opts?.prior === undefined
+            ? []
+            : opts.ambiguousProfile
+              ? [calls.profile, { ...calls.profile, id: "prof_2" }]
+              : [calls.profile];
         return new Response(JSON.stringify(row), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -526,6 +546,36 @@ describe("stripe-webhook checkout grant", () => {
     expect(patches(calls)).toEqual([]);
   });
 
+  it("fails closed when two profiles match the buyer email", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_amb" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      ambiguousProfile: true,
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "grant lookup failed" });
+    expect(grantRpcs(calls)).toEqual([]);
+    expect(calls.profile.generations_limit).toBe(100);
+  });
+
+  it("fails closed when the catalog RPC is missing (migration not applied)", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_rpc" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      grantUsed: 40,
+      rpcStatus: 404,
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: "catalog grant RPC unavailable",
+    });
+    expect(calls.profile.generations_limit).toBe(100);
+  });
+
   it("fails closed when the catalog RPC returns 500, without changing credits", async () => {
     state.event = sessionEvent({ price: STARTER, id: "cs_rpc" });
     const calls = installFetch({
@@ -541,6 +591,23 @@ describe("stripe-webhook checkout grant", () => {
     });
     expect(calls.profile.generations_limit).toBe(100);
     expect(calls.receipts.has(grantReceiptKey("cs_rpc"))).toBe(false);
+  });
+
+  it("fails closed when the session receipt belongs to another profile", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_taken" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      grantUsed: 0,
+      receipts: ["cs_taken"],
+      receiptProfile: "prof_other",
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: "catalog_grant_receipt_conflict",
+    });
+    expect(calls.profile.generations_limit).toBe(100);
   });
 
   it("treats a uniqueness conflict as already granted", async () => {

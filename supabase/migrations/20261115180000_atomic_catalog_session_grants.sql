@@ -41,9 +41,13 @@ BEGIN
   FROM public.founder_exit_side_effects
   WHERE idempotency_key = v_grant_key;
   IF FOUND THEN
+    IF v_receipt_profile_id IS NOT NULL
+       AND v_receipt_profile_id IS DISTINCT FROM p_profile_id THEN
+      RAISE EXCEPTION 'catalog_grant_receipt_conflict';
+    END IF;
     RETURN jsonb_build_object(
       'status', 'already_granted',
-      'profile_id', v_receipt_profile_id
+      'profile_id', COALESCE(v_receipt_profile_id, p_profile_id)
     );
   END IF;
 
@@ -53,6 +57,20 @@ BEGIN
   FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'catalog_grant_profile_not_found';
+  END IF;
+
+  SELECT profile_id INTO v_receipt_profile_id
+  FROM public.founder_exit_side_effects
+  WHERE idempotency_key = v_grant_key;
+  IF FOUND THEN
+    IF v_receipt_profile_id IS NOT NULL
+       AND v_receipt_profile_id IS DISTINCT FROM p_profile_id THEN
+      RAISE EXCEPTION 'catalog_grant_receipt_conflict';
+    END IF;
+    RETURN jsonb_build_object(
+      'status', 'already_granted',
+      'profile_id', COALESCE(v_receipt_profile_id, p_profile_id)
+    );
   END IF;
 
   IF v_profile.last_grant_session_id = p_session_id THEN
@@ -72,9 +90,13 @@ BEGIN
     SELECT profile_id INTO v_receipt_profile_id
     FROM public.founder_exit_side_effects
     WHERE idempotency_key = v_grant_key;
+    IF v_receipt_profile_id IS NOT NULL
+       AND v_receipt_profile_id IS DISTINCT FROM p_profile_id THEN
+      RAISE EXCEPTION 'catalog_grant_receipt_conflict';
+    END IF;
     RETURN jsonb_build_object(
       'status', 'already_granted',
-      'profile_id', v_receipt_profile_id
+      'profile_id', COALESCE(v_receipt_profile_id, p_profile_id)
     );
   END IF;
 

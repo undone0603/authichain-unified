@@ -51,7 +51,7 @@ async function supabaseSelectOne(
   const params = Object.entries(match)
     .map(([k, v]) => `${k}=eq.${encodeURIComponent(v)}`)
     .join("&");
-  const url = `${env.SUPABASE_URL}/rest/v1/${table}?${params}&select=${encodeURIComponent(columns)}&limit=1`;
+  const url = `${env.SUPABASE_URL}/rest/v1/${table}?${params}&select=${encodeURIComponent(columns)}&limit=2`;
   try {
     const res = await fetch(url, {
       headers: {
@@ -65,6 +65,7 @@ async function supabaseSelectOne(
     if (rows.length === 0 || typeof rows[0] !== "object" || rows[0] === null) {
       return { ok: true, row: null };
     }
+    if (rows.length !== 1) return { ok: false };
     return { ok: true, row: rows[0] as Record<string, unknown> };
   } catch {
     return { ok: false };
@@ -109,7 +110,8 @@ async function supabaseRpc(
   fn: string,
   args: Record<string, unknown>
 ): Promise<
-  { ok: true; status: "granted" | "already_granted" } | { ok: false }
+  | { ok: true; status: "granted" | "already_granted" }
+  | { ok: false; error: string }
 > {
   const url = `${env.SUPABASE_URL}/rest/v1/rpc/${fn}`;
   try {
@@ -122,14 +124,31 @@ async function supabaseRpc(
       },
       body: JSON.stringify(args),
     });
-    if (!res.ok) return { ok: false };
-    const data = (await res.json()) as { status?: unknown };
+    const text = await res.text();
+    if (!res.ok) {
+      if (
+        res.status === 404 ||
+        /PGRST202|does not exist|could not find the function/i.test(text)
+      ) {
+        return { ok: false, error: "catalog grant RPC unavailable" };
+      }
+      if (/catalog_grant_receipt_conflict/i.test(text)) {
+        return { ok: false, error: "catalog_grant_receipt_conflict" };
+      }
+      return { ok: false, error: "grant write failed" };
+    }
+    let data: { status?: unknown };
+    try {
+      data = JSON.parse(text) as { status?: unknown };
+    } catch {
+      return { ok: false, error: "grant write failed" };
+    }
     if (data?.status === "granted" || data?.status === "already_granted") {
       return { ok: true, status: data.status };
     }
-    return { ok: false };
+    return { ok: false, error: "grant write failed" };
   } catch {
-    return { ok: false };
+    return { ok: false, error: "grant write failed" };
   }
 }
 
@@ -350,7 +369,7 @@ export default {
               p_stripe_subscription_id: subscriptionId,
               p_is_trial: false,
             });
-            if (!recorded.ok) return grantRetry("grant write failed");
+            if (!recorded.ok) return grantRetry(recorded.error);
             if (recorded.status === "already_granted") {
               console.log(
                 JSON.stringify({

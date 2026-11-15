@@ -27,6 +27,27 @@ export function grantReceiptKey(sessionId: string): string {
 
 /** Atomic pack/period grant. Lockstep with workers/stripe-webhook CATALOG_GRANT_RPC. */
 export const CATALOG_GRANT_RPC = "grant_catalog_checkout_session";
+export const CATALOG_GRANT_MIGRATION =
+  "supabase/migrations/20261115180000_atomic_catalog_session_grants.sql";
+
+export function isMissingCatalogGrantRpc(
+  error:
+    | {
+        message?: string;
+        code?: string;
+        status?: number;
+      }
+    | null
+    | undefined
+): boolean {
+  if (!error) return false;
+  if (error.status === 404) return true;
+  const code = error.code || "";
+  if (code === "PGRST202" || code === "42883") return true;
+  return /does not exist|PGRST202|schema cache|could not find the function/i.test(
+    error.message || ""
+  );
+}
 
 export type CatalogGrantArgs = {
   profileId: string;
@@ -42,6 +63,7 @@ export type CatalogGrantArgs = {
 
 export type CatalogGrantState = {
   receipts: Set<string>;
+  receiptProfiles?: Record<string, string>;
   row: Record<string, unknown>;
 };
 
@@ -143,8 +165,14 @@ export function stackedPackCredits(
 export function applyCatalogGrantState(
   state: CatalogGrantState,
   args: CatalogGrantArgs
-): { status: "granted" | "already_granted"; profileId: string } {
+):
+  | { status: "granted" | "already_granted"; profileId: string }
+  | { status: "conflict"; profileId: string } {
   const key = grantReceiptKey(args.sessionId);
+  const receiptProfile = state.receiptProfiles?.[key];
+  if (receiptProfile && receiptProfile !== args.profileId) {
+    return { status: "conflict", profileId: receiptProfile };
+  }
   if (
     state.receipts.has(key) ||
     state.row.last_grant_session_id === args.sessionId
@@ -153,6 +181,9 @@ export function applyCatalogGrantState(
     return { status: "already_granted", profileId: args.profileId };
   }
   state.receipts.add(key);
+  if (state.receiptProfiles) {
+    state.receiptProfiles[key] = args.profileId;
+  }
   const credits = args.stack
     ? stackedPackCredits(state.row, args.generations)
     : {
@@ -347,11 +378,25 @@ export async function provisionPurchase(
         profileId,
         created,
         status: "upsert_failed",
-        error: error.message || "atomic catalog grant failed",
+        error: isMissingCatalogGrantRpc(error)
+          ? "atomic catalog grant RPC unavailable"
+          : error.message || "atomic catalog grant failed",
       };
     }
     const result = data as { profile_id?: unknown; status?: unknown } | null;
     if (result?.status === "already_granted") {
+      if (
+        result.profile_id != null &&
+        result.profile_id !== profileId &&
+        String(result.profile_id) !== profileId
+      ) {
+        return {
+          profileId,
+          created,
+          status: "upsert_failed",
+          error: "catalog_grant_receipt_conflict",
+        };
+      }
       console.log(
         JSON.stringify({
           evt: "provision_skipped_idempotent",
