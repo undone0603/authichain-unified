@@ -352,6 +352,14 @@ export async function provisionPurchase(
     }
     const result = data as { profile_id?: unknown; status?: unknown } | null;
     if (result?.status === "already_granted") {
+      if (result.profile_id !== profileId) {
+        return {
+          profileId,
+          created,
+          status: "upsert_failed",
+          error: "atomic catalog receipt belongs to another profile",
+        };
+      }
       console.log(
         JSON.stringify({
           evt: "provision_skipped_idempotent",
