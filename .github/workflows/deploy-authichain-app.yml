@@ -90,7 +90,7 @@ jobs:
             . "$HOME/.nvm/nvm.sh"
             nvm use 22 >/dev/null
           fi
-          node --test scripts/ci/autonomous-release-gate.test.mjs scripts/ci/verify-dpp-release-env.test.mjs scripts/ci/protected-dpp-release.test.mjs
+          node --test scripts/ci/autonomous-release-gate.test.mjs scripts/ci/verify-dpp-release-env.test.mjs scripts/ci/protected-dpp-release.test.mjs scripts/ci/verify-app-supabase-values.test.mjs
           node scripts/ci/autonomous-release-gate.mjs
           node scripts/ci/verify-dpp-release-env.mjs
       - name: Require successful exact-head GitHub Main quality gate
