@@ -123,7 +123,12 @@ async function supabaseRpc(
       body: JSON.stringify(args),
     });
     if (!res.ok) return { ok: false };
-    const data = (await res.json()) as { status?: unknown };
+    const data = (await res.json()) as {
+      status?: unknown;
+      profile_id?: unknown;
+    };
+    // Do not acknowledge an existing session receipt for another buyer.
+    if (data?.profile_id !== args.p_profile_id) return { ok: false };
     if (data?.status === "granted" || data?.status === "already_granted") {
       return { ok: true, status: data.status };
     }
