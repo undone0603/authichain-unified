@@ -21,7 +21,10 @@ jobs:
     # GitHub-hosted ubuntu-latest is billing-locked (jobs start with zero steps).
     # Same WSL labels as other same-repo PR CI. Do not use actions/setup-python
     # on this ARM64 runner; PEP 668 blocks a system pip install.
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    # Fork pull requests must never execute on a persistent self-hosted runner.
+    # Keep fork CI on the hosted executor even when GitHub-hosted billing is blocked.
+    # Same-repo PRs and authorized manual dispatch use the existing WSL labels.
+    runs-on: ${{ (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
