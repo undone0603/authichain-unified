@@ -46,3 +46,11 @@ test("root application Hyperdrive target must be attested before publish",()=>{
     assert.ok(verifier.includes(marker),"missing root-app target assertion: "+marker);
   }
 });
+
+test("protected root-app Supabase values are required before publish",()=>{
+  const verifier=readFileSync("scripts/ci/verify-app-supabase-values.mjs","utf8");
+  assert.ok(workflow.includes("node scripts/ci/verify-app-supabase-values.mjs"));
+  assert.ok(workflow.indexOf("node scripts/ci/verify-app-supabase-values.mjs")<workflow.indexOf("name: Publish authichain-app"));
+  for(const marker of ["AUTHICHAIN_PRODUCTION_APP_DATABASE_URL","AUTHICHAIN_PRODUCTION_APP_SUPABASE_URL","NEXT_PUBLIC_SUPABASE_URL","APP_SUPABASE_ATTESTED_VALUES_MATCH","release held"])
+    assert.ok(verifier.includes(marker),"missing protected application target check: "+marker);
+});
