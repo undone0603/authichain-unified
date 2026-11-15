@@ -35,6 +35,7 @@ function fakeProfiles(opts?: {
   updateError?: { message: string } | null;
   rpcError?: { message: string } | null;
   rpcAlreadyGranted?: boolean;
+  rpcReceiptProfileOverride?: string;
   row?: Record<string, unknown>;
 }) {
   const inserts: Array<Record<string, unknown>> = [];
@@ -181,7 +182,11 @@ function fakeProfiles(opts?: {
         });
       }
       return {
-        data: { status: result.status, profile_id: result.profileId },
+        data: {
+          status: result.status,
+          profile_id:
+            opts?.rpcReceiptProfileOverride ?? result.profileId,
+        },
         error: null,
       };
     }
@@ -195,6 +200,26 @@ function fakeProfiles(opts?: {
     rpcCalls,
   };
 }
+
+describe("catalog grant receipt identity", () => {
+  it("fails closed when a replay receipt names another buyer", async () => {
+    const { supabase, updates, rpcCalls } = fakeProfiles({
+      existingId: "prof_1",
+      rpcReceiptProfileOverride: "prof_other",
+      receipts: ["grant:cs_replay"],
+    });
+    const result = await provisionPurchase(supabase, {
+      userId: "prof_1",
+      brand: "qron",
+      plan: "starter",
+      sessionId: "cs_replay",
+    });
+    expect(result.status).toBe("upsert_failed");
+    expect(result.error).toMatch(/another profile/);
+    expect(rpcCalls.some(x => x.fn === CATALOG_GRANT_RPC)).toBe(true);
+    expect(updates).toHaveLength(0);
+  });
+});
 
 describe("provisionPurchase", () => {
   it("does not map a failed guest insert to no_identity", async () => {
