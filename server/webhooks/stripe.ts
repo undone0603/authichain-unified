@@ -259,6 +259,10 @@ async function fulfillCatalogCreditsIfPaid(
     );
   }
 
+  if ((catalog === "starter" || catalog === "creator") &&
+      session.payment_status !== "paid") {
+    throw markRetryableFulfillment(new Error("Paid pack session evidence missing"));
+  }
   const { provisionPurchase } = await import("../../src/lib/provisioning");
   const email =
     session.customer_details?.email ||
