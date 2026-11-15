@@ -254,10 +254,9 @@ async function fulfillCatalogCreditsIfPaid(
 
   const supabase = await getWebhookSupabase();
   if (!supabase) {
-    console.error(
-      "[stripe-webhook] catalogue session paid but Supabase is not configured"
+    throw markRetryableFulfillment(
+      new Error("Paid catalog checkout cannot grant: entitlement store unavailable")
     );
-    return false;
   }
 
   const { provisionPurchase } = await import("../../src/lib/provisioning");
@@ -742,7 +741,7 @@ export async function handleStripeWebhook(
   // when Drizzle already claimed the event (or stripe_events has received).
   if (alreadyProcessed && isReplayableCheckoutEvent(event.type)) {
     console.log(
-      `[stripe-webhook] Duplicate ${event.type} — replaying DPP fulfill only: ${event.id}`
+      `[stripe-webhook] Duplicate ${event.type} — replaying idempotent checkout grants: ${event.id}`
     );
     const session = event.data.object as Stripe.Checkout.Session;
     try {
@@ -750,23 +749,52 @@ export async function handleStripeWebhook(
       if (dppRefusal) {
         return await holdIneligibleDppSettlement(logDelivery, event.type, true);
       }
-      // A duplicate catalog delivery does not replay a credit grant. The
-      // existing receipt may be a reconciliation hold: never overwrite it
-      // with a false success or claim that this event fulfilled a customer.
-      // DPP is the only replay path here (session-level idempotency).
+      // The event-id claim is not an entitlement lock. A prior delivery may
+      // have failed after claiming the event, or Drizzle may already have seen
+      // it. Re-run the session-id-idempotent catalog grant just like DPP.
+      const catalogFulfilled = await fulfillCatalogCreditsIfPaid(session);
+      if (catalogFulfilled === "reconciliation_required") {
+        const hold = await logDelivery("reconciliation_required", {
+          httpStatus: 200,
+          error: "paid_catalog_missing_buyer_identity",
+        });
+        if (!hold.ok || hold.detail === "base_columns_only") {
+          throw markRetryableFulfillment(
+            new Error("Could not persist paid catalog reconciliation hold")
+          );
+        }
+        return {
+          received: true,
+          type: event.type,
+          duplicate: true,
+          handled: false,
+          reconciliationRequired: true,
+        };
+      }
       const { isDppOffer } = await import("../../src/lib/dpp-loop");
       const dppReplay =
         session.payment_status === "paid" &&
         !isRecurringCheckoutSession(session) &&
         isDppOffer(session.metadata || {}, checkoutLinePriceId(session));
-      if (claim !== "duplicate") {
+      if (
+        catalogFulfilled === true &&
+        isStarterCheckoutSession(session) &&
+        session.amount_total != null &&
+        session.amount_total > 0
+      ) {
+        // Growth RPC uses the checkout session as an idempotency key.
+        await recordStarterGrowthEvent("purchase_starter_succeeded", session);
+      }
+      // Never erase a stored reconciliation hold for a skipped/non-granted
+      // catalog session. Successful replays can advance the receipt to success.
+      if (catalogFulfilled === true || dppReplay || claim !== "duplicate") {
         await logDelivery("success", { httpStatus: 200 });
       }
       return {
         received: true,
         type: event.type,
         duplicate: true,
-        handled: dppReplay,
+        handled: catalogFulfilled === true || dppReplay,
       };
     } catch (dppErr) {
       const retryable = markRetryableFulfillment(dppErr);
