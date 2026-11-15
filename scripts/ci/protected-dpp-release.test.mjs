@@ -37,3 +37,12 @@ test("DPP schema attestation uses read-only SQL, target identity, and all servic
   assert.ok(!database.includes("supabase db push"));
   assert.ok(!database.includes("psql -f"));
 });
+
+test("root application Hyperdrive target must be attested before publish",()=>{
+  const verifier=readFileSync("scripts/ci/verify-root-app-hyperdrive-target.mjs","utf8");
+  assert.ok(workflow.includes("node scripts/ci/verify-root-app-hyperdrive-target.mjs"));
+  assert.ok(workflow.indexOf("node scripts/ci/verify-root-app-hyperdrive-target.mjs")<workflow.indexOf("name: Publish authichain-app"));
+  for(const marker of ["workers/scripts/authichain-app/settings","hyperdrive/configs/","postgres.","ROOT_APP_HYPERDRIVE_TARGET_MATCH","release held"]){
+    assert.ok(verifier.includes(marker),"missing root-app target assertion: "+marker);
+  }
+});
