@@ -139,6 +139,10 @@ function fakeProfiles(opts?: {
         : {
             status: opts?.rpcAlreadyGranted ? "already_granted" : "granted",
             profile_id: args.p_profile_id,
+            ...(fn === "grant_stripe_pack_session" ? {
+              plan: args.p_plan,
+              credits: args.p_plan === "creator" ? 500 : 100,
+            } : {}),
           },
       error: opts?.rpcError ?? null,
     };
@@ -153,6 +157,45 @@ function fakeProfiles(opts?: {
 }
 
 describe("provisionPurchase", () => {
+  it("uses a single atomic RPC for verified Starter/Creator packs", async () => {
+    const { supabase, rpcCalls, updates, receiptInserts } = fakeProfiles({ existingId: "prof_1" });
+    const r = await provisionPurchase(supabase, {
+      email: "buyer@example.com", brand: "qron", plan: "starter",
+      sessionId: "cs_atomic", atomicPackSessionGrant: true,
+    });
+    expect(r.status).toBe("provisioned");
+    expect(rpcCalls).toEqual([{ fn: "grant_stripe_pack_session", args: {
+      p_profile_id: "prof_1", p_session_id: "cs_atomic",
+      p_plan: "starter", p_stripe_customer_id: null,
+    }}]);
+    expect(updates).toEqual([]);
+    expect(receiptInserts).toEqual([]);
+  });
+
+  it("does not fall back to non-atomic writes on RPC error", async () => {
+    const { supabase, updates, receiptInserts } = fakeProfiles({
+      existingId: "prof_1", rpcError: { message: "RPC unavailable" },
+    });
+    const r = await provisionPurchase(supabase, {
+      email: "buyer@example.com", brand: "qron", plan: "creator",
+      sessionId: "cs_atomic_failure", atomicPackSessionGrant: true,
+    });
+    expect(r.status).toBe("upsert_failed");
+    expect(updates).toEqual([]);
+    expect(receiptInserts).toEqual([]);
+  });
+
+  it("refuses mismatched metadata grant on the atomic path", async () => {
+    const { supabase, rpcCalls, updates } = fakeProfiles({ existingId: "prof_1" });
+    const r = await provisionPurchase(supabase, {
+      email: "buyer@example.com", brand: "qron", plan: "starter",
+      sessionId: "cs_bad", generationsGrant: 500, atomicPackSessionGrant: true,
+    });
+    expect(r.status).toBe("upsert_failed");
+    expect(rpcCalls).toEqual([]);
+    expect(updates).toEqual([]);
+  });
+
   it("does not map a failed guest insert to no_identity", async () => {
     const { supabase, inserts } = fakeProfiles({
       insertError: {
