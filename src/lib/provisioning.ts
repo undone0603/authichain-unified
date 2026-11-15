@@ -23,6 +23,10 @@ import { type BrandId } from "@shared/brands";
 // The webhook passes its existing service-role Supabase client (loosely typed).
 type SupabaseLike = {
   from: (table: string) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  rpc?: (
+    fn: string,
+    args: Record<string, unknown>
+  ) => PromiseLike<{ data: unknown; error: { message?: string } | null }>;
 };
 
 export interface ProvisionInput {
@@ -37,6 +41,8 @@ export interface ProvisionInput {
   generationsGrant?: number;
   /** Stripe checkout session id for session-level idempotency. */
   sessionId?: string | null;
+  /** Use the DPP RPC that commits the grant and idempotency key atomically. */
+  atomicDppSessionGrant?: boolean;
 }
 
 export interface ProvisionResult {
@@ -180,6 +186,64 @@ export async function provisionPurchase(
   if (!profileId) {
     // No user id and no email — nothing to attach entitlements to.
     return { profileId: null, created: false, status: "no_identity" };
+  }
+
+  if (input.atomicDppSessionGrant) {
+    if (
+      input.plan !== "dpp_readiness" ||
+      !input.sessionId ||
+      input.stripeSubscriptionId
+    ) {
+      return {
+        profileId,
+        created,
+        status: "upsert_failed",
+        error: "invalid atomic DPP grant request",
+      };
+    }
+    if (!supabase.rpc) {
+      return {
+        profileId,
+        created,
+        status: "upsert_failed",
+        error: "atomic DPP grant RPC unavailable",
+      };
+    }
+
+    const { data, error } = await supabase.rpc("grant_dpp_checkout_session", {
+      p_profile_id: profileId,
+      p_session_id: input.sessionId,
+      p_brand: input.brand,
+      p_stripe_customer_id: input.stripeCustomerId ?? null,
+    });
+    if (error) {
+      console.error("[provisioning] atomic DPP grant failed:", error.message);
+      return {
+        profileId,
+        created,
+        status: "upsert_failed",
+        error: error.message || "atomic DPP grant failed",
+      };
+    }
+
+    const result = data as { profile_id?: unknown; status?: unknown } | null;
+    if (result?.status === "already_granted") {
+      return {
+        profileId,
+        created,
+        status: "provisioned",
+        skippedIdempotent: true,
+      };
+    }
+    if (result?.status !== "granted" || result.profile_id !== profileId) {
+      return {
+        profileId,
+        created,
+        status: "upsert_failed",
+        error: "atomic DPP grant returned invalid evidence",
+      };
+    }
+    return { profileId, created, status: "provisioned" };
   }
 
   // Session-level idempotency: do not reset generations_used if this session already granted.

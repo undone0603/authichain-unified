@@ -5,7 +5,8 @@ import { provisionPurchase } from "@/lib/provisioning";
 import { renderBillingEmail } from "@/lib/billing-emails";
 import { getBrandIdFromMetadata } from "@/lib/brand-billing";
 import { sendEmail } from "@/lib/email";
-import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "@/lib/dpp-loop";
+import { dppActivateUrl, recordDppLoopEvent } from "@/lib/dpp-loop";
+import { isDppCheckoutCandidate } from "@/lib/dpp-payment-eligibility";
 import { fulfillDppPaidSession } from "@/lib/dpp-fulfill-checkout";
 import {
   anchorStripeReversal,
@@ -181,7 +182,12 @@ async function claimStripeEvent(
     .eq("event_id", event.id)
     .maybeSingle();
   if (readError) throw readError;
-  if (!existing || existing.status === "success" || !existing.status) {
+  if (
+    !existing ||
+    existing.status === "success" ||
+    existing.status === "reconciliation_required" ||
+    !existing.status
+  ) {
     return "duplicate";
   }
 
@@ -305,12 +311,53 @@ export async function POST(req: NextRequest) {
           (typeof session.metadata?.stripe_price_id === "string"
             ? session.metadata.stripe_price_id
             : null);
-        const dppOffer = isDppOffer(md as Record<string, unknown>, linePriceId);
+        const dppOffer = isDppCheckoutCandidate(session);
         const visitId =
           md.visit_id || md.prospect_id || session.client_reference_id || null;
 
         if (dppOffer) {
-          await fulfillDppPaidSession(getSupabase(), session, linePriceId);
+          // Signed events omit expanded line items. Retrieve the actual
+          // Stripe Session before treating any metadata as a paid product.
+          const verified = await stripe.checkout.sessions.retrieve(session.id, {
+            expand: ["line_items"],
+          });
+          const verifiedPrice =
+            verified.line_items?.data?.[0]?.price?.id ?? null;
+          const grant = await fulfillDppPaidSession(
+            getSupabase(),
+            verified,
+            verifiedPrice
+          );
+          if (grant.refused) {
+            // Permanent money refusal: nothing was granted and Stripe must not
+            // retry, but the event must never be recorded as success. Persist
+            // an actionable hold; fail closed (500, retry) if that fails.
+            const { data: held, error: holdError } = await getSupabase()
+              .from("stripe_events")
+              .update({
+                status: "reconciliation_required",
+                processed_at: new Date().toISOString(),
+                error: "dpp_ineligible_settlement",
+              })
+              .eq("event_id", event.id)
+              .select("event_id");
+            if (holdError || !held?.length) {
+              throw new Error(
+                "Could not persist DPP ineligible-settlement hold"
+              );
+            }
+            return NextResponse.json({
+              received: true,
+              type: event.type,
+              handled: false,
+              reconciliationRequired: true,
+            });
+          }
+          if (verified.payment_status === "paid" && !grant.handled) {
+            throw new Error(
+              "DPP payment requires product and entitlement reconciliation"
+            );
+          }
           break;
         }
 

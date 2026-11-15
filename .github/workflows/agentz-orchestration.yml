@@ -142,6 +142,10 @@ jobs:
             echo "::warning::OPENCLAW_GATEWAY_URL is set in this job env — this workflow must not invent or require it. Unset for the ping."
             unset OPENCLAW_GATEWAY_URL
           fi
+          if [ -z "${CF_ACCESS_CLIENT_ID:-}" ] || [ -z "${CF_ACCESS_CLIENT_SECRET:-}" ]; then
+            echo "::error::Missing CF_ACCESS_CLIENT_ID or CF_ACCESS_CLIENT_SECRET. The claw/AgentZ health check needs those Cloudflare Access service-token repo secrets. Do not add an Access bypass."
+            exit 1
+          fi
           chmod +x scripts/ops/ping_claw_agentz.py
           if [ -n "${OPENCLAW_API_KEY:-}${AGENTZ_API_KEY:-}${AGENT_SECRET:-}" ]; then
             echo "bearer secret present — health + claw /architect/cycle dry-run"
