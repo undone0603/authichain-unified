@@ -137,13 +137,24 @@ async function supabaseRpc(
       }
       return { ok: false, error: "grant write failed" };
     }
-    let data: { status?: unknown };
+    let data: { status?: unknown; profile_id?: unknown };
     try {
-      data = JSON.parse(text) as { status?: unknown };
+      data = JSON.parse(text) as {
+        status?: unknown;
+        profile_id?: unknown;
+      };
     } catch {
       return { ok: false, error: "grant write failed" };
     }
     if (data?.status === "granted" || data?.status === "already_granted") {
+      // Do not acknowledge an existing session receipt for another buyer,
+      // including unmapped (null) historical receipts.
+      if (
+        data.profile_id == null ||
+        String(data.profile_id) !== String(args.p_profile_id)
+      ) {
+        return { ok: false, error: "catalog_grant_receipt_conflict" };
+      }
       return { ok: true, status: data.status };
     }
     return { ok: false, error: "grant write failed" };

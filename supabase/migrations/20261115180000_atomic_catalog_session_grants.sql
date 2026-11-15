@@ -41,13 +41,14 @@ BEGIN
   FROM public.founder_exit_side_effects
   WHERE idempotency_key = v_grant_key;
   IF FOUND THEN
-    IF v_receipt_profile_id IS NOT NULL
-       AND v_receipt_profile_id IS DISTINCT FROM p_profile_id THEN
+    -- Unmapped historical receipts stay fail-closed: COALESCE(profile_id)
+    -- would acknowledge fulfillment for whoever asked.
+    IF v_receipt_profile_id IS DISTINCT FROM p_profile_id THEN
       RAISE EXCEPTION 'catalog_grant_receipt_conflict';
     END IF;
     RETURN jsonb_build_object(
       'status', 'already_granted',
-      'profile_id', COALESCE(v_receipt_profile_id, p_profile_id)
+      'profile_id', v_receipt_profile_id
     );
   END IF;
 
@@ -63,13 +64,12 @@ BEGIN
   FROM public.founder_exit_side_effects
   WHERE idempotency_key = v_grant_key;
   IF FOUND THEN
-    IF v_receipt_profile_id IS NOT NULL
-       AND v_receipt_profile_id IS DISTINCT FROM p_profile_id THEN
+    IF v_receipt_profile_id IS DISTINCT FROM p_profile_id THEN
       RAISE EXCEPTION 'catalog_grant_receipt_conflict';
     END IF;
     RETURN jsonb_build_object(
       'status', 'already_granted',
-      'profile_id', COALESCE(v_receipt_profile_id, p_profile_id)
+      'profile_id', v_receipt_profile_id
     );
   END IF;
 
@@ -77,6 +77,14 @@ BEGIN
     INSERT INTO public.founder_exit_side_effects (idempotency_key, profile_id)
     VALUES (v_grant_key, v_profile.id::text)
     ON CONFLICT (idempotency_key) DO NOTHING;
+    IF NOT FOUND THEN
+      SELECT profile_id INTO v_receipt_profile_id
+      FROM public.founder_exit_side_effects
+      WHERE idempotency_key = v_grant_key;
+      IF v_receipt_profile_id IS DISTINCT FROM p_profile_id THEN
+        RAISE EXCEPTION 'catalog_grant_receipt_conflict';
+      END IF;
+    END IF;
     RETURN jsonb_build_object(
       'status', 'already_granted',
       'profile_id', v_profile.id
@@ -90,13 +98,12 @@ BEGIN
     SELECT profile_id INTO v_receipt_profile_id
     FROM public.founder_exit_side_effects
     WHERE idempotency_key = v_grant_key;
-    IF v_receipt_profile_id IS NOT NULL
-       AND v_receipt_profile_id IS DISTINCT FROM p_profile_id THEN
+    IF v_receipt_profile_id IS DISTINCT FROM p_profile_id THEN
       RAISE EXCEPTION 'catalog_grant_receipt_conflict';
     END IF;
     RETURN jsonb_build_object(
       'status', 'already_granted',
-      'profile_id', COALESCE(v_receipt_profile_id, p_profile_id)
+      'profile_id', v_receipt_profile_id
     );
   END IF;
 

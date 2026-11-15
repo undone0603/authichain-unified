@@ -107,6 +107,12 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
     expect(migration.toString("utf8")).not.toMatch(
       /CREATE OR REPLACE FUNCTION public\.grant_dpp_checkout_session/
     );
+    expect(migration.toString("utf8")).toContain(
+      "IS DISTINCT FROM p_profile_id"
+    );
+    expect(migration.toString("utf8")).not.toMatch(
+      /COALESCE\(v_receipt_profile_id,\s*p_profile_id\)/
+    );
   });
 
   it("grant A, grant B, replay A does not add A again", async () => {
@@ -230,6 +236,83 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
       )
     ).rows[0].generations_limit;
     expect(a).toBe(0);
+  });
+
+  it("fails closed on an unmapped historical receipt instead of COALESCE", async () => {
+    const db = await isolatedCatalogDb();
+    await insertProfile(db, PROF_A, 40, 0, "cs_other");
+    await db.query(
+      `INSERT INTO public.founder_exit_side_effects (idempotency_key, profile_id)
+       VALUES ('grant:cs_orphan', NULL)`
+    );
+    await expect(
+      grant(db, { profileId: PROF_A, sessionId: "cs_orphan" })
+    ).rejects.toThrow(/catalog_grant_receipt_conflict/);
+    const a = (
+      await db.query<{ generations_limit: number }>(
+        "SELECT generations_limit FROM public.profiles WHERE id = $1::uuid",
+        [PROF_A]
+      )
+    ).rows[0].generations_limit;
+    expect(a).toBe(40);
+  });
+
+  it("fails closed when a last_grant marker races a receipt for another buyer", async () => {
+    const db = await isolatedCatalogDb();
+    await insertProfile(db, PROF_A, 100, 0, "cs_legacy");
+    await insertProfile(db, PROF_B, 0, 0);
+    await db.query(
+      `INSERT INTO public.founder_exit_side_effects (idempotency_key, profile_id)
+       VALUES ('grant:cs_legacy', $1)`,
+      [PROF_B]
+    );
+    await expect(
+      grant(db, { profileId: PROF_A, sessionId: "cs_legacy" })
+    ).rejects.toThrow(/catalog_grant_receipt_conflict/);
+    const a = (
+      await db.query<{ generations_limit: number }>(
+        "SELECT generations_limit FROM public.profiles WHERE id = $1::uuid",
+        [PROF_A]
+      )
+    ).rows[0].generations_limit;
+    expect(a).toBe(100);
+  });
+
+  it("rolls back credits when the function errors after the profile update", async () => {
+    const db = await isolatedCatalogDb();
+    await insertProfile(db, PROF_A, 100, 0);
+    await db.exec(`
+      CREATE OR REPLACE FUNCTION public.grant_catalog_crash_after_update(
+        p_profile_id text, p_session_id text
+      ) RETURNS jsonb
+      LANGUAGE plpgsql AS $$
+      BEGIN
+        INSERT INTO public.founder_exit_side_effects (idempotency_key, profile_id)
+        VALUES ('grant:' || p_session_id, p_profile_id);
+        UPDATE public.profiles
+          SET generations_limit = COALESCE(generations_limit, 0) + 100
+          WHERE id = p_profile_id::uuid;
+        RAISE EXCEPTION 'injected_crash_after_update';
+      END;
+      $$;
+    `);
+    await expect(
+      db.query("SELECT public.grant_catalog_crash_after_update($1, $2)", [
+        PROF_A,
+        "cs_crash_update",
+      ])
+    ).rejects.toThrow(/injected_crash_after_update/);
+    const receipts = await db.query(
+      "SELECT count(*)::int AS n FROM public.founder_exit_side_effects"
+    );
+    const limit = (
+      await db.query<{ generations_limit: number }>(
+        "SELECT generations_limit FROM public.profiles WHERE id = $1::uuid",
+        [PROF_A]
+      )
+    ).rows[0].generations_limit;
+    expect((receipts.rows[0] as { n: number }).n).toBe(0);
+    expect(limit).toBe(100);
   });
 
   it("refuses callers without service_role execute", async () => {

@@ -36,6 +36,7 @@ function fakeProfiles(opts?: {
   updateError?: { message: string } | null;
   rpcError?: { message: string } | null;
   rpcAlreadyGranted?: boolean;
+  rpcReceiptProfileOverride?: string | null;
   row?: Record<string, unknown>;
 }) {
   const inserts: Array<Record<string, unknown>> = [];
@@ -192,7 +193,13 @@ function fakeProfiles(opts?: {
         });
       }
       return {
-        data: { status: result.status, profile_id: result.profileId },
+        data: {
+          status: result.status,
+          profile_id:
+            opts?.rpcReceiptProfileOverride !== undefined
+              ? opts.rpcReceiptProfileOverride
+              : result.profileId,
+        },
         error: null,
       };
     }
@@ -469,6 +476,41 @@ describe("provisionPurchase", () => {
       status: "upsert_failed",
       error: "atomic catalog grant RPC unavailable",
     });
+    expect(updates).toHaveLength(0);
+  });
+
+  it("fails closed when already_granted names another buyer", async () => {
+    const { supabase, updates, rpcCalls } = fakeProfiles({
+      existingId: "prof_1",
+      receipts: ["grant:cs_replay"],
+      rpcReceiptProfileOverride: "prof_other",
+    });
+    const result = await provisionPurchase(supabase, {
+      userId: "prof_1",
+      brand: "qron",
+      plan: "starter",
+      sessionId: "cs_replay",
+    });
+    expect(result.status).toBe("upsert_failed");
+    expect(result.error).toBe("catalog_grant_receipt_conflict");
+    expect(rpcCalls.some(x => x.fn === CATALOG_GRANT_RPC)).toBe(true);
+    expect(updates).toHaveLength(0);
+  });
+
+  it("fails closed when already_granted omits the receipt profile", async () => {
+    const { supabase, updates } = fakeProfiles({
+      existingId: "prof_1",
+      receipts: ["grant:cs_unmapped"],
+      rpcReceiptProfileOverride: null,
+    });
+    const result = await provisionPurchase(supabase, {
+      userId: "prof_1",
+      brand: "qron",
+      plan: "starter",
+      sessionId: "cs_unmapped",
+    });
+    expect(result.status).toBe("upsert_failed");
+    expect(result.error).toBe("catalog_grant_receipt_conflict");
     expect(updates).toHaveLength(0);
   });
 
@@ -814,6 +856,28 @@ describe("provisionPurchase", () => {
       expect(r.error).toMatch(/timeout/);
       expect(state.writes).toBe(0);
       expect(state.row.generations_limit).toBe(100);
+    });
+
+    it("fails closed on an unmapped historical receipt", () => {
+      const state = {
+        receipts: new Set(["grant:cs_orphan"]),
+        receiptProfiles: { "grant:cs_orphan": null },
+        row: {
+          generations_limit: 40,
+          generations_used: 0,
+          last_grant_session_id: "cs_other",
+        },
+      };
+      const result = applyCatalogGrantState(state, {
+        profileId: "prof_1",
+        sessionId: "cs_orphan",
+        plan: "starter",
+        brand: "qron",
+        generations: 100,
+        stack: true,
+      });
+      expect(result.status).toBe("conflict");
+      expect(state.row.generations_limit).toBe(40);
     });
 
     it("never returns granted without a durable session receipt", () => {

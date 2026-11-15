@@ -63,9 +63,19 @@ export type CatalogGrantArgs = {
 
 export type CatalogGrantState = {
   receipts: Set<string>;
-  receiptProfiles?: Record<string, string>;
+  receiptProfiles?: Record<string, string | null>;
   row: Record<string, unknown>;
 };
+
+/** RPC evidence must name this buyer on both granted and already_granted. */
+export function catalogGrantReturnedProfileMatches(
+  returnedProfileId: unknown,
+  expectedProfileId: string
+): boolean {
+  return (
+    returnedProfileId != null && String(returnedProfileId) === expectedProfileId
+  );
+}
 
 // The webhook passes its existing service-role Supabase client (loosely typed).
 type SupabaseLike = {
@@ -169,15 +179,26 @@ export function applyCatalogGrantState(
   | { status: "granted" | "already_granted"; profileId: string }
   | { status: "conflict"; profileId: string } {
   const key = grantReceiptKey(args.sessionId);
-  const receiptProfile = state.receiptProfiles?.[key];
-  if (receiptProfile && receiptProfile !== args.profileId) {
-    return { status: "conflict", profileId: receiptProfile };
+  if (state.receipts.has(key)) {
+    if (
+      state.receiptProfiles &&
+      Object.prototype.hasOwnProperty.call(state.receiptProfiles, key)
+    ) {
+      const receiptProfile = state.receiptProfiles[key];
+      if (receiptProfile == null || receiptProfile !== args.profileId) {
+        return {
+          status: "conflict",
+          profileId: receiptProfile ?? args.profileId,
+        };
+      }
+    }
+    return { status: "already_granted", profileId: args.profileId };
   }
-  if (
-    state.receipts.has(key) ||
-    state.row.last_grant_session_id === args.sessionId
-  ) {
+  if (state.row.last_grant_session_id === args.sessionId) {
     state.receipts.add(key);
+    if (state.receiptProfiles) {
+      state.receiptProfiles[key] = args.profileId;
+    }
     return { status: "already_granted", profileId: args.profileId };
   }
   state.receipts.add(key);
@@ -385,11 +406,7 @@ export async function provisionPurchase(
     }
     const result = data as { profile_id?: unknown; status?: unknown } | null;
     if (result?.status === "already_granted") {
-      if (
-        result.profile_id != null &&
-        result.profile_id !== profileId &&
-        String(result.profile_id) !== profileId
-      ) {
+      if (!catalogGrantReturnedProfileMatches(result.profile_id, profileId)) {
         return {
           profileId,
           created,
@@ -411,7 +428,10 @@ export async function provisionPurchase(
         skippedIdempotent: true,
       };
     }
-    if (result?.status !== "granted" || result.profile_id !== profileId) {
+    if (
+      result?.status !== "granted" ||
+      !catalogGrantReturnedProfileMatches(result.profile_id, profileId)
+    ) {
       return {
         profileId,
         created,

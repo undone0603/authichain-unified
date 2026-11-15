@@ -70,7 +70,8 @@ function installFetch(opts?: {
   upsertOk?: boolean;
   rpcStatus?: number;
   ambiguousProfile?: boolean;
-  receiptProfile?: string;
+  receiptProfile?: string | null;
+  rpcProfileOverride?: string | null;
 }) {
   const calls: Array<{
     method: string;
@@ -138,7 +139,10 @@ function installFetch(opts?: {
         return new Response(
           JSON.stringify({
             status: result.status,
-            profile_id: result.profileId,
+            profile_id:
+              opts?.rpcProfileOverride !== undefined
+                ? opts.rpcProfileOverride
+                : result.profileId,
             generations_limit: calls.profile.generations_limit,
             generations_used: calls.profile.generations_used,
             last_grant_session_id: calls.profile.last_grant_session_id,
@@ -591,6 +595,39 @@ describe("stripe-webhook checkout grant", () => {
     });
     expect(calls.profile.generations_limit).toBe(100);
     expect(calls.receipts.has(grantReceiptKey("cs_rpc"))).toBe(false);
+  });
+
+  it("rejects atomic RPC replay evidence for another profile", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_wrong_profile" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      receipts: ["cs_wrong_profile"],
+      rpcProfileOverride: "prof_other",
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: "catalog_grant_receipt_conflict",
+    });
+    expect(grantRpcs(calls)).toHaveLength(1);
+    expect(calls.profile.generations_limit).toBe(100);
+  });
+
+  it("rejects already_granted evidence that omits the receipt profile", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_unmapped" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      receipts: ["cs_unmapped"],
+      rpcProfileOverride: null,
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: "catalog_grant_receipt_conflict",
+    });
+    expect(calls.profile.generations_limit).toBe(100);
   });
 
   it("fails closed when the session receipt belongs to another profile", async () => {
