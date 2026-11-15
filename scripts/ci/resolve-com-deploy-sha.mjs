@@ -115,7 +115,7 @@ export function inspectGit({
     }
   }
   const changedFiles = git(
-    ["diff", "--name-only", expectedSha, mainSha],
+    ["diff", "--no-renames", "--name-only", expectedSha, mainSha],
     cwd
   )
     .split("\n")

@@ -276,3 +276,16 @@ test("git: expected_sha missing from the repo fails closed", () => {
     /git merge-base --is-ancestor failed/
   );
 });
+
+test("git: renaming a shipped file into docs/ still blocks the ancestor path", () => {
+  const { dir, git, base } = gitRepo();
+  mkdirSync(path.join(dir, "docs"), { recursive: true });
+  git("mv", path.join(WORKER_DIR, "w.txt"), "docs/w.txt");
+  git("commit", "-qm", "move shipped file into docs");
+  const inspected = inspectGit({ expectedSha: base, mainRef: "main", cwd: dir });
+  assert.ok(inspected.changedFiles.includes(`${WORKER_DIR}w.txt`));
+  assert.throws(
+    () => resolveDeploySha({ expectedSha: base, ...inspected }),
+    /paths outside the ancestor allowlist changed/
+  );
+});
