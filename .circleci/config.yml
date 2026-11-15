@@ -60,7 +60,6 @@ jobs:
           seconds: 1200
 
   test-other:
-    executor: node
     docker:
       - image: cimg/node:22.23.3
       - image: postgres:16-alpine
@@ -68,6 +67,8 @@ jobs:
           POSTGRES_DB: dpp_ci
           POSTGRES_USER: dpp_ci
           POSTGRES_PASSWORD: dpp_ci_local_only
+    resource_class: large
+    working_directory: ~/project
     environment:
       DPP_ISOLATED_POSTGRES: "true"
       PGHOST: 127.0.0.1
