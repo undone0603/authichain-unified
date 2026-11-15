@@ -393,6 +393,11 @@ export async function POST(req: NextRequest) {
           isTrial,
           generationsGrant,
           sessionId: session.id,
+          // Only a verified Stripe checkout can reach this branch.
+          // Transaction is shared with the secondary Worker; no CAS fallback.
+          atomicPackSessionGrant:
+            (resolvedPlan === "starter" || resolvedPlan === "creator") &&
+            !subscriptionId && !isTrial,
         });
 
         if (prov.status === "upsert_failed") {
