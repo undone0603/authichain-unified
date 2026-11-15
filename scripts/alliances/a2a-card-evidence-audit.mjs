@@ -27,11 +27,15 @@ export function auditAgentCard(card) {
       card.skills.some(s => !s || typeof s.id !== 'string' || !s.id.trim() ||
         typeof s.name !== 'string' || !s.name.trim())) add('SKILLS_INVALID');
   const interfaces = Array.isArray(card.supportedInterfaces) ? card.supportedInterfaces : [];
-  const primary = httpsTarget(card.url) ? [{ url: card.url, protocolBinding: 'JSONRPC', protocolVersion: card.protocolVersion }] : [];
-  const declared = [...interfaces, ...primary].filter(i => i && typeof i === 'object');
-  if (!declared.length) add('NO_INTERFACE');
-  if (declared.some(i => !httpsTarget(i.url))) add('UNEXPECTED_TARGET');
-  if (!declared.some(i => i.protocolBinding === 'JSONRPC' && i.protocolVersion === '1.0' && httpsTarget(i.url))) {
+  // A top-level url is optional metadata, never a replacement for declared
+  // supportedInterfaces. If present, validate it even if another binding is valid.
+  if (card.url !== undefined && !httpsTarget(card.url)) add('UNEXPECTED_TARGET');
+  if (!interfaces.length) add('NO_INTERFACE');
+  if (interfaces.some(i => !i || typeof i !== 'object' || Array.isArray(i) || !httpsTarget(i.url))) {
+    add('UNEXPECTED_TARGET');
+  }
+  if (!interfaces.some(i => i && typeof i === 'object' && !Array.isArray(i) &&
+    i.protocolBinding === 'JSONRPC' && i.protocolVersion === '1.0' && httpsTarget(i.url))) {
     add('NO_EXPECTED_JSONRPC_V1_INTERFACE');
   }
   if (card.capabilities && (typeof card.capabilities !== 'object' || Array.isArray(card.capabilities))) add('CAPABILITIES_INVALID');
