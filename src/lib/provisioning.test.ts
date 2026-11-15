@@ -36,6 +36,7 @@ function fakeProfiles(opts?: {
   updateError?: { message: string } | null;
   rpcError?: { message: string } | null;
   rpcAlreadyGranted?: boolean;
+  rpcProfileOverride?: string | null;
   row?: Record<string, unknown>;
 }) {
   const inserts: Array<Record<string, unknown>> = [];
@@ -192,7 +193,7 @@ function fakeProfiles(opts?: {
         });
       }
       return {
-        data: { status: result.status, profile_id: result.profileId },
+        data: { status: result.status, profile_id: opts?.rpcProfileOverride === undefined ? result.profileId : opts.rpcProfileOverride },
         error: null,
       };
     }
@@ -206,6 +207,24 @@ function fakeProfiles(opts?: {
     rpcCalls,
   };
 }
+
+describe("atomic catalog response identity", () => {
+  it("rejects missing profile identity on an acknowledged replay", async () => {
+    const { supabase, updates } = fakeProfiles({
+      existingId: "prof_1",
+      receipts: ["grant:cs_a"],
+      rpcProfileOverride: null,
+    });
+    const result = await provisionPurchase(supabase, {
+      userId: "prof_1",
+      brand: "qron",
+      plan: "starter",
+      sessionId: "cs_a",
+    });
+    expect(result.status).toBe("upsert_failed");
+    expect(updates).toHaveLength(0);
+  });
+});
 
 describe("provisionPurchase", () => {
   it("does not map a failed guest insert to no_identity", async () => {
