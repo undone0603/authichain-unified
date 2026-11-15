@@ -119,6 +119,7 @@ jobs:
           scripts/autonomy/*.test.mjs
           scripts/ci/*.test.mjs
           scripts/agent-adoption/*.test.mjs
+          scripts/alliances/peer-subject-binding-fixture.test.mjs
           scripts/growth/x402-authenticated.test.mjs
           scripts/growth/x402-base-receipt.test.mjs
           scripts/growth/x402-reconcile.test.mjs
