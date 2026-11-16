@@ -19,8 +19,8 @@ vi.mock("next/server", () => ({
   },
 }));
 
-const ID = "11111111-1111-4111-8111-111111111111";
-const OTHER = "22222222-2222-4222-8222-222222222222";
+const ID = "1234567890123456789";
+const OTHER = "2234567890123456789";
 const REF = "abcdefghijklmnopqrst";
 const SHA = "a".repeat(40);
 const KEY = "secret-operator-".padEnd(40, "K");
@@ -50,12 +50,12 @@ describe("protected dual-path runtime DB attestation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("RUNTIME_ATTESTATION_KEY", KEY);
-    vi.stubEnv("RUNTIME_EXPECTED_DB_INSTANCE_ID", ID);
+    vi.stubEnv("RUNTIME_EXPECTED_DB_SYSTEM_IDENTIFIER", ID);
     vi.stubEnv("RUNTIME_EXPECTED_SUPABASE_PROJECT_REF", REF);
     vi.stubEnv("AUTHICHAIN_DEPLOYED_SHA", SHA);
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", `https://${REF}.supabase.co`);
     mockGetDb.mockReturnValue({
-      execute: vi.fn().mockResolvedValue([{ instance_id: ID }]),
+      execute: vi.fn().mockResolvedValue([{ system_id: ID }]),
     });
     mockGetWebhookSupabase.mockReturnValue({
       rpc: vi.fn().mockResolvedValue({ data: ID, error: null }),
@@ -63,7 +63,7 @@ describe("protected dual-path runtime DB attestation", () => {
   });
   afterEach(() => vi.unstubAllEnvs());
 
-  it("matches both live query results to the independent pin and redacts UUID/credentials", async () => {
+  it("matches both live query results to the independent pin and redacts cluster ID/credentials", async () => {
     const result = await invoke();
     expect(result.status).toBe(200);
     expect(result.body.verified).toBe(true);
@@ -99,7 +99,7 @@ describe("protected dual-path runtime DB attestation", () => {
   it("rejects query-string authentication and refuses missing independent pins", async () => {
     const untrusted = await GET(new Request(`${URL}?key=${KEY}`)) as unknown as Result;
     expect(untrusted.status).toBe(401);
-    vi.stubEnv("RUNTIME_EXPECTED_DB_INSTANCE_ID", "");
+    vi.stubEnv("RUNTIME_EXPECTED_DB_SYSTEM_IDENTIFIER", "");
     expect((await invoke()).status).toBe(503);
     expect(mockGetDb).not.toHaveBeenCalled();
     expect(mockGetWebhookSupabase).not.toHaveBeenCalled();
@@ -112,7 +112,7 @@ describe("protected dual-path runtime DB attestation", () => {
   });
 
   it("fails closed on a wrong PostgreSQL target without echoing the identity", async () => {
-    mockGetDb.mockReturnValue({ execute: vi.fn().mockResolvedValue([{ instance_id: OTHER }]) });
+    mockGetDb.mockReturnValue({ execute: vi.fn().mockResolvedValue([{ system_id: OTHER }]) });
     const result = await invoke();
     expect(result.status).toBe(503);
     expect(result.body).toMatchObject({ verified: false, error: "attestation_unavailable" });
@@ -142,6 +142,7 @@ describe("protected dual-path runtime DB attestation", () => {
 
   it("does not pass when the deployed version is unknown", async () => {
     vi.stubEnv("AUTHICHAIN_DEPLOYED_SHA", "");
+    vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "");
     expect((await invoke()).status).toBe(503);
     expect(mockGetDb).not.toHaveBeenCalled();
   });
