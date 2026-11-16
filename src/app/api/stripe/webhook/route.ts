@@ -361,6 +361,25 @@ export async function POST(req: NextRequest) {
           break;
         }
 
+        // A signed completion is not proof of a paid purchase. Zero-dollar
+        // sessions (including forged plan/grant metadata) must never reach
+        // general paid provisioning. Authorized DPP smoke grants are handled
+        // only in the separately verified DPP branch above.
+        if (
+          session.mode !== "payment" ||
+          session.status !== "complete" ||
+          session.payment_status !== "paid" ||
+          !Number.isSafeInteger(session.amount_total) ||
+          session.amount_total <= 0
+        ) {
+          console.warn("[webhook] general checkout paid grant refused", {
+            sessionId: session.id,
+            eventId: event.id,
+            reason: "ineligible_payment",
+          });
+          break;
+        }
+
         // Hands-off provisioning for BOTH authenticated and guest checkouts.
         // Guests get a profile created/resolved by email so the purchase is
         // never lost.
