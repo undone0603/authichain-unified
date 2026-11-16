@@ -42,7 +42,11 @@ jobs:
   secret-format:
     name: Protected main secret format
     if: github.event_name == 'push'
-    runs-on: ubuntu-24.04
+    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
+    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
+    # GitHub-hosted ubuntu-24.04 never starts under the billing lock, so this
+    # push-only check must use the labels the other passing jobs already use.
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
     timeout-minutes: 5
     permissions:
       contents: read
@@ -50,6 +54,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+      - name: Use the runner Node and pnpm
+        if: runner.environment == 'self-hosted'
+        run: bash scripts/ci/use-runner-pnpm.sh
       - name: Validate secrets format
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
