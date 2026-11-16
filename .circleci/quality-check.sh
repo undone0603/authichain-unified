@@ -27,7 +27,7 @@ pnpm install --frozen-lockfile --prefer-offline
 
 case "$task" in
   quality)
-    node --test scripts/ci/ci-scope.test.mjs
+    node --test scripts/ci/ci-scope.test.mjs scripts/ci/check-secrets-format.test.mjs
     pnpm check
     pnpm lint:ci
     node scripts/check-workflow-cannot-fail.mjs
