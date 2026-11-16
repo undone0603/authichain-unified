@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import Stripe from "stripe";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getWebhookSupabase as getSupabase } from "./supabase";
 import { provisionPurchase } from "@/lib/provisioning";
 import { renderBillingEmail } from "@/lib/billing-emails";
 import { getBrandIdFromMetadata } from "@/lib/brand-billing";
@@ -150,17 +151,6 @@ function getStripe(): Stripe {
     _stripe = new Stripe(key, { apiVersion: "2026-08-26.dahlia" as const });
   }
   return _stripe;
-}
-
-let _supabase: AdminSupabase | null = null;
-function getSupabase(): AdminSupabase {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-  }
-  return _supabase;
 }
 
 async function claimStripeEvent(
