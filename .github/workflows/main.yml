@@ -45,13 +45,19 @@ jobs:
     # Reuse the previously trusted protected-main self-hosted runner.
     # Hosted Actions are account-billing-locked; never send fork PRs here.
     runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f scripts/check-secrets-format.mjs
       - name: Validate secrets format
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
