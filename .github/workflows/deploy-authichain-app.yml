@@ -19,6 +19,8 @@ on:
         default: ""
 permissions:
   contents: read
+  statuses: read
+  actions: read
 concurrency:
   group: deploy-authichain-app
   cancel-in-progress: false
@@ -27,6 +29,8 @@ jobs:
     # Publish runner only: authichain-wsl, same as deploy-authichain-com.yml.
     runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 45
+    environment:
+      name: production-cloudflare
     env:
       NODE_OPTIONS: --max-old-space-size=4096
     steps:
@@ -98,6 +102,22 @@ jobs:
           node-version: "22"
           cache: "pnpm"
           cache-dependency-path: pnpm-lock.yaml
+      # Reuse the same fail-closed, exact-SHA CircleCI + ruleset + protected
+      # environment policy as the authichain-com release. No ancestor release.
+      # This runs before dependencies, builds, credential use, or rollback.
+      - name: Enforce exact-main protected release policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ inputs.rollback_version == '' && inputs.expected_sha || github.sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+          SHA_MATCH_PATH: exact-head
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          node --version
+          node --test scripts/ci/autonomous-release-gate.test.mjs
+          node scripts/ci/autonomous-release-gate.mjs
       - name: Install node-gyp (native builds)
         run: npm i -g node-gyp@11.5.0
       - name: Install
@@ -108,8 +128,8 @@ jobs:
       - name: Rollback authichain-app
         if: ${{ inputs.rollback_version != '' }}
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
           ROLLBACK_VERSION: ${{ inputs.rollback_version }}
         run: |
           set -euo pipefail
@@ -129,6 +149,15 @@ jobs:
             if [ -z "${!n:-}" ]; then echo "::error::secret $n is empty"; exit 1; fi
           done
           bash scripts/with-build-lock.sh pnpm exec opennextjs-cloudflare build --config wrangler.app.jsonc
+      - name: Recheck protected release policy immediately before publishing
+        if: ${{ inputs.rollback_version == '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ inputs.expected_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+          SHA_MATCH_PATH: exact-head
+        run: node scripts/ci/autonomous-release-gate.mjs
       - name: Publish authichain-app
         if: ${{ inputs.rollback_version == '' }}
         env:
