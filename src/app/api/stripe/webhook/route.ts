@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import Stripe from "stripe";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getWebhookSupabase as getSupabase } from "./supabase";
 import { provisionPurchase } from "@/lib/provisioning";
 import { renderBillingEmail } from "@/lib/billing-emails";
 import { getBrandIdFromMetadata } from "@/lib/brand-billing";
@@ -150,17 +151,6 @@ function getStripe(): Stripe {
     _stripe = new Stripe(key, { apiVersion: "2026-08-26.dahlia" as const });
   }
   return _stripe;
-}
-
-let _supabase: AdminSupabase | null = null;
-function getSupabase(): AdminSupabase {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-  }
-  return _supabase;
 }
 
 async function claimStripeEvent(
@@ -358,6 +348,25 @@ export async function POST(req: NextRequest) {
               "DPP payment requires product and entitlement reconciliation"
             );
           }
+          break;
+        }
+
+        // A signed completion is not proof of a paid purchase. Zero-dollar
+        // sessions (including forged plan/grant metadata) must never reach
+        // general paid provisioning. Authorized DPP smoke grants are handled
+        // only in the separately verified DPP branch above.
+        if (
+          session.mode !== "payment" ||
+          session.status !== "complete" ||
+          session.payment_status !== "paid" ||
+          !Number.isSafeInteger(session.amount_total) ||
+          session.amount_total <= 0
+        ) {
+          console.warn("[webhook] general checkout paid grant refused", {
+            sessionId: session.id,
+            eventId: event.id,
+            reason: "ineligible_payment",
+          });
           break;
         }
 

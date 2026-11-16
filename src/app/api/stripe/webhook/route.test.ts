@@ -407,6 +407,8 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
         object: {
           id: "cs_starter_001",
           object: "checkout.session",
+          mode: "payment",
+          status: "complete",
           amount_total: 2900,
           currency: "usd",
           customer_email: "buyer@example.com",
@@ -441,6 +443,8 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
         object: {
           id: "cs_starter_neg",
           object: "checkout.session",
+          mode: "payment",
+          status: "complete",
           amount_total: 2900,
           amount_subtotal: 2900,
           total_details: { amount_discount: 0 },
@@ -734,5 +738,43 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     expect(mockCheckoutSessionRetrieve).toHaveBeenCalledOnce();
     expect(mockDppFulfill).toHaveBeenCalledOnce();
     expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["zero total with forged plan", { amount_total: 0, metadata: { plan: "professional", grant: "999999" } }],
+    ["zero total with forged trial", { amount_total: 0, metadata: { plan: "starter", trial: "true", grant: "50" } }],
+    ["missing total", { amount_total: null, metadata: { plan: "professional", grant: "999999" } }],
+    ["unpaid positive checkout", { amount_total: 2900, payment_status: "unpaid", metadata: { plan: "starter" } }],
+  ])("general checkout refuses %s before paid provisioning", async (_label, overrides) => {
+    const res = await postInvoice(dppCheckoutEvent({
+      id: "cs_general_ineligible_mock",
+      metadata: {},
+      ...overrides,
+    }));
+    await flushAfter();
+    expect(res.status).toBe(200);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(mockDppFulfill).not.toHaveBeenCalled();
+    expect(calls.profileUpdates).toHaveLength(0);
+    expect(calls.paymentInserts).toHaveLength(0);
+  });
+
+  it("DPP zero-dollar completion cannot bypass the DPP verifier", async () => {
+    mockCheckoutSessionRetrieve.mockResolvedValue(verifiedDppCheckout({
+      amount_total: 0,
+      metadata: { plan: "dpp_readiness" },
+    }));
+    mockDppFulfill.mockResolvedValue({
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    });
+    const res = await postInvoice(dppCheckoutEvent({ amount_total: 0 }));
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ handled: false, reconciliationRequired: true });
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(calls.profileUpdates).toHaveLength(0);
+    expect(calls.paymentInserts).toHaveLength(0);
   });
 });

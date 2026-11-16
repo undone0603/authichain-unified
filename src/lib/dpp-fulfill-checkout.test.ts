@@ -422,6 +422,33 @@ describe("fulfillDppPaidSession", () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
+  it("refuses a zero-dollar non-smoke checkout before atomic grant or payment timestamp", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    const session = {
+      ...paidSession,
+      id: "cs_test_zero_unapproved",
+      amount_total: 0,
+      metadata: {
+        ...paidSession.metadata,
+        grant: "999999",
+        is_demo: "true",
+        promo: "NOT_AUTHORIZED",
+      },
+    };
+    const result = await fulfillDppPaidSession(supabase, session);
+    expect(result).toMatchObject({
+      handled: true,
+      profileId: null,
+      refused: "ineligible_settlement",
+    });
+    expect(rows).toHaveLength(0);
+    expect(profileUpdates).toHaveLength(0);
+    expect(sendEmail).not.toHaveBeenCalled();
+    const replay = await fulfillDppPaidSession(supabase, session);
+    expect(replay.refused).toBe("ineligible_settlement");
+    expect(profileUpdates).toHaveLength(0);
+  });
+
   it("sends the provisioned email for a non-demo paid session", async () => {
     const { supabase } = fakeSupabase();
     await fulfillDppPaidSession(supabase, paidSession);
