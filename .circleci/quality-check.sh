@@ -9,6 +9,14 @@ case "$task" in
 esac
 
 test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing pipeline revision}"
+# Safely skip only archive/changelog-only non-main diffs; errors run full.
+if [ "$task" != "quality" ]; then
+  scope="$(node scripts/ci/ci-scope.mjs "$task")" || scope="full"
+  if [ "$scope" = "skip" ]; then
+    echo "Archive-only CI fast path: $task not applicable to exact HEAD"
+    exit 0
+  fi
+fi
 # Keep Corepack shims in the unprivileged user's PATH.
 mkdir -p "$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
@@ -19,6 +27,7 @@ pnpm install --frozen-lockfile --prefer-offline
 
 case "$task" in
   quality)
+    node --test scripts/ci/ci-scope.test.mjs scripts/ci/check-secrets-format.test.mjs
     pnpm check
     pnpm lint:ci
     node scripts/check-workflow-cannot-fail.mjs
