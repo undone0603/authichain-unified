@@ -88,10 +88,12 @@ jobs:
           fi
           echo "wrangler.app.jsonc name: $NAME"
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        timeout-minutes: 15
         with:
           version: "10.28.2"
           run_install: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        timeout-minutes: 15
         with:
           node-version: "22"
           cache: "pnpm"
@@ -99,6 +101,7 @@ jobs:
       - name: Install node-gyp (native builds)
         run: npm i -g node-gyp@11.5.0
       - name: Install
+        timeout-minutes: 15
         env:
           npm_config_build_from_source: "false"
         run: pnpm install --frozen-lockfile

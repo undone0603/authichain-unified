@@ -27,6 +27,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install declared AgentZ Python dependencies
+        timeout-minutes: 15
         run: python3 -m pip install --disable-pip-version-check -r requirements-agentz.txt
       - name: Validate read-only MCP, scout, daemon and CLI regression
         env:
@@ -87,6 +88,7 @@ jobs:
         run: python3 -m compileall -q agentz
 
       - name: Install AgentZ Python deps
+        timeout-minutes: 15
         run: |
           if [ "${{ runner.environment }}" = "self-hosted" ]; then
             VENV="/home/zac/.cache/agentz-venv-${{ runner.name }}"

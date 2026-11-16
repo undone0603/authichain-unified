@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Used by .github/workflows/deploy-workers.yml's "Select workers" step on
-// the auto-deploy path (a plain push, CLOUDFLARE_DEPLOY_ENABLED off, not a
-// workflow_dispatch): narrows the deploy matrix to only the workers/* dirs
+// the auto-deploy path (every plain push, regardless of repo variables):
+// narrows the deploy matrix to only the workers/* dirs
 // that both changed in this push AND are on AUTO_DEPLOY_ALLOWLIST below.
 // Replaces an earlier inline jq expression -- this version is committed,
 // testable code instead of shell arithmetic nobody could run without jq.
@@ -9,7 +9,8 @@ import { execFileSync } from "node:child_process";
 
 // Same set as the full matrix in deploy-workers.yml, minus
 // authichain-agentz (Cloudflare Containers, Workers Paid, dispatch-only)
-// and authichain-com (protected manual production release only).
+// authichain-com (protected manual production release only), and
+// stripe-webhook (payment-sensitive; manual release only).
 // A push deploys the members of this list that the push actually changed.
 // passport-demo, qron-portfolio, and first-dollar-desk stay off: they are
 // archived and not in the matrix.
@@ -57,7 +58,6 @@ export const AUTO_DEPLOY_ALLOWLIST = [
   "authichain-scan-validate",
   "authichain-telegram",
   "authichain-verify-worker",
-  "stripe-webhook",
   "authichain-openclaw",
   "authichain-infra",
   "authichain-outreach-engine",
