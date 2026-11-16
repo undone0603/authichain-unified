@@ -42,7 +42,7 @@ jobs:
   secret-format:
     name: Protected main secret format
     if: github.event_name == 'push'
-    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
+    # Same-repo jobs use the authichain-wsl ARM64 runners. Fork PRs stay on # pragma: allowlist secret
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
     # GitHub-hosted ubuntu-24.04 never starts under the billing lock, so this
     # push-only check must use the labels the other passing jobs already use.
