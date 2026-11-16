@@ -56,6 +56,32 @@ case "$task" in
     node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs
     ;;
   test-other)
+    # Atomic checkout grants MUST pass against two separate PostgreSQL clients.
+    # Avoid Vitest's conditional describe.skip when local server binaries are absent.
+    # This container uses an unprivileged user and an ephemeral 127.0.0.1 cluster.
+    sudo apt-get update -qq
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends postgresql
+    if [ "$(id -u)" -eq 0 ]; then
+      echo "FAIL: initdb cannot run as root; use the unprivileged CircleCI Docker user" >&2
+      exit 1
+    fi
+    PG_BINDIR=""
+    for dir in /usr/lib/postgresql/*/bin; do
+      if [ -x "$dir/initdb" ] && [ -x "$dir/postgres" ]; then
+        PG_BINDIR="$dir"
+      fi
+    done
+    if [ -z "$PG_BINDIR" ]; then
+      echo "FAIL: PostgreSQL initdb/postgres server binaries missing" >&2
+      exit 1
+    fi
+    export PG_BINDIR CATALOG_GRANT_PG_REQUIRED=1
+    echo "CATALOG_PG_PROOF_HEAD $(git rev-parse HEAD)"
+    echo "CATALOG_PG_PROOF_SERVER $("$PG_BINDIR/postgres" --version)"
+    sha256sum supabase/migrations/20261115180000_atomic_catalog_session_grants.sql
+    # This MUST run five tests; absent binaries, skips, or failing assertions fail CI.
+    pnpm exec vitest run src/lib/catalog-session-grant.concurrency.pg.test.ts --reporter=verbose
+
     pnpm --filter agent-browser exec playwright install --with-deps chromium
     pnpm test --filter='!./workers/*' --continue=dependencies-successful
     # The root Vitest suites are excluded from turbo test --filter='!.'.
