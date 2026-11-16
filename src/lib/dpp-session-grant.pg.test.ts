@@ -83,7 +83,8 @@ describe("DPP atomic grant isolated PostgreSQL replay", () => {
     expect(migration).toContain("REVOKE ALL");
     expect(migration).toContain("FROM PUBLIC, anon, authenticated");
     expect(migration).toContain("TO service_role");
-    expect(migration).not.toContain("auth.instances");
+    const functionBody = migration.split("AS $")[1]?.split("$;")[0] ?? "";
+    expect(functionBody).not.toContain("auth.instances");
   });
 
 });

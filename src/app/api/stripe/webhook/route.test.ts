@@ -407,6 +407,8 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
         object: {
           id: "cs_starter_001",
           object: "checkout.session",
+          mode: "payment",
+          status: "complete",
           amount_total: 2900,
           currency: "usd",
           customer_email: "buyer@example.com",
@@ -441,6 +443,8 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
         object: {
           id: "cs_starter_neg",
           object: "checkout.session",
+          mode: "payment",
+          status: "complete",
           amount_total: 2900,
           amount_subtotal: 2900,
           total_details: { amount_discount: 0 },
