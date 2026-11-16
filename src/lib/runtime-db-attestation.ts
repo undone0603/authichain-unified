@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 
 // The pin must be obtained independently of DATABASE_URL and Supabase REST
 // credentials. Do not derive the expected identity from either connection.
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SYSTEM_ID = /^[1-9][0-9]{15,19}$/;
 const PROJECT_REF = /^[a-z0-9]{20}$/;
 const GIT_SHA = /^[a-f0-9]{40}$/i;
 
@@ -25,7 +25,7 @@ export function authorizedAttestationRequest(
 }
 
 export type RuntimeAttestationPins = {
-  expectedInstance: string;
+  expectedSystemId: string;
   expectedProjectRef: string;
   deployedSha: string;
 };
@@ -36,7 +36,7 @@ export function validRuntimeAttestationPins(
   effectiveSupabaseUrl: string | undefined,
 ): boolean {
   if (
-    !UUID.test(pins.expectedInstance) ||
+    !SYSTEM_ID.test(pins.expectedSystemId) ||
     !PROJECT_REF.test(pins.expectedProjectRef) ||
     !GIT_SHA.test(pins.deployedSha) ||
     !effectiveSupabaseUrl
@@ -58,19 +58,19 @@ export function validRuntimeAttestationPins(
   }
 }
 
-/** Reject malformed, missing or mismatched UUIDs without reflecting input. */
+/** Reject malformed, missing or mismatched cluster IDs without reflecting input. */
 export function matchesExpectedDatabase(
-  instance: unknown,
+  systemId: unknown,
   expected: string,
-): instance is string {
+): systemId is string {
   return (
-    typeof instance === "string" &&
-    UUID.test(instance) &&
-    UUID.test(expected) &&
-    equalFixedDigest(instance.toLowerCase(), expected.toLowerCase())
+    typeof systemId === "string" &&
+    SYSTEM_ID.test(systemId) &&
+    SYSTEM_ID.test(expected) &&
+    equalFixedDigest(systemId, expected)
   );
 }
 
-export function safeIdentityFingerprint(instance: string): string {
-  return "sha256:" + createHash("sha256").update(instance.toLowerCase()).digest("hex").slice(0, 20);
+export function safeIdentityFingerprint(systemId: string): string {
+  return "sha256:" + createHash("sha256").update(systemId).digest("hex").slice(0, 20);
 }
