@@ -213,6 +213,7 @@
         "dpp-followup.yml": "manual",
         "dpp-outreach-trigger.yml": "manual",
         "guardrail-digest.yml": "manual",
+        "opennext-attestation-evidence.yml": "manual",
         "outreach-trigger.yml": "manual",
         "purge-cloudflare-cache.yml": "manual",
         "repo-audit-integrate.yml": "manual",
