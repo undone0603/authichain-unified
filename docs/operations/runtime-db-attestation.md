@@ -10,17 +10,18 @@ check of two independently executed database connections:
 
 The migration `20261116153000_runtime_database_identity_attestation.sql`
 exposes `public.attest_runtime_database_identity()` only to `service_role`
-and the function owner. It reads the PostgreSQL cluster system identifier from
-`pg_catalog.pg_control_system()`. The operator confirms the expected value
+and the function owner. It reads the PostgreSQL cluster system identifier **and current database name**
+from `pg_catalog.pg_control_system()` and `current_database()`. The operator confirms the expected value
 **independently** via a read-only Supabase management-plane SQL query:
 
 ```sql
-SELECT system_identifier::text FROM pg_catalog.pg_control_system();
+SELECT system_identifier::text, current_database()
+FROM pg_catalog.pg_control_system();
 ```
 
 Do not attempt to identify this project via `auth.instances`: the connected
 Supabase project returned **zero instance rows** during preflight on
-2026-11-16. A cluster system identifier is useful for detecting a wrong
+2026-11-16. A cluster system identifier combined with the database name is useful for detecting a wrong
 physical database; it is *not* a cryptographic credential and may persist in
 physical database clones. Treat it as one independent identity check, not proof
 of settled Stripe payments or overall release readiness.
@@ -34,6 +35,7 @@ never in public source, logs, URL query strings, or frontend variables:
 | --- | --- |
 | `RUNTIME_ATTESTATION_KEY` | Dedicated randomly generated operator Bearer secret, minimum 32 characters |
 | `RUNTIME_EXPECTED_DB_SYSTEM_IDENTIFIER` | Out-of-band management-plane `system_identifier::text` (19 decimal digits on the checked project) |
+| `RUNTIME_EXPECTED_DATABASE_NAME` | Independently verified PostgreSQL database name (`postgres` on the checked project) |
 | `RUNTIME_EXPECTED_SUPABASE_PROJECT_REF` | Independently verified 20-character Supabase project ref |
 | `AUTHICHAIN_DEPLOYED_SHA` | Exact protected-deployment Git commit SHA (40 hex); Vercel SHA is fallback |
 
@@ -46,7 +48,7 @@ potentially wrong `DATABASE_URL`.**
 
 1. Validate the migration and all tests on the **same PR head**. This does
    not authorize a deployment or production migration.
-2. Obtain the independent system identifier and project ref via the authorized
+2. Obtain the independent cluster identifier, database name and project ref via the authorized
    Supabase control plane. Protect the expected values and operator secret.
 3. Under separate release approval, run the protected migration and release
    the endpoint with the effective runtime bindings and deployed SHA.

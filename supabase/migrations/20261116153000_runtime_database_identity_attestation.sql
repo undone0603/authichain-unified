@@ -3,13 +3,17 @@
 -- The independent expected system identifier comes from a management-plane
 -- read-only query, not from DATABASE_URL or the webhook REST URL.
 CREATE OR REPLACE FUNCTION public.attest_runtime_database_identity()
-RETURNS text
+RETURNS jsonb
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = pg_catalog
 AS $$
-  SELECT system_identifier::text FROM pg_catalog.pg_control_system();
+  SELECT pg_catalog.jsonb_build_object(
+    'system_identifier', system_identifier::text,
+    'database_name', pg_catalog.current_database()
+  )
+  FROM pg_catalog.pg_control_system();
 $$;
 
 -- A public-schema RPC must not be callable by anon/authenticated/PUBLIC.

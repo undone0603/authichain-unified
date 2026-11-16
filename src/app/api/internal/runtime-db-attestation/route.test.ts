@@ -21,6 +21,7 @@ vi.mock("next/server", () => ({
 
 const ID = "1234567890123456789";
 const OTHER = "2234567890123456789";
+const DB_NAME = "postgres";
 const REF = "abcdefghijklmnopqrst";
 const SHA = "a".repeat(40);
 const KEY = "secret-operator-".padEnd(40, "K");
@@ -51,14 +52,15 @@ describe("protected dual-path runtime DB attestation", () => {
     vi.clearAllMocks();
     vi.stubEnv("RUNTIME_ATTESTATION_KEY", KEY);
     vi.stubEnv("RUNTIME_EXPECTED_DB_SYSTEM_IDENTIFIER", ID);
+    vi.stubEnv("RUNTIME_EXPECTED_DATABASE_NAME", DB_NAME);
     vi.stubEnv("RUNTIME_EXPECTED_SUPABASE_PROJECT_REF", REF);
     vi.stubEnv("AUTHICHAIN_DEPLOYED_SHA", SHA);
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", `https://${REF}.supabase.co`);
     mockGetDb.mockReturnValue({
-      execute: vi.fn().mockResolvedValue([{ system_id: ID }]),
+      execute: vi.fn().mockResolvedValue([{ identity: { system_identifier: ID, database_name: DB_NAME } }]),
     });
     mockGetWebhookSupabase.mockReturnValue({
-      rpc: vi.fn().mockResolvedValue({ data: ID, error: null }),
+      rpc: vi.fn().mockResolvedValue({ data: { system_identifier: ID, database_name: DB_NAME }, error: null }),
     });
   });
   afterEach(() => vi.unstubAllEnvs());
@@ -112,7 +114,7 @@ describe("protected dual-path runtime DB attestation", () => {
   });
 
   it("fails closed on a wrong PostgreSQL target without echoing the identity", async () => {
-    mockGetDb.mockReturnValue({ execute: vi.fn().mockResolvedValue([{ system_id: OTHER }]) });
+    mockGetDb.mockReturnValue({ execute: vi.fn().mockResolvedValue([{ identity: { system_identifier: OTHER, database_name: DB_NAME } }]) });
     const result = await invoke();
     expect(result.status).toBe(503);
     expect(result.body).toMatchObject({ verified: false, error: "attestation_unavailable" });
@@ -122,7 +124,7 @@ describe("protected dual-path runtime DB attestation", () => {
 
   it("fails closed on wrong Supabase RPC target or unavailable RPC", async () => {
     mockGetWebhookSupabase.mockReturnValue({
-      rpc: vi.fn().mockResolvedValue({ data: OTHER, error: null }),
+      rpc: vi.fn().mockResolvedValue({ data: { system_identifier: OTHER, database_name: DB_NAME }, error: null }),
     });
     expect((await invoke()).status).toBe(503);
     mockGetWebhookSupabase.mockReturnValue({
@@ -131,6 +133,23 @@ describe("protected dual-path runtime DB attestation", () => {
     const failed = await invoke();
     expect(failed.status).toBe(503);
     expect(JSON.stringify(failed.body)).not.toContain("secret error");
+  });
+
+  it("rejects the same cluster ID paired with a different database name", async () => {
+    mockGetWebhookSupabase.mockReturnValue({
+      rpc: vi.fn().mockResolvedValue({
+        data: { system_identifier: ID, database_name: "other" },
+        error: null,
+      }),
+    });
+    expect((await invoke()).status).toBe(503);
+  });
+
+  it("rejects an absent database-name pin before any query", async () => {
+    vi.stubEnv("RUNTIME_EXPECTED_DATABASE_NAME", "");
+    expect((await invoke()).status).toBe(503);
+    expect(mockGetDb).not.toHaveBeenCalled();
+    expect(mockGetWebhookSupabase).not.toHaveBeenCalled();
   });
 
   it("fails closed when PostgreSQL query fails even if REST attestation succeeds", async () => {

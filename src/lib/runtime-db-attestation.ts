@@ -3,6 +3,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 // The pin must be obtained independently of DATABASE_URL and Supabase REST
 // credentials. Do not derive the expected identity from either connection.
 const SYSTEM_ID = /^[1-9][0-9]{15,19}$/;
+const DATABASE_NAME = /^[a-z][a-z0-9_]{0,62}$/;
 const PROJECT_REF = /^[a-z0-9]{20}$/;
 const GIT_SHA = /^[a-f0-9]{40}$/i;
 
@@ -26,6 +27,7 @@ export function authorizedAttestationRequest(
 
 export type RuntimeAttestationPins = {
   expectedSystemId: string;
+  expectedDatabaseName: string;
   expectedProjectRef: string;
   deployedSha: string;
 };
@@ -37,6 +39,7 @@ export function validRuntimeAttestationPins(
 ): boolean {
   if (
     !SYSTEM_ID.test(pins.expectedSystemId) ||
+    !DATABASE_NAME.test(pins.expectedDatabaseName) ||
     !PROJECT_REF.test(pins.expectedProjectRef) ||
     !GIT_SHA.test(pins.deployedSha) ||
     !effectiveSupabaseUrl
@@ -60,17 +63,25 @@ export function validRuntimeAttestationPins(
 
 /** Reject malformed, missing or mismatched cluster IDs without reflecting input. */
 export function matchesExpectedDatabase(
-  systemId: unknown,
-  expected: string,
-): systemId is string {
+  value: unknown,
+  expectedSystemId: string,
+  expectedDatabaseName: string,
+): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const identity = value as Record<string, unknown>;
   return (
-    typeof systemId === "string" &&
-    SYSTEM_ID.test(systemId) &&
-    SYSTEM_ID.test(expected) &&
-    equalFixedDigest(systemId, expected)
+    typeof identity.system_identifier === "string" &&
+    typeof identity.database_name === "string" &&
+    SYSTEM_ID.test(identity.system_identifier) &&
+    SYSTEM_ID.test(expectedSystemId) &&
+    DATABASE_NAME.test(identity.database_name) &&
+    DATABASE_NAME.test(expectedDatabaseName) &&
+    equalFixedDigest(identity.system_identifier, expectedSystemId) &&
+    equalFixedDigest(identity.database_name, expectedDatabaseName)
   );
 }
 
-export function safeIdentityFingerprint(systemId: string): string {
-  return "sha256:" + createHash("sha256").update(systemId).digest("hex").slice(0, 20);
+export function safeIdentityFingerprint(systemId: string, databaseName: string): string {
+  return "sha256:" +
+    createHash("sha256").update(systemId + ":" + databaseName).digest("hex").slice(0, 20);
 }

@@ -76,7 +76,9 @@ describe("DPP atomic grant isolated PostgreSQL replay", () => {
       "supabase/migrations/20261116153000_runtime_database_identity_attestation.sql",
       "utf8",
     );
-    expect(migration).toContain("SELECT system_identifier::text FROM pg_catalog.pg_control_system()");
+    expect(migration).toContain("system_identifier::text");
+    expect(migration).toContain("pg_catalog.pg_control_system()");
+    expect(migration).toContain("pg_catalog.current_database()");
     expect(migration).toContain("SECURITY DEFINER");
     expect(migration).toContain("REVOKE ALL");
     expect(migration).toContain("FROM PUBLIC, anon, authenticated");

@@ -30,12 +30,12 @@ function reply(body: Record<string, unknown>, status: number) {
 /** Read through the application's actual postgres-js DATABASE_URL singleton. */
 async function readPostgresInstance(): Promise<unknown> {
   const result = await getDb().execute(
-    sql`SELECT public.attest_runtime_database_identity() AS system_id`,
+    sql`SELECT public.attest_runtime_database_identity() AS identity`,
   );
   const rows = Array.isArray(result)
     ? result
-    : (result as unknown as { rows?: Array<{ system_id?: unknown }> }).rows;
-  return rows?.[0]?.system_id;
+    : (result as unknown as { rows?: Array<{ identity?: unknown }> }).rows;
+  return rows?.[0]?.identity;
 }
 
 /** Read through precisely the same Supabase service-role client as the webhook. */
@@ -60,10 +60,11 @@ export async function GET(request: Request) {
   const checkedAt = new Date().toISOString();
   const pins = {
     expectedSystemId: process.env.RUNTIME_EXPECTED_DB_SYSTEM_IDENTIFIER ?? "",
+    expectedDatabaseName: process.env.RUNTIME_EXPECTED_DATABASE_NAME ?? "",
     expectedProjectRef: process.env.RUNTIME_EXPECTED_SUPABASE_PROJECT_REF ?? "",
     deployedSha:
-      process.env.AUTHICHAIN_DEPLOYED_SHA ??
-      process.env.VERCEL_GIT_COMMIT_SHA ??
+      process.env.AUTHICHAIN_DEPLOYED_SHA ||
+      process.env.VERCEL_GIT_COMMIT_SHA ||
       "",
   };
   if (!validRuntimeAttestationPins(pins, process.env.NEXT_PUBLIC_SUPABASE_URL)) {
@@ -76,17 +77,17 @@ export async function GET(request: Request) {
   ]);
   const postgresValid =
     probes[0].status === "fulfilled" &&
-    matchesExpectedDatabase(probes[0].value, pins.expectedSystemId);
+    matchesExpectedDatabase(probes[0].value, pins.expectedSystemId, pins.expectedDatabaseName);
   const webhookValid =
     probes[1].status === "fulfilled" &&
-    matchesExpectedDatabase(probes[1].value, pins.expectedInstance);
+    matchesExpectedDatabase(probes[1].value, pins.expectedSystemId, pins.expectedDatabaseName);
 
   if (!postgresValid || !webhookValid) {
     return reply({ verified: false, error: "attestation_unavailable", checkedAt }, 503);
   }
 
   // Return only a digest of the independently pinned identity. No raw system ID.
-  const identity = safeIdentityFingerprint(pins.expectedInstance);
+  const identity = safeIdentityFingerprint(pins.expectedSystemId, pins.expectedDatabaseName);
   return reply(
     {
       verified: true,
