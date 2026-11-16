@@ -4,19 +4,12 @@ name: CI
 # This job keeps the extras that workflow does not run: drizzle source-of-truth
 # and AgentZ pytest. Restricting push to main avoids a duplicate run on every
 # PR branch (push + pull_request used to fire two copies of this workflow).
+# CircleCI carries the mandatory automatic checks; use manual diagnostics
+# when investigating failures, without doubling the self-hosted WSL load.
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
-    # GB-26 fix 3: skip PRs that touch ONLY these paths. Kept narrow on
-    # purpose: docs/** is NOT ignored because product code renders and
-    # validates it (workers/authichain-com docs pages, identity validators,
-    # # src/lib/authentic-economy.ts). Pushes to main are never filtered.
-    paths-ignore:
-      - "*.md"
-      - "**/CHANGELOG.md"
-      - "docs/archive/**"
+  workflow_dispatch:
 
 concurrency:
   # PM ruling Oct 24: CI-only per-workflow group, cancel stale runs so a
@@ -31,10 +24,12 @@ env:
 
 jobs:
   extras:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
     name: Drizzle + Pytest Extras
     runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
     permissions:
       contents: read
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,6 +49,7 @@ jobs:
         run: bash scripts/ci/use-runner-pnpm.sh
 
       - name: Install pnpm
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
@@ -66,6 +62,7 @@ jobs:
           node-version: "22"
 
       - name: Setup Python virtual environment
+        timeout-minutes: 15
         run: |
           VENV_DIR="${RUNNER_TEMP}/agentz-venv"
           if [ ! -d "$VENV_DIR" ]; then
@@ -77,6 +74,7 @@ jobs:
           fi
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: pnpm install --frozen-lockfile
 
       - name: Check migration source of truth

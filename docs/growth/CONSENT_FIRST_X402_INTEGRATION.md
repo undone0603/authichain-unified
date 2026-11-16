@@ -11,6 +11,12 @@ This is a **read-only integration guide**, not a claim that AuthiChain has certi
 5. After an authorized payment, verify the transaction with an independent Base receipt and sufficient confirmations; verify the server-delivery signature against a public key obtained from an independently trusted source (not from the submitted receipt), then correlate its signed request ID, transaction hash, resource, and fulfillment status. A signed receipt alone does not establish that the delivered resource was useful or that the payer is unaffiliated. Check refunds, disputes, duplicate payment IDs and duplicate fulfillment receipts before counting externally settled-and-fulfilled revenue.
 6. If any evidence is missing or a provider is unavailable, label the outcome **unverified**. Do not infer fulfillment from a 200 landing page, 402 challenge, counter, Checkout Session, or owner test.
 
+## Dated offer reconciliation boundaries
+
+The read-only reconciler requires an HTTPS historical offer snapshot with a version, UTC observation time, and a half-open validity window: `validFrom <= occurredAt < validUntil`. Every request must explicitly bind its `offerVersion` to the snapshot and match the Base network, USDC token, recipient, atomic amount and resource. Invalid or missing offer evidence is rejected **before** any independent receipt RPC request. UTC timestamps must be real calendar dates; credential-bearing offer URLs are rejected.
+
+These values are self-attested manifest assertions, not independently authenticated offer terms or on-chain timestamps. Even successful independent Base receipt and Ed25519 delivery checks are partial evidence only: `verifiedExternalFulfilled` and `verifiedAtomicUSDC` remain zero without independently proven external-payer identity, authorization, and refund/dispute finality. No live payments, wallet operations, or production writes are performed.
+
 ## Safe attribution and sharing
 
 For owned documentation or an opt-in integration, a referral link may include a coarse source tag such as `?utm_source=owned_docs&utm_medium=integration_guide`. Do not attach personal identifiers, wallet addresses, private serials, or cross-site tracking identifiers. A referral click is **discovery**, not an external integration or a sale. Never publish a buyer name, transaction, screenshot, testimonial, badge or independently verifiable result without appropriate consent.

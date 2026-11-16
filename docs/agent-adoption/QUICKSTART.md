@@ -19,9 +19,11 @@ curl -fsS https://authichain.com/.well-known/agent-card.json \
 # Uses only the published demonstration record and a pinned free endpoint.
 node scripts/agent-adoption/free-record-smoke.mjs
 
-# Seven isolated tests without network, credentials, or payment.
+# Ten isolated tests without network, credentials, or payment.
 node --test scripts/agent-adoption/free-record-smoke.test.mjs
 ```
+
+The ten offline regression cases include mismatched JSON-RPC IDs, incompatible initialized protocol versions, and SSE rejection before a downstream tool call. Passing these mocked cases does not establish live endpoint compatibility or independent external adoption.
 
 This example calls only `verify_record` with the published demonstration ID
 `polygon-anchor-1`. The service may return `verified`, `unverified`, `invalid`,
@@ -35,13 +37,11 @@ evidence. The demonstration is owner-authored, **not** independent adoption.
 | Purpose | URL | Evidence boundary |
 | --- | --- | --- |
 | Free MCP | `https://authichain.com/mcp/free` | This script exercises one read-only free POST call |
-| Full MCP | `https://authichain.com/mcp` | Eight advertised tools include paid `verify`; discovery is not paid use |
+| Full MCP | `https://authichain.com/mcp` | Tool catalog varies by dated observation; owner-operated `tools/list` reported nine on 2026-11-14, including paid `verify`. Recheck before integration; discovery is not paid use |
 | A2A | `https://authichain.com/.well-known/agent-card.json` | An advertised JSON-RPC interface is not proven A2A task compatibility |
 | AgentZ x402 | `https://signal.authichain.com/offer` | Public offer metadata; price/SKU may change; no settlement made |
 
-The official MCP Registry publishes `com.authichain/authichain`:
-https://registry.modelcontextprotocol.io/v0.1/servers?search=com.authichain%2Fauthichain .
-This is discovery, **not** protocol certification.
+A local `server.json` manifest advertises `com.authichain/authichain` version `1.4.0`, but **current official MCP Registry publication has not been independently confirmed**. Query the official Registry API for the exact name and version, retain the dated response and registry-managed lifecycle metadata, and verify namespace ownership before claiming a published listing. Manifest existence and a search URL do not prove publication or protocol certification. See [registry acceptance #2484](https://github.com/undone0603/authichain-unified/issues/2484).
 
 The existing full MCP transport test is also available:
 
@@ -50,7 +50,7 @@ node --test scripts/ci/glama-mcp-free-smoke.test.mjs
 node scripts/ci/glama-mcp-free-smoke.mjs
 ```
 
-It exercises eight-tool GET discovery, JSON-RPC initialize, tools/list, and a
+It exercises its pinned eight-tool GET discovery fixture, JSON-RPC initialize, tools/list, and a
 zero-price, nonbinding `negotiate` quote; never paid `verify`.
 
 ## Python (no dependencies): discovery only
@@ -72,14 +72,14 @@ The Python snippet is metadata only. The Node script makes the actual free MCP c
 
 ## Independent reproduction
 
-An unaffiliated developer can submit a voluntary, redacted report to
-https://github.com/undone0603/authichain-unified/issues/2486 with UTC time,
-client/runtime, endpoint, protocol, method, status, safe tool name,
-redacted response, exact code SHA and check outcome. Do not disclose secrets,
-customer records, private serials, wallet data, or payment headers.
+Use the [opt-in evidence-submission guide](./INDEPENDENT_REPRODUCTION.md) and
+[GitHub independent-MCP issue form](https://github.com/undone0603/authichain-unified/issues/new?template=independent-mcp-reproduction.yml).
+The offline preflight validates the free result's SHA-256, operator consent declaration,
+pinned client SHA and paid-call boundary; it **never automatically counts adoption**.
+A separate reviewer must verify operator independence and redacted transport evidence.
 
-Count independent integration **only** after permissioned, reproducible,
-unaffiliated successful use; exclude house traffic, owner CI, and page views.
+Do not disclose secrets, customer records, private serials, wallet data,
+or payment headers. Exclude house traffic, owner CI, and page views.
 
 The script pins the free endpoint and demo identifier, rejects newly
 exposed paid/unknown tools, missing read-only hints, unexpected server

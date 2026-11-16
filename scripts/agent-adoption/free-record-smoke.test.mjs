@@ -20,12 +20,15 @@ function mock(overrides = {}) {
       tools: overrides.discoveryTools ?? FREE_TOOLS,
     });
     const req = JSON.parse(opts.body);
-    if (req.method === 'initialize') return reply({ jsonrpc: '2.0', id: req.id, result: {
-      protocolVersion: '2025-06-18', serverInfo: { name: 'authichain-free', version: '1.4.0' },
+    if (req.method === 'initialize') return reply({ jsonrpc: '2.0', id: overrides.wrongRpcId ? req.id + 100 : req.id, result: {
+      protocolVersion: overrides.protocolVersion ?? '2025-06-18', serverInfo: { name: 'authichain-free', version: '1.4.0' },
     } });
-    if (req.method === 'tools/list') return reply({ jsonrpc: '2.0', id: req.id, result: {
+    if (req.method === 'tools/list') {
+      if (overrides.sseResponse) return new Response('event: message\ndata: {}\n\n', { status: 200, headers: { 'content-type': 'text/event-stream' } });
+      return reply({ jsonrpc: '2.0', id: req.id, result: {
       tools: overrides.listTools ?? tools,
     } });
+    }
     if (req.method === 'tools/call') {
       if (overrides.paymentRequired) return reply({ error: 'payment required' }, 402);
       return reply({ jsonrpc: '2.0', id: req.id, result: {
@@ -103,4 +106,22 @@ test('accepts a properly reported published-demo verified verdict without claimi
   const v = await run({ fetchImpl: m.fetchImpl, log: () => {} });
   assert.equal(v.verdict, 'verified');
   assert.match(v.limitation, /Not independent evidence/);
+});
+
+test('rejects mismatched JSON-RPC response ID before listing tools', async () => {
+  const m = mock({ wrongRpcId: true });
+  await assert.rejects(run({ fetchImpl: m.fetchImpl, log: () => {} }), /invalid\/error JSON-RPC envelope/);
+  assert.deepEqual(m.calls.map(x => x.method), ['GET', 'POST']);
+});
+
+test('rejects incompatible initialized protocol version before tools/list', async () => {
+  const m = mock({ protocolVersion: '2099-01-01' });
+  await assert.rejects(run({ fetchImpl: m.fetchImpl, log: () => {} }), /protocol mismatch/);
+  assert.equal(m.calls.length, 2);
+});
+
+test('rejects SSE tools/list response without parsing or making tools/call', async () => {
+  const m = mock({ sseResponse: true });
+  await assert.rejects(run({ fetchImpl: m.fetchImpl, log: () => {} }), /expected application\/json/);
+  assert.equal(m.calls.length, 3);
 });

@@ -8,8 +8,8 @@ import { verifyRecord, sha256Hex, signingBytes } from "../../../protocol/verifie
 const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
 
 export const PUBLIC_RPC = {
-  "polygon:137": "https://polygon-bor-rpc.publicnode.com",
-  "eip155:137": "https://polygon-bor-rpc.publicnode.com",
+  "polygon:137": "https://polygon.drpc.org",
+  "eip155:137": "https://polygon.drpc.org",
   "eip155:1": "https://cloudflare-eth.com",
 };
 

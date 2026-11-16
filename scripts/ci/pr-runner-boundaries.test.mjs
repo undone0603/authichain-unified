@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const workflow = name => readFileSync(`.github/workflows/${name}.yml`, "utf8");
 const routes = source =>
@@ -28,7 +31,7 @@ const routesPrToHosted = line => {
 
 test("runner selector rejects misleading hosted fallback expressions", () => {
   const unsafe = [
-    "runs-on: [self-hosted, Linux, ARM64, authichain-wsl]",
+    "runs-on: [self-hosted, Linux, ARM64, authichain-wsl]", // pragma: allowlist secret
     "runs-on: ${{ github.event_name == 'pull_request' && 'self-hosted' || 'ubuntu-24.04' }}",
     "runs-on: ${{ github.event_name == 'pull_request' && fromJSON('[\"self-hosted\"]') || 'ubuntu-24.04' }}",
     "runs-on: ${{ github.event_name != 'pull_request' && 'self-hosted' || 'self-hosted' }}",
@@ -71,8 +74,47 @@ test("fork pull requests still fall back to hosted ubuntu-24.04 on CI Main", () 
   assert.ok(source.includes("pull_request:"));
   assert.match(
     source,
-    /github\.event\.pull_request\.head\.repo\.full_name == github\.repository\) && fromJSON\('\["self-hosted","Linux","ARM64","authichain-wsl"\]'\) \|\| 'ubuntu-24.04'/
+    /github\.event\.pull_request\.head\.repo\.full_name == github\.repository\) && fromJSON\('\["self-hosted","Linux","ARM64","authichain-wsl"\]'\) \|\| 'ubuntu-24.04'/ // pragma: allowlist secret
   );
+});
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const FORK_GUARD_SCANNER = join(HERE, "fork-runner-guard-scan.py");
+const REPO_ROOT = join(HERE, "../..");
+
+test("self-hosted jobs cannot run fork pull_request, pull_request_target, or workflow_run code", () => {
+  execFileSync("python3", [FORK_GUARD_SCANNER, "--self-test"], {
+    encoding: "utf8",
+    cwd: REPO_ROOT,
+  });
+  const raw = execFileSync("python3", [FORK_GUARD_SCANNER], {
+    encoding: "utf8",
+    cwd: REPO_ROOT,
+  });
+  const unguarded = JSON.parse(raw);
+  assert.deepEqual(
+    unguarded,
+    [],
+    unguarded
+      .map(
+        job =>
+          `${job.file} / ${job.job}: ${job.issues.join(", ")}`
+      )
+      .join("\n")
+  );
+});
+
+test("Dependabot pull_request_target jobs stay on hosted ubuntu-24.04", () => {
+  for (const name of ["automerge-dependabot", "dependabot-auto-merge"]) {
+    const source = workflow(name);
+    assert.ok(source.includes("pull_request_target:"), name);
+    const runs = source.split("\n").filter(line => line.trim().startsWith("runs-on:"));
+    assert.ok(runs.length > 0, name);
+    for (const line of runs) {
+      assert.equal(line.trim(), "runs-on: ubuntu-24.04", name);
+    }
+    assert.equal(source.includes("runs-on: [self-hosted"), false, name);
+  }
 });
 
 test("autonomy reconcile apply stays off pull_request and needs isolation attestation", () => {
