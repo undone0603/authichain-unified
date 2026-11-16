@@ -26,6 +26,7 @@ permissions:
 jobs:
   preflight:
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    timeout-minutes: 30
     steps:
       - name: Validate SAM.gov API key
         run: |
@@ -74,6 +75,7 @@ jobs:
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     outputs:
       active: ${{ steps.launch.outputs.active }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:

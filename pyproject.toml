@@ -22,3 +22,6 @@ agentz = "agentz.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["agentz*"]
+
+[tool.setuptools.package-data]
+"agentz.api" = ["voice_vision_console.html"]

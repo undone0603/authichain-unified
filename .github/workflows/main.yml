@@ -1,7 +1,7 @@
 name: CI Main
 
-# Required quality gate: install, typecheck, lint, test, production build.
-# Schema/AgentZ extras live in ci.yml so this job is not duplicated there.
+# Manual CI diagnostic matrix. CircleCI main-quality-gate is enforced.
+# On pushes, run only the protected-main secret-format check.
 # Concurrency: one group per PR branch and one group for main. A newer
 # commit cancels the superseded CI Main run so the runner is not stacked
 # behind stale SHAs. Deploy workflows keep cancel-in-progress false (PM-328).
@@ -9,13 +9,9 @@ name: CI Main
 on:
   push:
     branches: [main]
+  # CircleCI main-quality-gate handles PR/push CI; full diagnostics manual.
   pull_request:
     branches: [main]
-  # Lets content-routine-pr.yml run this gate on routine branches. PRs opened
-  # with GITHUB_TOKEN never trigger pull_request workflows, so without this a
-  # routine PR gets no "Main quality gate" check at all (that is how #1474
-  # merged with no CI on 2026-10-02). workflow_dispatch from GITHUB_TOKEN does
-  # start runs. production-proof stays push-only (its `if:` is unchanged).
   workflow_dispatch:
 
 concurrency:
@@ -41,6 +37,37 @@ env:
 permissions:
   contents: read
 jobs:
+  # Keep the existing protected-main secret URL checks without re-running
+  # the duplicate GitHub test/build matrix on every merge.
+  secret-format:
+    name: Protected main secret format
+    if: github.event_name == 'push'
+    # Same-repo jobs use the authichain-wsl ARM64 runners. Fork PRs stay on # pragma: allowlist secret
+    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
+    # GitHub-hosted ubuntu-24.04 never starts under the billing lock, so this
+    # push-only check must use the labels the other passing jobs already use.
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+      - name: Use the runner Node and pnpm
+        if: runner.environment == 'self-hosted'
+        run: bash scripts/ci/use-runner-pnpm.sh
+      - name: Validate secrets format
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node scripts/check-secrets-format.mjs
   # GB-26 fix 1: the old single "Main quality gate" job ran typecheck, lint,
   # tests (~314 s) and the production build (~218 s) one after another. They
   # now run as parallel jobs, tests split into 2 shards. The job below keeps
@@ -49,6 +76,7 @@ jobs:
   # parallel job succeeded.
   # Rollback: git revert <merge sha> (restores the single serial job).
   quality:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
     name: Typecheck and lint
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
@@ -73,12 +101,14 @@ jobs:
         run: bash scripts/ci/use-runner-pnpm.sh
 
       - name: Install pnpm
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
 
       - name: Setup Node.js
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -86,6 +116,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Validate secrets format (skipped on pull_request)
@@ -114,6 +145,7 @@ jobs:
           find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
 
   test:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
     # The workspace suites mix Vitest, node:test and tsx --test, so
     # `vitest --shard` cannot split them. Shards split turbo's package graph
     # instead: shard 1 = workers/*, shard 2 = every other workspace package.
@@ -157,12 +189,14 @@ jobs:
         run: bash scripts/ci/use-runner-pnpm.sh
 
       - name: Install pnpm
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
 
       - name: Setup Node.js
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -170,6 +204,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: pnpm install --frozen-lockfile --prefer-offline
 
       # The workflow-level vars flag may be unset even when the job runs on
@@ -247,6 +282,7 @@ jobs:
           find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
 
   build:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
     name: Production build
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
@@ -271,12 +307,14 @@ jobs:
         run: bash scripts/ci/use-runner-pnpm.sh
 
       - name: Install pnpm
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
 
       - name: Setup Node.js
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -286,6 +324,7 @@ jobs:
       # Same-repo runs land on the 3.8 GiB WSL runner and do not install or
       # next-build there. Fork PRs stay on ubuntu-24.04 and still install.
       - name: Install dependencies
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         run: pnpm install --frozen-lockfile --prefer-offline
 
@@ -339,7 +378,7 @@ jobs:
     needs: [quality, test, build]
     # Report failed dependencies, but let cancellation release the workflow's
     # concurrency group instead of queueing a finalizer on the busy runner.
-    if: ${{ !cancelled() }}
+    if: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)) && !cancelled() }}
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
     runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
@@ -395,6 +434,7 @@ jobs:
         run: bash scripts/ci/use-runner-pnpm.sh
 
       - name: Install pnpm
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
@@ -407,6 +447,7 @@ jobs:
           node-version: "22"
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       - name: Run autonomous revenue pipeline

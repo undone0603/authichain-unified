@@ -7,7 +7,7 @@ internal CI, bots, and duplicate operators.
 
 | Metric | Current state (Nov 12, 2026) | Acceptance |
 | --- | --- | --- |
-| Official MCP Registry | `com.authichain/authichain` v1.4.0, public latest listing | Listing only; no tool-call proof |
+| Official MCP Registry | Local `server.json` advertises `com.authichain/authichain` v1.4.0; official live listing unconfirmed | Require official exact-name API response and publisher proof; not tool-call evidence |
 | Public A2A Agent Card | Accessible at `/.well-known/agent-card.json` | Advertised interface, not certified task |
 | Free live MCP POST from independent client | Not independently established | Unaffiliated user submits redacted success |
 | A2A task interoperability | Not independently established | Actual task lifecycle and test report |
@@ -32,3 +32,7 @@ paid-and-fulfilled buyer.
 
 No automated paid traffic, unsolicited outreach, fake reviews,
 fabricated endorsements, or private user tracking.
+
+## Independent developer intake
+
+A voluntary [free MCP issue submission](https://github.com/undone0603/authichain-unified/issues/new?template=independent-mcp-reproduction.yml) and [offline evidence preflight](./INDEPENDENT_REPRODUCTION.md) are provided as an acceptance mechanism, **not** an activation. Even a preflight result of REVIEW_REQUIRED is not accepted evidence of third-party operation. Only a distinct, corroborated reviewer decision and consented external operator may advance the independent integration count in #2263 and #2486. A2A task execution and x402 settlement use separate evidence gates.

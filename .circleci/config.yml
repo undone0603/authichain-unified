@@ -84,6 +84,36 @@ jobs:
       - store_test_results:
           path: /tmp/pytest-results
 
+  runtime-db-attestation-postgres:
+    docker:
+      - image: cimg/node:22.23.3
+      - image: postgres:16
+        environment:
+          POSTGRES_PASSWORD: isolated-ci-only
+          POSTGRES_DB: postgres
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Execute unchanged migration and verify actual PostgreSQL roles
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing exact SHA}"
+            mkdir -p "$HOME/.local/bin"
+            export PATH="$HOME/.local/bin:$PATH"
+            corepack enable --install-directory "$HOME/.local/bin"
+            corepack prepare pnpm@10.28.2 --activate
+            pnpm config set store-dir ~/.pnpm-store
+            pnpm install --frozen-lockfile --prefer-offline
+            export PG_TEST_PASSWORD=isolated-ci-only
+            for i in $(seq 1 40); do
+              if node -e 'const {Client}=require("pg");const c=new Client({host:"127.0.0.1",user:"postgres",password:process.env.PG_TEST_PASSWORD,database:"postgres"});c.connect().then(()=>c.end()).catch(()=>process.exit(1))'; then break; fi
+              sleep 2
+            done
+            timeout --signal=TERM --kill-after=10s 120s node scripts/ci/runtime-db-attestation-postgres-acceptance.mjs
+          no_output_timeout: 20m
+
   main-quality-gate:
     docker:
       - image: cimg/base:stable
@@ -119,6 +149,9 @@ workflows:
       - extras:
           requires: [test-workers]
           filters: *quality-branches
+      - runtime-db-attestation-postgres:
+          requires: [test-workers]
+          filters: *quality-branches
       - main-quality-gate:
           requires:
             - quality
@@ -127,4 +160,5 @@ workflows:
             - test-other
             - build
             - extras
+            - runtime-db-attestation-postgres
           filters: *quality-branches
