@@ -42,7 +42,9 @@ jobs:
   secret-format:
     name: Protected main secret format
     if: github.event_name == 'push'
-    runs-on: ubuntu-24.04
+    # Reuse the previously trusted protected-main self-hosted runner.
+    # Hosted Actions are account-billing-locked; never send fork PRs here.
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
     timeout-minutes: 5
     permissions:
       contents: read
