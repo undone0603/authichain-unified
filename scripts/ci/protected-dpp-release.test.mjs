@@ -20,6 +20,10 @@ test("root-app release is protected by exact-main quality and database attestati
     "needs.db_preflight.result == 'skipped'"
   ])assert.ok(workflow.includes(marker),"missing release marker: "+marker);
   assert.ok(!workflow.includes("secrets.CLOUDFLARE_API_TOKEN"));
+  assert.ok(workflow.includes("release_mode:"));
+  assert.ok(workflow.includes("inputs.release_mode == 'attestation-bootstrap'"));
+  assert.ok(workflow.includes("inputs.release_mode == 'dpp-email'"));
+  assert.ok(workflow.includes("verify-runtime-attestation-production.sh"));
 });
 test("DPP schema attestation uses read-only SQL, target identity, and all service privileges",()=>{
   for(const marker of [

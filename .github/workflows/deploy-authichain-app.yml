@@ -22,6 +22,14 @@ on:
         type: string
         required: false
         default: ""
+      release_mode:
+        description: "Separate protected DB attestation bootstrap from later DPP email-capable release"
+        type: choice
+        required: true
+        options:
+          - attestation-bootstrap
+          - dpp-email
+        default: dpp-email
 permissions:
   contents: read
   statuses: read
@@ -43,9 +51,11 @@ jobs:
           DISPATCH_SHA: ${{ github.sha }}
           ROLLBACK_VERSION: ${{ inputs.rollback_version }}
           EXPECTED_SUPABASE_REF: ${{ inputs.supabase_project_ref }}
+          RELEASE_MODE: ${{ inputs.release_mode }}
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
+          [[ "$RELEASE_MODE" == 'attestation-bootstrap' || "$RELEASE_MODE" == 'dpp-email' ]]
           if [ -n "$ROLLBACK_VERSION" ]; then
             test -z "$EXPECTED_SHA"
             test -z "$EXPECTED_SUPABASE_REF"
@@ -143,7 +153,17 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
+      - name: Require independent attestation RPC and database identity
+        if: ${{ inputs.release_mode == 'attestation-bootstrap' }}
+        env:
+          AUTHICHAIN_PRODUCTION_SUPABASE_DB_URL: ${{ secrets.AUTHICHAIN_PRODUCTION_SUPABASE_DB_URL }}
+          AUTHICHAIN_PRODUCTION_SUPABASE_PROJECT_REF: ${{ secrets.AUTHICHAIN_PRODUCTION_SUPABASE_PROJECT_REF }}
+          RUNTIME_EXPECTED_DB_SYSTEM_IDENTIFIER: ${{ secrets.RUNTIME_EXPECTED_DB_SYSTEM_IDENTIFIER }}
+          RUNTIME_EXPECTED_DATABASE_NAME: ${{ secrets.RUNTIME_EXPECTED_DATABASE_NAME }}
+          EXPECTED_SUPABASE_REF: ${{ inputs.supabase_project_ref }}
+        run: bash scripts/ci/verify-runtime-attestation-production.sh
       - name: Require applied schema before allowing Worker publish
+        if: ${{ inputs.release_mode == 'dpp-email' }}
         env:
           AUTHICHAIN_PRODUCTION_SUPABASE_DB_URL: ${{ secrets.AUTHICHAIN_PRODUCTION_SUPABASE_DB_URL }}
           AUTHICHAIN_PRODUCTION_SUPABASE_PROJECT_REF: ${{ secrets.AUTHICHAIN_PRODUCTION_SUPABASE_PROJECT_REF }}
@@ -247,6 +267,18 @@ jobs:
           set -euo pipefail
           pnpm exec wrangler rollback "$ROLLBACK_VERSION" --name authichain-app --message "CI rollback via deploy-authichain-app" --yes
           pnpm exec wrangler deployments list --name authichain-app
+      - name: Require explicit attestation-only release clearance and preinstalled pins
+        if: ${{ inputs.rollback_version == '' && inputs.release_mode == 'attestation-bootstrap' }}
+        env:
+          ATTESTATION_RELEASE_CLEARANCE: ${{ secrets.AUTHICHAIN_ATTESTATION_BOOTSTRAP_RELEASE_GO }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [ "$ATTESTATION_RELEASE_CLEARANCE" != 'attestation-bootstrap-reviewed' ]; then
+            echo "::error::attestation-only code, email and payment side-effect review not authorized"; exit 1
+          fi
+          node scripts/ci/verify-runtime-attestation-bindings.mjs
       - name: Build (OpenNext)
         if: ${{ inputs.rollback_version == '' }}
         env:
@@ -295,6 +327,13 @@ jobs:
           set -euo pipefail
           pnpm exec wrangler deploy --keep-vars --config wrangler.app.jsonc
           pnpm exec wrangler deployments list --name authichain-app
+      - name: Verify live dual-connection runtime database attestation
+        if: ${{ inputs.rollback_version == '' && inputs.release_mode == 'attestation-bootstrap' }}
+        env:
+          RUNTIME_ATTESTATION_KEY: ${{ secrets.RUNTIME_ATTESTATION_KEY }}
+          RUNTIME_ATTESTATION_URL: ${{ secrets.RUNTIME_ATTESTATION_URL }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: node scripts/ci/verify-runtime-attestation-live.mjs
       - name: Live GET checks (qron.space)
         run: |
           set -euo pipefail
