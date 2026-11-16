@@ -285,7 +285,8 @@ export default {
           })
         );
       } else {
-        const email = session.customer_details?.email;
+        const email =
+          session.customer_details?.email?.toLowerCase().trim() || null;
         const name = session.customer_details?.name || "QRON User";
         const customerId =
           typeof session.customer === "string" ? session.customer : null;
@@ -297,7 +298,6 @@ export default {
           priceId: priceIdFromSession(session),
           amountTotal: session.amount_total,
         });
-        const plan = grant?.plan || session.metadata?.plan || "starter";
         // A one-time paid pack must not grant on missing status, an unpaid
         // session, or a zero-dollar no_payment_required completion. A later
         // checkout.session.async_payment_succeeded can safely retry.
@@ -314,17 +314,17 @@ export default {
         }
 
         if (email) {
+          const profile: Record<string, unknown> = {
+            email,
+            full_name: name,
+            updated_at: new Date().toISOString(),
+          };
+          if (customerId) profile.stripe_customer_id = customerId;
+          if (subscriptionId) profile.stripe_subscription_id = subscriptionId;
           const upserted = await supabaseUpsert(
             env,
             "profiles",
-            {
-              email,
-              full_name: name,
-              stripe_customer_id: customerId,
-              stripe_subscription_id: subscriptionId,
-              plan,
-              updated_at: new Date().toISOString(),
-            },
+            profile,
             "email"
           );
           if (!upserted) return grantRetry("profile upsert failed");
@@ -428,10 +428,8 @@ export default {
 
         // After the grant, so a failed analytics write can never cost credits.
         //
-        // Pass grant?.plan, NOT the `plan` above: that falls back to "starter"
-        // when the price is unmapped, which is harmless for the profiles upsert
-        // but would record a false purchase_starter_succeeded — the single metric
-        // the first-dollar kill decision reads. An unmapped price gets no event.
+        // Pass grant?.plan, never a starter fallback: an unmapped price must
+        // not record purchase_starter_succeeded, the first-dollar kill metric.
         await recordPurchaseEvent(env, grant?.plan ?? null, email);
 
         // Non-founder first-sale alert (observability only; never blocks grant)
@@ -445,7 +443,7 @@ export default {
             JSON.stringify({
               evt: "first_sale_non_founder",
               amount: (session.amount_total ?? 0) / 100,
-              plan,
+              plan: grant?.plan ?? null,
             })
           );
           fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {

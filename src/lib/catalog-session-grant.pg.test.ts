@@ -6,11 +6,16 @@ import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
-import { describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { CATALOG_GRANT_MIGRATION, CATALOG_GRANT_RPC } from "./provisioning";
 
 const PROF_A = "11111111-1111-1111-1111-111111111111";
 const PROF_B = "22222222-2222-2222-2222-222222222222";
+
+// One WASM Postgres per file. Per-test `new PGlite()` without close() leaked
+// engines in the GitHub Lint worker, and the unmapped-receipt case then hit
+// the 30s timeout under the full root suite. Fail-closed assertions unchanged.
+let catalogDb: PGlite | undefined;
 
 async function isolatedCatalogDb() {
   const db = new PGlite();
@@ -53,6 +58,25 @@ async function isolatedCatalogDb() {
   return db;
 }
 
+function openCatalogDb(): PGlite {
+  if (!catalogDb) throw new Error("catalog PGlite was not opened");
+  return catalogDb;
+}
+
+async function resetCatalogDb(db: PGlite) {
+  await db.exec("RESET ROLE");
+  await db.exec(`
+    DROP TRIGGER IF EXISTS catalog_grant_boom_after_receipt
+      ON public.founder_exit_side_effects;
+    DROP TRIGGER IF EXISTS catalog_grant_boom_after_update
+      ON public.profiles;
+    DROP FUNCTION IF EXISTS public.catalog_grant_boom_after_receipt();
+    DROP FUNCTION IF EXISTS public.catalog_grant_boom_after_update();
+    TRUNCATE public.founder_exit_side_effects;
+    TRUNCATE public.profiles;
+  `);
+}
+
 async function insertProfile(
   db: PGlite,
   id: string,
@@ -93,6 +117,20 @@ async function grant(
 }
 
 describe("grant_catalog_checkout_session isolated postgres", () => {
+  beforeAll(async () => {
+    catalogDb = await isolatedCatalogDb();
+  });
+
+  afterEach(async () => {
+    if (catalogDb) await resetCatalogDb(catalogDb);
+  });
+
+  afterAll(async () => {
+    if (!catalogDb) return;
+    await catalogDb.close();
+    catalogDb = undefined;
+  });
+
   it("attests the live code SHA together with the migration SHA", () => {
     const migration = readFileSync(CATALOG_GRANT_MIGRATION);
     const migrationSha = createHash("sha256").update(migration).digest("hex");
@@ -116,7 +154,7 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
   });
 
   it("grant A, grant B, replay A does not add A again", async () => {
-    const db = await isolatedCatalogDb();
+    const db = openCatalogDb();
     await insertProfile(db, PROF_A);
     await grant(db, { profileId: PROF_A, sessionId: "cs_a" });
     await grant(db, { profileId: PROF_A, sessionId: "cs_b" });
@@ -138,7 +176,7 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
   });
 
   it("replays after a successful commit without a second increment", async () => {
-    const db = await isolatedCatalogDb();
+    const db = openCatalogDb();
     await insertProfile(db, PROF_A, 40, 0);
     const first = await grant(db, { profileId: PROF_A, sessionId: "cs_ok" });
     expect(
@@ -158,7 +196,7 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
   });
 
   it("credits two distinct sessions on one profile once each", async () => {
-    const db = await isolatedCatalogDb();
+    const db = openCatalogDb();
     await insertProfile(db, PROF_A, 100, 40);
     await grant(db, {
       profileId: PROF_A,
@@ -181,7 +219,7 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
   });
 
   it("rolls back the real RPC when a receipt-insert trigger aborts", async () => {
-    const db = await isolatedCatalogDb();
+    const db = openCatalogDb();
     await insertProfile(db, PROF_A, 100, 0);
     await db.exec(`
       CREATE FUNCTION public.catalog_grant_boom_after_receipt()
@@ -214,14 +252,14 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
   });
 
   it("fails closed on a missing profile", async () => {
-    const db = await isolatedCatalogDb();
+    const db = openCatalogDb();
     await expect(
       grant(db, { profileId: PROF_A, sessionId: "cs_none" })
     ).rejects.toThrow(/catalog_grant_profile_not_found/);
   });
 
   it("fails closed when the receipt belongs to another profile", async () => {
-    const db = await isolatedCatalogDb();
+    const db = openCatalogDb();
     await insertProfile(db, PROF_A, 0, 0);
     await insertProfile(db, PROF_B, 0, 0);
     await grant(db, { profileId: PROF_B, sessionId: "cs_taken" });
@@ -238,7 +276,7 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
   });
 
   it("fails closed on an unmapped historical receipt instead of COALESCE", async () => {
-    const db = await isolatedCatalogDb();
+    const db = openCatalogDb();
     await insertProfile(db, PROF_A, 40, 0, "cs_other");
     await db.query(
       `INSERT INTO public.founder_exit_side_effects (idempotency_key, profile_id)
@@ -257,7 +295,7 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
   });
 
   it("fails closed when a last_grant marker races a receipt for another buyer", async () => {
-    const db = await isolatedCatalogDb();
+    const db = openCatalogDb();
     await insertProfile(db, PROF_A, 100, 0, "cs_legacy");
     await insertProfile(db, PROF_B, 0, 0);
     await db.query(
@@ -278,7 +316,7 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
   });
 
   it("rolls back the real RPC when a profile-update trigger aborts", async () => {
-    const db = await isolatedCatalogDb();
+    const db = openCatalogDb();
     await insertProfile(db, PROF_A, 100, 0);
     await db.exec(`
       CREATE FUNCTION public.catalog_grant_boom_after_update()
@@ -311,7 +349,7 @@ describe("grant_catalog_checkout_session isolated postgres", () => {
   });
 
   it("refuses callers without service_role execute", async () => {
-    const db = await isolatedCatalogDb();
+    const db = openCatalogDb();
     await insertProfile(db, PROF_A);
     await db.exec(
       "REVOKE ALL ON FUNCTION public.grant_catalog_checkout_session(text, text, text, text, integer, boolean, text, text, boolean) FROM PUBLIC, catalog_anon"
