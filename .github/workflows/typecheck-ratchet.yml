@@ -7,6 +7,10 @@ name: Typecheck ratchet
 # CircleCI carries the mandatory automatic checks; use manual diagnostics
 # when investigating failures, without doubling the self-hosted WSL load.
 on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -20,6 +24,7 @@ permissions:
   contents: read
 jobs:
   ratchet:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
     name: Typecheck ratchet
     # Zac, Oct 23 9:30 AM ET: use wsl-zac-arm64. Public repo: never run fork PRs on it.
     runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}

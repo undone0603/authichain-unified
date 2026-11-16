@@ -88,3 +88,19 @@ The same seven CircleCI job statuses remain, and executor startup is not skipped
 Protected merge eligibility, release authorization, payment settlement and
 deployment-health evidence remain separate. A manual or skipped GitHub check
 must not be counted as executed proof. Keep the CircleCI 5,000-credit reserve.
+
+## Fork pull-request containment correction (2026-11-16)
+
+Exact-head Lint revealed two policy regressions when GitHub CI Main and
+Typecheck ratchet lost their `pull_request` event declarations. Retain
+`pull_request` on all three diagnostic workflows and `push` on the ratchet;
+**untrusted fork pull requests still execute these checks using GitHub-hosted
+runners**, preserving independent trust-boundary validation. Same-repository
+pull requests do not run those duplicate job bodies: CircleCI remains the
+sole enforced full merge gate and GitHub Lint stays automatic for unique
+PostgreSQL acceptance. Protected-main push runs the minimal secret-format
+check in CI Main; ratchet may trigger with a skipped diagnostic job.
+
+Do not rewrite or remove fork-boundary policy tests to make them pass. Verify
+both `core-pr-hosted-containment.test.mjs` and
+`pr-runner-boundaries.test.mjs` on the new exact head before merging.

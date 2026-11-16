@@ -10,6 +10,8 @@ on:
   push:
     branches: [main]
   # CircleCI main-quality-gate handles PR/push CI; full diagnostics manual.
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -61,7 +63,7 @@ jobs:
   # parallel job succeeded.
   # Rollback: git revert <merge sha> (restores the single serial job).
   quality:
-    if: github.event_name == 'workflow_dispatch'
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
     name: Typecheck and lint
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
@@ -130,7 +132,7 @@ jobs:
           find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
 
   test:
-    if: github.event_name == 'workflow_dispatch'
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
     # The workspace suites mix Vitest, node:test and tsx --test, so
     # `vitest --shard` cannot split them. Shards split turbo's package graph
     # instead: shard 1 = workers/*, shard 2 = every other workspace package.
@@ -267,7 +269,7 @@ jobs:
           find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
 
   build:
-    if: github.event_name == 'workflow_dispatch'
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
     name: Production build
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
@@ -363,7 +365,7 @@ jobs:
     needs: [quality, test, build]
     # Report failed dependencies, but let cancellation release the workflow's
     # concurrency group instead of queueing a finalizer on the busy runner.
-    if: ${{ github.event_name == 'workflow_dispatch' && !cancelled() }}
+    if: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)) && !cancelled() }}
     # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
     runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
