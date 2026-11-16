@@ -70,4 +70,36 @@ describe("DPP atomic grant isolated PostgreSQL replay", () => {
     expect(sql).not.toMatch(/p_payment_intent|p_amount_paid|p_payment_verified/);
     // This is an explicit outstanding security boundary, NOT a paid-settlement acceptance test.
   });
+
+  it("restricts read-only identity RPC to service_role and preserves the UUID", async () => {
+    const identity = "33333333-3333-4333-8333-333333333333";
+    await db.exec(`
+      CREATE SCHEMA auth;
+      CREATE TABLE auth.instances (id uuid PRIMARY KEY);
+      INSERT INTO auth.instances (id) VALUES ('33333333-3333-4333-8333-333333333333');
+    `);
+    const migration = readFileSync(
+      "supabase/migrations/20261116153000_runtime_database_identity_attestation.sql",
+      "utf8",
+    );
+    expect(migration).toContain("SECURITY DEFINER");
+    expect(migration).toContain("REVOKE ALL");
+    expect(migration).toContain("TO service_role");
+    await db.exec(migration);
+    const rpc = "SELECT public.attest_runtime_database_identity() AS id";
+    try {
+      await db.exec("SET ROLE anon");
+      await expect(db.query(rpc)).rejects.toThrow();
+      await db.exec("RESET ROLE");
+      await db.exec("SET ROLE service_role");
+      const result = await db.query<{ id: string }>(rpc);
+      expect(result.rows[0].id).toBe(identity);
+    } finally {
+      await db.exec("RESET ROLE");
+    }
+    // The function only reads auth.instances; no identity rows are changed.
+    const rows = await db.query<{ id: string }>("SELECT id FROM auth.instances");
+    expect(rows.rows).toEqual([{ id: identity }]);
+  });
+
 });
