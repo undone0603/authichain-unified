@@ -298,6 +298,17 @@ export default {
           amountTotal: session.amount_total,
         });
         const plan = grant?.plan || session.metadata?.plan || "starter";
+        // A one-time paid pack must not grant on missing status, an unpaid
+        // session, or a zero-dollar no_payment_required completion. A later
+        // checkout.session.async_payment_succeeded can safely retry.
+        // Do not affect DPP's separate canonical fulfillment or subscription
+        // trials. Never call the catalog RPC on this unsafe evidence.
+        if (
+          (grant?.plan === "starter" || grant?.plan === "creator") &&
+          session.payment_status !== "paid"
+        ) {
+          return grantRetry("paid pack settlement not confirmed");
+        }
         if (grant?.canonicalFulfillment && !email) {
           return grantRetry("canonical DPP buyer identity missing");
         }

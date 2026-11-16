@@ -368,6 +368,35 @@ describe("stripe-webhook checkout grant", () => {
     expect(patches(calls)).toEqual([]);
   });
 
+  it("fails closed for a one-time Starter pack with no_payment_required", async () => {
+    state.event = sessionEvent({
+      price: STARTER, id: "cs_unsettled_starter",
+      paymentStatus: "no_payment_required",
+    });
+    const calls = installFetch();
+    const response = await worker.fetch(signedPost(), env);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: "paid pack settlement not confirmed",
+    });
+    expect(calls.some(c => c.url.includes(`/rpc/${CATALOG_GRANT_RPC}`))).toBe(false);
+    expect(calls.some(c => c.url.includes("/profiles"))).toBe(false);
+  });
+
+  it("fails closed for a Creator checkout missing payment_status", async () => {
+    state.event = sessionEvent({ price: CREATOR, id: "cs_missing_payment" });
+    const evt = state.event as { data: { object: { payment_status?: string } } };
+    delete evt.data.object.payment_status;
+    const calls = installFetch();
+    const response = await worker.fetch(signedPost(), env);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: "paid pack settlement not confirmed",
+    });
+    expect(calls.some(c => c.url.includes(`/rpc/${CATALOG_GRANT_RPC}`))).toBe(false);
+    expect(calls.some(c => c.url.includes("/profiles"))).toBe(false);
+  });
+
   it("does not grant a checkout session that is still unpaid", async () => {
     state.event = sessionEvent({
       price: LAUNCH_ANNUAL,
