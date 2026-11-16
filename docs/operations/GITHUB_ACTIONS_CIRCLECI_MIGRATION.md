@@ -59,3 +59,32 @@ independently checking CircleCI billing/usage.
 Implementation lives in `.circleci/quality-check.sh` and
 `.circleci/gitleaks-check.sh`; the six-job aggregation remains in
 `.circleci/config.yml`.
+
+## Consolidated protected checks (proposed 2026-11-16)
+
+The sole enforced GitHub branch rule remains `ci/circleci: main-quality-gate`,
+which depends on the six upstream CircleCI tasks, each running the exact SHA.
+No rule, payment operation, production release, or credential is changed.
+
+The duplicate GitHub CI Main test/build matrix, GitHub CI Drizzle/Pytest, and
+GitHub Typecheck ratchet run only on explicit `workflow_dispatch`; they remain
+available for diagnosis and content-routine dispatch. On protected-main pushes,
+CI Main instead runs a small **secret-format** job with the same validator and
+repository secrets previously checked by the full quality job. No secrets are
+exposed to PRs. A production-proof commit-message job retains its prior predicate.
+
+**GitHub Lint continues to run automatically.** It alone runs the mandatory
+two-connection local PostgreSQL catalog-grant acceptance, plus additional
+node:test checks that are not yet fully reproduced in CircleCI. Do not remove
+or claim to have passed that coverage without an actual exact-head test run.
+
+On non-main branches, CircleCI uses a bounded merge-base diff to skip the
+five non-quality task *bodies* only for a pure `docs/archive/**` or
+`**/CHANGELOG.md` change. Quality/security always runs fully; a main push
+always runs the full matrix. Unknown git metadata, mixed changes, and ordinary
+documentation, code, workflow, migration, or payment changes all run full.
+The same seven CircleCI job statuses remain, and executor startup is not skipped.
+
+Protected merge eligibility, release authorization, payment settlement and
+deployment-health evidence remain separate. A manual or skipped GitHub check
+must not be counted as executed proof. Keep the CircleCI 5,000-credit reserve.

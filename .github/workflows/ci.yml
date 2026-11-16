@@ -4,19 +4,10 @@ name: CI
 # This job keeps the extras that workflow does not run: drizzle source-of-truth
 # and AgentZ pytest. Restricting push to main avoids a duplicate run on every
 # PR branch (push + pull_request used to fire two copies of this workflow).
+# CircleCI carries the mandatory automatic checks; use manual diagnostics
+# when investigating failures, without doubling the self-hosted WSL load.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-    # GB-26 fix 3: skip PRs that touch ONLY these paths. Kept narrow on
-    # purpose: docs/** is NOT ignored because product code renders and
-    # validates it (workers/authichain-com docs pages, identity validators,
-    # # src/lib/authentic-economy.ts). Pushes to main are never filtered.
-    paths-ignore:
-      - "*.md"
-      - "**/CHANGELOG.md"
-      - "docs/archive/**"
+  workflow_dispatch:
 
 concurrency:
   # PM ruling Oct 24: CI-only per-workflow group, cancel stale runs so a
