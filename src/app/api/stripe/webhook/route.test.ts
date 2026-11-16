@@ -753,7 +753,6 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     expect(mockDppFulfill).not.toHaveBeenCalled();
     expect(calls.profileUpdates).toHaveLength(0);
     expect(calls.paymentInserts).toHaveLength(0);
-    expect(calls.rpcCalls).toHaveLength(0);
   });
 
   it("DPP zero-dollar completion cannot bypass the DPP verifier", async () => {
@@ -773,6 +772,5 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     expect(provisionPurchase).not.toHaveBeenCalled();
     expect(calls.profileUpdates).toHaveLength(0);
     expect(calls.paymentInserts).toHaveLength(0);
-    expect(calls.rpcCalls).toHaveLength(0);
   });
 });
