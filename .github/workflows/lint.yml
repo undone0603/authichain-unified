@@ -137,7 +137,9 @@ jobs:
           set -euo pipefail
           test -n "${PG_BINDIR:-}"
           test -x "$PG_BINDIR/initdb"
-          pnpm exec vitest run
+          # The mandatory five-case PostgreSQL suite already passed above.
+          # Do not start another disposable cluster in parallel root Vitest.
+          pnpm exec vitest run --exclude src/lib/catalog-session-grant.concurrency.pg.test.ts
 
       # node:test files that no workspace `test` script runs. Named, not
       # globbed, past scripts/ci: scripts/lib and worker-app also hold Vitest
