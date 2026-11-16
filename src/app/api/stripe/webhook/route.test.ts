@@ -485,6 +485,34 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     expect(r.warned).toBe(false);
   });
 
+  it("refuses Starter checkout with missing payment status before provisioning", async () => {
+    const res = await postInvoice(
+      starterSession({
+        metadata: { plan: "starter" },
+        payment_status: undefined,
+      })
+    );
+    await flushAfter();
+    expect(res.status).toBe(200);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(calls.profileUpdates).toHaveLength(0);
+    expect(calls.paymentInserts).toHaveLength(0);
+  });
+
+  it("refuses Creator checkout marked no_payment_required before provisioning", async () => {
+    const res = await postInvoice(
+      starterSession({
+        metadata: { plan: "creator" },
+        payment_status: "no_payment_required",
+      })
+    );
+    await flushAfter();
+    expect(res.status).toBe(200);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(calls.profileUpdates).toHaveLength(0);
+    expect(calls.paymentInserts).toHaveLength(0);
+  });
+
   it("negative: unpaid session is held before any grant and logs the hold", async () => {
     // ae38cf56 (2026-10-19) intercepts payment_status "unpaid" before the
     // Starter amount fallback is reached, so the signal is the

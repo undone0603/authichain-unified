@@ -270,7 +270,8 @@ export async function POST(req: NextRequest) {
         // Delayed methods emit completed while payment_status is still unpaid.
         // Granting there would provision Launch before the money arrives.
         // async_payment_succeeded is the paid event for those methods.
-        // A missing status still grants. A trial is no_payment_required.
+        // A missing or no_payment_required status is not proof of settlement.
+        // The general paid-checkout guard below rejects both fail-closed.
         if (session.payment_status === "unpaid") {
           console.log(
             JSON.stringify({
