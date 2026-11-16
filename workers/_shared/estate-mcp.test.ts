@@ -546,3 +546,10 @@ test("scan_living_qr reads the apex scan and drops the JWS", async () => {
     globalThis.fetch = real;
   }
 });
+
+test("MCP pricing discovery leaves out retired checkouts", () => {
+  for (const { brand } of BRANDS) {
+    const body = JSON.stringify(sisterMcpPricingDiscovery(brand));
+    assert.equal(body.includes("/checkout/qron_launch"), false, brand);
+  }
+});

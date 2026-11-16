@@ -2,11 +2,8 @@
  * /llms.txt for agents. Point crawlers at Payment Links, unpaid POST /api/x402,
  * and the canonical Living QR scan. Do not tell them to GET /api/checkout.
  */
-import { catalogOffers } from "../../../src/lib/plans.ts";
-import {
-  X402_PUBLISHED_PAY_TO,
-  x402PriceUsd,
-} from "../../../src/lib/x402.ts";
+import { openCatalogOffers } from "../../../src/lib/retired-plans.ts";
+import { X402_PUBLISHED_PAY_TO, x402PriceUsd } from "../../../src/lib/x402.ts";
 
 const X402_USD = x402PriceUsd();
 
@@ -24,7 +21,7 @@ export function isLlmsTxtPath(pathname: string): boolean {
 export function renderLlmsTxt(): string {
   const humanCheckout = [
     "## Human checkout (Stripe Payment Links)",
-    ...catalogOffers().map(offer => {
+    ...openCatalogOffers().map(offer => {
       const suffix = offer.priceSuffix ?? "";
       return `- ${offer.name} $${offer.usd}${suffix}: ${offer.checkout}`;
     }),
@@ -96,7 +93,10 @@ function explicitMediaQuality(header: string, type: string): number {
   let best = 0;
   const wanted = type.toLowerCase();
   for (const part of header.split(",")) {
-    const [rawType, ...params] = part.trim().split(";").map(s => s.trim());
+    const [rawType, ...params] = part
+      .trim()
+      .split(";")
+      .map(s => s.trim());
     if (!rawType) continue;
     let q = 1;
     for (const p of params) {

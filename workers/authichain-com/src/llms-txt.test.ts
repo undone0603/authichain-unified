@@ -39,7 +39,9 @@ describe("llms.txt", () => {
     );
     expect(text).toContain("18 February 2027");
     expect(text).toContain("e-bike / LMT");
-    expect(text).toContain(planPaymentLink("qron_launch"));
+    // Retired for new buyers: /checkout/qron_launch answers 303 to /pricing.
+    expect(text).not.toContain("/checkout/qron_launch");
+    expect(text).not.toContain("QRON Launch");
     expect(text).toContain(planPaymentLink("starter"));
     expect(text).toContain(planPaymentLink("creator"));
     expect(text).toContain("https://authichain.com/generate");
@@ -128,9 +130,7 @@ describe("llms.txt", () => {
         })
       )
     ).toBe(false);
-    expect(
-      prefersMarkdown(new Request("https://authichain.com/"))
-    ).toBe(false);
+    expect(prefersMarkdown(new Request("https://authichain.com/"))).toBe(false);
     expect(
       prefersMarkdown(
         new Request("https://authichain.com/", {

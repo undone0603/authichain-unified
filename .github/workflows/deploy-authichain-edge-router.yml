@@ -49,11 +49,13 @@ jobs:
           test -f scripts/ci/promote-worker-version.mjs
           test -f worker-app/wrangler.toml
       - uses: pnpm/action-setup@v6
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         with:
           version: "10.28.2"
           run_install: false
       - uses: actions/setup-node@v7
+        timeout-minutes: 15
         with:
           node-version: "22"
           cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
@@ -74,6 +76,7 @@ jobs:
       - name: Install node-gyp (native builds)
         run: npm i -g node-gyp@11
       - name: Install
+        timeout-minutes: 15
         env:
           npm_config_build_from_source: "false"
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
