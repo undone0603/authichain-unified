@@ -30,12 +30,12 @@ function reply(body: Record<string, unknown>, status: number) {
 /** Read through the application's actual postgres-js DATABASE_URL singleton. */
 async function readPostgresInstance(): Promise<unknown> {
   const result = await getDb().execute(
-    sql`SELECT public.attest_runtime_database_identity() AS instance_id`,
+    sql`SELECT public.attest_runtime_database_identity() AS system_id`,
   );
   const rows = Array.isArray(result)
     ? result
-    : (result as unknown as { rows?: Array<{ instance_id?: unknown }> }).rows;
-  return rows?.[0]?.instance_id;
+    : (result as unknown as { rows?: Array<{ system_id?: unknown }> }).rows;
+  return rows?.[0]?.system_id;
 }
 
 /** Read through precisely the same Supabase service-role client as the webhook. */
@@ -50,7 +50,7 @@ async function readWebhookInstance(): Promise<unknown> {
 /**
  * No public health details or fallback database targets. Missing pin, missing
  * migration, permission error, stale credential, or a split-brain target all
- * fail closed without exposing any URL, key, UUID or connection error.
+ * fail closed without exposing any URL, key, cluster ID or connection error.
  */
 export async function GET(request: Request) {
   if (!authorizedAttestationRequest(request, process.env.RUNTIME_ATTESTATION_KEY)) {
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
 
   const checkedAt = new Date().toISOString();
   const pins = {
-    expectedInstance: process.env.RUNTIME_EXPECTED_DB_INSTANCE_ID ?? "",
+    expectedSystemId: process.env.RUNTIME_EXPECTED_DB_SYSTEM_IDENTIFIER ?? "",
     expectedProjectRef: process.env.RUNTIME_EXPECTED_SUPABASE_PROJECT_REF ?? "",
     deployedSha:
       process.env.AUTHICHAIN_DEPLOYED_SHA ??
@@ -76,7 +76,7 @@ export async function GET(request: Request) {
   ]);
   const postgresValid =
     probes[0].status === "fulfilled" &&
-    matchesExpectedDatabase(probes[0].value, pins.expectedInstance);
+    matchesExpectedDatabase(probes[0].value, pins.expectedSystemId);
   const webhookValid =
     probes[1].status === "fulfilled" &&
     matchesExpectedDatabase(probes[1].value, pins.expectedInstance);
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
     return reply({ verified: false, error: "attestation_unavailable", checkedAt }, 503);
   }
 
-  // Return only a digest of the independently pinned identity. No raw UUID.
+  // Return only a digest of the independently pinned identity. No raw system ID.
   const identity = safeIdentityFingerprint(pins.expectedInstance);
   return reply(
     {
