@@ -75,19 +75,22 @@ export async function GET(request: Request) {
     readPostgresInstance(),
     readWebhookInstance(),
   ]);
-  const postgresValid =
-    probes[0].status === "fulfilled" &&
-    matchesExpectedDatabase(probes[0].value, pins.expectedSystemId, pins.expectedDatabaseName);
-  const webhookValid =
-    probes[1].status === "fulfilled" &&
-    matchesExpectedDatabase(probes[1].value, pins.expectedSystemId, pins.expectedDatabaseName);
-
-  if (!postgresValid || !webhookValid) {
+  const postgresIdentity = probes[0].status === "fulfilled" ? probes[0].value : null;
+  const webhookIdentity = probes[1].status === "fulfilled" ? probes[1].value : null;
+  if (
+    !matchesExpectedDatabase(postgresIdentity, pins.expectedSystemId, pins.expectedDatabaseName) ||
+    !matchesExpectedDatabase(webhookIdentity, pins.expectedSystemId, pins.expectedDatabaseName)
+  ) {
     return reply({ verified: false, error: "attestation_unavailable", checkedAt }, 503);
   }
 
-  // Return only a digest of the independently pinned identity. No raw system ID.
-  const identity = safeIdentityFingerprint(pins.expectedSystemId, pins.expectedDatabaseName);
+  // Fingerprint each observed result, not merely the expected configuration.
+  const postgresFingerprint = safeIdentityFingerprint(
+    postgresIdentity.system_identifier, postgresIdentity.database_name,
+  );
+  const webhookFingerprint = safeIdentityFingerprint(
+    webhookIdentity.system_identifier, webhookIdentity.database_name,
+  );
   return reply(
     {
       verified: true,
@@ -96,12 +99,12 @@ export async function GET(request: Request) {
       connections: {
         databaseUrl: {
           path: "postgres-js:getDb",
-          identity,
+          identity: postgresFingerprint,
           verified: true,
         },
         webhookSupabase: {
           path: "stripe-webhook:supabase-js",
-          identity,
+          identity: webhookFingerprint,
           verified: true,
         },
       },

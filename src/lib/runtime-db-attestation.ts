@@ -61,12 +61,17 @@ export function validRuntimeAttestationPins(
   }
 }
 
+export type RuntimeDatabaseIdentity = {
+  system_identifier: string;
+  database_name: string;
+};
+
 /** Reject malformed, missing or mismatched cluster IDs without reflecting input. */
 export function matchesExpectedDatabase(
   value: unknown,
   expectedSystemId: string,
   expectedDatabaseName: string,
-): boolean {
+): value is RuntimeDatabaseIdentity {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const identity = value as Record<string, unknown>;
   return (
