@@ -1,11 +1,8 @@
 name: Deploy first-dollar-desk
 on:
+  # RELEASE HOLD: editing this workflow or Worker must never auto-publish.
+  # Dispatch requires separate operator authorization and release checks.
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "workers/first-dollar-desk/**"
-      - ".github/workflows/deploy-first-dollar-desk.yml"
 permissions:
   contents: read
 concurrency:
@@ -13,6 +10,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
+    # Defense in depth against any future event trigger being added.
+    if: github.event_name == 'workflow_dispatch'
     # Publish runner only: authichain-wsl, same as deploy-authichain-com.yml.
     runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 30

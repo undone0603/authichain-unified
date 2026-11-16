@@ -72,7 +72,12 @@ function installFetch(opts?: {
   ambiguousProfile?: boolean;
   receiptProfile?: string | null;
   rpcProfileOverride?: string | null;
+  email?: string;
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  stripeSubscriptionId?: string;
 }) {
+  const seededEmail = opts?.email ?? "buyer@example.com";
   const calls: Array<{
     method: string;
     url: string;
@@ -80,20 +85,27 @@ function installFetch(opts?: {
     prefer?: string | null;
   }> & {
     profile: Record<string, unknown>;
+    profiles: Map<string, Record<string, unknown>>;
     receipts: Set<string>;
   } = Object.assign([], {
     profile: {
       id: "prof_1",
+      email: seededEmail,
       last_grant_session_id: opts?.prior === undefined ? null : opts.prior,
       generations_limit: opts?.grantLimit ?? 0,
       generations_used: opts?.grantUsed ?? 0,
+      subscription_plan: opts?.subscriptionPlan ?? null,
+      subscription_status: opts?.subscriptionStatus ?? null,
+      stripe_subscription_id: opts?.stripeSubscriptionId ?? null,
     },
+    profiles: new Map<string, Record<string, unknown>>(),
     receipts: new Set(
       (opts?.receipts ?? []).map(id =>
         id.startsWith("grant:") ? id : grantReceiptKey(id)
       )
     ),
   });
+  calls.profiles.set(seededEmail, calls.profile);
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
@@ -107,6 +119,10 @@ function installFetch(opts?: {
           return new Response("no", { status: opts?.rpcStatus ?? 500 });
         }
         const args = (body ?? {}) as Record<string, unknown>;
+        const profileId = String(args.p_profile_id);
+        const target =
+          [...calls.profiles.values()].find(row => row.id === profileId) ??
+          calls.profile;
         const result = applyCatalogGrantState(
           {
             receipts: calls.receipts,
@@ -115,7 +131,7 @@ function installFetch(opts?: {
                   [...calls.receipts].map(key => [key, opts.receiptProfile!])
                 )
               : undefined,
-            row: calls.profile,
+            row: target,
           },
           {
             profileId: String(args.p_profile_id),
@@ -156,16 +172,48 @@ function installFetch(opts?: {
             status: opts?.selectStatus ?? 500,
           });
         }
+        const emailParam = new URL(url).searchParams.get("email");
+        const email = emailParam?.startsWith("eq.")
+          ? emailParam.slice(3)
+          : null;
+        const matched = email ? calls.profiles.get(email) : undefined;
         const row =
-          opts?.prior === undefined
-            ? []
-            : opts.ambiguousProfile
-              ? [calls.profile, { ...calls.profile, id: "prof_2" }]
-              : [calls.profile];
+          email != null
+            ? matched
+              ? opts?.ambiguousProfile
+                ? [matched, { ...matched, id: "prof_2" }]
+                : [matched]
+              : []
+            : opts?.prior === undefined
+              ? []
+              : opts.ambiguousProfile
+                ? [calls.profile, { ...calls.profile, id: "prof_2" }]
+                : [calls.profile];
         return new Response(JSON.stringify(row), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
+      }
+      if (method === "POST" && url.includes("/profiles")) {
+        if (opts?.upsertOk === false) {
+          return new Response("no", { status: 500 });
+        }
+        const row = (body ?? {}) as Record<string, unknown>;
+        const email = typeof row.email === "string" ? row.email : "";
+        const existing = email ? calls.profiles.get(email) : undefined;
+        if (existing) {
+          Object.assign(existing, row);
+        } else if (email) {
+          const created = {
+            id: `prof_${calls.profiles.size + 1}`,
+            generations_limit: 0,
+            generations_used: 0,
+            last_grant_session_id: null,
+            ...row,
+          };
+          calls.profiles.set(email, created);
+        }
+        return new Response("{}", { status: 200 });
       }
       if (method === "POST" && opts?.upsertOk === false) {
         return new Response("no", { status: 500 });
@@ -195,6 +243,19 @@ function grantRpcs(
     c =>
       c.method === "POST" && String(c.url).includes(`/rpc/${CATALOG_GRANT_RPC}`)
   );
+}
+
+function profileUpserts(
+  calls: Array<{ method: string; url: string; body?: unknown }>
+) {
+  return calls
+    .filter(
+      c =>
+        c.method === "POST" &&
+        String(c.url).includes("/profiles") &&
+        !String(c.url).includes("/rpc/")
+    )
+    .map(c => c.body as Record<string, unknown>);
 }
 
 describe("stripe-webhook checkout grant", () => {
@@ -368,6 +429,35 @@ describe("stripe-webhook checkout grant", () => {
     expect(patches(calls)).toEqual([]);
   });
 
+  it("fails closed for a one-time Starter pack with no_payment_required", async () => {
+    state.event = sessionEvent({
+      price: STARTER, id: "cs_unsettled_starter",
+      paymentStatus: "no_payment_required",
+    });
+    const calls = installFetch();
+    const response = await worker.fetch(signedPost(), env);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: "paid pack settlement not confirmed",
+    });
+    expect(calls.some(c => c.url.includes(`/rpc/${CATALOG_GRANT_RPC}`))).toBe(false);
+    expect(calls.some(c => c.url.includes("/profiles"))).toBe(false);
+  });
+
+  it("fails closed for a Creator checkout missing payment_status", async () => {
+    state.event = sessionEvent({ price: CREATOR, id: "cs_missing_payment" });
+    const evt = state.event as { data: { object: { payment_status?: string } } };
+    delete evt.data.object.payment_status;
+    const calls = installFetch();
+    const response = await worker.fetch(signedPost(), env);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: "paid pack settlement not confirmed",
+    });
+    expect(calls.some(c => c.url.includes(`/rpc/${CATALOG_GRANT_RPC}`))).toBe(false);
+    expect(calls.some(c => c.url.includes("/profiles"))).toBe(false);
+  });
+
   it("does not grant a checkout session that is still unpaid", async () => {
     state.event = sessionEvent({
       price: LAUNCH_ANNUAL,
@@ -513,6 +603,63 @@ describe("stripe-webhook checkout grant", () => {
     const res = await worker.fetch(signedPost(), env);
     expect(res.status).toBe(200);
     expect(patches(calls)).toEqual([]);
+  });
+
+  it("keeps an active subscriber's plan when they buy a Starter pack", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_pack" });
+    const calls = installFetch({
+      prior: "cs_launch",
+      grantLimit: 100,
+      grantUsed: 40,
+      subscriptionPlan: "qron_launch",
+      subscriptionStatus: "active",
+      stripeSubscriptionId: "sub_123",
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(200);
+    const upsert = profileUpserts(calls)[0];
+    expect(upsert).toMatchObject({
+      email: "buyer@example.com",
+      full_name: "Buyer",
+      stripe_customer_id: "cus_1",
+    });
+    expect(upsert).not.toHaveProperty("plan");
+    expect(upsert).not.toHaveProperty("stripe_subscription_id");
+    expect(grantRpcs(calls)[0]?.body).toMatchObject({
+      p_plan: "starter",
+      p_stack: true,
+      p_stripe_subscription_id: null,
+    });
+    expect(calls.profile.generations_limit).toBe(160);
+    expect(calls.profile.subscription_plan).toBe("qron_launch");
+    expect(calls.profile.stripe_subscription_id).toBe("sub_123");
+  });
+
+  it("credits the existing lowercase profile for a mixed-case checkout email", async () => {
+    state.event = sessionEvent({
+      price: STARTER,
+      id: "cs_case",
+      email: " Buyer@Example.com ",
+    });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 0,
+      email: "buyer@example.com",
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(200);
+    expect(profileUpserts(calls)[0]).toMatchObject({
+      email: "buyer@example.com",
+    });
+    expect(grantRpcs(calls)[0]?.body).toMatchObject({
+      p_profile_id: "prof_1",
+      p_session_id: "cs_case",
+    });
+    expect(calls.profiles.size).toBe(1);
+    expect(calls.profiles.has("buyer@example.com")).toBe(true);
+    expect(calls.profile.generations_limit).toBe(100);
+    expect(calls.receipts.size).toBe(1);
+    expect(calls.receipts.has(grantReceiptKey("cs_case"))).toBe(true);
   });
 
   it("adds a Creator pack on leftover Starter credits", async () => {
