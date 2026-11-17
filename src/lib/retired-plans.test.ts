@@ -2,15 +2,21 @@ import { describe, expect, it } from "vitest";
 import { tryHandleGatedCheckout } from "./checkout-gate";
 import { catalogOffers } from "./plans";
 import {
-  NON_PUBLIC_AGENT_OFFER_IDS,
   RETIRED_GATED_PLAN_IDS,
   isPublicAgentOffer,
   isRetiredPlan,
   openCatalogOffers,
 } from "./retired-plans";
 
+const F886_3_CHECKOUT_IDS = [
+  "theater_1",
+  "theater_3",
+  "strainchain_farm",
+  "gov_provenance_pilot",
+] as const;
+
 describe("openCatalogOffers", () => {
-  it("drops retired and non-public offers from the agent catalogue", () => {
+  it("drops retired offers from the agent catalogue", () => {
     const all = catalogOffers().map(o => o.id);
     const open = openCatalogOffers().map(o => o.id);
 
@@ -18,12 +24,6 @@ describe("openCatalogOffers", () => {
       expect(all).toContain(id);
       expect(open).not.toContain(id);
       expect(isRetiredPlan(id)).toBe(true);
-      expect(isPublicAgentOffer(id)).toBe(false);
-    }
-    for (const id of NON_PUBLIC_AGENT_OFFER_IDS) {
-      expect(all).toContain(id);
-      expect(open).not.toContain(id);
-      expect(isRetiredPlan(id)).toBe(false);
       expect(isPublicAgentOffer(id)).toBe(false);
     }
     expect(open).toEqual(all.filter(id => isPublicAgentOffer(id)));
@@ -55,6 +55,34 @@ describe("openCatalogOffers", () => {
       );
       expect(res, offer.id).not.toBeNull();
       expect(res!.headers.get("Location"), offer.id).not.toBe("/pricing");
+    }
+  });
+});
+
+describe("F886-3 retired checkout URLs", () => {
+  it("redirects Theater, Farm, and the federal provenance pilot to /pricing", async () => {
+    for (const id of F886_3_CHECKOUT_IDS) {
+      for (const method of ["GET", "HEAD", "POST"]) {
+        const res = await tryHandleGatedCheckout(
+          new Request(`https://authichain.com/checkout/${id}`, {
+            method,
+            headers: {
+              origin: "https://authichain.com",
+              "content-type": "application/x-www-form-urlencoded",
+              "user-agent":
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
+            },
+            body: method === "POST" ? "email=ops%40brand.com" : undefined,
+          }),
+          { STRIPE_SECRET_KEY: "sk_test_unused" }
+        );
+        expect(res, `${id} ${method}`).not.toBeNull();
+        expect([301, 302, 303], `${id} ${method}`).toContain(res!.status);
+        expect(res!.headers.get("location"), `${id} ${method}`).toBe(
+          "/pricing"
+        );
+        expect(await res!.text(), `${id} ${method}`).not.toContain("<form");
+      }
     }
   });
 });

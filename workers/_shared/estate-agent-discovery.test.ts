@@ -202,7 +202,7 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
     assert.match(scan.get?.summary ?? "", /does not verify/);
     assert.equal(spec.info["x-human-checkout"].passportPaymentLink, PASSPORT);
     assert.equal(spec.info["x-human-checkout"].dppPaymentLink, DPP);
-    assert.equal(spec.info["x-human-checkout"].farmPaymentLink, undefined);
+    assert.equal("farmPaymentLink" in spec.info["x-human-checkout"], false);
     assert.equal(
       spec.info["x-human-checkout"].passportUsd,
       planUsd("strainchain_passport")
@@ -211,10 +211,10 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
       spec.info["x-human-checkout"].dppUsd,
       planUsd("dpp_readiness")
     );
-    assert.equal(
-      spec.info["x-human-checkout"].farmUsd,
-      planUsd("strainchain_farm")
-    );
+    assert.equal("farmUsd" in spec.info["x-human-checkout"], false);
+    const checkoutBlob = JSON.stringify(spec.info["x-human-checkout"]);
+    assert.equal(checkoutBlob.includes("farmUsd"), false);
+    assert.equal(checkoutBlob.includes("strainchain_farm"), false);
     const body = JSON.stringify(spec);
     assert.equal(body.includes("/api/checkout"), false);
     assert.ok(hasHttpsHost(body, "authichain.com"));

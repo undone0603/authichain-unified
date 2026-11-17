@@ -1102,12 +1102,10 @@ export type X402CatalogBody = {
     rail: "stripe";
     passportUsd: number;
     dppUsd: number;
-    farmUsd: number;
     starterUsd: number;
     creatorUsd: number;
     passportPaymentLink?: string;
     dppPaymentLink?: string;
-    farmPaymentLink?: string;
     starterPaymentLink?: string;
     creatorPaymentLink?: string;
     offers: CatalogOffer[];
@@ -1223,7 +1221,6 @@ export async function x402Catalog(
       rail: "stripe",
       passportUsd: planUsd("strainchain_passport"),
       dppUsd: planUsd("dpp_readiness"),
-      farmUsd: planUsd("strainchain_farm"),
       starterUsd: planUsd("starter"),
       creatorUsd: planUsd("creator"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),

@@ -10,7 +10,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
+import { planPaymentLink } from "../../../src/lib/plans.ts";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import { TERMS_EFFECTIVE } from "./legal-pages.ts";
 import worker from "./index.ts";
@@ -1161,14 +1161,11 @@ test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async
     assert.equal(body.protocol, "x402", path);
     assert.equal(body.catalog, "/api/x402/catalog", path);
     assert.equal(body.health, "/api/x402/health", path);
-    // Farm's price stays on the catalog. Its checkout link does not
-    // (x402-routes.test.ts).
     assert.equal(body.humanCheckout?.farmPaymentLink, undefined, path);
-    assert.equal(
-      body.humanCheckout?.farmUsd,
-      planUsd("strainchain_farm"),
-      path
-    );
+    assert.equal(body.humanCheckout?.farmUsd, undefined, path);
+    const checkoutBlob = JSON.stringify(body.humanCheckout ?? {});
+    assert.equal(checkoutBlob.includes("farmUsd"), false, path);
+    assert.equal(checkoutBlob.includes("strainchain_farm"), false, path);
   }
 });
 

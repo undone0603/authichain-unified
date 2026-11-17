@@ -61,7 +61,6 @@ export const MONEY_RAILS = {
     skus: {
       passportUsd: planUsd("strainchain_passport"),
       dppUsd: planUsd("dpp_readiness"),
-      farmUsd: planUsd("strainchain_farm"),
     },
     isSettlement: true,
   },
@@ -143,14 +142,12 @@ export function agentPricingDiscovery() {
       source: MONEY_RAILS.stripe.source,
       strainchain_passport: `$${MONEY_RAILS.stripe.skus.passportUsd} one-time`,
       dpp_readiness: `$${MONEY_RAILS.stripe.skus.dppUsd} one-time`,
-      strainchain_farm: `$${MONEY_RAILS.stripe.skus.farmUsd}/month`,
       starter: `$${planUsd("starter")} one-time`,
       creator: `$${planUsd("creator")} one-time`,
       offers: openCatalogOffers(),
       checkout: {
         passport: planPaymentLink("strainchain_passport"),
         dpp: planPaymentLink("dpp_readiness"),
-        farm: planPaymentLink("strainchain_farm"),
         starter: planPaymentLink("starter"),
         creator: planPaymentLink("creator"),
         emailCapture: {
