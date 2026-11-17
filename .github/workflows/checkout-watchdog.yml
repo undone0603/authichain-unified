@@ -58,7 +58,6 @@ jobs:
         timeout-minutes: 15
         with:
           node-version: "22"
-          cache: pnpm
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
         timeout-minutes: 15
 
