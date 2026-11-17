@@ -86,7 +86,7 @@ function generateServiceKey(env?: Env): string | undefined {
   );
 }
 
-function hydrateProcessEnv(env?: Env) {
+export function hydrateProcessEnv(env?: Env) {
   if (!env) return;
   const copy: Array<[string, string | undefined]> = [
     ["STRIPE_SECRET_KEY", env.STRIPE_SECRET_KEY],
@@ -94,6 +94,9 @@ function hydrateProcessEnv(env?: Env) {
     ["COFFEE_RECEIPT_PRIVATE_JWK", env.COFFEE_RECEIPT_PRIVATE_JWK],
     ["STRIPE_WEBHOOK_SECRET", env.STRIPE_WEBHOOK_SECRET],
     ["STRIPE_WEBHOOK_AUTHICHAIN_SECRET", env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET],
+    // The canonical DPP webhook sends its activation mail through src/lib/email.ts.
+    // That module reads process.env; a bound-but-unhydrated key silently fails.
+    ["RESEND_API_KEY", env.RESEND_API_KEY],
     [
       "NEXT_PUBLIC_SUPABASE_URL",
       env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL,
