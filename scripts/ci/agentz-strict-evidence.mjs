@@ -5,7 +5,7 @@ const validDate=x=>text(x)&&Number.isFinite(Date.parse(x));
 const proof=x=>x&&text(x.sourceId)&&text(x.sourceSystem)&&validDate(x.observedAt)&&x.verified===true;
 const eq=(...v)=>v.every(x=>text(x))&&v.every(x=>x===v[0]);
 const digest=x=>'sha256:'+createHash('sha256').update(JSON.stringify(x)).digest('hex');
-export const OFFER_CENTS=Object.freeze({mcp_connect:150000,a2a_connect:150000,mcp_a2a_launch:250000});
+export const OFFER_CENTS=Object.freeze({mcp_a2a_build:150000});
 export function assessStrictWin(x={}) {
  const fails=[]; const fail=(condition,code)=>{if(!condition)fails.push(code)};
  const {buyer,order,checkout,payment,charge,balance,payout,bank,delivery,acceptance}=x;

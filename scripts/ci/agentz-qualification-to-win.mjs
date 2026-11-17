@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto';
 const okText = x => typeof x === 'string' && !!x.trim();
 const evidence = x => x && okText(x.id) && /^https:\/\//.test(x.evidenceUrl || '') && Number.isFinite(Date.parse(x.observedAt)) && x.verifiedBy !== 'agent_claim_only';
-export const PRICES = Object.freeze({ mcp_connect:150000, a2a_connect:150000, mcp_a2a_launch:250000 });
+export const PRICES = Object.freeze({ mcp_a2a_build:150000 });
 export function qualifyBuyer(b = {}) {
  const missing = [];
  if (!okText(b.buyerCompany) || !okText(b.buyerContact)) missing.push('identified_buyer');
