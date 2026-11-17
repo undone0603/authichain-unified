@@ -199,16 +199,38 @@ function suppressionSet() {
 
 type SuppressionLookup = "hit" | "miss" | "unavailable";
 
+const SUPPRESSION_LOOKUP_TIMEOUT_MS = 3000;
+
+function raceWithTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    promise.finally(() => {
+      if (timer !== undefined) clearTimeout(timer);
+    }),
+    new Promise<T>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error("suppression_lookup_timeout")),
+        ms
+      );
+    }),
+  ]);
+}
+
 async function isSuppressedInGuardrailTable(
   email: string
 ): Promise<SuppressionLookup> {
   try {
-    const db = await getDb();
-    const rows = await db
-      .select({ email: suppressionList.email })
-      .from(suppressionList)
-      .where(eq(suppressionList.email, email))
-      .limit(1);
+    const rows = await raceWithTimeout(
+      (async () => {
+        const db = await getDb();
+        return db
+          .select({ email: suppressionList.email })
+          .from(suppressionList)
+          .where(eq(suppressionList.email, email))
+          .limit(1);
+      })(),
+      SUPPRESSION_LOOKUP_TIMEOUT_MS
+    );
     return rows.length > 0 ? "hit" : "miss";
   } catch {
     return "unavailable";
@@ -238,6 +260,7 @@ async function isSuppressedViaSupabaseRest(
           apikey: key,
           Authorization: `Bearer ${key}`,
         },
+        signal: AbortSignal.timeout(SUPPRESSION_LOOKUP_TIMEOUT_MS),
       }
     );
     if (!res.ok) return "unavailable";

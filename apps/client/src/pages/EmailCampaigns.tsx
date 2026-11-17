@@ -79,7 +79,9 @@ export default function EmailCampaigns() {
   });
   const bulkApprove = trpc.emailDrafts.bulkApprove.useMutation({
     onSuccess: res => {
-      toast.success(`Approved & sent ${res.count} draft(s)`);
+      toast.success(
+        `Approved ${res.count} draft(s) (not sent; approve individually to send)`
+      );
       setSelected(new Set());
       refetchDrafts();
     },
