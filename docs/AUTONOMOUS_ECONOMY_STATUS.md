@@ -2,6 +2,29 @@
 
 Profile and `stripe_events` counts below were read on 2026-10-13 from Supabase project `nhdnkzhtadfkkluiulhs` and were not re-read on 2026-10-29. Later paragraphs name their own dates. This is not a claim that the autonomous economy is complete.
 
+## Release path, read on 2026-11-11T19:45Z
+
+A merge to `main` is not a release. These are reads; nothing was deployed or re-run.
+
+- **The `/onboard` spam gate merged at 14:49Z as `abe3f08` and was not live five hours later.** `GET https://authichain.com/onboard` did not contain the `company_website` field. `https://authichain.com/llms.txt` still listed both retired QRON Launch checkouts.
+- **Why:** `Deploy authichain-edge-router` run 43042166366 for `abe3f08` has been `queued` since 14:49Z. So have `CI`, `CI Main` and `Typecheck ratchet` for the same commit, the 15:48Z AgentZ orchestration run, the 18:39Z `Checkout watchdog` and the 19:39Z `Launch gates`. Eight runs on `main` were queued at the time of this read.
+- **Cause of the queue:** 114 of the 115 workflow files name a self-hosted runner, and the runner logs show one machine (`/home/zac/actions-runner-wsl`). A job at 14:39Z ended with "The runner has received a shutdown signal". It ran one Lint job at 16:35Z and nothing on `main` since. `docs/OPERATING_CHARTER.md` says none of the stack needs the owner's computer to be on. Today the health probes, the checkout watchdog, the revenue cycle and every deploy do.
+- **`main` was also red on its own account.** Lint run 43042166371 on `abe3f08` failed `scripts/__tests__/autonomy.test.ts`: `deploy-qron-space.yml` and `deploy-authichain-edge-router.yml` were each listed in both the `ship` and `manual` lanes after #2240 merged on top of a manifest that already classified them. The duplicate entries are removed in the PR that adds this section.
+- **Not checked:** whether GitHub-hosted runners are usable on this account. The repository page answers 200 without a login, and several workflows already fall back to `ubuntu-24.04` when the repo variables `AUTHICHAIN_CI_SELF_HOSTED` and `AUTHICHAIN_DEPLOY_SELF_HOSTED` are not `true`. An earlier note in this file records GitHub refusing to start jobs for a billing lock. Those variables and that lock are the owner's to read and change.
+
+## Read on 2026-11-11
+
+These reads supersede the 2026-10-29 "Stripe livemode list" block below. They are reads only. Nothing was charged, sent, migrated or deployed.
+
+- **Stripe livemode, account `acct_1SXIyEGqTruSqV8T`, through the Stripe connector.** `GET /v1/charges` returns 5 charges, all time. One succeeded: 1000 cents, paid by a founder address. Four failed, all on founder addresses. `GET /v1/subscriptions?status=all` returns 0. `GET /v1/balance` is 0 available and 0 pending. Independent customer revenue is $0. The provider list is readable again, so the Supabase tables are no longer the only evidence.
+- **Checkout sessions created from 2026-11-01T21:09Z to 2026-11-11T11:50Z: 86, none paid.** 54 carry `checkout_gate=confirm_post` on a preview host with `example.com` or founder addresses, which is test traffic. 29 are opens for products outside `src/lib/plans.ts` (23 for a store tool, 4 for a contractor invoice, 2 for the $1 agent desk). 2 are opens of the $299 DPP payment link and 1 is a $29 session with no metadata. Every session is `unpaid`; 84 expired and 2 are still open.
+- **`public.funnel_events`, last 30 days:** 37 `dpp_loop:attributed_visit` (16 in the last 7 days), 8 `checkout_started` (0 in the last 7 days), 1 `payment_succeeded` and 1 `provisioned` (both the 2026-10-13 rows described below).
+- **`public.lead_captures`, last 30 days: 32 rows, 0 from a prospect.** 28 came from the `/onboard` form: casino and "deposit available" links in the company field from throwaway mail domains, and one script-injection scan on 2026-11-02. 4 are `system_activation` rows on a founder address. Each `/onboard` row was stored as `new` and paged the founder. The form now refuses links and markup and has a decoy field (`worker-app/dynamic-pages.ts`). The 28 rows are still in the table with status `new`; they were not edited.
+- **Older `lead_captures` rows carry outcomes nothing else supports:** 21 `active_partner` and 1 `closed_won`, from sources such as `NMIP-Autonomous-Outreach`, `Starlink Terminal Scan` and `autonomous_blitz`. Stripe has no customer behind any of them. The seed scripts under `scripts/ops/` write rows of this shape. Treat those statuses as seeded until a row is tied to a payment, and do not quote them as partners or wins.
+- **Live probes at 2026-11-11T13:00Z:** `authichain.com/`, `/pricing`, `/llms.txt` and `qron.space/` return 200. Unpaid `GET /api/x402` returns 402 with a Base USDC quote of 50000 atomic units. That is a quote, not a settlement.
+
+What this adds up to: the checkout and the webhook answer, and nobody outside the company has reached them. The constraint is demand, not another payment feature.
+
 ## VERIFIED
 
 - `POST https://authichain.com/api/stripe/webhook` with a dummy `stripe-signature` returns HTTP 400 and reports `STRIPE_WEBHOOK_SECRET=set` and `STRIPE_WEBHOOK_AUTHICHAIN_SECRET=set`. That shows the secrets are bound. It does not show a signature-verified payment delivery.

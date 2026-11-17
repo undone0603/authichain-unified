@@ -28,8 +28,8 @@ const JWKS_URL = "https://authichain.com/.well-known/jwks.json";
 export const ONBOARD_URL = "https://authichain.com/onboard";
 export const UPGRADE_CTA = {
   url: ONBOARD_URL,
-  track_url: "/verify/cta",
-  // DRAFT COPY: needs AuthiChain Research wording PASS before deploy.
+  track_url: "/api/verify/cta",
+  // Copy approved for the existing /onboard pilot-request destination on 2026-11-14.
   label: "Set up AuthiChain for your products",
 } as const;
 

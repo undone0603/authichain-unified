@@ -9,6 +9,8 @@ qrcode[pil]>=7.0.0
 tenacity>=8.0.0
 fastapi>=0.100.0
 uvicorn>=0.22.0
+# TinyFish remote MCP client (headless API-key HTTP or interactive stdio OAuth)
+mcp>=1.25,<2
 
 # LLM & Agent Stack
 langchain-openai>=0.1.0

@@ -53,6 +53,81 @@ export type LeadEnv = {
 
 type LeadContext = Context<{ Bindings: LeadEnv }>;
 
+/** Browser origins allowed to call POST /api/leads/capture from estate landings. */
+export const ESTATE_LEAD_CAPTURE_ORIGINS = [
+  "https://authichain.com",
+  "https://qron.space",
+  "https://strainchain.io",
+  "https://govchain.us",
+] as const;
+
+export const ESTATE_LEAD_CAPTURE_HOSTNAMES = [
+  "authichain.com",
+  "qron.space",
+  "strainchain.io",
+  "govchain.us",
+] as const;
+
+export const ESTATE_LEAD_CAPTURE_CONSENT_MESSAGE =
+  "consent: yes (site-lead-capture-v1)";
+
+export function estateLeadCaptureAllowedOrigin(
+  origin: string | undefined | null
+): string | null {
+  if (!origin) return null;
+  return (ESTATE_LEAD_CAPTURE_ORIGINS as readonly string[]).includes(origin)
+    ? origin
+    : null;
+}
+
+/**
+ * Footer captures from the four live apexes. Source is the hostname the
+ * form sends. Sister Origins only have this form on /api/leads/capture;
+ * https://authichain.com Origin is shared with battery/is-this-real/DPP
+ * forms that must keep running HubSpot without footer consent.
+ */
+export function isEstateFooterLeadCapture(
+  source: string | undefined,
+  origin: string | undefined | null
+): boolean {
+  if (
+    source &&
+    (ESTATE_LEAD_CAPTURE_HOSTNAMES as readonly string[]).includes(source)
+  ) {
+    return true;
+  }
+  const allowed = estateLeadCaptureAllowedOrigin(origin);
+  return !!allowed && allowed !== "https://authichain.com";
+}
+
+function attachEstateLeadCors(c: LeadContext) {
+  const allowed = estateLeadCaptureAllowedOrigin(c.req.header("origin"));
+  if (!allowed) return;
+  c.header("Access-Control-Allow-Origin", allowed);
+  c.header("Vary", "Origin");
+}
+
+function handleLeadCaptureOptions(c: LeadContext) {
+  const allowed = estateLeadCaptureAllowedOrigin(c.req.header("origin"));
+  if (!allowed) return c.body(null, 403);
+  c.header("Access-Control-Allow-Origin", allowed);
+  c.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+  c.header("Access-Control-Allow-Headers", "Content-Type");
+  c.header("Access-Control-Max-Age", "86400");
+  c.header("Vary", "Origin");
+  return c.body(null, 204);
+}
+
+/** Apply before rate limiting so 429s still carry estate CORS headers. */
+export async function estateLeadCaptureCorsMiddleware(
+  c: any,
+  next: () => Promise<void>
+) {
+  if (c.req.method === "OPTIONS") return handleLeadCaptureOptions(c);
+  attachEstateLeadCors(c);
+  await next();
+}
+
 const HS_BASE = "https://api.hubapi.com";
 const DEFAULT_HUBSPOT_OWNER_ID = "87978084";
 
@@ -522,18 +597,30 @@ function isMissingColumnError(error: { code?: string; message?: string }) {
 }
 
 async function handleLeadCapture(c: LeadContext) {
+  attachEstateLeadCors(c);
   const body = await readJson(c);
   const email = str(body?.email);
   if (!body || !email) return c.json({ error: "Email required" }, 400);
 
+  const source = str(body.source) || "website";
+  const estateFooter = isEstateFooterLeadCapture(
+    source,
+    c.req.header("origin")
+  );
+  if (estateFooter && str(body.consent) !== "yes") {
+    return c.json({ error: "Consent required" }, 400);
+  }
+
   const lead: CapturedLead = {
     email,
     name: str(body.name),
-    source: str(body.source) || "website",
+    source,
     product_interest: str(body.product_interest) || "qron",
     company: clip(body.company, 200),
     role: clip(body.role, 120),
-    message: str(body.message)?.trim().slice(0, 2000),
+    message: estateFooter
+      ? ESTATE_LEAD_CAPTURE_CONSENT_MESSAGE
+      : str(body.message)?.trim().slice(0, 2000),
   };
   const formFields = {
     company: lead.company ?? null,
@@ -581,7 +668,9 @@ async function handleLeadCapture(c: LeadContext) {
     return c.json({ error: "Could not store the request" }, 500);
   }
 
-  await background(c, runLeadAutomation(c, lead));
+  // Estate footer captures are 1-to-1 follow-up only. Privacy names HubSpot
+  // for paid orders, so Apollo/Make/n8n/HubSpot must not run here.
+  if (!estateFooter) await background(c, runLeadAutomation(c, lead));
   return c.json({ ok: true });
 }
 
@@ -637,6 +726,8 @@ async function handleCrmSync(c: LeadContext) {
 
 export function registerLeadRoutes(app: Hono<any>) {
   app.post("/api/book", c => handleBook(c));
+  app.options("/api/leads/capture", c => handleLeadCaptureOptions(c));
+  app.options("/api/lead-capture", c => handleLeadCaptureOptions(c));
   app.post("/api/leads/capture", c => handleLeadCapture(c));
   app.post("/api/lead-capture", c => handleLeadCapture(c));
   app.post("/api/crm/sync", c => handleCrmSync(c));

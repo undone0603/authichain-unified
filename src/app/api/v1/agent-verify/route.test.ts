@@ -65,13 +65,10 @@ describe("POST /api/v1/agent-verify (Next)", () => {
     expect(res.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
   });
 
-  it("refuses the all-zero discovery example before the 402", async () => {
+  it("keeps the bazaar nil UUID on the 402 challenge", async () => {
     process.env.X402_PAY_TO = PAY_TO;
     const res = await post(JSON.stringify({ sealId: NIL }));
-    expect(res.status).toBe(400);
-    expect(res.headers.get("PAYMENT-REQUIRED")).toBeNull();
-    const json = (await res.json()) as { error: string; settled: boolean };
-    expect(json.error).toBe("seal_id_nil");
-    expect(json.settled).toBe(false);
+    expect(res.status).toBe(402);
+    expect(res.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
   });
 });

@@ -119,7 +119,30 @@ describe("/mcp/free verify_record is fully free", () => {
 describe("/mcp unchanged", () => {
   it("tools/list matches the pre-change snapshot", async () => {
     const res = await tryHandleMcp(post("/mcp", { jsonrpc: "2.0", id: 1, method: "tools/list" }));
-    expect(await res!.text()).toMatchSnapshot();
+    const body = JSON.parse(await res!.text()) as {
+      jsonrpc: string;
+      id: number;
+      result: { tools: Array<{ name: string }> };
+    };
+    // The original seven tool schemas must not change when adding a new tool.
+    expect(body.result.tools.map(t => t.name)).toEqual([
+      "get_pricing",
+      "verify",
+      "query_provenance",
+      "verify_attestation",
+      "verify_record",
+      "dpp_readiness_check",
+      "scan_living_qr",
+      "negotiate",
+    ]);
+    const originalSeven = {
+      ...body,
+      result: {
+        ...body.result,
+        tools: body.result.tools.filter(t => t.name !== "negotiate"),
+      },
+    };
+    expect(JSON.stringify(originalSeven)).toMatchSnapshot();
   });
   it("TOOLS still lists verify", () => {
     expect(TOOLS.map(t => t.name)).toContain("verify");

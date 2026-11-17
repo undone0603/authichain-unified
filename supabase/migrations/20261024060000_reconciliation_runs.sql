@@ -8,6 +8,7 @@
 --   * Read access is column-level SELECT on the ledger tables, excluding PII
 --     columns (e.g. payments.customer_email is NOT granted).
 
+-- supabase-grants-exempt: public.reconciliation_runs dedicated stripe_reconciler role only; no service_role key
 CREATE TABLE IF NOT EXISTS public.reconciliation_runs (
   id                       BIGSERIAL   PRIMARY KEY,
   run_at                   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -55,7 +56,7 @@ CREATE POLICY "stripe_reconciler inserts runs" ON public.reconciliation_runs
   FOR INSERT TO stripe_reconciler WITH CHECK (true);
 
 -- Read-only, non-PII columns on ledger tables.
-GRANT SELECT (session_id, amount_cents, currency, status, created_at)
+GRANT SELECT (session_id, amount, currency, status, created_at)
   ON public.payments TO stripe_reconciler;
 CREATE POLICY "stripe_reconciler reads payments" ON public.payments
   FOR SELECT TO stripe_reconciler USING (true);

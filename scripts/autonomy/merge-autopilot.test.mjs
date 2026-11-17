@@ -5,6 +5,7 @@ import {
   cell,
   decide,
   isGitHubRateLimit,
+  independentApprovalForHead,
   listCheckRuns,
   loadConfig,
   restrictedChange,
@@ -400,5 +401,44 @@ describe("merge autopilot complete CI evidence", () => {
       })),
       /pagination limit/
     );
+  });
+});
+
+describe("merge-autopilot exact-head independent review", () => {
+  const human = (login, state = "APPROVED", commit_id = "abc", association = "COLLABORATOR") => ({
+    user: { login, type: "User" }, state, commit_id, author_association: association,
+  });
+  const approve = (reviews, p = pr()) =>
+    independentApprovalForHead(p, reviews, "abc");
+
+  it("fails closed on no reviews, incomplete review history, and unknown identity", () => {
+    for (const reviews of [null, undefined, [], {}, Array(100).fill(human("peer"))])
+      assert.equal(approve(reviews).ok, false);
+    assert.equal(approve([human("peer")], pr({ user: null })).ok, false);
+  });
+  it("accepts exact-head approval from a human collaborator", () => {
+    assert.equal(approve([human("peer")]).ok, true);
+    assert.equal(approve([human("peer", "APPROVED", "abc", "MEMBER")]).ok, true);
+  });
+  it("rejects owner, author, random user, and bot", () => {
+    assert.equal(approve([human("undone0603")]).ok, false);
+    const botPr = pr({ user: { login: "dependabot[bot]" } });
+    assert.equal(approve([human("undone0603")], botPr).ok, false);
+    assert.equal(approve([human("peer", "APPROVED", "abc", "NONE")]).ok, false);
+    assert.equal(approve([{ ...human("peer"), user: { login: "peer[bot]", type: "Bot" } }]).ok, false);
+  });
+  it("rejects approvals on older commits and mismatched target", () => {
+    assert.equal(approve([human("peer", "APPROVED", "outdated")]).ok, false);
+    assert.equal(independentApprovalForHead(pr(), [human("peer")], "different").ok, false);
+  });
+  it("rejects withdrawn approvals and unresolved change requests", () => {
+    assert.equal(approve([human("peer"), human("peer", "DISMISSED")]).ok, false);
+    assert.equal(approve([human("peer"), human("auditor", "CHANGES_REQUESTED")]).ok, false);
+  });
+  it("accepts new head-specific approval after change request is cleared", () => {
+    assert.equal(approve([human("peer", "CHANGES_REQUESTED"), human("peer")]).ok, true);
+  });
+  it("ignores non-decisive comments without withdrawing approval", () => {
+    assert.equal(approve([human("peer"), human("peer", "COMMENTED")]).ok, true);
   });
 });

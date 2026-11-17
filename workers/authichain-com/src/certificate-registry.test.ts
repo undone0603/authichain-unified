@@ -182,11 +182,22 @@ describe("tryHandleCertificateRegistry", () => {
       fetchImpl,
     );
     expect(res?.status).toBe(409);
-    await expect(res?.json()).resolves.toMatchObject({
+    const body = await res!.json() as {
+      error: string;
+      source: string;
+      candidate_count: number;
+      more_matches_may_exist: boolean;
+      candidates: Array<{ attestation_id: string | null; seal_id: string | null; product_id: string | null }>;
+      record?: unknown;
+    };
+    expect(body).toMatchObject({
       error: "ambiguous_identifier",
       source: "authichain_attestation_records",
-      match_count: 2,
+      candidate_count: 2,
+      more_matches_may_exist: true,
     });
+    expect(body.candidates.map(row => row.attestation_id)).toEqual(["attestation-1", "attestation-2"]);
+    expect(body).not.toHaveProperty("record");
   });
 
   it("requires assetId and fails closed when the published-record table is unavailable", async () => {

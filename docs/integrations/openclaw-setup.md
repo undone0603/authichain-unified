@@ -162,9 +162,11 @@ If you routed a free subdomain instead, curl that host.
 cd workers/authichain-openclaw
 
 # OpenClaw gateway — owner-set reachable host only. Do not invent a URL.
+# Current host: https://claw-gateway.authichain.com (tunnel, Access, /hooks/* only).
 npx wrangler secret put OPENCLAW_GATEWAY_URL
 
-# API key for the webhook auth
+# API key for the webhook auth. Must equal the gateway's hooks.token, not its
+# gateway auth token.
 npx wrangler secret put OPENCLAW_API_KEY
 
 # AgentZ host (named tunnel or trycloudflare). Secret-only — not a [vars] entry.

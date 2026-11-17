@@ -19,6 +19,15 @@ export const navigation: NavSection[] = [
     ],
   },
   {
+    title: "Authentic Economy",
+    items: [
+      { name: "The Vision", href: "/authentic-economy" },
+      { name: "QRON", href: "/qron" },
+      { name: "StrainChain", href: "/strainchain" },
+      { name: "Trust Score", href: "/trust-score" },
+    ],
+  },
+  {
     title: "Reference",
     items: [
       { name: "Commands", href: "/commands" },
@@ -37,6 +46,7 @@ export const navigation: NavSection[] = [
       { name: "Profiler", href: "/profiler" },
       { name: "iOS Simulator", href: "/ios" },
       { name: "Security", href: "/security" },
+      { name: "Vision Mode", href: "/vision" },
       { name: "Next.js + Vercel", href: "/next" },
       { name: "Native Mode (Experimental)", href: "/native-mode" },
     ],

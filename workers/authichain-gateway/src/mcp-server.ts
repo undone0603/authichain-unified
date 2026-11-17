@@ -37,7 +37,7 @@ function createMcpServer(env: Env): McpServer {
         .describe("URL of product image for visual verification"),
       barcode: z.string().optional().describe("Barcode or QR code data"),
       metadata: z
-        .record(z.string())
+        .record(z.string(), z.string())
         .optional()
         .describe("Additional product metadata"),
     },
@@ -295,7 +295,7 @@ function createMcpServer(env: Env): McpServer {
       serialNumber: z.string().optional().describe("Serial or SKU number"),
       category: z.string().optional().describe("Product category"),
       metadata: z
-        .record(z.string())
+        .record(z.string(), z.string())
         .optional()
         .describe("Additional product metadata"),
     },

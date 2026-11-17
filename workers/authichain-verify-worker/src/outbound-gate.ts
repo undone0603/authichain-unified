@@ -191,6 +191,7 @@ export async function authorizeOutbound(input: {
     resolver: input.registry,
     replayStore: input.replay,
     now,
+    requiredCapability: "SEND_OUTBOUND",
   });
   const identityExtra = {
     agent_id: verified.agent_id ?? base.agent_id,
@@ -662,6 +663,7 @@ export async function authorizeDraft(input: {
     resolver: input.registry,
     replayStore: input.replay,
     now,
+    requiredCapability: "DRAFT_OUTBOUND",
   });
   if (!verified.valid) {
     const code = mapIdentity(verified.reasons);

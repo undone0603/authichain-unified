@@ -5,6 +5,7 @@ Grant Agent: Autonomously searches for and drafts SBIR/SVIP grant proposals.
 Now hardened for high-fidelity federal RFP capture (Phase 16).
 """
 from __future__ import annotations
+import os
 import logging
 import json
 import datetime
@@ -37,7 +38,7 @@ async def draft_federal_proposal(grant_data: Dict[str, str]) -> str:
         "brand": "AuthiChain",
         "uei": "R34XKWRJY9A5",
         "cage": "1PUJ6",
-        "address": "109 N 4th St, Roscommon, MI 48653-9090 USA",
+        "address": os.environ.get("MAILING_ADDRESS", "[MAILING_ADDRESS]"),
         "purpose": "All Awards"
     }
 

@@ -17,7 +17,9 @@ import { PUBLIC_PLAN_IDS, planByStripePriceId } from "../plans";
 describe("catalog freeze 2026-09-28", () => {
   it("first stranger SKU is starter $29", () => {
     expect(FIRST_STRANGER_SKU).toBe("starter");
-    expect(LIVE_PRICE_MAP.starter.priceId).toBe("price_1UIoEVGqTruSqV8T61lp48wB");
+    expect(LIVE_PRICE_MAP.starter.priceId).toBe(
+      "price_1UIoEVGqTruSqV8T61lp48wB"
+    );
     expect(LIVE_PRICE_MAP.starter.grant).toBe(100);
     expect(LIVE_PRICE_MAP.starter.mode).toBe("payment");
   });
@@ -122,7 +124,9 @@ describe("catalog freeze 2026-09-28", () => {
   });
 
   it("public checkout hrefs stay on apex", () => {
-    expect(publicCheckoutHref("starter")).toBe("https://authichain.com/checkout/starter");
+    expect(publicCheckoutHref("starter")).toBe(
+      "https://authichain.com/checkout/starter"
+    );
     expect(publicCheckoutHref("free")).toBe("https://qron.space/generate");
   });
 
@@ -187,8 +191,8 @@ describe("starterAmountFallbackRefusals", () => {
   });
 });
 
-describe("StorePilot Pro price_1UTxvp", () => {
-  const PRO = "price_1UTxvpGqTruSqV8TQu5gkqyc";
+describe("StorePilot Pro price_1UYrxS", () => {
+  const PRO = "price_1UYrxSGqTruSqV8TKZDxvSiL";
 
   it("is mapped to tier=pro, catalog_limit=200 in LIVE_PRICE_MAP", () => {
     expect(LIVE_PRICE_MAP.storepilot_pro.priceId).toBe(PRO);
@@ -200,7 +204,11 @@ describe("StorePilot Pro price_1UTxvp", () => {
 
   it("never resolves to Starter, even on an exact $29.00 fallback-eligible session", () => {
     for (const allowAmountFallback of [true, false]) {
-      const r = resolveCheckoutPlanId({ priceId: PRO, amountTotal: 2900, allowAmountFallback });
+      const r = resolveCheckoutPlanId({
+        priceId: PRO,
+        amountTotal: 2900,
+        allowAmountFallback,
+      });
       expect(r).not.toBe("starter");
       expect(r).toBeNull();
     }
@@ -209,9 +217,15 @@ describe("StorePilot Pro price_1UTxvp", () => {
 
   it("grants tier=pro and catalog_limit=200 keyed to the checkout email", () => {
     const g = liveTierGrantForPriceId(PRO, "  Buyer@Example.com ");
-    expect(g).toEqual({ email: "buyer@example.com", tier: "pro", catalog_limit: 200 });
+    expect(g).toEqual({
+      email: "buyer@example.com",
+      tier: "pro",
+      catalog_limit: 200,
+    });
     expect(g?.tier).not.toBe("starter");
     expect(liveTierGrantForPriceId(PRO, null)).toBeNull();
-    expect(liveTierGrantForPriceId(LIVE_PRICE_MAP.starter.priceId, "a@b.co")).toBeNull();
+    expect(
+      liveTierGrantForPriceId(LIVE_PRICE_MAP.starter.priceId, "a@b.co")
+    ).toBeNull();
   });
 });

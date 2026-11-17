@@ -2204,6 +2204,17 @@ export default {
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "qron.space", ts: Date.now() });
     }
+    // Nightstamp Digital Payment Link success URL historically pointed at
+    // /order?preset=starmap&sku=digital, which 404s. Send it to the live
+    // /starmap builder (query preserved). Do not change the Stripe link.
+    if (/^\/order\/?$/.test(url.pathname)) {
+      const dest = new URL("/starmap", url.origin);
+      dest.search = url.search;
+      return new Response(null, {
+        status: 302,
+        headers: { location: dest.toString(), "cache-control": "no-store" },
+      });
+    }
     if (request.method === "POST" && /^\/generate\/?$/.test(url.pathname)) {
       // The app behind APP_ORIGIN still answers this POST with /onboard.
       // Loop 2 is the $29 Starter checkout on authichain.com.
@@ -2365,8 +2376,6 @@ ${estateCtaBand({
   lede: "The generate form is proxied to the AuthiChain app. That is the conversion path for qron.space — Starter $29.",
   actions: [
     { href: "/generate", label: "Generate Living QR", primary: true },
-    { href: "https://authichain.com/checkout/qron_launch", label: "QRON Launch $19/mo", primary: false },
-    { href: "https://authichain.com/checkout/qron_launch_annual", label: "QRON Launch $190/yr", primary: false },
     { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29", primary: false },
     { href: "/pricing", label: "See pricing", primary: false },
   ],
@@ -2380,8 +2389,6 @@ ${estateFooter(
       links: [
         { href: "/generate", label: "Generate Living QR" },
         { href: "/pricing", label: "Pricing" },
-        { href: "https://authichain.com/checkout/qron_launch", label: "QRON Launch $19/mo" },
-        { href: "https://authichain.com/checkout/qron_launch_annual", label: "QRON Launch $190/yr" },
         { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29" },
       ],
     },

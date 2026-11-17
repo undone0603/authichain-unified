@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   selectAutoDeployWorkers,
   AUTO_DEPLOY_ALLOWLIST,
@@ -55,11 +56,10 @@ test("selectAutoDeployWorkers preserves allowlist order, not changed-dirs order"
   assert.deepEqual(result, ["worker-a", "worker-b"]);
 });
 
-test("a workers/_shared-only change redeploys the sisters and authichain-com", () => {
+test("a workers/_shared-only change redeploys sister sites but not protected authichain-com", () => {
   const expanded = expandSharedWorkerDirs(["_shared"]);
   const shipped = selectAutoDeployWorkers(expanded, AUTO_DEPLOY_ALLOWLIST);
   assert.deepEqual(shipped, [
-    "authichain-com",
     "qron-space",
     "strainchain-io",
     "govchain-us",
@@ -72,7 +72,6 @@ test("expandSharedWorkerDirs leaves a normal worker diff alone", () => {
 
 test("the production allowlist ships the public workers and not paid or archived ones", () => {
   for (const worker of [
-    "authichain-com",
     "authichain-api",
     "authichain-api-gateway",
     "qron-space",
@@ -90,5 +89,23 @@ test("the production allowlist ships the public workers and not paid or archived
     ["authichain-com", "passport-demo", "gs1-resolver"],
     AUTO_DEPLOY_ALLOWLIST
   );
-  assert.deepEqual(shipped, ["authichain-com", "gs1-resolver"]);
+  assert.deepEqual(shipped, ["gs1-resolver"]);
+  assert.equal(AUTO_DEPLOY_ALLOWLIST.includes("authichain-com"), false);
+});
+
+// A payment-fix merge may not publish the Stripe Worker by itself.
+test("stripe-webhook is not in the push auto-deploy allowlist", () => {
+  assert.equal(AUTO_DEPLOY_ALLOWLIST.includes("stripe-webhook"), false);
+  assert.deepEqual(selectAutoDeployWorkers(["stripe-webhook"], AUTO_DEPLOY_ALLOWLIST), []);
+});
+
+test("a legacy repo variable cannot expand push deploys to the full matrix", () => {
+  const source = readFileSync(
+    new URL("../../.github/workflows/deploy-workers.yml", import.meta.url),
+    "utf8"
+  );
+  assert.match(source, /if \[ "\$\{EVENT_NAME\}" = "workflow_dispatch" \]; then/);
+  assert.doesNotMatch(source, /if \[ "\$\{CLOUDFLARE_DEPLOY_ENABLED\}"/);
+  assert.match(source, /eligible=\$\(node scripts\/ci\/select-autodeploy-workers\.mjs\)/);
+  assert.match(source, /"stripe-webhook"/); // explicitly selected manual release remains available
 });
