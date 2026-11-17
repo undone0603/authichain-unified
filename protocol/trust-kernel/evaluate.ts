@@ -153,6 +153,18 @@ function classifyIssuerCheck(crypto: NonNullable<TrustInput["crypto"]> = {}) {
   };
 }
 
+function isInactiveOrBlockedStatus(
+  status: string | undefined
+): status is "inactive" | "suspended" | "blocked" | "pending" | "disabled" {
+  return (
+    status === "inactive" ||
+    status === "suspended" ||
+    status === "blocked" ||
+    status === "pending" ||
+    status === "disabled"
+  );
+}
+
 export function evaluate(input: TrustInput = {}) {
   const depthUsed = input.depth === "history" ? "history" : "lookup";
   const vector = emptyVector();
@@ -222,11 +234,7 @@ export function evaluate(input: TrustInput = {}) {
     vector.revocation = "failed";
     reasons.push("attestation_revoked");
   }
-  if (
-    ["inactive", "suspended", "blocked", "pending", "disabled"].includes(
-      att?.status
-    )
-  ) {
+  if (isInactiveOrBlockedStatus(att?.status)) {
     vector.revocation = "failed";
     reasons.push("attestation_inactive_or_blocked");
   }

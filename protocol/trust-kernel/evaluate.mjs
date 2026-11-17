@@ -100,6 +100,16 @@ function classifyIssuerCheck(crypto = {}) {
   return { issuer: "unknown", reason: "issuer_check_missing" };
 }
 
+function isInactiveOrBlockedStatus(status) {
+  return (
+    status === "inactive" ||
+    status === "suspended" ||
+    status === "blocked" ||
+    status === "pending" ||
+    status === "disabled"
+  );
+}
+
 export function evaluate(input = {}) {
   const depthUsed = input.depth === "history" ? "history" : "lookup";
   const vector = emptyVector();
@@ -169,11 +179,7 @@ export function evaluate(input = {}) {
     vector.revocation = "failed";
     reasons.push("attestation_revoked");
   }
-  if (
-    ["inactive", "suspended", "blocked", "pending", "disabled"].includes(
-      att?.status
-    )
-  ) {
+  if (isInactiveOrBlockedStatus(att?.status)) {
     vector.revocation = "failed";
     reasons.push("attestation_inactive_or_blocked");
   }
