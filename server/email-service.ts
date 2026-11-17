@@ -197,7 +197,11 @@ function suppressionSet() {
   );
 }
 
-async function isSuppressedInGuardrailTable(email: string): Promise<boolean> {
+type SuppressionLookup = "hit" | "miss" | "unavailable";
+
+async function isSuppressedInGuardrailTable(
+  email: string
+): Promise<SuppressionLookup> {
   try {
     const db = await getDb();
     const rows = await db
@@ -205,9 +209,9 @@ async function isSuppressedInGuardrailTable(email: string): Promise<boolean> {
       .from(suppressionList)
       .where(eq(suppressionList.email, email))
       .limit(1);
-    return rows.length > 0;
+    return rows.length > 0 ? "hit" : "miss";
   } catch {
-    return false;
+    return "unavailable";
   }
 }
 
@@ -216,14 +220,16 @@ async function isSuppressedInGuardrailTable(email: string): Promise<boolean> {
  * on the edge (worker-app/unsubscribe-routes.ts). Drizzle/getDb is the Node
  * path; REST covers Workers where DATABASE_URL is not set.
  */
-async function isSuppressedViaSupabaseRest(email: string): Promise<boolean> {
+async function isSuppressedViaSupabaseRest(
+  email: string
+): Promise<SuppressionLookup> {
   const url = (
     process.env.SUPABASE_URL ||
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
     ""
   ).replace(/\/+$/, "");
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-  if (!url || !key) return false;
+  if (!url || !key) return "unavailable";
   try {
     const res = await fetch(
       `${url}/rest/v1/guardrail_suppression_list?email=eq.${encodeURIComponent(email)}&select=email`,
@@ -234,19 +240,27 @@ async function isSuppressedViaSupabaseRest(email: string): Promise<boolean> {
         },
       }
     );
-    if (!res.ok) return false;
+    if (!res.ok) return "unavailable";
     const rows: unknown = await res.json().catch(() => null);
-    return Array.isArray(rows) && rows.length > 0;
+    if (!Array.isArray(rows)) return "unavailable";
+    return rows.length > 0 ? "hit" : "miss";
   } catch {
-    return false;
+    return "unavailable";
   }
 }
 
 export async function isSuppressed(email: string): Promise<boolean> {
   const normalized = email.trim().toLowerCase();
   if (suppressionSet().has(normalized)) return true;
-  if (await isSuppressedInGuardrailTable(normalized)) return true;
-  return isSuppressedViaSupabaseRest(normalized);
+  const dbLookup = await isSuppressedInGuardrailTable(normalized);
+  if (dbLookup === "hit") return true;
+  if (dbLookup === "miss") return false;
+  const restLookup = await isSuppressedViaSupabaseRest(normalized);
+  if (restLookup === "hit") return true;
+  if (restLookup === "miss") return false;
+  // Neither backend could establish status — fail closed so an unsubscribed
+  // recipient is never mailed because the DNC table was unreachable.
+  return true;
 }
 
 function toBase64Url(input: string) {

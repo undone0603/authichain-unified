@@ -52,4 +52,26 @@ describe("isSuppressed", () => {
     } as never);
     await expect(isSuppressed("db-blocked@example.com")).resolves.toBe(true);
   });
+
+  it("fails closed when neither the database nor REST can establish status", async () => {
+    ENV.suppressionList = "";
+    vi.mocked(getDb).mockRejectedValueOnce(new Error("db down"));
+    const previousUrl = process.env.SUPABASE_URL;
+    const previousPublicUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const previousKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.SUPABASE_URL;
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    try {
+      await expect(isSuppressed("maybe@example.com")).resolves.toBe(true);
+    } finally {
+      if (previousUrl !== undefined) process.env.SUPABASE_URL = previousUrl;
+      if (previousPublicUrl !== undefined) {
+        process.env.NEXT_PUBLIC_SUPABASE_URL = previousPublicUrl;
+      }
+      if (previousKey !== undefined) {
+        process.env.SUPABASE_SERVICE_ROLE_KEY = previousKey;
+      }
+    }
+  });
 });
