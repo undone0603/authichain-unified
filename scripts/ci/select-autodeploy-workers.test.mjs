@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   selectAutoDeployWorkers,
   AUTO_DEPLOY_ALLOWLIST,
@@ -90,4 +91,21 @@ test("the production allowlist ships the public workers and not paid or archived
   );
   assert.deepEqual(shipped, ["gs1-resolver"]);
   assert.equal(AUTO_DEPLOY_ALLOWLIST.includes("authichain-com"), false);
+});
+
+// A payment-fix merge may not publish the Stripe Worker by itself.
+test("stripe-webhook is not in the push auto-deploy allowlist", () => {
+  assert.equal(AUTO_DEPLOY_ALLOWLIST.includes("stripe-webhook"), false);
+  assert.deepEqual(selectAutoDeployWorkers(["stripe-webhook"], AUTO_DEPLOY_ALLOWLIST), []);
+});
+
+test("a legacy repo variable cannot expand push deploys to the full matrix", () => {
+  const source = readFileSync(
+    new URL("../../.github/workflows/deploy-workers.yml", import.meta.url),
+    "utf8"
+  );
+  assert.match(source, /if \[ "\$\{EVENT_NAME\}" = "workflow_dispatch" \]; then/);
+  assert.doesNotMatch(source, /if \[ "\$\{CLOUDFLARE_DEPLOY_ENABLED\}"/);
+  assert.match(source, /eligible=\$\(node scripts\/ci\/select-autodeploy-workers\.mjs\)/);
+  assert.match(source, /"stripe-webhook"/); // explicitly selected manual release remains available
 });
