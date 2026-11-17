@@ -20,6 +20,8 @@ import { provisionPurchase } from "@/lib/provisioning";
 const {
   mockAfterCalls,
   mockRetrieve,
+  mockCheckoutSessionRetrieve,
+  mockDppFulfill,
   mockAnchorSale,
   mockAnchorReversal,
   mockConstructEvent,
@@ -29,11 +31,14 @@ const {
 } = vi.hoisted(() => {
   const mockAfterCalls: Array<() => unknown> = [];
   const mockRetrieve = vi.fn();
+  const mockCheckoutSessionRetrieve = vi.fn();
+  const mockDppFulfill = vi.fn();
   const mockAnchorSale = vi.fn().mockResolvedValue(undefined);
   const mockAnchorReversal = vi.fn().mockResolvedValue(undefined);
   const mockConstructEvent = vi.fn();
   const db = {
     seenEvent: null as null | { event_id: string },
+    failEventUpdate: false,
     profile: { id: "prof_1" } as Record<string, unknown> | null,
     affiliate: {
       id: "aff_1",
@@ -54,6 +59,7 @@ const {
       filters: Array<[string, unknown]>;
     }>,
     eventInserts: [] as Array<Record<string, unknown>>,
+    eventUpdates: [] as Array<Record<string, unknown>>,
     rpcCalls: [] as Array<{ fn: string; args: unknown }>,
   };
 
@@ -115,6 +121,18 @@ const {
               payload: updatePayload,
               filters: [...filters],
             });
+          else if (table === "stripe_events") {
+            calls.eventUpdates.push(updatePayload);
+            if (db.failEventUpdate)
+              return Promise.resolve({
+                data: null,
+                error: { message: "update failed" },
+              }).then(resolve as never, reject);
+            return Promise.resolve({
+              data: [{ event_id: "evt" }],
+              error: null,
+            }).then(resolve as never, reject);
+          }
         }
         return Promise.resolve({ error: null }).then(resolve, reject);
       },
@@ -137,6 +155,8 @@ const {
   return {
     mockAfterCalls,
     mockRetrieve,
+    mockCheckoutSessionRetrieve,
+    mockDppFulfill,
     mockAnchorSale,
     mockAnchorReversal,
     mockConstructEvent,
@@ -177,7 +197,12 @@ vi.mock("next/server", () => ({
 vi.mock("stripe", () => ({
   default: class MockStripe {
     subscriptions = { retrieve: mockRetrieve };
-    checkout = { sessions: { list: vi.fn().mockResolvedValue({ data: [] }) } };
+    checkout = {
+      sessions: {
+        list: vi.fn().mockResolvedValue({ data: [] }),
+        retrieve: mockCheckoutSessionRetrieve,
+      },
+    };
     constructor(..._args: unknown[]) {}
   },
 }));
@@ -215,13 +240,16 @@ vi.mock("@/lib/email", () => ({
 }));
 vi.mock("@/lib/dpp-loop", () => ({
   recordDppLoopEvent: vi.fn().mockResolvedValue(undefined),
-  isDppOffer: () => false,
+  DPP_PRICE_ID: "price_1TwmD8GqTruSqV8TpAF8dfyA",
+  isDppDemoSession: () => false,
+  isDppOffer: (md: Record<string, unknown> | null, priceId?: string | null) =>
+    md?.plan === "dpp_readiness" ||
+    md?.offer === "dpp_readiness_2026" ||
+    priceId === "price_1TwmD8GqTruSqV8TpAF8dfyA",
   dppActivateUrl: () => "https://authichain.com/dpp/activate",
 }));
 vi.mock("@/lib/dpp-fulfill-checkout", () => ({
-  fulfillDppPaidSession: vi
-    .fn()
-    .mockResolvedValue({ handled: false, profileId: null }),
+  fulfillDppPaidSession: mockDppFulfill,
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -283,6 +311,8 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     calls.affiliateSelects = 0;
     calls.affiliateUpdates.length = 0;
     calls.eventInserts.length = 0;
+    calls.eventUpdates.length = 0;
+    db.failEventUpdate = false;
     db.seenEvent = null;
     db.profile = { id: "prof_1" };
     db.affiliate = {
@@ -293,6 +323,9 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     };
     // Even the first invoice carries a subscribing affiliate — the
     // subscription_create path must still not credit it.
+    mockCheckoutSessionRetrieve.mockReset();
+    mockDppFulfill.mockReset();
+    mockDppFulfill.mockResolvedValue({ handled: false, profileId: null });
     mockRetrieve.mockResolvedValue({
       id: "sub_123",
       metadata: { affiliate_code: "AFF-TEST" },
@@ -374,6 +407,8 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
         object: {
           id: "cs_starter_001",
           object: "checkout.session",
+          mode: "payment",
+          status: "complete",
           amount_total: 2900,
           currency: "usd",
           customer_email: "buyer@example.com",
@@ -408,6 +443,8 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
         object: {
           id: "cs_starter_neg",
           object: "checkout.session",
+          mode: "payment",
+          status: "complete",
           amount_total: 2900,
           amount_subtotal: 2900,
           total_details: { amount_discount: 0 },
@@ -446,6 +483,34 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     const r = await grantedPlan(starterSession());
     expect(r.plan).toBe("starter");
     expect(r.warned).toBe(false);
+  });
+
+  it("refuses Starter checkout with missing payment status before provisioning", async () => {
+    const res = await postInvoice(
+      starterSession({
+        metadata: { plan: "starter" },
+        payment_status: undefined,
+      })
+    );
+    await flushAfter();
+    expect(res.status).toBe(200);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(calls.profileUpdates).toHaveLength(0);
+    expect(calls.paymentInserts).toHaveLength(0);
+  });
+
+  it("refuses Creator checkout marked no_payment_required before provisioning", async () => {
+    const res = await postInvoice(
+      starterSession({
+        metadata: { plan: "creator" },
+        payment_status: "no_payment_required",
+      })
+    );
+    await flushAfter();
+    expect(res.status).toBe(200);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(calls.profileUpdates).toHaveLength(0);
+    expect(calls.paymentInserts).toHaveLength(0);
   });
 
   it("negative: unpaid session is held before any grant and logs the hold", async () => {
@@ -510,5 +575,234 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     expect(logged).not.toContain("buyer@example.com");
     expect(logged).not.toContain("sk_");
     expect(logged).not.toContain("whsec_");
+  });
+
+  // PR #2411: cover the alternate Next.js webhook's Stripe-read boundary.
+  // All events below are synthetic and never create real Stripe sessions.
+  function dppCheckoutEvent(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "evt_dpp_next_mock",
+      object: "event",
+      type: "checkout.session.completed",
+      livemode: false,
+      data: {
+        object: {
+          id: "cs_dpp_next_mock",
+          object: "checkout.session",
+          mode: "payment",
+          status: "complete",
+          payment_status: "paid",
+          amount_total: 29900,
+          currency: "usd",
+          customer_details: { email: "buyer@example.com" },
+          metadata: { plan: "dpp_readiness" },
+          ...overrides,
+        },
+      },
+    };
+  }
+
+  function verifiedDppCheckout(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "cs_dpp_next_mock",
+      mode: "payment",
+      status: "complete",
+      payment_status: "paid",
+      amount_total: 29900,
+      currency: "usd",
+      customer_details: { email: "buyer@example.com" },
+      metadata: { plan: "dpp_readiness" },
+      line_items: {
+        has_more: false,
+        data: [
+          {
+            quantity: 1,
+            price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" },
+          },
+        ],
+      },
+      ...overrides,
+    };
+  }
+
+  it("DPP: retrieves the authoritative Stripe session before granting", async () => {
+    mockCheckoutSessionRetrieve.mockResolvedValue(verifiedDppCheckout());
+    mockDppFulfill.mockResolvedValue({
+      handled: true,
+      profileId: "prof_dpp_1",
+      activationEmail: "skipped",
+    });
+
+    const res = await postInvoice(dppCheckoutEvent());
+
+    expect(res.status).toBe(200);
+    expect(mockCheckoutSessionRetrieve).toHaveBeenCalledOnce();
+    expect(mockCheckoutSessionRetrieve).toHaveBeenCalledWith(
+      "cs_dpp_next_mock",
+      { expand: ["line_items"] }
+    );
+    expect(mockDppFulfill).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        id: "cs_dpp_next_mock",
+        payment_status: "paid",
+        line_items: expect.objectContaining({ has_more: false }),
+      }),
+      "price_1TwmD8GqTruSqV8TpAF8dfyA"
+    );
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("DPP: retries on a Stripe session retrieval failure without granting", async () => {
+    mockCheckoutSessionRetrieve.mockRejectedValueOnce(
+      new Error("Stripe retrieve unavailable")
+    );
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await postInvoice(dppCheckoutEvent());
+      expect(res.status).toBe(500);
+      expect(res.body.error).toMatch(/Stripe retrieve unavailable/);
+      expect(mockDppFulfill).not.toHaveBeenCalled();
+      expect(provisionPurchase).not.toHaveBeenCalled();
+    } finally {
+      err.mockRestore();
+    }
+  });
+
+  it("DPP: holds an unpaid event without querying Stripe or provisioning", async () => {
+    const res = await postInvoice(
+      dppCheckoutEvent({ payment_status: "unpaid" })
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockCheckoutSessionRetrieve).not.toHaveBeenCalled();
+    expect(mockDppFulfill).not.toHaveBeenCalled();
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("DPP: holds a paid checkout when entitlement reconciliation declines", async () => {
+    mockCheckoutSessionRetrieve.mockResolvedValue(
+      verifiedDppCheckout({ line_items: { data: [], has_more: false } })
+    );
+    mockDppFulfill.mockResolvedValue({
+      handled: false,
+      profileId: null,
+      activationEmail: "skipped",
+    });
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await postInvoice(dppCheckoutEvent());
+      expect(res.status).toBe(500);
+      expect(res.body.error).toMatch(/requires product and entitlement reconciliation/);
+      expect(mockDppFulfill).toHaveBeenCalledOnce();
+      expect(provisionPurchase).not.toHaveBeenCalled();
+    } finally {
+      err.mockRestore();
+    }
+  });
+
+  it("DPP: a permanently refused positive-value payment becomes a durable hold, never success", async () => {
+    mockCheckoutSessionRetrieve.mockResolvedValue(verifiedDppCheckout());
+    mockDppFulfill.mockResolvedValue({
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    });
+
+    const res = await postInvoice(dppCheckoutEvent());
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(calls.eventUpdates).toHaveLength(1);
+    expect(calls.eventUpdates[0]).toMatchObject({
+      status: "reconciliation_required",
+      error: "dpp_ineligible_settlement",
+    });
+    expect(calls.eventUpdates.some(u => u.status === "success")).toBe(false);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("DPP: fails closed (500, retryable) when the refusal hold cannot be persisted", async () => {
+    mockCheckoutSessionRetrieve.mockResolvedValue(verifiedDppCheckout());
+    mockDppFulfill.mockResolvedValue({
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    });
+    db.failEventUpdate = true;
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await postInvoice(dppCheckoutEvent());
+      expect(res.status).toBe(500);
+      expect(res.body.error).toMatch(/ineligible-settlement hold/);
+      expect(provisionPurchase).not.toHaveBeenCalled();
+    } finally {
+      err.mockRestore();
+    }
+  });
+
+  it("DPP: identifies metadata-free canonical Payment Link, but still reads Stripe", async () => {
+    mockCheckoutSessionRetrieve.mockResolvedValue(
+      verifiedDppCheckout({ metadata: {} })
+    );
+    mockDppFulfill.mockResolvedValue({
+      handled: true,
+      profileId: "prof_dpp_link",
+      activationEmail: "skipped",
+    });
+    const res = await postInvoice(
+      dppCheckoutEvent({
+        payment_link: "plink_1UNd1FGqTruSqV8TWahMUQ3l",
+        metadata: {},
+      })
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockCheckoutSessionRetrieve).toHaveBeenCalledOnce();
+    expect(mockDppFulfill).toHaveBeenCalledOnce();
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["zero total with forged plan", { amount_total: 0, metadata: { plan: "professional", grant: "999999" } }],
+    ["zero total with forged trial", { amount_total: 0, metadata: { plan: "starter", trial: "true", grant: "50" } }],
+    ["missing total", { amount_total: null, metadata: { plan: "professional", grant: "999999" } }],
+    ["unpaid positive checkout", { amount_total: 2900, payment_status: "unpaid", metadata: { plan: "starter" } }],
+  ])("general checkout refuses %s before paid provisioning", async (_label, overrides) => {
+    const res = await postInvoice(dppCheckoutEvent({
+      id: "cs_general_ineligible_mock",
+      metadata: {},
+      ...overrides,
+    }));
+    await flushAfter();
+    expect(res.status).toBe(200);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(mockDppFulfill).not.toHaveBeenCalled();
+    expect(calls.profileUpdates).toHaveLength(0);
+    expect(calls.paymentInserts).toHaveLength(0);
+  });
+
+  it("DPP zero-dollar completion cannot bypass the DPP verifier", async () => {
+    mockCheckoutSessionRetrieve.mockResolvedValue(verifiedDppCheckout({
+      amount_total: 0,
+      metadata: { plan: "dpp_readiness" },
+    }));
+    mockDppFulfill.mockResolvedValue({
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    });
+    const res = await postInvoice(dppCheckoutEvent({ amount_total: 0 }));
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ handled: false, reconciliationRequired: true });
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(calls.profileUpdates).toHaveLength(0);
+    expect(calls.paymentInserts).toHaveLength(0);
   });
 });

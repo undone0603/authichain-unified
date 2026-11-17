@@ -392,6 +392,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       <p class="estate-lede hero-sub">Your e-bike, e-scooter or industrial battery needs a passport to be sold in the EU. Map the public-tier gaps in your browser — nothing is sent or stored. From 18 February 2027.</p>
       <div class="estate-actions hero-cta">
         <a class="btn btn-secondary" href="#gap-map">Map my gaps</a>
+        <a class="btn btn-outline" href="${BATTERY_PASSPORT_PATH}/sample">See a signed fictional sample</a>
         ${checkoutForm("hero-checkout", `Get passport-ready — $${price}`)}
       </div>
     </div>
@@ -443,6 +444,10 @@ ${estateFooter(
       heading: "Start",
       links: [
         { href: BATTERY_PASSPORT_PATH, label: "Battery passport" },
+        {
+          href: `${BATTERY_PASSPORT_PATH}/sample`,
+          label: "Signed fictional sample",
+        },
         {
           href: `${BATTERY_PASSPORT_PATH}/sample-audit`,
           label: "Fictional walkthrough",

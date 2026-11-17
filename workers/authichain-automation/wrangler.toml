@@ -24,3 +24,8 @@ new_sqlite_classes = ["RateLimiter"]
 
 [observability]
 enabled = true
+
+# Private, optional AgentZ dispatch. No new Cron Trigger.
+[[services]]
+binding = "AGENTZ_EDGE"
+service = "authichain-agentz-mcp-edge"

@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { decide, loadBaseline, validateBaseline } from "./build-baseline.mjs";
+import {
+  decide,
+  isCiHarnessPath,
+  isTestOnlyPath,
+  loadBaseline,
+  validateBaseline,
+} from "./build-baseline.mjs";
 
 const ROOTS = [".github/", "docs/", "workers/"];
 
@@ -41,4 +47,37 @@ test("the committed baseline skips a worker-only change and rejects overlap", ()
   validateBaseline(baseline);
   assert.equal(decide(["workers/authichain-com/src/generation-check.ts"], baseline.skipRoots).skip, true);
   assert.equal(decide(["package.json"], baseline.skipRoots).skip, false);
+});
+
+test("a scripts/__tests__ wait_buyer lock does not force the Next production build", () => {
+  assert.equal(isTestOnlyPath("scripts/__tests__/revenue-operator.test.ts"), true);
+  const decision = decide(
+    ["scripts/__tests__/revenue-operator.test.ts"],
+    ROOTS
+  );
+  assert.equal(decision.skip, true);
+  assert.deepEqual(decision.outside, []);
+});
+
+test("a scripts/ci harness edit with a wait_buyer test skips the Next build", () => {
+  assert.equal(isCiHarnessPath("scripts/ci/build-baseline.mjs"), true);
+  const decision = decide(
+    [
+      "scripts/__tests__/revenue-operator.test.ts",
+      "scripts/ci/build-baseline.mjs",
+      "scripts/ci/build-baseline.test.mjs",
+    ],
+    ROOTS
+  );
+  assert.equal(decision.skip, true);
+  assert.deepEqual(decision.outside, []);
+});
+
+test("a src edit next to a test still builds", () => {
+  const decision = decide(
+    ["scripts/__tests__/revenue-operator.test.ts", "src/lib/plans.ts"],
+    ROOTS
+  );
+  assert.equal(decision.skip, false);
+  assert.deepEqual(decision.outside, ["src/lib/plans.ts"]);
 });

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, afterEach, vi } from "vitest";
 import { Hono } from "hono";
-import { exportPKCS8, generateKeyPair } from "jose";
+import { calculateJwkThumbprint, exportJWK, exportPKCS8, generateKeyPair } from "jose";
 import {
   registerAttestationApi,
   type AttestationRegistry,
@@ -96,16 +96,23 @@ describe("registerAttestationApi", () => {
   });
 
   async function bindKey() {
-    const { privateKey } = await generateKeyPair("EdDSA", {
+    const { privateKey, publicKey } = await generateKeyPair("EdDSA", {
       crv: "Ed25519",
       extractable: true,
     });
     const pem = await exportPKCS8(privateKey);
+    const exported = await exportJWK(publicKey);
+    const kid = await calculateJwkThumbprint({
+      kty: exported.kty,
+      crv: exported.crv,
+      x: exported.x,
+    });
     process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 = Buffer.from(
       pem,
       "utf8"
     ).toString("base64");
-    process.env.AUTHICHAIN_ATTESTATION_KEY_ID = "attest-api-kid";
+    process.env.AUTHICHAIN_ATTESTATION_KEY_ID = kid;
+    return kid;
   }
 
   it("POST signed-record publication requires issuer authorization", async () => {
@@ -130,7 +137,7 @@ describe("registerAttestationApi", () => {
   });
 
   it("POST signed-record publication signs and persists a record linked to an existing seal", async () => {
-    await bindKey();
+    const kid = await bindKey();
     process.env.CRON_SECRET = "issuer-test-secret";
     const publishRecord: NonNullable<AttestationRegistry["publishRecord"]> = async (_env, input) => ({
       ok: true,
@@ -190,7 +197,7 @@ describe("registerAttestationApi", () => {
     expect(publisher).toHaveBeenCalledTimes(1);
     expect(publisher.mock.calls[0][1]).toMatchObject({
       sealId: "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a",
-      issuerKid: "attest-api-kid",
+      issuerKid: kid,
       attestation,
     });
     const verify = await app.request("/api/v1/attestation/verify", {
@@ -205,7 +212,11 @@ describe("registerAttestationApi", () => {
   it("POST signed-record publication refuses an attestation for a different registered product", async () => {
     await bindKey();
     process.env.CRON_SECRET = "issuer-test-secret";
-    const publisher = vi.fn();
+    const publisher = vi.fn(async () => ({
+      ok: false as const,
+      status: 409 as const,
+      error: "attestation object_id does not match the registered product_id",
+    }));
     const app = new Hono();
     registerAttestationApi(app, { ...mockRegistry(), publishRecord: publisher as unknown as NonNullable<AttestationRegistry["publishRecord"]> });
     const res = await app.request("/api/v1/attestations/publish", {
@@ -225,7 +236,7 @@ describe("registerAttestationApi", () => {
     });
     expect(res.status).toBe(409);
     expect(await res.json()).toMatchObject({ error: "attestation object_id does not match the registered product_id" });
-    expect(publisher).not.toHaveBeenCalled();
+    expect(publisher).toHaveBeenCalledTimes(1);
   });
 
   it("POST signing requires issuer authorization", async () => {

@@ -387,7 +387,7 @@ AUTONOMOUS MODE ACTIVE \u2014 5 AI Agents Online \u2014 AgentZ Operational
 <div style="font-size:0.85em; color:#999; line-height:1.8;">
 <strong style="color:#FFD700">AuthiChain</strong><br>
 Zachary Kietzman, CEO<br>
-109 N 4th St, Roscommon, MI 48653<br>
+[MAILING_ADDRESS]<br>
 SAM.gov Registered \u2713<br>
 CAGE: 1PUJ6 | UEI: R34XKWRJY9A5<br>
 NAICS: 541519<br>
