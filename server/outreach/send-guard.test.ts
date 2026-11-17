@@ -8,6 +8,7 @@ import {
   isRoleInboxEmail,
 } from "./send-guard";
 import { verifyUnsubscribeToken } from "./unsubscribe-link";
+import { ENV } from "../_core/env";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -147,6 +148,25 @@ describe("guardedSend", () => {
     expect(r.sent).toBe(false);
     expect(r.reason).toContain("role_inbox");
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("blocks a suppression-listed recipient before DNS or Resend", async () => {
+    const previous = ENV.suppressionList;
+    ENV.suppressionList = "blocked@example.com";
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    try {
+      const r = await guardedSend({
+        to: "blocked@example.com",
+        source: "inbound_optin",
+        subject: "s",
+        body: "b",
+      });
+      expect(r.sent).toBe(false);
+      expect(r.reason).toBe("suppression_list");
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      ENV.suppressionList = previous;
+    }
   });
 
   it("does not treat a role_inbox refuse as a live send attempt", async () => {
