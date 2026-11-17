@@ -628,17 +628,39 @@ describe("POST /api/paddle/webhook", () => {
 });
 
 describe("POST /api/webhooks/instantly", () => {
-  it("forwards the parsed JSON payload to the handler", async () => {
+  const webhookSecret = "test-instantly-webhook-secret";
+
+  beforeEach(() => {
+    process.env.INSTANTLY_WEBHOOK_SECRET = webhookSecret;
+  });
+
+  afterEach(() => {
+    delete process.env.INSTANTLY_WEBHOOK_SECRET;
+  });
+
+  it("rejects requests without the webhook secret", async () => {
     const res = await app.request("/api/webhooks/instantly", {
       method: "POST",
       headers: { "content-type": "application/json" },
+      body: JSON.stringify({ event: "email_opened", email: "a@b.com" }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("forwards an authenticated parsed JSON payload to the handler", async () => {
+    const res = await app.request("/api/webhooks/instantly", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-webhook-secret": webhookSecret,
+      },
       body: JSON.stringify({ event: "email_opened", email: "a@b.com" }),
     });
     expect(res.status).toBe(200);
     const { handleInstantlyWebhook } =
       await import("../server/webhooks/instantly");
     const args = (handleInstantlyWebhook as any).mock.calls.at(-1);
-    expect(args[1]).toEqual({ event: "email_opened", email: "a@b.com" });
+    expect(args[0]).toEqual({ event: "email_opened", email: "a@b.com" });
   });
 });
 

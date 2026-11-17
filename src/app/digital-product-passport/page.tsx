@@ -208,7 +208,7 @@ export default function DPPPage() {
                 </div>
                 {simStep === 4 && (
                   <div className="px-4 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                    <CheckCircle className="w-3 h-3" /> Compliance Verified
+                    <CheckCircle className="w-3 h-3" /> Simulation Complete
                   </div>
                 )}
               </div>

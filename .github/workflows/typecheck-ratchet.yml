@@ -4,18 +4,14 @@
 # .github/typecheck-baseline.json. See scripts/typecheck-ratchet.mjs.
 name: Typecheck ratchet
 
+# CircleCI carries the mandatory automatic checks; use manual diagnostics
+# when investigating failures, without doubling the self-hosted WSL load.
 on:
   pull_request:
-    # GB-26 fix 3: skip PRs that touch ONLY these paths. Kept narrow on
-    # purpose: docs/** is NOT ignored because product code renders and
-    # validates it (workers/authichain-com docs pages, identity validators,
-    # src/lib/authentic-economy.ts). Pushes to main are never filtered.
-    paths-ignore:
-      - "*.md"
-      - "**/CHANGELOG.md"
-      - "docs/archive/**"
+    branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   # PM ruling Oct 24: CI-only per-workflow group, cancel stale runs so a
@@ -28,6 +24,7 @@ permissions:
   contents: read
 jobs:
   ratchet:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
     name: Typecheck ratchet
     # Zac, Oct 23 9:30 AM ET: use wsl-zac-arm64. Public repo: never run fork PRs on it.
     runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
@@ -49,12 +46,14 @@ jobs:
         run: bash scripts/ci/use-runner-pnpm.sh
 
       - name: Install pnpm
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
 
       - name: Setup Node.js
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -62,6 +61,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: pnpm install --frozen-lockfile
 
       # tsconfig.worker.json can need ~5 GB of heap and, on a busy runner, minutes.
