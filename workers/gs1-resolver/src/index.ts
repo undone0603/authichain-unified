@@ -1003,6 +1003,15 @@ async function serialTakenOnGtin(
   return Boolean(row);
 }
 
+async function certIdTaken(env: Env, certId: string): Promise<boolean> {
+  const row = await env.DB.prepare(
+    "SELECT lookup_key FROM seals WHERE cert_id = ?1 COLLATE NOCASE LIMIT 1"
+  )
+    .bind(certId)
+    .first<{ lookup_key: string }>();
+  return Boolean(row);
+}
+
 /** Register a seal. Requires ISSUE_SECRET; refuses outright if unset. */
 async function handleIssue(request: Request, env: Env): Promise<Response> {
   if (!env.ISSUE_SECRET) {
@@ -1071,6 +1080,13 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
     (await serialTakenOnGtin(env, fields.gtin, serial))
   ) {
     return json({ error: "serial_collision", gtin: fields.gtin, serial }, 409);
+  }
+
+  // Generated serials change lookup_key from cert:{id} to gtin:ser:{serial}.
+  // Without this check a retry of the same certId would insert a second row
+  // and loadSeal would treat /cert/{id} as ambiguous (404).
+  if (!serialSupplied && (await certIdTaken(env, certId))) {
+    return json({ error: "already_issued", certId }, 409);
   }
 
   const key = lookupKey(fields);

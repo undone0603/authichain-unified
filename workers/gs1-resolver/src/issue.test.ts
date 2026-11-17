@@ -36,6 +36,13 @@ function fakeDb() {
               ) ?? null
             );
           }
+          if (/WHERE cert_id = \?1/i.test(sql)) {
+            const certId = String(values[0]).toLowerCase();
+            return (
+              seals.find(row => String(row.cert_id).toLowerCase() === certId) ??
+              null
+            );
+          }
           if (/FROM seals WHERE lookup_key/i.test(sql)) {
             return seals.find(row => row.lookup_key === values[0]) ?? null;
           }
@@ -222,6 +229,33 @@ test("caller-supplied serial on the same GTIN is rejected with 409", async () =>
   });
   assert.equal(otherGtin.status, 201);
   assert.equal(db.seals.length, 2);
+});
+
+test("retry with the same certId and a generated serial is 409; /cert still resolves", async () => {
+  const db = fakeDb();
+  const runtime = env(db);
+  const first = await issue(runtime, { certId: "AC-RETRY", gtin: GTIN });
+  assert.equal(first.status, 201);
+  const firstBody = await first.json();
+
+  const retry = await issue(runtime, { certId: "ac-retry", gtin: GTIN });
+  assert.equal(retry.status, 409);
+  assert.deepEqual(await retry.json(), {
+    error: "already_issued",
+    certId: "ac-retry",
+  });
+  assert.equal(db.seals.length, 1);
+
+  const cert = await worker.fetch(
+    new Request(`${ORIGIN}/cert/AC-RETRY`, {
+      headers: { accept: "application/json" },
+    }),
+    runtime
+  );
+  assert.equal(cert.status, 200);
+  const certBody = await cert.json();
+  assert.equal(certBody.identifier.certId, "AC-RETRY");
+  assert.equal(certBody.identifier.serial, firstBody.serial);
 });
 
 test("POST /issue is 403 without a valid ISSUE_SECRET", async () => {
