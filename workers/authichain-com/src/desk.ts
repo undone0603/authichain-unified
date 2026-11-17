@@ -78,7 +78,7 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
     surface: "Public catalogue",
     state: "live",
     detail:
-      "Passport $49, Farm $149/mo, DPP $299, Starter $29, Creator $99. Free cap is 5 generations. Theater $499 and $1,499 are not listed (#1234).",
+      "Passport $49, DPP $299, Starter $29, Creator $99. Free cap is 5 generations. Theater $499 and $1,499 are not listed (#1234).",
   },
   {
     surface: "gov-mint",
@@ -345,7 +345,7 @@ function storyChapters(seal: DeskSeal): StoryChapter[] {
       {
         phase: "Sealing",
         title: "Passport on the jar",
-        body: "Sealed 12 Sep 2026. Farm is $149 a month. A single cultivar passport is $49. This page is the sample story for that jar.",
+        body: "Sealed 12 Sep 2026. A single cultivar passport is $49. This page is the sample story for that jar.",
       },
     ],
     "GC-MIA-DLA-0005": [
@@ -718,7 +718,7 @@ function hubs(): string {
      <h1>Seed hubs live on each apex.</h1>
      <p class="muted">W3C Render Method, Confidence Method, and Data Model 2.1 are research pages. This protocol does not implement them yet.</p>
      <div class="grid g2" style="margin-top:1.5rem">${cards}</div>
-     <p class="muted" style="margin-top:1.5rem">Checkout stays DPP $299 / Passport $49 / Farm $149/mo / QRON packs / GovChain onboard.</p>`
+     <p class="muted" style="margin-top:1.5rem">Checkout stays DPP $299 / Passport $49 / QRON packs / GovChain onboard.</p>`
   );
 }
 
