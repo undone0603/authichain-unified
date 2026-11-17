@@ -112,6 +112,9 @@ describe("tryHandleGatedCheckout — GET/HEAD never call Stripe", () => {
     expect(html).toContain('href="/checkout/starter"');
     expect(html).not.toContain("strainchain_farm");
     expect(html).not.toContain("Farm Plan");
+    expect(html).not.toContain("theater_1");
+    expect(html).not.toContain("theater_3");
+    expect(html).not.toContain("gov_provenance_pilot");
     expect(html).toContain("noindex");
     expect(fetchImpl).not.toHaveBeenCalled();
   });
@@ -206,8 +209,8 @@ describe("tryHandleGatedCheckout — POST", () => {
   it("creates one session with customer_email and catalogue price, then 303s to Stripe", async () => {
     const fetchImpl = stripeOk();
     const res = await tryHandleGatedCheckout(
-      post("/checkout/strainchain_farm", {
-        email: "grower@farm.com",
+      post("/checkout/starter", {
+        email: "buyer@brand.com",
         utm_source: "mail",
         visit_id: "v_1",
         checkout_key: "12345678-1234-4234-8234-123456789abc",
@@ -226,16 +229,13 @@ describe("tryHandleGatedCheckout — POST", () => {
     ];
     expect(url).toBe("https://api.stripe.com/v1/checkout/sessions");
     const body = new URLSearchParams(String(init.body));
-    expect(body.get("mode")).toBe("subscription");
+    expect(body.get("mode")).toBe("payment");
     expect(body.get("line_items[0][price]")).toBe(
-      planById("strainchain_farm")!.stripe_price_id
+      planById("starter")!.stripe_price_id
     );
-    expect(body.get("customer_email")).toBe("grower@farm.com");
-    expect(body.get("metadata[plan]")).toBe("strainchain_farm");
+    expect(body.get("customer_email")).toBe("buyer@brand.com");
+    expect(body.get("metadata[plan]")).toBe("starter");
     expect(body.get("metadata[checkout_gate]")).toBe("confirm_post");
-    expect(body.get("subscription_data[metadata][plan]")).toBe(
-      "strainchain_farm"
-    );
     expect(body.get("metadata[utm_source]")).toBe("mail");
     expect(body.get("client_reference_id")).toBe("v_1");
     expect(body.get("after_expiration[recovery][enabled]")).toBe("true");
