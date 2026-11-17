@@ -1,5 +1,5 @@
-import { test } from "node:test";
-import assert from "node:assert/strict";
+// @vitest-environment node
+import { describe, expect, it } from "vitest";
 import worker from "./index.ts";
 
 const KEY = "test-anchor-key";
@@ -22,7 +22,14 @@ function fakeStore() {
   };
 }
 
-function anchor(env: any, headers: Record<string, string> = {}) {
+function certPuts(store: ReturnType<typeof fakeStore>) {
+  return store.puts.filter(([key]) => key.startsWith("cert:"));
+}
+
+function anchor(
+  env: Record<string, unknown>,
+  headers: Record<string, string> = {}
+) {
   return worker.fetch(
     new Request("https://api.authichain.com/api/v1/anchor", {
       method: "POST",
@@ -33,46 +40,53 @@ function anchor(env: any, headers: Record<string, string> = {}) {
   );
 }
 
-test("anchor rejects a request with no key and stores nothing", async () => {
-  const store = fakeStore();
-  const res = await anchor({ ANCHOR_API_KEY: KEY, RATE_LIMITS: store });
-  assert.equal(res.status, 401);
-  assert.equal(store.puts.length, 0);
-});
+describe("POST /api/v1/anchor auth", () => {
+  it("rejects a request with no key and stores nothing", async () => {
+    const store = fakeStore();
+    const res = await anchor({ RATE_LIMITS: store });
+    expect(res.status).toBe(401);
+    expect(certPuts(store)).toEqual([]);
+  });
 
-test("anchor rejects a wrong key, including one containing demo", async () => {
-  const store = fakeStore();
-  for (const key of ["wrong", "demo", `${KEY}-demo`]) {
+  it("rejects an empty X-API-Key with 401 and stores nothing", async () => {
+    const store = fakeStore();
+    const res = await anchor({ RATE_LIMITS: store }, { "X-API-Key": "" });
+    expect(res.status).toBe(401);
+    expect(certPuts(store)).toEqual([]);
+  });
+
+  it("rejects demo-tier keys with 403 and stores no certificate", async () => {
+    const store = fakeStore();
+    for (const key of ["demo", `${KEY}-demo`]) {
+      const res = await anchor({ RATE_LIMITS: store }, { "X-API-Key": key });
+      expect(res.status).toBe(403);
+    }
+    expect(certPuts(store)).toEqual([]);
+  });
+
+  it("does not report success when storage is missing", async () => {
+    const res = await anchor({}, { "X-API-Key": KEY });
+    expect(res.status).toBe(503);
+  });
+
+  it("stores the record from X-API-Key and does not claim it was anchored", async () => {
+    const store = fakeStore();
+    const res = await anchor({ RATE_LIMITS: store }, { "X-API-Key": KEY });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as {
+      certificate: { anchored: boolean };
+    };
+    expect(body.certificate.anchored).toBe(false);
+    expect(certPuts(store).map(([key]) => key)).toEqual(["cert:AC-AAAAAAAA"]);
+  });
+
+  it("accepts Authorization Bearer the same way sibling v1 routes do", async () => {
+    const store = fakeStore();
     const res = await anchor(
-      { ANCHOR_API_KEY: KEY, RATE_LIMITS: store },
-      { "X-API-Key": key }
+      { RATE_LIMITS: store },
+      { Authorization: `Bearer ${KEY}` }
     );
-    assert.equal(res.status, 401, key);
-  }
-  assert.equal(store.puts.length, 0);
-});
-
-test("anchor fails closed when ANCHOR_API_KEY is unset", async () => {
-  const store = fakeStore();
-  const res = await anchor({ RATE_LIMITS: store }, { "X-API-Key": "" });
-  assert.equal(res.status, 401);
-  assert.equal(store.puts.length, 0);
-});
-
-test("anchor does not report success when storage is missing", async () => {
-  const res = await anchor({ ANCHOR_API_KEY: KEY }, { "X-API-Key": KEY });
-  assert.equal(res.status, 503);
-});
-
-test("anchor stores the record and does not claim it was anchored", async () => {
-  const store = fakeStore();
-  const res = await anchor(
-    { ANCHOR_API_KEY: KEY, RATE_LIMITS: store },
-    { Authorization: `Bearer ${KEY}` }
-  );
-  assert.equal(res.status, 201);
-  const body: any = await res.json();
-  assert.equal(body.certificate.anchored, false);
-  assert.equal(store.puts.length, 1);
-  assert.equal(store.puts[0][0], "cert:AC-AAAAAAAA");
+    expect(res.status).toBe(201);
+    expect(certPuts(store).map(([key]) => key)).toEqual(["cert:AC-AAAAAAAA"]);
+  });
 });

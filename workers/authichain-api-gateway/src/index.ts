@@ -44,62 +44,7 @@ export default {
       return handleV2(request, path, url, env, cors);
     }
 
-    // Certificate records need ANCHOR_API_KEY; fails closed when it is unset.
-    if (path === "/api/v1/anchor" && request.method === "POST") {
-      const anchorKey =
-        request.headers.get("X-API-Key") ||
-        request.headers.get("Authorization")?.replace("Bearer ", "") ||
-        "";
-      if (
-        !env.ANCHOR_API_KEY ||
-        !timingSafeEqual(anchorKey, env.ANCHOR_API_KEY)
-      ) {
-        return json({ error: "Valid API key required." }, cors, 401);
-      }
-      if (!env.RATE_LIMITS) {
-        return json({ error: "Storage unavailable" }, cors, 503);
-      }
-      const body: any = await request.json().catch(() => ({}));
-      const { name, brand, description, sku, industry, hash } = body;
-      if (!name || !brand || !hash) {
-        return json({ error: "name, brand, and hash are required" }, cors, 400);
-      }
-      if (!/^[0-9a-f]{64}$/i.test(hash)) {
-        return json(
-          { error: "hash must be a 64-character hex SHA-256 digest" },
-          cors,
-          400
-        );
-      }
-      const id = "AC-" + hash.slice(0, 8).toUpperCase();
-      const ts = new Date().toISOString();
-      const cert = {
-        id,
-        name: String(name).slice(0, 200),
-        brand: String(brand).slice(0, 100),
-        description: String(description || "").slice(0, 2000),
-        sku: String(sku || "").slice(0, 100),
-        industry: String(industry || "general").slice(0, 50),
-        hash: hash.toLowerCase(),
-        ts,
-        anchored: false,
-        version: 1,
-      };
-      await env.RATE_LIMITS.put("cert:" + id, JSON.stringify(cert));
-      return json(
-        {
-          success: true,
-          id,
-          hash: hash.toLowerCase(),
-          ts,
-          certUrl: "https://authichain.com/cert/" + id,
-          certificate: cert,
-        },
-        cors,
-        201
-      );
-    }
-
+    // Certificate lookup is public. Writes go through the v1 API key gate below.
     if (path.startsWith("/api/v1/cert/") && request.method === "GET") {
       const certId = path.slice("/api/v1/cert/".length).toUpperCase();
       if (!certId || !/^AC-[0-9A-F]{8}$/.test(certId)) {
@@ -157,6 +102,64 @@ export default {
 
     // Route handling
     try {
+      if (path === "/api/v1/anchor" && request.method === "POST") {
+        if (keyData.plan === "free")
+          return json(
+            {
+              error: "Anchoring requires Starter plan or above",
+              upgrade: "https://authichain.com/pricing",
+            },
+            cors,
+            403
+          );
+        if (!env.RATE_LIMITS) {
+          return json({ error: "Storage unavailable" }, cors, 503);
+        }
+        const body: any = await request.json().catch(() => ({}));
+        const { name, brand, description, sku, industry, hash } = body;
+        if (!name || !brand || !hash) {
+          return json(
+            { error: "name, brand, and hash are required" },
+            cors,
+            400
+          );
+        }
+        if (!/^[0-9a-f]{64}$/i.test(hash)) {
+          return json(
+            { error: "hash must be a 64-character hex SHA-256 digest" },
+            cors,
+            400
+          );
+        }
+        const id = "AC-" + hash.slice(0, 8).toUpperCase();
+        const ts = new Date().toISOString();
+        const cert = {
+          id,
+          name: String(name).slice(0, 200),
+          brand: String(brand).slice(0, 100),
+          description: String(description || "").slice(0, 2000),
+          sku: String(sku || "").slice(0, 100),
+          industry: String(industry || "general").slice(0, 50),
+          hash: hash.toLowerCase(),
+          ts,
+          anchored: false,
+          version: 1,
+        };
+        await env.RATE_LIMITS.put("cert:" + id, JSON.stringify(cert));
+        return json(
+          {
+            success: true,
+            id,
+            hash: hash.toLowerCase(),
+            ts,
+            certUrl: "https://authichain.com/cert/" + id,
+            certificate: cert,
+          },
+          cors,
+          201
+        );
+      }
+
       if (path === "/api/v1/classify" && request.method === "POST") {
         const body: any = await request.json();
         return json(
