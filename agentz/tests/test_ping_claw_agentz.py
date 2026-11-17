@@ -137,6 +137,10 @@ def test_orchestration_workflow_wires_live_hosts_and_dry_run():
     assert "ws://localhost" not in yml
     assert "Does not thaw content-publish" in yml
     assert 'echo "dry_run=true" >> "$GITHUB_OUTPUT"' in yml
+    assert "CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}" in yml
+    assert "CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}" in yml
+    assert "Missing CF_ACCESS_CLIENT_ID or CF_ACCESS_CLIENT_SECRET" in yml
+    assert "Do not add an Access bypass" in yml
 
 
 def test_scheduled_dry_run_is_fail_closed():
@@ -171,3 +175,108 @@ def test_orchestration_workflow_does_not_use_env_context_for_urls():
     # Public hosts stay literals (or step-level env / run), never env context.
     assert yml.count("CLAW_URL: https://claw.authichain.com") >= 1
     assert yml.count("AGENTZ_API_URL: https://agentz.authichain.com") >= 1
+
+
+def _clear_access_env(monkeypatch):
+    for name in (
+        "CF_ACCESS_CLIENT_ID",
+        "CF_ACCESS_CLIENT_SECRET",
+        "CLOUDFLARE_ACCESS_CLIENT_ID",
+        "CLOUDFLARE_ACCESS_CLIENT_SECRET",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+
+def test_require_access_headers_fails_when_missing(monkeypatch):
+    _clear_access_env(monkeypatch)
+    with pytest.raises(SystemExit, match="missing Cloudflare Access service-token secrets"):
+        ping.require_access_headers()
+    monkeypatch.setenv("CF_ACCESS_CLIENT_ID", "id-only")
+    with pytest.raises(SystemExit, match="missing Cloudflare Access service-token secrets"):
+        ping.require_access_headers()
+    monkeypatch.setenv("CF_ACCESS_CLIENT_SECRET", "secret")
+    assert ping.require_access_headers()["CF-Access-Client-Id"] == "id-only"
+
+
+def test_request_json_fails_closed_without_access_secrets(monkeypatch):
+    _clear_access_env(monkeypatch)
+
+    def no_network(*args, **kwargs):
+        raise AssertionError("must not call the network when Access secrets are missing")
+
+    monkeypatch.setattr(ping, "_OPENER", type("O", (), {"open": staticmethod(no_network)})())
+    with pytest.raises(SystemExit, match="missing Cloudflare Access service-token secrets"):
+        ping.request_json("GET", "https://agentz.authichain.com/health")
+
+
+class _FakeResp:
+    def __init__(self, status, body, headers=None):
+        self.status = status
+        self._body = body.encode("utf-8")
+        self.headers = headers or {}
+
+    def read(self):
+        return self._body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
+def test_request_json_fails_on_html_not_json(monkeypatch):
+    _clear_access_env(monkeypatch)
+    monkeypatch.setenv("CF_ACCESS_CLIENT_ID", "id")
+    monkeypatch.setenv("CF_ACCESS_CLIENT_SECRET", "secret")
+    html = "<!DOCTYPE html>\n<html lang=\"en\">\n<title>AgentZ Sovereign Terminal</title>"
+
+    def open_html(req, timeout=None):
+        return _FakeResp(200, html)
+
+    monkeypatch.setattr(ping, "_OPENER", type("O", (), {"open": staticmethod(open_html)})())
+    with pytest.raises(SystemExit, match="body is HTML, not JSON"):
+        ping.request_json("GET", "https://agentz.authichain.com/health")
+
+
+def test_request_json_fails_on_access_login_redirect(monkeypatch):
+    import urllib.error
+    from email.message import EmailMessage
+
+    _clear_access_env(monkeypatch)
+    monkeypatch.setenv("CF_ACCESS_CLIENT_ID", "id")
+    monkeypatch.setenv("CF_ACCESS_CLIENT_SECRET", "secret")
+
+    def open_redirect(req, timeout=None):
+        hdrs = EmailMessage()
+        hdrs["Location"] = "https://example.cloudflareaccess.com/cdn-cgi/access/login"
+        raise urllib.error.HTTPError(
+            "https://agentz.authichain.com/health",
+            302,
+            "Found",
+            hdrs,
+            __import__("io").BytesIO(b""),
+        )
+
+    monkeypatch.setattr(ping, "_OPENER", type("O", (), {"open": staticmethod(open_redirect)})())
+    with pytest.raises(SystemExit, match="behind Cloudflare Access"):
+        ping.request_json("GET", "https://agentz.authichain.com/health")
+
+
+def test_request_json_accepts_json_health(monkeypatch):
+    _clear_access_env(monkeypatch)
+    monkeypatch.setenv("CF_ACCESS_CLIENT_ID", "id")
+    monkeypatch.setenv("CF_ACCESS_CLIENT_SECRET", "secret")
+    sent = {}
+
+    def open_json(req, timeout=None):
+        sent["headers"] = dict(req.header_items())
+        return _FakeResp(200, '{"status": "sovereign", "network": "Polygon"}')
+
+    monkeypatch.setattr(ping, "_OPENER", type("O", (), {"open": staticmethod(open_json)})())
+    status, body = ping.request_json("GET", "https://agentz.authichain.com/health")
+    assert status == 200
+    assert body["status"] == "sovereign"
+    headers = {k.lower(): v for k, v in sent["headers"].items()}
+    assert headers["cf-access-client-id"] == "id"
+    assert headers["cf-access-client-secret"] == "secret"

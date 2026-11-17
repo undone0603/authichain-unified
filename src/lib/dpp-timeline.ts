@@ -75,6 +75,8 @@ export function daysUntil(iso: string, now: Date): number {
 }
 
 export function milestoneStatus(m: Milestone, now: Date): MilestoneStatus {
+  // An indicative working-plan date is never an enacted legal obligation.
+  if (m.indicative) return 'upcoming';
   const days = daysUntil(m.date, now);
   if (days <= 0) return 'in-force';
   return monthsUntil(m.date, now) < IMMINENT_MONTHS ? 'imminent' : 'upcoming';
@@ -109,6 +111,7 @@ export function formatMilestoneDate(m: Milestone): string {
  * the page stops advertising a deadline it has already crossed.
  */
 export function countdownLabel(m: Milestone, now: Date): string {
+  if (m.indicative) return 'Indicative timing only — not adopted law';
   const status = milestoneStatus(m, now);
   if (status === 'in-force') return `In force since ${formatMilestoneDate(m)}`;
 
@@ -122,13 +125,13 @@ export function countdownLabel(m: Milestone, now: Date): string {
   return years === 1 ? 'Over a year out' : `About ${years} years out`;
 }
 
-/** The next milestone still ahead — what the page should lead its urgency with. */
+/** The next enacted/dated obligation still ahead; do not count indicative acts as deadlines. */
 export function nextDeadline(now: Date): Milestone | null {
-  return listMilestones().find((m) => milestoneStatus(m, now) !== 'in-force') ?? null;
+  return listMilestones().find((m) => !m.indicative && milestoneStatus(m, now) !== 'in-force') ?? null;
 }
 
-/** The most recent milestone already in force, for "registry is live" messaging. */
+/** The most recent enacted milestone in force; exclude indicative future projections. */
 export function mostRecentInForce(now: Date): Milestone | null {
-  const past = listMilestones().filter((m) => milestoneStatus(m, now) === 'in-force');
+  const past = listMilestones().filter((m) => !m.indicative && milestoneStatus(m, now) === 'in-force');
   return past.length ? past[past.length - 1] : null;
 }

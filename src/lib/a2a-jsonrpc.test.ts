@@ -120,6 +120,42 @@ describe("A2A JSON-RPC", () => {
     expect((bad.body as { error: { code: number } }).error.code).toBe(-32700);
   });
 
+  it("default JSON-RPC store never leaks task history across calls", () => {
+    const created = handleA2aJsonRpc(
+      call("SendMessage", { message: { parts: [{ text: "private-agent-payload" }] } }),
+      { now: NOW }
+    );
+    const taskId = (created.body as {
+      result: { task: { id: string } }
+    }).result.task.id;
+
+    // Neither call supplies a trusted tenant-scoped persistent store.
+    const listing = handleA2aJsonRpc(call("ListTasks", {}), { now: NOW });
+    const listed = (listing.body as { result: { tasks: unknown[]; totalSize: number } }).result;
+    expect(listed.totalSize).toBe(0);
+    expect(listed.tasks).toEqual([]);
+    expect(JSON.stringify(listing)).not.toContain("private-agent-payload");
+
+    const read = handleA2aJsonRpc(call("GetTask", { id: taskId }), { now: NOW });
+    expect((read.body as { error: { code: number } }).error.code).toBe(-32001);
+  });
+
+  it("default JSON-RPC store is shared only within the current RPC batch", () => {
+    const batch = JSON.stringify([
+      { jsonrpc: "2.0", id: 1, method: "SendMessage",
+        params: { message: { parts: [{ text: "ephemeral-batch-only" }] } } },
+      { jsonrpc: "2.0", id: 2, method: "ListTasks", params: {} },
+    ]);
+    const response = handleA2aJsonRpc(batch, { now: NOW });
+    const replies = response.body as Array<{
+      result: { task?: { id: string }; tasks?: unknown[] }
+    }>;
+    expect(replies[0].result.task?.id).toBeTruthy();
+    expect(replies[1].result.tasks).toHaveLength(1);
+    const after = handleA2aJsonRpc(call("ListTasks", {}), { now: NOW });
+    expect((after.body as { result: { totalSize: number } }).result.totalSize).toBe(0);
+  });
+
   it("CancelTask on a completed task is not cancelable", () => {
     const store = memoryA2aStore();
     const sent = handleA2aJsonRpc(

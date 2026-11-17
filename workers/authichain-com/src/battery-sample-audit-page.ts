@@ -188,8 +188,7 @@ export function renderSampleAuditPage(now: Date = new Date()): string {
   const plan = planById("dpp_readiness");
   const price = plan?.price ?? 299;
   const a = buildSampleAudit(now);
-  const title =
-    "Fictional e-bike battery passport walkthrough | AuthiChain";
+  const title = "Fictional e-bike battery passport walkthrough | AuthiChain";
   const description = `A fictional 48 V e-bike battery walked through the free figure check and Annex XIII gap table. The $${price} checkout opens an AuthiChain workspace. This page is not a document that checkout sends.`;
   const deliverables = PAGE_DELIVERABLES.map(f => `<li>${esc(f)}</li>`).join(
     ""
@@ -295,7 +294,7 @@ export function renderSampleAuditPage(now: Date = new Date()): string {
       <p class="sa-sample">${esc(SAMPLE_LABEL)}</p>
       <h1>A fictional walkthrough of one e-bike battery line.</h1>
       <p class="estate-lede hero-sub">We ran the free figure check and gap table on a fictional 48 V e-bike pack from a brand that sells into the EU through a distributor. The $${price} checkout opens an AuthiChain workspace. It does not email this page to you as a written assessment.</p>
-      <div class="estate-actions hero-cta"><a class="btn btn-primary" href="#get-started">Get ready — $${price}</a> <a class="btn btn-outline" href="${BATTERY_PASSPORT_PATH}#gap-map">Try the free gap map first</a></div>
+      <div class="estate-actions hero-cta"><a class="btn btn-primary" href="#get-started">Get ready — $${price}</a> <a class="btn btn-outline" href="${BATTERY_PASSPORT_PATH}#gap-map">Try the free gap map first</a> <a class="btn btn-outline" href="${BATTERY_PASSPORT_PATH}/sample">See the signed fictional sample</a></div>
     </div>
   </header>
 

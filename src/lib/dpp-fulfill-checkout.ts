@@ -10,17 +10,18 @@ import { provisionPurchase } from "./provisioning";
 import { renderBillingEmail } from "./billing-emails";
 import { getBrandIdFromMetadata } from "./brand-billing";
 import { sendEmail } from "./email";
-import {
-  dppActivateUrl,
-  isDppDemoSession,
-  isDppOffer,
-  recordDppLoopEventOnce,
-} from "./dpp-loop";
+import { dppActivateUrl, recordDppLoopEventOnce } from "./dpp-loop";
 import {
   beginProvisionContinuity,
   finishProvisionContinuity,
+  provisionContinuityProfileId,
 } from "./founder-exit/supabase-log";
 import { markRetryableFulfillment } from "./retryable-fulfillment";
+import {
+  dppGrantDecision,
+  dppInvalidSettlementIsPermanent,
+  type DppProofSession,
+} from "./dpp-payment-eligibility";
 import { emitTrustEvent } from "../../shared/trust-events";
 
 type SupabaseLike = {
@@ -28,16 +29,10 @@ type SupabaseLike = {
   from: (table: string) => any;
 };
 
-export type DppCheckoutSessionLike = {
-  id: string;
-  mode?: string | null;
-  metadata?: Record<string, string> | null;
-  client_reference_id?: string | null;
+export type DppCheckoutSessionLike = DppProofSession & {
   customer_email?: string | null;
   customer_details?: { email?: string | null } | null;
   customer?: string | { id: string } | null;
-  subscription?: string | { id: string } | null;
-  amount_total?: number | null;
 };
 
 function toId(
@@ -47,6 +42,61 @@ function toId(
   return typeof value === "string" ? value : value.id;
 }
 
+async function findGrantedProfileId(
+  supabase: SupabaseLike,
+  sessionId: string
+): Promise<string | null> {
+  const recordedProfileId = await provisionContinuityProfileId(
+    supabase,
+    sessionId
+  );
+  if (recordedProfileId) return recordedProfileId;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("last_grant_session_id", sessionId)
+    .maybeSingle();
+  if (error) throw new Error("DPP grant recovery profile lookup failed");
+  return typeof data?.id === "string" ? data.id : null;
+}
+
+async function recordRecoveredProvisionedEvent(
+  supabase: SupabaseLike,
+  input: {
+    visitId: string | null;
+    source: string;
+    email: string;
+    profileId: string | null;
+    sessionId: string;
+    plan: string;
+    demo: boolean;
+    allowNoIdentityDemo?: boolean;
+  }
+): Promise<void> {
+  if (!input.visitId) return;
+  if (!input.profileId && !(input.demo && input.allowNoIdentityDemo)) {
+    throw new Error("DPP grant recovery profile not found");
+  }
+
+  await recordDppLoopEventOnce(supabase, {
+    visitId: input.visitId,
+    stage: "provisioned",
+    source: input.source,
+    email: input.email || null,
+    profileId: input.profileId ?? undefined,
+    stripeSessionId: input.sessionId,
+    dedupeKey: input.sessionId,
+    metadata: {
+      plan: input.plan,
+      ...(input.profileId
+        ? { recovered: true }
+        : { skip_reason: "no_identity" }),
+      ...(input.demo ? { is_demo: true } : {}),
+    },
+  });
+}
+
 export async function fulfillDppPaidSession(
   supabase: SupabaseLike,
   session: DppCheckoutSessionLike,
@@ -54,12 +104,23 @@ export async function fulfillDppPaidSession(
 ): Promise<DppFulfillResult> {
   try {
     const result = await fulfillDppPaidSessionOnce(supabase, session, priceId);
+    if (result.refused) {
+      emitTrustEvent("fulfillment.failed", {
+        session_id: session.id,
+        plan: session.metadata?.plan || "dpp_readiness",
+        error_class: "IneligibleSettlement",
+        outcome: "ineligible_settlement",
+      });
+      return result;
+    }
     if (result.handled) {
       emitTrustEvent("fulfillment.completed", {
         session_id: session.id,
         profile_id: result.profileId,
         plan: session.metadata?.plan || "dpp_readiness",
-        outcome: `activation_email_${result.activationEmail}`,
+        outcome: result.alreadyFulfilled
+          ? "already_fulfilled"
+          : `activation_email_${result.activationEmail}`,
       });
     }
     return result;
@@ -79,20 +140,35 @@ async function fulfillDppPaidSessionOnce(
   session: DppCheckoutSessionLike,
   priceId?: string | null
 ): Promise<DppFulfillResult> {
+  // Legacy priceId is a routing hint, never Stripe-paid product evidence.
+  void priceId;
   const md = session.metadata || {};
-  const linePriceId =
-    (typeof priceId === "string" && priceId) ||
-    (typeof md.stripe_price_id === "string" ? md.stripe_price_id : null);
-  if (!isDppOffer(md, linePriceId)) {
+  const decision = dppGrantDecision(session);
+  if (decision === "not_dpp" || decision === "recurring") {
     return { handled: false, profileId: null, activationEmail: "skipped" };
   }
-
-  const subscriptionId = toId(session.subscription);
-  if (session.mode === "subscription" || subscriptionId) {
-    console.error(
-      `[dpp-fulfill] refusing DPP grant for recurring checkout: session=${session.id} mode=${session.mode ?? "unknown"}`
-    );
+  if (decision === "unverified" && session.payment_status !== "paid") {
+    // Async payment can complete before funds arrive.
     return { handled: false, profileId: null, activationEmail: "skipped" };
+  }
+  if (
+    decision === "invalid_product" &&
+    dppInvalidSettlementIsPermanent(session)
+  ) {
+    // The line item is already the DPP price. A discount or an unexplained
+    // total will not change on Stripe's next delivery, so do not grant and
+    // do not ask Stripe to retry.
+    return {
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    };
+  }
+  if (decision !== "paid" && decision !== "authorized_smoke") {
+    throw markRetryableFulfillment(
+      new Error("DPP grant blocked: unverified completion or Stripe product")
+    );
   }
 
   const visitId =
@@ -106,7 +182,7 @@ async function fulfillDppPaidSessionOnce(
     .trim();
   const brand = getBrandIdFromMetadata(md);
   const plan = md.plan || "dpp_readiness";
-  const demo = isDppDemoSession(md);
+  const demo = decision === "authorized_smoke";
   emitTrustEvent("fulfillment.started", { session_id: session.id, plan, demo });
   const loopMeta = {
     plan,
@@ -127,8 +203,9 @@ async function fulfillDppPaidSessionOnce(
     });
   }
 
+  let continuityState: Awaited<ReturnType<typeof beginProvisionContinuity>>;
   try {
-    await beginProvisionContinuity(supabase, {
+    continuityState = await beginProvisionContinuity(supabase, {
       sessionId: session.id,
       amountCents: session.amount_total ?? null,
       isDemo: demo,
@@ -136,6 +213,66 @@ async function fulfillDppPaidSessionOnce(
     });
   } catch (err) {
     throw markRetryableFulfillment(err);
+  }
+
+  if (continuityState === "already_succeeded") {
+    let profileId: string | null = null;
+    try {
+      if (visitId) {
+        profileId = await findGrantedProfileId(supabase, session.id);
+        await recordRecoveredProvisionedEvent(supabase, {
+          visitId: String(visitId),
+          source: md.source || "direct",
+          email,
+          profileId,
+          sessionId: session.id,
+          plan,
+          demo,
+          allowNoIdentityDemo: true,
+        });
+      }
+    } catch (err) {
+      throw markRetryableFulfillment(err);
+    }
+    return {
+      handled: true,
+      profileId,
+      activationEmail: "skipped",
+      alreadyFulfilled: true,
+    };
+  }
+  if (continuityState === "grant_recorded") {
+    let profileId: string | null;
+    try {
+      profileId = await findGrantedProfileId(supabase, session.id);
+      if (!profileId) throw new Error("DPP grant recovery profile not found");
+      await finishProvisionContinuity(supabase, {
+        sessionId: session.id,
+        amountCents: session.amount_total ?? null,
+        isDemo: demo,
+        plan,
+        grantAlreadyPresent: true,
+        grantApplied: true,
+        profileId,
+      });
+      await recordRecoveredProvisionedEvent(supabase, {
+        visitId: visitId ? String(visitId) : null,
+        source: md.source || "direct",
+        email,
+        profileId,
+        sessionId: session.id,
+        plan,
+        demo,
+      });
+    } catch (err) {
+      throw markRetryableFulfillment(err);
+    }
+    return {
+      handled: true,
+      profileId,
+      activationEmail: "skipped",
+      alreadyFulfilled: true,
+    };
   }
 
   const prov = await provisionPurchase(supabase, {
@@ -146,6 +283,7 @@ async function fulfillDppPaidSessionOnce(
     stripeCustomerId: toId(session.customer),
     stripeSubscriptionId: toId(session.subscription),
     sessionId: session.id,
+    atomicDppSessionGrant: true,
   });
 
   // A resolved profile id does not mean the entitlement write succeeded.
@@ -189,6 +327,8 @@ async function fulfillDppPaidSessionOnce(
       isDemo: demo,
       plan,
       grantAlreadyPresent: prov.skippedIdempotent === true,
+      grantApplied: Boolean(prov.profileId),
+      profileId: prov.profileId,
     });
   } catch (err) {
     throw markRetryableFulfillment(err);
@@ -287,6 +427,10 @@ export type DppFulfillResult = {
   profileId: string | null;
   /** Outcome of the activation email: skipped = not attempted (no email, demo, or not a DPP grant). */
   activationEmail: ActivationEmailStatus;
+  /** This session's durable continuity record proves fulfillment already ran. */
+  alreadyFulfilled?: boolean;
+  /** Permanent money refusal. Stripe must stop; nothing was granted. */
+  refused?: "ineligible_settlement";
 };
 
 const EMAIL_LIKE = /[^\s@<>"'(),;:]+@[^\s@<>"'(),;:]+\.[^\s@<>"'(),;:]+/g;

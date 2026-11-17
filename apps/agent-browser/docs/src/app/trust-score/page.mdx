@@ -1,0 +1,16 @@
+export const metadata = {
+  title: "Trust Score: Evidence Limits",
+  description: "Registry observations are not a verified numerical trust score or a certification guarantee.",
+  openGraph: { title: "Trust Score: Evidence Limits", description: "Registry observations are not a verified numerical trust score or a certification guarantee." },
+  twitter: { title: "Trust Score: Evidence Limits", description: "Registry observations are not a verified numerical trust score or a certification guarantee." },
+}
+
+# Trust Score: Evidence Limits
+
+Current main verification handlers return `trustScore: null` alongside registry lookup decisions. A registry match is not a calibrated probability of authenticity.
+
+This documentation does not publish a supported trust-score API, numerical formula, weighting system, confidence threshold, decay schedule, HMAC contract, or automated score-update service.
+
+Record the exact observation, source URL, retrieval time, and verification method. Keep missing evidence and unresolved properties explicitly unknown. Do not derive a numerical confidence or certification guarantee from page text, screenshots, logos, token metadata, or a blockchain reference alone.
+
+See [AuthiChain](https://authichain.com/) for current public product descriptions. New API or score claims require a reviewed implementation, tests, documentation, and a separate release gate.

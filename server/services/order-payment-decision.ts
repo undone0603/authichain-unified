@@ -1,7 +1,11 @@
 // Pure decision function for the service-order payment-completion webhook.
 // Given an existing order's state and a Stripe checkout session, decide
 // whether to transition the order's status to "paid" or ignore the event
-// (because the order is already paid, fulfilled, or cancelled).
+// (because the order is already paid, fulfilled, cancelled, or the paid
+// amount/currency does not match the expected order price).
+
+export const SERVICE_ORDER_AMOUNT_MISMATCH_REASON =
+  "Checkout amount/currency does not match expected order price";
 
 export type OrderPaymentDecision =
   | {
@@ -20,6 +24,8 @@ export type OrderPaymentDecision =
 export type OrderShape = {
   status: string;
   stripePaymentIntentId?: string | null;
+  amount?: string | number | null;
+  currency?: string | null;
 };
 
 export type SessionShape = {
@@ -39,9 +45,30 @@ function extractPaymentIntentId(session: SessionShape): string | null {
   return null;
 }
 
+/** Service orders store catalog cents (integer or numeric "19900.0000"). */
+export function expectedServiceOrderAmountCents(
+  amount: unknown
+): number | null {
+  if (typeof amount === "number") {
+    return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
+  }
+  if (typeof amount !== "string") return null;
+  const trimmed = amount.trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed);
+  if (!Number.isFinite(n) || n <= 0 || n !== Math.trunc(n)) return null;
+  const cents = Math.trunc(n);
+  return Number.isSafeInteger(cents) ? cents : null;
+}
+
+export function expectedServiceOrderCurrency(currency?: string | null): string {
+  const normalized = (currency ?? "usd").trim().toLowerCase();
+  return normalized || "usd";
+}
+
 export function decideOrderPaymentAction(
   order: OrderShape,
-  session: SessionShape,
+  session: SessionShape
 ): OrderPaymentDecision {
   if (order.status !== "pending") {
     return {
@@ -66,14 +93,20 @@ export function decideOrderPaymentAction(
   ) {
     return { action: "ignore", reason: "No positive checkout total" };
   }
-  // The service checkout is created in USD. Reject foreign-currency
-  // events rather than recording an unrelated amount as USD revenue.
-  if (session.currency?.toLowerCase() !== "usd") {
-    return { action: "ignore", reason: "Checkout currency is not USD" };
-  }
   const paymentIntentId = extractPaymentIntentId(session);
   if (!paymentIntentId) {
     return { action: "ignore", reason: "Missing PaymentIntent evidence" };
+  }
+
+  const expectedCents = expectedServiceOrderAmountCents(order.amount);
+  const expectedCurrency = expectedServiceOrderCurrency(order.currency);
+  const paidCurrency = session.currency?.trim().toLowerCase() ?? "";
+  if (
+    expectedCents == null ||
+    paidCurrency !== expectedCurrency ||
+    session.amount_total !== expectedCents
+  ) {
+    return { action: "ignore", reason: SERVICE_ORDER_AMOUNT_MISMATCH_REASON };
   }
 
   return {
@@ -81,7 +114,7 @@ export function decideOrderPaymentAction(
     updates: {
       status: "paid",
       stripePaymentIntentId: paymentIntentId,
-      paidAmountCents: session.amount_total as number,
+      paidAmountCents: expectedCents,
     },
   };
 }

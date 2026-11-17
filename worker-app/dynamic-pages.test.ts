@@ -214,7 +214,7 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("Product Not Found");
   });
 
-  it("handles passport lookup timeout gracefully with 404 guidance", async () => {
+  it("answers a retryable 503 when the passport lookup times out", async () => {
     (getCertificateByNumber as any).mockRejectedValue(
       new Error("passport-lookup-timeout")
     );
@@ -222,8 +222,9 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     const res = await app.request("/p/timeout-serial", {}, makeEnv() as any);
     const body = await res.text();
 
-    expect(res.status).toBe(404);
-    expect(body).toContain("The registry lookup timed out");
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("30");
+    expect(body).toContain("Registry Temporarily Unavailable");
   });
 
   it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {
@@ -943,6 +944,95 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
 
     expect(res.status).toBe(303);
     expect(notifyPilotIntake).toHaveBeenCalled();
+  });
+
+  it("renders the decoy field out of sight and out of the tab order", async () => {
+    const res = await app.request("/onboard", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(body).toContain('name="company_website"');
+    expect(body).toMatch(
+      /<div aria-hidden="true"[^>]*left:-10000px[^>]*>\s*<label for="company_website">/
+    );
+    expect(body).toMatch(/name="company_website"[^>]*tabindex="-1"/);
+  });
+
+  it("303s a filled decoy without writing a lead or paging the founder", async () => {
+    const execute = mockLeadInsert();
+    const res = await app.request(
+      "/onboard",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "company=nktwer&contactName=p30k1w&email=bot%40fldubai.com&vertical=govchain&productName=uiconf&sku=t5t7nl&serial=2vy7zi&company_website=x9k2",
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+
+    // Same response a real intake gets, so the submitter learns nothing.
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location") || "").toContain("/onboard/received");
+    expect(execute).not.toHaveBeenCalled();
+    expect(notifyPilotIntake).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      "a promo link in the company field",
+      "company=3500%24+BONUS+CODE+https%3A%2F%2Fspam.example%2Fx&contactName=nktwer&email=a%40fldubai.com&vertical=govchain&productName=uiconf",
+    ],
+    [
+      "an anchor tag in the company field",
+      "company=%3Ca+href%3D%22x%22%3Epay%3C%2Fa%3E&contactName=epg5zf&email=a%40merepost.com&vertical=govchain&productName=g7sndf",
+    ],
+    [
+      "a script probe in the contact field",
+      "company=test&contactName=%3Cscript+src%3D%22%2F%2Fx.test%2Fget.js%22%3E%3C%2Fscript%3E&email=a%40acme.com&vertical=authichain&productName=test",
+    ],
+    [
+      "markup in the optional serial field",
+      "company=Acme&contactName=Ada&email=ada%40acme.com&vertical=qron&productName=Living+QR&serial=%22%3E%3Csvg+onload%3Dx%3E",
+    ],
+  ])("400s %s and records nothing", async (_label, formBody) => {
+    const execute = mockLeadInsert();
+    const res = await app.request(
+      "/onboard",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: formBody,
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(400);
+    expect(body).toContain("Links and markup are not accepted");
+    // The rejected value is never echoed back into the page.
+    expect(body).not.toContain("<script src=");
+    expect(body).not.toContain("<svg onload");
+    expect(execute).not.toHaveBeenCalled();
+    expect(notifyPilotIntake).not.toHaveBeenCalled();
+  });
+
+  it("still records a real intake whose text has punctuation but no link", async () => {
+    const execute = mockLeadInsert();
+    const res = await app.request(
+      "/onboard",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "company=O%27Neil+%26+Sons%2C+Inc.+%28acme.com%29&contactName=Dr.+Ana+M.+Ruiz&email=ana%40oneil-sons.com&vertical=authichain&productName=Valve+3%2F4%22+%23A-12%3A+rev+2&sku=A-12%2FB&serial=SN%3A0001",
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+
+    expect(res.status).toBe(303);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(notifyPilotIntake).toHaveBeenCalledTimes(1);
   });
 
   it("renders the received confirmation when a ref is present", async () => {

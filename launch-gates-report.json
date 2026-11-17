@@ -1,0 +1,287 @@
+{
+  "state": "fail",
+  "gates": [
+    {
+      "id": "ci-executes-and-green",
+      "title": "CI executes and is green (steps ran, not just 'no failures')",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1989",
+      "status": "fail",
+      "reasons": [
+        "main.yml: latest run concluded cancelled",
+        "main.yml / Tests (shard 2/2): empty steps (job never executed)",
+        "main.yml / Production build: empty steps (job never executed)",
+        "main.yml / Tests (shard 1/2): empty steps (job never executed)",
+        "main.yml / Typecheck and lint: empty steps (job never executed)",
+        "main.yml / Production launch proof: empty steps (job never executed)",
+        "main.yml / Main quality gate: empty steps (job never executed)",
+        "ci.yml: latest run concluded failure",
+        "ci.yml / Drizzle + Pytest Extras: job concluded failure",
+        "lint.yml: latest run concluded failure",
+        "lint.yml / lint: empty steps (job never executed)",
+        "codeql.yml: latest run concluded failure",
+        "codeql.yml / Analyze (python): empty steps (job never executed)",
+        "codeql.yml / Analyze (javascript-typescript): empty steps (job never executed)",
+        "codeql.yml / Analyze (actions): empty steps (job never executed)",
+        "codeql.yml / CodeQL: empty steps (job never executed)"
+      ],
+      "evidence": {
+        "runs": [
+          {
+            "workflow": "main.yml",
+            "run_id": 41474571961,
+            "sha": "499f2531c0ad2e411992dfe8b957c02d6ff92759"
+          },
+          {
+            "workflow": "ci.yml",
+            "run_id": 41475679185,
+            "sha": "21e9df3b71f79e40a5fe16a52dc9218054c4af0e"
+          },
+          {
+            "workflow": "lint.yml",
+            "run_id": 41475678995,
+            "sha": "21e9df3b71f79e40a5fe16a52dc9218054c4af0e"
+          },
+          {
+            "workflow": "codeql.yml",
+            "run_id": 38848778677,
+            "sha": "151365e3849461ee97c10a39d83b4bdfdbd97036"
+          }
+        ]
+      }
+    },
+    {
+      "id": "public-hosts-reachable",
+      "title": "Public hosts reachable (no Cloudflare Access redirect)",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1990",
+      "status": "pass",
+      "reasons": [],
+      "evidence": {
+        "results": [
+          {
+            "url": "https://authichain.com/",
+            "status": 200,
+            "location": null,
+            "ms": 149
+          },
+          {
+            "url": "https://authichain.com/api/health",
+            "status": 200,
+            "location": null,
+            "ms": 1299
+          },
+          {
+            "url": "https://qron.space/",
+            "status": 200,
+            "location": null,
+            "ms": 122
+          },
+          {
+            "url": "https://strainchain.io/",
+            "status": 200,
+            "location": null,
+            "ms": 79
+          },
+          {
+            "url": "https://govchain.us/",
+            "status": 200,
+            "location": null,
+            "ms": 92
+          }
+        ]
+      }
+    },
+    {
+      "id": "signed-verification-round-trip",
+      "title": "Protocol round trip: sign, verify, tamper (shipped verifier, Ed25519 did:key + JCS)",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1991",
+      "status": "pass",
+      "reasons": [],
+      "evidence": {
+        "checks": [
+          {
+            "name": "issue-and-verify",
+            "ok": true,
+            "detail": "{\"verdict\":\"valid-unanchored\",\"reasons\":[]}"
+          },
+          {
+            "name": "anchor-commitment",
+            "ok": true,
+            "detail": "{\"verdict\":\"verified\",\"reasons\":[]}"
+          },
+          {
+            "name": "tampered-subject-rejected",
+            "ok": true,
+            "detail": "{\"verdict\":\"invalid\",\"reasons\":[\"signature_invalid\"]}"
+          },
+          {
+            "name": "tampered-anchor-hash-rejected",
+            "ok": true,
+            "detail": "{\"verdict\":\"invalid\",\"reasons\":[\"anchor_hash_mismatch\"]}"
+          },
+          {
+            "name": "wrong-issuer-key-rejected",
+            "ok": true,
+            "detail": "{\"verdict\":\"invalid\",\"reasons\":[\"signature_invalid\"]}"
+          },
+          {
+            "name": "key-order-independent",
+            "ok": true,
+            "detail": "{\"verdict\":\"valid-unanchored\",\"reasons\":[]}"
+          },
+          {
+            "name": "expired-rejected",
+            "ok": true,
+            "detail": "{\"verdict\":\"invalid\",\"reasons\":[\"expired\"]}"
+          },
+          {
+            "name": "testnet-anchor-rejected",
+            "ok": true,
+            "detail": "{\"verdict\":\"invalid\",\"reasons\":[\"anchor_not_mainnet:eip155:80002\"]}"
+          },
+          {
+            "name": "published-example-verifies",
+            "ok": true,
+            "detail": "{\"verdict\":\"valid-unanchored\",\"reasons\":[]}"
+          },
+          {
+            "name": "published-anchored-example-verifies",
+            "ok": true,
+            "detail": "{\"verdict\":\"verified\",\"reasons\":[]}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "protocol-conformance",
+      "title": "Protocol conformance suite passes against the reference verifier",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1996",
+      "status": "pass",
+      "reasons": [],
+      "evidence": {
+        "stdout_tail": "PASS  anchor-chain-not-caip2\nPASS  anchor-hash-mismatch\nPASS  anchor-testnet-opt-in\nPASS  anchor-testnet-rejected\nPASS  anchor-tx-missing\nPASS  anchor-tx-no-0x\nPASS  anchor-tx-truncated\nPASS  canon-anchor-key-order\nPASS  canon-key-order\nPASS  canon-nested\nPASS  canon-unicode\nPASS  missing-at-context\nPASS  missing-issuer\nPASS  missing-proof\nPASS  missing-subject-id\nPASS  missing-type\nPASS  missing-validFrom\nPASS  sig-missing-multibase-prefix\nPASS  sig-non-ed25519-didkey\nPASS  sig-tampered-subject\nPASS  sig-tampered-validfrom\nPASS  sig-truncated\nPASS  sig-wrong-key\nPASS  time-expired\nPASS  time-not-yet-valid\nPASS  valid-anchored-ethereum\nPASS  valid-anchored-polygon\nPASS  valid-unanchored\n\n28/28 passed (strict) — node verifier.mjs\n"
+      }
+    },
+    {
+      "id": "live-verify-endpoint",
+      "title": "Public verify/resolver endpoint serves a known-good record within budget",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1930",
+      "status": "pass",
+      "reasons": [],
+      "evidence": {
+        "status": 200,
+        "ms": 198,
+        "max_ms": 5000,
+        "verdict": "verified",
+        "source": "published_example",
+        "subjectId": "https://authichain.com/protocol/examples/polygon-anchor-1",
+        "recordVerdict": "verified",
+        "recordSubjectId": "https://authichain.com/protocol/examples/polygon-anchor-1"
+      }
+    },
+    {
+      "id": "checkout-and-stripe-webhook",
+      "title": "Checkout and Stripe webhook health (DPP Readiness)",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1992",
+      "status": "fail",
+      "reasons": [
+        "not implemented yet (https://gitlab.com/authichain-group/authichain-unified/-/work_items/1992)"
+      ],
+      "evidence": {}
+    },
+    {
+      "id": "auto-promotion-rollback-breakers",
+      "title": "Auto-promotion by host, auto-rollback, circuit breakers",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1993",
+      "status": "fail",
+      "reasons": [
+        "not implemented yet (https://gitlab.com/authichain-group/authichain-unified/-/work_items/1993)"
+      ],
+      "evidence": {}
+    },
+    {
+      "id": "estate-inventory-decided",
+      "title": "Estate inventory: every off-repo Worker has an explicit decision (repo-side, no token)",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1994",
+      "status": "fail",
+      "reasons": [
+        "grok-cloudflare-toolchain: disposition is 'unknown' (owner must decide: snapshot or retire)"
+      ],
+      "evidence": {
+        "entries": 13,
+        "snapshot_taken": "2026-09-26"
+      }
+    },
+    {
+      "id": "estate-live-drift",
+      "title": "Estate live drift: no live Worker without source or inventory entry",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1331",
+      "status": "fail",
+      "reasons": [
+        "not implemented yet (https://gitlab.com/authichain-group/authichain-unified/-/work_items/1331)"
+      ],
+      "evidence": {}
+    },
+    {
+      "id": "outreach-compliance",
+      "title": "Outreach compliance guardrails",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1995",
+      "status": "fail",
+      "reasons": [
+        "not implemented yet (https://gitlab.com/authichain-group/authichain-unified/-/work_items/1995)"
+      ],
+      "evidence": {}
+    },
+    {
+      "id": "public-trust-artifacts",
+      "title": "Public trust artifacts (spec, open verifier, key registry, status page)",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1996",
+      "status": "pass",
+      "reasons": [],
+      "evidence": {
+        "results": [
+          {
+            "url": "https://raw.githubusercontent.com/undone0603/authichain-unified/main/protocol/SPEC.md",
+            "status": 200,
+            "ms": 87,
+            "includes": true
+          },
+          {
+            "url": "https://raw.githubusercontent.com/undone0603/authichain-unified/main/protocol/verifier.mjs",
+            "status": 200,
+            "ms": 88,
+            "includes": true
+          },
+          {
+            "url": "https://authichain.com/.well-known/jwks.json",
+            "status": 200,
+            "ms": 36,
+            "includes": true
+          },
+          {
+            "url": "https://authichain.com/protocol/issuer.json",
+            "status": 200,
+            "ms": 25,
+            "includes": true
+          },
+          {
+            "url": "https://authichain.com/api/health",
+            "status": 200,
+            "ms": 857,
+            "includes": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "docs-consolidated",
+      "title": "Docs and backlog consolidation",
+      "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1997",
+      "status": "fail",
+      "reasons": [
+        "not implemented yet (https://gitlab.com/authichain-group/authichain-unified/-/work_items/1997)"
+      ],
+      "evidence": {}
+    }
+  ],
+  "checked_at": "2026-11-03T05:23:46.434Z"
+}

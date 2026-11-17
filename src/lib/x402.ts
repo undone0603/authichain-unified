@@ -1232,10 +1232,14 @@ export async function x402Catalog(
       creatorUsd: planUsd("creator"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
-      farmPaymentLink: planPaymentLink("strainchain_farm"),
       starterPaymentLink: planPaymentLink("starter"),
       creatorPaymentLink: planPaymentLink("creator"),
-      offers: catalogOffers(),
+      offers: catalogOffers().filter(
+        offer =>
+          offer.id !== "qron_launch" &&
+          offer.id !== "qron_launch_annual" &&
+          offer.id !== "strainchain_farm"
+      ),
       source: "src/lib/plans.ts",
     },
     discovery: {
@@ -1347,17 +1351,6 @@ export async function x402AgentCard(
         examples: [
           "POST https://authichain.com/api/v1/agent-verify with an X-PAYMENT header",
           "Run the independent verifier on the signed record; leftover unknowns stay unknown",
-        ],
-      },
-      {
-        id: "qron-launch-subscription",
-        name: "QRON Launch subscription",
-        description:
-          "A person, not this agent, pays QRON Launch. Monthly is 19 USD. Annual is 190 USD. This card does not create a Checkout Session and does not charge. Send the person to the confirm page.",
-        tags: ["subscription", "qron", "checkout"],
-        examples: [
-          "https://authichain.com/checkout/qron_launch",
-          "https://authichain.com/checkout/qron_launch_annual",
         ],
       },
     ],

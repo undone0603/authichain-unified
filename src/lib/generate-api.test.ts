@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   claimFreeSampleSlot,
@@ -10,6 +11,12 @@ import {
 } from "./generate-api";
 import { qronObjectIdForDestination } from "./qron-presentation";
 import { qronResolveUrl } from "./qron-resolve";
+import {
+  LIVING_QR_SCAN_DISCLAIMER,
+  decodePngDataUrl,
+} from "./scannable-living-qr";
+import { toGray } from "./qron-studio/perturb";
+import { DEFAULT_DECODERS } from "./qron-studio/validate";
 
 function toBase64Url(value: string): string {
   return Buffer.from(value, "utf8")
@@ -212,6 +219,16 @@ describe("handleGeneratePost", () => {
     );
     expect((result.body.qron as { resolveUrl: unknown }).resolveUrl).toBeNull();
     expect(result.body.presentation).toBeUndefined();
+    const raster = decodePngDataUrl(
+      (result.body.qron as { imageUrl: string }).imageUrl
+    );
+    expect(raster).not.toBeNull();
+    const gray = toGray(raster!);
+    expect(DEFAULT_DECODERS[0].decode(gray)).toBe("https://example.com");
+    expect(DEFAULT_DECODERS[1].decode(gray)).toBe("https://example.com");
+    expect((result.body.qron as { disclaimer: string }).disclaimer).toBe(
+      LIVING_QR_SCAN_DISCLAIMER
+    );
   });
 
   it("walls the anonymous caller once the free sample is used", async () => {
@@ -387,7 +404,18 @@ describe("handleGeneratePost", () => {
     };
     expect(qron.destinationUrl).toBe("https://example.com/sku");
     expect(qron.resolveUrl).toBe(resolveUrl);
-    expect(qron.qrDataUrl.startsWith("data:image/svg+xml;base64,")).toBe(true);
+    expect(qron.qrDataUrl.startsWith("data:image/png;base64,")).toBe(true);
+    expect((result.body.qron as { disclaimer: string }).disclaimer).toBe(
+      LIVING_QR_SCAN_DISCLAIMER
+    );
+    const raster = decodePngDataUrl(
+      (result.body.qron as { imageUrl: string }).imageUrl
+    );
+    expect(raster).not.toBeNull();
+    const gray = toGray(raster!);
+    const decoded = DEFAULT_DECODERS.map(d => d.decode(gray));
+    expect(decoded[0]).toBe(resolveUrl);
+    expect(decoded[1]).toBe(resolveUrl);
     expect(
       (result.body.presentation as { resolve_url: string }).resolve_url
     ).toBe(resolveUrl);
@@ -613,5 +641,8 @@ describe("proxyQronImageGen", () => {
     const body = JSON.parse(fetchImpl.mock.calls[0][1].body as string);
     expect(body.style).toBeUndefined();
     expect(body.prompt).toContain("neon drift");
+    expect(body.prompt).not.toMatch(/https?:\/\//i);
+    expect(body.prompt).not.toContain("example.com");
+    expect(body.prompt.toLowerCase()).toContain("no qr code");
   });
 });

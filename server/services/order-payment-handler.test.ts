@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../db", () => ({ getServiceOrderBySessionId: vi.fn() }));
-vi.mock("./order-payment-atomic", () => ({ settleServiceOrderPaymentAtomic: vi.fn() }));
+vi.mock("./order-payment-atomic", () => ({
+  settleServiceOrderPaymentAtomic: vi.fn(),
+}));
 
 import * as db from "../db";
 import { settleServiceOrderPaymentAtomic } from "./order-payment-atomic";
@@ -25,26 +27,39 @@ beforeEach(() => {
 
 describe("handleServiceOrderPayment", () => {
   it("uses an injected Workers DB for lookup and settlement without Node DATABASE_URL", async () => {
-    const limit = vi.fn().mockResolvedValue([{
-      id: 52, userId: 7, status: "pending", amount: "19900", serviceType: "audit",
-    }]);
+    const limit = vi.fn().mockResolvedValue([
+      {
+        id: 52,
+        userId: 7,
+        status: "pending",
+        amount: "19900",
+        serviceType: "audit",
+      },
+    ]);
     const where = vi.fn(() => ({ limit }));
     const from = vi.fn(() => ({ where }));
     const select = vi.fn(() => ({ from }));
     const requestDb = { select } as any;
-    await expect(handleServiceOrderPayment(settled, requestDb))
-      .resolves.toEqual({ handled: true, orderId: 52 });
+    await expect(
+      handleServiceOrderPayment(settled, requestDb)
+    ).resolves.toEqual({ handled: true, orderId: 52 });
     expect(db.getServiceOrderBySessionId).not.toHaveBeenCalled();
     expect(select).toHaveBeenCalledTimes(1);
     expect(settleServiceOrderPaymentAtomic).toHaveBeenCalledWith(
-      expect.objectContaining({ orderId: 52, paidAmountCents: 19900 }), requestDb,
+      expect.objectContaining({ orderId: 52, paidAmountCents: 19900 }),
+      requestDb
     );
   });
 
   it("propagates an injected Workers DB lookup failure for webhook retry", async () => {
-    const requestDb = { select: () => { throw new Error("Hyperdrive unavailable"); } } as any;
-    await expect(handleServiceOrderPayment(settled, requestDb))
-      .rejects.toThrow("Hyperdrive unavailable");
+    const requestDb = {
+      select: () => {
+        throw new Error("Hyperdrive unavailable");
+      },
+    } as any;
+    await expect(handleServiceOrderPayment(settled, requestDb)).rejects.toThrow(
+      "Hyperdrive unavailable"
+    );
     expect(db.getServiceOrderBySessionId).not.toHaveBeenCalled();
     expect(settleServiceOrderPaymentAtomic).not.toHaveBeenCalled();
   });
@@ -52,32 +67,65 @@ describe("handleServiceOrderPayment", () => {
   it("ignores an unknown order without attempting settlement", async () => {
     vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue(null as any);
     expect(await handleServiceOrderPayment(settled)).toEqual({
-      handled: false, reason: "no service order for this session",
+      handled: false,
+      reason: "no service order for this session",
     });
     expect(settleServiceOrderPaymentAtomic).not.toHaveBeenCalled();
   });
 
   it("passes verified cash and identifiers to atomic settlement once", async () => {
     vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue({
-      id: 42, userId: 7, status: "pending", amount: "19900", serviceType: "authenticity_audit",
+      id: 42,
+      userId: 7,
+      status: "pending",
+      amount: "19900",
+      serviceType: "authenticity_audit",
     } as any);
-    expect(await handleServiceOrderPayment(settled)).toEqual({ handled: true, orderId: 42 });
+    expect(await handleServiceOrderPayment(settled)).toEqual({
+      handled: true,
+      orderId: 42,
+    });
     expect(settleServiceOrderPaymentAtomic).toHaveBeenCalledTimes(1);
     expect(settleServiceOrderPaymentAtomic).toHaveBeenCalledWith({
-      orderId: 42, sessionId: "cs_test_paid", paymentIntentId: "pi_test_paid",
+      orderId: 42,
+      sessionId: "cs_test_paid",
+      paymentIntentId: "pi_test_paid",
       paidAmountCents: 19900,
     });
   });
 
-  it("uses actual discounted checkout cash, not the order list price", async () => {
+  it("does not settle when Checkout total does not match the expected order price", async () => {
     vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue({
-      id: 43, userId: 7, status: "pending", amount: "19900", serviceType: "audit",
+      id: 43,
+      userId: 7,
+      status: "pending",
+      amount: "19900",
+      serviceType: "audit",
     } as any);
-    expect(await handleServiceOrderPayment({ ...settled, amount_total: 1000 }))
-      .toEqual({ handled: true, orderId: 43 });
-    expect(settleServiceOrderPaymentAtomic).toHaveBeenCalledWith(
-      expect.objectContaining({ paidAmountCents: 1000 }),
-    );
+    expect(
+      await handleServiceOrderPayment({ ...settled, amount_total: 1000 })
+    ).toEqual({
+      handled: false,
+      reason: "Checkout amount/currency does not match expected order price",
+    });
+    expect(settleServiceOrderPaymentAtomic).not.toHaveBeenCalled();
+  });
+
+  it("does not settle when Checkout currency does not match the expected order currency", async () => {
+    vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue({
+      id: 43,
+      userId: 7,
+      status: "pending",
+      amount: "19900",
+      serviceType: "audit",
+    } as any);
+    expect(
+      await handleServiceOrderPayment({ ...settled, currency: "eur" })
+    ).toEqual({
+      handled: false,
+      reason: "Checkout amount/currency does not match expected order price",
+    });
+    expect(settleServiceOrderPaymentAtomic).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -89,7 +137,11 @@ describe("handleServiceOrderPayment", () => {
     ["no PaymentIntent", { payment_intent: undefined }],
   ])("does not attempt settlement for %s", async (_name, override) => {
     vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue({
-      id: 44, userId: 7, status: "pending", amount: "19900", serviceType: "audit",
+      id: 44,
+      userId: 7,
+      status: "pending",
+      amount: "19900",
+      serviceType: "audit",
     } as any);
     const result = await handleServiceOrderPayment({ ...settled, ...override });
     expect(result.handled).toBe(false);
@@ -98,28 +150,46 @@ describe("handleServiceOrderPayment", () => {
 
   it("reports a lost compare-and-swap as ignored, never as fulfilled", async () => {
     vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue({
-      id: 45, userId: 7, status: "pending", amount: "19900", serviceType: "audit",
+      id: 45,
+      userId: 7,
+      status: "pending",
+      amount: "19900",
+      serviceType: "audit",
     } as any);
     vi.mocked(settleServiceOrderPaymentAtomic).mockResolvedValue(false);
     expect(await handleServiceOrderPayment(settled)).toEqual({
-      handled: false, reason: "Order already settled or session changed",
+      handled: false,
+      reason: "Order already settled or session changed",
     });
   });
 
   it("propagates transaction failures so the webhook cannot acknowledge missing economic writes", async () => {
     vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue({
-      id: 46, userId: 7, status: "pending", amount: "19900", serviceType: "audit",
+      id: 46,
+      userId: 7,
+      status: "pending",
+      amount: "19900",
+      serviceType: "audit",
     } as any);
-    vi.mocked(settleServiceOrderPaymentAtomic).mockRejectedValue(new Error("DB unavailable"));
-    await expect(handleServiceOrderPayment(settled)).rejects.toThrow("DB unavailable");
+    vi.mocked(settleServiceOrderPaymentAtomic).mockRejectedValue(
+      new Error("DB unavailable")
+    );
+    await expect(handleServiceOrderPayment(settled)).rejects.toThrow(
+      "DB unavailable"
+    );
   });
 
   it("ignores already-paid orders without a second settlement attempt", async () => {
     vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue({
-      id: 47, userId: 7, status: "paid", amount: "19900", serviceType: "audit",
+      id: 47,
+      userId: 7,
+      status: "paid",
+      amount: "19900",
+      serviceType: "audit",
     } as any);
     expect(await handleServiceOrderPayment(settled)).toEqual({
-      handled: false, reason: "Order already in status: paid",
+      handled: false,
+      reason: "Order already in status: paid",
     });
     expect(settleServiceOrderPaymentAtomic).not.toHaveBeenCalled();
   });

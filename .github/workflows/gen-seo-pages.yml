@@ -17,7 +17,7 @@ permissions:
 jobs:
   generate:
     name: Generate SEO pages
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7

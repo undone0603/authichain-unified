@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { QrScanner, validateAndExtract } from "./scanner";
 
@@ -9,21 +9,25 @@ const STARTER_SUB_URL = "https://buy.stripe.com/9B67sL87n7Fkh0SgXW1NE04";
 const STARTER_ONE_TIME_URL = "/checkout/starter";
 const DPP_URL = "/checkout/dpp_readiness";
 
-export default function VerifyPage() {
+function VerifyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialId = searchParams.get("id") || "";
   const [id, setId] = useState(initialId);
   const [verdict, setVerdict] = useState<string | null>(null);
+  const [reasons, setReasons] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   const runVerify = async (sealId: string) => {
     setLoading(true);
     setVerdict(null);
+    setReasons([]);
     try {
       const res = await fetch(`/api/verify-proxy?id=${encodeURIComponent(sealId)}`);
       const body = await res.json();
       setVerdict(body.verdict || body.decision || body.error || "indeterminate");
+      setReasons(Array.isArray(body.reasons) ? body.reasons.map(String) : []);
+      (window as any).track?.('verify_result_viewed');
     } catch {
       setVerdict("verification_failed");
     } finally {
@@ -82,9 +86,32 @@ export default function VerifyPage() {
               Protocol verdict
             </div>
             <div className="text-xl font-black mb-2">{verdict}</div>
+            {reasons.length > 0 && (
+              <p className="text-sm text-zinc-400">
+                {reasons.map(r => r.replace(/_/g, " ")).join(", ")}
+              </p>
+            )}
             <p className="text-xs text-zinc-500 mt-4 leading-relaxed">
               A “verified” verdict means the signature is valid and the hash matches the anchor. It does not prove the physical product is authentic.
             </p>
+            <div className="mt-6 rounded-lg border border-steel/20 bg-ivory/50 p-4 text-sm">
+              <h3 className="font-medium text-ink">Protect your own products</h3>
+              <p className="mt-1 text-charcoal">
+                Start with 100 AI QR generations for $29 once. Self-serve checkout; no subscription or call.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <a
+                  href="/checkout/starter"
+                  className="rounded bg-navy px-3 py-1.5 text-ivory text-xs font-medium"
+                  onClick={() => (window as any).track?.('verify_cta_clicked', { plan: '29' })}
+                >
+                  Buy Starter Pack — $29
+                </a>
+              </div>
+              <p className="mt-2 text-xs text-steel">
+                A verification result reflects the available record and cryptographic evidence; it does not by itself prove the physical item is authentic.
+              </p>
+            </div>
           </div>
         )}
 
@@ -107,5 +134,15 @@ export default function VerifyPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+// useSearchParams() needs a Suspense boundary or the static prerender of
+// /verify fails the production build (same pattern as /success, /login).
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-black" />}>
+      <VerifyContent />
+    </Suspense>
   );
 }

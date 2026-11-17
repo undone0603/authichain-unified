@@ -1,12 +1,8 @@
 name: Deploy qron-space
 on:
+  # RELEASE HOLD: editing this workflow or Worker must never auto-publish.
+  # Dispatch requires separate operator authorization and release checks.
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "workers/qron-space/**"
-      - "workers/_shared/estate-pricing.ts"
-      - ".github/workflows/deploy-qron-space.yml"
 permissions:
   contents: read
 concurrency:
@@ -15,6 +11,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
+    # Defense in depth against any future event trigger being added.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 30
     env:
@@ -22,6 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
+        timeout-minutes: 15
         if: runner.environment != 'self-hosted'
         with:
           version: "10.28.2"
@@ -32,6 +31,7 @@ jobs:
           command -v pnpm
           pnpm --version
       - uses: actions/setup-node@v7
+        timeout-minutes: 15
         with:
           node-version: "22"
           cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
@@ -39,6 +39,7 @@ jobs:
       - name: Install node-gyp (native builds)
         run: npm i -g node-gyp@11
       - name: Install
+        timeout-minutes: 15
         env:
           npm_config_build_from_source: "false"
         run: |

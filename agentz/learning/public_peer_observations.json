@@ -1,0 +1,31 @@
+{
+  "schema": "agentz.peer-observations.v1",
+  "collected_at_utc": "2026-11-02T03:00:00Z",
+  "provenance": "Public GitHub thread read through the authenticated repository connector; author identities and tests are not cryptographically attested.",
+  "observations": [
+    {
+      "source": "https://github.com/Sheernox/cedr/issues/7",
+      "author": "vSkilled",
+      "kind": "external_reply",
+      "subject": "mcp_interop"
+    },
+    {
+      "source": "https://github.com/Sheernox/cedr/issues/7",
+      "author": "undone0603",
+      "kind": "self_post",
+      "subject": "mcp_interop"
+    },
+    {
+      "source": "https://github.com/undone0603/authichain-unified/issues/2263",
+      "author": "undone0603",
+      "kind": "self_post",
+      "subject": "a2a_tck"
+    },
+    {
+      "source": "https://github.com/undone0603/authichain-unified/pull/2270",
+      "author": "undone0603",
+      "kind": "self_post",
+      "subject": "payment_integrity"
+    }
+  ]
+}

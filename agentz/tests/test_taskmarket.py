@@ -128,10 +128,16 @@ def test_crowded_deadline_loses_to_a_smaller_open_bounty():
 
 
 def test_handler_uses_supplied_tasks_and_does_not_sign():
+    # The handler runs on the real clock, so this fixture must expire in the
+    # future. It was pinned to 2026-10-31 and turned red on 2026-11-01 by
+    # calendar alone, with no code change behind it.
+    from datetime import timedelta
+
+    far = (datetime.now(timezone.utc) + timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     ctx = ExecutionContext(
         mode=Mode.DRY_RUN,
         workflow_id="taskmarket_cycle",
-        parameters={"tasks": [_task(id="0xhandler", referenceCode="TSK-HANDLER")]},
+        parameters={"tasks": [_task(id="0xhandler", referenceCode="TSK-HANDLER", expiryTime=far)]},
     )
     plan = json.loads(run(ctx))
     assert plan["referenceCode"] == "TSK-HANDLER"

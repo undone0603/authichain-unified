@@ -35,7 +35,7 @@ env:
 jobs:
   produce:
     name: Produce weekly video
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 30
 
     steps:
@@ -65,17 +65,20 @@ jobs:
           fi
 
       - name: Setup pnpm
+        timeout-minutes: 15
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
+        timeout-minutes: 15
         uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       - name: Generate script, render and publish
