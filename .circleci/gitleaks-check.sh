@@ -19,4 +19,15 @@ curl --fail --silent --show-error --location --retry 1 --connect-timeout 10 --ma
   --output "$tmp/gitleaks.tar.gz"
 printf '%s  %s\n' "$digest" "$tmp/gitleaks.tar.gz" | sha256sum --check --status
 tar --no-same-owner -xzf "$tmp/gitleaks.tar.gz" -C "$tmp" gitleaks
-"$tmp/gitleaks" detect --no-git --source . --config .gitleaks.toml --redact --verbose
+# Scan only git-tracked files (working-tree content), so installed dependencies
+# (node_modules/, build output, caches) are never scanned. This job installs
+# dependencies before quality runs; next 16.4.5's compiled runtime matched the
+# resend-key rule (#2585). A committed node_modules/ would still be tracked and
+# therefore still scanned. Paths stay relative, so .gitleaksignore keeps working.
+tree="$tmp/tree"
+mkdir -p "$tree"
+git ls-files -z | tar --null --no-recursion -T - -cf - | tar --no-same-owner -xf - -C "$tree"
+cfg="$(pwd)/.gitleaks.toml"
+ignore="$(pwd)/.gitleaksignore"
+(cd "$tree" && "$tmp/gitleaks" detect --no-git --source . --config "$cfg" \
+  --gitleaks-ignore-path "$ignore" --redact --verbose)

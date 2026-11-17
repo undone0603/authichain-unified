@@ -7,17 +7,29 @@
 import { catalogOffers, type CatalogOffer, type PlanId } from "./plans";
 
 /**
- * Retired for new buyers (RES-86c). Existing subscribers keep billing,
+ * Retired for new buyers (RES-86c, F886-3). Existing subscribers keep billing,
  * webhooks, and plan lookups; /checkout/<id> answers 303 to /pricing and must
  * not mint new sessions.
+ *
+ * Theater 1/3, Farm, and the federal provenance pilot join QRON Launch:
+ * Stripe objects and live Payment Links are untouched; the gated URLs
+ * redirect instead of starting checkout.
  */
 export const RETIRED_GATED_PLAN_IDS: readonly PlanId[] = [
   "qron_launch",
   "qron_launch_annual",
+  "theater_1",
+  "theater_3",
+  "strainchain_farm",
+  "gov_provenance_pilot",
 ];
 
 export function isRetiredPlan(id: PlanId): boolean {
   return RETIRED_GATED_PLAN_IDS.includes(id);
+}
+
+export function isPublicAgentOffer(id: PlanId): boolean {
+  return !isRetiredPlan(id);
 }
 
 /**
@@ -26,5 +38,5 @@ export function isRetiredPlan(id: PlanId): boolean {
  * checkout link redirects to /pricing and sells nothing.
  */
 export function openCatalogOffers(): CatalogOffer[] {
-  return catalogOffers().filter(offer => !isRetiredPlan(offer.id));
+  return catalogOffers().filter(offer => isPublicAgentOffer(offer.id));
 }

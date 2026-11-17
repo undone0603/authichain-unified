@@ -27,7 +27,7 @@ import {
   x402AgentCard,
   type PaymentRequirement,
 } from "./x402";
-import { planPaymentLink, planUsd } from "./plans";
+import { planPaymentLink } from "./plans";
 import { sealBaseline } from "./seal-baseline";
 
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
@@ -758,7 +758,7 @@ describe("x402Catalog", () => {
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
       planPaymentLink("dpp_readiness")
     );
-    expect(catalog.humanCheckout.farmPaymentLink).toBeUndefined();
+    expect(catalog.humanCheckout).not.toHaveProperty("farmPaymentLink");
     expect(catalog.humanCheckout.starterPaymentLink).toBe(
       planPaymentLink("starter")
     );
@@ -777,8 +777,30 @@ describe("x402Catalog", () => {
     expect(catalog.humanCheckout.offers.map(offer => offer.id)).not.toContain(
       "qron_launch_annual"
     );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).not.toContain(
+      "theater_1"
+    );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).not.toContain(
+      "theater_3"
+    );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).not.toContain(
+      "strainchain_farm"
+    );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).not.toContain(
+      "gov_provenance_pilot"
+    );
     expect(JSON.stringify(catalog)).not.toContain("/checkout/qron_launch");
-    expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
+    expect(JSON.stringify(catalog)).not.toContain("/checkout/theater_1");
+    expect(JSON.stringify(catalog)).not.toContain("/checkout/theater_3");
+    expect(JSON.stringify(catalog)).not.toContain("/checkout/strainchain_farm");
+    expect(JSON.stringify(catalog)).not.toContain(
+      "/checkout/gov_provenance_pilot"
+    );
+    expect(catalog.humanCheckout).not.toHaveProperty("farmUsd");
+    expect(JSON.stringify(catalog.humanCheckout)).not.toContain("farmUsd");
+    expect(JSON.stringify(catalog.humanCheckout)).not.toContain(
+      "strainchain_farm"
+    );
     expect(JSON.stringify(catalog)).not.toContain("/api/checkout");
     expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
       "facilitator.payai"
@@ -974,6 +996,8 @@ describe("x402OpenApiDocument", () => {
     expect(scan.get.responses["404"]).toBeTruthy();
     expect(scan.get["x-payment-info"]).toBeUndefined();
     expect(JSON.stringify(spec)).not.toContain("/api/checkout");
+    expect(JSON.stringify(spec)).not.toContain("farmUsd");
+    expect(JSON.stringify(spec)).not.toContain("strainchain_farm");
     expect(JSON.stringify(spec).toLowerCase()).not.toContain(
       "facilitator.payai"
     );
