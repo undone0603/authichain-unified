@@ -494,7 +494,7 @@ describe("tryHandleGatedCheckout — POST", () => {
 });
 
 describe("CFA-460: /checkout/starter confirm copy", () => {
-  it("shows the Research PASS FREE-PREVIEW sentence and no Launch $19 copy", async () => {
+  it("shows the approved never-expire sentence and no Launch $19 copy", async () => {
     const res = await tryHandleGatedCheckout(
       new Request("https://authichain.com/checkout/starter"),
       {}
@@ -503,28 +503,30 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
     expect(res!.status).toBe(200);
     const html = await res!.text();
     expect(html).toContain(
-      "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits."
+      "100 AI QR generations for $29, paid once. No subscription. One-time pack credits (Starter and Creator) never expire."
     );
     expect(html).not.toContain("$19");
     expect(html).not.toContain("qron_launch");
     expect(html).not.toContain("Launch subscription");
-    expect(html).not.toContain("never expire");
+    expect(html).not.toContain("Pack credits never expire.");
     expect(html).not.toContain("never-expire");
     expect(html).not.toContain("no expiry");
     expect(html).not.toContain("no-expiry");
     expect(html).not.toContain("50 workspace generations");
   });
 
-  it("plans.ts Starter pricing copy uses the Advisor-GO replace-only sentence", () => {
+  it("plans.ts Starter pricing copy uses the approved never-expire sentence", () => {
     expect(planById("starter")?.description).toBe(
-      "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits."
+      "100 AI QR generations for $29, paid once. No subscription. One-time pack credits (Starter and Creator) never expire."
     );
     expect(planById("starter")?.features).toContain(
-      "Starting a monthly plan replaces unused pack credits"
+      "One-time pack credits (Starter and Creator) never expire"
     );
-    expect(planById("starter")?.description).not.toContain("never expire");
+    expect(planById("starter")?.description).not.toContain(
+      "Pack credits never expire."
+    );
     expect(planById("starter")?.features?.join(" ")).not.toContain(
-      "never expire"
+      "Pack credits never expire."
     );
   });
 });
