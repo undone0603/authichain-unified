@@ -251,6 +251,83 @@ describe("tryHandleX402", () => {
     expect(JSON.stringify(body)).not.toContain("txHash");
   });
 
+  it("does not disclose anonymous task history across A2A requests", async () => {
+    const post = (method: string, params: Record<string, unknown>) =>
+      req("/api/a2a", {
+        method: "POST",
+        headers: { "content-type": "application/json", "A2A-Version": "1.0" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 10, method, params }),
+      });
+    const created = await tryHandleX402(
+      post("SendMessage", {
+        message: { parts: [{ text: "private-peer-evidence-never-echo" }] },
+      })
+    );
+    expect(created?.status).toBe(200);
+    const sent = (await created!.json()) as {
+      result: { task: { id: string } };
+    };
+    const taskId = sent.result.task.id;
+
+    const listed = await tryHandleX402(post("ListTasks", {}));
+    const listing = (await listed!.json()) as {
+      result: { tasks: unknown[]; totalSize: number };
+    };
+    expect(listing.result.tasks).toEqual([]);
+    expect(listing.result.totalSize).toBe(0);
+    expect(JSON.stringify(listing)).not.toContain("private-peer-evidence-never-echo");
+
+    const lookedUp = await tryHandleX402(post("GetTask", { id: taskId }));
+    const lookup = (await lookedUp!.json()) as { error: { code: number } };
+    expect(lookup.error.code).toBe(-32001);
+  });
+
+  it("retains only same-request batch task visibility", async () => {
+    const res = await tryHandleX402(req("/api/a2a", {
+      method: "POST",
+      headers: { "content-type": "application/json", "A2A-Version": "1.0" },
+      body: JSON.stringify([
+        { jsonrpc: "2.0", id: 1, method: "SendMessage",
+          params: { message: { parts: [{ text: "only-this-batch" }] } } },
+        { jsonrpc: "2.0", id: 2, method: "ListTasks", params: {} },
+      ]),
+    }));
+    const replies = (await res!.json()) as Array<{
+      result: { task?: { id: string }; tasks?: Array<{ history: unknown[] }> };
+    }>;
+    expect(replies[0].result.task?.id).toBeTruthy();
+    expect(replies[1].result.tasks?.length).toBe(1);
+  });
+
+  it("rejects oversized anonymous A2A messages before task creation", async () => {
+    const request = req("/api/a2a", {
+      method: "POST",
+      headers: { "content-type": "application/json", "A2A-Version": "1.0" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 1, method: "SendMessage",
+        params: { message: { parts: [{ text: "x".repeat(70_000) }] } },
+      }),
+    });
+    const result = await tryHandleX402(request);
+    expect(result?.status).toBe(413);
+    expect(await result!.json()).toEqual({ error: "a2a_request_too_large" });
+  });
+
+  it("enforces byte limits even without Content-Length", async () => {
+    const request = req("/api/a2a", {
+      method: "POST",
+      headers: { "content-type": "application/json", "A2A-Version": "1.0" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 2, method: "SendMessage",
+        params: { message: { parts: [{ text: "🔥".repeat(20_000) }] } },
+      }),
+    });
+    request.headers.delete("content-length");
+    const result = await tryHandleX402(request);
+    expect(result?.status).toBe(413);
+    expect(await result!.json()).toEqual({ error: "a2a_request_too_large" });
+  });
+
   it("GET /.well-known/lumi-monitor.txt is the Watch-trial domain proof", async () => {
     const res = await tryHandleX402(req("/.well-known/lumi-monitor.txt"));
     expect(res).not.toBeNull();

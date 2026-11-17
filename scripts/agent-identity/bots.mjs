@@ -1,6 +1,8 @@
 // Public roster. Names and one-line roles only. No secrets.
 export const ISSUER_SLUG = 'authichain-agent-issuer';
 export const VALID_FROM = '2026-10-17T18:00:00Z';
+// AgentZ readiness signing stops at this instant until generate.mjs is re-run
+// with a later date (KEY_DIR outside the repo). See agentz-readiness-sign.ts.
 export const VALID_UNTIL = '2027-01-17T18:00:00Z';
 const b = (name, slug, role) => ({ name, slug, role });
 export const BOTS = [

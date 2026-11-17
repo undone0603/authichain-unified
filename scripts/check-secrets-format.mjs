@@ -1,5 +1,6 @@
 /**
  * Validates the format of critical repository secrets to catch misconfigurations early in CI.
+ * Never print credential values or secret-derived hostnames in diagnostics.
  */
 function validateSupabaseUrl(url) {
   if (!url) return true; // Optional secrets handled by workflow logic
@@ -17,6 +18,9 @@ function validateDatabaseUrl(url) {
   if (!url) return true;
   try {
     const parsed = new URL(url);
+    if (!['postgres:', 'postgresql:'].includes(parsed.protocol) || !parsed.hostname) { // pragma: allowlist secret
+      return false;
+    }
     const host = parsed.hostname;
     const port = parsed.port;
 
@@ -27,7 +31,7 @@ function validateDatabaseUrl(url) {
     
     if (host.includes('.pooler.supabase.com')) return true;
     if (host.startsWith('db.')) {
-      console.error(`::error::DATABASE_URL host "${host}" appears to be a direct Supabase host. These are IPv6-only and will fail.`);
+      console.error('::error::DATABASE_URL appears to use a direct Supabase host. Use the pooler (value redacted).');
       return false;
     }
     return true;
@@ -44,11 +48,12 @@ const secrets = {
 let failed = false;
 
 if (secrets.NEXT_PUBLIC_SUPABASE_URL && !validateSupabaseUrl(secrets.NEXT_PUBLIC_SUPABASE_URL)) {
-  console.error(`::error::NEXT_PUBLIC_SUPABASE_URL "${secrets.NEXT_PUBLIC_SUPABASE_URL}" is not a valid Supabase URL.`);
+  console.error('::error::NEXT_PUBLIC_SUPABASE_URL is not a valid Supabase URL (value redacted).');
   failed = true;
 }
 
 if (secrets.DATABASE_URL && !validateDatabaseUrl(secrets.DATABASE_URL)) {
+  console.error('::error::DATABASE_URL failed format validation (value redacted).');
   failed = true;
 }
 

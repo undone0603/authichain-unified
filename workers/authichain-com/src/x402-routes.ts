@@ -54,8 +54,10 @@ import {
   A2A_RPC_PATH,
   a2aMethodList,
   handleA2aJsonRpc,
+  memoryA2aStore,
 } from "../../../src/lib/a2a-jsonrpc";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
+import { resolveTierRequest } from "../../../src/lib/x402-tiers";
 import { sealBaseline } from "../../../src/lib/seal-baseline";
 import {
   readSeal,
@@ -112,6 +114,42 @@ function json(
     status,
     headers: { ...JSON_HEADERS, ...extraHeaders },
   });
+}
+
+// Public, unauthenticated A2A demonstration: bound memory consumption before
+// parsing JSON or constructing tasks. No auth/tenant scoped persistence exists.
+const MAX_ANONYMOUS_A2A_BYTES = 64 * 1024;
+
+async function readBoundedA2aBody(request: Request): Promise<string | null> {
+  const claimedLength = request.headers.get("content-length");
+  if (claimedLength && Number(claimedLength) > MAX_ANONYMOUS_A2A_BYTES) {
+    return null;
+  }
+  const reader = request.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_ANONYMOUS_A2A_BYTES) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 function normalizePath(pathname: string): string {
@@ -382,7 +420,12 @@ function unpaidQuote(request: Request, env?: X402Env): Response {
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(request.url).toString();
-  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  const tierReq = resolveTierRequest(
+    resource,
+    x402PriceUsd(env?.X402_PRICE_USD)
+  );
+  if (!tierReq.ok) return json(tierReq.status, tierReq.body);
+  const priceUsd = tierReq.priceUsd;
   if (!payTo) {
     return json(503, {
       error: "payments_not_configured",
@@ -408,7 +451,10 @@ async function agentVerify(
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(request.url).toString();
-  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  const verifyUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  const tierReq = resolveTierRequest(resource, verifyUsd);
+  if (!tierReq.ok) return json(tierReq.status, tierReq.body);
+  const priceUsd = tierReq.priceUsd;
   if (!payTo) {
     return json(503, {
       error: "payments_not_configured",
@@ -426,7 +472,12 @@ async function agentVerify(
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof || !proofHeader) {
-    const free = await tryFreeCall(request, env, opts);
+    // The daily free allowance is the default (verify) tier only: the free
+    // body is the verify baseline, which is not what ping or evidence sell.
+    const free =
+      tierReq.tier === "verify"
+        ? await tryFreeCall(request, env, opts)
+        : { response: null, remaining: null };
     if (free.response) return free.response;
     return json(402, required.v2, {
       ...required.headers,
@@ -443,6 +494,8 @@ async function agentVerify(
     bodyText,
     resource,
     priceUsd,
+    tier: tierReq.tier,
+    verifyPriceUsd: verifyUsd,
     payTo,
     description: X402_RESOURCE_DESCRIPTION,
     env,
@@ -523,10 +576,19 @@ export async function tryHandleX402(
   if (normalizePath(url.pathname) === A2A_RPC_PATH) {
     if (request.method === "GET") return json(200, a2aMethodList());
     if (request.method === "POST") {
-      const body = await request.text();
+      const body = await readBoundedA2aBody(request);
+      if (body === null) {
+        return json(413, { error: "a2a_request_too_large" });
+      }
+      // Public A2A is an immediate, unauthenticated demonstration. Using the
+      // module-global task store would let one anonymous caller enumerate
+      // another caller's task history via ListTasks/GetTask. Until a real
+      // authenticated tenant-scoped store exists, keep each HTTP request
+      // isolated; the completed task is returned to its sender immediately.
       const answered = handleA2aJsonRpc(body, {
         now: opts?.now,
         a2aVersion: request.headers.get("A2A-Version"),
+        store: memoryA2aStore(),
       });
       if (answered.body === null) return new Response(null, { status: 204 });
       return json(answered.status, answered.body);

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
-import { CompactSign, exportJWK, exportPKCS8, generateKeyPair } from "jose";
+import { calculateJwkThumbprint, CompactSign, exportJWK, exportPKCS8, generateKeyPair } from "jose";
 import { registerAttestationApi, type AttestationRegistry } from "./attestation-api";
 import { registerJwksRoute, resolveVerificationKeys, selectVerificationKey } from "./jwks";
 import { canonicalize, AUTHICHAIN_ATTESTATION_TYP } from "../packages/verifier/src/index";
@@ -67,10 +67,17 @@ function registry(): AttestationRegistry {
   };
 }
 
-async function keypair(kid: string) {
+async function keypair() {
   const { privateKey, publicKey } = await generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true });
   const pemB64 = Buffer.from(await exportPKCS8(privateKey), "utf8").toString("base64");
-  const publicJwk = { ...(await exportJWK(publicKey)), kid };
+  const exported = await exportJWK(publicKey);
+  // CFA-462: the served kid is the RFC 7638 thumbprint, not a friendly name.
+  const kid = await calculateJwkThumbprint({
+    kty: exported.kty,
+    crv: exported.crv,
+    x: exported.x,
+  });
+  const publicJwk = { ...exported, kid };
   return { kid, privateKey, pemB64, publicJwk };
 }
 
@@ -79,9 +86,13 @@ function bindCurrent(k: { kid: string; pemB64: string }) {
   process.env.AUTHICHAIN_ATTESTATION_KEY_ID = k.kid;
 }
 
-async function signWith(k: { kid: string; privateKey: CryptoKey }, attestation: Record<string, unknown> = SAMPLE) {
+async function signWith(
+  k: { kid: string; privateKey: CryptoKey },
+  attestation: Record<string, unknown> = SAMPLE,
+  headerKid = k.kid,
+) {
   return new CompactSign(new TextEncoder().encode(canonicalize(attestation as never)))
-    .setProtectedHeader({ alg: "EdDSA", kid: k.kid, typ: AUTHICHAIN_ATTESTATION_TYP })
+    .setProtectedHeader({ alg: "EdDSA", kid: headerKid, typ: AUTHICHAIN_ATTESTATION_TYP })
     .sign(k.privateKey);
 }
 
@@ -108,8 +119,8 @@ afterEach(() => {
 
 describe("attestation key rotation", () => {
   it("still verifies an attestation signed by a retired key, and says so", async () => {
-    const oldKey = await keypair("kid-2026-01");
-    const newKey = await keypair("kid-2026-10");
+    const oldKey = await keypair();
+    const newKey = await keypair();
     const jws = await signWith(oldKey);
     bindCurrent(newKey);
     process.env.AUTHICHAIN_ATTESTATION_RETIRED_PUBLIC_JWKS = JSON.stringify([oldKey.publicJwk]);
@@ -119,12 +130,12 @@ describe("attestation key rotation", () => {
     const body = (await res.json()) as Record<string, any>;
     expect(body.valid).toBe(true);
     expect(body.decision).toBe("verified");
-    expect(body.trust.evidence).toMatchObject({ kid: "kid-2026-01", key_status: "retired" });
+    expect(body.trust.evidence).toMatchObject({ kid: oldKey.kid, key_status: "retired" });
   });
 
   it("without the retired key, the same attestation is indeterminate, not counterfeit", async () => {
-    const oldKey = await keypair("kid-2026-01");
-    const newKey = await keypair("kid-2026-10");
+    const oldKey = await keypair();
+    const newKey = await keypair();
     const jws = await signWith(oldKey);
     bindCurrent(newKey);
 
@@ -138,12 +149,12 @@ describe("attestation key rotation", () => {
   });
 
   it("a forged JWS naming a retired kid fails the signature check", async () => {
-    const oldKey = await keypair("kid-2026-01");
-    const newKey = await keypair("kid-2026-10");
-    const attacker = await keypair("kid-2026-01");
+    const oldKey = await keypair();
+    const newKey = await keypair();
+    const attacker = await keypair();
     bindCurrent(newKey);
     process.env.AUTHICHAIN_ATTESTATION_RETIRED_PUBLIC_JWKS = JSON.stringify([oldKey.publicJwk]);
-    const forged = await signWith(attacker);
+    const forged = await signWith(attacker, SAMPLE, oldKey.kid);
 
     const res = await app().request("/api/v1/attestation/verify", json({ jws: forged }));
     expect(res.status).toBe(400);
@@ -151,7 +162,7 @@ describe("attestation key rotation", () => {
   });
 
   it("PUT verify works with only public key material bound (no private key)", async () => {
-    const k = await keypair("kid-public-only");
+    const k = await keypair();
     const jws = await signWith(k);
     process.env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK = JSON.stringify(k.publicJwk);
     process.env.AUTHICHAIN_ATTESTATION_KEY_ID = k.kid;
@@ -162,8 +173,8 @@ describe("attestation key rotation", () => {
   });
 
   it("can revoke an attestation signed by a retired key", async () => {
-    const oldKey = await keypair("kid-2026-01");
-    const newKey = await keypair("kid-2026-10");
+    const oldKey = await keypair();
+    const newKey = await keypair();
     const jws = await signWith(oldKey);
     bindCurrent(newKey);
     process.env.AUTHICHAIN_ATTESTATION_RETIRED_PUBLIC_JWKS = JSON.stringify([oldKey.publicJwk]);
@@ -181,8 +192,8 @@ describe("attestation key rotation", () => {
   });
 
   it("refuses to supersede onto a replacement signed by a retired key", async () => {
-    const oldKey = await keypair("kid-2026-01");
-    const newKey = await keypair("kid-2026-10");
+    const oldKey = await keypair();
+    const newKey = await keypair();
     bindCurrent(newKey);
     process.env.AUTHICHAIN_ATTESTATION_RETIRED_PUBLIC_JWKS = JSON.stringify([oldKey.publicJwk]);
     process.env.CRON_SECRET = "issuer-secret";
@@ -201,15 +212,15 @@ describe("attestation key rotation", () => {
   });
 
   it("JWKS publishes the current key first, then retired keys, never private material", async () => {
-    const oldKey = await keypair("kid-2026-01");
-    const newKey = await keypair("kid-2026-10");
+    const oldKey = await keypair();
+    const newKey = await keypair();
     bindCurrent(newKey);
     process.env.AUTHICHAIN_ATTESTATION_RETIRED_PUBLIC_JWKS = JSON.stringify([oldKey.publicJwk]);
 
     const res = await app().request("/.well-known/jwks.json");
     expect(res.status).toBe(200);
     const { keys } = (await res.json()) as { keys: Array<Record<string, unknown>> };
-    expect(keys.map(k => k.kid)).toEqual(["kid-2026-10", "kid-2026-01"]);
+    expect(keys.map(k => k.kid)).toEqual([newKey.kid, oldKey.kid]);
     for (const k of keys) {
       expect(k.d).toBeUndefined();
       expect(k.key_status).toBeUndefined();
@@ -219,12 +230,12 @@ describe("attestation key rotation", () => {
 
 describe("verification is observable", () => {
   it("emits attestation.verified and attestation.rejected trust events without the JWS", async () => {
-    const oldKey = await keypair("kid-2026-01");
-    const newKey = await keypair("kid-2026-10");
+    const oldKey = await keypair();
+    const newKey = await keypair();
     bindCurrent(newKey);
     process.env.AUTHICHAIN_ATTESTATION_RETIRED_PUBLIC_JWKS = JSON.stringify([oldKey.publicJwk]);
     const good = await signWith(oldKey);
-    const unknown = await signWith(await keypair("kid-unknown"));
+    const unknown = await signWith(await keypair());
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     try {
       const a = app();
@@ -238,7 +249,7 @@ describe("verification is observable", () => {
         expect.objectContaining({
           event: "attestation.verified",
           attestation_id: SAMPLE.attestation_id,
-          kid: "kid-2026-01",
+          kid: oldKey.kid,
           key_status: "retired",
           decision: "verified",
           http_status: 200,
@@ -256,13 +267,13 @@ describe("verification is observable", () => {
 
 describe("retired key configuration fails closed", () => {
   it("drops entries with private material, no kid, a non-Ed25519 curve, or a kid that shadows the current key", async () => {
-    const current = await keypair("kid-current");
-    const good = await keypair("kid-good");
+    const current = await keypair();
+    const good = await keypair();
     bindCurrent(current);
     const leaked = { ...good.publicJwk, kid: "kid-leaked", d: "private" };
     const noKid = { ...good.publicJwk, kid: undefined };
     const wrongCurve = { ...good.publicJwk, kid: "kid-x448", crv: "X448" };
-    const shadow = { ...good.publicJwk, kid: "kid-current" };
+    const shadow = { ...good.publicJwk, kid: current.kid };
     process.env.AUTHICHAIN_ATTESTATION_RETIRED_PUBLIC_JWKS = JSON.stringify([
       leaked,
       noKid,
@@ -275,21 +286,21 @@ describe("retired key configuration fails closed", () => {
     expect(resolved.ok).toBe(true);
     if (!resolved.ok) return;
     expect(resolved.keys.map(k => [k.kid, k.key_status])).toEqual([
-      ["kid-current", "current"],
-      ["kid-good", "retired"],
+      [current.kid, "current"],
+      [good.kid, "retired"],
     ]);
   });
 
   it("ignores the whole list when it is not valid JSON", async () => {
-    const current = await keypair("kid-current");
+    const current = await keypair();
     bindCurrent(current);
     process.env.AUTHICHAIN_ATTESTATION_RETIRED_PUBLIC_JWKS = "[{not json";
     const resolved = await resolveVerificationKeys();
-    expect(resolved.ok && resolved.keys.map(k => k.kid)).toEqual(["kid-current"]);
+    expect(resolved.ok && resolved.keys.map(k => k.kid)).toEqual([current.kid]);
   });
 
   it("selectVerificationKey rejects a malformed header and a missing kid", async () => {
-    const current = await keypair("kid-current");
+    const current = await keypair();
     bindCurrent(current);
     const resolved = await resolveVerificationKeys();
     if (!resolved.ok) throw new Error("expected keys");

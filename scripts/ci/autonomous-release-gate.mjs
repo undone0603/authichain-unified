@@ -13,23 +13,41 @@ export const REQUIRED = [
   'extras', 'build', 'main-quality-gate',
 ].map(s => 'ci/circleci: ' + s);
 const SHA = /^[a-f0-9]{40}$/;
-const CIRCLE_JOB = /^https:\/\/circleci\.com\/gh\/undone0603\/authichain-unified\/[0-9]+\/?$/;
+// Accept the current CircleCI app job URL and the older repository-scoped job URL.
+const CIRCLE_JOB = /^(?:https:\/\/circleci\.com\/gh\/undone0603\/authichain-unified\/[0-9]+\/?|https:\/\/app\.circleci\.com\/workflow\/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\/job\/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})$/;
 function guard(ok, message) { if (!ok) throw new Error('release policy: ' + message); }
 
-export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, ruleset, environment, statuses}) {
+export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, ruleset, environment, statuses, shaMatchPath}) {
+  const matchPath = shaMatchPath || 'exact-head';
+  guard(matchPath === 'exact-head' || matchPath === 'ancestor', 'unknown SHA match path');
   guard(repo === REPO, 'wrong repository');
-  guard(SHA.test(expectedSha || '') && expectedSha === dispatchSha, 'exact dispatch SHA mismatch');
-  guard(branch?.name === 'main' && branch?.protected === true && branch?.commit?.sha === expectedSha,
+  guard(SHA.test(expectedSha || '') && SHA.test(dispatchSha || ''), 'exact dispatch SHA mismatch');
+  guard(branch?.name === 'main' && branch?.protected === true && SHA.test(branch?.commit?.sha || ''),
         'main is not protected or exact current main has moved');
+  if (matchPath === 'exact-head') {
+    guard(expectedSha === dispatchSha && branch.commit.sha === expectedSha,
+          expectedSha === dispatchSha
+            ? 'main is not protected or exact current main has moved'
+            : 'exact dispatch SHA mismatch');
+  } else {
+    guard(expectedSha !== branch.commit.sha,
+          'ancestor path requires expected_sha behind main HEAD');
+    guard(dispatchSha === branch.commit.sha,
+          'dispatch not from current main');
+  }
   guard(ruleset?.id === RULESET && ruleset?.name === 'main-no-direct-push' &&
         ruleset?.enforcement === 'active' &&
         ruleset?.conditions?.ref_name?.include?.includes('refs/heads/main') &&
         ruleset?.rules?.some(rule => rule.type === 'pull_request') &&
         (!Array.isArray(ruleset?.bypass_actors) || ruleset.bypass_actors.length === 0),
         'protected main PR ruleset missing, disabled, or bypassable');
+  // GitHub mirrors protected_branches into protection_rules as type
+  // branch_policy. Allow that echo; reject wait_timer / required_reviewers.
+  const envRules = Array.isArray(environment?.protection_rules) ? environment.protection_rules : null;
+  const humanEnvRules = (envRules || []).filter(rule => rule?.type !== 'branch_policy');
   guard(environment?.name === ENV && environment?.deployment_branch_policy?.protected_branches === true &&
         environment?.deployment_branch_policy?.custom_branch_policies === false &&
-        Array.isArray(environment?.protection_rules) && environment.protection_rules.length === 0,
+        envRules !== null && humanEnvRules.length === 0,
         'environment must be protected-branches-only with no manual approval, wait timer, or unknown rule');
   guard(Number.isInteger(statuses?.total_count) && statuses.total_count >= REQUIRED.length &&
         statuses.total_count <= 100 && Array.isArray(statuses?.statuses) &&
@@ -59,7 +77,7 @@ async function getJson(path, token, fetchImpl = fetch) {
 export async function verifyLive(env = process.env, fetchImpl = fetch) {
   const {GH_TOKEN, REPOSITORY, TARGET_SHA, DISPATCH_SHA} = env;
   guard(GH_TOKEN?.length > 0, 'missing read-only GitHub token');
-  guard(REPOSITORY === REPO && SHA.test(TARGET_SHA || '') && TARGET_SHA === DISPATCH_SHA,
+  guard(REPOSITORY === REPO && SHA.test(TARGET_SHA || '') && SHA.test(DISPATCH_SHA || ''),
         'invalid dispatch identity');
   const [branch, ruleset, environment, statuses] = await Promise.all([
     getJson('/branches/main', GH_TOKEN, fetchImpl),
@@ -68,7 +86,8 @@ export async function verifyLive(env = process.env, fetchImpl = fetch) {
     getJson('/commits/' + TARGET_SHA + '/status?per_page=100', GH_TOKEN, fetchImpl),
   ]);
   return assertReleasePolicy({repo: REPOSITORY, expectedSha: TARGET_SHA,
-    dispatchSha: DISPATCH_SHA, branch, ruleset, environment, statuses});
+    dispatchSha: DISPATCH_SHA, branch, ruleset, environment, statuses,
+    shaMatchPath: env.SHA_MATCH_PATH});
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

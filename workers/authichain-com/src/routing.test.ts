@@ -23,9 +23,12 @@ const ENV = {
   APP_WORKER: { fetch: async () => new Response("app", { status: 200 }) },
 } as unknown as Env;
 
-async function get(path: string, env: Env = ENV) {
+async function get(path: string, env: Env = ENV, headers?: HeadersInit) {
   return worker.fetch(
-    new Request(`https://authichain.govchain.us${path}`),
+    new Request(
+      `https://authichain.govchain.us${path}`,
+      headers ? { headers } : undefined
+    ),
     env
   );
 }
@@ -41,6 +44,42 @@ test("an unknown path is a 404, not the homepage at 200", async () => {
     const res = await get(path);
     assert.equal(res.status, 404, `${path} should 404`);
   }
+});
+
+test("homepage Accept text/markdown states the paid offer", async () => {
+  const res = await get("/", ENV, { Accept: "text/markdown" });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") ?? "", /text\/markdown/);
+  assert.match(res.headers.get("vary") ?? "", /Accept/i);
+  const body = await res.text();
+  assert.match(body, /WHAT IS SOLD/);
+  assert.match(body, /WHAT IT COSTS/);
+  assert.match(body, /HOW TO PAY/);
+  assert.match(body, /WHAT YOU RECEIVE/);
+  assert.match(body, /HOW DELIVERY IS VERIFIED/);
+  assert.match(body, /X-PAYMENT/);
+  assert.match(body, /\/api\/v1\/agent-verify/);
+  assert.ok(body.length > 20);
+});
+
+test("homepage without markdown Accept stays HTML", async () => {
+  const res = await get("/", ENV, { Accept: "text/html" });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") ?? "", /text\/html/);
+  const body = await res.text();
+  assert.match(body, /<!DOCTYPE html>/i);
+});
+
+test("unknown path Accept text/markdown is a markdown 404", async () => {
+  const res = await get("/__ora-404-probe-s5rhi5v1", ENV, {
+    Accept: "text/markdown",
+  });
+  assert.equal(res.status, 404);
+  assert.match(res.headers.get("content-type") ?? "", /text\/markdown/);
+  const body = await res.text();
+  assert.ok(body.length > 20);
+  assert.match(body, /llms\.txt/);
+  assert.match(body, /__ora-404-probe-s5rhi5v1/);
 });
 
 test("unknown 404s still offer catalogue Payment Links", async () => {

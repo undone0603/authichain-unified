@@ -60,7 +60,13 @@ test("reconcile neither enables nor disables protected deploy workflows", () => 
 
 test("outbound and payment guardrails remain operator-held or disabled", () => {
   const m = loadManifest();
-  assert.equal(m.cold_outreach.enabled, false);
+  // The master switch is the branch record, not one shared boolean.
+  // launch-mode-expired leaves it on (owner, 2026-11-09). The second-brake
+  // branch says "then off again" and must stay off. Either way these
+  // workflows stay in operator_hold, and live send still needs
+  // OWNER_LIVE_SEND. Do not edit autonomy.json from this test.
+  const secondBrake = m.cold_outreach.$comment.includes("then off again");
+  assert.equal(m.cold_outreach.enabled, secondBrake ? false : true);
   for (const filename of [
     "b2b-outreach.yml",
     "content-publish.yml",

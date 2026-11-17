@@ -47,6 +47,7 @@ import {
   scopedReplayStore,
   resolvePaidSealVerify,
 } from "../../../src/lib/paid-seal-verify";
+import { resolveTierRequest } from "../../../src/lib/x402-tiers";
 import {
   expectedRecordHash,
   readAnchorOnChain,
@@ -105,14 +106,16 @@ export const TOOLS = [
   {
     name: "get_pricing",
     description:
-      "Free. Lists live human Stripe checkouts ($29 Living QR Starter Pack at /checkout/starter, $299 EU DPP Readiness at /checkout/dpp_readiness) and free verification tools.",
+      "Free. Read-only price discovery; never starts a checkout or authorizes payment. Lists live human Stripe checkouts ($29 Living QR Starter Pack at /checkout/starter, $299 EU DPP Readiness at /checkout/dpp_readiness) and free verification tools.",
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     inputSchema: { type: "object", properties: {} },
   },
   {
     name: "verify",
     description: x402PaidVerifyStatus().bound
-      ? "Legacy x402 seal verify. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. For free verification use verify_record."
-      : "Legacy x402 seal verify, not answering. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
+      ? "Legacy x402 seal verify for separately authorized paid seal UUID requests, not free discovery. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. For free verification use verify_record."
+      : "Legacy x402 seal verify, not answering; do not attempt to pay. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -122,13 +125,20 @@ export const TOOLS = [
           description:
             "Required seal UUID. productId and serial are not registry keys.",
         },
+        tier: {
+          type: "string",
+          enum: ["ping", "verify", "evidence"],
+          description:
+            "Signal tier. ping: registry existence only. verify (default): signature and validity baseline. evidence: the baseline plus a SHA-256 digest of the returned answer. The HTTP 402 quote states the exact price. No tier claims real-world authenticity.",
+        },
       },
     },
   },
   {
     name: "query_provenance",
     description:
-      "Free public lookup for an assetId / seal / QR token. Reads matching rows from the canonical auth_seals registry when public Supabase configuration is available, and also resolves published packs. A registry match means registered only; it does not verify a signature or prove a physical item is genuine. Use verify_attestation for a published v0.1 JWS; verify_record is the separate reference-protocol verifier.",
+      "Free registry and published-pack lookup for an assetId / seal / QR token; use for discovery, not proof of authenticity. Reads matching rows from the canonical auth_seals registry when public Supabase configuration is available, and also resolves published packs. A registry match means registered only; it does not verify a signature or prove a physical item is genuine. Use verify_attestation for a published v0.1 JWS; verify_record is the separate reference-protocol verifier.",
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -143,7 +153,8 @@ export const TOOLS = [
   {
     name: "verify_attestation",
     description:
-      "Free. Fetch the exact published AuthiChain v0.1 JWS from the signed-record registry and pass it to the canonical edge-router verifier. Checks signature, issuer trust, durable revocation/status, expiry, and signed decision. Supply expectedObjectId to bind the record to a scanned object identifier. A valid signed claim alone does not prove physical authenticity.",
+      "Free. Use when verifying a registry-published attestation, not a supplied offline protocol record. Fetch the exact published AuthiChain v0.1 JWS from the signed-record registry and pass it to the canonical edge-router verifier. Checks signature, issuer trust, durable revocation/status, expiry, and signed decision. Supply expectedObjectId to bind the record to a scanned object identifier. A valid signed claim alone does not prove physical authenticity.",
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -162,7 +173,8 @@ export const TOOLS = [
   },
   {
     name: "verify_record",
-    description: `Free. Verify an AuthiChain signed provenance record with the open reference verifier. Pass id "${"polygon-anchor-1"}" for the published demonstration record, or pass your own record and anchor JSON. Returns verified, valid-unanchored, or invalid, plus whether the transaction carries the record hash. It does not inspect a physical product.`,
+    description: `Free. Use for a supplied signed protocol record or demonstration record, not published JWS issuer-status checks. Verify an AuthiChain signed provenance record with the open reference verifier. Pass id "${"polygon-anchor-1"}" for the published demonstration record, or pass your own record and anchor JSON. Returns verified, valid-unanchored, or invalid, plus whether the transaction carries the record hash. It does not inspect a physical product.`,
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -185,7 +197,8 @@ export const TOOLS = [
   {
     name: "dpp_readiness_check",
     description:
-      "Free EU Digital Product Passport readiness check. Returns a 0-100 score, gaps, and the dated obligation for the product category (battery passport is law from 18 Feb 2027; other categories are ESPR targets). Not legal advice.",
+      "Free informational EU Digital Product Passport readiness questionnaire; this cannot issue a passport or certify compliance. Returns a 0-100 score, gaps, and the dated obligation for the product category (battery passport is law from 18 Feb 2027; other categories are ESPR targets). Not legal advice.",
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     inputSchema: {
       type: "object",
       properties: {
@@ -214,7 +227,8 @@ export const TOOLS = [
   {
     name: "scan_living_qr",
     description:
-      "Free. Scan a stored Living QR. GET https://authichain.com/qron/r/{object_id} returns AuthiChain Verification Decision v1. This host verifies the signature. A missing id is presentation_not_found. Not an x402 payment endpoint, and it does not inspect a physical product.",
+      "Free. Read an existing Living QR presentation, not a QR generator or x402 purchase. Scan a stored Living QR. GET https://authichain.com/qron/r/{object_id} returns AuthiChain Verification Decision v1. This host verifies the signature. A missing id is presentation_not_found. Not an x402 payment endpoint, and it does not inspect a physical product.",
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -462,6 +476,7 @@ export function isMcpPath(pathname: string): boolean {
  * Keep it published for as long as the listing should stay verified.
  */
 export const GLAMA_CONNECTOR_CLAIM_PATHS = [
+  "/.well-known/glama.json",
   "/mcp/.well-known/glama.json",
   "/api/mcp/.well-known/glama.json",
 ] as const;
@@ -557,14 +572,14 @@ function mcpTools(env?: X402Env) {
       return {
         ...tool,
         description:
-          "Free. Quotes the live x402 agent rail ($0.05 USDC on Base) and live human Stripe checkouts: $29 Starter Pack (100 generations, paid once) at https://authichain.com/checkout/starter and $299 EU DPP Readiness at https://authichain.com/checkout/dpp_readiness. Starting a monthly plan replaces unused pack credits.",
+          "Free. Quotes without charging or authorizing payment the live x402 agent rail ($0.05 USDC on Base) and live human Stripe checkouts: $29 Starter Pack (100 generations, paid once) at https://authichain.com/checkout/starter and $299 EU DPP Readiness at https://authichain.com/checkout/dpp_readiness. Starting a monthly plan replaces unused pack credits.",
       };
     }
     if (tool.name === "verify") {
       return {
         ...tool,
         description:
-          "x402 seal verify. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. Paid calls are answered from the seal registry at $0.05 USDC on Base. For free verification use verify_record.",
+          "x402 paid seal-registry verification; use only after separate payment authorization, not for free lookup. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. Paid calls are answered from the seal registry at $0.05 USDC on Base. For free verification use verify_record.",
       };
     }
     return tool;
@@ -613,11 +628,13 @@ export function mcpPricingDiscovery(env?: X402Env) {
       docs: "https://authichain.com/protocol",
     },
     freeTools: [
-      "verify_record",
-      "query_provenance",
-      "dpp_readiness_check",
       "get_pricing",
+      "query_provenance",
+      "verify_attestation",
+      "verify_record",
+      "dpp_readiness_check",
       "scan_living_qr",
+      "negotiate",
     ],
     humanCheckout: stripe,
   };
@@ -1344,14 +1361,23 @@ function rpcError(id: unknown, message: string, code = -32601): Response {
 async function unpaidOrRefusedVerify(
   request: Request,
   env: X402Env | undefined,
-  args: Record<string, unknown>,
+  rawArgs: Record<string, unknown>,
   id: unknown,
   verifyApp?: X402VerifyBinding
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(request.url).toString();
-  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  // `tier` selects the price; it is not a seal argument, so strip it before
+  // the seal-UUID checks (otherwise {tier:"ping"} would be refused as a bad seal).
+  const { tier: tierArg, ...args } = rawArgs;
+  const verifyUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  const tierReq = resolveTierRequest(
+    typeof tierArg === "string" ? tierArg : resource,
+    verifyUsd
+  );
+  if (!tierReq.ok) return json(tierReq.status, tierReq.body);
+  const priceUsd = tierReq.priceUsd;
   if (!payTo) {
     return json(503, {
       error: "payments_not_configured",
@@ -1387,6 +1413,8 @@ async function unpaidOrRefusedVerify(
     bodyText: JSON.stringify(args),
     resource,
     priceUsd,
+    tier: tierReq.tier,
+    verifyPriceUsd: verifyUsd,
     payTo,
     description: "AuthiChain MCP verify",
     env,
@@ -1478,7 +1506,7 @@ async function handleRpc(
       capabilities: { tools: { listChanged: false } },
       serverInfo: { name: "authichain", version: SERVER_VERSION },
       instructions:
-        "AuthiChain verification is free. verify_attestation fetches a published v0.1 JWS and delegates signature, issuer trust, lifecycle, and expiry checks to the canonical verifier. query_provenance is registration-only; verify_record checks the separate reference protocol. No tool proves physical authenticity. dpp_readiness_check scores EU Digital Product Passport readiness and is not legal advice.",
+        "Free verification: verify_attestation fetches a published v0.1 JWS and checks issuer trust, signature, lifecycle and expiry; verify_record checks the separate reference protocol. Paid verification: verify is an x402 seal-registry tool requiring separately authorized payment. query_provenance is registration-only. No tool proves physical authenticity. dpp_readiness_check is informational EU Digital Product Passport readiness scoring, not legal advice.",
     });
   }
 

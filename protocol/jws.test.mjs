@@ -3,11 +3,19 @@
 // repository's attestation v0.1 fixtures (fixtures/attestation-v0.1-*), copied
 // into examples/ so they ship with the package. python/tests uses the same files.
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { generateKeyPairSync, sign as edSign } from 'node:crypto';
 import { verifyAttestationJws, didKeyFromJwk, verifyRecord, publicKeyFromDidKey } from './verifier.mjs';
 
-const ex = (f) => new URL(`./examples/${f}`, import.meta.url);
+// Vitest can report this module's URL as file:///protocol/..., which misses
+// the worktree. Prefer the real sibling directory, then the repo path.
+const ex = (f) => {
+  const beside = join(dirname(fileURLToPath(import.meta.url)), 'examples', f);
+  if (existsSync(beside)) return beside;
+  return join(process.cwd(), 'protocol', 'examples', f);
+};
 const VALID = readFileSync(ex('attestation-fixture.jws'), 'utf8').trim();
 const TAMPERED = readFileSync(ex('attestation-fixture-tampered.jws'), 'utf8').trim();
 const JWKS = JSON.parse(readFileSync(ex('attestation-fixture.jwks.json'), 'utf8'));

@@ -41,11 +41,12 @@ jobs:
           echo "sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
       # Separately tested, fail-closed automated protection instead of a human
       # environment reviewer. Missing/stale evidence stops the release.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.head.outputs.sha }}
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        timeout-minutes: 15
         with:
           node-version: "22"
       - name: Test fail-closed automated release policy
@@ -70,7 +71,7 @@ jobs:
       contents: read
       statuses: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.verify.outputs.sha }}
           persist-credentials: false
@@ -84,24 +85,21 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           HEAD_SHA=$(node --input-type=module -e "const r=await fetch('https://api.github.com/repos/' + process.env.REPOSITORY + '/branches/main',{headers:{authorization:'Bearer ' + process.env.GH_TOKEN,accept:'application/vnd.github+json'}});if(!r.ok)process.exit(1);const d=await r.json();console.log(d.commit.sha)")
           test "$HEAD_SHA" = "$EXPECTED_SHA"
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
+        timeout-minutes: 15
         with:
           version: "10.28.2"
           run_install: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        timeout-minutes: 15
         with:
           node-version: "22"
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      # Must run after setup-node. The runner's pnpm is a corepack shim with a
-      # "#!/usr/bin/env node" shebang, and the runner process has no node on
-      # PATH when the listener was started by hand instead of the systemd unit
-      # (run 42162800026: "/usr/bin/env: 'node': No such file or directory",
-      # exit 127, after the WSL restart on 2026-11-05). setup-node puts the
-      # cached node 22 on PATH, the same node every later step already uses.
       - name: Install node-gyp (native builds)
         run: npm i -g node-gyp@11
       - name: Install
+        timeout-minutes: 15
         env:
           npm_config_build_from_source: "false"
         run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0
@@ -115,35 +113,6 @@ jobs:
             server/webhooks/stripe.test.ts \
             src/app/api/stripe/webhook/route.test.ts \
             src/app/checkout-return-truth.test.ts
-      - name: Preflight uplink probe (fail fast on a stalled runner)
-        if: runner.environment == 'self-hosted'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
-          # A floor, not a target. Measured on this runner on 2026-11-04: about
-          # 120-140 KB/s sustained to Cloudflare, so the 8.8 MiB bundle needs
-          # roughly 75 s. The stalls this gate exists for ran at 7-11 KB/s.
-          # 80 KB/s keeps a 7x margin over those stalls and still finishes the
-          # upload in about 2 minutes. A connection reset at ~96 s was seen once
-          # (run 41264005567); upload-worker-version.mjs retries it.
-          MIN_UPLINK_BYTES_PER_SEC: "80000"
-        run: |
-          set -euo pipefail
-          # The 8.8 MiB versions POST has stalled at 7-11 KB/s for 9 runs. Probe
-          # api.cloudflare.com with a 1 MiB payload first so a bad uplink fails in
-          # ~15s with an actionable message instead of eating the job timeout.
-          head -c 1048576 /dev/zero > /tmp/probe.bin
-          out=$(curl -s --ipv4 --http1.1 -o /dev/null -m 25 \
-            -w '%{speed_upload} %{http_code}' \
-            -X POST --data-binary @/tmp/probe.bin \
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            https://api.cloudflare.com/client/v4/user/tokens/verify || true)
-          speed=${out%% *}; code=${out##* }
-          echo "uplink: ${speed:-0} bytes/s (http ${code:-none})"
-          if [ "${speed:-0}" -lt "${MIN_UPLINK_BYTES_PER_SEC}" ]; then
-            echo "::error::Uplink to api.cloudflare.com measured ${speed:-0} bytes/s, under the ${MIN_UPLINK_BYTES_PER_SEC} bytes/s floor. The 8.8 MiB bundle would stall; failing now instead of holding the runner for 20-35 minutes. Check the runner's network or run this job elsewhere."
-            exit 1
-          fi
-
       - name: Recheck release gate before any Cloudflare credential use
         env:
           GH_TOKEN: ${{ github.token }}
