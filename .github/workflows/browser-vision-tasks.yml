@@ -63,17 +63,20 @@ jobs:
         if: steps.db-check.outputs.skip != 'true'
 
       - uses: pnpm/action-setup@v6
+        timeout-minutes: 15
         if: steps.db-check.outputs.skip != 'true'
         with:
           version: 10.28.2
 
       - uses: actions/setup-node@v7
+        timeout-minutes: 15
         if: steps.db-check.outputs.skip != 'true'
         with:
           node-version: "22"
           cache: pnpm
 
       - name: Install dependencies
+        timeout-minutes: 15
         if: steps.db-check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 

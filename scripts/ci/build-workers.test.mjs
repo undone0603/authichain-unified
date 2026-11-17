@@ -119,7 +119,25 @@ test("Worker dry-run uses supported step workdirs and lockfile cache path", () =
     assert.ok(workflow.includes(expected), name);
   }
   assert.ok(workflow.includes("cache-dependency-path: " + checkout + "/pnpm-lock.yaml"));
-  assert.ok(workflow.includes("vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'"));
+  // Hosted ubuntu-24.04 is billing-locked. This compile job opts into ops via
+  // AUTHICHAIN_CI_SELF_HOSTED and falls back to ubuntu-24.04. It does not use
+  // a hard-coded self-hosted list. The isolation-attested apply gate lives on
+  // autonomy-reconcile, not this dry-run.
+  assert.ok(
+    workflow.includes(
+      "(github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && " +
+        "vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON(" + // pragma: allowlist secret
+        `'["self-hosted","Linux","ARM64","authichain-ops"]'` + // pragma: allowlist secret
+        ") || 'ubuntu-24.04' }} # pragma: allowlist secret"
+    )
+  );
+  assert.equal(/^\s*runs-on:\s*\[self-hosted/m.test(workflow), false);
+  const reconcile = readFileSync(".github/workflows/autonomy-reconcile.yml", "utf8");
+  assert.ok(
+    reconcile.includes(
+      "github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.AUTHICHAIN_OPS_ISOLATION_ATTESTED == 'true'"
+    )
+  );
   assert.ok(!workflow.includes("/home/zac"));
   assert.ok(!workflow.includes("secrets.CLOUDFLARE_"));
 });

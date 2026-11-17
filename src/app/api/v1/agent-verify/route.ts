@@ -37,6 +37,13 @@ import {
   unpaidSealRefusal,
 } from "../../../../lib/agent-verify";
 import { onVerificationEvent } from "../../../../../server/revenue-engine/loop";
+import {
+  SIGNAL_LEDGER,
+  SIGNAL_LEDGER_NAMES,
+  resolveTierRequest,
+  shapeTierAnswer,
+  spendAtomicFromRows,
+} from "../../../../lib/x402-tiers";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -48,24 +55,30 @@ const PRICE_USD =
 
 async function dailySpentAtomic(
   payer: string,
-  priceAtomic: bigint,
+  verifyUsd: number,
   supabaseUrl: string,
   serviceKey: string
 ): Promise<bigint | null> {
   const supabase = createAdminClient(supabaseUrl, serviceKey);
   const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count, error } = await supabase
+  const { data, error } = await supabase
     .from("automation_logs")
-    .select("*", { count: "exact", head: true })
-    .eq("workflow_name", "x402_spend")
+    .select("workflow_name")
+    .in("workflow_name", [...SIGNAL_LEDGER_NAMES])
     .eq("payload", payer)
-    .gt("created_at", windowStart);
-  if (error) return null;
-  return BigInt(count || 0) * priceAtomic;
+    .gt("created_at", windowStart)
+    .limit(1000);
+  // A failed read must never look like zero spend (would bypass the cap).
+  if (error || !Array.isArray(data)) return null;
+  return spendAtomicFromRows(data, verifyUsd);
 }
 
 export async function POST(request: Request) {
   const resource = new URL(request.url).toString();
+  const tierReq = resolveTierRequest(resource, PRICE_USD);
+  if (!tierReq.ok) {
+    return NextResponse.json(tierReq.body, { status: tierReq.status });
+  }
   const payTo = process.env.X402_PAY_TO;
   if (!payTo) {
     return NextResponse.json(
@@ -76,7 +89,7 @@ export async function POST(request: Request) {
 
   const required = buildPaymentRequired({
     resource,
-    priceUsd: PRICE_USD,
+    priceUsd: tierReq.priceUsd,
     payTo,
     description: X402_RESOURCE_DESCRIPTION,
   });
@@ -143,11 +156,11 @@ export async function POST(request: Request) {
   }
   const admin = createAdminClient(supabaseUrl, serviceKey);
 
-  const priceAtomic = BigInt(usdToAtomic(PRICE_USD));
+  const priceAtomic = BigInt(usdToAtomic(tierReq.priceUsd));
   const capAtomic = BigInt(usdToAtomic(dailyCapUsd()));
   const spent = await dailySpentAtomic(
     proof.payer,
-    priceAtomic,
+    PRICE_USD,
     supabaseUrl,
     serviceKey
   );
@@ -201,7 +214,7 @@ export async function POST(request: Request) {
   // 6. Record the spend (one row == one priced call). Use the same privileged
   // client as the cap read so RLS cannot silently drop the ledger entry.
   await admin.from("automation_logs").insert({
-    workflow_name: "x402_spend",
+    workflow_name: SIGNAL_LEDGER[tierReq.tier],
     trigger_type: "event",
     status: "success",
     payload: proof.payer,
@@ -218,7 +231,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json(
     {
-      ...answer,
+      ...shapeTierAnswer(tierReq.tier, answer),
       subject: sealId ?? (discoveryAlias ? listed : null),
       settlement: {
         payer: proof.payer,
@@ -241,6 +254,10 @@ export async function POST(request: Request) {
 
 /** Unpaid GET is the 402 quote. Paid GET settles like an empty POST. */
 export async function GET(request: Request) {
+  const tierReq = resolveTierRequest(request.url, PRICE_USD);
+  if (!tierReq.ok) {
+    return NextResponse.json(tierReq.body, { status: tierReq.status });
+  }
   const paymentHeader = readPaymentProofHeader(name =>
     request.headers.get(name)
   );
@@ -265,7 +282,7 @@ export async function GET(request: Request) {
   }
   const required = buildPaymentRequired({
     resource: new URL(request.url).toString(),
-    priceUsd: PRICE_USD,
+    priceUsd: tierReq.priceUsd,
     payTo,
     description: X402_RESOURCE_DESCRIPTION,
   });

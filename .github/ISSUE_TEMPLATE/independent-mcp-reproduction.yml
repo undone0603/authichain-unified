@@ -1,0 +1,75 @@
+name: "Independent free MCP reproduction (opt-in)"
+description: "Submit a consented free-only interoperability receipt; not an endorsement or product certification."
+title: "[Independent MCP reproduction] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form is **voluntary**. Follow the reproduction guide at:
+        https://github.com/undone0603/authichain-unified/blob/main/docs/agent-adoption/INDEPENDENT_REPRODUCTION.md
+        Use only the fixed demonstration ID "polygon-anchor-1" on https://authichain.com/mcp/free.
+        Do not share customer data, private keys, wallet/payment headers, API tokens, or personal identifiers.
+        A successful preflight remains **REVIEW_REQUIRED**, never automatic third-party adoption.
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Operator consent and independence
+      options:
+        - label: "I voluntarily authorize public review of the redacted result and evidence I submit."
+          required: true
+        - label: "I disclose whether I am affiliated with AuthiChain; I will not claim independence if owner-operated."
+          required: true
+  - type: input
+    id: operator
+    attributes:
+      label: GitHub operator and affiliation
+      description: "Your own public GitHub handle and any commercial or team affiliation; no private identity data."
+      placeholder: "@example-dev — unaffiliated / affiliation disclosed"
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Client repository URL and full 40-character commit SHA
+      placeholder: "https://github.com/owner/repo @ abcdef..."
+    validations:
+      required: true
+  - type: input
+    id: runtime
+    attributes:
+      label: Runtime, UTC observation and command
+      placeholder: "Node.js 22; 2026-11-14T20:00:00Z; node scripts/agent-adoption/free-record-smoke.mjs"
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Public, sanitized free-result.json
+      description: "Only stdout from the free demo client. Read it first and remove anything private."
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: submission
+    attributes:
+      label: submission.json and result SHA-256
+      description: "Copy the required metadata structure from the guide. The hash is integrity, not authentication."
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: validator
+    attributes:
+      label: Local preflight verdict and external HTTP evidence
+      description: "Include REVIEW_REQUIRED or rejection; attach safe HTTP status/request-ID corroboration only if available. Describe gaps as NOT TESTED."
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Evidence boundaries
+      options:
+        - label: "I did not make a paid call, transmit customer data, or assert physical-product authenticity."
+          required: true
+        - label: "I understand that owner acknowledgment is separate from independent reproduction and review."
+          required: true

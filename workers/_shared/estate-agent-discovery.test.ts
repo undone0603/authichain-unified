@@ -110,10 +110,23 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
     );
     assert.ok(text.includes(PASSPORT));
     assert.ok(text.includes(DPP));
-    assert.equal(text.includes(FARM), true);
+    assert.equal(text.includes(FARM), false);
+    assert.equal(text.includes(planPaymentLink("theater_1") ?? ""), false);
+    assert.equal(text.includes(planPaymentLink("theater_3") ?? ""), false);
+    assert.equal(
+      text.includes(planPaymentLink("gov_provenance_pilot") ?? ""),
+      false
+    );
+    assert.equal(text.includes("Theater 1"), false);
+    assert.equal(text.includes("Theater 3"), false);
+    assert.equal(text.includes("Farm Plan"), false);
+    assert.equal(text.includes("Federal provenance"), false);
     assert.ok(text.includes(planPaymentLink("starter") ?? ""));
     assert.ok(text.includes(planPaymentLink("creator") ?? ""));
     assert.ok(text.includes(planPaymentLink("musa_claim_file") ?? ""));
+    assert.ok(text.includes(planPaymentLink("musa_audit_bundle") ?? ""));
+    assert.ok(text.includes(planPaymentLink("battery_gap_report") ?? ""));
+    assert.ok(text.includes(planPaymentLink("battery_gap_report_extra") ?? ""));
     assert.equal(httpsUrl(PASSPORT).hostname, "authichain.com");
     assert.equal(httpsUrl(DPP).hostname, "authichain.com");
     assert.doesNotMatch(text, /GET \/api\/checkout/);
@@ -242,4 +255,17 @@ test("tryHandleEstateAgentDiscovery answers GET and ignores other paths", async 
     ),
     null
   );
+});
+
+test("llms.txt does not send buyers to a retired checkout", () => {
+  for (const brand of ["qron", "strainchain", "govchain"] as const) {
+    const text = renderEstateLlmsTxt(brand);
+    // /checkout/qron_launch answers 303 to /pricing and sells nothing.
+    assert.equal(text.includes("/checkout/qron_launch"), false, brand);
+    assert.equal(text.includes("QRON Launch"), false, brand);
+    assert.equal(text.includes("/checkout/theater_1"), false, brand);
+    assert.equal(text.includes("/checkout/theater_3"), false, brand);
+    assert.equal(text.includes("/checkout/strainchain_farm"), false, brand);
+    assert.equal(text.includes("/checkout/gov_provenance_pilot"), false, brand);
+  }
 });

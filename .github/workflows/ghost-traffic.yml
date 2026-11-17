@@ -33,6 +33,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: pip install -r requirements-agentz.txt
 
       - name: Resolve probe mode

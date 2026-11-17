@@ -2,10 +2,10 @@
  * AuthiChain Stripe Service
  * Handles checkout sessions, subscription management, and webhook processing
  */
-  import Stripe from "stripe";
-  import { safeOrigin } from "./_core/allowed-origins";
-  import { ENV } from "./_core/env";
-  import { STRIPE_PRODUCTS,type PlanKey } from "./stripe-products";
+import Stripe from "stripe";
+import { safeOrigin } from "./_core/allowed-origins";
+import { ENV } from "./_core/env";
+import { STRIPE_PRODUCTS, type PlanKey } from "./stripe-products";
 
 let _stripe: Stripe | null = null;
 
@@ -97,12 +97,18 @@ export interface CreatePaymentCheckoutParams {
   origin: string;
   stripeCustomerId?: string;
   metadata?: Record<string, string>;
+  /** Same-site return path after checkout (default "/payments"). */
+  returnPath?: string;
 }
 
 export async function createPaymentCheckout(
   params: CreatePaymentCheckoutParams
 ): Promise<{ url: string; sessionId: string }> {
   const stripe = getStripe();
+  const returnPath =
+    params.returnPath && /^\/[A-Za-z0-9/_-]*$/.test(params.returnPath)
+      ? params.returnPath
+      : "/payments";
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -128,8 +134,8 @@ export async function createPaymentCheckout(
         quantity: 1,
       },
     ],
-    success_url: `${safeOrigin(params.origin)}/payments?session_id={CHECKOUT_SESSION_ID}&success=true`,
-    cancel_url: `${safeOrigin(params.origin)}/payments?cancelled=true`,
+    success_url: `${safeOrigin(params.origin)}${returnPath}?session_id={CHECKOUT_SESSION_ID}&success=true`,
+    cancel_url: `${safeOrigin(params.origin)}${returnPath}?cancelled=true`,
   });
 
   return { url: session.url!, sessionId: session.id };
@@ -235,10 +241,13 @@ export interface WebhookResult {
 
 function invoiceSubscriptionId(invoice: {
   subscription?: string | { id?: string } | null;
-  parent?: { subscription_details?: { subscription?: string | null } | null } | null;
+  parent?: {
+    subscription_details?: { subscription?: string | null } | null;
+  } | null;
 }): string | undefined {
   const fromParent = invoice.parent?.subscription_details?.subscription;
-  if (typeof fromParent === "string" && fromParent.length > 0) return fromParent;
+  if (typeof fromParent === "string" && fromParent.length > 0)
+    return fromParent;
   if (typeof invoice.subscription === "string") return invoice.subscription;
   if (invoice.subscription && typeof invoice.subscription === "object") {
     return invoice.subscription.id;
