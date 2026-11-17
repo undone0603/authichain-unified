@@ -42,6 +42,14 @@ describe("llms.txt", () => {
     // Retired for new buyers: /checkout/qron_launch answers 303 to /pricing.
     expect(text).not.toContain("/checkout/qron_launch");
     expect(text).not.toContain("QRON Launch");
+    expect(text).not.toContain(planPaymentLink("theater_1"));
+    expect(text).not.toContain(planPaymentLink("theater_3"));
+    expect(text).not.toContain(planPaymentLink("strainchain_farm"));
+    expect(text).not.toContain(planPaymentLink("gov_provenance_pilot"));
+    expect(text).not.toContain("Theater 1");
+    expect(text).not.toContain("Theater 3");
+    expect(text).not.toContain("Farm Plan");
+    expect(text).not.toContain("Federal provenance");
     expect(text).toContain(planPaymentLink("starter"));
     expect(text).toContain(planPaymentLink("creator"));
     expect(text).toContain("https://authichain.com/generate");
@@ -52,8 +60,7 @@ describe("llms.txt", () => {
     expect(text).toContain(planPaymentLink("musa_claim_file"));
     expect(text).toContain(planPaymentLink("musa_audit_bundle"));
     expect(text).toContain(planPaymentLink("battery_gap_report"));
-    expect(text).toContain(planPaymentLink("gov_provenance_pilot"));
-    expect(text).toContain(planPaymentLink("strainchain_farm"));
+    expect(text).toContain(planPaymentLink("battery_gap_report_extra"));
     expect(text).not.toContain("GET /api/checkout");
     expect(text.toLowerCase()).not.toContain("facilitator.payai");
   });

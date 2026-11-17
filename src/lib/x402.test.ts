@@ -777,7 +777,25 @@ describe("x402Catalog", () => {
     expect(catalog.humanCheckout.offers.map(offer => offer.id)).not.toContain(
       "qron_launch_annual"
     );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).not.toContain(
+      "theater_1"
+    );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).not.toContain(
+      "theater_3"
+    );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).not.toContain(
+      "strainchain_farm"
+    );
+    expect(catalog.humanCheckout.offers.map(offer => offer.id)).not.toContain(
+      "gov_provenance_pilot"
+    );
     expect(JSON.stringify(catalog)).not.toContain("/checkout/qron_launch");
+    expect(JSON.stringify(catalog)).not.toContain("/checkout/theater_1");
+    expect(JSON.stringify(catalog)).not.toContain("/checkout/theater_3");
+    expect(JSON.stringify(catalog)).not.toContain("/checkout/strainchain_farm");
+    expect(JSON.stringify(catalog)).not.toContain(
+      "/checkout/gov_provenance_pilot"
+    );
     expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
     expect(JSON.stringify(catalog)).not.toContain("/api/checkout");
     expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
