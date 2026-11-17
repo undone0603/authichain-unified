@@ -1,6 +1,6 @@
 # AgentZ MCP/A2A Connect — customer scope and commercial WIN gate (proposal v1)
 
-**Nonbinding, not signed; this document does not create a payment link.** The USD 1,500 option is purchasable as a $1,500 one-time price for MCP + A2A Agent Build (Standard).
+**Nonbinding, not signed; this document does not create a payment link.** The USD 1,500 option is priced at a $1,500 one-time price for MCP + A2A Agent Build (Standard).
 
 ## Buyer and budget
 
@@ -8,7 +8,7 @@ Buyer legal entity: **unverified**; purchasing contact: **unverified**; human-ex
 
 ## Prices and scoped deliverables
 
-- **USD 1,500 one-time**, purchasable as MCP + A2A Agent Build (Standard): MCP and A2A sandbox interfaces, one sandbox, and one read-only synthetic component/lot evidence flow.
+- **USD 1,500 one-time**, priced at MCP + A2A Agent Build (Standard): MCP and A2A sandbox interfaces, one sandbox, and one read-only synthetic component/lot evidence flow.
 - Include one agreed schema/fixture, documented source/issuer verification assumptions, fail-closed negative fixtures (missing evidence, duplicate identifier, unknown authority, missing auth, unsupported purchasing call), test report, redacted SHA-256 manifest, deployment/rollback and acceptance runbook.
 - The existing local synthetic protocol demonstration is **not** full protocol conformance; client acceptance requires verified environment-specific tests. The aerospace evidence screen cannot certify components or authorize release/flight use.
 
