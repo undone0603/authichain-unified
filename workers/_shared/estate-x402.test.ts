@@ -340,6 +340,11 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
     const blob = JSON.stringify(body);
     assert.equal(blob.includes("/api/checkout"), false, host);
     assert.equal(blob.toLowerCase().includes("facilitator.payai"), false, host);
+    assert.equal(blob.includes("/checkout/qron_launch"), false, host);
+    assert.equal(blob.includes("/checkout/theater_1"), false, host);
+    assert.equal(blob.includes("/checkout/theater_3"), false, host);
+    assert.equal(blob.includes("/checkout/strainchain_farm"), false, host);
+    assert.equal(blob.includes("/checkout/gov_provenance_pilot"), false, host);
 
     if (brand === "qron") {
       const starter = planPaymentLink("starter") ?? "";

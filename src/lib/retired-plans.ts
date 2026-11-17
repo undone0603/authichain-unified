@@ -16,15 +16,36 @@ export const RETIRED_GATED_PLAN_IDS: readonly PlanId[] = [
   "qron_launch_annual",
 ];
 
+/**
+ * Still have checkout routes, but are not a public offer. Agent catalogs
+ * (llms.txt, MCP offers, x402 humanCheckout.offers) omit these. Checkout,
+ * Stripe, and pricing pages stay unchanged.
+ *
+ * Theater 1/3 and Farm: Stripe checkout fails 502/503; not on /pricing.
+ * Federal provenance pilot: govchain.us/pricing says no self-serve GovChain
+ * price.
+ */
+export const NON_PUBLIC_AGENT_OFFER_IDS: readonly PlanId[] = [
+  "theater_1",
+  "theater_3",
+  "strainchain_farm",
+  "gov_provenance_pilot",
+];
+
 export function isRetiredPlan(id: PlanId): boolean {
   return RETIRED_GATED_PLAN_IDS.includes(id);
+}
+
+export function isPublicAgentOffer(id: PlanId): boolean {
+  return !isRetiredPlan(id) && !NON_PUBLIC_AGENT_OFFER_IDS.includes(id);
 }
 
 /**
  * Offers a new buyer can actually open. Anything that tells a person or an
  * agent where to pay lists these, not catalogOffers(): a retired plan's
- * checkout link redirects to /pricing and sells nothing.
+ * checkout link redirects to /pricing and sells nothing, and a non-public
+ * offer is not on /pricing.
  */
 export function openCatalogOffers(): CatalogOffer[] {
-  return catalogOffers().filter(offer => !isRetiredPlan(offer.id));
+  return catalogOffers().filter(offer => isPublicAgentOffer(offer.id));
 }

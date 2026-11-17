@@ -4,15 +4,12 @@
  *
  * Same class of payload authichain.com already serves: unpaid x402 price +
  * payTo from health, plus humanCheckout Payment Links from plans.ts
- * (Passport and DPP; QRON also Starter + Creator). Farm is not a public
- * offer. Do not invent Stripe
+ * (Passport and DPP; QRON also Starter + Creator). Farm, Theater, and the
+ * federal provenance pilot are not public offers. Do not invent Stripe
  * URLs. Do not add GET /api/checkout. Do not publish a facilitator URL.
  */
-import {
-  catalogOffers,
-  planPaymentLink,
-  planUsd,
-} from "../../src/lib/plans.ts";
+import { planPaymentLink, planUsd } from "../../src/lib/plans.ts";
+import { openCatalogOffers } from "../../src/lib/retired-plans.ts";
 import {
   x402Caip2Network,
   x402HealthReport,
@@ -35,7 +32,7 @@ export type SisterHumanCheckout = {
   creatorUsd?: number;
   starterPaymentLink?: string;
   creatorPaymentLink?: string;
-  offers: ReturnType<typeof catalogOffers>;
+  offers: ReturnType<typeof openCatalogOffers>;
   source: "src/lib/plans.ts";
 };
 
@@ -87,12 +84,7 @@ function humanCheckout(
     farmUsd: planUsd("strainchain_farm"),
     passportPaymentLink: planPaymentLink("strainchain_passport"),
     dppPaymentLink: planPaymentLink("dpp_readiness"),
-    offers: catalogOffers().filter(
-      offer =>
-        offer.id !== "qron_launch" &&
-        offer.id !== "qron_launch_annual" &&
-        offer.id !== "strainchain_farm"
-    ),
+    offers: openCatalogOffers(),
     source: "src/lib/plans.ts",
   };
   if (brand === "qron") {
