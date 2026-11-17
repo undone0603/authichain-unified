@@ -8,6 +8,8 @@
  * A hold is not delivery. Founder still has to produce the file.
  */
 
+import { isOwnerTestCharge } from "../../../src/lib/billing/owner-test-charges";
+
 export type Grant = {
   plan: string;
   brand: "qron" | "strainchain" | "authichain";
@@ -226,4 +228,27 @@ export function isFounderEmail(email: string | null | undefined): boolean {
   const at = e.lastIndexOf("@");
   if (at < 0) return false;
   return (FOUNDER_EMAILS as readonly string[]).includes(e.slice(at));
+}
+
+/**
+ * Observability-only first-sale alert. Owner self-tests are excluded by
+ * allowlisted Stripe ids / metadata flags, not by a personal email.
+ */
+export function isNonFounderFirstSale(input: {
+  amountTotal?: number | null;
+  email?: string | null;
+  paymentIntentId?: string | null;
+  customerId?: string | null;
+  clientReferenceId?: string | null;
+  metadata?: Record<string, unknown> | null;
+}): boolean {
+  if ((input.amountTotal ?? 0) < 2900) return false;
+  if (!input.email || isFounderEmail(input.email)) return false;
+  return !isOwnerTestCharge({
+    id: input.paymentIntentId,
+    payment_intent: input.paymentIntentId,
+    customer: input.customerId,
+    client_reference_id: input.clientReferenceId,
+    metadata: input.metadata,
+  });
 }

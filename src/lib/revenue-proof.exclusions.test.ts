@@ -86,8 +86,29 @@ describe("classifyVisit", () => {
       "real",
     ],
     [
-      "string 'true' is not a demo flag (only boolean true counts, as in isDemoVisit)",
+      "string 'true' is a demo flag (Stripe metadata is always a string)",
       paidVisit("a", { is_demo: "true" }),
+      [],
+      "demo",
+    ],
+    [
+      "test_payment=owner metadata is a self-test, not a sale",
+      paidVisit("a", { test_payment: "owner", amount_total: 1000 }),
+      [],
+      "demo",
+    ],
+    [
+      "allowlisted $10 self-test charge id is excluded without an email",
+      paidVisit("a", {
+        charge_id: "ch_3UHcQfGqTruSqV8T1j4hdD7l",
+        amount_total: 1000,
+      }),
+      [],
+      "demo",
+    ],
+    [
+      "unmarked $10 stranger charge is still real (amount is not the rule)",
+      paidVisit("a", { amount_total: 1000 }),
       [],
       "real",
     ],

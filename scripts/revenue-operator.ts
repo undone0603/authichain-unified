@@ -9,6 +9,7 @@ import {
   canSend,
   type VerificationSource,
 } from "../server/outreach/send-guard";
+import { isOwnerTestCharge } from "../src/lib/billing/owner-test-charges";
 import { planStripePaymentLink } from "../src/lib/plans";
 
 export const DEFAULT_FOUNDER_EMAILS = [
@@ -56,6 +57,9 @@ export type RevenueCharge = {
   /** False means Stripe test mode. Missing means the caller already filtered. */
   livemode?: boolean | null;
   email?: string | null;
+  payment_intent?: string | null;
+  customer?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 export type RevenueSnapshot = {
@@ -144,7 +148,9 @@ export function isFounderEmail(
   return founderEmails.some(item => item.trim().toLowerCase() === domainEntry);
 }
 
-function countsAsLive<T extends { livemode?: boolean | null }>(row: T): boolean {
+function countsAsLive<T extends { livemode?: boolean | null }>(
+  row: T
+): boolean {
   return row.livemode !== false;
 }
 
@@ -180,6 +186,7 @@ export function classifyRevenue(
     charge =>
       countsAsLive(charge) &&
       charge.paid &&
+      !isOwnerTestCharge(charge) &&
       isStrangerEmail(charge.email, founderEmails)
   );
   let blockedPayout: string | null = null;
@@ -501,6 +508,14 @@ export function snapshotFromStripeLike(input: unknown): RevenueSnapshot {
         billing?.email
       ),
       livemode: typeof rec.livemode === "boolean" ? rec.livemode : null,
+      payment_intent:
+        typeof rec.payment_intent === "string"
+          ? rec.payment_intent
+          : typeof rec.paymentIntent === "string"
+            ? rec.paymentIntent
+            : null,
+      customer: typeof rec.customer === "string" ? rec.customer : null,
+      metadata: asRecord(rec.metadata),
     };
   });
   return { subscriptions, payouts, charges };

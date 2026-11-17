@@ -5,6 +5,7 @@ import {
   grantForPrice,
   grantStacksOnRepeat,
   isFounderEmail,
+  isNonFounderFirstSale,
   loopForPlan,
 } from "./grant-map";
 
@@ -433,10 +434,19 @@ export default {
         await recordPurchaseEvent(env, grant?.plan ?? null, email);
 
         // Non-founder first-sale alert (observability only; never blocks grant)
+        const paymentIntentId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : (session.payment_intent?.id ?? null);
         if (
-          (session.amount_total ?? 0) >= 2900 &&
-          email &&
-          !isFounderEmail(email) &&
+          isNonFounderFirstSale({
+            amountTotal: session.amount_total,
+            email,
+            paymentIntentId,
+            customerId,
+            clientReferenceId: session.client_reference_id,
+            metadata: session.metadata,
+          }) &&
           env.NTFY_TOPIC
         ) {
           console.log(

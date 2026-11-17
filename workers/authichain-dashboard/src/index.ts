@@ -15,6 +15,8 @@
 // Auth: cookie session from a form POST against env.ACCESS_TOKEN, and the
 // hostname sits behind Cloudflare Access. Auto-refreshes every 60 seconds.
 
+import { isOwnerTestCharge } from "../../../src/lib/billing/owner-test-charges";
+
 interface Env {
   ACCESS_TOKEN: string;
   STRIPE_READ_KEY?: string;
@@ -160,8 +162,17 @@ export function summarizeMoney(
   const paid = charges.filter(
     c => c.status === "succeeded" && c.paid && !c.refunded
   );
+  const isOwnerTest = (c: any) =>
+    isOwnerTestCharge({
+      id: c.id,
+      payment_intent: c.payment_intent,
+      customer: c.customer,
+      metadata: c.metadata,
+    });
   // Founder entries are exact emails or "@domain" (covers smoke+x@ aliases).
+  // Owner self-tests are excluded by allowlisted id / metadata, not email.
   const isExternal = (c: any) => {
+    if (isOwnerTest(c)) return false;
     const e = String(
       c.billing_details?.email ?? c.receipt_email ?? ""
     ).toLowerCase();

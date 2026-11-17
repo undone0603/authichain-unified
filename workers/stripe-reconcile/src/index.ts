@@ -79,8 +79,11 @@ async function db(
 /** Stripe metadata values are strings; never forward an untyped value to the ledger. */
 function testPaymentMetadata(metadata: unknown): Record<string, string> {
   if (metadata === null || typeof metadata !== "object") return {};
-  const value = (metadata as { test_payment?: unknown }).test_payment;
-  return typeof value === "string" ? { test_payment: value } : {};
+  const rec = metadata as { test_payment?: unknown; is_self_test?: unknown };
+  const out: Record<string, string> = {};
+  if (typeof rec.test_payment === "string") out.test_payment = rec.test_payment;
+  if (typeof rec.is_self_test === "string") out.is_self_test = rec.is_self_test;
+  return out;
 }
 
 export async function gather(env: Env, now: Date): Promise<ReconInput> {
@@ -127,6 +130,7 @@ export async function gather(env: Env, now: Date): Promise<ReconInput> {
       status: c.status,
       refunded: c.refunded,
       livemode: c.livemode,
+      customer: typeof c.customer === "string" ? c.customer : null,
       metadata: testPaymentMetadata(c.metadata),
     })),
     sessions: sessions.map(s => ({
@@ -138,7 +142,10 @@ export async function gather(env: Env, now: Date): Promise<ReconInput> {
     payouts: payoutRows,
     ledger,
     events,
-    allowlist: allowlistFile.ids,
+    allowlist: [
+      ...allowlistFile.ids,
+      ...((allowlistFile as { customer_ids?: string[] }).customer_ids ?? []),
+    ],
   };
 }
 

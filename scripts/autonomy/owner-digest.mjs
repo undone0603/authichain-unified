@@ -15,7 +15,7 @@
 //      CLOUDFLARE_API_TOKEN (Analytics read) + optional CLOUDFLARE_ZONE_ID,
 //      DIGEST_FORCE=true to send regardless of day, DIGEST_DRY_RUN=true to print only.
 
-import { isFounder } from "./revenue-watch.mjs";
+import { isFounder, isOwnerTestPayment } from "./revenue-watch.mjs";
 import { flatten, loadManifest } from "./reconcile.mjs";
 import { pickLatestCompletedRun } from "./ops-pulse.mjs";
 
@@ -53,6 +53,7 @@ export function summarize(
     String(c.receipt_email ?? "").trim();
   const unattributedPayments = paid.filter(c => !buyerEmail(c)).length;
   const ext = paid.filter(c => {
+    if (isOwnerTestPayment(c)) return false;
     const email = buyerEmail(c);
     return email && !isFounder(email, founders);
   });
@@ -117,6 +118,7 @@ export function hasBuyerEmail(s) {
  */
 export function isRealCheckout(s, founders) {
   if (s.livemode === false) return false;
+  if (isOwnerTestPayment(s)) return false;
   const m = s.metadata ?? {};
   if (m.is_demo === "true") return false;
   const tags = [

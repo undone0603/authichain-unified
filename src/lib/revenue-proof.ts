@@ -25,7 +25,8 @@ export const REVENUE_PROOF_SIGNALS = [
 
 /**
  * What a visit is, for the purpose of counting revenue.
- *  - demo: the loop marked it `is_demo` / `demo` (smoke checkout, demo promo).
+ *  - demo: explicit demo/self-test metadata, allowlisted owner-test ids, or a
+ *    $0 "paid" checkout. Not a hardcoded personal email.
  *  - test: a row carries Stripe `livemode: false`.
  *  - founder: a row carries an email on the founder list.
  * Only `real` visits count toward any signal. One class per visit, in the

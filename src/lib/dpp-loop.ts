@@ -6,6 +6,7 @@
  * attributed_visit → … → retained without a schema migration.
  */
 
+import { isOwnerTestCharge } from "./billing/owner-test-charges";
 import { DPP_OFFER_KEY } from "./plans";
 
 export type DppLoopStage =
@@ -271,8 +272,22 @@ export function stallOf(
 
 export function isDemoVisit(rows: LoopEventRow[]): boolean {
   return rows.some(row => {
-    const meta = row.metadata;
-    return meta?.is_demo === true || meta?.demo === true;
+    if (
+      isOwnerTestCharge({
+        id: row.prospect_id,
+        prospect_id: row.prospect_id,
+        metadata: row.metadata,
+      })
+    ) {
+      return true;
+    }
+
+    // Stripe marks $0 completed checkouts "paid" even without collecting money.
+    // Only the payment stage is authoritative for this amount classification.
+    const total = row.metadata?.amount_total;
+    return (
+      stageOf(row) === "payment_succeeded" && (total === 0 || total === "0")
+    );
   });
 }
 
