@@ -46,6 +46,28 @@ vi.mock("../server/_core/db-helpers", () => ({
 const indexModule = await import("./index");
 const app = indexModule.app;
 const __resetMarketingRoutesCache = indexModule.__resetMarketingRoutesCache;
+const hydrateProcessEnv = indexModule.hydrateProcessEnv;
+
+describe("Cloudflare Resend outbound secret hydration", () => {
+  const priorResendKey = process.env.RESEND_API_KEY;
+  afterEach(() => {
+    if (priorResendKey === undefined) delete process.env.RESEND_API_KEY;
+    else process.env.RESEND_API_KEY = priorResendKey;
+  });
+
+  it("prefers the bound outbound credential over a stale process.env snapshot", () => {
+    process.env.RESEND_API_KEY = "re_synthetic_stale";
+    hydrateProcessEnv({ RESEND_API_KEY: "re_synthetic_current" } as Parameters<typeof hydrateProcessEnv>[0]);
+    expect(process.env.RESEND_API_KEY).toBe("re_synthetic_current");
+  });
+
+  it("does not create an outbound credential when the Worker binding is missing", () => {
+    delete process.env.RESEND_API_KEY;
+    hydrateProcessEnv({} as Parameters<typeof hydrateProcessEnv>[0]);
+    expect(process.env.RESEND_API_KEY).toBeUndefined();
+  });
+});
+
 
 const { dppCreate } = vi.hoisted(() => ({ dppCreate: vi.fn() }));
 vi.mock("stripe", () => ({

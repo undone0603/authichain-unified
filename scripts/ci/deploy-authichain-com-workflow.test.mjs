@@ -49,14 +49,11 @@ test("shared self-hosted workspace is restored to a full tree after every checko
   assert.equal(titles.length, 2, "verify and deploy jobs must each restore the tree");
   const first = yml.indexOf("- name: Restore full tree after sparse checkout");
   const second = yml.indexOf("- name: Restore full tree after sparse checkout", first + 1);
-  const checkouts = [];
-  let from = 0;
-  while (true) {
-    const at = yml.indexOf("uses: actions/checkout@v4", from);
-    if (at === -1) break;
-    checkouts.push(at);
-    from = at + 1;
-  }
+  // Accept version-tagged or full-SHA checkout actions; retain the
+  // fail-closed count/order checks for both restored self-hosted jobs.
+  const checkouts = [
+    ...yml.matchAll(/uses: actions\/checkout@(?:v\d+|[0-9a-f]{40})\b/g),
+  ].map(match => match.index);
   assert.equal(checkouts.length, 2);
   assert.ok(checkouts[0] < first && first < checkouts[1], "first restore follows the verify checkout");
   assert.ok(checkouts[1] < second, "second restore follows the deploy checkout");

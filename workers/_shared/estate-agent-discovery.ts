@@ -122,8 +122,6 @@ export type EstateOpenApiDocument = {
       dppUsd: number;
       passportPaymentLink: string;
       dppPaymentLink: string;
-      farmUsd?: number;
-      farmPaymentLink?: string;
     };
   };
   servers: Array<{ url: string }>;
@@ -145,7 +143,6 @@ export function renderEstateOpenApi(
         source: "src/lib/plans.ts",
         passportUsd: planUsd("strainchain_passport"),
         dppUsd: planUsd("dpp_readiness"),
-        farmUsd: planUsd("strainchain_farm"),
         passportPaymentLink: PASSPORT_LINK,
         dppPaymentLink: DPP_LINK,
       },
