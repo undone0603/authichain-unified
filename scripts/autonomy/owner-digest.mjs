@@ -45,9 +45,17 @@ export function summarize(
   const paid = charges.filter(
     c => c.status === "succeeded" && c.paid && !c.refunded
   );
-  const ext = paid.filter(
-    c => !isFounder(c.billing_details?.email ?? c.receipt_email, founders)
-  );
+  // A charge with no attributable buyer is not proof of a non-founder sale.
+  // Trim billing email before falling back to the receipt address, so a
+  // whitespace-only billing field cannot hide an attributable founder.
+  const buyerEmail = c =>
+    String(c.billing_details?.email ?? "").trim() ||
+    String(c.receipt_email ?? "").trim();
+  const unattributedPayments = paid.filter(c => !buyerEmail(c)).length;
+  const ext = paid.filter(c => {
+    const email = buyerEmail(c);
+    return email && !isFounder(email, founders);
+  });
   const mrr = subs.reduce((n, s) => {
     for (const it of s.items?.data ?? []) {
       const p = it.price ?? {};
@@ -70,6 +78,7 @@ export function summarize(
       0
     ),
     payments: ext.length,
+    unattributedPayments,
     mrr: Math.round(mrr),
     subs: subs.length,
     abandoned: sessions.filter(
@@ -290,6 +299,10 @@ export function buildDigest(d, { force = false } = {}) {
         ? `Paid by customers: ${usd(d.money.revenue)} (Stripe-confirmed)`
         : "Paid by customers: not connected"
     );
+    if (d.money?.unattributedPayments)
+      item(
+        `Paid charges missing buyer identity: ${d.money.unattributedPayments} (excluded from customer revenue; reconcile)`
+      );
     item(
       n(b.replies, "Replies") ??
         `Replies received: ${b.replies} ("Re:" emails from outside the company; read them before counting them as interest)`

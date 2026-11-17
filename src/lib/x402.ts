@@ -1232,10 +1232,14 @@ export async function x402Catalog(
       creatorUsd: planUsd("creator"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
-      farmPaymentLink: planPaymentLink("strainchain_farm"),
       starterPaymentLink: planPaymentLink("starter"),
       creatorPaymentLink: planPaymentLink("creator"),
-      offers: catalogOffers(),
+      offers: catalogOffers().filter(
+        offer =>
+          offer.id !== "qron_launch" &&
+          offer.id !== "qron_launch_annual" &&
+          offer.id !== "strainchain_farm"
+      ),
       source: "src/lib/plans.ts",
     },
     discovery: {
@@ -1293,7 +1297,7 @@ export type X402AgentCard = {
 /**
  * A2A Agent Card at `/.well-known/agent-card.json`.
  * Identity + skills + x402 payment metadata for Trust Passport probes.
- * This host has no A2A JSON-RPC and no ERC-8004 registration — do not claim either.
+ * JSON-RPC 1.0 is POST /api/a2a. There is no ERC-8004 registration.
  * A valid signature is not real-world truth. Do not add contact email.
  */
 export async function x402AgentCard(
@@ -1310,7 +1314,7 @@ export async function x402AgentCard(
   return {
     name: "AuthiChain",
     description: X402_RESOURCE_DESCRIPTION,
-    url: "https://authichain.com/mcp",
+    url: "https://authichain.com/api/a2a",
     version: "1.3.2",
     documentationUrl: "https://authichain.com/x402",
     provider: {
@@ -1326,9 +1330,9 @@ export async function x402AgentCard(
     defaultOutputModes: ["application/json"],
     supportedInterfaces: [
       {
-        url: "https://authichain.com/mcp",
-        protocolBinding: "HTTP",
-        protocolVersion: "2025-03-26",
+        url: "https://authichain.com/api/a2a",
+        protocolBinding: "JSONRPC",
+        protocolVersion: "1.0",
       },
     ],
     additionalInterfaces: [

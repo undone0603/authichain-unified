@@ -13,7 +13,10 @@ import { planPaymentLink } from "../../../src/lib/plans.ts";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
 
-const GATED_DPP_ACTION = new URL("/checkout/dpp_readiness", "https://authichain.com").href;
+const GATED_DPP_ACTION = new URL(
+  "/checkout/dpp_readiness",
+  "https://authichain.com"
+).href;
 
 const ENV = {
   SUPABASE_URL: "https://project.supabase.co",
@@ -101,15 +104,29 @@ test("the apex still renders the marketing page", async () => {
   assert.match(html, /Federal Contract Intelligence/);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /--bg: #ffffff/);
+  assert.match(html, /id="lead-capture"/);
+  assert.match(html, /Request follow-up/);
+  assert.match(html, /1-to-1 follow-up/);
+  assert.match(html, /consent:"yes"/);
+  assert.match(html, /novalidate/);
+  assert.match(html, /lead_captures/);
+  assert.match(html, /https:\/\/authichain\.com\/api\/leads\/capture/);
+  assert.match(html, /https:\/\/authichain\.com\/privacy/);
 });
 
 test("RES-209: the apex footer carries the non-affiliation line", async () => {
   const html = await (await get("/")).text();
   assert.ok(
-    html.includes("GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency."),
+    html.includes(
+      "GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency."
+    ),
     "govchain.us footer must carry the non-affiliation line"
   );
-  for (const banned of [/eSign Act/i, /legally binding/i, /Public Records on Blockchain/i]) {
+  for (const banned of [
+    /eSign Act/i,
+    /legally binding/i,
+    /Public Records on Blockchain/i,
+  ]) {
     assert.doesNotMatch(html, banned);
   }
 });
@@ -231,11 +248,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
       planPaymentLink("strainchain_passport"),
       path
     );
-    assert.equal(
-      body.pricing.humanCheckout.farmPaymentLink,
-      undefined,
-      path
-    );
+    assert.equal(body.pricing.humanCheckout.farmPaymentLink, undefined, path);
     assert.equal(
       body.pricing.humanCheckout.starterPaymentLink,
       undefined,
@@ -305,7 +318,10 @@ test("/pricing is a live money page, not a 404", async () => {
   assert.match(html, /<title>Pricing — GovChain<\/title>/);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.match(html, /href="https:\/\/authichain\.govchain\.us\/pricing"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\//);
   assert.ok(
@@ -334,7 +350,10 @@ test("free DoD packet is live, unpaid, and does not claim an award", async () =>
         return false;
       }
     };
-    assert.ok(hrefs.some(h => isAppUrl(h, "/made-in-america")), path);
+    assert.ok(
+      hrefs.some(h => isAppUrl(h, "/made-in-america")),
+      path
+    );
     assert.ok(
       hrefs.includes(
         "https://govchain.us/p/sbir-svip-blockchain-document-verification"
@@ -458,15 +477,22 @@ test("/api/govchain/grants proxies the canonical JSON handler", async () => {
       fetch: async (request: Request) => {
         calls.push(request);
         return Response.json(
-          { grants: [{ program: "Small Business Innovation Research", agency: "GSA" }], total: 1, limit: 20, offset: 0 },
-          { status: 200 },
+          {
+            grants: [
+              { program: "Small Business Innovation Research", agency: "GSA" },
+            ],
+            total: 1,
+            limit: 20,
+            offset: 0,
+          },
+          { status: 200 }
         );
       },
     },
   } as typeof ENV;
   const res = await worker.fetch(
     new Request("https://govchain.us/api/govchain/grants?agency=GSA"),
-    env,
+    env
   );
   assert.equal(res.status, 200);
   assert.match(res.headers.get("content-type") ?? "", /application\/json/);
@@ -489,7 +515,9 @@ test("/api/govchain/grants fails closed when the app binding is absent", async (
 test("/api/govchain/opportunities applies the search query", async () => {
   const f = stubSupabase([ROW]);
   try {
-    const res = await get("/api/govchain/opportunities?min_fit=70&limit=6&q=Cyber%20support");
+    const res = await get(
+      "/api/govchain/opportunities?min_fit=70&limit=6&q=Cyber%20support"
+    );
     assert.equal(res.status, 200);
     assert.ok(
       f.calls[0].includes("title.ilike.*Cyber%20support*"),
@@ -630,7 +658,11 @@ test("the apex makes no Polygon contract claim (CFA-147)", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
   const html = await res.text();
-  for (const banned of [/live on Polygon/i, /deployed on Polygon/i, /0x4da4/i]) {
+  for (const banned of [
+    /live on Polygon/i,
+    /deployed on Polygon/i,
+    /0x4da4/i,
+  ]) {
     assert.doesNotMatch(html, banned, `/ must not contain ${banned}`);
   }
   assert.match(html, /Hash-anchoring of claims is in development\./);

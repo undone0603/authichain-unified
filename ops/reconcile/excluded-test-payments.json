@@ -1,0 +1,8 @@
+{
+  "status": "PENDING ZAC CONFIRMATION",
+  "note": "Owner test payments excluded from revenue. Ids only. Zac must confirm this list before the first live run (Advisor condition 5). Truncated ids from the spec (pi_3Tks5e..., pi_3TF7YF..., pi_3TF7XN...) are declined Zac attempts and must be filled in with full ids by Zac.",
+  "ids": [
+    "ch_3UHcQfGqTruSqV8T1j4hdD7l",
+    "pi_3UHcQfGqTruSqV8T18dYFwd3"
+  ]
+}

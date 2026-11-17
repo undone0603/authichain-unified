@@ -3,7 +3,8 @@
  * POST /api/dpp/activate is not a 404.
  */
 
-import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "./dpp-loop";
+import { dppActivateUrl, recordDppLoopEvent } from "./dpp-loop";
+import { planByStripePriceId } from "./plans";
 import {
   buildDppImporterFile,
   parseImporterPackFigures,
@@ -89,23 +90,42 @@ export async function activateDppMerchant(opts: {
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
     expand: ["line_items"],
   });
-  if (session.payment_status !== "paid" && session.status !== "complete") {
+  // A completed Checkout Session can still be unpaid, especially when
+  // asynchronous payment methods are used. Neither 'complete' alone nor a
+  // return URL proves funds were collected. DPP activation is paid-only.
+  if (session.payment_status !== "paid" || session.status !== "complete") {
     return { ok: false, status: 402, error: "Checkout session is not paid" };
   }
 
+  // This endpoint activates one DPP workspace, not subscriptions, $0 demos,
+  // or a different $299 product. Product identity must come from Stripe's
+  // actual line-item price, not caller-controlled metadata or amount alone.
+  if (
+    session.mode !== "payment" ||
+    typeof session.amount_total !== "number" ||
+    !Number.isFinite(session.amount_total) ||
+    session.amount_total <= 0
+  ) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Not a paid DPP workspace purchase",
+    };
+  }
+
   const md = (session.metadata || {}) as Record<string, unknown>;
-  // Another $299 product (the Made in USA claim file) shares the DPP amount,
-  // so an explicit non-DPP plan must never activate a DPP workspace.
-  const otherPlan =
-    typeof md.plan === "string" && md.plan && md.plan !== "dpp_readiness";
-  if (otherPlan && !isDppOffer(md)) {
-    return { ok: false, status: 400, error: "Not a DPP workspace session" };
-  }
-  const linePriceId = session.line_items?.data?.[0]?.price?.id ?? null;
-  if (linePriceId && !isDppOffer(md, linePriceId)) {
-    return { ok: false, status: 400, error: "Not a DPP workspace session" };
-  }
-  if (!isDppOffer(md) && session.amount_total !== 29900) {
+  const lineItems = session.line_items?.data ?? [];
+  const first = lineItems[0];
+  const linePriceId = first?.price?.id ?? null;
+  const pricePlan = planByStripePriceId(linePriceId);
+  if (
+    lineItems.length !== 1 ||
+    pricePlan?.id !== "dpp_readiness" ||
+    (first?.quantity != null && first.quantity !== 1) ||
+    (typeof md.plan === "string" &&
+      md.plan !== "" &&
+      md.plan !== "dpp_readiness")
+  ) {
     return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
 
@@ -124,21 +144,28 @@ export async function activateDppMerchant(opts: {
 
   let profileId: string | null = null;
   if (email) {
-    const { data: profile } = await opts.supabase
+    const { data: profile, error: profileLookupError } = await opts.supabase
       .from("profiles")
       .select("id")
       .eq("email", email)
       .maybeSingle();
+    if (profileLookupError) {
+      return { ok: false, status: 503, error: "Customer record lookup failed" };
+    }
     profileId = (profile?.id as string) || null;
   }
 
-  const { data: prior } = await opts.supabase
+  const { data: prior, error: priorLookupError } = await opts.supabase
     .from("funnel_events")
     .select("id, metadata")
     .eq("prospect_id", visitId)
     .eq("event_type", "dpp_loop:merchant_activated")
     .order("timestamp", { ascending: false })
     .limit(5);
+
+  if (priorLookupError) {
+    return { ok: false, status: 503, error: "Activation record lookup failed" };
+  }
 
   const alreadyActivated = Array.isArray(prior)
     ? prior.some(
@@ -174,22 +201,35 @@ export async function activateDppMerchant(opts: {
       : buildDppImporterFile({ categories, markets, labeling, pack });
 
   if (!alreadyActivated) {
-    await recordDppLoopEvent(opts.supabase, {
-      visitId,
-      stage: "merchant_activated",
-      source: String(md.source || "direct"),
-      email,
-      profileId,
-      stripeSessionId: sessionId,
-      metadata: {
-        categories,
-        markets,
-        labeling,
-        call_windows: (opts.body.call_windows || "").trim() || null,
-        activated_at: new Date().toISOString(),
-        importer_file,
-      },
-    });
+    try {
+      await recordDppLoopEvent(
+        opts.supabase,
+        {
+          visitId,
+          stage: "merchant_activated",
+          source: String(md.source || "direct"),
+          email,
+          profileId,
+          stripeSessionId: sessionId,
+          metadata: {
+            categories,
+            markets,
+            labeling,
+            call_windows: (opts.body.call_windows || "").trim() || null,
+            activated_at: new Date().toISOString(),
+            importer_file,
+          },
+        },
+        { required: true }
+      );
+    } catch {
+      // Without a durable activation row the merchant must not see "Activated".
+      return {
+        ok: false,
+        status: 503,
+        error: "Activation could not be recorded",
+      };
+    }
   }
 
   return {

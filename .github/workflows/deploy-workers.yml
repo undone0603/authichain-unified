@@ -30,7 +30,7 @@ permissions:
 jobs:
   secret-scan:
     name: Secret scan
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    runs-on: ${{ vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -39,7 +39,12 @@ jobs:
         run: |
           # Tree scan only. Removed keys in old commits were failing a
           # history scan and skipping every deploy.
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_arm64.tar.gz -o gitleaks.tgz
+          case "$(uname -m)" in
+            aarch64|arm64) ARCH=arm64 ;;
+            x86_64|amd64) ARCH=x64 ;;
+            *) echo "::error::Unsupported runner architecture"; exit 1 ;;
+          esac
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_${ARCH}.tar.gz" -o gitleaks.tgz
           tar --no-same-owner -xzf gitleaks.tgz gitleaks
           ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
 
@@ -49,8 +54,8 @@ jobs:
   # be shown."). Build the list here instead: $0 default omits agentz;
   # workflow_dispatch + deploy_agentz_containers=true appends it (Workers Paid).
   #
-  # This job now also runs on a plain push (CLOUDFLARE_DEPLOY_ENABLED off,
-  # not workflow_dispatch) to narrow `workers` down to whichever
+  # Every plain push, regardless of deployment repo variables, narrows
+  # `workers` down to whichever
   # AUTO_DEPLOY_ALLOWLIST worker(s) actually changed -- or to `[]` if none
   # did, or if the diff step below hits any error (a shallow-clone edge
   # case, a force-push, anything). An allow-listed worker earns its place by
@@ -58,17 +63,17 @@ jobs:
   # (gs1-resolver's is workers/gs1-resolver/src/conformance.test.ts,
   # mirroring GS1's hosted suite) -- not just CI type/lint, which every
   # worker already has. `deploy` below consumes whatever this outputs
-  # unchanged: a full list (CLOUDFLARE_DEPLOY_ENABLED, or blank
-  # workflow_dispatch), a single-worker list (workflow_dispatch with
-  # inputs.worker set), a narrowed one-or-few-worker list (auto-deploy),
+  # unchanged: a full list (blank workflow_dispatch), a single-worker
+  # list (workflow_dispatch with inputs.worker set), or a narrowed
+  # one-or-few-worker list (auto-deploy),
   # or an empty one (a plain push touching no allow-listed worker) --
   # so no per-step gating anywhere below this job needs to change, and no
   # *other* worker's bind step can ever run on the auto-deploy path, because
   # no other worker is ever in that path's matrix.
   deploy-matrix:
     name: Build worker matrix
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+    runs-on: ${{ vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     timeout-minutes: 5
     outputs:
       workers: ${{ steps.build.outputs.workers }}
@@ -81,7 +86,6 @@ jobs:
         id: build
         env:
           DEPLOY_AGENTZ: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_agentz_containers == 'true' }}
-          CLOUDFLARE_DEPLOY_ENABLED: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED }}
           EVENT_NAME: ${{ github.event_name }}
           DISPATCH_WORKER: ${{ github.event.inputs.worker }}
           PUSH_BEFORE: ${{ github.event.before }}
@@ -95,7 +99,7 @@ jobs:
             "authichain-api",
             "authichain-api-gateway",
             "authichain-automation",
-            "authichain-com",
+            # authichain-com uses only the protected manual Worker release path
             "authichain-dashboard",
             "qron-automation",
             "qron-image-gen",
@@ -141,13 +145,19 @@ jobs:
             workers=$(jq -nc --argjson w "${workers}" '$w + ["authichain-agentz"]')
           fi
 
-          if [ "${CLOUDFLARE_DEPLOY_ENABLED}" = "true" ] || [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+          # Only a deliberate manual dispatch may expand to the full matrix.
+          # A legacy CLOUDFLARE_DEPLOY_ENABLED repo variable cannot override a push.
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
             # workflow_dispatch with a specific worker must not expand the
             # full ~40-job matrix (install + checkout per skipped row).
             # Validate against the known list, then emit a one-element matrix.
             target="${DISPATCH_WORKER:-}"
             target="${target#"${target%%[![:space:]]*}"}"
             target="${target%"${target##*[![:space:]]}"}"
+          if [ "${target}" = "authichain-com" ]; then
+            echo "::error::authichain-com is only released through the protected dedicated workflow"
+            exit 1
+          fi
             if [ -n "${target}" ]; then
               if ! echo "${workers}" | jq -e --arg t "${target}" 'index($t) != null' >/dev/null; then
                 echo "::error::Unknown worker '${target}'. Pass a directory under workers/ from the deploy matrix (or leave blank for all)."
@@ -167,9 +177,8 @@ jobs:
             exit 0
           fi
 
-          # Auto-deploy path: CLOUDFLARE_DEPLOY_ENABLED is off and this
-          # isn't a workflow_dispatch, so only an explicitly allow-listed
-          # worker (see the job comment above and
+          # Auto-deploy path: every push, independent of repository variables.
+          # Only an explicitly allow-listed worker (see above and
           # scripts/ci/select-autodeploy-workers.mjs, which owns the
           # allowlist and is unit-tested) may deploy, and only if it
           # actually changed in this push. That script never throws -- a
@@ -183,7 +192,7 @@ jobs:
           echo "deploy matrix (auto-deploy, narrowed to changed allow-listed workers): ${eligible}"
 
   deploy:
-    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
+    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-24.04' || (vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04') }}
     timeout-minutes: 45
     needs: [secret-scan, deploy-matrix]
     # GitHub fails the whole workflow when `strategy.matrix` expands to an
@@ -200,10 +209,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Setup pnpm
+        timeout-minutes: 15
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
       - name: Setup Node 22
+        timeout-minutes: 15
         uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -212,6 +223,7 @@ jobs:
           # after the worker is already published.
           cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
       - name: Install dependencies
+        timeout-minutes: 15
         run: pnpm install --frozen-lockfile
 
       # Cloudflare Containers (wrangler.jsonc "containers") need a Docker
@@ -445,7 +457,7 @@ jobs:
     name: Post-deploy smoke (blocking)
     needs: [deploy]
     if: ${{ needs.deploy.result == 'success' }}
-    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    runs-on: ${{ vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
     timeout-minutes: 10
     permissions:
       contents: read

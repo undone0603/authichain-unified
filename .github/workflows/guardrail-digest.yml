@@ -8,7 +8,8 @@ on:
 
 jobs:
   digest:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 30
     steps:
       - name: Run guardrail evaluator + send digest
         run: |

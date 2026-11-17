@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    # Only a manufacturer-status source change may publish this Worker.
+    # Do NOT include this workflow path: workflow-only/docs merges are inert.
+    paths:
+      - "workers/manufacturer-status/**"
   workflow_dispatch:
 
 permissions:
@@ -16,7 +20,7 @@ concurrency:
 jobs:
   secret-scan:
     name: Secret scan
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -24,7 +28,7 @@ jobs:
 
       - name: Scan the tree being deployed
         run: |
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz -o gitleaks.tgz
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_$(uname -m | sed "s/aarch64/arm64/;s/x86_64/x64/").tar.gz -o gitleaks.tgz
           tar --no-same-owner -xzf gitleaks.tgz gitleaks
           ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
 
@@ -48,6 +52,7 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
       - name: Setup PNPM
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         uses: pnpm/action-setup@v6
         with:
@@ -55,6 +60,7 @@ jobs:
           run_install: false
 
       - name: Setup Node 22
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         uses: actions/setup-node@v7
         with:
@@ -62,6 +68,7 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 

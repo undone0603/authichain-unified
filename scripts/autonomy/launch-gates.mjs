@@ -26,6 +26,7 @@
 //   `launch-gate`) and closes it when the gate passes again.
 
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import https from "node:https";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
@@ -38,6 +39,55 @@ import {
   collectEstateEvidence,
   evaluateEstateEvidence,
 } from "./estate-gate.mjs";
+
+/** Browser-like UA; some edges reset short bot UAs. */
+const PROBE_UA =
+  "Mozilla/5.0 (compatible; AuthiChainLaunchGates/1.1; +https://authichain.com)";
+
+/**
+ * GET with IPv4 only. On this runner (and many WSL hosts) AAAA answers but
+ * TCP to Cloudflare over IPv6 fails; undici then reports "fetch failed" /
+ * ETIMEDOUT in well under the AbortSignal budget. Curl -4 and family:4 work.
+ */
+function ipv4Get(url, { timeoutMs = 10_000, maxBytes = 2_000_000 } = {}) {
+  return new Promise((resolve) => {
+    const t0 = Date.now();
+    const req = https.get(
+      url,
+      {
+        family: 4,
+        headers: { "user-agent": PROBE_UA, accept: "*/*" },
+        timeout: timeoutMs,
+      },
+      (res) => {
+        const chunks = [];
+        let size = 0;
+        res.on("data", (c) => {
+          size += c.length;
+          if (size <= maxBytes) chunks.push(c);
+        });
+        res.on("end", () => {
+          resolve({
+            status: res.statusCode ?? 0,
+            location: res.headers.location ?? null,
+            body: Buffer.concat(chunks).toString("utf8"),
+            ms: Date.now() - t0,
+          });
+        });
+      }
+    );
+    req.on("error", (err) => {
+      resolve({
+        error: err?.code || err?.message || String(err),
+        ms: Date.now() - t0,
+      });
+    });
+    req.on("timeout", () => {
+      req.destroy();
+      resolve({ error: "timeout", ms: Date.now() - t0 });
+    });
+  });
+}
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const MANIFEST_PATH = join(ROOT, "config", "launch-gates.json");
@@ -467,23 +517,14 @@ async function collectGitlabCi(gate, manifest, env) {
 }
 
 async function probeOne(p) {
-  const t0 = Date.now();
-  try {
-    const res = await fetch(p.url, {
-      method: "GET",
-      redirect: "manual",
-      signal: AbortSignal.timeout(10_000),
-      headers: { "user-agent": "authichain-launch-gates/1.0" },
-    });
-    return {
-      url: p.url,
-      status: res.status,
-      location: res.headers.get("location"),
-      ms: Date.now() - t0,
-    };
-  } catch (err) {
-    return { url: p.url, error: err?.message ?? String(err), ms: Date.now() - t0 };
-  }
+  const res = await ipv4Get(p.url);
+  if (res.error) return { url: p.url, error: res.error, ms: res.ms };
+  return {
+    url: p.url,
+    status: res.status,
+    location: res.location,
+    ms: res.ms,
+  };
 }
 
 async function collect(gate, manifest, env) {
@@ -513,61 +554,47 @@ async function collectLiveVerify(gate) {
   const record = JSON.parse(readFileSync(join(ROOT, gate.record), "utf8"));
   const anchor = JSON.parse(readFileSync(join(ROOT, gate.anchor), "utf8"));
   const checked = verifier.verifyRecord(record, anchor);
-  const t0 = Date.now();
-  let status = 0;
+  const res = await ipv4Get(gate.url);
   let body = {};
-  let error;
-  try {
-    const res = await fetch(gate.url, {
-      method: "GET",
-      redirect: "manual",
-      signal: AbortSignal.timeout(10_000),
-      headers: { "user-agent": "authichain-launch-gates/1.0" },
-    });
-    status = res.status;
-    body = await res.json().catch(() => ({}));
-  } catch (err) {
-    error = err?.message ?? String(err);
+  if (!res.error && res.body) {
+    try {
+      body = JSON.parse(res.body);
+    } catch {
+      body = {};
+    }
   }
   return {
-    status,
-    ms: Date.now() - t0,
+    status: res.status ?? 0,
+    ms: res.ms,
     max_ms: gate.max_ms,
     verdict: body.verdict ?? null,
     source: body.source ?? null,
     subjectId: body.subject?.id ?? null,
     recordVerdict: checked.verdict,
     recordSubjectId: record.credentialSubject?.id ?? null,
-    ...(error ? { error } : {}),
+    ...(res.error ? { error: res.error } : {}),
   };
 }
 
 async function collectPublicTrust(gate) {
   const results = [];
   for (const p of gate.probes) {
-    const t0 = Date.now();
-    try {
-      const res = await fetch(p.url, {
-        method: "GET",
-        redirect: "manual",
-        signal: AbortSignal.timeout(10_000),
-        headers: { "user-agent": "authichain-launch-gates/1.0" },
-      });
-      const text = await res.text();
+    const res = await ipv4Get(p.url);
+    if (res.error) {
       results.push({
         url: p.url,
-        status: res.status,
-        ms: Date.now() - t0,
-        includes: text.includes(p.includes),
-      });
-    } catch (err) {
-      results.push({
-        url: p.url,
-        error: err?.message ?? String(err),
-        ms: Date.now() - t0,
+        error: res.error,
+        ms: res.ms,
         includes: false,
       });
+      continue;
     }
+    results.push({
+      url: p.url,
+      status: res.status,
+      ms: res.ms,
+      includes: (res.body ?? "").includes(p.includes),
+    });
   }
   return { results };
 }

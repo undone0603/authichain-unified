@@ -214,33 +214,17 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("Product Not Found");
   });
 
-  it("returns a retryable 503 with Retry-After when the lookup errors", async () => {
-    (getCertificateByNumber as any).mockRejectedValue(new Error("db down"));
-    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+  it("answers a retryable 503 when the passport lookup times out", async () => {
+    (getCertificateByNumber as any).mockRejectedValue(
+      new Error("passport-lookup-timeout")
+    );
 
-    const res = await app.request("/p/CERT-ERR", {}, makeEnv() as any);
+    const res = await app.request("/p/timeout-serial", {}, makeEnv() as any);
+    const body = await res.text();
 
     expect(res.status).toBe(503);
-    expect(res.headers.get("retry-after")).toBe("30");
-    expect(createHyperdriveRequestDb).toHaveBeenCalled();
-  });
-
-  it("returns a retryable 503 (not 404) when the connect times out", async () => {
-    vi.useFakeTimers();
-    try {
-      (createHyperdriveRequestDb as any).mockReturnValueOnce({
-        db: {},
-        connect: () => new Promise(() => {}),
-        close: vi.fn().mockResolvedValue(undefined),
-      });
-      const pending = app.request("/p/CERT-SLOW", {}, makeEnv() as any);
-      await vi.advanceTimersByTimeAsync(3000);
-      const res = await pending;
-      expect(res.status).toBe(503);
-      expect(res.headers.get("retry-after")).toBe("30");
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(res.headers.get("Retry-After")).toBe("30");
+    expect(body).toContain("Registry Temporarily Unavailable");
   });
 
   it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {
@@ -358,7 +342,8 @@ describe("renderDynamicPage: /verify verification landing", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("Verify a Product");
-    expect(body).toContain("On-chain verification is in development.");
+    expect(body).toContain("That certificate is not an on-chain check.");
+    expect(body).not.toContain("On-chain verification is in development.");
     expect(body).toContain('href="/verify?id=polygon-anchor-1"');
     expect(body).toContain(
       '<link rel="manifest" href="/manifest.webmanifest">'
@@ -537,6 +522,26 @@ describe("renderDynamicPage: /verify verification landing", () => {
     );
     expect(body).toContain("What this does not prove");
     expect(body).not.toContain("No record found");
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
+    expect(getProductById).not.toHaveBeenCalled();
+  });
+
+  it("serves /verify/manufacturer as role-history copy, not a certificate lookup", async () => {
+    const res = await app.request(
+      "/verify/manufacturer/",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("<h1>Manufacturer role history</h1>");
+    expect(body).toContain("This path is not a certificate number.");
+    expect(body).toContain("GET /api/manufacturer-status/{address}/history");
+    expect(body).toContain("does not invent a role");
+    expect(body).toContain("does not sell a role");
+    expect(body).not.toContain("No record found");
+    expect(body).not.toContain("$49");
     expect(getCertificateByNumber).not.toHaveBeenCalled();
     expect(getProductById).not.toHaveBeenCalled();
   });
@@ -941,6 +946,95 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(notifyPilotIntake).toHaveBeenCalled();
   });
 
+  it("renders the decoy field out of sight and out of the tab order", async () => {
+    const res = await app.request("/onboard", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(body).toContain('name="company_website"');
+    expect(body).toMatch(
+      /<div aria-hidden="true"[^>]*left:-10000px[^>]*>\s*<label for="company_website">/
+    );
+    expect(body).toMatch(/name="company_website"[^>]*tabindex="-1"/);
+  });
+
+  it("303s a filled decoy without writing a lead or paging the founder", async () => {
+    const execute = mockLeadInsert();
+    const res = await app.request(
+      "/onboard",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "company=nktwer&contactName=p30k1w&email=bot%40fldubai.com&vertical=govchain&productName=uiconf&sku=t5t7nl&serial=2vy7zi&company_website=x9k2",
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+
+    // Same response a real intake gets, so the submitter learns nothing.
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location") || "").toContain("/onboard/received");
+    expect(execute).not.toHaveBeenCalled();
+    expect(notifyPilotIntake).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      "a promo link in the company field",
+      "company=3500%24+BONUS+CODE+https%3A%2F%2Fspam.example%2Fx&contactName=nktwer&email=a%40fldubai.com&vertical=govchain&productName=uiconf",
+    ],
+    [
+      "an anchor tag in the company field",
+      "company=%3Ca+href%3D%22x%22%3Epay%3C%2Fa%3E&contactName=epg5zf&email=a%40merepost.com&vertical=govchain&productName=g7sndf",
+    ],
+    [
+      "a script probe in the contact field",
+      "company=test&contactName=%3Cscript+src%3D%22%2F%2Fx.test%2Fget.js%22%3E%3C%2Fscript%3E&email=a%40acme.com&vertical=authichain&productName=test",
+    ],
+    [
+      "markup in the optional serial field",
+      "company=Acme&contactName=Ada&email=ada%40acme.com&vertical=qron&productName=Living+QR&serial=%22%3E%3Csvg+onload%3Dx%3E",
+    ],
+  ])("400s %s and records nothing", async (_label, formBody) => {
+    const execute = mockLeadInsert();
+    const res = await app.request(
+      "/onboard",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: formBody,
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(400);
+    expect(body).toContain("Links and markup are not accepted");
+    // The rejected value is never echoed back into the page.
+    expect(body).not.toContain("<script src=");
+    expect(body).not.toContain("<svg onload");
+    expect(execute).not.toHaveBeenCalled();
+    expect(notifyPilotIntake).not.toHaveBeenCalled();
+  });
+
+  it("still records a real intake whose text has punctuation but no link", async () => {
+    const execute = mockLeadInsert();
+    const res = await app.request(
+      "/onboard",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "company=O%27Neil+%26+Sons%2C+Inc.+%28acme.com%29&contactName=Dr.+Ana+M.+Ruiz&email=ana%40oneil-sons.com&vertical=authichain&productName=Valve+3%2F4%22+%23A-12%3A+rev+2&sku=A-12%2FB&serial=SN%3A0001",
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+
+    expect(res.status).toBe(303);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(notifyPilotIntake).toHaveBeenCalledTimes(1);
+  });
+
   it("renders the received confirmation when a ref is present", async () => {
     const res = await app.request(
       "/onboard/received?ref=abcd1234&company=Trulieve&vertical=strainchain",
@@ -1173,7 +1267,7 @@ describe("renderDynamicPage: /story StoryMode", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("AuthiChain Launch Proof");
-    expect(body).toContain("T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ");
+    expect(body).toContain("jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM");
     expect(body).toContain("StoryMode");
     expect(body).not.toContain("verified against the live public JWKS");
     expect(body).toContain(

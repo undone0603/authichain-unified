@@ -124,6 +124,20 @@ def test_cli_run_all_auto_refused(capsys):
     assert "Refusing" in err
 
 
+def test_cli_run_one_auto_refused(capsys, monkeypatch):
+    """A single workflow stays frozen in auto. The runner must not start."""
+
+    def boom(*_args, **_kwargs):
+        raise AssertionError("auto must not execute")
+
+    monkeypatch.setattr("agentz.cli.execute", boom)
+    rc = main(["run", "launch_governor", "--mode", "auto"])
+    err = capsys.readouterr().err
+    assert rc == 2
+    assert "Refusing" in err
+    assert "auto" in err
+
+
 def test_cli_run_unknown_id(capsys):
     rc = main(["run", "definitely_not_a_workflow", "--mode", "dry-run"])
     assert rc == 2

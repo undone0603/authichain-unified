@@ -92,7 +92,8 @@ describe("deploy-workers openclaw AGENT_SECRET bind", () => {
     expect(defaultList).toContain('"qron-space"');
     expect(defaultList).toContain('"govchain-us"');
     expect(defaultList).toContain('"strainchain-io"');
-    expect(defaultList).toContain('"authichain-com"');
+    expect(defaultList).not.toContain('"authichain-com"');
+    expect(yml).toContain("authichain-com is only released through the protected dedicated workflow");
   });
 
   it("does not hard-fail the claw bind when AGENT_SECRET is empty", () => {

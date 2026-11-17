@@ -170,7 +170,7 @@ export function batteryLeadFormSection(): string {
       <p class="estate-badge">EU Battery Regulation, Article 77</p>
       <h2>Battery passports are required from 18 February 2027.</h2>
       <p class="section-sub">From that date, LMT batteries (e-bikes, scooters and other light electric vehicles), industrial batteries over 2 kWh (including home storage), and EV batteries placed on the EU market need an electronic battery passport, reached through a QR code on the battery.</p>
-      <p class="bp-note">Live today: AuthiChain's open protocol spec (Apache-2.0) and its offline reference verifier. Certificate issuance and public verification are in development.</p>
+      <p class="bp-note">Live today: AuthiChain's open protocol spec (Apache-2.0) and its offline reference verifier. Certificate issuance for a battery passport is in development. This page is not a battery passport and not a physical inspection.</p>
 
       <h3 id="scope-pilot-heading">Request a scoping call</h3>
       <p class="section-sub">This form is optional. Tell us what you place on the EU market. We may email you at the work address in this form to set up a scoping call.</p>

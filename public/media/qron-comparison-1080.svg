@@ -150,12 +150,6 @@
   <text x="815" y="672" text-anchor="middle" font-family="Arial" font-size="13" fill="#c9a227">&#10003;  Memorable brand art</text>
   <text x="815" y="716" text-anchor="middle" font-family="Arial" font-size="13" fill="#c9a227">&#10003;  AuthiChain blockchain verified</text>
 
-  <!-- Center +25% callout -->
-  <circle cx="540" cy="392" r="66" fill="#0d0d0d" stroke="rgba(201,162,39,0.45)" stroke-width="2"/>
-  <circle cx="540" cy="392" r="66" fill="none" stroke="rgba(201,162,39,0.1)" stroke-width="14" filter="url(#gg)"/>
-  <text x="540" y="380" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="20" font-weight="900" fill="#e8c547">+25%</text>
-  <text x="540" y="399" text-anchor="middle" font-family="Arial" font-size="12" fill="#c9a227">more</text>
-  <text x="540" y="415" text-anchor="middle" font-family="Arial" font-size="12" fill="#c9a227">scans</text>
   <line x1="430" y1="392" x2="470" y2="392" stroke="rgba(201,162,39,0.3)" stroke-width="1.5"/>
   <polygon points="470,387 480,392 470,397" fill="rgba(201,162,39,0.4)"/>
   <line x1="610" y1="392" x2="650" y2="392" stroke="rgba(201,162,39,0.3)" stroke-width="1.5"/>

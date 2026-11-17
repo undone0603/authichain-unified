@@ -25,6 +25,51 @@ Repo integration audit (writes nothing in dry-run; `auto` refreshes only `docs/N
 python -m agentz.cli run repo_audit_integrate --mode dry-run
 ```
 
+Taskmarket (read-only pick; the CLI signs later, this workflow never does):
+
+```bash
+python -m agentz.cli run taskmarket_cycle --mode dry-run
+```
+
+The picker is `agentz/core/taskmarket.py`. It chooses one open Base USDC worker task and prints the CLI command. It does not claim, submit, stake, or treat the task as Stripe revenue. Procedure: `agentz/knowledge/TASKMARKET.md`.
+Power-user product automations (public rails, wait_buyer, X draft pack, OpenClaw handoff; dry-run sends no HTTP):
+
+```bash
+python -m agentz.cli run power_user_ops --mode dry-run
+```
+
+OpenClaw drop-in: `agentz/openclaw/POWER_USER.md`. Live X publish stays on AgentZ `xurl`, not this CLI.
+
+TinyFish MCP read-only search/fetch (on headless hosts, supply a protected
+`TINYFISH_API_KEY`; Node.js/npx is only needed for local OAuth fallback):
+
+```bash
+python -m agentz.cli tinyfish search 'Agent2Agent protocol' --dry-run
+python -m agentz.cli tinyfish search 'Agent2Agent protocol'
+python -m agentz.cli tinyfish fetch_content https://github.com/a2aproject/a2a
+```
+
+The optional AgentZ discovery workflow is an **opt-in read-only A2A scout**.
+It is disabled by default. Live dispatch still sends **0 outbound messages,
+0 comments, and 0 posts**. Search snippets are untrusted; prompt-injection
+and any instruction to send or disclose secrets are refused. No hardcoded
+secrets, street address, or phone number are stored in this path.
+
+```bash
+python -m agentz.cli run tinyfish_a2a_scout --mode dry-run
+python -m agentz.cli run tinyfish_a2a_scout --mode confirm
+```
+
+Its daemon schedule remains disabled until the host sets
+`AGENTZ_TINYFISH_SCOUT_ENABLED=true`, `AGENTZ_TINYFISH_FREE_TIER_CONFIRMED=true`,
+secures `TINYFISH_API_KEY`,
+and configures `AGENTZ_TINYFISH_SCOUT_STATE_DIR` on a durable mounted volume.
+The daemon permits one research _attempt_ per UTC date, without outreach.
+If the state volume is missing, it refuses to run.
+
+See [AgentZ + TinyFish MCP](../docs/operations/AGENTZ_TINYFISH_MCP.md) for
+OAuth setup and the explicit boundary excluding browser automations and paid actions.
+
 See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and workflow details.
 
 ## Running the API
@@ -44,9 +89,48 @@ See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and 
 - `$QRON` rewards on `/scan` and redemptions on `/redeem` are simulated and say
   so (`simulated: true`); nothing is minted or burned on-chain.
 
-
 ## Control plane
 
 The read-only deployment control plane is available at `GET /control-plane/state` and returns normalized GitHub, GitLab, Vercel, and optionally Cloudflare Workers/Pages state. It correlates provider commits to the authoritative GitHub `main` commit and emits a conservative release gate: `deploy_eligible`, `blocked`, or `observe_only`.
 
 Cloudflare Worker deployment APIs expose the active deployment and version IDs; Cloudflare Pages deployments expose the trigger branch and commit hash. These APIs are observation-only here. Provider mutations remain in the existing governed workflows.
+
+## Voice + Vision console (local, opt-in, no hosted inference)
+
+AgentZ can take a spoken question with a photo, camera snapshot or shared-screen
+frame, analyze that still image with **your local vision-capable model**, and
+speak its response in your browser. It is observation-only: no autonomous
+browsing, payments, publishing, merges, or deployments are triggered.
+
+1. Run a local OpenAI-compatible **vision** model through LM Studio or a
+   compatible local server (an ordinary text-only model cannot see images).
+2. Configure these on the machine running AgentZ (do not commit secrets):
+
+   `AGENT_SECRET=<your existing private operator secret>`
+
+   `AGENTZ_VOICE_VISION_ENABLED=true`
+
+   `AGENTZ_VISION_MODEL=<the installed model's exact ID>`
+
+   `AGENTZ_VISION_ENDPOINT=http://127.0.0.1:1234/v1/chat/completions`
+
+   If LM Studio runs on a private LAN host, use its private IP endpoint
+   instead. Public hosts and HTTPS cloud inference endpoints are deliberately
+   rejected. No new hosted model subscription is required.
+3. From the repository root, run:
+   `uvicorn agentz.api.main:app --host 127.0.0.1 --port 8000`
+4. On the same computer open
+   `http://127.0.0.1:8000/agentz/voice-vision`, enter `AGENT_SECRET`
+   in the password field, tap **Start speaking**, then **Capture camera** or
+   **Capture screen**, then **Observe and respond**. The answer is displayed
+   and read aloud. An image file and typed question also work.
+
+The API never echoes the operator secret or local-model token and never
+persists uploaded frames. The UI sends one resized still image per request,
+not a live video feed. Camera/screen permissions are explicitly user-granted.
+Browser speech recognition availability varies; some browsers send audio to
+their speech provider. Use typed input if fully local speech transcription is
+required. Browser speech synthesis is used for spoken answers. This console
+is intentionally localhost-only and disabled unless opted in. The vision
+endpoint and tests are at `agentz/api/voice_vision.py` and
+`tests/test_agentz_voice_vision.py`.

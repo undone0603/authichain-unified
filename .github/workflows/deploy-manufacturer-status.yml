@@ -26,6 +26,7 @@ jobs:
           fi
 
       - name: Setup pnpm
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         uses: pnpm/action-setup@v6
         with:
@@ -33,6 +34,7 @@ jobs:
           run_install: false
 
       - name: Setup Node
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         uses: actions/setup-node@v7
         with:
@@ -40,6 +42,7 @@ jobs:
           cache: pnpm
 
       - name: Install
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile
 

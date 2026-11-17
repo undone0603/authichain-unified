@@ -18,6 +18,15 @@ zone_name = "qron.space"
 [vars]
 # Origin that renders /generate (Living QR intake) and /p (SEO hubs).
 APP_ORIGIN = "https://authichain.com"
+# Kill switch for the hourly mode-usage digest. "false" = log dry-run only.
+MODE_USAGE_CRON_ENABLED = "false"
+
+# Keep the disabled hourly digest unscheduled on Workers Free.
+# The account already uses its five cron slots; MODE_USAGE_CRON_ENABLED=false
+# and no live qron-space schedule is installed. Restore only after a reviewed
+# trigger budget and approved production release.
+[triggers]
+crons = []
 
 [observability]
 enabled = true

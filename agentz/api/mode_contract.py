@@ -24,7 +24,7 @@ def is_fail_closed_workflow(workflow_id: str | None, endpoint: str = "workflow")
     if not workflow_id:
         return False
     wid = workflow_id.strip().lower()
-    return wid == "architect_cycle" or "email" in wid
+    return wid == "architect_cycle" or wid.startswith("taskmarket") or "email" in wid
 
 
 def _as_bool(value: Any) -> bool:
@@ -46,8 +46,8 @@ def resolve_execution_mode(
     """Return (mode, coerced_to_dry_run, live).
 
     Query `mode` wins over JSON `mode`. Invalid values fall back to dry-run.
-    Fail-closed surfaces (architect / *email*) ignore confirm/auto unless
-    `live` is explicitly true.
+    Fail-closed surfaces (architect / taskmarket / *email*) ignore confirm/auto
+    unless `live` is explicitly true.
     """
     payload = body if isinstance(body, Mapping) else {}
     live = _as_bool(live_query) or _as_bool(payload.get("live"))

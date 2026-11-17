@@ -185,7 +185,8 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
     assert.ok(html.includes(`$${plan(id).price}`), `${id} price`);
   }
   assert.equal(html.includes("/checkout/starter"), true);
-  assert.equal(html.includes("/checkout/qron_launch"), false);
+  // Launch is linked from the footer (e7af0bd5); it must not become a card.
+  assert.doesNotMatch(html, /<h3>QRON Launch/);
   assert.match(html, /href="\/x402"/);
   assert.ok(html.includes(escHtml(plan("dpp_readiness").cta)));
   assert.match(html, /name="email"/);
@@ -239,7 +240,7 @@ test("qron /pricing HTML cites catalogue prices and generate", () => {
   assert.match(html, /href="\/generate"/);
   // LOOP-03: nav/footer lead Starter/Launch; DPP remains as a secondary link.
   assert.match(html, /https:\/\/authichain\.com\/checkout\/starter/);
-  assert.doesNotMatch(html, /https:\/\/authichain\.com\/checkout\/qron_launch/);
+  // Launch is linked beside Starter (14db6a65); "Start Launch" stays absent.
   assert.doesNotMatch(html, /Start Launch/);
   assert.match(html, />See pricing</);
   assert.match(html, /https:\/\/authichain\.com\/checkout\/dpp_readiness/);
@@ -441,10 +442,30 @@ test("authichain pricing uses buyer copy and QRON titles; held strings unchanged
   // listed.
   assertCardWording(html, plan("free"));
   assertCardWording(html, plan("dpp_readiness"));
+  assert.doesNotMatch(html, /href="\/checkout\/qron_launch"/);
+  assert.doesNotMatch(html, /QRON Launch \$19\/mo/);
+  assert.doesNotMatch(html, /href="\/checkout\/qron_launch_annual"/);
+  assert.doesNotMatch(html, /QRON Launch \$190\/yr/);
   assert.doesNotMatch(html, /<h3>QRON Launch/);
   assert.doesNotMatch(html, /Free Trial|Try Free for 7 Days/);
   // No new plan prices.
   assert.doesNotMatch(html, /\$1,499|\$199\/mo/);
+});
+
+test("qron pricing excludes unlisted Launch checkout and labels", () => {
+  const html = renderEstatePricingPage("qron");
+  assert.doesNotMatch(
+    html,
+    /href="https:\/\/authichain.com\/checkout\/qron_launch"/
+  );
+  assert.doesNotMatch(html, /QRON Launch \$19\/mo/);
+  assert.doesNotMatch(
+    html,
+    /href="https:\/\/authichain.com\/checkout\/qron_launch_annual"/
+  );
+  assert.doesNotMatch(html, /QRON Launch \$190\/yr/);
+  assert.doesNotMatch(html, /<h3>QRON Launch/);
+  assert.equal(plan("qron_launch").listed, false);
 });
 
 test("qron pricing does not list Theater", () => {
@@ -458,6 +479,10 @@ test("qron pricing does not list Theater", () => {
 
 test("wording sweep 2026-10-16: pricing points to the gap report without a raw Payment Link", () => {
   const html = renderEstatePricingPage("authichain");
-  assert.ok(html.includes('/battery-passport#gap-report">Written gap report, $950 first model, $350 each extra</a>'));
+  assert.ok(
+    html.includes(
+      '/battery-passport#gap-report">Written gap report, $950 first model, $350 each extra</a>'
+    )
+  );
   assert.equal(html.includes("buy.stripe.com"), false);
 });

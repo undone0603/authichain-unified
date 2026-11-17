@@ -285,6 +285,27 @@ test("the PR-only expression passes", () => {
   assert.deepEqual(checkCancelInProgress(root), []);
 });
 
+test("versions upload on push-to-main is a deploy workflow for cancel-in-progress", () => {
+  const root = repo({
+    ".github/workflows/v.yml": `name: d
+on:
+  push:
+    branches: [main]
+concurrency:
+  group: d-\${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npx wrangler versions upload --keep-vars --config wrangler.toml
+`,
+  });
+  const errors = checkCancelInProgress(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /v\.yml/);
+});
+
 test("non-deploy and non-main workflows are not checked", () => {
   const root = repo({
     ".github/workflows/ci.yml":

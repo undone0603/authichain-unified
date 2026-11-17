@@ -214,7 +214,7 @@ export async function guardedSend(args: {
   // CAN-SPAM requires a valid physical postal address in every commercial email.
   // Fail CLOSED if none is configured, rather than ship a placeholder — so
   // autopilot can never send a non-compliant message.
-  const address = args.address ?? process.env.MAILING_ADDRESS;
+  const address = (args.address ?? process.env.MAILING_ADDRESS)?.trim();
   if (!address) {
     return {
       sent: false,

@@ -15,6 +15,7 @@
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
  * GET  /.well-known/agent-card.json (+ agent.json) → A2A Agent Card
  *      with skills and x402 payment metadata. No contact email. No ERC-8004.
+ * POST /api/a2a → A2A 1.0 JSON-RPC. Does not settle a payment.
  * GET  /.well-known/lumi-monitor.txt → Lumi Watch-trial domain proof.
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
  * POST /api/x402 + /api/v1/agent-verify → 402 challenge when unpaid. A paid
@@ -49,7 +50,14 @@ import {
   type X402HealthEnv,
   type X402VerifyBinding,
 } from "../../../src/lib/x402";
+import {
+  A2A_RPC_PATH,
+  a2aMethodList,
+  handleA2aJsonRpc,
+  memoryA2aStore,
+} from "../../../src/lib/a2a-jsonrpc";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
+import { resolveTierRequest } from "../../../src/lib/x402-tiers";
 import { sealBaseline } from "../../../src/lib/seal-baseline";
 import {
   readSeal,
@@ -108,6 +116,42 @@ function json(
   });
 }
 
+// Public, unauthenticated A2A demonstration: bound memory consumption before
+// parsing JSON or constructing tasks. No auth/tenant scoped persistence exists.
+const MAX_ANONYMOUS_A2A_BYTES = 64 * 1024;
+
+async function readBoundedA2aBody(request: Request): Promise<string | null> {
+  const claimedLength = request.headers.get("content-length");
+  if (claimedLength && Number(claimedLength) > MAX_ANONYMOUS_A2A_BYTES) {
+    return null;
+  }
+  const reader = request.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_ANONYMOUS_A2A_BYTES) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 function normalizePath(pathname: string): string {
   if (pathname.length > 1 && pathname.endsWith("/")) {
     return pathname.replace(/\/+$/, "");
@@ -128,6 +172,7 @@ export function isX402Path(pathname: string): boolean {
     p === "/.well-known/x402.json" ||
     p === "/.well-known/agent-card.json" ||
     p === "/.well-known/agent.json" ||
+    p === A2A_RPC_PATH ||
     p === "/.well-known/lumi-monitor.txt" ||
     p === "/openapi.json"
   );
@@ -302,16 +347,23 @@ async function tryFreeCall(
   env: X402Env | undefined,
   opts: X402Options | undefined
 ): Promise<{ response: Response | null; remaining: number | null }> {
-  const raw = parseJsonObject(await request.clone().text());
+  const raw = coerceSealBody(parseJsonObject(await request.clone().text()));
+  // A named seal that cannot exist is refused before the 402 (400). Listing
+  // samples (`demo` / bazaar UUID) and no-sealId crawler probes are not
+  // refused: they get the 402 so the price can be read (c7aebe90, 5e807fab).
+  const refusal = unpaidSealRefusal(raw);
+  if (refusal) {
+    return { response: json(refusal.status, refusal.body), remaining: null };
+  }
   const parsed = parseSealRequest(raw);
   if (!parsed.ok) {
-    // No body: 402 so a scanner can read the price. A named seal that cannot
-    // exist, or productId/serial used as the key, is refused here. The paid
-    // path does the same before settlement. This runs before the registry
-    // credential check so a bad id is not a payment challenge.
-    if (Object.keys(raw).length > 0) {
-      return { response: json(parsed.status, parsed.body), remaining: null };
-    }
+    // Empty body or listing sample: 402 so a scanner can read the price.
+    return { response: null, remaining: null };
+  }
+  // Listing example UUID: crawlers POST this body. A free 200 is classified
+  // as payability=free so they never buy. Do not consume the real-UUID
+  // allowance. Paid lookup of this id is still missing-seal evidence.
+  if (isDiscoveryExampleSealId(parsed.sealId)) {
     return { response: null, remaining: null };
   }
   const limit = freeDailyCalls(env?.X402_FREE_DAILY_CALLS);
@@ -368,7 +420,12 @@ function unpaidQuote(request: Request, env?: X402Env): Response {
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(request.url).toString();
-  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  const tierReq = resolveTierRequest(
+    resource,
+    x402PriceUsd(env?.X402_PRICE_USD)
+  );
+  if (!tierReq.ok) return json(tierReq.status, tierReq.body);
+  const priceUsd = tierReq.priceUsd;
   if (!payTo) {
     return json(503, {
       error: "payments_not_configured",
@@ -394,7 +451,10 @@ async function agentVerify(
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(request.url).toString();
-  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  const verifyUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  const tierReq = resolveTierRequest(resource, verifyUsd);
+  if (!tierReq.ok) return json(tierReq.status, tierReq.body);
+  const priceUsd = tierReq.priceUsd;
   if (!payTo) {
     return json(503, {
       error: "payments_not_configured",
@@ -412,7 +472,12 @@ async function agentVerify(
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof || !proofHeader) {
-    const free = await tryFreeCall(request, env, opts);
+    // The daily free allowance is the default (verify) tier only: the free
+    // body is the verify baseline, which is not what ping or evidence sell.
+    const free =
+      tierReq.tier === "verify"
+        ? await tryFreeCall(request, env, opts)
+        : { response: null, remaining: null };
     if (free.response) return free.response;
     return json(402, required.v2, {
       ...required.headers,
@@ -429,6 +494,8 @@ async function agentVerify(
     bodyText,
     resource,
     priceUsd,
+    tier: tierReq.tier,
+    verifyPriceUsd: verifyUsd,
     payTo,
     description: X402_RESOURCE_DESCRIPTION,
     env,
@@ -504,6 +571,29 @@ export async function tryHandleX402(
 
   if (request.method === "GET" && isFanoutPath(url.pathname)) {
     return fanoutResponse();
+  }
+
+  if (normalizePath(url.pathname) === A2A_RPC_PATH) {
+    if (request.method === "GET") return json(200, a2aMethodList());
+    if (request.method === "POST") {
+      const body = await readBoundedA2aBody(request);
+      if (body === null) {
+        return json(413, { error: "a2a_request_too_large" });
+      }
+      // Public A2A is an immediate, unauthenticated demonstration. Using the
+      // module-global task store would let one anonymous caller enumerate
+      // another caller's task history via ListTasks/GetTask. Until a real
+      // authenticated tenant-scoped store exists, keep each HTTP request
+      // isolated; the completed task is returned to its sender immediately.
+      const answered = handleA2aJsonRpc(body, {
+        now: opts?.now,
+        a2aVersion: request.headers.get("A2A-Version"),
+        store: memoryA2aStore(),
+      });
+      if (answered.body === null) return new Response(null, { status: 204 });
+      return json(answered.status, answered.body);
+    }
+    return json(405, { error: "method not allowed" });
   }
 
   if (request.method === "GET" && isAgentCardPath(url.pathname)) {

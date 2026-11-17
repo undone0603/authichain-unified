@@ -264,6 +264,46 @@ export function decide(pr, checkRuns, status, behindBy, cfg, opts = {}) {
   return { action: "merge", reason: "green, clean, up to date" };
 }
 
+/**
+ * Require independent, authorized human review of exactly the commit being
+ * considered for merge. Treat missing/truncated review evidence as a hold.
+ * GitHub returns reviews chronologically; the latest decisive state per
+ * reviewer supersedes older approvals.
+ */
+export function independentApprovalForHead(pr, reviews, sha) {
+  if (!Array.isArray(reviews) || reviews.length >= 100)
+    return { ok: false, reason: "review history absent or incomplete" };
+  if (!sha || sha !== pr?.head?.sha)
+    return { ok: false, reason: "reviewed head differs from target" };
+  const author = pr?.user?.login?.toLowerCase();
+  const owner = pr?.base?.repo?.full_name?.split("/")[0]?.toLowerCase();
+  if (!author || !owner)
+    return { ok: false, reason: "PR author or repository owner unknown" };
+
+  const lastDecisive = new Map();
+  for (const review of reviews) {
+    const login = review?.user?.login?.toLowerCase();
+    if (!login) continue;
+    if (["APPROVED", "CHANGES_REQUESTED", "DISMISSED"].includes(review.state))
+      lastDecisive.set(login, review);
+  }
+  const latest = [...lastDecisive.values()];
+  if (latest.some(r => r.state === "CHANGES_REQUESTED" && r.user?.type === "User"))
+    return { ok: false, reason: "reviewer changes requested remain unresolved" };
+
+  const approved = latest.some(review => {
+    const login = review.user?.login?.toLowerCase();
+    return review.state === "APPROVED" &&
+      review.commit_id === sha &&
+      review.user?.type === "User" &&
+      ["COLLABORATOR", "MEMBER"].includes(review.author_association) &&
+      login !== author && login !== owner;
+  });
+  return approved
+    ? { ok: true, reason: "independent exact-head approval verified" }
+    : { ok: false, reason: "independent exact-head approval missing" };
+}
+
 export function isGitHubRateLimit(status, body) {
   if (status !== 403 && status !== 429) return false;
   const text = String(body).toLowerCase();
@@ -419,7 +459,17 @@ async function main() {
       if (decision.action === "merge") {
         const files = await listFiles(repo, n, token);
         const why = restrictedChange(files, pr.changed_files);
-        if (why) decision = { action: "skip", reason: `owner merges: ${why}` };
+        if (why) {
+          decision = { action: "skip", reason: `owner merges: ${why}` };
+        } else {
+          // Fail closed when the effective branch rules require no approvals.
+          const reviews = await gh(
+            `/repos/${repo}/pulls/${n}/reviews?per_page=100`, { token }
+          );
+          const reviewGate = independentApprovalForHead(pr, reviews, sha);
+          if (!reviewGate.ok)
+            decision = { action: "wait", reason: reviewGate.reason };
+        }
       }
 
       const labels = labelNames(pr);

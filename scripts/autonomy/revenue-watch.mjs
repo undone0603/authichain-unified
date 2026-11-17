@@ -17,7 +17,8 @@ export function isFounder(email, founders) {
   return at >= 0 && founders.has(e.slice(at));
 }
 
-const OK_STATUSES = new Set(["success", "processed", "handled", "duplicate"]);
+// A duplicate-only receipt is not proof that the original event succeeded.
+const OK_STATUSES = new Set(["success", "processed", "handled"]);
 
 /**
  * Pure. sessions: Stripe checkout sessions. events: rows from stripe_events
@@ -34,7 +35,10 @@ export function findUnfulfilled(
   );
   const handled = new Map();
   for (const e of events) {
-    if (!e.session_id || !String(e.event_type).startsWith("checkout.session."))
+    if (
+      !e.session_id ||
+      !["checkout.session.completed", "checkout.session.async_payment_succeeded"].includes(String(e.event_type))
+    )
       continue;
     const ok = OK_STATUSES.has(String(e.status ?? "").toLowerCase());
     handled.set(e.session_id, handled.get(e.session_id) || ok);
@@ -44,6 +48,9 @@ export function findUnfulfilled(
       s =>
         s.status === "complete" &&
         s.payment_status === "paid" &&
+        // Stripe always supplies livemode. Exclude explicit test-mode sessions;
+        // preserve an alert for malformed/missing livemode rather than hiding it.
+        s.livemode !== false &&
         s.amount_total !== 0
     )
     .filter(s => now - s.created * 1000 > graceMs)
@@ -101,7 +108,7 @@ export async function checkFulfilment({
   if (!complete)
     throw new Error("Stripe checkout sessions: pagination limit exceeded");
   const paid = sessions.filter(
-    s => s.payment_status === "paid" && s.amount_total !== 0
+    s => s.payment_status === "paid" && s.livemode !== false && s.amount_total !== 0
   );
   if (!paid.length) return { checked: 0, problems: [] };
   const events = [];

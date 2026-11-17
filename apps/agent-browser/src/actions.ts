@@ -643,7 +643,7 @@ async function handleClick(command: ClickCommand, browser: BrowserManager): Prom
     // If --new-tab flag is set, get the href and open in a new tab
     if (command.newTab) {
       const fullUrl = await locator.evaluate((el) => {
-        const href = el.getAttribute('href');
+        const href = (el as any).getAttribute('href');
         // URL and document.baseURI are available in the browser context
         return href
           ? new (globalThis as any).URL(href, (globalThis as any).document.baseURI).toString()
@@ -1007,7 +1007,7 @@ async function handleScroll(command: ScrollCommand, browser: BrowserManager): Pr
     if (hasExplicitDelta || deltaX !== 0 || deltaY !== 0) {
       await element.evaluate(
         (el, { x, y }) => {
-          el.scrollBy(x, y);
+          (el as any).scrollBy(x, y);
         },
         { x: deltaX, y: deltaY }
       );

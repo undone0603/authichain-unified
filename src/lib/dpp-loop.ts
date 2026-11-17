@@ -79,13 +79,21 @@ function normalizeSource(
   return "direct";
 }
 
-/** Persist one observable loop stage. Never throws — logging only on failure. */
+/**
+ * Persist one observable loop stage. Best-effort by default for analytics.
+ * Merchant activation opts into required=true; it must never report success
+ * when the durable activation record failed to write.
+ */
 export async function recordDppLoopEvent(
   supabase: SupabaseLike,
-  input: RecordDppLoopEventInput
+  input: RecordDppLoopEventInput,
+  opts: { required?: boolean } = {}
 ): Promise<void> {
   const visitId = input.visitId?.trim();
-  if (!visitId) return;
+  if (!visitId) {
+    if (opts.required) throw new Error("dpp_loop_visit_id_required");
+    return;
+  }
 
   try {
     const { error } = await supabase.from("funnel_events").insert({
@@ -107,9 +115,11 @@ export async function recordDppLoopEvent(
     });
     if (error) {
       console.error("[dpp-loop] record failed:", input.stage, error);
+      if (opts.required) throw new Error("dpp_loop_record_failed");
     }
   } catch (err) {
     console.error("[dpp-loop] record failed:", input.stage, err);
+    if (opts.required) throw err;
   }
 }
 

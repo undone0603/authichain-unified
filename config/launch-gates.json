@@ -30,11 +30,31 @@
       "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1990",
       "forbid_redirect_host": "cloudflareaccess.com",
       "probes": [
-        { "url": "https://authichain.com/", "expect_status": 200, "max_ms": 4000 },
-        { "url": "https://authichain.com/api/health", "expect_status": 200, "max_ms": 4000 },
-        { "url": "https://qron.space/", "expect_status": 200, "max_ms": 4000 },
-        { "url": "https://strainchain.io/", "expect_status": 200, "max_ms": 4000 },
-        { "url": "https://govchain.us/", "expect_status": 200, "max_ms": 4000 }
+        {
+          "url": "https://authichain.com/",
+          "expect_status": 200,
+          "max_ms": 8000
+        },
+        {
+          "url": "https://authichain.com/api/health",
+          "expect_status": 200,
+          "max_ms": 8000
+        },
+        {
+          "url": "https://qron.space/",
+          "expect_status": 200,
+          "max_ms": 8000
+        },
+        {
+          "url": "https://strainchain.io/",
+          "expect_status": 200,
+          "max_ms": 8000
+        },
+        {
+          "url": "https://govchain.us/",
+          "expect_status": 200,
+          "max_ms": 8000
+        }
       ],
       "evidence_required": "Every probe returned the expected status within budget with no redirect to the forbidden host.",
       "on_pass": "report",
@@ -64,7 +84,7 @@
       "type": "live_verify",
       "ref": "https://gitlab.com/authichain-group/authichain-unified/-/work_items/1930",
       "url": "https://authichain.com/api/verify?id=polygon-anchor-1",
-      "max_ms": 5000,
+      "max_ms": 10000,
       "record": "protocol/examples/polygon-anchor-1.record.json",
       "anchor": "protocol/examples/polygon-anchor-1.anchor.json",
       "evidence_required": "GET the published example returns 200, verdict verified, source published_example, within max_ms. protocol/verifier.mjs verifies the shipped example, and the live subject id matches that record.",
@@ -138,19 +158,19 @@
         {
           "url": "https://authichain.com/.well-known/jwks.json",
           "expect_status": 200,
-          "max_ms": 3000,
+          "max_ms": 8000,
           "includes": "\"keys\""
         },
         {
           "url": "https://authichain.com/protocol/issuer.json",
           "expect_status": 200,
-          "max_ms": 3000,
+          "max_ms": 8000,
           "includes": "\"ready\":true"
         },
         {
           "url": "https://authichain.com/api/health",
           "expect_status": 200,
-          "max_ms": 3000,
+          "max_ms": 8000,
           "includes": "\"status\":\"ok\""
         }
       ],

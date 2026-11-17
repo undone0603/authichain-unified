@@ -243,3 +243,12 @@ test("tryHandleEstateAgentDiscovery answers GET and ignores other paths", async 
     null
   );
 });
+
+test("llms.txt does not send buyers to a retired checkout", () => {
+  for (const brand of ["qron", "strainchain", "govchain"] as const) {
+    const text = renderEstateLlmsTxt(brand);
+    // /checkout/qron_launch answers 303 to /pricing and sells nothing.
+    assert.equal(text.includes("/checkout/qron_launch"), false, brand);
+    assert.equal(text.includes("QRON Launch"), false, brand);
+  }
+});

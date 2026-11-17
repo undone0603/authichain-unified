@@ -15,7 +15,7 @@ concurrency:
 jobs:
   sync:
     name: Push LINKEDIN_* session to AgentZ
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 5
     steps:
       - name: Sync cookies to AgentZ

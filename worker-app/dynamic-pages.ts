@@ -47,6 +47,7 @@ import { getQronById } from "../server/identity-db-helpers";
 import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
+import { detectBot } from "../src/app/api/book/bot-detection";
 import { reportGrowthEvent } from "./growth-record";
 import { listedPlans, planPaymentLink } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
@@ -296,14 +297,25 @@ async function renderProductPassport(c: Context): Promise<Response> {
       return htmlResponse(c, renderSeoHubHtml(seoPage, pathname), 200);
     }
 
-    // Same per-request pg.Client pattern as /verify: connect + every query
-    // share one 2.5s deadline, and the client is closed in finally.
-    const withLookupTimeout = makeVerifyDeadline();
-    dbHandle = createHyperdriveRequestDb(c.env as any);
-    await withLookupTimeout(dbHandle.connect());
-    const result = await withLookupTimeout(
-      findPassportBySerial(dbHandle.db, serial)
-    );
+    const db = getHyperdriveDb(c.env as any);
+    const result = await new Promise<
+      Awaited<ReturnType<typeof findPassportBySerial>>
+    >((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("passport-lookup-timeout")),
+        4000
+      );
+      findPassportBySerial(db, serial).then(
+        value => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        err => {
+          clearTimeout(timer);
+          reject(err);
+        }
+      );
+    });
 
     if (!result) {
       return htmlResponse(
@@ -413,13 +425,13 @@ function verifyPromptHtml(): string {
   return htmlDocument({
     title: "Verify a Product | AuthiChain",
     description:
-      "Look up an AuthiChain record. On-chain verification is in development.",
+      "Look up an AuthiChain certificate. A product certificate is not an on-chain check. The published demonstration record is linked on this page.",
     canonicalPath: "/verify",
     extraHead: '<link rel="manifest" href="/manifest.webmanifest">\n',
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      "<p>Enter a registry product ID to look up its record. On-chain verification is in development.</p>\n" +
+      "<p>Enter a registry product ID to look up its certificate. That certificate is not an on-chain check.</p>\n" +
       '<p>The open verifier checks the published demonstration record <a href="/verify?id=polygon-anchor-1">polygon-anchor-1</a>. The same check as JSON is <a href="/api/verify?id=polygon-anchor-1">/api/verify</a>.</p>\n' +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
@@ -615,6 +627,30 @@ function verifyLiveSealHtml(): string {
   });
 }
 
+/**
+ * Reserved path. Not a certificate number. The Next page at
+ * src/app/verify/manufacturer/page.tsx never runs on this host because
+ * /verify/* is owned here. The history reader is a separate route and may
+ * be absent; this page does not invent a role when it is.
+ */
+function verifyManufacturerHistoryHtml(): string {
+  return htmlDocument({
+    title: "Manufacturer role history | AuthiChain",
+    description:
+      "This path is not a certificate number. It does not look up a product and it does not grant a manufacturer role.",
+    canonicalPath: "/verify/manufacturer",
+    extraHead: '<meta name="robots" content="noindex">\n',
+    bodyHtml:
+      "<main>\n" +
+      "<h1>Manufacturer role history</h1>\n" +
+      "<p>This path is not a certificate number. Nothing was looked up in the product registry.</p>\n" +
+      "<p>RoleGranted and RoleRevoked events for one address are read from <code>GET /api/manufacturer-status/{address}/history</code>. This page does not call that reader and does not invent a role when the reader is absent.</p>\n" +
+      "<p>An empty history is not proof that an address holds no role. A role event is not proof that a product is genuine. This page does not sell a role.</p>\n" +
+      '<p><a href="/verify">Look up a certificate</a></p>\n' +
+      "</main>",
+  });
+}
+
 async function renderVerify(c: Context): Promise<Response> {
   const url = new URL(c.req.url);
   const idParam = url.searchParams.get("id");
@@ -636,6 +672,10 @@ async function renderVerify(c: Context): Promise<Response> {
 
     if (!idParam && pathSegment.toLowerCase() === "live") {
       return htmlResponse(c, verifyLiveSealHtml(), 200);
+    }
+
+    if (!idParam && pathSegment.toLowerCase() === "manufacturer") {
+      return htmlResponse(c, verifyManufacturerHistoryHtml(), 200);
     }
 
     if (!identifier) {
@@ -1142,6 +1182,17 @@ function renderLanding(c: Context): Response {
 // contact, work email, vertical, and first product, writes a lead_captures
 // row, then 303s to /onboard/received. The founder alert is extra; a submit
 // is recorded only when the table write succeeds.
+//
+// Spam gate. Every onboard row written between 2026-10-20 and 2026-11-11 (28
+// of 28) was automated: casino and "deposit available" links in the company
+// field, or script-injection probes in the contact field. Each one was stored
+// as a `new` lead and paged the founder by ntfy, email and SMS. Two checks,
+// both structural, same reasoning as src/app/api/book/bot-detection.ts:
+//   - the `company_website` decoy field (detectBot). A filled decoy gets the
+//     normal 303 and nothing is written or sent, as /api/book does.
+//   - a link or markup in a plain-text field. No company, person, product,
+//     SKU or serial contains "://" or an angle bracket. That gets a 400 with
+//     the reason, so a person who pasted a URL can fix it; nothing is written.
 
 const ONBOARD_VERTICALS = [
   "authichain",
@@ -1236,12 +1287,24 @@ function onboardFormHtml(error?: string, host = ""): string {
       '<input id="sku" name="sku" type="text" maxlength="40">\n' +
       '<label for="serial">Serial (optional)</label>\n' +
       '<input id="serial" name="serial" type="text" maxlength="40">\n' +
+      // Decoy for automated submitters; see the spam gate note above.
+      '<div aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden">\n' +
+      '<label for="company_website">Company website (leave blank)</label>\n' +
+      '<input id="company_website" name="company_website" type="text" tabindex="-1" autocomplete="off">\n' +
+      "</div>\n" +
       '<button type="submit">Request a free pilot seal</button>\n' +
       "</form>\n" +
       onboardPayNowHtml() +
       '<p>Questions? <a href="https://authichain.com/contact">Talk to us</a></p>\n' +
       "</main>",
   });
+}
+
+const ONBOARD_LINK_OR_MARKUP_RE = /:\/\/|[<>]/;
+
+/** True when a plain-text intake field carries a link or markup. Pure. */
+export function hasLinkOrMarkup(...fields: string[]): boolean {
+  return fields.some(field => ONBOARD_LINK_OR_MARKUP_RE.test(field));
 }
 
 type PilotLeadRow = {
@@ -1292,8 +1355,10 @@ async function handleOnboardPost(c: Context): Promise<Response> {
   let productName = "";
   let sku = "";
   let serial = "";
+  let decoy: unknown = "";
   try {
     const form = await c.req.parseBody();
+    decoy = form.company_website;
     company = String(form.company || "")
       .trim()
       .slice(0, 80);
@@ -1349,6 +1414,16 @@ async function handleOnboardPost(c: Context): Promise<Response> {
       400
     );
   }
+  if (hasLinkOrMarkup(company, contactName, productName, sku, serial)) {
+    return htmlResponse(
+      c,
+      onboardFormHtml(
+        "Use plain text for company, contact, product, SKU and serial. Links and markup are not accepted.",
+        onboardHost(c)
+      ),
+      400
+    );
+  }
   const refBytes = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(`${email}|${company}|${productName}`)
@@ -1357,6 +1432,16 @@ async function handleOnboardPost(c: Context): Promise<Response> {
     .slice(0, 8)
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
+  const dest = new URL("/onboard/received", c.req.url);
+  dest.searchParams.set("ref", ref);
+  dest.searchParams.set("vertical", vertical);
+  dest.searchParams.set("company", company);
+  // Indistinguishable 303 for bots: nothing written, nothing sent.
+  const botReason = detectBot({ company_website: decoy });
+  if (botReason) {
+    console.info("[onboard] dropped automated submission:", botReason);
+    return c.redirect(dest.pathname + dest.search, 303);
+  }
   try {
     await recordPilotLead(c, {
       company,
@@ -1379,10 +1464,6 @@ async function handleOnboardPost(c: Context): Promise<Response> {
       500
     );
   }
-  const dest = new URL("/onboard/received", c.req.url);
-  dest.searchParams.set("ref", ref);
-  dest.searchParams.set("vertical", vertical);
-  dest.searchParams.set("company", company);
   scheduleOnboardNotify(c, {
     company,
     contact: contactName,
@@ -1494,7 +1575,7 @@ async function renderOnboard(c: Context): Promise<Response> {
 // deterministic reference object. That page must exist. Unknown ids 404.
 
 const LAUNCH_PROOF_PRODUCT_ID = "00000000-0000-4000-8000-000000000001";
-const LAUNCH_PROOF_KID = "T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ";
+const LAUNCH_PROOF_KID = "jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM";
 
 function launchProofStoryHtml(): string {
   return htmlDocument({

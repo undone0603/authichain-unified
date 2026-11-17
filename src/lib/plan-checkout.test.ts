@@ -126,16 +126,16 @@ describe("createPlanCheckoutSession", () => {
     expect(create.mock.calls[0][0].customer_email).toBe("mike@example.com");
   });
 
-  it("does not set customer_creation on Farm Plan subscription checkout", async () => {
+  it("does not set customer_creation on Theater 1 subscription checkout", async () => {
     create.mockResolvedValue({
-      url: "https://checkout.stripe.com/c/pay/cs_test_farm",
+      url: "https://checkout.stripe.com/c/pay/cs_test_theater",
     });
     const result = await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.govchain.us/api/checkout/plan/strainchain_farm",
+        "https://authichain.govchain.us/api/checkout/plan/theater_1",
         { method: "GET" }
       ),
-      body: { planId: "strainchain_farm" },
+      body: { planId: "theater_1" },
       stripeSecretKey: "sk_test_x",
     });
     expect(result.ok).toBe(true);
@@ -147,46 +147,41 @@ describe("createPlanCheckoutSession", () => {
     expect(arg.customer_creation).toBeUndefined();
   });
 
-  it("lands Launch monthly and annual on /generate", async () => {
-    for (const planId of ["qron_launch", "qron_launch_annual"] as const) {
-      create.mockResolvedValue({
-        url: "https://checkout.stripe.com/c/pay/cs_test_launch",
-      });
+  it("rejects retired QRON Launch and Farm plans without calling Stripe", async () => {
+    for (const planId of [
+      "qron_launch",
+      "qron_launch_annual",
+      "strainchain_farm",
+    ] as const) {
       const result = await createPlanCheckoutSession({
-        request: new Request(
-          `https://authichain.govchain.us/api/checkout/plan/${planId}`,
-          { method: "GET" }
-        ),
-        body: { planId },
+        request: new Request("https://authichain.govchain.us/api/checkout", {
+          method: "POST",
+        }),
+        body: { planId, email: "ops@brand.com" },
         stripeSecretKey: "sk_test_x",
       });
-      expect(result.ok).toBe(true);
-      const success = create.mock.calls[0][0].success_url as string;
-      expect(success, planId).toContain("/generate?paid=1&session_id=");
-      expect(success, planId).not.toContain("/dpp/thanks");
-      expect(success.split("?").length, planId).toBe(2);
-      const session = create.mock.calls.at(-1)?.[0];
-      expect(session.metadata.plan, planId).toBe(planId);
-      expect(session.metadata.stripe_price_id, planId).toBeTruthy();
-      expect(session.subscription_data.metadata.stripe_price_id, planId).toBe(
-        session.metadata.stripe_price_id
-      );
+      expect(result, planId).toMatchObject({
+        ok: false,
+        status: 400,
+        error: "Plan is no longer available",
+      });
     }
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("carries aff_ref + ref_code cookies into session and subscription metadata", async () => {
     create.mockResolvedValue({
-      url: "https://checkout.stripe.com/c/pay/cs_test_farm_aff",
+      url: "https://checkout.stripe.com/c/pay/cs_test_theater_aff",
     });
     const result = await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.govchain.us/api/checkout/plan/strainchain_farm",
+        "https://authichain.govchain.us/api/checkout/plan/theater_1",
         {
           method: "GET",
           headers: { cookie: "aff_ref=AFF-COOKIE; ref_code=USER-456" },
         }
       ),
-      body: { planId: "strainchain_farm" },
+      body: { planId: "theater_1" },
       stripeSecretKey: "sk_test_x",
     });
     expect(result.ok).toBe(true);
@@ -232,14 +227,14 @@ describe("createPlanCheckoutSession", () => {
 
   it("prefers an explicit affiliateCode over the cookie", async () => {
     create.mockResolvedValue({
-      url: "https://checkout.stripe.com/c/pay/cs_test_farm_aff2",
+      url: "https://checkout.stripe.com/c/pay/cs_test_theater_aff2",
     });
     await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.govchain.us/api/checkout/plan/strainchain_farm",
+        "https://authichain.govchain.us/api/checkout/plan/theater_1",
         { method: "GET", headers: { cookie: "aff_ref=AFF-COOKIE" } }
       ),
-      body: { planId: "strainchain_farm", affiliateCode: "AFF-EXPLICIT" },
+      body: { planId: "theater_1", affiliateCode: "AFF-EXPLICIT" },
       stripeSecretKey: "sk_test_x",
     });
     expect(create.mock.calls[0][0].metadata.affiliate_code).toBe(
@@ -249,9 +244,13 @@ describe("createPlanCheckoutSession", () => {
 
   it("tags the $29 Starter PaymentIntent with plan + stripe_price_id (#1890 parity)", async () => {
     const { planById } = await import("./plans");
-    create.mockResolvedValue({ url: "https://checkout.stripe.com/c/pay/cs_test_starter" });
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_starter",
+    });
     const result = await createPlanCheckoutSession({
-      request: new Request("https://authichain.com/api/checkout", { method: "POST" }),
+      request: new Request("https://authichain.com/api/checkout", {
+        method: "POST",
+      }),
       body: { planId: "starter", email: "ops@brand.com" },
       stripeSecretKey: "sk_test_x",
     });
@@ -267,9 +266,13 @@ describe("createPlanCheckoutSession", () => {
   });
 
   it("does not add Starter PaymentIntent metadata to other plans", async () => {
-    create.mockResolvedValue({ url: "https://checkout.stripe.com/c/pay/cs_test_p" });
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_p",
+    });
     await createPlanCheckoutSession({
-      request: new Request("https://authichain.com/api/checkout", { method: "POST" }),
+      request: new Request("https://authichain.com/api/checkout", {
+        method: "POST",
+      }),
       body: { planId: "strainchain_passport", email: "ops@brand.com" },
       stripeSecretKey: "sk_test_x",
     });

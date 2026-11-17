@@ -32,7 +32,7 @@ concurrency:
 jobs:
   post:
     name: Call AgentZ /workflows/{id}/run
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 20
     env:
       AGENT_SECRET: ${{ secrets.AGENT_SECRET }}

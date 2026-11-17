@@ -64,7 +64,9 @@ export interface OutboundPolicy {
 export function defaultOutboundPolicy(): OutboundPolicy {
   return {
     policy_version: OUTBOUND_POLICY_VERSION,
-    production_send: false,
+    // Founder-authorized restricted mode. Email also requires a signed agent,
+    // qualified recipient, approved campaign, anti-replay, and live sender.
+    production_send: true,
     kill_switch: false,
     allowed_capabilities: [
       "DISCOVER_PROSPECT",
@@ -80,10 +82,10 @@ export function defaultOutboundPolicy(): OutboundPolicy {
       "CREATE_AUDIT_RECORD",
     ],
     public_offers: ["dpp_readiness"],
-    max_sends_per_agent: 5,
-    max_sends_per_campaign: 20,
+    max_sends_per_agent: 2,
+    max_sends_per_campaign: 5,
     max_sends_per_recipient: 1,
-    cooldown_ms: 7 * 24 * 60 * 60 * 1000,
+    cooldown_ms: 30 * 24 * 60 * 60 * 1000,
   };
 }
 

@@ -205,8 +205,141 @@ export function checkPreviewUrls(root = ROOT, targets = PREVIEW_URLS_OFF) {
   return errors;
 }
 
+
+/**
+ * Bare event name from a 2-space `on:` header after unquoting
+ * (`push:`, `'push':`, `"push":`). Returns null for inline or
+ * unrecognized shapes so the checker can fail closed.
+ */
+export function parseOnEventHeader(line) {
+  const m = String(line).match(
+    /^  (?:([A-Za-z0-9_-]+)|'([A-Za-z0-9_-]+)'|"([A-Za-z0-9_-]+)"):\s*$/
+  );
+  return m ? (m[1] || m[2] || m[3]) : null;
+}
+
+/** True for a 2-space mapping entry in the top-level `on:` block. */
+function isOnEventHeaderLine(line) {
+  return /^  \S/.test(line) && !/^\s*#/.test(line);
+}
+
+/** Existing direct push deploys may run ONLY for their own Worker source.
+ * No workflow-file trigger: changing a workflow is not permission to deploy.
+ * A read-only CI invariant keeps an unfiltered main push from silently
+ * reappearing on these two high-impact workflows.
+ */
+export const DIRECT_DEPLOY_PUSH_SCOPES = [
+  {
+    workflow: "deploy-cloudflare.yml",
+    entry: "workers/manufacturer-status/src/index.ts",
+    paths: ["workers/manufacturer-status/**"],
+  },
+  {
+    workflow: "deploy-edge-worker.yml",
+    entry: "api/worker.ts",
+    // The revenue Worker bundles src/lib/plans.ts, the pricing source of
+    // truth. Leaving it out would let a price change merge without the
+    // Worker that quotes those prices ever being redeployed.
+    paths: ["api/**", "src/lib/plans.ts"],
+  },
+];
+
+export function checkDirectDeployPushScopes(root = ROOT, scopes = DIRECT_DEPLOY_PUSH_SCOPES) {
+  const errors = [];
+  for (const { workflow, paths: allowed } of scopes) {
+    const rel = ".github/workflows/" + workflow;
+    let source;
+    try {
+      source = readFileSync(path.join(root, rel), "utf8");
+    } catch {
+      errors.push(rel + ": missing or unreadable");
+      continue;
+    }
+    // A compact or rewritten on: trigger must never silently be classified
+    // as manual-only. Require the event map explicitly and fail closed.
+    const topLevelOn = source.split(/\r?\n/).find(line => /^on\s*:/.test(line));
+    if (!topLevelOn || topLevelOn.trim() !== "on:") {
+      errors.push(rel + ": unsupported inline or missing on trigger");
+      continue;
+    }
+    const block = onBlock(source);
+    // Quoted keys such as 'push': / "push": must be normalized, not dropped.
+    // Any event-header shape we cannot recognize fails closed (never
+    // classified as manual-only).
+    const eventHeaderLines = block.filter(isOnEventHeaderLine);
+    const eventNames = [];
+    let unrecognizedHeader = false;
+    for (const line of eventHeaderLines) {
+      const name = parseOnEventHeader(line);
+      if (!name) {
+        unrecognizedHeader = true;
+        break;
+      }
+      eventNames.push(name);
+    }
+    if (unrecognizedHeader) {
+      errors.push(
+        rel +
+          ": unrecognized on: event-header shape; only one explicit push and one workflow_dispatch trigger are allowed"
+      );
+      continue;
+    }
+    if (eventNames.length === 0 ||
+        !eventNames.includes("workflow_dispatch") ||
+        eventNames.some(name => !["push", "workflow_dispatch"].includes(name)) ||
+        new Set(eventNames).size !== eventNames.length) {
+      errors.push(rel + ": only one explicit push and one workflow_dispatch trigger are allowed");
+      continue;
+    }
+    const pushIndex = block.findIndex(line => parseOnEventHeader(line) === "push");
+    // Manual-only is a supported fail-closed fallback.
+    if (pushIndex === -1) continue;
+    const pushLines = [];
+    for (const line of block.slice(pushIndex + 1)) {
+      if (isOnEventHeaderLine(line)) break;
+      if (line.trim() && !/^\s*#/.test(line)) pushLines.push(line);
+    }
+    const keys = pushLines
+      .filter(line => /^    [A-Za-z0-9_-]+:/.test(line))
+      .map(line => line.trim().split(":")[0]);
+    // Name the case this check exists for, instead of folding it into the
+    // generic shape error below.
+    if (!keys.includes("paths")) {
+      errors.push(rel + ": push to main is not path-restricted");
+      continue;
+    }
+    if (keys.length !== 2 ||
+        keys.some(key => !["branches", "paths"].includes(key)) ||
+        new Set(keys).size !== keys.length) {
+      errors.push(rel + ": push must define only branches and paths");
+      continue;
+    }
+    function listValues(key) {
+      const start = pushLines.findIndex(line => line === "    " + key + ":");
+      if (start < 0) return null;
+      const result = [];
+      for (const line of pushLines.slice(start + 1)) {
+        if (/^    [A-Za-z0-9_-]+:/.test(line)) break;
+        const m = line.match(/^      -\s+(?:"([^"]+)"|'([^']+)'|([^"'#\s]+))\s*(?:#.*)?$/);
+        result.push(m ? (m[1] || m[2] || m[3]) : "[unsupported]");
+      }
+      return result;
+    }
+    const branches = listValues("branches");
+    if (!branches || branches.length !== 1 || branches[0] !== "main") {
+      errors.push(rel + ": push branches must be exactly main");
+    }
+    const paths = listValues("paths");
+    if (!paths || paths.length !== allowed.length ||
+        allowed.some(entry => !paths.includes(entry))) {
+      errors.push(rel + ": push paths must be exactly " + allowed.join(", "));
+    }
+  }
+  return errors;
+}
+
 const DEPLOY_CMD =
-  /\bwrangler(?:@[\w.^~-]+)?\s+(?:deploy|versions\s+deploy)\b|cloudflare\/wrangler-action/;
+  /\bwrangler(?:@[\w.^~-]+)?\s+(?:deploy|versions\s+(?:deploy|upload))\b|cloudflare\/wrangler-action/;
 
 /** Lines of the top-level `on:` block (handles `on:` and `"on":`). */
 function onBlock(text) {
@@ -330,6 +463,7 @@ function main() {
   const errors = [
     ...checkWorkersDev(),
     ...checkPreviewUrls(),
+    ...checkDirectDeployPushScopes(),
     ...checkCancelInProgress(),
     ...checkCiGateWorkflows(),
   ];

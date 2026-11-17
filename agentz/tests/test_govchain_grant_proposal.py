@@ -86,6 +86,7 @@ def test_dry_run_drafts_locally_and_skips_ledger(tmp_path: Path, monkeypatch):
     ledger = tmp_path / "pipeline_ledger.json"
     monkeypatch.setattr(gp, "DEFAULT_CSV", csv)
     monkeypatch.setattr(gp, "DEFAULT_LEDGER", ledger)
+    monkeypatch.setattr(gp, "_get_supabase", lambda: None)
 
     class _FakeLLM:
         def invoke(self, prompt):

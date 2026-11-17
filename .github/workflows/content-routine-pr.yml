@@ -34,7 +34,7 @@ permissions:
 jobs:
   open-pr:
     name: Open and auto-merge content PR
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
@@ -99,12 +99,14 @@ jobs:
           fi
 
       - name: Install pnpm
+        timeout-minutes: 15
         if: steps.scope.outputs.content_only == 'true'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
 
       - name: Set up Node.js
+        timeout-minutes: 15
         if: steps.scope.outputs.content_only == 'true'
         uses: actions/setup-node@v7
         with:
@@ -123,6 +125,7 @@ jobs:
           fi
 
       - name: Install dependencies for SEO page test
+        timeout-minutes: 15
         if: steps.scope.outputs.content_only == 'true' && steps.scope.outputs.seo_changed == 'true'
         # Scoped to the root workspace (--filter .), not the full 36-package
         # monorepo install pnpm test would trigger via turbo — this only needs
@@ -173,7 +176,10 @@ jobs:
           gh run watch "$RUN_ID" --interval 30 --exit-status
 
       - name: Enable auto-merge for content-only changes
-        if: steps.scope.outputs.content_only == 'true' && success()
+        # Hold this write action until content-only PRs have independently
+        # verified exact-head quality and human approval requirements.
+        # PR creation and all content/CI validation steps remain enabled.
+        if: ${{ false }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NUMBER: ${{ steps.pr.outputs.number }}

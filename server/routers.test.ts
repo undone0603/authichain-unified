@@ -972,15 +972,28 @@ describe("AuthiChain Unified Platform Routers", () => {
   });
 
   describe("metrc", () => {
-    it("stats is public", async () => {
+    it("stats is public and does not invent a census", async () => {
       const caller = appRouter.createCaller(createPublicContext());
       const result = await caller.metrc.stats();
-      expect(result).toBeDefined();
-      expect(typeof result.activeLicenses).toBe("number");
+      expect(result).toEqual({ available: false, reason: "metrc_unavailable" });
+      expect(JSON.stringify(result)).not.toMatch(/42|1042|98\.4|LARA|Michigan/);
     });
     it("sync requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
       await expect(caller.metrc.sync({ licenseNumber: "LIC-123" })).rejects.toThrow();
+    });
+    it("sync and anchor refuse without calling METRC", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.metrc.sync({ licenseNumber: "LIC-123" })).resolves.toEqual({
+        available: false,
+        reason: "metrc_unavailable",
+      });
+      await expect(
+        caller.metrc.anchor({ packageTag: "1A4", manifestId: "m-1" }),
+      ).resolves.toEqual({
+        available: false,
+        reason: "metrc_unavailable",
+      });
     });
   });
 

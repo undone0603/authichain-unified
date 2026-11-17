@@ -540,9 +540,14 @@ describe("Launch Annual cadence", () => {
     expect(confirm).not.toContain("$190/mo");
     expect(renderCheckoutConfirmPage({ plan: monthly! })).toContain("$19/mo");
     const chooser = renderCheckoutChooserPage();
-    // Launch plans are unlisted, so the chooser no longer offers them.
-    expect(chooser).not.toContain("$190/yr");
+    // Retired Launch prices stay in the catalogue for existing subscribers,
+    // but the chooser must not mint a new checkout path for them.
+    expect(chooser).not.toContain('href="/checkout/qron_launch"');
+    expect(chooser).not.toContain('href="/checkout/qron_launch_annual"');
     expect(chooser).not.toContain("$19/mo");
+    expect(chooser).not.toContain("$190/yr");
+    expect(planById("qron_launch")?.listed).toBe(false);
+    expect(planById("qron_launch_annual")?.listed).toBe(false);
   });
 
   it("opens a subscription session for the annual price", () => {
@@ -783,6 +788,7 @@ describe("QRON Interdiction Gate hardening", () => {
     expect(res!.headers.get("location")).toBe("/pricing");
   });
 });
+
 describe("retired /checkout/qron_launch (RES-86c)", () => {
   it("no longer renders the confirm form for any method", async () => {
     for (const method of ["GET", "HEAD", "POST"]) {

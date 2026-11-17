@@ -8,7 +8,8 @@
 # Optional:
 #   TUNNEL_UUID          default 08378b03-f6a2-46cf-aab8-a2754bad869f
 #   TUNNEL_HOSTNAME      default agentz.authichain.com
-#   ZONE_NAME            default authichain.com
+#   GATEWAY_HOSTNAME     default claw-gateway.authichain.com
+#   ZONE_NAME           default authichain.com
 #   TUNNEL_TOKEN_OUT     if set, write the run token here (file mode 0600)
 #   PUT_TUNNEL_INGRESS   default 1 — try to store ingress on the tunnel
 #
@@ -18,6 +19,7 @@ set -euo pipefail
 
 TUNNEL_UUID="${TUNNEL_UUID:-08378b03-f6a2-46cf-aab8-a2754bad869f}"
 TUNNEL_HOSTNAME="${TUNNEL_HOSTNAME:-agentz.authichain.com}"
+GATEWAY_HOSTNAME="${GATEWAY_HOSTNAME:-claw-gateway.authichain.com}"
 ZONE_NAME="${ZONE_NAME:-authichain.com}"
 CNAME_TARGET="${TUNNEL_UUID}.cfargotunnel.com"
 PUT_TUNNEL_INGRESS="${PUT_TUNNEL_INGRESS:-1}"
@@ -82,10 +84,13 @@ echo "tunnel ok name=${TUNNEL_NAME:-?} id=${TUNNEL_UUID} status=${TUNNEL_STATUS}
 
 # Best-effort remote ingress so `cloudflared tunnel run --token` has a service.
 if [ "$PUT_TUNNEL_INGRESS" = "1" ]; then
-  INGRESS="$(jq -n --arg host "$TUNNEL_HOSTNAME" '{
+  # This PUT replaces the whole ingress, so every tunnel hostname must be here.
+  # Only the hook endpoints reach the gateway; its UI and tools stay local.
+  INGRESS="$(jq -n --arg host "$TUNNEL_HOSTNAME" --arg gw "$GATEWAY_HOSTNAME" '{
     config: {
       ingress: [
         {hostname: $host, service: "http://127.0.0.1:8000"},
+        {hostname: $gw, path: "^/hooks/(wake|agent)$", service: "http://127.0.0.1:18789"},
         {service: "http_status:404"}
       ]
     }

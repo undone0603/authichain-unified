@@ -29,11 +29,12 @@ env:
 jobs:
   claw-secrets:
     name: Bind claw AGENTZ_* only
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - name: Install wrangler
+        timeout-minutes: 15
         run: npm install -g wrangler
       - name: Put AGENTZ_API_URL + AGENTZ_API_KEY on authichain-openclaw
         env:
@@ -92,7 +93,7 @@ jobs:
 
   tunnel-cf:
     name: Tunnel DNS + Worker route cleanup
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7

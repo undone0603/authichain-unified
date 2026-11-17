@@ -1,0 +1,47 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/credentials/v2",
+    "https://authichain.com/protocol/v1"
+  ],
+  "type": [
+    "VerifiableCredential",
+    "ProvenanceRecord",
+    "BatteryPassportDemonstrationSample"
+  ],
+  "issuer": "did:key:z6MksmTCGMGYrU5oBLyTXVdpYBTegKhFjeXjnnAfmsm7F7TV",
+  "validFrom": "2026-11-06T00:00:00Z",
+  "validUntil": "2028-12-31T00:00:00Z",
+  "credentialSubject": {
+    "id": "https://authichain.com/battery-passport/sample",
+    "demonstration": true,
+    "label": "DEMONSTRATION SAMPLE — FICTIONAL DATA, NOT AN ARTICLE 77 PASSPORT OR LEGAL ADVICE",
+    "claim": "fictional_demonstration_sample_only",
+    "productClass": "LMT battery pack (e-bike / light means of transport)",
+    "brand": "Fictional Demonstration Brand (not a company)",
+    "name": "EXAMPLE-LMT-48V-14Ah fictional e-bike battery pack",
+    "model": "EXAMPLE-LMT-48V-14Ah",
+    "serial": "DEMO-LMT-SAMPLE-0001",
+    "category": "LMT",
+    "chemistry": "NMC (fictional demonstration value)",
+    "weightKg": 3.2,
+    "statedEnergyWh": 672,
+    "ratedCapacityAh": 14,
+    "nominalVoltageV": 48,
+    "expectedLifetimeCycles": "800–1000 (fictional datasheet range)",
+    "manufacturer": "Fictional Demonstration Pack Assembler (not a company)",
+    "placeOfManufacture": "Example City (fictional; not a street address)",
+    "dateOfManufacture": "2026-01-15",
+    "statement": "DEMONSTRATION SAMPLE — FICTIONAL DATA, NOT AN ARTICLE 77 PASSPORT OR LEGAL ADVICE",
+    "notArticle77": true,
+    "notLegalAdvice": true,
+    "notACustomerRecord": true,
+    "notCertifiedConformityAssessment": true
+  },
+  "proof": {
+    "type": "Ed25519Signature2020",
+    "created": "2026-11-06T00:00:00Z",
+    "verificationMethod": "did:key:z6MksmTCGMGYrU5oBLyTXVdpYBTegKhFjeXjnnAfmsm7F7TV#z6MksmTCGMGYrU5oBLyTXVdpYBTegKhFjeXjnnAfmsm7F7TV",
+    "proofPurpose": "assertionMethod",
+    "proofValue": "z9AWyqN4mUimbgMu3bEucDJD9ZZjuWSeEf2k3TNdmyMe5vrXPXiGJftnYbMyPG4RFcpK6PmcVmPcorDPJcbaZXZ4"
+  }
+}
