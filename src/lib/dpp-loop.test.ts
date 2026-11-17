@@ -236,6 +236,28 @@ describe("dpp-loop", () => {
       },
     ];
     expect(isDemoVisit(rows.slice(0, 1))).toBe(true);
+    expect(
+      isDemoVisit([
+        {
+          prospect_id: "owner_self_test",
+          event_type: "dpp_loop:payment_succeeded",
+          metadata: {
+            loop_stage: "payment_succeeded",
+            test_payment: "owner",
+            amount_total: 1000,
+          },
+        },
+      ])
+    ).toBe(true);
+    expect(
+      isDemoVisit([
+        {
+          prospect_id: "stranger_ten",
+          event_type: "dpp_loop:payment_succeeded",
+          metadata: { loop_stage: "payment_succeeded", amount_total: 1000 },
+        },
+      ])
+    ).toBe(false);
     const summary = summarizeDppLoop(
       rows,
       new Date("2026-09-01T04:00:00.000Z")

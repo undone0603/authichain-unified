@@ -24,6 +24,8 @@ describe("command center helpers", () => {
   it("separates customer revenue from founder self-tests and computes MRR", () => {
     const charges = [
       {
+        id: "ch_3UHcQfGqTruSqV8T1j4hdD7l",
+        payment_intent: "pi_3UHcQfGqTruSqV8T18dYFwd3",
         status: "succeeded",
         paid: true,
         refunded: false,
@@ -31,6 +33,7 @@ describe("command center helpers", () => {
         currency: "usd",
         created: 1,
         billing_details: { email: "Founder@x.com" },
+        metadata: { test_payment: "owner" },
       },
       {
         status: "succeeded",
@@ -81,6 +84,30 @@ describe("command center helpers", () => {
     expect(m.external30d).toBe(4900);
     expect(m.externalCount30d).toBe(1);
     expect(m.founderTests30d).toBe(1);
+    expect(
+      summarizeMoney(
+        [
+          {
+            id: "ch_3UHcQfGqTruSqV8T1j4hdD7l",
+            status: "succeeded",
+            paid: true,
+            refunded: false,
+            amount: 1000,
+            currency: "usd",
+            created: 1,
+            billing_details: { email: "buyer@farm.com" },
+          },
+        ],
+        { available: [], pending: [] },
+        [],
+        [],
+        []
+      )
+    ).toMatchObject({
+      external30d: 0,
+      externalCount30d: 0,
+      founderTests30d: 1,
+    });
     expect(m.mrr).toBe(14900);
     expect(m.openCheckouts7d).toBe(2);
     expect(m.available).toBe(931);

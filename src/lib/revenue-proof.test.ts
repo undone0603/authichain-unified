@@ -51,19 +51,32 @@ describe("buildRevenueProof", () => {
     expect(proof.generated_at).toBe("2026-09-21T12:00:00.000Z");
   });
 
-  it("excludes legacy $0 and founder smoke from customer conversion proof", () => {
+  it("excludes legacy $0 and allowlisted owner self-test from customer conversion proof", () => {
     const rows: LoopEventRow[] = [
       row("dpp_smoke_1789591727", "payment_succeeded", {
-        metadata: { loop_stage: "payment_succeeded", amount_total: 0, surface: "authichain.com" },
+        metadata: {
+          loop_stage: "payment_succeeded",
+          amount_total: 0,
+          surface: "authichain.com",
+        },
       }),
       row("dpp_smoke_1789591727", "provisioned"),
       row("dpp_smoke_1789591727", "merchant_activated"),
       row("paid_smoke_10_20260920", "payment_succeeded", {
-        metadata: { loop_stage: "payment_succeeded", amount_total: 1000, surface: "authichain.com" },
+        metadata: {
+          loop_stage: "payment_succeeded",
+          amount_total: 1000,
+          surface: "authichain.com",
+          charge_id: "ch_3UHcQfGqTruSqV8T1j4hdD7l",
+        },
       }),
       row("paid_smoke_10_20260920", "provisioned"),
       row("real_customer", "payment_succeeded", {
-        metadata: { loop_stage: "payment_succeeded", amount_total: 29900, surface: "authichain.com" },
+        metadata: {
+          loop_stage: "payment_succeeded",
+          amount_total: 29900,
+          surface: "authichain.com",
+        },
       }),
       row("real_customer", "provisioned"),
     ];

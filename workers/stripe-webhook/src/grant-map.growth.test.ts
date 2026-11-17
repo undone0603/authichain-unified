@@ -16,6 +16,7 @@ import {
   grantReplayAction,
   grantStacksOnRepeat,
   isFounderEmail,
+  isNonFounderFirstSale,
   loopForPlan,
   stackedPackCredits,
 } from "./grant-map";
@@ -195,6 +196,42 @@ describe("founder list stays in lockstep with live-catalog.ts", () => {
     expect(isFounderEmail("ops@authichain.com")).toBe(true);
     expect(isFounderEmail("smoke+dpp@authichain.com")).toBe(true);
     expect(isFounderEmail("a@authichain.com.au")).toBe(false);
+  });
+});
+
+describe("first-sale alert excludes owner self-tests", () => {
+  const stranger = {
+    amountTotal: 2900,
+    email: "buyer@example.com",
+  };
+
+  it("alerts for an unmarked stranger Starter payment", () => {
+    expect(isNonFounderFirstSale(stranger)).toBe(true);
+  });
+
+  it("does not alert for the allowlisted $10 self-test even with a stranger email", () => {
+    expect(
+      isNonFounderFirstSale({
+        ...stranger,
+        amountTotal: 1000,
+        paymentIntentId: "pi_3UHcQfGqTruSqV8T18dYFwd3",
+      })
+    ).toBe(false);
+  });
+
+  it("does not alert when metadata marks the checkout as an owner test", () => {
+    expect(
+      isNonFounderFirstSale({
+        ...stranger,
+        metadata: { test_payment: "owner" },
+      })
+    ).toBe(false);
+    expect(
+      isNonFounderFirstSale({
+        ...stranger,
+        metadata: { is_self_test: "true" },
+      })
+    ).toBe(false);
   });
 });
 

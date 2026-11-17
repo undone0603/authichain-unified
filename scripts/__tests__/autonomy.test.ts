@@ -719,6 +719,27 @@ describe("fulfilment watchdog", async () => {
     ]);
   });
 
+  it("does not treat an allowlisted owner self-test as an unfulfilled sale", () => {
+    const out = findUnfulfilled(
+      [
+        s("cs_owner_test", 60, {
+          amount_total: 1000,
+          payment_intent: "pi_3UHcQfGqTruSqV8T18dYFwd3",
+          customer_details: { email: "buyer@example.com" },
+        }),
+        s("cs_flagged", 60, {
+          amount_total: 2900,
+          metadata: { test_payment: "owner" },
+          customer_details: { email: "buyer@example.com" },
+        }),
+        s("cs_real", 60, { amount_total: 2900 }),
+      ],
+      [],
+      { now }
+    );
+    expect(out.map((p: { session: string }) => p.session)).toEqual(["cs_real"]);
+  });
+
   it("excludes free completed checkouts without hiding unknown-amount payments", () => {
     const out = findUnfulfilled(
       [
@@ -917,6 +938,32 @@ describe("owner digest", async () => {
     expect(d.shouldSend).toBe(true);
     expect(d.subject).toBe("AuthiChain: 1 thing needs you");
     expect(d.text.split("\n")[0]).toBe("WAITING ON YOU");
+  });
+
+  it("excludes allowlisted $10 self-test charges from revenue even with a buyer email", () => {
+    const m = summarize(
+      {
+        charges: [
+          {
+            id: "ch_3UHcQfGqTruSqV8T1j4hdD7l",
+            status: "succeeded",
+            paid: true,
+            amount: 1000,
+            currency: "usd",
+            billing_details: { email: "buyer@farm.com" },
+          },
+          {
+            status: "succeeded",
+            paid: true,
+            amount: 4900,
+            currency: "usd",
+            billing_details: { email: "buyer@farm.com" },
+          },
+        ],
+      },
+      new Set()
+    );
+    expect(m).toMatchObject({ revenue: 4900, payments: 1 });
   });
 
   it("excludes founder charges from revenue", () => {

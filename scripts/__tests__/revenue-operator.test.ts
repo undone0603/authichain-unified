@@ -28,6 +28,25 @@ describe("classifyRevenue", () => {
     expect(classifyRevenue(snap({}), founders).qualifying).toBe(false);
   });
 
+  it("does not count an allowlisted $10 self-test charge as a stranger sale", () => {
+    const verdict = classifyRevenue(
+      snap({
+        payouts: [{ id: "po_self", amount: 931, status: "paid" }],
+        charges: [
+          {
+            id: "ch_3UHcQfGqTruSqV8T1j4hdD7l",
+            amount: 1000,
+            paid: true,
+            email: "buyer@example.com",
+            metadata: { test_payment: "owner" },
+          },
+        ],
+      }),
+      founders
+    );
+    expect(verdict.qualifying).toBe(false);
+  });
+
   it("does not count the founder $10 charge or a founder subscription", () => {
     const verdict = classifyRevenue(
       snap({
@@ -322,7 +341,10 @@ describe("selectNextSendCandidate", () => {
 });
 
 describe("decideOperatorAction", () => {
-  const railsOk = { ok: true, reason: "Starter $29 and DPP $299 checkout rails up" };
+  const railsOk = {
+    ok: true,
+    reason: "Starter $29 and DPP $299 checkout rails up",
+  };
 
   it("returns fix_rails before anything else", () => {
     const decision = decideOperatorAction({

@@ -8,6 +8,73 @@
 // Read-only: Stripe GET + Supabase REST GET. Output carries session IDs only
 // (no emails, no amounts) because the alert issue lives in a public repo.
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const excludedTestPayments = JSON.parse(
+  readFileSync(
+    join(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../ops/reconcile/excluded-test-payments.json"
+    ),
+    "utf8"
+  )
+);
+
+const EXCLUDED_TEST_IDS = new Set(
+  [
+    ...(excludedTestPayments.ids ?? []),
+    ...(excludedTestPayments.customer_ids ?? []),
+    ...(excludedTestPayments.visit_ids ?? []),
+  ]
+    .map(id => String(id).trim())
+    .filter(Boolean)
+);
+
+function stripeId(value) {
+  if (typeof value === "string") return value.trim();
+  if (value && typeof value === "object" && typeof value.id === "string") {
+    return value.id.trim();
+  }
+  return "";
+}
+
+/** Explicit owner/self-test rule: metadata flag or allowlisted Stripe/visit id. */
+export function isOwnerTestPayment(obj = {}) {
+  const meta =
+    obj.metadata && typeof obj.metadata === "object" ? obj.metadata : {};
+  if (
+    meta.test_payment === "owner" ||
+    meta.is_self_test === true ||
+    meta.is_self_test === "true" ||
+    meta.purpose === "paid_smoke_10" ||
+    meta.is_demo === true ||
+    meta.is_demo === "true" ||
+    meta.demo === true ||
+    meta.demo === "true"
+  ) {
+    return true;
+  }
+  const ids = [
+    stripeId(obj.id),
+    stripeId(obj.payment_intent),
+    stripeId(obj.customer),
+    stripeId(obj.customer_id),
+    stripeId(obj.prospect_id),
+    stripeId(obj.client_reference_id),
+    stripeId(meta.charge),
+    stripeId(meta.charge_id),
+    stripeId(meta.payment_intent),
+    stripeId(meta.customer),
+    stripeId(meta.customer_id),
+    stripeId(meta.visit_id),
+    stripeId(meta.prospect_id),
+    stripeId(meta.stripe_charge_id),
+  ];
+  return ids.some(id => id && EXCLUDED_TEST_IDS.has(id));
+}
+
 /** Founder entries are exact emails, or "@domain" to cover every smoke alias on a domain. */
 export function isFounder(email, founders) {
   const e = String(email ?? "").toLowerCase();
@@ -37,7 +104,10 @@ export function findUnfulfilled(
   for (const e of events) {
     if (
       !e.session_id ||
-      !["checkout.session.completed", "checkout.session.async_payment_succeeded"].includes(String(e.event_type))
+      ![
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+      ].includes(String(e.event_type))
     )
       continue;
     const ok = OK_STATUSES.has(String(e.status ?? "").toLowerCase());
@@ -55,6 +125,7 @@ export function findUnfulfilled(
     )
     .filter(s => now - s.created * 1000 > graceMs)
     .filter(s => s.metadata?.is_demo !== "true")
+    .filter(s => !isOwnerTestPayment(s))
     .filter(
       s => !isFounder(s.customer_details?.email ?? s.customer_email, founders)
     )
@@ -84,7 +155,8 @@ export async function checkFulfilment({
   let cursor;
   let complete = false;
   for (let page = 0; page < 10; page++) {
-    const url = `https://api.stripe.com/v1/checkout/sessions?limit=100&created[gte]=${since}&status=complete` +
+    const url =
+      `https://api.stripe.com/v1/checkout/sessions?limit=100&created[gte]=${since}&status=complete` +
       (cursor ? `&starting_after=${encodeURIComponent(cursor)}` : "");
     const sRes = await fetchImpl(url, {
       headers: { Authorization: `Bearer ${stripeKey}` },
@@ -103,25 +175,38 @@ export async function checkFulfilment({
       break;
     }
     cursor = body.data.at(-1)?.id;
-    if (!cursor) throw new Error("Stripe checkout sessions: missing page cursor");
+    if (!cursor)
+      throw new Error("Stripe checkout sessions: missing page cursor");
   }
   if (!complete)
     throw new Error("Stripe checkout sessions: pagination limit exceeded");
   const paid = sessions.filter(
-    s => s.payment_status === "paid" && s.livemode !== false && s.amount_total !== 0
+    s =>
+      s.payment_status === "paid" &&
+      s.livemode !== false &&
+      s.amount_total !== 0
   );
   if (!paid.length) return { checked: 0, problems: [] };
   const events = [];
   // Bound URL length for large windows; any failed page invalidates the check.
   for (let i = 0; i < paid.length; i += 50) {
-    const ids = paid.slice(i, i + 50).map(s => `"${s.id}"`).join(",");
+    const ids = paid
+      .slice(i, i + 50)
+      .map(s => `"${s.id}"`)
+      .join(",");
     const eRes = await fetchImpl(
       `${supabaseUrl}/rest/v1/stripe_events?select=session_id,event_type,status&session_id=in.(${encodeURIComponent(ids)})`,
-      { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } }
+      {
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+      }
     );
     if (!eRes.ok) throw new Error(`Supabase stripe_events -> ${eRes.status}`);
     const rows = await eRes.json();
-    if (!Array.isArray(rows)) throw new Error("Supabase stripe_events: invalid response");
+    if (!Array.isArray(rows))
+      throw new Error("Supabase stripe_events: invalid response");
     events.push(...rows);
   }
   return {
