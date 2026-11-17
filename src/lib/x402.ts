@@ -21,12 +21,8 @@
  */
 
 import { BASE_USDC, TOKENOMICS_PAY_TO } from "../../scripts/lib/evm-chains";
-import {
-  catalogOffers,
-  planPaymentLink,
-  planUsd,
-  type CatalogOffer,
-} from "./plans";
+import { planPaymentLink, planUsd, type CatalogOffer } from "./plans";
+import { openCatalogOffers } from "./retired-plans";
 
 export interface PaymentRequirement {
   scheme: "exact";
@@ -1106,12 +1102,10 @@ export type X402CatalogBody = {
     rail: "stripe";
     passportUsd: number;
     dppUsd: number;
-    farmUsd: number;
     starterUsd: number;
     creatorUsd: number;
     passportPaymentLink?: string;
     dppPaymentLink?: string;
-    farmPaymentLink?: string;
     starterPaymentLink?: string;
     creatorPaymentLink?: string;
     offers: CatalogOffer[];
@@ -1227,19 +1221,13 @@ export async function x402Catalog(
       rail: "stripe",
       passportUsd: planUsd("strainchain_passport"),
       dppUsd: planUsd("dpp_readiness"),
-      farmUsd: planUsd("strainchain_farm"),
       starterUsd: planUsd("starter"),
       creatorUsd: planUsd("creator"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
       starterPaymentLink: planPaymentLink("starter"),
       creatorPaymentLink: planPaymentLink("creator"),
-      offers: catalogOffers().filter(
-        offer =>
-          offer.id !== "qron_launch" &&
-          offer.id !== "qron_launch_annual" &&
-          offer.id !== "strainchain_farm"
-      ),
+      offers: openCatalogOffers(),
       source: "src/lib/plans.ts",
     },
     discovery: {

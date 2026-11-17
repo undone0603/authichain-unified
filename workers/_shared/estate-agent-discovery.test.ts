@@ -110,10 +110,23 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
     );
     assert.ok(text.includes(PASSPORT));
     assert.ok(text.includes(DPP));
-    assert.equal(text.includes(FARM), true);
+    assert.equal(text.includes(FARM), false);
+    assert.equal(text.includes(planPaymentLink("theater_1") ?? ""), false);
+    assert.equal(text.includes(planPaymentLink("theater_3") ?? ""), false);
+    assert.equal(
+      text.includes(planPaymentLink("gov_provenance_pilot") ?? ""),
+      false
+    );
+    assert.equal(text.includes("Theater 1"), false);
+    assert.equal(text.includes("Theater 3"), false);
+    assert.equal(text.includes("Farm Plan"), false);
+    assert.equal(text.includes("Federal provenance"), false);
     assert.ok(text.includes(planPaymentLink("starter") ?? ""));
     assert.ok(text.includes(planPaymentLink("creator") ?? ""));
     assert.ok(text.includes(planPaymentLink("musa_claim_file") ?? ""));
+    assert.ok(text.includes(planPaymentLink("musa_audit_bundle") ?? ""));
+    assert.ok(text.includes(planPaymentLink("battery_gap_report") ?? ""));
+    assert.ok(text.includes(planPaymentLink("battery_gap_report_extra") ?? ""));
     assert.equal(httpsUrl(PASSPORT).hostname, "authichain.com");
     assert.equal(httpsUrl(DPP).hostname, "authichain.com");
     assert.doesNotMatch(text, /GET \/api\/checkout/);
@@ -189,7 +202,7 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
     assert.match(scan.get?.summary ?? "", /does not verify/);
     assert.equal(spec.info["x-human-checkout"].passportPaymentLink, PASSPORT);
     assert.equal(spec.info["x-human-checkout"].dppPaymentLink, DPP);
-    assert.equal(spec.info["x-human-checkout"].farmPaymentLink, undefined);
+    assert.equal("farmPaymentLink" in spec.info["x-human-checkout"], false);
     assert.equal(
       spec.info["x-human-checkout"].passportUsd,
       planUsd("strainchain_passport")
@@ -198,10 +211,10 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
       spec.info["x-human-checkout"].dppUsd,
       planUsd("dpp_readiness")
     );
-    assert.equal(
-      spec.info["x-human-checkout"].farmUsd,
-      planUsd("strainchain_farm")
-    );
+    assert.equal("farmUsd" in spec.info["x-human-checkout"], false);
+    const checkoutBlob = JSON.stringify(spec.info["x-human-checkout"]);
+    assert.equal(checkoutBlob.includes("farmUsd"), false);
+    assert.equal(checkoutBlob.includes("strainchain_farm"), false);
     const body = JSON.stringify(spec);
     assert.equal(body.includes("/api/checkout"), false);
     assert.ok(hasHttpsHost(body, "authichain.com"));
@@ -250,5 +263,9 @@ test("llms.txt does not send buyers to a retired checkout", () => {
     // /checkout/qron_launch answers 303 to /pricing and sells nothing.
     assert.equal(text.includes("/checkout/qron_launch"), false, brand);
     assert.equal(text.includes("QRON Launch"), false, brand);
+    assert.equal(text.includes("/checkout/theater_1"), false, brand);
+    assert.equal(text.includes("/checkout/theater_3"), false, brand);
+    assert.equal(text.includes("/checkout/strainchain_farm"), false, brand);
+    assert.equal(text.includes("/checkout/gov_provenance_pilot"), false, brand);
   }
 });

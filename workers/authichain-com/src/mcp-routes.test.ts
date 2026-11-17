@@ -85,8 +85,13 @@ describe("mcp discovery", () => {
     };
     const tools = new Map(data.result.tools.map(tool => [tool.name, tool]));
     for (const name of [
-      "get_pricing", "query_provenance", "verify_attestation",
-      "verify_record", "dpp_readiness_check", "scan_living_qr", "negotiate",
+      "get_pricing",
+      "query_provenance",
+      "verify_attestation",
+      "verify_record",
+      "dpp_readiness_check",
+      "scan_living_qr",
+      "negotiate",
     ]) {
       expect(tools.get(name)?.annotations?.readOnlyHint, name).toBe(true);
       expect(tools.get(name)?.annotations?.destructiveHint, name).toBe(false);
@@ -96,7 +101,9 @@ describe("mcp discovery", () => {
     expect(tools.get("verify")?.description).toMatch(/paid|x402/i);
     expect(tools.get("verify_record")?.description).toContain("published JWS");
     expect(tools.get("verify_attestation")?.description).toContain("published");
-    expect(tools.get("get_pricing")?.description).toMatch(/never starts a checkout|without charging/);
+    expect(tools.get("get_pricing")?.description).toMatch(
+      /never starts a checkout|without charging/
+    );
   });
 
   it("GET discovery and initialize distinguish seven free tools from paid x402 verification", async () => {
@@ -124,14 +131,22 @@ describe("mcp discovery", () => {
           jsonrpc: "2.0",
           id: 77,
           method: "initialize",
-          params: { protocolVersion: "2025-06-18", clientInfo: { name: "glama-test", version: "1" }, capabilities: {} },
+          params: {
+            protocolVersion: "2025-06-18",
+            clientInfo: { name: "glama-test", version: "1" },
+            capabilities: {},
+          },
         }),
       })
     );
     expect(initResponse?.status).toBe(200);
-    const initialized = (await initResponse!.json()) as { result: { instructions: string } };
+    const initialized = (await initResponse!.json()) as {
+      result: { instructions: string };
+    };
     expect(initialized.result.instructions).toContain("Paid verification:");
-    expect(initialized.result.instructions).toContain("separately authorized payment");
+    expect(initialized.result.instructions).toContain(
+      "separately authorized payment"
+    );
     expect(initialized.result.instructions).toContain("Free verification:");
   });
 
@@ -159,7 +174,9 @@ describe("mcp discovery", () => {
       const res = await tryHandleMcp(req(path));
       expect(res, path).not.toBeNull();
       expect(res!.status, path).toBe(200);
-      expect(res!.headers.get("content-type"), path).toContain("application/json");
+      expect(res!.headers.get("content-type"), path).toContain(
+        "application/json"
+      );
       const body = (await res!.json()) as { $schema: string; claim: string };
       expect(body, path).toEqual(GLAMA_CONNECTOR_CLAIM);
       expect(Object.keys(body), path).toEqual(["$schema", "claim"]);
@@ -210,7 +227,10 @@ describe("mcp discovery", () => {
       expect(text).not.toContain("USDC");
       expect(text).not.toContain("on_hold");
       expect(text).not.toContain("wait_buyer");
-      expect(text).not.toContain("never expire");
+      expect(text).toContain(
+        "One-time pack credits (Starter and Creator) never expire."
+      );
+      expect(text).not.toContain("Pack credits never expire.");
       expect(text).toContain("https://authichain.com/checkout/starter");
       expect(text).toContain("https://authichain.com/checkout/dpp_readiness");
       for (const plan of [
@@ -356,7 +376,10 @@ describe("mcp discovery", () => {
       expect(text, path).not.toContain("/api/checkout");
       expect(text, path).not.toContain("on_hold");
       expect(text, path).not.toContain("wait_buyer");
-      expect(text, path).not.toContain("never expire");
+      expect(text, path).toContain(
+        "One-time pack credits (Starter and Creator) never expire."
+      );
+      expect(text, path).not.toContain("Pack credits never expire.");
       for (const plan of [
         "strainchain_passport",
         "strainchain_farm",
@@ -434,7 +457,12 @@ describe("mcp discovery", () => {
     expect(priced.result.content[0].text).not.toContain("/api/checkout");
     expect(priced.result.content[0].text).not.toContain("on_hold");
     expect(priced.result.content[0].text).not.toContain("wait_buyer");
-    expect(priced.result.content[0].text).not.toContain("never expire");
+    expect(priced.result.content[0].text).toContain(
+      "One-time pack credits (Starter and Creator) never expire."
+    );
+    expect(priced.result.content[0].text).not.toContain(
+      "Pack credits never expire."
+    );
   });
 
   it("tools/call dpp_readiness_check is free and scores the answers", async () => {
