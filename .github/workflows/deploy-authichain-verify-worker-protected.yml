@@ -42,7 +42,7 @@ jobs:
           [[ "$EXPECTED_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
           test "$EXPECTED_SHA" = "$DISPATCH_SHA"
           echo "sha=$EXPECTED_SHA" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ steps.pin.outputs.sha }}
           persist-credentials: false
@@ -99,7 +99,7 @@ jobs:
     environment:
       name: production-cloudflare-verify-worker
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.verify.outputs.sha }}
           persist-credentials: false
