@@ -111,6 +111,23 @@ describe("handleServiceOrderPayment", () => {
     expect(settleServiceOrderPaymentAtomic).not.toHaveBeenCalled();
   });
 
+  it("does not settle a paid Checkout discounted below the stored list price", async () => {
+    vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue({
+      id: 47,
+      userId: 7,
+      status: "pending",
+      amount: "19900",
+      serviceType: "audit",
+    } as any);
+    expect(
+      await handleServiceOrderPayment({ ...settled, amount_total: 9900 })
+    ).toEqual({
+      handled: false,
+      reason: "Checkout amount/currency does not match expected order price",
+    });
+    expect(settleServiceOrderPaymentAtomic).not.toHaveBeenCalled();
+  });
+
   it("does not settle when Checkout currency does not match the expected order currency", async () => {
     vi.mocked(db.getServiceOrderBySessionId).mockResolvedValue({
       id: 43,

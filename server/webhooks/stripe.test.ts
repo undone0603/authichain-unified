@@ -2147,6 +2147,52 @@ describe("service-order webhook retry and product isolation", () => {
     expect(provisionPurchase).not.toHaveBeenCalled();
   });
 
+  it("flags a paid service checkout discounted below list price and does not settle the order", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: false,
+      reason: "Checkout amount/currency does not match expected order price",
+    });
+    const discountedSession = {
+      ...session,
+      amount_subtotal: 19900,
+      amount_total: 9900,
+      total_details: { amount_discount: 10000 },
+    };
+    mockConstructEvent.mockReturnValue(
+      makeEvent(
+        "checkout.session.completed",
+        "evt_service_discounted_session",
+        discountedSession
+      )
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true,
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(handleServiceOrderPayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: session.id,
+        payment_intent: session.payment_intent,
+        amount_total: 9900,
+        currency: "usd",
+      })
+    );
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_service_discounted_session",
+        status: "reconciliation_required",
+        error: "paid_service_order_amount_mismatch",
+      })
+    );
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
   it("flags a paid service checkout whose currency does not match the expected order currency", async () => {
     const { handleServiceOrderPayment } =
       await import("../services/order-payment-handler.js");
