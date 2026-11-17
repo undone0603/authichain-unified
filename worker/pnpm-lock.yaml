@@ -10,7 +10,7 @@ importers:
     dependencies:
       hono:
         specifier: ^4.13.16
-        version: 4.13.16
+        version: 4.13.18
       stripe:
         specifier: ^22.6.2
         version: 22.6.2(@types/node@26.6.6)
@@ -574,8 +574,8 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  hono@4.13.16:
-    resolution: {integrity: sha512-AOLOEhvrV+iH92xXCnFr/5+3KjPKcI3xP63XJtX5spAnkznPdHijlIsUTpi7/9EhWqrTCekw5c5zh1K+YsVw7A==}
+  hono@4.13.18:
+    resolution: {integrity: sha512-H9q/E1XizaWstJxUW881dmLxEj+t/TrGGnyxINkm4+sK0qUwsMtFdo2BWI9Vs3cIS19MU6b6iCijoUoEf4f3DA==}
     engines: {node: '>=16.9.0'}
 
   kleur@4.1.5:
@@ -1024,7 +1024,7 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  hono@4.13.16: {}
+  hono@4.13.18: {}
 
   kleur@4.1.5: {}
 
