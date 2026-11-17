@@ -185,6 +185,24 @@ test("invalid caller-supplied certId is rejected", async () => {
   assert.equal(db.seals.length, 0);
 });
 
+test("caller-supplied certId may not contain / ? # % or whitespace", async () => {
+  const db = fakeDb();
+  const runtime = env(db);
+  for (const certId of [
+    "AC/0001",
+    "AC?X",
+    "AC#1",
+    "AC%2F",
+    "AC DEMO",
+    " AC-1",
+  ]) {
+    const res = await issue(runtime, { certId, gtin: GTIN, serial: "SN-BAD" });
+    assert.equal(res.status, 400, certId);
+    assert.deepEqual(await res.json(), { error: "invalid_cert_id" });
+  }
+  assert.equal(db.seals.length, 0);
+});
+
 test("omitted serial is unique, unguessable, and not the GTIN or origin", async () => {
   const db = fakeDb();
   const res = await issue(env(db), { gtin: GTIN, brand: "Acme" });
@@ -258,20 +276,43 @@ test("retry with the same certId and a generated serial is 409; /cert still reso
   assert.equal(certBody.identifier.serial, firstBody.serial);
 });
 
-test("POST /issue is 403 without a valid ISSUE_SECRET", async () => {
+test("same certId with a different caller-supplied serial is 409", async () => {
+  const db = fakeDb();
+  const runtime = env(db);
+  const first = await issue(runtime, {
+    certId: "AC-DUP",
+    gtin: GTIN,
+    serial: "SN-A",
+  });
+  assert.equal(first.status, 201);
+
+  const second = await issue(runtime, {
+    certId: "AC-DUP",
+    gtin: GTIN,
+    serial: "SN-B",
+  });
+  assert.equal(second.status, 409);
+  assert.deepEqual(await second.json(), {
+    error: "already_issued",
+    certId: "AC-DUP",
+  });
+  assert.equal(db.seals.length, 1);
+});
+
+test("POST /issue is 401 without a valid ISSUE_SECRET", async () => {
   const runtime = env();
   const missing = await worker.fetch(
     post({ gtin: GTIN }, { authorization: "" }),
     runtime
   );
-  assert.equal(missing.status, 403);
+  assert.equal(missing.status, 401);
   assert.deepEqual(await missing.json(), { error: "unauthorized" });
 
   const wrong = await worker.fetch(
     post({ gtin: GTIN }, { authorization: "Bearer not-the-secret" }),
     runtime
   );
-  assert.equal(wrong.status, 403);
+  assert.equal(wrong.status, 401);
 });
 
 test("POST /issue is 503 when ISSUE_SECRET is unset", async () => {

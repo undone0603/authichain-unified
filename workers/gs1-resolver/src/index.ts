@@ -963,9 +963,10 @@ function resolveCertId(
     return { ok: true, certId: crypto.randomUUID() };
   }
   if (typeof value !== "string") return { ok: false };
-  const certId = value.trim();
-  if (!/^[\x21-\x7e]{1,128}$/.test(certId)) return { ok: false };
-  return { ok: true, certId };
+  if (value.length < 1 || value.length > 128) return { ok: false };
+  if (/[\s/?#%]/.test(value)) return { ok: false };
+  if (!/^[\x21-\x7e]+$/.test(value)) return { ok: false };
+  return { ok: true, certId: value };
 }
 
 /**
@@ -1021,9 +1022,8 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
     );
   }
 
-  const auth = request.headers.get("authorization") || "";
-  if (auth !== `Bearer ${env.ISSUE_SECRET}`) {
-    return json({ error: "unauthorized" }, 403);
+  if (!hasIssueAuthorization(request, env.ISSUE_SECRET)) {
+    return json({ error: "unauthorized" }, 401);
   }
 
   let body: Record<string, unknown>;
@@ -1082,10 +1082,9 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
     return json({ error: "serial_collision", gtin: fields.gtin, serial }, 409);
   }
 
-  // Generated serials change lookup_key from cert:{id} to gtin:ser:{serial}.
-  // Without this check a retry of the same certId would insert a second row
-  // and loadSeal would treat /cert/{id} as ambiguous (404).
-  if (!serialSupplied && (await certIdTaken(env, certId))) {
+  // Duplicate cert_id makes /cert/{id} ambiguous (loadSeal returns null).
+  // Check on every issue, including caller-supplied serials.
+  if (await certIdTaken(env, certId)) {
     return json({ error: "already_issued", certId }, 409);
   }
 
