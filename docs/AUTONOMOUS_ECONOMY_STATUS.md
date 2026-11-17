@@ -2,6 +2,16 @@
 
 Profile and `stripe_events` counts below were read on 2026-10-13 from Supabase project `nhdnkzhtadfkkluiulhs` and were not re-read on 2026-10-29. Later paragraphs name their own dates. This is not a claim that the autonomous economy is complete.
 
+## Release path, read on 2026-11-11T19:45Z
+
+A merge to `main` is not a release. These are reads; nothing was deployed or re-run.
+
+- **The `/onboard` spam gate merged at 14:49Z as `abe3f08` and was not live five hours later.** `GET https://authichain.com/onboard` did not contain the `company_website` field. `https://authichain.com/llms.txt` still listed both retired QRON Launch checkouts.
+- **Why:** `Deploy authichain-edge-router` run 43042166366 for `abe3f08` has been `queued` since 14:49Z. So have `CI`, `CI Main` and `Typecheck ratchet` for the same commit, the 15:48Z AgentZ orchestration run, the 18:39Z `Checkout watchdog` and the 19:39Z `Launch gates`. Eight runs on `main` were queued at the time of this read.
+- **Cause of the queue:** 114 of the 115 workflow files name a self-hosted runner, and the runner logs show one machine (`/home/zac/actions-runner-wsl`). A job at 14:39Z ended with "The runner has received a shutdown signal". It ran one Lint job at 16:35Z and nothing on `main` since. `docs/OPERATING_CHARTER.md` says none of the stack needs the owner's computer to be on. Today the health probes, the checkout watchdog, the revenue cycle and every deploy do.
+- **`main` was also red on its own account.** Lint run 43042166371 on `abe3f08` failed `scripts/__tests__/autonomy.test.ts`: `deploy-qron-space.yml` and `deploy-authichain-edge-router.yml` were each listed in both the `ship` and `manual` lanes after #2240 merged on top of a manifest that already classified them. The duplicate entries are removed in the PR that adds this section.
+- **Not checked:** whether GitHub-hosted runners are usable on this account. The repository page answers 200 without a login, and several workflows already fall back to `ubuntu-24.04` when the repo variables `AUTHICHAIN_CI_SELF_HOSTED` and `AUTHICHAIN_DEPLOY_SELF_HOSTED` are not `true`. An earlier note in this file records GitHub refusing to start jobs for a billing lock. Those variables and that lock are the owner's to read and change.
+
 ## Read on 2026-11-11
 
 These reads supersede the 2026-10-29 "Stripe livemode list" block below. They are reads only. Nothing was charged, sent, migrated or deployed.

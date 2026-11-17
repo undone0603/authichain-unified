@@ -51,6 +51,7 @@ type Env = {
   COFFEE_RECEIPT_PRIVATE_JWK?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_WEBHOOK_AUTHICHAIN_SECRET?: string;
+  INSTANTLY_WEBHOOK_SECRET?: string;
   NEXT_PUBLIC_SUPABASE_URL?: string;
   SUPABASE_URL?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
@@ -85,7 +86,7 @@ function generateServiceKey(env?: Env): string | undefined {
   );
 }
 
-function hydrateProcessEnv(env?: Env) {
+export function hydrateProcessEnv(env?: Env) {
   if (!env) return;
   const copy: Array<[string, string | undefined]> = [
     ["STRIPE_SECRET_KEY", env.STRIPE_SECRET_KEY],
@@ -93,6 +94,9 @@ function hydrateProcessEnv(env?: Env) {
     ["COFFEE_RECEIPT_PRIVATE_JWK", env.COFFEE_RECEIPT_PRIVATE_JWK],
     ["STRIPE_WEBHOOK_SECRET", env.STRIPE_WEBHOOK_SECRET],
     ["STRIPE_WEBHOOK_AUTHICHAIN_SECRET", env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET],
+    // The canonical DPP webhook sends its activation mail through src/lib/email.ts.
+    // That module reads process.env; a bound-but-unhydrated key silently fails.
+    ["RESEND_API_KEY", env.RESEND_API_KEY],
     [
       "NEXT_PUBLIC_SUPABASE_URL",
       env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL,
@@ -1016,19 +1020,17 @@ app.post("/api/paddle/webhook", async c => {
 
 // ─── Instantly.ai Webhook ───────────────────────────────────────────────────
 app.post("/api/webhooks/instantly", async c => {
-  const secret = process.env.INSTANTLY_WEBHOOK_SECRET;
-  if (secret) {
-    const provided = c.req.header("x-webhook-secret");
-    if (!provided || !timingSafeEqualStrings(provided, secret)) {
-      return c.json({ error: "Invalid webhook secret" }, 401);
-    }
+  const secret = c.env?.INSTANTLY_WEBHOOK_SECRET || process.env.INSTANTLY_WEBHOOK_SECRET;
+  if (!secret) return c.json({ error: "Instantly webhook secret not configured" }, 503);
+  const provided = c.req.header("x-webhook-secret");
+  if (!provided || !timingSafeEqualStrings(provided, secret)) {
+    return c.json({ error: "Invalid webhook secret" }, 401);
   }
   try {
     const { handleInstantlyWebhook } =
       await import("../server/webhooks/instantly");
     const payload = await c.req.json();
-    const db = getHyperdriveDb(c.env);
-    const result = await handleInstantlyWebhook(db, payload);
+    const result = await handleInstantlyWebhook(payload);
     return c.json(result);
   } catch (err: any) {
     console.error(`[Instantly Webhook] Error: ${err.message}`);

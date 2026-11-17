@@ -114,6 +114,7 @@ jobs:
           pnpm --version
 
       - name: Install dependencies
+        timeout-minutes: 15
         if: steps.db-check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 

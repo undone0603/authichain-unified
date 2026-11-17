@@ -48,6 +48,7 @@ jobs:
       dry_run: ${{ steps.mode.outputs.dry_run }}
       ping_agentz: ${{ steps.mode.outputs.ping_agentz }}
       launch: ${{ steps.launch.outputs.active }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -119,6 +120,7 @@ jobs:
       AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
       CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       # resolve-mode leaves the shared self-hosted workspace sparse; restore
@@ -142,6 +144,10 @@ jobs:
             echo "::warning::OPENCLAW_GATEWAY_URL is set in this job env — this workflow must not invent or require it. Unset for the ping."
             unset OPENCLAW_GATEWAY_URL
           fi
+          if [ -z "${CF_ACCESS_CLIENT_ID:-}" ] || [ -z "${CF_ACCESS_CLIENT_SECRET:-}" ]; then
+            echo "::error::Missing CF_ACCESS_CLIENT_ID or CF_ACCESS_CLIENT_SECRET. The claw/AgentZ health check needs those Cloudflare Access service-token repo secrets. Do not add an Access bypass."
+            exit 1
+          fi
           chmod +x scripts/ops/ping_claw_agentz.py
           if [ -n "${OPENCLAW_API_KEY:-}${AGENTZ_API_KEY:-}${AGENT_SECRET:-}" ]; then
             echo "bearer secret present — health + claw /architect/cycle dry-run"
@@ -162,6 +168,7 @@ jobs:
       HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
       AGENTZ_WEBHOOK_SECRET: ${{ secrets.AGENTZ_WEBHOOK_SECRET }}
       APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
+    timeout-minutes: 30
     steps:
       - id: check
         shell: bash
@@ -188,6 +195,7 @@ jobs:
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     needs: [preflight, resolve-mode]
     if: needs.preflight.outputs.ready == 'true'
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       # resolve-mode leaves the shared self-hosted workspace sparse; restore
@@ -210,10 +218,12 @@ jobs:
       # Same step as typecheck-ratchet.yml: a per-runner dest so concurrent
       # self-hosted jobs do not race on one directory.
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        timeout-minutes: 15
         with:
           version: "${{ env.PNPM_VERSION }}"
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        timeout-minutes: 15
       - name: Qualify leads with AI scoring
         run: pnpm exec tsx scripts/qualify-leads.ts
         env:
@@ -237,6 +247,7 @@ jobs:
     needs: [qualify-leads, resolve-mode]
     # sync-mi-leads-hubspot.ts does not honor DRY_RUN — skip on dry-run.
     if: needs.resolve-mode.outputs.dry_run != 'true'
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       # resolve-mode leaves the shared self-hosted workspace sparse; restore
@@ -259,10 +270,12 @@ jobs:
       # Same step as typecheck-ratchet.yml: a per-runner dest so concurrent
       # self-hosted jobs do not race on one directory.
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        timeout-minutes: 15
         with:
           version: "${{ env.PNPM_VERSION }}"
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        timeout-minutes: 15
       - name: Sync MI leads to HubSpot CRM
         run: pnpm exec tsx scripts/sync-mi-leads-hubspot.ts
         env:
@@ -283,6 +296,7 @@ jobs:
     runs-on: [self-hosted, Linux, ARM64, authichain-ops]
     needs: [qualify-leads, resolve-mode]
     if: always() && needs.qualify-leads.result != 'cancelled'
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       # resolve-mode leaves the shared self-hosted workspace sparse; restore
@@ -305,10 +319,12 @@ jobs:
       # Same step as typecheck-ratchet.yml: a per-runner dest so concurrent
       # self-hosted jobs do not race on one directory.
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        timeout-minutes: 15
         with:
           version: "${{ env.PNPM_VERSION }}"
           dest: ${{ runner.environment == 'self-hosted' && format('/home/zac/setup-pnpm-{0}', runner.name) || '~/setup-pnpm' }}
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        timeout-minutes: 15
       - name: Generate funnel performance report
         run: pnpm exec tsx scripts/funnel-report.ts
         env:
@@ -333,6 +349,7 @@ jobs:
         funnel-report,
       ]
     if: always()
+    timeout-minutes: 30
     steps:
       - name: Post orchestration summary to webhook
         env:
