@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  FETCH_TIMEOUT_MS,
+  displayLabel,
   isValidSealId,
+  isWarningStatus,
   matchSealVerifyPath,
   payloadHasJws,
   resolverPassportUrl,
@@ -47,15 +50,18 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 function capturingFetch(
   handler: (url: string) => Response | Promise<Response>
-): { fetchImpl: FetchLike; urls: string[] } {
+): { fetchImpl: FetchLike; urls: string[]; inits: RequestInit[] } {
   const urls: string[] = [];
+  const inits: RequestInit[] = [];
   const fetchImpl: FetchLike = async (input, init) => {
     urls.push(input);
+    if (init) inits.push(init);
     expect(init?.method ?? "GET").toBe("GET");
     expect(String(init?.redirect ?? "")).not.toBe("follow");
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
     return handler(input);
   };
-  return { fetchImpl, urls };
+  return { fetchImpl, urls, inits };
 }
 
 describe("GET /seal/{id} path matching", () => {
@@ -79,6 +85,24 @@ describe("GET /seal/{id} path matching", () => {
     expect(isValidSealId("AC-DEMO-001")).toBe(true);
     expect(isValidSealId("x".repeat(129))).toBe(false);
     expect(isValidSealId("bad id")).toBe(false);
+    expect(isValidSealId(".")).toBe(false);
+    expect(isValidSealId("..")).toBe(false);
+    expect(matchSealVerifyPath("/seal/.")).toEqual({
+      ok: false,
+      reason: "invalid",
+    });
+    expect(matchSealVerifyPath("/seal/..")).toEqual({
+      ok: false,
+      reason: "invalid",
+    });
+    expect(matchSealVerifyPath("/seal/%2e")).toEqual({
+      ok: false,
+      reason: "invalid",
+    });
+    expect(matchSealVerifyPath("/seal/%2e%2e")).toEqual({
+      ok: false,
+      reason: "invalid",
+    });
   });
 });
 
@@ -185,5 +209,75 @@ describe("GET /seal/{id} render", () => {
   it("treats a missing JWS as unsigned", () => {
     expect(payloadHasJws(knownPayload)).toBe(false);
     expect(payloadHasJws({ ...knownPayload, jws: "abc.def.ghi" })).toBe(true);
+  });
+
+  it("shows a warning state for clone_suspected and never Authentic", async () => {
+    expect(isWarningStatus("clone_suspected")).toBe(true);
+    expect(displayLabel("clone_suspected", "Authentic")).toBe(
+      "Clone suspected"
+    );
+    const { fetchImpl } = capturingFetch(() =>
+      jsonResponse({
+        ...knownPayload,
+        status: "clone_suspected",
+        label: "Authentic",
+        proves:
+          "The same identifier is appearing in multiple regions in a short window.",
+        doesNotProve:
+          "Not a courtroom finding. Treat as a risk flag and inspect the item.",
+      })
+    );
+    const res = await tryHandleSealVerify(req("/seal/AC-DEMO-001"), fetchImpl);
+    expect(res!.status).toBe(200);
+    const html = await res!.text();
+    expect(html).toContain("Clone suspected");
+    expect(html).toContain("badge-suspect");
+    expect(html).toContain("#b25e00");
+    expect(html).toMatch(/<dt>Clone state<\/dt><dd>clone_suspected<\/dd>/);
+    expect(html).toContain(
+      "The same identifier is appearing in multiple regions in a short window."
+    );
+    expect(html).not.toContain("Authentic");
+    expect(html).not.toContain("badge-ok");
+    expect(html).not.toContain("#0f7b3f");
+  });
+
+  it("shows a warning state for cloned and never Authentic", async () => {
+    expect(isWarningStatus("cloned")).toBe(true);
+    expect(displayLabel("cloned", "Authentic")).toBe("Cloned or diverted");
+    const { fetchImpl } = capturingFetch(() =>
+      jsonResponse({
+        ...knownPayload,
+        status: "cloned",
+        label: "Authentic",
+        proves:
+          "Scan velocity or region fan-out exceeds a single-unit pattern.",
+        doesNotProve: "Does not identify which scan was the original unit.",
+      })
+    );
+    const res = await tryHandleSealVerify(req("/seal/AC-DEMO-001"), fetchImpl);
+    expect(res!.status).toBe(200);
+    const html = await res!.text();
+    expect(html).toContain("Cloned or diverted");
+    expect(html).toContain("badge-warn");
+    expect(html).toContain("#a5122a");
+    expect(html).toMatch(/<dt>Clone state<\/dt><dd>cloned<\/dd>/);
+    expect(html).toContain(
+      "Scan velocity or region fan-out exceeds a single-unit pattern."
+    );
+    expect(html).not.toContain("Authentic");
+    expect(html).not.toContain("badge-ok");
+    expect(html).not.toContain("#0f7b3f");
+  });
+
+  it("fails closed with 503 when the resolver fetch times out", async () => {
+    expect(FETCH_TIMEOUT_MS).toBe(4000);
+    const { fetchImpl, inits } = capturingFetch(() => {
+      throw new DOMException("The operation was aborted.", "TimeoutError");
+    });
+    const res = await tryHandleSealVerify(req("/seal/AC-DEMO-001"), fetchImpl);
+    expect(res!.status).toBe(503);
+    expect(await res!.text()).toContain("could not verify right now");
+    expect(inits[0]?.signal).toBeInstanceOf(AbortSignal);
   });
 });
