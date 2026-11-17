@@ -711,8 +711,8 @@ importers:
   worker:
     dependencies:
       hono:
-        specifier: ^4.13.7
-        version: 4.13.12
+        specifier: ^4.13.16
+        version: 4.13.18
       stripe:
         specifier: ^22.6.2
         version: 22.6.2(@types/node@26.6.5)
