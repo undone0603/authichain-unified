@@ -47,7 +47,7 @@ jobs:
       # depth-1 checkout of expected_sha plus a default fetch of origin/main
       # does not guarantee that ancestry graph. The #2457 sparse-checkout
       # restore below still applies after a full-history checkout.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ steps.head.outputs.sha }}
           persist-credentials: false
@@ -132,7 +132,7 @@ jobs:
       contents: read
       statuses: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.verify.outputs.sha }}
           persist-credentials: false

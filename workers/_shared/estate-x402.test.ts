@@ -286,7 +286,7 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
         rail: string;
         passportUsd: number;
         dppUsd: number;
-        farmUsd: number;
+        farmUsd?: number;
         passportPaymentLink?: string;
         dppPaymentLink?: string;
         farmPaymentLink?: string;
@@ -321,7 +321,12 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
       host
     );
     assert.equal(body.humanCheckout.dppUsd, planUsd("dpp_readiness"), host);
-    assert.equal(body.humanCheckout.farmUsd, planUsd("strainchain_farm"), host);
+    assert.equal(body.humanCheckout.farmUsd, undefined, host);
+    assert.equal(
+      JSON.stringify(body.humanCheckout).includes("farmUsd"),
+      false,
+      host
+    );
     assert.equal(body.humanCheckout.passportPaymentLink, passport, host);
     assert.equal(body.humanCheckout.dppPaymentLink, dpp, host);
     assert.equal(body.humanCheckout.farmPaymentLink, undefined, host);
