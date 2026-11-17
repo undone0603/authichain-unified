@@ -1,13 +1,13 @@
 # AgentZ MCP/A2A Connect — customer scope and commercial WIN gate (proposal v1)
 
-**Nonbinding, not signed; no payment link or production change authorized.** This is a proposed service package, not an existing Stripe SKU.
+**Nonbinding, not signed; this document does not create a payment link.** The USD 1,500 option is purchasable as a $1,500 one-time price for MCP + A2A Agent Build (Standard).
 
 ## Buyer and budget
 Buyer legal entity: **unverified**; purchasing contact: **unverified**; human-expressed need: **unverified**; written budget approval: **unverified**; buyer SOW acceptance: **unverified**.
 
 ## Prices and scoped deliverables
-- **USD 1,500 one-time**, buyer chooses MCP Connect OR A2A Connect, one sandbox and one read-only synthetic component/lot evidence flow.
-- **USD 2,500 one-time**, both MCP and A2A sandbox interfaces to the same synthetic evidence flow.
+- **USD 1,500 one-time**, purchasable as MCP + A2A Agent Build (Standard): buyer chooses MCP Connect OR A2A Connect, one sandbox and one read-only synthetic component/lot evidence flow.
+- **USD 2,500 one-time**, quote-only and not yet purchasable: both MCP and A2A sandbox interfaces to the same synthetic evidence flow. There is no live Stripe $2,500 price for this offer.
 - Include one agreed schema/fixture, documented source/issuer verification assumptions, fail-closed negative fixtures (missing evidence, duplicate identifier, unknown authority, missing auth, unsupported purchasing call), test report, redacted SHA-256 manifest, deployment/rollback and acceptance runbook.
 - The existing local synthetic protocol demonstration is **not** full protocol conformance; client acceptance requires verified environment-specific tests. The aerospace evidence screen cannot certify components or authorize release/flight use.
 
@@ -31,6 +31,3 @@ Run focused tests: `node --test scripts/ci/agentz-qualification-to-win.test.mjs`
 
 ### Production restrictions
 `humanHold`, `production_send=false`, `OWNER_LIVE_SEND=false`, protected CI/exact-SHA release, qualified review when enforced, and zero discretionary spend remain active. These functions cannot send messages, create Stripe objects or alter HubSpot/Airtable. No automatic advancement from deal stage to WIN.
-
-### Evidence baseline (checked November 12, 2026)
-Read-only live Stripe account `acct_1SXIyEGqTruSqV8T`: a historical $10 succeeded PaymentIntent and $9.31 paid payout cannot establish a verified non-founder fulfilled transaction; several complete DPP sessions are $0 with null PaymentIntents; a $299 checkout is open/unpaid. No authenticated paid $1,500 AgentZ buyer/fulfillment was established. Keep the WIN indicator unverified.
