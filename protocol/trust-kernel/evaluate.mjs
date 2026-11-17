@@ -42,7 +42,7 @@ export function scanAnomalies(scans = []) {
   for (let i = 0; i < ordered.length - 1; i++) {
     const a = ordered[i];
     const b = ordered[i + 1];
-    if ([a.lat, a.lon, b.lat, b.lon].some((v) => typeof v !== "number")) continue;
+    if ([a.lat, a.lon, b.lat, b.lon].some(v => typeof v !== "number")) continue;
     const km = haversineKm(a, b);
     const dt = parseTs(b.at) - parseTs(a.at);
     if (dt <= 0) {
@@ -51,13 +51,17 @@ export function scanAnomalies(scans = []) {
     }
     const mps = (km * 1000) / dt;
     if (mps > MAX_PLAUSIBLE_MPS) {
-      reasons.push(`impossible_travel:${Math.round(km)}km_in_${Math.round(dt)}s`);
+      reasons.push(
+        `impossible_travel:${Math.round(km)}km_in_${Math.round(dt)}s`
+      );
     }
   }
   if (ordered.length >= 3) {
-    const window = parseTs(ordered[ordered.length - 1].at) - parseTs(ordered[0].at);
-    const regions = new Set(ordered.map((s) => s.region).filter(Boolean));
-    if (window <= 7200 && regions.size >= 3) reasons.push("cloned_identity_pattern");
+    const window =
+      parseTs(ordered[ordered.length - 1].at) - parseTs(ordered[0].at);
+    const regions = new Set(ordered.map(s => s.region).filter(Boolean));
+    if (window <= 7200 && regions.size >= 3)
+      reasons.push("cloned_identity_pattern");
   }
   return reasons;
 }
@@ -75,6 +79,27 @@ function emptyVector() {
   };
 }
 
+/**
+ * Fail closed: only a completed check that marked the issuer trusted may
+ * yield issuer=verified. Missing, skipped, or errored checks never pass.
+ */
+function classifyIssuerCheck(crypto = {}) {
+  const check = crypto.issuerCheck;
+  if (check === "skipped") {
+    return { issuer: "unknown", reason: "issuer_check_skipped" };
+  }
+  if (check === "error" || check === "errored" || crypto.issuerError) {
+    return { issuer: "failed", reason: "issuer_check_error" };
+  }
+  if (crypto.issuerTrusted === true) {
+    return { issuer: "verified", reason: null };
+  }
+  if (crypto.issuerTrusted === false) {
+    return { issuer: "failed", reason: "issuer_untrusted" };
+  }
+  return { issuer: "unknown", reason: "issuer_check_missing" };
+}
+
 export function evaluate(input = {}) {
   const depthUsed = input.depth === "history" ? "history" : "lookup";
   const vector = emptyVector();
@@ -82,9 +107,15 @@ export function evaluate(input = {}) {
   const unknowns = ["physical_binding_not_inspected"];
   const att = input.attestation;
   const crypto = input.crypto || {};
-  const evidence = [...(input.evidence || []), ...((att && att.evidence) || [])];
+  const evidence = [
+    ...(input.evidence || []),
+    ...((att && att.evidence) || []),
+  ];
 
-  if (input.objectFound === false || (!input.objectFound && !att && !input.crypto)) {
+  if (
+    input.objectFound === false ||
+    (!input.objectFound && !att && !input.crypto)
+  ) {
     return {
       decision: "not_found",
       vector,
@@ -100,10 +131,13 @@ export function evaluate(input = {}) {
     reasons.push("signature_invalid");
   }
 
-  if (crypto.issuerTrusted === true) vector.issuer = "verified";
-  else if (crypto.issuerTrusted === false) {
-    vector.issuer = "failed";
-    reasons.push("issuer_untrusted");
+  const issuerOutcome = classifyIssuerCheck(crypto);
+  vector.issuer = issuerOutcome.issuer;
+  if (
+    issuerOutcome.reason &&
+    (issuerOutcome.reason !== "issuer_check_missing" || input.crypto != null)
+  ) {
+    reasons.push(issuerOutcome.reason);
   }
 
   if (crypto.identityValid === true) vector.identity = "verified";
@@ -119,8 +153,8 @@ export function evaluate(input = {}) {
     vector.freshness = "verified";
   }
 
-  const realEvidence = evidence.filter((e) => isRealSha256(e.digest));
-  const mockEvidence = evidence.filter((e) => isMockDigest(e.digest));
+  const realEvidence = evidence.filter(e => isRealSha256(e.digest));
+  const mockEvidence = evidence.filter(e => isMockDigest(e.digest));
   if (mockEvidence.length) {
     vector.provenance = "unknown";
     reasons.push("mock_digest_unusable");
@@ -135,7 +169,11 @@ export function evaluate(input = {}) {
     vector.revocation = "failed";
     reasons.push("attestation_revoked");
   }
-  if (["inactive", "suspended", "blocked", "pending", "disabled"].includes(att?.status)) {
+  if (
+    ["inactive", "suspended", "blocked", "pending", "disabled"].includes(
+      att?.status
+    )
+  ) {
     vector.revocation = "failed";
     reasons.push("attestation_inactive_or_blocked");
   }
@@ -151,7 +189,7 @@ export function evaluate(input = {}) {
     reasons.push("attestation_decision_conflict");
   }
 
-  const inspected = realEvidence.some((e) => e.type === "inspection");
+  const inspected = realEvidence.some(e => e.type === "inspection");
   if (inspected) {
     vector.physical_binding = "partial";
     const idx = unknowns.indexOf("physical_binding_not_inspected");
@@ -177,6 +215,9 @@ export function evaluate(input = {}) {
   else if (
     reasons.includes("signature_invalid") ||
     reasons.includes("issuer_untrusted") ||
+    reasons.includes("issuer_check_missing") ||
+    reasons.includes("issuer_check_skipped") ||
+    reasons.includes("issuer_check_error") ||
     reasons.includes("identity_mismatch") ||
     reasons.includes("attestation_decision_conflict")
   )
@@ -204,7 +245,8 @@ export function evaluate(input = {}) {
   return { decision, vector, reasons, unknowns, depthUsed };
 }
 
-const invoked = process.argv[1] && /evaluate\.mjs$/.test(String(process.argv[1]));
+const invoked =
+  process.argv[1] && /evaluate\.mjs$/.test(String(process.argv[1]));
 if (invoked && process.argv[2]) {
   const { readFileSync } = await import("node:fs");
   const raw = JSON.parse(readFileSync(process.argv[2], "utf8"));

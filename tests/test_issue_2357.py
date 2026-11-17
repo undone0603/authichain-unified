@@ -67,8 +67,56 @@ class TrustKernelBoundaries(unittest.TestCase):
 
     def test_valid_signature_without_issuer_trust_does_not_verify(self):
         r = actual({"objectFound": True, "crypto": {"signatureValid": True, "statusActive": True}})
-        self.assertNotEqual(r["decision"], "verified")
+        self.assertEqual(r["decision"], "invalid")
         self.assertEqual(r["vector"]["issuer"], "unknown")
+        self.assertIn("issuer_check_missing", r["reasons"])
+
+    def test_missing_issuer_check_never_yields_a_pass(self):
+        r = actual({
+            "objectFound": True,
+            "crypto": {
+                "signatureValid": True,
+                "identityValid": True,
+                "statusActive": True,
+            },
+        })
+        self.assertNotEqual(r["decision"], "verified")
+        self.assertEqual(r["decision"], "invalid")
+        self.assertEqual(r["vector"]["issuer"], "unknown")
+        self.assertIn("issuer_check_missing", r["reasons"])
+        self.assert_no_automatic_enforcement(r)
+
+    def test_skipped_issuer_check_never_yields_a_pass(self):
+        r = actual({
+            "objectFound": True,
+            "crypto": {
+                "signatureValid": True,
+                "issuerTrusted": True,
+                "issuerCheck": "skipped",
+                "identityValid": True,
+                "statusActive": True,
+            },
+        })
+        self.assertNotEqual(r["decision"], "verified")
+        self.assertEqual(r["decision"], "invalid")
+        self.assertIn("issuer_check_skipped", r["reasons"])
+        self.assert_no_automatic_enforcement(r)
+
+    def test_errored_issuer_check_never_yields_a_pass(self):
+        r = actual({
+            "objectFound": True,
+            "crypto": {
+                "signatureValid": True,
+                "issuerTrusted": True,
+                "issuerCheck": "error",
+                "identityValid": True,
+                "statusActive": True,
+            },
+        })
+        self.assertNotEqual(r["decision"], "verified")
+        self.assertEqual(r["decision"], "invalid")
+        self.assertIn("issuer_check_error", r["reasons"])
+        self.assert_no_automatic_enforcement(r)
 
     def test_explicitly_untrusted_issuer_is_invalid(self):
         r = actual({"objectFound": True, "crypto": {

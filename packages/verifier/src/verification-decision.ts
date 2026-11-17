@@ -8,11 +8,19 @@ export type VerificationDecision =
   | "risk"
   | "indeterminate";
 
+export type IssuerCheckState = "ok" | "skipped" | "error" | "missing";
+
 export type VerificationDecisionInput = {
   /** Whether the signed payload was cryptographically verified. */
   cryptographicValid: boolean;
-  /** Whether the issuer is currently trusted and within its validity window. */
-  issuerTrusted: boolean;
+  /**
+   * Whether the issuer is currently trusted and within its validity window.
+   * Must be the boolean result of a completed issuer check. Missing,
+   * skipped, or errored checks never count as trusted.
+   */
+  issuerTrusted?: boolean;
+  /** Outcome of the issuer check itself. Skip/error/missing fail closed. */
+  issuerCheck?: IssuerCheckState;
   /** Durable lifecycle status. `null` means no registry record was found. */
   claimStatus: "active" | "revoked" | "expired" | "superseded" | null;
   /** Issuer's signed decision. */
@@ -42,7 +50,7 @@ export type VerificationDecisionResult = {
  * `verified=true`.
  */
 export function resolveVerificationDecision(
-  input: VerificationDecisionInput,
+  input: VerificationDecisionInput
 ): VerificationDecisionResult {
   const reasons: string[] = [];
 
@@ -62,11 +70,29 @@ export function resolveVerificationDecision(
     };
   }
 
-  if (!input.issuerTrusted) {
+  if (input.issuerCheck === "skipped") {
     return {
       decision: "indeterminate",
       valid: false,
-      reasons: ["issuer_not_trusted"],
+      reasons: ["issuer_check_skipped"],
+    };
+  }
+  if (input.issuerCheck === "error") {
+    return {
+      decision: "indeterminate",
+      valid: false,
+      reasons: ["issuer_check_error"],
+    };
+  }
+  if (input.issuerCheck === "missing" || input.issuerTrusted !== true) {
+    return {
+      decision: "indeterminate",
+      valid: false,
+      reasons: [
+        input.issuerTrusted === false
+          ? "issuer_not_trusted"
+          : "issuer_check_missing",
+      ],
     };
   }
 
