@@ -110,9 +110,12 @@ export async function createPaymentCheckout(
       ? params.returnPath
       : "/payments";
 
+  // Service-order settlement requires amount_total === stored catalog cents
+  // (see decideOrderPaymentAction). Promotion codes would let a buyer pay
+  // less than list and land pending with a reconciliation hold.
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
-    allow_promotion_codes: true,
+    allow_promotion_codes: false,
     client_reference_id: params.userId.toString(),
     customer_email: params.stripeCustomerId ? undefined : params.userEmail,
     customer: params.stripeCustomerId || undefined,

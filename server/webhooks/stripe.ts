@@ -20,6 +20,7 @@ import Stripe from "stripe";
 import * as db from "../db";
 import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
 import { handleServiceOrderPayment } from "../services/order-payment-handler";
+import { SERVICE_ORDER_AMOUNT_MISMATCH_REASON } from "../services/order-payment-decision";
 import { sendEmail } from "../email-service";
 import { BRANDS } from "../../shared/brands";
 import { constructStripeEventAsync } from "../../src/lib/stripe-construct-event";
@@ -139,6 +140,26 @@ function isRecurringCheckoutSession(session: Stripe.Checkout.Session): boolean {
   return false;
 }
 
+// Share the same Stripe evidence mapping for first delivery and retries.
+// Event-level duplicate claims are not fulfillment receipts for service orders.
+function serviceOrderSessionFromCheckout(session: Stripe.Checkout.Session) {
+  return {
+    id: session.id,
+    payment_intent:
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent && typeof session.payment_intent === "object"
+          ? session.payment_intent.id
+          : undefined,
+    status: session.status,
+    payment_status: session.payment_status,
+    mode: session.mode,
+    subscription: session.subscription,
+    amount_total: session.amount_total,
+    currency: session.currency,
+  };
+}
+
 function isReplayableCheckoutEvent(type: string): boolean {
   return (
     type === "checkout.session.completed" ||
@@ -163,6 +184,9 @@ function isDemoCheckoutSession(session: Stripe.Checkout.Session): boolean {
 async function fulfillCatalogCreditsIfPaid(
   session: Stripe.Checkout.Session
 ): Promise<boolean | "reconciliation_required"> {
+  // Service orders have a separate atomic payment ledger, not catalogue credits.
+  // Metadata.plan and matching amounts must never cross this product boundary.
+  if (session.metadata?.type === "one_time_service") return false;
   if (session.payment_status !== "paid") return false;
   // Demo / is_demo sessions must never receive catalog credits. A 100% promo
   // still arrives as payment_status=paid with amount_total=0 — grant those,
@@ -255,7 +279,9 @@ async function fulfillCatalogCreditsIfPaid(
   const supabase = await getWebhookSupabase();
   if (!supabase) {
     throw markRetryableFulfillment(
-      new Error("Paid catalog checkout cannot grant: entitlement store unavailable")
+      new Error(
+        "Paid catalog checkout cannot grant: entitlement store unavailable"
+      )
     );
   }
 
@@ -289,6 +315,7 @@ async function fulfillCatalogCreditsIfPaid(
 }
 
 function isStarterCheckoutSession(session: Stripe.Checkout.Session): boolean {
+  if (session.metadata?.type === "one_time_service") return false;
   if (session.mode !== "payment" || isRecurringCheckoutSession(session)) {
     return false;
   }
@@ -649,7 +676,8 @@ export interface StripeWebhookResult {
 
 export async function handleStripeWebhook(
   rawBody: Buffer,
-  sig: string
+  sig: string,
+  serviceOrderHandler: typeof handleServiceOrderPayment = handleServiceOrderPayment
 ): Promise<StripeWebhookResult> {
   const candidateSecrets = getWebhookSecretCandidates();
   if (candidateSecrets.length === 0) {
@@ -693,6 +721,48 @@ export async function handleStripeWebhook(
       httpStatus: extras?.httpStatus,
       error: extras?.error,
     });
+  };
+
+  // A signed, settled service checkout that cannot be fulfilled — missing
+  // order or amount/currency mismatch — is not payment. Persist a durable
+  // operator hold; do not acknowledge settlement or erase a hold on replay.
+  const holdUnmatchedPaidServiceOrder = async (
+    result: Awaited<ReturnType<typeof handleServiceOrderPayment>>,
+    session: Stripe.Checkout.Session
+  ): Promise<boolean> => {
+    const pi = session.payment_intent;
+    const paymentIntentId =
+      typeof pi === "string" ? pi : pi && typeof pi === "object" ? pi.id : null;
+    const holdError =
+      result?.reason === "no service order for this session"
+        ? "paid_service_order_missing_order"
+        : result?.reason === SERVICE_ORDER_AMOUNT_MISMATCH_REASON
+          ? "paid_service_order_amount_mismatch"
+          : null;
+    if (
+      result?.handled !== false ||
+      !holdError ||
+      session.status !== "complete" ||
+      session.payment_status !== "paid" ||
+      session.mode !== "payment" ||
+      Boolean(session.subscription) ||
+      !Number.isSafeInteger(session.amount_total) ||
+      (session.amount_total ?? 0) <= 0 ||
+      typeof paymentIntentId !== "string" ||
+      !paymentIntentId.startsWith("pi_")
+    ) {
+      return false;
+    }
+    const hold = await logDelivery("reconciliation_required", {
+      httpStatus: 200,
+      error: holdError,
+    });
+    if (!hold.ok || hold.detail === "base_columns_only") {
+      throw markRetryableFulfillment(
+        new Error("Could not persist paid service order reconciliation hold")
+      );
+    }
+    return true;
   };
 
   // F1: claim the event id once in stripe_events (PRIMARY KEY event_id)
@@ -771,6 +841,25 @@ export async function handleStripeWebhook(
           reconciliationRequired: true,
         };
       }
+      // A previously claimed service-order event may have failed before the
+      // atomic order/ledger transaction committed. Recheck the exact session:
+      // its pending->paid CAS makes replay safe and suppresses duplicates.
+      let serviceReplayed = false;
+      if (session.metadata?.type === "one_time_service") {
+        const result = await serviceOrderHandler(
+          serviceOrderSessionFromCheckout(session)
+        );
+        serviceReplayed = result.handled;
+        if (await holdUnmatchedPaidServiceOrder(result, session)) {
+          return {
+            received: true,
+            type: event.type,
+            duplicate: true,
+            handled: false,
+            reconciliationRequired: true,
+          };
+        }
+      }
       const { isDppOffer } = await import("../../src/lib/dpp-loop");
       const dppReplay =
         session.payment_status === "paid" &&
@@ -787,14 +876,19 @@ export async function handleStripeWebhook(
       }
       // Never erase a stored reconciliation hold for a skipped/non-granted
       // catalog session. Successful replays can advance the receipt to success.
-      if (catalogFulfilled === true || dppReplay || claim !== "duplicate") {
+      if (
+        catalogFulfilled === true ||
+        dppReplay ||
+        serviceReplayed ||
+        claim !== "duplicate"
+      ) {
         await logDelivery("success", { httpStatus: 200 });
       }
       return {
         received: true,
         type: event.type,
         duplicate: true,
-        handled: catalogFulfilled === true || dppReplay,
+        handled: catalogFulfilled === true || dppReplay || serviceReplayed,
       };
     } catch (dppErr) {
       const retryable = markRetryableFulfillment(dppErr);
@@ -1232,13 +1326,23 @@ export async function handleStripeWebhook(
         }
 
         if (session.metadata?.type === "one_time_service") {
-          await handleServiceOrderPayment({
-            id: session.id,
-            payment_intent:
-              typeof session.payment_intent === "string"
-                ? session.payment_intent
-                : undefined,
-          });
+          try {
+            const result = await serviceOrderHandler(
+              serviceOrderSessionFromCheckout(session)
+            );
+            if (await holdUnmatchedPaidServiceOrder(result, session)) {
+              return {
+                received: true,
+                type: event.type,
+                handled: false,
+                reconciliationRequired: true,
+              };
+            }
+            if (!result?.handled) handled = false;
+          } catch (serviceErr) {
+            // A failed SQL transaction must remain retryable by Stripe.
+            throw markRetryableFulfillment(serviceErr);
+          }
         }
 
         console.log(
