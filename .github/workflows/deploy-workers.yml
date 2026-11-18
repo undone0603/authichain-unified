@@ -423,36 +423,10 @@ jobs:
           printf '%s' "$ISSUE_SECRET" | npx wrangler secret put ISSUE_SECRET --name gs1-resolver
           echo "bound ISSUE_SECRET on gs1-resolver"
 
-      # Same values as bind-x402-secrets.yml / deploy-authichain-com.yml.
-      # Sisters 402 without this secret; /settle stays closed (dead listing).
-      # Do not invent a facilitator URL. Do not print values.
-      - name: Bind X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET
-        if: |
-          (matrix.worker == 'qron-space' ||
-           matrix.worker == 'strainchain-io' ||
-           matrix.worker == 'govchain-us') &&
-          env.CLOUDFLARE_ACCOUNT_ID != '' &&
-          (github.event.inputs.worker == '' || github.event.inputs.worker == matrix.worker)
-        working-directory: workers/${{ matrix.worker }}
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          set -euo pipefail
-          PAY_TO='0x5db511706FB6317cd23A7655F67450c5AC6e6AA2' # pragma: allowlist secret
-          FACILITATOR='https://facilitator.payai.network'
-          USDC_ASSET='0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-          NAME='${{ matrix.worker }}'
-          printf '%s' "$PAY_TO" | npx wrangler secret put X402_PAY_TO --name "$NAME"
-          printf '%s' "$FACILITATOR" | npx wrangler secret put X402_FACILITATOR_URL --name "$NAME"
-          printf '%s' "$USDC_ASSET" | npx wrangler secret put X402_USDC_ASSET --name "$NAME"
-          echo "bound X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET on ${NAME} (values not logged)"
+      # x402 payment-routing secrets are NEVER rewritten by a push deploy.
+      # --keep-vars preserves live bindings; only the protected manual binder
+      # can rotate a single target Worker after independent release checks.
 
-  # PM-330 item 6: blocking post-deploy smoke, AFTER the deploy job. Fails the
-  # run if a public money/protocol surface is down, answers the wrong code
-  # (unsigned Stripe webhook must 400, unpaid /api/x402 must 402), or redirects
-  # to cloudflareaccess.com. Read-only: HEAD on checkout, nothing signed.
-  # Rollback: delete this job.
   post-deploy-smoke:
     name: Post-deploy smoke (blocking)
     needs: [deploy]
