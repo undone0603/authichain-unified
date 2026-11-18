@@ -2106,6 +2106,8 @@ describe("MCP 2026-07-28 stateless requests (#2276)", () => {
     expect(decodeMcpHeaderValue("=?base64?Z2V0X3ByaWNpbmc=?=")).toBe(
       "get_pricing"
     );
+    // 0xC3 0x28 is invalid UTF-8; it must not decode to a usable tool name.
+    expect(decodeMcpHeaderValue("=?base64?wyg=?=")).toBeNull();
     const res = await modern("tools/call", {
       params: { name: "get_pricing", arguments: {} },
       headers: { "Mcp-Name": "=?base64?Z2V0X3ByaWNpbmc=?=" },

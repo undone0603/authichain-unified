@@ -1739,7 +1739,10 @@ export function decodeMcpHeaderValue(value: string | null): string | null {
   if (!m) return value;
   try {
     const bytes = Uint8Array.from(atob(m[1]), c => c.charCodeAt(0));
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    // Workers' TextDecoder options type has no `fatal`, so decode leniently
+    // and treat a replacement character as malformed UTF-8.
+    const decoded = new TextDecoder().decode(bytes);
+    return decoded.includes("\uFFFD") ? null : decoded;
   } catch {
     return null;
   }
