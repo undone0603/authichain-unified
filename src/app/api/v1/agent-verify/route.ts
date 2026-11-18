@@ -29,6 +29,7 @@ import {
   X402_REGISTRY_NOT_BOUND,
 } from "@/lib/x402";
 import { sealBaseline } from "../../../../lib/seal-baseline";
+import { nonTrustlessAllowed } from "../../../../lib/paid-seal-verify";
 // Relative, not "@/lib/…": tsconfig.worker.json maps "@/*" to client/src only.
 import {
   coerceSealBody,
@@ -195,15 +196,16 @@ export async function POST(request: Request) {
   const answer = sealBaseline(seal);
 
   // 5. Trustless settlement via the x402 facilitator (on-chain EIP-3009).
-  // In production a facilitator MUST confirm settlement; dev-mode (no facilitator
-  // configured) is refused in production so a fake proof can never pass.
+  // A facilitator MUST confirm settlement; dev-mode (no facilitator configured)
+  // is allowed only when NODE_ENV is test or development, so an unset or
+  // unexpected NODE_ENV fails closed and a fake proof can never pass.
   const settlement = await settlePayment(
     paymentHeader ?? "",
     required.body.accepts[0]
   );
   if (
     !settlement.settled ||
-    (!settlement.trustless && process.env.NODE_ENV === "production")
+    (!settlement.trustless && !nonTrustlessAllowed())
   ) {
     return NextResponse.json(
       { ...required.v2, error: settlement.reason ?? "payment_not_settled" },

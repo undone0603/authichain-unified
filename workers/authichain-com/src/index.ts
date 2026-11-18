@@ -4,6 +4,7 @@ import {
   renderVerifyManufacturerPage,
 } from "./verify-manufacturer-page.ts";
 import { isIsThisRealPath, renderIsThisRealPage } from "./is-this-real-page.ts";
+import { tryHandleSealVerify } from "./seal-verify-page";
 import { handleSalesInquiry } from './routes/sales';
 // The DPP regulatory timeline is shared with the Next.js page rather than
 // duplicated here: content/dpp/regulatory-timeline.json is the single source of
@@ -3586,6 +3587,8 @@ async function handleAuthichainCom(
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
     }
+    const sealVerify = await tryHandleSealVerify(request);
+    if (sealVerify) return sealVerify;
     if (isIsThisRealPath(p)) {
       return new Response(renderIsThisRealPage(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
