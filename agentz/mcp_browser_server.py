@@ -8,7 +8,9 @@ from mcp.server.fastmcp import FastMCP
 
 from agentz.core.browser_executor import execute_browser_task
 from agentz.core.public_navigation import navigate_public
-from agentz.core.code_proposals import propose_code_change
+from agentz.core.code_proposals import (
+    propose_code_change, create_code_branch, create_draft_code_pr, hydrogen_playbook,
+)
 
 mcp = FastMCP("AgentZ Browser Executor")
 
@@ -31,6 +33,25 @@ def code_proposal(branch_ref: str, path: str, content: str,
     """Create or update a file on a scoped AgentZ development branch."""
     return propose_code_change(branch_ref, path, content,
                                expected_blob_sha=expected_blob_sha)
+
+
+
+@mcp.tool()
+def agentz_create_branch(branch_ref: str) -> dict:
+    """Create a restricted AgentZ feature branch from current protected main."""
+    return create_code_branch(branch_ref)
+
+
+@mcp.tool()
+def agentz_draft_pr(branch_ref: str, title: str, body: str = "") -> dict:
+    """Open a draft development PR for the scoped AgentZ branch; never merge."""
+    return create_draft_code_pr(branch_ref, title, body)
+
+
+@mcp.tool()
+def hydrogen_execution_rules() -> str:
+    """Retrieve AuthiChain's durable, evidence-driven autonomous coding charter."""
+    return hydrogen_playbook()
 
 
 @mcp.tool()

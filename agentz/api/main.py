@@ -504,6 +504,54 @@ async def api_agentz_code_proposal(data: CodeProposalInput):
         raise HTTPException(status_code=503, detail=str(exc))
 
 
+
+
+class AgentzCodeBranchInput(BaseModel):
+    branch_ref: str
+
+
+@app.post("/agentz/github/create-code-branch",
+          dependencies=[Depends(verify_token)], tags=["AgentZ Development"])
+async def api_agentz_create_code_branch(data: AgentzCodeBranchInput):
+    """Create a restricted development branch at protected-main HEAD."""
+    from agentz.core.code_proposals import create_code_branch
+    try:
+        return await run_in_threadpool(create_code_branch, data.branch_ref)
+    except (ValueError, PermissionError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
+class AgentzDraftPRInput(BaseModel):
+    branch_ref: str
+    title: str
+    body: str = ""
+
+
+@app.post("/agentz/github/draft-code-pr",
+          dependencies=[Depends(verify_token)], tags=["AgentZ Development"])
+async def api_agentz_draft_code_pr(data: AgentzDraftPRInput):
+    """Create a draft PR only; no production merge, deployment, or money."""
+    from agentz.core.code_proposals import create_draft_code_pr
+    try:
+        return await run_in_threadpool(
+            create_draft_code_pr, data.branch_ref, data.title, data.body
+        )
+    except (ValueError, PermissionError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
+@app.get("/agentz/hydrogen/playbook",
+         dependencies=[Depends(verify_token)], tags=["AgentZ Development"])
+async def api_agentz_hydrogen_playbook():
+    """Return on-host autonomous engineering rules for authenticated AgentZ."""
+    from agentz.core.code_proposals import hydrogen_playbook
+    return {"playbook": hydrogen_playbook()}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
