@@ -17,11 +17,11 @@ function makeMockDb(opts: MockDbOptions = {}) {
   const db = {
     from: vi.fn((table: string) => {
       const rows = table === "gov_proposals" ? (opts.govProposals ?? []) : (opts.leads ?? []);
-      const queryBuilder = {
+      const queryBuilder: Record<string, unknown> = {
         select: vi.fn(() => queryBuilder),
         in: vi.fn(() => queryBuilder),
         gte: vi.fn(() => queryBuilder),
-        limit: vi.fn(async () => ({ data: rows, error: null })),
+        eq: vi.fn(() => queryBuilder), or: vi.fn(() => queryBuilder), order: vi.fn(() => queryBuilder), limit: vi.fn(() => queryBuilder), then: (resolve: (value: { data: Record<string, unknown>[]; error: null }) => unknown) => Promise.resolve({ data: rows, error: null }).then(resolve),
         update: vi.fn((payload: Record<string, unknown>) => {
           updates.push({ table, payload });
           return {
@@ -226,6 +226,6 @@ describe("revenue-cycle checkout-links & proposals", () => {
 
     expect(planned).toBe(2);
     expect(updates).toHaveLength(2);
-    expect(updates.map((u) => u.table)).toEqual(["gov_proposals", "leads"]);
+    expect(updates.map((u) => u.table)).toEqual(["gov_proposals", "leads"]); }); it("filters processed rows before slicing to 10 in phaseProposals", async () => { const skippedGov = Array.from({ length: 10 }, (_, i) => ({ id: "gov-skip-" + i, contact_email: "skip" + i + "@agency.gov", solicitation_number: "SOL-" + i, agency: "Agency", title: "Skipped", estimated_value: 1000, payment_link: "https://pay.example/" + i })); const newGov = { id: "gov-eligible", contact_email: "ready@agency.gov", solicitation_number: "SOL-NEW", agency: "Agency", title: "Eligible", estimated_value: 5000, payment_link: null }; const skippedLeads = Array.from({ length: 10 }, (_, i) => ({ id: "lead-skip-" + i, name: "Skip" + i, email: "skip" + i + "@example.com", company: "Co", status: "qualified", source: "inbound", metadata: { needsProposal: true } })); const newLead = { id: "lead-eligible", name: "Ready", email: "ready@example.com", company: "New Co", status: "qualified", source: "inbound", metadata: {} }; const { db, updates } = createMockDb({ gov_proposals: [...skippedGov, newGov], leads: [...skippedLeads, newLead] }); const planned = await phaseProposals(db, { dryRun: false }); expect(planned).toBe(2); expect(updates).toHaveLength(2); expect(updates.map((u) => u.table)).toEqual(["gov_proposals", "leads"]);
   });
 });
