@@ -45,7 +45,8 @@ describe("hosted MCP documentation and quickstart", () => {
 
   it("does not reference legacy dist/index.js or mandatory DATABASE_URL quickstart", () => {
     expect(readme).not.toContain("dist/index.js");
-    expect(readme).not.toMatch(/["\x27]DATABASE_URL["\x27]\\s*:/);\n    expect(readme).not.toMatch(/(?:export\\s+)?DATABASE_URL\\s*=/);
+    expect(readme).not.toMatch(/["']DATABASE_URL["']\s*:/);
+    expect(readme).not.toMatch(/(?:export\s+)?DATABASE_URL\s*=/);
   });
 
   it("documents all 8 tools defined in mcp-routes.ts", () => {
