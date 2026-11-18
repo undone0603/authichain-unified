@@ -44,54 +44,10 @@ export default {
       return handleV2(request, path, url, env, cors);
     }
 
-    // ── Public endpoints — no API key required ────────────────────────────
-    if (path === "/api/v1/anchor" && request.method === "POST") {
-      const body: any = await request.json().catch(() => ({}));
-      const { name, brand, description, sku, industry, hash } = body;
-      if (!name || !brand || !hash) {
-        return json({ error: "name, brand, and hash are required" }, cors, 400);
-      }
-      if (!/^[0-9a-f]{64}$/i.test(hash)) {
-        return json(
-          { error: "hash must be a 64-character hex SHA-256 digest" },
-          cors,
-          400
-        );
-      }
-      const id = "AC-" + hash.slice(0, 8).toUpperCase();
-      const ts = new Date().toISOString();
-      const cert = {
-        id,
-        name: String(name).slice(0, 200),
-        brand: String(brand).slice(0, 100),
-        description: String(description || "").slice(0, 2000),
-        sku: String(sku || "").slice(0, 100),
-        industry: String(industry || "general").slice(0, 50),
-        hash: hash.toLowerCase(),
-        ts,
-        anchored: true,
-        version: 1,
-      };
-      if (env.RATE_LIMITS) {
-        await env.RATE_LIMITS.put("cert:" + id, JSON.stringify(cert));
-      }
-      return json(
-        {
-          success: true,
-          id,
-          hash: hash.toLowerCase(),
-          ts,
-          certUrl: "https://authichain.com/cert/" + id,
-          certificate: cert,
-        },
-        cors,
-        201
-      );
-    }
-
+    // Certificate lookup is public. Writes go through industrial-key lookup below.
     if (path.startsWith("/api/v1/cert/") && request.method === "GET") {
       const certId = path.slice("/api/v1/cert/".length).toUpperCase();
-      if (!certId || !/^AC-[0-9A-F]{8}$/.test(certId)) {
+      if (!certId || !CERT_ID_RE.test(certId)) {
         return json(
           { error: "Invalid certificate ID — expected format: AC-XXXXXXXX" },
           cors,
@@ -106,6 +62,73 @@ export default {
         return json({ error: "Certificate not found", id: certId }, cors, 404);
       }
       return json({ success: true, certificate: JSON.parse(stored) }, cors);
+    }
+
+    // Anchor writes: hash-lookup against `api_keys`, not the demo substring gate.
+    if (path === "/api/v1/anchor" && request.method === "POST") {
+      const apiKey =
+        request.headers.get("X-API-Key") ||
+        request.headers.get("Authorization")?.replace("Bearer ", "");
+      if (!apiKey) return json({ error: "Missing API key." }, cors, 401);
+
+      const lookup = await lookupApiKey(env, apiKey);
+      if (lookup.status === "invalid") {
+        return json({ error: "Invalid API key." }, cors, 401);
+      }
+      if (lookup.status === "revoked") {
+        return json({ error: "API key revoked." }, cors, 403);
+      }
+      if (lookup.status === "unavailable") {
+        return json({ error: "Key store unavailable" }, cors, 503);
+      }
+
+      if (!env.RATE_LIMITS) {
+        return json({ error: "Storage unavailable" }, cors, 503);
+      }
+      const body: any = await request.json().catch(() => ({}));
+      const { name, brand, description, sku, industry, hash } = body;
+      if (!name || !brand || !hash) {
+        return json({ error: "name, brand, and hash are required" }, cors, 400);
+      }
+      if (!/^[0-9a-f]{64}$/i.test(hash)) {
+        return json(
+          { error: "hash must be a 64-character hex SHA-256 digest" },
+          cors,
+          400
+        );
+      }
+      const id = newCertificateId();
+      const storeKey = "cert:" + id;
+      const existing = await env.RATE_LIMITS.get(storeKey);
+      if (existing) {
+        return json({ error: "Certificate id already exists", id }, cors, 409);
+      }
+      const ts = new Date().toISOString();
+      const cert = {
+        id,
+        name: String(name).slice(0, 200),
+        brand: String(brand).slice(0, 100),
+        description: String(description || "").slice(0, 2000),
+        sku: String(sku || "").slice(0, 100),
+        industry: String(industry || "general").slice(0, 50),
+        hash: hash.toLowerCase(),
+        ts,
+        anchored: false,
+        version: 1,
+      };
+      await env.RATE_LIMITS.put(storeKey, JSON.stringify(cert));
+      return json(
+        {
+          success: true,
+          id,
+          hash: hash.toLowerCase(),
+          ts,
+          certUrl: "https://authichain.com/cert/" + id,
+          certificate: cert,
+        },
+        cors,
+        201
+      );
     }
 
     // API key validation
@@ -528,6 +551,80 @@ function timingSafeEqual(a: string, b: string): boolean {
   let diff = ab.length ^ bb.length;
   for (let i = 0; i < len; i++) diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
   return diff === 0;
+}
+
+/** SHA-256 hex of a raw API key — same digest `/api/keys` stores as `api_keys.key_hash`. */
+export async function hashApiKey(key: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(key)
+  );
+  return Array.from(new Uint8Array(digest), b =>
+    b.toString(16).padStart(2, "0")
+  ).join("");
+}
+
+/** 128-bit cert id: `AC-` + UUID hex (32 chars). Legacy records used 8 hex chars. */
+export function newCertificateId(): string {
+  return "AC-" + crypto.randomUUID().replace(/-/g, "").toUpperCase();
+}
+
+/** Legacy 8-hex ids and 32-hex UUID ids. */
+export const CERT_ID_RE = /^AC-[0-9A-F]{8}(?:[0-9A-F]{24})?$/;
+
+type ApiKeyLookup =
+  | { status: "ok"; userId: string }
+  | { status: "invalid" }
+  | { status: "revoked" }
+  | { status: "unavailable" };
+
+/**
+ * Look up a live industrial key in `api_keys` by SHA-256 hash.
+ * Matches Next.js `verifyApiKey` / `consumeVerificationQuota`: unknown → 401,
+ * `is_active !== true` → 403, store down → fail closed.
+ */
+export async function lookupApiKey(
+  env: { SUPABASE_URL?: string; SUPABASE_SERVICE_ROLE_KEY?: string },
+  apiKey: string
+): Promise<ApiKeyLookup> {
+  if (!apiKey.startsWith("qron_")) return { status: "invalid" };
+  const url = env.SUPABASE_URL?.replace(/\/$/, "");
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) return { status: "unavailable" };
+
+  const keyHash = await hashApiKey(apiKey);
+  let res: Response;
+  try {
+    res = await fetch(
+      `${url}/rest/v1/api_keys?key_hash=eq.${encodeURIComponent(keyHash)}&select=user_id,is_active&limit=2`,
+      {
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          Accept: "application/json",
+        },
+      }
+    );
+  } catch {
+    return { status: "unavailable" };
+  }
+  if (!res.ok) return { status: "unavailable" };
+
+  let rows: Array<{ user_id?: string; is_active?: boolean }>;
+  try {
+    rows = (await res.json()) as Array<{
+      user_id?: string;
+      is_active?: boolean;
+    }>;
+  } catch {
+    return { status: "unavailable" };
+  }
+  if (!Array.isArray(rows)) return { status: "unavailable" };
+  if (rows.length === 0) return { status: "invalid" };
+  if (rows.length > 1) return { status: "unavailable" };
+  const row = rows[0];
+  if (row.is_active !== true) return { status: "revoked" };
+  return { status: "ok", userId: String(row.user_id ?? "") };
 }
 
 // ── Stripe Accounts v2 (admin-gated) ────────────────────

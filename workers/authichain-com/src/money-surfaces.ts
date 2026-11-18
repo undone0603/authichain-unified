@@ -208,10 +208,6 @@ ${surfaceFooter()}`,
   });
 }
 
-/** Gov provenance pilot, gated confirm page (Zac approved $7,500, 2026-10-16). */
-export const GOV_PILOT_LINK =
-  "https://authichain.com/checkout/gov_provenance_pilot";
-
 export function renderMadeInAmericaPage(): string {
   return pageShell({
     title: "Made in America origin claims | AuthiChain",
@@ -238,11 +234,6 @@ export function renderMadeInAmericaPage(): string {
       },
       { href: "/partners/brief", label: "Partner brief", primary: false },
       { href: "/pricing", label: "View pricing", primary: false },
-      {
-        href: GOV_PILOT_LINK,
-        label: "Federal buyers: 60-day provenance pilot — $7,500 fixed",
-        primary: false,
-      },
     ],
   })}
   ${estateSteps(

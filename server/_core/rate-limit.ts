@@ -6,7 +6,11 @@ type Entry = { count: number; resetAt: number };
 class RateLimiter {
   private store = new Map<string, Entry>();
 
-  check(key: string, max: number, windowMs: number): { ok: boolean; retryAfterMs: number } {
+  check(
+    key: string,
+    max: number,
+    windowMs: number
+  ): { ok: boolean; retryAfterMs: number } {
     const now = Date.now();
 
     // Evict expired entries when the store grows large
@@ -33,7 +37,7 @@ class RateLimiter {
 
 function getClientIp(req: Request): string {
   // Trust proxy headers set by Vercel / Railway; req.ip respects app.set("trust proxy")
-  return req.ip ?? (req.socket?.remoteAddress ?? "unknown");
+  return req.ip ?? req.socket?.remoteAddress ?? "unknown";
 }
 
 // Shared limiter instances (one per logical boundary)
@@ -50,7 +54,9 @@ function expressLimit(limiter: RateLimiter, max: number, windowMs: number) {
     const { ok, retryAfterMs } = limiter.check(getClientIp(req), max, windowMs);
     if (!ok) {
       res.setHeader("Retry-After", String(Math.ceil(retryAfterMs / 1000)));
-      return res.status(429).json({ error: "Too many requests. Please slow down." });
+      return res
+        .status(429)
+        .json({ error: "Too many requests. Please slow down." });
     }
     next();
   };
@@ -77,7 +83,31 @@ export const adminRateLimit = expressLimit(adminLimiter, 60, 60_000);
 
 /** 30 public tRPC mutations per minute per IP */
 export function checkTrpcPublicLimit(req: Request): void {
-  const { ok, retryAfterMs } = trpcPublicLimiter.check(getClientIp(req), 30, 60_000);
+  const { ok, retryAfterMs } = trpcPublicLimiter.check(
+    getClientIp(req),
+    30,
+    60_000
+  );
+  if (!ok) {
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS",
+      message: `Rate limit exceeded. Retry after ${Math.ceil(retryAfterMs / 1000)}s.`,
+    });
+  }
+}
+
+const emailCampaignSendLimiter = new RateLimiter();
+
+/** Tight cap for admin campaign sends: 5 per minute per caller. */
+export const EMAIL_CAMPAIGN_SEND_MAX = 5;
+export const EMAIL_CAMPAIGN_SEND_WINDOW_MS = 60_000;
+
+export function checkEmailCampaignSendLimit(key: string): void {
+  const { ok, retryAfterMs } = emailCampaignSendLimiter.check(
+    key,
+    EMAIL_CAMPAIGN_SEND_MAX,
+    EMAIL_CAMPAIGN_SEND_WINDOW_MS
+  );
   if (!ok) {
     throw new TRPCError({
       code: "TOO_MANY_REQUESTS",
