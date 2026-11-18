@@ -107,7 +107,11 @@ export const TOOLS = [
     name: "get_pricing",
     description:
       "Free. Read-only price discovery; never starts a checkout or authorizes payment. Lists live human Stripe checkouts ($29 Living QR Starter Pack at /checkout/starter, $299 EU DPP Readiness at /checkout/dpp_readiness) and free verification tools.",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
     inputSchema: { type: "object", properties: {} },
   },
   {
@@ -115,7 +119,12 @@ export const TOOLS = [
     description: x402PaidVerifyStatus().bound
       ? "Legacy x402 seal verify for separately authorized paid seal UUID requests, not free discovery. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. For free verification use verify_record."
       : "Legacy x402 seal verify, not answering; do not attempt to pay. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
     inputSchema: {
       type: "object",
       properties: {
@@ -138,7 +147,11 @@ export const TOOLS = [
     name: "query_provenance",
     description:
       "Free registry and published-pack lookup for an assetId / seal / QR token; use for discovery, not proof of authenticity. Reads matching rows from the canonical auth_seals registry when public Supabase configuration is available, and also resolves published packs. A registry match means registered only; it does not verify a signature or prove a physical item is genuine. Use verify_attestation for a published v0.1 JWS; verify_record is the separate reference-protocol verifier.",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
     inputSchema: {
       type: "object",
       properties: {
@@ -154,7 +167,11 @@ export const TOOLS = [
     name: "verify_attestation",
     description:
       "Free. Use when verifying a registry-published attestation, not a supplied offline protocol record. Fetch the exact published AuthiChain v0.1 JWS from the signed-record registry and pass it to the canonical edge-router verifier. Checks signature, issuer trust, durable revocation/status, expiry, and signed decision. Supply expectedObjectId to bind the record to a scanned object identifier. A valid signed claim alone does not prove physical authenticity.",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
     inputSchema: {
       type: "object",
       properties: {
@@ -174,7 +191,11 @@ export const TOOLS = [
   {
     name: "verify_record",
     description: `Free. Use for a supplied signed protocol record or demonstration record, not published JWS issuer-status checks. Verify an AuthiChain signed provenance record with the open reference verifier. Pass id "${"polygon-anchor-1"}" for the published demonstration record, or pass your own record and anchor JSON. Returns verified, valid-unanchored, or invalid, plus whether the transaction carries the record hash. It does not inspect a physical product.`,
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
     inputSchema: {
       type: "object",
       properties: {
@@ -198,7 +219,11 @@ export const TOOLS = [
     name: "dpp_readiness_check",
     description:
       "Free informational EU Digital Product Passport readiness questionnaire; this cannot issue a passport or certify compliance. Returns a 0-100 score, gaps, and the dated obligation for the product category (battery passport is law from 18 Feb 2027; other categories are ESPR targets). Not legal advice.",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
     inputSchema: {
       type: "object",
       properties: {
@@ -228,7 +253,11 @@ export const TOOLS = [
     name: "scan_living_qr",
     description:
       "Free. Read an existing Living QR presentation, not a QR generator or x402 purchase. Scan a stored Living QR. GET https://authichain.com/qron/r/{object_id} returns AuthiChain Verification Decision v1. This host verifies the signature. A missing id is presentation_not_found. Not an x402 payment endpoint, and it does not inspect a physical product.",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
     inputSchema: {
       type: "object",
       properties: {
@@ -572,7 +601,7 @@ function mcpTools(env?: X402Env) {
       return {
         ...tool,
         description:
-          "Free. Quotes without charging or authorizing payment the live x402 agent rail ($0.05 USDC on Base) and live human Stripe checkouts: $29 Starter Pack (100 generations, paid once) at https://authichain.com/checkout/starter and $299 EU DPP Readiness at https://authichain.com/checkout/dpp_readiness. Starting a monthly plan replaces unused pack credits.",
+          "Free. Quotes without charging or authorizing payment the live x402 agent rail ($0.05 USDC on Base) and live human Stripe checkouts: $29 Starter Pack (100 generations, paid once) at https://authichain.com/checkout/starter and $299 EU DPP Readiness at https://authichain.com/checkout/dpp_readiness. One-time pack credits (Starter and Creator) never expire.",
       };
     }
     if (tool.name === "verify") {
@@ -592,7 +621,7 @@ function humanStripeCheckout() {
   return {
     status: "live" as const,
     rail: "stripe",
-    note: "Starting a monthly plan replaces unused Starter pack credits.",
+    note: "One-time pack credits (Starter and Creator) never expire.",
     starter: {
       usd: planUsd("starter"),
       generations: starter?.generations ?? 100,
