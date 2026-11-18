@@ -488,7 +488,7 @@ export async function phaseProposals(db: SupabaseClient | null, opts?: { dryRun?
     if (error) {
       console.warn(`  ⚠️  gov_proposals: ${error.message}`);
     } else {
-      const withEmail = (govProps ?? []).filter(p => !!p.contact_email);
+      const withEmail = (govProps ?? []).filter(p => !!p.contact_email && !p.payment_link);
       console.log(
         `  Gov proposals ready (fit≥70, unsent, has contact): ${withEmail.length}/${(govProps ?? []).length}`
       );
@@ -541,7 +541,7 @@ export async function phaseProposals(db: SupabaseClient | null, opts?: { dryRun?
     console.warn(`  ⚠️  warm leads: ${warmErr.message}`);
   } else {
     const needProposal = (warm ?? []).filter(
-      l => (l.proposalsSent ?? 0) === 0 && !!l.email
+      l => (l.proposalsSent ?? 0) === 0 && !!l.email && ((l.metadata ?? {}) as Record<string, unknown>).needsProposal !== true
     );
     console.log(`  Warm leads with 0 proposalsSent: ${needProposal.length}`);
     for (const l of needProposal.slice(0, 10)) {
