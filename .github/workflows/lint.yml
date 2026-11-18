@@ -159,7 +159,7 @@ jobs:
       # Self-hosted WSL has no passwordless sudo, so this is user-space
       # only. CircleCI is left unchanged to preserve credit reserve.
       - name: Install local PostgreSQL binaries
-        run: bash scripts/ci/install-local-postgresql.sh
+        run: bash scripts/ci/install-local-postgres.sh
 
       - name: Catalog grant two-connection PostgreSQL
         env:
