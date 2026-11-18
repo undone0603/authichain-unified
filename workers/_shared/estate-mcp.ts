@@ -157,7 +157,6 @@ export function sisterMcpPricingDiscovery(brand: SisterDiscoveryBrand) {
     source: "src/lib/plans.ts",
     passportUsd: planUsd("strainchain_passport"),
     dppUsd: planUsd("dpp_readiness"),
-    farmUsd: planUsd("strainchain_farm"),
     passportPaymentLink: PASSPORT_LINK,
     dppPaymentLink: DPP_LINK,
     offers: openCatalogOffers(),

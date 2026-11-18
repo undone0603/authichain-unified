@@ -74,10 +74,10 @@ test("GET discovery lists Payment Links and unpaid POST x402, not GET checkout",
             source: string;
             passportUsd: number;
             dppUsd: number;
-            farmUsd: number;
+            farmUsd?: number;
             passportPaymentLink: string;
             dppPaymentLink: string;
-            farmPaymentLink: string;
+            farmPaymentLink?: string;
             starterPaymentLink?: string;
             creatorPaymentLink?: string;
           };
@@ -113,7 +113,17 @@ test("GET discovery lists Payment Links and unpaid POST x402, not GET checkout",
       );
       assert.equal(
         body.pricing.humanCheckout.farmUsd,
-        planUsd("strainchain_farm"),
+        undefined,
+        `${host} ${path}`
+      );
+      assert.equal(
+        JSON.stringify(body.pricing.humanCheckout).includes("farmUsd"),
+        false,
+        `${host} ${path}`
+      );
+      assert.equal(
+        JSON.stringify(body.pricing.humanCheckout).includes("strainchain_farm"),
+        false,
         `${host} ${path}`
       );
       stripeLink(body.pricing.humanCheckout.passportPaymentLink);

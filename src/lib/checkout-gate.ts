@@ -253,13 +253,13 @@ function pageShell(title: string, body: string): string {
 }
 
 /**
- * Confirm page and home JSON-LD use this override (Research PASS ebed0fd3).
+ * Confirm page and home JSON-LD use this override.
  * /pricing still reads plans.ts description and features.
  * Stripe IDs, prices, and Launch refillOnInvoicePaid stay unchanged.
  */
 const PLAN_DISPLAY_DESCRIPTION: Partial<Record<string, string>> = {
   starter:
-    "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits.",
+    "100 AI QR generations for $29, paid once. No subscription. One-time pack credits (Starter and Creator) never expire.",
 };
 
 export function displayPlanDescription(

@@ -138,3 +138,49 @@ test("Polygon defaults use the keyless historical-receipt RPC on both chain alia
   });
   assert.deepEqual(denied, { queried: false, onChain: false, status: "rpc_http_error" });
 });
+
+
+test("a failing configured RPC falls back to the keyless public default", async () => {
+  const fx = load("valid-anchored-polygon.json");
+  const configured = "https://configured.example/rpc";
+  const seen = [];
+  const fetchImpl = async (url, request) => {
+    seen.push(url);
+    if (url === configured) return { ok: false, status: 429 };
+    const { method } = JSON.parse(request.body);
+    const result = method === "eth_getTransactionByHash"
+      ? { input: "0x" + expectedRecordHash(fx.record) }
+      : { status: "0x1", blockNumber: "0x5a4b714" };
+    return { ok: true, json: async () => ({ jsonrpc: "2.0", id: 1, result }) };
+  };
+  const out = await readAnchorOnChain(fx.record, fx.anchor, { rpcUrl: configured, fetchImpl });
+  assert.equal(out.onChain, true);
+  assert.equal(out.status, "tx_contains_record_hash");
+  assert.deepEqual([...new Set(seen)], [configured, PUBLIC_RPC["polygon:137"]]);
+});
+
+test("a working configured RPC is used alone, and its chain answer is final", async () => {
+  const fx = load("valid-anchored-polygon.json");
+  const configured = "https://configured.example/rpc";
+  const seen = [];
+  const fetchImpl = async (url) => {
+    seen.push(url);
+    // Configured endpoint answers: the transaction does not exist.
+    return { ok: true, json: async () => ({ jsonrpc: "2.0", id: 1, result: null }) };
+  };
+  const out = await readAnchorOnChain(fx.record, fx.anchor, { rpcUrl: configured, fetchImpl });
+  assert.deepEqual(out, { queried: true, onChain: false, status: "tx_missing" });
+  assert.deepEqual([...new Set(seen)], [configured]);
+});
+
+test("when the configured and public RPCs both fail, the last diagnostic is reported", async () => {
+  const fx = load("valid-anchored-polygon.json");
+  const configured = "https://configured.example/rpc";
+  const fetchImpl = async (url) => {
+    if (url === configured) throw Object.assign(new Error("timed out"), { name: "TimeoutError" });
+    return { ok: false, status: 503 };
+  };
+  const out = await readAnchorOnChain(fx.record, fx.anchor, { rpcUrl: configured, fetchImpl });
+  assert.deepEqual(out, { queried: false, onChain: false, status: "rpc_http_error" });
+  assert.deepEqual(verifySubmitted(fx.record, fx.anchor).anchorTransactionQueried, false);
+});

@@ -1,5 +1,8 @@
 import { ENV } from "./_core/env";
 import nodemailer from "nodemailer";
+import { eq } from "drizzle-orm";
+import { suppressionList } from "../drizzle/schema";
+import { getDb } from "./db";
 
 type JsonRecord = Record<string, unknown>;
 type GmailTokenResponse = {
@@ -29,7 +32,7 @@ type GmailSendResponse = {
 };
 
 function asRecord(value: unknown): JsonRecord {
-  return value && typeof value === "object" ? value as JsonRecord : {};
+  return value && typeof value === "object" ? (value as JsonRecord) : {};
 }
 
 function parseJsonResponse<T extends JsonRecord>(value: unknown): Partial<T> {
@@ -78,14 +81,20 @@ async function getGmailAccessToken(): Promise<string> {
   });
 
   if (!res.ok) {
-    console.error("[gmail] token refresh failed:", res.status, await res.text().catch(() => ""));
+    console.error(
+      "[gmail] token refresh failed:",
+      res.status,
+      await res.text().catch(() => "")
+    );
     return staticToken; // fall back to static if refresh fails
   }
 
-  const data = parseJsonResponse<GmailTokenResponse>(await res.json().catch(() => ({})));
+  const data = parseJsonResponse<GmailTokenResponse>(
+    await res.json().catch(() => ({}))
+  );
   _cachedToken = data.access_token ?? staticToken;
   // expires_in is in seconds; default 3600
-  _tokenExpiresAt = Date.now() + ((data.expires_in ?? 3600) * 1000);
+  _tokenExpiresAt = Date.now() + (data.expires_in ?? 3600) * 1000;
   return _cachedToken!;
 }
 
@@ -150,7 +159,11 @@ export function isDryRun() {
  */
 export function recordDryRunSend(input: SendEmailInput): boolean {
   if (dryRunLog === null) return false;
-  dryRunLog.push({ ...input, to: input.to.trim().toLowerCase(), at: new Date().toISOString() });
+  dryRunLog.push({
+    ...input,
+    to: input.to.trim().toLowerCase(),
+    at: new Date().toISOString(),
+  });
   return true;
 }
 
@@ -162,7 +175,7 @@ export function recordDryRunSend(input: SendEmailInput): boolean {
  * cannot leave sends suppressed for the rest of the process.
  */
 export async function withDryRunEmail<T>(
-  fn: () => Promise<T>,
+  fn: () => Promise<T>
 ): Promise<{ result: T; sends: RecordedSend[] }> {
   const previous = dryRunLog;
   const log: RecordedSend[] = [];
@@ -180,12 +193,97 @@ function suppressionSet() {
     ENV.suppressionList
       .split(",")
       .map(x => x.trim().toLowerCase())
-      .filter(Boolean),
+      .filter(Boolean)
   );
 }
 
-export function isSuppressed(email: string) {
-  return suppressionSet().has(email.trim().toLowerCase());
+type SuppressionLookup = "hit" | "miss" | "unavailable";
+
+const SUPPRESSION_LOOKUP_TIMEOUT_MS = 3000;
+
+function raceWithTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    promise.finally(() => {
+      if (timer !== undefined) clearTimeout(timer);
+    }),
+    new Promise<T>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error("suppression_lookup_timeout")),
+        ms
+      );
+    }),
+  ]);
+}
+
+async function isSuppressedInGuardrailTable(
+  email: string
+): Promise<SuppressionLookup> {
+  try {
+    const rows = await raceWithTimeout(
+      (async () => {
+        const db = await getDb();
+        return db
+          .select({ email: suppressionList.email })
+          .from(suppressionList)
+          .where(eq(suppressionList.email, email))
+          .limit(1);
+      })(),
+      SUPPRESSION_LOOKUP_TIMEOUT_MS
+    );
+    return rows.length > 0 ? "hit" : "miss";
+  } catch {
+    return "unavailable";
+  }
+}
+
+/**
+ * Link and reply opt-outs land in guardrail_suppression_list via Supabase REST
+ * on the edge (worker-app/unsubscribe-routes.ts). Drizzle/getDb is the Node
+ * path; REST covers Workers where DATABASE_URL is not set.
+ */
+async function isSuppressedViaSupabaseRest(
+  email: string
+): Promise<SuppressionLookup> {
+  const url = (
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    ""
+  ).replace(/\/+$/, "");
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!url || !key) return "unavailable";
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/guardrail_suppression_list?email=eq.${encodeURIComponent(email)}&select=email`,
+      {
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+        },
+        signal: AbortSignal.timeout(SUPPRESSION_LOOKUP_TIMEOUT_MS),
+      }
+    );
+    if (!res.ok) return "unavailable";
+    const rows: unknown = await res.json().catch(() => null);
+    if (!Array.isArray(rows)) return "unavailable";
+    return rows.length > 0 ? "hit" : "miss";
+  } catch {
+    return "unavailable";
+  }
+}
+
+export async function isSuppressed(email: string): Promise<boolean> {
+  const normalized = email.trim().toLowerCase();
+  if (suppressionSet().has(normalized)) return true;
+  const dbLookup = await isSuppressedInGuardrailTable(normalized);
+  if (dbLookup === "hit") return true;
+  if (dbLookup === "miss") return false;
+  const restLookup = await isSuppressedViaSupabaseRest(normalized);
+  if (restLookup === "hit") return true;
+  if (restLookup === "miss") return false;
+  // Neither backend could establish status — fail closed so an unsubscribed
+  // recipient is never mailed because the DNC table was unreachable.
+  return true;
 }
 
 function toBase64Url(input: string) {
@@ -196,9 +294,11 @@ function toBase64Url(input: string) {
     .replace(/=+$/g, "");
 }
 
-export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
+export async function sendEmail(
+  input: SendEmailInput
+): Promise<SendEmailResult> {
   const to = input.to.trim().toLowerCase();
-  if (isSuppressed(to)) {
+  if (await isSuppressed(to)) {
     return { status: "suppressed", reason: "suppression_list" };
   }
 
@@ -211,7 +311,8 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   }
 
   const fromEmail = ENV.gmailFromEmail || process.env.GMAIL_FROM_EMAIL || "";
-  const appPassword = ENV.gmailAppPassword || process.env.GMAIL_APP_PASSWORD || "";
+  const appPassword =
+    ENV.gmailAppPassword || process.env.GMAIL_APP_PASSWORD || "";
   const fromName = input.fromName || "AuthiChain";
 
   // ─── Method 0: Resend (preferred transactional email SaaS) ─────────────────
@@ -221,7 +322,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${resendApiKey}`,
+          Authorization: `Bearer ${resendApiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -232,13 +333,24 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         }),
       });
       if (res.ok) {
-        const data = parseJsonResponse<{ id?: string }>(await res.json().catch(() => ({})));
-        return { status: "sent", provider: "resend", providerMessageId: data?.id };
+        const data = parseJsonResponse<{ id?: string }>(
+          await res.json().catch(() => ({}))
+        );
+        return {
+          status: "sent",
+          provider: "resend",
+          providerMessageId: data?.id,
+        };
       }
       const errText = await res.text().catch(() => "");
-      console.warn(`[email-service] Resend failed (${res.status}): ${errText.slice(0, 200)}`);
+      console.warn(
+        `[email-service] Resend failed (${res.status}): ${errText.slice(0, 200)}`
+      );
     } catch (resendErr: unknown) {
-      console.warn("[email-service] Resend error, falling back:", getErrorMessage(resendErr));
+      console.warn(
+        "[email-service] Resend error, falling back:",
+        getErrorMessage(resendErr)
+      );
     }
   }
 
@@ -263,18 +375,29 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         providerMessageId: info.messageId,
       };
     } catch (smtpErr: unknown) {
-      console.warn("[email-service] SMTP failed, attempting OAuth2...", getErrorMessage(smtpErr));
+      console.warn(
+        "[email-service] SMTP failed, attempting OAuth2...",
+        getErrorMessage(smtpErr)
+      );
     }
   }
 
   // ─── Method 2: OAuth2 (Primary/Legacy) ─────────────────────────────────────
   if (!fromEmail) {
-    return { status: "skipped", reason: "gmail_not_configured", provider: "gmail" };
+    return {
+      status: "skipped",
+      reason: "gmail_not_configured",
+      provider: "gmail",
+    };
   }
 
   const gmailAccessToken = await getGmailAccessToken();
   if (!gmailAccessToken) {
-    return { status: "skipped", reason: "gmail_token_unavailable", provider: "gmail" };
+    return {
+      status: "skipped",
+      reason: "gmail_token_unavailable",
+      provider: "gmail",
+    };
   }
 
   const mime = [
@@ -288,14 +411,17 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   ].join("\r\n");
 
   const raw = toBase64Url(mime);
-  const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${gmailAccessToken}`,
-    },
-    body: JSON.stringify({ raw }),
-  });
+  const response = await fetch(
+    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${gmailAccessToken}`,
+      },
+      body: JSON.stringify({ raw }),
+    }
+  );
 
   if (!response.ok) {
     const txt = await response.text().catch(() => "");
@@ -306,7 +432,9 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     };
   }
 
-  const data = parseJsonResponse<GmailSendResponse>(await response.json().catch(() => ({})));
+  const data = parseJsonResponse<GmailSendResponse>(
+    await response.json().catch(() => ({}))
+  );
   return {
     status: "sent",
     provider: "gmail-oauth",
@@ -326,15 +454,17 @@ export async function checkThreadReplies(threadId: string): Promise<{
 
   const res = await fetch(
     `https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`,
-    { headers: { Authorization: `Bearer ${gmailAccessToken}` } },
+    { headers: { Authorization: `Bearer ${gmailAccessToken}` } }
   );
   if (!res.ok) return { hasReply: false };
 
-  const thread = parseJsonResponse<GmailThreadResponse>(await res.json().catch(() => null));
+  const thread = parseJsonResponse<GmailThreadResponse>(
+    await res.json().catch(() => null)
+  );
   const messages = Array.isArray(thread.messages) ? thread.messages : [];
   // First message is the one we sent (SENT label). Any subsequent message is a reply.
-  const replies = messages.filter(m =>
-    Array.isArray(m.labelIds) && m.labelIds.includes("INBOX"),
+  const replies = messages.filter(
+    m => Array.isArray(m.labelIds) && m.labelIds.includes("INBOX")
   );
   if (replies.length === 0) return { hasReply: false };
 
@@ -354,8 +484,13 @@ export async function checkThreadReplies(threadId: string): Promise<{
   }
 
   const replyText = extractBody(latest.payload).slice(0, 1500);
-  const headers = Array.isArray(latest.payload?.headers) ? latest.payload.headers : [];
-  const fromHeader = headers.find((header): header is GmailHeader & { value: string } => header.name === "From" && typeof header.value === "string");
+  const headers = Array.isArray(latest.payload?.headers)
+    ? latest.payload.headers
+    : [];
+  const fromHeader = headers.find(
+    (header): header is GmailHeader & { value: string } =>
+      header.name === "From" && typeof header.value === "string"
+  );
 
   return { hasReply: true, replyText, replyFrom: fromHeader?.value };
 }

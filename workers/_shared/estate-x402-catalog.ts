@@ -26,8 +26,6 @@ export type SisterHumanCheckout = {
   dppUsd: number;
   passportPaymentLink?: string;
   dppPaymentLink?: string;
-  farmUsd?: number;
-  farmPaymentLink?: string;
   starterUsd?: number;
   creatorUsd?: number;
   starterPaymentLink?: string;
@@ -81,7 +79,6 @@ function humanCheckout(
     rail: "stripe",
     passportUsd: planUsd("strainchain_passport"),
     dppUsd: planUsd("dpp_readiness"),
-    farmUsd: planUsd("strainchain_farm"),
     passportPaymentLink: planPaymentLink("strainchain_passport"),
     dppPaymentLink: planPaymentLink("dpp_readiness"),
     offers: openCatalogOffers(),
