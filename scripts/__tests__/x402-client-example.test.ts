@@ -148,6 +148,7 @@ describe("x402-verify-client example", () => {
       paid: true,
       body: { verified: true, sku: "DEMO-001" },
     });
+});
   
     it("refuses a 402 challenge with conflicting amount and maxAmountRequired fields", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(makeChallengeResponse({ amount: "500000", maxAmountRequired: "10000" }));
@@ -157,5 +158,4 @@ describe("x402-verify-client example", () => {
     expect(signerMock).not.toHaveBeenCalled();
     expect(result).toMatchObject({ ok: false, status: 402, refused: true, reason: "conflicting_amount_fields" });
     });
-});
 });
