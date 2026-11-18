@@ -156,6 +156,6 @@ describe("x402-verify-client example", () => {
     const result = await runX402VerifyClient({ endpoint: "https://authichain.com/api/x402", maxAmountAtomic: 100000n, createPaymentSignature: signerMock, fetchImpl: fetchMock });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(signerMock).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ ok: false, status: 402, refused: true, reason: "conflicting_amount_fields" });
+    expect(result).toMatchObject({ ok: false, status: 402, refused: true, code: "conflicting_amount_fields", reason: "conflicting_amount_fields" });
     });
 });

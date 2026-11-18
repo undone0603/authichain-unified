@@ -33,9 +33,14 @@ export function assertProtectedBindingPolicy({
     ruleset.name === "main-no-direct-push" &&
     ruleset.enforcement === "active" &&
     ruleset.conditions?.ref_name?.include?.includes("refs/heads/main") &&
-    ruleset.rules?.some((r) => r.type === "pull_request") &&
-    Array.isArray(ruleset.bypass_actors) && ruleset.bypass_actors.length === 0,
-  "required no-bypass PR ruleset unavailable");
+    ruleset.rules?.some((r) => r.type === "pull_request"),
+  "required active PR ruleset unavailable");
+  // Read-only tokens may omit bypass_actors entirely. Reject a visible bypass,
+  // and never assert that an omitted field proves no bypass actors exist.
+  if (Array.isArray(ruleset.bypass_actors)) {
+    guard(ruleset.bypass_actors.length === 0, "ruleset allows a bypass actor");
+  }
+  guard(ruleset.current_user_can_bypass !== "always", "caller can bypass main rules");
   guard(ENVIRONMENTS.has(environmentName) &&
     environment?.name === environmentName &&
     environment.deployment_branch_policy?.protected_branches === true &&

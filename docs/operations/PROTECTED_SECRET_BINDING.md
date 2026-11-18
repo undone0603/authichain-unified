@@ -2,6 +2,9 @@
 
 Tracking issue: https://github.com/undone0603/authichain-unified/issues/2629
 
+These four workflows share one non-canceling concurrency group, so simultaneous
+manual secret rotations queue instead of racing across Workers.
+
 These four workflows are explicit manual-only operations. A main push must
 never change a signing secret, lead credential, guardrail key, x402 pay-to
 destination, facilitator, or USDC asset binding.
@@ -10,6 +13,13 @@ The shared read-only gate scripts/ci/guard-production-secret-binding.mjs checks
 workflow_dispatch on the exact current protected main SHA, active no-bypass
 main PR rules, eight successful CircleCI contexts on that SHA, and the matching
 protected-branches-only GitHub environment with admin bypass disabled.
+The workflow's GITHUB_TOKEN is read-only and has Actions: read to inspect
+environment policy, while repository metadata access covers ruleset reads.
+GitHub may omit ruleset bypass_actors from read-only API responses: absence
+of that field does NOT prove a no-bypass configuration. Independently verify
+all bypass permissions using authorized repository administration before
+activating any manual secret-binding path. A visible bypass is rejected.
+
 Missing or unreadable evidence fails closed. Jobs check out the exact SHA,
 restore a full tree, and validate the gate immediately before secret writes.
 

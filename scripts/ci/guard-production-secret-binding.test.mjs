@@ -58,6 +58,10 @@ for(const [reason,modify] of [
     assert.throws(()=>assertProtectedBindingPolicy(f),/protected secret binding:/);
   });
 }
+test("read-only token may omit privileged ruleset bypass metadata",()=>{
+  const f=validFixture();delete f.ruleset.bypass_actors;
+  assert.equal(assertProtectedBindingPolicy(f).checks,8);
+});
 test("all four bind workflows require exact SHA, environment, and isolated credentials",()=>{
   const reqs={
     "bind-stripe-webhook-secrets.yml":["production-cloudflare-edge-router","AUTHICHAIN_EDGE_ROUTER_CLOUDFLARE"],
@@ -72,6 +76,11 @@ test("all four bind workflows require exact SHA, environment, and isolated crede
     assert.match(yml,/github\.ref == 'refs\/heads\/main'/);
     assert.ok(yml.includes("name: "+environment));
     assert.ok(yml.includes("guard-production-secret-binding.mjs"));
+    assert.ok(yml.includes("actions: read"),"the default token needs Actions read for environment inspection");
+    assert.ok(yml.includes("group: production-secret-binding-"),"all manual writers must serialize");
+    assert.ok(yml.includes("cancel-in-progress: false"));
+    assert.ok(yml.includes("GH_TOKEN: "+"$"+"{{ github.token }}"));
+    assert.ok(!yml.includes("AUTHICHAIN_ENV_POLICY_READ_TOKEN"));
     assert.ok(yml.includes("ref: "+"$"+"{{ inputs.expected_sha }}"));
     assert.ok(yml.includes("persist-credentials: false"));
     assert.ok(yml.includes("git sparse-checkout disable"));
@@ -98,4 +107,6 @@ test("qron uses byte-exact one-Worker rotation",()=>{
   const yml=readFileSync(path.join(ROOT,".github/workflows/set-qron-outreach-guardrail-secret.yml"),"utf8");
   assert.match(yml,/printf '%s' "\$INTERNAL_API_SECRET" \| wrangler secret put INTERNAL_API_SECRET --name qron-outreach/);
   assert.doesNotMatch(yml,/secret put INTERNAL_API_SECRET --name authichain-edge-router/);
+  const bindStep=yml.slice(yml.indexOf("- name: Set INTERNAL_API_SECRET on qron-outreach only"));
+  assert.equal((bindStep.match(/^        env:$/gm)||[]).length,1,"exactly one env mapping for the binding step");
 });

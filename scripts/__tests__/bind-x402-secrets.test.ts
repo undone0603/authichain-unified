@@ -28,7 +28,7 @@ describe("x402 facilitator bind matches authichain-com", () => {
     const bind = readWorkflow("bind-x402-secrets.yml");
     const landing = readWorkflow("deploy-authichain-com.yml");
     const workers = readWorkflow("deploy-workers.yml");
-    for (const yml of [bind, landing, workers]) {
+    for (const yml of [bind, landing]) {
       expect(yml).toContain(PAY_TO);
       expect(yml).toContain(`'${FACILITATOR}'`);
       expect(yml).toContain(USDC);
@@ -39,6 +39,8 @@ describe("x402 facilitator bind matches authichain-com", () => {
         /FACILITATOR[^'\n]*['"]https:\/\/x402\.org\/facilitator['"]/
       );
     }
+    expect(workers).toContain("--keep-vars");
+    expect(workers).not.toContain("secret put X402_PAY_TO");
     expect(landing).toContain("--keep-vars");
     expect(landing).not.toContain("secret put X402_PAY_TO");
   });

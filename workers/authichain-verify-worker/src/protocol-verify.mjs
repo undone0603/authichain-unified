@@ -93,22 +93,27 @@ async function rpcCall(fetchImpl, rpc, method, params) {
 export async function readAnchorOnChain(record, anchor, opts = {}) {
   const chain = String(anchor?.chain || "");
   const txHash = String(anchor?.txHash || "");
-  const rpc = opts.rpcUrl || PUBLIC_RPC[chain];
-  if (!rpc || !TX_HASH_RE.test(txHash) || !record) {
+  // A configured RPC is tried first. If it fails at the transport, HTTP or
+  // provider level, the keyless public default is tried once, so a
+  // rate-limited or expired configured endpoint cannot turn every anchor read
+  // into rpc_http_error. A chain answer (tx_missing, reverted, ...) from the
+  // first endpoint that responds is final and is not retried elsewhere.
+  const rpcs = [...new Set([opts.rpcUrl, PUBLIC_RPC[chain]].filter(Boolean))];
+  if (rpcs.length === 0 || !TX_HASH_RE.test(txHash) || !record) {
     return { queried: false, onChain: false, status: "not_queried" };
   }
   const fetchImpl = opts.fetchImpl || fetch;
-  try {
-    const [tx, receipt] = await Promise.all([
-      rpcCall(fetchImpl, rpc, "eth_getTransactionByHash", [txHash]),
-      rpcCall(fetchImpl, rpc, "eth_getTransactionReceipt", [txHash]),
-    ]);
-    return assessChainRead({ tx, receipt, recordHash: expectedRecordHash(record) });
-  } catch (error) {
-    return {
-      queried: false,
-      onChain: false,
-      status: error instanceof RpcDiagnosticError ? error.status : "rpc_transport_error",
-    };
+  let status = "rpc_transport_error";
+  for (const rpc of rpcs) {
+    try {
+      const [tx, receipt] = await Promise.all([
+        rpcCall(fetchImpl, rpc, "eth_getTransactionByHash", [txHash]),
+        rpcCall(fetchImpl, rpc, "eth_getTransactionReceipt", [txHash]),
+      ]);
+      return assessChainRead({ tx, receipt, recordHash: expectedRecordHash(record) });
+    } catch (error) {
+      status = error instanceof RpcDiagnosticError ? error.status : "rpc_transport_error";
+    }
   }
+  return { queried: false, onChain: false, status };
 }
