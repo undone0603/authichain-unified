@@ -41,7 +41,9 @@ jobs:
   followup:
     name: DPP follow-up (${{ inputs.dry_run == false && 'live if OWNER_LIVE_SEND' || 'dry run' }})
     runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
-    timeout-minutes: 10
+    # Each setup step allows 15 minutes and the pnpm cache save runs after the
+    # script, so 10 minutes cancelled a run whose dry-run had already finished.
+    timeout-minutes: 25
 
     steps:
       - name: Checkout repository
