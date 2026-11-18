@@ -175,7 +175,7 @@ function leadProvenance(lead: LeadProvenanceInput): string | null {
   return inferProvenanceFromSignals(lead)?.provenance ?? null;
 }
 
-function hasVerifiedProvenance(lead: LeadProvenanceInput): boolean {
+export function hasVerifiedProvenance(lead: LeadProvenanceInput): boolean {
   const p = leadProvenance(lead);
   return !!p && VERIFIED_PROVENANCE.has(p);
 }
@@ -212,7 +212,7 @@ const CLOSER_BLOCKED_STATUSES = new Set([
   "disqualified",
 ]);
 
-function segmentPaymentCta(segment?: string | null): {
+export function segmentPaymentCta(segment?: string | null): {
   name: string;
   price: string;
   url: string;
@@ -259,7 +259,7 @@ function segmentPaymentCta(segment?: string | null): {
   };
 }
 
-function withAttribution(
+export function withAttribution(
   url: string,
   leadId: string | number,
   campaign: string
@@ -282,57 +282,6 @@ async function stripeGet(path: string): Promise<any> {
     throw new Error(`Stripe ${res.status}: ${body.slice(0, 200)}`);
   }
   return res.json();
-}
-
-async function createCheckoutSession(opts: {
-  leadEmail: string;
-  leadId: number;
-  segment: string;
-  amountCents: number;
-  productName: string;
-}): Promise<string | null> {
-  if (!STRIPE_KEY) return null;
-  const params = new URLSearchParams();
-  params.set("mode", "payment");
-  params.set(
-    "success_url",
-    `${APP_URL}/thanks?session_id={CHECKOUT_SESSION_ID}`
-  );
-  params.set("cancel_url", `${APP_URL}/pricing`);
-  params.set("customer_email", opts.leadEmail);
-  params.set(
-    // Stripe Checkout Session expiry must be ≤ 24h from creation for payment mode.
-    "expires_at",
-    String(Math.floor(Date.now() / 1000) + 23 * 3600)
-  );
-  params.set("line_items[0][quantity]", "1");
-  params.set("line_items[0][price_data][currency]", "usd");
-  params.set(
-    "line_items[0][price_data][unit_amount]",
-    String(opts.amountCents)
-  );
-  params.set("line_items[0][price_data][product_data][name]", opts.productName);
-  params.set("metadata[leadEmail]", opts.leadEmail);
-  params.set("metadata[leadId]", String(opts.leadId));
-  params.set("metadata[segment]", opts.segment);
-  params.set("metadata[source]", "revenue_cycle");
-
-  const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${STRIPE_KEY}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: params,
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(
-      `Checkout session failed (${res.status}): ${body.slice(0, 240)}`
-    );
-  }
-  const data = (await res.json()) as { url?: string };
-  return data.url ?? null;
 }
 
 // ─── Phases ───────────────────────────────────────────────────────────────────
@@ -426,7 +375,8 @@ async function phaseFixProvenance(db: SupabaseClient | null): Promise<number> {
   return fixed;
 }
 
-async function phaseCheckoutLinks(db: SupabaseClient | null): Promise<number> {
+export async function phaseCheckoutLinks(db: SupabaseClient | null, opts?: { dryRun?: boolean }): Promise<number> {
+  const dryRun = opts?.dryRun ?? isDryRun;
   console.log("\n=== PHASE: checkout-links ===");
   if (!db) {
     console.warn("  ⚠️  Supabase not configured — skipping");
@@ -473,45 +423,24 @@ async function phaseCheckoutLinks(db: SupabaseClient | null): Promise<number> {
         ? ` (skipped ${skippedUnverified} without verified provenance)`
         : "")
   );
-  let attached = 0;
+  let attached = 0; let failed = 0;
 
   for (const lead of candidates.slice(0, 20)) {
     const cta = segmentPaymentCta(lead.segment);
     if (!cta) continue;
     const attributed = withAttribution(cta.url, lead.id, "warm_checkout");
-    const amountHint =
-      cta.price.replace(/[^0-9.]/g, "") === ""
-        ? 49900
-        : Math.round(parseFloat(cta.price.replace(/[^0-9.]/g, "")) * 100);
 
     console.log(
       `  • lead#${lead.id} ${lead.email} [${lead.segment ?? "n/a"}] → ${cta.name} ${cta.price}`
     );
 
-    if (isDryRun) {
+    if (dryRun) {
       console.log(`    WOULD attach: ${attributed}`);
       attached++;
       continue;
     }
 
-    let checkoutUrl = attributed;
-    if (STRIPE_KEY) {
-      try {
-        const sessionUrl = await createCheckoutSession({
-          leadEmail: lead.email,
-          leadId: lead.id,
-          segment: String(lead.segment ?? "default"),
-          amountCents:
-            Number.isFinite(amountHint) && amountHint > 0 ? amountHint : 49900,
-          productName: cta.name,
-        });
-        if (sessionUrl) checkoutUrl = sessionUrl;
-      } catch (err: any) {
-        console.warn(
-          `    ⚠️  Checkout session failed, using static link: ${err.message?.slice(0, 120)}`
-        );
-      }
-    }
+    const checkoutUrl = attributed;
 
     const nextMeta = {
       ...((lead.metadata ?? {}) as object),
@@ -526,6 +455,7 @@ async function phaseCheckoutLinks(db: SupabaseClient | null): Promise<number> {
       .eq("id", lead.id);
     if (updErr) {
       console.warn(`    ⚠️  update failed: ${updErr.message}`);
+      failed++;
       continue;
     }
     attached++;
@@ -536,59 +466,25 @@ async function phaseCheckoutLinks(db: SupabaseClient | null): Promise<number> {
   return attached;
 }
 
-async function phaseProposals(db: SupabaseClient | null): Promise<number> {
+// Rows already flagged (metadata.needsProposal) are dropped after the fetch, so the
+// fetch window must be well above the 10-row processing batch or flagged rows crowd
+// out eligible ones.
+const WARM_LEAD_FETCH_LIMIT = 200;
+
+export async function phaseProposals(db: SupabaseClient | null, opts?: { dryRun?: boolean }): Promise<number> {
+  const dryRun = opts?.dryRun ?? isDryRun;
   console.log("\n=== PHASE: proposals ===");
   if (!db) {
     console.warn("  ⚠️  Supabase not configured — skipping");
     return 0;
   }
 
-  // High-fit unsent gov proposals (if table exists)
+  // public.gov_proposals has no payment_link column in the live database.
+  // Government proposal CTAs require separately verified schema and workflow.
+  // Do not report unsent proposal drafts as enriched or write fictitious fields.
+  // This phase only flags eligible warm leads for permitted follow-up.
   let planned = 0;
-  try {
-    const { data: govProps, error } = await db
-      .from("gov_proposals")
-      .select("notice_id,title,agency,fit_score,email_status,contact_email")
-      .eq("email_status", "unsent")
-      .gte("fit_score", 70)
-      .limit(25);
-
-    if (error) {
-      console.warn(`  ⚠️  gov_proposals: ${error.message}`);
-    } else {
-      const withEmail = (govProps ?? []).filter(p => !!p.contact_email);
-      console.log(
-        `  Gov proposals ready (fit≥70, unsent, has contact): ${withEmail.length}/${(govProps ?? []).length}`
-      );
-      for (const p of withEmail.slice(0, 10)) {
-        const cta = segmentPaymentCta("govchain");
-        const url = cta
-          ? withAttribution(cta.url, p.notice_id, "gov_proposal")
-          : "";
-        console.log(
-          `  • ${p.notice_id} ${p.agency} fit=${p.fit_score} → CTA ${cta?.name ?? "n/a"}`
-        );
-        if (isDryRun) {
-          console.log(
-            `    WOULD stamp payment CTA on draft / enqueue closer: ${url}`
-          );
-          planned++;
-          continue;
-        }
-        // Persist CTA into a notes-style column if present; otherwise leave for email-proposals.
-        await db
-          .from("gov_proposals")
-          .update({
-            payment_link: url,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("notice_id", p.notice_id);
-        planned++;
-      }
-    }
-  } catch (err: any) {
-    console.warn(`  ⚠️  gov proposals phase error: ${err.message}`);
-  }
+  let failed = 0;
 
   // Warm leads with replies / high score but no proposalsSent
   const { data: warm, error: warmErr } = await db
@@ -597,21 +493,23 @@ async function phaseProposals(db: SupabaseClient | null): Promise<number> {
       "id,email,segment,status,proposalsSent,emailReplied,leadScore,score,metadata"
     )
     .or("emailReplied.eq.true,leadScore.gte.70,score.gte.70")
-    .limit(30);
+    .limit(WARM_LEAD_FETCH_LIMIT);
 
   if (warmErr) {
     console.warn(`  ⚠️  warm leads: ${warmErr.message}`);
   } else {
     const needProposal = (warm ?? []).filter(
-      l => (l.proposalsSent ?? 0) === 0 && !!l.email
+      l => (l.proposalsSent ?? 0) === 0 && !!l.email && ((l.metadata ?? {}) as Record<string, unknown>).needsProposal !== true
     );
     console.log(`  Warm leads with 0 proposalsSent: ${needProposal.length}`);
     for (const l of needProposal.slice(0, 10)) {
+      const existingMeta = (l.metadata ?? {}) as Record<string, unknown>;
+      if (existingMeta.needsProposal === true) continue;
       const cta = segmentPaymentCta(l.segment);
       console.log(
         `  • lead#${l.id} ${l.email} status=${l.status} → propose ${cta?.name ?? "?"}`
       );
-      if (isDryRun) {
+      if (dryRun) {
         planned++;
         continue;
       }
@@ -621,8 +519,13 @@ async function phaseProposals(db: SupabaseClient | null): Promise<number> {
         suggestedPaymentLink: cta?.url ?? null,
         revenueCycleFlaggedAt: new Date().toISOString(),
       };
-      await db.from("leads").update({ metadata: meta }).eq("id", l.id);
-      planned++;
+      const { error: updErr } = await db.from("leads").update({ metadata: meta }).eq("id", l.id);
+      if (updErr) {
+        console.warn("   lead update failed:", updErr.message);
+        failed++;
+      } else {
+        planned++;
+      }
     }
   }
 
@@ -1042,7 +945,9 @@ async function main() {
   console.log("\n✅ Revenue cycle complete");
 }
 
-main().catch(err => {
-  console.error(err);
-  process.exit(isDryRun ? 0 : 1);
-});
+if (process.argv[1]?.replace(/\\/g, "/").endsWith("/scripts/revenue-cycle.ts")) {
+  main().catch((err) => {
+    console.error("Fatal:", err);
+    process.exit(1);
+  });
+}
