@@ -138,7 +138,7 @@ curl -sS -X POST https://authichain.com/mcp \
     "params": {
       "name": "verify_record",
       "arguments": {
-        "recordId": "example-record-id"
+        "id": "polygon-anchor-1"
       }
     }
   }'
