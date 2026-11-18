@@ -144,13 +144,13 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Check openclaw AGENT_SECRET bind skip ($0 Deploy Workers)
-        run: pnpm exec vitest run scripts/__tests__/deploy-workers-agent-secret-bind.test.ts
+        run: pnpm exec vitest run scripts/__tests__/bind-openclaw-agentz-secrets.test.ts
 
       - name: Check sister x402 facilitator bind matches authichain-com
-        run: pnpm exec vitest run scripts/__tests__/sister-x402-facilitator-bind.test.ts
+        run: pnpm exec vitest run scripts/__tests__/bind-x402-secrets.test.ts
 
       - name: Check AgentZ tunnel gh secret set ($0 bring-up)
-        run: pnpm exec vitest run scripts/__tests__/agentz-tunnel-gh-secret-set.test.ts
+        run: pnpm exec vitest run scripts/__tests__/resolve-agent-secret.test.ts
 
       - name: Check autonomy manifest, reconciler, breaker and pulse
         run: pnpm exec vitest run scripts/__tests__/autonomy.test.ts
