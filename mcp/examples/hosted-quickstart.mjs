@@ -174,6 +174,14 @@ async function main() {
   console.log(JSON.stringify(result, null, 2));
   if (!result.connected || !result.toolCallOk) {
     process.exitCode = 1;
+  } else if (result.classification !== "verified") {
+    // The call worked but the published demo record did not verify (for
+    // example anchor_not_on_chain:rpc_http_error). Exit non-zero so a smoke
+    // test does not report a degraded verifier as healthy.
+    console.error(
+      `verify_record returned "${result.classification}", not "verified": ${result.limitations.join(", ")}`
+    );
+    process.exitCode = 2;
   }
 }
 

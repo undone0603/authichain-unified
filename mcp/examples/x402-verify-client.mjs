@@ -78,7 +78,7 @@ export function validateX402Challenge(challenge, options = {}) {
     requirement?.maxAmountRequired !== undefined && requirement?.maxAmountRequired !== null &&
     String(requirement.amount) !== String(requirement.maxAmountRequired)
     ) {
-    return { valid: false, reason: "conflicting_amount_fields" };
+    return { ok: false, code: "conflicting_amount_fields", reason: "conflicting_amount_fields" };
   }
   const rawAmount = requirement?.amount ?? requirement?.maxAmountRequired;
   if (typeof rawAmount !== "string" && typeof rawAmount !== "number") {
