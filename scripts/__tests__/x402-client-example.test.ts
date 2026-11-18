@@ -148,5 +148,14 @@ describe("x402-verify-client example", () => {
       paid: true,
       body: { verified: true, sku: "DEMO-001" },
     });
-  });
+  
+    it("refuses a 402 challenge with conflicting amount and maxAmountRequired fields", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(makeChallengeResponse({ amount: "500000", maxAmountRequired: "10000" }));
+    const signerMock = vi.fn();
+    const result = await runX402VerifyClient({ endpoint: "https://authichain.com/api/x402", maxAmountAtomic: 100000n, createPaymentSignature: signerMock, fetchImpl: fetchMock });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(signerMock).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ok: false, status: 402, refused: true, reason: "conflicting_amount_fields" });
+    });
+});
 });
