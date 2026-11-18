@@ -11909,5 +11909,261 @@
         }
       ]
     }
+  },
+  {
+    "slug": "espr-2025-2030-working-plan-product-groups-digital-product-passport",
+    "keyword": "espr 2025-2030 working plan product groups digital product passport",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "ESPR 2025-2030 Working Plan Product Groups | AuthiChain",
+    "metaDescription": "The Commission's ESPR working plan for 2025 to 2030 names steel, aluminium, textiles, furniture, tyres and mattresses as priority product groups, and each.",
+    "h1": "ESPR 2025-2030 Working Plan Product Groups Digital Product Passport",
+    "bodyHtml": "<p>The Commission's ESPR working plan for 2025 to 2030 names steel, aluminium, textiles, furniture, tyres and mattresses as priority product groups, and each group gets its own delegated act that sets its passport requirements, so there is no single date for all products.</p><h2>Why AuthiChain</h2><ul><li>The working plan gives indicative adoption years per group, and a delegated act applies only after its own transition period, so check the act for your group rather than the plan</li><li>A record is a signed W3C Verifiable Credential carrying a GS1 Digital Link identifier, so the same format works whichever group your product falls in</li><li>The specification and the zero-dependency verifier are Apache-2.0 with a patent grant, so you can test the format against your own data before a delegated act lands</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Where do I find the date that applies to my product?</h3><p>In the delegated act for your product group, once the Commission adopts it. The working plan, COM(2025) 187, lists indicative timing only, and the Commission publishes the registry of adopted acts.</p><h3>Does a signed record satisfy a delegated act?</h3><p>Not by itself. A delegated act sets the data fields, identifiers and access rules for its group. A signed record shows who issued the data and that it is unchanged; you still map your fields to the act.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — ESPR 2025-2030 Working Plan Product Groups Digital Product Passport",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The Commission's ESPR working plan for 2025 to 2030 names steel, aluminium, textiles, furniture, tyres and mattresses as priority product groups, and each group gets its own delegated act that sets its passport requirements, so there is no single date for all products.",
+          "url": "https://authichain.com/p/espr-2025-2030-working-plan-product-groups-digital-product-passport"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "ESPR 2025-2030 Working Plan Product Groups Digital Product Passport",
+              "item": "https://authichain.com/p/espr-2025-2030-working-plan-product-groups-digital-product-passport"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Where do I find the date that applies to my product?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "In the delegated act for your product group, once the Commission adopts it. The working plan, COM(2025) 187, lists indicative timing only, and the Commission publishes the registry of adopted acts."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a signed record satisfy a delegated act?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not by itself. A delegated act sets the data fields, identifiers and access rules for its group. A signed record shows who issued the data and that it is unchanged; you still map your fields to the act."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "run-the-authichain-conformance-suite-against-your-own-verifier",
+    "keyword": "run the authichain conformance suite against your own verifier",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Run The Authichain Conformance Suite Against | AuthiChain",
+    "metaDescription": "The repository ships a conformance suite of 28 fixtures, and a verifier conforms when it returns the expected verdict for every one; run it with npm run.",
+    "h1": "Run The Authichain Conformance Suite Against Your Own Verifier",
+    "bodyHtml": "<p>The repository ships a conformance suite of 28 fixtures, and a verifier conforms when it returns the expected verdict for every one; run it with npm run conformance in the protocol directory, or point it at your own implementation.</p><h2>Why AuthiChain</h2><ul><li>The fixtures are adversarial: tampered fields, malformed anchors, testnet anchors and invalid dates each have a case with a stated expected verdict</li><li>The Python port of the verifier runs the same 28 fixtures under --strict, so a second implementation in another language has already been checked against them</li><li>The suite lives in the source repository and is not part of the npm package, so clone the repository to run it</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>What does passing the suite show?</h3><p>That your verifier returns the same verdicts as the reference on those 28 cases. It does not show the absence of other bugs, and it does not test the truth of any record.</p><h3>Can I add a fixture?</h3><p>Yes. The repository accepts contributions under Apache-2.0; a fixture that the reference verifier gets wrong is a useful report.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Run The Authichain Conformance Suite Against Your Own Verifier",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The repository ships a conformance suite of 28 fixtures, and a verifier conforms when it returns the expected verdict for every one; run it with npm run conformance in the protocol directory, or point it at your own implementation.",
+          "url": "https://authichain.com/p/run-the-authichain-conformance-suite-against-your-own-verifier"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Run The Authichain Conformance Suite Against Your Own Verifier",
+              "item": "https://authichain.com/p/run-the-authichain-conformance-suite-against-your-own-verifier"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What does passing the suite show?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "That your verifier returns the same verdicts as the reference on those 28 cases. It does not show the absence of other bugs, and it does not test the truth of any record."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I add a fixture?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. The repository accepts contributions under Apache-2.0; a fixture that the reference verifier gets wrong is a useful report."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "gtin-check-digit-calculation-validate-gtin-14",
+    "keyword": "gtin check digit calculation validate gtin-14",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Gtin Check Digit Calculation Validate Gtin-14 | AuthiChain",
+    "metaDescription": "The last digit of a GTIN is a check digit: multiply the digits before it by 3 and 1 alternately starting with 3 from the right, add them up, and the check.",
+    "h1": "Gtin Check Digit Calculation Validate Gtin-14",
+    "bodyHtml": "<p>The last digit of a GTIN is a check digit: multiply the digits before it by 3 and 1 alternately starting with 3 from the right, add them up, and the check digit is the amount that brings the total to the next multiple of 10, so 0950600013435 gets check digit 2 and becomes 09506000134352 as a GTIN-14.</p><h2>Why AuthiChain</h2><ul><li>A correct check digit shows a GTIN is well formed, which catches typing and scanning errors and does not show the number was ever assigned to a product</li><li>An AuthiChain record carries the gtin as a plain field and in its GS1 Digital Link URL, so you can recompute the check digit yourself</li><li>Who may use a GTIN is decided by GS1 company prefix licensing; the signature on a record shows who made statements about the GTIN, not who owns it</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does a valid check digit mean the product is real?</h3><p>No. Anyone can compute a valid check digit for a number nobody assigned. It only rules out a mistyped or misread number.</p><h3>Does the AuthiChain verifier check the GTIN check digit?</h3><p>The v0.1 specification does not list a check-digit test among its verification steps, so validate it in your own intake code if you need it.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Gtin Check Digit Calculation Validate Gtin-14",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The last digit of a GTIN is a check digit: multiply the digits before it by 3 and 1 alternately starting with 3 from the right, add them up, and the check digit is the amount that brings the total to the next multiple of 10, so 0950600013435 gets check digit 2 and becomes 09506000134352 as a GTIN-14.",
+          "url": "https://authichain.com/p/gtin-check-digit-calculation-validate-gtin-14"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Gtin Check Digit Calculation Validate Gtin-14",
+              "item": "https://authichain.com/p/gtin-check-digit-calculation-validate-gtin-14"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a valid check digit mean the product is real?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Anyone can compute a valid check digit for a number nobody assigned. It only rules out a mistyped or misread number."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the AuthiChain verifier check the GTIN check digit?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The v0.1 specification does not list a check-digit test among its verification steps, so validate it in your own intake code if you need it."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verifiable-credentials-2-0-validfrom-replaces-issuancedate-migration",
+    "keyword": "verifiable credentials 2.0 validfrom replaces issuancedate migration",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verifiable Credentials 2.0 Validfrom Replaces | AuthiChain",
+    "metaDescription": "W3C published Verifiable Credentials 2.0 as a Recommendation on 15 May 2025; it uses the context https://www.w3.org/ns/credentials/v2 and validFrom and.",
+    "h1": "Verifiable Credentials 2.0 Validfrom Replaces Issuancedate Migration",
+    "bodyHtml": "<p>W3C published Verifiable Credentials 2.0 as a Recommendation on 15 May 2025; it uses the context https://www.w3.org/ns/credentials/v2 and validFrom and validUntil in place of the 1.1 issuanceDate and expirationDate.</p><h2>Why AuthiChain</h2><ul><li>An AuthiChain record declares the v2 context and requires validFrom, so a record without it is rejected</li><li>The verifier checks validFrom and validUntil against a clock you can set, offline, in the same step as the signature</li><li>A 1.1 credential with issuanceDate needs its dates and context rewritten and re-signed under the new fields, because the signed bytes change</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can I keep a 1.1 context and add validFrom?</h3><p>Not reliably. The v2 context defines validFrom, and tools differ in how they handle mixed contexts. Re-issue under the v2 context so every party reads the same terms.</p><h3>Does moving to 2.0 change what a signature proves?</h3><p>No. It still proves who signed and that the content is unchanged, and it does not prove the content is true.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verifiable Credentials 2.0 Validfrom Replaces Issuancedate Migration",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "W3C published Verifiable Credentials 2.0 as a Recommendation on 15 May 2025; it uses the context https://www.w3.org/ns/credentials/v2 and validFrom and validUntil in place of the 1.1 issuanceDate and expirationDate.",
+          "url": "https://authichain.com/p/verifiable-credentials-2-0-validfrom-replaces-issuancedate-migration"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credentials 2.0 Validfrom Replaces Issuancedate Migration",
+              "item": "https://authichain.com/p/verifiable-credentials-2-0-validfrom-replaces-issuancedate-migration"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can I keep a 1.1 context and add validFrom?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not reliably. The v2 context defines validFrom, and tools differ in how they handle mixed contexts. Re-issue under the v2 context so every party reads the same terms."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does moving to 2.0 change what a signature proves?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It still proves who signed and that the content is unchanged, and it does not prove the content is true."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
