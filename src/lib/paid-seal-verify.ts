@@ -69,7 +69,7 @@ export type PaidSealDecision =
  * allowed only in test and development. A public worker with NODE_ENV
  * unset must not answer 200 for an unsettled proof.
  */
-function nonTrustlessAllowed(): boolean {
+export function nonTrustlessAllowed(): boolean {
   const mode = process.env.NODE_ENV;
   return mode === "test" || mode === "development";
 }
