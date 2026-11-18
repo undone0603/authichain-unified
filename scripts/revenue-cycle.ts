@@ -776,7 +776,7 @@ async function phaseDunning(): Promise<boolean> {
   }
 }
 
-async function phaseReport(db: SupabaseClient | null): Promise<void> {
+export async function phaseReport(db: SupabaseClient | null): Promise<string[]> {
   console.log("\n=== PHASE: report ===");
   const lines: string[] = [
     "💰 REVENUE CYCLE HEALTH REPORT",
@@ -810,28 +810,33 @@ async function phaseReport(db: SupabaseClient | null): Promise<void> {
       lines.push(`Leads: failed (${err.message})`);
     }
 
+    // Select only columns that exist in production: gov_proposals has no
+    // payment_link and revenue_records has no created_at. Supabase returns
+    // query errors instead of throwing, so check `error` or the report
+    // silently prints zeros.
     try {
-      const { data: props } = await db
+      const { data: props, error } = await db
         .from("gov_proposals")
-        .select("email_status,fit_score,payment_link")
+        .select("email_status,fit_score")
         .limit(500);
+      if (error) throw new Error(error.message);
       const unsent = (props ?? []).filter(
         p => p.email_status === "unsent"
       ).length;
-      const withLink = (props ?? []).filter(p => !!p.payment_link).length;
       lines.push(
-        `Gov proposals sampled: ${(props ?? []).length} (unsent=${unsent}, with payment_link=${withLink})`
+        `Gov proposals sampled: ${(props ?? []).length} (unsent=${unsent})`
       );
-    } catch {
-      lines.push("Gov proposals: table unavailable or query failed");
+    } catch (err: any) {
+      lines.push(`Gov proposals: failed (${err.message})`);
     }
 
     try {
-      const { data: rev } = await db
+      const { data: rev, error } = await db
         .from("revenue_records")
-        .select("amount,createdAt,created_at")
+        .select("amount,createdAt")
         .order("createdAt", { ascending: false })
         .limit(100);
+      if (error) throw new Error(error.message);
       const total = (rev ?? []).reduce(
         (sum, r: any) => sum + Number(r.amount ?? 0),
         0
@@ -839,8 +844,8 @@ async function phaseReport(db: SupabaseClient | null): Promise<void> {
       lines.push(
         `revenue_records (last ≤100): count=${(rev ?? []).length} sum_amount=${total}`
       );
-    } catch {
-      lines.push("revenue_records: unavailable");
+    } catch (err: any) {
+      lines.push(`revenue_records: failed (${err.message})`);
     }
 
     try {
@@ -890,6 +895,7 @@ async function phaseReport(db: SupabaseClient | null): Promise<void> {
   lines.push(`Generated: ${new Date().toISOString()}`);
 
   console.log(lines.join("\n"));
+  return lines;
 }
 
 async function main() {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { phaseCheckoutLinks, phaseProposals } from "../revenue-cycle";
+import { phaseCheckoutLinks, phaseProposals, phaseReport } from "../revenue-cycle";
 
 const CHECKOUT_BASE = "https://" + ["authichain", "com"].join(".") + "/checkout/";
 
@@ -253,4 +253,62 @@ describe("revenue-cycle checkout-links & proposals", () => {
     expect(metadata.needsProposal).toBe(true);
   });
 
+
+  it("phaseReport selects only production columns and reports query errors instead of zeros", async () => {
+    const selects: Record<string, string> = {};
+    const missing: Record<string, string> = {
+      gov_proposals: "payment_link",
+      revenue_records: "created_at",
+    };
+    const db = {
+      from: vi.fn((table: string) => {
+        let cols = "";
+        const q: Record<string, unknown> = {};
+        q.select = vi.fn((c: string) => {
+          cols = c;
+          selects[table] = c;
+          return q;
+        });
+        for (const name of ["order", "limit", "eq", "in", "gte", "or", "not"]) {
+          q[name] = vi.fn(() => q);
+        }
+        q.then = (resolve: (v: unknown) => unknown) => {
+          // Mimic PostgREST: an unknown column is an error, not an exception.
+          const bad = missing[table] && cols.split(",").includes(missing[table]);
+          const result = bad
+            ? { data: null, error: { message: `column ${table}.${missing[table]} does not exist` } }
+            : { data: [], error: null };
+          return Promise.resolve(result).then(resolve);
+        };
+        return q;
+      }),
+    } as unknown as SupabaseClient;
+
+    const lines = await phaseReport(db);
+
+    expect(selects.gov_proposals.split(",")).not.toContain("payment_link");
+    expect(selects.revenue_records.split(",")).not.toContain("created_at");
+    expect(lines.join("\n")).toContain("Gov proposals sampled: 0 (unsent=0)");
+    expect(lines.join("\n")).toContain("revenue_records (last ≤100): count=0");
+  });
+
+  it("phaseReport surfaces a Supabase error rather than printing an empty sample", async () => {
+    const db = {
+      from: vi.fn(() => {
+        const q: Record<string, unknown> = {};
+        for (const name of ["select", "order", "limit", "eq", "in", "gte", "or", "not"]) {
+          q[name] = vi.fn(() => q);
+        }
+        q.then = (resolve: (v: unknown) => unknown) =>
+          Promise.resolve({ data: null, error: { message: "permission denied" } }).then(resolve);
+        return q;
+      }),
+    } as unknown as SupabaseClient;
+
+    const out = (await phaseReport(db)).join("\n");
+
+    expect(out).toContain("Gov proposals: failed (permission denied)");
+    expect(out).toContain("revenue_records: failed (permission denied)");
+    expect(out).not.toContain("Gov proposals sampled");
+  });
 });
