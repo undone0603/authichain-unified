@@ -196,45 +196,23 @@ describe("revenue-cycle checkout-links & proposals", () => {
     expect(planned).toBe(0);
   });
 
-  it("phaseProposals skips gov_proposals with existing payment_link and leads with metadata.needsProposal === true", async () => {
+  it("avoids gov_proposals fields absent from production", async () => {
     const { db, updates } = makeMockDb({
       govProposals: [
         {
-          notice_id: "gov-skip",
-          title: "Already Linked",
-          agency: "DOD",
-          fit_score: 90,
-          email_status: "pending",
-          contact_email: "skip@agency.gov",
-          payment_link: CHECKOUT_BASE + "gov-existing",
-        },
-        {
-          notice_id: "gov-new",
-          title: "Needs Link",
-          agency: "USDA",
-          fit_score: 80,
-          email_status: "pending",
-          contact_email: "new@agency.gov",
-          payment_link: null,
+          notice_id: "gov-real-schema",
+          title: "Asset provenance",
+          agency: "Public Agency",
+          fit_score: 85,
+          email_status: "unsent",
+          contact_email: "published@agency.gov",
         },
       ],
       leads: [
         {
-          id: "lead-skip",
-          name: "Grace",
-          email: "grace@example.com",
-          company: "Eta Co",
+          id: "lead-eligible",
+          email: "inbound@example.com",
           status: "qualified",
-          source: "inbound",
-          metadata: { needsProposal: true },
-        },
-        {
-          id: "lead-new",
-          name: "Henry",
-          email: "henry@example.com",
-          company: "Theta Co",
-          status: "qualified",
-          source: "inbound",
           metadata: {},
         },
       ],
@@ -242,55 +220,37 @@ describe("revenue-cycle checkout-links & proposals", () => {
 
     const planned = await phaseProposals(db, { dryRun: false });
 
-    expect(planned).toBe(2);
-    expect(updates).toHaveLength(2);
-    expect(updates.map((u) => u.table)).toEqual(["gov_proposals", "leads"]);
+    expect(planned).toBe(1);
+    expect(db.from).not.toHaveBeenCalledWith("gov_proposals");
+    expect(updates).toHaveLength(1);
+    expect(updates[0].table).toBe("leads");
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("does not let already-processed rows crowd eligible ones out of the capped fetch", async () => {
-    // 25 processed gov proposals fill the query cap; the eligible one sits behind them.
-    const processedGov = Array.from({ length: 25 }, (_, i) => ({
-      notice_id: "gov-done-" + i,
-      title: "Processed",
-      agency: "Agency",
-      fit_score: 80,
-      email_status: "unsent",
-      contact_email: "done" + i + "@agency.gov",
-      payment_link: CHECKOUT_BASE + "done-" + i,
-    }));
-    const eligibleGov = {
-      notice_id: "gov-eligible",
-      title: "Eligible",
-      agency: "Agency",
-      fit_score: 80,
-      email_status: "unsent",
-      contact_email: "ready@agency.gov",
-      payment_link: null,
-    };
-    // 30 already-flagged leads precede the eligible one (old fetch cap was 30).
-    const flaggedLeads = Array.from({ length: 30 }, (_, i) => ({
+  it("does not let flagged leads consume proposal slots", async () => {
+    const flagged = Array.from({ length: 30 }, (_, i) => ({
       id: "lead-done-" + i,
       email: "done" + i + "@example.com",
       status: "qualified",
       proposalsSent: 0,
       metadata: { needsProposal: true },
     }));
-    const eligibleLead = {
-      id: "lead-eligible",
+    const eligible = {
+      id: "lead-next",
       email: "ready@example.com",
       status: "qualified",
       proposalsSent: 0,
       metadata: {},
     };
-    const { db, updates } = makeMockDb({
-      govProposals: [...processedGov, eligibleGov],
-      leads: [...flaggedLeads, eligibleLead],
-    });
+    const { db, updates } = makeMockDb({ leads: [...flagged, eligible] });
 
     const planned = await phaseProposals(db, { dryRun: false });
 
-    expect(planned).toBe(2);
-    expect(updates).toHaveLength(2);
-    expect(updates.map(u => u.table)).toEqual(["gov_proposals", "leads"]);
+    expect(planned).toBe(1);
+    expect(updates).toHaveLength(1);
+    expect(updates[0].table).toBe("leads");
+    const metadata = updates[0].payload.metadata as Record<string, unknown>;
+    expect(metadata.needsProposal).toBe(true);
   });
+
 });

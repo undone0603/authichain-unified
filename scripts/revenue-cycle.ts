@@ -479,62 +479,12 @@ export async function phaseProposals(db: SupabaseClient | null, opts?: { dryRun?
     return 0;
   }
 
-  // High-fit unsent gov proposals (if table exists)
+  // public.gov_proposals has no payment_link column in the live database.
+  // Government proposal CTAs require separately verified schema and workflow.
+  // Do not report unsent proposal drafts as enriched or write fictitious fields.
+  // This phase only flags eligible warm leads for permitted follow-up.
   let planned = 0;
   let failed = 0;
-  try {
-    const { data: govProps, error } = await db
-      .from("gov_proposals")
-      .select("notice_id,title,agency,fit_score,email_status,contact_email,payment_link")
-      .eq("email_status", "unsent")
-      .gte("fit_score", 70)
-      // Exclude already-linked rows in the query itself: filtering after a capped
-      // fetch lets 25 processed rows hide every eligible one.
-      .is("payment_link", null)
-      .limit(25);
-
-    if (error) {
-      console.warn(`  ⚠️  gov_proposals: ${error.message}`);
-    } else {
-      const withEmail = (govProps ?? []).filter(p => !!p.contact_email && !p.payment_link);
-      console.log(
-        `  Gov proposals ready (fit≥70, unsent, has contact): ${withEmail.length}/${(govProps ?? []).length}`
-      );
-      for (const p of withEmail.slice(0, 10)) {
-        if (p.payment_link) continue;
-        const cta = segmentPaymentCta("govchain");
-        const url = cta
-          ? withAttribution(cta.url, p.notice_id, "gov_proposal")
-          : "";
-        console.log(
-          `  • ${p.notice_id} ${p.agency} fit=${p.fit_score} → CTA ${cta?.name ?? "n/a"}`
-        );
-        if (dryRun) {
-          console.log(
-            `    WOULD stamp payment CTA on draft / enqueue closer: ${url}`
-          );
-          planned++;
-          continue;
-        }
-        // Persist CTA into a notes-style column if present; otherwise leave for email-proposals.
-        const { error: updErr } = await db
-          .from("gov_proposals")
-          .update({
-            payment_link: url,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("notice_id", p.notice_id);
-        if (updErr) {
-          console.warn("   gov_proposals update failed:", updErr.message);
-          failed++;
-        } else {
-          planned++;
-        }
-      }
-    }
-  } catch (err: any) {
-    console.warn(`  ⚠️  gov proposals phase error: ${err.message}`);
-  }
 
   // Warm leads with replies / high score but no proposalsSent
   const { data: warm, error: warmErr } = await db
