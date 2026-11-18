@@ -16,10 +16,10 @@ on:
 
 concurrency:
   # PM ruling Oct 24: CI-only per-workflow group, cancel stale runs so a
-  # push to main cannot pile CI up ahead of a deploy on the single
-  # self-hosted runner. Never a deploy group name.
+  # # push to main cannot pile CI up ahead of a deploy on the single
+  # # self-hosted runner. Never a deploy group name.
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # Self-hosted ARM64 runner cannot run this tooling yet (PM ruling Oct 24).
 # Flip to 'false' once the runner is verified; the skip step warns visibly.
@@ -31,7 +31,7 @@ permissions:
   contents: read
 jobs:
   lint:
-    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PRs stay on
+    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PR stays on
     # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
     runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
@@ -45,6 +45,7 @@ jobs:
           git sparse-checkout disable
           git reset --hard HEAD
           test -f package.json
+
       # Self-hosted WSL cannot use pnpm/action-setup for 10.28.2. The
       # download ETIMEDOUT and the signature check then refuses to run.
       - name: Use the runner Node and pnpm
@@ -60,17 +61,13 @@ jobs:
       - name: Setup Node.js
         timeout-minutes: 15
         if: runner.environment != 'self-hosted'
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbce0c15c1 # v7
         with:
           node-version: "22"
           cache: pnpm
 
-      # CFA-737: node --check one file at a time. `node --check a.mjs b.mjs`
-      # only parses the first argument, which is how a SyntaxError in
-      # ops-pulse.mjs reached main after #1865 / #1867.
       - name: Syntax-check autonomy scripts
         run: |
-          set -euo pipefail
           for f in scripts/autonomy/*.mjs; do
             node --check "$f"
           done
@@ -85,23 +82,75 @@ jobs:
       - name: Check for structural cannot-fail patterns in workflows
         run: node scripts/check-workflow-cannot-fail.mjs
 
-      # PM-330: workers_dev must be an explicit false on authichain-automation
-      # and authichain-edge-router, and no push-to-main deploy workflow may set
-      # cancel-in-progress: true. Read-only, offline.
       - name: Check deploy invariants (workers_dev off, no deploy cancels)
         run: node scripts/ci/check-deploy-invariants.mjs
 
       - name: Check every node:test file has a CI runner
         run: node scripts/ci/check-node-test-runners.mjs
 
+      - name: Check wrangler.toml Durable Object migrations
+        run: node scripts/check-wrangler-durable-objects.mjs
+
+      # Persistent self-hosted runner: drop deps and build outputs so state
+      # never leaks into the next run. Workspace-only; never outside it.
+      - name: Clean workspace (self-hosted)
+        if: always()
+        run: |
+          set -eu
+          ws="${GITHUB_WORKSPACE:?}"
+          case "$ws" in /|"") echo "::error::bad GITHUB_WORKSPACE"; exit 1;; esac
+          cd "$ws"
+          find . -mindepth 1 -type d \( -name node_modules -o -name .venv -o -name .next -o -name .open-next -o -name .turbo -o -name dist -o -name test-results \) -prune -exec rm -rf -- {} +
+
+  test:
+    needs: lint
+    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    timeout-minutes: 45
+    env:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Restore full tree after sparse checkout
+        if: runner.environment == 'self-hosted'
+        run: |
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -f package.json
+
+      # Self-hosted WSL cannot use pnpm/action-setup for 10.28.2. The
+      # download ETIMEDOUT and the signature check then refuses to run.
+      - name: Use the runner Node and pnpm
+        if: runner.environment == 'self-hosted'
+        run: bash scripts/ci/use-runner-pnpm.sh
+      - name: Install pnpm
+        timeout-minutes: 15
+        if: runner.environment != 'self-hosted'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: "10.28.2"
+
+      - name: Setup Node.js
+        timeout-minutes: 15
+        if: runner.environment != 'self-hosted'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbce0c15c1 # v7
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        timeout-minutes: 15
+        run: pnpm install --frozen-lockfile --prefer-offline
+
       - name: Check openclaw AGENT_SECRET bind skip ($0 Deploy Workers)
-        run: pnpm exec vitest run scripts/__tests__/bind-openclaw-agentz-secrets.test.ts
+        run: pnpm exec vitest run scripts/__tests__/deploy-workers-agent-secret-bind.test.ts
 
       - name: Check sister x402 facilitator bind matches authichain-com
-        run: pnpm exec vitest run scripts/__tests__/bind-x402-secrets.test.ts
+        run: pnpm exec vitest run scripts/__tests__/sister-x402-facilitator-bind.test.ts
 
       - name: Check AgentZ tunnel gh secret set ($0 bring-up)
-        run: pnpm exec vitest run scripts/__tests__/resolve-agent-secret.test.ts
+        run: pnpm exec vitest run scripts/__tests__/agentz-tunnel-gh-secret-set.test.ts
 
       - name: Check autonomy manifest, reconciler, breaker and pulse
         run: pnpm exec vitest run scripts/__tests__/autonomy.test.ts
@@ -110,7 +159,7 @@ jobs:
       # Self-hosted WSL has no passwordless sudo, so this is user-space
       # only. CircleCI is left unchanged to preserve credit reserve.
       - name: Install local PostgreSQL binaries
-        run: bash scripts/ci/install-local-postgres.sh
+        run: bash scripts/ci/install-local-postgresql.sh
 
       - name: Catalog grant two-connection PostgreSQL
         env:
@@ -127,7 +176,7 @@ jobs:
           pnpm exec vitest run src/lib/catalog-session-grant.concurrency.pg.test.ts --reporter=verbose
 
       # The root package's suites (src, server, worker-app, packages, scripts,
-      # client, workers) are outside `turbo test --filter=!.`, so no other job
+      # client, workers) are outside `turbo test --filter=!`, so no other job
       # runs them. node:test files are excluded by vitest.config.ts and run on
       # their workspace runners, or in the next step when they have none.
       - name: Root Vitest suite
@@ -177,9 +226,6 @@ jobs:
       - name: "Skipped on self-hosted: Hardhat contract tests"
         if: env.SKIP_HARDHAT_ON_SELF_HOSTED == 'true'
         run: echo "::warning title=Skipped on self-hosted::Hardhat contract tests (pnpm test:contracts) not run - solc 0.8.19 fetch/ARM64 binary unverified on the runner. Not a pass."
-
-      - name: Check wrangler.toml Durable Object migrations
-        run: node scripts/check-wrangler-durable-objects.mjs
 
       # Persistent self-hosted runner: drop deps and build outputs so state
       # never leaks into the next run. Workspace-only; never outside it.
