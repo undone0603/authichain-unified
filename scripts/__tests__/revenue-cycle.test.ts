@@ -16,19 +16,35 @@ function makeMockDb(opts: MockDbOptions = {}) {
 
   const db = {
     from: vi.fn((table: string) => {
-      const rows = table === "gov_proposals" ? (opts.govProposals ?? []) : (opts.leads ?? []);
-      const queryBuilder: Record<string, unknown> = {
-        select: vi.fn(() => queryBuilder),
-        in: vi.fn(() => queryBuilder),
-        gte: vi.fn(() => queryBuilder),
-        eq: vi.fn(() => queryBuilder), or: vi.fn(() => queryBuilder), order: vi.fn(() => queryBuilder), limit: vi.fn(() => queryBuilder), then: (resolve: (value: { data: Record<string, unknown>[]; error: null }) => unknown) => Promise.resolve({ data: rows, error: null }).then(resolve),
-        update: vi.fn((payload: Record<string, unknown>) => {
-          updates.push({ table, payload });
-          return {
-            eq: vi.fn(async () => updateResult),
-          };
-        }),
+      const source = table === "gov_proposals" ? (opts.govProposals ?? []) : (opts.leads ?? []);
+      // Only `.is(col, null)` and `.limit(n)` are modelled: together they decide which
+      // rows a capped query can see. Other filters are accepted and ignored so
+      // fixtures stay small.
+      const nullCols: string[] = [];
+      let max = Number.POSITIVE_INFINITY;
+      const queryBuilder: Record<string, unknown> = {};
+      const chain = () => queryBuilder;
+      for (const name of ["select", "in", "gte", "eq", "neq", "not", "or", "order"]) {
+        queryBuilder[name] = vi.fn(chain);
+      }
+      queryBuilder.is = vi.fn((col: string, val: unknown) => {
+        if (val === null) nullCols.push(col);
+        return queryBuilder;
+      });
+      queryBuilder.limit = vi.fn((n: number) => {
+        max = n;
+        return queryBuilder;
+      });
+      queryBuilder.then = (
+        resolve: (value: { data: Record<string, unknown>[]; error: null }) => unknown
+      ) => {
+        const rows = source.filter(r => nullCols.every(c => r[c] == null)).slice(0, max);
+        return Promise.resolve({ data: rows, error: null }).then(resolve);
       };
+      queryBuilder.update = vi.fn((payload: Record<string, unknown>) => {
+        updates.push({ table, payload });
+        return { eq: vi.fn(async () => updateResult) };
+      });
       return queryBuilder;
     }),
   };
@@ -73,7 +89,9 @@ describe("revenue-cycle checkout-links & proposals", () => {
     expect((meta.paymentLink as string).startsWith(CHECKOUT_BASE)).toBe(true);
     expect(meta.paymentLink).toContain("prospect_id=lead-1");
     expect(meta.paymentLink).toContain("utm_source=revenue_cycle");
-    expect(meta.checkoutUrl).toBe(meta.paymentLink);
+    // The phase writes `paymentLink` only; `checkoutUrl` is just an alternate key that
+    // the idempotency check also honours.
+    expect(typeof meta.paymentLinkAttachedAt).toBe("string");
   });
 
   it("phaseCheckoutLinks skips leads that already have paymentLink or checkoutUrl (idempotent)", async () => {
@@ -226,6 +244,53 @@ describe("revenue-cycle checkout-links & proposals", () => {
 
     expect(planned).toBe(2);
     expect(updates).toHaveLength(2);
-    expect(updates.map((u) => u.table)).toEqual(["gov_proposals", "leads"]); }); it("filters processed rows before slicing to 10 in phaseProposals", async () => { const skippedGov = Array.from({ length: 10 }, (_, i) => ({ id: "gov-skip-" + i, contact_email: "skip" + i + "@agency.gov", solicitation_number: "SOL-" + i, agency: "Agency", title: "Skipped", estimated_value: 1000, payment_link: "https://pay.example/" + i })); const newGov = { id: "gov-eligible", contact_email: "ready@agency.gov", solicitation_number: "SOL-NEW", agency: "Agency", title: "Eligible", estimated_value: 5000, payment_link: null }; const skippedLeads = Array.from({ length: 10 }, (_, i) => ({ id: "lead-skip-" + i, name: "Skip" + i, email: "skip" + i + "@example.com", company: "Co", status: "qualified", source: "inbound", metadata: { needsProposal: true } })); const newLead = { id: "lead-eligible", name: "Ready", email: "ready@example.com", company: "New Co", status: "qualified", source: "inbound", metadata: {} }; const { db, updates } = createMockDb({ gov_proposals: [...skippedGov, newGov], leads: [...skippedLeads, newLead] }); const planned = await phaseProposals(db, { dryRun: false }); expect(planned).toBe(2); expect(updates).toHaveLength(2); expect(updates.map((u) => u.table)).toEqual(["gov_proposals", "leads"]);
+    expect(updates.map((u) => u.table)).toEqual(["gov_proposals", "leads"]);
+  });
+
+  it("does not let already-processed rows crowd eligible ones out of the capped fetch", async () => {
+    // 25 processed gov proposals fill the query cap; the eligible one sits behind them.
+    const processedGov = Array.from({ length: 25 }, (_, i) => ({
+      notice_id: "gov-done-" + i,
+      title: "Processed",
+      agency: "Agency",
+      fit_score: 80,
+      email_status: "unsent",
+      contact_email: "done" + i + "@agency.gov",
+      payment_link: CHECKOUT_BASE + "done-" + i,
+    }));
+    const eligibleGov = {
+      notice_id: "gov-eligible",
+      title: "Eligible",
+      agency: "Agency",
+      fit_score: 80,
+      email_status: "unsent",
+      contact_email: "ready@agency.gov",
+      payment_link: null,
+    };
+    // 30 already-flagged leads precede the eligible one (old fetch cap was 30).
+    const flaggedLeads = Array.from({ length: 30 }, (_, i) => ({
+      id: "lead-done-" + i,
+      email: "done" + i + "@example.com",
+      status: "qualified",
+      proposalsSent: 0,
+      metadata: { needsProposal: true },
+    }));
+    const eligibleLead = {
+      id: "lead-eligible",
+      email: "ready@example.com",
+      status: "qualified",
+      proposalsSent: 0,
+      metadata: {},
+    };
+    const { db, updates } = makeMockDb({
+      govProposals: [...processedGov, eligibleGov],
+      leads: [...flaggedLeads, eligibleLead],
+    });
+
+    const planned = await phaseProposals(db, { dryRun: false });
+
+    expect(planned).toBe(2);
+    expect(updates).toHaveLength(2);
+    expect(updates.map(u => u.table)).toEqual(["gov_proposals", "leads"]);
   });
 });

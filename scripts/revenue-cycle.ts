@@ -466,6 +466,11 @@ export async function phaseCheckoutLinks(db: SupabaseClient | null, opts?: { dry
   return attached;
 }
 
+// Rows already flagged (metadata.needsProposal) are dropped after the fetch, so the
+// fetch window must be well above the 10-row processing batch or flagged rows crowd
+// out eligible ones.
+const WARM_LEAD_FETCH_LIMIT = 200;
+
 export async function phaseProposals(db: SupabaseClient | null, opts?: { dryRun?: boolean }): Promise<number> {
   const dryRun = opts?.dryRun ?? isDryRun;
   console.log("\n=== PHASE: proposals ===");
@@ -483,6 +488,9 @@ export async function phaseProposals(db: SupabaseClient | null, opts?: { dryRun?
       .select("notice_id,title,agency,fit_score,email_status,contact_email,payment_link")
       .eq("email_status", "unsent")
       .gte("fit_score", 70)
+      // Exclude already-linked rows in the query itself: filtering after a capped
+      // fetch lets 25 processed rows hide every eligible one.
+      .is("payment_link", null)
       .limit(25);
 
     if (error) {
@@ -535,7 +543,7 @@ export async function phaseProposals(db: SupabaseClient | null, opts?: { dryRun?
       "id,email,segment,status,proposalsSent,emailReplied,leadScore,score,metadata"
     )
     .or("emailReplied.eq.true,leadScore.gte.70,score.gte.70")
-    .limit(30);
+    .limit(WARM_LEAD_FETCH_LIMIT);
 
   if (warmErr) {
     console.warn(`  ⚠️  warm leads: ${warmErr.message}`);
