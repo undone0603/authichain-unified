@@ -1,9 +1,12 @@
 name: MCP Registry Publish
 
 # Lists the live remote MCP server (https://authichain.com/mcp) in the official
-# MCP registry as com.authichain/authichain. GitHub OIDC login: no secret.
-# NOTE: github-oidc can only publish io.github.* names, so a NEW
-# com.authichain version still fails here until DNS/HTTP auth is added.
+# MCP registry as com.authichain/authichain.
+# github-oidc can only publish io.github.* names, so com.authichain/* uses
+# registry DNS auth: an Ed25519 key whose public half is published in a TXT
+# record on authichain.com, with the private half (hex) in the repo secret
+# MCP_REGISTRY_PRIVATE_KEY. Without that secret the publish step fails with a
+# clear message instead of attempting a login that cannot succeed.
 # Bump "version" in server.json to publish a new entry; an already-listed
 # version is skipped.
 
@@ -30,7 +33,15 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install mcp-publisher
-        run: curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+        run: |
+          set -euo pipefail
+          # The authichain-wsl runner is aarch64; the amd64 build cannot exec there.
+          case "$(uname -m)" in
+            x86_64) arch=amd64 ;;
+            aarch64|arm64) arch=arm64 ;;
+            *) echo "::error::unsupported runner arch $(uname -m)"; exit 1 ;;
+          esac
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_${arch}.tar.gz" | tar xz mcp-publisher
 
       - name: Validate
         run: ./mcp-publisher validate
@@ -52,9 +63,15 @@ jobs:
             echo "listed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Login (GitHub OIDC) and publish
+      - name: Login (DNS auth for com.authichain) and publish
         if: steps.listed.outputs.listed == 'false'
+        env:
+          MCP_REGISTRY_PRIVATE_KEY: ${{ secrets.MCP_REGISTRY_PRIVATE_KEY }}
         run: |
           set -euo pipefail
-          ./mcp-publisher login github-oidc
+          if [ -z "${MCP_REGISTRY_PRIVATE_KEY:-}" ]; then
+            echo "::error::MCP_REGISTRY_PRIVATE_KEY is not set. com.authichain/* needs DNS (or HTTP) registry auth; github-oidc only covers io.github.* names."
+            exit 1
+          fi
+          ./mcp-publisher login dns --domain authichain.com --private-key "$MCP_REGISTRY_PRIVATE_KEY"
           ./mcp-publisher publish
