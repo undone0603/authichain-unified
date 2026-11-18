@@ -203,7 +203,7 @@ export async function guardedSend(args: {
   if (!canSend(assessment)) {
     return { sent: false, reason: assessment.reasons.join(","), assessment };
   }
-  if (isSuppressed(assessment.email)) {
+  if (await isSuppressed(assessment.email)) {
     return { sent: false, reason: "suppression_list", assessment };
   }
   if (!(await domainAcceptsMail(assessment.email))) {
