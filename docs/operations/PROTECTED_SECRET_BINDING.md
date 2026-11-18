@@ -61,3 +61,32 @@ and require separately verified authorization and a documented rollback.
 Landing these changes does not issue credentials, create protected
 environments, deploy a Worker, alter any live binding, transfer funds,
 charge a customer, or prove paid fulfillment.
+
+## Additional protected manual releases (follow-up to #2629)
+
+The revenue-worker and manufacturer-status deployment workflows must never
+publish or refresh secrets on a push to main. Both are operator-initiated
+workflow_dispatch jobs only, with an exact current protected-main SHA,
+eight CircleCI contexts, read-only GitHub environment policy inspection,
+and a non-cancelling concurrency group. The revenue-worker uses a dedicated
+production-cloudflare-revenue-worker environment and
+AUTHICHAIN_REVENUE_WORKER_CLOUDFLARE_API_TOKEN / _ACCOUNT_ID credentials.
+Manufacturer-status uses production-cloudflare-manufacturer-status and
+AUTHICHAIN_MANUFACTURER_STATUS_CLOUDFLARE_API_TOKEN / _ACCOUNT_ID.
+
+The protected environments, token scopes, and code-to-target identity must be
+verified by authorized administration before first dispatch. The manual
+revenue-worker workflow may rewrite Supabase, Stripe and sales credentials;
+that is never a validation technique. Existing production is unchanged by
+this source-only change. Additional manual Gmail/social/outreach credential
+input leaks require separately scoped remediation and must not be considered
+fixed by this follow-up.
+
+The general deploy-workers.yml workflow retains its limited automatic source
+publishes, but its five remaining secret-binding steps (AgentZ, dashboard,
+OpenClaw, authichain-com, GS1 resolver) must run **only** during an explicit
+workflow_dispatch. A push may not rewrite credentials, even for an auto-
+deploy-allowlisted Worker. This preserves --keep-vars, while retaining
+separate protected release and credential-scope work for the broader Worker
+publishing surface. No automatic deploy path here may be treated as proof
+that all production writes are protected.

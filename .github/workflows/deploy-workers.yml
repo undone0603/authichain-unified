@@ -291,6 +291,7 @@ jobs:
 
       - name: Bind agentz secrets
         if: |
+          github.event_name == 'workflow_dispatch' &&
           matrix.worker == 'authichain-agentz' &&
           env.CLOUDFLARE_ACCOUNT_ID != '' &&
           (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-agentz')
@@ -322,6 +323,7 @@ jobs:
       # shows "not connected" on the page instead of failing the deploy.
       - name: Bind command-center secrets
         if: |
+          github.event_name == 'workflow_dispatch' &&
           matrix.worker == 'authichain-dashboard' &&
           env.CLOUDFLARE_ACCOUNT_ID != '' &&
           (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-dashboard')
@@ -355,6 +357,7 @@ jobs:
 
       - name: Bind claw AGENTZ_* secrets
         if: |
+          github.event_name == 'workflow_dispatch' &&
           matrix.worker == 'authichain-openclaw' &&
           env.CLOUDFLARE_ACCOUNT_ID != '' &&
           (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-openclaw')
@@ -372,6 +375,7 @@ jobs:
 
       - name: Bind Stripe secret on authichain-com
         if: |
+          github.event_name == 'workflow_dispatch' &&
           matrix.worker == 'authichain-com' &&
           env.CLOUDFLARE_ACCOUNT_ID != '' &&
           (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-com')
@@ -406,6 +410,7 @@ jobs:
       # the dashboard, or the two will drift.
       - name: Bind ISSUE_SECRET on gs1-resolver
         if: |
+          github.event_name == 'workflow_dispatch' &&
           matrix.worker == 'gs1-resolver' &&
           env.CLOUDFLARE_ACCOUNT_ID != '' &&
           (github.event.inputs.worker == '' || github.event.inputs.worker == 'gs1-resolver')
