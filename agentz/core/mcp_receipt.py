@@ -57,7 +57,7 @@ def execute_and_sign(*, opener=urlopen, now=None, endpoint=None, source_sha=None
     if not isinstance(key, Ed25519PrivateKey):
         raise RuntimeError("KEY_NOT_ED25519")
 
-    execution_id = str(uuid.uuid4())
+    execution_id = str(uuid.uuid4())  # Fresh server-generated ID; client supplies no ID or evidence.
     request_obj = {"jsonrpc": "2.0", "id": execution_id, "method": "tools/call",
                    "params": {"name": "get_pricing", "arguments": {}}}
     request_bytes = _canonical(request_obj)
@@ -107,7 +107,7 @@ def verify_receipt(receipt: dict) -> bool:
     request, response = json.loads(request_bytes), json.loads(response_bytes)
     if request.get("method") != "tools/call" or request.get("params") != {"name": "get_pricing", "arguments": {}} or request.get("id") != payload["executionId"]:
         return False
-    if response.get("id") != payload["executionId"] or "result" not in response or "error" in response:
+    if response.get("id") != payload["executionId"] or "result" not in response or "error" in response or (isinstance(response["result"], dict) and response["result"].get("isError") is True):
         return False
     # did:key Ed25519 multicodec: 0xed01 followed by 32 raw public-key bytes.
     z = DID_KEY.removeprefix("did:key:z")
@@ -115,7 +115,10 @@ def verify_receipt(receipt: dict) -> bool:
     for char in z:
         n = n * 58 + _B58.index(char)
     raw = n.to_bytes(34, "big")
-    if raw[:2] != b"\\xed\\x01":
+    if raw[:2] != bytes((0xed, 0x01)):
         return False
-    Ed25519PublicKey.from_public_bytes(raw[2:]).verify(decode(s), (h + "." + p).encode("ascii"))
+    try:
+        Ed25519PublicKey.from_public_bytes(raw[2:]).verify(decode(s), (h + "." + p).encode("ascii"))
+    except (ValueError, Exception):
+        return False
     return True
