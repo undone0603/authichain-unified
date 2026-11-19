@@ -1,6 +1,7 @@
 /**
  * Fulfil a $950 EU battery passport gap report order.
  *
+ *   npx tsx scripts/battery-gap-report/generate.ts --questions   (email to the buyer after payment)
  *   npx tsx scripts/battery-gap-report/generate.ts intake.json [--out dir]
  *
  * Reads the customer's intake (see intake.example.json), refuses it unless it
@@ -16,10 +17,15 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildGapReport,
+  intakeQuestionnaire,
   type GapReportIntake,
 } from "../../workers/authichain-com/src/battery-gap-report.ts";
 
 const args = process.argv.slice(2);
+if (args.includes("--questions")) {
+  process.stdout.write(intakeQuestionnaire());
+  process.exit(0);
+}
 const file = args.find(a => !a.startsWith("--"));
 const outIdx = args.indexOf("--out");
 const outDir = outIdx >= 0 ? args[outIdx + 1] : ".";

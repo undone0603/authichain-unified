@@ -3,6 +3,7 @@ import { annexXiiiRows } from "./battery-gap-map.ts";
 import {
   REPORT_DISCLAIMER,
   buildGapReport,
+  intakeQuestionnaire,
   markdownToHtml,
   modelReport,
   validateIntake,
@@ -152,6 +153,30 @@ describe("buildGapReport", () => {
     expect(html).not.toContain("<script>");
     expect(html).toContain("&lt;script&gt;");
     expect(html).toContain("&quot;rev | B&quot; &lt;b&gt;");
+  });
+});
+
+describe("intakeQuestionnaire", () => {
+  it("asks for every item the customer can supply, keyed to its intake field", () => {
+    const q = intakeQuestionnaire();
+    const m = intake().models[0];
+    for (const r of annexXiiiRows(m).filter(
+      x => x.status === "needs_operator" || x.status === "not_public"
+    ))
+      expect(q).toContain(`[available.${r.id}]`);
+    expect(q).not.toContain("[available.energy]");
+    expect(q).not.toContain("[available.commercial]");
+    expect(q).toContain(REPORT_DISCLAIMER);
+  });
+
+  it("every key it asks for is accepted by validateIntake", () => {
+    const keys = [
+      ...intakeQuestionnaire().matchAll(/\[available\.([a-z_]+)\]/g),
+    ].map(x => x[1]);
+    const i = intake();
+    i.models[0].available = Object.fromEntries(keys.map(k => [k, "held"]));
+    expect(() => validateIntake(i)).not.toThrow();
+    expect(modelReport(i.models[0]).counts.missing).toBe(0);
   });
 });
 

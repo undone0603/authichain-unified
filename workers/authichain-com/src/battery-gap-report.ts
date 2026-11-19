@@ -296,6 +296,39 @@ export function buildGapReport(intake: GapReportIntake): GapReport {
   return { markdown, html: markdownToHtml(markdown), models };
 }
 
+/**
+ * Plain-text questions to email a buyer after payment. Built from the same
+ * Annex XIII rows as the report, so each answer maps to one intake field.
+ */
+export function intakeQuestionnaire(): string {
+  const rows = annexXiiiRows({
+    model: "x",
+    statedWh: 1,
+    ah: 1,
+    nominalV: 1,
+    placing: "unknown",
+  });
+  const ask = rows.filter(
+    r => r.status === "needs_operator" || r.status === "not_public"
+  );
+  const out: string[] = [
+    "Thank you for ordering the EU Battery Passport gap report. To write it, we need the following for each battery model. Answer what you can; anything you leave blank is reported as missing.",
+    "",
+    "Per model:",
+    "1. Model designation [model]",
+    "2. Stated energy in Wh [statedWh]",
+    "3. Rated capacity in Ah [ah]",
+    "4. Nominal voltage in V [nominalV]",
+    "5. Expected lifetime in cycles, as a range if you have one [cyclesLow, cyclesHigh]",
+    "6. Who places this battery on the EU market: you, your cell maker, or not yet confirmed? [placing: self | cell_maker | unknown]",
+    "",
+    'For each item below, tell us whether you hold it and briefly what it is (for example, "declaration of conformity, draft rev B"). We record your answer in your words and do not review the documents.',
+  ];
+  ask.forEach((r, i) => out.push(`${i + 7}. ${r.item} [available.${r.id}]`));
+  out.push("", REPORT_DISCLAIMER, "");
+  return out.join("\n");
+}
+
 const esc = (s: string): string =>
   s
     .replace(/&/g, "&amp;")
