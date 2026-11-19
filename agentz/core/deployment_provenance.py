@@ -37,6 +37,68 @@ def _published_key() -> Ed25519PublicKey:
     return Ed25519PublicKey.from_public_bytes(raw[2:])
 
 
+
+def sign_deployment_provenance(
+    *,
+    artifact: bytes,
+    source_sha: str,
+    deployment_id: str,
+    version_id: str,
+    workflow_run_id: str,
+    now=None,
+) -> dict:
+    """AgentZ signature over supplied release facts; independent verification required.
+
+    This function does NOT assert that a deployment occurred. A protected
+    release controller must obtain the values from authenticated GitHub and
+    Cloudflare APIs and the actual deployable artifact. The signature proves
+    only that the AgentZ key signed these bytes; independent verification
+    must establish their truth.
+    """
+    import os
+    from datetime import datetime, timezone
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from agentz.core.identity import KEY_FILE, did_key_from_pem, identity_status
+
+    if not isinstance(artifact, bytes) or not artifact:
+        raise ValueError("ARTIFACT_REQUIRED")
+    if not isinstance(source_sha, str) or not HEX40.fullmatch(source_sha):
+        raise ValueError("SOURCE_SHA_REQUIRED")
+    if not all(isinstance(x, str) and x and len(x) <= 256 for x in
+               (deployment_id, version_id, workflow_run_id)):
+        raise ValueError("RELEASE_IDENTIFIERS_REQUIRED")
+    now = now or datetime.now(timezone.utc)
+    status = identity_status(now)
+    if not status["can_sign_as_self"]:
+        raise RuntimeError("AGENTZ_IDENTITY_NOT_PROVEN")
+    key_dir = os.environ.get("AGENTZ_KEY_DIR")
+    if not key_dir:
+        raise RuntimeError("KEY_UNBOUND")
+    pem = (Path(key_dir) / KEY_FILE).read_bytes()
+    if did_key_from_pem(pem) != DID_KEY:
+        raise RuntimeError("KEY_MISMATCH")
+    key = serialization.load_pem_private_key(pem, password=None)
+    if not isinstance(key, Ed25519PrivateKey):
+        raise RuntimeError("KEY_NOT_ED25519")
+    payload = {
+        "schema": SCHEMA,
+        "sourceCommit": source_sha,
+        "artifactSha256": hashlib.sha256(artifact).hexdigest(),
+        "deploymentId": deployment_id,
+        "versionId": version_id,
+        "workflowRunId": workflow_run_id,
+        "signedAt": now.isoformat().replace("+00:00", "Z"),
+    }
+    header = {"alg": "EdDSA", "typ": "AGENTZ-PROVENANCE+JWS", "kid": DID_KEY}
+    canonical = lambda value: json.dumps(value, sort_keys=True, separators=(",", ":"),
+                                         ensure_ascii=False, allow_nan=False).encode("utf-8")
+    b64 = lambda raw: base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+    signing_input = b64(canonical(header)) + "." + b64(canonical(payload))
+    return {"payload": payload,
+            "jws": signing_input + "." + b64(key.sign(signing_input.encode("ascii")))}
+
+
 def verify_deployment_provenance(
     attestation: dict,
     *,
