@@ -81,6 +81,13 @@ class ScanInput(BaseModel):
 async def health():
     return {"status": "sovereign", "network": "Polygon"}
 
+
+@app.get("/identity")
+async def identity():
+    """AgentZ's own Agent ID, DID documents and key-possession status. No secrets."""
+    from agentz.core.identity import identity_status
+    return identity_status()
+
 @app.get("/scout/{city}")
 async def api_scout(city: str, token: bool = Depends(verify_token)):
     from agentz.core.scout import scout_businesses
