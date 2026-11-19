@@ -12,6 +12,7 @@ export type ActivationSendResult = {
   provider?: string;
   status?: number;
   error?: string;
+  messageId?: string;
 };
 export type ActivationDispatchResult = {
   status: ActivationDispatchStatus;
@@ -98,19 +99,25 @@ export async function deliverDppActivationOnce(
       error: err instanceof Error ? err.message : String(err),
     };
   }
+  const receiptValid = typeof result.messageId === "string" &&
+    /^[A-Za-z0-9_-]{1,128}$/.test(result.messageId);
+  // Resend 2xx alone is not an acceptance receipt. Without an email ID,
+  // manual reconciliation is required; no automatic replay is allowed.
+  const accepted = result.ok === true && receiptValid;
   const completed = await call(db, "dpp_activation_finish_send", {
     p_session_id: input.sessionId,
     p_claim_token: token,
-    p_accepted: result.ok === true,
+    p_accepted: accepted,
     p_provider: result.provider || null,
     p_http_status: result.status ?? null,
+    p_provider_message_id: accepted ? result.messageId : null,
   });
-  const expected = result.ok ? "accepted" : "needs_reconciliation";
+  const expected = accepted ? "accepted" : "needs_reconciliation";
   if (completed.status !== expected) throw new Error("dpp_activation_receipt_mismatch");
   return {
-    status: result.ok ? "sent" : "failed",
+    status: accepted ? "sent" : "failed",
     provider: result.provider,
     httpStatus: result.status ?? null,
-    ...(!result.ok ? { error: result.error } : {}),
+    ...(!accepted ? { error: result.error || "provider receipt not verified" } : {}),
   };
 }
