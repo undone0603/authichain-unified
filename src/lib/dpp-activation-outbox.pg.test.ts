@@ -20,8 +20,9 @@ const claim = (s: string) =>
 const begin = (s: string, token: string) =>
   rpc("dpp_activation_begin_send", "$1,$2::uuid", [s, token]);
 const finish = (s: string, token: string, accepted: boolean) =>
-  rpc("dpp_activation_finish_send", "$1,$2::uuid,$3,$4,$5", [
-    s, token, accepted, "resend", accepted ? 200 : null
+  rpc("dpp_activation_finish_send", "$1,$2::uuid,$3,$4,$5,$6", [
+    s, token, accepted, "resend", accepted ? 200 : null,
+    accepted ? "email_receipt_2482" : null
   ]);
 const receipt = (s: string) => db.query(
   "INSERT INTO public.founder_exit_side_effects(idempotency_key,profile_id) VALUES($1,$2)",
