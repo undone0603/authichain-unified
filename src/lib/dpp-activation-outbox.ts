@@ -42,6 +42,19 @@ async function call(
   }
   return object(data);
 }
+/** Pre-grant marker written only for a verified new/recoverable paid session. */
+export async function prepareDppActivation(
+  db: ActivationRpcClient,
+  sessionId: string
+): Promise<void> {
+  if (!sessionId) throw new Error("dpp_activation_missing_session");
+  const result = await call(db, "dpp_activation_prepare", { p_session_id: sessionId });
+  if (!["pending", "leased", "sending", "accepted", "needs_reconciliation"].includes(
+    String(result.status)
+  )) {
+    throw new Error("dpp_activation_prepare_invalid_status");
+  }
+}
 export async function deliverDppActivationOnce(
   db: ActivationRpcClient,
   input: { sessionId: string; profileId: string; demo: boolean },
@@ -56,6 +69,7 @@ export async function deliverDppActivationOnce(
     ...keys,
     p_is_demo: false,
   });
+  if (initialized.status === "legacy_untracked") return { status: "held" };
   if (initialized.status === "accepted") return { status: "skipped" };
   if (!["pending", "leased", "sending", "needs_reconciliation"].includes(String(initialized.status))) {
     throw new Error("dpp_activation_unknown_outbox_state");
