@@ -139,7 +139,7 @@ async function deliverActivationAfterGrant(
             html: mail.html,
             text: mail.text,
           },
-          { onlyProvider: "resend" }
+          { onlyProvider: "resend", idempotencyKey: input.sessionId }
         )
     );
   } catch (err) {
