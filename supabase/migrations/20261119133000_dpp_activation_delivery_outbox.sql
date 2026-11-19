@@ -150,6 +150,12 @@ DECLARE v_updated integer; v_final text;
 BEGIN
   -- Uncertain failure is held, NEVER automatically retried. No email, API
   -- payload, provider error body, or recipient identifier is persisted.
+  IF p_accepted IS TRUE AND (
+    p_provider_message_id IS NULL OR
+    p_provider_message_id !~ '^[A-Za-z0-9_-]{1,128}$'
+  ) THEN
+    RAISE EXCEPTION 'dpp_activation_missing_provider_receipt';
+  END IF;
   v_final := CASE WHEN p_accepted IS TRUE
     THEN 'accepted' ELSE 'needs_reconciliation' END;
   UPDATE public.dpp_activation_outbox
