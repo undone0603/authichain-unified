@@ -3,7 +3,7 @@
 -- replays Stripe events, grants credit, sends mail, or changes customer data.
 CREATE TABLE IF NOT EXISTS public.dpp_activation_outbox (
   session_id text PRIMARY KEY,
-  profile_id text NOT NULL,
+  profile_id text,
   state text NOT NULL DEFAULT 'pending'
     CHECK (state IN ('pending','leased','sending','accepted','needs_reconciliation')),
   claim_token uuid,
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.dpp_activation_outbox (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CHECK (length(session_id) BETWEEN 8 AND 255),
-  CHECK (length(profile_id) BETWEEN 1 AND 255)
+  CHECK (profile_id IS NULL OR length(profile_id) BETWEEN 1 AND 255)
 );
 CREATE INDEX IF NOT EXISTS dpp_activation_outbox_state_idx
   ON public.dpp_activation_outbox(state, lease_until);
@@ -23,6 +23,27 @@ ALTER TABLE public.dpp_activation_outbox ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.dpp_activation_outbox FROM PUBLIC, anon, authenticated;
 -- No table RLS policy, no anonymous access. All mutations require these
 -- SECURITY DEFINER functions, each granted only to service_role.
+
+-- Before any paid grant, record that this session's future activation has NOT
+-- been attempted. Do not pre-create a marker for an already-succeeded legacy
+-- action: its email may have been sent by older code.
+CREATE OR REPLACE FUNCTION public.dpp_activation_prepare(
+  p_session_id text
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $body$
+DECLARE v_row public.dpp_activation_outbox%ROWTYPE;
+BEGIN
+  IF p_session_id IS NULL OR length(p_session_id) NOT BETWEEN 8 AND 255 THEN
+    RAISE EXCEPTION 'dpp_activation_invalid_session';
+  END IF;
+  INSERT INTO public.dpp_activation_outbox(session_id)
+    VALUES (p_session_id) ON CONFLICT (session_id) DO NOTHING;
+  SELECT * INTO STRICT v_row FROM public.dpp_activation_outbox
+    WHERE session_id=p_session_id FOR UPDATE;
+  RETURN jsonb_build_object('status',v_row.state);
+END;
+$body$;
 
 CREATE OR REPLACE FUNCTION public.dpp_activation_enqueue(
   p_session_id text, p_profile_id text, p_is_demo boolean DEFAULT false
@@ -43,11 +64,16 @@ BEGIN
   IF NOT FOUND OR v_receipt_profile IS DISTINCT FROM p_profile_id THEN
     RAISE EXCEPTION 'dpp_activation_grant_receipt_mismatch';
   END IF;
-  INSERT INTO public.dpp_activation_outbox(session_id,profile_id)
-    VALUES (p_session_id,p_profile_id) ON CONFLICT (session_id) DO NOTHING;
-  SELECT * INTO STRICT v_row FROM public.dpp_activation_outbox
+  SELECT * INTO v_row FROM public.dpp_activation_outbox
     WHERE session_id=p_session_id FOR UPDATE;
-  IF v_row.profile_id IS DISTINCT FROM p_profile_id THEN
+  -- No marker = a legacy fulfilled action with UNKNOWN email outcome.
+  -- Never bootstrap a new attempt after the fact.
+  IF NOT FOUND THEN RETURN jsonb_build_object('status','legacy_untracked'); END IF;
+  IF v_row.profile_id IS NULL THEN
+    UPDATE public.dpp_activation_outbox
+      SET profile_id=p_profile_id,updated_at=clock_timestamp()
+      WHERE session_id=p_session_id;
+  ELSIF v_row.profile_id IS DISTINCT FROM p_profile_id THEN
     RAISE EXCEPTION 'dpp_activation_profile_mismatch';
   END IF;
   RETURN jsonb_build_object('status',v_row.state);
@@ -133,10 +159,12 @@ BEGIN
 END;
 $body$;
 
+REVOKE ALL ON FUNCTION public.dpp_activation_prepare(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.dpp_activation_enqueue(text,text,boolean) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.dpp_activation_claim(text,text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.dpp_activation_begin_send(text,uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.dpp_activation_finish_send(text,uuid,boolean,text,integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.dpp_activation_prepare(text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.dpp_activation_enqueue(text,text,boolean) TO service_role;
 GRANT EXECUTE ON FUNCTION public.dpp_activation_claim(text,text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.dpp_activation_begin_send(text,uuid) TO service_role;
