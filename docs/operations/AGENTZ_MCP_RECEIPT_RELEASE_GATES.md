@@ -98,3 +98,28 @@ connected Cloudflare deployment API does not currently supply a trusted source
 commit/artifact digest. The live AgentZ API is behind Access and the challenge
 signing endpoint is not yet deployed. This code therefore proves verifier
 behavior only; it is not a completed deployment attestation.
+
+## AgentZ provenance signing producer (draft, not deployed)
+
+`agentz.core.deployment_provenance.sign_deployment_provenance` now
+produces a compact Ed25519 JWS using the *existing* AgentZ private key
+only when `identity_status.can_sign_as_self` is true and the PEM matches
+the published DID. It binds the exact deployable artifact SHA-256,
+source SHA, GitHub protected workflow run ID, Cloudflare deployment ID
+and Cloudflare version ID.
+
+This signer is intentionally a library function, **not** a public HTTP
+endpoint. It must be invoked only by a trusted protected release
+controller after it has independently gathered these facts. Passing
+caller-supplied identifiers into the signer without checking their
+origin would produce a signed claim, not independent deployment
+provenance. The verifier separately requires independently sourced
+expectations and the exact deployable artifact bytes.
+
+**Still needed for real proof:** identify and review the existing
+protected AgentZ deployment path; instrument it to retain the actual
+deployable artifact, record a GitHub run/source and Cloudflare
+deployment/version, and invoke the authenticated AgentZ signer from a
+trusted execution environment. Obtain a real signature, verify it
+independently, and preserve the result as immutable release evidence.
+No deployed AgentZ signing proof exists yet.
