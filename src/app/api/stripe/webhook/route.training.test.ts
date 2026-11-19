@@ -256,6 +256,7 @@ function testModeSession(
         object: "checkout.session",
         livemode: false,
         mode: "payment",
+        status: "complete",
         amount_total: 2900,
         amount_subtotal: 2900,
         total_details: { amount_discount: 0 },

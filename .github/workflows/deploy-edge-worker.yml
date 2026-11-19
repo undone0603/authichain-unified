@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+    # Only the authichain-revenue-worker source may bind its secrets/deploy.
+    # A docs or workflow-only merge must never write production secrets.
+    # src/lib/plans.ts is bundled into this Worker (api/worker.ts imports it),
+    # so a price change must redeploy it too.
+    paths:
+      - "api/**"
+      - "src/lib/plans.ts"
   workflow_dispatch:
 
 permissions:
@@ -68,6 +75,7 @@ jobs:
           fi
 
       - name: Install pnpm
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         uses: pnpm/action-setup@v6
         with:
@@ -75,6 +83,7 @@ jobs:
           run_install: false
 
       - name: Setup Node
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         uses: actions/setup-node@v7
         with:
@@ -82,6 +91,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 

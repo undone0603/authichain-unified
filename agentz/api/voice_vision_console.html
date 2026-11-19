@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AgentZ · Voice + Vision</title>
+  <style>
+    :root {color-scheme:dark; font:16px system-ui,sans-serif; background:#10151e; color:#edf4ff}
+    body {max-width:820px; margin:2rem auto; padding:0 1rem}
+    h1 {font-size:1.85rem; margin:.2rem 0} p {color:#b6c3d4; line-height:1.5}
+    section {background:#1a2230; border:1px solid #39485a; border-radius:14px; padding:1rem; margin:1rem 0}
+    label {display:block; margin:.8rem 0 .3rem}
+    input, textarea {font:inherit; color:inherit; background:#111925; border:1px solid #65758b; border-radius:8px; box-sizing:border-box; padding:.7rem; width:100%}
+    textarea {min-height:90px; resize:vertical}
+    button {font:inherit; border:0; border-radius:9px; padding:.7rem 1rem; background:#75c8ff; color:#07121f; font-weight:600; cursor:pointer; margin:.3rem .4rem .3rem 0}
+    button:disabled {opacity:.4;cursor:not-allowed}
+    button.secondary {background:#344456;color:#f1f7ff}
+    .actions {display:flex;flex-wrap:wrap;align-items:center; gap:.2rem}
+    #preview {max-height:280px; max-width:100%; display:none; border-radius:10px; margin:.7rem 0}
+    #answer {white-space:pre-wrap;line-height:1.55;min-height:2em}
+    #status {color:#adffdb} .notice {font-size:.85rem} :focus-visible {outline:3px solid #ffa852;outline-offset:2px}
+  </style>
+</head>
+<body>
+  <h1>AgentZ · Voice + Vision</h1>
+  <p>Speak to AgentZ while showing a photo, camera frame, or screen. AgentZ observes and suggests; it never clicks, deploys or sends on your behalf.</p>
+  <section>
+    <label for="token">Local AgentZ access token (kept only in this page's memory)</label>
+    <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="AGENT_SECRET">
+    <label for="prompt">Your request</label>
+    <textarea id="prompt" maxlength="2000" placeholder="What do you see? Which safe improvement should I make next?"></textarea>
+    <div class="actions">
+      <button id="listen" type="button">🎙 Start speaking</button>
+      <button id="stop" type="button" class="secondary" disabled>Stop listening</button>
+    </div>
+    <p class="notice">Microphone transcription is handled by your browser. Depending on the browser, speech recognition may use its provider's service. Typing avoids this.</p>
+  </section>
+  <section>
+    <label for="image">Vision input</label>
+    <input id="image" type="file" accept="image/jpeg,image/png,image/webp">
+    <div class="actions">
+      <button id="camera" type="button" class="secondary">📷 Capture camera</button>
+      <button id="screen" type="button" class="secondary">🖥 Capture screen</button>
+      <button id="clear" type="button" class="secondary">Clear image</button>
+    </div>
+    <img id="preview" alt="Image to be analyzed by AgentZ">
+    <p class="notice">The camera/screen is accessed only when you click Capture, with browser permission. A single resized still image is sent to your configured private-network model; no continuous stream is uploaded.</p>
+  </section>
+  <section>
+    <button id="ask" type="button">Observe and respond</button>
+    <button id="speak" type="button" class="secondary" disabled>🔊 Speak answer</button>
+    <button id="silence" type="button" class="secondary">Stop voice</button>
+    <p id="status" aria-live="polite">Ready · Local-only mode</p>
+    <div id="answer" role="status" aria-live="polite"></div>
+  </section>
+  <script>
+    (() => {
+      'use strict';
+      const byId = id => document.getElementById(id);
+      const status = msg => { byId('status').textContent = msg; };
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let recognition = null, imageData = null, responseText = '';
+      const maxBytes = 3_000_000;
+      if (!SpeechRecognition) {
+        byId('listen').disabled = true;
+        status('Speech recognition not available in this browser. Type your request instead.');
+      } else {
+        byId('listen').onclick = () => {
+          recognition = new SpeechRecognition();
+          recognition.lang = navigator.language || 'en-US';
+          recognition.continuous = false;
+          recognition.interimResults = false;
+          recognition.onresult = event => {
+            const heard = event.results[0][0].transcript;
+            byId('prompt').value = (byId('prompt').value.trim() + ' ' + heard).trim().slice(0, 2000);
+            status('Speech captured. Add an image or ask AgentZ to respond.');
+          };
+          recognition.onerror = () => status('Speech recognition unavailable. Type your request.');
+          recognition.onend = () => { byId('stop').disabled = true; byId('listen').disabled = false; recognition = null; };
+          byId('stop').disabled = false;
+          byId('listen').disabled = true;
+          try { recognition.start(); status('Listening…'); }
+          catch { status('Microphone could not start.'); recognition = null; byId('listen').disabled = false; byId('stop').disabled = true; }
+        };
+        byId('stop').onclick = () => { recognition?.stop(); };
+      }
+      function showImage(data) {
+        imageData = data;
+        const preview = byId('preview');
+        preview.src = data || '';
+        preview.style.display = data ? 'block' : 'none';
+        status(data ? 'Image ready for local vision.' : 'Image cleared.');
+      }
+      byId('clear').onclick = () => { byId('image').value = ''; showImage(null); };
+      byId('image').onchange = async event => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > maxBytes) {
+          showImage(null); status('Select a JPEG, PNG or WebP under 3 MB.'); return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => showImage(String(reader.result));
+        reader.onerror = () => status('Image could not be read.');
+        reader.readAsDataURL(file);
+      };
+      async function capture(mode) {
+        let stream;
+        try {
+          stream = mode === 'camera'
+            ? await navigator.mediaDevices.getUserMedia({video: true, audio: false})
+            : await navigator.mediaDevices.getDisplayMedia({video: true, audio: false});
+          const video = document.createElement('video');
+          video.srcObject = stream;
+          video.muted = true;
+          await video.play();
+          if (!video.videoWidth) throw Error('No video frame');
+          const scale = Math.min(1, 1280 / video.videoWidth, 960 / video.videoHeight);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+          canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+          canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+          const data = canvas.toDataURL('image/jpeg', .7);
+          if (data.length > maxBytes * 4 / 3 + 50) throw Error('Image too large');
+          showImage(data);
+        } catch (err) { status('Capture unavailable or permission declined: ' + (err?.name || 'error')); }
+        finally { stream?.getTracks().forEach(track => track.stop()); }
+      }
+      byId('camera').onclick = () => capture('camera');
+      byId('screen').onclick = () => capture('screen');
+      byId('silence').onclick = () => window.speechSynthesis?.cancel();
+      byId('speak').onclick = () => {
+        if (!responseText || !window.speechSynthesis) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(responseText);
+        utterance.lang = navigator.language || 'en-US';
+        utterance.rate = 1.02;
+        window.speechSynthesis.speak(utterance);
+      };
+      byId('ask').onclick = async () => {
+        const token = byId('token').value;
+        const prompt = byId('prompt').value.trim();
+        if (!token || !prompt) { status('Enter AGENT_SECRET and a spoken or typed request.'); return; }
+        byId('ask').disabled = true;
+        byId('speak').disabled = true;
+        responseText = '';
+        window.speechSynthesis?.cancel();
+        status('Observing with your local model…');
+        try {
+          const response = await fetch('/agentz/voice-vision/observe', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + token},
+            body: JSON.stringify({prompt, image: imageData}),
+            cache: 'no-store',
+          });
+          const result = await response.json();
+          if (!response.ok) throw Error(result.detail || 'Local vision unavailable');
+          responseText = result.reply;
+          byId('answer').textContent = responseText;
+          byId('speak').disabled = !responseText || !window.speechSynthesis;
+          status(result.image_analyzed ? 'Vision analyzed locally · no actions taken' : 'Spoken/text request answered locally');
+          if (byId('speak').disabled === false) byId('speak').click();
+        } catch (err) { byId('answer').textContent = ''; status('AgentZ: ' + (err?.message || 'Unreachable')); }
+        finally { byId('ask').disabled = false; }
+      };
+      window.addEventListener('pagehide', () => { recognition?.abort(); window.speechSynthesis?.cancel(); byId('token').value = ''; });
+    })();
+  </script>
+</body>
+</html>

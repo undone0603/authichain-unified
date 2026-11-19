@@ -12,6 +12,7 @@
 // Env: GITHUB_TOKEN (issues:write, actions:read), GITHUB_REPOSITORY,
 //      PULSE_DRY_RUN=true to print instead of touching issues.
 
+import { createHash } from "node:crypto";
 import { appendFileSync, readFileSync } from "node:fs";
 import {
   loadManifest,
@@ -25,6 +26,13 @@ import { PROBES, runProbes } from "./probes.mjs";
 export { PROBES, runProbes };
 
 const MARKER = "<!-- ops-pulse-signature:";
+
+function sessionRef(session) {
+  return createHash("sha256")
+    .update(String(session))
+    .digest("hex")
+    .slice(0, 12);
+}
 
 /**
  * Pure. True when a workflow's only trigger is `workflow_call`. Its jobs run
@@ -127,14 +135,19 @@ export function evaluateWorkflows(
  */
 export function blindReason(error) {
   const msg = String(error?.message ?? error ?? "");
-  const m = msg.match(/^(Stripe checkout sessions|Supabase stripe_events) -> (\d{3})/);
-  return m ? `${m[1]} answered HTTP ${m[2]}` : "the check failed before it could read Stripe and Supabase";
+  const m = msg.match(
+    /^(Stripe checkout sessions|Stripe events|Supabase stripe_events|Supabase profiles) -> (\d{3})/
+  );
+  return m
+    ? `${m[1]} answered HTTP ${m[2]}`
+    : "the check failed before it could read Stripe and Supabase";
 }
 
 /**
  * Read-only monitoring must fail closed. Never put exception messages (which
  * could contain tokens or customer details) in a public ops-alert issue.
- * This checks webhook receipt only, not entitlement or activation.
+ * This checks payment, webhook receipt, and the durable grant marker, but not
+ * settlement, customer identity, access, or activation.
  */
 export async function monitorFulfilment({
   stripeKey,
@@ -146,6 +159,8 @@ export async function monitorFulfilment({
   if (!stripeKey || !supabaseUrl || !supabaseKey)
     return {
       checked: 0,
+      entitlementGranted: 0,
+      pending: 0,
       problems: [],
       monitoring: [{ name: "fulfilment", kind: "credentials_missing" }],
     };
@@ -156,10 +171,18 @@ export async function monitorFulfilment({
       supabaseKey,
       founderEmails,
     });
-    return { checked: result.checked, problems: result.problems, monitoring: [] };
+    return {
+      checked: result.checked,
+      entitlementGranted: result.entitlementGranted ?? 0,
+      pending: result.pending ?? 0,
+      problems: result.problems,
+      monitoring: [],
+    };
   } catch {
     return {
       checked: 0,
+      entitlementGranted: 0,
+      pending: 0,
       problems: [],
       monitoring: [{ name: "fulfilment", kind: "read_failed" }],
     };
@@ -170,7 +193,7 @@ export function signature(report) {
   const keys = [
     ...report.probes.filter(p => !p.ok).map(p => `probe:${p.name}`),
     ...report.workflows.map(w => `wf:${w.file}:${w.kind}`),
-    ...(report.revenue ?? []).map(r => `pay:${r.session}`),
+    ...(report.revenue ?? []).map(r => `pay:${sessionRef(r.session)}`),
     ...(report.fulfilmentBlind ? ["watchdog:fulfilment"] : []),
     ...(report.monitoring ?? []).map(m => `monitor:${m.name}:${m.kind}`),
   ].sort();
@@ -203,17 +226,17 @@ export function renderReport(report) {
       );
   }
   if (report.revenue?.length) {
-    lines.push("", "#### Paid but not fulfilled");
+    lines.push("", "#### Paid checkout exceptions");
     for (const r of report.revenue)
       lines.push(
-        `- Checkout \`${r.session}\` paid ${r.paid_at}: ${r.reason}. Check the customer received what they bought, then replay the event from the Stripe dashboard.`
+        `- Checkout ref \`${sessionRef(r.session)}\` paid ${r.paid_at}: ${r.status} — ${r.reason}. Verify settlement, identity, and access using restricted records. Do not replay, grant access, or contact the buyer based only on this alert.`
       );
   }
   if (report.fulfilmentBlind) {
     lines.push(
       "",
       "#### Fulfilment watchdog cannot see",
-      `- ${report.fulfilmentBlind}. Until this is fixed nobody is checking that paying customers received what they bought.`
+      `- ${report.fulfilmentBlind}. The monitor cannot determine webhook or entitlement status; no fulfillment conclusion is available.`
     );
   }
   lines.push(
@@ -363,7 +386,7 @@ async function main() {
   console.log(
     f.monitoring.length
       ? `fulfilment: UNVERIFIED (${f.monitoring[0].kind})`
-      : `fulfilment: ${f.checked} chargeable paid checkouts checked, ${f.problems.length} missing webhook receipts`
+      : `fulfilment: ${f.entitlementGranted} entitlement grant markers across ${f.checked} paid checkouts, ${f.pending} pending checkouts, ${f.problems.length} exceptions; settlement and product access are unverified`
   );
 
   const sig = signature(report);

@@ -101,8 +101,8 @@ test("failed smoke after promotion restores the previous version via the API pro
     /if: failure\(\) && env\.PROMOTED_VERSION_ID != '' && env\.PREV_VERSION_ID != ''/
   );
   assert.match(rollback, /promote-worker-version\.mjs authichain-edge-router "\$\{PREV_VERSION_ID\}"/);
-  assert.match(rollback, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
-  assert.match(rollback, /CLOUDFLARE_ACCOUNT_ID: \$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
+  assert.match(rollback, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.AUTHICHAIN_EDGE_ROUTER_CLOUDFLARE_API_TOKEN \}\}/);
+  assert.match(rollback, /CLOUDFLARE_ACCOUNT_ID: \$\{\{ secrets\.AUTHICHAIN_EDGE_ROUTER_CLOUDFLARE_ACCOUNT_ID \}\}/);
   assert.doesNotMatch(rollback, /\|\| true/);
   assert.doesNotMatch(rollback, /wrangler/);
   // Last step: it must see the smoke result and nothing may run after it.
@@ -178,4 +178,20 @@ test("runner pnpm is checked only after setup-node has put node on PATH", () => 
   // Nothing that needs node may run before setup-node (comments excluded).
   const before = yml.slice(0, setupNode).replace(/#.*$/gm, "");
   assert.doesNotMatch(before, /pnpm --version|\bnode scripts\/|\bnpm /);
+});
+test("edge-router production releases require manual exact-main dispatch and protected environment", () => {
+  assert.match(yml, /workflow_dispatch:/);
+  assert.doesNotMatch(yml, /^  push:/m);
+  assert.match(yml, /expected_sha:/);
+  assert.match(yml, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(yml, /name: production-cloudflare-edge-router/);
+  assert.match(yml, /can_admins_bypass!==false/);
+  assert.match(yml, /main\.protected!==true/);
+  assert.match(yml, /runtime-db-attestation-postgres/);
+  assert.match(yml, /main-quality-gate/);
+  assert.match(yml, /Recheck exact current main immediately before upload/);
+  assert.match(yml, /secrets\.AUTHICHAIN_EDGE_ROUTER_CLOUDFLARE_API_TOKEN/);
+  assert.match(yml, /secrets\.AUTHICHAIN_EDGE_ROUTER_CLOUDFLARE_ACCOUNT_ID/);
+  assert.doesNotMatch(yml, /secrets\.CLOUDFLARE_API_TOKEN\b/);
+  assert.doesNotMatch(yml, /secrets\.CLOUDFLARE_ACCOUNT_ID\b/);
 });

@@ -9,11 +9,8 @@
  * (#1171 owns sister catalog). Do not tell agents to GET /api/checkout.
  * Do not invent Stripe links. Do not list theater.
  */
-import {
-  catalogOffers,
-  planPaymentLink,
-  planUsd,
-} from "../../src/lib/plans.ts";
+import { planPaymentLink, planUsd } from "../../src/lib/plans.ts";
+import { openCatalogOffers } from "../../src/lib/retired-plans.ts";
 import {
   BASE_USDC_ASSET,
   X402_PUBLISHED_PAY_TO,
@@ -160,10 +157,9 @@ export function sisterMcpPricingDiscovery(brand: SisterDiscoveryBrand) {
     source: "src/lib/plans.ts",
     passportUsd: planUsd("strainchain_passport"),
     dppUsd: planUsd("dpp_readiness"),
-    farmUsd: planUsd("strainchain_farm"),
     passportPaymentLink: PASSPORT_LINK,
     dppPaymentLink: DPP_LINK,
-    offers: catalogOffers(),
+    offers: openCatalogOffers(),
     emailCapture: {
       passport: "https://authichain.com/passport",
       dpp: "https://authichain.com/dpp",

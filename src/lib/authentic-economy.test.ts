@@ -80,19 +80,30 @@ describe("authentic-economy identity join", () => {
     expect(d.humanCheckout.checkout.dpp).toBe(
       "https://authichain.com/checkout/dpp_readiness"
     );
-    expect(d.humanCheckout.checkout.farm).toBe(
-      "https://authichain.com/checkout/strainchain_farm"
-    );
-    expect(d.humanCheckout.strainchain_farm).toBe("$149/month");
-    expect(new URL(d.humanCheckout.checkout.farm ?? "").hostname).toBe(
-      "authichain.com"
-    );
+    expect(d.humanCheckout).not.toHaveProperty("strainchain_farm");
+    expect(d.humanCheckout.checkout).not.toHaveProperty("farm");
+    expect(JSON.stringify(d)).not.toContain("strainchain_farm");
+    expect(JSON.stringify(d)).not.toContain("farmUsd");
     expect(JSON.stringify(d)).not.toContain("/api/checkout");
     expect(d.qron.isPaymentRail).toBe(false);
     expect(d.qron.totalSupply).toBe(QRON_TOTAL_SUPPLY);
     expect(d.nft.contract).toBe(POLYGON_AUTHICHAIN_NFT);
     expect(d.nft.deployer.toLowerCase()).not.toBe(
       TOKENOMICS_PAY_TO.toLowerCase()
+    );
+  });
+
+  it("F886-4: get_pricing omits Farm / farmUsd", () => {
+    const d = agentPricingDiscovery();
+    const blob = JSON.stringify(d);
+    expect(d.humanCheckout).not.toHaveProperty("strainchain_farm");
+    expect(d.humanCheckout.checkout).not.toHaveProperty("farm");
+    expect(MONEY_RAILS.stripe.skus).not.toHaveProperty("farmUsd");
+    expect(blob).not.toContain("farmUsd");
+    expect(blob).not.toContain("strainchain_farm");
+    expect(blob).not.toContain("$149/month");
+    expect(d.humanCheckout.offers.map(o => o.id)).not.toContain(
+      "strainchain_farm"
     );
   });
 });
