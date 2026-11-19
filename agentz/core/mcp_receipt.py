@@ -45,11 +45,11 @@ def execute_and_sign(*, opener=urlopen, now=None, endpoint=None, source_sha=None
     if endpoint != ALLOWED_ENDPOINT or urlsplit(endpoint).hostname != "authichain.com":
         raise RuntimeError("MCP_ENDPOINT_NOT_ALLOWLISTED")
     source_sha = source_sha or os.environ.get("AGENTZ_SOURCE_SHA", "")
+    if len(source_sha) != 40 or any(c not in "0123456789abcdef" for c in source_sha):
+        raise RuntimeError("SOURCE_SHA_REQUIRED")
     deployment_sha = os.environ.get("AGENTZ_DEPLOYED_COMMIT_SHA", "")
     if not deployment_sha or deployment_sha != source_sha:
         raise RuntimeError("DEPLOYED_SHA_ATTESTATION_REQUIRED")
-    if len(source_sha) != 40 or any(c not in "0123456789abcdef" for c in source_sha):
-        raise RuntimeError("SOURCE_SHA_REQUIRED")
     key_dir = os.environ.get("AGENTZ_KEY_DIR")
     if not key_dir:
         raise RuntimeError("KEY_UNBOUND")
