@@ -46,12 +46,14 @@ def test_signed_execution_binds_bytes(monkeypatch, tmp_path):
     pem = key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
     (tmp_path / mcp_receipt.KEY_FILE).write_bytes(pem)
     monkeypatch.setenv("AGENTZ_KEY_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENTZ_DEPLOYED_COMMIT_SHA", "a" * 40)
     monkeypatch.setattr(mcp_receipt, "DID_KEY", mcp_receipt.did_key_from_pem(pem))
     monkeypatch.setattr(mcp_receipt, "identity_status", lambda now: {"can_sign_as_self": True, "did_key": mcp_receipt.DID_KEY})
     receipt = mcp_receipt.execute_and_sign(opener=lambda req, timeout: FakeResponse(req),
                                             source_sha="a" * 40,
                                             now=datetime(2026, 11, 19, tzinfo=timezone.utc))
-    assert mcp_receipt.verify_receipt(receipt)
+    assert mcp_receipt.verify_receipt(receipt, expected_execution_id=receipt["payload"]["executionId"])
+    assert not mcp_receipt.verify_receipt(receipt, expected_execution_id="replayed-id")
     altered = dict(receipt, responseRaw=receipt["responseRaw"] + " ")
     assert not mcp_receipt.verify_receipt(altered)
     altered = dict(receipt, payload={**receipt["payload"], "sourceCommit": "b" * 40})
