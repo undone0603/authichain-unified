@@ -52,7 +52,7 @@
     }
   ],
   "operator_hold": {
-    "$comment": "Left disabled_manually on 2026-10-08. Ops pulse does not page these, and autonomy-reconcile does not re-enable them. Remove a name here before turning that loop back on. Cold outreach, social publish, gov mint, and the direct pipeline tick stay off. Staged restart 2026-11-18: the 45 names after deploy-qron-space.yml were already disabled_manually while their lane said on (GitHub Actions billing lock, single laptop runner). They stay held so turning autonomy-reconcile back on starts only the self-building core (reconcile, merge-autopilot, ops-pulse, ci-repair-loop, branch-hygiene). Lane states still record the intended end state; release them a few at a time by deleting names here.",
+    "$comment": "Left disabled_manually on 2026-10-08. Ops pulse does not page these, and autonomy-reconcile does not re-enable them. Remove a name here before turning that loop back on. Cold outreach, social publish, gov mint, and the direct pipeline tick stay off. Staged restart 2026-11-18: the 46 names after deploy-qron-space.yml were already disabled_manually while their lane said on (GitHub Actions billing lock, single laptop runner). They stay held so turning autonomy-reconcile back on starts only the self-building core (reconcile, ops-pulse, ci-repair-loop, branch-hygiene). merge-autopilot stays held: AgentZ frozen_gates require it disabled_manually until the owner lifts that. Lane states still record the intended end state; release them a few at a time by deleting names here.",
     "workflows": [
       "b2b-outreach.yml",
       "content-publish.yml",
@@ -61,6 +61,7 @@
       "pipeline-tick.yml",
       "deploy-authichain-edge-router.yml",
       "deploy-qron-space.yml",
+      "merge-autopilot.yml",
       "agentz-ci.yml",
       "codeql.yml",
       "compliance-audit.yml",
