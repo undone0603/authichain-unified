@@ -193,3 +193,33 @@ describe("markdownToHtml", () => {
     expect(html).toContain("<ol><li>one</li><li>two</li></ol>");
   });
 });
+
+describe("chemistry-dependent obligations", () => {
+  it("adds the chemistry table when the intake names a chemistry", () => {
+    const i = intake();
+    i.models[0].chemistry = "iron_air";
+    expect(() => validateIntake(i)).not.toThrow();
+    const r = modelReport(i.models[0]);
+    expect(r.chemistry?.label).toBe("Iron-air");
+    const md = buildGapReport(i).markdown;
+    expect(md).toContain("### Chemistry-dependent obligations (Iron-air)");
+    expect(md).toContain("| Battery passport (Art. 77) | Applies |");
+    expect(md).toContain("Not triggered");
+  });
+
+  it("omits the table when no chemistry is given", () => {
+    const i = intake();
+    expect(modelReport(i.models[0]).chemistry).toBeNull();
+    expect(buildGapReport(i).markdown).not.toContain("Chemistry-dependent obligations");
+  });
+
+  it("refuses an unknown chemistry", () => {
+    const i = intake();
+    (i.models[0] as { chemistry?: string }).chemistry = "unobtainium";
+    expect(() => validateIntake(i)).toThrow(/chemistry must be one of/);
+  });
+
+  it("asks for chemistry in the questionnaire", () => {
+    expect(intakeQuestionnaire()).toContain("7. Cell chemistry [chemistry: lithium_ion |");
+  });
+});

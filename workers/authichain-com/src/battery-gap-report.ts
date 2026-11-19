@@ -27,6 +27,15 @@ import {
   type PackInput,
   type Placing,
 } from "./battery-gap-map.ts";
+import {
+  APPLICABILITY_LABEL,
+  CHEMISTRY_IDS,
+  CHEMISTRY_PROFILES,
+  chemistryRows,
+  isChemistryId,
+  type ChemistryId,
+  type ChemistryRow,
+} from "./battery-chemistry-profiles.ts";
 
 export const REPORT_DISCLAIMER =
   "Readiness assessment only. Not a conformity assessment, not legal advice, and not an issued battery passport. Figures and document statements are the customer's own and were not verified. Confirm obligations against Regulation (EU) 2023/1542 and with counsel.";
@@ -39,6 +48,8 @@ const MAX_MODELS = 21; // first model + up to 20 extra (plans.ts adjustable_quan
 export interface ModelIntake extends PackInput {
   /** Row id (from annexXiiiRows) → the customer's own description of what they hold. */
   available?: Record<string, string>;
+  /** Cell chemistry; selects which Art. 48 / Art. 8 / Art. 7 obligations apply. */
+  chemistry?: ChemistryId;
 }
 
 export interface GapReportIntake {
@@ -67,6 +78,8 @@ export interface ReportRow extends AnnexRow {
 export interface ModelReport {
   model: string;
   placing: Placing;
+  /** Chemistry-dependent obligations, or null when the intake gave no chemistry. */
+  chemistry: { label: string; rows: ChemistryRow[] } | null;
   consistency: string;
   rows: ReportRow[];
   counts: Record<ReportStatus, number>;
@@ -98,6 +111,13 @@ export function validateIntake(intake: GapReportIntake): void {
   const models = Array.isArray(src.models) ? src.models : [];
   if (models.length === 0)
     problems.push("models must list at least one battery model.");
+  models.forEach((m, i) => {
+    const c = (m as Partial<ModelIntake>)?.chemistry;
+    if (c !== undefined && !isChemistryId(c))
+      problems.push(
+        `models[${i}].chemistry must be one of: ${CHEMISTRY_IDS.join(", ")}.`
+      );
+  });
   if (models.length > MAX_MODELS)
     problems.push(`at most ${MAX_MODELS} models per report.`);
   const paid = Number.isInteger(src.modelsPaid)
@@ -177,6 +197,12 @@ export function modelReport(m: ModelIntake): ModelReport {
   return {
     model: s.model,
     placing: s.placing,
+    chemistry: isChemistryId(m.chemistry)
+      ? {
+          label: CHEMISTRY_PROFILES[m.chemistry].label,
+          rows: chemistryRows(m.chemistry),
+        }
+      : null,
     consistency: consistencyLine(m),
     rows,
     counts,
@@ -213,6 +239,19 @@ function modelMarkdown(r: ModelReport, n: number): string {
     `- Public-layer items: ${have.length} you have, ${missing.length} missing.`,
     ""
   );
+
+  if (r.chemistry) {
+    out.push(`### Chemistry-dependent obligations (${r.chemistry.label})`, "");
+    out.push("| Obligation | Status | Basis |", "|---|---|---|");
+    out.push(
+      `| Battery passport (Art. 77) | Applies | From ${APPLIES_FROM} for industrial batteries over 2 kWh, EV and LMT batteries, every chemistry. |`
+    );
+    for (const c of r.chemistry.rows)
+      out.push(
+        `| ${mdCell(c.item)} | ${APPLICABILITY_LABEL[c.status]} | ${mdCell(c.note)} |`
+      );
+    out.push("");
+  }
 
   out.push("### What you have", "");
   if (have.length === 0) out.push("Nothing yet recorded.", "");
@@ -324,10 +363,11 @@ export function intakeQuestionnaire(): string {
     "4. Nominal voltage in V [nominalV]",
     "5. Expected lifetime in cycles, as a range if you have one [cyclesLow, cyclesHigh]",
     "6. Who places this battery on the EU market: you, your cell maker, or not yet confirmed? [placing: self | cell_maker | unknown]",
+    `7. Cell chemistry [chemistry: ${CHEMISTRY_IDS.join(" | ")}]`,
     "",
     'For each item below, tell us whether you hold it and briefly what it is (for example, "declaration of conformity, draft rev B"). We record your answer in your words and do not review the documents.',
   ];
-  ask.forEach((r, i) => out.push(`${i + 7}. ${r.item} [available.${r.id}]`));
+  ask.forEach((r, i) => out.push(`${i + 8}. ${r.item} [available.${r.id}]`));
   out.push("", REPORT_DISCLAIMER, "");
   return out.join("\n");
 }
