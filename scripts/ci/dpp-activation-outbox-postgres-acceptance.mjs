@@ -96,7 +96,7 @@ try {
   await assert.rejects(json(clientB,"dpp_activation_begin_send",[s,first.claim_token]),/send_lease_lost/);
   assert.equal((await getRow(s)).send_attempts,1);
   assert.equal((await json(clientB,"dpp_activation_claim",[s,profile])).status,"held");
-  assert.equal((await json(clientA,"dpp_activation_finish_send",[s,first.claim_token,true,"resend",200])).status,"accepted");
+  assert.equal((await json(clientA,"dpp_activation_finish_send",[s,first.claim_token,true,"resend",200,"email_receipt_2482"])).status,"accepted");
   assert.equal((await json(clientB,"dpp_activation_claim",[s,profile])).status,"accepted");
   assert.equal((await getRow(s)).send_attempts,1);
   pass++;
