@@ -56,7 +56,8 @@ def _github(method: str, api_path: str, payload: dict | None = None) -> dict:
         raise RuntimeError("scoped GitHub code token not configured")
     headers = {"Authorization": f"Bearer {token}",
                "Accept": "application/vnd.github+json",
-               "X-GitHub-Api-Version": "2022-11-28"}
+               "X-GitHub-Api-Version": "2022-11-28",
+               "User-Agent": "AuthiChain-AgentZ-CodeProposals/1.0"}
     data = None
     if payload is not None:
         headers["Content-Type"] = "application/json"
