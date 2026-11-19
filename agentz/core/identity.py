@@ -1,7 +1,8 @@
 """AgentZ's own identity: which Agent ID it is, and whether it can prove it.
 
-The identity is published on authichain.com (workers/authichain-com/src/
-bot-identities.ts): a did:web document whose key is the did:key below. This
+The identity is published on authichain.com and read from the same roster
+file the site serves (workers/authichain-com/src/bot-identities.ts), so this
+never drifts from what is published. This
 module binds the running service to that identity and reports, without
 revealing any secret, whether the private key it was given matches it.
 
@@ -17,13 +18,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import json
+
 AGENT_ID = "agent:authichain:agentz"
-DID_WEB = "did:web:authichain.com:agents:agentz"
-DID_KEY = "did:key:z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82"
 DID_DOCUMENT_URL = "https://authichain.com/agents/agentz/did.json"
 PROFILE_URL = "https://authichain.com/agents/agentz"
-VALID_UNTIL = "2027-01-17T18:00:00Z"
 KEY_FILE = "agentz.ed25519.pem"
+IDENTITIES = Path(__file__).resolve().parents[2] / "workers/authichain-com/src/bot-identities.ts"
+
+
+def published_identity(path: Path = IDENTITIES) -> Dict[str, str]:
+    """AgentZ's did:web, did:key and validUntil from the published roster file."""
+    src = path.read_text(encoding="utf-8")
+    data = json.loads(src[src.index("=") + 1: src.rindex(";")])
+    bot = next(b for b in data["bots"] if b["slug"] == "agentz")
+    return {"did": bot["did"], "did_key": bot["didKey"],
+            "valid_until": bot["record"]["validUntil"]}
+
+
+_PUB = published_identity()
+DID_WEB = _PUB["did"]
+DID_KEY = _PUB["did_key"]
+VALID_UNTIL = _PUB["valid_until"]
 
 _B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 

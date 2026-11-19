@@ -76,6 +76,12 @@ class IdentityTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {}, clear=True):
             self.assertFalse(identity.identity_status(self.NOW)["trusts_own_signatures"])
 
+    def test_identity_is_read_from_the_published_roster(self):
+        pub = identity.published_identity()
+        self.assertEqual(identity.DID_KEY, pub["did_key"])
+        self.assertEqual(identity.DID_WEB, "did:web:authichain.com:agents:agentz")
+        self.assertTrue(identity.IDENTITIES.is_file())
+
     def test_did_key_encoding_matches_the_published_form(self):
         # Ed25519 did:keys always start with z6Mk (multicodec 0xed01 + base58btc).
         did = identity.did_key_from_pem(_pem(Ed25519PrivateKey.generate()))
