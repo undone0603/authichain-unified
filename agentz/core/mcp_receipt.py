@@ -90,6 +90,42 @@ def execute_and_sign(*, opener=urlopen, now=None, endpoint=None, source_sha=None
             "responseRaw": response_bytes.decode("utf-8"), "identity": status["did_key"]}
 
 
+
+def sign_identity_challenge(*, challenge: str, now=None) -> dict:
+    """Sign an operator-provided challenge with the published AgentZ identity.
+
+    This proves possession at invocation time; it does not prove source
+    provenance, authorization of any business operation, or key custody.
+    """
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    if not isinstance(challenge, str) or not 16 <= len(challenge) <= 256 or not challenge.isascii():
+        raise ValueError("INVALID_CHALLENGE")
+    if any(ord(c) < 33 or ord(c) > 126 for c in challenge):
+        raise ValueError("INVALID_CHALLENGE")
+    now = now or datetime.now(timezone.utc)
+    status = identity_status(now)
+    if not status["can_sign_as_self"]:
+        raise RuntimeError("AGENTZ_IDENTITY_NOT_PROVEN")
+    key_dir = os.environ.get("AGENTZ_KEY_DIR")
+    if not key_dir:
+        raise RuntimeError("KEY_UNBOUND")
+    pem = (Path(key_dir) / KEY_FILE).read_bytes()
+    if did_key_from_pem(pem) != DID_KEY:
+        raise RuntimeError("KEY_MISMATCH")
+    key = serialization.load_pem_private_key(pem, password=None)
+    if not isinstance(key, Ed25519PrivateKey):
+        raise RuntimeError("KEY_NOT_ED25519")
+    payload = {"schema": "authichain.agentz.identity-challenge/1",
+               "challenge": challenge, "didKey": DID_KEY,
+               "signedAt": now.isoformat().replace("+00:00", "Z")}
+    header = {"alg": "EdDSA", "typ": "AGENTZ-CHALLENGE+JWS", "kid": DID_KEY}
+    signing_input = _b64(_canonical(header)) + "." + _b64(_canonical(payload))
+    return {"jws": signing_input + "." + _b64(key.sign(signing_input.encode("ascii"))),
+            "payload": payload}
+
+
 def verify_receipt(receipt: dict, *, expected_execution_id: str | None = None) -> bool:
     """Verify signature and exact supplied request/response bytes, without private key."""
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
