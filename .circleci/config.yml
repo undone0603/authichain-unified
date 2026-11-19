@@ -112,6 +112,7 @@ jobs:
               sleep 2
             done
             timeout --signal=TERM --kill-after=10s 120s node scripts/ci/runtime-db-attestation-postgres-acceptance.mjs
+            timeout --signal=TERM --kill-after=10s 120s node scripts/ci/dpp-activation-outbox-postgres-acceptance.mjs
           no_output_timeout: 20m
 
   main-quality-gate:
