@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DPP_PAYMENT_LINK_ID,
   dppGrantDecision,
+  dppInvalidSettlementIsPermanent,
   isDppCheckoutCandidate,
   type DppProofSession,
 } from "./dpp-payment-eligibility";
@@ -34,6 +35,45 @@ describe("DPP paid entitlement boundary", () => {
     ["zero-dollar purchase", { amount_total: 0 }, "invalid_product"],
     ["underpaid DPP amount", { amount_total: 29899 }, "invalid_product"],
     ["overpaid DPP amount", { amount_total: 30000 }, "invalid_product"],
+    [
+      "full discount of the list price",
+      {
+        amount_subtotal: 29900,
+        amount_total: 0,
+        total_details: {
+          amount_discount: 29900,
+          amount_tax: 0,
+          amount_shipping: 0,
+        },
+      },
+      "invalid_product",
+    ],
+    [
+      "partial discount",
+      {
+        amount_subtotal: 29900,
+        amount_total: 26910,
+        total_details: {
+          amount_discount: 2990,
+          amount_tax: 0,
+          amount_shipping: 0,
+        },
+      },
+      "invalid_product",
+    ],
+    [
+      "tax that does not add up to the total",
+      {
+        amount_subtotal: 29900,
+        amount_total: 29900,
+        total_details: {
+          amount_discount: 0,
+          amount_tax: 5980,
+          amount_shipping: 0,
+        },
+      },
+      "invalid_product",
+    ],
     ["wrong currency", { currency: "eur" }, "invalid_product"],
     ["missing line items", { line_items: null }, "invalid_product"],
     [
@@ -139,6 +179,45 @@ describe("DPP paid entitlement boundary", () => {
         metadata: { ...smoke.metadata, promo: "fake" },
       })
     ).toBe("invalid_product");
+  });
+  it("accepts sales tax added to the undiscounted list price", () => {
+    const taxed = {
+      ...paid,
+      amount_subtotal: 29900,
+      amount_total: 35880,
+      total_details: {
+        amount_discount: 0,
+        amount_tax: 5980,
+        amount_shipping: 0,
+      },
+    };
+    expect(dppGrantDecision(taxed)).toBe("paid");
+    expect(dppInvalidSettlementIsPermanent(taxed)).toBe(false);
+  });
+  it("treats a fully discounted list-price session as a permanent refusal", () => {
+    const discounted = {
+      ...paid,
+      amount_subtotal: 29900,
+      amount_total: 0,
+      total_details: {
+        amount_discount: 29900,
+        amount_tax: 0,
+        amount_shipping: 0,
+      },
+    };
+    expect(dppGrantDecision(discounted)).toBe("invalid_product");
+    expect(dppInvalidSettlementIsPermanent(discounted)).toBe(true);
+  });
+  it("keeps a missing line-item page retryable", () => {
+    const truncated = {
+      ...paid,
+      line_items: {
+        data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }],
+        has_more: true,
+      },
+    };
+    expect(dppGrantDecision(truncated)).toBe("invalid_product");
+    expect(dppInvalidSettlementIsPermanent(truncated)).toBe(false);
   });
   it("ignores a different catalog offer", () => {
     expect(

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import Stripe from "stripe";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getWebhookSupabase as getSupabase } from "./supabase";
 import { provisionPurchase } from "@/lib/provisioning";
 import { renderBillingEmail } from "@/lib/billing-emails";
 import { getBrandIdFromMetadata } from "@/lib/brand-billing";
@@ -152,17 +153,6 @@ function getStripe(): Stripe {
   return _stripe;
 }
 
-let _supabase: AdminSupabase | null = null;
-function getSupabase(): AdminSupabase {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-  }
-  return _supabase;
-}
-
 async function claimStripeEvent(
   supabase: AdminSupabase,
   event: Stripe.Event
@@ -182,7 +172,12 @@ async function claimStripeEvent(
     .eq("event_id", event.id)
     .maybeSingle();
   if (readError) throw readError;
-  if (!existing || existing.status === "success" || !existing.status) {
+  if (
+    !existing ||
+    existing.status === "success" ||
+    existing.status === "reconciliation_required" ||
+    !existing.status
+  ) {
     return "duplicate";
   }
 
@@ -275,7 +270,8 @@ export async function POST(req: NextRequest) {
         // Delayed methods emit completed while payment_status is still unpaid.
         // Granting there would provision Launch before the money arrives.
         // async_payment_succeeded is the paid event for those methods.
-        // A missing status still grants. A trial is no_payment_required.
+        // A missing or no_payment_required status is not proof of settlement.
+        // The general paid-checkout guard below rejects both fail-closed.
         if (session.payment_status === "unpaid") {
           console.log(
             JSON.stringify({
@@ -323,11 +319,55 @@ export async function POST(req: NextRequest) {
             verified,
             verifiedPrice
           );
+          if (grant.refused) {
+            // Permanent money refusal: nothing was granted and Stripe must not
+            // retry, but the event must never be recorded as success. Persist
+            // an actionable hold; fail closed (500, retry) if that fails.
+            const { data: held, error: holdError } = await getSupabase()
+              .from("stripe_events")
+              .update({
+                status: "reconciliation_required",
+                processed_at: new Date().toISOString(),
+                error: "dpp_ineligible_settlement",
+              })
+              .eq("event_id", event.id)
+              .select("event_id");
+            if (holdError || !held?.length) {
+              throw new Error(
+                "Could not persist DPP ineligible-settlement hold"
+              );
+            }
+            return NextResponse.json({
+              received: true,
+              type: event.type,
+              handled: false,
+              reconciliationRequired: true,
+            });
+          }
           if (verified.payment_status === "paid" && !grant.handled) {
             throw new Error(
               "DPP payment requires product and entitlement reconciliation"
             );
           }
+          break;
+        }
+
+        // A signed completion is not proof of a paid purchase. Zero-dollar
+        // sessions (including forged plan/grant metadata) must never reach
+        // general paid provisioning. Authorized DPP smoke grants are handled
+        // only in the separately verified DPP branch above.
+        if (
+          session.mode !== "payment" ||
+          session.status !== "complete" ||
+          session.payment_status !== "paid" ||
+          !Number.isSafeInteger(session.amount_total) ||
+          session.amount_total <= 0
+        ) {
+          console.warn("[webhook] general checkout paid grant refused", {
+            sessionId: session.id,
+            eventId: event.id,
+            reason: "ineligible_payment",
+          });
           break;
         }
 

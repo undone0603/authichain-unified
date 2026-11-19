@@ -126,32 +126,14 @@ describe("createPlanCheckoutSession", () => {
     expect(create.mock.calls[0][0].customer_email).toBe("mike@example.com");
   });
 
-  it("does not set customer_creation on Theater 1 subscription checkout", async () => {
-    create.mockResolvedValue({
-      url: "https://checkout.stripe.com/c/pay/cs_test_theater",
-    });
-    const result = await createPlanCheckoutSession({
-      request: new Request(
-        "https://authichain.govchain.us/api/checkout/plan/theater_1",
-        { method: "GET" }
-      ),
-      body: { planId: "theater_1" },
-      stripeSecretKey: "sk_test_x",
-    });
-    expect(result.ok).toBe(true);
-    const arg = create.mock.calls[0][0];
-    expect(arg.mode).toBe("subscription");
-    expect(arg.success_url).toContain("/dpp/thanks?session_id=");
-    expect(arg.after_expiration.recovery.enabled).toBe(true);
-    expect(arg.allow_promotion_codes).toBeUndefined();
-    expect(arg.customer_creation).toBeUndefined();
-  });
-
-  it("rejects retired QRON Launch and Farm plans without calling Stripe", async () => {
+  it("rejects each retired gated plan without calling Stripe", async () => {
     for (const planId of [
       "qron_launch",
       "qron_launch_annual",
+      "theater_1",
+      "theater_3",
       "strainchain_farm",
+      "gov_provenance_pilot",
     ] as const) {
       const result = await createPlanCheckoutSession({
         request: new Request("https://authichain.govchain.us/api/checkout", {
@@ -169,27 +151,26 @@ describe("createPlanCheckoutSession", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it("carries aff_ref + ref_code cookies into session and subscription metadata", async () => {
+  it("carries aff_ref + ref_code cookies into session metadata", async () => {
     create.mockResolvedValue({
-      url: "https://checkout.stripe.com/c/pay/cs_test_theater_aff",
+      url: "https://checkout.stripe.com/c/pay/cs_test_starter_aff",
     });
     const result = await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.govchain.us/api/checkout/plan/theater_1",
+        "https://authichain.govchain.us/api/checkout/plan/starter",
         {
           method: "GET",
           headers: { cookie: "aff_ref=AFF-COOKIE; ref_code=USER-456" },
         }
       ),
-      body: { planId: "theater_1" },
+      body: { planId: "starter" },
       stripeSecretKey: "sk_test_x",
     });
     expect(result.ok).toBe(true);
     const arg = create.mock.calls[0][0];
     expect(arg.metadata.affiliate_code).toBe("AFF-COOKIE");
     expect(arg.metadata.ref_code).toBe("USER-456");
-    expect(arg.subscription_data.metadata.affiliate_code).toBe("AFF-COOKIE");
-    expect(arg.subscription_data.metadata.ref_code).toBe("USER-456");
+    expect(arg.subscription_data).toBeUndefined();
   });
 
   it("ignores a foreign Origin on Stripe return URLs", async () => {
@@ -227,14 +208,14 @@ describe("createPlanCheckoutSession", () => {
 
   it("prefers an explicit affiliateCode over the cookie", async () => {
     create.mockResolvedValue({
-      url: "https://checkout.stripe.com/c/pay/cs_test_theater_aff2",
+      url: "https://checkout.stripe.com/c/pay/cs_test_starter_aff2",
     });
     await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.govchain.us/api/checkout/plan/theater_1",
+        "https://authichain.govchain.us/api/checkout/plan/starter",
         { method: "GET", headers: { cookie: "aff_ref=AFF-COOKIE" } }
       ),
-      body: { planId: "theater_1", affiliateCode: "AFF-EXPLICIT" },
+      body: { planId: "starter", affiliateCode: "AFF-EXPLICIT" },
       stripeSecretKey: "sk_test_x",
     });
     expect(create.mock.calls[0][0].metadata.affiliate_code).toBe(

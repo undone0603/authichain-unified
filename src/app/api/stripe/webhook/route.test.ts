@@ -38,6 +38,7 @@ const {
   const mockConstructEvent = vi.fn();
   const db = {
     seenEvent: null as null | { event_id: string },
+    failEventUpdate: false,
     profile: { id: "prof_1" } as Record<string, unknown> | null,
     affiliate: {
       id: "aff_1",
@@ -58,6 +59,7 @@ const {
       filters: Array<[string, unknown]>;
     }>,
     eventInserts: [] as Array<Record<string, unknown>>,
+    eventUpdates: [] as Array<Record<string, unknown>>,
     rpcCalls: [] as Array<{ fn: string; args: unknown }>,
   };
 
@@ -119,6 +121,18 @@ const {
               payload: updatePayload,
               filters: [...filters],
             });
+          else if (table === "stripe_events") {
+            calls.eventUpdates.push(updatePayload);
+            if (db.failEventUpdate)
+              return Promise.resolve({
+                data: null,
+                error: { message: "update failed" },
+              }).then(resolve as never, reject);
+            return Promise.resolve({
+              data: [{ event_id: "evt" }],
+              error: null,
+            }).then(resolve as never, reject);
+          }
         }
         return Promise.resolve({ error: null }).then(resolve, reject);
       },
@@ -297,6 +311,8 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     calls.affiliateSelects = 0;
     calls.affiliateUpdates.length = 0;
     calls.eventInserts.length = 0;
+    calls.eventUpdates.length = 0;
+    db.failEventUpdate = false;
     db.seenEvent = null;
     db.profile = { id: "prof_1" };
     db.affiliate = {
@@ -391,6 +407,8 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
         object: {
           id: "cs_starter_001",
           object: "checkout.session",
+          mode: "payment",
+          status: "complete",
           amount_total: 2900,
           currency: "usd",
           customer_email: "buyer@example.com",
@@ -425,6 +443,8 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
         object: {
           id: "cs_starter_neg",
           object: "checkout.session",
+          mode: "payment",
+          status: "complete",
           amount_total: 2900,
           amount_subtotal: 2900,
           total_details: { amount_discount: 0 },
@@ -463,6 +483,34 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     const r = await grantedPlan(starterSession());
     expect(r.plan).toBe("starter");
     expect(r.warned).toBe(false);
+  });
+
+  it("refuses Starter checkout with missing payment status before provisioning", async () => {
+    const res = await postInvoice(
+      starterSession({
+        metadata: { plan: "starter" },
+        payment_status: undefined,
+      })
+    );
+    await flushAfter();
+    expect(res.status).toBe(200);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(calls.profileUpdates).toHaveLength(0);
+    expect(calls.paymentInserts).toHaveLength(0);
+  });
+
+  it("refuses Creator checkout marked no_payment_required before provisioning", async () => {
+    const res = await postInvoice(
+      starterSession({
+        metadata: { plan: "creator" },
+        payment_status: "no_payment_required",
+      })
+    );
+    await flushAfter();
+    expect(res.status).toBe(200);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(calls.profileUpdates).toHaveLength(0);
+    expect(calls.paymentInserts).toHaveLength(0);
   });
 
   it("negative: unpaid session is held before any grant and logs the hold", async () => {
@@ -653,6 +701,51 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     }
   });
 
+  it("DPP: a permanently refused positive-value payment becomes a durable hold, never success", async () => {
+    mockCheckoutSessionRetrieve.mockResolvedValue(verifiedDppCheckout());
+    mockDppFulfill.mockResolvedValue({
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    });
+
+    const res = await postInvoice(dppCheckoutEvent());
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(calls.eventUpdates).toHaveLength(1);
+    expect(calls.eventUpdates[0]).toMatchObject({
+      status: "reconciliation_required",
+      error: "dpp_ineligible_settlement",
+    });
+    expect(calls.eventUpdates.some(u => u.status === "success")).toBe(false);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("DPP: fails closed (500, retryable) when the refusal hold cannot be persisted", async () => {
+    mockCheckoutSessionRetrieve.mockResolvedValue(verifiedDppCheckout());
+    mockDppFulfill.mockResolvedValue({
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    });
+    db.failEventUpdate = true;
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await postInvoice(dppCheckoutEvent());
+      expect(res.status).toBe(500);
+      expect(res.body.error).toMatch(/ineligible-settlement hold/);
+      expect(provisionPurchase).not.toHaveBeenCalled();
+    } finally {
+      err.mockRestore();
+    }
+  });
+
   it("DPP: identifies metadata-free canonical Payment Link, but still reads Stripe", async () => {
     mockCheckoutSessionRetrieve.mockResolvedValue(
       verifiedDppCheckout({ metadata: {} })
@@ -673,5 +766,158 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
     expect(mockCheckoutSessionRetrieve).toHaveBeenCalledOnce();
     expect(mockDppFulfill).toHaveBeenCalledOnce();
     expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["zero total with forged plan", { amount_total: 0, metadata: { plan: "professional", grant: "999999" } }],
+    ["zero total with forged trial", { amount_total: 0, metadata: { plan: "starter", trial: "true", grant: "50" } }],
+    ["missing total", { amount_total: null, metadata: { plan: "professional", grant: "999999" } }],
+    ["unpaid positive checkout", { amount_total: 2900, payment_status: "unpaid", metadata: { plan: "starter" } }],
+  ])("general checkout refuses %s before paid provisioning", async (_label, overrides) => {
+    const res = await postInvoice(dppCheckoutEvent({
+      id: "cs_general_ineligible_mock",
+      metadata: {},
+      ...overrides,
+    }));
+    await flushAfter();
+    expect(res.status).toBe(200);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(mockDppFulfill).not.toHaveBeenCalled();
+    expect(calls.profileUpdates).toHaveLength(0);
+    expect(calls.paymentInserts).toHaveLength(0);
+  });
+
+  it("DPP zero-dollar completion cannot bypass the DPP verifier", async () => {
+    mockCheckoutSessionRetrieve.mockResolvedValue(verifiedDppCheckout({
+      amount_total: 0,
+      metadata: { plan: "dpp_readiness" },
+    }));
+    mockDppFulfill.mockResolvedValue({
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    });
+    const res = await postInvoice(dppCheckoutEvent({ amount_total: 0 }));
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ handled: false, reconciliationRequired: true });
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(calls.profileUpdates).toHaveLength(0);
+    expect(calls.paymentInserts).toHaveLength(0);
+  });
+});
+
+/**
+ * Subscription lifecycle contract for the canonical Next.js receiver.
+ * IMPORTANT: these are isolated unit tests with faked Stripe and Supabase.
+ * They do NOT prove exactly-once behavior across the independent Workers
+ * and Supabase webhook receivers registered on the live Stripe account.
+ * A cross-receiver, signed test-mode integration test is still required.
+ */
+describe("POST /api/stripe/webhook subscription lifecycle (isolated receiver)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAfterCalls.length = 0;
+    calls.profileUpdates.length = 0;
+    calls.paymentInserts.length = 0;
+    calls.eventInserts.length = 0;
+    calls.rpcCalls.length = 0;
+    db.seenEvent = null;
+    db.profile = { id: "prof_lifecycle", subscription_plan: "qron_launch" };
+    db.affiliate = null;
+    mockRetrieve.mockResolvedValue({
+      id: "sub_lifecycle",
+      metadata: {},
+    });
+    process.env.STRIPE_SECRET_KEY = "sk_test_dummy";
+    process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service_role_test";
+  });
+
+  it("initial invoice plus renewal records each distinct invoice but never grants a second checkout entitlement", async () => {
+    const created = invoiceEvent("subscription_create", {
+      event: "evt_lifecycle_create",
+      invoice: "in_lifecycle_create",
+    });
+    const renewed = invoiceEvent("subscription_cycle", {
+      event: "evt_lifecycle_cycle",
+      invoice: "in_lifecycle_cycle",
+    });
+
+    expect((await postInvoice(created)).status).toBe(200);
+    expect((await postInvoice(renewed)).status).toBe(200);
+    await flushAfter();
+
+    expect(calls.paymentInserts.map(x => x.stripe_invoice_id)).toEqual([
+      "in_lifecycle_create",
+      "in_lifecycle_cycle",
+    ]);
+    expect(calls.profileUpdates.filter(x =>
+      (x.payload as { subscription_status?: string }).subscription_status === "active"
+    )).toHaveLength(2);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(mockAnchorSale).toHaveBeenCalledTimes(1);
+  });
+
+  it("failed renewal records past_due, not paid, with no entitlement grant", async () => {
+    const event = {
+      id: "evt_lifecycle_failed",
+      type: "invoice.payment_failed",
+      livemode: false,
+      data: {
+        object: {
+          id: "in_lifecycle_failed",
+          customer: "cus_123",
+          subscription: "sub_lifecycle",
+          amount_paid: 0,
+          currency: "usd",
+        },
+      },
+    };
+
+    expect((await postInvoice(event)).status).toBe(200);
+    await flushAfter();
+
+    expect(calls.profileUpdates).toEqual([
+      expect.objectContaining({
+        payload: expect.objectContaining({ subscription_status: "past_due" }),
+        filters: expect.arrayContaining([["id", "prof_lifecycle"]]),
+      }),
+    ]);
+    expect(calls.paymentInserts).toHaveLength(0);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(mockAnchorSale).not.toHaveBeenCalled();
+  });
+
+  it("deleted subscription transitions to free/cancelled without any new grant", async () => {
+    const event = {
+      id: "evt_lifecycle_deleted",
+      type: "customer.subscription.deleted",
+      livemode: false,
+      data: {
+        object: {
+          id: "sub_lifecycle",
+          customer: "cus_123",
+          status: "canceled",
+        },
+      },
+    };
+
+    expect((await postInvoice(event)).status).toBe(200);
+    await flushAfter();
+
+    expect(calls.profileUpdates).toEqual([
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          subscription_status: "cancelled",
+          subscription_plan: "free",
+        }),
+        filters: expect.arrayContaining([["stripe_customer_id", "cus_123"]]),
+      }),
+    ]);
+    expect(calls.paymentInserts).toHaveLength(0);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(mockAnchorSale).not.toHaveBeenCalled();
   });
 });

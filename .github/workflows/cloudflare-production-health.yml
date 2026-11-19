@@ -12,7 +12,7 @@ on:
 # These probes are read-only: a new main revision supersedes older probes.
 concurrency:
   group: cloudflare-production-health-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read

@@ -17,6 +17,11 @@ vi.mock("stripe", () => ({
 }));
 
 import worker from "./index";
+import {
+  CATALOG_GRANT_RPC,
+  applyCatalogGrantState,
+  grantReceiptKey,
+} from "../../../src/lib/provisioning";
 
 const env = {
   STRIPE_SECRET_KEY: "sk_test_x",
@@ -26,6 +31,7 @@ const env = {
 };
 
 const STARTER = "price_1UIoEVGqTruSqV8T61lp48wB";
+const CREATOR = "price_1UIoEYGqTruSqV8TCXTNipvh";
 const DPP = "price_1TwmD8GqTruSqV8TpAF8dfyA";
 const LAUNCH_ANNUAL = "price_1USNoSGqTruSqV8ThTIW7Ej8";
 
@@ -59,31 +65,157 @@ function installFetch(opts?: {
   selectStatus?: number;
   prior?: string | null;
   grantLimit?: number;
+  grantUsed?: number;
+  receipts?: string[];
   upsertOk?: boolean;
-  updateOk?: boolean;
+  rpcStatus?: number;
+  ambiguousProfile?: boolean;
+  receiptProfile?: string | null;
+  rpcProfileOverride?: string | null;
+  email?: string;
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  stripeSubscriptionId?: string;
 }) {
-  const calls: Array<{ method: string; url: string; body?: unknown }> = [];
+  const seededEmail = opts?.email ?? "buyer@example.com";
+  const calls: Array<{
+    method: string;
+    url: string;
+    body?: unknown;
+    prefer?: string | null;
+  }> & {
+    profile: Record<string, unknown>;
+    profiles: Map<string, Record<string, unknown>>;
+    receipts: Set<string>;
+  } = Object.assign([], {
+    profile: {
+      id: "prof_1",
+      email: seededEmail,
+      last_grant_session_id: opts?.prior === undefined ? null : opts.prior,
+      generations_limit: opts?.grantLimit ?? 0,
+      generations_used: opts?.grantUsed ?? 0,
+      subscription_plan: opts?.subscriptionPlan ?? null,
+      subscription_status: opts?.subscriptionStatus ?? null,
+      stripe_subscription_id: opts?.stripeSubscriptionId ?? null,
+    },
+    profiles: new Map<string, Record<string, unknown>>(),
+    receipts: new Set(
+      (opts?.receipts ?? []).map(id =>
+        id.startsWith("grant:") ? id : grantReceiptKey(id)
+      )
+    ),
+  });
+  calls.profiles.set(seededEmail, calls.profile);
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? "GET";
+      const headers = new Headers(init?.headers);
+      const prefer = headers.get("Prefer");
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
-      calls.push({ method, url, body });
+      calls.push({ method, url, body, prefer });
+      if (url.includes(`/rpc/${CATALOG_GRANT_RPC}`)) {
+        if ((opts?.rpcStatus ?? 200) >= 400) {
+          return new Response("no", { status: opts?.rpcStatus ?? 500 });
+        }
+        const args = (body ?? {}) as Record<string, unknown>;
+        const profileId = String(args.p_profile_id);
+        const target =
+          [...calls.profiles.values()].find(row => row.id === profileId) ??
+          calls.profile;
+        const result = applyCatalogGrantState(
+          {
+            receipts: calls.receipts,
+            receiptProfiles: opts?.receiptProfile
+              ? Object.fromEntries(
+                  [...calls.receipts].map(key => [key, opts.receiptProfile!])
+                )
+              : undefined,
+            row: target,
+          },
+          {
+            profileId: String(args.p_profile_id),
+            sessionId: String(args.p_session_id),
+            plan: String(args.p_plan),
+            brand: String(args.p_brand),
+            generations: Number(args.p_generations),
+            stack: Boolean(args.p_stack),
+            stripeCustomerId:
+              (args.p_stripe_customer_id as string | null) ?? null,
+            stripeSubscriptionId:
+              (args.p_stripe_subscription_id as string | null) ?? null,
+            isTrial: Boolean(args.p_is_trial),
+          }
+        );
+        if (result.status === "conflict") {
+          return new Response("catalog_grant_receipt_conflict", {
+            status: 400,
+          });
+        }
+        return new Response(
+          JSON.stringify({
+            status: result.status,
+            profile_id:
+              opts?.rpcProfileOverride !== undefined
+                ? opts.rpcProfileOverride
+                : result.profileId,
+            generations_limit: calls.profile.generations_limit,
+            generations_used: calls.profile.generations_used,
+            last_grant_session_id: calls.profile.last_grant_session_id,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
       if (method === "GET") {
         if ((opts?.selectStatus ?? 200) >= 400) {
-          return new Response("no", { status: opts?.selectStatus ?? 500 });
+          return new Response("no", {
+            status: opts?.selectStatus ?? 500,
+          });
         }
+        const emailParam = new URL(url).searchParams.get("email");
+        const email = emailParam?.startsWith("eq.")
+          ? emailParam.slice(3)
+          : null;
+        const matched = email ? calls.profiles.get(email) : undefined;
         const row =
-          opts?.prior === undefined ? [] : [{ last_grant_session_id: opts.prior, generations_limit: opts.grantLimit ?? 0 }];
-        return new Response(JSON.stringify(opts?.prior === undefined ? [] : row), {
+          email != null
+            ? matched
+              ? opts?.ambiguousProfile
+                ? [matched, { ...matched, id: "prof_2" }]
+                : [matched]
+              : []
+            : opts?.prior === undefined
+              ? []
+              : opts.ambiguousProfile
+                ? [calls.profile, { ...calls.profile, id: "prof_2" }]
+                : [calls.profile];
+        return new Response(JSON.stringify(row), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
       }
-      if (method === "POST" && opts?.upsertOk === false) {
-        return new Response("no", { status: 500 });
+      if (method === "POST" && url.includes("/profiles")) {
+        if (opts?.upsertOk === false) {
+          return new Response("no", { status: 500 });
+        }
+        const row = (body ?? {}) as Record<string, unknown>;
+        const email = typeof row.email === "string" ? row.email : "";
+        const existing = email ? calls.profiles.get(email) : undefined;
+        if (existing) {
+          Object.assign(existing, row);
+        } else if (email) {
+          const created = {
+            id: `prof_${calls.profiles.size + 1}`,
+            generations_limit: 0,
+            generations_used: 0,
+            last_grant_session_id: null,
+            ...row,
+          };
+          calls.profiles.set(email, created);
+        }
+        return new Response("{}", { status: 200 });
       }
-      if (method === "PATCH" && opts?.updateOk === false) {
+      if (method === "POST" && opts?.upsertOk === false) {
         return new Response("no", { status: 500 });
       }
       return new Response("{}", { status: 200 });
@@ -92,8 +224,38 @@ function installFetch(opts?: {
   return calls;
 }
 
+function signedPost() {
+  return new Request("https://worker.test/stripe", {
+    method: "POST",
+    body: "{}",
+    headers: { "stripe-signature": "t=1,v1=ok" },
+  });
+}
+
 function patches(calls: Array<{ method: string; body?: unknown }>) {
   return calls.filter(c => c.method === "PATCH").map(c => c.body);
+}
+
+function grantRpcs(
+  calls: Array<{ method: string; url: string; body?: unknown }>
+) {
+  return calls.filter(
+    c =>
+      c.method === "POST" && String(c.url).includes(`/rpc/${CATALOG_GRANT_RPC}`)
+  );
+}
+
+function profileUpserts(
+  calls: Array<{ method: string; url: string; body?: unknown }>
+) {
+  return calls
+    .filter(
+      c =>
+        c.method === "POST" &&
+        String(c.url).includes("/profiles") &&
+        !String(c.url).includes("/rpc/")
+    )
+    .map(c => c.body as Record<string, unknown>);
 }
 
 describe("stripe-webhook checkout grant", () => {
@@ -112,7 +274,9 @@ describe("stripe-webhook checkout grant", () => {
   });
 
   it("rejects an invalid signature", async () => {
-    state.verifyError = new Error("No signatures found matching the expected signature");
+    state.verifyError = new Error(
+      "No signatures found matching the expected signature"
+    );
     const res = await worker.fetch(
       new Request("https://worker.test/stripe", {
         method: "POST",
@@ -153,17 +317,22 @@ describe("stripe-webhook checkout grant", () => {
       env
     );
     expect(created.status).toBe(200);
-    expect(patches(first)).toEqual([
+    expect(grantRpcs(first)).toEqual([
       expect.objectContaining({
-        plan: "starter",
-        generations_limit: 100,
-        generations_used: 0,
-        last_grant_session_id: "cs_new",
+        body: expect.objectContaining({
+          p_session_id: "cs_new",
+          p_plan: "starter",
+          p_generations: 100,
+          p_stack: true,
+        }),
       }),
     ]);
+    expect(first.profile.generations_limit).toBe(100);
+    expect(first.receipts.has(grantReceiptKey("cs_new"))).toBe(true);
+    expect(patches(first)).toEqual([]);
 
     state.event = sessionEvent({ price: STARTER, id: "cs_new" });
-    const second = installFetch({ prior: "cs_new" });
+    const second = installFetch({ prior: "cs_new", grantLimit: 100 });
     const replay = await worker.fetch(
       new Request("https://worker.test/stripe", {
         method: "POST",
@@ -173,6 +342,7 @@ describe("stripe-webhook checkout grant", () => {
       env
     );
     expect(replay.status).toBe(200);
+    expect(second.profile.generations_limit).toBe(100);
     expect(patches(second)).toEqual([]);
   });
 
@@ -204,7 +374,9 @@ describe("stripe-webhook checkout grant", () => {
       env
     );
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ error: "canonical DPP entitlement pending" });
+    expect(await res.json()).toEqual({
+      error: "canonical DPP entitlement pending",
+    });
     expect(patches(calls)).toEqual([]);
   });
 
@@ -236,7 +408,9 @@ describe("stripe-webhook checkout grant", () => {
       env
     );
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ error: "canonical DPP buyer identity missing" });
+    expect(await res.json()).toEqual({
+      error: "canonical DPP buyer identity missing",
+    });
     expect(calls.filter(c => c.url.includes("/profiles"))).toHaveLength(0);
   });
 
@@ -253,6 +427,35 @@ describe("stripe-webhook checkout grant", () => {
     );
     expect(res.status).toBe(500);
     expect(patches(calls)).toEqual([]);
+  });
+
+  it("fails closed for a one-time Starter pack with no_payment_required", async () => {
+    state.event = sessionEvent({
+      price: STARTER, id: "cs_unsettled_starter",
+      paymentStatus: "no_payment_required",
+    });
+    const calls = installFetch();
+    const response = await worker.fetch(signedPost(), env);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: "paid pack settlement not confirmed",
+    });
+    expect(calls.some(c => c.url.includes(`/rpc/${CATALOG_GRANT_RPC}`))).toBe(false);
+    expect(calls.some(c => c.url.includes("/profiles"))).toBe(false);
+  });
+
+  it("fails closed for a Creator checkout missing payment_status", async () => {
+    state.event = sessionEvent({ price: CREATOR, id: "cs_missing_payment" });
+    const evt = state.event as { data: { object: { payment_status?: string } } };
+    delete evt.data.object.payment_status;
+    const calls = installFetch();
+    const response = await worker.fetch(signedPost(), env);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: "paid pack settlement not confirmed",
+    });
+    expect(calls.some(c => c.url.includes(`/rpc/${CATALOG_GRANT_RPC}`))).toBe(false);
+    expect(calls.some(c => c.url.includes("/profiles"))).toBe(false);
   });
 
   it("does not grant a checkout session that is still unpaid", async () => {
@@ -311,14 +514,13 @@ describe("stripe-webhook checkout grant", () => {
     );
     spy.mockRestore();
     expect(res.status).toBe(200);
-    expect(patches(calls)).toEqual([
-      expect.objectContaining({
-        plan: "qron_launch_annual",
-        generations_limit: 1200,
-        generations_used: 0,
-        last_grant_session_id: "cs_annual",
-      }),
-    ]);
+    expect(grantRpcs(calls)[0]?.body).toMatchObject({
+      p_plan: "qron_launch_annual",
+      p_generations: 1200,
+      p_stack: false,
+      p_session_id: "cs_annual",
+    });
+    expect(calls.profile.generations_limit).toBe(1200);
     const paid = logs
       .map(line => JSON.parse(line) as { evt: string })
       .filter(e => e.evt === "checkout_paid_qron_annual");
@@ -332,6 +534,278 @@ describe("stripe-webhook checkout grant", () => {
         brand: "qron",
       }),
     ]);
+  });
+
+  it("does not add again when an older session is replayed after a newer purchase", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_old" });
+    const calls = installFetch({
+      prior: "cs_new",
+      grantLimit: 200,
+      grantUsed: 0,
+      receipts: ["cs_old"],
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(200);
+    expect(calls.profile.generations_limit).toBe(200);
+    expect(grantRpcs(calls)).toHaveLength(1);
+    expect(patches(calls)).toEqual([]);
+  });
+
+  it("grant A, grant B, replay A does not add A again (CFA-869 F869-1)", async () => {
+    const db = installFetch({
+      prior: null,
+      grantLimit: 0,
+      grantUsed: 0,
+    });
+    state.event = sessionEvent({ price: STARTER, id: "cs_a" });
+    expect((await worker.fetch(signedPost(), env)).status).toBe(200);
+    expect(db.profile.generations_limit).toBe(100);
+    expect(db.receipts.has(grantReceiptKey("cs_a"))).toBe(true);
+
+    state.event = sessionEvent({ price: STARTER, id: "cs_b" });
+    expect((await worker.fetch(signedPost(), env)).status).toBe(200);
+    expect(db.profile.generations_limit).toBe(200);
+    expect(db.profile.last_grant_session_id).toBe("cs_b");
+    const writes = grantRpcs(db).length;
+
+    state.event = sessionEvent({ price: STARTER, id: "cs_a" });
+    expect((await worker.fetch(signedPost(), env)).status).toBe(200);
+    expect(db.profile.generations_limit).toBe(200);
+    expect(grantRpcs(db)).toHaveLength(writes + 1);
+  });
+
+  it("adds a second Starter pack on top of unused credits", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_repeat" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      grantUsed: 40,
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(200);
+    expect(grantRpcs(calls)[0]?.body).toMatchObject({
+      p_plan: "starter",
+      p_generations: 100,
+      p_stack: true,
+      p_session_id: "cs_repeat",
+    });
+    expect(calls.profile.generations_limit).toBe(160);
+    expect(patches(calls)).toEqual([]);
+  });
+
+  it("does not double-grant when the same Starter event is replayed", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_repeat" });
+    const calls = installFetch({
+      prior: "cs_repeat",
+      grantLimit: 160,
+      grantUsed: 0,
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(200);
+    expect(patches(calls)).toEqual([]);
+  });
+
+  it("keeps an active subscriber's plan when they buy a Starter pack", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_pack" });
+    const calls = installFetch({
+      prior: "cs_launch",
+      grantLimit: 100,
+      grantUsed: 40,
+      subscriptionPlan: "qron_launch",
+      subscriptionStatus: "active",
+      stripeSubscriptionId: "sub_123",
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(200);
+    const upsert = profileUpserts(calls)[0];
+    expect(upsert).toMatchObject({
+      email: "buyer@example.com",
+      full_name: "Buyer",
+      stripe_customer_id: "cus_1",
+    });
+    expect(upsert).not.toHaveProperty("plan");
+    expect(upsert).not.toHaveProperty("stripe_subscription_id");
+    expect(grantRpcs(calls)[0]?.body).toMatchObject({
+      p_plan: "starter",
+      p_stack: true,
+      p_stripe_subscription_id: null,
+    });
+    expect(calls.profile.generations_limit).toBe(160);
+    expect(calls.profile.subscription_plan).toBe("qron_launch");
+    expect(calls.profile.stripe_subscription_id).toBe("sub_123");
+  });
+
+  it("credits the existing lowercase profile for a mixed-case checkout email", async () => {
+    state.event = sessionEvent({
+      price: STARTER,
+      id: "cs_case",
+      email: " Buyer@Example.com ",
+    });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 0,
+      email: "buyer@example.com",
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(200);
+    expect(profileUpserts(calls)[0]).toMatchObject({
+      email: "buyer@example.com",
+    });
+    expect(grantRpcs(calls)[0]?.body).toMatchObject({
+      p_profile_id: "prof_1",
+      p_session_id: "cs_case",
+    });
+    expect(calls.profiles.size).toBe(1);
+    expect(calls.profiles.has("buyer@example.com")).toBe(true);
+    expect(calls.profile.generations_limit).toBe(100);
+    expect(calls.receipts.size).toBe(1);
+    expect(calls.receipts.has(grantReceiptKey("cs_case"))).toBe(true);
+  });
+
+  it("adds a Creator pack on leftover Starter credits", async () => {
+    state.event = sessionEvent({ price: CREATOR, id: "cs_creator" });
+    const calls = installFetch({
+      prior: "cs_starter",
+      grantLimit: 100,
+      grantUsed: 40,
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(200);
+    expect(grantRpcs(calls)[0]?.body).toMatchObject({
+      p_plan: "creator",
+      p_generations: 500,
+      p_stack: true,
+    });
+    expect(calls.profile.generations_limit).toBe(560);
+  });
+
+  it("still sets a Launch Annual period grant instead of stacking", async () => {
+    state.event = sessionEvent({ price: LAUNCH_ANNUAL, id: "cs_annual" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      grantUsed: 40,
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(200);
+    expect(grantRpcs(calls)[0]?.body).toMatchObject({
+      p_plan: "qron_launch_annual",
+      p_generations: 1200,
+      p_stack: false,
+    });
+    expect(calls.profile.generations_limit).toBe(1200);
+    expect(patches(calls)).toEqual([]);
+  });
+
+  it("fails closed when two profiles match the buyer email", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_amb" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      ambiguousProfile: true,
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "grant lookup failed" });
+    expect(grantRpcs(calls)).toEqual([]);
+    expect(calls.profile.generations_limit).toBe(100);
+  });
+
+  it("fails closed when the catalog RPC is missing (migration not applied)", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_rpc" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      grantUsed: 40,
+      rpcStatus: 404,
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: "catalog grant RPC unavailable",
+    });
+    expect(calls.profile.generations_limit).toBe(100);
+  });
+
+  it("fails closed when the catalog RPC returns 500, without changing credits", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_rpc" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      grantUsed: 40,
+      rpcStatus: 500,
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: "grant write failed",
+    });
+    expect(calls.profile.generations_limit).toBe(100);
+    expect(calls.receipts.has(grantReceiptKey("cs_rpc"))).toBe(false);
+  });
+
+  it("rejects atomic RPC replay evidence for another profile", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_wrong_profile" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      receipts: ["cs_wrong_profile"],
+      rpcProfileOverride: "prof_other",
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: "catalog_grant_receipt_conflict",
+    });
+    expect(grantRpcs(calls)).toHaveLength(1);
+    expect(calls.profile.generations_limit).toBe(100);
+  });
+
+  it("rejects already_granted evidence that omits the receipt profile", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_unmapped" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      receipts: ["cs_unmapped"],
+      rpcProfileOverride: null,
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: "catalog_grant_receipt_conflict",
+    });
+    expect(calls.profile.generations_limit).toBe(100);
+  });
+
+  it("fails closed when the session receipt belongs to another profile", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_taken" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 100,
+      grantUsed: 0,
+      receipts: ["cs_taken"],
+      receiptProfile: "prof_other",
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: "catalog_grant_receipt_conflict",
+    });
+    expect(calls.profile.generations_limit).toBe(100);
+  });
+
+  it("treats a uniqueness conflict as already granted", async () => {
+    state.event = sessionEvent({ price: STARTER, id: "cs_race" });
+    const calls = installFetch({
+      prior: "cs_old",
+      grantLimit: 160,
+      grantUsed: 0,
+      receipts: ["cs_race"],
+    });
+    const res = await worker.fetch(signedPost(), env);
+    expect(res.status).toBe(200);
+    expect(calls.profile.generations_limit).toBe(160);
+    expect(grantRpcs(calls)).toHaveLength(1);
   });
 
   it("does not log a second Launch Annual sale when the paid session replays", async () => {

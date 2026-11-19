@@ -418,6 +418,7 @@ export function toW3cVerifiableCredential(
 
 export { resolveVerificationDecision } from "./verification-decision";
 export type {
+  IssuerCheckState,
   VerificationDecision,
   VerificationDecisionInput,
   VerificationDecisionResult,

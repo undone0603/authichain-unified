@@ -549,6 +549,33 @@ describe("fulfillDppPaidSession", () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
+  it("refuses a zero-dollar non-smoke checkout before atomic grant or payment timestamp", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    const session = {
+      ...paidSession,
+      id: "cs_test_zero_unapproved",
+      amount_total: 0,
+      metadata: {
+        ...paidSession.metadata,
+        grant: "999999",
+        is_demo: "true",
+        promo: "NOT_AUTHORIZED",
+      },
+    };
+    const result = await fulfillDppPaidSession(supabase, session);
+    expect(result).toMatchObject({
+      handled: true,
+      profileId: null,
+      refused: "ineligible_settlement",
+    });
+    expect(rows).toHaveLength(0);
+    expect(profileUpdates).toHaveLength(0);
+    expect(sendEmail).not.toHaveBeenCalled();
+    const replay = await fulfillDppPaidSession(supabase, session);
+    expect(replay.refused).toBe("ineligible_settlement");
+    expect(profileUpdates).toHaveLength(0);
+  });
+
   it("sends through only one provider for a non-demo paid activation", async () => {
     const { supabase } = fakeSupabase();
     await fulfillDppPaidSession(supabase, paidSession);
@@ -892,6 +919,51 @@ describe("fulfillDppPaidSession", () => {
       "dpp_loop:provisioned",
     ]);
     expect(profileUpdates).toHaveLength(1);
+  });
+
+  it("grants a tax-bearing session when the subtotal is the list price", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, {
+      ...paidSession,
+      amount_subtotal: 29900,
+      amount_total: 35880,
+      total_details: {
+        amount_discount: 0,
+        amount_tax: 5980,
+        amount_shipping: 0,
+      },
+    });
+    expect(result.handled).toBe(true);
+    expect(result.refused).toBeUndefined();
+    expect(result.profileId).toBe("prof_1");
+    expect(rows.map(row => row.event_type)).toContain(
+      "dpp_loop:payment_succeeded"
+    );
+    expect(profileUpdates).toHaveLength(1);
+    expect(sendEmail).toHaveBeenCalled();
+  });
+
+  it("does not grant or retry a fully discounted list-price session", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, {
+      ...paidSession,
+      amount_subtotal: 29900,
+      amount_total: 0,
+      total_details: {
+        amount_discount: 29900,
+        amount_tax: 0,
+        amount_shipping: 0,
+      },
+    });
+    expect(result).toMatchObject({
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    });
+    expect(rows).toHaveLength(0);
+    expect(profileUpdates).toHaveLength(0);
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
   it("does not provision a complete-but-unpaid checkout", async () => {

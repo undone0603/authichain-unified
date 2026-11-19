@@ -178,7 +178,9 @@ beforeEach(async () => {
       status: source.status ?? "complete",
       currency: source.currency ?? "usd",
       line_items: source.line_items ?? {
-        data: [{ quantity: 1, price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } }],
+        data: [
+          { quantity: 1, price: { id: "price_1TwmD8GqTruSqV8TpAF8dfyA" } },
+        ],
         has_more: false,
       },
     };
@@ -426,6 +428,30 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     );
   });
 
+  it("does not provision a plan for a certificate fee priced like Starter ($29)", async () => {
+    provisionPurchase.mockClear();
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_cert_fee_001", {
+        id: "cs_cert_fee_001",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 2900,
+        livemode: true,
+        currency: "usd",
+        customer_details: { email: "buyer@example.com" },
+        metadata: {
+          user_id: "30",
+          kind: "evidence",
+          certificateNumber: "AC-1",
+        },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
   it("fulfills a paid DPP session even when Drizzle DATABASE_URL is missing", async () => {
     const { hasWebhookEventProcessed, logActivity, logAutomationAudit } =
       await import("../db.js");
@@ -500,7 +526,6 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     );
   });
 
-
   it("recognizes the live $299 Payment Link with no metadata and fetches the real Stripe price", async () => {
     mockConstructEvent.mockReturnValue(
       makeEvent("checkout.session.completed", "evt_dpp_link", {
@@ -539,9 +564,13 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         metadata: { plan: "dpp_readiness" },
       })
     );
-    mockCheckoutRetrieve.mockRejectedValueOnce(new Error("Stripe read unavailable"));
+    mockCheckoutRetrieve.mockRejectedValueOnce(
+      new Error("Stripe read unavailable")
+    );
     const { handleStripeWebhook } = await import("./stripe.js");
-    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(/Stripe read unavailable/);
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(
+      /Stripe read unavailable/
+    );
     expect(fulfillDppPaidSession).not.toHaveBeenCalled();
   });
   it("does not fulfill checkout.session.completed until payment_status is paid", async () => {
@@ -600,6 +629,133 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
       })
     );
     expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
+
+  it("replays an idempotent Starter grant after an earlier paid webhook fails", async () => {
+    const session = {
+      id: "cs_starter_catalog_recovery",
+      mode: "payment",
+      payment_status: "paid",
+      amount_total: 2900,
+      currency: "usd",
+      livemode: true,
+      customer_details: { email: "buyer@example.test" },
+      metadata: { plan: "starter" },
+    };
+    mockConstructEvent.mockReturnValue(
+      makeEvent(
+        "checkout.session.completed",
+        "evt_starter_catalog_recovery",
+        session
+      )
+    );
+    provisionPurchase
+      .mockResolvedValueOnce({
+        status: "upsert_failed",
+        error: "transient entitlement store failure",
+      })
+      .mockResolvedValueOnce({
+        status: "provisioned",
+        profileId: "prof_starter_recovered",
+      });
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(provisionPurchase).toHaveBeenCalledTimes(1);
+    expect(growthRecordRpc).not.toHaveBeenCalled();
+
+    // Even when the Stripe event is already claimed, replaying the same
+    // Checkout Session must recover via provisionPurchase's session-id guard.
+    claimStripeEventMock.mockResolvedValueOnce("duplicate");
+    const recovered = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(recovered).toMatchObject({
+      received: true,
+      duplicate: true,
+      handled: true,
+    });
+    expect(provisionPurchase).toHaveBeenCalledTimes(2);
+    expect(provisionPurchase.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({ sessionId: session.id, plan: "starter" })
+    );
+    expect(provisionPurchase.mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({ sessionId: session.id, plan: "starter" })
+    );
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: "success", httpStatus: 200 })
+    );
+    expect(growthRecordRpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails closed if a recognized paid catalog checkout has no entitlement store", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_paid_no_catalog_store", {
+        id: "cs_paid_no_catalog_store",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 2900,
+        currency: "usd",
+        livemode: true,
+        customer_details: { email: "buyer@example.test" },
+        metadata: { plan: "starter" },
+      })
+    );
+    const savedUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const savedFallback = process.env.SUPABASE_URL;
+    const savedKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    try {
+      const { handleStripeWebhook } = await import("./stripe.js");
+      await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toMatchObject({
+        name: "RetryableFulfillmentError",
+      });
+      expect(provisionPurchase).not.toHaveBeenCalled();
+      // With no Supabase configuration the delivery logger receives a null
+      // client. The handler still fails closed; no delivery row can persist.
+      expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+        null,
+        expect.objectContaining({ status: "error", httpStatus: 500 })
+      );
+    } finally {
+      if (savedUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+      else process.env.NEXT_PUBLIC_SUPABASE_URL = savedUrl;
+      if (savedFallback === undefined) delete process.env.SUPABASE_URL;
+      else process.env.SUPABASE_URL = savedFallback;
+      if (savedKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+      else process.env.SUPABASE_SERVICE_ROLE_KEY = savedKey;
+    }
+  });
+
+  it("does not grant unpaid or demo catalog credits on a duplicate delivery", async () => {
+    const { handleStripeWebhook } = await import("./stripe.js");
+    for (const [kind, overrides] of [
+      ["unpaid", { payment_status: "unpaid" }],
+      ["demo", { metadata: { plan: "starter", is_demo: "true" } }],
+    ] as const) {
+      claimStripeEventMock.mockResolvedValueOnce("duplicate");
+      mockConstructEvent.mockReturnValue(
+        makeEvent(
+          "checkout.session.completed",
+          `evt_catalog_duplicate_${kind}`,
+          {
+            id: `cs_catalog_duplicate_${kind}`,
+            mode: "payment",
+            payment_status: "paid",
+            amount_total: 2900,
+            customer_details: { email: "buyer@example.test" },
+            metadata: { plan: "starter" },
+            ...overrides,
+          }
+        )
+      );
+      const result = await handleStripeWebhook(RAW_BODY, SIG);
+      expect(result).toMatchObject({ duplicate: true, handled: false });
+    }
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(growthRecordRpc).not.toHaveBeenCalled();
   });
 
   it("does not fail a fulfilled Starter checkout when growth recording fails", async () => {
@@ -1460,16 +1616,30 @@ describe("handleStripeWebhook — paid Starter missing-identity hold (#2122)", (
     );
     expect(growthRecordRpc).not.toHaveBeenCalled();
 
-    // Stripe resend must not erase the hold or silently grant credits.
+    // A duplicate tries the idempotent grant again, but an unresolved
+    // missing identity must still stay held rather than being marked success.
+    provisionPurchase.mockResolvedValueOnce({
+      profileId: null,
+      created: false,
+      status: "no_identity",
+    });
     claimStripeEventMock.mockResolvedValueOnce("duplicate");
     const duplicate = await handleStripeWebhook(RAW_BODY, SIG);
     expect(duplicate).toMatchObject({
       received: true,
       duplicate: true,
       handled: false,
+      reconciliationRequired: true,
     });
-    expect(recordStripeWebhookDelivery).toHaveBeenCalledTimes(2);
-    expect(provisionPurchase).toHaveBeenCalledTimes(1);
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledTimes(3);
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        status: "reconciliation_required",
+        error: "paid_catalog_missing_buyer_identity",
+      })
+    );
+    expect(provisionPurchase).toHaveBeenCalledTimes(2);
   });
 
   it("does not acknowledge a missing-identity hold when only legacy base columns persist", async () => {
@@ -1536,6 +1706,87 @@ describe("handleStripeWebhook — paid Starter missing-identity hold (#2122)", (
       })
     );
     expect(growthRecordRpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("handleStripeWebhook — DPP ineligible-settlement hold", () => {
+  const refusedGrant = {
+    handled: true,
+    profileId: null,
+    activationEmail: "skipped",
+    refused: "ineligible_settlement",
+  };
+  function discountedEvent(eventId: string) {
+    return makeEvent("checkout.session.completed", eventId, {
+      id: "cs_dpp_discounted",
+      mode: "payment",
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 0,
+      currency: "usd",
+      customer_details: { email: "buyer@example.test" },
+      metadata: { offer: "dpp_readiness_2026", plan: "dpp_readiness" },
+    });
+  }
+
+  it("persists a reconciliation hold and never reports success for a refused payment", async () => {
+    fulfillDppPaidSession.mockResolvedValueOnce(refusedGrant);
+    mockConstructEvent.mockReturnValue(discountedEvent("evt_dpp_refused"));
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true,
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_dpp_refused",
+        sessionId: "cs_dpp_discounted",
+        status: "reconciliation_required",
+        httpStatus: 200,
+        error: "dpp_ineligible_settlement",
+      })
+    );
+    expect(recordStripeWebhookDelivery).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: "success" })
+    );
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("fails closed and retryable when only legacy base columns persist", async () => {
+    fulfillDppPaidSession.mockResolvedValueOnce(refusedGrant);
+    recordStripeWebhookDelivery
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, detail: "base_columns_only" });
+    mockConstructEvent.mockReturnValue(
+      discountedEvent("evt_dpp_refused_legacy")
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("keeps the hold on a replayed duplicate delivery without a false success", async () => {
+    fulfillDppPaidSession.mockResolvedValueOnce(refusedGrant);
+    claimStripeEventMock.mockResolvedValueOnce("duplicate");
+    mockConstructEvent.mockReturnValue(discountedEvent("evt_dpp_refused_dup"));
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true,
+      duplicate: true,
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(recordStripeWebhookDelivery).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: "success" })
+    );
   });
 });
 
@@ -1655,5 +1906,343 @@ describe("handleStripeWebhook — Starter amount fallback gate (#1890 parity, ed
   it("explicit metadata.plan=starter still grants in test mode", async () => {
     await run("gate_meta", { livemode: false, metadata: { plan: "starter" } });
     expect(starterCalls().length).toBe(1);
+  });
+});
+
+describe("service-order webhook retry and product isolation", () => {
+  const session = {
+    id: "cs_test_service_atomic",
+    status: "complete",
+    payment_status: "paid",
+    mode: "payment",
+    payment_intent: "pi_test_service_atomic",
+    currency: "usd",
+    amount_total: 2900,
+    livemode: true,
+    customer: "cus_service_atomic",
+    customer_details: { email: "buyer@example.test" },
+    metadata: { type: "one_time_service", plan: "starter", user_id: "7" },
+  };
+
+  it("replays a claimed service-order event through the atomic settlement handler", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    claimStripeEventMock.mockResolvedValue("duplicate");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: true,
+      orderId: 42,
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_service_replay", session)
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toEqual(
+      expect.objectContaining({
+        received: true,
+        duplicate: true,
+        handled: true,
+      })
+    );
+    expect(handleServiceOrderPayment).toHaveBeenCalledTimes(1);
+    expect(handleServiceOrderPayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: session.id,
+        payment_intent: session.payment_intent,
+        amount_total: 2900,
+        currency: "usd",
+      })
+    );
+  });
+
+  it("preserves an expanded PaymentIntent ID when replaying a claimed service order", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    claimStripeEventMock.mockResolvedValue("duplicate");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: true,
+      orderId: 42,
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_service_expanded_pi", {
+        ...session,
+        payment_intent: { id: "pi_test_service_expanded" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(handleServiceOrderPayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: session.id,
+        payment_intent: "pi_test_service_expanded",
+        amount_total: 2900,
+      })
+    );
+  });
+
+  it("returns a retryable failure when atomic service-order settlement fails", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    vi.mocked(handleServiceOrderPayment).mockRejectedValue(
+      new Error("database transaction failed")
+    );
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_service_tx_failure", session)
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(
+      "database transaction failed"
+    );
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_service_tx_failure",
+        status: "error",
+        httpStatus: 500,
+      })
+    );
+  });
+
+  it("does not provision catalog credits for a service checkout even when amount and plan mimic Starter", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: true,
+      orderId: 42,
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent(
+        "checkout.session.completed",
+        "evt_service_catalog_collision",
+        session
+      )
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(handleServiceOrderPayment).toHaveBeenCalledTimes(1);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+  it("persists a reconciliation hold when paid service checkout has no matching order", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: false,
+      reason: "no service order for this session",
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent(
+        "checkout.session.completed",
+        "evt_service_missing_order",
+        session
+      )
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true,
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_service_missing_order",
+        status: "reconciliation_required",
+        error: "paid_service_order_missing_order",
+      })
+    );
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("rechecks unmatched paid service orders on duplicate signed events", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    claimStripeEventMock.mockResolvedValue("duplicate");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: false,
+      reason: "no service order for this session",
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent(
+        "checkout.session.completed",
+        "evt_service_missing_replay",
+        session
+      )
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true,
+      duplicate: true,
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_service_missing_replay",
+        status: "reconciliation_required",
+      })
+    );
+  });
+
+  it("fails retryably if the missing-order hold can only write legacy base columns", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: false,
+      reason: "no service order for this session",
+    });
+    recordStripeWebhookDelivery
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, detail: "base_columns_only" });
+    mockConstructEvent.mockReturnValue(
+      makeEvent(
+        "checkout.session.completed",
+        "evt_service_hold_legacy",
+        session
+      )
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_service_hold_legacy",
+        status: "reconciliation_required",
+      })
+    );
+  });
+
+  it("flags a paid service checkout whose amount_total does not match the order price", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: false,
+      reason: "Checkout amount/currency does not match expected order price",
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_service_amount_mismatch", {
+        ...session,
+        amount_total: 1000,
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true,
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_service_amount_mismatch",
+        status: "reconciliation_required",
+        error: "paid_service_order_amount_mismatch",
+      })
+    );
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("flags a paid service checkout discounted below list price and does not settle the order", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: false,
+      reason: "Checkout amount/currency does not match expected order price",
+    });
+    const discountedSession = {
+      ...session,
+      amount_subtotal: 19900,
+      amount_total: 9900,
+      total_details: { amount_discount: 10000 },
+    };
+    mockConstructEvent.mockReturnValue(
+      makeEvent(
+        "checkout.session.completed",
+        "evt_service_discounted_session",
+        discountedSession
+      )
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true,
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(handleServiceOrderPayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: session.id,
+        payment_intent: session.payment_intent,
+        amount_total: 9900,
+        currency: "usd",
+      })
+    );
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_service_discounted_session",
+        status: "reconciliation_required",
+        error: "paid_service_order_amount_mismatch",
+      })
+    );
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("flags a paid service checkout whose currency does not match the expected order currency", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: false,
+      reason: "Checkout amount/currency does not match expected order price",
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_service_currency_mismatch", {
+        ...session,
+        currency: "eur",
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({
+      received: true,
+      handled: false,
+      reconciliationRequired: true,
+    });
+    expect(recordStripeWebhookDelivery).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_service_currency_mismatch",
+        status: "reconciliation_required",
+        error: "paid_service_order_amount_mismatch",
+      })
+    );
+  });
+
+  it("does not call an unpaid service checkout fulfilled or create a paid hold", async () => {
+    const { handleServiceOrderPayment } =
+      await import("../services/order-payment-handler.js");
+    vi.mocked(handleServiceOrderPayment).mockResolvedValue({
+      handled: false,
+      reason: "no service order for this session",
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_service_unpaid_no_hold", {
+        ...session,
+        payment_status: "unpaid",
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result).toMatchObject({ received: true, handled: false });
+    expect(result.reconciliationRequired).toBeUndefined();
+    expect(recordStripeWebhookDelivery).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: "reconciliation_required" })
+    );
   });
 });

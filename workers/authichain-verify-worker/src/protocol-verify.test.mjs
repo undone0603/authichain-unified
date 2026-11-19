@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { assessChainRead, expectedRecordHash, verifySubmitted } from "./protocol-verify.mjs";
+import { PUBLIC_RPC, assessChainRead, expectedRecordHash, verifySubmitted, readAnchorOnChain } from "./protocol-verify.mjs";
 
 const fixtures = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -73,4 +73,114 @@ test("the chain read is separate from the verdict", () => {
   });
   assert.equal(other.onChain, false);
   assert.equal(other.status, "hash_not_in_tx");
+});
+
+test("RPC diagnostics fail closed without changing signed-record verdict", async () => {
+  const fx = load("valid-anchored-polygon.json");
+  const verdict = verifySubmitted(fx.record, fx.anchor);
+  const txHash = fx.anchor.txHash;
+  const scenarios = [
+    ["rpc_dns_error", async () => { throw Object.assign(new TypeError("fetch failed"), { cause: { code: "ENOTFOUND" } }); }],
+    ["rpc_timeout", async () => { throw Object.assign(new Error("timed out"), { name: "TimeoutError" }); }],
+    ["rpc_transport_error", async () => { throw new TypeError("network failure"); }],
+    ["rpc_http_error", async () => ({ ok: false, status: 503 })],
+    ["rpc_invalid_response", async () => ({ ok: true, json: async () => { throw new SyntaxError("invalid JSON"); } })],
+    ["rpc_invalid_response", async () => ({ ok: true, json: async () => ({ jsonrpc: "2.0", id: 1 }) })],
+    ["rpc_provider_error", async () => ({ ok: true, json: async () => ({ jsonrpc: "2.0", id: 1, error: { code: -32000, message: "upstream unavailable" } }) })],
+  ];
+  for (const [status, fetchImpl] of scenarios) {
+    const result = await readAnchorOnChain(fx.record, fx.anchor, { fetchImpl });
+    assert.deepEqual(result, { queried: false, onChain: false, status });
+    assert.deepEqual(verifySubmitted(fx.record, fx.anchor), verdict);
+    assert.equal(verdict.anchorTransactionQueried, false);
+  }
+  const calls = [];
+  const successful = async (_url, request) => {
+    const { method, params } = JSON.parse(request.body);
+    calls.push(method);
+    assert.equal(params[0], txHash);
+    const result = method === "eth_getTransactionByHash"
+      ? { input: "0x" + expectedRecordHash(fx.record) }
+      : { status: "0x1", blockNumber: "0x10" };
+    return { ok: true, json: async () => ({ jsonrpc: "2.0", id: 1, result }) };
+  };
+  const confirmed = await readAnchorOnChain(fx.record, fx.anchor, { fetchImpl: successful });
+  assert.equal(confirmed.status, "tx_contains_record_hash");
+  assert.equal(confirmed.onChain, true);
+  assert.deepEqual(calls.sort(), ["eth_getTransactionByHash", "eth_getTransactionReceipt"]);
+  assert.deepEqual(verifySubmitted(fx.record, fx.anchor), verdict);
+});
+
+
+test("Polygon defaults use the keyless historical-receipt RPC on both chain aliases", async () => {
+  const endpoint = "https://polygon.drpc.org";
+  assert.equal(PUBLIC_RPC["polygon:137"], endpoint);
+  assert.equal(PUBLIC_RPC["eip155:137"], endpoint);
+  const fx = load("valid-anchored-polygon.json");
+  const methods = [];
+  const fetchImpl = async (url, request) => {
+    assert.equal(url, endpoint);
+    assert.equal(request.method, "POST");
+    const { method, params } = JSON.parse(request.body);
+    assert.equal(params[0], fx.anchor.txHash);
+    methods.push(method);
+    const result = method === "eth_getTransactionByHash"
+      ? { input: "0x" + expectedRecordHash(fx.record) }
+      : { status: "0x1", blockNumber: "0x5a4b714" };
+    return { ok: true, json: async () => ({ jsonrpc: "2.0", id: 1, result }) };
+  };
+  const verified = await readAnchorOnChain(fx.record, fx.anchor, { fetchImpl });
+  assert.equal(verified.onChain, true);
+  assert.equal(verified.status, "tx_contains_record_hash");
+  assert.deepEqual(methods.sort(), ["eth_getTransactionByHash", "eth_getTransactionReceipt"]);
+  const denied = await readAnchorOnChain(fx.record, fx.anchor, {
+    fetchImpl: async () => ({ ok: false, status: 403 }),
+  });
+  assert.deepEqual(denied, { queried: false, onChain: false, status: "rpc_http_error" });
+});
+
+
+test("a failing configured RPC falls back to the keyless public default", async () => {
+  const fx = load("valid-anchored-polygon.json");
+  const configured = "https://configured.example/rpc";
+  const seen = [];
+  const fetchImpl = async (url, request) => {
+    seen.push(url);
+    if (url === configured) return { ok: false, status: 429 };
+    const { method } = JSON.parse(request.body);
+    const result = method === "eth_getTransactionByHash"
+      ? { input: "0x" + expectedRecordHash(fx.record) }
+      : { status: "0x1", blockNumber: "0x5a4b714" };
+    return { ok: true, json: async () => ({ jsonrpc: "2.0", id: 1, result }) };
+  };
+  const out = await readAnchorOnChain(fx.record, fx.anchor, { rpcUrl: configured, fetchImpl });
+  assert.equal(out.onChain, true);
+  assert.equal(out.status, "tx_contains_record_hash");
+  assert.deepEqual([...new Set(seen)], [configured, PUBLIC_RPC["polygon:137"]]);
+});
+
+test("a working configured RPC is used alone, and its chain answer is final", async () => {
+  const fx = load("valid-anchored-polygon.json");
+  const configured = "https://configured.example/rpc";
+  const seen = [];
+  const fetchImpl = async (url) => {
+    seen.push(url);
+    // Configured endpoint answers: the transaction does not exist.
+    return { ok: true, json: async () => ({ jsonrpc: "2.0", id: 1, result: null }) };
+  };
+  const out = await readAnchorOnChain(fx.record, fx.anchor, { rpcUrl: configured, fetchImpl });
+  assert.deepEqual(out, { queried: true, onChain: false, status: "tx_missing" });
+  assert.deepEqual([...new Set(seen)], [configured]);
+});
+
+test("when the configured and public RPCs both fail, the last diagnostic is reported", async () => {
+  const fx = load("valid-anchored-polygon.json");
+  const configured = "https://configured.example/rpc";
+  const fetchImpl = async (url) => {
+    if (url === configured) throw Object.assign(new Error("timed out"), { name: "TimeoutError" });
+    return { ok: false, status: 503 };
+  };
+  const out = await readAnchorOnChain(fx.record, fx.anchor, { rpcUrl: configured, fetchImpl });
+  assert.deepEqual(out, { queried: false, onChain: false, status: "rpc_http_error" });
+  assert.deepEqual(verifySubmitted(fx.record, fx.anchor).anchorTransactionQueried, false);
 });

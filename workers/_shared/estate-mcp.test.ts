@@ -74,10 +74,10 @@ test("GET discovery lists Payment Links and unpaid POST x402, not GET checkout",
             source: string;
             passportUsd: number;
             dppUsd: number;
-            farmUsd: number;
+            farmUsd?: number;
             passportPaymentLink: string;
             dppPaymentLink: string;
-            farmPaymentLink: string;
+            farmPaymentLink?: string;
             starterPaymentLink?: string;
             creatorPaymentLink?: string;
           };
@@ -113,7 +113,17 @@ test("GET discovery lists Payment Links and unpaid POST x402, not GET checkout",
       );
       assert.equal(
         body.pricing.humanCheckout.farmUsd,
-        planUsd("strainchain_farm"),
+        undefined,
+        `${host} ${path}`
+      );
+      assert.equal(
+        JSON.stringify(body.pricing.humanCheckout).includes("farmUsd"),
+        false,
+        `${host} ${path}`
+      );
+      assert.equal(
+        JSON.stringify(body.pricing.humanCheckout).includes("strainchain_farm"),
+        false,
         `${host} ${path}`
       );
       stripeLink(body.pricing.humanCheckout.passportPaymentLink);
@@ -157,7 +167,13 @@ test("GET discovery lists Payment Links and unpaid POST x402, not GET checkout",
         false,
         `${host} ${path}`
       );
-      assert.equal(blob.includes("theater_1"), true, `${host} ${path}`);
+      assert.equal(blob.includes("theater_1"), false, `${host} ${path}`);
+      assert.equal(blob.includes("theater_3"), false, `${host} ${path}`);
+      assert.equal(
+        blob.includes("gov_provenance_pilot"),
+        false,
+        `${host} ${path}`
+      );
       assert.equal(
         blob.includes("StrainChain Basic"),
         false,
@@ -244,7 +260,7 @@ test("JSON-RPC tools/list and get_pricing are public", async () => {
   assert.ok(priced.result.content[0].text.includes("POST /api/x402"));
   assert.ok(priced.result.content[0].text.includes(PASSPORT));
   assert.ok(priced.result.content[0].text.includes(DPP));
-  assert.equal(priced.result.content[0].text.includes(FARM), true);
+  assert.equal(priced.result.content[0].text.includes(FARM), false);
   assert.equal(priced.result.content[0].text.includes("/api/checkout"), false);
 });
 
@@ -544,5 +560,16 @@ test("scan_living_qr reads the apex scan and drops the JWS", async () => {
     );
   } finally {
     globalThis.fetch = real;
+  }
+});
+
+test("MCP pricing discovery leaves out retired checkouts", () => {
+  for (const { brand } of BRANDS) {
+    const body = JSON.stringify(sisterMcpPricingDiscovery(brand));
+    assert.equal(body.includes("/checkout/qron_launch"), false, brand);
+    assert.equal(body.includes("/checkout/theater_1"), false, brand);
+    assert.equal(body.includes("/checkout/theater_3"), false, brand);
+    assert.equal(body.includes("/checkout/strainchain_farm"), false, brand);
+    assert.equal(body.includes("/checkout/gov_provenance_pilot"), false, brand);
   }
 });

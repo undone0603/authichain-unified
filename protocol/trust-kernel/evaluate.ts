@@ -17,12 +17,9 @@ export type CheckState =
   | "anomalous";
 
 export type TrustDecision =
-  | "verified"
-  | "anomaly"
-  | "blocked"
-  | "expired"
-  | "invalid"
-  | "not_found";
+  "verified" | "anomaly" | "blocked" | "expired" | "invalid" | "not_found";
+
+export type IssuerCheckState = "ok" | "skipped" | "error" | "missing";
 
 export type TrustInput = {
   objectFound?: boolean;
@@ -38,6 +35,8 @@ export type TrustInput = {
   crypto?: {
     signatureValid?: boolean;
     issuerTrusted?: boolean;
+    issuerCheck?: IssuerCheckState | "errored";
+    issuerError?: unknown;
     identityValid?: boolean;
     evidenceIntact?: boolean;
     statusActive?: boolean;
@@ -59,7 +58,7 @@ function toRad(n: number) {
 }
 export function haversineKm(
   a: { lat: number; lon: number },
-  b: { lat: number; lon: number },
+  b: { lat: number; lon: number }
 ) {
   const dLat = toRad(b.lat - a.lat);
   const dLon = toRad(b.lon - a.lon);
@@ -81,10 +80,10 @@ export function scanAnomalies(scans: TrustInput["scans"] = []) {
   for (let i = 0; i < ordered.length - 1; i++) {
     const a = ordered[i];
     const b = ordered[i + 1];
-    if ([a.lat, a.lon, b.lat, b.lon].some((v) => typeof v !== "number")) continue;
+    if ([a.lat, a.lon, b.lat, b.lon].some(v => typeof v !== "number")) continue;
     const km = haversineKm(
       { lat: a.lat as number, lon: a.lon as number },
-      { lat: b.lat as number, lon: b.lon as number },
+      { lat: b.lat as number, lon: b.lon as number }
     );
     const dt = parseTs(b.at) - parseTs(a.at);
     if (dt <= 0) {
@@ -93,13 +92,17 @@ export function scanAnomalies(scans: TrustInput["scans"] = []) {
     }
     const mps = (km * 1000) / dt;
     if (mps > MAX_PLAUSIBLE_MPS) {
-      reasons.push(`impossible_travel:${Math.round(km)}km_in_${Math.round(dt)}s`);
+      reasons.push(
+        `impossible_travel:${Math.round(km)}km_in_${Math.round(dt)}s`
+      );
     }
   }
   if (ordered.length >= 3) {
-    const window = parseTs(ordered[ordered.length - 1].at) - parseTs(ordered[0].at);
-    const regions = new Set(ordered.map((s) => s.region).filter(Boolean));
-    if (window <= 7200 && regions.size >= 3) reasons.push("cloned_identity_pattern");
+    const window =
+      parseTs(ordered[ordered.length - 1].at) - parseTs(ordered[0].at);
+    const regions = new Set(ordered.map(s => s.region).filter(Boolean));
+    if (window <= 7200 && regions.size >= 3)
+      reasons.push("cloned_identity_pattern");
   }
   return reasons;
 }
@@ -117,6 +120,51 @@ function emptyVector() {
   };
 }
 
+/**
+ * Fail closed: only a completed check that marked the issuer trusted may
+ * yield issuer=verified. Missing, skipped, or errored checks never pass.
+ */
+function classifyIssuerCheck(crypto: NonNullable<TrustInput["crypto"]> = {}) {
+  const check = crypto.issuerCheck;
+  if (check === "skipped") {
+    return {
+      issuer: "unknown" as CheckState,
+      reason: "issuer_check_skipped" as const,
+    };
+  }
+  if (check === "error" || check === "errored" || crypto.issuerError) {
+    return {
+      issuer: "failed" as CheckState,
+      reason: "issuer_check_error" as const,
+    };
+  }
+  if (crypto.issuerTrusted === true) {
+    return { issuer: "verified" as CheckState, reason: null };
+  }
+  if (crypto.issuerTrusted === false) {
+    return {
+      issuer: "failed" as CheckState,
+      reason: "issuer_untrusted" as const,
+    };
+  }
+  return {
+    issuer: "unknown" as CheckState,
+    reason: "issuer_check_missing" as const,
+  };
+}
+
+function isInactiveOrBlockedStatus(
+  status: string | undefined
+): status is "inactive" | "suspended" | "blocked" | "pending" | "disabled" {
+  return (
+    status === "inactive" ||
+    status === "suspended" ||
+    status === "blocked" ||
+    status === "pending" ||
+    status === "disabled"
+  );
+}
+
 export function evaluate(input: TrustInput = {}) {
   const depthUsed = input.depth === "history" ? "history" : "lookup";
   const vector = emptyVector();
@@ -124,9 +172,15 @@ export function evaluate(input: TrustInput = {}) {
   const unknowns = ["physical_binding_not_inspected"];
   const att = input.attestation;
   const crypto = input.crypto || {};
-  const evidence = [...(input.evidence || []), ...((att && att.evidence) || [])];
+  const evidence = [
+    ...(input.evidence || []),
+    ...((att && att.evidence) || []),
+  ];
 
-  if (!input.objectFound && !att && !input.crypto) {
+  if (
+    input.objectFound === false ||
+    (!input.objectFound && !att && !input.crypto)
+  ) {
     return {
       decision: "not_found" as TrustDecision,
       vector,
@@ -142,10 +196,13 @@ export function evaluate(input: TrustInput = {}) {
     reasons.push("signature_invalid");
   }
 
-  if (crypto.issuerTrusted === true) vector.issuer = "verified";
-  else if (crypto.issuerTrusted === false) {
-    vector.issuer = "failed";
-    reasons.push("issuer_untrusted");
+  const issuerOutcome = classifyIssuerCheck(crypto);
+  vector.issuer = issuerOutcome.issuer;
+  if (
+    issuerOutcome.reason &&
+    (issuerOutcome.reason !== "issuer_check_missing" || input.crypto != null)
+  ) {
+    reasons.push(issuerOutcome.reason);
   }
 
   if (crypto.identityValid === true) vector.identity = "verified";
@@ -161,8 +218,8 @@ export function evaluate(input: TrustInput = {}) {
     vector.freshness = "verified";
   }
 
-  const realEvidence = evidence.filter((e) => isRealSha256(e.digest));
-  const mockEvidence = evidence.filter((e) => isMockDigest(e.digest));
+  const realEvidence = evidence.filter(e => isRealSha256(e.digest));
+  const mockEvidence = evidence.filter(e => isMockDigest(e.digest));
   if (mockEvidence.length) {
     vector.provenance = "unknown";
     reasons.push("mock_digest_unusable");
@@ -177,13 +234,23 @@ export function evaluate(input: TrustInput = {}) {
     vector.revocation = "failed";
     reasons.push("attestation_revoked");
   }
+  if (isInactiveOrBlockedStatus(att?.status)) {
+    vector.revocation = "failed";
+    reasons.push("attestation_inactive_or_blocked");
+  }
   if (att?.status === "expired" || att?.decision === "expired") {
     vector.freshness = "failed";
     reasons.push("attestation_expired");
   }
   if (att?.decision === "blocked") reasons.push("attestation_blocked");
+  // Contradictory record-level decisions must not be overridden by a
+  // caller-supplied positive crypto tuple. This is still NOT signature
+  // verification: trusted flags must be derived upstream.
+  if (att?.decision === "invalid" || att?.decision === "not_found") {
+    reasons.push("attestation_decision_conflict");
+  }
 
-  const inspected = realEvidence.some((e) => e.type === "inspection");
+  const inspected = realEvidence.some(e => e.type === "inspection");
   if (inspected) {
     vector.physical_binding = "partial";
     const idx = unknowns.indexOf("physical_binding_not_inspected");
@@ -206,14 +273,33 @@ export function evaluate(input: TrustInput = {}) {
 
   let decision: TrustDecision;
   if (reasons.includes("object_not_found")) decision = "not_found";
-  else if (reasons.includes("signature_invalid") || reasons.includes("issuer_untrusted"))
+  else if (
+    reasons.includes("signature_invalid") ||
+    reasons.includes("issuer_untrusted") ||
+    reasons.includes("issuer_check_missing") ||
+    reasons.includes("issuer_check_skipped") ||
+    reasons.includes("issuer_check_error") ||
+    reasons.includes("identity_mismatch") ||
+    reasons.includes("attestation_decision_conflict")
+  )
     decision = "invalid";
-  else if (reasons.includes("attestation_revoked") || reasons.includes("attestation_blocked"))
+  else if (
+    reasons.includes("attestation_revoked") ||
+    reasons.includes("attestation_blocked") ||
+    reasons.includes("attestation_inactive_or_blocked")
+  )
     decision = "blocked";
   else if (reasons.includes("attestation_expired")) decision = "expired";
   else if (vector.scan_behavior === "anomalous" || att?.decision === "anomaly")
     decision = "anomaly";
-  else if (vector.signature === "verified" && vector.revocation === "clear")
+  else if (
+    input.objectFound === true &&
+    vector.signature === "verified" &&
+    vector.issuer === "verified" &&
+    vector.identity === "verified" &&
+    crypto.statusActive === true &&
+    vector.revocation === "clear"
+  )
     decision = "verified";
   else decision = "invalid";
 
