@@ -28,6 +28,8 @@ function fakeSupabase(opts?: {
   updateError?: { message: string } | null;
   failContinuityUpdateOnce?: boolean;
   failProvisionedEventOnce?: boolean;
+  failActivationFinalizeOnce?: boolean;
+  failActivationClaimOnce?: boolean;
   preGrantedSessionId?: string;
 }) {
   const rows: Array<Record<string, unknown>> = [];
@@ -49,6 +51,10 @@ function fakeSupabase(opts?: {
       : null;
   const continuity = new Map<string, Record<string, unknown>[]>();
   const grantedSessions = new Set<string>();
+  const delivery = new Map<string, { state: string; profileId: string; token: string; attempts: number }>();
+  let activationFinalizeFailed = false;
+  let activationClaimFailed = false;
+  let claimCounter = 0;
   let continuityUpdateFailed = false;
   let provisionedEventFailed = false;
   const from = (table: string) => {
@@ -190,6 +196,61 @@ function fakeSupabase(opts?: {
     return builder;
   };
   const rpc = async (fn: string, args: Record<string, unknown>) => {
+    const session = String(args.p_session_id);
+    if (fn === "dpp_activation_enqueue") {
+      if (args.p_is_demo === true) return { data: { status: "skipped_demo" }, error: null };
+      const receipt = (continuity.get("founder_exit_side_effects") ?? []).find(
+        row => row.idempotency_key === `grant:${session}`
+      );
+      if (!receipt || receipt.profile_id !== args.p_profile_id) {
+        return { data: null, error: { code: "P0001", message: "receipt_mismatch" } };
+      }
+      if (!delivery.has(session)) {
+        delivery.set(session, { state: "pending", profileId: String(args.p_profile_id), token: "", attempts: 0 });
+      }
+      const row = delivery.get(session)!;
+      if (row.profileId !== args.p_profile_id) {
+        return { data: null, error: { code: "P0001", message: "profile_mismatch" } };
+      }
+      return { data: { status: row.state }, error: null };
+    }
+    if (fn === "dpp_activation_claim") {
+      if (opts?.failActivationClaimOnce && !activationClaimFailed) {
+        activationClaimFailed = true;
+        return { data: null, error: { code: "08006" } };
+      }
+      const row = delivery.get(session);
+      if (!row) return { data: null, error: { code: "P0001" } };
+      if (row.state === "accepted") return { data: { status: "accepted" }, error: null };
+      if (row.state === "sending" || row.state === "needs_reconciliation") {
+        return { data: { status: "held" }, error: null };
+      }
+      if (row.state === "leased") return { data: { status: "busy" }, error: null };
+      row.state = "leased";
+      row.token = `test_token_${++claimCounter}`;
+      return { data: { status: "claimed", claim_token: row.token }, error: null };
+    }
+    if (fn === "dpp_activation_begin_send") {
+      const row = delivery.get(session);
+      if (!row || row.state !== "leased" || row.token !== args.p_claim_token) {
+        return { data: null, error: { code: "P0001" } };
+      }
+      row.state = "sending";
+      row.attempts += 1;
+      return { data: { status: "armed" }, error: null };
+    }
+    if (fn === "dpp_activation_finish_send") {
+      const row = delivery.get(session);
+      if (opts?.failActivationFinalizeOnce && !activationFinalizeFailed) {
+        activationFinalizeFailed = true;
+        return { data: null, error: { code: "08006" } };
+      }
+      if (!row || row.state !== "sending" || row.token !== args.p_claim_token) {
+        return { data: null, error: { code: "P0001" } };
+      }
+      row.state = args.p_accepted ? "accepted" : "needs_reconciliation";
+      return { data: { status: row.state }, error: null };
+    }
     if (fn !== "grant_dpp_checkout_session") {
       return { data: null, error: { message: "unexpected RPC" } };
     }
@@ -236,7 +297,7 @@ function fakeSupabase(opts?: {
       error: null,
     };
   };
-  return { supabase: { from, rpc }, rows, profileUpdates, continuity, profile };
+  return { supabase: { from, rpc }, rows, profileUpdates, continuity, profile, delivery };
 }
 
 const paidSession = {
@@ -751,6 +812,9 @@ describe("fulfillDppPaidSession", () => {
     expect(continuity.get("founder_exit_actions")?.[0]?.state).toBe(
       "succeeded"
     );
+    // #2482: first attempt crashed after grant but BEFORE send. Recovery must send once.
+    expect(sendEmail).toHaveBeenCalledOnce();
+    expect(result.activationEmail).toBe("sent");
   });
 
   it("recovers a missing provisioned event after continuity already succeeded", async () => {
@@ -778,6 +842,55 @@ describe("fulfillDppPaidSession", () => {
       "dpp_loop:provisioned",
     ]);
     expect(profileUpdates).toHaveLength(1);
+  });
+
+  it("does not send again after provider acceptance but receipt write crashes", async () => {
+    const { supabase, delivery, profileUpdates } = fakeSupabase({
+      failActivationFinalizeOnce: true,
+    });
+    await expect(fulfillDppPaidSession(supabase, paidSession)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(delivery.get(paidSession.id)).toMatchObject({
+      state: "sending",
+      attempts: 1,
+    });
+    expect(sendEmail).toHaveBeenCalledOnce();
+    const replay = await fulfillDppPaidSession(supabase, paidSession);
+    expect(replay).toMatchObject({
+      handled: true,
+      alreadyFulfilled: true,
+      activationEmail: "held",
+    });
+    expect(delivery.get(paidSession.id)?.attempts).toBe(1);
+    expect(profileUpdates).toHaveLength(1);
+    expect(sendEmail).toHaveBeenCalledOnce();
+  });
+
+  it("recovers an outbox claim failure before provider contact without another grant", async () => {
+    const { supabase, delivery, profileUpdates } = fakeSupabase({
+      failActivationClaimOnce: true,
+    });
+    await expect(fulfillDppPaidSession(supabase, paidSession)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(delivery.get(paidSession.id)?.state).toBe("pending");
+    expect(sendEmail).not.toHaveBeenCalled();
+    const recovered = await fulfillDppPaidSession(supabase, paidSession);
+    expect(recovered.activationEmail).toBe("sent");
+    expect(sendEmail).toHaveBeenCalledOnce();
+    expect(profileUpdates).toHaveLength(1);
+  });
+
+  it("keeps uncertain provider outcomes on manual hold without a second send", async () => {
+    vi.mocked(sendEmail).mockRejectedValueOnce(new Error("network outcome unknown"));
+    const { supabase, delivery } = fakeSupabase();
+    const failed = await fulfillDppPaidSession(supabase, paidSession);
+    expect(failed.activationEmail).toBe("failed");
+    expect(delivery.get(paidSession.id)?.state).toBe("needs_reconciliation");
+    const replay = await fulfillDppPaidSession(supabase, paidSession);
+    expect(replay.activationEmail).toBe("held");
+    expect(sendEmail).toHaveBeenCalledOnce();
   });
 
   it("grants a tax-bearing session when the subtotal is the list price", async () => {
