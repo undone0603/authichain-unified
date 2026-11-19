@@ -12,6 +12,7 @@ async function rpc(name: string, sql: string, params: unknown[]) {
   );
   return result.rows[0].result;
 }
+const prepare = (s: string) => rpc("dpp_activation_prepare", "$1", [s]);
 const enqueue = (s: string, profile = PROFILE, demo = false) =>
   rpc("dpp_activation_enqueue", "$1,$2,$3", [s, profile, demo]);
 const claim = (s: string) =>
@@ -48,19 +49,32 @@ describe("DPP durable activation outbox (isolated PostgreSQL)", () => {
   afterAll(async () => { if(db) await db.close(); });
 
   it("fails closed unless the atomic grant receipt matches the profile", async () => {
+    await prepare("cs_test_no_receipt_2482");
     await expect(enqueue("cs_test_no_receipt_2482")).rejects.toThrow(
       /dpp_activation_grant_receipt_mismatch/
     );
     await receipt("cs_test_receipt_2482");
+    await prepare("cs_test_receipt_2482");
     await expect(enqueue("cs_test_receipt_2482","other-profile")).rejects.toThrow(
       /dpp_activation_grant_receipt_mismatch/
     );
     expect((await enqueue("cs_test_receipt_2482")).status).toBe("pending");
   });
 
+  it("holds legacy successful grants without a preparatory marker", async () => {
+    const s="cs_test_legacy_2482";
+    await receipt(s);
+    expect((await enqueue(s)).status).toBe("legacy_untracked");
+    const result = await db.query<{n:number}>(
+      "SELECT count(*)::int AS n FROM public.dpp_activation_outbox WHERE session_id=$1",[s]
+    );
+    expect(result.rows[0].n).toBe(0);
+  });
+
   it("deduplicates simultaneous claims to a single lease before provider contact", async () => {
     const s="cs_test_concurrent_2482";
     await receipt(s);
+    await prepare(s);
     await enqueue(s);
     const [a,b]=await Promise.all([claim(s),claim(s)]);
     expect([a.status,b.status].sort()).toEqual(["busy","claimed"]);
@@ -77,6 +91,7 @@ describe("DPP durable activation outbox (isolated PostgreSQL)", () => {
   it("recovers an expired unarmed lease and rejects the previous owner", async () => {
     const s="cs_test_unarmed_2482";
     await receipt(s);
+    await prepare(s);
     await enqueue(s);
     const first=await claim(s);
     expect(first.status).toBe("claimed");
@@ -93,6 +108,7 @@ describe("DPP durable activation outbox (isolated PostgreSQL)", () => {
   it("holds after crash or timeout once sending began, without a second attempt", async () => {
     const s="cs_test_ambiguous_2482";
     await receipt(s);
+    await prepare(s);
     await enqueue(s);
     const token=(await claim(s)).claim_token!;
     await begin(s,token);
@@ -107,6 +123,7 @@ describe("DPP durable activation outbox (isolated PostgreSQL)", () => {
   it("holds provider non-acceptance for manual reconciliation", async () => {
     const s="cs_test_rejected_2482";
     await receipt(s);
+    await prepare(s);
     await enqueue(s);
     const token=(await claim(s)).claim_token!;
     await begin(s,token);
