@@ -1347,3 +1347,25 @@ workflows:
       Describes `node scripts/autonomy/reconcile.mjs --check` in dry-run.
       Host execution is disabled until an isolated executor and trusted
       immutable source are verified. Keep the existing GitHub workflow in place.
+
+  - id: ci_watch
+    title: "CI fleet and main gate watch (read-only)"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.ci_watch
+    type: api
+    estimated_minutes: 1
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    description: |
+      Read-only. Checks the three self-hosted runner services on the AgentZ
+      host (systemctl --user is-active), ci/circleci: main-quality-gate on
+      main's head, and the newest Lint run on main. Reports green, amber or
+      red and checkpoints the verdict for transition alerts. Never cancels,
+      re-runs, restarts, merges or deploys. Run by the agentz-ci-watch
+      systemd user timer.
