@@ -1,0 +1,21 @@
+{
+  "orderRef": "cs_live_REPLACE_WITH_STRIPE_SESSION_ID",
+  "company": "Example Packs Inc. (fictional)",
+  "preparedOn": "2026-11-19",
+  "modelsPaid": 1,
+  "models": [
+    {
+      "model": "EXAMPLE-48V-20Ah",
+      "statedWh": 960,
+      "ah": 20,
+      "nominalV": 48,
+      "cyclesLow": 1500,
+      "cyclesHigh": 2000,
+      "placing": "self",
+      "available": {
+        "conformity": "EU declaration of conformity draft, rev B",
+        "composition": "Cathode/anode bill of materials from the cell supplier"
+      }
+    }
+  ]
+}
