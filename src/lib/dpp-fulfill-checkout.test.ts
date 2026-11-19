@@ -390,7 +390,7 @@ describe("fulfillDppPaidSession", () => {
     errSpy.mockRestore();
 
     expect(result.activationEmail).toBe("failed");
-    expect(logged).toContain("ETIMEDOUT");
+    expect(logged).toContain("provider_outcome_unknown");
     expect(logged).not.toContain("buyer@example.com");
     expect(
       rows.filter(r => r.event_type === "dpp_activation_email:failed")
