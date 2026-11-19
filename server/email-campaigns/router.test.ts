@@ -32,6 +32,15 @@ vi.mock("../db", () => ({
   getUserEmailCampaigns: vi.fn(async () => [campaign]),
   updateEmailCampaign: vi.fn(async () => undefined),
   createEmailCampaign: vi.fn(async () => ({ id: CAMPAIGN_ID })),
+  getDb: vi.fn(async () => ({
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [],
+        }),
+      }),
+    }),
+  })),
 }));
 
 const { emailCampaignsRouter } = await import("./router");

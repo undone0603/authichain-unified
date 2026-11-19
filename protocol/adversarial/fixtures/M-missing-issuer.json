@@ -1,0 +1,23 @@
+{
+  "id": "M-missing-issuer",
+  "input": {
+    "objectFound": true,
+    "depth": "lookup",
+    "crypto": {
+      "signatureValid": true,
+      "identityValid": true,
+      "statusActive": true
+    },
+    "attestation": {
+      "objectId": "ac:demo:missing-issuer-01",
+      "decision": "verified",
+      "status": "active",
+      "issuer": "self-declared",
+      "evidence": []
+    }
+  },
+  "expect": {
+    "decision": "invalid",
+    "reasonsInclude": ["issuer_check_missing"]
+  }
+}
