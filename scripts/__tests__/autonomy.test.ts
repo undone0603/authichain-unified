@@ -181,7 +181,9 @@ describe("launch mode", () => {
 
   it("holds the 2026-10-08 manual disables and still classifies every file", () => {
     const manifest = loadManifest();
-    expect([...(manifest.operator_hold?.workflows ?? [])].sort()).toEqual([
+    // The 2026-10-08 disables must stay held. The 2026-11-18 staged restart
+    // holds more on top of them; releasing those is a manifest edit.
+    expect([...(manifest.operator_hold?.workflows ?? [])].sort()).toEqual(expect.arrayContaining([
       "b2b-outreach.yml",
       "content-publish.yml",
       "deploy-authichain-edge-router.yml",
@@ -189,7 +191,7 @@ describe("launch mode", () => {
       "gov-mint.yml",
       "marketing-autonomous.yml",
       "pipeline-tick.yml",
-    ]);
+    ]));
     expect(validateManifest(manifest, listWorkflowFiles())).toEqual([]);
   });
 

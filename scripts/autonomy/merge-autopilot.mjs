@@ -35,6 +35,7 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const GREEN = new Set(["success", "neutral", "skipped"]);
 // Require positive CI evidence even when main requires zero human reviews.
@@ -539,7 +540,7 @@ function finish(lines) {
   process.stdout.write(lines.join("\n") + "\n");
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main().catch(err => {
     console.error(err);
     process.exit(1);
