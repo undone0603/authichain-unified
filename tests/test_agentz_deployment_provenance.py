@@ -50,3 +50,32 @@ def test_untrusted_attestation_cannot_supply_its_own_external_facts():
     assert not provenance.verify_deployment_provenance(
         {"jws": "not.a.valid.jws"}, artifact=b"x", expected_source_sha="",
         expected_deployment_id="", expected_version_id="", expected_workflow_run_id="")
+
+
+def test_agentz_producer_roundtrip_and_missing_identity(monkeypatch, tmp_path):
+    from agentz.core import identity
+    key = Ed25519PrivateKey.generate()  # offline fixture only
+    pem = key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
+                            serialization.NoEncryption())
+    (tmp_path / identity.KEY_FILE).write_bytes(pem)
+    monkeypatch.setenv("AGENTZ_KEY_DIR", str(tmp_path))
+    monkeypatch.setattr(provenance, "DID_KEY", did_key_from_pem(pem))
+    monkeypatch.setattr(identity, "DID_KEY", provenance.DID_KEY)
+    monkeypatch.setattr(identity, "identity_status", lambda now: {"can_sign_as_self": True})
+    artifact = b"release-artifact-fixture"
+    kwargs = dict(artifact=artifact, source_sha="c" * 40,
+                  deployment_id="deployment-123", version_id="version-123",
+                  workflow_run_id="run-123")
+    signed = provenance.sign_deployment_provenance(**kwargs)
+    assert provenance.verify_deployment_provenance(
+        signed, artifact=artifact, expected_source_sha="c" * 40,
+        expected_deployment_id="deployment-123", expected_version_id="version-123",
+        expected_workflow_run_id="run-123")
+    assert not provenance.verify_deployment_provenance(
+        signed, artifact=b"wrong", expected_source_sha="c" * 40,
+        expected_deployment_id="deployment-123", expected_version_id="version-123",
+        expected_workflow_run_id="run-123")
+    monkeypatch.setattr(identity, "identity_status", lambda now: {"can_sign_as_self": False})
+    import pytest
+    with pytest.raises(RuntimeError, match="AGENTZ_IDENTITY_NOT_PROVEN"):
+        provenance.sign_deployment_provenance(**kwargs)
