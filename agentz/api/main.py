@@ -88,6 +88,20 @@ async def identity():
     from agentz.core.identity import identity_status
     return identity_status()
 
+@app.post("/agentz/evidence/sign-mcp-receipt", dependencies=[Depends(verify_token)], tags=["AgentZ Evidence"])
+async def sign_mcp_receipt():
+    """Execute allowlisted free MCP pricing and sign observed bytes with AgentZ's own key.
+
+    No caller-supplied evidence is accepted. This operation never mutates business data.
+    """
+    from agentz.core.mcp_receipt import execute_and_sign
+    try:
+        return await run_in_threadpool(execute_and_sign)
+    except Exception as exc:
+        # Do not expose filesystem paths, private-key material, or upstream responses.
+        raise HTTPException(status_code=503, detail="MCP_RECEIPT_UNAVAILABLE") from None
+
+
 @app.get("/scout/{city}")
 async def api_scout(city: str, token: bool = Depends(verify_token)):
     from agentz.core.scout import scout_businesses
