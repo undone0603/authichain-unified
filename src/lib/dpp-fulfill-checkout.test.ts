@@ -785,6 +785,8 @@ describe("fulfillDppPaidSession", () => {
       "dpp_loop:payment_succeeded",
       "dpp_loop:provisioned",
     ]);
+    expect(result.activationEmail).toBe("held");
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
   it("recovers provisioned recording after the atomic grant receipt was committed", async () => {
