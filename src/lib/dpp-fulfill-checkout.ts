@@ -10,7 +10,7 @@ import { provisionPurchase } from "./provisioning";
 import { renderBillingEmail } from "./billing-emails";
 import { getBrandIdFromMetadata } from "./brand-billing";
 import { sendEmail } from "./email";
-import { deliverDppActivationOnce } from "./dpp-activation-outbox";
+import { deliverDppActivationOnce, prepareDppActivation } from "./dpp-activation-outbox";
 import { dppActivateUrl, recordDppLoopEventOnce } from "./dpp-loop";
 import {
   beginProvisionContinuity,
@@ -285,6 +285,17 @@ async function fulfillDppPaidSessionOnce(
     });
   } catch (err) {
     throw markRetryableFulfillment(err);
+  }
+
+  // A new delivery marker must precede the entitlement grant. Otherwise a
+  // crash after continuity succeeds but before the first email could not be
+  // distinguished from an older already-emailed session.
+  if (!demo && continuityState !== "already_succeeded") {
+    try {
+      await prepareDppActivation(supabase, session.id);
+    } catch (err) {
+      throw markRetryableFulfillment(err);
+    }
   }
 
   if (
