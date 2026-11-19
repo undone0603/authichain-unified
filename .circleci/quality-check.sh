@@ -81,7 +81,9 @@ case "$task" in
     sha256sum supabase/migrations/20261115180000_atomic_catalog_session_grants.sql
     # This MUST run five tests; absent binaries, skips, or failing assertions fail CI.
     pnpm exec vitest run src/lib/catalog-session-grant.concurrency.pg.test.ts --reporter=verbose
-
+    # The Node executor has an ephemeral, synthetic PostgreSQL sidecar.
+    # Exercise actual committed PL/pgSQL and concurrency before wider tests.
+    node scripts/ci/dpp-isolated-postgres-replay.mjs
     pnpm --filter agent-browser exec playwright install --with-deps chromium
     pnpm test --filter='!./workers/*' --continue=dependencies-successful
     # The root Vitest suites are excluded from turbo test --filter='!.'.
