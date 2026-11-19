@@ -89,12 +89,14 @@ async def identity():
     return identity_status()
 
 @app.post("/agentz/evidence/sign-mcp-receipt", dependencies=[Depends(verify_token)], tags=["AgentZ Evidence"])
-async def sign_mcp_receipt():
+async def sign_mcp_receipt(request: Request):
     """Execute allowlisted free MCP pricing and sign observed bytes with AgentZ's own key.
 
     No caller-supplied evidence is accepted. This operation never mutates business data.
     """
     from agentz.core.mcp_receipt import execute_and_sign
+    if request.headers.get("content-length") not in (None, "0") or await request.body():
+        raise HTTPException(status_code=400, detail="REQUEST_BODY_FORBIDDEN")
     try:
         return await run_in_threadpool(execute_and_sign)
     except Exception as exc:
