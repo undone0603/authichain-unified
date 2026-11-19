@@ -15,7 +15,7 @@ concurrency:
 jobs:
   verify:
     if: github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +51,7 @@ jobs:
   deploy:
     needs: verify
     if: github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     environment: production-cloudflare
     timeout-minutes: 30
     steps:
