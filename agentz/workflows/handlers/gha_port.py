@@ -1,35 +1,23 @@
 """
 agentz.workflows.handlers.gha_port
 ----------------------------------
-Run a GitHub Actions job's own repo script on the AgentZ host instead.
+Describe candidate GitHub Actions ports without executing them on the host.
 
-Each port is one registry workflow (`gha_<name>`) that maps to one entry in
-PORTS below: the script the GitHub workflow already runs, the env vars it may
-see, and a timeout. Nothing is passed through a shell. The child process gets
-PATH and HOME plus only the listed env vars.
-
-Only read-only jobs are ported here. A port is refused if its command or
-script path looks like a deploy, publish, send, mint, charge or secret write,
-so a later edit cannot quietly turn this into a release path. Those jobs stay
-on GitHub behind their protected environments (docs/OPERATING_CHARTER.md).
-
-Dry-run only describes the command. auto runs it from the checkout this
-handler lives in (the pinned AgentZ worktree) and returns the exit code and
-the tail of its output. A non-zero exit is reported as red, never hidden.
-See docs/operations/AGENTZ-WORKFLOW-MIGRATION.md.
+Filename and environment filters are not a process or filesystem sandbox.
+Dry-run describes the candidate command, but confirm and auto both fail
+closed until a separately tested isolated executor with immutable, trusted
+source and credential separation is implemented. Keep the existing GitHub
+workflows enabled according to their existing operator holds.
 """
 from __future__ import annotations
 
 import os
 import re
 import shutil
-import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from agentz.core.modes import ExecutionContext
-
-OUTPUT_TAIL_CHARS = 4000
+from agentz.core.modes import ExecutionContext, Mode
 
 # Words that mark a release or outbound path. Matched against the whole argv.
 REFUSED = re.compile(
@@ -89,14 +77,20 @@ def find_node() -> str | None:
 
 
 def check_port(port: Port, root: Path) -> list[str]:
-    """Reasons this port must not run. Empty means it may."""
+    """Check basic paths and names; success does not authorize execution."""
     problems = []
     if not port.script.startswith("scripts/"):
         problems.append(f"script {port.script} is not under scripts/")
     if ".." in Path(port.script).parts:
         problems.append(f"script {port.script} leaves the repo")
-    if not (root / port.script).is_file():
+    script_path = root / port.script
+    if not script_path.is_file():
         problems.append(f"script {port.script} does not exist in {root}")
+    else:
+        try:
+            script_path.resolve(strict=True).relative_to(root.resolve(strict=True))
+        except (OSError, RuntimeError, ValueError):
+            problems.append(f"script {port.script} resolves outside the repo or cannot be resolved")
     argv = " ".join((port.script, *port.args))
     if REFUSED.search(argv):
         problems.append(f"refused: '{argv}' matches a release/outbound word")
@@ -107,6 +101,7 @@ def check_port(port: Port, root: Path) -> list[str]:
 
 
 def child_env(port: Port) -> dict[str, str]:
+    # Environment filtering alone does not isolate filesystem credentials.
     env = {k: os.environ[k] for k in ("PATH", "HOME") if k in os.environ}
     env.update(port.env)
     for name in port.pass_env:
@@ -116,6 +111,10 @@ def child_env(port: Port) -> dict[str, str]:
 
 
 def run(ctx: ExecutionContext) -> str:
+    # A returned "red" string is reported as successful by some callers.
+    # Raise before any lookup or prompt so every non-dry-run fails visibly.
+    if ctx.mode != Mode.DRY_RUN:
+        raise RuntimeError("host execution disabled until an isolated executor is verified")
     port = PORTS.get(ctx.workflow_id)
     if port is None:
         return f"red: no port defined for {ctx.workflow_id}"
@@ -126,29 +125,6 @@ def run(ctx: ExecutionContext) -> str:
     node = find_node()
     if node is None:
         return "red: node not found (set AGENTZ_NODE or install node)"
-    # Absolute path: the scripts only run main() when
-    # import.meta.url === `file://${process.argv[1]}`.
-    argv = [node, str(root / port.script), *port.args]
     shown = " ".join(["node", port.script, *port.args])
-
-    def _run() -> str:
-        try:
-            proc = subprocess.run(
-                argv,
-                cwd=root,
-                env=child_env(port),
-                capture_output=True,
-                text=True,
-                timeout=port.timeout_s,
-                check=False,
-            )
-        except subprocess.TimeoutExpired:
-            return f"red: timed out after {port.timeout_s}s"
-        out = (proc.stdout + proc.stderr)[-OUTPUT_TAIL_CHARS:]
-        verdict = "green" if proc.returncode == 0 else "red"
-        return f"{verdict}: exit {proc.returncode}\n{out}"
-
-    result = ctx.step(f"Run `{shown}` (replaces {port.source})", _run)
-    if result is None:
-        return f"dry-run: would run `{shown}` in {root} (replaces {port.source})"
-    return result
+    ctx.step(f"Describe `{shown}` (candidate replacement for {port.source})")
+    return f"dry-run: would run `{shown}` in {root} (host execution disabled)"

@@ -1325,9 +1325,9 @@ workflows:
     reputational_impact: low
     requires_human_approval: false
     description: |
-      Runs scripts/launch/honest-launch-gate.mjs on the AgentZ host, the
-      same read-only script .github/workflows/honest-launch-gate.yml runs.
-      Public GET probes only. Exit 0 green, 1 red. Writes nothing.
+      Describes scripts/launch/honest-launch-gate.mjs in dry-run. Host
+      execution is disabled until an isolated executor and trusted immutable
+      source are verified. Keep the existing GitHub workflow in place.
 
   - id: gha_autonomy_manifest_check
     title: "Autonomy manifest check (ported from GitHub Actions)"
@@ -1344,6 +1344,6 @@ workflows:
     reputational_impact: low
     requires_human_approval: false
     description: |
-      Runs `node scripts/autonomy/reconcile.mjs --check` offline: every
-      workflow file is classified exactly once in .github/autonomy.json.
-      No network, no token, writes nothing. Never runs --apply.
+      Describes `node scripts/autonomy/reconcile.mjs --check` in dry-run.
+      Host execution is disabled until an isolated executor and trusted
+      immutable source are verified. Keep the existing GitHub workflow in place.
