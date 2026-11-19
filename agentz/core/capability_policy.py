@@ -21,6 +21,10 @@ class Capability(str, Enum):
     PAYMENT = "payment"
     CREDENTIALS = "credentials"
     POLICY_CHANGE = "policy_change"
+    CUSTOMER_SEND = "customer_send"
+    SPEND = "spend"
+    IDENTITY_PUBLISH = "identity_publish"
+    GUARDRAIL_EDIT = "guardrail_edit"
 
 
 AUTONOMOUS = frozenset({
