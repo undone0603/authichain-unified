@@ -301,11 +301,14 @@ export function buildGapReport(intake: GapReportIntake): GapReport {
  * Annex XIII rows as the report, so each answer maps to one intake field.
  */
 export function intakeQuestionnaire(): string {
+  // Every figure filled in, so only items the customer supplies as documents remain.
   const rows = annexXiiiRows({
     model: "x",
     statedWh: 1,
     ah: 1,
     nominalV: 1,
+    cyclesLow: 1,
+    cyclesHigh: 1,
     placing: "unknown",
   });
   const ask = rows.filter(

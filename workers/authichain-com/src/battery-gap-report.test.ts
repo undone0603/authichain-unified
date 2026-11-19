@@ -165,6 +165,7 @@ describe("intakeQuestionnaire", () => {
     ))
       expect(q).toContain(`[available.${r.id}]`);
     expect(q).not.toContain("[available.energy]");
+    expect(q).not.toContain("[available.cycles]");
     expect(q).not.toContain("[available.commercial]");
     expect(q).toContain(REPORT_DISCLAIMER);
   });
