@@ -151,6 +151,32 @@ def execute(
     if missing and mode == Mode.DRY_RUN and verbose:
         print(f"   (dry-run note: missing creds {missing} - would block in live mode)")
 
+    # The direct runner is used by the CLI and API as well as by the
+    # governor. Check an existing positive per-workflow limit on each entry
+    # path before importing or invoking the handler. This is only a check of
+    # previously reported spend: it is not a reservation or a live-payment
+    # authorization. A zero limit retains its existing "no cap" meaning.
+    if mode != Mode.DRY_RUN and wf.financial_limit_usd > 0:
+        from agentz.core.risk_firewall import assess_workflow
+
+        assessment = assess_workflow(
+            wf_id=wf.id,
+            risk_class=wf.risk_class,
+            financial_limit_usd=wf.financial_limit_usd,
+            requires_human_approval=wf.requires_human_approval,
+            current_mode=mode.value,
+            audit_log_path=audit_log_path,
+        )
+        if not assessment.approved:
+            return RunResult(
+                workflow_id=wf.id,
+                status="blocked",
+                started_at=started_iso,
+                finished_at=datetime.now(timezone.utc).isoformat(),
+                duration_s=time.time() - started,
+                notes=assessment.reason,
+            )
+
     # Promote confirm if workflow self-flags it OR risk firewall requires it
     from agentz.core.risk_firewall import should_force_confirm as _should_force
     force_confirm = _should_force(
