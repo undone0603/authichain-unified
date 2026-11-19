@@ -45,6 +45,9 @@ def execute_and_sign(*, opener=urlopen, now=None, endpoint=None, source_sha=None
     if endpoint != ALLOWED_ENDPOINT or urlsplit(endpoint).hostname != "authichain.com":
         raise RuntimeError("MCP_ENDPOINT_NOT_ALLOWLISTED")
     source_sha = source_sha or os.environ.get("AGENTZ_SOURCE_SHA", "")
+    deployment_sha = os.environ.get("AGENTZ_DEPLOYED_COMMIT_SHA", "")
+    if not deployment_sha or deployment_sha != source_sha:
+        raise RuntimeError("DEPLOYED_SHA_ATTESTATION_REQUIRED")
     if len(source_sha) != 40 or any(c not in "0123456789abcdef" for c in source_sha):
         raise RuntimeError("SOURCE_SHA_REQUIRED")
     key_dir = os.environ.get("AGENTZ_KEY_DIR")
@@ -75,6 +78,7 @@ def execute_and_sign(*, opener=urlopen, now=None, endpoint=None, source_sha=None
         raise RuntimeError("MCP_TOOL_ERROR")
 
     payload = {"schema": SCHEMA, "executionId": execution_id, "sourceCommit": source_sha,
+               "sourceProvenance": "deployment-env-match-unverified",
                "tool": "get_pricing", "endpoint": endpoint, "httpStatus": http_status,
                "requestSha256": _digest(request_bytes), "responseSha256": _digest(response_bytes),
                "signedAt": now.isoformat().replace("+00:00", "Z"), "noProductionWrite": True,
@@ -86,7 +90,7 @@ def execute_and_sign(*, opener=urlopen, now=None, endpoint=None, source_sha=None
             "responseRaw": response_bytes.decode("utf-8"), "identity": status["did_key"]}
 
 
-def verify_receipt(receipt: dict) -> bool:
+def verify_receipt(receipt: dict, *, expected_execution_id: str | None = None) -> bool:
     """Verify signature and exact supplied request/response bytes, without private key."""
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     from agentz.core.identity import _B58
@@ -98,7 +102,9 @@ def verify_receipt(receipt: dict) -> bool:
         return False
     if payload != receipt["payload"] or payload.get("schema") != SCHEMA or payload.get("tool") != "get_pricing" or payload.get("noProductionWrite") is not True:
         return False
-    if payload.get("endpoint") != ALLOWED_ENDPOINT or payload.get("httpStatus") != 200:
+    if expected_execution_id is not None and payload.get("executionId") != expected_execution_id:
+        return False
+    if payload.get("sourceProvenance") != "deployment-env-match-unverified" or payload.get("endpoint") != ALLOWED_ENDPOINT or payload.get("httpStatus") != 200:
         return False
     request_bytes = receipt["requestRaw"].encode("utf-8")
     response_bytes = receipt["responseRaw"].encode("utf-8")
