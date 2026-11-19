@@ -53,7 +53,7 @@ class CodeProposalTests(unittest.TestCase):
             net.assert_not_called()
 
     def test_github_requests_use_identified_agent_and_bearer_auth(self):
-        with mock.patch.dict(os.environ, {"AGENTZ_GITHUB_CODE_TOKEN": "test-token"}), \\
+        with mock.patch.dict(os.environ, {"AGENTZ_GITHUB_CODE_TOKEN": "test-token"}), \
                 mock.patch.object(code_proposals, "urlopen") as net:
             net.return_value.__enter__.return_value.read.return_value = b"{}"
             self.assertEqual(code_proposals._github("GET", "git/ref/heads/main"), {})
