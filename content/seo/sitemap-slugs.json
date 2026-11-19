@@ -32,6 +32,7 @@
     "caip-2-chain-identifier-polygon-137-eip155-bip122-anchor",
     "california-sb-253-scope-3-supplier-emissions-verification",
     "california-sb-707-textile-epr-traceability",
+    "can-a-digital-product-passport-qr-code-be-copied",
     "cbam-embedded-carbon-emissions-verification",
     "cen-cenelec-digital-product-passport-standards",
     "circularise-alternative-for-smaller-brands",
@@ -55,6 +56,7 @@
     "dscsa-epcis-interoperable-data-exchange-requirement",
     "dscsa-saleable-returns-verification-requirement",
     "dscsa-small-dispenser-compliance-deadline-2026",
+    "dscsa-small-dispenser-exemption-extended-to-november-2027",
     "dscsa-unit-level-traceability-2026",
     "e-bike-battery-passport",
     "e-scooter-battery-passport-eu",
@@ -132,6 +134,7 @@
     "product-registry-404-unknown-serial-number-counterfeit-check",
     "products-excluded-from-eu-digital-product-passport-requirement",
     "qr-code-phishing-product-packaging-security",
+    "repurposed-battery-new-battery-passport-linked-to-original",
     "rfc-8785-json-canonicalization-signature-verification",
     "right-to-repair-spare-parts-verification",
     "scantrust-alternative-with-a-public-verifier",
@@ -165,7 +168,8 @@
     "w3c-verifiable-credentials-data-model-2-1-changes",
     "w3c-verifiable-credentials-product-authentication",
     "weee-directive-revision-2026-electronics-traceability",
-    "what-is-a-digital-product-passport"
+    "what-is-a-digital-product-passport",
+    "when-is-the-textile-digital-product-passport-mandatory"
   ],
   "strainchain.io": [
     "biotrack-integration-blockchain-provenance",
