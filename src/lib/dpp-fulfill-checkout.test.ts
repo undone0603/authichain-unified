@@ -197,6 +197,12 @@ function fakeSupabase(opts?: {
   };
   const rpc = async (fn: string, args: Record<string, unknown>) => {
     const session = String(args.p_session_id);
+    if (fn === "dpp_activation_prepare") {
+      if (!delivery.has(session)) {
+        delivery.set(session, { state: "pending", profileId: "", token: "", attempts: 0 });
+      }
+      return { data: { status: delivery.get(session)!.state }, error: null };
+    }
     if (fn === "dpp_activation_enqueue") {
       if (args.p_is_demo === true) return { data: { status: "skipped_demo" }, error: null };
       const receipt = (continuity.get("founder_exit_side_effects") ?? []).find(
@@ -205,13 +211,12 @@ function fakeSupabase(opts?: {
       if (!receipt || receipt.profile_id !== args.p_profile_id) {
         return { data: null, error: { code: "P0001", message: "receipt_mismatch" } };
       }
-      if (!delivery.has(session)) {
-        delivery.set(session, { state: "pending", profileId: String(args.p_profile_id), token: "", attempts: 0 });
-      }
-      const row = delivery.get(session)!;
-      if (row.profileId !== args.p_profile_id) {
+      const row = delivery.get(session);
+      if (!row) return { data: { status: "legacy_untracked" }, error: null };
+      if (row.profileId && row.profileId !== args.p_profile_id) {
         return { data: null, error: { code: "P0001", message: "profile_mismatch" } };
       }
+      row.profileId = String(args.p_profile_id);
       return { data: { status: row.state }, error: null };
     }
     if (fn === "dpp_activation_claim") {
@@ -880,6 +885,23 @@ describe("fulfillDppPaidSession", () => {
     expect(recovered.activationEmail).toBe("sent");
     expect(sendEmail).toHaveBeenCalledOnce();
     expect(profileUpdates).toHaveLength(1);
+  });
+
+  it("holds a legacy succeeded grant with no pre-grant outbox marker", async () => {
+    const { supabase, delivery, profileUpdates } = fakeSupabase();
+    await fulfillDppPaidSession(supabase, paidSession);
+    expect(delivery.get(paidSession.id)?.state).toBe("accepted");
+    // Models migration rollout for a historical grant with no outbox row.
+    delivery.delete(paidSession.id);
+    const replay = await fulfillDppPaidSession(supabase, paidSession);
+    expect(replay).toMatchObject({
+      handled: true,
+      alreadyFulfilled: true,
+      activationEmail: "held",
+    });
+    expect(delivery.has(paidSession.id)).toBe(false);
+    expect(profileUpdates).toHaveLength(1);
+    expect(sendEmail).toHaveBeenCalledOnce();
   });
 
   it("keeps uncertain provider outcomes on manual hold without a second send", async () => {
