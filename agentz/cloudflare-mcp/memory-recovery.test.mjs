@@ -17,7 +17,7 @@ CREATE TABLE agentz_task_events (id INTEGER PRIMARY KEY AUTOINCREMENT,task_id TE
 CREATE TABLE agentz_learnings (id INTEGER PRIMARY KEY AUTOINCREMENT,task_kind TEXT NOT NULL,fingerprint TEXT NOT NULL,outcome TEXT NOT NULL CHECK(outcome IN ('success','failure')),strategy TEXT NOT NULL,observation TEXT NOT NULL,source_event_id INTEGER NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(task_kind,fingerprint,outcome,strategy,source_event_id),FOREIGN KEY(source_event_id) REFERENCES agentz_task_events(id));
 `;
 class FakeD1 {
- constructor(){this.db = new DatabaseSync(':memory:');this.db.exec('PRAGMA foreign_keys=ON;'+schema);this.db.exec(readFileSync(new URL('./migrations/0002_lease_recovery.sql',import.meta.url),'utf8'));}
+ constructor(){this.db = new DatabaseSync(':memory:');this.db.exec('PRAGMA foreign_keys=ON;'+schema);this.db.exec(readFileSync(new URL('./migrations/0002_lease_recovery.sql',import.meta.url),'utf8'));this.db.exec(readFileSync(new URL('./migrations/0003_scheduler_recovery.sql',import.meta.url),'utf8'));}
  prepare(sql){const db=this.db;return {bind(...args){const exec=(which)=>db.prepare(sql)[which](...args);return {run:async()=>({meta:{changes:exec('run').changes}}),first:async()=>exec('get')??null,all:async()=>({results:exec('all')})};}};}
  async batch(statements){this.db.exec('BEGIN');try{let r=[];for(const statement of statements){r.push(await statement.run());}this.db.exec('COMMIT');return r;}catch(e){this.db.exec('ROLLBACK');throw e;}}
  rows(sql){return this.db.prepare(sql).all().map(row => ({...row}));}
