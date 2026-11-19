@@ -83,7 +83,6 @@
       "npm-publish-verify.yml",
       "cloudflare-estate-audit.yml",
       "honest-launch-gate.yml",
-      "production-smoke-gate.yml",
       "schema-drift.yml",
       "supabase-baseline.yml",
       "verify-integrations.yml",
