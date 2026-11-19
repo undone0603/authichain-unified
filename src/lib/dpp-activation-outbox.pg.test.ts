@@ -138,14 +138,20 @@ describe("DPP durable activation outbox (isolated PostgreSQL)", () => {
     const r=await db.query<{
       anon_execute: boolean; authenticated_execute:boolean;
       service_execute:boolean; rls_enabled:boolean;
+      direct_select:boolean; direct_insert:boolean; direct_update:boolean; direct_delete:boolean;
     }>("SELECT " +
       "has_function_privilege('anon','public.dpp_activation_claim(text,text)','EXECUTE') AS anon_execute, " +
       "has_function_privilege('authenticated','public.dpp_activation_claim(text,text)','EXECUTE') AS authenticated_execute, " +
       "has_function_privilege('service_role','public.dpp_activation_claim(text,text)','EXECUTE') AS service_execute, " +
+      "has_table_privilege('service_role','public.dpp_activation_outbox','SELECT') AS direct_select, " +
+      "has_table_privilege('service_role','public.dpp_activation_outbox','INSERT') AS direct_insert, " +
+      "has_table_privilege('service_role','public.dpp_activation_outbox','UPDATE') AS direct_update, " +
+      "has_table_privilege('service_role','public.dpp_activation_outbox','DELETE') AS direct_delete, " +
       "relrowsecurity AS rls_enabled FROM pg_class WHERE oid='public.dpp_activation_outbox'::regclass"
     );
     expect(r.rows[0]).toMatchObject({
-      anon_execute:false, authenticated_execute:false, service_execute:true, rls_enabled:true
+      anon_execute:false, authenticated_execute:false, service_execute:true, rls_enabled:true,
+      direct_select:false, direct_insert:false, direct_update:false, direct_delete:false
     });
     const cols=await db.query<{column_name:string}>(
       "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='dpp_activation_outbox'"

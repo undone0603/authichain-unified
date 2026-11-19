@@ -1,6 +1,7 @@
 -- #2482: durable, PII-free DPP activation dispatch outbox.
 -- Apply only through the reviewed production migration workflow. Nothing here
 -- replays Stripe events, grants credit, sends mail, or changes customer data.
+-- supabase-grants-exempt: public.dpp_activation_outbox RPC-only table accessed via service_role-executable SECURITY DEFINER functions; direct table grants intentionally prohibited.
 CREATE TABLE IF NOT EXISTS public.dpp_activation_outbox (
   session_id text PRIMARY KEY,
   profile_id text,
