@@ -200,6 +200,21 @@ function workflowTexts(root) {
         texts.push(readFileSync(path.join(dir, f), "utf8"));
     }
   }
+  // The required CircleCI test-workers job runs this shared script on the
+  // exact SHA when hosted GitHub Actions are unavailable. Do not count an
+  // unreferenced file as a CI runner; the configuration must wire the job.
+  const circleConfig = path.join(root, ".circleci", "config.yml");
+  const circleScript = path.join(root, ".circleci", "quality-check.sh");
+  if (existsSync(circleConfig) && existsSync(circleScript)) {
+    const config = readFileSync(circleConfig, "utf8");
+    if (
+      config.includes(".circleci/quality-check.sh") &&
+      /^\s{2}test-workers:\s*$/m.test(config) &&
+      /\btask:\s*test-workers\b/.test(config)
+    ) {
+      texts.push(readFileSync(circleScript, "utf8"));
+    }
+  }
   return texts;
 }
 

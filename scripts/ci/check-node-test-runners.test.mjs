@@ -1,3 +1,6 @@
+import {mkdtempSync, mkdirSync, writeFileSync, rmSync} from "node:fs";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -7,6 +10,7 @@ import {
   isNodeTestSource,
   stripYamlComments,
   uncoveredFiles,
+  ciPatterns,
 } from "./check-node-test-runners.mjs";
 
 test("isNodeTestSource matches node:test imports and requires only", () => {
@@ -104,4 +108,28 @@ test("uncoveredFiles returns the files no pattern matches, in order", () => {
   assert.deepEqual(uncoveredFiles(files, ["a/*.test.ts", "c/**"]), [
     "b/y.test.ts",
   ]);
+});
+
+
+test("CircleCI registration counts real node:test runners but not detached scripts", () => {
+  const root = mkdtempSync(join(tmpdir(), "agentz-node-runner-"));
+  try {
+    const circle = join(root, ".circleci");
+    mkdirSync(circle);
+    writeFileSync(join(root, "package.json"), JSON.stringify({scripts:{}}));
+    writeFileSync(join(circle, "quality-check.sh"),
+      "node --test agentz/cloudflare-mcp/memory-recovery.test.mjs\n");
+    const config = join(circle, "config.yml");
+    writeFileSync(config,
+      "commands:\n  bounded-check:\n    steps:\n      - run: .circleci/quality-check.sh << parameters.task >>\n" +
+      "jobs:\n  test-workers:\n    steps:\n      - bounded-check:\n          task: test-workers\n");
+    const name = "agentz/cloudflare-mcp/memory-recovery.test.mjs";
+    assert.deepEqual(uncoveredFiles([name],ciPatterns(root)),[]);
+    writeFileSync(config,
+      "commands:\n  bounded-check:\n    steps:\n      - run: .circleci/quality-check.sh << parameters.task >>\n" +
+      "jobs:\n  test-workers:\n    steps:\n      - bounded-check:\n          task: extras\n");
+    assert.deepEqual(uncoveredFiles([name],ciPatterns(root)),[name]);
+  } finally {
+    rmSync(root,{recursive:true,force:true});
+  }
 });

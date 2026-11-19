@@ -33,6 +33,7 @@ case "$task" in
     node scripts/check-workflow-cannot-fail.mjs
     node scripts/ci/check-deploy-invariants.mjs
     node scripts/ci/check-node-test-runners.mjs
+    node --test scripts/ci/check-node-test-runners.test.mjs
     # Mirror GitHub Actions Windows path safety in the existing offline gate.
     bash scripts/check-windows-paths.sh
     # Mirrors GitHub's gitleaks PR/push tree scan; SHA-pinned binary.
@@ -53,7 +54,7 @@ case "$task" in
     # Run the real AgentZ edge/scheduler integration tests on the exact CircleCI SHA.
     # GitHub Actions hosted runners may be unavailable; this independent gate
     # remains credential-free and never deploys.
-    node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs
+    node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs agentz/cloudflare-mcp/memory-recovery.test.mjs agentz/cloudflare-mcp/binding-preflight.test.mjs
     ;;
   test-other)
     # Atomic checkout grants MUST pass against two separate PostgreSQL clients.
