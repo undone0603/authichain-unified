@@ -83,6 +83,18 @@ export const SUPPORTED_PROTOCOL_VERSIONS = [
 export const LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0];
 
 /**
+ * MCP 2026-07-28 is stateless: there is no initialize handshake, and every
+ * request carries its version in the MCP-Protocol-Version header and in
+ * params._meta. Requests in that shape go to handleModernRpc; everything
+ * else keeps the legacy flow above unchanged.
+ */
+export const MODERN_PROTOCOL_VERSION = "2026-07-28";
+/** JSON-RPC codes defined by the 2026-07-28 schema. */
+export const HEADER_MISMATCH = -32020;
+export const UNSUPPORTED_PROTOCOL_VERSION = -32022;
+const MODERN_HEADERS = { "MCP-Protocol-Version": MODERN_PROTOCOL_VERSION };
+
+/**
  * The server's own version, reported in serverInfo and in GET discovery.
  *
  * This MUST equal `version` in the repo-root server.json, which is what the
@@ -93,6 +105,9 @@ export const LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0];
  * both or CI fails.
  */
 export const SERVER_VERSION = "1.4.0";
+
+const SERVER_INSTRUCTIONS =
+  "Free verification: verify_attestation fetches a published v0.1 JWS and checks issuer trust, signature, lifecycle and expiry; verify_record checks the separate reference protocol. Paid verification: verify is an x402 seal-registry tool requiring separately authorized payment. query_provenance is registration-only. No tool proves physical authenticity. dpp_readiness_check is informational EU Digital Product Passport readiness scoring, not legal advice.";
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -1503,6 +1518,9 @@ async function handleRpc(
   } catch {
     return rpcError(null, "invalid JSON", -32700);
   }
+  if (isModernRequest(request, body)) {
+    return handleModernRpc(request, body, env, verifyApp);
+  }
   const method = body.method ?? "";
   const id = body.id;
 
@@ -1534,8 +1552,7 @@ async function handleRpc(
       protocolVersion: negotiateProtocolVersion(body.params),
       capabilities: { tools: { listChanged: false } },
       serverInfo: { name: "authichain", version: SERVER_VERSION },
-      instructions:
-        "Free verification: verify_attestation fetches a published v0.1 JWS and checks issuer trust, signature, lifecycle and expiry; verify_record checks the separate reference protocol. Paid verification: verify is an x402 seal-registry tool requiring separately authorized payment. query_provenance is registration-only. No tool proves physical authenticity. dpp_readiness_check is informational EU Digital Product Passport readiness scoring, not legal advice.",
+      instructions: SERVER_INSTRUCTIONS,
     });
   }
 
@@ -1673,6 +1690,247 @@ async function handleRpc(
   return rpcError(id, `Method not found: ${method}`);
 }
 
+type RpcBody = {
+  jsonrpc?: string;
+  id?: unknown;
+  method?: string;
+  params?: unknown;
+};
+
+function objectOrUndefined(
+  value: unknown
+): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+/** A request is modern when either its header or its _meta says so. */
+function isModernRequest(request: Request, body: RpcBody): boolean {
+  if (request.headers.get("MCP-Protocol-Version") === MODERN_PROTOCOL_VERSION) {
+    return true;
+  }
+  const meta = objectOrUndefined(objectOrUndefined(body?.params)?._meta);
+  return meta?.["io.modelcontextprotocol/protocolVersion"] !== undefined;
+}
+
+function modernError(
+  status: number,
+  id: unknown,
+  code: number,
+  message: string,
+  data?: unknown
+): Response {
+  return json(
+    status,
+    {
+      jsonrpc: "2.0",
+      id: typeof id === "string" || typeof id === "number" ? id : null,
+      error: { code, message, ...(data === undefined ? {} : { data }) },
+    },
+    MODERN_HEADERS
+  );
+}
+
+/** Header values may use the spec's `=?base64?...?=` sentinel for non-ASCII. */
+export function decodeMcpHeaderValue(value: string | null): string | null {
+  if (value === null) return null;
+  const m = /^=\?base64\?([A-Za-z0-9+/]*={0,2})\?=$/.exec(value);
+  if (!m) return value;
+  try {
+    const bytes = Uint8Array.from(atob(m[1]), c => c.charCodeAt(0));
+    // Workers' TextDecoder options type has no `fatal`, so decode leniently
+    // and treat a replacement character as malformed UTF-8.
+    const decoded = new TextDecoder().decode(bytes);
+    return decoded.includes("\uFFFD") ? null : decoded;
+  } catch {
+    return null;
+  }
+}
+
+/** Add resultType to a legacy JSON-RPC result and mark the response modern. */
+async function asModernResponse(res: Response): Promise<Response> {
+  const headers = new Headers(res.headers);
+  headers.set("MCP-Protocol-Version", MODERN_PROTOCOL_VERSION);
+  const text = await res.text();
+  let payload: unknown;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    return new Response(text, { status: res.status, headers });
+  }
+  const frame = objectOrUndefined(payload);
+  const result = objectOrUndefined(frame?.result);
+  if (frame && result && !("resultType" in result)) {
+    frame.result = { resultType: "complete", ...result };
+  }
+  return new Response(JSON.stringify(payload), { status: res.status, headers });
+}
+
+/**
+ * MCP 2026-07-28 adapter. Validates the per-request headers and _meta the
+ * spec requires, answers server/discover and tools/list directly, and runs
+ * tools/call through the same legacy dispatcher (with _meta removed) so tool
+ * behaviour, payment checks and x402 refusals are identical in both eras.
+ */
+async function handleModernRpc(
+  request: Request,
+  body: RpcBody,
+  env?: McpEnv,
+  verifyApp?: X402VerifyBinding
+): Promise<Response> {
+  const id = body.id;
+  const method = typeof body.method === "string" ? body.method : "";
+  const params = objectOrUndefined(body.params);
+  const meta = objectOrUndefined(params?._meta);
+  const headerVersion = request.headers.get("MCP-Protocol-Version");
+  const metaVersion = meta?.["io.modelcontextprotocol/protocolVersion"];
+
+  if (
+    !headerVersion ||
+    typeof metaVersion !== "string" ||
+    headerVersion !== metaVersion
+  ) {
+    return modernError(
+      400,
+      id,
+      HEADER_MISMATCH,
+      "Header mismatch: MCP-Protocol-Version header and _meta protocolVersion must both be present and equal"
+    );
+  }
+  if (metaVersion !== MODERN_PROTOCOL_VERSION) {
+    return modernError(
+      400,
+      id,
+      UNSUPPORTED_PROTOCOL_VERSION,
+      "Unsupported protocol version",
+      {
+        supported: [MODERN_PROTOCOL_VERSION, ...SUPPORTED_PROTOCOL_VERSIONS],
+        requested: metaVersion,
+      }
+    );
+  }
+  if (!method || request.headers.get("Mcp-Method") !== method) {
+    return modernError(
+      400,
+      id,
+      HEADER_MISMATCH,
+      "Header mismatch: Mcp-Method header must equal the request method"
+    );
+  }
+  if (!Object.prototype.hasOwnProperty.call(body, "id")) {
+    return new Response(null, {
+      status: 202,
+      headers: {
+        "Cache-Control": "private, no-store",
+        "Access-Control-Allow-Origin": "*",
+        ...MODERN_HEADERS,
+      },
+    });
+  }
+  if (
+    body.jsonrpc !== "2.0" ||
+    (typeof id !== "string" && typeof id !== "number")
+  ) {
+    return modernError(400, id, -32600, "Invalid Request");
+  }
+  if (
+    !objectOrUndefined(meta?.["io.modelcontextprotocol/clientCapabilities"])
+  ) {
+    return modernError(
+      400,
+      id,
+      -32602,
+      "Invalid params: _meta io.modelcontextprotocol/clientCapabilities is required"
+    );
+  }
+
+  if (method === "server/discover") {
+    return json(
+      200,
+      {
+        jsonrpc: "2.0",
+        id,
+        result: {
+          resultType: "complete",
+          supportedVersions: [
+            MODERN_PROTOCOL_VERSION,
+            ...SUPPORTED_PROTOCOL_VERSIONS,
+          ],
+          capabilities: { tools: { listChanged: false } },
+          instructions: SERVER_INSTRUCTIONS,
+          ttlMs: 0,
+          cacheScope: "public",
+          _meta: {
+            "io.modelcontextprotocol/serverInfo": {
+              name: "authichain",
+              version: SERVER_VERSION,
+            },
+          },
+        },
+      },
+      MODERN_HEADERS
+    );
+  }
+
+  if (method === "tools/list") {
+    hydrateX402(env);
+    // The list depends only on server configuration, never on the caller.
+    return json(
+      200,
+      {
+        jsonrpc: "2.0",
+        id,
+        result: {
+          resultType: "complete",
+          tools: mcpTools(env),
+          ttlMs: 0,
+          cacheScope: "public",
+        },
+      },
+      MODERN_HEADERS
+    );
+  }
+
+  if (method === "tools/call") {
+    const name = typeof params?.name === "string" ? params.name : "";
+    if (
+      !name ||
+      decodeMcpHeaderValue(request.headers.get("Mcp-Name")) !== name
+    ) {
+      return modernError(
+        400,
+        id,
+        HEADER_MISMATCH,
+        "Header mismatch: Mcp-Name header must equal params.name"
+      );
+    }
+    const { _meta: _ignored, ...legacyParams } = params ?? {};
+    const headers = new Headers(request.headers);
+    headers.delete("MCP-Protocol-Version");
+    headers.delete("Mcp-Method");
+    headers.delete("Mcp-Name");
+    const legacy = await handleRpc(
+      new Request(request.url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id,
+          method,
+          params: legacyParams,
+        }),
+      }),
+      env,
+      verifyApp
+    );
+    return asModernResponse(legacy);
+  }
+
+  // initialize, ping and notifications/initialized do not exist in 2026-07-28.
+  return modernError(404, id, -32601, `Method not found: ${method}`);
+}
+
 const LIVING_QR_OBJECT_ID = /^qron:url:[0-9a-f]{8}$/;
 const LIVING_QR_SCAN_ORIGIN = "https://authichain.com";
 const LIVING_QR_DECISION_FIELDS = [
@@ -1774,7 +2032,7 @@ export async function tryHandleMcp(
         // clients on every call; omitting them here failed the preflight
         // for any browser-side MCP client before the request was made.
         "Access-Control-Allow-Headers":
-          "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID, X-PAYMENT, PAYMENT-SIGNATURE",
+          "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id, Last-Event-ID, X-PAYMENT, PAYMENT-SIGNATURE",
         "Access-Control-Expose-Headers":
           "MCP-Protocol-Version, Mcp-Session-Id, WWW-Authenticate",
         "Access-Control-Max-Age": "86400",

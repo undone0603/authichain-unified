@@ -171,6 +171,15 @@ function inferProvenanceFromSignals(lead: LeadProvenanceInput): {
 function leadProvenance(lead: LeadProvenanceInput): string | null {
   const meta = (lead.metadata ?? {}) as Record<string, unknown>;
   const fromMeta = metadataProvenance(meta);
+  // Nobody opts in through a cold campaign or a scrape. Rows imported from
+  // b2b_outreach_* carried metadata.source "inbound_optin" with
+  // target.source "unknown" (leads 14, 19, 20, 476 on 2026-11-18) and were
+  // treated as warm. A stamped opt-in cannot override a cold column source;
+  // a real reply still counts through inferProvenanceFromSignals.
+  const col = String(lead.source ?? "").trim();
+  if (fromMeta === "inbound_optin" && col && isUntrustedColumnSource(col)) {
+    return inferProvenanceFromSignals(lead)?.provenance ?? null;
+  }
   if (fromMeta) return fromMeta;
   return inferProvenanceFromSignals(lead)?.provenance ?? null;
 }
