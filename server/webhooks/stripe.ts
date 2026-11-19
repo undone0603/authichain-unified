@@ -44,6 +44,7 @@ import {
   markRetryableFulfillment,
 } from "../../src/lib/retryable-fulfillment";
 import { accrueAffiliateCommission } from "../../src/lib/affiliate-accrual";
+import { notifyGapReportPaid } from "../../src/lib/billing/gap-report-paid";
 import {
   claimStripeEvent,
   StripeEventClaimUnavailableError,
@@ -1310,6 +1311,24 @@ export async function handleStripeWebhook(
             ),
           undefined
         );
+
+        // A paid gap report grants no credits, so nothing else would tell the
+        // founder to send the intake questionnaire. First delivery only: the
+        // duplicate/replay path above returns before reaching here.
+        const gapOrder = await notifyGapReportPaid(
+          session,
+          checkoutLinePriceId(session)
+        );
+        if (gapOrder) {
+          await auditSafe("battery_gap_report_paid", {
+            eventId: event.id,
+            sessionId: gapOrder.sessionId,
+            plan: gapOrder.planId,
+            amountUsd: gapOrder.amountUsd,
+            buyerEmail: gapOrder.email,
+            status: "awaiting_intake",
+          });
+        }
 
         // Affiliate commission on the first paid sale. Guest checkouts count.
         // An unpaid (async) session is credited later by
