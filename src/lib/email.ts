@@ -13,6 +13,7 @@ type SendResult = {
   provider: 'gmail' | 'resend' | 'brevo' | 'sendgrid' | 'none';
   status?: number;
   error?: string;
+  messageId?: string;
 };
 
 function parseFrom(from: string): { email: string; name?: string } {
@@ -94,14 +95,42 @@ async function viaSendGrid(args: SendArgs, key: string): Promise<SendResult> {
  */
 export async function sendEmail(
   args: SendArgs,
-  options?: { onlyProvider?: "resend" }
+  options?: { onlyProvider?: "resend"; idempotencyKey?: string }
 ): Promise<SendResult> {
   // Transactional activation must not fall back across providers: a timeout
   // from one provider can mean acceptance, so trying another risks two emails.
   if (options?.onlyProvider === "resend") {
     const key = process.env.RESEND_API_KEY;
     if (!key) return { ok: false, provider: "resend", error: "RESEND_API_KEY not set" };
-    return viaResend(args, key);
+    const idem = options.idempotencyKey;
+    // Resend supports an idempotency key for POST /emails. A stable Checkout
+    // Session key prevents accidental duplicate accepts during transport retries.
+    if (!idem || idem.length > 256) {
+      return { ok: false, provider: "resend", error: "invalid idempotency key" };
+    }
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": idem,
+      },
+      body: JSON.stringify(args),
+    });
+    if (!response.ok) {
+      return { ok: false, provider: "resend", status: response.status, error: await response.text() };
+    }
+    // 2xx without a verifiable Resend email ID is an unknown outcome, not an
+    // accepted delivery receipt. The outbox holds it for reconciliation.
+    const payload: unknown = await response.json().catch(() => null);
+    const id = payload && typeof payload === "object" && "id" in payload &&
+      typeof payload.id === "string" ? payload.id : null;
+    return {
+      ok: Boolean(id),
+      provider: "resend",
+      status: response.status,
+      ...(id ? { messageId: id } : { error: "provider email ID missing" }),
+    };
   }
   const providers: Array<[string | undefined, (a: SendArgs, k: string) => Promise<SendResult>]> = [
     [process.env.GMAIL_APP_PASSWORD, viaGmail],
