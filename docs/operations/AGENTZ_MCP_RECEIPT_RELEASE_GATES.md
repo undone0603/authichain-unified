@@ -56,3 +56,21 @@ verifier must supply the expected execution ID from its own challenge context.
 
 No private key, synthetic locally generated identity, or fabricated receipt may
 be used as production proof.
+
+## Protected live challenge proof (added to this draft)
+
+Once deployed through a protected release and authenticated through the existing
+Cloudflare Access policy **and** the AgentZ API bearer token, submit an
+operator-generated fresh random ASCII challenge (16–256 printable characters)
+to `POST /agentz/evidence/sign-identity-challenge` with JSON body
+`{"challenge":"<unique-random-value>"}`. The API signs the exact challenge
+with the same published Ed25519 key and returns only a compact JWS and public
+payload. Independently verify EdDSA signature, the published `did:key`, JWS
+`kid`, challenge equality, and timestamp. Never upload or print the private
+key. This proves signing-key possession at the observed time, not deployment
+source provenance or ongoing key custody. Challenge signing is protected by
+the same `AGENT_SECRET` dependency as MCP receipt signing; Cloudflare Access
+must remain enforced.
+
+**Do not mistake the newly committed endpoint for a deployed endpoint.**
+Until protected release, live runtime proof remains unverified.
