@@ -30,3 +30,14 @@ Lyten is already done by hand (2026-11-19, HubSpot 601852360419). Skip Microvast
 ## Tests
 - Unit tests for the allowlist, CAPTCHA detection, honeypot skipping and batch matching.
 - An AgentZ endpoint test: tasks are refused without a paired token, and form tasks are refused outside an approved batch.
+
+## Auto-approve with high confidence (owner decision, 2026-11-19)
+The owner asked for submissions to auto-approve when confidence is high. "High confidence" is not a model score. A form task auto-approves only if **every** check below passes. Otherwise it falls back to the owner's batch approval.
+
+1. **Known target.** The company is on an approved lead list (for example Airtable `US Battery Leads`), the form URL is on the company's own domain, and the company has no prior contact, opt-out or bounce in Gmail or HubSpot.
+2. **Approved template.** The message is an owner-approved template where only listed variables change (company name, product line, one fact). Each fact must come from a cited public source on the company's own site or an official register. No other free text.
+3. **Owner-approved fields only.** Every required field's value comes from the owner's approved sender profile (name, company, email, the phone the owner approved, job title "Founder", country). An unknown required field pauses the task.
+4. **Rate and scope limits.** At most 5 auto-submits per day, 1 per company ever, campaign "EU battery passport" only. A daily digest of every auto-submit goes to the owner (ntfy plus HubSpot log).
+5. **Clean page.** No CAPTCHA or bot check, no login, no payment, and no consent checkbox beyond the site's standard privacy notice. A pre-ticked marketing opt-in is unticked.
+
+Kill switch: AgentZ env `AGENTZ_BRIDGE_AUTO_APPROVE=false` (the default until the owner sets it `true`) turns this off instantly. Any reply of "no thanks" or "stop" from a company blocks the whole domain.
