@@ -148,7 +148,10 @@ async function deliverActivationAfterGrant(
     throw markRetryableFulfillment(err);
   }
   if (delivery.status === "failed") {
-    const reason = redactForLog(delivery.error ?? "provider outcome unknown");
+    // Persist classification only; the provider body may contain tokens or PII.
+    const reason = delivery.httpStatus != null
+      ? "provider_response_not_accepted"
+      : "provider_outcome_unknown";
     console.error(
       `[dpp-fulfill] activation email failed: session=${input.sessionId} profile=${input.profileId} provider=${delivery.provider || "unknown"} status=${delivery.httpStatus ?? "n/a"} reason=${reason}`
     );
