@@ -10,6 +10,7 @@ import { provisionPurchase } from "./provisioning";
 import { renderBillingEmail } from "./billing-emails";
 import { getBrandIdFromMetadata } from "./brand-billing";
 import { sendEmail } from "./email";
+import { deliverDppActivationOnce } from "./dpp-activation-outbox";
 import { dppActivateUrl, recordDppLoopEventOnce } from "./dpp-loop";
 import {
   beginProvisionContinuity,
@@ -97,6 +98,77 @@ async function recordRecoveredProvisionedEvent(
   });
 }
 
+/**
+ * Delivery is deliberately separate from the atomic entitlement grant.
+ * Every path, including recovered continuity, reconciles the durable outbox.
+ * No additional mail is sent after a provider outcome becomes ambiguous.
+ */
+async function deliverActivationAfterGrant(
+  supabase: SupabaseLike,
+  input: {
+    sessionId: string;
+    profileId: string | null;
+    email: string;
+    brand: ReturnType<typeof getBrandIdFromMetadata>;
+    visitId: string | null;
+    source: string;
+    demo: boolean;
+  }
+): Promise<ActivationEmailStatus> {
+  if (input.demo || !input.profileId) return "skipped";
+  if (!input.email) {
+    throw markRetryableFulfillment(
+      new Error("DPP paid grant has no activation recipient; manual reconciliation required")
+    );
+  }
+  const mail = renderBillingEmail("dpp_audit_provisioned", input.brand, {
+    planName: "EU DPP Workspace",
+    activateUrl: dppActivateUrl(input.sessionId, input.visitId),
+  });
+  let delivery: Awaited<ReturnType<typeof deliverDppActivationOnce>>;
+  try {
+    delivery = await deliverDppActivationOnce(
+      supabase,
+      { sessionId: input.sessionId, profileId: input.profileId, demo: false },
+      () =>
+        sendEmail(
+          {
+            to: input.email,
+            from: mail.from,
+            subject: mail.subject,
+            html: mail.html,
+            text: mail.text,
+          },
+          { onlyProvider: "resend" }
+        )
+    );
+  } catch (err) {
+    // Before a provider attempt: Stripe can retry. After an ambiguous attempt
+    // the SQL state stays 'sending' and replay returns 'held', never re-sends.
+    throw markRetryableFulfillment(err);
+  }
+  if (delivery.status === "failed") {
+    const reason = redactForLog(delivery.error ?? "provider outcome unknown");
+    console.error(
+      `[dpp-fulfill] activation email failed: session=${input.sessionId} profile=${input.profileId} provider=${delivery.provider || "unknown"} status=${delivery.httpStatus ?? "n/a"} reason=${reason}`
+    );
+    await recordActivationEmailFailed(supabase, {
+      prospectId: input.visitId || input.sessionId,
+      source: input.source,
+      stripeSessionId: input.sessionId,
+      profileId: input.profileId,
+      provider: delivery.provider || null,
+      httpStatus: delivery.httpStatus ?? null,
+      reason,
+    });
+  } else if (delivery.status === "held") {
+    console.warn(
+      `[dpp-fulfill] activation delivery held for reconciliation: session=${input.sessionId} profile=${input.profileId}`
+    );
+  }
+  return delivery.status;
+}
+
 export async function fulfillDppPaidSession(
   supabase: SupabaseLike,
   session: DppCheckoutSessionLike,
@@ -119,7 +191,7 @@ export async function fulfillDppPaidSession(
         profile_id: result.profileId,
         plan: session.metadata?.plan || "dpp_readiness",
         outcome: result.alreadyFulfilled
-          ? "already_fulfilled"
+          ? `recovered_activation_email_${result.activationEmail}`
           : `activation_email_${result.activationEmail}`,
       });
     }
@@ -215,46 +287,29 @@ async function fulfillDppPaidSessionOnce(
     throw markRetryableFulfillment(err);
   }
 
-  if (continuityState === "already_succeeded") {
-    let profileId: string | null = null;
-    try {
-      if (visitId) {
-        profileId = await findGrantedProfileId(supabase, session.id);
-        await recordRecoveredProvisionedEvent(supabase, {
-          visitId: String(visitId),
-          source: md.source || "direct",
-          email,
-          profileId,
-          sessionId: session.id,
-          plan,
-          demo,
-          allowNoIdentityDemo: true,
-        });
-      }
-    } catch (err) {
-      throw markRetryableFulfillment(err);
-    }
-    return {
-      handled: true,
-      profileId,
-      activationEmail: "skipped",
-      alreadyFulfilled: true,
-    };
-  }
-  if (continuityState === "grant_recorded") {
+  if (
+    continuityState === "already_succeeded" ||
+    continuityState === "grant_recorded"
+  ) {
     let profileId: string | null;
     try {
+      // Receipt lookup must occur even when the Checkout Session has no
+      // visit-id metadata (not all Payment Links supply a visit ID).
       profileId = await findGrantedProfileId(supabase, session.id);
-      if (!profileId) throw new Error("DPP grant recovery profile not found");
-      await finishProvisionContinuity(supabase, {
-        sessionId: session.id,
-        amountCents: session.amount_total ?? null,
-        isDemo: demo,
-        plan,
-        grantAlreadyPresent: true,
-        grantApplied: true,
-        profileId,
-      });
+      if (!profileId && !demo) {
+        throw new Error("DPP grant recovery profile not found");
+      }
+      if (continuityState === "grant_recorded") {
+        await finishProvisionContinuity(supabase, {
+          sessionId: session.id,
+          amountCents: session.amount_total ?? null,
+          isDemo: demo,
+          plan,
+          grantAlreadyPresent: true,
+          grantApplied: Boolean(profileId),
+          profileId,
+        });
+      }
       await recordRecoveredProvisionedEvent(supabase, {
         visitId: visitId ? String(visitId) : null,
         source: md.source || "direct",
@@ -263,14 +318,24 @@ async function fulfillDppPaidSessionOnce(
         sessionId: session.id,
         plan,
         demo,
+        allowNoIdentityDemo: true,
       });
     } catch (err) {
       throw markRetryableFulfillment(err);
     }
+    const activationEmail = await deliverActivationAfterGrant(supabase, {
+      sessionId: session.id,
+      profileId,
+      email,
+      brand,
+      visitId: visitId ? String(visitId) : null,
+      source: md.source || "direct",
+      demo,
+    });
     return {
       handled: true,
       profileId,
-      activationEmail: "skipped",
+      activationEmail,
       alreadyFulfilled: true,
     };
   }
@@ -365,67 +430,25 @@ async function fulfillDppPaidSessionOnce(
     });
   }
 
-  let activationEmail: ActivationEmailStatus = "skipped";
-  if (prov.profileId && email && !demo && !prov.skippedIdempotent) {
-    const mail = renderBillingEmail("dpp_audit_provisioned", brand, {
-      planName: "EU DPP Workspace",
-      activateUrl: dppActivateUrl(session.id, visitId ? String(visitId) : null),
-    });
-    // A paid buyer who never gets this email has no way into the workspace, so
-    // a failed send must be visible (log + funnel_events row), never swallowed.
-    // The payment and the grant above are already done; we do not throw here,
-    // because a Stripe retry would re-run provisioning, not just the email.
-    let result: {
-      ok: boolean;
-      provider?: string;
-      status?: number;
-      error?: string;
-    };
-    try {
-      result = await sendEmail({
-        to: email,
-        from: mail.from,
-        subject: mail.subject,
-        html: mail.html,
-        text: mail.text,
-      });
-    } catch (err) {
-      result = {
-        ok: false,
-        error: err instanceof Error ? err.message : String(err),
-      };
-    }
-    if (result && result.ok) {
-      activationEmail = "sent";
-    } else {
-      activationEmail = "failed";
-      const reason = redactForLog(result?.error ?? "no send result");
-      // No recipient address in logs: session and profile ids are enough to
-      // find the buyer from the service side.
-      console.error(
-        `[dpp-fulfill] activation email failed: session=${session.id} profile=${prov.profileId} provider=${result?.provider ?? "unknown"} status=${result?.status ?? "n/a"} reason=${reason}`
-      );
-      await recordActivationEmailFailed(supabase, {
-        prospectId: visitId ? String(visitId) : session.id,
-        source: md.source || "direct",
-        stripeSessionId: session.id,
-        profileId: prov.profileId,
-        provider: result?.provider ?? null,
-        httpStatus: result?.status ?? null,
-        reason,
-      });
-    }
-  }
+  const activationEmail = await deliverActivationAfterGrant(supabase, {
+    sessionId: session.id,
+    profileId: prov.profileId,
+    email,
+    brand,
+    visitId: visitId ? String(visitId) : null,
+    source: md.source || "direct",
+    demo,
+  });
 
   return { handled: true, profileId: prov.profileId, activationEmail };
 }
 
-export type ActivationEmailStatus = "sent" | "failed" | "skipped";
+export type ActivationEmailStatus = "sent" | "failed" | "skipped" | "held";
 
 export type DppFulfillResult = {
   handled: boolean;
   profileId: string | null;
-  /** Outcome of the activation email: skipped = not attempted (no email, demo, or not a DPP grant). */
+  /** sent=provider accepted; held=unresolved/active attempt, never auto-resend; skipped=demo, non-DPP or already accepted. */
   activationEmail: ActivationEmailStatus;
   /** This session's durable continuity record proves fulfillment already ran. */
   alreadyFulfilled?: boolean;
