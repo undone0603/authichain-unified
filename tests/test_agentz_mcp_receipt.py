@@ -58,3 +58,21 @@ def test_signed_execution_binds_bytes(monkeypatch, tmp_path):
     assert not mcp_receipt.verify_receipt(altered)
     altered = dict(receipt, payload={**receipt["payload"], "sourceCommit": "b" * 40})
     assert not mcp_receipt.verify_receipt(altered)
+
+
+def test_atomic_acceptance_rejects_replay(monkeypatch, tmp_path):
+    from agentz.core import mcp_receipt_acceptance as acceptance
+    monkeypatch.setattr(acceptance, "verify_receipt",
+                        lambda receipt, expected_execution_id: expected_execution_id == receipt["payload"]["executionId"])
+    receipt = {"jws": "test.only.not-a-real-signature", "payload": {"executionId": "challenge-123"}}
+    db = tmp_path / "acceptance.sqlite3"
+    assert not acceptance.consume_once(receipt, db, expected_execution_id="wrong-challenge")
+    assert acceptance.consume_once(receipt, db, expected_execution_id="challenge-123")
+    assert not acceptance.consume_once(receipt, db, expected_execution_id="challenge-123")
+
+
+def test_deployment_sha_mismatch_fails_closed(monkeypatch):
+    monkeypatch.setattr(mcp_receipt, "identity_status", lambda now: {"can_sign_as_self": True})
+    monkeypatch.setenv("AGENTZ_DEPLOYED_COMMIT_SHA", "b" * 40)
+    with pytest.raises(RuntimeError, match="DEPLOYED_SHA_ATTESTATION_REQUIRED"):
+        mcp_receipt.execute_and_sign(source_sha="a" * 40)
