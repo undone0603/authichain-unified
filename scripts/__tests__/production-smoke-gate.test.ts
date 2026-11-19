@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { runSmokeGate, smokeSteps } from "../production-smoke-gate";
+import {
+  MCP_VERIFY_CALL,
+  runSmokeGate,
+  runSmokeStep,
+  smokeSteps,
+} from "../production-smoke-gate";
 
 describe("production smoke gate", () => {
   it("covers the live Cloudflare money + verify path", () => {
@@ -15,6 +20,7 @@ describe("production smoke gate", () => {
       "passport_head",
       "farm_head",
       "x402_health",
+      "mcp_verify_record",
     ]);
     const heads = smokeSteps().filter(s => s.method === "HEAD");
     expect(heads.map(s => s.id)).toEqual([
@@ -71,6 +77,7 @@ describe("production smoke gate", () => {
           return this;
         },
         async json() {
+          if (path === "/mcp/free") return mcpVerifyBody("verified", []);
           return path.includes("jwks")
             ? { keys: [{ kid: "k1" }] }
             : { ok: true, ready: true };
@@ -80,4 +87,42 @@ describe("production smoke gate", () => {
     const report = await runSmokeGate("https://authichain.com", fetchImpl);
     expect(report.ok).toBe(true);
   });
+
+  it("sends one read-only verify_record call for the published demo record", () => {
+    const step = smokeSteps().find(s => s.id === "mcp_verify_record");
+    expect(step?.url).toBe("https://authichain.com/mcp/free");
+    expect(step?.method).toBe("POST");
+    expect(step?.mcpVerify).toEqual(MCP_VERIFY_CALL);
+  });
+
+  it("fails the gate when verify_record cannot read the Polygon anchor", async () => {
+    // 2026-11-19: every page served 200 while the hosted verifier returned
+    // unverified for days because its Polygon RPC answered 403.
+    const step = smokeSteps().find(s => s.id === "mcp_verify_record")!;
+    const fetchImpl = (async () =>
+      ({
+        status: 200,
+        clone() {
+          return this;
+        },
+        async json() {
+          return mcpVerifyBody("unverified", [
+            "anchor_not_on_chain:rpc_http_error",
+          ]);
+        },
+      }) as Response) as unknown as typeof fetch;
+    const result = await runSmokeStep(step, fetchImpl);
+    expect(result.ok).toBe(false);
+    expect(result.detail).toContain("rpc_http_error");
+  });
 });
+
+function mcpVerifyBody(verdict: string, reasons: string[]) {
+  return {
+    jsonrpc: "2.0",
+    id: 1,
+    result: {
+      content: [{ type: "text", text: JSON.stringify({ verdict, reasons }) }],
+    },
+  };
+}

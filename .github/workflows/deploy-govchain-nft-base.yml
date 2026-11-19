@@ -186,7 +186,7 @@ jobs:
           CONTRACT: ${{ steps.deploy.outputs.contract_address }}
         run: |
           case "$CHAIN" in
-            polygon) RPC="https://polygon-rpc.com" ;;
+            polygon) RPC="https://polygon.drpc.org" ;;
             base-sepolia) RPC="https://sepolia.base.org" ;;
             *) RPC="https://mainnet.base.org" ;;
           esac

@@ -5,12 +5,14 @@
  * doing TrueMark product certificates and is not touched by any ledger code.
  */
 
-export const LEDGER_CONTRACT_ADDRESS = (process.env.LEDGER_CONTRACT_ADDRESS ?? "").trim();
+export const LEDGER_CONTRACT_ADDRESS = (
+  process.env.LEDGER_CONTRACT_ADDRESS ?? ""
+).trim();
 
 export const LEDGER_CHAIN_ID = Number(process.env.LEDGER_CHAIN_ID ?? 137);
 
 export const LEDGER_RPC_URL =
-  process.env.NFT_RPC_URL?.trim() || "https://polygon-rpc.com";
+  process.env.NFT_RPC_URL?.trim() || "https://polygon.drpc.org";
 
 /** Currency enum written on-chain. Anything not listed here is not anchored. */
 export const CURRENCY_CODES: Record<string, number> = {
