@@ -20,3 +20,10 @@ def test_playbook_is_size_capped(tmp_path):
     big = tmp_path / "big.md"
     big.write_text("x" * 50_000, encoding="utf-8")
     assert len(playbook_section(big)) < 13_000
+
+
+def test_playbook_fits_the_cap_untruncated():
+    from agentz.core.architect import PLAYBOOK_MAX_CHARS
+
+    text = PLAYBOOK_PATH.read_text(encoding="utf-8").strip()
+    assert len(text) <= PLAYBOOK_MAX_CHARS, "playbook would be truncated in the planner prompt; trim it"
