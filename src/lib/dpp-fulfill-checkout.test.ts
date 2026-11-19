@@ -5,7 +5,7 @@ import { DPP_PRICE_ID } from "./dpp-loop";
 vi.mock("./email", () => ({
   sendEmail: vi
     .fn()
-    .mockResolvedValue({ ok: true, provider: "resend", status: 200 }),
+    .mockResolvedValue({ ok: true, provider: "resend", status: 200, messageId: "email_test_accepted" }),
 }));
 vi.mock("./billing-emails", () => ({
   renderBillingEmail: vi.fn().mockReturnValue({
@@ -51,7 +51,7 @@ function fakeSupabase(opts?: {
       : null;
   const continuity = new Map<string, Record<string, unknown>[]>();
   const grantedSessions = new Set<string>();
-  const delivery = new Map<string, { state: string; profileId: string; token: string; attempts: number }>();
+  const delivery = new Map<string, { state: string; profileId: string; token: string; attempts: number; messageId?: string }>();
   let activationFinalizeFailed = false;
   let activationClaimFailed = false;
   let claimCounter = 0;
@@ -254,6 +254,7 @@ function fakeSupabase(opts?: {
         return { data: null, error: { code: "P0001" } };
       }
       row.state = args.p_accepted ? "accepted" : "needs_reconciliation";
+      row.messageId = args.p_provider_message_id ? String(args.p_provider_message_id) : undefined;
       return { data: { status: row.state }, error: null };
     }
     if (fn !== "grant_dpp_checkout_session") {
@@ -903,6 +904,22 @@ describe("fulfillDppPaidSession", () => {
     });
     expect(delivery.has(paidSession.id)).toBe(false);
     expect(profileUpdates).toHaveLength(1);
+    expect(sendEmail).toHaveBeenCalledOnce();
+  });
+
+  it("holds a successful HTTP response without an immutable Resend email ID", async () => {
+    vi.mocked(sendEmail).mockResolvedValueOnce({
+      ok: true,
+      provider: "resend",
+      status: 200,
+    });
+    const { supabase, delivery } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+    expect(result.activationEmail).toBe("failed");
+    expect(delivery.get(paidSession.id)?.state).toBe("needs_reconciliation");
+    expect(delivery.get(paidSession.id)?.messageId).toBeUndefined();
+    const replay = await fulfillDppPaidSession(supabase, paidSession);
+    expect(replay.activationEmail).toBe("held");
     expect(sendEmail).toHaveBeenCalledOnce();
   });
 
