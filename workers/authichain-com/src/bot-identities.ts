@@ -1465,10 +1465,10 @@ export const BOT_IDENTITIES = {
       "slug": "agentz",
       "role": "Operator-authorized AI agent for AuthiChain brand publishing and directory submissions within stated $0 scope",
       "did": "did:web:authichain.com:agents:agentz",
-      "didKey": "did:key:z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82",
-      "publicKeyMultibase": "z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82",
-      "publicKeyJwkX": "uidcNVRZYplEAL8ydA1LXrvEiiJetZ8VirXaDpHOoVs",
-      "kid": "_iJ-a7FDIX5LEMrFG0ADfRayWUnGstvghoJlOldBFIs",
+      "didKey": "did:key:z6MkinQCrMW7nC1FLNVRUgoMX7ZdKR2b8go5xhZajZzSvjn9",
+      "publicKeyMultibase": "z6MkinQCrMW7nC1FLNVRUgoMX7ZdKR2b8go5xhZajZzSvjn9",
+      "publicKeyJwkX": "QFYCXXer7VMTagUEObxFbfRuvVlVGeSepAgV65MSDZo",
+      "kid": "-gqzTWHGEvPu2QjwGWdD_-q_QZqEu8COvRAShrU2lOY",
       "record": {
         "@context": [
           "https://www.w3.org/ns/credentials/v2",
@@ -1478,24 +1478,24 @@ export const BOT_IDENTITIES = {
           "VerifiableCredential",
           "AgentIdentityRecord"
         ],
-        "issuer": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
-        "validFrom": "2026-10-17T18:00:00Z",
-        "validUntil": "2027-01-17T18:00:00Z",
+        "issuer": "did:key:z6MkinQCrMW7nC1FLNVRUgoMX7ZdKR2b8go5xhZajZzSvjn9",
+        "validFrom": "2026-11-19T00:00:00Z",
+        "validUntil": "2027-11-19T00:00:00Z",
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:agentz",
           "name": "AgentZ",
           "role": "Operator-authorized AI agent for AuthiChain brand publishing and directory submissions within stated $0 scope",
           "operator": "AuthiChain",
           "isHuman": false,
-          "agentKey": "did:key:z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82",
+          "agentKey": "did:key:z6MkinQCrMW7nC1FLNVRUgoMX7ZdKR2b8go5xhZajZzSvjn9",
           "profile": "https://authichain.com/agents/agentz"
         },
         "proof": {
           "type": "Ed25519Signature2020",
-          "created": "2026-10-17T18:00:00Z",
-          "verificationMethod": "did:key:z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7#z6MksGQUHtYbqvuFoQdeznZ6uKEoZkUgMm969a6tqjSjpUy7",
+          "created": "2026-11-19T00:00:00Z",
+          "verificationMethod": "did:key:z6MkinQCrMW7nC1FLNVRUgoMX7ZdKR2b8go5xhZajZzSvjn9#z6MkinQCrMW7nC1FLNVRUgoMX7ZdKR2b8go5xhZajZzSvjn9",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z568rELmQN1AuGw6mkABHgfK3Vn3CaGuiEcTzcx5xqtxHyys3Uh3vaJPbKvLG4wmFenkEuosz2QGchiBurHStdkmD"
+          "proofValue": "z3SibrYTwong5xRsNkjBuphL1e4SX6r4D8mpP4bzCJXh3umPejeq2wwxdgubJh5umYegWp8UwN2Xo1H7n1whNTByE"
         }
       },
       "selfStatement": {
@@ -1507,21 +1507,22 @@ export const BOT_IDENTITIES = {
           "VerifiableCredential",
           "AgentKeyControlStatement"
         ],
-        "issuer": "did:key:z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82",
-        "validFrom": "2026-10-17T18:00:00Z",
-        "validUntil": "2027-01-17T18:00:00Z",
+        "issuer": "did:key:z6MkinQCrMW7nC1FLNVRUgoMX7ZdKR2b8go5xhZajZzSvjn9",
+        "validFrom": "2026-11-19T00:00:00Z",
+        "validUntil": "2027-11-19T00:00:00Z",
         "credentialSubject": {
           "id": "did:web:authichain.com:agents:agentz",
           "statement": "I am AgentZ, an AI agent operated by AuthiChain. I am not a person."
         },
         "proof": {
           "type": "Ed25519Signature2020",
-          "created": "2026-10-17T18:00:00Z",
-          "verificationMethod": "did:key:z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82#z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82",
+          "created": "2026-11-19T00:00:00Z",
+          "verificationMethod": "did:key:z6MkinQCrMW7nC1FLNVRUgoMX7ZdKR2b8go5xhZajZzSvjn9#z6MkinQCrMW7nC1FLNVRUgoMX7ZdKR2b8go5xhZajZzSvjn9",
           "proofPurpose": "assertionMethod",
-          "proofValue": "z2kdafRMpCV4xKsKHeiur7dSX6aF5XhCvb8ahnrBeBGpZw9uwoR8iqZ3bPezpTSkUVRGY9Svc44V2isHzHosaKEjA"
+          "proofValue": "z2AMiy7TBbN8WB8sdVAhh1tgRrDFuE1GcqJCoYfgUGesv82oTwL1eYpPY66tQ3csgp4QwdbNbt4ZWUaid4pR8ZWZ4"
         }
-      }
+      },
+      "selfIssued": true
     }
   ]
 };

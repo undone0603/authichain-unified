@@ -136,7 +136,7 @@ export function botAgentCard(bot: Bot) {
     identity: {
       did: bot.did,
       didKey: bot.didKey,
-      issuer: BOT_IDENTITIES.issuer.did,
+      issuer: isSelfIssued(bot) ? bot.did : BOT_IDENTITIES.issuer.did,
       record: `${ORIGIN}/agents/${bot.slug}/identity.json`,
       verifier: "https://www.npmjs.com/package/authichain-verify",
       anchorTransaction: polygonTx(bot.slug),
@@ -208,6 +208,11 @@ export function polygonTx(slug: string): string | null {
   return anchor ? `https://polygonscan.com/tx/${anchor.txHash}` : null;
 }
 
+/** A bot whose record is signed by its own key because the shared agent issuer key was unavailable. */
+export function isSelfIssued(bot: Bot): boolean {
+  return (bot as { selfIssued?: boolean }).selfIssued === true;
+}
+
 export function checkBot(bot: Bot): BotCheck {
   const anchor = anchorFor(bot.slug);
   const r = verifySubmitted(
@@ -220,7 +225,9 @@ export function checkBot(bot: Bot): BotCheck {
   const keyMatches =
     bot.record.credentialSubject.agentKey === bot.didKey &&
     bot.selfStatement.issuer === bot.didKey;
-  const issuerMatches = bot.record.issuer === BOT_IDENTITIES.issuer.didKey;
+  const issuerMatches = isSelfIssued(bot)
+    ? bot.record.issuer === bot.didKey
+    : bot.record.issuer === BOT_IDENTITIES.issuer.didKey;
   const record = r?.verdict ?? "invalid";
   const selfStatement = s?.verdict ?? "invalid";
   const recordOk = anchor
@@ -265,7 +272,10 @@ export function renderBotPage(bot: Bot): string {
   }
   const verifyHelp = anchor
     ? `<p>Check it yourself, offline: save <code>record</code> and <code>anchor</code> from <code>identity.json</code>, then run <code>npx authichain-verify record.json anchor.json</code> (the open-source <a href="https://www.npmjs.com/package/authichain-verify">AuthiChain verifier</a>, spec at <a href="/protocol">/protocol</a>). A verified pass means AuthiChain's key signed this record and the anchor names that record's hash.</p>`
-    : `<p>Check it yourself, offline: save <code>record</code> from <code>identity.json</code>, then run <code>npx authichain-verify record.json</code> (the open-source <a href="https://www.npmjs.com/package/authichain-verify">AuthiChain verifier</a>, spec at <a href="/protocol">/protocol</a>). A <code>valid-unanchored</code> pass means AuthiChain's key signed this record. No Polygon hash commitment is recorded yet.</p>`;
+    : `<p>Check it yourself, offline: save <code>record</code> from <code>identity.json</code>, then run <code>npx authichain-verify record.json</code> (the open-source <a href="https://www.npmjs.com/package/authichain-verify">AuthiChain verifier</a>, spec at <a href="/protocol">/protocol</a>). A <code>valid-unanchored</code> pass means ${isSelfIssued(bot) ? "this agent's published key" : "AuthiChain's key"} signed this record. No Polygon hash commitment is recorded yet.</p>`;
+  const signedBy = isSelfIssued(bot)
+    ? `<dt>Signed by</dt><dd><code>${esc(bot.didKey)}</code> (this agent's own key; this record is self-issued, not signed by the AuthiChain agent issuer)</dd>`
+    : `<dt>Signed by</dt><dd><code>${esc(BOT_IDENTITIES.issuer.didKey)}</code> (AuthiChain agent issuer, <a href="/.well-known/did.json">did:web:authichain.com</a>)</dd>`;
   const related =
     bot.slug === "agentz"
       ? `<p>Related: a scoped Ride Aventon presentation artifact lives at <a href="/agent/agentz">/agent/agentz</a> (Base data-only anchor; not this Ed25519 identity record).</p>`
@@ -277,7 +287,7 @@ export function renderBotPage(bot: Bot): string {
 <dl><dt>Role</dt><dd>${esc(bot.role)}</dd>
 <dt>Identifier</dt><dd><code>${esc(bot.did)}</code></dd>
 <dt>Public key (Ed25519)</dt><dd><code>${esc(bot.didKey)}</code></dd>
-<dt>Signed by</dt><dd><code>${esc(BOT_IDENTITIES.issuer.didKey)}</code> (AuthiChain agent issuer, <a href="/.well-known/did.json">did:web:authichain.com</a>)</dd>
+${signedBy}
 <dt>Checks</dt><dd>Issuer record: ${esc(c.record)} · Bot key statement: ${esc(c.selfStatement)} · Key matches: ${c.keyMatches ? "yes" : "no"} · Issuer matches: ${c.issuerMatches ? "yes" : "no"}</dd>
 <dt>Valid</dt><dd>${esc(bot.record.validFrom)} to ${esc(bot.record.validUntil)}</dd>
 ${blockchain}

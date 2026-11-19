@@ -6,6 +6,7 @@ import { BOT_ANCHORS } from "./bot-anchors";
 import { BOT_IDENTITIES } from "./bot-identities";
 import {
   checkBot,
+  isSelfIssued,
   polygonTx,
   renderBotPage,
   tryHandleBotIdentity,
@@ -178,7 +179,7 @@ describe("GET /agents/agentz (unanchored did:web)", () => {
     expect(cardRes.status).toBe(200);
     const card = await cardRes.json();
     expect(card.identity.did).toBe("did:web:authichain.com:agents:agentz");
-    expect(card.identity.issuer).toBe("did:web:authichain.com");
+    expect(card.identity.issuer).toBe("did:web:authichain.com:agents:agentz");
     expect(card.identity.anchorTransaction).toBeNull();
     expect(card.description).toContain("Not a person");
     expect(card.description).not.toContain("minted NFT");
@@ -187,7 +188,8 @@ describe("GET /agents/agentz (unanchored did:web)", () => {
     const identityRes = get("/agents/agentz/identity.json")!;
     expect(identityRes.status).toBe(200);
     const identity = await identityRes.json();
-    expect(identity.record.issuer).toBe(ISSUER_DID_KEY);
+    expect(identity.record.issuer).toBe(agentz().didKey);
+    expect(identity.check.issuerMatches).toBe(true);
     expect(identity.anchor).toBeNull();
     expect(identity.check.ok).toBe(true);
     expect(identity.check.record).toBe("valid-unanchored");
@@ -217,7 +219,7 @@ describe("GET /agents/agentz (unanchored did:web)", () => {
     expect(row).toMatchObject({
       name: "AgentZ",
       did: "did:web:authichain.com:agents:agentz",
-      didKey: "did:key:z6MkryvgqPJq6qE7zWnw7T62biPzJrLPML3EMSSXxLUoKN82",
+      didKey: agentz().didKey,
       profile: "https://authichain.com/agents/agentz",
       anchorTransaction: null,
     });
@@ -226,6 +228,32 @@ describe("GET /agents/agentz (unanchored did:web)", () => {
         (a: { anchorTransaction: string | null }) => a.anchorTransaction
       )
     ).toHaveLength(23);
+  });
+
+  it("AgentZ is self-issued with its own key; the other 23 keep the shared issuer", async () => {
+    const a = agentz();
+    expect(isSelfIssued(a)).toBe(true);
+    expect(a.record.issuer).toBe(a.didKey);
+    expect(a.record.credentialSubject.agentKey).toBe(a.didKey);
+    expect(a.didKey).not.toBe(ISSUER_DID_KEY);
+    for (const b of BOT_IDENTITIES.bots.filter(b => b.slug !== "agentz")) {
+      expect(isSelfIssued(b)).toBe(false);
+      expect(b.record.issuer).toBe(ISSUER_DID_KEY);
+    }
+    const html = await get("/agents/agentz")!.text();
+    expect(html).toContain(
+      "this record is self-issued, not signed by the AuthiChain agent issuer"
+    );
+    expect(html).toContain("this agent's published key signed this record");
+  });
+
+  it("a self-signed record without the selfIssued flag does not pass", () => {
+    const { selfIssued: _flag, ...unflagged } = agentz() as ReturnType<
+      typeof agentz
+    > & { selfIssued?: boolean };
+    const check = checkBot(unflagged as ReturnType<typeof agentz>);
+    expect(check.issuerMatches).toBe(false);
+    expect(check.ok).toBe(false);
   });
 
   it("leaves GET /agent/agentz on the Ride Aventon presentation route", async () => {
