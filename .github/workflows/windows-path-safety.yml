@@ -18,7 +18,8 @@ concurrency:
 jobs:
   paths:
     name: Reject NTFS-illegal filenames
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    # Fork PRs stay on ubuntu-24.04; same-repo PRs keep WSL.
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }} # pragma: allowlist secret
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7

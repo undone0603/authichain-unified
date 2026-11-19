@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resolvePaidSealVerify } from "./paid-seal-verify";
+import { nonTrustlessAllowed, resolvePaidSealVerify } from "./paid-seal-verify";
 import fixture from "../../protocol/conformance/fixtures/valid-unanchored.json";
 import { verifyRecord } from "../../protocol/verifier.mjs";
 
@@ -679,6 +679,28 @@ describe("resolvePaidSealVerify", () => {
       expect(decision).toMatchObject({ action: "answer", status: 402 });
       expect(calls.some(call => call.url.includes("/settle"))).toBe(false);
       expect(calls.some(call => call.url.includes("auth_seals"))).toBe(true);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("allows non-trustless settlement only when NODE_ENV is test or development", () => {
+    try {
+      for (const [mode, allowed] of [
+        ["test", true],
+        ["development", true],
+        ["production", false],
+        ["staging", false],
+        ["", false],
+      ] as const) {
+        vi.stubEnv("NODE_ENV", mode);
+        expect(nonTrustlessAllowed(), `NODE_ENV=${JSON.stringify(mode)}`).toBe(
+          allowed
+        );
+      }
+      // Unset must fail closed too (a public worker may not define NODE_ENV).
+      vi.stubEnv("NODE_ENV", undefined);
+      expect(nonTrustlessAllowed()).toBe(false);
     } finally {
       vi.unstubAllEnvs();
     }

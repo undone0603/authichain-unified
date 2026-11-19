@@ -30,7 +30,7 @@ Never print `~/.xurl` or tokens. Prefer xurl over paid schedulers.
 
 ## Hard stops
 
-- wait_buyer until a non-founder pays https://authichain.com/checkout/strainchain_farm
+- wait_buyer: GET https://authichain.com/checkout/strainchain_farm returns 303 to /pricing
 - Founder inboxes undone.k@gmail.com and authichain@gmail.com are not buyers
 - Do not invent a customer, charge, or workflow_dispatch
 - Outreach stays frozen; do not guess role inboxes

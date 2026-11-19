@@ -103,6 +103,7 @@ test("/desk/status records telegram sitemap live and Base pending", async () => 
   assert.match(html, /25 Sep 2026/);
   assert.match(html, /does not call Stripe/);
   assert.match(html, /Theater \$499 and \$1,499 are not listed/);
+  assert.doesNotMatch(html, /Farm \$149/);
 });
 
 test("/desk/hubs does not claim W3C VC specs are implemented", async () => {
@@ -110,6 +111,7 @@ test("/desk/hubs does not claim W3C VC specs are implemented", async () => {
   const html = await res.text();
   assert.match(html, /does not implement them yet/);
   assert.match(html, /eu-digital-product-passport-registry-test-environment/);
+  assert.doesNotMatch(html, /Farm \$149/);
 });
 
 test("apex sitemap keeps the internal /desk out", async () => {
@@ -190,6 +192,7 @@ test("/desk/pricing sells the passport and DPP, not Farm", async () => {
     html.includes("https://authichain.com/checkout/strainchain_farm"),
     false
   );
+  assert.doesNotMatch(html, /Farm \$149/);
   assert.doesNotMatch(html, /href="\/api\/checkout/);
   assert.doesNotMatch(html, /AuthiChain Basic/);
   assert.match(html, /self-serve activation/);

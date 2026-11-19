@@ -6,7 +6,7 @@
 // (Apollo-verified, inbound opt-in, or a confirmed reply), with format + MX as a
 // secondary gate, and a mandatory CAN-SPAM unsubscribe footer.
 import { promises as dns } from "node:dns";
-import { recordDryRunSend } from "../email-service";
+import { isSuppressed, recordDryRunSend } from "../email-service";
 import { checkClaims, htmlToText } from "./claims";
 import { signedUnsubscribeUrl } from "./unsubscribe-link";
 
@@ -202,6 +202,9 @@ export async function guardedSend(args: {
   });
   if (!canSend(assessment)) {
     return { sent: false, reason: assessment.reasons.join(","), assessment };
+  }
+  if (await isSuppressed(assessment.email)) {
+    return { sent: false, reason: "suppression_list", assessment };
   }
   if (!(await domainAcceptsMail(assessment.email))) {
     return { sent: false, reason: "no_mx", assessment };

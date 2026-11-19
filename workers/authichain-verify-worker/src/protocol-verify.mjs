@@ -8,8 +8,8 @@ import { verifyRecord, sha256Hex, signingBytes } from "../../../protocol/verifie
 const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
 
 export const PUBLIC_RPC = {
-  "polygon:137": "https://polygon-bor-rpc.publicnode.com",
-  "eip155:137": "https://polygon-bor-rpc.publicnode.com",
+  "polygon:137": "https://polygon.drpc.org",
+  "eip155:137": "https://polygon.drpc.org",
   "eip155:1": "https://cloudflare-eth.com",
 };
 
@@ -49,33 +49,71 @@ export function assessChainRead({ tx, receipt, recordHash }) {
   };
 }
 
+class RpcDiagnosticError extends Error {
+  constructor(status) {
+    super(status);
+    this.status = status;
+  }
+}
+
+function classifyTransportError(error) {
+  if (error?.name === "TimeoutError" || error?.name === "AbortError") return "rpc_timeout";
+  const code = error?.cause?.code || error?.code;
+  if (code === "ENOTFOUND" || code === "EAI_AGAIN") return "rpc_dns_error";
+  return "rpc_transport_error";
+}
+
 async function rpcCall(fetchImpl, rpc, method, params) {
-  const res = await fetchImpl(rpc, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    signal: AbortSignal.timeout(5000),
-  });
-  const body = await res.json();
-  if (body?.error) throw new Error(body.error.message || "rpc error");
-  return body?.result ?? null;
+  let res;
+  try {
+    res = await fetchImpl(rpc, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch (error) {
+    throw new RpcDiagnosticError(classifyTransportError(error));
+  }
+  if (!res.ok) throw new RpcDiagnosticError("rpc_http_error");
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    throw new RpcDiagnosticError("rpc_invalid_response");
+  }
+  if (!body || body.jsonrpc !== "2.0" || body.id !== 1 || typeof body !== "object") {
+    throw new RpcDiagnosticError("rpc_invalid_response");
+  }
+  if (body.error) throw new RpcDiagnosticError("rpc_provider_error");
+  if (!Object.hasOwn(body, "result")) throw new RpcDiagnosticError("rpc_invalid_response");
+  return body.result;
 }
 
 export async function readAnchorOnChain(record, anchor, opts = {}) {
   const chain = String(anchor?.chain || "");
   const txHash = String(anchor?.txHash || "");
-  const rpc = opts.rpcUrl || PUBLIC_RPC[chain];
-  if (!rpc || !TX_HASH_RE.test(txHash) || !record) {
+  // A configured RPC is tried first. If it fails at the transport, HTTP or
+  // provider level, the keyless public default is tried once, so a
+  // rate-limited or expired configured endpoint cannot turn every anchor read
+  // into rpc_http_error. A chain answer (tx_missing, reverted, ...) from the
+  // first endpoint that responds is final and is not retried elsewhere.
+  const rpcs = [...new Set([opts.rpcUrl, PUBLIC_RPC[chain]].filter(Boolean))];
+  if (rpcs.length === 0 || !TX_HASH_RE.test(txHash) || !record) {
     return { queried: false, onChain: false, status: "not_queried" };
   }
   const fetchImpl = opts.fetchImpl || fetch;
-  try {
-    const [tx, receipt] = await Promise.all([
-      rpcCall(fetchImpl, rpc, "eth_getTransactionByHash", [txHash]),
-      rpcCall(fetchImpl, rpc, "eth_getTransactionReceipt", [txHash]),
-    ]);
-    return assessChainRead({ tx, receipt, recordHash: expectedRecordHash(record) });
-  } catch {
-    return { queried: false, onChain: false, status: "rpc_error" };
+  let status = "rpc_transport_error";
+  for (const rpc of rpcs) {
+    try {
+      const [tx, receipt] = await Promise.all([
+        rpcCall(fetchImpl, rpc, "eth_getTransactionByHash", [txHash]),
+        rpcCall(fetchImpl, rpc, "eth_getTransactionReceipt", [txHash]),
+      ]);
+      return assessChainRead({ tx, receipt, recordHash: expectedRecordHash(record) });
+    } catch (error) {
+      status = error instanceof RpcDiagnosticError ? error.status : "rpc_transport_error";
+    }
   }
+  return { queried: false, onChain: false, status };
 }

@@ -485,6 +485,8 @@ describe("ops pulse", () => {
     });
     expect(f).toEqual({
       checked: 0,
+      entitlementGranted: 0,
+      pending: 0,
       problems: [],
       monitoring: [{ name: "fulfilment", kind: "credentials_missing" }],
     });
@@ -577,6 +579,8 @@ describe("ops pulse", () => {
 describe("fulfilment watchdog", async () => {
   const { findUnfulfilled, checkFulfilment } =
     await import("../autonomy/revenue-watch.mjs");
+  const { classifyPaidCheckout } =
+    await import("../autonomy/revenue-watch.mjs");
   const now = Date.parse("2026-09-23T12:00:00Z");
   const s = (
     id: string,
@@ -587,6 +591,7 @@ describe("fulfilment watchdog", async () => {
     status: "complete",
     payment_status: "paid",
     amount_total: 29900,
+    livemode: true,
     created: Math.floor((now - minsAgo * 60_000) / 1000),
     customer_details: { email: `${id}@buyer.com` },
     ...extra,
@@ -660,7 +665,7 @@ describe("fulfilment watchdog", async () => {
         session: "cs_expired_receipt",
         reason: "no webhook record",
         paid_at: new Date(sessions[0].created * 1000).toISOString(),
-        livemode: undefined,
+        livemode: true,
       },
     ]);
   });
@@ -687,6 +692,193 @@ describe("fulfilment watchdog", async () => {
     ).toEqual(["cs_duplicate_only:webhook ran but did not succeed"]);
   });
 
+  it("requires a matching successful webhook receipt and durable grant marker", () => {
+    const session = s("cs_verified", 60);
+    const events = [
+      {
+        event_id: "evt_verified",
+        event_type: "checkout.session.completed",
+        session_id: session.id,
+        livemode: true,
+      },
+    ];
+    const successfulReceipt = [{ event_id: "evt_verified", status: "success" }];
+    const grant = [{ last_grant_session_id: session.id }];
+    expect(classifyPaidCheckout(session, [], [], [])).toMatchObject({
+      status: "RECONCILIATION_REQUIRED",
+      evidence: {
+        payment: "PAYMENT_CONFIRMED",
+        paymentReconciliation: "UNVERIFIED",
+        settlement: "UNVERIFIED",
+        entitlement: "UNVERIFIED",
+        productAccess: "UNVERIFIED",
+        fulfillment: "UNVERIFIED",
+      },
+    });
+    expect(
+      classifyPaidCheckout(session, events, successfulReceipt, grant)
+    ).toMatchObject({
+      status: "ENTITLEMENT_GRANTED",
+      evidence: {
+        payment: "PAYMENT_CONFIRMED",
+        paymentReconciliation: "PAYMENT_RECONCILED",
+        settlement: "UNVERIFIED",
+        entitlement: "ENTITLEMENT_GRANTED",
+        productAccess: "UNVERIFIED",
+        fulfillment: "UNVERIFIED",
+      },
+    });
+    expect(
+      classifyPaidCheckout(session, events, successfulReceipt, [])
+    ).toMatchObject({
+      status: "RECONCILIATION_REQUIRED",
+      evidence: {
+        paymentReconciliation: "PAYMENT_RECONCILED",
+        entitlement: "UNVERIFIED",
+        productAccess: "UNVERIFIED",
+        fulfillment: "UNVERIFIED",
+      },
+    });
+    expect(classifyPaidCheckout(session, events, [], grant)).toMatchObject({
+      status: "RECONCILIATION_REQUIRED",
+    });
+    expect(
+      classifyPaidCheckout(
+        session,
+        [{ ...events[0], livemode: false }],
+        successfulReceipt,
+        grant
+      )
+    ).toMatchObject({
+      status: "RECONCILIATION_REQUIRED",
+      evidence: {
+        paymentReconciliation: "UNVERIFIED",
+        settlement: "UNVERIFIED",
+        productAccess: "UNVERIFIED",
+        fulfillment: "UNVERIFIED",
+      },
+    });
+  });
+
+  it("holds pending and unverifiable payment state instead of claiming fulfillment", () => {
+    const pending = s("cs_pending", 60, { payment_status: "unpaid" });
+    expect(classifyPaidCheckout(pending, [], [], [])).toMatchObject({
+      status: "PAYMENT_PENDING",
+    });
+    expect(
+      classifyPaidCheckout(
+        { ...s("cs_unknown_livemode", 60), livemode: undefined },
+        [],
+        [],
+        []
+      )
+    ).toMatchObject({ status: "RECONCILIATION_REQUIRED" });
+  });
+
+  it("holds processing and duplicate-only deliveries for reconciliation", () => {
+    const session = s("cs_held", 60);
+    const events = [
+      {
+        event_id: "evt_held",
+        event_type: "checkout.session.completed",
+        session_id: session.id,
+        livemode: true,
+      },
+    ];
+    for (const status of [
+      "processing",
+      "received",
+      "duplicate",
+      "reconciliation_required",
+    ]) {
+      expect(
+        classifyPaidCheckout(
+          session,
+          events,
+          [{ event_id: "evt_held", status }],
+          []
+        )
+      ).toMatchObject({ status: "RECONCILIATION_REQUIRED" });
+    }
+  });
+
+  it("verifies the paid event and entitlement by stable Stripe identifiers", async () => {
+    const session = s("cs_confirmed", 60);
+    const urls: string[] = [];
+    const result = await checkFulfilment({
+      stripeKey: "test-only",
+      supabaseUrl: "https://example.test",
+      supabaseKey: "test-only",
+      fetchImpl: async (url: string) => {
+        urls.push(url);
+        if (url.includes("/v1/checkout/sessions?")) {
+          return {
+            ok: true,
+            json: async () => ({ data: [session], has_more: false }),
+          };
+        }
+        if (url.includes("/v1/events?")) {
+          const type = new URL(url).searchParams.get("types[]");
+          return {
+            ok: true,
+            json: async () => ({
+              data:
+                type === "checkout.session.completed"
+                  ? [
+                      {
+                        id: "evt_confirmed",
+                        type,
+                        livemode: true,
+                        data: { object: { id: session.id } },
+                      },
+                    ]
+                  : [],
+              has_more: false,
+            }),
+          };
+        }
+        if (url.includes("/rest/v1/stripe_events?")) {
+          expect(new URL(url).searchParams.get("event_id")).toBe(
+            "in.(evt_confirmed)"
+          );
+          return {
+            ok: true,
+            json: async () => [
+              { event_id: "evt_confirmed", status: "success" },
+            ],
+          };
+        }
+        if (url.includes("/rest/v1/profiles?")) {
+          expect(new URL(url).searchParams.get("last_grant_session_id")).toBe(
+            `in.(${session.id})`
+          );
+          return {
+            ok: true,
+            json: async () => [{ last_grant_session_id: session.id }],
+          };
+        }
+        throw new Error("unexpected URL");
+      },
+    });
+    expect(result).toMatchObject({
+      checked: 1,
+      entitlementGranted: 1,
+      problems: [],
+      orders: [
+        {
+          status: "ENTITLEMENT_GRANTED",
+          session: session.id,
+          evidence: {
+            settlement: "UNVERIFIED",
+            productAccess: "UNVERIFIED",
+            fulfillment: "UNVERIFIED",
+          },
+        },
+      ],
+    });
+    expect(urls.filter(url => url.includes("/v1/events?"))).toHaveLength(2);
+  });
+
   it("does not mistake test-mode paid checkouts for live webhook failures", async () => {
     const sessions = [
       s("cs_test_mode", 60, { livemode: false }),
@@ -703,12 +895,20 @@ describe("fulfilment watchdog", async () => {
       supabaseUrl: "https://example.test",
       supabaseKey: "test-only",
       fetchImpl: async (url: string) => {
-        if (url.startsWith("https://api.stripe.com/"))
+        if (url.includes("/v1/checkout/sessions?"))
           return {
             ok: true,
             json: async () => ({ data: sessions, has_more: false }),
           };
-        if (url.includes("/rest/v1/stripe_events?"))
+        if (url.includes("/v1/events?"))
+          return {
+            ok: true,
+            json: async () => ({ data: [], has_more: false }),
+          };
+        if (
+          url.includes("/rest/v1/stripe_events?") ||
+          url.includes("/rest/v1/profiles?")
+        )
           return { ok: true, json: async () => [] };
         throw new Error("unexpected URL");
       },
@@ -744,23 +944,31 @@ describe("fulfilment watchdog", async () => {
       { data: first, has_more: true },
       { data: [s("cs_paid_second_page", 60)], has_more: false },
     ];
-    const stripeUrls: string[] = [];
+    const checkoutUrls: string[] = [];
     const result = await checkFulfilment({
       stripeKey: "test-only",
       supabaseUrl: "https://example.test",
       supabaseKey: "test-only",
       fetchImpl: async (url: string) => {
-        if (url.startsWith("https://api.stripe.com/")) {
-          stripeUrls.push(url);
+        if (url.includes("/v1/checkout/sessions?")) {
+          checkoutUrls.push(url);
           return { ok: true, json: async () => pages.shift() };
         }
-        if (url.includes("/rest/v1/stripe_events?"))
+        if (url.includes("/v1/events?"))
+          return {
+            ok: true,
+            json: async () => ({ data: [], has_more: false }),
+          };
+        if (
+          url.includes("/rest/v1/stripe_events?") ||
+          url.includes("/rest/v1/profiles?")
+        )
           return { ok: true, json: async () => [] };
         throw new Error("unexpected URL");
       },
     });
-    expect(stripeUrls).toHaveLength(2);
-    expect(stripeUrls[1]).toContain("starting_after=cs_free_99");
+    expect(checkoutUrls).toHaveLength(2);
+    expect(checkoutUrls[1]).toContain("starting_after=cs_free_99");
     expect(result.checked).toBe(1);
     expect(result.problems.map((p: { session: string }) => p.session)).toEqual([
       "cs_paid_second_page",
@@ -794,17 +1002,26 @@ describe("fulfilment watchdog", async () => {
     }
   });
 
-  it("puts unfulfilled payments into the alert signature", () => {
+  it("redacts checkout references and blocks replay as an automatic action", () => {
     const report = {
       at: "t",
       probes: [],
       workflows: [],
-      revenue: [{ session: "cs_x", reason: "r", paid_at: "p" }],
+      revenue: [
+        {
+          session: "cs_x",
+          status: "PAID_NOT_FULFILLED",
+          reason: "r",
+          paid_at: "p",
+        },
+      ],
     };
-    expect(signature(report)).toBe("pay:cs_x");
-    expect(decideIssueAction(null, report).body).toContain(
-      "Paid but not fulfilled"
-    );
+    const body = decideIssueAction(null, report).body;
+    expect(signature(report)).toMatch(/^pay:[a-f0-9]{12}$/);
+    expect(signature(report)).not.toContain("cs_x");
+    expect(body).toContain("Paid checkout exceptions");
+    expect(body).not.toContain("cs_x");
+    expect(body).toContain("Do not replay");
   });
 
   it("a watchdog that could not look is red, not green", () => {
@@ -830,6 +1047,9 @@ describe("fulfilment watchdog", async () => {
     expect(
       blindReason(new Error('Supabase stripe_events -> 500 {"hint":"secret"}'))
     ).toBe("Supabase stripe_events answered HTTP 500");
+    expect(blindReason(new Error("Supabase profiles -> 401"))).toBe(
+      "Supabase profiles answered HTTP 401"
+    );
     expect(
       blindReason(new Error("fetch failed: getaddrinfo api.stripe.com"))
     ).toBe("the check failed before it could read Stripe and Supabase");

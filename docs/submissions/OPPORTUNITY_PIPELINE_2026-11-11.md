@@ -9,7 +9,7 @@ No-fee funding and program opportunities, ranked. Nothing here has been submitte
 - Revenue from customers: $0. No paying customer, no subscription, no signed partner, no pilot in progress.
 - One founder, no employees. Based in Roscommon, Michigan.
 - What exists and can be shown: the open verifier `authichain-verify` 0.1.1 on npm (Ed25519 signature over an RFC 8785 canonical record, offline), a Python port that passes the same 28 conformance fixtures, one record anchored on Polygon mainnet (block 94680852), and a live x402 endpoint that quotes 0.05 USDC on Base for a signed evidence check. No x402 settlement from an outside payer has been verified.
-- Not verified from this repository: whether the SAM.gov registration behind the UEI recorded in `NSF_SBIR_Project_Pitch_Final.md` is active. Federal applications need it active. The founder has to confirm it.
+- Not verified from this repository: whether the company's SAM.gov registration (UEI) is active. Federal applications need it active. The founder has to confirm it.
 
 ## Ranked
 
@@ -26,11 +26,11 @@ No-fee funding and program opportunities, ranked. Nothing here has been submitte
 
 **1. Michigan SBDC Tech Team.** One-on-one consulting at no cost, with consultants who review SBIR/STTR proposals. It costs an hour and commits to nothing. It is first because it improves the odds of row 2 and is the door to rows 4 and 6. Next step: the founder requests a consultant at michigansbdc.org.
 
-**2. NSF SBIR Project Pitch.** Four text boxes: innovation (3,500 characters), technical objectives and challenges (3,500), market (1,750), company and team (1,750). NSF answers in about one to two months. Limits: one pitch under review at a time, two per 12 months, three ever for the same project. A draft that stays inside the facts above is in `NSF_SBIR_Project_Pitch_2026-11-11_DRAFT.md`.
+**2. NSF SBIR Project Pitch.** Four text boxes: innovation (3,500 characters), technical objectives and challenges (3,500), market (1,750), company and team (1,750). NSF answers in about one to two months. Limits: one pitch under review at a time, two per 12 months, three ever for the same project. (Draft removed from public repo 2026-11-11.)
 
 Why the odds are low: NSF funds high-risk research, not product engineering, and it asks for a team that is technically qualified to do that research. Most of what AuthiChain has built is integration work. The draft is built around the one open research problem the product has. A reviewer may still read it as engineering. Because only three pitches are ever allowed per project, get the SBDC review (row 1) before spending one.
 
-**Do not submit `NSF_SBIR_Project_Pitch_Final.md` as written.** It calls the system "the world's first", calls Ed25519 signatures "quantum-resistant" (they are not), says every major manufacturer is required to adopt this technology, cites market figures with no source, and reports outreach to named companies as traction. An NSF submission is a statement to a federal agency.
+**Do not reuse claims from the older pitch draft that was removed from this repo** (formerly `docs/submissions/NSF_SBIR_Project_Pitch_Final.md`). It called the system "the world's first", called Ed25519 signatures "quantum-resistant" (they are not), said every major manufacturer is required to adopt this technology, cited market figures with no source, and reported outreach to named companies as traction. An NSF submission is a statement to a federal agency.
 
 **3. Vendor credits.** Worth doing when a bill appears. They do not move revenue, so they are not worth founder time this week.
 
