@@ -16,7 +16,8 @@
  * loads. Missing binding fails closed. KV is not used: missing-key reads
  * cache at the edge.
  *
- * Re-sign / rotate before 2027-01-17T18:00:00Z (R4):
+ * Re-sign / rotate before the identity validUntil (R4). AgentZ alone can be
+ * re-issued with scripts/agent-identity/rotate-agentz.mjs (self-issued); otherwise:
  *   1. Update VALID_UNTIL in scripts/agent-identity/bots.mjs.
  *   2. KEY_DIR=/path/outside/repo node scripts/agent-identity/generate.mjs
  *      (reuses the existing AgentZ key; writes public records only).

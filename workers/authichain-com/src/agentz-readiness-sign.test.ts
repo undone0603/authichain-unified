@@ -132,7 +132,7 @@ describe("AgentZ readiness signing — published identity", () => {
     expect(AGENTZ_DID_KEY).toBe(agentz.didKey);
     expect(AGENTZ_PUBLIC_JWK_X).toBe(agentz.publicKeyJwkX);
     expect(AGENTZ_KID).toBe(agentz.kid);
-    expect(AGENTZ_IDENTITY_VALID_UNTIL).toBe("2027-01-17T18:00:00Z");
+    expect(AGENTZ_IDENTITY_VALID_UNTIL).toBe("2027-11-19T00:00:00Z");
     expect(agentz.record.validUntil).toBe(AGENTZ_IDENTITY_VALID_UNTIL);
     expect(publishedAgentzJwks().keys[0]).toMatchObject({
       kty: "OKP",
@@ -156,7 +156,12 @@ describe("AgentZ readiness signing — published identity", () => {
       ],
     };
     const self = verifyRecord(agentz.selfStatement, null, { jwks: agentzJwks });
-    const identity = verifyRecord(agentz.record, null, { jwks: issuerJwks });
+    // AgentZ's record is self-issued (scripts/agent-identity/rotate-agentz.mjs),
+    // so it verifies against AgentZ's own published key, not the shared issuer.
+    expect(agentz.record.issuer).toBe(agentz.didKey);
+    expect(agentz.record.issuer).not.toBe(BOT_IDENTITIES.issuer.didKey);
+    void issuerJwks;
+    const identity = verifyRecord(agentz.record, null, { jwks: agentzJwks });
     expect(self.verdict).toBe("valid-unanchored");
     expect(self.checks.signature).toBe(true);
     expect(self.checks.issuerInJwks).toBe(true);
@@ -286,7 +291,7 @@ describe("AgentZ readiness signing — schema exactness", () => {
     );
     expect(result.payload.disclaimer).toBe(SIGNED_DISCLAIMER);
     expect(result.payload.identityStatus).toBe(IDENTITY_STATUS_UNANCHORED);
-    expect(result.payload.validUntil).toBe("2027-01-17T18:00:00Z");
+    expect(result.payload.validUntil).toBe("2027-11-19T00:00:00Z");
     expect(result.payload.tool).toBe("dpp_check");
     expect(result.payload.toolVersion).toBe("1.0.0");
     expect(result.payload.score).toBe(20);
@@ -437,13 +442,13 @@ describe("AgentZ readiness signing — expiry", () => {
       {
         privateKey: keys.key,
         allowMismatchedKey: true,
-        now: new Date("2027-01-17T18:00:00Z"),
+        now: new Date("2027-11-19T00:00:00Z"),
       }
     );
     expect(expired.signed).toBe(false);
     if (expired.signed) throw new Error("signed");
     expect(expired.error).toBe("IDENTITY_EXPIRED");
-    expect(expired.validUntil).toBe("2027-01-17T18:00:00Z");
+    expect(expired.validUntil).toBe("2027-11-19T00:00:00Z");
 
     const after = signReadinessRecord(
       BASE_REQUEST,
@@ -451,7 +456,7 @@ describe("AgentZ readiness signing — expiry", () => {
       {
         privateKey: keys.key,
         allowMismatchedKey: true,
-        now: new Date("2027-01-17T18:00:01Z"),
+        now: new Date("2027-11-19T00:00:01Z"),
       }
     );
     expect(after.signed).toBe(false);
@@ -462,7 +467,7 @@ describe("AgentZ readiness signing — expiry", () => {
       {
         privateKey: keys.key,
         allowMismatchedKey: true,
-        now: new Date("2027-01-17T17:59:59Z"),
+        now: new Date("2027-11-18T23:59:59Z"),
       }
     );
     expect(before.signed).toBe(true);
