@@ -2,7 +2,7 @@
 import os
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -55,7 +55,9 @@ class IdentityTests(unittest.TestCase):
     def test_expired_identity_cannot_sign_even_with_the_key(self):
         key = Ed25519PrivateKey.generate()
         did = identity.did_key_from_pem(_pem(key))
-        later = datetime(2027, 2, 1, tzinfo=timezone.utc)
+        # Derive from the published roster: a hardcoded date broke when the
+        # identity was re-issued with a later validUntil.
+        later = datetime.fromisoformat(identity.VALID_UNTIL.replace("Z", "+00:00")) + timedelta(days=1)
         with tempfile.TemporaryDirectory() as d, mock.patch.object(identity, "DID_KEY", did):
             Path(d, identity.KEY_FILE).write_bytes(_pem(key))
             with mock.patch.dict(os.environ, {"AGENTZ_KEY_DIR": d}, clear=True):
