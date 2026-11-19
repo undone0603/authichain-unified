@@ -76,3 +76,33 @@ def test_deployment_sha_mismatch_fails_closed(monkeypatch):
     monkeypatch.setenv("AGENTZ_DEPLOYED_COMMIT_SHA", "b" * 40)
     with pytest.raises(RuntimeError, match="DEPLOYED_SHA_ATTESTATION_REQUIRED"):
         mcp_receipt.execute_and_sign(source_sha="a" * 40)
+
+
+def test_identity_challenge_signs_with_matching_key(monkeypatch, tmp_path):
+    import base64
+    key = Ed25519PrivateKey.generate()  # Offline test identity, never production.
+    pem = key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
+                            serialization.NoEncryption())
+    (tmp_path / mcp_receipt.KEY_FILE).write_bytes(pem)
+    monkeypatch.setenv("AGENTZ_KEY_DIR", str(tmp_path))
+    monkeypatch.setattr(mcp_receipt, "DID_KEY", mcp_receipt.did_key_from_pem(pem))
+    monkeypatch.setattr(mcp_receipt, "identity_status",
+                        lambda now: {"can_sign_as_self": True, "did_key": mcp_receipt.DID_KEY})
+    challenge = "operator-challenge-123456789"
+    proof = mcp_receipt.sign_identity_challenge(
+        challenge=challenge, now=datetime(2026, 11, 19, tzinfo=timezone.utc))
+    h, p, signature = proof["jws"].split(".")
+    decode = lambda value: base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+    assert json.loads(decode(h))["kid"] == mcp_receipt.DID_KEY
+    assert json.loads(decode(p))["challenge"] == challenge
+    key.public_key().verify(decode(signature), (h + "." + p).encode("ascii"))
+    with pytest.raises(ValueError, match="INVALID_CHALLENGE"):
+        mcp_receipt.sign_identity_challenge(challenge="short")
+    with pytest.raises(ValueError, match="INVALID_CHALLENGE"):
+        mcp_receipt.sign_identity_challenge(challenge="line\\nbreak" + "a" * 20)
+
+
+def test_identity_challenge_refuses_unproven_key(monkeypatch):
+    monkeypatch.setattr(mcp_receipt, "identity_status", lambda now: {"can_sign_as_self": False})
+    with pytest.raises(RuntimeError, match="AGENTZ_IDENTITY_NOT_PROVEN"):
+        mcp_receipt.sign_identity_challenge(challenge="challenge-at-least-16")
