@@ -290,10 +290,40 @@ async function fulfillDppPaidSessionOnce(
     throw markRetryableFulfillment(err);
   }
 
-  // A new delivery marker must precede the entitlement grant. Otherwise a
-  // crash after continuity succeeds but before the first email could not be
-  // distinguished from an older already-emailed session.
-  if (!demo && continuityState !== "already_succeeded") {
+  // A prior grant in an old system may have been emailed without an outbox.
+  // When no continuity action existed, beginProvisionContinuity reports
+  // 'provision' even if the old grant receipt or profile marker is present.
+  // Do not retroactively prepare and send for those ambiguous legacy sales.
+  let legacyGrantBeforePrepare = false;
+  if (!demo && continuityState === "provision") {
+    try {
+      const [receipt, profile] = await Promise.all([
+        supabase
+          .from("founder_exit_side_effects")
+          .select("idempotency_key")
+          .eq("idempotency_key", `grant:${session.id}`)
+          .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("id")
+          .eq("last_grant_session_id", session.id)
+          .maybeSingle(),
+      ]);
+      if (receipt.error || profile.error) {
+        throw new Error("DPP legacy grant lookup failed");
+      }
+      legacyGrantBeforePrepare = Boolean(receipt.data || profile.data);
+    } catch (err) {
+      throw markRetryableFulfillment(err);
+    }
+  }
+  // New paid sessions must record delivery intent BEFORE atomic entitlement.
+  // grant_recorded (running continuity) is provably pre-email and recoverable.
+  if (
+    !demo &&
+    continuityState !== "already_succeeded" &&
+    !legacyGrantBeforePrepare
+  ) {
     try {
       await prepareDppActivation(supabase, session.id);
     } catch (err) {
