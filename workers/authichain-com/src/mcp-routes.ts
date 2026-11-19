@@ -47,6 +47,7 @@ import {
   scopedReplayStore,
   resolvePaidSealVerify,
 } from "../../../src/lib/paid-seal-verify";
+import { resolveTierRequest } from "../../../src/lib/x402-tiers";
 import {
   expectedRecordHash,
   readAnchorOnChain,
@@ -82,6 +83,18 @@ export const SUPPORTED_PROTOCOL_VERSIONS = [
 export const LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0];
 
 /**
+ * MCP 2026-07-28 is stateless: there is no initialize handshake, and every
+ * request carries its version in the MCP-Protocol-Version header and in
+ * params._meta. Requests in that shape go to handleModernRpc; everything
+ * else keeps the legacy flow above unchanged.
+ */
+export const MODERN_PROTOCOL_VERSION = "2026-07-28";
+/** JSON-RPC codes defined by the 2026-07-28 schema. */
+export const HEADER_MISMATCH = -32020;
+export const UNSUPPORTED_PROTOCOL_VERSION = -32022;
+const MODERN_HEADERS = { "MCP-Protocol-Version": MODERN_PROTOCOL_VERSION };
+
+/**
  * The server's own version, reported in serverInfo and in GET discovery.
  *
  * This MUST equal `version` in the repo-root server.json, which is what the
@@ -92,6 +105,9 @@ export const LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0];
  * both or CI fails.
  */
 export const SERVER_VERSION = "1.4.0";
+
+const SERVER_INSTRUCTIONS =
+  "Free verification: verify_attestation fetches a published v0.1 JWS and checks issuer trust, signature, lifecycle and expiry; verify_record checks the separate reference protocol. Paid verification: verify is an x402 seal-registry tool requiring separately authorized payment. query_provenance is registration-only. No tool proves physical authenticity. dpp_readiness_check is informational EU Digital Product Passport readiness scoring, not legal advice.";
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -106,7 +122,11 @@ export const TOOLS = [
     name: "get_pricing",
     description:
       "Free. Read-only price discovery; never starts a checkout or authorizes payment. Lists live human Stripe checkouts ($29 Living QR Starter Pack at /checkout/starter, $299 EU DPP Readiness at /checkout/dpp_readiness) and free verification tools.",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
     inputSchema: { type: "object", properties: {} },
   },
   {
@@ -114,7 +134,12 @@ export const TOOLS = [
     description: x402PaidVerifyStatus().bound
       ? "Legacy x402 seal verify for separately authorized paid seal UUID requests, not free discovery. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402. For free verification use verify_record."
       : "Legacy x402 seal verify, not answering; do not attempt to pay. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
     inputSchema: {
       type: "object",
       properties: {
@@ -124,6 +149,12 @@ export const TOOLS = [
           description:
             "Required seal UUID. productId and serial are not registry keys.",
         },
+        tier: {
+          type: "string",
+          enum: ["ping", "verify", "evidence"],
+          description:
+            "Signal tier. ping: registry existence only. verify (default): signature and validity baseline. evidence: the baseline plus a SHA-256 digest of the returned answer. The HTTP 402 quote states the exact price. No tier claims real-world authenticity.",
+        },
       },
     },
   },
@@ -131,7 +162,11 @@ export const TOOLS = [
     name: "query_provenance",
     description:
       "Free registry and published-pack lookup for an assetId / seal / QR token; use for discovery, not proof of authenticity. Reads matching rows from the canonical auth_seals registry when public Supabase configuration is available, and also resolves published packs. A registry match means registered only; it does not verify a signature or prove a physical item is genuine. Use verify_attestation for a published v0.1 JWS; verify_record is the separate reference-protocol verifier.",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
     inputSchema: {
       type: "object",
       properties: {
@@ -147,7 +182,11 @@ export const TOOLS = [
     name: "verify_attestation",
     description:
       "Free. Use when verifying a registry-published attestation, not a supplied offline protocol record. Fetch the exact published AuthiChain v0.1 JWS from the signed-record registry and pass it to the canonical edge-router verifier. Checks signature, issuer trust, durable revocation/status, expiry, and signed decision. Supply expectedObjectId to bind the record to a scanned object identifier. A valid signed claim alone does not prove physical authenticity.",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
     inputSchema: {
       type: "object",
       properties: {
@@ -167,7 +206,11 @@ export const TOOLS = [
   {
     name: "verify_record",
     description: `Free. Use for a supplied signed protocol record or demonstration record, not published JWS issuer-status checks. Verify an AuthiChain signed provenance record with the open reference verifier. Pass id "${"polygon-anchor-1"}" for the published demonstration record, or pass your own record and anchor JSON. Returns verified, valid-unanchored, or invalid, plus whether the transaction carries the record hash. It does not inspect a physical product.`,
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
     inputSchema: {
       type: "object",
       properties: {
@@ -191,7 +234,11 @@ export const TOOLS = [
     name: "dpp_readiness_check",
     description:
       "Free informational EU Digital Product Passport readiness questionnaire; this cannot issue a passport or certify compliance. Returns a 0-100 score, gaps, and the dated obligation for the product category (battery passport is law from 18 Feb 2027; other categories are ESPR targets). Not legal advice.",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
     inputSchema: {
       type: "object",
       properties: {
@@ -221,7 +268,11 @@ export const TOOLS = [
     name: "scan_living_qr",
     description:
       "Free. Read an existing Living QR presentation, not a QR generator or x402 purchase. Scan a stored Living QR. GET https://authichain.com/qron/r/{object_id} returns AuthiChain Verification Decision v1. This host verifies the signature. A missing id is presentation_not_found. Not an x402 payment endpoint, and it does not inspect a physical product.",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
     inputSchema: {
       type: "object",
       properties: {
@@ -565,7 +616,7 @@ function mcpTools(env?: X402Env) {
       return {
         ...tool,
         description:
-          "Free. Quotes without charging or authorizing payment the live x402 agent rail ($0.05 USDC on Base) and live human Stripe checkouts: $29 Starter Pack (100 generations, paid once) at https://authichain.com/checkout/starter and $299 EU DPP Readiness at https://authichain.com/checkout/dpp_readiness. Starting a monthly plan replaces unused pack credits.",
+          "Free. Quotes without charging or authorizing payment the live x402 agent rail ($0.05 USDC on Base) and live human Stripe checkouts: $29 Starter Pack (100 generations, paid once) at https://authichain.com/checkout/starter and $299 EU DPP Readiness at https://authichain.com/checkout/dpp_readiness. One-time pack credits (Starter and Creator) never expire.",
       };
     }
     if (tool.name === "verify") {
@@ -585,7 +636,7 @@ function humanStripeCheckout() {
   return {
     status: "live" as const,
     rail: "stripe",
-    note: "Starting a monthly plan replaces unused Starter pack credits.",
+    note: "One-time pack credits (Starter and Creator) never expire.",
     starter: {
       usd: planUsd("starter"),
       generations: starter?.generations ?? 100,
@@ -1354,14 +1405,23 @@ function rpcError(id: unknown, message: string, code = -32601): Response {
 async function unpaidOrRefusedVerify(
   request: Request,
   env: X402Env | undefined,
-  args: Record<string, unknown>,
+  rawArgs: Record<string, unknown>,
   id: unknown,
   verifyApp?: X402VerifyBinding
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(request.url).toString();
-  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  // `tier` selects the price; it is not a seal argument, so strip it before
+  // the seal-UUID checks (otherwise {tier:"ping"} would be refused as a bad seal).
+  const { tier: tierArg, ...args } = rawArgs;
+  const verifyUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  const tierReq = resolveTierRequest(
+    typeof tierArg === "string" ? tierArg : resource,
+    verifyUsd
+  );
+  if (!tierReq.ok) return json(tierReq.status, tierReq.body);
+  const priceUsd = tierReq.priceUsd;
   if (!payTo) {
     return json(503, {
       error: "payments_not_configured",
@@ -1397,6 +1457,8 @@ async function unpaidOrRefusedVerify(
     bodyText: JSON.stringify(args),
     resource,
     priceUsd,
+    tier: tierReq.tier,
+    verifyPriceUsd: verifyUsd,
     payTo,
     description: "AuthiChain MCP verify",
     env,
@@ -1456,6 +1518,9 @@ async function handleRpc(
   } catch {
     return rpcError(null, "invalid JSON", -32700);
   }
+  if (isModernRequest(request, body)) {
+    return handleModernRpc(request, body, env, verifyApp);
+  }
   const method = body.method ?? "";
   const id = body.id;
 
@@ -1487,8 +1552,7 @@ async function handleRpc(
       protocolVersion: negotiateProtocolVersion(body.params),
       capabilities: { tools: { listChanged: false } },
       serverInfo: { name: "authichain", version: SERVER_VERSION },
-      instructions:
-        "Free verification: verify_attestation fetches a published v0.1 JWS and checks issuer trust, signature, lifecycle and expiry; verify_record checks the separate reference protocol. Paid verification: verify is an x402 seal-registry tool requiring separately authorized payment. query_provenance is registration-only. No tool proves physical authenticity. dpp_readiness_check is informational EU Digital Product Passport readiness scoring, not legal advice.",
+      instructions: SERVER_INSTRUCTIONS,
     });
   }
 
@@ -1626,6 +1690,247 @@ async function handleRpc(
   return rpcError(id, `Method not found: ${method}`);
 }
 
+type RpcBody = {
+  jsonrpc?: string;
+  id?: unknown;
+  method?: string;
+  params?: unknown;
+};
+
+function objectOrUndefined(
+  value: unknown
+): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+/** A request is modern when either its header or its _meta says so. */
+function isModernRequest(request: Request, body: RpcBody): boolean {
+  if (request.headers.get("MCP-Protocol-Version") === MODERN_PROTOCOL_VERSION) {
+    return true;
+  }
+  const meta = objectOrUndefined(objectOrUndefined(body?.params)?._meta);
+  return meta?.["io.modelcontextprotocol/protocolVersion"] !== undefined;
+}
+
+function modernError(
+  status: number,
+  id: unknown,
+  code: number,
+  message: string,
+  data?: unknown
+): Response {
+  return json(
+    status,
+    {
+      jsonrpc: "2.0",
+      id: typeof id === "string" || typeof id === "number" ? id : null,
+      error: { code, message, ...(data === undefined ? {} : { data }) },
+    },
+    MODERN_HEADERS
+  );
+}
+
+/** Header values may use the spec's `=?base64?...?=` sentinel for non-ASCII. */
+export function decodeMcpHeaderValue(value: string | null): string | null {
+  if (value === null) return null;
+  const m = /^=\?base64\?([A-Za-z0-9+/]*={0,2})\?=$/.exec(value);
+  if (!m) return value;
+  try {
+    const bytes = Uint8Array.from(atob(m[1]), c => c.charCodeAt(0));
+    // Workers' TextDecoder options type has no `fatal`, so decode leniently
+    // and treat a replacement character as malformed UTF-8.
+    const decoded = new TextDecoder().decode(bytes);
+    return decoded.includes("\uFFFD") ? null : decoded;
+  } catch {
+    return null;
+  }
+}
+
+/** Add resultType to a legacy JSON-RPC result and mark the response modern. */
+async function asModernResponse(res: Response): Promise<Response> {
+  const headers = new Headers(res.headers);
+  headers.set("MCP-Protocol-Version", MODERN_PROTOCOL_VERSION);
+  const text = await res.text();
+  let payload: unknown;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    return new Response(text, { status: res.status, headers });
+  }
+  const frame = objectOrUndefined(payload);
+  const result = objectOrUndefined(frame?.result);
+  if (frame && result && !("resultType" in result)) {
+    frame.result = { resultType: "complete", ...result };
+  }
+  return new Response(JSON.stringify(payload), { status: res.status, headers });
+}
+
+/**
+ * MCP 2026-07-28 adapter. Validates the per-request headers and _meta the
+ * spec requires, answers server/discover and tools/list directly, and runs
+ * tools/call through the same legacy dispatcher (with _meta removed) so tool
+ * behaviour, payment checks and x402 refusals are identical in both eras.
+ */
+async function handleModernRpc(
+  request: Request,
+  body: RpcBody,
+  env?: McpEnv,
+  verifyApp?: X402VerifyBinding
+): Promise<Response> {
+  const id = body.id;
+  const method = typeof body.method === "string" ? body.method : "";
+  const params = objectOrUndefined(body.params);
+  const meta = objectOrUndefined(params?._meta);
+  const headerVersion = request.headers.get("MCP-Protocol-Version");
+  const metaVersion = meta?.["io.modelcontextprotocol/protocolVersion"];
+
+  if (
+    !headerVersion ||
+    typeof metaVersion !== "string" ||
+    headerVersion !== metaVersion
+  ) {
+    return modernError(
+      400,
+      id,
+      HEADER_MISMATCH,
+      "Header mismatch: MCP-Protocol-Version header and _meta protocolVersion must both be present and equal"
+    );
+  }
+  if (metaVersion !== MODERN_PROTOCOL_VERSION) {
+    return modernError(
+      400,
+      id,
+      UNSUPPORTED_PROTOCOL_VERSION,
+      "Unsupported protocol version",
+      {
+        supported: [MODERN_PROTOCOL_VERSION, ...SUPPORTED_PROTOCOL_VERSIONS],
+        requested: metaVersion,
+      }
+    );
+  }
+  if (!method || request.headers.get("Mcp-Method") !== method) {
+    return modernError(
+      400,
+      id,
+      HEADER_MISMATCH,
+      "Header mismatch: Mcp-Method header must equal the request method"
+    );
+  }
+  if (!Object.prototype.hasOwnProperty.call(body, "id")) {
+    return new Response(null, {
+      status: 202,
+      headers: {
+        "Cache-Control": "private, no-store",
+        "Access-Control-Allow-Origin": "*",
+        ...MODERN_HEADERS,
+      },
+    });
+  }
+  if (
+    body.jsonrpc !== "2.0" ||
+    (typeof id !== "string" && typeof id !== "number")
+  ) {
+    return modernError(400, id, -32600, "Invalid Request");
+  }
+  if (
+    !objectOrUndefined(meta?.["io.modelcontextprotocol/clientCapabilities"])
+  ) {
+    return modernError(
+      400,
+      id,
+      -32602,
+      "Invalid params: _meta io.modelcontextprotocol/clientCapabilities is required"
+    );
+  }
+
+  if (method === "server/discover") {
+    return json(
+      200,
+      {
+        jsonrpc: "2.0",
+        id,
+        result: {
+          resultType: "complete",
+          supportedVersions: [
+            MODERN_PROTOCOL_VERSION,
+            ...SUPPORTED_PROTOCOL_VERSIONS,
+          ],
+          capabilities: { tools: { listChanged: false } },
+          instructions: SERVER_INSTRUCTIONS,
+          ttlMs: 0,
+          cacheScope: "public",
+          _meta: {
+            "io.modelcontextprotocol/serverInfo": {
+              name: "authichain",
+              version: SERVER_VERSION,
+            },
+          },
+        },
+      },
+      MODERN_HEADERS
+    );
+  }
+
+  if (method === "tools/list") {
+    hydrateX402(env);
+    // The list depends only on server configuration, never on the caller.
+    return json(
+      200,
+      {
+        jsonrpc: "2.0",
+        id,
+        result: {
+          resultType: "complete",
+          tools: mcpTools(env),
+          ttlMs: 0,
+          cacheScope: "public",
+        },
+      },
+      MODERN_HEADERS
+    );
+  }
+
+  if (method === "tools/call") {
+    const name = typeof params?.name === "string" ? params.name : "";
+    if (
+      !name ||
+      decodeMcpHeaderValue(request.headers.get("Mcp-Name")) !== name
+    ) {
+      return modernError(
+        400,
+        id,
+        HEADER_MISMATCH,
+        "Header mismatch: Mcp-Name header must equal params.name"
+      );
+    }
+    const { _meta: _ignored, ...legacyParams } = params ?? {};
+    const headers = new Headers(request.headers);
+    headers.delete("MCP-Protocol-Version");
+    headers.delete("Mcp-Method");
+    headers.delete("Mcp-Name");
+    const legacy = await handleRpc(
+      new Request(request.url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id,
+          method,
+          params: legacyParams,
+        }),
+      }),
+      env,
+      verifyApp
+    );
+    return asModernResponse(legacy);
+  }
+
+  // initialize, ping and notifications/initialized do not exist in 2026-07-28.
+  return modernError(404, id, -32601, `Method not found: ${method}`);
+}
+
 const LIVING_QR_OBJECT_ID = /^qron:url:[0-9a-f]{8}$/;
 const LIVING_QR_SCAN_ORIGIN = "https://authichain.com";
 const LIVING_QR_DECISION_FIELDS = [
@@ -1727,7 +2032,7 @@ export async function tryHandleMcp(
         // clients on every call; omitting them here failed the preflight
         // for any browser-side MCP client before the request was made.
         "Access-Control-Allow-Headers":
-          "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID, X-PAYMENT, PAYMENT-SIGNATURE",
+          "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id, Last-Event-ID, X-PAYMENT, PAYMENT-SIGNATURE",
         "Access-Control-Expose-Headers":
           "MCP-Protocol-Version, Mcp-Session-Id, WWW-Authenticate",
         "Access-Control-Max-Age": "86400",

@@ -427,3 +427,43 @@ describe("CFA-363/366: edge-router paid forward needs X402_REPLAY_KV", () => {
     expect(calls).toBe(0);
   });
 });
+
+describe("signal tiers on /api/x402", () => {
+  const PAY_TO = "0xabc0000000000000000000000000000000000001";
+
+  async function quote(path: string, init?: RequestInit) {
+    process.env.X402_PAY_TO = PAY_TO;
+    const res = await app().request(path, init);
+    const body = (await res.json()) as {
+      accepts?: Array<{ amount?: string; maxAmountRequired?: string }>;
+    };
+    const a = body.accepts?.[0];
+    return { status: res.status, amount: a?.amount ?? a?.maxAmountRequired, body };
+  }
+
+  it.each([
+    ["/api/x402", "50000"],
+    ["/api/x402?tier=verify", "50000"],
+    ["/api/x402?tier=ping", "10000"],
+    ["/api/x402?tier=evidence", "100000"],
+  ])("GET %s quotes %s atomic USDC", async (path, atomic) => {
+    const q = await quote(path);
+    expect(q.status).toBe(402);
+    expect(q.amount).toBe(atomic);
+  });
+
+  it("POST ?tier=ping quotes $0.01, not the default $0.05", async () => {
+    const q = await quote("/api/x402?tier=ping", { method: "POST", body: "{}" });
+    expect(q.status).toBe(402);
+    expect(q.amount).toBe("10000");
+  });
+
+  it("refuses an unknown tier with 400 before quoting any price", async () => {
+    const res = await (async () => {
+      process.env.X402_PAY_TO = PAY_TO;
+      return app().request("/api/x402?tier=free", { method: "POST", body: "{}" });
+    })();
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: "unknown_tier" });
+  });
+});

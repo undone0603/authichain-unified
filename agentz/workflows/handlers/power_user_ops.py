@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from typing import Any
@@ -48,6 +49,7 @@ class ProbeSpec:
     url: str
     expect: int
     parse: str  # "none" | "jwks"
+    expect_location: str | None = None
 
 
 @dataclass(frozen=True)
@@ -55,10 +57,18 @@ class ProbeResult:
     status: int
     body: bytes = b""
     content_type: str = ""
+    location: str = ""
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Keep the first hop so a 303 to /pricing is visible."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 RAILS: tuple[ProbeSpec, ...] = (
-    ProbeSpec("GET", FARM_CHECKOUT, 200, "none"),
+    ProbeSpec("GET", FARM_CHECKOUT, 303, "none", "/pricing"),
     ProbeSpec("HEAD", FARM_PLAN_HEAD, 204, "none"),
     ProbeSpec("GET", X402_QUOTE, 402, "none"),
     ProbeSpec("GET", X402_HEALTH, 200, "none"),
@@ -68,7 +78,7 @@ RAILS: tuple[ProbeSpec, ...] = (
 FROZEN_GATES = (
     "outreach freeze: do not dispatch frozen workflows or guess inboxes",
     "Merge autopilot stays disabled_manually",
-    "wait_buyer until a non-founder pays strainchain_farm",
+    "wait_buyer: GET /checkout/strainchain_farm is 303 to /pricing",
     "do not rotate AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64",
     "do not python -m agentz.cli run --all --mode auto",
     "do not wrangler-deploy or merge HOLD/WIP from this workflow",
@@ -79,23 +89,39 @@ class RailsProbeError(RuntimeError):
     """A public product rail returned the wrong status or unreadable JWKS."""
 
 
+def _location_matches(actual: str, expected: str) -> bool:
+    if actual == expected:
+        return True
+    path = urllib.parse.urlparse(actual).path
+    return path == expected or actual.rstrip("/").endswith(expected.rstrip("/"))
+
+
 def _probe(spec: ProbeSpec, timeout: float = PROBE_TIMEOUT_S) -> ProbeResult:
     headers = {"User-Agent": USER_AGENT, "Accept": "*/*"}
     req = urllib.request.Request(spec.url, method=spec.method, headers=headers)
+    opener = urllib.request.build_opener(_NoRedirect)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with opener.open(req, timeout=timeout) as resp:
             body = resp.read() if spec.method != "HEAD" else b""
             return ProbeResult(
                 status=int(resp.status),
                 body=body,
                 content_type=str(resp.headers.get("Content-Type") or ""),
+                location=str(resp.headers.get("Location") or ""),
             )
     except urllib.error.HTTPError as exc:
         body = exc.read() if spec.method != "HEAD" and exc.fp else b""
         ctype = ""
+        location = ""
         if exc.headers:
             ctype = str(exc.headers.get("Content-Type") or "")
-        return ProbeResult(status=int(exc.code), body=body, content_type=ctype)
+            location = str(exc.headers.get("Location") or "")
+        return ProbeResult(
+            status=int(exc.code),
+            body=body,
+            content_type=ctype,
+            location=location,
+        )
 
 
 def _jwks_findings(result: ProbeResult) -> list[str]:
@@ -139,6 +165,13 @@ def probe_rails(probe_fn=None) -> tuple[list[str], list[str]]:
         if result.status != spec.expect:
             failures.append(line)
             continue
+        if spec.expect_location and not _location_matches(
+            result.location, spec.expect_location
+        ):
+            failures.append(
+                f"{line} location={result.location!r} (expect {spec.expect_location})"
+            )
+            continue
         ok.append(line)
         if spec.parse == "jwks":
             for finding in _jwks_findings(result):
@@ -162,7 +195,7 @@ def build_x_pack(*, farm_ok: bool, x402_ok: bool, jwks_ok: bool) -> str:
     """STATUS: DRAFT pack for AgentZ OpenClaw xurl. This chat / CLI does not post."""
     facts = []
     if farm_ok:
-        facts.append(f"Farm checkout answers at {FARM_CHECKOUT}")
+        facts.append(f"Farm checkout redirects to /pricing ({FARM_CHECKOUT})")
     if x402_ok:
         facts.append("Unpaid /api/x402 returns HTTP 402 with a USDC-on-Base quote")
     if jwks_ok:

@@ -49,6 +49,7 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' && (inputs.strategy == 'all' || inputs.strategy == 'seo_only') ||
       github.event_name == 'schedule'
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -123,6 +124,7 @@ jobs:
           done
 
       - name: Submit sitemaps to Google Search Console
+        timeout-minutes: 15
         env:
           GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
         run: |
@@ -162,6 +164,7 @@ jobs:
     name: LinkedIn — retired in favour of validated bundles
     runs-on: ${{ (github.event_name == 'workflow_dispatch' && inputs.runner == 'ubuntu-latest') && fromJSON('["ubuntu-latest"]') || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
     if: github.event_name == 'workflow_dispatch' && inputs.strategy == 'linkedin_only'
+    timeout-minutes: 30
     steps:
       # The rotating posts that used to live here were hardcoded and unbacked:
       # a "$4.5 trillion" market size with no source, "100% scannable under
@@ -184,6 +187,7 @@ jobs:
     runs-on: ${{ (github.event_name == 'workflow_dispatch' && inputs.runner == 'ubuntu-latest') && fromJSON('["ubuntu-latest"]') || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
     if: |
       github.event_name == 'workflow_dispatch' && (inputs.strategy == 'all' || inputs.strategy == 'content_drafts')
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -214,6 +218,7 @@ jobs:
     name: Reddit — retired in favour of validated bundles
     runs-on: ${{ (github.event_name == 'workflow_dispatch' && inputs.runner == 'ubuntu-latest') && fromJSON('["ubuntu-latest"]') || fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') }}
     if: github.event_name == 'workflow_dispatch' && inputs.strategy == 'reddit_only'
+    timeout-minutes: 30
     steps:
       # The hardcoded r/QRcode submission that used to live here claimed
       # error-correction "L4" (QR levels are L/M/Q/H — there is no L4) and

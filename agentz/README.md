@@ -94,3 +94,43 @@ See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and 
 The read-only deployment control plane is available at `GET /control-plane/state` and returns normalized GitHub, GitLab, Vercel, and optionally Cloudflare Workers/Pages state. It correlates provider commits to the authoritative GitHub `main` commit and emits a conservative release gate: `deploy_eligible`, `blocked`, or `observe_only`.
 
 Cloudflare Worker deployment APIs expose the active deployment and version IDs; Cloudflare Pages deployments expose the trigger branch and commit hash. These APIs are observation-only here. Provider mutations remain in the existing governed workflows.
+
+## Voice + Vision console (local, opt-in, no hosted inference)
+
+AgentZ can take a spoken question with a photo, camera snapshot or shared-screen
+frame, analyze that still image with **your local vision-capable model**, and
+speak its response in your browser. It is observation-only: no autonomous
+browsing, payments, publishing, merges, or deployments are triggered.
+
+1. Run a local OpenAI-compatible **vision** model through LM Studio or a
+   compatible local server (an ordinary text-only model cannot see images).
+2. Configure these on the machine running AgentZ (do not commit secrets):
+
+   `AGENT_SECRET=<your existing private operator secret>`
+
+   `AGENTZ_VOICE_VISION_ENABLED=true`
+
+   `AGENTZ_VISION_MODEL=<the installed model's exact ID>`
+
+   `AGENTZ_VISION_ENDPOINT=http://127.0.0.1:1234/v1/chat/completions`
+
+   If LM Studio runs on a private LAN host, use its private IP endpoint
+   instead. Public hosts and HTTPS cloud inference endpoints are deliberately
+   rejected. No new hosted model subscription is required.
+3. From the repository root, run:
+   `uvicorn agentz.api.main:app --host 127.0.0.1 --port 8000`
+4. On the same computer open
+   `http://127.0.0.1:8000/agentz/voice-vision`, enter `AGENT_SECRET`
+   in the password field, tap **Start speaking**, then **Capture camera** or
+   **Capture screen**, then **Observe and respond**. The answer is displayed
+   and read aloud. An image file and typed question also work.
+
+The API never echoes the operator secret or local-model token and never
+persists uploaded frames. The UI sends one resized still image per request,
+not a live video feed. Camera/screen permissions are explicitly user-granted.
+Browser speech recognition availability varies; some browsers send audio to
+their speech provider. Use typed input if fully local speech transcription is
+required. Browser speech synthesis is used for spoken answers. This console
+is intentionally localhost-only and disabled unless opted in. The vision
+endpoint and tests are at `agentz/api/voice_vision.py` and
+`tests/test_agentz_voice_vision.py`.
