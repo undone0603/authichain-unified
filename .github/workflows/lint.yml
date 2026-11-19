@@ -182,13 +182,18 @@ jobs:
       - name: Root Vitest suite
         env:
           CATALOG_GRANT_PG_REQUIRED: "1"
+          # Both self-hosted runners share one 8 GB WSL VM. Vitest's default
+          # (cpus - 1 jsdom workers) starved it on 2026-11-19 and the runner
+          # lost its GitHub session mid-suite. Hosted runners keep the default.
+          VITEST_WORKER_ARGS: ${{ runner.environment == 'self-hosted' && '--maxWorkers=2' || '' }}
         run: |
           set -euo pipefail
           test -n "${PG_BINDIR:-}"
           test -x "$PG_BINDIR/initdb"
           # The mandatory five-case PostgreSQL suite already passed above.
           # Do not start another disposable cluster in parallel root Vitest.
-          pnpm exec vitest run --exclude src/lib/catalog-session-grant.concurrency.pg.test.ts
+          # shellcheck disable=SC2086 # empty on hosted runners, one flag otherwise
+          pnpm exec vitest run $VITEST_WORKER_ARGS --exclude src/lib/catalog-session-grant.concurrency.pg.test.ts
 
       # node:test files that no workspace `test` script runs. Named, not
       # globbed, past scripts/ci: scripts/lib and worker-app also hold Vitest
