@@ -104,3 +104,26 @@ def test_handler_never_shells_out_beyond_systemctl_is_active(monkeypatch):
     monkeypatch.setattr(ci_watch.subprocess, "run", fake_run)
     assert ci_watch.unit_state("actions-runner.service") == "active"
     assert calls == [["systemctl", "--user", "is-active", "actions-runner.service"]]
+
+
+def test_stranded_queue_is_amber_with_the_fix():
+    old = (NOW - timedelta(minutes=45)).isoformat().replace("+00:00", "Z")
+    fresh = (NOW - timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
+    verdict, findings = evaluate(
+        ALL_UP, SHA, NOW, "success", lint(), NOW,
+        queued=[{"created_at": old}, {"created_at": fresh}],
+    )
+    assert verdict == "amber"
+    assert any("1 run(s) queued over 30 min" in f and "restart" in f for f in findings)
+
+
+def test_fresh_queue_stays_green():
+    fresh = (NOW - timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
+    verdict, _ = evaluate(ALL_UP, SHA, NOW, "success", lint(), NOW, queued=[{"created_at": fresh}])
+    assert verdict == "green"
+
+
+def test_zombie_queued_record_is_ignored():
+    ancient = (NOW - timedelta(days=43)).isoformat().replace("+00:00", "Z")
+    verdict, _ = evaluate(ALL_UP, SHA, NOW, "success", lint(), NOW, queued=[{"created_at": ancient}])
+    assert verdict == "green"
