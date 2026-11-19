@@ -45,6 +45,10 @@ describe("DPP durable activation outbox (isolated PostgreSQL)", () => {
       "CREATE TABLE public.founder_exit_side_effects (" +
       "idempotency_key text PRIMARY KEY, profile_id text NOT NULL);"
     );
+    // Simulate projects retaining older default Data API table grants.
+    await db.exec(
+      "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO anon, authenticated, service_role;"
+    );
     await db.exec(readFileSync(MIGRATION,"utf8"));
   });
   afterAll(async () => { if(db) await db.close(); });

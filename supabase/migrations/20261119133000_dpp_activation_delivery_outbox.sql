@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS dpp_activation_outbox_state_idx
   ON public.dpp_activation_outbox(state, lease_until);
 
 ALTER TABLE public.dpp_activation_outbox ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.dpp_activation_outbox FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.dpp_activation_outbox FROM PUBLIC, anon, authenticated, service_role;
 -- No table RLS policy, no anonymous access. All mutations require these
 -- SECURITY DEFINER functions, each granted only to service_role.
 
