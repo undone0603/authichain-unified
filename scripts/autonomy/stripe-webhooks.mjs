@@ -15,6 +15,7 @@
 // Env: STRIPE_SECRET_KEY. --plan prints without writing.
 
 import { appendFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { loadManifest } from "./reconcile.mjs";
 
 /** Pure. Returns {missing, error} for one declared endpoint. */
@@ -96,7 +97,7 @@ async function main(argv) {
   return failed ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main(process.argv.slice(2)).then(
     c => process.exit(c),
     e => {

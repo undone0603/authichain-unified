@@ -29,6 +29,7 @@
 // Flag: --dry-run reads and plans but writes nothing.
 
 import { createHash } from "node:crypto";
+import { pathToFileURL } from "node:url";
 
 export const LABEL = "agent-task";
 export const ESCALATE_LABEL = "needs-founder";
@@ -526,7 +527,7 @@ async function main(argv) {
   return 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main(process.argv.slice(2)).then(
     c => process.exit(c),
     e => {

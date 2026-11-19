@@ -14,6 +14,7 @@
 
 import { createHash } from "node:crypto";
 import { appendFileSync, readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import {
   loadManifest,
   flatten,
@@ -446,7 +447,7 @@ async function main() {
   console.log(`alert issue: ${d.action}`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main().catch(e => {
     console.error(e);
     process.exit(1);

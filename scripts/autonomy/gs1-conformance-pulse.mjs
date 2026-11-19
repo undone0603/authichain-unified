@@ -12,6 +12,7 @@
 // On green, commits the date and result to docs/GS1_CONFORMANCE.md. Never
 // edits BANNED_COPY; never claims "GS1-Conformant".
 import { readFile, writeFile, appendFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 
 export const CANARY_DIGITAL_LINK =
   "https://id.authichain.com/01/09506000134352/21/GS1-CONFORMANCE-TEST";
@@ -148,7 +149,7 @@ async function main() {
   await updateConformanceDoc(result, runUrl ?? SUITE_URL);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main().catch(err => {
     console.error(err);
     process.exitCode = 1;

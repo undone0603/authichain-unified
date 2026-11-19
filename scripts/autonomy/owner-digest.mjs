@@ -15,6 +15,7 @@
 //      CLOUDFLARE_API_TOKEN (Analytics read) + optional CLOUDFLARE_ZONE_ID,
 //      DIGEST_FORCE=true to send regardless of day, DIGEST_DRY_RUN=true to print only.
 
+import { pathToFileURL } from "node:url";
 import { isFounder } from "./revenue-watch.mjs";
 import { flatten, loadManifest } from "./reconcile.mjs";
 import { pickLatestCompletedRun } from "./ops-pulse.mjs";
@@ -667,7 +668,7 @@ export async function sendViaResend(keys, payload, fetchImpl = fetch) {
   throw new Error(last);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main().catch(e => {
     console.error(e);
     process.exit(1);
