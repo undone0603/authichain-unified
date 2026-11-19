@@ -41,3 +41,11 @@ The owner asked for submissions to auto-approve when confidence is high. "High c
 5. **Clean page.** No CAPTCHA or bot check, no login, no payment, and no consent checkbox beyond the site's standard privacy notice. A pre-ticked marketing opt-in is unticked.
 
 Kill switch: AgentZ env `AGENTZ_BRIDGE_AUTO_APPROVE=false` (the default until the owner sets it `true`) turns this off instantly. Any reply of "no thanks" or "stop" from a company blocks the whole domain.
+
+### Activation gate (from `docs/outreach-deliverability-runbook.md` and `.claude/skills/manual-outreach-playbook`)
+The repo's automated outreach was disabled after zero replies and a 16% bounce rate. Auto-approve ships **off** and may be turned on only when all of these hold, recorded in HubSpot:
+- at least one real reply to a hand-sent message in this campaign
+- bounce rate under 3% on the verified list
+- a monitored reply-to address (the daily reply-watch routine `trig_0196n8Mo65si64DLmrqvJNxA` covers this)
+
+Until then the extension runs in batch-approval mode. AgentZ refuses `AGENTZ_BRIDGE_AUTO_APPROVE=true` with a clear error while any criterion is unmet.
