@@ -92,7 +92,17 @@ async function viaSendGrid(args: SendArgs, key: string): Promise<SendResult> {
  * Tries Resend → Brevo → SendGrid; returns the first ok=true, otherwise
  * the last attempt's failure. Skips providers whose env var is unset.
  */
-export async function sendEmail(args: SendArgs): Promise<SendResult> {
+export async function sendEmail(
+  args: SendArgs,
+  options?: { onlyProvider?: "resend" }
+): Promise<SendResult> {
+  // Transactional activation must not fall back across providers: a timeout
+  // from one provider can mean acceptance, so trying another risks two emails.
+  if (options?.onlyProvider === "resend") {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) return { ok: false, provider: "resend", error: "RESEND_API_KEY not set" };
+    return viaResend(args, key);
+  }
   const providers: Array<[string | undefined, (a: SendArgs, k: string) => Promise<SendResult>]> = [
     [process.env.GMAIL_APP_PASSWORD, viaGmail],
     [process.env.RESEND_API_KEY, viaResend],
