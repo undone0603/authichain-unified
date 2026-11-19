@@ -17,7 +17,7 @@ export const AUTHICHAIN_ABI = [
  * @returns The transaction hash and anchor ID
  */
 export async function anchorEdgeHash(edgeHash: string, metadata: string) {
-  const providerUrl = process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com';
+  const providerUrl = process.env.POLYGON_RPC_URL || 'https://polygon.drpc.org';
   const privateKey = process.env.BLOCKCHAIN_PRIVATE_KEY;
   const contractAddress = process.env.AUTHICHAIN_CONTRACT_ADDRESS;
 

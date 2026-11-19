@@ -7,12 +7,24 @@ export type SmokeStep = {
   id: string;
   url: string;
   accept: number[];
-  method?: "GET" | "HEAD";
+  method?: "GET" | "HEAD" | "POST";
   jsonOk?: boolean;
   jsonReady?: boolean;
+  /** JSON-RPC body; the step passes only if verify_record says "verified". */
+  mcpVerify?: unknown;
 };
 
 export const DEFAULT_ORIGIN = "https://authichain.com";
+
+// The published demo record. A healthy verifier reads its Polygon anchor and
+// returns "verified"; anything else (e.g. anchor_not_on_chain:rpc_http_error)
+// means the on-chain read is broken even though every page still serves 200.
+export const MCP_VERIFY_CALL = {
+  jsonrpc: "2.0",
+  id: 1,
+  method: "tools/call",
+  params: { name: "verify_record", arguments: { id: "polygon-anchor-1" } },
+};
 
 export function smokeSteps(origin = DEFAULT_ORIGIN): SmokeStep[] {
   const base = origin.replace(/\/$/, "");
@@ -52,7 +64,26 @@ export function smokeSteps(origin = DEFAULT_ORIGIN): SmokeStep[] {
       accept: [200],
       jsonReady: true,
     },
+    {
+      id: "mcp_verify_record",
+      url: `${base}/mcp/free`,
+      accept: [200],
+      method: "POST",
+      mcpVerify: MCP_VERIFY_CALL,
+    },
   ];
+}
+
+function mcpVerdict(body: unknown): { verdict: unknown; reasons: unknown } {
+  const text = (body as { result?: { content?: { text?: unknown }[] } })?.result
+    ?.content?.[0]?.text;
+  if (typeof text !== "string") return { verdict: null, reasons: [] };
+  try {
+    const parsed = JSON.parse(text) as { verdict?: unknown; reasons?: unknown };
+    return { verdict: parsed.verdict ?? null, reasons: parsed.reasons ?? [] };
+  } catch {
+    return { verdict: null, reasons: [] };
+  }
 }
 
 export type StepResult = {
@@ -71,7 +102,13 @@ export async function runSmokeStep(
   const res = await fetchImpl(step.url, {
     method,
     redirect: "manual",
-    headers: { Accept: "application/json, text/html;q=0.8" },
+    headers: step.mcpVerify
+      ? {
+          Accept: "application/json, text/event-stream",
+          "Content-Type": "application/json",
+        }
+      : { Accept: "application/json, text/html;q=0.8" },
+    ...(step.mcpVerify ? { body: JSON.stringify(step.mcpVerify) } : {}),
   });
   const okStatus = step.accept.includes(res.status);
   if (!okStatus) {
@@ -92,6 +129,20 @@ export async function runSmokeStep(
         status: res.status,
         ok: false,
         detail: "JWKS missing keys",
+      };
+    }
+  }
+  if (step.mcpVerify) {
+    const { verdict, reasons } = mcpVerdict(await res.clone().json());
+    if (verdict !== "verified") {
+      return {
+        id: step.id,
+        url: step.url,
+        status: res.status,
+        ok: false,
+        detail: `verify_record returned ${JSON.stringify(verdict)}: ${
+          Array.isArray(reasons) ? reasons.join(", ") : ""
+        }`,
       };
     }
   }

@@ -58,7 +58,7 @@ jobs:
         if: steps.secrets_check.outputs.skip != 'true'
         working-directory: workers/manufacturer-status
         run: |
-          echo "https://polygon-rpc.com" | npx wrangler secret put POLYGON_RPC || echo "secret already set or failed (non-fatal)"
+          echo "https://polygon.drpc.org" | npx wrangler secret put POLYGON_RPC || echo "secret already set or failed (non-fatal)"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

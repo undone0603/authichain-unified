@@ -46,7 +46,7 @@ export const CHAINS: Record<ChainKey, ChainTarget> = {
     explorer: "https://polygonscan.com",
     currency: "POL",
     alchemyHost: "polygon-mainnet.g.alchemy.com",
-    publicRpc: "https://polygon-rpc.com",
+    publicRpc: "https://polygon.drpc.org",
   },
   "polygon-amoy": {
     key: "polygon-amoy",
@@ -113,11 +113,17 @@ export const QRON_DECIMALS = 18;
 export const QRON_TOTAL_SUPPLY = 1_000_000_000;
 
 export function resolveChain(): ChainTarget {
-  const raw = (process.env.CHAIN || process.env.CHAIN_ID || "base").toLowerCase();
+  const raw = (
+    process.env.CHAIN ||
+    process.env.CHAIN_ID ||
+    "base"
+  ).toLowerCase();
   if (raw === "8453" || raw === "base") return CHAINS.base;
-  if (raw === "84532" || raw === "base-sepolia" || raw === "basesepolia") return CHAINS["base-sepolia"];
+  if (raw === "84532" || raw === "base-sepolia" || raw === "basesepolia")
+    return CHAINS["base-sepolia"];
   if (raw === "137" || raw === "polygon") return CHAINS.polygon;
-  if (raw === "80002" || raw === "amoy" || raw === "polygon-amoy") return CHAINS["polygon-amoy"];
+  if (raw === "80002" || raw === "amoy" || raw === "polygon-amoy")
+    return CHAINS["polygon-amoy"];
   return CHAINS.base;
 }
 

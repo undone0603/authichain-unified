@@ -2,7 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
-import { runHostedQuickstart } from "../../mcp/examples/hosted-quickstart.mjs";
+import {
+  endpointFromArgs,
+  runHostedQuickstart,
+} from "../../mcp/examples/hosted-quickstart.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
@@ -10,9 +13,12 @@ const repoRoot = path.resolve(__dirname, "../..");
 const readmePath = path.join(repoRoot, "mcp/docs/README.md");
 const mcpRoutesPath = path.join(
   repoRoot,
-  "workers/authichain-com/src/mcp-routes.ts",
+  "workers/authichain-com/src/mcp-routes.ts"
 );
-const quickstartPath = path.join(repoRoot, "mcp/examples/hosted-quickstart.mjs");
+const quickstartPath = path.join(
+  repoRoot,
+  "mcp/examples/hosted-quickstart.mjs"
+);
 
 const readme = fs.readFileSync(readmePath, "utf8");
 const mcpRoutes = fs.readFileSync(mcpRoutesPath, "utf8");
@@ -75,7 +81,7 @@ describe("hosted MCP documentation and quickstart", () => {
             id: body.id,
             result: { protocolVersion: "2025-06-18" },
           }),
-          { status: 200, headers: { "content-type": "application/json" } },
+          { status: 200, headers: { "content-type": "application/json" } }
         );
       }
 
@@ -89,10 +95,10 @@ describe("hosted MCP documentation and quickstart", () => {
             jsonrpc: "2.0",
             id: body.id,
             result: {
-              tools: EXPECTED_TOOLS.map((name) => ({ name })),
+              tools: EXPECTED_TOOLS.map(name => ({ name })),
             },
           }),
-          { status: 200, headers: { "content-type": "application/json" } },
+          { status: 200, headers: { "content-type": "application/json" } }
         );
       }
 
@@ -113,7 +119,7 @@ describe("hosted MCP documentation and quickstart", () => {
               ],
             },
           }),
-          { status: 200, headers: { "content-type": "application/json" } },
+          { status: 200, headers: { "content-type": "application/json" } }
         );
       }
 
@@ -143,5 +149,18 @@ describe("hosted MCP documentation and quickstart", () => {
     expect(result.connected).toBe(false);
     expect(result.toolCallOk).toBe(false);
     expect(result.limitations.length).toBeGreaterThan(0);
+  });
+
+  it("takes the endpoint from --endpoint, then AUTHICHAIN_MCP_ENDPOINT", () => {
+    const free = "https://authichain.com/mcp/free";
+    expect(endpointFromArgs(["--endpoint", free], {})).toBe(free);
+    expect(
+      endpointFromArgs(["--endpoint", free], {
+        AUTHICHAIN_MCP_ENDPOINT: "https://example.test/mcp",
+      })
+    ).toBe(free);
+    expect(endpointFromArgs([], { AUTHICHAIN_MCP_ENDPOINT: free })).toBe(free);
+    expect(endpointFromArgs([], {})).toBeUndefined();
+    expect(endpointFromArgs(["--endpoint"], {})).toBeUndefined();
   });
 });
