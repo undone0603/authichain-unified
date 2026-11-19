@@ -110,8 +110,19 @@ describe("MCP callable negotiate (quote only)", () => {
       expect(quote).toMatchObject({
         service: "verify",
         status: "separate_authorization_required",
-        price_usd: null,
-        price_status: "recheck_current_pricing",
+        price_usd: 0.05,
+        price_status: "live_rail_quote",
+        within_budget: true,
+        x402: {
+          x402Version: 2,
+          scheme: "exact",
+          network: "eip155:8453",
+          asset_symbol: "USDC",
+          maxAmountRequired: "50000",
+          payTo: "0xabc0000000000000000000000000000000000001",
+          resource: "https://authichain.com/api/x402",
+        },
+        next_action: "seek_explicit_payment_authorization_then_call_verify",
         binding: false,
         accepted: false,
         payment_authorized: false,
@@ -124,6 +135,48 @@ describe("MCP callable negotiate (quote only)", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  it("adds x402 v2 terms only when rail terms are passed, and flags an under-budget caller", () => {
+    const rail = Object.freeze({
+      priceUsd: 0.05,
+      amountAtomic: "50000",
+      payTo: "0xabc0000000000000000000000000000000000001",
+      asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      facilitator: null,
+      resource: "https://authichain.com/api/x402",
+    });
+    const under = negotiateQuote({ service: "verify", max_budget_usd: 0.01 }, rail);
+    expect(under.isError).toBe(false);
+    expect(under.body).toMatchObject({
+      price_usd: 0.05,
+      within_budget: false,
+      next_action: "do_not_pay_budget_below_price",
+      payment_authorized: false,
+      settled: false,
+      side_effects: false,
+    });
+    expect((under.body.x402 as Record<string, unknown>).facilitator).toBeNull();
+    const noBudget = negotiateQuote({ service: "verify" }, rail);
+    expect(noBudget.body.within_budget).toBeNull();
+    const unbound = negotiateQuote({ service: "verify", max_budget_usd: 1 });
+    expect(unbound.body).toMatchObject({ price_usd: null, price_status: "recheck_current_pricing" });
+    expect(unbound.body.x402).toBeUndefined();
+    const free = negotiateQuote({ service: "verify_record" }, rail);
+    expect(free.body).toMatchObject({ price_usd: 0, status: "non_binding_quote" });
+    expect(free.body.x402).toBeUndefined();
+  });
+
+  it("omits x402 terms over MCP when the paid seal registry is not bound", async () => {
+    const response = await tryHandleMcp(
+      request("tools/call", "/mcp", { name: "negotiate", arguments: { service: "verify" } }),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" } as NonNullable<
+        Parameters<typeof tryHandleMcp>[1]
+      >
+    );
+    const json = (await response!.json()) as { result: { structuredContent: Record<string, unknown> } };
+    expect(json.result.structuredContent.price_usd).toBeNull();
+    expect(json.result.structuredContent.x402).toBeUndefined();
   });
 
   it("rejects invalid terms and unsafe authorization attempts without side effects", async () => {
