@@ -17,6 +17,10 @@ import {
   DEMONSTRATION_RECORD_HASH,
   DEMONSTRATION_SIGNER_DID,
   LATEST_PROTOCOL_VERSION,
+  MODERN_PROTOCOL_VERSION,
+  HEADER_MISMATCH,
+  UNSUPPORTED_PROTOCOL_VERSION,
+  decodeMcpHeaderValue,
   SERVER_VERSION,
   PRODUCTION_ISSUER_DID,
   PRODUCTION_ISSUER_KID,
@@ -85,8 +89,13 @@ describe("mcp discovery", () => {
     };
     const tools = new Map(data.result.tools.map(tool => [tool.name, tool]));
     for (const name of [
-      "get_pricing", "query_provenance", "verify_attestation",
-      "verify_record", "dpp_readiness_check", "scan_living_qr", "negotiate",
+      "get_pricing",
+      "query_provenance",
+      "verify_attestation",
+      "verify_record",
+      "dpp_readiness_check",
+      "scan_living_qr",
+      "negotiate",
     ]) {
       expect(tools.get(name)?.annotations?.readOnlyHint, name).toBe(true);
       expect(tools.get(name)?.annotations?.destructiveHint, name).toBe(false);
@@ -96,7 +105,9 @@ describe("mcp discovery", () => {
     expect(tools.get("verify")?.description).toMatch(/paid|x402/i);
     expect(tools.get("verify_record")?.description).toContain("published JWS");
     expect(tools.get("verify_attestation")?.description).toContain("published");
-    expect(tools.get("get_pricing")?.description).toMatch(/never starts a checkout|without charging/);
+    expect(tools.get("get_pricing")?.description).toMatch(
+      /never starts a checkout|without charging/
+    );
   });
 
   it("GET discovery and initialize distinguish seven free tools from paid x402 verification", async () => {
@@ -124,14 +135,22 @@ describe("mcp discovery", () => {
           jsonrpc: "2.0",
           id: 77,
           method: "initialize",
-          params: { protocolVersion: "2025-06-18", clientInfo: { name: "glama-test", version: "1" }, capabilities: {} },
+          params: {
+            protocolVersion: "2025-06-18",
+            clientInfo: { name: "glama-test", version: "1" },
+            capabilities: {},
+          },
         }),
       })
     );
     expect(initResponse?.status).toBe(200);
-    const initialized = (await initResponse!.json()) as { result: { instructions: string } };
+    const initialized = (await initResponse!.json()) as {
+      result: { instructions: string };
+    };
     expect(initialized.result.instructions).toContain("Paid verification:");
-    expect(initialized.result.instructions).toContain("separately authorized payment");
+    expect(initialized.result.instructions).toContain(
+      "separately authorized payment"
+    );
     expect(initialized.result.instructions).toContain("Free verification:");
   });
 
@@ -159,7 +178,9 @@ describe("mcp discovery", () => {
       const res = await tryHandleMcp(req(path));
       expect(res, path).not.toBeNull();
       expect(res!.status, path).toBe(200);
-      expect(res!.headers.get("content-type"), path).toContain("application/json");
+      expect(res!.headers.get("content-type"), path).toContain(
+        "application/json"
+      );
       const body = (await res!.json()) as { $schema: string; claim: string };
       expect(body, path).toEqual(GLAMA_CONNECTOR_CLAIM);
       expect(Object.keys(body), path).toEqual(["$schema", "claim"]);
@@ -210,7 +231,10 @@ describe("mcp discovery", () => {
       expect(text).not.toContain("USDC");
       expect(text).not.toContain("on_hold");
       expect(text).not.toContain("wait_buyer");
-      expect(text).not.toContain("never expire");
+      expect(text).toContain(
+        "One-time pack credits (Starter and Creator) never expire."
+      );
+      expect(text).not.toContain("Pack credits never expire.");
       expect(text).toContain("https://authichain.com/checkout/starter");
       expect(text).toContain("https://authichain.com/checkout/dpp_readiness");
       for (const plan of [
@@ -356,7 +380,10 @@ describe("mcp discovery", () => {
       expect(text, path).not.toContain("/api/checkout");
       expect(text, path).not.toContain("on_hold");
       expect(text, path).not.toContain("wait_buyer");
-      expect(text, path).not.toContain("never expire");
+      expect(text, path).toContain(
+        "One-time pack credits (Starter and Creator) never expire."
+      );
+      expect(text, path).not.toContain("Pack credits never expire.");
       for (const plan of [
         "strainchain_passport",
         "strainchain_farm",
@@ -434,7 +461,12 @@ describe("mcp discovery", () => {
     expect(priced.result.content[0].text).not.toContain("/api/checkout");
     expect(priced.result.content[0].text).not.toContain("on_hold");
     expect(priced.result.content[0].text).not.toContain("wait_buyer");
-    expect(priced.result.content[0].text).not.toContain("never expire");
+    expect(priced.result.content[0].text).toContain(
+      "One-time pack credits (Starter and Creator) never expire."
+    );
+    expect(priced.result.content[0].text).not.toContain(
+      "Pack credits never expire."
+    );
   });
 
   it("tools/call dpp_readiness_check is free and scores the answers", async () => {
@@ -1976,5 +2008,295 @@ describe("scan_living_qr", () => {
     };
     expect(body.decision).toBe("verified");
     expect(payload.result.content[0].text).not.toContain("header.payload.sig");
+  });
+});
+
+describe("MCP 2026-07-28 stateless requests (#2276)", () => {
+  const meta = {
+    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+    "io.modelcontextprotocol/clientCapabilities": {},
+    "io.modelcontextprotocol/clientInfo": { name: "vitest", version: "1" },
+  };
+
+  function modern(
+    method: string,
+    opts: {
+      params?: Record<string, unknown>;
+      meta?: Record<string, unknown> | null;
+      headers?: Record<string, string>;
+      id?: unknown;
+    } = {}
+  ) {
+    const params: Record<string, unknown> = { ...(opts.params ?? {}) };
+    if (opts.meta !== null) params._meta = opts.meta ?? meta;
+    const body: Record<string, unknown> = { jsonrpc: "2.0", method, params };
+    if (opts.id !== undefined) body.id = opts.id;
+    else body.id = 7;
+    return tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+          "MCP-Protocol-Version": "2026-07-28",
+          "Mcp-Method": method,
+          ...opts.headers,
+        },
+        body: JSON.stringify(body),
+      })
+    );
+  }
+
+  it("server/discover advertises both eras with cache hints and no handshake", async () => {
+    const res = await modern("server/discover");
+    expect(res?.status).toBe(200);
+    expect(res?.headers.get("MCP-Protocol-Version")).toBe(
+      MODERN_PROTOCOL_VERSION
+    );
+    const { result } = (await res!.json()) as { result: Record<string, any> };
+    expect(result.resultType).toBe("complete");
+    expect(result.supportedVersions).toEqual([
+      "2026-07-28",
+      "2025-06-18",
+      "2025-03-26",
+      "2024-11-05",
+    ]);
+    expect(result.capabilities).toEqual({ tools: { listChanged: false } });
+    expect(result.ttlMs).toBe(0);
+    expect(result.cacheScope).toBe("public");
+    expect(result._meta["io.modelcontextprotocol/serverInfo"]).toEqual({
+      name: "authichain",
+      version: SERVER_VERSION,
+    });
+  });
+
+  it("tools/list returns resultType, ttlMs and cacheScope", async () => {
+    const res = await modern("tools/list");
+    expect(res?.status).toBe(200);
+    expect(res?.headers.get("MCP-Protocol-Version")).toBe("2026-07-28");
+    const { result } = (await res!.json()) as { result: Record<string, any> };
+    expect(result.resultType).toBe("complete");
+    expect(result.ttlMs).toBe(0);
+    expect(result.cacheScope).toBe("public");
+    const names = (result.tools as Array<{ name: string }>).map(t => t.name);
+    expect(names).toContain("verify_record");
+    expect(names).toContain("get_pricing");
+  });
+
+  it("tools/call runs the same tool and adds resultType", async () => {
+    const res = await modern("tools/call", {
+      params: { name: "get_pricing", arguments: {} },
+      headers: { "Mcp-Name": "get_pricing" },
+    });
+    expect(res?.status).toBe(200);
+    expect(res?.headers.get("MCP-Protocol-Version")).toBe("2026-07-28");
+    const body = (await res!.json()) as {
+      id: number;
+      result: Record<string, any>;
+    };
+    expect(body.id).toBe(7);
+    expect(body.result.resultType).toBe("complete");
+    expect(body.result.content[0].type).toBe("text");
+    expect(JSON.parse(body.result.content[0].text).freeTools).toContain(
+      "verify_record"
+    );
+  });
+
+  it("accepts a base64-sentinel Mcp-Name", async () => {
+    expect(decodeMcpHeaderValue("=?base64?Z2V0X3ByaWNpbmc=?=")).toBe(
+      "get_pricing"
+    );
+    // 0xC3 0x28 is invalid UTF-8; it must not decode to a usable tool name.
+    expect(decodeMcpHeaderValue("=?base64?wyg=?=")).toBeNull();
+    const res = await modern("tools/call", {
+      params: { name: "get_pricing", arguments: {} },
+      headers: { "Mcp-Name": "=?base64?Z2V0X3ByaWNpbmc=?=" },
+    });
+    expect(res?.status).toBe(200);
+  });
+
+  it("rejects Mcp-Method that differs from the body method with HeaderMismatch", async () => {
+    const res = await modern("tools/list", {
+      headers: { "Mcp-Method": "tools/call" },
+    });
+    expect(res?.status).toBe(400);
+    const body = (await res!.json()) as { error: { code: number } };
+    expect(body.error.code).toBe(HEADER_MISMATCH);
+  });
+
+  it("rejects a missing Mcp-Name or one that differs from params.name", async () => {
+    for (const headers of [{}, { "Mcp-Name": "verify" }]) {
+      const res = await modern("tools/call", {
+        params: { name: "get_pricing", arguments: {} },
+        headers,
+      });
+      expect(res?.status).toBe(400);
+      expect(
+        ((await res!.json()) as { error: { code: number } }).error.code
+      ).toBe(HEADER_MISMATCH);
+    }
+  });
+
+  it("rejects a header/_meta version mismatch and a missing header", async () => {
+    const mismatch = await modern("tools/list", {
+      meta: {
+        ...meta,
+        "io.modelcontextprotocol/protocolVersion": "2025-06-18",
+      },
+    });
+    expect(mismatch?.status).toBe(400);
+    expect(
+      ((await mismatch!.json()) as { error: { code: number } }).error.code
+    ).toBe(HEADER_MISMATCH);
+    const noHeader = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Mcp-Method": "tools/list",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/list",
+          params: { _meta: meta },
+        }),
+      })
+    );
+    expect(noHeader?.status).toBe(400);
+    expect(
+      ((await noHeader!.json()) as { error: { code: number } }).error.code
+    ).toBe(HEADER_MISMATCH);
+  });
+
+  it("answers an unknown version with UnsupportedProtocolVersion and the supported list", async () => {
+    const res = await modern("tools/list", {
+      headers: { "MCP-Protocol-Version": "2099-01-01" },
+      meta: {
+        ...meta,
+        "io.modelcontextprotocol/protocolVersion": "2099-01-01",
+      },
+    });
+    expect(res?.status).toBe(400);
+    const body = (await res!.json()) as {
+      error: { code: number; data: { supported: string[]; requested: string } };
+    };
+    expect(body.error.code).toBe(UNSUPPORTED_PROTOCOL_VERSION);
+    expect(body.error.data.requested).toBe("2099-01-01");
+    expect(body.error.data.supported).toContain("2026-07-28");
+    expect(body.error.data.supported).toContain("2025-06-18");
+  });
+
+  it("requires clientCapabilities in _meta", async () => {
+    const res = await modern("tools/list", {
+      meta: { "io.modelcontextprotocol/protocolVersion": "2026-07-28" },
+    });
+    expect(res?.status).toBe(400);
+    expect(
+      ((await res!.json()) as { error: { code: number } }).error.code
+    ).toBe(-32602);
+  });
+
+  it("treats initialize and ping as unknown methods in the modern era", async () => {
+    for (const method of ["initialize", "ping"]) {
+      const res = await modern(method);
+      expect(res?.status).toBe(404);
+      expect(
+        ((await res!.json()) as { error: { code: number } }).error.code
+      ).toBe(-32601);
+    }
+  });
+
+  it("answers a modern notification with a bare 202", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "MCP-Protocol-Version": "2026-07-28",
+          "Mcp-Method": "notifications/cancelled",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "notifications/cancelled",
+          params: { requestId: 1, _meta: meta },
+        }),
+      })
+    );
+    expect(res?.status).toBe(202);
+    expect(await res!.text()).toBe("");
+  });
+
+  it("keeps paid verify behaviour identical across eras (no payment header)", async () => {
+    const legacy = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 7,
+          method: "tools/call",
+          params: {
+            name: "verify",
+            arguments: { sealId: "00000000-0000-4000-8000-000000000000" },
+          },
+        }),
+      })
+    );
+    const viaModern = await modern("tools/call", {
+      params: {
+        name: "verify",
+        arguments: { sealId: "00000000-0000-4000-8000-000000000000" },
+      },
+      headers: { "Mcp-Name": "verify" },
+    });
+    expect(viaModern?.status).toBe(legacy?.status);
+  });
+
+  it("leaves legacy requests untouched", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+      })
+    );
+    expect(res?.status).toBe(200);
+    expect(res?.headers.get("MCP-Protocol-Version")).toBe(
+      LATEST_PROTOCOL_VERSION
+    );
+    const { result } = (await res!.json()) as {
+      result: Record<string, unknown>;
+    };
+    expect(result).not.toHaveProperty("resultType");
+    expect(result).not.toHaveProperty("ttlMs");
+    const init = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          method: "initialize",
+          params: {
+            protocolVersion: "2025-06-18",
+            capabilities: {},
+            clientInfo: { name: "t", version: "1" },
+          },
+        }),
+      })
+    );
+    expect(
+      ((await init!.json()) as { result: { protocolVersion: string } }).result
+        .protocolVersion
+    ).toBe("2025-06-18");
+  });
+
+  it("lets browser clients send the modern request headers", async () => {
+    const res = await tryHandleMcp(req("/mcp", { method: "OPTIONS" }));
+    const allowed = res?.headers.get("Access-Control-Allow-Headers") ?? "";
+    expect(allowed).toContain("Mcp-Method");
+    expect(allowed).toContain("Mcp-Name");
+    expect(allowed).toContain("MCP-Protocol-Version");
   });
 });

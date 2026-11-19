@@ -8,6 +8,7 @@ import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
 import { checkoutReturnOrigin } from "./checkout-gate";
 import { PLANS, type PlanId } from "./plans";
+import { isRetiredPlan } from "./retired-plans";
 
 export type PlanCheckoutOk = { ok: true; url: string; planId: string };
 export type PlanCheckoutErr = {
@@ -50,12 +51,8 @@ export async function createPlanCheckoutSession(opts: {
     return { ok: false, status: 400, error: "Unknown plan" };
   }
   // Keep grandfathered subscriptions, but never mint a new Checkout Session
-  // for retired QRON Launch or Farm prices from this API entry point.
-  if (
-    plan.id === "qron_launch" ||
-    plan.id === "qron_launch_annual" ||
-    plan.id === "strainchain_farm"
-  ) {
+  // for a retired gated plan from this API entry point.
+  if (isRetiredPlan(plan.id)) {
     return { ok: false, status: 400, error: "Plan is no longer available" };
   }
   if (!plan.stripe_price_id || !plan.stripe_mode) {
