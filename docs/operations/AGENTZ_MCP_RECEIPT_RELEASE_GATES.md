@@ -74,3 +74,27 @@ must remain enforced.
 
 **Do not mistake the newly committed endpoint for a deployed endpoint.**
 Until protected release, live runtime proof remains unverified.
+
+## Independent deployment provenance verification (draft implementation)
+
+The `agentz/core/deployment_provenance.py` verifier requires:
+1. An AgentZ Ed25519 JWS using the **published** DID public key.
+2. The exact deployable artifact bytes; SHA-256 must match the signed claim.
+3. The protected GitHub release's source SHA and workflow run ID, independently
+   retrieved by the verifier, not copied from the signed manifest.
+4. The Cloudflare deployment ID and version ID, independently retrieved from
+   the authenticated Cloudflare deployments API, not copied from the manifest.
+5. A signed UTC timestamp.
+
+The verifier deliberately fails closed if any of these are absent, invalid,
+or mismatched. Test-only ephemeral keys are used in offline tests, never as
+evidence of production AgentZ identity.
+
+**Evidence still missing:** a protected workflow that builds the exact bytes,
+records their digest, deploys those same bytes, captures the Cloudflare
+deployment/version IDs, and obtains an AgentZ signature over that immutable
+manifest. No signer has yet produced a real production attestation, and the
+connected Cloudflare deployment API does not currently supply a trusted source
+commit/artifact digest. The live AgentZ API is behind Access and the challenge
+signing endpoint is not yet deployed. This code therefore proves verifier
+behavior only; it is not a completed deployment attestation.
