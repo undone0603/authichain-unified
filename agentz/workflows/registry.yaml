@@ -1309,3 +1309,41 @@ workflows:
       zero-payment AuthiChain MCP initialize/list/nonbinding-quote smoke.
       In dry-run, do nothing; live runs require individual confirmation.
       Persist redacted UTC evidence locally; unknown or failed checks fail.
+
+  - id: gha_honest_launch_gate
+    title: "Honest launch gate (ported from GitHub Actions)"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.gha_port
+    type: shell
+    estimated_minutes: 3
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    description: |
+      Runs scripts/launch/honest-launch-gate.mjs on the AgentZ host, the
+      same read-only script .github/workflows/honest-launch-gate.yml runs.
+      Public GET probes only. Exit 0 green, 1 red. Writes nothing.
+
+  - id: gha_autonomy_manifest_check
+    title: "Autonomy manifest check (ported from GitHub Actions)"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.gha_port
+    type: shell
+    estimated_minutes: 1
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    description: |
+      Runs `node scripts/autonomy/reconcile.mjs --check` offline: every
+      workflow file is classified exactly once in .github/autonomy.json.
+      No network, no token, writes nothing. Never runs --apply.
