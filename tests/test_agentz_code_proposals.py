@@ -52,6 +52,16 @@ class CodeProposalTests(unittest.TestCase):
                 propose_code_change("refs/heads/feat/agentz-demo", "src/lib/x.ts", "x")
             net.assert_not_called()
 
+    def test_github_requests_use_identified_agent_and_bearer_auth(self):
+        with mock.patch.dict(os.environ, {"AGENTZ_GITHUB_CODE_TOKEN": "test-token"}), \\
+                mock.patch.object(code_proposals, "urlopen") as net:
+            net.return_value.__enter__.return_value.read.return_value = b"{}"
+            self.assertEqual(code_proposals._github("GET", "git/ref/heads/main"), {})
+        request = net.call_args.args[0]
+        self.assertEqual(request.get_header("User-agent"),
+                         "AuthiChain-AgentZ-CodeProposals/1.0")
+        self.assertEqual(request.get_header("Authorization"), "Bearer test-token")
+
     def test_creates_missing_branch_from_main_then_commits(self):
         calls = []
 
