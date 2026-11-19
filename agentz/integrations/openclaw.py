@@ -68,7 +68,11 @@ class OpenClawClient:
         self.config = config or OpenClawConfig.from_env()
 
     def _headers(self, *, auth: bool = True) -> dict[str, str]:
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "AuthiChain-AgentZ-OpenClaw/1.0 (+https://authichain.com)",
+        }
         if auth and self.config.api_key:
             headers["Authorization"] = f"Bearer {self.config.api_key}"
         return headers
