@@ -34,6 +34,14 @@ RUNNER_UNITS = (
 )
 # A required gate still pending on a main head older than this is stuck.
 GATE_STUCK_AFTER_S = 2 * 60 * 60
+# A run queued this long is likely stranded: after a WSL restart, jobs queued
+# while the runners were offline can stay queued with every runner idle until
+# the runner services are restarted (seen 2026-11-19).
+QUEUE_STALE_AFTER_S = 30 * 60
+# Older "queued" runs are corrupt records, not live work: GitHub keeps a
+# 2026-10-07 merge-autopilot run queued that it also refuses to cancel as
+# "completed". Ignoring them keeps the verdict from going amber forever.
+QUEUE_ZOMBIE_AFTER_S = 24 * 60 * 60
 
 
 def _get_json(path: str) -> Any:
@@ -64,6 +72,7 @@ def evaluate(
     gate_state: str | None,
     lint: dict[str, Any] | None,
     now: datetime,
+    queued: list[dict[str, Any]] | None = None,
 ) -> tuple[str, list[str]]:
     """Return (verdict, findings). Verdict is green, amber or red."""
     red: list[str] = []
@@ -96,6 +105,20 @@ def evaluate(
             amber.append(f"{where} was {conclusion}")
         else:
             red.append(f"{where} concluded {conclusion}")
+    stale = []
+    for q in queued or []:
+        created = q.get("created_at")
+        if not created:
+            continue
+        waited = (now - datetime.fromisoformat(created.replace("Z", "+00:00"))).total_seconds()
+        if QUEUE_STALE_AFTER_S < waited <= QUEUE_ZOMBIE_AFTER_S:
+            stale.append(waited)
+    if stale:
+        amber.append(
+            f"{len(stale)} run(s) queued over {QUEUE_STALE_AFTER_S // 60} min (oldest "
+            f"{int(max(stale) // 60)} min); if the runners are idle, restart "
+            "actions-runner and actions-runner-wsl"
+        )
     if red:
         return "red", red + amber
     if amber:
@@ -120,10 +143,13 @@ def run(
         gate = next((s["state"] for s in statuses if s.get("context") == GATE), None)
         runs = get_json("actions/workflows/lint.yml/runs?branch=main&per_page=1")
         lint = (runs.get("workflow_runs") or [None])[0]
+        queued = get_json("actions/runs?status=queued&per_page=50").get("workflow_runs") or []
     except Exception as exc:  # network, rate limit, or shape change
         return f"red: GitHub read failed ({type(exc).__name__}: {exc})"
 
-    verdict, findings = evaluate(units, sha, committed, gate, lint, datetime.now(timezone.utc))
+    verdict, findings = evaluate(
+        units, sha, committed, gate, lint, datetime.now(timezone.utc), queued
+    )
     previous = ctx.load_state().get("verdict")
     ctx.save_state({
         "verdict": verdict,
