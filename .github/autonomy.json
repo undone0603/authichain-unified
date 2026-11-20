@@ -126,6 +126,7 @@
       "managed": true,
       "workflows": {
         "agentz-ci.yml": "on",
+        "agentz-protected-provenance-build.yml": "on",
         "agentz-mcp-verify.yml": "on",
         "ci.yml": "on",
         "main.yml": "on",
