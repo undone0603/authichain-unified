@@ -1200,3 +1200,49 @@ describe("POST /api/stripe/webhook — claim unavailable (PM-338)", () => {
     expect(res.status).toBe(400);
   });
 });
+
+
+describe("private database attestation route before internal middleware", () => {
+  const token = "Bearer " + "r".repeat(40);
+
+  it("rejects an unauthenticated external caller without requiring the legacy internal key", async () => {
+    const res = await app.request("/api/internal/runtime-db-attestation");
+    expect(res.status).toBe(401);
+    expect(res.headers.get("cache-control")).toContain("no-store");
+  });
+
+  it("fails closed when the private app service binding is missing", async () => {
+    const res = await app.request("/api/internal/runtime-db-attestation", {
+      headers: { authorization: token },
+    });
+    expect(res.status).toBe(503);
+  });
+
+  it("forwards an authenticated exact route to VERIFY_APP, never the generic internal handler", async () => {
+    const fetch = vi.fn(async (request: Request) => {
+      expect(request.url).toBe("https://app.authichain.com/api/internal/runtime-db-attestation");
+      expect(request.headers.get("authorization")).toBe(token);
+      return new Response(JSON.stringify({ verified: true, deployedVersion: "a".repeat(40) }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    const res = await app.request(
+      "/api/internal/runtime-db-attestation",
+      { headers: { authorization: token } },
+      { VERIFY_APP: { fetch } } as any,
+    );
+    expect(res.status).toBe(200);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("does not relax other internal routes or accept POST at the new route", async () => {
+    const post = await app.request("/api/internal/runtime-db-attestation", {
+      method: "POST",
+      headers: { authorization: token },
+    });
+    expect(post.status).toBe(405);
+    const other = await app.request("/api/internal/verify", { method: "POST" });
+    expect(other.status).toBe(401);
+  });
+});

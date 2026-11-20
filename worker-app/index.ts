@@ -38,6 +38,7 @@ import {
   isRetryableFulfillment,
   markRetryableFulfillment,
 } from "../src/lib/retryable-fulfillment";
+import { proxyRuntimeDbAttestation } from "./runtime-db-attestation-proxy";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
@@ -1524,6 +1525,13 @@ app.post("/api/gpt/trust-score", async c => {
     return c.json({ error: "Trust score computation failed" }, 500);
   }
 });
+
+// Exact authenticated DB attestation must precede generic internal-key middleware.
+// It forwards only this route to authichain-app's independently authenticated
+// Next endpoint; all other /api/internal routes retain x-internal-secret.
+app.all("/api/internal/runtime-db-attestation", c =>
+  proxyRuntimeDbAttestation(c.req.raw, c.env?.VERIFY_APP),
+);
 
 // ─── Internal API for the authichain-gateway Cloudflare Worker
 // (server/internal-api.ts's Express Router, ported route-by-route).

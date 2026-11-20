@@ -31,7 +31,7 @@ import {
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
-import { NEGOTIATE_TOOL, negotiateQuote } from "./mcp-negotiate";
+import { NEGOTIATE_TOOL, negotiateQuote, type X402RailTerms } from "./mcp-negotiate";
 
 type McpEnv = X402Env & {
   /** Service binding to authichain-edge-router. Public fetch of this zone returns 522. */
@@ -599,6 +599,21 @@ function livePayTo(env?: X402Env): string {
     process.env.X402_PAY_TO?.trim() ||
     X402_PUBLISHED_PAY_TO
   );
+}
+
+/** Live x402 terms for negotiate, only when a paid verify call would be answered. */
+function negotiateRailTerms(env?: X402Env): X402RailTerms | null {
+  if (!mcpPaidVerifyStatus(env).bound) return null;
+  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  return {
+    priceUsd,
+    amountAtomic: usdToAtomic(priceUsd),
+    payTo: livePayTo(env),
+    asset: BASE_USDC_ASSET,
+    facilitator:
+      env?.X402_FACILITATOR_URL?.trim() || process.env.X402_FACILITATOR_URL?.trim() || null,
+    resource: "https://authichain.com/api/x402",
+  };
 }
 
 function mcpPaidVerifyStatus(env?: X402Env) {
@@ -1573,7 +1588,7 @@ async function handleRpc(
     };
     const name = params.name ?? "";
     if (name === "negotiate") {
-      const quote = negotiateQuote(params.arguments ?? {});
+      const quote = negotiateQuote(params.arguments ?? {}, negotiateRailTerms(env));
       return rpcResult(id, {
         content: [{ type: "text", text: JSON.stringify(quote.body, null, 2) }],
         structuredContent: quote.body,

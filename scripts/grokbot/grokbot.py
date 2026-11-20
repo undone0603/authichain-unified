@@ -32,7 +32,7 @@ PRODUCT_TERMS = {
     "strainchain": ("strainchain", "strain chain", "genetics passport", "metrc", "biotrack"),
     "govchain": ("govchain", "gov chain", "sam.gov", "government document", "procurement"),
     "agentz": ("agentz", "guardian", "archivist", "sentinel", "scout", "arbiter"),
-}
+    "x402_dex": ("x402", "bazaar", "eip155:8453", "signal.authichain.com", "agentz-dex"),}
 
 TEXT_EXTENSIONS = {
     ".md", ".mdx", ".txt", ".json", ".yaml", ".yml", ".toml", ".csv", ".tsv",
@@ -45,7 +45,7 @@ SKIP_DIRS = {".git", "node_modules", ".next", "dist", "build", "coverage", ".ven
 MAX_TEXT_BYTES = 2_000_000
 
 # Empty by default. Never includes Downloads, Desktop or Documents.
-SCAN_ALLOWLIST: tuple[str, ...] = ()
+SCAN_ALLOWLIST: tuple[str, ...] = tuple(p.strip() for p in os.environ.get("GROKBOT_SCAN_ALLOWLIST", "").replace(",", os.pathsep).split(os.pathsep) if p.strip() and not any(b in p.lower() for b in ("downloads", "desktop", "documents")))
 
 MARKER = "[REDACTED]"
 _SECRET_NAME = r"key|secret|token|password|pass|private|credential|auth|salt"

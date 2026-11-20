@@ -25,7 +25,7 @@ export const MCP_FREE_PATH = "/mcp/free";
 export const FREE_TOOL_NAMES = [
   "verify_record",
   "dpp_readiness_check",
-  "scan_living_qr",
+  "scan_living_qr", "verify_attestation",
 ] as const;
 
 const FREE_DESCRIPTIONS: Partial<Record<(typeof FREE_TOOL_NAMES)[number], string>> = {

@@ -185,7 +185,8 @@
         "gs1-conformance-pulse.yml": "on",
         "trust-lab.yml": "on",
         "estate-drift.yml": "on",
-        "launch-gates.yml": "on"
+        "launch-gates.yml": "on",
+        "pr-hygiene.yml": "on"
       }
     },
     "revenue": {

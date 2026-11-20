@@ -54,7 +54,7 @@ case "$task" in
     # Run the real AgentZ edge/scheduler integration tests on the exact CircleCI SHA.
     # GitHub Actions hosted runners may be unavailable; this independent gate
     # remains credential-free and never deploys.
-    node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs agentz/cloudflare-mcp/memory-recovery.test.mjs agentz/cloudflare-mcp/binding-preflight.test.mjs
+    node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs agentz/cloudflare-mcp/memory-recovery.test.mjs agentz/cloudflare-mcp/scheduler-recovery.test.mjs agentz/cloudflare-mcp/binding-preflight.test.mjs
     ;;
   test-other)
     # Atomic checkout grants MUST pass against two separate PostgreSQL clients.
