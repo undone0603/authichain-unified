@@ -489,6 +489,26 @@ async def api_agentz_dispatch_protected(data: ProtectedDispatchInput):
         raise HTTPException(status_code=503, detail=str(exc))
 
 
+class Arm64EvidenceDispatchInput(BaseModel):
+    expected_sha: str
+
+
+@app.post("/agentz/github/dispatch-arm64-evidence", dependencies=[Depends(verify_token)], tags=["AgentZ Evidence"])
+async def api_agentz_dispatch_arm64_evidence(
+    data: Arm64EvidenceDispatchInput,
+    x_agentz_evidence_operator_token: str = Header(None),
+):
+    """Evidence-only workflow; authenticating the caller is not a CI gate."""
+    from agentz.core.evidence_build_dispatch import GateBlocked, dispatch_arm64_evidence
+    try:
+        return await run_in_threadpool(
+            dispatch_arm64_evidence, data.expected_sha,
+            operator_token=x_agentz_evidence_operator_token,
+        )
+    except GateBlocked as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+
+
 class CodeProposalInput(BaseModel):
     branch_ref: str
     path: str

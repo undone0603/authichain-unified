@@ -2,18 +2,43 @@ name: AgentZ protected host artifact
 
 on:
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: "Protected main source SHA (40 lowercase hex)"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: agentz-evidence-${{ github.sha }}
+  cancel-in-progress: false
+
 jobs:
   build:
-    if: github.ref == 'refs/heads/main' && github.ref_protected
+    if: github.ref == 'refs/heads/main' && github.ref_protected && github.sha == inputs.expected_sha
     permissions:
       contents: write # only for unpublished build-evidence release assets
+      actions: read # same-SHA workflow-run duplicate guard
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 35
     steps:
+      - name: Refuse duplicate ARM64 build for protected SHA
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$GITHUB_SHA" = "$EXPECTED_SHA"
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/agentz-protected-host-artifact.yml/runs?branch=main&head_sha=$GITHUB_SHA&event=workflow_dispatch&per_page=100")"
+          jq -e --arg sha "$GITHUB_SHA" --argjson own_run "$GITHUB_RUN_ID" '
+            (.total_count | type == "number" and . > 0 and . < 100) and
+            ([.workflow_runs[] | select(.head_sha == $sha and .event == "workflow_dispatch") | .id] | min) == $own_run
+          ' <<< "$runs" > /dev/null
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
