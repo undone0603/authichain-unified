@@ -17,7 +17,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 REPO = "undone0603/authichain-unified"
-BRANCH = re.compile(r"^refs/heads/feat/agentz-[a-z0-9][a-z0-9-]{0,60}$")
+BRANCH = re.compile(r"^refs/heads/(?:feat|fix|docs|ops|chore)/agentz-[a-z0-9][a-z0-9-]{0,60}$")
 PATH = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_./@+-]{0,239}$")
 DENIED_PREFIXES = (".github/workflows/", ".github/actions/", ".circleci/",
                    ".git/", ".husky/")
@@ -35,7 +35,7 @@ MAX_BODY = 20_000
 
 def _check_branch(branch_ref: str) -> str:
     if not isinstance(branch_ref, str) or not BRANCH.fullmatch(branch_ref):
-        raise ValueError("only feat/agentz-* branches are editable")
+        raise ValueError("only (feat|fix|docs|ops|chore)/agentz-* branches are editable")
     return branch_ref.removeprefix("refs/heads/")
 
 
