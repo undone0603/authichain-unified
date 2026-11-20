@@ -25,12 +25,14 @@ class Capability(str, Enum):
     SPEND = "spend"
     IDENTITY_PUBLISH = "identity_publish"
     GUARDRAIL_EDIT = "guardrail_edit"
-
+    ISSUE_TRIAGE = "issue_triage"
+    CI_RERUN = "ci_rerun"
+    DRAFT_READY = "draft_ready"  
 
 AUTONOMOUS = frozenset({
     Capability.RESEARCH, Capability.BROWSER_READ, Capability.MEMORY_WRITE,
     Capability.EXPERIMENT, Capability.TEST_ISOLATED, Capability.CODE_BRANCH,
-    Capability.PR_CREATE,
+    Capability.PR_CREATE, Capability.ISSUE_TRIAGE, Capability.CI_RERUN, Capability.DRAFT_READY,
 })
 GOVERNED = frozenset(set(Capability) - AUTONOMOUS)
 
