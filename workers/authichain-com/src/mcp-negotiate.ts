@@ -69,6 +69,21 @@ export const NEGOTIATE_TOOL = {
   },
 } as const;
 
+/**
+ * Live x402 v2 terms for the paid verify rail, computed by the caller from its
+ * env only when the paid seal-registry path is bound. Plain data, so
+ * negotiateQuote stays pure. Never pass terms for a rail that would refuse a
+ * paid call (registry_not_bound): agents would pay for nothing.
+ */
+export type X402RailTerms = {
+  priceUsd: number;
+  amountAtomic: string;
+  payTo: string;
+  asset: string;
+  facilitator: string | null;
+  resource: string;
+};
+
 export type NegotiationResult = {
   isError: boolean;
   body: Record<string, unknown>;
@@ -90,7 +105,10 @@ function refusal(error: string): NegotiationResult {
 }
 
 /** Pure function: no env bindings, secrets, fetch, data stores, or side effects. */
-export function negotiateQuote(input: unknown): NegotiationResult {
+export function negotiateQuote(
+  input: unknown,
+  rail: X402RailTerms | null = null
+): NegotiationResult {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     return refusal("arguments_must_be_object");
   }
@@ -121,6 +139,47 @@ export function negotiateQuote(input: unknown): NegotiationResult {
   }
 
   const free = FREE_SERVICES.includes(args.service);
+  const budget = args.max_budget_usd as number | undefined;
+  if (!free && rail) {
+    const withinBudget = budget === undefined ? null : budget >= rail.priceUsd;
+    return {
+      isError: false,
+      body: {
+        status: "separate_authorization_required",
+        service: args.service,
+        mode: "quote_only",
+        currency: "USD",
+        ...(budget !== undefined ? { max_budget_usd: budget } : {}),
+        price_usd: rail.priceUsd,
+        price_status: "live_rail_quote",
+        within_budget: withinBudget,
+        x402: {
+          x402Version: 2,
+          scheme: "exact",
+          network: "eip155:8453",
+          asset: rail.asset,
+          asset_symbol: "USDC",
+          maxAmountRequired: rail.amountAtomic,
+          payTo: rail.payTo,
+          facilitator: rail.facilitator,
+          resource: rail.resource,
+          catalog: "https://authichain.com/api/x402/catalog",
+          health: "https://authichain.com/api/x402/health",
+        },
+        next_action:
+          withinBudget === false
+            ? "do_not_pay_budget_below_price"
+            : "seek_explicit_payment_authorization_then_call_verify",
+        binding: false,
+        accepted: false,
+        payment_authorized: false,
+        settled: false,
+        side_effects: false,
+        requires_separate_approval: true,
+        note: "Quote only. The x402 block mirrors the live 402 challenge terms; the 402 response at payment time is authoritative. Nothing is agreed or authorized here.",
+      },
+    };
+  }
   return {
     isError: false,
     body: {
