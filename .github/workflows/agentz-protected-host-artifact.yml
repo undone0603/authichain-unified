@@ -63,9 +63,9 @@ jobs:
       # Actions artifact quota can be exhausted account-wide. Draft Release assets
       # are independently downloadable evidence, not a published production release.
       - name: Store verified ARM64 evidence in an unpublished draft release
-        working-directory: \${{ runner.temp }}/agentz-release
+        working-directory: ${{ runner.temp }}/agentz-release
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
