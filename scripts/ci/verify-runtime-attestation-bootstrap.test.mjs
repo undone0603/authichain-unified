@@ -16,9 +16,11 @@ test("attestation mode splits independent migration from DPP outbox and keeps bo
     "secrets.AUTHICHAIN_ATTESTATION_BOOTSTRAP_RELEASE_GO",
     "node scripts/ci/verify-runtime-attestation-bindings.mjs",
     "node scripts/ci/verify-runtime-attestation-live.mjs",
-    "name: production-cloudflare","name: production-supabase","Main quality gate",
+    "name: production-cloudflare","name: production-supabase",
+    "node scripts/ci/verify-dpp-main-quality.mjs",
     "bash scripts/with-build-lock.sh pnpm exec opennextjs-cloudflare build --config wrangler.app.jsonc"])
     assert.ok(w.includes(phrase),phrase);
+  assert.ok(!w.includes("Require successful exact-head GitHub Main quality gate"),"obsolete GitHub quality gate cannot be required");
   assert.ok(w.includes("inputs.release_mode == 'dpp-email'"),"DPP-only stage guard missing");
   assert.ok(w.includes("inputs.release_mode == 'attestation-bootstrap'"),"bootstrap stage guard missing");
   const sh=readFileSync("scripts/ci/verify-runtime-attestation-production.sh","utf8");

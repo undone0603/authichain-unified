@@ -1,8 +1,6 @@
 # DPP activation outbox — #2482 release and recovery
 
-**Status: DRAFT / NOT IN PRODUCTION.** This supersedes the stale, non-mergeable
-logging-only integration in #2478. Never enable paid activation from this
-source without verified migration and exact-head protected CI.
+**Status, 2026-11-20: SOURCE MERGED; RUNTIME RELEASE UNVERIFIED.** PR #2648 merged this outbox implementation into protected main. A read-only check of the QRON-v2 project (`nhdnkzhtadfkkluiulhs`) confirmed migration `20261119133000` applied, RLS and RPC-only privileges, with zero outbox records. The configured `SUPABASE_URL` and Hyperdrive origin of the live apex edge-router point to QRON-v2. This does NOT prove the deployed Worker source SHA or both actual runtime database connections. The currently deployed authichain-app and edge-router versions predate the protected merge; runtime attestation pins are not yet present on authichain-app. Do not claim activation readiness or email delivery until protected exact-SHA release, runtime attestation, Resend readiness and independent paid-buyer fulfillment evidence are obtained. This implementation supersedes the stale logging-only #2478 and nonmergeable #2481.
 
 ## Why
 

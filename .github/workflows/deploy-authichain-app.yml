@@ -101,28 +101,19 @@ jobs:
             . "$HOME/.nvm/nvm.sh"
             nvm use 22 >/dev/null
           fi
-          node --test scripts/ci/autonomous-release-gate.test.mjs scripts/ci/verify-dpp-release-env.test.mjs scripts/ci/protected-dpp-release.test.mjs scripts/ci/verify-runtime-attestation-bootstrap.test.mjs
+          node --test scripts/ci/autonomous-release-gate.test.mjs scripts/ci/verify-dpp-release-env.test.mjs scripts/ci/protected-dpp-release.test.mjs scripts/ci/verify-runtime-attestation-bootstrap.test.mjs scripts/ci/verify-dpp-main-quality.test.mjs
           node scripts/ci/autonomous-release-gate.mjs
           node scripts/ci/verify-dpp-release-env.mjs
-      - name: Require successful exact-head GitHub Main quality gate
+      # GitHub 'Main quality gate' is intentionally skipped on main pushes;
+      # enforce the actual required CircleCI aggregate plus the isolated PG test.
+      - name: Verify exact-main protected CircleCI aggregate and PostgreSQL acceptance
         if: ${{ inputs.rollback_version == '' }}
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ inputs.expected_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
           REPOSITORY: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          node --input-type=module <<'NODE'
-          const sha=process.env.TARGET_SHA;
-          const url="https://api.github.com/repos/"+process.env.REPOSITORY+"/commits/"+sha+"/check-runs?per_page=100";
-          const resp=await fetch(url,{headers:{Authorization:"Bearer "+process.env.GH_TOKEN,
-            Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"}});
-          if(!resp.ok){console.error("::error::Cannot read exact-main GitHub quality check");process.exit(1)}
-          const data=await resp.json();
-          const passed=(data.check_runs||[]).some(run=>run.name==="Main quality gate"&&run.head_sha===sha&&
-            run.status==="completed"&&run.conclusion==="success");
-          if(!passed){console.error("::error::Exact-main GitHub quality gate is missing or not successful");process.exit(1)}
-          NODE
+        run: node scripts/ci/verify-dpp-main-quality.mjs
       - name: Verify protected rollback environment exists
         if: ${{ inputs.rollback_version != '' }}
         env:
