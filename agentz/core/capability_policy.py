@@ -55,10 +55,17 @@ def decide(capability: Capability | str, *, isolated: bool = False,
         if action in (Capability.EXPERIMENT, Capability.TEST_ISOLATED) and not isolated:
             return Decision(False, "isolated executor required")
         return Decision(True, "autonomous reversible capability")
-    if action in (Capability.MERGE, Capability.DEPLOY):
+    if action is Capability.MERGE:
+        # The caller must verify exact-head CI, enforced branch protection, and
+        # security/review requirements before passing release_gate_passed=True.
+        # A protected merge does not approve a production version release.
+        if not release_gate_passed:
+            return Decision(False, "verified high-confidence merge checks required", True)
+        return Decision(True, "high-confidence protected merge permitted", True)
+    if action is Capability.DEPLOY:
         if not authorized or not release_gate_passed:
-            return Decision(False, "authorization and verified release gate required", True)
-        return Decision(True, "authorized with verified release gate", True)
+            return Decision(False, "owner authorization and verified version release gate required", True)
+        return Decision(True, "owner-authorized version release permitted", True)
     if not authorized:
         return Decision(False, "explicit scoped authorization required")
     return Decision(True, "explicitly authorized governed capability")
