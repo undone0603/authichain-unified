@@ -1,4 +1,10 @@
-import { JsonRpcProvider, Contract, Interface, ZeroAddress, getAddress } from "ethers";
+import {
+  JsonRpcProvider,
+  Contract,
+  Interface,
+  ZeroAddress,
+  getAddress,
+} from "ethers";
 import { writeFile, mkdir } from "node:fs/promises";
 import {
   COINBASE_SMART_WALLET,
@@ -12,7 +18,7 @@ import {
 const CONTRACT_ADDRESS = POLYGON_AUTHICHAIN_NFT;
 const DEPLOYER = NFT_DEPLOYER_EOA;
 const DEPLOY_BLOCK = 77535676;
-const DEFAULT_RPC = "https://polygon-rpc.com";
+const DEFAULT_RPC = "https://polygon.drpc.org";
 const CHUNK_SIZE = Number(process.env.AUTHICHAIN_LEDGER_CHUNK ?? 8_000);
 
 const ABI = [
@@ -25,7 +31,9 @@ const ABI = [
   "function totalSupply() view returns (uint256)",
 ];
 
-const provider = new JsonRpcProvider(process.env.POLYGON_RPC_URL ?? DEFAULT_RPC);
+const provider = new JsonRpcProvider(
+  process.env.POLYGON_RPC_URL ?? DEFAULT_RPC
+);
 const contract = new Contract(CONTRACT_ADDRESS, ABI, provider);
 const iface = new Interface(ABI);
 
@@ -45,8 +53,20 @@ type LedgerRow = {
   additionalDetails: string;
   active: boolean;
   tokenURI: string;
-  transfers: Array<{ tx: string; block: number; from: string; to: string; timestamp: string }>;
-  supplyChainHistory: Array<{ actor: string; eventType: string; location: string; timestamp: string; notes: string }>;
+  transfers: Array<{
+    tx: string;
+    block: number;
+    from: string;
+    to: string;
+    timestamp: string;
+  }>;
+  supplyChainHistory: Array<{
+    actor: string;
+    eventType: string;
+    location: string;
+    timestamp: string;
+    notes: string;
+  }>;
 };
 
 async function blockTimestamp(blockNumber: number): Promise<string> {
@@ -110,7 +130,10 @@ async function main() {
     const transfersForToken = transferByToken.get(tokenId) ?? [];
     const enrichedTransfers = [];
     for (const t of transfersForToken) {
-      enrichedTransfers.push({ ...t, timestamp: await blockTimestamp(t.block) });
+      enrichedTransfers.push({
+        ...t,
+        timestamp: await blockTimestamp(t.block),
+      });
     }
 
     rows.push({
@@ -119,13 +142,15 @@ async function main() {
       mintBlock: log.blockNumber,
       mintTimestamp,
       minter: getAddress(parsed.args.manufacturer),
-      recipient: enrichedTransfers.find((t) => t.from === ZeroAddress)?.to ?? "",
+      recipient: enrichedTransfers.find(t => t.from === ZeroAddress)?.to ?? "",
       currentOwner: getAddress(owner),
       productIdentifier: info.productIdentifier,
       manufacturer: info.manufacturer,
       model: info.model,
       serialNumber: info.serialNumber,
-      manufactureDate: new Date(Number(info.manufactureDate) * 1000).toISOString(),
+      manufactureDate: new Date(
+        Number(info.manufactureDate) * 1000
+      ).toISOString(),
       additionalDetails: info.additionalDetails,
       active: info.isActive,
       tokenURI: uri,
@@ -141,16 +166,20 @@ async function main() {
   }
 
   rows.sort((a, b) => Number(a.tokenId) - Number(b.tokenId));
-  const recipients = new Set(rows.map((r) => r.recipient.toLowerCase()).filter(Boolean));
+  const recipients = new Set(
+    rows.map(r => r.recipient.toLowerCase()).filter(Boolean)
+  );
   // Known AuthiChainNFT recipient cluster — not a single “ops” wallet.
   // Names: docs/strategy/WEB3_IDENTITY.md
-  const cluster = new Set([
-    NFT_DEPLOYER_EOA,
-    QRON_FACTORY_CALLER,
-    COINBASE_SMART_WALLET,
-    NFT_CLUSTER_KNOWN,
-    QRON_HOLDER_EOA,
-  ].map((a) => a.toLowerCase()));
+  const cluster = new Set(
+    [
+      NFT_DEPLOYER_EOA,
+      QRON_FACTORY_CALLER,
+      COINBASE_SMART_WALLET,
+      NFT_CLUSTER_KNOWN,
+      QRON_HOLDER_EOA,
+    ].map(a => a.toLowerCase())
+  );
 
   const summary = {
     contract: CONTRACT_ADDRESS,
@@ -159,22 +188,30 @@ async function main() {
     latestBlock: latest,
     mintedCount: rows.length,
     contractTotalSupply: (await contract.totalSupply()).toString(),
-    clusterRecipients: rows.filter((r) => cluster.has(r.recipient.toLowerCase())).map((r) => ({
-      tokenId: r.tokenId,
-      recipient: r.recipient,
-      mintTx: r.mintTx,
-    })),
-    recipientsNotInKnownCluster: [...recipients].filter((a) => !cluster.has(a)),
+    clusterRecipients: rows
+      .filter(r => cluster.has(r.recipient.toLowerCase()))
+      .map(r => ({
+        tokenId: r.tokenId,
+        recipient: r.recipient,
+        mintTx: r.mintTx,
+      })),
+    recipientsNotInKnownCluster: [...recipients].filter(a => !cluster.has(a)),
   };
 
   await mkdir("artifacts/onchain", { recursive: true });
-  await writeFile("artifacts/onchain/authichain-nft-ledger.json", JSON.stringify({ summary, rows }, null, 2) + "\n");
-  await writeFile("artifacts/onchain/authichain-nft-summary.json", JSON.stringify(summary, null, 2) + "\n");
+  await writeFile(
+    "artifacts/onchain/authichain-nft-ledger.json",
+    JSON.stringify({ summary, rows }, null, 2) + "\n"
+  );
+  await writeFile(
+    "artifacts/onchain/authichain-nft-summary.json",
+    JSON.stringify(summary, null, 2) + "\n"
+  );
 
   console.log(JSON.stringify(summary, null, 2));
 }
 
-main().catch((error) => {
+main().catch(error => {
   console.error(error);
   process.exitCode = 1;
 });

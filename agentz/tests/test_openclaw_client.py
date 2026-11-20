@@ -74,3 +74,12 @@ def test_cli_openclaw_notify_dry_run(monkeypatch):
     data = json.loads(out.strip())
     assert data["ok"] is True
     assert data["dry_run"] is True
+
+
+def test_requests_identify_agentz_without_changing_auth():
+    client = OpenClawClient(OpenClawConfig(api_key="test-token"))
+    headers = client._headers()
+    assert headers["User-Agent"].startswith("AuthiChain-AgentZ-OpenClaw/")
+    assert headers["Authorization"] == "Bearer test-token"
+    assert "Authorization" not in client._headers(auth=False)
+    assert client._headers(auth=False)["User-Agent"] == headers["User-Agent"]

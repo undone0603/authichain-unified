@@ -1,0 +1,65 @@
+name: PR Queue Hygiene
+
+# Daily queue cleanup: close Dependabot, Renovate and github-actions PRs that
+# GitHub reports as CONFLICTING and that nobody has updated for 7 days, and
+# delete their branches (the bot re-opens from current main when the update
+# is still wanted). Human and agent PRs are never touched.
+#
+# Superseded PR CI runs are already cancelled by the concurrency groups in
+# ci.yml, main.yml, lint.yml and typecheck-ratchet.yml, so this workflow does
+# not add a pull_request trigger.
+#
+# Manual runs default to a dry run that only prints what would be closed.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the PRs that would be closed without closing them"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: pr-queue-hygiene
+  cancel-in-progress: false
+
+jobs:
+  close-conflicting-bot-prs:
+    name: Close conflicting bot PRs older than 7 days
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # No checkout: gh needs the repository named explicitly.
+      GH_REPO: ${{ github.repository }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+    steps:
+      - name: Close conflicting bot PRs
+        run: |
+          set -euo pipefail
+          cutoff=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          nums=$(gh pr list --state open --limit 200 \
+              --json number,author,mergeable,updatedAt \
+            | jq -r --arg cutoff "$cutoff" '.[]
+                | select(.mergeable == "CONFLICTING")
+                | select(.author.login | test("^app/(dependabot|renovate|github-actions)$"))
+                | select(.updatedAt < $cutoff)
+                | .number')
+          count=0
+          for n in $nums; do
+            count=$((count + 1))
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "dry run: would close #$n"
+            else
+              gh pr close "$n" --delete-branch \
+                --comment "Auto-closed: conflicting bot PR not updated for 7 days. The bot will re-open it from current main if the update is still needed."
+            fi
+          done
+          echo "Matched $count conflicting bot PR(s) older than $cutoff (dry_run=$DRY_RUN)."

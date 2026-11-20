@@ -22,8 +22,8 @@ jobs:
     name: Verify exact-main commit and CircleCI gate
     if: github.ref == 'refs/heads/main'
     # Self-hosted: GitHub-hosted ubuntu is billing-locked on this account.
-    # Free path is the local WSL runner (wsl-zac-arm64 / authichain-wsl).
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    # Free path is the dedicated local WSL publish runner (wsl-deploy-arm64 / authichain-deploy).
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 5
     env:
       NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"
@@ -122,7 +122,7 @@ jobs:
     name: Publish exact automatically policy-approved Worker
     needs: verify
     if: github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 30
     environment:
       name: production-cloudflare

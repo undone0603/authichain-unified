@@ -169,8 +169,17 @@ export async function runHostedQuickstart({
   }
 }
 
+// --endpoint <url> wins over AUTHICHAIN_MCP_ENDPOINT; both fall back to the
+// default above. Example: --endpoint https://authichain.com/mcp/free
+export function endpointFromArgs(argv, env = {}) {
+  const i = argv.indexOf("--endpoint");
+  if (i !== -1 && argv[i + 1]) return argv[i + 1];
+  return env.AUTHICHAIN_MCP_ENDPOINT || undefined;
+}
+
 async function main() {
-  const result = await runHostedQuickstart();
+  const endpoint = endpointFromArgs(process.argv.slice(2), process.env);
+  const result = await runHostedQuickstart(endpoint ? { endpoint } : {});
   console.log(JSON.stringify(result, null, 2));
   if (!result.connected || !result.toolCallOk) {
     process.exitCode = 1;

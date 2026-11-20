@@ -17,7 +17,8 @@ concurrency:
 
 jobs:
   evidence:
-    runs-on: ubuntu-latest
+    # ubuntu-latest is billing-locked; same publish runner as deploy-authichain-app.yml.
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 45
     env:
       SOURCE_SHA: ${{ inputs.source_sha }}
@@ -49,6 +50,11 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build OpenNext without deploying
         id: build
+        env:
+          # Matches Workers Builds and deploy-authichain-app.yml. next.config.js then swaps
+          # playwright-core for server/stubs/playwright-core.cjs; without it OpenNext's
+          # esbuild bundles the real package and fails on chromium-bidi.
+          WORKERS_CI: "1"
         shell: bash
         run: |
           set -euo pipefail

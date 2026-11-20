@@ -20,7 +20,7 @@ concurrency:
 jobs:
   secret-scan:
     name: Secret scan
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -34,7 +34,7 @@ jobs:
 
   deploy:
     name: Deploy to Cloudflare
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     needs: secret-scan
     timeout-minutes: 20
     steps:

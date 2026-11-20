@@ -81,6 +81,13 @@ class ScanInput(BaseModel):
 async def health():
     return {"status": "sovereign", "network": "Polygon"}
 
+
+@app.get("/identity")
+async def identity():
+    """AgentZ's own Agent ID, DID documents and key-possession status. No secrets."""
+    from agentz.core.identity import identity_status
+    return identity_status()
+
 @app.get("/scout/{city}")
 async def api_scout(city: str, token: bool = Depends(verify_token)):
     from agentz.core.scout import scout_businesses
@@ -491,7 +498,7 @@ class CodeProposalInput(BaseModel):
 
 @app.post("/agentz/github/code-proposal", dependencies=[Depends(verify_token)], tags=["AgentZ Development"])
 async def api_agentz_code_proposal(data: CodeProposalInput):
-    """Propose a change to a restricted feature branch; never touch main."""
+    """Propose a change on a feat/agentz-* branch (created from main if missing); never touch main."""
     from agentz.core.code_proposals import propose_code_change
     try:
         return await run_in_threadpool(
@@ -503,6 +510,26 @@ async def api_agentz_code_proposal(data: CodeProposalInput):
     except (RuntimeError, OSError) as exc:
         raise HTTPException(status_code=503, detail=str(exc))
 
+
+
+class DraftPrInput(BaseModel):
+    branch_ref: str
+    title: str
+    body: str = ""
+
+
+@app.post("/agentz/github/draft-pr", dependencies=[Depends(verify_token)], tags=["AgentZ Development"])
+async def api_agentz_draft_pr(data: DraftPrInput):
+    """Open a draft PR from a feat/agentz-* branch into main; never merges."""
+    from agentz.core.code_proposals import open_draft_pr
+    try:
+        return await run_in_threadpool(open_draft_pr, data.branch_ref, data.title, data.body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
 if __name__ == "__main__":
     import uvicorn

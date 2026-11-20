@@ -1,0 +1,100 @@
+import { describe, expect, it, vi } from "vitest";
+import type Stripe from "stripe";
+import {
+  gapReportOrder,
+  gapReportPaidAlert,
+  notifyGapReportPaid,
+} from "./gap-report-paid";
+import { planById } from "../plans";
+
+const GAP_PRICE = planById("battery_gap_report")!.stripe_price_id!;
+const EXTRA_PRICE = planById("battery_gap_report_extra")!.stripe_price_id!;
+const DPP_PRICE = planById("dpp_readiness")!.stripe_price_id!;
+
+function session(over: Partial<Stripe.Checkout.Session> = {}): Stripe.Checkout.Session {
+  return {
+    id: "cs_live_test123",
+    object: "checkout.session",
+    mode: "payment",
+    payment_status: "paid",
+    amount_total: 95000,
+    livemode: true,
+    customer_details: { email: "buyer@example.com" },
+    metadata: { plan: "battery_gap_report", stripe_price_id: GAP_PRICE },
+    ...over,
+  } as unknown as Stripe.Checkout.Session;
+}
+
+describe("gapReportOrder", () => {
+  it("matches a paid gap report by exact price ID", () => {
+    const o = gapReportOrder(session(), GAP_PRICE)!;
+    expect(o.planId).toBe("battery_gap_report");
+    expect(o.amountUsd).toBe(950);
+    expect(o.email).toBe("buyer@example.com");
+  });
+
+  it("matches the extra-model plan", () => {
+    const s = session({ amount_total: 35000, metadata: { plan: "battery_gap_report_extra" } });
+    expect(gapReportOrder(s, EXTRA_PRICE)!.planId).toBe("battery_gap_report_extra");
+  });
+
+  it("ignores unpaid, subscription and demo sessions", () => {
+    expect(gapReportOrder(session({ payment_status: "unpaid" }), GAP_PRICE)).toBeNull();
+    expect(gapReportOrder(session({ mode: "subscription" }), GAP_PRICE)).toBeNull();
+    expect(
+      gapReportOrder(session({ metadata: { plan: "battery_gap_report", is_demo: "true" } }), GAP_PRICE)
+    ).toBeNull();
+  });
+
+  it("never lets metadata override a different plan's price", () => {
+    // A DPP price with gap-report metadata is a DPP sale, not a gap report.
+    expect(gapReportOrder(session(), DPP_PRICE)).toBeNull();
+  });
+
+  it("falls back to metadata.plan only when the price is unknown", () => {
+    expect(gapReportOrder(session(), null)!.planId).toBe("battery_gap_report");
+    expect(gapReportOrder(session({ metadata: { plan: "starter" } }), null)).toBeNull();
+  });
+
+  it("never matches by amount alone", () => {
+    expect(gapReportOrder(session({ metadata: {} }), null)).toBeNull();
+  });
+});
+
+describe("gapReportPaidAlert", () => {
+  it("names the buyer, the session and the next step", () => {
+    const a = gapReportPaidAlert(gapReportOrder(session(), GAP_PRICE)!);
+    expect(a.subject).toContain("buyer@example.com");
+    expect(a.text).toContain("cs_live_test123");
+    expect(a.text).toContain("$950.00");
+    expect(a.text).toContain("intake questionnaire");
+    expect(a.click).toBe("https://dashboard.stripe.com/checkout/sessions/cs_live_test123");
+  });
+
+  it("flags test-mode sessions", () => {
+    const a = gapReportPaidAlert(gapReportOrder(session({ livemode: false }), GAP_PRICE)!);
+    expect(a.title).toContain("TEST MODE");
+    expect(a.click).toContain("/test/");
+  });
+});
+
+describe("notifyGapReportPaid", () => {
+  it("publishes once for a paid order", async () => {
+    const publish = vi.fn().mockResolvedValue(undefined);
+    const order = await notifyGapReportPaid(session(), GAP_PRICE, publish);
+    expect(order?.planId).toBe("battery_gap_report");
+    expect(publish).toHaveBeenCalledTimes(1);
+  });
+
+  it("publishes nothing for other sales", async () => {
+    const publish = vi.fn().mockResolvedValue(undefined);
+    expect(await notifyGapReportPaid(session(), DPP_PRICE, publish)).toBeNull();
+    expect(publish).not.toHaveBeenCalled();
+  });
+
+  it("never throws when the alert fails", async () => {
+    const publish = vi.fn().mockRejectedValue(new Error("ntfy down"));
+    const order = await notifyGapReportPaid(session(), GAP_PRICE, publish);
+    expect(order?.planId).toBe("battery_gap_report");
+  });
+});

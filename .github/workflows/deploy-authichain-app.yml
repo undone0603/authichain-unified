@@ -42,7 +42,7 @@ concurrency:
 jobs:
   preflight:
     name: Validate exact-main CI and protected release environments
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 8
     steps:
       - name: Validate dispatch mode and exact SHA
@@ -140,7 +140,7 @@ jobs:
     name: Read-only production DPP migration attestation
     needs: preflight
     if: ${{ inputs.rollback_version == '' }}
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 8
     environment:
       name: production-supabase
@@ -180,8 +180,8 @@ jobs:
     if: ${{ always() && needs.preflight.result == 'success' && ((inputs.rollback_version == '' && needs.db_preflight.result == 'success') || (inputs.rollback_version != '' && needs.db_preflight.result == 'skipped')) }}
     environment:
       name: production-cloudflare
-    # Publish runner only: authichain-wsl, same as deploy-authichain-com.yml.
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    # Publish runner only: authichain-deploy (wsl-deploy-arm64), never CI or PR jobs.
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 45
     env:
       NODE_OPTIONS: --max-old-space-size=4096

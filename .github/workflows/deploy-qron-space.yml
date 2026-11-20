@@ -13,7 +13,7 @@ jobs:
   deploy:
     # Defense in depth against any future event trigger being added.
     if: github.event_name == 'workflow_dispatch'
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 30
     env:
       NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"

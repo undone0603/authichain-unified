@@ -1,0 +1,125 @@
+name: AgentZ host read-only runtime preflight
+
+# Manual only, protected-main only. No checkout, secrets, keys, DNS, deploy,
+# process control, outbound networking or writes to the AgentZ host.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    timeout-minutes: 5
+    steps:
+      - name: Read host identity, agentz process and loopback health
+        shell: bash
+        env:
+          EXPECTED_RUNNER: authichain-ops
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import platform
+          import socket
+          import subprocess
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          def sha256_file(path):
+              try:
+                  h = hashlib.sha256()
+                  with open(path, "rb") as file:
+                      for chunk in iter(lambda: file.read(1024 * 1024), b""):
+                          h.update(chunk)
+                  return h.hexdigest()
+              except (OSError, PermissionError):
+                  return None
+
+          report = {
+              "schema": "authichain.agentz.local-runtime-preflight/1",
+              "probe_scope": "read-only-loopback-no-secret-access",
+              "github_run_id": os.getenv("GITHUB_RUN_ID"),
+              "workflow_sha_not_runtime_sha": os.getenv("GITHUB_SHA"),
+              "runner_name": os.getenv("RUNNER_NAME"),
+              "host": socket.gethostname(),
+              "system": platform.system(),
+              "architecture": platform.machine(),
+              "process_count": 0,
+              "running_source_revision": None,
+              "source_revision_origin": None,
+              "api_source_sha256": None,
+              "interpreter_sha256_not_app_artifact": None,
+              "health_http_status": None,
+              "health_response_sha256": None,
+              "health_json_valid": False,
+              "health_bytes": None,
+              "result": "HOLD",
+          }
+          matches = []
+          for entry in Path("/proc").iterdir():
+              if not entry.name.isdigit():
+                  continue
+              try:
+                  command = (entry / "cmdline").read_bytes().replace(b"\x00", b" ")
+              except (OSError, PermissionError):
+                  continue
+              if b"agentz.api.main:app" in command and b"uvicorn" in command:
+                  matches.append(entry)
+          report["process_count"] = len(matches)
+          if len(matches) == 1:
+              proc = matches[0]
+              report["api_pid"] = int(proc.name)
+              report["interpreter_sha256_not_app_artifact"] = sha256_file(proc / "exe")
+              try:
+                  cwd = (proc / "cwd").resolve(strict=True)
+                  source = cwd / "agentz" / "api" / "main.py"
+                  if source.is_file():
+                      report["api_source_sha256"] = sha256_file(source)
+                      sha = subprocess.run(
+                          ["git", "-C", str(cwd), "rev-parse", "HEAD"],
+                          capture_output=True, text=True, timeout=3,
+                          check=False,
+                      )
+                      if sha.returncode == 0 and len(sha.stdout.strip()) == 40:
+                          report["running_source_revision"] = sha.stdout.strip()
+                          report["source_revision_origin"] = "process-cwd-git-head-not-loaded-code-proof"
+              except (OSError, subprocess.TimeoutExpired):
+                  pass
+          try:
+              request = urllib.request.Request(
+                  "http://127.0.0.1:8000/health",
+                  headers={"Accept": "application/json"},
+              )
+              with urllib.request.urlopen(request, timeout=5) as response:
+                  report["health_http_status"] = response.status
+                  raw = response.read(65537)
+              if len(raw) <= 65536:
+                  report["health_bytes"] = len(raw)
+                  report["health_response_sha256"] = hashlib.sha256(raw).hexdigest()
+                  try:
+                      report["health_json_valid"] = isinstance(json.loads(raw), (dict, list))
+                  except (ValueError, UnicodeError):
+                      pass
+              else:
+                  report["health_oversize"] = True
+          except urllib.error.HTTPError as error:
+              report["health_http_status"] = error.code
+          except (urllib.error.URLError, OSError):
+              report["health_unreachable"] = True
+          if (
+              len(matches) == 1 and
+              report["health_http_status"] == 200 and
+              report["health_json_valid"] and
+              report["health_response_sha256"]
+          ):
+              report["result"] = "LOCAL_ORIGIN_HEALTH_PROVEN"
+          print("AGENTZ_RUNTIME_PREFLIGHT=" + json.dumps(report, sort_keys=True))
+          if report["result"] != "LOCAL_ORIGIN_HEALTH_PROVEN":
+              raise SystemExit(1)
+          PY

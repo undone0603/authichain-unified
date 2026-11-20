@@ -7,6 +7,7 @@ Connect AI agents and developer tools to AuthiChain's hosted Model Context Proto
 The AuthiChain MCP server exposes product provenance, Digital Product Passport (DPP) readiness, Living QR inspection, and cryptographic verification tools over Streamable HTTP.
 
 It distinguishes between two verification levels:
+
 - **Signed verification**: Cryptographic validation of signed attestations and records (`verify_attestation`, `verify_record`, and paid `verify` evidence).
 - **Registry lookup**: Querying registered provenance timelines, QRON metadata, and DPP readiness (`query_provenance`, `dpp_readiness_check`, `scan_living_qr`).
 
@@ -106,7 +107,7 @@ The hosted server (`workers/authichain-com/src/mcp-routes.ts`) exposes 8 tools:
 
 ## Free Verification
 
-You can call free tools such as `get_pricing` and `verify_record` directly via JSON-RPC over HTTP POST (see also `mcp/examples/hosted-quickstart.mjs`):
+You can call free tools such as `get_pricing` and `verify_record` directly via JSON-RPC over HTTP POST (see also `mcp/examples/hosted-quickstart.mjs`, which targets `https://authichain.com/mcp` unless given `--endpoint <url>` or `AUTHICHAIN_MCP_ENDPOINT`, e.g. `node mcp/examples/hosted-quickstart.mjs --endpoint https://authichain.com/mcp/free`):
 
 ```bash
 curl -sS -X POST https://authichain.com/mcp \

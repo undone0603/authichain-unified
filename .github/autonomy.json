@@ -60,6 +60,7 @@
       "marketing-autonomous.yml",
       "pipeline-tick.yml",
       "deploy-authichain-edge-router.yml",
+      "deploy-agentz-scheduler-protected.yml",
       "deploy-qron-space.yml",
       "merge-autopilot.yml",
       "agentz-ci.yml",
@@ -83,11 +84,9 @@
       "npm-publish-verify.yml",
       "cloudflare-estate-audit.yml",
       "honest-launch-gate.yml",
-      "production-smoke-gate.yml",
       "schema-drift.yml",
       "supabase-baseline.yml",
       "verify-integrations.yml",
-      "seo-regression.yml",
       "social-credentials-check.yml",
       "genesis-cron.yml",
       "gs1-conformance-pulse.yml",
@@ -102,7 +101,6 @@
       "gov-notify.yml",
       "owner-digest.yml",
       "founder-business-pulse.yml",
-      "gen-seo-pages.yml",
       "indexnow-submit.yml",
       "reddit-monitor.yml",
       "buyer-signals.yml",
@@ -111,7 +109,7 @@
   },
   "merge_autopilot": {
     "$comment": "Merges trusted PRs into main once every check is green and GitHub reports clean; merges main into branches that fall behind so CI re-runs first (never rebases). Owner decision 2026-10-02, narrowed 2026-10-13: PRs touching RESTRICTED_PATHS or changing RESTRICTED_SYMBOLS (payments, fulfilment, sending, secrets, migrations, deploys, autonomy controls; lists in the script) are skipped and wait for the owner. Set enabled=false, or add the label 'hold' to one PR, to stop the merge. A held branch that falls behind main is still updated. Script: scripts/autonomy/merge-autopilot.mjs. SAFETY: CODEOWNERS requires @undone0603 on billing/Stripe/auth/schema/contracts/workflows. Held workflows must stay off. Never bypass required status checks.",
-    "enabled": true,
+    "enabled": false,
     "trusted_authors": ["undone0603", "dependabot[bot]"],
     "hold_labels": [
       "hold",
@@ -144,6 +142,7 @@
         "verify-production-cloudflare-credential.yml": "on",
         "deploy-authichain-com.yml": "on",
         "deploy-authichain-edge-router.yml": "on",
+        "deploy-agentz-scheduler-protected.yml": "on",
         "deploy-qron-space.yml": "on",
         "deploy-cloudflare.yml": "on",
         "deploy-edge-worker.yml": "on",
@@ -186,7 +185,8 @@
         "gs1-conformance-pulse.yml": "on",
         "trust-lab.yml": "on",
         "estate-drift.yml": "on",
-        "launch-gates.yml": "on"
+        "launch-gates.yml": "on",
+        "pr-hygiene.yml": "on"
       }
     },
     "revenue": {
@@ -194,7 +194,7 @@
       "managed": true,
       "workflows": {
         "revenue-cycle.yml": "on",
-        "agentz-orchestration.yml": "on",
+        "agentz-orchestration.yml": "off",
         "email-proposals.yml": "on",
         "gov-engine.yml": "on",
         "gov-ingest.yml": "on",
@@ -240,6 +240,7 @@
       "purpose": "One-shot operator tools (secret binding, backfills, manual sends). Run by hand only; state is not managed.",
       "managed": false,
       "workflows": {
+        "agentz-host-runtime-preflight.yml": "manual",
         "self-hosted-ops-smoke.yml": "manual",
         "agentz-manual-post.yml": "manual",
         "agentz-tunnel-bringup.yml": "manual",

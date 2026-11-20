@@ -28,13 +28,13 @@ test("Publish uses versions upload + API promote, not wrangler deploy", () => {
   assert.doesNotMatch(yml, /secret put AUTHICHAIN_ATTESTATION_PRIVATE_KEY/);
 });
 
-test("both jobs run on the self-hosted WSL runner with IPv4 NODE_OPTIONS", () => {
+test("both jobs run on the dedicated self-hosted publish runner with IPv4 NODE_OPTIONS", () => {
   assert.match(
     yml,
-    /runs-on: \[self-hosted, Linux, ARM64, authichain-wsl\]/
+    /runs-on: \[self-hosted, Linux, ARM64, authichain-deploy\]/
   );
   assert.equal(
-    (yml.match(/runs-on: \[self-hosted, Linux, ARM64, authichain-wsl\]/g) || []).length,
+    (yml.match(/runs-on: \[self-hosted, Linux, ARM64, authichain-deploy\]/g) || []).length,
     2
   );
   assert.doesNotMatch(yml, /runs-on: ubuntu-24\.04/);
