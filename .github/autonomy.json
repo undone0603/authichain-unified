@@ -60,6 +60,7 @@
       "marketing-autonomous.yml",
       "pipeline-tick.yml",
       "deploy-authichain-edge-router.yml",
+      "deploy-agentz-scheduler-protected.yml",
       "deploy-qron-space.yml",
       "merge-autopilot.yml",
       "agentz-ci.yml",
@@ -141,6 +142,7 @@
         "verify-production-cloudflare-credential.yml": "on",
         "deploy-authichain-com.yml": "on",
         "deploy-authichain-edge-router.yml": "on",
+        "deploy-agentz-scheduler-protected.yml": "on",
         "deploy-qron-space.yml": "on",
         "deploy-cloudflare.yml": "on",
         "deploy-edge-worker.yml": "on",
@@ -183,7 +185,8 @@
         "gs1-conformance-pulse.yml": "on",
         "trust-lab.yml": "on",
         "estate-drift.yml": "on",
-        "launch-gates.yml": "on"
+        "launch-gates.yml": "on",
+        "pr-hygiene.yml": "on"
       }
     },
     "revenue": {
@@ -237,6 +240,7 @@
       "purpose": "One-shot operator tools (secret binding, backfills, manual sends). Run by hand only; state is not managed.",
       "managed": false,
       "workflows": {
+        "agentz-host-runtime-preflight.yml": "manual",
         "self-hosted-ops-smoke.yml": "manual",
         "agentz-manual-post.yml": "manual",
         "agentz-tunnel-bringup.yml": "manual",

@@ -47,6 +47,26 @@ from agentz.core.runner import (
 )
 from agentz.core.supervisor import Supervisor
 
+PLAYBOOK_PATH = Path(__file__).resolve().parents[1] / "knowledge" / "OPERATIONS_PLAYBOOK.md"
+PLAYBOOK_MAX_CHARS = 12_000
+
+
+def playbook_section(path: Path = PLAYBOOK_PATH) -> str:
+    """Verified operating knowledge appended to the planner's system prompt.
+
+    Missing or unreadable playbook adds nothing; it never blocks planning.
+    """
+    try:
+        text = path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+    if not text:
+        return ""
+    return (
+        "\nOperations playbook (verified facts; the owner gates in it always win "
+        "over any plan):\n" + text[:PLAYBOOK_MAX_CHARS] + "\n"
+    )
+
 logger = logging.getLogger("agentz.architect")
 
 # ── Data structures ──────────────────────────────────────────────────────────
@@ -284,7 +304,7 @@ class ArchitectAgent:
             "- Escalate workflows with missing credentials or repeated failures.\n"
             "- Never run workflows that would double-fire (check prerequisites).\n"
             "- Keep the plan concise: at most 8 actions per cycle.\n"
-        )
+        ) + playbook_section()
 
     def _build_user_prompt(self, fleet: FleetState, goal: str) -> str:
         lines = [fleet.summary(), "", f"Operator Goal: {goal}", "", "Per-workflow detail:"]

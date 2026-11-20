@@ -182,13 +182,18 @@ jobs:
       - name: Root Vitest suite
         env:
           CATALOG_GRANT_PG_REQUIRED: "1"
+          # Both self-hosted runners share one 8 GB WSL VM. Vitest's default
+          # (cpus - 1 jsdom workers) starved it on 2026-11-19 and the runner
+          # lost its GitHub session mid-suite. Hosted runners keep the default.
+          VITEST_WORKER_ARGS: ${{ runner.environment == 'self-hosted' && '--maxWorkers=2' || '' }}
         run: |
           set -euo pipefail
           test -n "${PG_BINDIR:-}"
           test -x "$PG_BINDIR/initdb"
           # The mandatory five-case PostgreSQL suite already passed above.
           # Do not start another disposable cluster in parallel root Vitest.
-          pnpm exec vitest run --exclude src/lib/catalog-session-grant.concurrency.pg.test.ts
+          # shellcheck disable=SC2086 # empty on hosted runners, one flag otherwise
+          pnpm exec vitest run $VITEST_WORKER_ARGS --exclude src/lib/catalog-session-grant.concurrency.pg.test.ts
 
       # node:test files that no workspace `test` script runs. Named, not
       # globbed, past scripts/ci: scripts/lib and worker-app also hold Vitest
@@ -215,7 +220,7 @@ jobs:
       # node:test suites outside scripts/autonomy and scripts/ci that no other
       # job ran: the QFS envelope, the B2B send policy and the cron dispatcher.
       - name: Check other node:test suites
-        run: pnpm exec tsx --test protocol/qfs/envelope.test.mjs scripts/lib/b2b-send-policy.test.ts worker-app/cron-dispatch.test.ts workers/authichain-verify-worker/src/agent-d1-concurrency.node-test.mjs
+        run: pnpm exec tsx --test protocol/qfs/envelope.test.mjs scripts/agent-identity/sign-evidence.test.mjs scripts/lib/b2b-send-policy.test.ts worker-app/cron-dispatch.test.ts workers/authichain-verify-worker/src/agent-d1-concurrency.node-test.mjs scripts/ops/merge-train.test.mjs
 
       # Hardhat contract tests (test/AuthiChainLedger.test.ts). Hardhat fetches
       # solc 0.8.19 on first run; no other job ran these.

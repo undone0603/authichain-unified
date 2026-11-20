@@ -4,7 +4,7 @@ import {enqueue,recent,runQueue} from "./memory.mjs";
  * Configure AGENTZ_MCP_TOKEN as a Worker secret before deployment.
  */
 const TOOLS = [
-  {name:"agentz_enqueue_probe",description:"Queue a bounded public GitHub repository inspection",inputSchema:{type:"object",properties:{target:{type:"string"},priority:{type:"integer"}},required:["target"],additionalProperties:false}},
+  {name:"agentz_enqueue_probe",description:"Queue a bounded public GitHub repository inspection",inputSchema:{type:"object",properties:{target:{type:"string"},priority:{type:"integer"},idempotency_key:{type:"string",minLength:8,maxLength:128}},required:["target"],additionalProperties:false}},
   {name:"agentz_memory_recent",description:"Read recent task outcomes and learned observations",inputSchema:{type:"object",properties:{limit:{type:"integer"}},additionalProperties:false}},
   {name:"agentz_readiness",description:"Check the read-only AgentZ Cloudflare gateway",inputSchema:{type:"object",properties:{},additionalProperties:false}},
 ];
@@ -28,7 +28,7 @@ export default {
    const execution=await runQueue(env,3);
    return json({service:"agentz-mcp-edge",...execution});
   }
-  if(request.method==="GET"&&new URL(request.url).pathname==="/health")return json({service:"agentz-mcp-edge",status:"up",authenticated_tools:true});
+  if(request.method==="GET"&&new URL(request.url).pathname==="/health")return json({service:"agentz-mcp-edge",status:env.AGENTZ_DB?"up":"degraded",authenticated_tools:true,durable_memory:!!env.AGENTZ_DB},env.AGENTZ_DB?200:503);
   if(!env.AGENTZ_MCP_TOKEN)return json({error:"not configured"},503);
   const supplied=(request.headers.get("authorization")||"").replace(/^Bearer /i,"");
   if(!supplied||!(await equalSecret(supplied,env.AGENTZ_MCP_TOKEN)))return json({error:"unauthorized"},401);
@@ -46,7 +46,7 @@ export default {
    try {const value=name==="agentz_enqueue_probe"?await enqueue(env,call.params?.arguments):await recent(env,call.params?.arguments);return result({content:[{type:"text",text:JSON.stringify(value)}]})}
    catch(e){return error(-32000,String(e.message).slice(0,200))}
   }
-  if(name==="agentz_readiness")return result({content:[{type:"text",text:JSON.stringify({cloudflare_edge:true,browser_inspect:false,code_write:false,production_dispatch:false})}]});
+  if(name==="agentz_readiness")return result({content:[{type:"text",text:JSON.stringify({cloudflare_edge:true,durable_memory:!!env.AGENTZ_DB,browser_inspect:false,code_write:false,production_dispatch:false})}]});
   return error(-32602,"unknown tool");
  }
 };

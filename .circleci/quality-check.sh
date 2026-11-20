@@ -33,6 +33,7 @@ case "$task" in
     node scripts/check-workflow-cannot-fail.mjs
     node scripts/ci/check-deploy-invariants.mjs
     node scripts/ci/check-node-test-runners.mjs
+    node --test scripts/ci/check-node-test-runners.test.mjs
     # Mirror GitHub Actions Windows path safety in the existing offline gate.
     bash scripts/check-windows-paths.sh
     # Mirrors GitHub's gitleaks PR/push tree scan; SHA-pinned binary.
@@ -53,7 +54,7 @@ case "$task" in
     # Run the real AgentZ edge/scheduler integration tests on the exact CircleCI SHA.
     # GitHub Actions hosted runners may be unavailable; this independent gate
     # remains credential-free and never deploys.
-    node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs
+    node --test agentz/cloudflare-mcp/worker-runtime.test.mjs agentz/cloudflare-mcp/automation-integration.test.mjs agentz/cloudflare-mcp/memory-recovery.test.mjs agentz/cloudflare-mcp/scheduler-recovery.test.mjs agentz/cloudflare-mcp/binding-preflight.test.mjs
     ;;
   test-other)
     # Atomic checkout grants MUST pass against two separate PostgreSQL clients.
@@ -81,7 +82,9 @@ case "$task" in
     sha256sum supabase/migrations/20261115180000_atomic_catalog_session_grants.sql
     # This MUST run five tests; absent binaries, skips, or failing assertions fail CI.
     pnpm exec vitest run src/lib/catalog-session-grant.concurrency.pg.test.ts --reporter=verbose
-
+    # The Node executor has an ephemeral, synthetic PostgreSQL sidecar.
+    # Exercise actual committed PL/pgSQL and concurrency before wider tests.
+    node scripts/ci/dpp-isolated-postgres-replay.mjs
     pnpm --filter agent-browser exec playwright install --with-deps chromium
     pnpm test --filter='!./workers/*' --continue=dependencies-successful
     # The root Vitest suites are excluded from turbo test --filter='!.'.

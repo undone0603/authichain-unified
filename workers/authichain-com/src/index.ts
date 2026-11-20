@@ -88,6 +88,7 @@ import {
   renderSampleAuditPage,
 } from "./battery-sample-audit-page";
 import { tryHandleBatteryPassportSample } from "./battery-passport-sample-page";
+import { isNonLithiumPath, renderNonLithiumPage } from "./battery-non-lithium-page";
 import { tryHandleCoffee } from "./coffee-page";
 import {
   dppCheckCompleteEvent,
@@ -3584,6 +3585,11 @@ async function handleAuthichainCom(
     if (batterySample) return batterySample;
     if (isSampleAuditPath(p)) {
       return new Response(renderSampleAuditPage(), {
+        headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
+    if (isNonLithiumPath(p)) {
+      return new Response(renderNonLithiumPage(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
     }
