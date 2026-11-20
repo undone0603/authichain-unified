@@ -9,6 +9,8 @@ permissions:
 jobs:
   build:
     if: github.ref == 'refs/heads/main' && github.ref_protected
+    permissions:
+      contents: write # only for unpublished build-evidence release assets
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 35
     steps:
@@ -58,10 +60,40 @@ jobs:
             printf 'Artifact SHA-256: `%s`\n' "$digest"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload release artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: agentz-linux-arm64-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/agentz-release/
-          if-no-files-found: error
-          compression-level: 0
+      # Actions artifact quota can be exhausted account-wide. Draft Release assets
+      # are independently downloadable evidence, not a published production release.
+      - name: Store verified ARM64 evidence in an unpublished draft release
+        working-directory: ${{ runner.temp }}/agentz-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive=agentz-linux-arm64.tar.gz
+          test -s "$archive"
+          # GitHub Releases require each individual asset to be smaller than 2 GiB.
+          test "$(stat -c%s "$archive")" -lt 2147483648
+          sha256sum "$archive" release.json > SHA256SUMS
+          sha256sum --check SHA256SUMS
+          tag="agentz-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          gh release create "$tag" "$archive" release.json SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --draft --prerelease --target "$GITHUB_SHA" \
+            --title "AgentZ build evidence $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            --notes "BUILD EVIDENCE ONLY: unpublished draft. Not a production deployment, release clearance, host attestation, or DNS authorization. Exact source SHA: $GITHUB_SHA. GitHub run: $GITHUB_RUN_ID, attempt: $GITHUB_RUN_ATTEMPT."
+          payload="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag")"
+          jq -e --arg source "$GITHUB_SHA" --arg tag "$tag" \
+            '.draft == true and .tag_name == $tag and .target_commitish == $source and .published_at == null' \
+            <<< "$payload" > /dev/null
+          for file in "$archive" release.json SHA256SUMS; do
+            local_sha="$(sha256sum "$file" | cut -d ' ' -f 1)"
+            local_size="$(stat -c%s "$file")"
+            jq -e --arg name "$file" --arg digest "sha256:$local_sha" \
+              --argjson size "$local_size" \
+              '[.assets[] | select(.name == $name and .state == "uploaded" and .digest == $digest and .size == $size)] | length == 1' \
+              <<< "$payload" > /dev/null
+          done
+          {
+            printf '\nUnpublished evidence tag: %s\n' "$tag"
+            printf 'Draft release asset digests independently matched GitHub REST metadata.\n'
+            printf 'Protected image is NOT independently matched to the running host.\n'
+          } >> "$GITHUB_STEP_SUMMARY"
