@@ -99,7 +99,7 @@ def test_identity_challenge_signs_with_matching_key(monkeypatch, tmp_path):
     with pytest.raises(ValueError, match="INVALID_CHALLENGE"):
         mcp_receipt.sign_identity_challenge(challenge="short")
     with pytest.raises(ValueError, match="INVALID_CHALLENGE"):
-        mcp_receipt.sign_identity_challenge(challenge="line\\nbreak" + "a" * 20)
+        mcp_receipt.sign_identity_challenge(challenge="line" + chr(10) + "break" + "a" * 20)
 
 
 def test_identity_challenge_refuses_unproven_key(monkeypatch):
