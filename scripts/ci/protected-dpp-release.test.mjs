@@ -12,7 +12,7 @@ test("root-app release is protected by exact-main quality and database attestati
     "name: production-supabase",
     "node scripts/ci/autonomous-release-gate.mjs",
     "node scripts/ci/verify-dpp-release-env.mjs",
-    "Main quality gate",
+    "node scripts/ci/verify-dpp-main-quality.mjs",
     "bash scripts/ci/verify-dpp-outbox-production.sh",
     'test "$EXPECTED_SHA" = "$DISPATCH_SHA"',
     "current main does not equal exact release SHA",
@@ -24,6 +24,9 @@ test("root-app release is protected by exact-main quality and database attestati
   assert.ok(workflow.includes("inputs.release_mode == 'attestation-bootstrap'"));
   assert.ok(workflow.includes("inputs.release_mode == 'dpp-email'"));
   assert.ok(workflow.includes("verify-runtime-attestation-production.sh"));
+  assert.ok(workflow.includes("scripts/ci/verify-dpp-main-quality.test.mjs"));
+  assert.ok(!workflow.includes("Require successful exact-head GitHub Main quality gate"));
+  assert.ok(!workflow.includes("run.name===\"Main quality gate\""));
 });
 
 test("DPP schema gate validates current RPC-only outbox, target identity, and read-only access", () => {

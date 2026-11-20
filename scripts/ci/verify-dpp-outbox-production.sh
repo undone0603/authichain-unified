@@ -3,9 +3,9 @@
 # Do not apply SQL, replay payments, send email, or infer deployed Worker identity.
 set -euo pipefail
 
-: "$AUTHICHAIN_PRODUCTION_SUPABASE_DB_URL"
-: "$AUTHICHAIN_PRODUCTION_SUPABASE_PROJECT_REF"
-: "$EXPECTED_SUPABASE_REF"
+: "${AUTHICHAIN_PRODUCTION_SUPABASE_DB_URL:?Missing protected production-supabase DB URL}"
+: "${AUTHICHAIN_PRODUCTION_SUPABASE_PROJECT_REF:?Missing protected production project ref}"
+: "${EXPECTED_SUPABASE_REF:?Missing independently pinned expected project ref}"
 if [[ ! "$EXPECTED_SUPABASE_REF" =~ ^[a-z0-9]{20}$ ]] ||
    [[ "$EXPECTED_SUPABASE_REF" != "$AUTHICHAIN_PRODUCTION_SUPABASE_PROJECT_REF" ]]; then
   echo "::error::Protected Supabase target identity mismatch" >&2
