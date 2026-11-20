@@ -110,3 +110,60 @@ test("qron uses byte-exact one-Worker rotation",()=>{
   const bindStep=yml.slice(yml.indexOf("- name: Set INTERNAL_API_SECRET on qron-outreach only"));
   assert.equal((bindStep.match(/^        env:$/gm)||[]).length,1,"exactly one env mapping for the binding step");
 });
+
+test("manual protected deployment workflows cannot auto-publish production",()=>{
+  for(const [name,environment,prefix] of [
+    ["deploy-edge-worker.yml","production-cloudflare-revenue-worker","AUTHICHAIN_REVENUE_WORKER_CLOUDFLARE"],
+    ["deploy-cloudflare.yml","production-cloudflare-manufacturer-status","AUTHICHAIN_MANUFACTURER_STATUS_CLOUDFLARE"],
+  ]){
+    const yml=readFileSync(path.join(ROOT,".github/workflows",name),"utf8");
+    assert.match(yml,/workflow_dispatch:/);
+    assert.doesNotMatch(yml,/^  push:/m);
+    assert.match(yml,/if: github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'/);
+    assert.ok(yml.includes("name: "+environment));
+    assert.ok(yml.includes("guard-production-secret-binding.mjs"));
+    assert.ok(yml.includes("ref: "+"$"+"{{ inputs.expected_sha }}"));
+    assert.ok(yml.includes("cancel-in-progress: false"));
+    assert.ok(yml.includes("secrets."+prefix+"_API_TOKEN"));
+    assert.ok(yml.includes("secrets."+prefix+"_ACCOUNT_ID"));
+    assert.doesNotMatch(yml,/secrets\.CLOUDFLARE_API_TOKEN\b/);
+    assert.doesNotMatch(yml,/secrets\.CLOUDFLARE_ACCOUNT_ID\b/);
+    assert.ok(yml.indexOf("guard-production-secret-binding.mjs") < yml.indexOf("wrangler deploy"),"release policy precedes upload");
+    if(name==="deploy-edge-worker.yml") assert.ok(yml.indexOf("guard-production-secret-binding.mjs") < yml.indexOf("wrangler secret put"),"release policy precedes secret updates");
+  }
+});
+test("revenue and manufacturer environments are authorized only with matching evidence",()=>{
+  for(const environmentName of ["production-cloudflare-revenue-worker","production-cloudflare-manufacturer-status"]){
+    const f=validFixture();f.environmentName=environmentName;f.environment.name=environmentName;
+    assert.equal(assertProtectedBindingPolicy(f).environment,environmentName);
+    f.environment.deployment_branch_policy.protected_branches=false;
+    assert.throws(()=>assertProtectedBindingPolicy(f),/protected secret binding:/);
+  }
+});
+
+test("deploy-workers push path cannot rotate sensitive credentials",()=>{
+  const yml=readFileSync(path.join(ROOT,".github/workflows/deploy-workers.yml"),"utf8");
+  for(const title of [
+    "Bind agentz secrets",
+    "Bind command-center secrets",
+    "Bind claw AGENTZ_* secrets",
+    "Bind Stripe secret on authichain-com",
+    "Bind ISSUE_SECRET on gs1-resolver",
+  ]){
+    const marker="- name: "+title+"\n        if: |\n";
+    assert.equal(yml.split(marker).length,2,"one binder: "+title);
+    const step=yml.slice(yml.indexOf(marker));
+    assert.match(step,/^          github\.event_name == 'workflow_dispatch' &&/m,
+      "no automatic push secret binder: "+title);
+  }
+  assert.doesNotMatch(yml,/secret put X402_(?:PAY_TO|FACILITATOR_URL|USDC_ASSET)/);
+  assert.match(yml,/--keep-vars/);
+});
+
+test("deploy-workers does not automatically release a new production version",()=>{
+  const yml=readFileSync(path.join(ROOT,".github/workflows/deploy-workers.yml"),"utf8");
+  const eventSection=yml.slice(yml.indexOf("\non:")+1,yml.indexOf("\nconcurrency:"));
+  assert.match(eventSection,/^  workflow_dispatch:/m);
+  assert.doesNotMatch(eventSection,/^  push:/m);
+  assert.match(yml,/github\.event_name == 'workflow_dispatch'/);
+});

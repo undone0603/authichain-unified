@@ -7,6 +7,8 @@ export const ENVIRONMENTS = new Set([
   "production-cloudflare-edge-router",
   "production-cloudflare-x402-secrets",
   "production-cloudflare-qron-outreach",
+  "production-cloudflare-revenue-worker",
+  "production-cloudflare-manufacturer-status",
 ]);
 export const REQUIRED = [
   "test-workers", "test-other", "typecheck-ratchet", "quality",
