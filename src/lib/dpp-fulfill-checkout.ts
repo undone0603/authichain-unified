@@ -10,7 +10,11 @@ import { provisionPurchase } from "./provisioning";
 import { renderBillingEmail } from "./billing-emails";
 import { getBrandIdFromMetadata } from "./brand-billing";
 import { sendEmail } from "./email";
-import { deliverDppActivationOnce, prepareDppActivation } from "./dpp-activation-outbox";
+import {
+  deliverDppActivationOnce,
+  prepareDppActivation,
+  type ActivationRpcClient,
+} from "./dpp-activation-outbox";
 import { dppActivateUrl, recordDppLoopEventOnce } from "./dpp-loop";
 import {
   beginProvisionContinuity,
@@ -25,7 +29,7 @@ import {
 } from "./dpp-payment-eligibility";
 import { emitTrustEvent } from "../../shared/trust-events";
 
-type SupabaseLike = {
+type SupabaseLike = ActivationRpcClient & {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   from: (table: string) => any;
 };
