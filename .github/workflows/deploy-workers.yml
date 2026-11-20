@@ -1,10 +1,5 @@
 name: Deploy Workers (workers/*)
 on:
-  push:
-    branches: [main]
-    paths:
-      - "workers/**"
-      - ".github/workflows/deploy-workers.yml"
   workflow_dispatch:
     inputs:
       worker:
@@ -192,7 +187,7 @@ jobs:
           echo "deploy matrix (auto-deploy, narrowed to changed allow-listed workers): ${eligible}"
 
   deploy:
-    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-24.04' || (vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04') }}
+    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-24.04' || (vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-deploy"]') || 'ubuntu-24.04') }}
     timeout-minutes: 45
     needs: [secret-scan, deploy-matrix]
     # GitHub fails the whole workflow when `strategy.matrix` expands to an

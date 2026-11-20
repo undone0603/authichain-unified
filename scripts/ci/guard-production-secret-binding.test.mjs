@@ -159,3 +159,11 @@ test("deploy-workers push path cannot rotate sensitive credentials",()=>{
   assert.doesNotMatch(yml,/secret put X402_(?:PAY_TO|FACILITATOR_URL|USDC_ASSET)/);
   assert.match(yml,/--keep-vars/);
 });
+
+test("deploy-workers does not automatically release a new production version",()=>{
+  const yml=readFileSync(path.join(ROOT,".github/workflows/deploy-workers.yml"),"utf8");
+  const eventSection=yml.slice(yml.indexOf("\non:")+1,yml.indexOf("\nconcurrency:"));
+  assert.match(eventSection,/^  workflow_dispatch:/m);
+  assert.doesNotMatch(eventSection,/^  push:/m);
+  assert.match(yml,/github\.event_name == 'workflow_dispatch'/);
+});

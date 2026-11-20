@@ -19,6 +19,7 @@
 //         script itself crashes; callers act on the output.
 
 import { appendFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { loadManifest } from "./reconcile.mjs";
 
 const BAD_EVENTS = { bounced: "bounce", complained: "complaint" };
@@ -168,7 +169,7 @@ async function main() {
   emit(verdict);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main().catch(e => {
     console.error(e);
     process.exit(1);

@@ -8,7 +8,7 @@ from mcp.server.fastmcp import FastMCP
 
 from agentz.core.browser_executor import execute_browser_task
 from agentz.core.public_navigation import navigate_public
-from agentz.core.code_proposals import propose_code_change
+from agentz.core.code_proposals import open_draft_pr, propose_code_change
 
 mcp = FastMCP("AgentZ Browser Executor")
 
@@ -28,10 +28,16 @@ def browser_navigate(url: str) -> dict:
 @mcp.tool()
 def code_proposal(branch_ref: str, path: str, content: str,
                   expected_blob_sha: str | None = None) -> dict:
-    """Create or update a file on a scoped AgentZ development branch."""
+    """Create or update a repo file on a feat/agentz-* branch (created from main if missing)."""
     return propose_code_change(branch_ref, path, content,
                                expected_blob_sha=expected_blob_sha)
 
+
+
+@mcp.tool()
+def draft_pr(branch_ref: str, title: str, body: str = "") -> dict:
+    """Open a draft PR from a feat/agentz-* branch into main. Never merges."""
+    return open_draft_pr(branch_ref, title, body)
 
 @mcp.tool()
 def readiness() -> dict:

@@ -110,7 +110,7 @@ jobs:
     name: Deploy or grant AuthiChainNFT
     if: github.event_name == 'workflow_dispatch'
     needs: compile-nft
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 20
     outputs:
       contract_address: ${{ steps.deploy.outputs.contract_address }}
@@ -186,7 +186,7 @@ jobs:
           CONTRACT: ${{ steps.deploy.outputs.contract_address }}
         run: |
           case "$CHAIN" in
-            polygon) RPC="https://polygon-rpc.com" ;;
+            polygon) RPC="https://polygon.drpc.org" ;;
             base-sepolia) RPC="https://sepolia.base.org" ;;
             *) RPC="https://mainnet.base.org" ;;
           esac

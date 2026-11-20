@@ -171,6 +171,15 @@ function inferProvenanceFromSignals(lead: LeadProvenanceInput): {
 function leadProvenance(lead: LeadProvenanceInput): string | null {
   const meta = (lead.metadata ?? {}) as Record<string, unknown>;
   const fromMeta = metadataProvenance(meta);
+  // Nobody opts in through a cold campaign or a scrape. Rows imported from
+  // b2b_outreach_* carried metadata.source "inbound_optin" with
+  // target.source "unknown" (leads 14, 19, 20, 476 on 2026-11-18) and were
+  // treated as warm. A stamped opt-in cannot override a cold column source;
+  // a real reply still counts through inferProvenanceFromSignals.
+  const col = String(lead.source ?? "").trim();
+  if (fromMeta === "inbound_optin" && col && isUntrustedColumnSource(col)) {
+    return inferProvenanceFromSignals(lead)?.provenance ?? null;
+  }
   if (fromMeta) return fromMeta;
   return inferProvenanceFromSignals(lead)?.provenance ?? null;
 }
@@ -257,6 +266,44 @@ export function segmentPaymentCta(segment?: string | null): {
     price: PAYMENT_LINKS.authichain.starter.price,
     url: PAYMENT_LINKS.authichain.starter.url,
   };
+}
+
+type LeadCtaInput = {
+  segment?: string | null;
+  source?: string | null;
+  metadata?: unknown;
+};
+
+/**
+ * The segment column is empty on most imported leads, and an empty segment
+ * falls through to the default product (EU DPP Workspace $299 in production).
+ * On 2026-11-18 that sent QRON print prospects (leads 19, 20, 349, 350) a DPP
+ * link. Derive the segment from metadata.target.segment or the lead.source
+ * campaign before falling back.
+ */
+export function effectiveSegment(lead: LeadCtaInput): string | null {
+  const col = String(lead.segment ?? "").trim();
+  if (col) return col;
+  const meta = (lead.metadata ?? {}) as { target?: { segment?: unknown } };
+  const fromTarget = meta.target?.segment;
+  if (typeof fromTarget === "string" && fromTarget.trim()) return fromTarget.trim();
+  const src = String(lead.source ?? "").toLowerCase();
+  if (src.includes("qron")) return "qron";
+  if (src.includes("strainchain") || src.includes("strain")) return "strainchain";
+  if (src.includes("gov")) return "gov";
+  return null;
+}
+
+/** Channel partners get a partnership conversation, never a self-serve checkout. */
+export function isChannelPartner(lead: LeadCtaInput): boolean {
+  const src = String(lead.source ?? "").toLowerCase();
+  const meta = (lead.metadata ?? {}) as { target?: { role?: unknown } };
+  return src.startsWith("channel_partner") || meta.target?.role === "channel_partner";
+}
+
+export function paymentCtaForLead(lead: LeadCtaInput) {
+  if (isChannelPartner(lead)) return null;
+  return segmentPaymentCta(effectiveSegment(lead));
 }
 
 export function withAttribution(
@@ -426,12 +473,12 @@ export async function phaseCheckoutLinks(db: SupabaseClient | null, opts?: { dry
   let attached = 0; let failed = 0;
 
   for (const lead of candidates.slice(0, 20)) {
-    const cta = segmentPaymentCta(lead.segment);
+    const cta = paymentCtaForLead(lead);
     if (!cta) continue;
     const attributed = withAttribution(cta.url, lead.id, "warm_checkout");
 
     console.log(
-      `  • lead#${lead.id} ${lead.email} [${lead.segment ?? "n/a"}] → ${cta.name} ${cta.price}`
+      `  • lead#${lead.id} ${lead.email} [${effectiveSegment(lead) ?? "n/a"}] → ${cta.name} ${cta.price}`
     );
 
     if (dryRun) {

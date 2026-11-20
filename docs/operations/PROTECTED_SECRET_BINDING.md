@@ -82,8 +82,10 @@ this source-only change. Additional manual Gmail/social/outreach credential
 input leaks require separately scoped remediation and must not be considered
 fixed by this follow-up.
 
-The general deploy-workers.yml workflow retains its limited automatic source
-publishes, but its five remaining secret-binding steps (AgentZ, dashboard,
+The general deploy-workers.yml workflow now requires an explicit
+workflow_dispatch for both Worker code publishing and secret binding. No push
+to main (including changes to the deploy workflow itself) can automatically
+publish Worker versions from this workflow. Its five secret-binding steps (AgentZ, dashboard,
 OpenClaw, authichain-com, GS1 resolver) must run **only** during an explicit
 workflow_dispatch. A push may not rewrite credentials, even for an auto-
 deploy-allowlisted Worker. This preserves --keep-vars, while retaining

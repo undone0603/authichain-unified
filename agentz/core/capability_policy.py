@@ -21,12 +21,18 @@ class Capability(str, Enum):
     PAYMENT = "payment"
     CREDENTIALS = "credentials"
     POLICY_CHANGE = "policy_change"
-
+    CUSTOMER_SEND = "customer_send"
+    SPEND = "spend"
+    IDENTITY_PUBLISH = "identity_publish"
+    GUARDRAIL_EDIT = "guardrail_edit"
+    ISSUE_TRIAGE = "issue_triage"
+    CI_RERUN = "ci_rerun"
+    DRAFT_READY = "draft_ready"  
 
 AUTONOMOUS = frozenset({
     Capability.RESEARCH, Capability.BROWSER_READ, Capability.MEMORY_WRITE,
     Capability.EXPERIMENT, Capability.TEST_ISOLATED, Capability.CODE_BRANCH,
-    Capability.PR_CREATE,
+    Capability.PR_CREATE, Capability.ISSUE_TRIAGE, Capability.CI_RERUN, Capability.DRAFT_READY,
 })
 GOVERNED = frozenset(set(Capability) - AUTONOMOUS)
 
@@ -49,10 +55,17 @@ def decide(capability: Capability | str, *, isolated: bool = False,
         if action in (Capability.EXPERIMENT, Capability.TEST_ISOLATED) and not isolated:
             return Decision(False, "isolated executor required")
         return Decision(True, "autonomous reversible capability")
-    if action in (Capability.MERGE, Capability.DEPLOY):
+    if action is Capability.MERGE:
+        # The caller must verify exact-head CI, enforced branch protection, and
+        # security/review requirements before passing release_gate_passed=True.
+        # A protected merge does not approve a production version release.
+        if not release_gate_passed:
+            return Decision(False, "verified high-confidence merge checks required", True)
+        return Decision(True, "high-confidence protected merge permitted", True)
+    if action is Capability.DEPLOY:
         if not authorized or not release_gate_passed:
-            return Decision(False, "authorization and verified release gate required", True)
-        return Decision(True, "authorized with verified release gate", True)
+            return Decision(False, "owner authorization and verified version release gate required", True)
+        return Decision(True, "owner-authorized version release permitted", True)
     if not authorized:
         return Decision(False, "explicit scoped authorization required")
     return Decision(True, "explicitly authorized governed capability")

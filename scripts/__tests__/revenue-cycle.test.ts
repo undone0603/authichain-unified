@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { phaseCheckoutLinks, phaseProposals, phaseReport } from "../revenue-cycle";
+import {
+  effectiveSegment,
+  hasVerifiedProvenance,
+  paymentCtaForLead,
+  phaseCheckoutLinks,
+  phaseProposals,
+  phaseReport,
+  segmentPaymentCta,
+} from "../revenue-cycle";
 
 const CHECKOUT_BASE = "https://" + ["authichain", "com"].join(".") + "/checkout/";
 
@@ -311,4 +319,96 @@ describe("revenue-cycle checkout-links & proposals", () => {
     expect(out).toContain("revenue_records: failed (permission denied)");
     expect(out).not.toContain("Gov proposals sampled");
   });
+
+  it("derives the product from the lead source when segment is empty", () => {
+    const qron = { segment: null, source: "b2b_outreach_qron", metadata: {} };
+    expect(effectiveSegment(qron)).toBe("qron");
+    expect(paymentCtaForLead(qron)?.name).toBe(segmentPaymentCta("qron")?.name);
+    expect(paymentCtaForLead(qron)?.name).not.toBe(segmentPaymentCta(null)?.name);
+
+    expect(effectiveSegment({ segment: null, source: "b2b_outreach_strainchain" })).toBe("strainchain");
+    expect(effectiveSegment({ segment: null, source: "x", metadata: { target: { segment: "qron" } } })).toBe("qron");
+    expect(effectiveSegment({ segment: "gov", source: "b2b_outreach_qron" })).toBe("gov");
+    expect(effectiveSegment({ segment: null, source: "website_form" })).toBeNull();
+  });
+
+  it("never attaches a self-serve checkout to a channel partner", () => {
+    expect(paymentCtaForLead({ segment: "strainchain", source: "channel_partner_web_scan_2026-09-19" })).toBeNull();
+    expect(
+      paymentCtaForLead({ segment: null, source: "x", metadata: { target: { role: "channel_partner" } } })
+    ).toBeNull();
+  });
+
+  it("phaseCheckoutLinks gives a QRON print prospect the QRON product and skips channel partners", async () => {
+    const { db, updates } = makeMockDb({
+      leads: [
+        {
+          id: 349,
+          email: "franchiseinfo@example-signs.com",
+          status: "contacted",
+          segment: null,
+          source: "b2b_outreach_qron",
+          metadata: { source: "published_contact", target: { source: "published_contact" } },
+        },
+        {
+          id: 478,
+          email: "info@example-consulting.com",
+          status: "contacted",
+          segment: null,
+          source: "channel_partner_web_scan_2026-09-19",
+          metadata: { source: "published_contact", target: { role: "channel_partner" } },
+        },
+      ],
+    });
+    const planned = await phaseCheckoutLinks(db, { dryRun: false });
+    expect(planned).toBe(1);
+    expect(updates).toHaveLength(1);
+    const meta = updates[0].payload.metadata as Record<string, unknown>;
+    expect(meta.paymentProduct).toBe(segmentPaymentCta("qron")?.name);
+  });
+
+  it("does not treat a stamped inbound_optin on a cold-outreach lead as an opt-in", () => {
+    const cold = {
+      source: "b2b_outreach_strainchain",
+      emailReplied: false,
+      repliesReceived: 0,
+      metadata: { source: "inbound_optin", target: { source: "unknown" } },
+    };
+    expect(hasVerifiedProvenance(cold)).toBe(false);
+    for (const col of ["b2b_outreach_qron", "scraped", "pattern_guess", "unknown", "seed"]) {
+      expect(hasVerifiedProvenance({ ...cold, source: col })).toBe(false);
+    }
+    // A real reply is still trusted.
+    expect(hasVerifiedProvenance({ ...cold, emailReplied: true })).toBe(true);
+    // A genuine inbound column keeps its opt-in.
+    expect(hasVerifiedProvenance({ ...cold, source: "website_form" })).toBe(true);
+    // Other verification stamps on cold rows are unchanged.
+    expect(
+      hasVerifiedProvenance({ ...cold, metadata: { source: "published_contact" } })
+    ).toBe(true);
+    expect(
+      hasVerifiedProvenance({ ...cold, metadata: { verification_source: "apollo_verified" } })
+    ).toBe(true);
+  });
+
+  it("phaseCheckoutLinks skips a cold-outreach lead that only carries a stamped inbound_optin", async () => {
+    const { db, updates } = makeMockDb({
+      leads: [
+        {
+          id: 14,
+          email: "compliance@example-mso.com",
+          status: "contacted",
+          segment: null,
+          source: "b2b_outreach_strainchain",
+          emailReplied: false,
+          repliesReceived: 0,
+          metadata: { source: "inbound_optin", target: { source: "unknown" } },
+        },
+      ],
+    });
+    const planned = await phaseCheckoutLinks(db, { dryRun: false });
+    expect(planned).toBe(0);
+    expect(updates).toHaveLength(0);
+  });
 });
+
