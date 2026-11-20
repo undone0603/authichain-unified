@@ -1,0 +1,98 @@
+name: AgentZ protected provenance build (no deployment)
+
+# Produces immutable, hash-addressed AgentZ source evidence from protected main.
+# This is not a production launch or proof that a host runs these bytes.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "agentz/**"
+      - "requirements-agentz.txt"
+      - ".github/workflows/agentz-protected-provenance-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agentz-provenance-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build AgentZ protected source artifact
+    if: github.ref == 'refs/heads/main' && github.repository == 'undone0603/authichain-unified'
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact protected source without persistent credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          clean: true
+      - name: Assert immutable source and compile AgentZ Python
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "${GITHUB_REF}" = "refs/heads/main"
+          test -f agentz/api/main.py
+          test -f requirements-agentz.txt
+          python3 -m compileall -q agentz
+      - name: Package tracked AgentZ source and record SHA-256 evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p agentz-build-evidence
+          git archive --format=tar HEAD agentz requirements-agentz.txt | gzip -n > agentz-build-evidence/agentz-source.tar.gz
+          python3 - <<'PY'
+          import datetime
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          def digest(path):
+              h = hashlib.sha256()
+              with open(path, "rb") as f:
+                  for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          evidence = Path("agentz-build-evidence")
+          source_sha = os.environ["GITHUB_SHA"]
+          if len(source_sha) != 40 or any(c not in "0123456789abcdef" for c in source_sha):
+              raise SystemExit("Invalid source SHA")
+          receipt = {
+              "schema": "authichain.agentz.protected-source-build/1",
+              "sourceSha": source_sha,
+              "githubRunId": os.environ["GITHUB_RUN_ID"],
+              "githubRunAttempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "githubRef": os.environ["GITHUB_REF"],
+              "workflow": os.environ["GITHUB_WORKFLOW"],
+              "buildTimeUtc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "artifactFile": "agentz-source.tar.gz",
+              "artifactSha256": digest(evidence / "agentz-source.tar.gz"),
+              "apiMainSourceSha256": digest("agentz/api/main.py"),
+              "dependenciesFileSha256": digest("requirements-agentz.txt"),
+              "pythonCompileall": "passed",
+              "productionDeployment": False,
+              "runningExecutableAttested": False,
+          }
+          (evidence / "manifest.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+          print(json.dumps(receipt, sort_keys=True))
+          PY
+          (
+            cd agentz-build-evidence
+            sha256sum agentz-source.tar.gz manifest.json > sha256sums.txt
+            sha256sum -c sha256sums.txt
+          )
+      - name: Upload evidence (no deployment)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentz-protected-build-${{ github.sha }}-${{ github.run_id }}
+          path: agentz-build-evidence/
+          if-no-files-found: warn
+          retention-days: 30
