@@ -105,7 +105,19 @@ jobs:
             --repo "$GITHUB_REPOSITORY" --draft --prerelease --target "$GITHUB_SHA" \
             --title "AgentZ build evidence $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
             --notes "BUILD EVIDENCE ONLY: unpublished draft. Not a production deployment, release clearance, host attestation, or DNS authorization. Exact source SHA: $GITHUB_SHA. GitHub run: $GITHUB_RUN_ID, attempt: $GITHUB_RUN_ATTEMPT."
-          payload="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag")"
+          # Draft releases use an untagged temporary URL and can return
+          # 404 from /releases/tags/{tag}; select the unique unpublished
+          # build evidence by tag and exact protected SHA instead.
+          payload="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
+            jq -e --arg tag "$tag" --arg source "$GITHUB_SHA" '
+              [.[] | select(.draft == true and
+                            .tag_name == $tag and
+                            .target_commitish == $source and
+                            .published_at == null)] |
+              if length == 1 then .[0]
+              else error("expected exactly one unpublished image-evidence release")
+              end
+            ')"
           jq -e --arg source "$GITHUB_SHA" --arg tag "$tag" \
             '.draft == true and .tag_name == $tag and .target_commitish == $source and .published_at == null' \
             <<< "$payload" > /dev/null
