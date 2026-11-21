@@ -1,13 +1,13 @@
 /**
- * seo-data/commercial.cjs
- * DATA entries for gen-seo-pages.cjs: brand- and money-surface pages (Made
+ * seo-data/commercial.mjs
+ * DATA entries for gen-seo-pages.mjs: brand- and money-surface pages (Made
  * in America/USA origin claims, TruMark, AI shopping agent verification, and
  * similar commercial surfaces that aren't a regulatory deadline, an industry
  * vertical, or a standards explainer).
- * Shape must match gen-seo-pages.cjs's DATA entries exactly: keyword, brand,
- * schemaType, lead, bullets[3], faqs[{q,a}]. Required by gen-seo-pages.cjs.
+ * Shape must match gen-seo-pages.mjs's DATA entries exactly: keyword, brand,
+ * schemaType, lead, bullets[3], faqs[{q,a}]. Required by gen-seo-pages.mjs.
  */
-module.exports = [
+export default [
   { keyword: 'kimberley process diamond certification blockchain 2026', brand: 'authichain', schemaType: 'Product',
     lead: 'India’s 2026 chairship of the Kimberley Process has put blockchain-based, tamper-proof rough-diamond certificates on the reform agenda for the scheme’s 60 participants — an aspiration not yet adopted, and a narrower problem AuthiChain already solves: proving one specific polished stone is the one described in its certificate.',
     bullets: ['The Kimberley Process certifies rough-diamond shipments at the border; it says nothing about which specific polished stone a consumer holds years later — a signed per-stone record closes that separate gap', 'Blockchain-based KP certification is a 2026 chairship priority, not a shipped system — the 60 participants have not adopted a common ledger, so a stone-level record built today does not wait on that reform to land'],

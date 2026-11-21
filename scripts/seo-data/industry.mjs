@@ -1,12 +1,12 @@
 /**
- * seo-data/industry.cjs
- * DATA entries for gen-seo-pages.cjs: industry-vertical use-case pages
+ * seo-data/industry.mjs
+ * DATA entries for gen-seo-pages.mjs: industry-vertical use-case pages
  * (blockchain QR code for <industry>, product authentication for <use case>,
  * anti-counterfeit <category>, supply chain traceability <industry>).
- * Shape must match gen-seo-pages.cjs's DATA entries exactly: keyword, brand,
- * schemaType, lead, bullets[3], faqs[{q,a}]. Required by gen-seo-pages.cjs.
+ * Shape must match gen-seo-pages.mjs's DATA entries exactly: keyword, brand,
+ * schemaType, lead, bullets[3], faqs[{q,a}]. Required by gen-seo-pages.mjs.
  */
-module.exports = [
+export default [
   { keyword: 'blockchain qr code for cannabis', brand: 'strainchain', schemaType: 'Product',
     lead: 'Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof record of that product’s journey from seed to sale.',
     bullets: ['METRC and BioTrack sync — no duplicate data entry', 'Lab certificates linked to a signed record', 'State auditors check chain of custody by scan'],
