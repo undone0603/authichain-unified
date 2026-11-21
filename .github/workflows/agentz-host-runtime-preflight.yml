@@ -21,10 +21,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
+          import datetime
           import hashlib
           import json
           import os
           import platform
+          import re
           import socket
           import subprocess
           import urllib.error
@@ -41,6 +43,65 @@ jobs:
               except (OSError, PermissionError):
                   return None
 
+          def process_start(pid):
+              # /proc/<pid>/stat field 22 is boot-relative clock ticks. Parse
+              # after the final ')' because the comm field may contain spaces.
+              stat = Path(f"/proc/{pid}/stat").read_text().rsplit(") ", 1)[1].split()
+              ticks = int(stat[19])
+              boot = next(int(line.split()[1]) for line in Path("/proc/stat").read_text().splitlines()
+                          if line.startswith("btime "))
+              value = boot + ticks / os.sysconf("SC_CLK_TCK")
+              return datetime.datetime.fromtimestamp(value, datetime.timezone.utc).isoformat(), ticks
+
+          def inspect_container(pid):
+              # Read Docker's actual host PID-namespace membership, never just
+              # a stale repository directory or a user-provided container name.
+              target_ns = os.stat(f"/proc/{pid}/ns/pid").st_ino
+              try:
+                  ps = subprocess.run(["docker", "ps", "--quiet", "--no-trunc"],
+                                      capture_output=True, text=True, timeout=4, check=False)
+                  if ps.returncode != 0:
+                      return {"container_probe": "docker-unavailable"}
+                  matches = []
+                  for cid in ps.stdout.splitlines()[:64]:
+                      result = subprocess.run(["docker", "inspect", cid],
+                                              capture_output=True, text=True, timeout=4, check=False)
+                      if result.returncode != 0:
+                          continue
+                      details = json.loads(result.stdout)[0]
+                      init_pid = int(details.get("State", {}).get("Pid") or 0)
+                      if init_pid <= 0 or not details.get("State", {}).get("Running"):
+                          continue
+                      try:
+                          if os.stat(f"/proc/{init_pid}/ns/pid").st_ino != target_ns:
+                              continue
+                      except OSError:
+                          continue
+                      # Fail closed if image code can be shadowed with a mount.
+                      shadowed = any(
+                          str(m.get("Destination", "")).rstrip("/") in ("/app", "/app/agentz")
+                          or str(m.get("Destination", "")).startswith("/app/agentz/")
+                          for m in details.get("Mounts", [])
+                      )
+                      image_id = details.get("Image")
+                      image = subprocess.run(["docker", "image", "inspect", image_id],
+                                             capture_output=True, text=True, timeout=4, check=False)
+                      image_meta = json.loads(image.stdout)[0] if image.returncode == 0 else {}
+                      labels = (image_meta.get("Config") or {}).get("Labels") or {}
+                      matches.append({
+                          "container_id_short": cid[:12],
+                          "container_image_id": image_id,
+                          "image_source_revision_label": labels.get("org.opencontainers.image.revision"),
+                          "container_started_at_utc": details.get("State", {}).get("StartedAt"),
+                          "app_source_mount_shadowed": shadowed,
+                      })
+                  return {"container_probe": "unique-pid-namespace-match", **matches[0]} if len(matches) == 1 else {
+                      "container_probe": "no-unique-matching-container",
+                      "matching_container_count": len(matches)
+                  }
+              except (OSError, subprocess.TimeoutExpired, ValueError, IndexError, KeyError):
+                  return {"container_probe": "inspection-unavailable"}
+
           report = {
               "schema": "authichain.agentz.local-runtime-preflight/1",
               "probe_scope": "read-only-loopback-no-secret-access",
@@ -51,6 +112,13 @@ jobs:
               "system": platform.system(),
               "architecture": platform.machine(),
               "process_count": 0,
+              "process_start_time_utc": None,
+              "process_start_ticks": None,
+              "container_probe": "not-inspected",
+              "container_image_id": None,
+              "image_source_revision_label": None,
+              "image_identity_matched_to_protected_build": False,
+              "attestation_signed": False,
               "running_source_revision": None,
               "source_revision_origin": None,
               "api_source_sha256": None,
@@ -75,6 +143,13 @@ jobs:
           if len(matches) == 1:
               proc = matches[0]
               report["api_pid"] = int(proc.name)
+              try:
+                  started, ticks = process_start(proc.name)
+                  report["process_start_time_utc"] = started
+                  report["process_start_ticks"] = ticks
+                  report.update(inspect_container(proc.name))
+              except (OSError, ValueError, StopIteration, IndexError):
+                  report["process_start_probe"] = "unavailable"
               report["interpreter_sha256_not_app_artifact"] = sha256_file(proc / "exe")
               try:
                   cwd = (proc / "cwd").resolve(strict=True)
