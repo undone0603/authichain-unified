@@ -64,7 +64,9 @@ describe("seo-pages loader", () => {
     expect(page?.bodyHtml).not.toContain("physical-world authenticity");
     expect(page?.bodyHtml).not.toContain("verify authenticity");
     expect(page?.bodyHtml).not.toContain("polygonscan.com");
-    expect(JSON.stringify(page?.jsonLd)).not.toContain("trust physical products");
+    expect(JSON.stringify(page?.jsonLd)).not.toContain(
+      "trust physical products"
+    );
     expect(page?.bodyHtml).toContain(
       'action="https://authichain.com/checkout/dpp_readiness"'
     );
@@ -124,7 +126,8 @@ const PROTECTED_SEED_SLUGS = new Set([
 ]);
 
 const PROTECTED_SEED_MARKERS: Record<string, string> = {
-  "blockchain-product-authentication": "the manufacturer holds the keys, not us",
+  "blockchain-product-authentication":
+    "the manufacturer holds the keys, not us",
   "cannabis-blockchain-provenance": "What you get",
   "what-is-a-digital-product-passport": "What a DPP contains",
 };
@@ -269,7 +272,10 @@ describe("generated SEO money-path CTAs", () => {
     ];
     const checks: Array<[string[], string]> = [
       [product, "A scan is not, by itself, proof the product is genuine."],
-      [cannabis, "A scan is not, by itself, proof a cannabis product is genuine."],
+      [
+        cannabis,
+        "A scan is not, by itself, proof a cannabis product is genuine.",
+      ],
       [government, "On-chain government records are in development."],
       [
         ["eu-digital-product-passport-batteries"],
@@ -280,7 +286,10 @@ describe("generated SEO money-path CTAs", () => {
         "A scan is not, by itself, proof a medicine is genuine.",
       ],
       [
-        ["blockchain-qr-code-for-aerospace", "supply-chain-traceability-aerospace"],
+        [
+          "blockchain-qr-code-for-aerospace",
+          "supply-chain-traceability-aerospace",
+        ],
         "This page does not establish airworthiness.",
       ],
     ];
@@ -303,9 +312,13 @@ describe("generated SEO money-path CTAs", () => {
     const battery = getSeoPageBySlug("eu-digital-product-passport-batteries");
     expect(battery?.bodyHtml).toContain("This page is not a battery passport");
     expect(battery?.bodyHtml).toContain("not a physical inspection");
-    expect(battery?.bodyHtml).not.toContain("only published demonstration record");
+    expect(battery?.bodyHtml).not.toContain(
+      "only published demonstration record"
+    );
     const pharma = getSeoPageBySlug("supply-chain-traceability-pharmaceutical");
-    expect(pharma?.bodyHtml).toContain("This page does not establish DSCSA compliance.");
+    expect(pharma?.bodyHtml).toContain(
+      "This page does not establish DSCSA compliance."
+    );
   });
 
   it("links Made in USA / origin-claim hubs to DPP checkout and the Made in America brief", () => {
@@ -467,7 +480,9 @@ describe("generated SEO money-path CTAs", () => {
       expect(text, p.slug).not.toMatch(
         /anchored (on|to) Polygon|Polygon-anchored|Polygon anchoring|blockchain-anchored|hashes and anchors/i
       );
-      expect(text, p.slug).not.toMatch(/offline-verification problem GovChain/i);
+      expect(text, p.slug).not.toMatch(
+        /offline-verification problem GovChain/i
+      );
     }
   });
 
@@ -490,11 +505,15 @@ describe("generated SEO money-path CTAs", () => {
 
   it("CFA-155: the generator data files do not carry the Polygon contract claim", () => {
     const dir = path.join(process.cwd(), "scripts", "seo-data");
-    const files = fs.readdirSync(dir).filter((f) => f.endsWith(".cjs"));
+    const files = fs
+      .readdirSync(dir)
+      .filter(f => f.endsWith(".mjs") || f.endsWith(".cjs"));
     expect(files.length).toBeGreaterThan(0);
     const sources = [
-      ...files.map((f) => path.join(dir, f)),
-      path.join(process.cwd(), "scripts", "gen-seo-pages.cjs"),
+      ...files.map(f => path.join(dir, f)),
+      fs.existsSync(path.join(process.cwd(), "scripts", "gen-seo-pages.mjs"))
+        ? path.join(process.cwd(), "scripts", "gen-seo-pages.mjs")
+        : path.join(process.cwd(), "scripts", "gen-seo-pages.cjs"),
     ];
     for (const f of sources) {
       expect(fs.readFileSync(f, "utf8"), f).not.toMatch(
@@ -525,7 +544,9 @@ describe("generated SEO money-path CTAs", () => {
     expect(text).not.toMatch(/link it to a signed record/i);
     expect(text).not.toMatch(/signed record published now/i);
     expect(p?.bodyHtml).toContain("Signed records are in development.");
-    expect(p?.bodyHtml).toContain("a Commission study on footwear due by the end of 2027.</p>");
+    expect(p?.bodyHtml).toContain(
+      "a Commission study on footwear due by the end of 2027.</p>"
+    );
     expect(p?.metaDescription.endsWith("by the end of 2027.")).toBe(true);
   });
 
