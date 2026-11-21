@@ -21,7 +21,10 @@ concurrency:
 jobs:
   build:
     name: Build AgentZ protected source artifact
-    if: github.ref == 'refs/heads/main' && github.repository == 'undone0603/authichain-unified'
+    # Never grant release-asset write access to a non-protected branch.
+    if: github.ref == 'refs/heads/main' && github.ref_protected && github.repository == 'undone0603/authichain-unified'
+    permissions:
+      contents: write # exclusively to create unpublished, hash-verified evidence assets
     runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 30
     steps:
@@ -35,11 +38,30 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
-          test "${GITHUB_REF}" = "refs/heads/main"
-          test -f agentz/api/main.py
-          test -f requirements-agentz.txt
+          actual_sha="$(git rev-parse HEAD)"
+          if [ "$actual_sha" != "$GITHUB_SHA" ]; then
+            echo "::error title=source-mismatch::Git checkout SHA does not match the immutable event SHA."
+            exit 1
+          fi
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error title=ref-mismatch::Build is not running from protected main."
+            exit 1
+          fi
+          if [ ! -f agentz/api/main.py ]; then
+            echo "::error title=missing-source::agentz/api/main.py is absent from checkout."
+            exit 1
+          fi
+          if [ ! -f requirements-agentz.txt ]; then
+            echo "::error title=missing-dependencies::requirements-agentz.txt is absent from checkout."
+            exit 1
+          fi
+          if ! command -v python3 >/dev/null; then
+            echo "::error title=missing-python::Python 3 was not found on ARM64 runner."
+            exit 1
+          fi
+          echo "[agentz-evidence] protected main/source/ref verified; compiling AgentZ..."
           python3 -m compileall -q agentz
+          echo "[agentz-evidence] compileall passed"
       - name: Package tracked AgentZ source and record SHA-256 evidence
         shell: bash
         run: |
@@ -88,11 +110,46 @@ jobs:
             sha256sum agentz-source.tar.gz manifest.json > sha256sums.txt
             sha256sum -c sha256sums.txt
           )
-      - name: Upload evidence (no deployment)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: agentz-protected-build-${{ github.sha }}-${{ github.run_id }}
-          path: agentz-build-evidence/
-          if-no-files-found: warn
-          retention-days: 30
+      # The Actions artifact quota is exhausted on this estate. Keep the
+      # protected source receipt independently downloadable as an unpublished
+      # draft-release asset, with GitHub-side sha256/size readback verification.
+      - name: Publish SHA-verified draft source evidence (no deployment)
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          command -v gh >/dev/null || { echo "::error::gh CLI unavailable"; exit 1; }
+          command -v jq >/dev/null || { echo "::error::jq unavailable"; exit 1; }
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          cd agentz-build-evidence
+          sha256sum --check sha256sums.txt
+          for file in agentz-source.tar.gz manifest.json sha256sums.txt; do
+            test -s "$file"
+            test "$(stat -c%s "$file")" -lt 2147483648
+          done
+          tag="agentz-source-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          gh release create "$tag" agentz-source.tar.gz manifest.json sha256sums.txt \
+            --repo "$GITHUB_REPOSITORY" --draft --prerelease --target "$GITHUB_SHA" \
+            --title "AgentZ source evidence $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            --notes "BUILD EVIDENCE ONLY. Not a production release, host attestation, trading signer proof, DNS clearance, or authorization to place orders. SHA: $GITHUB_SHA. Run: $GITHUB_RUN_ID attempt $GITHUB_RUN_ATTEMPT."
+          payload="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag")"
+          jq -e --arg sha "$GITHUB_SHA" --arg tag "$tag" \
+            '.draft == true and .tag_name == $tag and .target_commitish == $sha and .published_at == null' \
+            <<< "$payload" >/dev/null
+          for file in agentz-source.tar.gz manifest.json sha256sums.txt; do
+            digest="$(sha256sum "$file" | cut -d ' ' -f 1)"
+            size="$(stat -c%s "$file")"
+            jq -e --arg file "$file" --arg digest "sha256:$digest" \
+              --argjson size "$size" \
+              '[.assets[] | select(.name == $file and .state == "uploaded" and .digest == $digest and .size == $size)] | length == 1' \
+              <<< "$payload" >/dev/null
+          done
+          {
+            echo "AgentZ source evidence for exact protected main SHA: $GITHUB_SHA"
+            echo "Draft release tag: $tag (unpublished, **not** a version release)"
+            echo "All three assets matched GitHub REST SHA-256 and byte-size metadata."
+            echo "**Running host artifact, EVM wallet authority and live swaps remain unverified.**"
+          } >> "$GITHUB_STEP_SUMMARY"
