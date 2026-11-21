@@ -1,6 +1,6 @@
 /**
- * seo-data/comparison.cjs
- * DATA entries for gen-seo-pages.cjs: "alternative to X" and plan-pricing
+ * seo-data/comparison.mjs
+ * DATA entries for gen-seo-pages.mjs: "alternative to X" and plan-pricing
  * pages built from the plan catalogue (src/lib/plans.ts) and the vetted
  * /vs comparison copy (workers/authichain-com/src/vs-pages*.ts).
  *
@@ -12,10 +12,10 @@
  *   checked, leave it out rather than guess.
  * - AuthiChain capabilities keep the same status the /vs pages give them:
  *   "in development" stays in development, "goal" stays a goal.
- * Shape must match gen-seo-pages.cjs's DATA entries exactly: keyword, brand,
- * schemaType, lead, bullets[3], faqs[{q,a}]. Required by gen-seo-pages.cjs.
+ * Shape must match gen-seo-pages.mjs's DATA entries exactly: keyword, brand,
+ * schemaType, lead, bullets[3], faqs[{q,a}]. Required by gen-seo-pages.mjs.
  */
-module.exports = [
+export default [
   { keyword: 'vechain alternative without tokens or gas fees', brand: 'authichain', schemaType: 'Service',
     lead: 'VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing product instead, where the seal, the certificate and the public verifier are the thing you buy, and you pay in USD by card rather than holding a token.',
     bullets: ['No token and no gas to manage: AuthiChain plans are billed in US dollars through Stripe, so a brand never has to fund a wallet before it can issue a record', 'Signing keys are published at /.well-known/jwks.json. Product certification through verify is in development.', 'Self-serve issuance and EU DPP export are still in development. The $299 checkout opens a workspace; it is not a readiness audit.'],

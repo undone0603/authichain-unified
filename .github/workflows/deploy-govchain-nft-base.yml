@@ -25,7 +25,7 @@ on:
   pull_request:
     paths:
       - contracts/AuthiChainNFT.sol
-      - scripts/compile-authichain-nft.cjs
+      - scripts/compile-authichain-nft.mjs
       - scripts/deploy-authichain-nft-base.ts
       - scripts/lib/authichain-nft-artifact.ts
       - scripts/lib/evm-chains.ts
@@ -85,7 +85,7 @@ jobs:
         timeout-minutes: 15
 
       - name: Compile AuthiChainNFT
-        run: node scripts/compile-authichain-nft.cjs
+        run: node scripts/compile-authichain-nft.mjs
 
       - name: Verify artifact bytecode and ABI
         run: |
@@ -128,7 +128,7 @@ jobs:
         timeout-minutes: 15
 
       - name: Compile AuthiChainNFT
-        run: node scripts/compile-authichain-nft.cjs
+        run: node scripts/compile-authichain-nft.mjs
 
       - name: Check deploy secrets (names only)
         id: secrets
