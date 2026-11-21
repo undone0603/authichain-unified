@@ -116,7 +116,8 @@ def test_real_socket_different_uid_group_and_restart():
        '--wallet',wallet,'--socket-dir',str(run),'--private-dir',str(private),
        '--key-file',str(keyfile),'--nonce-db',str(state/'used.sqlite'),
        '--observation-dir',str(obs),'--observation-file',str(receipt)]
-    env = {**os.environ,'PYTHONPATH':str(Path(__file__).resolve().parents[2])}
+    env = {**os.environ,'PYTHONPATH':str(Path(__file__).resolve().parents[2]),
+           'AGENTZ_TREASURY_SOFTWARE_KEY_FIXTURE_ONLY':'yes-disposable-only'}
     def demote(uid,gid,groups):
         def f(): os.setgroups(groups);os.setgid(gid);os.setuid(uid)
         return f

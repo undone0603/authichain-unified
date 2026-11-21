@@ -106,6 +106,16 @@ case "$task" in
     export TINYFISH_API_KEY=""
     export AGENTZ_TINYFISH_SCOUT_ENABLED=""
     /tmp/agentz-ci-venv/bin/python -m pytest -q agentz/tests tests/test_agentz_*.py --junitxml=/tmp/pytest-results/agentz.xml
+    # Run the multi-UID socket and key-isolation test as root ONLY inside
+    # CircleCI's disposable Docker executor; never on an untrusted WSL runner.
+    # The ordinary suite above executes all negative/offline tests; this
+    # explicit root run prevents the SO_PEERCRED test from being silently skipped.
+    test "$(sudo -n id -u)" = 0
+    sudo -n env PYTHONPATH="$PWD" \
+      /tmp/agentz-ci-venv/bin/python -m pytest -q \
+      agentz/tests/test_treasury_signer_review.py \
+      -k test_real_socket_different_uid_group_and_restart \
+      --junitxml=/tmp/pytest-results/treasury-socket-root.xml
     /tmp/agentz-ci-venv/bin/python - <<'PY'
 from agentz.mcp_browser_server import mcp
 assert mcp is not None, "AgentZ MCP server failed to import"

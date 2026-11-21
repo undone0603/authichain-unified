@@ -10,6 +10,7 @@ This code MUST NOT be imported by or exposed through AgentZ's HTTP API.
 from __future__ import annotations
 
 import argparse
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
@@ -18,6 +19,7 @@ import os
 from pathlib import Path
 import re
 import signal
+import shutil
 import socket
 import sqlite3
 import stat
@@ -38,6 +40,12 @@ HASH_RE = re.compile(r"[0-9a-f]{64}\Z")
 MAX_FUTURE = 300  # seconds
 MAX_OBSERVATION_AGE = 300
 MAX_FRAME = 4096
+# Strongly bounded, local proof-only service, not a trading or wallet API.
+MAX_PROOFS_PER_MINUTE = 6
+MIN_NONCE_STORE_FREE_BYTES = 2 * 1024 * 1024
+NONCE_RETENTION_SECONDS = 90 * 24 * 60 * 60
+CLOCK_BACKWARD_TOLERANCE = 2
+SOFTWARE_KEY_TEST_FLAG = "yes-disposable-only"
 
 
 class ProofError(Exception):
@@ -194,6 +202,9 @@ def _load_observation(cfg: Config, now: datetime) -> tuple[str, str]:
 
 def _use_nonce(cfg: Config, nonce: str, expires: int) -> None:
     _check_dir(cfg.nonce_db.parent, cfg.signer_uid, None, 0o700)
+    # Refuse a low-space store rather than signing without durable replay state.
+    if shutil.disk_usage(cfg.nonce_db.parent).free < MIN_NONCE_STORE_FREE_BYTES:
+        raise ProofError("insufficient free space for durable replay protection")
     db = cfg.nonce_db
     if db.exists() or db.is_symlink():
         st = db.lstat()
@@ -208,9 +219,19 @@ def _use_nonce(cfg: Config, nonce: str, expires: int) -> None:
             con.execute("PRAGMA journal_mode=DELETE")
             con.execute("BEGIN IMMEDIATE")
             con.execute("CREATE TABLE IF NOT EXISTS used_nonce (nonce TEXT PRIMARY KEY, expires INTEGER NOT NULL, used_at INTEGER NOT NULL)")
-            con.execute("INSERT INTO used_nonce VALUES (?, ?, ?)", (nonce.lower(), expires, int(time.time())))
+            con.execute("CREATE TABLE IF NOT EXISTS replay_clock (name TEXT PRIMARY KEY, highest_utc INTEGER NOT NULL)")
+            now_utc = int(time.time())
+            clock = con.execute("SELECT highest_utc FROM replay_clock WHERE name='utc'").fetchone()
+            if clock and now_utc + CLOCK_BACKWARD_TOLERANCE < clock[0]:
+                raise ProofError("system clock regressed: replay store held")
+            con.execute("INSERT INTO replay_clock VALUES ('utc', ?) ON CONFLICT(name) DO UPDATE SET highest_utc=MAX(highest_utc, excluded.highest_utc)", (now_utc,))
+            # Expired challenges cannot be accepted again; retain records for 90 days.
+            # Storage is durable across restarts, and old records are pruned in the same transaction.
+            con.execute("DELETE FROM used_nonce WHERE expires < ? AND used_at < ?",
+                        (now_utc - NONCE_RETENTION_SECONDS, now_utc - NONCE_RETENTION_SECONDS))
+            con.execute("INSERT INTO used_nonce VALUES (?, ?, ?)", (nonce.lower(), expires, now_utc))
             con.execute("COMMIT")
-        except (sqlite3.Error, OSError) as exc:
+        except (sqlite3.Error, OSError, ProofError) as exc:
             try:
                 con.execute("ROLLBACK")
             except sqlite3.Error:
@@ -242,6 +263,13 @@ def sign_proof(cfg: Config, request: dict, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     expires = _parse_expiry(request["expires_at"], now)
     _check_dir(cfg.private_dir, cfg.signer_uid, None, 0o700)
+    # This implementation supports disposable software keys for offline tests only.
+    # Real treasury keys must never be installed here. A hardware-backed,
+    # nonexportable ownership-only provider must be security-reviewed separately.
+    if os.environ.get("AGENTZ_TREASURY_SOFTWARE_KEY_FIXTURE_ONLY") != SOFTWARE_KEY_TEST_FLAG:
+        raise ProofError("software private-key signing disabled outside disposable tests")
+    if os.path.commonpath(("/tmp", str(cfg.private_dir.resolve()))) != "/tmp":
+        raise ProofError("disposable key directory must be under /tmp")
     key_bytes = _read_checked_file(cfg.key_file, cfg.signer_uid, None, 0o600, 128).strip()
     if not re.fullmatch(rb"(?:0x)?[a-fA-F0-9]{64}", key_bytes):
         raise ProofError("invalid private key encoding")
@@ -270,12 +298,18 @@ def sign_proof(cfg: Config, request: dict, now: datetime | None = None) -> dict:
             "authority": "ownership-proof-only", "host_observation_independently_verified": False}
 
 
-def _client(conn: socket.socket, cfg: Config) -> None:
-    conn.settimeout(3)
+def _client(conn: socket.socket, cfg: Config, attempts: deque[float]) -> None:
+    conn.settimeout(1)
     try:
         pid, uid, gid = struct.unpack("3i", conn.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
         if uid != cfg.operator_uid or uid in (0, cfg.signer_uid):
             raise ProofError("unauthorized peer UID")
+        now_tick = time.monotonic()
+        while attempts and now_tick - attempts[0] >= 60:
+            attempts.popleft()
+        if len(attempts) >= MAX_PROOFS_PER_MINUTE:
+            raise ProofError("proof request rate limit exceeded")
+        attempts.append(now_tick)  # charge rejected requests too
         buf = bytearray()
         while len(buf) <= MAX_FRAME:
             chunk = conn.recv(min(512, MAX_FRAME + 1 - len(buf)))
@@ -325,12 +359,13 @@ def serve(cfg: Config) -> None:
             if (not stat.S_ISSOCK(st.st_mode) or st.st_uid != cfg.signer_uid or
                     st.st_gid != cfg.socket_gid or stat.S_IMODE(st.st_mode) != 0o660):
                 raise ProofError("socket owner, group or mode not enforced")
-            listener.listen(8)
+            listener.listen(4)
+            attempts: deque[float] = deque()
             try:
                 while True:
                     conn, _ = listener.accept()
                     with conn:
-                        _client(conn, cfg)
+                        _client(conn, cfg, attempts)
             finally:
                 sock_path.unlink()
     finally:
