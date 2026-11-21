@@ -26,7 +26,6 @@ jobs:
           import json
           import os
           import platform
-          import re
           import socket
           import subprocess
           import urllib.error
@@ -114,11 +113,17 @@ jobs:
               "process_count": 0,
               "process_start_time_utc": None,
               "process_start_ticks": None,
+              "process_identity_stable": False,
+              "observed_at_utc": None,
+              "boot_id": None,
               "container_probe": "not-inspected",
               "container_image_id": None,
               "image_source_revision_label": None,
               "image_identity_matched_to_protected_build": False,
               "attestation_signed": False,
+              "independent_protected_image_match": False,
+              "image_source_revision_label_matches_workflow_head": False,
+              "running_checkout_matches_workflow_head_not_loaded_code_proof": False,
               "running_source_revision": None,
               "source_revision_origin": None,
               "api_source_sha256": None,
@@ -187,13 +192,34 @@ jobs:
               report["health_http_status"] = error.code
           except (urllib.error.URLError, OSError):
               report["health_unreachable"] = True
+          # Recheck PID after the local health request to reject PID recycling.
+          if len(matches) == 1 and report["process_start_ticks"] is not None:
+              try:
+                  _, after = process_start(matches[0].name)
+                  report["process_identity_stable"] = after == report["process_start_ticks"]
+              except (OSError, ValueError, StopIteration, IndexError):
+                  pass
+          report["observed_at_utc"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+          try:
+              report["boot_id"] = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+          except OSError:
+              pass
+          report["running_checkout_matches_workflow_head_not_loaded_code_proof"] = (
+              report["running_source_revision"] == os.getenv("GITHUB_SHA")
+          )
+          report["image_source_revision_label_matches_workflow_head"] = (
+              report["image_source_revision_label"] == os.getenv("GITHUB_SHA")
+          )
           if (
               len(matches) == 1 and
               report["health_http_status"] == 200 and
               report["health_json_valid"] and
-              report["health_response_sha256"]
+              report["health_response_sha256"] and
+              report["process_identity_stable"]
           ):
               report["result"] = "LOCAL_ORIGIN_HEALTH_PROVEN"
+          # Observing a Docker image ID is not a protected-build attestation
+          # until an independent verifier matches the source and archive.
           print("AGENTZ_RUNTIME_PREFLIGHT=" + json.dumps(report, sort_keys=True))
           if report["result"] != "LOCAL_ORIGIN_HEALTH_PROVEN":
               raise SystemExit(1)
