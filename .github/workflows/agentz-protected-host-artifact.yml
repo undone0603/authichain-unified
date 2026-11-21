@@ -24,7 +24,9 @@ jobs:
     # Zac, Nov 21 2026 12:30 AM EST: "stick to free path". GitHub-hosted runners are
     # billing-locked, so this builds on the self-hosted ARM64 deploy runner (wsl-deploy-arm64).
     runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
-    timeout-minutes: 35
+    # Run 44874903039 (Nov 21 2026) built and smoke-tested in ~10 min, then hit the
+    # 35-min cap uploading the ~397 MB image tarball at ~189 KB/s from the laptop.
+    timeout-minutes: 90
     steps:
       - name: Refuse duplicate ARM64 build for protected SHA
         shell: bash
