@@ -127,7 +127,7 @@
       "workflows": {
         "agentz-ci.yml": "on",
         "agentz-protected-provenance-build.yml": "on",
-      "agentz-host-executable-identity.yml": "on",
+        "agentz-host-executable-identity.yml": "on",
         "agentz-mcp-verify.yml": "on",
         "ci.yml": "on",
         "main.yml": "on",
