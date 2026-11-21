@@ -135,3 +135,22 @@ test("agent-verify exports coerceSealBody and listedSealId for the worker bundle
   assert.match(routes, /from "\.\.\/\.\.\/\.\.\/src\/lib\/agent-verify"/);
   assert.match(routes, /from "\.\.\/\.\.\/\.\.\/src\/lib\/paid-seal-verify"/);
 });
+
+test("deployment remains manual, main-only, and on the protected WSL runner", () => {
+  const triggers = yml.match(/^on:\n([\s\S]*?)(?=^permissions:)/m)?.[1] ?? "";
+  assert.match(triggers, /^  workflow_dispatch:/m);
+  assert.doesNotMatch(
+    triggers,
+    /^  (?:pull_request(?:_target)?|push|schedule|workflow_run):/m
+  );
+  assert.equal(
+    (yml.match(/runs-on: \[self-hosted, Linux, ARM64, authichain-wsl\]/g) || [])
+      .length,
+    2
+  );
+  assert.equal(
+    (yml.match(/if: github\.ref == 'refs\/heads\/main'/g) || []).length,
+    2
+  );
+  assert.match(yml, /environment:\s*\n\s+name: production-cloudflare/);
+});
