@@ -1,22 +1,31 @@
 /**
- * gen-seo-pages.cjs
+ * gen-seo-pages.mjs
  * Deterministically generates the committed programmatic-SEO catalogue
  * (content/seo/pages.json). Re-running is idempotent: hand-authored seed pages
  * are preserved by slug (bespoke copy is not rewritten) and generated pages
  * are (re)built from the DATA table. The Get started money CTA is always
  * rebuilt so checkout landings collect a recovery email.
  *
- * DATA is assembled below from scripts/seo-data/*.cjs (regulatory.cjs,
- * industry.cjs, standards.cjs, commercial.cjs) rather than inlined here — see
+ * DATA is assembled below from scripts/seo-data/*.mjs (regulatory.mjs,
+ * industry.mjs, standards.mjs, commercial.mjs) rather than inlined here — see
  * the comment above the `const DATA =` assignment for which file a new entry
  * belongs in.
  *
- * Run:  node scripts/gen-seo-pages.cjs
+ * Run:  node scripts/gen-seo-pages.mjs
  * CI:   .github/workflows/gen-seo-pages.yml — Friday 09:00 UTC and
  *       workflow_dispatch. Commits content/seo/pages.json only when it changes.
  */
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import regulatoryData from './seo-data/regulatory.mjs';
+import industryData from './seo-data/industry.mjs';
+import standardsData from './seo-data/standards.mjs';
+import commercialData from './seo-data/commercial.mjs';
+import comparisonData from './seo-data/comparison.mjs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const OUT = path.join(__dirname, '..', 'content', 'seo', 'pages.json');
 const SLUGS_OUT = path.join(__dirname, '..', 'content', 'seo', 'sitemap-slugs.json');
@@ -223,11 +232,11 @@ function clampTitle(kwTitle, brand, max = 60) {
   return `${kw}${suffix}`;
 }
 const DATA = [
-  ...require('./seo-data/regulatory.cjs'),
-  ...require('./seo-data/industry.cjs'),
-  ...require('./seo-data/standards.cjs'),
-  ...require('./seo-data/commercial.cjs'),
-  ...require('./seo-data/comparison.cjs'),
+  ...regulatoryData,
+  ...industryData,
+  ...standardsData,
+  ...commercialData,
+  ...comparisonData,
   ...[
     { keyword: 'eu ban on destroying unsold clothes and shoes records', brand: 'authichain', schemaType: 'Service',
       lead: 'Under the ESPR, large companies may not destroy unsold apparel, clothing accessories and footwear from 19 July 2026 unless a listed exception applies, and they must disclose the volumes they discard; medium-sized companies follow on 19 July 2030.',

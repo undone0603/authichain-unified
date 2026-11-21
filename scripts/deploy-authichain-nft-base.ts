@@ -24,7 +24,7 @@
 // Identity: docs/strategy/WEB3_IDENTITY.md.
 //
 // Usage:
-//   node scripts/compile-authichain-nft.cjs
+//   node scripts/compile-authichain-nft.mjs
 //   CHAIN=base DRY_RUN=true  GRANT_SMART_WALLET=true pnpm exec tsx scripts/deploy-authichain-nft-base.ts
 //   CHAIN=base DRY_RUN=false GRANT_SMART_WALLET=true pnpm exec tsx scripts/deploy-authichain-nft-base.ts
 
@@ -67,7 +67,11 @@ function privateKey(): string {
 }
 
 function existingContract(): string {
-  return (process.env.GOVCHAIN_NFT_CONTRACT || process.env.CONTRACT_ADDRESS || "").trim();
+  return (
+    process.env.GOVCHAIN_NFT_CONTRACT ||
+    process.env.CONTRACT_ADDRESS ||
+    ""
+  ).trim();
 }
 
 function fail(message: string): never {
@@ -102,7 +106,9 @@ async function grantIfNeeded(
   const verified: boolean = await contract.isManufacturerVerified(address);
   const minterRole: string = await contract.MINTER_ROLE();
   const hasMinter: boolean = await contract.hasRole(minterRole, address);
-  console.log(`[grant] ${label} ${address} verified=${verified} minter=${hasMinter}`);
+  console.log(
+    `[grant] ${label} ${address} verified=${verified} minter=${hasMinter}`
+  );
   if (verified && hasMinter) return;
   if (dry) {
     console.log(`[grant] DRY_RUN would verifyManufacturer(${address})`);
@@ -113,7 +119,10 @@ async function grantIfNeeded(
   await tx.wait();
 }
 
-function writeReceipt(payload: Record<string, unknown>, chainKey: string): string {
+function writeReceipt(
+  payload: Record<string, unknown>,
+  chainKey: string
+): string {
   const outDir = join(process.cwd(), "deployments");
   if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
   const outFile = join(outDir, `AuthiChainNFT.${chainKey}.json`);
@@ -128,7 +137,9 @@ async function main() {
   const artifactFile = defaultArtifactPath();
   const existing = existingContract();
 
-  console.log(`[deploy-nft] chain=${chain.name} (${chain.chainId}) dryRun=${DRY_RUN}`);
+  console.log(
+    `[deploy-nft] chain=${chain.name} (${chain.chainId}) dryRun=${DRY_RUN}`
+  );
   console.log(
     `[deploy-nft] env CHAIN DRY_RUN GRANT_SMART_WALLET ARTIFACT_PATH GOVCHAIN_NFT_CONTRACT`
   );
@@ -153,7 +164,9 @@ async function main() {
     if (!DRY_RUN) fail(hint);
     console.warn(hint);
     if (IN_ACTIONS && !existing) {
-      console.warn("[deploy-nft] DRY_RUN without a key: compile + RPC + artifact checks only");
+      console.warn(
+        "[deploy-nft] DRY_RUN without a key: compile + RPC + artifact checks only"
+      );
     }
   }
 
@@ -189,7 +202,9 @@ async function main() {
   }
 
   if (!DRY_RUN && !address && wallet && balance === 0n) {
-    fail(`NFT deployer EOA ${wallet.address} has 0 ${chain.currency} on ${chain.name}; fund it before a live deploy`);
+    fail(
+      `NFT deployer EOA ${wallet.address} has 0 ${chain.currency} on ${chain.name}; fund it before a live deploy`
+    );
   }
 
   let deployTxHash = "";
@@ -197,7 +212,9 @@ async function main() {
   if (!address) {
     const artifact = loadAuthiChainNftArtifact(artifactFile);
     artifactBytes = bytecodeByteLength(artifact.bytecode);
-    console.log(`[deploy-nft] artifact ${artifactFile} bytecode_bytes=${artifactBytes} abi=${artifact.abi.length}`);
+    console.log(
+      `[deploy-nft] artifact ${artifactFile} bytecode_bytes=${artifactBytes} abi=${artifact.abi.length}`
+    );
 
     if (!wallet) {
       writeReceipt(
@@ -222,23 +239,37 @@ async function main() {
         chain: chain.key,
         explorer: "",
       });
-      if (!DRY_RUN) fail("Live deploy requires WALLET_PRIVATE_KEY or POLYGON_PRIVATE_KEY");
-      console.log("[deploy-nft] DRY_RUN would deploy AuthiChainNFT (no ops key in this process)");
+      if (!DRY_RUN)
+        fail("Live deploy requires WALLET_PRIVATE_KEY or POLYGON_PRIVATE_KEY");
+      console.log(
+        "[deploy-nft] DRY_RUN would deploy AuthiChainNFT (no ops key in this process)"
+      );
       return;
     }
 
-    const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
+    const factory = new ethers.ContractFactory(
+      artifact.abi,
+      artifact.bytecode,
+      wallet
+    );
     if (DRY_RUN) {
       try {
         const deployTx = await factory.getDeployTransaction();
-        const gas = await provider.estimateGas({ ...deployTx, from: wallet.address });
-        console.log(`[deploy-nft] DRY_RUN estimated deploy gas=${gas.toString()}`);
+        const gas = await provider.estimateGas({
+          ...deployTx,
+          from: wallet.address,
+        });
+        console.log(
+          `[deploy-nft] DRY_RUN estimated deploy gas=${gas.toString()}`
+        );
       } catch (err) {
         console.warn(
           `[deploy-nft] DRY_RUN could not estimate gas: ${err instanceof Error ? err.message : err}`
         );
       }
-      console.log(`[deploy-nft] DRY_RUN would deploy AuthiChainNFT from ${artifactFile}`);
+      console.log(
+        `[deploy-nft] DRY_RUN would deploy AuthiChainNFT from ${artifactFile}`
+      );
       writeReceipt(
         {
           contract: "AuthiChainNFT",
@@ -271,14 +302,21 @@ async function main() {
     deployTxHash = tx?.hash || "";
     console.log(`[deploy-nft] deployed ${address} tx=${deployTxHash}`);
     console.log(`[deploy-nft] explorer ${chain.explorer}/address/${address}`);
-    const code = await requireCode(provider, address, "fresh AuthiChainNFT deploy");
+    const code = await requireCode(
+      provider,
+      address,
+      "fresh AuthiChainNFT deploy"
+    );
     console.log(
       `[deploy-nft] getCode_bytes=${bytecodeByteLength(code)} ${chain.explorer}/address/${address}`
     );
   }
 
   if (!wallet) {
-    if (!DRY_RUN) fail("Grant/live path requires WALLET_PRIVATE_KEY or POLYGON_PRIVATE_KEY");
+    if (!DRY_RUN)
+      fail(
+        "Grant/live path requires WALLET_PRIVATE_KEY or POLYGON_PRIVATE_KEY"
+      );
     writeReceipt(
       {
         contract: "AuthiChainNFT",
@@ -341,17 +379,26 @@ async function main() {
   console.log("Next secrets:");
   console.log(`  CHAIN=${chain.key}`);
   console.log(`  GOVCHAIN_NFT_CONTRACT=${address}`);
-  console.log(`  WALLET_PRIVATE_KEY=<NFT deployer EOA, same as this run — do not paste into logs>`);
+  console.log(
+    `  WALLET_PRIVATE_KEY=<NFT deployer EOA, same as this run — do not paste into logs>`
+  );
   console.log(`  DRY_RUN=true pnpm exec tsx scripts/mint-govchain-nfts.ts`);
   if (!DRY_RUN) {
     console.log("");
-    console.log("Owner: set GitHub Actions secret GOVCHAIN_NFT_CONTRACT to the address above,");
-    console.log("then enable gov-mint.yml (id 304825951) and dispatch with dry_run=true.");
+    console.log(
+      "Owner: set GitHub Actions secret GOVCHAIN_NFT_CONTRACT to the address above,"
+    );
+    console.log(
+      "then enable gov-mint.yml (id 304825951) and dispatch with dry_run=true."
+    );
     console.log(`Verify: ${chain.explorer}/address/${address}`);
   }
 }
 
-main().catch((err) => {
-  console.error("[deploy-nft] failed:", err instanceof Error ? err.message : err);
+main().catch(err => {
+  console.error(
+    "[deploy-nft] failed:",
+    err instanceof Error ? err.message : err
+  );
   process.exit(1);
 });

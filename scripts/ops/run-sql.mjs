@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
+import postgres from 'postgres';
+
 const sql = postgres(process.env.DATABASE_URL || '');
 
 const migrationSql = `

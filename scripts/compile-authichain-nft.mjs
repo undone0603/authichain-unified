@@ -4,8 +4,13 @@
 //
 // Hardhat sources stay scoped to contracts/ledger — do not expect `npx hardhat compile`
 // to emit AuthiChainNFT. This file is the production compile path.
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const repoRoot = path.join(__dirname, "..");
 const contractPath = path.join(repoRoot, "contracts", "AuthiChainNFT.sol");
@@ -78,6 +83,7 @@ if (!bytecodeObject || bytecodeObject === "0x") {
 
 const bytecode = bytecodeObject.startsWith("0x") ? bytecodeObject : `0x${bytecodeObject}`;
 const abi = compiled.abi;
+
 if (!Array.isArray(abi) || abi.length < 10) {
   fail("compiled AuthiChainNFT ABI is missing or too small");
 }

@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- This .cjs pitch-deck script intentionally uses CommonJS semantics. */
+// Voyage Bloom pitch deck generation script (ESM)
 // Voyage Bloom Pack-to-NFT + Storymode — 8-slide pitch deck
 // Neon festival palette aligned to packaging energy.
 
-const pptxgen = require("pptxgenjs");
+import pptxgen from 'pptxgenjs';
 
 const pres = new pptxgen();
 pres.layout = "LAYOUT_WIDE"; // 13.333" x 7.5"

@@ -1,12 +1,12 @@
 /**
- * seo-data/standards.cjs
- * DATA entries for gen-seo-pages.cjs: protocol and standards-mechanics pages
+ * seo-data/standards.mjs
+ * DATA entries for gen-seo-pages.mjs: protocol and standards-mechanics pages
  * (W3C Verifiable Credentials, GS1 Digital Link, DID methods, EPCIS, and
  * related technical-standard explainers not tied to a specific deadline).
- * Shape must match gen-seo-pages.cjs's DATA entries exactly: keyword, brand,
- * schemaType, lead, bullets[3], faqs[{q,a}]. Required by gen-seo-pages.cjs.
+ * Shape must match gen-seo-pages.mjs's DATA entries exactly: keyword, brand,
+ * schemaType, lead, bullets[3], faqs[{q,a}]. Required by gen-seo-pages.mjs.
  */
-module.exports = [
+export default [
   { keyword: 'gs1 digital link sunrise 2027', brand: 'qron', schemaType: 'Service',
     lead: 'GS1 Sunrise 2027 moves point-of-sale scanning to QR codes carrying GS1 Digital Link URIs — the same identifier format QRON uses to attach a signed, verifiable record to every code it issues.',
     bullets: ['GS1 Digital Link is the item-identity format in the AuthiChain protocol spec, not a proprietary URL scheme', 'Existing GTINs and serials map directly into a verifiable record; nothing about your GS1 numbering changes'],

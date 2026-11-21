@@ -1,12 +1,12 @@
 /**
- * seo-data/regulatory.cjs
- * DATA entries for gen-seo-pages.cjs: EU/US regulatory deadlines and
+ * seo-data/regulatory.mjs
+ * DATA entries for gen-seo-pages.mjs: EU/US regulatory deadlines and
  * compliance timelines (ESPR delegated acts, EUDR, DSCSA, battery passport,
  * PPWR, FTC/USDA origin-claim rules, and similar dated obligations).
- * Shape must match gen-seo-pages.cjs's DATA entries exactly: keyword, brand,
- * schemaType, lead, bullets[3], faqs[{q,a}]. Required by gen-seo-pages.cjs.
+ * Shape must match gen-seo-pages.mjs's DATA entries exactly: keyword, brand,
+ * schemaType, lead, bullets[3], faqs[{q,a}]. Required by gen-seo-pages.mjs.
  */
-module.exports = [
+export default [
   { keyword: 'eu digital product passport textiles', brand: 'authichain', schemaType: 'Service',
     lead: 'Issue EU Digital Product Passports for textiles and apparel — fiber composition, recycled content, and care data anchored.',
     bullets: ['Fiber and recycled-content declarations', 'Care, durability, and repairability data', 'EPCIS 2.0 + JSON-LD registry export'],
