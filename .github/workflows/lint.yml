@@ -31,11 +31,9 @@ permissions:
   contents: read
 jobs:
   lint:
-    # All pull-request jobs use ephemeral GitHub-hosted runners. Both persistent
-    # WSL runners have shown 10-minute incomplete-step dependency-install
-    # failures (issue #2162); keep protected-main push jobs on ARM64.
-    # Never run untrusted PR checkout code on persistent WSL runners.
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
+    # Same-repo jobs use the authichain-ops ARM64 runners. Fork PR stays on
+    # ubuntu-24.04 so untrusted code never lands on the self-hosted machine.
+    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -106,7 +104,7 @@ jobs:
 
   test:
     needs: lint
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') }}
+    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
     timeout-minutes: 45
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
