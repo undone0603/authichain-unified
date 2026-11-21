@@ -133,8 +133,15 @@ export function validateIntake(intake: GapReportIntake): void {
   models.forEach((m, i) => {
     const label = `models[${i}]${clean(m?.model) ? ` (${clean(m.model)})` : ""}`;
     const s = scorePack(m);
-    for (const e of s.errors)
-      if (!e.startsWith("Cycle")) problems.push(`${label}: ${e}`);
+  const isSupplied = (v: unknown): boolean =>
+    v !== undefined && v !== null && String(v).trim() !== "";
+  for (const e of s.errors) {
+    if (e.startsWith("Cycle")) continue;
+    if (e.startsWith("Stated energy (Wh)") && !isSupplied(m?.statedWh)) continue;
+    if (e.startsWith("Capacity (Ah)") && !isSupplied(m?.capacityAh)) continue;
+    if (e.startsWith("Nominal voltage (V)") && !isSupplied(m?.nominalV)) continue;
+    problems.push(`${label}: ${e}`);
+  }
     const rows = annexXiiiRows(m);
     const allowed = new Set(
       rows
