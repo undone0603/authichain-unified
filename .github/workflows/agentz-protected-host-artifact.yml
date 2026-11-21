@@ -21,7 +21,9 @@ jobs:
     permissions:
       contents: write # only for unpublished build-evidence release assets
       actions: read # same-SHA workflow-run duplicate guard
-    runs-on: ubuntu-24.04-arm
+    # Zac, Nov 21 2026 12:30 AM EST: "stick to free path". GitHub-hosted runners are
+    # billing-locked, so this builds on the self-hosted ARM64 deploy runner (wsl-deploy-arm64).
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 35
     steps:
       - name: Refuse duplicate ARM64 build for protected SHA
