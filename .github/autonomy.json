@@ -242,6 +242,7 @@
       "managed": false,
       "workflows": {
         "agentz-host-runtime-preflight.yml": "manual",
+        "agentz-protected-host-artifact.yml": "manual",
         "self-hosted-ops-smoke.yml": "manual",
         "agentz-manual-post.yml": "manual",
         "agentz-tunnel-bringup.yml": "manual",
