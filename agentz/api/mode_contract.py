@@ -6,8 +6,8 @@ POST body `{ "mode": "confirm" }` was ignored and every chat `run` stayed
 dry-run. Resolve mode from query first, then JSON body, then default
 dry-run.
 
-Architect and cold-email workflows stay dry-run unless the caller sets an
-explicit live flag (`?live=true` or `{ "live": true }`).
+Architect, governor, and cold-email workflows stay dry-run unless the caller
+sets an explicit live flag (`?live=true` or `{ "live": true }`).
 """
 
 from __future__ import annotations
@@ -19,12 +19,16 @@ DEFAULT_MODE = "dry-run"
 
 
 def is_fail_closed_workflow(workflow_id: str | None, endpoint: str = "workflow") -> bool:
-    if endpoint == "architect":
+    if endpoint in {"architect", "governor"}:
         return True
     if not workflow_id:
         return False
     wid = workflow_id.strip().lower()
-    return wid == "architect_cycle" or wid.startswith("taskmarket") or "email" in wid
+    return (
+        wid in {"architect_cycle", "governor_cycle"}
+        or wid.startswith("taskmarket")
+        or "email" in wid
+    )
 
 
 def _as_bool(value: Any) -> bool:

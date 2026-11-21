@@ -4,20 +4,19 @@ agentz.api.main
 FastAPI Gateway for the AgentZ Autonomous Trust Infrastructure.
 Exposes core agents for Mobile, GPT, and Third-party integrations.
 """
-import hmac
-
 from fastapi import FastAPI, Header, HTTPException, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
+from agentz.api.auth import Scope, require_scope
+from agentz.api.cors import CORS_HEADERS, CORS_METHODS, cors_allow_origins
 from agentz.api.mode_contract import resolve_execution_mode
 from agentz.api.session_credentials import (
     apply_session_credential,
     session_credential_status,
 )
-import asyncio
 
 from agentz.core.credentials import get
 from supabase import create_client, Client
@@ -34,9 +33,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=cors_allow_origins(),
+    allow_credentials=True,
+    allow_methods=list(CORS_METHODS),
+    allow_headers=list(CORS_HEADERS),
 )
 
 # --- Dependency ---
@@ -47,18 +47,12 @@ def get_supabase():
     # The client will use the default httpx client internally.
     return create_client(url, key)
 
-async def verify_token(authorization: str = Header(None)):
-    # Fail closed: with no agent_secret configured there is no token anyone
-    # should hold. This used to fall back to a string committed to the repo,
-    # which made every "protected" route public on an unconfigured box.
-    admin_token = get("agent_secret")
-    if not admin_token:
-        raise HTTPException(status_code=503, detail="agent_secret not configured")
-    if not authorization or not hmac.compare_digest(
-        authorization.encode(), f"Bearer {admin_token}".encode()
-    ):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return True
+# Fail closed: with no agent_secret / scoped secret configured there is no
+# token anyone should hold. AGENT_SECRET still satisfies every scope when it
+# is the only token (or when it remains set alongside scoped tokens).
+verify_token = require_scope(Scope.RUN)
+verify_read_token = require_scope(Scope.READ)
+verify_credentials_token = require_scope(Scope.CREDENTIALS)
 
 # --- Models ---
 class ProductCreate(BaseModel):
@@ -96,9 +90,12 @@ async def api_scout(city: str, token: bool = Depends(verify_token)):
 
 @app.post("/products")
 async def api_create_product(data: ProductCreate, supabase: Client = Depends(get_supabase), token: bool = Depends(verify_token)):
+    from agentz.core.blockchain import ChainSigningRefused
     from agentz.core.builder import create_product_identity
-    res = await create_product_identity(supabase, data.dict())
-    return res
+    try:
+        return await create_product_identity(supabase, data.dict())
+    except ChainSigningRefused as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
 
 @app.post("/scan", dependencies=[Depends(verify_token)])
 async def api_scan(data: ScanInput, supabase: Client = Depends(get_supabase)):
@@ -188,7 +185,7 @@ async def get_operational_results():
 
 # --- AgentZ Fleet Endpoints (for OpenClaw bridge and CLI) ---
 
-@app.get("/agents", dependencies=[Depends(verify_token)])
+@app.get("/agents", dependencies=[Depends(verify_read_token)])
 async def api_list_agents():
     """List all registered agents."""
     from agentz.agents.pipeline import ALL_AGENTS
@@ -200,7 +197,7 @@ async def api_list_agents():
     }
 
 
-@app.get("/workflows", dependencies=[Depends(verify_token)])
+@app.get("/workflows", dependencies=[Depends(verify_read_token)])
 async def api_list_workflows():
     """List all registered workflows from the registry."""
     from agentz.core.runner import load_registry
@@ -316,7 +313,7 @@ async def api_architect_cycle(
     }
 
 
-@app.post("/credentials/{key}", dependencies=[Depends(verify_token)])
+@app.post("/credentials/{key}", dependencies=[Depends(verify_credentials_token)])
 async def api_set_session_credential(key: str, request: Request):
     """Push an allowlisted session cookie into the live AgentZ process.
 
@@ -333,7 +330,7 @@ async def api_set_session_credential(key: str, request: Request):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.get("/credentials/{key}/status", dependencies=[Depends(verify_token)])
+@app.get("/credentials/{key}/status", dependencies=[Depends(verify_credentials_token)])
 async def api_session_credential_status(key: str):
     """Presence/length of an allowlisted session cookie. Never returns the value."""
     try:
@@ -344,7 +341,7 @@ async def api_session_credential_status(key: str):
 
 # --- Launch Governor Endpoints ---
 
-@app.get("/launch/state", dependencies=[Depends(verify_token)])
+@app.get("/launch/state", dependencies=[Depends(verify_read_token)])
 async def api_launch_state():
     """Get the current launch stage and gate assessment."""
     from agentz.core.launch_state import LaunchStateMachine
@@ -367,7 +364,7 @@ async def api_launch_state():
     }
 
 
-@app.get("/launch/score", dependencies=[Depends(verify_token)])
+@app.get("/launch/score", dependencies=[Depends(verify_read_token)])
 async def api_launch_score():
     """Get the current Launch Score with breakdown."""
     from agentz.core.launch_state import LaunchStateMachine
@@ -379,19 +376,47 @@ async def api_launch_score():
 
 
 @app.post("/launch/governor/cycle", dependencies=[Depends(verify_token)])
-async def api_governor_cycle(mode: str = "dry-run", budget: float = 50.0):
+async def api_governor_cycle(
+    request: Request,
+    mode: Optional[str] = Query(None),
+    live: bool = Query(False),
+    budget: Optional[float] = Query(None),
+):
     """
     Run one Launch Governor cycle (observe→measure→plan→execute→verify).
-    Returns the full cycle report.
+
+    Same dry-run-by-default contract as `/architect/cycle`: query/body `mode`
+    is resolved through `resolve_execution_mode`. Confirm/auto require
+    `live=true`. Default daily budget remains 50 USD.
     """
-    from agentz.core.governor import LaunchGovernor
+    from agentz.core.governor import DEFAULT_DAILY_BUDGET_USD, LaunchGovernor
     from agentz.core.modes import parse_mode
-    governor = LaunchGovernor(mode=parse_mode(mode), daily_budget=budget)
+
+    body = await _read_json_object(request)
+    resolved, coerced, live_flag = resolve_execution_mode(
+        query_mode=mode,
+        body=body,
+        live_query=live,
+        workflow_id="governor_cycle",
+        endpoint="governor",
+    )
+    body_budget = body.get("budget")
+    daily_budget = (
+        budget
+        if budget is not None
+        else body_budget if isinstance(body_budget, (int, float)) else DEFAULT_DAILY_BUDGET_USD
+    )
+    governor = LaunchGovernor(mode=parse_mode(resolved), daily_budget=float(daily_budget))
     cycle = governor.run_cycle(verbose=False)
-    return {"cycle": cycle.to_dict()}
+    return {
+        "cycle": cycle.to_dict(),
+        "mode": resolved,
+        "coerced_to_dry_run": coerced,
+        "live": live_flag,
+    }
 
 
-@app.get("/launch/specialists", dependencies=[Depends(verify_token)])
+@app.get("/launch/specialists", dependencies=[Depends(verify_read_token)])
 async def api_launch_specialists():
     """Get status of all six specialist agents."""
     from agentz.core.specialists import ALL_SPECIALISTS
@@ -410,7 +435,7 @@ async def api_launch_specialists():
 
 
 # --- Deployment Control Plane ---
-@app.get("/control-plane/state", dependencies=[Depends(verify_token)], tags=["Control Plane"])
+@app.get("/control-plane/state", dependencies=[Depends(verify_read_token)], tags=["Control Plane"])
 async def api_control_plane_state():
     """Return normalized GitHub/GitLab/Vercel/Cloudflare deployment state."""
     from agentz.control_plane import collect_state

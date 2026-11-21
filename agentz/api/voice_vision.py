@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import base64
 import binascii
-import hmac
 import ipaddress
 import os
 from pathlib import Path
@@ -18,7 +17,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from agentz.core.credentials import get
+from agentz.api.auth import Scope, verify_scope
 
 router = APIRouter(prefix="/agentz/voice-vision", tags=["AgentZ Voice + Vision"])
 _CONSOLE = Path(__file__).with_name("voice_vision_console.html")
@@ -94,13 +93,7 @@ def _private_model_endpoint() -> str:
 
 
 def _operator_auth(authorization: str | None) -> None:
-    secret = get("agent_secret", required=False)
-    if not secret:
-        raise HTTPException(503, "AGENT_SECRET not configured")
-    if not authorization or not hmac.compare_digest(
-        authorization.encode(), f"Bearer {secret}".encode()
-    ):
-        raise HTTPException(401, "Unauthorized")
+    verify_scope(Scope.RUN, authorization)
 
 
 @router.get("", response_class=HTMLResponse)

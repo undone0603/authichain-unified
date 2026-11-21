@@ -160,7 +160,7 @@ Payments, webhooks and checkout have their own keys; they are in `REVENUE_LOOP.m
 
 ### 4.7 API (`agentz/api/main.py`, run with `uvicorn agentz.api.main:app`)
 
-**(code)** Public: `/health`, `/scout/{city}`, `/products`, `/marketplace`, `/network/pulses`, `/network/summary`, `/results`. Behind `verify_token`: `/scan`, `/redeem`, `/agents`, `/workflows`, `POST /workflows/{id}/run`, `/architect/cycle`, `/credentials/{key}` (write and status), `/launch/state`, `/launch/score`, `/launch/governor/cycle`, `/launch/specialists`. `AGENT_SECRET` unset makes every token route answer 503 (it fails closed). `$QRON` rewards on `/scan` and redemptions on `/redeem` are simulated and say so; nothing is minted or burned.
+**(code)** Public: `/health`, `/identity`, `/marketplace`, `/network/pulses`, `/network/summary`, `/results`. Behind scoped tokens (`AGENT_SECRET` still satisfies every scope when it is the only secret): read (`/agents`, `/workflows`, `/launch/state|score|specialists`), run (`/scout/{city}`, `/products`, `/scan`, `/redeem`, `POST /workflows/{id}/run`, `/architect/cycle`, `/launch/governor/cycle`), credentials (`/credentials/{key}`). `AGENT_SECRET` unset (and no scoped secret for that route) answers 503 (it fails closed). Governor and architect stay dry-run unless `live=true`. `$QRON` rewards on `/scan` and redemptions on `/redeem` are simulated and say so; nothing is minted or burned.
 
 ### 4.8 Where AgentZ runs
 

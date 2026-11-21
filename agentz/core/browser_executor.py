@@ -20,10 +20,19 @@ _SHA = re.compile(r"^[0-9a-f]{40}$")
 # Allow only subprocess runtime/profile settings. Do not inherit unrelated
 # production secrets, credentials or arbitrary configuration variables. The
 # HOME/XDG browser profile still requires an isolated, unprivileged OS identity.
-_BROWSER_ENV_KEYS = frozenset({
+BROWSER_ENV_KEYS = frozenset({
     "PATH", "HOME", "LANG", "LC_ALL", "LC_CTYPE", "TMPDIR",
     "XDG_RUNTIME_DIR", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME",
 })
+_BROWSER_ENV_KEYS = BROWSER_ENV_KEYS
+
+
+def browser_subprocess_env(extra: dict[str, str] | None = None) -> dict[str, str]:
+    """Minimal env for a browser CLI. Service keys and operator tokens stay out."""
+    env = {key: value for key, value in os.environ.items() if key in BROWSER_ENV_KEYS}
+    if extra:
+        env.update(extra)
+    return env
 
 
 def execute_browser_task(task: str, *, timeout: int = 60) -> dict:
@@ -47,9 +56,7 @@ def execute_browser_task(task: str, *, timeout: int = 60) -> dict:
     # A separate session prevents cross-task browser state leakage. CLI is
     # intentionally invoked with a fixed argv, never a shell or user command.
     session = "agentz-" + run_id
-    env = {key: value for key, value in os.environ.items()
-           if key in _BROWSER_ENV_KEYS}
-    env["AGENT_BROWSER_SESSION"] = session
+    env = browser_subprocess_env({"AGENT_BROWSER_SESSION": session})
     def call(*args):
         return subprocess.run(
             [executable, *args], capture_output=True, text=True,
