@@ -101,7 +101,7 @@ jobs:
             . "$HOME/.nvm/nvm.sh"
             nvm use 22 >/dev/null
           fi
-          node --test scripts/ci/autonomous-release-gate.test.mjs scripts/ci/verify-dpp-release-env.test.mjs scripts/ci/protected-dpp-release.test.mjs scripts/ci/verify-runtime-attestation-bootstrap.test.mjs scripts/ci/verify-dpp-main-quality.test.mjs
+          node --test scripts/ci/autonomous-release-gate.test.mjs scripts/ci/verify-dpp-release-env.test.mjs scripts/ci/protected-dpp-release.test.mjs scripts/ci/verify-runtime-attestation-bootstrap.test.mjs scripts/ci/verify-dpp-main-quality.test.mjs scripts/ci/worker-release-receipt.test.mjs
           node scripts/ci/autonomous-release-gate.mjs
           node scripts/ci/verify-dpp-release-env.mjs
       # GitHub 'Main quality gate' is intentionally skipped on main pushes;
@@ -313,6 +313,31 @@ jobs:
               process.exit(1);
             }
           '
+      - name: Record Cloudflare deployment baseline before publishing
+        if: ${{ inputs.rollback_version == '' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          rm -rf .release-receipt
+          node scripts/ci/worker-release-receipt.mjs before
+      # Halt before production mutation if the account Actions-artifact quota is exhausted.
+      # A successful small upload does not guarantee the full receipt can be uploaded later.
+      - name: Prepare predeploy artifact quota canary
+        if: ${{ inputs.rollback_version == '' }}
+        run: |
+          set -euo pipefail
+          printf 'source=%s run=%s\\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > .release-receipt/artifact-capacity-probe.txt
+      - name: Confirm GitHub artifact upload works before Worker publish
+        if: ${{ inputs.rollback_version == '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: authichain-app-predeploy-probe-${{ inputs.expected_sha }}-${{ github.run_id }}
+          path: .release-receipt/artifact-capacity-probe.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
       - name: Publish authichain-app
         if: ${{ inputs.rollback_version == '' }}
         env:
@@ -321,8 +346,24 @@ jobs:
         # --keep-vars keeps dashboard vars/secrets attached. No secret put, no --var.
         run: |
           set -euo pipefail
-          pnpm exec wrangler deploy --keep-vars --config wrangler.app.jsonc
+          pnpm exec wrangler deploy --keep-vars --config wrangler.app.jsonc --outdir .release-receipt/bundle
           pnpm exec wrangler deployments list --name authichain-app
+      - name: Verify Cloudflare release version and create SHA-256 receipt
+        if: ${{ inputs.rollback_version == '' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: node scripts/ci/worker-release-receipt.mjs after
+      - name: Publish same-run Worker bundle and SHA-256 release receipt
+        if: ${{ inputs.rollback_version == '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: authichain-app-release-${{ inputs.expected_sha }}-${{ github.run_id }}
+          path: .release-receipt/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
       - name: Verify live dual-connection runtime database attestation
         if: ${{ inputs.rollback_version == '' && inputs.release_mode == 'attestation-bootstrap' }}
         env:
