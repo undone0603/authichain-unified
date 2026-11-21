@@ -231,7 +231,13 @@ def _use_nonce(cfg: Config, nonce: str, expires: int) -> None:
                         (now_utc - NONCE_RETENTION_SECONDS, now_utc - NONCE_RETENTION_SECONDS))
             con.execute("INSERT INTO used_nonce VALUES (?, ?, ?)", (nonce.lower(), expires, now_utc))
             con.execute("COMMIT")
-        except (sqlite3.Error, OSError, ProofError) as exc:
+        except ProofError:
+            try:
+                con.execute("ROLLBACK")
+            except sqlite3.Error:
+                pass
+            raise
+        except (sqlite3.Error, OSError) as exc:
             try:
                 con.execute("ROLLBACK")
             except sqlite3.Error:
