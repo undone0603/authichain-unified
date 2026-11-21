@@ -142,7 +142,20 @@ jobs:
             --repo "$GITHUB_REPOSITORY" --draft --prerelease --target "$GITHUB_SHA" \
             --title "AgentZ source evidence $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
             --notes "BUILD EVIDENCE ONLY. Not a production release, host attestation, trading signer proof, DNS clearance, or authorization to place orders. SHA: $GITHUB_SHA. Run: $GITHUB_RUN_ID attempt $GITHUB_RUN_ATTEMPT."
-          payload="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag")"
+          # Draft releases have an "untagged-..." URL until publication.
+          # GitHub's /releases/tags/{tag} endpoint returns 404 for drafts;
+          # enumerate unpublished releases and select the exact run-scoped
+          # tag and protected SHA without making the release public.
+          payload="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
+            jq -e --arg tag "$tag" --arg sha "$GITHUB_SHA" '
+              [.[] | select(.draft == true and
+                            .tag_name == $tag and
+                            .target_commitish == $sha and
+                            .published_at == null)] |
+              if length == 1 then .[0]
+              else error("expected exactly one protected unpublished evidence release")
+              end
+            ')"
           jq -e --arg sha "$GITHUB_SHA" --arg tag "$tag" \
             '.draft == true and .tag_name == $tag and .target_commitish == $sha and .published_at == null' \
             <<< "$payload" >/dev/null
