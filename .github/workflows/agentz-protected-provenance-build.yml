@@ -47,20 +47,26 @@ jobs:
             echo "::error title=ref-mismatch::Build is not running from protected main."
             exit 1
           fi
-          if [ ! -f agentz/api/main.py ]; then
-            echo "::error title=missing-source::agentz/api/main.py is absent from checkout."
-            exit 1
-          fi
-          if [ ! -f requirements-agentz.txt ]; then
-            echo "::error title=missing-dependencies::requirements-agentz.txt is absent from checkout."
-            exit 1
-          fi
+          # The self-hosted runner can report a correct checkout HEAD while
+          # its working directory is missing tracked files. Extract from the
+          # immutable Git tree rather than trusting that working directory.
+          for tracked in agentz/api/main.py requirements-agentz.txt; do
+            if ! git cat-file -e "HEAD:$tracked"; then
+              echo "::error title=missing-git-object::Required tracked source is missing from protected commit: $tracked"
+              exit 1
+            fi
+          done
           if ! command -v python3 >/dev/null; then
             echo "::error title=missing-python::Python 3 was not found on ARM64 runner."
             exit 1
           fi
-          echo "[agentz-evidence] protected main/source/ref verified; compiling AgentZ..."
-          python3 -m compileall -q agentz
+          source_dir="$RUNNER_TEMP/agentz-provenance-source"
+          mkdir -p "$source_dir"
+          git archive --format=tar HEAD agentz requirements-agentz.txt | tar -xf - -C "$source_dir"
+          test -s "$source_dir/agentz/api/main.py"
+          test -s "$source_dir/requirements-agentz.txt"
+          echo "[agentz-evidence] exact protected Git tree exported; compiling AgentZ..."
+          python3 -m compileall -q "$source_dir/agentz"
           echo "[agentz-evidence] compileall passed"
       - name: Package tracked AgentZ source and record SHA-256 evidence
         shell: bash
@@ -83,6 +89,7 @@ jobs:
               return h.hexdigest()
 
           evidence = Path("agentz-build-evidence")
+          staged_source = Path(os.environ["RUNNER_TEMP"]) / "agentz-provenance-source"
           source_sha = os.environ["GITHUB_SHA"]
           if len(source_sha) != 40 or any(c not in "0123456789abcdef" for c in source_sha):
               raise SystemExit("Invalid source SHA")
@@ -96,8 +103,8 @@ jobs:
               "buildTimeUtc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
               "artifactFile": "agentz-source.tar.gz",
               "artifactSha256": digest(evidence / "agentz-source.tar.gz"),
-              "apiMainSourceSha256": digest("agentz/api/main.py"),
-              "dependenciesFileSha256": digest("requirements-agentz.txt"),
+              "apiMainSourceSha256": digest(staged_source / "agentz/api/main.py"),
+              "dependenciesFileSha256": digest(staged_source / "requirements-agentz.txt"),
               "pythonCompileall": "passed",
               "productionDeployment": False,
               "runningExecutableAttested": False,
