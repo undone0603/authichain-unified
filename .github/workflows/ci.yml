@@ -23,10 +23,38 @@ env:
   SKIP_EXTRA_PYTEST: "false"
 
 jobs:
+  select-runner:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      runs_on: ${{ steps.pick.outputs.runs_on }}
+    steps:
+      - name: Select online self-hosted runner or fallback to ubuntu-24.04
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "push" ] && [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo 'runs_on="ubuntu-24.04"' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          online_wsl=$(gh api "repos/${{ github.repository }}/actions/runners" \
+            --jq '[.runners[] | select(.status=="online" and (.labels | map(.name) | index("authichain-wsl")))] | length' 2>/dev/null || echo 0)
+          if [ "${online_wsl:-0}" -ge 1 ]; then
+            echo 'runs_on=["self-hosted","Linux","ARM64","authichain-wsl"]' >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No online authichain-wsl runner found; falling back to ubuntu-24.04"
+            echo 'runs_on="ubuntu-24.04"' >> "$GITHUB_OUTPUT"
+          fi
+
   extras:
+    needs: select-runner
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
     name: Drizzle + Pytest Extras
-    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ fromJSON(needs.select-runner.outputs.runs_on) }}
     permissions:
       contents: read
     timeout-minutes: 30
