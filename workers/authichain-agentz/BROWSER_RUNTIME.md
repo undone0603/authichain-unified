@@ -67,3 +67,34 @@ docker run --rm --cap-drop ALL --security-opt no-new-privileges \
 The smoke imports Playwright, launches headless Chromium, and opens
 `about:blank`. It does not visit the network. Hosted CI does not build
 this linux/arm64 image; set `AGENTZ_BROWSER_SMOKE=0` to refuse a launch.
+
+## Host LM Studio from the container
+
+`LOCAL_MODEL_URL` defaults to `http://127.0.0.1:1234`. Inside the
+container that address is the **container**, not the laptop. LM Studio
+now listens only on host `127.0.0.1`.
+
+`--add-host=host.docker.internal:host-gateway` with
+`LOCAL_MODEL_URL=http://host.docker.internal:1234` does **not** reach a
+loopback-only LM Studio. Traffic to `host.docker.internal` lands on the
+host Docker bridge (for example `172.17.0.1`), not on `127.0.0.1`. Do
+not bind LM Studio to the LAN (`0.0.0.0` or a `192.168.*` address) to
+paper over that.
+
+The option that works **without** a LAN bind is Linux `--network host`,
+so the container shares the host network namespace and
+`http://127.0.0.1:1234` is the host LM Studio:
+
+```bash
+docker run --rm \
+  --network host \
+  --cap-drop ALL \
+  --security-opt no-new-privileges \
+  -e LOCAL_MODEL_URL=http://127.0.0.1:1234 \
+  agentz-host:<sha>
+```
+
+`--network host` is Linux-only. This image's default `docker run` and
+the ARM64 artifact smoke do **not** add it (they do not call LM Studio).
+Do not enable host networking unless the operator needs the local model
+from inside the container.

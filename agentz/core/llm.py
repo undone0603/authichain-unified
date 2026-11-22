@@ -18,10 +18,28 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 import httpx
 
+DEFAULT_LOCAL_MODEL_URL = "http://127.0.0.1:1234"
+
+
+def local_model_url() -> str:
+    """LM Studio origin from LOCAL_MODEL_URL. Defaults to loopback."""
+    base = os.environ.get("LOCAL_MODEL_URL", DEFAULT_LOCAL_MODEL_URL).rstrip("/")
+    if base.endswith("/v1"):
+        base = base[: -len("/v1")].rstrip("/")
+    return base or DEFAULT_LOCAL_MODEL_URL
+
+
 class LMStudioManager:
     """Manages model lifecycle using native LM Studio v1 REST API."""
-    def __init__(self, base_url="http://192.168.254.10:1234"):
-        self.base_url = base_url
+
+    def __init__(self, base_url: str | None = None):
+        self._base_url_override = base_url
+
+    @property
+    def base_url(self) -> str:
+        if self._base_url_override:
+            return self._base_url_override.rstrip("/")
+        return local_model_url()
 
     def _local_management_headers(self) -> dict[str, str]:
         """Send the LM Studio token only to localhost/RFC1918 endpoints."""
@@ -212,10 +230,7 @@ class LimitProofLLM:
     def _local_base_url() -> str:
         # ChatOpenAI expects an OpenAI-compatible root (…/v1); without it
         # requests hit /chat/completions instead of /v1/chat/completions (404 on Ollama/LM Studio).
-        base = os.environ.get("LOCAL_MODEL_URL", "http://192.168.254.10:1234").rstrip("/")
-        if not base.endswith("/v1"):
-            base += "/v1"
-        return base
+        return local_model_url() + "/v1"
 
     @staticmethod
     def _local_timeout() -> float:
