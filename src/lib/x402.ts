@@ -1404,6 +1404,17 @@ export async function x402AgentCard(
     ],
     skills: [
       {
+        id: "dpp-readiness-check",
+        name: "EU DPP readiness check (free)",
+        description:
+          "Free, informational EU Digital Product Passport readiness score by product category: 0-100, concrete gaps, and the dated obligation (battery passport is law from 18 Feb 2027; other categories are ESPR targets). Not legal advice and not a certification.",
+        tags: ["dpp", "espr", "battery-passport", "compliance", "free"],
+        examples: [
+          'POST https://authichain.com/mcp tools/call dpp_readiness_check {"category":"battery_passport","sells_in_eu":true}',
+          "https://authichain.com/dpp-check",
+        ],
+      },
+      {
         id: "paid-evidence-check",
         name: "Paid evidence check",
         description: X402_RESOURCE_DESCRIPTION,
