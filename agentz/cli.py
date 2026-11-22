@@ -257,6 +257,18 @@ def cmd_tinyfish(args: argparse.Namespace) -> int:
     return cli_action(args.tinyfish_action, args.values, dry_run=args.dry_run)
 
 
+def cmd_capabilities(args: argparse.Namespace) -> int:
+    """List registry capabilities, discover the hosted MCP server, or call a read-only tool."""
+    from agentz.integrations.authichain_mcp import cli_capabilities
+
+    return cli_capabilities(
+        args.capabilities_action,
+        capability_id=getattr(args, "capability_id", None),
+        args_json=getattr(args, "args", None),
+        status=getattr(args, "status", None),
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog="agentz",
@@ -356,6 +368,21 @@ def build_parser() -> argparse.ArgumentParser:
             help="Validate and print the request; do not connect to TinyFish",
         )
 
+    cap = sub.add_parser(
+        "capabilities",
+        help="AgentZ capability registry and read-only hosted AuthiChain MCP calls",
+    )
+    cap_sub = cap.add_subparsers(dest="capabilities_action", required=True)
+    cap_list = cap_sub.add_parser("list", help="List registry entries (no network)")
+    cap_list.add_argument(
+        "--status",
+        choices=["AVAILABLE", "INTEGRATION_READY", "PARTIAL", "BLOCKED", "PROPOSED"],
+    )
+    cap_sub.add_parser("discover", help="List live hosted MCP tools and registry drift")
+    cap_call = cap_sub.add_parser("call", help="Call one AVAILABLE read-only capability")
+    cap_call.add_argument("capability_id")
+    cap_call.add_argument("--args", default=None, help="JSON object of tool arguments")
+
     oc = sub.add_parser(
         "openclaw",
         help="Talk to the OpenClaw bridge (claw.authichain.com)",
@@ -416,6 +443,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_tinyfish(args)
     if args.command == "openclaw":
         return cmd_openclaw(args)
+    if args.command == "capabilities":
+        return cmd_capabilities(args)
 
     parser.print_help()
     return 1

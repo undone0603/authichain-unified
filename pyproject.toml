@@ -24,4 +24,5 @@ where = ["."]
 include = ["agentz*"]
 
 [tool.setuptools.package-data]
+"agentz" = ["capabilities/registry.yaml"]
 "agentz.api" = ["voice_vision_console.html"]
