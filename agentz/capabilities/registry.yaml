@@ -1,0 +1,255 @@
+# AgentZ capability registry (machine-readable).
+#
+# One entry per real repository capability AgentZ can discover. Status values:
+#   AVAILABLE          independently verified and callable (evidence below)
+#   INTEGRATION_READY  implemented, not yet connected to AgentZ
+#   PARTIAL            needs repair or a missing dependency
+#   BLOCKED            needs credentials, runtime identity, approval or external access
+#   PROPOSED           no verified working implementation
+#
+# Only entries with `agentz_executable: true` can be invoked by
+# agentz/integrations/authichain_mcp.py, and only when the live server's MCP
+# annotations also say readOnlyHint=true and destructiveHint=false. Everything
+# financial, signing, privileged or host-executable stays non-executable here.
+# A source file, route or passing mock is not evidence of a working capability.
+schema_version: 1
+registry_version: 1
+baseline_revision: b4afbb3fc7a44dee4f7b2b2b1b8f58a9e4dcc883
+hosted_mcp_endpoint: https://authichain.com/mcp
+
+capabilities:
+  # ---- Hosted MCP (authichain-com worker). Verified live 2026-11-22 via tools/list
+  # ---- and tools/call over public HTTPS, no credentials, $0.
+  - id: authichain.mcp.get_pricing
+    name: Price and free-tool discovery
+    purpose: Tell an agent which verification tools are free and which human checkouts exist.
+    source: workers/authichain-com/src/mcp-routes.ts
+    entrypoint: {adapter: mcp, tool: get_pricing}
+    auth: none
+    risk: read_only
+    policy_capability: research
+    status: AVAILABLE
+    agentz_executable: true
+    evidence: production tools/call get_pricing returned a JSON result (2026-11-22).
+  - id: authichain.mcp.query_provenance
+    name: Provenance lookup
+    purpose: Return registry status, ledger pointers and authenticity score for an asset id.
+    source: workers/authichain-com/src/mcp-routes.ts
+    entrypoint: {adapter: mcp, tool: query_provenance}
+    auth: none
+    risk: read_only
+    policy_capability: research
+    status: AVAILABLE
+    agentz_executable: true
+    evidence: production tools/call with an unknown id returned status=unknown, verified=false (2026-11-22).
+  - id: agentz.workflow.verify_request
+    name: End-to-end verification request
+    purpose: Verify a record and retrieve provenance and attestation in one call, with a traceable receipt.
+    source: agentz/workflows/handlers/verify_request.py
+    entrypoint: {adapter: internal, workflow: verify_request}
+    auth: none
+    risk: read_only
+    policy_capability: research
+    status: AVAILABLE
+    agentz_executable: false
+    evidence: See docs/agentz/integration-progress.md slice 6 for the live run.
+  - id: authichain.mcp.verify_attestation
+    name: Attestation check
+    purpose: Check an asset's attestation, optionally against an expected object id.
+    source: workers/authichain-com/src/mcp-routes.ts
+    entrypoint: {adapter: mcp, tool: verify_attestation}
+    auth: none
+    risk: read_only
+    policy_capability: research
+    status: AVAILABLE
+    agentz_executable: true
+    evidence: listed by production tools/list with readOnlyHint=true (2026-11-22).
+  - id: authichain.mcp.verify_record
+    name: Signed record verification (hosted)
+    purpose: Verify a protocol/SPEC.md signed record server-side, without running a verifier on the AgentZ host.
+    source: workers/authichain-com/src/mcp-routes.ts
+    entrypoint: {adapter: mcp, tool: verify_record}
+    auth: none
+    risk: read_only
+    policy_capability: research
+    status: AVAILABLE
+    agentz_executable: true
+    evidence: listed by production tools/list with readOnlyHint=true (2026-11-22).
+  - id: authichain.mcp.dpp_readiness_check
+    name: EU Digital Product Passport readiness
+    purpose: Score a product category's ESPR/DPP readiness and list concrete gaps.
+    source: workers/authichain-com/src/mcp-routes.ts
+    entrypoint: {adapter: mcp, tool: dpp_readiness_check}
+    auth: none
+    risk: read_only
+    policy_capability: research
+    status: AVAILABLE
+    agentz_executable: true
+    evidence: production tools/call category=textiles returned score, band and gaps (2026-11-22).
+  - id: authichain.mcp.scan_living_qr
+    name: QRON Living QR scan lookup
+    purpose: Resolve a QRON object id to its registered product and status.
+    source: workers/authichain-com/src/mcp-routes.ts
+    entrypoint: {adapter: mcp, tool: scan_living_qr}
+    auth: none
+    risk: read_only
+    policy_capability: research
+    status: AVAILABLE
+    agentz_executable: true
+    evidence: listed by production tools/list with readOnlyHint=true (2026-11-22).
+  - id: authichain.mcp.negotiate
+    name: Agent-to-agent quote negotiation
+    purpose: Non-binding, quote-only capability and price-class discovery between agents.
+    source: workers/authichain-com/src/mcp-negotiate.ts
+    entrypoint: {adapter: mcp, tool: negotiate}
+    auth: none
+    risk: read_only
+    policy_capability: research
+    status: AVAILABLE
+    agentz_executable: true
+    evidence: listed by production tools/list with readOnlyHint=true; source states it never accepts terms or charges.
+  - id: authichain.mcp.verify
+    name: Legacy x402 paid seal verify
+    purpose: Paid seal verification over x402. Not free discovery.
+    source: workers/authichain-com/src/mcp-routes.ts
+    entrypoint: {adapter: mcp, tool: verify}
+    auth: x402 payment
+    risk: financial
+    policy_capability: payment
+    status: BLOCKED
+    agentz_executable: false
+    blocker: Paid call. Production annotations say destructiveHint=true. Needs scoped payment authorization and signing authority.
+
+  # ---- Discovered, not connected through this registry yet.
+  - id: agentz.scan.local_signature
+    name: Local signed-record verification on /scan
+    purpose: Verify a scan's signed record on the AgentZ host via protocol/verifier.mjs.
+    source: agentz/core/signature.py
+    entrypoint: {adapter: rest, route: POST /scan}
+    auth: AGENTZ_TRUSTED_ISSUERS plus node on PATH
+    risk: host_executable_verifier
+    policy_capability: test_isolated
+    status: BLOCKED
+    agentz_executable: false
+    blocker: Owner pause on new host-executable verifier/signer features until the port 8000 runtime is reconciled with its protected build artifact. Use authichain.mcp.verify_record instead.
+  - id: agentz.control_plane.state
+    name: Deployment control plane state
+    purpose: Normalized GitHub/Vercel/Cloudflare deployment state and a conservative release gate.
+    source: agentz/control_plane.py
+    entrypoint: {adapter: rest, route: GET /control-plane/state}
+    auth: provider read tokens on the host
+    risk: read_only
+    policy_capability: research
+    status: INTEGRATION_READY
+    agentz_executable: false
+    missing: Not yet wired as a registry-invocable adapter.
+  - id: agentz.taskmarket.pick
+    name: Taskmarket read-only pick
+    purpose: Choose one open Base USDC worker task without claiming or signing.
+    source: agentz/core/taskmarket.py
+    entrypoint: {adapter: internal, workflow: taskmarket_cycle}
+    auth: none for the pick
+    risk: read_only
+    policy_capability: research
+    status: INTEGRATION_READY
+    agentz_executable: false
+    missing: Exposed as a workflow, not as a registry capability.
+  - id: authichain.x402.settlement
+    name: x402 agent payment settlement
+    purpose: Agent pay in Base USDC.
+    source: src/lib/x402.ts
+    entrypoint: {adapter: rest, route: workers/authichain-com/src/x402-routes.ts}
+    auth: wallet signing authority
+    risk: financial
+    policy_capability: payment
+    status: BLOCKED
+    agentz_executable: false
+    blocker: Treasury authority stays separate from AgentZ runtime authority.
+  - id: authichain.x402.revenue_observer
+    name: x402 agent-rail revenue counter
+    purpose: Count settled USDC payments into the x402 payTo wallet, so sales claims rest on chain data.
+    source: agentz/integrations/x402_revenue.py
+    entrypoint: {adapter: internal, cli: "python -m agentz.cli capabilities revenue --days N"}
+    auth: none (public Base RPC)
+    risk: read_only
+    policy_capability: research
+    status: AVAILABLE
+    agentz_executable: false
+    evidence: "Live run 2026-11-22: 0 payments, 0 USDC over 30 days (1,296,000 blocks to head 60713707)."
+  - id: authichain.x402.settlement_proof
+    name: x402 settlement proof
+    purpose: Prove from the Base receipt and block that a payment settled through a payer-signed EIP-3009 authorization, with keccak-checked event topics.
+    source: agentz/integrations/settlement_proof.py
+    entrypoint: {adapter: internal, cli: "python -m agentz.cli capabilities prove-settlement <tx>"}
+    auth: none (public Base RPC)
+    risk: read_only
+    policy_capability: research
+    status: AVAILABLE
+    agentz_executable: false
+    evidence: docs/agentz/evidence/settlement-proofs-2026-11-22.jsonl
+  - id: authichain.stripe.billing
+    name: Stripe human checkout and billing webhook
+    purpose: Human plans and checkout; src/lib/plans.ts is the source of truth.
+    source: agentz/api/billing_webhook.py
+    entrypoint: {adapter: rest, route: billing webhook}
+    auth: Stripe secret and webhook secret
+    risk: financial
+    policy_capability: payment
+    status: BLOCKED
+    agentz_executable: false
+    blocker: Charges customers. Read-only entitlement visibility is the next candidate, not charging.
+  - id: authichain.a2a.agent_card
+    name: A2A agent card
+    purpose: Public agent discovery document for agent-to-agent interop.
+    source: workers/authichain-com/src/bot-identity-routes.ts
+    entrypoint: {adapter: a2a, url: https://authichain.com/.well-known/agent-card.json}
+    auth: none
+    risk: read_only
+    policy_capability: research
+    status: AVAILABLE
+    agentz_executable: false
+    evidence: "`agentz.cli capabilities agent-card` fetched it live (2026-11-22): valid, version 1.3.2, advertises the registry MCP endpoint. Read-only discovery; not invoked through call()."
+  - id: authichain.a2a.paid_evidence_check
+    name: A2A paid evidence check skill
+    purpose: The only skill on the public agent card. Settles over x402.
+    source: workers/authichain-com/src/bot-identity-routes.ts
+    entrypoint: {adapter: a2a, url: https://authichain.com/api/a2a}
+    auth: x402 payment
+    risk: financial
+    policy_capability: payment
+    status: BLOCKED
+    agentz_executable: false
+    blocker: Paid skill. Needs scoped payment authorization and signing authority.
+  - id: strainchain.genetics_passport
+    name: StrainChain genetics passport
+    purpose: Cannabis genetics provenance with totals recomputed from the raw panel.
+    source: src/lib/genetics.ts
+    entrypoint: {adapter: rest, route: /genetics}
+    auth: unknown
+    risk: read_only
+    policy_capability: research
+    status: PROPOSED
+    agentz_executable: false
+    missing: Not inspected deeply enough to classify. No AgentZ adapter.
+  - id: govchain.services
+    name: GovChain public-sector services
+    purpose: Public-sector verification and grant workflows.
+    source: agentz/core/gov.py
+    entrypoint: {adapter: internal}
+    auth: unknown
+    risk: unknown
+    policy_capability: research
+    status: PROPOSED
+    agentz_executable: false
+    missing: Not inspected deeply enough to classify.
+  - id: authichain.gs1.resolver
+    name: GS1 Digital Link resolver
+    purpose: Resolve GS1 Digital Link product identity.
+    source: workers/gs1-resolver
+    entrypoint: {adapter: rest}
+    auth: unknown
+    risk: read_only
+    policy_capability: research
+    status: PROPOSED
+    agentz_executable: false
+    missing: Deployment and routes not verified.
