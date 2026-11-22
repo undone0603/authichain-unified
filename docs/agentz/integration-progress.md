@@ -112,8 +112,11 @@ secrets or sensitive outputs belong here.
     `verified_demonstration_only`.
 - **Production finding.** Live `verify_attestation` returns
   `registry_unavailable`, and `query_provenance` reports `lookup_degraded`.
-  The signed-record and attestation registries behind the hosted tools are not
-  answering. That needs investigation in the worker, not in AgentZ.
+  Root cause found: the worker compares non-uuid ids against uuid columns
+  (`auth_seals.id`, `authichain_attestation_records.seal_id`), so PostgREST
+  rejects the whole filter. A random uuid returns `not_found`, while
+  `polygon-anchor-1` and a GTIN-style id return `registry_unavailable`. Fixed in
+  PR #2704 (`fix/registry-uuid-filters`), not yet merged or deployed.
 
 ## Owner decisions that unblock agent sales
 
@@ -134,6 +137,7 @@ secrets or sensitive outputs belong here.
 
 ## Next safe actions
 
+1. After PR #2704 merges and authichain-com redeploys, re-run `verify_request` with `polygon-anchor-1` and expect attestation `not_found` instead of `inconclusive`.
 1. Make the approved $0.05 test purchase once a buyer wallet exists, then confirm it with `capabilities revenue --days 1`.
 2. Wire `/control-plane/state` as a read-only registry capability.
 3. Inspect StrainChain, GovChain and GS1 code and classify them with evidence.
