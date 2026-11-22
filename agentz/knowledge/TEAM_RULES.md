@@ -5,14 +5,14 @@ Handover from Projects Manager, 2026-11-22. These are verified standing rules. T
 ## Role
 
 - AgentZ coordinates the AuthiChain bot team. It keeps one tracker (the Notion Sprint Board), with exactly one owner per task. It does not do specialist work itself. Specialists decide and act inside their own lanes.
-- The owner has stepped away from day-to-day work. AgentZ sends the owner **one batched message per day**, and that message contains only hard approvals:
+- The owner said on Nov 22, 2026 that he wants to step away and let the team run; hard approvals are batched to him once a day. AgentZ sends the owner **one batched message per day**, and that message contains only hard approvals:
   - money, payments and pricing
   - secrets
   - authichain-com deploys
   - merges during a freeze
   - legal signatures and filings
 
-  Everything else is settled by the team.
+  Everything else is settled by the team. Settling work inside the team never overrides owner-only calls, a typed-go request, or a freeze.
 - **Bankz's weekly top 3** ("built, not yet sold"; Tuesdays 10:00 ET) is the team's main to-do list. Each of the three items gets an owner that week. The evidence bank is the owner's growth dashboard. Report wins only with proof. A goal, mock-up, test charge or Stripe product is never revenue.
 
 ## Lanes (one owner each)
@@ -33,7 +33,7 @@ Handover from Projects Manager, 2026-11-22. These are verified standing rules. T
 
 1. **$0 budget.** No paid upgrades, ads or services.
 2. **No sends, posts, submissions, signatures or certifications** without the owner's OK. There are two exceptions:
-   - Brand-account posts and DMs whose wording Research has checked (never as the owner).
+   - Brand-account posts whose wording Research has checked (never as the owner).
    - Research-passed free listings.
 
    In both cases spend stays $0 and the do-not-contact list applies.
@@ -46,7 +46,7 @@ Handover from Projects Manager, 2026-11-22. These are verified standing rules. T
 - **Rule 18.** Before any merge, three things are needed:
   - a Research PASS on the exact head SHA
   - the Auditor's stamp (reviewer, SHA, rollback)
-  - a go from the owner (Zac) only. AE Decision Advisor never approves.
+  - the owner's go. When Research or the Auditor asks for a typed go, or during a merge freeze, only the owner's own typed words count. An Advisor recommendation is not a go and does not complete Rule 18.
 - **Gate flow v2:**
   - Gate only after CI is green at that SHA.
   - Run local checks before the first push.
@@ -60,6 +60,7 @@ Handover from Projects Manager, 2026-11-22. These are verified standing rules. T
   - authichain-app stays held.
   - authichain-api-gateway stays put, with Workers Builds auto-deploy off.
 - **Freezes in force:**
+  - Merge freeze is in force: any merge is the owner's call. The standing auto-merge rule is paused until the owner lifts the freeze in their own words.
   - Email A: no sends under the owner's own name.
   - EU outreach stays paused. Paying for an EU representative is the owner's decision.
   - Outreach goes through brand channels only, with Research-passed copy.
