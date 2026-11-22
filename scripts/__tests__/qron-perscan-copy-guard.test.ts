@@ -17,6 +17,7 @@ const ROOT = path.resolve(import.meta.dirname, "../..");
 export const PER_SCAN = /\bper[- ]scans?\b/i;
 export const PER_READ = /\bper[- ]reads?\b/i;
 export const PER_QR = /\bper[- ]QRs?\b/i;
+export const PER_LOOKUP = /\bper[- ]lookups?\b/i;
 /** `$0.002/QR` style unit prices, word-bounded on QR. */
 export const DOLLAR_PER_QR = /\$\d+(?:\.\d+)?\s*\/\s*QRs?\b/i;
 /** `$0.001-$0.01` including the HTML split on the old QRON pricing card. */
@@ -51,13 +52,24 @@ const COPY_EXT = new Set([
 ]);
 const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/;
 
+/** Per-scan / per-read / per-QR / per-lookup used as a price or meter. */
+export function hasPerUnitPriceOrMetering(line: string): boolean {
+  const perUnit =
+    PER_SCAN.test(line) ||
+    PER_READ.test(line) ||
+    PER_QR.test(line) ||
+    PER_LOOKUP.test(line);
+  return perUnit && PRICING_CONTEXT.test(line);
+}
+
 export function isLiveX402Copy(line: string): boolean {
   const live =
     /POST \/api\/x402/.test(line) ||
     /\$0\.05 USDC on Base/i.test(line) ||
     /paid agent verification/i.test(line);
   if (!live) return false;
-  // x402 phrasing must not hide restored QRON microprices.
+  // x402 phrasing must not hide restored QRON unit prices or metering.
+  if (hasPerUnitPriceOrMetering(line)) return false;
   if (/\$0\.00[12]\b/.test(line)) return false;
   if (PER_SEAL_FEE.test(line)) return false;
   return true;
@@ -89,11 +101,18 @@ export function lineHits(line: string): string[] {
   if (PER_SCAN.test(line) && PRICING_CONTEXT.test(line)) hits.push("per-scan");
   if (PER_READ.test(line) && PRICING_CONTEXT.test(line)) hits.push("per-read");
   if (PER_QR.test(line) && PRICING_CONTEXT.test(line)) hits.push("per-QR");
+  if (PER_LOOKUP.test(line) && PRICING_CONTEXT.test(line))
+    hits.push("per-lookup");
   if (DOLLAR_PER_QR.test(line)) hits.push("$/QR");
   if (MICROPRICE_RANGE.test(line)) hits.push("$0.001-range");
   if (PER_SEAL_FEE.test(line)) hits.push("Per-Seal Fee");
   if (UNCONFIRMED_POLICY.test(line)) hits.push("unconfirmed-policy");
   return hits;
+}
+
+/** A line fails the guard when it hits a banned pattern and is not allowlisted. */
+export function failsGuard(rel: string, line: string): boolean {
+  return lineHits(line).length > 0 && !isAllowlisted(rel, line);
 }
 
 function walkCopyFiles(dir: string, acc: string[] = []): string[] {
@@ -153,6 +172,25 @@ describe("qron per-scan / per-read / per-QR copy guard", () => {
     expect(lineHits(x402)).toEqual([]);
     expect(isLiveX402Copy(x402)).toBe(true);
     expect(isAllowlisted("docs/CAPABILITIES.md", x402)).toBe(true);
+    expect(failsGuard("docs/CAPABILITIES.md", x402)).toBe(false);
+  });
+
+  it("fails a per-lookup fee for the passport", () => {
+    const line = "per-lookup fee for the passport";
+    expect(PER_LOOKUP.test(line)).toBe(true);
+    expect(lineHits(line)).toContain("per-lookup");
+    expect(failsGuard("src/app/resources/eu-dpp-guide/page.tsx", line)).toBe(
+      true
+    );
+  });
+
+  it("does not exempt x402 copy that also meters per-scan", () => {
+    const line =
+      "Monetize through per-scan metering via POST /api/x402 ($0.05 USDC on Base, paid agent verification).";
+    expect(lineHits(line)).toContain("per-scan");
+    expect(isLiveX402Copy(line)).toBe(false);
+    expect(isAllowlisted("docs/CAPABILITIES.md", line)).toBe(false);
+    expect(failsGuard("docs/CAPABILITIES.md", line)).toBe(true);
   });
 
   it("keeps the two allowed no-per-scan-fee lines and the art-style uses", () => {
