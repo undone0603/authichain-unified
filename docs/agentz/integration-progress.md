@@ -140,6 +140,23 @@ secrets or sensitive outputs belong here.
   merchant.payai.network, then set `PAYAI_API_KEY_ID` and `PAYAI_API_KEY_SECRET`
   on the settling server. A Base settlement costs about $0.0015 in credits.
 
+### 8. First settled x402 payment (2026-11-22)
+
+- On the owner's instruction, the buyer wallet bought a PayAI API key and 1,000
+  credits for $1.00 USDC on Base (tx
+  `0x26ca6b8135847970f2cc16db0bef77213a970277bb4588b90ef2f984440327b3`). The
+  key is stored outside the repo in the local merchant's owner-only `.env`.
+- The local Express merchant (`@x402/express` + `@payai/facilitator`, Base
+  mainnet, payTo = AuthiChain) restarted with the key and settled a $0.01
+  payment: HTTP 200 with the paid body, PayAI `success: true`, tx
+  `0x0282230d0980dd13e68e6ad38fe7900b0dfa83e7ead7cea461cc62be00c902fe`.
+- `capabilities revenue --days 0.1` confirms on-chain: 1 x402 settlement,
+  0.01 USDC. This is a self-test (the owner funded the buyer), not customer
+  revenue, but it proves the full x402 path settles once PayAI credits exist.
+- authichain.com production still settles without PayAI credentials. It needs
+  JWT auth headers in `settlePayment` and the key as a Worker secret, which is a
+  code change plus an owner-approved deploy.
+
 ## Owner decisions that unblock agent sales
 
 1. **Done:** authichain-com redeployed.
