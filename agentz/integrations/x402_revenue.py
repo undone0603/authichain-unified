@@ -17,8 +17,10 @@ PAY_TO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
 BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 DEFAULT_RPC = "https://base-rpc.publicnode.com"
-BLOCKS_PER_DAY = 43_200  # Base targets 2 s blocks
-STEP = 10_000
+# Base block time is not fixed (2 s at launch, 0.2 s by 2026-11). It is
+# measured from block timestamps on every run; never assume it.
+SAMPLE_BLOCKS = 200_000
+STEP = 50_000  # public Base RPC maximum eth_getLogs range
 MAX_DAYS = 31
 PRICE_ATOMIC = 50_000  # $0.05 per paid evidence check
 
@@ -29,27 +31,47 @@ class RevenueError(Exception):
     pass
 
 
-def http_rpc(url: str = DEFAULT_RPC, timeout: float = 30.0,
-             sleep: Callable[[float], None] = time.sleep) -> Rpc:
+PUBLIC_RPCS = ("https://base-rpc.publicnode.com", "https://mainnet.base.org",
+               "https://base.llamarpc.com")
+THROTTLED = frozenset({403, 429, 500, 502, 503, 504})
+RETRYABLE_RPC_HINTS = ("rate", "limit", "range", "too many", "timeout", "busy")
+
+
+def http_rpc(url: str | None = None, timeout: float = 30.0,
+             sleep: Callable[[float], None] = time.sleep,
+             opener: Callable[..., Any] = urllib.request.urlopen) -> Rpc:
+    """JSON-RPC over public Base endpoints. Throttled or unreachable endpoints
+    rotate to the next one with growing back-off; nothing is retried forever."""
+    urls = [url] if url else list(PUBLIC_RPCS)
+    state = {"i": 0}
+
     def call(method: str, params: list[Any]) -> Any:
         body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method,
                            "params": params}).encode()
-        for attempt in range(4):
-            req = urllib.request.Request(url, body, {"content-type": "application/json",
-                                                     "user-agent": "agentz-readonly/1"})
+        last = "no attempt"
+        for attempt in range(3 * len(urls)):
+            endpoint = urls[state["i"] % len(urls)]
+            req = urllib.request.Request(endpoint, body, {"content-type": "application/json",
+                                                          "user-agent": "agentz-readonly/1"})
             try:
-                data = json.load(urllib.request.urlopen(req, timeout=timeout))
+                data = json.load(opener(req, timeout=timeout))
             except urllib.error.HTTPError as exc:
-                if exc.code != 429 or attempt == 3:
+                if exc.code not in THROTTLED:
                     raise RevenueError(f"rpc http {exc.code}") from None
-                sleep(2 * (attempt + 1))
-                continue
+                last = f"http {exc.code}"
             except (urllib.error.URLError, TimeoutError) as exc:
-                raise RevenueError(f"rpc unreachable: {type(exc).__name__}") from None
-            if "error" in data:
-                raise RevenueError(f"rpc error: {str(data['error'])[:200]}")
-            return data["result"]
-        raise RevenueError("rpc rate limited")
+                last = f"unreachable: {type(exc).__name__}"
+            else:
+                if "error" in data:
+                    msg = str(data["error"])
+                    if not any(h in msg.lower() for h in RETRYABLE_RPC_HINTS):
+                        raise RevenueError(f"rpc error: {msg[:200]}")
+                    last = f"rpc error: {msg[:120]}"
+                else:
+                    return data["result"]
+            state["i"] += 1
+            sleep(min(8.0, 0.5 * (attempt + 1)))
+        raise RevenueError(f"rpc unavailable after rotation: {last}")
     return call
 
 
@@ -66,6 +88,19 @@ def facilitator_signers(url: str = "https://authichain.com/api/x402/health",
     return frozenset(a.lower() for addrs in signers.values() for a in addrs)
 
 
+def block_timestamp(rpc: Rpc, number: int) -> int:
+    return int(rpc("eth_getBlockByNumber", [hex(number), False])["timestamp"], 16)
+
+
+def measured_block_time(rpc: Rpc, head: int, sample: int = SAMPLE_BLOCKS) -> float:
+    """Average seconds per block over the last `sample` blocks."""
+    sample = max(1, min(sample, head))
+    seconds = block_timestamp(rpc, head) - block_timestamp(rpc, head - sample)
+    if seconds <= 0:
+        raise RevenueError("could not measure block time")
+    return seconds / sample
+
+
 def payments(days: float, rpc: Rpc, pay_to: str = PAY_TO,
              pause: Callable[[float], None] = time.sleep,
              signers: frozenset[str] = frozenset()) -> dict[str, Any]:
@@ -75,7 +110,8 @@ def payments(days: float, rpc: Rpc, pay_to: str = PAY_TO,
         raise RevenueError(f"days must be in (0, {MAX_DAYS}]")
     head = int(rpc("eth_blockNumber", []), 16)
     to_topic = "0x" + "0" * 24 + pay_to.lower().removeprefix("0x")
-    span = int(days * BLOCKS_PER_DAY)
+    block_time = measured_block_time(rpc, head)
+    span = min(head, int(days * 86_400 / block_time))
     logs: list[dict[str, Any]] = []
     hi = head
     while hi > head - span:
@@ -96,6 +132,7 @@ def payments(days: float, rpc: Rpc, pay_to: str = PAY_TO,
         "days": days,
         "head_block": head,
         "blocks_scanned": span,
+        "block_time_s": round(block_time, 4),
         "incoming_transfers": len(amounts),
         "usdc_received": round(sum(amounts) / 1e6, 6),
         "x402_settlements": len(settled),
