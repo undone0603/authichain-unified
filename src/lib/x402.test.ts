@@ -8,6 +8,7 @@ import {
   wouldExceedCap,
   dailyCapUsd,
   settlePayment,
+  payaiAuthorization,
   decodeFacilitatorPaymentPayload,
   attachResourceToPaymentPayload,
   resolveX402Asset,
@@ -1047,5 +1048,66 @@ describe("x402PaidVerifyPathBound", () => {
     expect(x402PaidVerifyPathBound("verify_app")).toBe(true);
     expect(x402PaidVerifyPathBound("yes")).toBe(false);
     expect(x402PaidVerifyPathBound(undefined)).toBe(false);
+  });
+});
+
+describe("payaiAuthorization (PayAI merchant JWT)", () => {
+  async function keyPair() {
+    const kp = (await crypto.subtle.generateKey({ name: "Ed25519" }, true, [
+      "sign",
+      "verify",
+    ])) as CryptoKeyPair;
+    const pkcs8 = new Uint8Array(await crypto.subtle.exportKey("pkcs8", kp.privateKey));
+    return { publicKey: kp.publicKey, secret: "payai_sk_" + Buffer.from(pkcs8).toString("base64") };
+  }
+  const part = (s: string) => JSON.parse(Buffer.from(s, "base64url").toString("utf8"));
+
+  it("returns null without both credentials", async () => {
+    expect(await payaiAuthorization(undefined, "x")).toBeNull();
+    expect(await payaiAuthorization("id", "  ")).toBeNull();
+  });
+
+  it("signs an EdDSA JWT that verifies with the key's public half", async () => {
+    const { publicKey, secret } = await keyPair();
+    const auth = await payaiAuthorization("key-123", secret, 1_800_000_000);
+    expect(auth).toMatch(/^Bearer /);
+    const [h, p, sig] = auth!.slice(7).split(".");
+    expect(part(h)).toEqual({ alg: "EdDSA", typ: "JWT", kid: "key-123" });
+    const claims = part(p);
+    expect(claims).toMatchObject({ sub: "key-123", iss: "payai-merchant", iat: 1_800_000_000, exp: 1_800_000_120 });
+    expect(claims.jti).toMatch(/^[0-9a-f-]{36}$/);
+    const ok = await crypto.subtle.verify(
+      "Ed25519",
+      publicKey,
+      Buffer.from(sig, "base64url"),
+      new TextEncoder().encode(`${h}.${p}`)
+    );
+    expect(ok).toBe(true);
+  });
+
+  it("mints a fresh jti per call because PayAI consumes it", async () => {
+    const { secret } = await keyPair();
+    const a = part((await payaiAuthorization("k", secret))!.slice(7).split(".")[1]).jti;
+    const b = part((await payaiAuthorization("k", secret))!.slice(7).split(".")[1]).jti;
+    expect(a).not.toBe(b);
+  });
+
+  it("settlePayment sends Authorization only when credentials are configured", async () => {
+    const { secret } = await keyPair();
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, txHash: "0x1" }),
+    } as Response);
+    delete process.env.PAYAI_API_KEY_ID;
+    delete process.env.PAYAI_API_KEY_SECRET;
+    await settlePayment("proof", req);
+    expect((spy.mock.calls[0][1]?.headers as Record<string, string>).Authorization).toBeUndefined();
+    process.env.PAYAI_API_KEY_ID = "key-123";
+    process.env.PAYAI_API_KEY_SECRET = secret;
+    await settlePayment("proof", req);
+    expect((spy.mock.calls[1][1]?.headers as Record<string, string>).Authorization).toMatch(/^Bearer ey/);
+    delete process.env.PAYAI_API_KEY_ID;
+    delete process.env.PAYAI_API_KEY_SECRET;
   });
 });
