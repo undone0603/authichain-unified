@@ -478,7 +478,7 @@ test("paid MCP verify is forwarded and wrapped as JSON-RPC when VERIFY_APP is bo
   };
   assert.equal(body.id, 4);
   assert.equal(body.result.structuredContent.subject, "AC-1");
-  assert.equal(seen[0].url, "https://qron.space/api/v1/agent-verify");
+  assert.equal(seen[0].url, "https://authichain.com/api/v1/agent-verify");
   assert.deepEqual(await seen[0].json(), { serial: "AC-1" });
 });
 
