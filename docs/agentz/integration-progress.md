@@ -132,8 +132,13 @@ secrets or sensitive outputs belong here.
   endpoint reports this payTo as `low`, not exhausted, so an edge block is
   also possible. PR #2705 keeps the facilitator's refusal reason so the next
   attempt names it.
-- **Owner action likely needed:** top up PayAI merchant credits for the payTo at
-  merchant.payai.network. A Base settlement costs about $0.0015 in credits.
+- **Cause confirmed.** A $0.01 payment through a local Express merchant using
+  `@payai/facilitator` on Base mainnet returned PayAI `errorReason:
+  free_tier_exhausted` for the payTo: its 1,000 free credits are used up. No
+  funds moved.
+- **Owner action required:** top up PayAI credits for the payTo at
+  merchant.payai.network, then set `PAYAI_API_KEY_ID` and `PAYAI_API_KEY_SECRET`
+  on the settling server. A Base settlement costs about $0.0015 in credits.
 
 ## Owner decisions that unblock agent sales
 
