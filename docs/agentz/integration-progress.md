@@ -13,12 +13,12 @@ secrets or sensitive outputs belong here.
 
 ## Capability registry
 
-`agentz/capabilities/registry.yaml` lists 20 capabilities. List them with
+`agentz/capabilities/registry.yaml` lists 21 capabilities. List them with
 `python -m agentz.cli capabilities list`.
 
 | Status | Count | Notes |
 | --- | --- | --- |
-| AVAILABLE | 10 | 7 free hosted MCP tools, the A2A agent card, the on-chain x402 revenue counter, and the verify_request workflow |
+| AVAILABLE | 11 | 7 free hosted MCP tools, the A2A agent card, the on-chain x402 revenue counter, the verify_request workflow, and the settlement proof |
 | INTEGRATION_READY | 2 | Control plane, taskmarket pick |
 | BLOCKED | 5 | Paid x402 verify, paid A2A evidence skill, local /scan verifier (owner pause), x402 settlement, Stripe billing |
 | PROPOSED | 3 | StrainChain, GovChain, GS1 resolver. Not yet inspected deeply. |
@@ -156,6 +156,23 @@ secrets or sensitive outputs belong here.
 - authichain.com production still settles without PayAI credentials. It needs
   JWT auth headers in `settlePayment` and the key as a Worker secret, which is a
   code change plus an owner-approved deploy.
+
+### 9. Cryptographic settlement proof and keccak tests (2026-11-22)
+
+- **Implemented.** `agentz/integrations/settlement_proof.py` and
+  `capabilities prove-settlement <tx>`. From the receipt and block it checks:
+  success status, block hash match, exactly one USDC Transfer to payTo, an
+  EIP-3009 `AuthorizationUsed` log by the same payer, and a facilitator-signer
+  sender. Event topics are computed with keccak-256 at runtime.
+- **Tested.** `agentz/tests/test_settlement_proof.py`, 21 tests: keccak-256
+  empty-input vector, a check that it differs from NIST SHA3-256, ERC-20 and
+  EIP-3009 selectors (`transfer`, `balanceOf`, `approve`,
+  `transferWithAuthorization` = `0xe3ee160e`), both event topics, the
+  counter's hard-coded constants, and every proof failure mode.
+- **Live proofs** in `docs/agentz/evidence/settlement-proofs-2026-11-22.jsonl`:
+  the $0.01 local-merchant settlement is proven (5/5 checks, authorization
+  nonce `0xa40b654f…0cba7a`); the owner's $1.00 plain send is not proven
+  (no AuthorizationUsed log, sender is not a facilitator signer).
 
 ## Owner decisions that unblock agent sales
 

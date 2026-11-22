@@ -261,6 +261,10 @@ def cmd_capabilities(args: argparse.Namespace) -> int:
     """List registry capabilities, discover the hosted MCP server, or call a read-only tool."""
     from agentz.integrations.authichain_mcp import cli_capabilities
 
+    if args.capabilities_action == "prove-settlement":
+        from agentz.integrations.settlement_proof import cli_prove
+
+        return cli_prove(args.tx_hash)
     if args.capabilities_action == "revenue":
         from agentz.integrations.x402_revenue import cli_revenue
 
@@ -387,6 +391,10 @@ def build_parser() -> argparse.ArgumentParser:
     cap_rev = cap_sub.add_parser(
         "revenue", help="Count settled x402 USDC payments to payTo on Base (read-only)")
     cap_rev.add_argument("--days", type=float, default=7.0)
+    cap_prove = cap_sub.add_parser(
+        "prove-settlement",
+        help="On-chain proof (receipt, keccak-checked logs) that an x402 payment settled")
+    cap_prove.add_argument("tx_hash")
     cap_call = cap_sub.add_parser("call", help="Call one AVAILABLE read-only capability")
     cap_call.add_argument("capability_id")
     cap_call.add_argument("--args", default=None, help="JSON object of tool arguments")

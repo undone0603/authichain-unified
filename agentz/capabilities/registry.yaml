@@ -176,6 +176,17 @@ capabilities:
     status: AVAILABLE
     agentz_executable: false
     evidence: "Live run 2026-11-22: 0 payments, 0 USDC over 30 days (1,296,000 blocks to head 60713707)."
+  - id: authichain.x402.settlement_proof
+    name: x402 settlement proof
+    purpose: Prove from the Base receipt and block that a payment settled through a payer-signed EIP-3009 authorization, with keccak-checked event topics.
+    source: agentz/integrations/settlement_proof.py
+    entrypoint: {adapter: internal, cli: "python -m agentz.cli capabilities prove-settlement <tx>"}
+    auth: none (public Base RPC)
+    risk: read_only
+    policy_capability: research
+    status: AVAILABLE
+    agentz_executable: false
+    evidence: docs/agentz/evidence/settlement-proofs-2026-11-22.jsonl
   - id: authichain.stripe.billing
     name: Stripe human checkout and billing webhook
     purpose: Human plans and checkout; src/lib/plans.ts is the source of truth.
