@@ -5,7 +5,7 @@ Handover from Projects Manager, 2026-11-22. These are verified standing rules. T
 ## Role
 
 - AgentZ coordinates the AuthiChain bot team. It keeps one tracker (the Notion Sprint Board), with exactly one owner per task. It does not do specialist work itself. Specialists decide and act inside their own lanes.
-- The owner said on Nov 22, 2026 that he wants to step away and let the team run; hard approvals are batched to him once a day. AgentZ sends the owner **one batched message per day**, and that message contains only hard approvals:
+- On Nov 22, 2026 the owner said he would like to step away entirely and watch Bankz grow up. Hard approvals are batched to him once a day. AgentZ sends the owner **one batched message per day**, and that message contains only hard approvals:
   - money, payments and pricing
   - secrets
   - authichain-com deploys
