@@ -66,14 +66,22 @@ secrets or sensitive outputs belong here.
     Main already returns the live $0.05 terms (PR #2652, merged 2026-11-20),
     but the last successful authichain-com deploy is 2026-11-19 at `6fdbfe5bc`.
 
+### 4. Live A2A quote deployed (2026-11-22)
+
+- Owner approved the redeploy. `deploy-authichain-com.yml` run 45016127980 on
+  `b4afbb3f` passed the verify and publish jobs.
+- Live `negotiate` for `verify` with a $1 budget now returns `price_usd: 0.05`,
+  `within_budget: true` and the full x402 v2 terms. Registry drift is zero.
+- The facilitator is `https://facilitator.payai.network`, not Coinbase CDP, so
+  settled payments will not by themselves create a Coinbase Bazaar listing.
+
 ## Owner decisions that unblock agent sales
 
-1. **Redeploy authichain-com** through the protected `deploy-authichain-com.yml`
-   workflow. Only two worker commits are pending: the live negotiate quote and a
-   one-line free-tool list change.
-2. **Authorize one $0.05 test purchase** from a buyer wallet you control. It
-   proves end-to-end settlement and, if the facilitator is Coinbase's, gets the
-   endpoint indexed in the Bazaar where buyer agents look for services.
+1. **Done:** authichain-com redeployed.
+2. **Test purchase approved but not made.** No buyer wallet is configured on
+   this machine. AgentZ has no wallet credential, and the payTo and treasury
+   wallets must not be used as buyers. A funded buyer wallet key, supplied
+   through a protected environment variable, is needed.
 3. **Seal supply.** A paid check needs a real seal UUID. Buyers only appear
    where sealed products exist, so issuing seals to real products drives demand.
 
@@ -84,7 +92,7 @@ secrets or sensitive outputs belong here.
 
 ## Next safe actions
 
-1. After a redeploy, re-run `capabilities call authichain.mcp.negotiate --args '{"service":"verify","max_budget_usd":1}'` and confirm `price_usd: 0.05`.
+1. Make the approved $0.05 test purchase once a buyer wallet exists, then confirm it with `capabilities revenue --days 1`.
 2. Wire `/control-plane/state` as a read-only registry capability.
 3. Inspect StrainChain, GovChain and GS1 code and classify them with evidence.
 4. Read-only customer entitlement visibility, without charging.
