@@ -379,6 +379,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["AVAILABLE", "INTEGRATION_READY", "PARTIAL", "BLOCKED", "PROPOSED"],
     )
     cap_sub.add_parser("discover", help="List live hosted MCP tools and registry drift")
+    cap_sub.add_parser("agent-card", help="Fetch and check the public A2A agent card (read-only)")
     cap_call = cap_sub.add_parser("call", help="Call one AVAILABLE read-only capability")
     cap_call.add_argument("capability_id")
     cap_call.add_argument("--args", default=None, help="JSON object of tool arguments")

@@ -13,14 +13,14 @@ secrets or sensitive outputs belong here.
 
 ## Capability registry
 
-`agentz/capabilities/registry.yaml` lists 17 capabilities. List them with
+`agentz/capabilities/registry.yaml` lists 18 capabilities. List them with
 `python -m agentz.cli capabilities list`.
 
 | Status | Count | Notes |
 | --- | --- | --- |
-| AVAILABLE | 7 | Free hosted MCP tools, verified live in production by tools/list and tools/call |
-| INTEGRATION_READY | 3 | Control plane, taskmarket pick, A2A agent card |
-| BLOCKED | 4 | Paid x402 verify, local /scan verifier (owner pause), x402 settlement, Stripe billing |
+| AVAILABLE | 8 | 7 free hosted MCP tools verified live by tools/list and tools/call, plus the A2A agent card as read-only discovery |
+| INTEGRATION_READY | 2 | Control plane, taskmarket pick |
+| BLOCKED | 5 | Paid x402 verify, paid A2A evidence skill, local /scan verifier (owner pause), x402 settlement, Stripe billing |
 | PROPOSED | 3 | StrainChain, GovChain, GS1 resolver. Not yet inspected deeply. |
 
 ## Completed slices
@@ -41,6 +41,15 @@ secrets or sensitive outputs belong here.
   call.
 - **Not yet merged or deployed.**
 
+### 2. A2A agent card discovery
+
+- **Implemented.** `capabilities agent-card` fetches the public card, checks its
+  basic fields, and confirms it advertises the registry's MCP endpoint.
+- **Tested.** 2 more tests, 20 in the file.
+- **Production evidence.** Live card is valid at version 1.3.2. Its only skill is
+  `paid-evidence-check`, recorded as BLOCKED.
+- **Not yet merged or deployed.**
+
 ## Active blockers
 
 - Owner pause: port 8000 runtime not reconciled with its protected artifact.
@@ -48,7 +57,6 @@ secrets or sensitive outputs belong here.
 
 ## Next safe actions
 
-1. Read and validate the A2A agent card from AgentZ, then mark it AVAILABLE.
-2. Wire `/control-plane/state` as a read-only registry capability.
-3. Inspect StrainChain, GovChain and GS1 code and classify them with evidence.
-4. Read-only customer entitlement visibility, without charging.
+1. Wire `/control-plane/state` as a read-only registry capability.
+2. Inspect StrainChain, GovChain and GS1 code and classify them with evidence.
+3. Read-only customer entitlement visibility, without charging.

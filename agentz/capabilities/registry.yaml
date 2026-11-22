@@ -173,10 +173,20 @@ capabilities:
     auth: none
     risk: read_only
     policy_capability: research
-    status: INTEGRATION_READY
+    status: AVAILABLE
     agentz_executable: false
-    evidence: production GET returned HTTP 200 (2026-11-22).
-    missing: AgentZ does not read or validate it yet.
+    evidence: "`agentz.cli capabilities agent-card` fetched it live (2026-11-22): valid, version 1.3.2, advertises the registry MCP endpoint. Read-only discovery; not invoked through call()."
+  - id: authichain.a2a.paid_evidence_check
+    name: A2A paid evidence check skill
+    purpose: The only skill on the public agent card. Settles over x402.
+    source: workers/authichain-com/src/bot-identity-routes.ts
+    entrypoint: {adapter: a2a, url: https://authichain.com/api/a2a}
+    auth: x402 payment
+    risk: financial
+    policy_capability: payment
+    status: BLOCKED
+    agentz_executable: false
+    blocker: Paid skill. Needs scoped payment authorization and signing authority.
   - id: strainchain.genetics_passport
     name: StrainChain genetics passport
     purpose: Cannabis genetics provenance with totals recomputed from the raw panel.

@@ -192,6 +192,50 @@ class HostedMCPClient:
         }
 
 
+AGENT_CARD_URL = "https://authichain.com/.well-known/agent-card.json"
+AGENT_CARD_REQUIRED = ("name", "url", "version", "skills")
+
+
+def summarize_agent_card(card: Any, mcp_endpoint: str) -> dict[str, Any]:
+    """Check an A2A agent card's basic shape and cross-check it with the registry.
+
+    Read-only discovery. It never invokes a skill; the published skills are paid.
+    """
+    if not isinstance(card, dict):
+        raise CapabilityError("agent_card_invalid", "agent card is not a JSON object")
+    missing = [k for k in AGENT_CARD_REQUIRED if k not in card]
+    skills = card.get("skills") if isinstance(card.get("skills"), list) else []
+    interfaces = [i for i in (card.get("additionalInterfaces") or [])
+                  + (card.get("supportedInterfaces") or []) if isinstance(i, dict)]
+    urls = sorted({i.get("url") for i in interfaces if i.get("url")})
+    return {
+        "name": card.get("name"),
+        "version": card.get("version"),
+        "a2a_url": card.get("url"),
+        "missing_fields": missing,
+        "skills": [s.get("id") for s in skills if isinstance(s, dict)],
+        "interface_urls": urls,
+        "advertises_registry_mcp_endpoint": mcp_endpoint in urls,
+        "x402_declared": "x402" in card,
+        "valid": not missing,
+    }
+
+
+def fetch_agent_card(url: str = AGENT_CARD_URL, timeout: float = DEFAULT_TIMEOUT_S) -> Any:
+    import httpx
+
+    try:
+        resp = httpx.get(url, timeout=timeout, headers={"accept": "application/json"})
+    except httpx.HTTPError as exc:
+        raise CapabilityError("upstream_unavailable", type(exc).__name__) from None
+    if resp.status_code != 200:
+        raise CapabilityError("upstream_rejected", f"http {resp.status_code}")
+    try:
+        return resp.json()
+    except ValueError:
+        raise CapabilityError("agent_card_invalid", "response is not JSON") from None
+
+
 def _read_only(tool: dict[str, Any]) -> bool:
     ann = tool.get("annotations") or {}
     return ann.get("readOnlyHint") is True and ann.get("destructiveHint") is False
@@ -228,6 +272,10 @@ def cli_capabilities(action: str, *, capability_id: str | None = None,
             for c in rows:
                 flag = "exec" if c["agentz_executable"] else "-"
                 print(f"{c['status']:<18} {flag:<5} {c['id']:<36} {c['name']}")
+            return 0
+        if action == "agent-card":
+            print(json.dumps(summarize_agent_card(fetch_agent_card(), registry.endpoint),
+                             indent=2))
             return 0
         client = HostedMCPClient(registry)
         if action == "discover":

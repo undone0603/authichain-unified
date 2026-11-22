@@ -192,3 +192,21 @@ def test_cli_list_needs_no_network(capsys):
     assert m.cli_capabilities("list", status="BLOCKED") == 0
     out = capsys.readouterr().out
     assert "authichain.mcp.verify" in out and "AVAILABLE" not in out
+
+
+def test_agent_card_summary_cross_checks_registry_endpoint():
+    card = {"name": "AuthiChain", "url": "https://authichain.com/api/a2a", "version": "1",
+            "skills": [{"id": "paid-evidence-check"}], "x402": {},
+            "additionalInterfaces": [{"url": "https://authichain.com/mcp"}]}
+    out = m.summarize_agent_card(card, "https://authichain.com/mcp")
+    assert out["valid"] and out["advertises_registry_mcp_endpoint"]
+    assert out["skills"] == ["paid-evidence-check"] and out["x402_declared"]
+
+
+def test_agent_card_missing_fields_and_non_object():
+    out = m.summarize_agent_card({"name": "x"}, "https://authichain.com/mcp")
+    assert not out["valid"] and set(out["missing_fields"]) == {"url", "version", "skills"}
+    assert out["advertises_registry_mcp_endpoint"] is False
+    with pytest.raises(m.CapabilityError) as exc:
+        m.summarize_agent_card([], "https://authichain.com/mcp")
+    assert exc.value.code == "agent_card_invalid"
