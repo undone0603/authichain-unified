@@ -59,7 +59,15 @@ jobs:
             tar -x -C "$context"
           docker build --platform linux/arm64 --label "org.opencontainers.image.revision=$GITHUB_SHA" \
             --tag "$image" --file "$context/workers/authichain-agentz/Dockerfile" "$context"
-          container="$(docker run -d -p 127.0.0.1::8000 "$image")"
+          # In-image Playwright Chromium smoke. This job already runs on the
+          # self-hosted ARM64 laptop runner (wsl-deploy-arm64 / authichain-deploy).
+          # Do not copy this step onto GitHub-hosted runners: the image is
+          # linux/arm64 and Chromium launch needs the laptop's disk/RAM.
+          docker run --rm --cap-drop ALL --security-opt no-new-privileges --group-add 0 \
+            "$image" python -m agentz.core.chromium_runtime --smoke \
+            > "$RUNNER_TEMP/agentz-chromium-smoke.json"
+          container="$(docker run -d --cap-drop ALL --security-opt no-new-privileges --group-add 0 \
+            -p 127.0.0.1::8000 "$image")"
           trap 'docker rm -f "$container" >/dev/null' EXIT
           address="$(docker port "$container" 8000/tcp)"
           curl --fail --silent --show-error --retry 15 --retry-all-errors \
@@ -68,6 +76,12 @@ jobs:
             "$RUNNER_TEMP/agentz-health.json"
           mkdir -p "$RUNNER_TEMP/agentz-release"
           docker save "$image" | gzip -n > "$RUNNER_TEMP/agentz-release/agentz-linux-arm64.tar.gz"
+          image_bytes="$(docker image inspect --format '{{.Size}}' "$image")"
+          archive_bytes="$(stat -c%s "$RUNNER_TEMP/agentz-release/agentz-linux-arm64.tar.gz")"
+          python3 -c 'import json,sys; from pathlib import Path; smoke,out=Path(sys.argv[1]),Path(sys.argv[2]); ib,ab=int(sys.argv[3]),int(sys.argv[4]); t=smoke.read_text(encoding="utf-8"); d=json.loads(t[t.rfind("{"):]); assert d.get("ok") is True, d; assert d.get("sandbox_mode") in ("userns","no-sandbox"), d; d["image_bytes"]=ib; d["archive_bytes"]=ab; b=json.dumps(d,sort_keys=True)+"\n"; smoke.write_text(b,encoding="utf-8"); out.write_text(b,encoding="utf-8"); print(b,end="")' \
+            "$RUNNER_TEMP/agentz-chromium-smoke.json" \
+            "$RUNNER_TEMP/agentz-release/chromium-smoke.json" \
+            "$image_bytes" "$archive_bytes"
 
       - name: Record release provenance
         working-directory: ${{ runner.temp }}/agentz-release
@@ -80,13 +94,26 @@ jobs:
           jq -n --arg repository "$GITHUB_REPOSITORY" --arg source_sha "$GITHUB_SHA" \
             --arg run_id "$GITHUB_RUN_ID" --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
             --arg filename "$artifact" --arg sha256 "$digest" --arg image_id "$image_id" \
+            --slurpfile smoke chromium-smoke.json \
             '{repository: $repository, source_sha: $source_sha, run_id: $run_id,
               run_attempt: $run_attempt, filename: $filename, sha256: $sha256, image_id: $image_id,
-              platform: "linux/arm64"}' > release.json
+              platform: "linux/arm64",
+              ok: $smoke[0].ok,
+              sandbox_mode: $smoke[0].sandbox_mode,
+              image_bytes: $smoke[0].image_bytes,
+              archive_bytes: $smoke[0].archive_bytes}' > release.json
+          jq -e '.ok == true and (.sandbox_mode == "userns" or .sandbox_mode == "no-sandbox")
+                 and (.image_bytes | type == "number") and (.archive_bytes | type == "number")' \
+            release.json > /dev/null
           {
             printf 'Source SHA: `%s`\n\n' "$GITHUB_SHA"
             printf 'Build run: `%s` (attempt %s)\n\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
-            printf 'Artifact SHA-256: `%s`\n' "$digest"
+            printf 'Artifact SHA-256: `%s`\n\n' "$digest"
+            printf 'Chromium smoke: `ok=%s` `sandbox_mode=%s` `image_bytes=%s` `archive_bytes=%s`\n' \
+              "$(jq -r .ok release.json)" \
+              "$(jq -r .sandbox_mode release.json)" \
+              "$(jq -r .image_bytes release.json)" \
+              "$(jq -r .archive_bytes release.json)"
           } >> "$GITHUB_STEP_SUMMARY"
 
       # Actions artifact quota can be exhausted account-wide. Draft Release assets
