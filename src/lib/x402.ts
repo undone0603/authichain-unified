@@ -671,6 +671,68 @@ export function attachResourceToPaymentPayload(
   return { ...raw, resource };
 }
 
+function base64UrlBytes(data: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < data.byteLength; i++) binary += String.fromCharCode(data[i]);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/**
+ * PayAI merchant JWT (EdDSA over the PKCS#8 Ed25519 API key secret), matching
+ * @payai/facilitator 2.4.x. Without it, settlement draws on the payTo's free
+ * allowance and the shared pool for Cloudflare egress IPs, and /settle answers
+ * HTTP 403 free_tier_exhausted once that runs out. PayAI consumes the `jti` on
+ * /verify and /settle, so every call gets a fresh token; nothing is cached.
+ */
+export async function payaiAuthorization(
+  apiKeyId: string | undefined = process.env.PAYAI_API_KEY_ID,
+  apiKeySecret: string | undefined = process.env.PAYAI_API_KEY_SECRET,
+  nowSeconds: number = Math.floor(Date.now() / 1000)
+): Promise<string | null> {
+  const id = apiKeyId?.trim();
+  const secret = apiKeySecret?.trim().replace(/^payai_sk_/, "");
+  if (!id || !secret) return null;
+  const enc = new TextEncoder();
+  const header = base64UrlBytes(enc.encode(JSON.stringify({ alg: "EdDSA", typ: "JWT", kid: id })));
+  const payload = base64UrlBytes(
+    enc.encode(
+      JSON.stringify({
+        sub: id,
+        iss: "payai-merchant",
+        iat: nowSeconds,
+        exp: nowSeconds + 120,
+        jti: crypto.randomUUID(),
+      })
+    )
+  );
+  const message = `${header}.${payload}`;
+  const raw = atob(secret.replace(/-/g, "+").replace(/_/g, "/"));
+  const keyBytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) keyBytes[i] = raw.charCodeAt(i);
+  const key = await crypto.subtle.importKey("pkcs8", keyBytes, { name: "Ed25519" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign("Ed25519", key, enc.encode(message));
+  return `Bearer ${message}.${base64UrlBytes(new Uint8Array(signature))}`;
+}
+
+/**
+ * Short machine code from a facilitator error body, e.g. ":free_tier_exhausted".
+ * PayAI answers /settle failures with JSON `errorReason` (or RFC 9457 `title`).
+ * Without it a 403 for exhausted credits and a 403 from an edge block look the
+ * same. Only a sanitized token is kept; the body is never echoed.
+ */
+export async function facilitatorErrorSuffix(res: Response): Promise<string> {
+  try {
+    const text = await res.text();
+    const j = JSON.parse(text) as { errorReason?: unknown; title?: unknown };
+    const raw = typeof j.errorReason === "string" ? j.errorReason : j.title;
+    if (typeof raw !== "string") return "";
+    const code = raw.trim().toLowerCase().replace(/[^a-z0-9_.-]+/g, "_").slice(0, 80);
+    return code ? `:${code}` : "";
+  } catch {
+    return ":non_json_body";
+  }
+}
+
 export async function settlePayment(
   paymentHeaderB64: string,
   requirement: PaymentRequirement
@@ -688,9 +750,14 @@ export async function settlePayment(
       toFacilitatorV1Payload(decodeFacilitatorPaymentPayload(paymentHeaderB64)),
       requirement.resource
     );
+    const authorization = await payaiAuthorization().catch(() => null);
     const res = await fetch(`${facilitator.replace(/\/$/, "")}/settle`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "authichain-x402-merchant/1 (+https://authichain.com/x402)",
+        ...(authorization ? { Authorization: authorization } : {}),
+      },
       body: JSON.stringify({
         x402Version: 1,
         paymentPayload,
@@ -701,7 +768,7 @@ export async function settlePayment(
       return {
         settled: false,
         trustless: true,
-        reason: `facilitator_http_${res.status}`,
+        reason: `facilitator_http_${res.status}${await facilitatorErrorSuffix(res)}`,
       };
     const j = (await res.json()) as {
       success?: boolean;
@@ -897,6 +964,9 @@ export function x402PriceUsd(raw?: string): number {
 export type X402HealthEnv = {
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
+  /** PayAI merchant credentials (Worker secrets). Never reported by health. */
+  PAYAI_API_KEY_ID?: string;
+  PAYAI_API_KEY_SECRET?: string;
   X402_NETWORK?: string;
   X402_CHAIN_ID?: string;
   X402_USDC_ASSET?: string;
@@ -926,6 +996,8 @@ export type X402EnvVars = Pick<
   | "X402_USDC_ASSET"
   | "X402_PRICE_USD"
   | "X402_DAILY_CAP_USD"
+  | "PAYAI_API_KEY_ID"
+  | "PAYAI_API_KEY_SECRET"
 >;
 
 export type X402FacilitatorStatus = {
