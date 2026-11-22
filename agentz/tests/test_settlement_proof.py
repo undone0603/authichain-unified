@@ -37,9 +37,10 @@ def test_event_topics_match_known_values():
 
 
 def test_hardcoded_constants_are_the_keccak_values():
-    # x402_revenue filters logs with a literal topic and reads balances with a
-    # literal selector; both must equal their keccak derivations.
+    # x402_revenue filters logs with literal topics and reads balances with a
+    # literal selector; all must equal their keccak derivations.
     assert rev.TRANSFER_TOPIC == sp.event_topic("Transfer(address,address,uint256)")
+    assert rev.AUTHORIZATION_USED_TOPIC == sp.event_topic("AuthorizationUsed(address,bytes32)")
     assert sp.function_selector("balanceOf(address)") == "0x70a08231"
 
 
@@ -88,7 +89,7 @@ SIGNERS = frozenset({FAC})
 
 def test_facilitator_settlement_is_proven():
     out = sp.prove_settlement(TX, Rpc([auth_log(), transfer_log()]), signers=SIGNERS)
-    assert out["proven"] is True
+    assert out["proven"] is True and out["facilitator"] == "payai"
     assert out["payer"] == PAYER and out["amount_usdc"] == 0.01
     assert out["confirmations"] == 10 and out["authorization_nonce"] == "0x" + "9" * 64
 
@@ -98,6 +99,13 @@ def test_direct_wallet_send_is_not_proven():
     assert out["checks"]["eip3009_authorization_used_by_payer"] is False
     assert out["checks"]["sender_is_facilitator_signer"] is False
     assert out["proven"] is False
+
+
+def test_other_facilitator_settlement_is_proven_and_labelled():
+    other = "0x" + "8" * 40
+    out = sp.prove_settlement(TX, Rpc([auth_log(), transfer_log()], sender=other), signers=SIGNERS)
+    assert out["checks"]["sender_is_facilitator_signer"] is False
+    assert out["proven"] is True and out["facilitator"] == "other_facilitator"
 
 
 @pytest.mark.parametrize("rpc,failed", [

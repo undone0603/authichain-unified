@@ -14,6 +14,7 @@ class FakeRpc:
         self.ranges = []
         self.filters = []
         self.senders = {}
+        self.authorized = {}
         self.block_time = block_time
 
     def __call__(self, method, params):
@@ -22,8 +23,13 @@ class FakeRpc:
         if method == "eth_getBlockByNumber":
             n = int(params[0], 16)
             return {"timestamp": hex(int(1_800_000_000 + n * self.block_time))}
-        if method == "eth_getTransactionByHash":
-            return {"from": self.senders.get(params[0], "0xowner")}
+        if method == "eth_getTransactionReceipt":
+            h = params[0]
+            logs = []
+            if h in self.authorized:
+                logs.append({"address": r.BASE_USDC, "topics": [
+                    r.AUTHORIZATION_USED_TOPIC, self.authorized[h], "0x" + "9" * 64]})
+            return {"status": "0x1", "from": self.senders.get(h, "0xowner"), "logs": logs}
         f = params[0]
         self.ranges.append((int(f["fromBlock"], 16), int(f["toBlock"], 16)))
         self.filters.append(f)
@@ -42,12 +48,15 @@ def test_counts_payments_payers_and_list_price():
     rpc = FakeRpc(logs_by_call=[[log(50_000, PAYER_A), log(50_000, PAYER_A)],
                                 [log(1_000_000, PAYER_B)]])
     first = rpc.logs_by_call[0]
-    rpc.senders = {first[0]["transactionHash"]: "0xFAC", first[1]["transactionHash"]: "0xfac"}
+    # Two authorized settlements: one by a PayAI signer, one by another facilitator.
+    rpc.authorized = {first[0]["transactionHash"]: PAYER_A, first[1]["transactionHash"]: PAYER_A}
+    rpc.senders = {first[0]["transactionHash"]: "0xfac"}
     out = r.payments(1, rpc, pause=lambda _s: None, signers=frozenset({"0xfac"}))
     assert out["incoming_transfers"] == 3
     assert out["usdc_received"] == 1.1
     assert out["x402_settlements"] == 2 and out["x402_at_list_price"] == 2
     assert out["x402_usdc"] == 0.1
+    assert out["x402_by_facilitator"] == {"payai": 1, "other_facilitator": 1}
     assert out["distinct_payers"] == 2
 
 
@@ -56,6 +65,23 @@ def test_plain_owner_send_is_not_an_x402_settlement():
     out = r.payments(0.1, rpc, pause=lambda _s: None, signers=frozenset({"0xfac"}))
     assert out["incoming_transfers"] == 1 and out["usdc_received"] == 1.0
     assert out["x402_settlements"] == 0 and out["x402_usdc"] == 0
+
+
+def test_authorization_by_a_different_address_does_not_count():
+    lg = log(50_000, PAYER_A)
+    rpc = FakeRpc(logs_by_call=[[lg]])
+    rpc.authorized = {lg["transactionHash"]: PAYER_B}
+    out = r.payments(0.1, rpc, pause=lambda _s: None)
+    assert out["x402_settlements"] == 0
+
+
+def test_coinbase_style_settlement_counts_without_known_signers():
+    lg = log(50_000, PAYER_A)
+    rpc = FakeRpc(logs_by_call=[[lg]])
+    rpc.authorized = {lg["transactionHash"]: PAYER_A}
+    rpc.senders = {lg["transactionHash"]: "0x8cda367232d78c067116e3260da881d2da8ffa39"}
+    out = r.payments(0.1, rpc, pause=lambda _s: None, signers=frozenset({"0xfac"}))
+    assert out["x402_settlements"] == 1 and out["x402_by_facilitator"] == {"other_facilitator": 1}
 
 
 def test_scan_ranges_are_contiguous_and_bounded():

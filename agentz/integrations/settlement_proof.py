@@ -11,7 +11,8 @@ and check, without trusting the facilitator:
 3. the receipt holds an EIP-3009 `AuthorizationUsed(authorizer, nonce)` log
    from the same USDC contract for the same payer, which shows the transfer
    consumed a payer-signed authorization rather than a direct send;
-4. the transaction sender is one of the facilitator signers, when known.
+4. (informational) whether the transaction sender is a known PayAI signer;
+   Coinbase CDP and other facilitators settle from their own addresses.
 
 Read-only. No keys, no writes.
 """
@@ -73,7 +74,11 @@ def prove_settlement(tx_hash: str, rpc: Rpc, pay_to: str = PAY_TO,
         "eip3009_authorization_used_by_payer": len(auths) == 1,
         "sender_is_facilitator_signer": (sender in signers) if signers else None,
     }
-    required = [k for k, v in checks.items() if v is not None]
+    # The sender check only labels the facilitator. Coinbase CDP and XPay signers
+    # are not in PayAI's published list, and the EIP-3009 authorization already
+    # proves the payer signed this exact transfer.
+    required = ["receipt_status_success", "block_hash_matches",
+                "single_usdc_transfer_to_pay_to", "eip3009_authorization_used_by_payer"]
     return {
         "tx_hash": tx_hash,
         "block_number": int(receipt["blockNumber"], 16),
@@ -86,6 +91,7 @@ def prove_settlement(tx_hash: str, rpc: Rpc, pay_to: str = PAY_TO,
         "amount_usdc": int(payment["data"], 16) / 1e6 if payment else None,
         "authorization_nonce": auths[0]["topics"][2] if len(auths) == 1 else None,
         "tx_sender": sender or None,
+        "facilitator": ("payai" if sender in signers else "other_facilitator") if signers else "unknown",
         "topics": {"Transfer": transfer_t, "AuthorizationUsed": auth_t},
         "checks": checks,
         "proven": all(checks[k] for k in required),

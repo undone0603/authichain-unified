@@ -16,6 +16,9 @@ from typing import Any, Callable
 PAY_TO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
 BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+# keccak256("AuthorizationUsed(address,bytes32)"): EIP-3009 consumed a payer-signed
+# authorization. Present in every x402 exact settlement, whatever the facilitator.
+AUTHORIZATION_USED_TOPIC = "0x98de503528ee59b575ef0c0a2576a82497bfc029a5685b209e9ec333479b10a5"
 DEFAULT_RPC = "https://base-rpc.publicnode.com"
 # Base block time is not fixed (2 s at launch, 0.2 s by 2026-11). It is
 # measured from block timestamps on every run; never assume it.
@@ -104,8 +107,10 @@ def measured_block_time(rpc: Rpc, head: int, sample: int = SAMPLE_BLOCKS) -> flo
 def payments(days: float, rpc: Rpc, pay_to: str = PAY_TO,
              pause: Callable[[float], None] = time.sleep,
              signers: frozenset[str] = frozenset()) -> dict[str, Any]:
-    """Count incoming USDC. Only transfers submitted by a facilitator signer count as
-    x402 settlements; plain wallet sends (including the owner's own) do not."""
+    """Count incoming USDC. A transfer counts as an x402 settlement when its tx
+    consumed the payer's EIP-3009 authorization (any facilitator: PayAI, Coinbase
+    CDP, XPay). Plain wallet sends, including the owner's own, do not. Known PayAI
+    signers only label the facilitator; they no longer decide what counts."""
     if not 0 < days <= MAX_DAYS:
         raise RevenueError(f"days must be in (0, {MAX_DAYS}]")
     head = int(rpc("eth_blockNumber", []), 16)
@@ -123,10 +128,22 @@ def payments(days: float, rpc: Rpc, pay_to: str = PAY_TO,
         pause(0.3)
     amounts = [int(log["data"], 16) for log in logs]
     settled = []
+    by_facilitator: dict[str, int] = {}
     for log in logs:
-        tx = rpc("eth_getTransactionByHash", [log["transactionHash"]])
-        if signers and (tx or {}).get("from", "").lower() in signers:
-            settled.append(int(log["data"], 16))
+        receipt = rpc("eth_getTransactionReceipt", [log["transactionHash"]]) or {}
+        payer_topic = log["topics"][1].lower()
+        authorized = any(
+            (lg.get("address") or "").lower() == BASE_USDC.lower()
+            and len(lg.get("topics") or []) >= 2
+            and lg["topics"][0].lower() == AUTHORIZATION_USED_TOPIC
+            and lg["topics"][1].lower() == payer_topic
+            for lg in receipt.get("logs") or [])
+        if not authorized or receipt.get("status") != "0x1":
+            continue
+        settled.append(int(log["data"], 16))
+        sender = (receipt.get("from") or "").lower()
+        label = "payai" if sender in signers else "other_facilitator"
+        by_facilitator[label] = by_facilitator.get(label, 0) + 1
     return {
         "pay_to": pay_to,
         "days": days,
@@ -138,7 +155,8 @@ def payments(days: float, rpc: Rpc, pay_to: str = PAY_TO,
         "x402_settlements": len(settled),
         "x402_usdc": round(sum(settled) / 1e6, 6),
         "x402_at_list_price": sum(1 for a in settled if a == PRICE_ATOMIC),
-        "signers_known": bool(signers),
+        "x402_by_facilitator": by_facilitator,
+        "classification": "EIP-3009 AuthorizationUsed by the payer in the same tx",
         "distinct_payers": len({log["topics"][1] for log in logs}),
         "source": "Base USDC Transfer logs via public RPC (read-only)",
     }
