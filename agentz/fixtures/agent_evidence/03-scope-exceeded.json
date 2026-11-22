@@ -1,0 +1,10 @@
+{
+  "action_id": "sample-03-scope-exceeded",
+  "note": "Same real purchase, checked against a tighter mandate. The settlement is genuine; the permission does not cover it.",
+  "claimed": {"principal": "0xc9514f6a3fe5394c9f3ce3d0afea532dca712f65", "action": "purchase_signal", "beneficiary": "0x5db511706fb6317cd23a7655f67450c5ac6e6aa2", "amount_usdc": 0.05, "occurred_at": "2026-11-22T15:50:30Z"},
+  "evidence": {
+    "settlement_tx": "0x5653f626de2ea2a6b4354541b56af36768e5694ac6653561cfcf733bcd220e42",
+    "mandate": {"type": "declared", "scope": {"max_amount_usdc": 0.01, "payees": ["0x5db511706fb6317cd23a7655f67450c5ac6e6aa2"]}},
+    "outcome": {"type": "http_response", "status": 200, "tx": "0x5653f626de2ea2a6b4354541b56af36768e5694ac6653561cfcf733bcd220e42"}
+  }
+}
