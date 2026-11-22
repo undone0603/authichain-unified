@@ -671,6 +671,25 @@ export function attachResourceToPaymentPayload(
   return { ...raw, resource };
 }
 
+/**
+ * Short machine code from a facilitator error body, e.g. ":free_tier_exhausted".
+ * PayAI answers /settle failures with JSON `errorReason` (or RFC 9457 `title`).
+ * Without it a 403 for exhausted credits and a 403 from an edge block look the
+ * same. Only a sanitized token is kept; the body is never echoed.
+ */
+export async function facilitatorErrorSuffix(res: Response): Promise<string> {
+  try {
+    const text = await res.text();
+    const j = JSON.parse(text) as { errorReason?: unknown; title?: unknown };
+    const raw = typeof j.errorReason === "string" ? j.errorReason : j.title;
+    if (typeof raw !== "string") return "";
+    const code = raw.trim().toLowerCase().replace(/[^a-z0-9_.-]+/g, "_").slice(0, 80);
+    return code ? `:${code}` : "";
+  } catch {
+    return ":non_json_body";
+  }
+}
+
 export async function settlePayment(
   paymentHeaderB64: string,
   requirement: PaymentRequirement
@@ -690,7 +709,10 @@ export async function settlePayment(
     );
     const res = await fetch(`${facilitator.replace(/\/$/, "")}/settle`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "authichain-x402-merchant/1 (+https://authichain.com/x402)",
+      },
       body: JSON.stringify({
         x402Version: 1,
         paymentPayload,
@@ -701,7 +723,7 @@ export async function settlePayment(
       return {
         settled: false,
         trustless: true,
-        reason: `facilitator_http_${res.status}`,
+        reason: `facilitator_http_${res.status}${await facilitatorErrorSuffix(res)}`,
       };
     const j = (await res.json()) as {
       success?: boolean;

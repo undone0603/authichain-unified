@@ -431,6 +431,42 @@ describe("settlePayment (facilitator)", () => {
     expect(s).toMatchObject({ settled: true, trustless: false });
   });
 
+  it("keeps the facilitator errorReason on a refused settle", async () => {
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ success: false, errorReason: "free_tier_exhausted: top up", errorMessage: "x" }),
+        { status: 403, headers: { "content-type": "application/json" } }
+      )
+    );
+    const s = await settlePayment("proof", req);
+    expect(s).toMatchObject({
+      settled: false,
+      trustless: true,
+      reason: "facilitator_http_403:free_tier_exhausted_top_up",
+    });
+  });
+
+  it("labels a non-JSON refusal without echoing the body", async () => {
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("<html>Attention Required</html>", { status: 403 })
+    );
+    const s = await settlePayment("proof", req);
+    expect(s.reason).toBe("facilitator_http_403:non_json_body");
+  });
+
+  it("identifies itself to the facilitator", async () => {
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, txHash: "0xbeef" }),
+    } as Response);
+    await settlePayment("proof", req);
+    const headers = spy.mock.calls[0][1]?.headers as Record<string, string>;
+    expect(headers["User-Agent"]).toMatch(/^authichain-x402-merchant\//);
+  });
+
   it("settles trustlessly when the facilitator confirms", async () => {
     process.env.X402_FACILITATOR_URL = "https://facilitator.example";
     vi.spyOn(globalThis, "fetch").mockResolvedValue({
