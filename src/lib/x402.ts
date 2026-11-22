@@ -964,6 +964,9 @@ export function x402PriceUsd(raw?: string): number {
 export type X402HealthEnv = {
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
+  /** PayAI merchant credentials (Worker secrets). Never reported by health. */
+  PAYAI_API_KEY_ID?: string;
+  PAYAI_API_KEY_SECRET?: string;
   X402_NETWORK?: string;
   X402_CHAIN_ID?: string;
   X402_USDC_ASSET?: string;
@@ -993,6 +996,8 @@ export type X402EnvVars = Pick<
   | "X402_USDC_ASSET"
   | "X402_PRICE_USD"
   | "X402_DAILY_CAP_USD"
+  | "PAYAI_API_KEY_ID"
+  | "PAYAI_API_KEY_SECRET"
 >;
 
 export type X402FacilitatorStatus = {

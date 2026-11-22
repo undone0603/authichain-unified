@@ -3273,6 +3273,9 @@ interface Env {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  /** PayAI merchant JWT credentials for authenticated /settle (secrets). */
+  PAYAI_API_KEY_ID?: string;
+  PAYAI_API_KEY_SECRET?: string;
   /** Public auth_seals read for paid verify. Service role stays a secret. */
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
