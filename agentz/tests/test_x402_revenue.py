@@ -13,28 +13,45 @@ class FakeRpc:
         self.logs_by_call = list(logs_by_call or [])
         self.ranges = []
         self.filters = []
+        self.senders = {}
 
     def __call__(self, method, params):
         if method == "eth_blockNumber":
             return hex(self.head)
+        if method == "eth_getTransactionByHash":
+            return {"from": self.senders.get(params[0], "0xowner")}
         f = params[0]
         self.ranges.append((int(f["fromBlock"], 16), int(f["toBlock"], 16)))
         self.filters.append(f)
         return self.logs_by_call.pop(0) if self.logs_by_call else []
 
 
+_n = iter(range(10**6))
+
+
 def log(amount, payer):
-    return {"data": hex(amount), "topics": [r.TRANSFER_TOPIC, payer, "x"]}
+    return {"data": hex(amount), "topics": [r.TRANSFER_TOPIC, payer, "x"],
+            "transactionHash": f"0x{next(_n):064x}"}
 
 
 def test_counts_payments_payers_and_list_price():
     rpc = FakeRpc(logs_by_call=[[log(50_000, PAYER_A), log(50_000, PAYER_A)],
                                 [log(1_000_000, PAYER_B)]])
-    out = r.payments(1, rpc, pause=lambda _s: None)
-    assert out["payments"] == 3
+    first = rpc.logs_by_call[0]
+    rpc.senders = {first[0]["transactionHash"]: "0xFAC", first[1]["transactionHash"]: "0xfac"}
+    out = r.payments(1, rpc, pause=lambda _s: None, signers=frozenset({"0xfac"}))
+    assert out["incoming_transfers"] == 3
     assert out["usdc_received"] == 1.1
-    assert out["at_list_price"] == 2
+    assert out["x402_settlements"] == 2 and out["x402_at_list_price"] == 2
+    assert out["x402_usdc"] == 0.1
     assert out["distinct_payers"] == 2
+
+
+def test_plain_owner_send_is_not_an_x402_settlement():
+    rpc = FakeRpc(logs_by_call=[[log(1_000_000, PAYER_A)]])
+    out = r.payments(0.1, rpc, pause=lambda _s: None, signers=frozenset({"0xfac"}))
+    assert out["incoming_transfers"] == 1 and out["usdc_received"] == 1.0
+    assert out["x402_settlements"] == 0 and out["x402_usdc"] == 0
 
 
 def test_scan_ranges_are_contiguous_and_bounded():

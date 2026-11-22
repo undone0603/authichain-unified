@@ -75,10 +75,24 @@ secrets or sensitive outputs belong here.
 - The facilitator is `https://facilitator.payai.network`, not Coinbase CDP, so
   settled payments will not by themselves create a Coinbase Bazaar listing.
 
+### 5. Owner test transfer and settlement classification (2026-11-22)
+
+- The owner sent 1.00 USDC from a Coinbase wallet to authichain.base.eth (tx
+  `0x70dbaf48dc1244389b1983d2d1e9fcd7f499892313dc68856c3f03f6ef3623b8`, block
+  60781634). It proves the payTo wallet receives Base USDC.
+- It is **not** an x402 sale and **not** customer revenue: it was a plain wallet
+  send of $1.00, not the $0.05 x402 payment, and was not submitted by a PayAI
+  facilitator signer.
+- The revenue counter now reports `x402_settlements` separately, counting only
+  transfers whose transaction sender is a facilitator signer published at
+  `/api/x402/health`. Live result: 1 incoming transfer, 0 x402 settlements.
+
 ## Owner decisions that unblock agent sales
 
 1. **Done:** authichain-com redeployed.
-2. **Test purchase approved but not made.** No buyer wallet is configured on
+2. **x402 test purchase still not made.** A plain wallet send does not exercise
+   x402. The purchase needs an x402 client that signs the payment authorization,
+   for example the x402 fetch client with a buyer key. **Earlier note:** No buyer wallet is configured on
    this machine. AgentZ has no wallet credential, and the payTo and treasury
    wallets must not be used as buyers. A funded buyer wallet key, supplied
    through a protected environment variable, is needed.
