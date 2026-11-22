@@ -118,6 +118,23 @@ secrets or sensitive outputs belong here.
   `polygon-anchor-1` and a GTIN-style id return `registry_unavailable`. Fixed in
   PR #2704 (`fix/registry-uuid-filters`), not yet merged or deployed.
 
+### 7. First real x402 purchase attempt (2026-11-22)
+
+- Buyer wallet `0xC9514F6A3fe5394C9f3ce3D0AfeA532DCa712f65`, created for this
+  test, key held outside the repo. The owner funded it with 0.10 USDC on Base.
+- The owner-supplied one-shot client validated the live quote and made one paid
+  `POST /api/x402`. Result: HTTP 402 `facilitator_http_403`. No funds moved;
+  the buyer still holds 0.10 USDC.
+- A freshly signed authorization from the same wallet returns
+  `isValid: true` at PayAI `/verify` in both v2 and v1-flattened form, so the
+  buyer side works and the refusal is at `/settle`.
+- PayAI documents `/settle` 403 for exhausted merchant credits. Its credits
+  endpoint reports this payTo as `low`, not exhausted, so an edge block is
+  also possible. PR #2705 keeps the facilitator's refusal reason so the next
+  attempt names it.
+- **Owner action likely needed:** top up PayAI merchant credits for the payTo at
+  merchant.payai.network. A Base settlement costs about $0.0015 in credits.
+
 ## Owner decisions that unblock agent sales
 
 1. **Done:** authichain-com redeployed.
