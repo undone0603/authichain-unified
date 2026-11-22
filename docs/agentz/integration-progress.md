@@ -9,16 +9,16 @@ secrets or sensitive outputs belong here.
 | --- | --- |
 | Source revision | `b4afbb3fc7a44dee4f7b2b2b1b8f58a9e4dcc883` (origin/main) |
 | Work branch | `feat/agentz-capability-registry` |
-| Port 8000 runtime | uvicorn `agentz.api.main:app`, cwd `~/worktrees/agentz-pinned-5ab5e2c93`, worktree HEAD `5ab5e2c9`, clean. Process identified only. It has **not** been reconciled with a protected build artifact, so the owner pause on host-executable verifier and signer features still applies. |
+| Port 8000 runtime (unchanged; owner pause in force) | uvicorn `agentz.api.main:app`, cwd `~/worktrees/agentz-pinned-5ab5e2c93`, worktree HEAD `5ab5e2c9`, clean. Process identified only. It has **not** been reconciled with a protected build artifact, so the owner pause on host-executable verifier and signer features still applies. |
 
 ## Capability registry
 
-`agentz/capabilities/registry.yaml` lists 19 capabilities. List them with
+`agentz/capabilities/registry.yaml` lists 20 capabilities. List them with
 `python -m agentz.cli capabilities list`.
 
 | Status | Count | Notes |
 | --- | --- | --- |
-| AVAILABLE | 9 | 7 free hosted MCP tools, the A2A agent card, and the on-chain x402 revenue counter |
+| AVAILABLE | 10 | 7 free hosted MCP tools, the A2A agent card, the on-chain x402 revenue counter, and the verify_request workflow |
 | INTEGRATION_READY | 2 | Control plane, taskmarket pick |
 | BLOCKED | 5 | Paid x402 verify, paid A2A evidence skill, local /scan verifier (owner pause), x402 settlement, Stripe billing |
 | PROPOSED | 3 | StrainChain, GovChain, GS1 resolver. Not yet inspected deeply. |
@@ -86,6 +86,34 @@ secrets or sensitive outputs belong here.
 - The revenue counter now reports `x402_settlements` separately, counting only
   transfers whose transaction sender is a facilitator signer published at
   `/api/x402/health`. Live result: 1 incoming transfer, 0 x402 settlements.
+
+### 6. End-to-end verify_request workflow (2026-11-22)
+
+- **Implemented.** `agentz/core/verification_workflow.py` and the
+  `verify_request` handler, registered in `agentz/workflows/registry.yaml`.
+  Flow: validate request, plan with approved tools only, call verify_record,
+  query_provenance and verify_attestation through `HostedMCPClient.call`,
+  combine verdicts (weakest link), write a receipt with execution id, request
+  and result digests, and timings.
+- **Verdict rules.** Demonstration records and non-production issuers give
+  `verified_demonstration_only`, never `verified`. Tool errors and unavailable
+  registries give `inconclusive`. Physical authenticity is always `not_inspected`.
+- **Run it.**
+  `python -m agentz.workflows.runner --handler verify_request --mode auto --params '{"record_id":"polygon-anchor-1","asset_id":"polygon-anchor-1"}'`
+  Dry-run returns the plan with no network calls.
+- **Tested.** `agentz/tests/test_verification_workflow.py`, 15 tests, no
+  network: positive, invalid requests, timeouts, live annotation change, and
+  handler dry-run and receipt writing. Full suite: 428 passed, 1 skipped.
+- **Production evidence (read-only).** `docs/agentz/evidence/verify_request-2026-11-22.jsonl`:
+  - Execution `740b2ec0-1b6a-4901-a3cb-31551724c779`: record verified as a
+    demonstration only, provenance `lookup_degraded`, attestation registry
+    unavailable, so the combined verdict is `inconclusive`.
+  - Execution `3d155640-ae49-471e-b63e-87ede52ef3c4`: record only,
+    `verified_demonstration_only`.
+- **Production finding.** Live `verify_attestation` returns
+  `registry_unavailable`, and `query_provenance` reports `lookup_degraded`.
+  The signed-record and attestation registries behind the hosted tools are not
+  answering. That needs investigation in the worker, not in AgentZ.
 
 ## Owner decisions that unblock agent sales
 

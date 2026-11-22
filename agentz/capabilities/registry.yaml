@@ -42,6 +42,17 @@ capabilities:
     status: AVAILABLE
     agentz_executable: true
     evidence: production tools/call with an unknown id returned status=unknown, verified=false (2026-11-22).
+  - id: agentz.workflow.verify_request
+    name: End-to-end verification request
+    purpose: Verify a record and retrieve provenance and attestation in one call, with a traceable receipt.
+    source: agentz/workflows/handlers/verify_request.py
+    entrypoint: {adapter: internal, workflow: verify_request}
+    auth: none
+    risk: read_only
+    policy_capability: research
+    status: AVAILABLE
+    agentz_executable: false
+    evidence: See docs/agentz/integration-progress.md slice 6 for the live run.
   - id: authichain.mcp.verify_attestation
     name: Attestation check
     purpose: Check an asset's attestation, optionally against an expected object id.
