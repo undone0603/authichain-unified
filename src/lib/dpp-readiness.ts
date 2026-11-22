@@ -267,7 +267,7 @@ export function scoreDppReadiness(
   } else if (days !== null) {
     nextStep = `${days} days left. The $${price} checkout opens an AuthiChain workspace for this product line${audit}.`;
   } else {
-    nextStep = `Obligations are expected, not yet law. The $${price} EU DPP Readiness audit maps your gaps against the draft rules before your importers start asking${audit}.`;
+    nextStep = `Obligations are expected, not yet law. The $${price} checkout opens an AuthiChain workspace for this product line, before your importers start asking${audit}. It is not an audit or legal advice.`;
   }
 
   return {

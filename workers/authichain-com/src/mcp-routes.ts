@@ -66,7 +66,7 @@ import {
   findPublishedPack,
   packUrl,
 } from "./published-packs";
-import { gatedCheckoutUrl, planById, planUsd } from "../../../src/lib/plans";
+import { gatedCheckoutUrl, planById, planPaymentLink, planUsd } from "../../../src/lib/plans";
 
 /**
  * Protocol versions this endpoint can speak, newest first. `initialize`
@@ -116,6 +116,32 @@ const JSON_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
 };
+
+/**
+ * The one paid next step for an in-scope dpp_readiness_check, as data an agent
+ * can act on. nextStep stays free of prices and pitches; this separate field
+ * names the live plan from plans.ts with its own description (a workspace, not
+ * an audit, certification or legal advice). Out of scope: nothing to sell.
+ */
+export function dppPaidOption(
+  inScope: boolean
+): { paidOption?: Record<string, unknown> } {
+  const plan = planById("dpp_readiness");
+  const checkout = planPaymentLink("dpp_readiness");
+  if (!inScope || !plan || !plan.listed || !checkout) return {};
+  return {
+    paidOption: {
+      plan: plan.id,
+      name: plan.name,
+      usd: planUsd("dpp_readiness"),
+      billing: "one_time",
+      checkout,
+      description: plan.description,
+      buyer: "human",
+      note: "Optional. A person completes the Stripe checkout; no agent payment is taken here.",
+    },
+  };
+}
 
 export const TOOLS = [
   {
@@ -1710,7 +1736,11 @@ async function handleRpc(
         content: [
           {
             type: "text",
-            text: JSON.stringify({ ...result, web: DPP_CHECK_URL }, null, 2),
+            text: JSON.stringify(
+              { ...result, web: DPP_CHECK_URL, ...dppPaidOption(result.inScope) },
+              null,
+              2
+            ),
           },
         ],
       });

@@ -31,6 +31,7 @@ import {
   RETIRED_OCT31_ISSUER_KID,
   RETIRED_OCT31_ISSUER_RETIRED_AT,
   GLAMA_CONNECTOR_CLAIM,
+  dppPaidOption,
   isMcpPath,
   registryOrFilter,
   scanLivingQr,
@@ -501,6 +502,14 @@ describe("mcp discovery", () => {
     // This tool never pitches an audit even though Stripe checkouts are live.
     expect(result.nextStep).not.toContain(planPaymentLink("dpp_readiness"));
     expect(result.nextStep).not.toMatch(/\$\d|audit/i);
+    // The paid step is a separate, labelled field from plans.ts, only in scope.
+    expect(result.paidOption).toMatchObject({
+      plan: "dpp_readiness",
+      checkout: planPaymentLink("dpp_readiness"),
+      billing: "one_time",
+      buyer: "human",
+    });
+    expect(result.paidOption.description).toMatch(/not an audit/i);
 
     const bad = (await (await call({}))!.json()) as {
       result: { isError?: boolean };
@@ -2351,5 +2360,16 @@ describe("registryOrFilter", () => {
     } finally {
       globalThis.fetch = orig;
     }
+  });
+});
+
+describe("dppPaidOption", () => {
+  it("offers nothing when the product is out of scope", () => {
+    expect(dppPaidOption(false)).toEqual({});
+  });
+  it("uses plans.ts for name, price and checkout", () => {
+    const o = dppPaidOption(true).paidOption!;
+    expect(o).toMatchObject({ plan: "dpp_readiness", checkout: planPaymentLink("dpp_readiness") });
+    expect(typeof o.usd).toBe("number");
   });
 });
