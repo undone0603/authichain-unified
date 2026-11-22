@@ -13,12 +13,12 @@ secrets or sensitive outputs belong here.
 
 ## Capability registry
 
-`agentz/capabilities/registry.yaml` lists 18 capabilities. List them with
+`agentz/capabilities/registry.yaml` lists 19 capabilities. List them with
 `python -m agentz.cli capabilities list`.
 
 | Status | Count | Notes |
 | --- | --- | --- |
-| AVAILABLE | 8 | 7 free hosted MCP tools verified live by tools/list and tools/call, plus the A2A agent card as read-only discovery |
+| AVAILABLE | 9 | 7 free hosted MCP tools, the A2A agent card, and the on-chain x402 revenue counter |
 | INTEGRATION_READY | 2 | Control plane, taskmarket pick |
 | BLOCKED | 5 | Paid x402 verify, paid A2A evidence skill, local /scan verifier (owner pause), x402 settlement, Stripe billing |
 | PROPOSED | 3 | StrainChain, GovChain, GS1 resolver. Not yet inspected deeply. |
@@ -50,6 +50,33 @@ secrets or sensitive outputs belong here.
   `paid-evidence-check`, recorded as BLOCKED.
 - **Not yet merged or deployed.**
 
+### 3. Agent-rail revenue counter and sales funnel audit
+
+- **Implemented.** `capabilities revenue --days N` counts settled Base USDC
+  transfers into the x402 payTo wallet over a public RPC. Read-only, no keys.
+- **Tested.** `agentz/tests/test_x402_revenue.py`, 6 tests, no network.
+- **Production evidence (2026-11-22).**
+  - 0 payments and 0 USDC received in the last 30 days.
+  - The paid rail works: unpaid calls return a valid x402 v2 402 with Bazaar
+    metadata, `/api/x402/health` reports bound and trustless, and the
+    facilitator supports v2 exact on eip155:8453 plus the bazaar extension.
+  - The $10 daily cap is per payer, not a global revenue cap.
+  - AuthiChain is absent from the Coinbase x402 Bazaar (0 of 40,158 listings).
+  - The live `negotiate` tool returns `price_usd: null` for the paid service.
+    Main already returns the live $0.05 terms (PR #2652, merged 2026-11-20),
+    but the last successful authichain-com deploy is 2026-11-19 at `6fdbfe5bc`.
+
+## Owner decisions that unblock agent sales
+
+1. **Redeploy authichain-com** through the protected `deploy-authichain-com.yml`
+   workflow. Only two worker commits are pending: the live negotiate quote and a
+   one-line free-tool list change.
+2. **Authorize one $0.05 test purchase** from a buyer wallet you control. It
+   proves end-to-end settlement and, if the facilitator is Coinbase's, gets the
+   endpoint indexed in the Bazaar where buyer agents look for services.
+3. **Seal supply.** A paid check needs a real seal UUID. Buyers only appear
+   where sealed products exist, so issuing seals to real products drives demand.
+
 ## Active blockers
 
 - Owner pause: port 8000 runtime not reconciled with its protected artifact.
@@ -57,6 +84,7 @@ secrets or sensitive outputs belong here.
 
 ## Next safe actions
 
-1. Wire `/control-plane/state` as a read-only registry capability.
-2. Inspect StrainChain, GovChain and GS1 code and classify them with evidence.
-3. Read-only customer entitlement visibility, without charging.
+1. After a redeploy, re-run `capabilities call authichain.mcp.negotiate --args '{"service":"verify","max_budget_usd":1}'` and confirm `price_usd: 0.05`.
+2. Wire `/control-plane/state` as a read-only registry capability.
+3. Inspect StrainChain, GovChain and GS1 code and classify them with evidence.
+4. Read-only customer entitlement visibility, without charging.
