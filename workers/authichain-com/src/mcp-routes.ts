@@ -845,6 +845,26 @@ type AuthSealLookup =
     };
 
 const SAFE_REGISTRY_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,179}$/;
+/**
+ * auth_seals.id and authichain_attestation_records.seal_id are uuid columns.
+ * PostgREST rejects a whole `or` filter with HTTP 400 when any uuid comparison
+ * gets a non-uuid value, so those terms are only added for uuid identifiers.
+ * Without this, every product id, GTIN, serial or lot lookup read as an outage.
+ */
+const UUID_IDENTIFIER = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** PostgREST `or` filter over `columns`, keeping uuid columns only for uuid ids. */
+export function registryOrFilter(
+  assetId: string,
+  columns: readonly string[],
+  uuidColumns: readonly string[]
+): string {
+  const isUuid = UUID_IDENTIFIER.test(assetId);
+  const terms = columns
+    .filter(column => isUuid || !uuidColumns.includes(column))
+    .map(column => `${column}.eq.${assetId}`);
+  return `(${terms.join(",")})`;
+}
 
 type PublicRegistryEnv = X402Env & {
   NEXT_PUBLIC_SUPABASE_URL?: string;
@@ -896,8 +916,8 @@ async function lookupAuthSeal(
   }
 
   const filters = [
-    `(id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId},qr_payload.eq.${assetId})`,
-    `(id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId})`,
+    registryOrFilter(assetId, ["id", "product_id", "batch_id", "qr_payload"], ["id"]),
+    registryOrFilter(assetId, ["id", "product_id", "batch_id"], ["id"]),
   ];
   try {
     for (const or of filters) {
@@ -1001,7 +1021,11 @@ async function lookupPublishedAttestation(
       "attestation_id,seal_id,product_id,batch_id,brand,object_id,product_class,gtin,serial,lot,issuer_id,issuer_kid,decision,payload,jws,record_hash,published_at",
     published: "eq.true",
     limit: "2",
-    or: `(attestation_id.eq.${assetId},seal_id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId},object_id.eq.${assetId},gtin.eq.${assetId},serial.eq.${assetId},lot.eq.${assetId})`,
+    or: registryOrFilter(
+      assetId,
+      ["attestation_id", "seal_id", "product_id", "batch_id", "object_id", "gtin", "serial", "lot"],
+      ["seal_id"]
+    ),
   });
   try {
     const response = await fetch(
