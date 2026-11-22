@@ -4,7 +4,7 @@
 
 | Cadence | Owner | What |
 |---|---|---|
-| **Daily 13:00 local** | `authichain-outreach-research.timer` | Research stubs → quality gate → promote verified DMs into Worker queue |
+| **Daily 13:00 local** | `authichain-outreach-research.timer` | Research stubs → quality gate. Promote verified DMs into Worker queue only with `OUTREACH_ENQUEUE=1` (cold outreach is off per #2412) |
 | **Hourly** | Cloudflare Worker cron | Send (cap 10/day) → Gmail reply poll → nurture/suppress → 3-day follow-up |
 
 From/Reply-To: `undone.k@gmail.com` (never noreply).
@@ -61,10 +61,13 @@ Only Apollo `email_status=verified` (unlocked) becomes `apollo_verified`. Guesse
 ## Manual daily tick
 
 ```bash
-./scripts/dpp-outreach/run-daily-tick.sh
+./scripts/dpp-outreach/run-daily-tick.sh                  # research only
+OUTREACH_ENQUEUE=1 ./scripts/dpp-outreach/run-daily-tick.sh   # + promote into Worker queue
 # or force a send/reply cycle after promote:
-RUN_CYCLE=1 ./scripts/dpp-outreach/run-daily-tick.sh
+OUTREACH_ENQUEUE=1 RUN_CYCLE=1 ./scripts/dpp-outreach/run-daily-tick.sh
 ```
+
+Secrets load from `~/.config/authichain/outreach.env` (mode 600, outside the checkout), then `server/.env.job-runner`, then `.env.local`. `CRON_SECRET` is only needed with `OUTREACH_ENQUEUE=1`. If the queue answers non-200 the tick logs `outreach queue unavailable` and still exits 0. Node comes from `NODE_BIN`, `PATH`, or the newest `~/.nvm` v22.
 
 ## Admin (Bearer `CRON_SECRET`)
 
