@@ -32,6 +32,7 @@ import {
   RETIRED_OCT31_ISSUER_RETIRED_AT,
   GLAMA_CONNECTOR_CLAIM,
   isMcpPath,
+  registryOrFilter,
   scanLivingQr,
   tryHandleMcp,
   verifyRecordTool,
@@ -2298,5 +2299,57 @@ describe("MCP 2026-07-28 stateless requests (#2276)", () => {
     expect(allowed).toContain("Mcp-Method");
     expect(allowed).toContain("Mcp-Name");
     expect(allowed).toContain("MCP-Protocol-Version");
+  });
+});
+
+describe("registryOrFilter", () => {
+  const cols = ["attestation_id", "seal_id", "product_id", "gtin"] as const;
+
+  it("drops uuid-typed columns for a non-uuid identifier", () => {
+    expect(registryOrFilter("GTIN-00012345678905", cols, ["seal_id"])).toBe(
+      "(attestation_id.eq.GTIN-00012345678905,product_id.eq.GTIN-00012345678905,gtin.eq.GTIN-00012345678905)"
+    );
+  });
+
+  it("keeps uuid-typed columns for a uuid identifier", () => {
+    const id = "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a";
+    expect(registryOrFilter(id, cols, ["seal_id"])).toContain(`seal_id.eq.${id}`);
+    expect(registryOrFilter(id.toUpperCase(), ["id"], ["id"])).toBe(
+      `(id.eq.${id.toUpperCase()})`
+    );
+  });
+
+  it("never sends a uuid column comparison for a product id lookup", async () => {
+    const orig = globalThis.fetch;
+    const filters: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      filters.push(url.searchParams.get("or") ?? "");
+      return new Response("[]", { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        new Request("https://authichain.com/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "tools/call",
+            params: { name: "verify_attestation", arguments: { assetId: "polygon-anchor-1" } },
+          }),
+        }),
+        { SUPABASE_URL: "https://example.supabase.co", SUPABASE_ANON_KEY: "anon-test" } as never
+      );
+      const body = (await res!.json()) as { result: { content: Array<{ text: string }> } };
+      const data = JSON.parse(body.result.content[0].text) as { status: string };
+      expect(data.status).toBe("not_found");
+      expect(filters.length).toBeGreaterThan(0);
+      for (const f of filters) {
+        expect(f).not.toMatch(/(^|[(,])(id|seal_id)\.eq\./);
+      }
+    } finally {
+      globalThis.fetch = orig;
+    }
   });
 });
