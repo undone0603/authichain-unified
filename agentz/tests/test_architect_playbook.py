@@ -39,3 +39,9 @@ def test_team_rules_loaded_and_fit_cap():
 
 def test_missing_team_rules_adds_nothing(tmp_path):
     assert team_rules_section(tmp_path / "absent.md") == ""
+
+
+def test_non_utf8_team_rules_adds_nothing(tmp_path):
+    bad = tmp_path / "bad.md"
+    bad.write_bytes(b"\xff\xfe not utf-8")
+    assert team_rules_section(bad) == ""

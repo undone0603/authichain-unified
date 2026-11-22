@@ -77,7 +77,7 @@ def team_rules_section(path: Path = TEAM_RULES_PATH) -> str:
     """
     try:
         text = path.read_text(encoding="utf-8").strip()
-    except OSError:
+    except (OSError, ValueError):
         return ""
     if not text:
         return ""

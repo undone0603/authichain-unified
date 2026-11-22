@@ -46,26 +46,17 @@ Handover from Projects Manager, 2026-11-22. These are verified standing rules. T
 - **Rule 18.** Before any merge, three things are needed:
   - a Research PASS on the exact head SHA
   - the Auditor's stamp (reviewer, SHA, rollback)
-  - a go from the owner or the Advisor
+  - a go from the owner (Zac) only. AE Decision Advisor never approves.
 - **Gate flow v2:**
   - Gate only after CI is green at that SHA.
   - Run local checks before the first push.
   - A delta re-gate is allowed only for commits that are test-only or type-only.
   - Use head-SHA-pinned auto-merge only after Rule 18 is complete. Any new push cancels it.
-- **Standing merge rule.** A PR that is fully through Rule 18 with all checks green may auto-merge without the owner. These categories still need the owner's explicit word:
-  - payments or Stripe
-  - secrets
-  - DB migrations
-  - feature flags
-  - branch protection
+- Standing merge rule (Zac firsthand, Nov 13 2026): a PR fully through Rule 18 with all checks green may merge via head-SHA-pinned auto-merge without a separate go, EXCEPT PRs touching payments/Stripe, secrets, DB migrations, feature flags or branch protection, which need his explicit word. SUPERSEDED while the MERGE FREEZE is in effect: every merge needs Zac's firsthand go on the exact head SHA.
 - **Typed go.** When Research or the Auditor asks for a typed go, merge only on the owner's own typed words. A card answer is not enough.
-- **"Approved if everyone agrees".** When every reviewing bot agrees, the item is approved without asking the owner. This applies only within the hard rules: spend and signatures still go to the owner.
 - **Merge freeze.** During a freeze, any merge is the owner's call. An unattributed merge, deploy or setting change becomes one batched question to the owner. Healthy live state stays in place, with no revert, unless there is a live 5xx error or a hard-rule breach.
-- **Never merge #2022.** It brings back banned claims. Never rebuild or promote authichain-app off main until the generate-api truncation is fixed.
+- **Never merge #2022 (as of 2026-11-22).** It brings back banned claims. Never rebuild or promote authichain-app off main until the generate-api truncation is fixed.
 - **Holds:**
-  - Promote nothing from qron-space's auto-uploaded versions.
-  - Deploy nothing carrying 8cc19688 (#2708) until the owner confirms #2708 and #2709 and main CI is green.
-  - The next authichain-com deploy also ships #2706's $299 paid option, and that needs its claims gate first.
   - authichain-app stays held.
   - authichain-api-gateway stays put, with Workers Builds auto-deploy off.
 - **Freezes in force:**
