@@ -30,7 +30,7 @@ import {
   unpaidSealRefusal,
 } from "../../src/lib/agent-verify.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
-import { sisterOrigin, type SisterX402Env } from "./estate-x402.ts";
+import { canonicalVerifyBinding, sisterOrigin, type SisterX402Env } from "./estate-x402.ts";
 import {
   guardedForward,
   scopedReplayStore,
@@ -457,6 +457,7 @@ export async function tryHandleSisterMcp(
   verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
   if (!isSisterMcpPath(new URL(request.url).pathname)) return null;
+  if (verifyApp) verifyApp = canonicalVerifyBinding(verifyApp);
 
   if (request.method === "OPTIONS") {
     return new Response(null, {
