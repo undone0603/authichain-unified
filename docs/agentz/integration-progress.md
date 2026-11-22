@@ -9,7 +9,7 @@ secrets or sensitive outputs belong here.
 | --- | --- |
 | Source revision | `b4afbb3fc7a44dee4f7b2b2b1b8f58a9e4dcc883` (origin/main) |
 | Work branch | `feat/agentz-capability-registry` |
-| Port 8000 runtime (unchanged; owner pause in force) | uvicorn `agentz.api.main:app`, cwd `~/worktrees/agentz-pinned-5ab5e2c93`, worktree HEAD `5ab5e2c9`, clean. Process identified only. It has **not** been reconciled with a protected build artifact, so the owner pause on host-executable verifier and signer features still applies. |
+| Port 8000 runtime (reconciled at source and dependency level 2026-11-22; see runtime-reconciliation-2026-11-22.md) | uvicorn `agentz.api.main:app`, cwd `~/worktrees/agentz-pinned-5ab5e2c93`, worktree HEAD `5ab5e2c9`, clean. Process identified only. It has **not** been reconciled with a protected build artifact, so the owner pause on host-executable verifier and signer features still applies. |
 
 ## Capability registry
 
@@ -188,7 +188,7 @@ secrets or sensitive outputs belong here.
 
 ## Active blockers
 
-- Owner pause: port 8000 runtime not reconciled with its protected artifact.
+- Port 8000 runtime: source trees and all 183 packages match the protected `75e2c5b5d` artifact; only Python differs (3.12.3 host vs 3.12.16 image). Lifting the pause is the owner's call.
 - Financial rails (x402, Stripe) need scoped authorization and signing authority.
 
 ## Next safe actions
