@@ -23,7 +23,7 @@
 
 ## Monetization Model
 - **SaaS Subscription:** $99/mo (Starter) | $299/mo (Pro) | $999/mo (Enterprise/Agency)
-- **Per-Seal Fee:** $0.001 - $0.01 per verification event
+- **Agent verify (x402):** $0.05 USDC on Base via POST /api/x402 (paid agent verification).
 - **$QRON Utility:** Revenue-backed emissions, staking discounts, and governance.
 
 ## Moat: Automated Workflows
