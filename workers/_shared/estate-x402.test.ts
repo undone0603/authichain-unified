@@ -477,3 +477,28 @@ test("canonicalVerifyBinding keeps method, headers and body", async () => {
   assert.equal(seen[0].headers.get("x-payment"), "p");
   assert.equal(await seen[0].text(), '{"sealId":"s"}');
 });
+
+test("each sister serves a branded A2A agent card with the free DPP skill", async () => {
+  for (const { host } of BRANDS) {
+    for (const path of ["/.well-known/agent-card.json", "/.well-known/agent.json"]) {
+      const res = await tryHandleSisterX402(req(host, path), {}, { fetch: async () => new Response("{}") });
+      assert.ok(res, `${host}${path}`);
+      assert.equal(res.status, 200, `${host}${path}`);
+      const card = (await res.json()) as {
+        name: string;
+        url: string;
+        provider: { url: string };
+        skills: Array<{ id: string }>;
+        additionalInterfaces: Array<{ url: string }>;
+      };
+      assert.match(card.name, /by AuthiChain$/, host);
+      assert.equal(card.provider.url, `https://${host}`, host);
+      assert.equal(card.url, "https://authichain.com/api/a2a", host);
+      assert.equal(card.additionalInterfaces[0].url, `https://${host}/mcp`, host);
+      const ids = card.skills.map(s => s.id);
+      assert.ok(ids.includes("dpp-readiness-check"), host);
+      assert.ok(ids.includes("paid-evidence-check"), host);
+      assert.doesNotMatch(JSON.stringify(card).toLowerCase(), /erc8004|@/, host);
+    }
+  }
+});

@@ -22,6 +22,7 @@ import {
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
   X402_RESOURCE_DESCRIPTION,
+  x402AgentCard,
   x402HealthReport,
   x402PriceUsd,
   x402ScanFanout,
@@ -87,8 +88,42 @@ export function isSisterX402Path(pathname: string): boolean {
     p === "/api/x402/health" ||
     p === "/api/x402/catalog" ||
     p === "/.well-known/x402.json" ||
-    p === "/.well-known/x402"
+    p === "/.well-known/x402" ||
+    isAgentCardPath(p)
   );
+}
+
+function isAgentCardPath(pathname: string): boolean {
+  const p = normalizePath(pathname);
+  return p === "/.well-known/agent-card.json" || p === "/.well-known/agent.json";
+}
+
+/**
+ * A2A Agent Card on a sister host. Same skills and live x402 terms as
+ * authichain.com; the A2A JSON-RPC endpoint and paid verify stay canonical on
+ * authichain.com, and this host's own /mcp is listed first so an agent that
+ * probed the brand can use its tools. No contact email, no ERC-8004.
+ */
+async function sisterAgentCardResponse(
+  request: Request,
+  env: SisterX402Env | undefined,
+  bound: boolean
+): Promise<Response> {
+  hydrateX402(env);
+  const url = new URL(request.url);
+  const brand = sisterBrandFromHost(url.hostname);
+  const base = await x402AgentCard(healthEnv(env, bound));
+  if (!brand) return json(200, base);
+  const site = ESTATE_BRANDS[brand];
+  return json(200, {
+    ...base,
+    name: `${site.name} by AuthiChain`,
+    provider: { organization: "AuthiChain", url: site.url },
+    additionalInterfaces: [
+      { url: `${site.url}/mcp`, transport: "HTTP+JSON" },
+      ...base.additionalInterfaces,
+    ],
+  });
 }
 
 function isHealthPath(pathname: string): boolean {
@@ -314,6 +349,10 @@ export async function tryHandleSisterX402(
 
   if (request.method === "GET" && isFanoutPath(url.pathname)) {
     return fanoutResponse(request);
+  }
+
+  if (request.method === "GET" && isAgentCardPath(url.pathname)) {
+    return sisterAgentCardResponse(request, env, !!canonical);
   }
 
   if (request.method === "GET" && isHealthPath(url.pathname)) {

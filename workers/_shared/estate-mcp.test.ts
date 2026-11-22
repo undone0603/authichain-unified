@@ -223,7 +223,7 @@ test("JSON-RPC tools/list and get_pricing are public", async () => {
   };
   assert.deepEqual(
     listed.result.tools.map(t => t.name).sort(),
-    ["get_pricing", "scan_living_qr", "verify"].sort()
+    ["dpp_readiness_check", "get_pricing", "scan_living_qr", "verify"].sort()
   );
   const scanTool = listed.result.tools.find(
     t => t.name === "scan_living_qr"
@@ -571,5 +571,37 @@ test("MCP pricing discovery leaves out retired checkouts", () => {
     assert.equal(body.includes("/checkout/theater_3"), false, brand);
     assert.equal(body.includes("/checkout/strainchain_farm"), false, brand);
     assert.equal(body.includes("/checkout/gov_provenance_pilot"), false, brand);
+  }
+});
+
+test("dpp_readiness_check is free on every sister host and scores answers", async () => {
+  for (const [brand, host] of [
+    ["qron", "qron.space"],
+    ["strainchain", "strainchain.io"],
+    ["govchain", "govchain.us"],
+  ] as const) {
+    const call = async (args: Record<string, unknown>) =>
+      (await (await tryHandleSisterMcp(
+        req(host, "/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 7,
+            method: "tools/call",
+            params: { name: "dpp_readiness_check", arguments: args },
+          }),
+        }),
+        brand
+      ))!.json()) as { result: { content: Array<{ text: string }>; isError?: boolean } };
+    const ok = await call({ category: "battery_passport", unique_id: true, supplier_data: true });
+    assert.equal(ok.result.isError, undefined, host);
+    const r = JSON.parse(ok.result.content[0].text);
+    assert.equal(r.score, 40, host);
+    assert.equal(r.category.date, "2027-02-18", host);
+    assert.equal(r.web, "https://authichain.com/dpp-check", host);
+    assert.doesNotMatch(r.nextStep, /\$\d|audit/i, host);
+    const bad = await call({});
+    assert.equal(bad.result.isError, true, host);
   }
 });

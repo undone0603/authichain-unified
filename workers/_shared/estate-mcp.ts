@@ -30,6 +30,14 @@ import {
   unpaidSealRefusal,
 } from "../../src/lib/agent-verify.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
+import {
+  DPP_CATEGORIES,
+  DPP_QUESTIONS,
+  parseDppReadinessInput,
+  scoreDppReadiness,
+} from "../../src/lib/dpp-readiness.ts";
+
+const DPP_CHECK_URL = "https://authichain.com/dpp-check";
 import { canonicalVerifyBinding, sisterOrigin, type SisterX402Env } from "./estate-x402.ts";
 import {
   guardedForward,
@@ -129,6 +137,30 @@ function mcpTools(brand: SisterDiscoveryBrand) {
               "Required seal UUID. productId and serial are not registry keys.",
           },
         },
+      },
+    },
+    {
+      name: "dpp_readiness_check",
+      description:
+        "Free informational EU Digital Product Passport readiness questionnaire; it cannot issue a passport or certify compliance. Returns a 0-100 score, gaps, and the dated obligation for the product category (battery passport is law from 18 Feb 2027; other categories are ESPR targets). Not legal advice.",
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+      inputSchema: {
+        type: "object",
+        properties: {
+          category: {
+            type: "string",
+            enum: DPP_CATEGORIES.map(c => c.id),
+            description: DPP_CATEGORIES.map(c => `${c.id}: ${c.label}`).join("; "),
+          },
+          sells_in_eu: {
+            type: "boolean",
+            description: "Sold into the EU directly or via an importer. Default true.",
+          },
+          ...Object.fromEntries(
+            DPP_QUESTIONS.map(q => [q.id, { type: "boolean", description: q.question }])
+          ),
+        },
+        required: ["category"],
       },
     },
     {
@@ -337,6 +369,27 @@ async function handleRpc(
         brand
       );
     }
+    if (name === "dpp_readiness_check") {
+      const args = params.arguments ?? {};
+      const input = parseDppReadinessInput(k => (args as Record<string, unknown>)[k]);
+      if (!input) {
+        return rpcResult(id, {
+          content: [
+            {
+              type: "text",
+              text: `category is required, one of: ${DPP_CATEGORIES.map(c => c.id).join(", ")}`,
+            },
+          ],
+          isError: true,
+        });
+      }
+      const result = scoreDppReadiness(input, { offerAudit: false });
+      return rpcResult(id, {
+        content: [
+          { type: "text", text: JSON.stringify({ ...result, web: DPP_CHECK_URL }, null, 2) },
+        ],
+      });
+    }
     if (name === "scan_living_qr") {
       const result = await scanSisterLivingQr(params.arguments ?? {});
       return rpcResult(id, {
@@ -348,7 +401,7 @@ async function handleRpc(
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use get_pricing (free), scan_living_qr (free, this host does not verify the signature), or verify (unpaid HTTP 402 on POST /mcp, $0.05 USDC on Base).",
+          text: "Unknown tool. Use get_pricing (free), dpp_readiness_check (free), scan_living_qr (free, this host does not verify the signature), or verify (unpaid HTTP 402 on POST /mcp, $0.05 USDC on Base).",
         },
       ],
       isError: true,

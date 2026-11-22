@@ -207,6 +207,7 @@ describe("tryHandleX402", () => {
         "A valid signature is not real-world truth"
       );
       expect(body.skills.some(s => s.id === "paid-evidence-check")).toBe(true);
+      expect(body.skills.some(s => s.id === "dpp-readiness-check")).toBe(true);
       expect(body.x402.scheme).toBe("exact");
       expect(body.x402.payTo).toBe(env.X402_PAY_TO);
       expect(body.x402.amount).toBe("50000");
