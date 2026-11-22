@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agentz.core.architect import PLAYBOOK_PATH, playbook_section
+from agentz.core.architect import PLAYBOOK_PATH, playbook_section, team_rules_section
 
 
 def test_playbook_exists_and_is_loaded():
@@ -27,3 +27,15 @@ def test_playbook_fits_the_cap_untruncated():
 
     text = PLAYBOOK_PATH.read_text(encoding="utf-8").strip()
     assert len(text) <= PLAYBOOK_MAX_CHARS, "playbook would be truncated in the planner prompt; trim it"
+
+
+def test_team_rules_loaded_and_fit_cap():
+    from agentz.core.architect import TEAM_RULES_MAX_CHARS, TEAM_RULES_PATH
+
+    text = TEAM_RULES_PATH.read_text(encoding="utf-8").strip()
+    assert len(text) <= TEAM_RULES_MAX_CHARS
+    assert "Rule 18" in team_rules_section()
+
+
+def test_missing_team_rules_adds_nothing(tmp_path):
+    assert team_rules_section(tmp_path / "absent.md") == ""
