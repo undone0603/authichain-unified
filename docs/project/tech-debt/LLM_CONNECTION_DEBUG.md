@@ -50,7 +50,7 @@ Notes:
 | `http://localhost:11434/api/tags`                        | **HTTP 200** — native Ollama tags                                                               |
 | `POST …/chat/completions` (**no** `/v1`)                 | **HTTP 404** `page not found`                                                                   |
 | `POST …/v1/chat/completions` model=`gemma2:2b`           | **HTTP 200** — completion OK                                                                    |
-| `http://192.168.254.10:1234` (LM Studio default in code) | **Connection refused**                                                                          |
+| `http://<lan-host>:1234` (LM Studio default in code) | **Connection refused**                                                                          |
 | `http://localhost:1234/v1/models`                        | **Timeout** — LM Studio not listening locally                                                   |
 
 **Conclusion:** Local inference available only via **Ollama on :11434**. LM Studio is down on both candidates.
@@ -113,7 +113,7 @@ get_llm().invoke("Hello world"): WATERFALL SUCCEEDED
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Default / `local-model` id → `LOCAL_MODEL_ID` / `gemma2:2b`                       | **Helps** — matches pulled Ollama model                                                                                              |
 | Earlier WIP that **removed** `/v1` append (committed already vs `services/` copy) | **Hurt** — proven 404; **restored** in this debug pass                                                                               |
-| Default host `http://192.168.254.10:1234`                                         | **Hurts** when env unset — host unreachable from this machine; mitigated because `.env` sets `LOCAL_MODEL_URL`                       |
+| Default host `http://<lan-host>:1234`                                         | **Hurts** when env unset — host unreachable from this machine; mitigated because `.env` sets `LOCAL_MODEL_URL`                       |
 | Prefer lmstudio providers before ollama                                           | **Mixed** — works only because LOCAL_MODEL_URL points at Ollama; hides broken `langchain_ollama` install and blurs provider identity |
 | `max_retries=0`, timeout 120 on local ChatOpenAI                                  | Neutral / slightly stricter fail-fast                                                                                                |
 

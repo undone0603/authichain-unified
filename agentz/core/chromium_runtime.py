@@ -11,9 +11,14 @@ Sandbox (non-root, ``--cap-drop ALL``, ``--security-opt no-new-privileges``):
   it cannot run here. The launcher first tries the user-namespace sandbox
   (``--disable-setuid-sandbox`` so Chromium uses userns) which needs no extra
   Docker capabilities when the host allows unprivileged user namespaces. If
-  that launch fails — typical when the kernel honours ``no-new-privileges`` —
-  it retries once with ``--no-sandbox``. That fallback is limited to this
-  launcher; it is not a container-wide sysctl or added capability.
+  that launch fails with a *sandbox* error (``No usable sandbox``, namespace
+  or setuid sandbox failures), it retries once with ``--no-sandbox`` and logs
+  a WARN. Generic launch errors (missing binary, timeout, crash) do not
+  trigger that fallback. Chosen mode is ``last_sandbox_mode()`` and
+  ``sandbox_mode`` in smoke JSON.
+
+  ``browser-use`` 0.11.13 is a separate path: when ``IN_DOCKER=1`` it always
+  appends ``--no-sandbox`` itself. This launcher does not.
 
 /dev/shm:
   Default Docker ``/dev/shm`` is 64 MB and Chromium will crash there. Always
@@ -24,20 +29,73 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import shutil
 import sys
+from pathlib import Path
 from typing import Any, Literal
 
 SandboxMode = Literal["userns", "no-sandbox"]
 
 _LAUNCH_TIMEOUT_MS = 30_000
 _LAST_SANDBOX_MODE: SandboxMode | None = None
+_LOGGER = logging.getLogger(__name__)
+
+# Chromium / Playwright phrasing that means the *sandbox* is what failed.
+# Do not treat missing binaries, timeouts, or generic "Browser closed" as
+# a reason to disable the sandbox.
+_SANDBOX_ERROR_MARKERS = (
+    "no usable sandbox",
+    "failed to move to new namespace",
+    "namespace sandbox",
+    "setuid sandbox",
+    "suid sandbox",
+    "sandbox helper",
+    "zygote_host_impl_linux",
+    "running as root without --no-sandbox",
+    "pid namespaces",
+    "user namespace",
+)
+
+_RUNTIME_DIR_ENV = (
+    "XDG_CONFIG_HOME",
+    "XDG_CACHE_HOME",
+    "XDG_DATA_HOME",
+    "XDG_RUNTIME_DIR",
+    "BROWSER_USE_CONFIG_DIR",
+)
 
 
 def no_sandbox_forced() -> bool:
     """Operator override: skip userns and use --no-sandbox immediately."""
     return os.environ.get("AGENTZ_CHROMIUM_NO_SANDBOX") == "1"
+
+
+def last_sandbox_mode() -> SandboxMode | None:
+    """Sandbox mode of the most recent successful launch, if any."""
+    return _LAST_SANDBOX_MODE
+
+
+def is_sandbox_error(exc: BaseException) -> bool:
+    """True when Chromium failed because its sandbox could not start."""
+    text = str(exc).lower()
+    cause = getattr(exc, "__cause__", None)
+    if cause is not None:
+        text = f"{text}\n{cause}".lower()
+    return any(marker in text for marker in _SANDBOX_ERROR_MARKERS)
+
+
+def ensure_writable_runtime_dirs() -> None:
+    """Create XDG / browser-use dirs so a missing host HOME cannot break launch.
+
+    Image ENV pins these to ``/app/.xdg/...`` and ``/tmp/agentz-runtime``.
+    Host ``HOME=/home/<user>`` that does not exist in the image is ignored.
+    """
+    for key in _RUNTIME_DIR_ENV:
+        path = os.environ.get(key)
+        if path:
+            Path(path).mkdir(parents=True, exist_ok=True)
 
 
 def chromium_launch_args(*, no_sandbox: bool) -> list[str]:
@@ -46,7 +104,7 @@ def chromium_launch_args(*, no_sandbox: bool) -> list[str]:
     ``--disable-setuid-sandbox`` skips the setuid helper (unusable as
     non-root under ``--cap-drop ALL``). Without ``--no-sandbox``, Chromium
     then uses its user-namespace sandbox. ``--no-sandbox`` is the fallback
-    when userns is blocked; keep it off the first attempt.
+    when userns is blocked by a sandbox error; keep it off the first attempt.
     """
     args = ["--disable-dev-shm-usage", "--disable-setuid-sandbox"]
     if no_sandbox:
@@ -56,10 +114,6 @@ def chromium_launch_args(*, no_sandbox: bool) -> list[str]:
         # this flag into unrelated binaries or a Docker --sysctl.
         args.append("--no-sandbox")
     return args
-
-
-def last_sandbox_mode() -> SandboxMode | None:
-    return _LAST_SANDBOX_MODE
 
 
 def _launch_attempts() -> list[tuple[SandboxMode, list[str]]]:
@@ -74,6 +128,7 @@ def _launch_attempts() -> list[tuple[SandboxMode, list[str]]]:
 def launch_playwright_chromium(playwright: Any, *, headless: bool = True) -> Any:
     """Launch bundled Playwright Chromium, then system Chromium if needed."""
     global _LAST_SANDBOX_MODE
+    ensure_writable_runtime_dirs()
     last_error: BaseException | None = None
     binaries: list[str | None] = [None]
     system = shutil.which("chromium") or shutil.which("chromium-browser")
@@ -93,7 +148,14 @@ def launch_playwright_chromium(playwright: Any, *, headless: bool = True) -> Any
                 browser = playwright.chromium.launch(**kwargs)
             except Exception as exc:  # Playwright wraps Chromium spawn failures
                 last_error = exc
-                continue
+                if mode == "userns" and is_sandbox_error(exc):
+                    _LOGGER.warning(
+                        "Chromium user-namespace sandbox failed (%s); "
+                        "retrying with --no-sandbox (weaker isolation, still non-root)",
+                        exc,
+                    )
+                    continue
+                break
             _LAST_SANDBOX_MODE = mode
             return browser
 

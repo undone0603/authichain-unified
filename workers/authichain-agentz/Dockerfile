@@ -27,13 +27,22 @@ RUN pip install --no-cache-dir -r /tmp/requirements-agentz.txt \
 
 FROM python:3.12-slim
 
+# Default image user. Host switch often runs as the laptop uid instead;
+# state dirs below are group 0 with g=u so `--group-add 0` can write them.
+ARG AGENTZ_UID=10001
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
     PATH=/opt/venv/bin:$PATH \
     PORT=8000 \
     PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright \
-    IN_DOCKER=1
+    IN_DOCKER=1 \
+    XDG_CONFIG_HOME=/app/.xdg/config \
+    XDG_CACHE_HOME=/app/.xdg/cache \
+    XDG_DATA_HOME=/app/.xdg/data \
+    XDG_RUNTIME_DIR=/tmp/agentz-runtime \
+    BROWSER_USE_CONFIG_DIR=/app/.xdg/config/browseruse
 
 COPY --from=wheels /opt/venv /opt/venv
 
@@ -48,13 +57,26 @@ RUN python -m playwright install-deps chromium \
 
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin agentz \
+RUN useradd --create-home --uid ${AGENTZ_UID} --shell /usr/sbin/nologin agentz \
     && mkdir -p /app \
     && chown -R agentz:agentz /app /opt/ms-playwright /home/agentz
 
 WORKDIR /app
 COPY --chown=agentz:agentz requirements-agentz.txt .
 COPY --chown=agentz:agentz agentz ./agentz
+
+# Runtime-written dirs: group 0 + g=u so any uid in group 0 can write
+# (`docker run --user <host-uid> --group-add 0`). Not world-writable.
+RUN mkdir -p /app/agentz/logs \
+        /app/.xdg/config/browseruse \
+        /app/.xdg/cache \
+        /app/.xdg/data \
+        /tmp/agentz-runtime \
+    && chown -R agentz:0 /app/agentz/logs /app/.xdg /tmp/agentz-runtime \
+    && chgrp -R 0 /app/agentz/logs /app/.xdg /tmp/agentz-runtime \
+    && chmod -R g=u /app/agentz/logs /app/.xdg /tmp/agentz-runtime \
+    && chmod -R o-w /app/agentz/logs /app/.xdg /tmp/agentz-runtime \
+    && find /app/agentz/logs /app/.xdg /tmp/agentz-runtime -type d -exec chmod 2770 {} +
 
 USER agentz
 EXPOSE 8000
