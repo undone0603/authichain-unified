@@ -26,7 +26,7 @@ jobs:
     runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     # Run 44874903039 (Nov 21 2026) built and smoke-tested in ~10 min, then hit the
     # 35-min cap uploading the ~397 MB image tarball at ~189 KB/s from the laptop.
-    timeout-minutes: 90
+    timeout-minutes: 240
     steps:
       - name: Refuse duplicate ARM64 build for protected SHA
         shell: bash
