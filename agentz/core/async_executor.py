@@ -29,6 +29,40 @@ from agentz.integrations.authichain_mcp import CapabilityError, Registry
 
 TRANSIENT_STATUS = frozenset({429, 500, 502, 503, 504})
 
+try:  # orjson is pinned in requirements-agentz.txt; stdlib json stays the fallback.
+    import orjson as _orjson
+except ImportError:  # pragma: no cover
+    _orjson = None
+
+
+# orjson decodes integers outside [-2**63, 2**64) as floats, silently losing precision
+# (think atomic USDC or wei amounts). Every such literal has at least 19 digits, so any
+# input with a 19-digit run goes to the stdlib; digits inside strings only cost speed.
+# The scan is translate + substring search, both in C (a regex here cost as much as
+# the stdlib parse it was meant to avoid).
+_DIGIT_MASK = bytes(0x30 if 0x30 <= c <= 0x39 else 0x20 for c in range(256))
+_LONG_RUN = b"0" * 19
+
+
+def _loads(data: bytes | str) -> Any:
+    """Decode JSON to the same value `json.loads` gives, raising ValueError where it does.
+
+    orjson is the fast path. It is stricter than the stdlib (NaN/Infinity literals,
+    non-UTF-8 bytes, a BOM, lone surrogates), so anything it rejects is re-decoded by
+    `json.loads`, which decides; inputs where it would be lossy never reach it.
+    """
+    if _orjson is not None:
+        try:
+            raw = data.encode() if isinstance(data, str) else data
+        except UnicodeEncodeError:  # lone surrogates: only the stdlib accepts them
+            raw = None
+        if raw is not None and _LONG_RUN not in raw.translate(_DIGIT_MASK):
+            try:
+                return _orjson.loads(raw)
+            except ValueError:
+                pass
+    return json.loads(data)
+
 
 @dataclass(order=True)
 class _Job:
@@ -150,12 +184,14 @@ class AsyncCapabilityExecutor:
     # ---- transport ------------------------------------------------------------------
     async def _rpc(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
         payload = {"jsonrpc": "2.0", "id": str(uuid.uuid4()), "method": method, "params": params}
+        # Requests stay on httpx's stdlib encoder: orjson would silently turn NaN into
+        # null where httpx refuses it (allow_nan=False). Only decoding is accelerated.
         resp = await self._http.post(self.registry.endpoint, json=payload)
         if resp.status_code in TRANSIENT_STATUS:
             raise _Transient(f"http {resp.status_code}")
         if resp.status_code != 200:
             raise CapabilityError("upstream_rejected", f"http {resp.status_code}")
-        body = resp.json()
+        body = _loads(resp.content)
         if "error" in body:
             raise CapabilityError("rpc_error", str(body["error"])[:300])
         return body.get("result") or {}
@@ -283,7 +319,7 @@ def _content(result: dict[str, Any]) -> Any:
     texts = [p.get("text", "") for p in parts if isinstance(p, dict) and p.get("type") == "text"]
     if len(texts) == 1:
         try:
-            return json.loads(texts[0])
+            return _loads(texts[0])
         except ValueError:
             return texts[0]
     return parts
