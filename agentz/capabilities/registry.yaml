@@ -154,6 +154,22 @@ capabilities:
     status: INTEGRATION_READY
     agentz_executable: false
     missing: Exposed as a workflow, not as a registry capability.
+  - id: agentz.reqbin_rest_mcp
+    name: ReqBin REST and MCP probe plugin
+    purpose: Send REST/HTTP requests, probe remote MCP endpoints and batch-check URL health.
+    source: agentz/reqbin-rest-mcp/src/mcp-handler.mjs
+    entrypoint:
+      adapter: mcp_http
+      endpoint: https://agentz-reqbin-rest-mcp.undone-k.workers.dev/mcp
+      tools: [http_request, mcp_probe, batch_health_check]
+      local_stdio: node agentz/reqbin-rest-mcp/local-server.mjs --stdio
+    auth: REQBIN_BEARER_TOKEN bearer token (Worker secret)
+    risk: outbound_http_write
+    policy_capability: external_message
+    status: INTEGRATION_READY
+    agentz_executable: false
+    evidence: Deployed 2026-11-23 (version bcca2cb6); /mcp returned 401 without the token, tools/list returned all three tools with it, and a 169.254.169.254 target was refused.
+    missing: No AgentZ adapter for its own mcp_http endpoint. http_request can POST/PUT/DELETE to any public URL and mcp_probe can call remote tools, so it stays non-executable until a read-only subset is gated.
   - id: authichain.x402.settlement
     name: x402 agent payment settlement
     purpose: Agent pay in Base USDC.
