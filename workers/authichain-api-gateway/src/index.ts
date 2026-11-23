@@ -466,7 +466,7 @@ export default {
                 price: "$29",
                 requests: "100 generations",
                 features: [
-                  "100 AI QR generations for $29, paid once. No subscription. One-time pack credits (Starter and Creator) never expire",
+                  "100 AI QR generations for $29, paid once. No subscription.",
                   "Designed for AuthiChain signed verification (in development)",
                 ],
                 stripeLink: "https://authichain.com/checkout/starter",

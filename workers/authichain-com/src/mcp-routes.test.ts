@@ -233,10 +233,8 @@ describe("mcp discovery", () => {
       expect(text).not.toContain("USDC");
       expect(text).not.toContain("on_hold");
       expect(text).not.toContain("wait_buyer");
-      expect(text).toContain(
-        "One-time pack credits (Starter and Creator) never expire."
-      );
-      expect(text).not.toContain("Pack credits never expire.");
+      expect(text).toContain("One-time pack credits (Starter and Creator).");
+      expect(text).not.toContain("never expire");
       expect(text).toContain("https://authichain.com/checkout/starter");
       expect(text).toContain("https://authichain.com/checkout/dpp_readiness");
       for (const plan of [
@@ -383,9 +381,9 @@ describe("mcp discovery", () => {
       expect(text, path).not.toContain("on_hold");
       expect(text, path).not.toContain("wait_buyer");
       expect(text, path).toContain(
-        "One-time pack credits (Starter and Creator) never expire."
+        "One-time pack credits (Starter and Creator)."
       );
-      expect(text, path).not.toContain("Pack credits never expire.");
+      expect(text, path).not.toContain("never expire");
       for (const plan of [
         "strainchain_passport",
         "strainchain_farm",
@@ -464,11 +462,9 @@ describe("mcp discovery", () => {
     expect(priced.result.content[0].text).not.toContain("on_hold");
     expect(priced.result.content[0].text).not.toContain("wait_buyer");
     expect(priced.result.content[0].text).toContain(
-      "One-time pack credits (Starter and Creator) never expire."
+      "One-time pack credits (Starter and Creator)."
     );
-    expect(priced.result.content[0].text).not.toContain(
-      "Pack credits never expire."
-    );
+    expect(priced.result.content[0].text).not.toContain("never expire");
   });
 
   it("tools/call dpp_readiness_check is free and scores the answers", async () => {
@@ -2322,7 +2318,9 @@ describe("registryOrFilter", () => {
 
   it("keeps uuid-typed columns for a uuid identifier", () => {
     const id = "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a";
-    expect(registryOrFilter(id, cols, ["seal_id"])).toContain(`seal_id.eq.${id}`);
+    expect(registryOrFilter(id, cols, ["seal_id"])).toContain(
+      `seal_id.eq.${id}`
+    );
     expect(registryOrFilter(id.toUpperCase(), ["id"], ["id"])).toBe(
       `(id.eq.${id.toUpperCase()})`
     );
@@ -2334,7 +2332,10 @@ describe("registryOrFilter", () => {
     globalThis.fetch = (async (input: RequestInfo | URL) => {
       const url = new URL(String(input));
       filters.push(url.searchParams.get("or") ?? "");
-      return new Response("[]", { status: 200, headers: { "content-type": "application/json" } });
+      return new Response("[]", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
     }) as typeof fetch;
     try {
       const res = await tryHandleMcp(
@@ -2345,13 +2346,23 @@ describe("registryOrFilter", () => {
             jsonrpc: "2.0",
             id: 1,
             method: "tools/call",
-            params: { name: "verify_attestation", arguments: { assetId: "polygon-anchor-1" } },
+            params: {
+              name: "verify_attestation",
+              arguments: { assetId: "polygon-anchor-1" },
+            },
           }),
         }),
-        { SUPABASE_URL: "https://example.supabase.co", SUPABASE_ANON_KEY: "anon-test" } as never
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        } as never
       );
-      const body = (await res!.json()) as { result: { content: Array<{ text: string }> } };
-      const data = JSON.parse(body.result.content[0].text) as { status: string };
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }> };
+      };
+      const data = JSON.parse(body.result.content[0].text) as {
+        status: string;
+      };
       expect(data.status).toBe("not_found");
       expect(filters.length).toBeGreaterThan(0);
       for (const f of filters) {
@@ -2369,7 +2380,10 @@ describe("dppPaidOption", () => {
   });
   it("uses plans.ts for name, price and checkout", () => {
     const o = dppPaidOption(true).paidOption!;
-    expect(o).toMatchObject({ plan: "dpp_readiness", checkout: planPaymentLink("dpp_readiness") });
+    expect(o).toMatchObject({
+      plan: "dpp_readiness",
+      checkout: planPaymentLink("dpp_readiness"),
+    });
     expect(typeof o.usd).toBe("number");
   });
 });

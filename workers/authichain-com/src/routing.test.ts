@@ -141,7 +141,7 @@ test("/vs/* and /mcp/install make no Polygon contract claim (RES-162)", async ()
 
 test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
   const starterDesc =
-    "100 AI QR generations for $29, paid once. No subscription. One-time pack credits (Starter and Creator) never expire.";
+    "100 AI QR generations for $29, paid once. No subscription.";
   for (const path of ["/", "/checkout/starter"]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
@@ -182,7 +182,12 @@ test("CFA-460: / and /checkout/starter show no Launch $19 copy", async () => {
   const home = await (await get("/")).text();
   assert.ok(
     home.includes(starterDesc),
-    "home JSON-LD Starter offer uses the approved never-expire sentence"
+    "home JSON-LD Starter offer uses the one-time pack sentence"
+  );
+  assert.equal(
+    home.toLowerCase().includes("never expire"),
+    false,
+    "home must have 0 hits on never expire"
   );
 });
 
@@ -194,7 +199,6 @@ test("CFA-758: money routes have no 50-workspace-generation or bare pack-credit 
     "no expiry",
     "no-expiry",
   ];
-  const approvedNeverExpire = new Set(["/", "/pricing", "/checkout/starter"]);
   for (const path of [
     "/",
     "/pricing",
@@ -223,26 +227,22 @@ test("CFA-758: money routes have no 50-workspace-generation or bare pack-credit 
         `${path} must have 0 hits on ${phrase}`
       );
     }
-    if (!approvedNeverExpire.has(path)) {
-      assert.equal(
-        html.toLowerCase().includes("never expire"),
-        false,
-        `${path} must have 0 hits on never expire`
-      );
-    }
+    assert.equal(
+      html.toLowerCase().includes("never expire"),
+      false,
+      `${path} must have 0 hits on never expire`
+    );
   }
   const pricing = await (await get("/pricing")).text();
   assert.ok(
     pricing.includes(
-      "One-time pack credits (Starter and Creator) never expire."
+      "100 AI QR generations for $29, paid once. No subscription."
     ),
-    "/pricing uses the approved never-expire sentence"
+    "/pricing uses the one-time pack sentence"
   );
   assert.ok(
-    pricing.includes(
-      "<li>One-time pack credits (Starter and Creator) never expire</li>"
-    ),
-    "/pricing list item uses the approved sentence without a trailing period"
+    pricing.includes("<li>One-time pack credits (Starter and Creator)</li>"),
+    "/pricing list item names one-time pack credits with no expiry promise"
   );
 });
 

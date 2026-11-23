@@ -494,7 +494,7 @@ describe("tryHandleGatedCheckout — POST", () => {
 });
 
 describe("CFA-460: /checkout/starter confirm copy", () => {
-  it("shows the approved never-expire sentence and no Launch $19 copy", async () => {
+  it("shows Starter as a one-time pack and no Launch $19 copy", async () => {
     const res = await tryHandleGatedCheckout(
       new Request("https://authichain.com/checkout/starter"),
       {}
@@ -503,8 +503,9 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
     expect(res!.status).toBe(200);
     const html = await res!.text();
     expect(html).toContain(
-      "100 AI QR generations for $29, paid once. No subscription. One-time pack credits (Starter and Creator) never expire."
+      "100 AI QR generations for $29, paid once. No subscription."
     );
+    expect(html.toLowerCase()).not.toContain("never expire");
     expect(html).not.toContain("$19");
     expect(html).not.toContain("qron_launch");
     expect(html).not.toContain("Launch subscription");
@@ -515,12 +516,15 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
     expect(html).not.toContain("50 workspace generations");
   });
 
-  it("plans.ts Starter pricing copy uses the approved never-expire sentence", () => {
+  it("plans.ts Starter pricing copy has no expiry promise", () => {
     expect(planById("starter")?.description).toBe(
-      "100 AI QR generations for $29, paid once. No subscription. One-time pack credits (Starter and Creator) never expire."
+      "100 AI QR generations for $29, paid once. No subscription."
     );
     expect(planById("starter")?.features).toContain(
-      "One-time pack credits (Starter and Creator) never expire"
+      "One-time pack credits (Starter and Creator)"
+    );
+    expect(planById("starter")?.description.toLowerCase()).not.toContain(
+      "never expire"
     );
     expect(planById("starter")?.description).not.toContain(
       "Pack credits never expire."
