@@ -448,12 +448,50 @@ test("POST with a proof is forwarded to authichain.com when VERIFY_APP is bound"
 test("sister health reports bound only when a VERIFY_APP binding is present", async () => {
   const binding = { fetch: async () => new Response("{}") };
   for (const { host } of BRANDS) {
-    const without = await tryHandleSisterX402(req(host, "/api/x402/health"), {});
-    const withB = await tryHandleSisterX402(req(host, "/api/x402/health"), {}, binding);
-    const a = (await without!.json()) as { paidVerify: { bound: boolean } };
-    const b = (await withB!.json()) as { paidVerify: { bound: boolean } };
+    const without = await tryHandleSisterX402(
+      req(host, "/api/x402/health"),
+      {}
+    );
+    const withB = await tryHandleSisterX402(
+      req(host, "/api/x402/health"),
+      {},
+      binding
+    );
+    const a = (await without!.json()) as {
+      endpoint: string;
+      aliases?: string[];
+      paidVerify: { bound: boolean; detail: string };
+    };
+    const b = (await withB!.json()) as {
+      endpoint: string;
+      aliases?: string[];
+      paidVerify: { bound: boolean; detail: string };
+    };
     assert.equal(a.paidVerify.bound, false, host);
     assert.equal(b.paidVerify.bound, true, host);
+    assert.equal(
+      b.paidVerify.detail.includes("answered from the seal registry"),
+      false,
+      host
+    );
+    assert.match(
+      b.paidVerify.detail,
+      /forwarded to authichain\.com's registry/,
+      host
+    );
+    for (const body of [a, b]) {
+      assert.equal(body.endpoint, "/api/x402", host);
+      assert.equal(
+        (body.aliases ?? []).includes("/api/v1/agent-verify"),
+        false,
+        host
+      );
+      assert.equal(
+        JSON.stringify(body).includes("/api/v1/agent-verify"),
+        false,
+        host
+      );
+    }
   }
 });
 
@@ -469,7 +507,7 @@ test("canonicalVerifyBinding keeps method, headers and body", async () => {
     new Request("http://govchain.us/api/v1/agent-verify?x=1", {
       method: "POST",
       headers: { "x-payment": "p" },
-      body: "{\"sealId\":\"s\"}",
+      body: '{"sealId":"s"}',
     })
   );
   assert.equal(seen[0].url, "https://authichain.com/api/v1/agent-verify?x=1");
@@ -480,8 +518,15 @@ test("canonicalVerifyBinding keeps method, headers and body", async () => {
 
 test("each sister serves a branded A2A agent card with the free DPP skill", async () => {
   for (const { host } of BRANDS) {
-    for (const path of ["/.well-known/agent-card.json", "/.well-known/agent.json"]) {
-      const res = await tryHandleSisterX402(req(host, path), {}, { fetch: async () => new Response("{}") });
+    for (const path of [
+      "/.well-known/agent-card.json",
+      "/.well-known/agent.json",
+    ]) {
+      const res = await tryHandleSisterX402(
+        req(host, path),
+        {},
+        { fetch: async () => new Response("{}") }
+      );
       assert.ok(res, `${host}${path}`);
       assert.equal(res.status, 200, `${host}${path}`);
       const card = (await res.json()) as {
@@ -494,11 +539,19 @@ test("each sister serves a branded A2A agent card with the free DPP skill", asyn
       assert.match(card.name, /by AuthiChain$/, host);
       assert.equal(card.provider.url, `https://${host}`, host);
       assert.equal(card.url, "https://authichain.com/api/a2a", host);
-      assert.equal(card.additionalInterfaces[0].url, `https://${host}/mcp`, host);
+      assert.equal(
+        card.additionalInterfaces[0].url,
+        `https://${host}/mcp`,
+        host
+      );
       const ids = card.skills.map(s => s.id);
       assert.ok(ids.includes("dpp-readiness-check"), host);
       assert.ok(ids.includes("paid-evidence-check"), host);
-      assert.doesNotMatch(JSON.stringify(card).toLowerCase(), /erc8004|@/, host);
+      assert.doesNotMatch(
+        JSON.stringify(card).toLowerCase(),
+        /erc8004|@/,
+        host
+      );
     }
   }
 });

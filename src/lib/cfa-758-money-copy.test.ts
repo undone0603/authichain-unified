@@ -1,7 +1,6 @@
 /**
- * CFA-758: money-route HTML/JS must not ship "50 workspace generation(s)",
- * leftover no-expiry wording, or the bare slogan "Pack credits never expire."
- * Approved pack copy: "One-time pack credits (Starter and Creator) never expire."
+ * CFA-758: money-route HTML/JS must not ship "50 workspace generation(s)"
+ * or any credit-expiry promise ("never expire", "no expiry").
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -9,15 +8,6 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const read = (rel: string) => readFileSync(path.join(ROOT, rel), "utf8");
-
-const APPROVED = [
-  "One-time pack credits (Starter and Creator) never expire.",
-  "One-time pack credits (Starter and Creator) never expire",
-];
-
-function withoutApprovedCopy(text: string): string {
-  return APPROVED.reduce((acc, phrase) => acc.split(phrase).join(""), text);
-}
 
 const BANNED = [
   /50 workspace generations?/i,
@@ -52,7 +42,7 @@ const MONEY_SOURCES = [
 describe("CFA-758 money-route copy", () => {
   for (const rel of MONEY_SOURCES) {
     it(`${rel} has no banned pack/workspace claims`, () => {
-      const text = withoutApprovedCopy(read(rel));
+      const text = read(rel);
       for (const re of BANNED) {
         expect(text.match(re), `${rel} matched ${re}`).toBeNull();
       }

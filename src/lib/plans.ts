@@ -75,8 +75,7 @@ export const PLANS: Plan[] = [
     id: "starter",
     name: "Starter Pack",
     price: 29,
-    description:
-      "100 AI QR generations for $29, paid once. No subscription. One-time pack credits (Starter and Creator) never expire.",
+    description: "100 AI QR generations for $29, paid once. No subscription.",
     generations: 100,
     stripe_price_id: "price_1UIoEVGqTruSqV8T61lp48wB",
     stripe_payment_link: "https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E",
@@ -85,7 +84,7 @@ export const PLANS: Plan[] = [
     features: [
       "100 generations for $29, paid once",
       "No subscription, no renewal",
-      "One-time pack credits (Starter and Creator) never expire",
+      "Starter and Creator include one-time pack credits.",
     ],
     cta: "Get 100 generations for $29",
     listed: true,
