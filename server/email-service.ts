@@ -105,6 +105,8 @@ export type SendEmailInput = {
   subject: string;
   body: string;
   fromName?: string;
+  /** Where replies go; the Resend sender is a no-reply address. */
+  replyTo?: string;
 };
 
 export type SendEmailResult = {
@@ -330,6 +332,7 @@ export async function sendEmail(
           to,
           subject: input.subject,
           text: input.body,
+          ...(input.replyTo ? { reply_to: input.replyTo } : {}),
         }),
       });
       if (res.ok) {
@@ -367,6 +370,7 @@ export async function sendEmail(
         to,
         subject: input.subject,
         text: input.body,
+        ...(input.replyTo ? { replyTo: input.replyTo } : {}),
       });
 
       return {
@@ -404,6 +408,7 @@ export async function sendEmail(
     `From: ${fromName} <${fromEmail}>`,
     `To: ${to}`,
     `Subject: ${input.subject}`,
+    ...(input.replyTo ? [`Reply-To: ${input.replyTo}`] : []),
     "MIME-Version: 1.0",
     "Content-Type: text/plain; charset=UTF-8",
     "",
