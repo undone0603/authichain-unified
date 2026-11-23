@@ -391,6 +391,11 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   // Theater is unlisted since the #1234 catalog freeze.
   assert.equal(html.includes("checkout/theater_1"), false);
   assert.equal(html.includes("checkout/theater_3"), false);
+  assert.equal(html.toLowerCase().includes("never expire"), false);
+  assert.match(
+    html,
+    /100 AI QR generations for \$29, paid once\. No subscription\./
+  );
 });
 
 test("IndexNow key file is served as short-cache plain text", async () => {
@@ -549,6 +554,24 @@ test("the 404 escapes the path, so a hostile URL cannot inject markup", async ()
   assert.ok(
     !html.includes("<script>alert(1)</script>"),
     "path must be escaped"
+  );
+});
+
+test("Nightstamp Digital /order?preset=starmap&sku=digital redirects to /starmap", async () => {
+  const res = await get("/order?preset=starmap&sku=digital");
+  assert.equal(res.status, 302);
+  assert.equal(
+    res.headers.get("location"),
+    "https://qron.space/starmap?preset=starmap&sku=digital"
+  );
+});
+
+test("trailing-slash /order/ also redirects to /starmap and keeps the query", async () => {
+  const res = await get("/order/?preset=starmap&sku=digital");
+  assert.equal(res.status, 302);
+  assert.equal(
+    res.headers.get("location"),
+    "https://qron.space/starmap?preset=starmap&sku=digital"
   );
 });
 

@@ -1,0 +1,9 @@
+{
+  "action_id": "sample-02-logs-only",
+  "note": "Typical starting point: the agent platform's own logs, no settlement reference and no signed mandate.",
+  "claimed": {"principal": "acct_7731 (redacted)", "action": "book_freight", "amount_usdc": 420.0, "occurred_at": "2026-10-03T09:12:00Z"},
+  "evidence": {
+    "mandate": {"type": "declared", "scope": {"max_amount_usdc": 500, "actions": ["book_freight"]}},
+    "outcome": {"type": "application_log", "status": "success"}
+  }
+}

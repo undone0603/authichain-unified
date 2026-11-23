@@ -43,6 +43,17 @@ test("API Dockerfile uses requirements-agentz.txt and uvicorn :8000", () => {
   const here = dirname(fileURLToPath(import.meta.url));
   const dockerfile = readFileSync(join(here, "..", "Dockerfile"), "utf8");
   assert.match(dockerfile, /COPY requirements-agentz\.txt/);
+  assert.match(dockerfile, /playwright install-deps chromium/);
+  assert.match(dockerfile, /playwright install chromium/);
+  assert.match(dockerfile, /^USER agentz/m);
+  assert.match(dockerfile, /ARG AGENTZ_UID=10001/);
+  assert.match(dockerfile, /chgrp -R 0/);
+  assert.match(dockerfile, /chmod -R g=u/);
+  assert.match(dockerfile, /XDG_CONFIG_HOME=\/app\/\.xdg\/config/);
+  assert.match(dockerfile, /BROWSER_USE_CONFIG_DIR=\/app\/\.xdg\/config\/browseruse/);
+  assert.doesNotMatch(dockerfile, /chmod -R 777/);
+  assert.doesNotMatch(dockerfile, /playwright install firefox/);
+  assert.doesNotMatch(dockerfile, /playwright install webkit/);
   assert.match(dockerfile, /EXPOSE 8000/);
   assert.match(
     dockerfile,

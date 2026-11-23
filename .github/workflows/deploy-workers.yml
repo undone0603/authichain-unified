@@ -1,10 +1,5 @@
 name: Deploy Workers (workers/*)
 on:
-  push:
-    branches: [main]
-    paths:
-      - "workers/**"
-      - ".github/workflows/deploy-workers.yml"
   workflow_dispatch:
     inputs:
       worker:
@@ -35,6 +30,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+      - name: Restore full tree after sparse checkout
+        # Self-hosted runners share a work dir; another workflow's sparse
+        # checkout persists and hid .gitleaks.toml from the secret scan.
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -z "$(git ls-files -v | awk '$1 == "S" { print }')"
       - name: Scan the tree being deployed
         run: |
           # Tree scan only. Removed keys in old commits were failing a
@@ -54,8 +58,8 @@ jobs:
   # be shown."). Build the list here instead: $0 default omits agentz;
   # workflow_dispatch + deploy_agentz_containers=true appends it (Workers Paid).
   #
-  # This job now also runs on a plain push (CLOUDFLARE_DEPLOY_ENABLED off,
-  # not workflow_dispatch) to narrow `workers` down to whichever
+  # Every plain push, regardless of deployment repo variables, narrows
+  # `workers` down to whichever
   # AUTO_DEPLOY_ALLOWLIST worker(s) actually changed -- or to `[]` if none
   # did, or if the diff step below hits any error (a shallow-clone edge
   # case, a force-push, anything). An allow-listed worker earns its place by
@@ -63,9 +67,9 @@ jobs:
   # (gs1-resolver's is workers/gs1-resolver/src/conformance.test.ts,
   # mirroring GS1's hosted suite) -- not just CI type/lint, which every
   # worker already has. `deploy` below consumes whatever this outputs
-  # unchanged: a full list (CLOUDFLARE_DEPLOY_ENABLED, or blank
-  # workflow_dispatch), a single-worker list (workflow_dispatch with
-  # inputs.worker set), a narrowed one-or-few-worker list (auto-deploy),
+  # unchanged: a full list (blank workflow_dispatch), a single-worker
+  # list (workflow_dispatch with inputs.worker set), or a narrowed
+  # one-or-few-worker list (auto-deploy),
   # or an empty one (a plain push touching no allow-listed worker) --
   # so no per-step gating anywhere below this job needs to change, and no
   # *other* worker's bind step can ever run on the auto-deploy path, because
@@ -73,7 +77,7 @@ jobs:
   deploy-matrix:
     name: Build worker matrix
     runs-on: ${{ vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-ops"]') || 'ubuntu-24.04' }}
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     timeout-minutes: 5
     outputs:
       workers: ${{ steps.build.outputs.workers }}
@@ -82,11 +86,19 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - name: Restore full tree after sparse checkout
+        # Self-hosted runners share a work dir; another workflow's sparse
+        # checkout persists and hid .gitleaks.toml from the secret scan.
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -z "$(git ls-files -v | awk '$1 == "S" { print }')"
       - name: Select workers ($0 default; AgentZ opt-in; auto-deploy narrows on a plain push)
         id: build
         env:
           DEPLOY_AGENTZ: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_agentz_containers == 'true' }}
-          CLOUDFLARE_DEPLOY_ENABLED: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED }}
           EVENT_NAME: ${{ github.event_name }}
           DISPATCH_WORKER: ${{ github.event.inputs.worker }}
           PUSH_BEFORE: ${{ github.event.before }}
@@ -146,7 +158,9 @@ jobs:
             workers=$(jq -nc --argjson w "${workers}" '$w + ["authichain-agentz"]')
           fi
 
-          if [ "${CLOUDFLARE_DEPLOY_ENABLED}" = "true" ] || [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+          # Only a deliberate manual dispatch may expand to the full matrix.
+          # A legacy CLOUDFLARE_DEPLOY_ENABLED repo variable cannot override a push.
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
             # workflow_dispatch with a specific worker must not expand the
             # full ~40-job matrix (install + checkout per skipped row).
             # Validate against the known list, then emit a one-element matrix.
@@ -176,9 +190,8 @@ jobs:
             exit 0
           fi
 
-          # Auto-deploy path: CLOUDFLARE_DEPLOY_ENABLED is off and this
-          # isn't a workflow_dispatch, so only an explicitly allow-listed
-          # worker (see the job comment above and
+          # Auto-deploy path: every push, independent of repository variables.
+          # Only an explicitly allow-listed worker (see above and
           # scripts/ci/select-autodeploy-workers.mjs, which owns the
           # allowlist and is unit-tested) may deploy, and only if it
           # actually changed in this push. That script never throws -- a
@@ -192,7 +205,7 @@ jobs:
           echo "deploy matrix (auto-deploy, narrowed to changed allow-listed workers): ${eligible}"
 
   deploy:
-    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-24.04' || (vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04') }}
+    runs-on: ${{ matrix.worker == 'authichain-agentz' && 'ubuntu-24.04' || (vars.AUTHICHAIN_DEPLOY_SELF_HOSTED == 'true' && fromJSON('["self-hosted","Linux","ARM64","authichain-deploy"]') || 'ubuntu-24.04') }}
     timeout-minutes: 45
     needs: [secret-scan, deploy-matrix]
     # GitHub fails the whole workflow when `strategy.matrix` expands to an
@@ -208,11 +221,22 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+      - name: Restore full tree after sparse checkout
+        # Self-hosted runners share a work dir; another workflow's sparse
+        # checkout persists and hid .gitleaks.toml from the secret scan.
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -z "$(git ls-files -v | awk '$1 == "S" { print }')"
       - name: Setup pnpm
+        timeout-minutes: 15
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
       - name: Setup Node 22
+        timeout-minutes: 15
         uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -221,6 +245,7 @@ jobs:
           # after the worker is already published.
           cache: ${{ runner.environment != 'self-hosted' && 'pnpm' || '' }}
       - name: Install dependencies
+        timeout-minutes: 15
         run: pnpm install --frozen-lockfile
 
       # Cloudflare Containers (wrangler.jsonc "containers") need a Docker
@@ -288,6 +313,7 @@ jobs:
 
       - name: Bind agentz secrets
         if: |
+          github.event_name == 'workflow_dispatch' &&
           matrix.worker == 'authichain-agentz' &&
           env.CLOUDFLARE_ACCOUNT_ID != '' &&
           (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-agentz')
@@ -319,6 +345,7 @@ jobs:
       # shows "not connected" on the page instead of failing the deploy.
       - name: Bind command-center secrets
         if: |
+          github.event_name == 'workflow_dispatch' &&
           matrix.worker == 'authichain-dashboard' &&
           env.CLOUDFLARE_ACCOUNT_ID != '' &&
           (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-dashboard')
@@ -352,6 +379,7 @@ jobs:
 
       - name: Bind claw AGENTZ_* secrets
         if: |
+          github.event_name == 'workflow_dispatch' &&
           matrix.worker == 'authichain-openclaw' &&
           env.CLOUDFLARE_ACCOUNT_ID != '' &&
           (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-openclaw')
@@ -369,6 +397,7 @@ jobs:
 
       - name: Bind Stripe secret on authichain-com
         if: |
+          github.event_name == 'workflow_dispatch' &&
           matrix.worker == 'authichain-com' &&
           env.CLOUDFLARE_ACCOUNT_ID != '' &&
           (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-com')
@@ -403,6 +432,7 @@ jobs:
       # the dashboard, or the two will drift.
       - name: Bind ISSUE_SECRET on gs1-resolver
         if: |
+          github.event_name == 'workflow_dispatch' &&
           matrix.worker == 'gs1-resolver' &&
           env.CLOUDFLARE_ACCOUNT_ID != '' &&
           (github.event.inputs.worker == '' || github.event.inputs.worker == 'gs1-resolver')
@@ -420,36 +450,10 @@ jobs:
           printf '%s' "$ISSUE_SECRET" | npx wrangler secret put ISSUE_SECRET --name gs1-resolver
           echo "bound ISSUE_SECRET on gs1-resolver"
 
-      # Same values as bind-x402-secrets.yml / deploy-authichain-com.yml.
-      # Sisters 402 without this secret; /settle stays closed (dead listing).
-      # Do not invent a facilitator URL. Do not print values.
-      - name: Bind X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET
-        if: |
-          (matrix.worker == 'qron-space' ||
-           matrix.worker == 'strainchain-io' ||
-           matrix.worker == 'govchain-us') &&
-          env.CLOUDFLARE_ACCOUNT_ID != '' &&
-          (github.event.inputs.worker == '' || github.event.inputs.worker == matrix.worker)
-        working-directory: workers/${{ matrix.worker }}
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          set -euo pipefail
-          PAY_TO='0x5db511706FB6317cd23A7655F67450c5AC6e6AA2' # pragma: allowlist secret
-          FACILITATOR='https://facilitator.payai.network'
-          USDC_ASSET='0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-          NAME='${{ matrix.worker }}'
-          printf '%s' "$PAY_TO" | npx wrangler secret put X402_PAY_TO --name "$NAME"
-          printf '%s' "$FACILITATOR" | npx wrangler secret put X402_FACILITATOR_URL --name "$NAME"
-          printf '%s' "$USDC_ASSET" | npx wrangler secret put X402_USDC_ASSET --name "$NAME"
-          echo "bound X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET on ${NAME} (values not logged)"
+      # x402 payment-routing secrets are NEVER rewritten by a push deploy.
+      # --keep-vars preserves live bindings; only the protected manual binder
+      # can rotate a single target Worker after independent release checks.
 
-  # PM-330 item 6: blocking post-deploy smoke, AFTER the deploy job. Fails the
-  # run if a public money/protocol surface is down, answers the wrong code
-  # (unsigned Stripe webhook must 400, unpaid /api/x402 must 402), or redirects
-  # to cloudflareaccess.com. Read-only: HEAD on checkout, nothing signed.
-  # Rollback: delete this job.
   post-deploy-smoke:
     name: Post-deploy smoke (blocking)
     needs: [deploy]
@@ -461,6 +465,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+      - name: Restore full tree after sparse checkout
+        # Self-hosted runners share a work dir; another workflow's sparse
+        # checkout persists and hid .gitleaks.toml from the secret scan.
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test -z "$(git ls-files -v | awk '$1 == "S" { print }')"
       - name: Setup Node 22
         uses: actions/setup-node@v7
         with:

@@ -28,7 +28,7 @@ describe("x402 facilitator bind matches authichain-com", () => {
     const bind = readWorkflow("bind-x402-secrets.yml");
     const landing = readWorkflow("deploy-authichain-com.yml");
     const workers = readWorkflow("deploy-workers.yml");
-    for (const yml of [bind, landing, workers]) {
+    for (const yml of [bind, landing]) {
       expect(yml).toContain(PAY_TO);
       expect(yml).toContain(`'${FACILITATOR}'`);
       expect(yml).toContain(USDC);
@@ -39,46 +39,41 @@ describe("x402 facilitator bind matches authichain-com", () => {
         /FACILITATOR[^'\n]*['"]https:\/\/x402\.org\/facilitator['"]/
       );
     }
+    expect(workers).toContain("--keep-vars");
+    expect(workers).not.toContain("secret put X402_PAY_TO");
     expect(landing).toContain("--keep-vars");
     expect(landing).not.toContain("secret put X402_PAY_TO");
   });
 
-  it("bind-x402-secrets.yml puts the pair on sisters as well as the landing pair", () => {
+  it("manual binder only targets one explicitly selected Worker", () => {
     const yml = readWorkflow("bind-x402-secrets.yml");
     const step = bindStep(
       yml,
       "Bind X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET"
     );
-    expect(step).toContain(
-      "authichain-com|authichain-edge-router|qron-space|strainchain-io|govchain-us"
-    );
-    expect(step).toMatch(
-      /for name in authichain-com authichain-edge-router qron-space strainchain-io govchain-us/
-    );
-    for (const sister of SISTERS) {
-      expect(step).toContain(sister);
+    expect(yml).toMatch(/workflow_dispatch:/);
+    expect(yml).not.toMatch(/^  push:/m);
+    expect(yml).toContain("production-cloudflare-x402-secrets");
+    expect(yml).toContain("guard-production-secret-binding.mjs");
+    expect(yml).toContain("inputs.expected_sha");
+    expect(yml).toContain("AUTHICHAIN_X402_SECRET_BIND_CLOUDFLARE_API_TOKEN");
+    expect(yml).not.toContain("secrets.CLOUDFLARE_API_TOKEN");
+    expect(step).toContain("authichain-com|authichain-edge-router|qron-space|strainchain-io|govchain-us");
+    expect(step).toContain('bind_pair "$WORKER"');
+    expect(step).not.toMatch(/for name in authichain-com/);
+    expect(step).toContain("Unreviewed pay-to destination refused");
+    expect(step).toContain("Unreviewed facilitator refused");
+    for (const sister of SISTERS) expect(step).toContain(sister);
+    for (const name of ["X402_PAY_TO", "X402_FACILITATOR_URL", "X402_USDC_ASSET"]) {
+      expect(step).toContain(`secret put ${name}`);
     }
-    expect(step).toContain("secret put X402_PAY_TO");
-    expect(step).toContain("secret put X402_FACILITATOR_URL");
-    expect(step).toContain("secret put X402_USDC_ASSET");
-    expect(step).toContain("values not logged");
-    expect(step).not.toMatch(/continue-on-error:/);
   });
 
-  it("Deploy Workers re-puts the same pair on sister apexes after wrangler deploy", () => {
+  it("a push deploy can retain but never rebind x402 payment-routing secrets", () => {
     const yml = readWorkflow("deploy-workers.yml");
-    const step = bindStep(
-      yml,
-      "Bind X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET"
-    );
-    expect(step).toContain("matrix.worker == 'qron-space'");
-    expect(step).toContain("matrix.worker == 'strainchain-io'");
-    expect(step).toContain("matrix.worker == 'govchain-us'");
-    expect(step).toContain("secret put X402_PAY_TO");
-    expect(step).toContain("secret put X402_FACILITATOR_URL");
-    expect(step).toContain("secret put X402_USDC_ASSET");
-    expect(step).toContain("values not logged");
-    expect(step).not.toMatch(/continue-on-error:/);
-    expect(step).not.toMatch(/versions upload/);
+    expect(yml).toContain("--keep-vars");
+    expect(yml).not.toMatch(/secret put X402_PAY_TO/);
+    expect(yml).not.toMatch(/secret put X402_FACILITATOR_URL/);
+    expect(yml).not.toMatch(/secret put X402_USDC_ASSET/);
   });
 });

@@ -20,7 +20,7 @@
 set -euo pipefail
 
 REPO="${GEMMA_REPO:-undone0603/authichain-unified}"
-LLM_URL="${LOCAL_LLM_URL:-http://192.168.254.10:1234}"
+LLM_URL="${LOCAL_LLM_URL:-http://127.0.0.1:1234}"
 LLM_URL="${LLM_URL%/}"
 RUNNER_DIR="${RUNNER_DIR:-$HOME/actions-runner-gemma}"
 RUNNER_NAME="${RUNNER_NAME:-lan-gemma-$(hostname -s)}"
@@ -35,7 +35,7 @@ say "1/4 LM Studio at $LLM_URL"
 if models=$(curl -fsS --max-time 10 "$LLM_URL/v1/models"); then
   echo "$models" | head -c 600; echo
 else
-  die "LM Studio did not answer at $LLM_URL/v1/models. Start its server (Developer tab -> Start) and allow LAN access, or set LOCAL_LLM_URL."
+  die "LM Studio did not answer at $LLM_URL/v1/models. Start its server (Developer tab -> Start) on 127.0.0.1:1234, or set LOCAL_LLM_URL."
 fi
 
 if [ -f "$RUNNER_DIR/.runner" ]; then

@@ -112,6 +112,9 @@ describe("tryHandleGatedCheckout — GET/HEAD never call Stripe", () => {
     expect(html).toContain('href="/checkout/starter"');
     expect(html).not.toContain("strainchain_farm");
     expect(html).not.toContain("Farm Plan");
+    expect(html).not.toContain("theater_1");
+    expect(html).not.toContain("theater_3");
+    expect(html).not.toContain("gov_provenance_pilot");
     expect(html).toContain("noindex");
     expect(fetchImpl).not.toHaveBeenCalled();
   });
@@ -206,8 +209,8 @@ describe("tryHandleGatedCheckout — POST", () => {
   it("creates one session with customer_email and catalogue price, then 303s to Stripe", async () => {
     const fetchImpl = stripeOk();
     const res = await tryHandleGatedCheckout(
-      post("/checkout/strainchain_farm", {
-        email: "grower@farm.com",
+      post("/checkout/starter", {
+        email: "buyer@brand.com",
         utm_source: "mail",
         visit_id: "v_1",
         checkout_key: "12345678-1234-4234-8234-123456789abc",
@@ -226,16 +229,13 @@ describe("tryHandleGatedCheckout — POST", () => {
     ];
     expect(url).toBe("https://api.stripe.com/v1/checkout/sessions");
     const body = new URLSearchParams(String(init.body));
-    expect(body.get("mode")).toBe("subscription");
+    expect(body.get("mode")).toBe("payment");
     expect(body.get("line_items[0][price]")).toBe(
-      planById("strainchain_farm")!.stripe_price_id
+      planById("starter")!.stripe_price_id
     );
-    expect(body.get("customer_email")).toBe("grower@farm.com");
-    expect(body.get("metadata[plan]")).toBe("strainchain_farm");
+    expect(body.get("customer_email")).toBe("buyer@brand.com");
+    expect(body.get("metadata[plan]")).toBe("starter");
     expect(body.get("metadata[checkout_gate]")).toBe("confirm_post");
-    expect(body.get("subscription_data[metadata][plan]")).toBe(
-      "strainchain_farm"
-    );
     expect(body.get("metadata[utm_source]")).toBe("mail");
     expect(body.get("client_reference_id")).toBe("v_1");
     expect(body.get("after_expiration[recovery][enabled]")).toBe("true");
@@ -494,7 +494,7 @@ describe("tryHandleGatedCheckout — POST", () => {
 });
 
 describe("CFA-460: /checkout/starter confirm copy", () => {
-  it("shows the Research PASS FREE-PREVIEW sentence and no Launch $19 copy", async () => {
+  it("shows Starter as a one-time pack and no Launch $19 copy", async () => {
     const res = await tryHandleGatedCheckout(
       new Request("https://authichain.com/checkout/starter"),
       {}
@@ -503,28 +503,34 @@ describe("CFA-460: /checkout/starter confirm copy", () => {
     expect(res!.status).toBe(200);
     const html = await res!.text();
     expect(html).toContain(
-      "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits."
+      "100 AI QR generations for $29, paid once. No subscription."
     );
+    expect(html.toLowerCase()).not.toContain("never expire");
     expect(html).not.toContain("$19");
     expect(html).not.toContain("qron_launch");
     expect(html).not.toContain("Launch subscription");
-    expect(html).not.toContain("never expire");
+    expect(html).not.toContain("Pack credits never expire.");
     expect(html).not.toContain("never-expire");
     expect(html).not.toContain("no expiry");
     expect(html).not.toContain("no-expiry");
     expect(html).not.toContain("50 workspace generations");
   });
 
-  it("plans.ts Starter pricing copy uses the Advisor-GO replace-only sentence", () => {
+  it("plans.ts Starter pricing copy has no expiry promise", () => {
     expect(planById("starter")?.description).toBe(
-      "100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits."
+      "100 AI QR generations for $29, paid once. No subscription."
     );
     expect(planById("starter")?.features).toContain(
-      "Starting a monthly plan replaces unused pack credits"
+      "Starter and Creator include one-time pack credits."
     );
-    expect(planById("starter")?.description).not.toContain("never expire");
-    expect(planById("starter")?.features?.join(" ")).not.toContain(
+    expect(planById("starter")?.description.toLowerCase()).not.toContain(
       "never expire"
+    );
+    expect(planById("starter")?.description).not.toContain(
+      "Pack credits never expire."
+    );
+    expect(planById("starter")?.features?.join(" ")).not.toContain(
+      "Pack credits never expire."
     );
   });
 });

@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 15
     defaults:
       run:
@@ -25,6 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        timeout-minutes: 15
         with:
           version: "10.28.2"
           run_install: false
@@ -32,6 +33,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install (frozen, worker/ is its own workspace)
+        timeout-minutes: 15
         run: pnpm install --frozen-lockfile
       - name: Typecheck
         run: pnpm exec tsc --noEmit

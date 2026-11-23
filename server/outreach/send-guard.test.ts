@@ -8,6 +8,20 @@ import {
   isRoleInboxEmail,
 } from "./send-guard";
 import { verifyUnsubscribeToken } from "./unsubscribe-link";
+import { ENV } from "../_core/env";
+import { getDb } from "../db";
+
+vi.mock("../db", () => ({
+  getDb: vi.fn(async () => ({
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [],
+        }),
+      }),
+    }),
+  })),
+}));
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -147,6 +161,56 @@ describe("guardedSend", () => {
     expect(r.sent).toBe(false);
     expect(r.reason).toContain("role_inbox");
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("blocks a suppression-listed recipient before DNS or Resend", async () => {
+    const previous = ENV.suppressionList;
+    ENV.suppressionList = "blocked@example.com";
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    try {
+      const r = await guardedSend({
+        to: "blocked@example.com",
+        source: "inbound_optin",
+        subject: "s",
+        body: "b",
+      });
+      expect(r.sent).toBe(false);
+      expect(r.reason).toBe("suppression_list");
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      ENV.suppressionList = previous;
+    }
+  });
+
+  it("blocks a recipient listed in guardrail_suppression_list even when the env list is empty", async () => {
+    const previous = ENV.suppressionList;
+    ENV.suppressionList = "";
+    vi.mocked(getDb).mockResolvedValueOnce({
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [{ email: "blocked@example.com" }],
+          }),
+        }),
+      }),
+    } as never);
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const dns = await import("node:dns");
+    const mx = vi.spyOn(dns.promises, "resolveMx");
+    try {
+      const r = await guardedSend({
+        to: "blocked@example.com",
+        source: "inbound_optin",
+        subject: "s",
+        body: "b",
+      });
+      expect(r.sent).toBe(false);
+      expect(r.reason).toBe("suppression_list");
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(mx).not.toHaveBeenCalled();
+    } finally {
+      ENV.suppressionList = previous;
+    }
   });
 
   it("does not treat a role_inbox refuse as a live send attempt", async () => {
@@ -462,6 +526,28 @@ describe("guardedSend", () => {
       expect(r.sent).toBe(false);
       expect(r.reason).toBe("mailing_address_not_configured");
       expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("fails closed when the postal address is only whitespace", async () => {
+      process.env.RESEND_API_KEY = "re_test";
+      process.env.MAILING_ADDRESS = "   ";
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const dns = await import("node:dns");
+      vi.spyOn(dns.promises, "resolveMx").mockResolvedValue([
+        { exchange: "mx", priority: 1 },
+      ]);
+
+      const r = await guardedSend({
+        to: "jane.doe@acmelabs.com",
+        source: "published_contact",
+        subject: "s",
+        html: "<p>hi</p>",
+      });
+      expect(r.sent).toBe(false);
+      expect(r.reason).toBe("mailing_address_not_configured");
+      expect(fetchMock).not.toHaveBeenCalled();
+      delete process.env.MAILING_ADDRESS;
     });
   });
 });

@@ -86,13 +86,14 @@ describe("canonical web3 identity lock", () => {
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
       planPaymentLink("dpp_readiness")
     );
-    expect(catalog.humanCheckout.farmPaymentLink).toBeUndefined();
+    expect(catalog.humanCheckout).not.toHaveProperty("farmPaymentLink");
     expect(catalog.humanCheckout.starterPaymentLink).toBe(
       planPaymentLink("starter")
     );
-    expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
-    expect(planPaymentLink("strainchain_farm")).toBe(
-      "https://authichain.com/checkout/strainchain_farm"
+    expect(catalog.humanCheckout).not.toHaveProperty("farmUsd");
+    expect(JSON.stringify(catalog.humanCheckout)).not.toContain("farmUsd");
+    expect(JSON.stringify(catalog.humanCheckout)).not.toContain(
+      "strainchain_farm"
     );
   });
 
@@ -116,20 +117,16 @@ describe("canonical web3 identity lock", () => {
       planUsd("strainchain_passport")
     );
     expect(MONEY_RAILS.stripe.skus.dppUsd).toBe(planUsd("dpp_readiness"));
-    expect(MONEY_RAILS.stripe.skus.farmUsd).toBe(planUsd("strainchain_farm"));
+    expect(MONEY_RAILS.stripe.skus).not.toHaveProperty("farmUsd");
     expect(PLANS.find(p => p.id === "strainchain_passport")?.price).toBe(49);
     expect(PLANS.find(p => p.id === "dpp_readiness")?.price).toBe(299);
     expect(PLANS.find(p => p.id === "strainchain_farm")?.price).toBe(149);
     const d = agentPricingDiscovery();
     expect(d.humanCheckout.source).toBe("src/lib/plans.ts");
     expect(d.humanCheckout.strainchain_passport).toBe("$49 one-time");
-    expect(d.humanCheckout.strainchain_farm).toBe("$149/month");
-    expect(d.humanCheckout.checkout.farm).toBe(
-      planPaymentLink("strainchain_farm")
-    );
-    expect(new URL(d.humanCheckout.checkout.farm ?? "").hostname).toBe(
-      "authichain.com"
-    );
+    expect(d.humanCheckout).not.toHaveProperty("strainchain_farm");
+    expect(d.humanCheckout.checkout).not.toHaveProperty("farm");
+    expect(JSON.stringify(d.humanCheckout)).not.toContain("strainchain_farm");
     expect(d.nft.deployer).toBe(NFT_DEPLOYER_EOA);
     expect(d.nft.contract).toBe(POLYGON_AUTHICHAIN_NFT);
   });

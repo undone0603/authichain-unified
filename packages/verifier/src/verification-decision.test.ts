@@ -28,7 +28,9 @@ describe("resolveVerificationDecision", () => {
   });
 
   it("fails closed when cryptographic verification fails", () => {
-    expect(resolveVerificationDecision({ ...base, cryptographicValid: false })).toEqual({
+    expect(
+      resolveVerificationDecision({ ...base, cryptographicValid: false })
+    ).toEqual({
       decision: "indeterminate",
       valid: false,
       reasons: ["cryptographic_verification_failed"],
@@ -36,15 +38,57 @@ describe("resolveVerificationDecision", () => {
   });
 
   it("fails closed when the issuer is not currently trusted", () => {
-    expect(resolveVerificationDecision({ ...base, issuerTrusted: false })).toEqual({
+    expect(
+      resolveVerificationDecision({ ...base, issuerTrusted: false })
+    ).toEqual({
       decision: "indeterminate",
       valid: false,
       reasons: ["issuer_not_trusted"],
     });
   });
 
+  it("fails closed when the issuer check is missing", () => {
+    expect(
+      resolveVerificationDecision({ ...base, issuerTrusted: undefined })
+    ).toEqual({
+      decision: "indeterminate",
+      valid: false,
+      reasons: ["issuer_check_missing"],
+    });
+  });
+
+  it("fails closed when the issuer check is skipped even if trust is claimed", () => {
+    expect(
+      resolveVerificationDecision({
+        ...base,
+        issuerTrusted: true,
+        issuerCheck: "skipped",
+      })
+    ).toEqual({
+      decision: "indeterminate",
+      valid: false,
+      reasons: ["issuer_check_skipped"],
+    });
+  });
+
+  it("fails closed when the issuer check errored even if trust is claimed", () => {
+    expect(
+      resolveVerificationDecision({
+        ...base,
+        issuerTrusted: true,
+        issuerCheck: "error",
+      })
+    ).toEqual({
+      decision: "indeterminate",
+      valid: false,
+      reasons: ["issuer_check_error"],
+    });
+  });
+
   it("preserves durable revocation as a lifecycle decision", () => {
-    expect(resolveVerificationDecision({ ...base, claimStatus: "revoked" })).toEqual({
+    expect(
+      resolveVerificationDecision({ ...base, claimStatus: "revoked" })
+    ).toEqual({
       decision: "revoked",
       valid: false,
       reasons: ["durable_status_revoked"],
@@ -60,7 +104,9 @@ describe("resolveVerificationDecision", () => {
   });
 
   it("preserves durable expiry as a lifecycle reason", () => {
-    expect(resolveVerificationDecision({ ...base, claimStatus: "expired" })).toEqual({
+    expect(
+      resolveVerificationDecision({ ...base, claimStatus: "expired" })
+    ).toEqual({
       decision: "expired",
       valid: false,
       reasons: ["durable_status_expired"],
@@ -70,15 +116,23 @@ describe("resolveVerificationDecision", () => {
   it.each([
     ["warning", "warning", "decision_warning"],
     ["blocked", "blocked", "decision_blocked"],
-  ] as const)("preserves issuer decision %s without calling it valid", (_label, signedDecision, reason) => {
-    expect(
-      resolveVerificationDecision({ ...base, signedDecision }),
-    ).toEqual({ decision: signedDecision, valid: false, reasons: [reason] });
-  });
+  ] as const)(
+    "preserves issuer decision %s without calling it valid",
+    (_label, signedDecision, reason) => {
+      expect(resolveVerificationDecision({ ...base, signedDecision })).toEqual({
+        decision: signedDecision,
+        valid: false,
+        reasons: [reason],
+      });
+    }
+  );
 
   it("surfaces physical-world risk without overriding the cryptographic record", () => {
     expect(
-      resolveVerificationDecision({ ...base, riskSignals: ["scan_velocity", "geo_spread"] }),
+      resolveVerificationDecision({
+        ...base,
+        riskSignals: ["scan_velocity", "geo_spread"],
+      })
     ).toEqual({
       decision: "risk",
       valid: false,
@@ -87,7 +141,9 @@ describe("resolveVerificationDecision", () => {
   });
 
   it("treats supersession as a non-valid risk state", () => {
-    expect(resolveVerificationDecision({ ...base, claimStatus: "superseded" })).toEqual({
+    expect(
+      resolveVerificationDecision({ ...base, claimStatus: "superseded" })
+    ).toEqual({
       decision: "risk",
       valid: false,
       reasons: ["durable_status_superseded"],

@@ -1,6 +1,6 @@
 /**
  * CFA-758: money-route HTML/JS must not ship "50 workspace generation(s)"
- * or never-expire / no-expiry pack-credit claims.
+ * or any credit-expiry promise ("never expire", "no expiry").
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -11,6 +11,7 @@ const read = (rel: string) => readFileSync(path.join(ROOT, rel), "utf8");
 
 const BANNED = [
   /50 workspace generations?/i,
+  /Pack credits never expire\./,
   /never[- ]expire/i,
   /no[- ]expiry/i,
 ];
@@ -27,6 +28,7 @@ const MONEY_SOURCES = [
   "worker-app/dynamic-pages.ts",
   "workers/authichain-api-gateway/src/index.ts",
   "workers/authichain-com/src/index.ts",
+  "workers/authichain-com/src/mcp-routes.ts",
   "workers/authichain-com/src/money-surfaces.ts",
   "workers/authichain-com/src/dpp-routes.ts",
   "workers/authichain-com/src/battery-passport-page.ts",

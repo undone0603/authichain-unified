@@ -59,6 +59,7 @@ Tests: `node --test scripts/ci/check-supabase-grants.test.mjs` (run by the Lint 
 The baseline lists the migrations that existed on 2026-10-02; all of their tables already exist on
 QRON-v2 and keep their grants. Never add a new migration to the baseline. A table that is genuinely
 direct-connection only can opt out with `-- supabase-grants-exempt: public.<t> <reason>`. The reason is required and must be on the same line; an exemption without one fails the check.
+A restricted **SECURITY DEFINER RPC-only** table is also eligible for a reasoned exemption when no direct Data API table access is intended. In that case, the migration must explicitly REVOKE direct table access from public/client roles, limit RPC EXECUTE to the necessary service role, and use a regression test to prove that service_role has no direct table privileges. Do not add a token table grant merely to satisfy the checker.
 
 ## Custom roles (`authichain_app`)
 

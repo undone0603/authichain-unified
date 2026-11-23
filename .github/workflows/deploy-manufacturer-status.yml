@@ -9,7 +9,7 @@ permissions:
 jobs:
   deploy:
     name: Deploy manufacturer-status
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -26,6 +26,7 @@ jobs:
           fi
 
       - name: Setup pnpm
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         uses: pnpm/action-setup@v6
         with:
@@ -33,6 +34,7 @@ jobs:
           run_install: false
 
       - name: Setup Node
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         uses: actions/setup-node@v7
         with:
@@ -40,6 +42,7 @@ jobs:
           cache: pnpm
 
       - name: Install
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile
 
@@ -55,7 +58,7 @@ jobs:
         if: steps.secrets_check.outputs.skip != 'true'
         working-directory: workers/manufacturer-status
         run: |
-          echo "https://polygon-rpc.com" | npx wrangler secret put POLYGON_RPC || echo "secret already set or failed (non-fatal)"
+          echo "https://polygon.drpc.org" | npx wrangler secret put POLYGON_RPC || echo "secret already set or failed (non-fatal)"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

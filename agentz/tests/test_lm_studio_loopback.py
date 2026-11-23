@@ -21,7 +21,7 @@ def test_localhost_constructs():
 @pytest.mark.parametrize(
     "url",
     [
-        "http://192.168.254.10:1234/v1",
+        "http://192.168.1.10:1234/v1",
         "http://10.0.0.5:1234/v1",
         "http://example.com/v1",
     ],

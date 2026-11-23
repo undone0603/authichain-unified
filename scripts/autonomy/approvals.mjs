@@ -24,6 +24,8 @@
 // Env: GITHUB_TOKEN (issues:write), GITHUB_REPOSITORY, APPROVAL_OWNER (login).
 // Bodies are public: never put emails, amounts, or secrets in them.
 
+import { pathToFileURL } from "node:url";
+
 export const LABEL = "approval-needed";
 const MARK = key => `<!-- approval-key:${key} -->`;
 
@@ -253,7 +255,7 @@ async function main(argv) {
   return d === "approved" ? 0 : d === "denied" ? 11 : 10;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main(process.argv.slice(2)).then(
     c => process.exit(c),
     e => {

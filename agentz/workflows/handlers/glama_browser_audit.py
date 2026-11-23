@@ -51,16 +51,12 @@ def inspect_public_glama(*, screenshot: Path | None = None) -> dict[str, Any]:
     """Open public Inspector in a *new*, unauthenticated, read-only browser."""
     from playwright.sync_api import sync_playwright
 
+    from agentz.core.chromium_runtime import launch_playwright_chromium
+
     with sync_playwright() as playwright:
-        try:
-            browser = playwright.chromium.launch(headless=True)
-        except Exception:
-            # Reuse already-installed system Chromium on a self-hosted WSL box;
-            # do not download a browser or use an existing profile.
-            binary = shutil.which("chromium") or shutil.which("chromium-browser")
-            if not binary:
-                raise
-            browser = playwright.chromium.launch(headless=True, executable_path=binary)
+        # Bundled Playwright Chromium, then system chromium(1). User-namespace
+        # sandbox first; --no-sandbox only inside that launcher if userns fails.
+        browser = launch_playwright_chromium(playwright, headless=True)
         try:
             context = browser.new_context(accept_downloads=False, service_workers="block")
             page = context.new_page()

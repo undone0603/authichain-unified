@@ -5,7 +5,7 @@ import { DPP_PRICE_ID } from "./dpp-loop";
 vi.mock("./email", () => ({
   sendEmail: vi
     .fn()
-    .mockResolvedValue({ ok: true, provider: "resend", status: 200 }),
+    .mockResolvedValue({ ok: true, provider: "resend", status: 200, messageId: "email_test_accepted" }),
 }));
 vi.mock("./billing-emails", () => ({
   renderBillingEmail: vi.fn().mockReturnValue({
@@ -26,14 +26,37 @@ function fakeSupabase(opts?: {
   existingProfile?: boolean;
   insertError?: { message: string } | null;
   updateError?: { message: string } | null;
+  failContinuityUpdateOnce?: boolean;
+  failProvisionedEventOnce?: boolean;
+  failActivationFinalizeOnce?: boolean;
+  failActivationClaimOnce?: boolean;
+  preGrantedSessionId?: string;
 }) {
   const rows: Array<Record<string, unknown>> = [];
   const profileUpdates: Array<Record<string, unknown>> = [];
   const profileId = opts?.profileId === undefined ? "prof_1" : opts.profileId;
   const existingProfile = opts?.existingProfile ?? profileId != null;
-  const profile: { id: string; last_grant_session_id?: string } | null =
-    existingProfile && profileId ? { id: profileId } : null;
+  const profile: Record<string, unknown> | null =
+    existingProfile && profileId
+      ? {
+          id: profileId,
+          ...(opts?.preGrantedSessionId
+            ? {
+                last_grant_session_id: opts.preGrantedSessionId,
+                generations_limit: 100,
+                generations_used: 20,
+              }
+            : {}),
+        }
+      : null;
   const continuity = new Map<string, Record<string, unknown>[]>();
+  const grantedSessions = new Set<string>();
+  const delivery = new Map<string, { state: string; profileId: string; token: string; attempts: number; messageId?: string }>();
+  let activationFinalizeFailed = false;
+  let activationClaimFailed = false;
+  let claimCounter = 0;
+  let continuityUpdateFailed = false;
+  let provisionedEventFailed = false;
   const from = (table: string) => {
     if (
       table === "founder_exit_actions" ||
@@ -68,6 +91,16 @@ function fakeSupabase(opts?: {
         },
         update: (patch: Record<string, unknown>) => ({
           eq: async (col: string, val: unknown) => {
+            if (
+              table === "founder_exit_actions" &&
+              opts?.failContinuityUpdateOnce &&
+              !continuityUpdateFailed
+            ) {
+              continuityUpdateFailed = true;
+              return {
+                error: { message: "injected continuity update failure" },
+              };
+            }
             const found = bucket.find(row => row[col] === val);
             if (found) Object.assign(found, patch);
             return { error: null };
@@ -80,6 +113,16 @@ function fakeSupabase(opts?: {
     const builder: Record<string, unknown> = {
       insert: (row: Record<string, unknown>) => {
         if (table === "funnel_events") {
+          if (
+            row.event_type === "dpp_loop:provisioned" &&
+            opts?.failProvisionedEventOnce &&
+            !provisionedEventFailed
+          ) {
+            provisionedEventFailed = true;
+            return Promise.resolve({
+              error: { message: "injected provisioned event failure" },
+            });
+          }
           rows.push(row);
           return Promise.resolve({ error: null });
         }
@@ -132,6 +175,12 @@ function fakeSupabase(opts?: {
       },
       maybeSingle: async () => {
         if (table === "profiles") {
+          if (
+            filters.some(([col]) => col === "last_grant_session_id") &&
+            !filters.every(([col, val]) => profile?.[col] === val)
+          ) {
+            return { data: null, error: null };
+          }
           return {
             data: profile,
             error: null,
@@ -146,12 +195,128 @@ function fakeSupabase(opts?: {
     };
     return builder;
   };
-  return { supabase: { from }, rows, profileUpdates, continuity };
+  const rpc = async (fn: string, args: Record<string, unknown>) => {
+    const session = String(args.p_session_id);
+    if (fn === "dpp_activation_prepare") {
+      if (!delivery.has(session)) {
+        delivery.set(session, { state: "pending", profileId: "", token: "", attempts: 0 });
+      }
+      return { data: { status: delivery.get(session)!.state }, error: null };
+    }
+    if (fn === "dpp_activation_enqueue") {
+      if (args.p_is_demo === true) return { data: { status: "skipped_demo" }, error: null };
+      const receipt = (continuity.get("founder_exit_side_effects") ?? []).find(
+        row => row.idempotency_key === `grant:${session}`
+      );
+      if (!receipt || receipt.profile_id !== args.p_profile_id) {
+        return { data: null, error: { code: "P0001", message: "receipt_mismatch" } };
+      }
+      const row = delivery.get(session);
+      if (!row) return { data: { status: "legacy_untracked" }, error: null };
+      if (row.profileId && row.profileId !== args.p_profile_id) {
+        return { data: null, error: { code: "P0001", message: "profile_mismatch" } };
+      }
+      row.profileId = String(args.p_profile_id);
+      return { data: { status: row.state }, error: null };
+    }
+    if (fn === "dpp_activation_claim") {
+      if (opts?.failActivationClaimOnce && !activationClaimFailed) {
+        activationClaimFailed = true;
+        return { data: null, error: { code: "08006" } };
+      }
+      const row = delivery.get(session);
+      if (!row) return { data: null, error: { code: "P0001" } };
+      if (row.state === "accepted") return { data: { status: "accepted" }, error: null };
+      if (row.state === "sending" || row.state === "needs_reconciliation") {
+        return { data: { status: "held" }, error: null };
+      }
+      if (row.state === "leased") return { data: { status: "busy" }, error: null };
+      row.state = "leased";
+      row.token = `test_token_${++claimCounter}`;
+      return { data: { status: "claimed", claim_token: row.token }, error: null };
+    }
+    if (fn === "dpp_activation_begin_send") {
+      const row = delivery.get(session);
+      if (!row || row.state !== "leased" || row.token !== args.p_claim_token) {
+        return { data: null, error: { code: "P0001" } };
+      }
+      row.state = "sending";
+      row.attempts += 1;
+      return { data: { status: "armed" }, error: null };
+    }
+    if (fn === "dpp_activation_finish_send") {
+      const row = delivery.get(session);
+      if (opts?.failActivationFinalizeOnce && !activationFinalizeFailed) {
+        activationFinalizeFailed = true;
+        return { data: null, error: { code: "08006" } };
+      }
+      if (!row || row.state !== "sending" || row.token !== args.p_claim_token) {
+        return { data: null, error: { code: "P0001" } };
+      }
+      row.state = args.p_accepted ? "accepted" : "needs_reconciliation";
+      row.messageId = args.p_provider_message_id ? String(args.p_provider_message_id) : undefined;
+      return { data: { status: row.state }, error: null };
+    }
+    if (fn !== "grant_dpp_checkout_session") {
+      return { data: null, error: { message: "unexpected RPC" } };
+    }
+    if (opts?.updateError) {
+      return { data: null, error: opts.updateError };
+    }
+    const sessionId = String(args.p_session_id);
+    const effects = continuity.get("founder_exit_side_effects") ?? [];
+    continuity.set("founder_exit_side_effects", effects);
+    if (grantedSessions.has(sessionId)) {
+      return {
+        data: { status: "already_granted", profile_id: args.p_profile_id },
+        error: null,
+      };
+    }
+    grantedSessions.add(sessionId);
+    if (profile?.last_grant_session_id === sessionId) {
+      effects.push({
+        idempotency_key: `grant:${sessionId}`,
+        profile_id: String(args.p_profile_id),
+      });
+      return {
+        data: { status: "already_granted", profile_id: args.p_profile_id },
+        error: null,
+      };
+    }
+    const limit = Number(profile?.generations_limit ?? 0);
+    const used = Number(profile?.generations_used ?? 0);
+    const patch = {
+      brand: args.p_brand,
+      generations_limit:
+        limit >= 999999 ? limit : Math.max(0, limit - used) + 50,
+      generations_used: limit >= 999999 ? used : 0,
+      last_grant_session_id: sessionId,
+    };
+    if (profile) Object.assign(profile, patch);
+    profileUpdates.push(patch);
+    effects.push({
+      idempotency_key: `grant:${sessionId}`,
+      profile_id: String(args.p_profile_id),
+    });
+    return {
+      data: { status: "granted", profile_id: args.p_profile_id },
+      error: null,
+    };
+  };
+  return { supabase: { from, rpc }, rows, profileUpdates, continuity, profile, delivery };
 }
 
 const paidSession = {
   id: "cs_live_smoke_check",
-  amount_total: 0,
+  mode: "payment",
+  status: "complete",
+  payment_status: "paid",
+  amount_total: 29900,
+  currency: "usd",
+  line_items: {
+    data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }],
+    has_more: false,
+  },
   customer_details: { email: "buyer@example.com" },
   client_reference_id: "smoke_check_1",
   metadata: {
@@ -226,7 +391,7 @@ describe("fulfillDppPaidSession", () => {
     errSpy.mockRestore();
 
     expect(result.activationEmail).toBe("failed");
-    expect(logged).toContain("ETIMEDOUT");
+    expect(logged).toContain("provider_outcome_unknown");
     expect(logged).not.toContain("buyer@example.com");
     expect(
       rows.filter(r => r.event_type === "dpp_activation_email:failed")
@@ -270,6 +435,15 @@ describe("fulfillDppPaidSession", () => {
       supabase,
       {
         id: "cs_price_only",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        amount_total: 29900,
+        currency: "usd",
+        line_items: {
+          data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }],
+          has_more: false,
+        },
         customer_details: { email: "buyer@example.com" },
         client_reference_id: "plink_visit",
         metadata: {},
@@ -287,6 +461,10 @@ describe("fulfillDppPaidSession", () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, {
       id: "cs_live_a1y4TuVXsdPVbXgPejLnXYpSWD5RvpmO273RUC3BxOHnAZ5JwlARbBMxQS",
+      mode: "payment",
+      status: "complete",
+      payment_status: "paid",
+      currency: "usd",
       amount_total: 0,
       customer_details: { email: "authichain@gmail.com" },
       client_reference_id: "smoke_check_1789786486",
@@ -311,13 +489,70 @@ describe("fulfillDppPaidSession", () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
+  it("refuses a zero-dollar non-smoke checkout before atomic grant or payment timestamp", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    const session = {
+      ...paidSession,
+      id: "cs_test_zero_unapproved",
+      amount_total: 0,
+      metadata: {
+        ...paidSession.metadata,
+        grant: "999999",
+        is_demo: "true",
+        promo: "NOT_AUTHORIZED",
+      },
+    };
+    const result = await fulfillDppPaidSession(supabase, session);
+    expect(result).toMatchObject({
+      handled: true,
+      profileId: null,
+      refused: "ineligible_settlement",
+    });
+    expect(rows).toHaveLength(0);
+    expect(profileUpdates).toHaveLength(0);
+    expect(sendEmail).not.toHaveBeenCalled();
+    const replay = await fulfillDppPaidSession(supabase, session);
+    expect(replay.refused).toBe("ineligible_settlement");
+    expect(profileUpdates).toHaveLength(0);
+  });
+
   it("sends the provisioned email for a non-demo paid session", async () => {
     const { supabase } = fakeSupabase();
     await fulfillDppPaidSession(supabase, paidSession);
     expect(sendEmail).toHaveBeenCalledOnce();
   });
 
-  it("writes payment_succeeded before provision on a $0 promo session", async () => {
+  it("does not grant a completed demo session again after a later purchase", async () => {
+    const { supabase, profileUpdates } = fakeSupabase();
+    const demoSession = {
+      ...paidSession,
+      id: "cs_demo_once",
+      metadata: {
+        ...paidSession.metadata,
+        is_demo: "true",
+        promo: "DPP-SMOKE-E2E",
+      },
+    };
+    const laterPaidSession = {
+      ...paidSession,
+      id: "cs_paid_later",
+      amount_total: 29900,
+      metadata: { ...paidSession.metadata, visit_id: "paid_later" },
+    };
+
+    await fulfillDppPaidSession(supabase, demoSession);
+    await fulfillDppPaidSession(supabase, laterPaidSession);
+    expect(profileUpdates.map(update => update.generations_limit)).toEqual([
+      50, 100,
+    ]);
+
+    const replay = await fulfillDppPaidSession(supabase, demoSession);
+
+    expect(profileUpdates).toHaveLength(2);
+    expect(replay.alreadyFulfilled).toBe(true);
+  });
+
+  it("writes payment_succeeded before provision on a paid session", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);
     expect(result).toEqual({
@@ -343,7 +578,7 @@ describe("fulfillDppPaidSession", () => {
         ...paidSession,
         customer_details: null,
         customer_email: null,
-        metadata: { ...paidSession.metadata, user_id: undefined },
+        metadata: { ...paidSession.metadata, user_id: "" },
       })
     ).rejects.toMatchObject({
       name: "RetryableFulfillmentError",
@@ -360,7 +595,7 @@ describe("fulfillDppPaidSession", () => {
         ...paidSession,
         customer_details: null,
         customer_email: null,
-        metadata: { ...paidSession.metadata, user_id: undefined },
+        metadata: { ...paidSession.metadata, user_id: "" },
       }).catch(() => undefined);
       const events = log.mock.calls
         .map(c => String(c[0]))
@@ -377,13 +612,17 @@ describe("fulfillDppPaidSession", () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     try {
       await fulfillDppPaidSession(supabase, paidSession);
-      const lines = log.mock.calls.map(c => String(c[0])).filter(l => l.includes("authichain.trust-event/1"));
+      const lines = log.mock.calls
+        .map(c => String(c[0]))
+        .filter(l => l.includes("authichain.trust-event/1"));
       expect(lines.map(l => JSON.parse(l).event)).toEqual([
         "fulfillment.started",
         "entitlement.granted",
         "fulfillment.completed",
       ]);
-      expect(lines.join(String.fromCharCode(10))).not.toContain("buyer@example.com");
+      expect(lines.join(String.fromCharCode(10))).not.toContain(
+        "buyer@example.com"
+      );
     } finally {
       log.mockRestore();
     }
@@ -395,7 +634,13 @@ describe("fulfillDppPaidSession", () => {
       ...paidSession,
       customer_details: null,
       customer_email: null,
-      metadata: { ...paidSession.metadata, user_id: undefined, is_demo: "true" },
+      metadata: {
+        ...paidSession.metadata,
+        user_id: "",
+        is_demo: "true",
+        promo: "DPP-SMOKE-E2E",
+      },
+      amount_total: 0,
     });
     expect(result).toEqual({
       handled: true,
@@ -437,6 +682,10 @@ describe("fulfillDppPaidSession", () => {
     await expect(
       fulfillDppPaidSession(supabase, {
         id: "cs_live_a1y4Tu_user_id",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        currency: "usd",
         amount_total: 0,
         customer_details: { email: "authichain@gmail.com" },
         client_reference_id: "smoke_check_1789786486",
@@ -459,6 +708,10 @@ describe("fulfillDppPaidSession", () => {
     });
     const result = await fulfillDppPaidSession(supabase, {
       id: "cs_live_a1y4Tu_guest",
+      mode: "payment",
+      status: "complete",
+      payment_status: "paid",
+      currency: "usd",
       amount_total: 0,
       customer_details: { email: "authichain@gmail.com" },
       client_reference_id: "smoke_check_1789786486",
@@ -510,5 +763,298 @@ describe("fulfillDppPaidSession", () => {
     expect(actions).toHaveLength(1);
     expect(actions[0]?.state).toBe("succeeded");
     expect(continuity.get("founder_exit_side_effects")).toHaveLength(1);
+  });
+
+  it("does not regrant a legacy session already marked on the profile", async () => {
+    const { supabase, rows, profileUpdates, continuity } = fakeSupabase({
+      preGrantedSessionId: paidSession.id,
+    });
+
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+
+    expect(result).toMatchObject({
+      handled: true,
+      profileId: "prof_1",
+    });
+    expect(profileUpdates).toHaveLength(0);
+    expect(
+      continuity
+        .get("founder_exit_side_effects")
+        ?.map(row => row.idempotency_key)
+    ).toEqual([`grant:${paidSession.id}`]);
+    expect(rows.map(row => row.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+      "dpp_loop:provisioned",
+    ]);
+    expect(result.activationEmail).toBe("held");
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("recovers provisioned recording after the atomic grant receipt was committed", async () => {
+    const { supabase, rows, profileUpdates, continuity, profile } =
+      fakeSupabase({
+        failContinuityUpdateOnce: true,
+      });
+
+    await expect(
+      fulfillDppPaidSession(supabase, paidSession)
+    ).rejects.toMatchObject({ name: "RetryableFulfillmentError" });
+    expect(rows.map(row => row.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+    ]);
+    expect(profileUpdates).toHaveLength(1);
+    if (profile) profile.last_grant_session_id = "cs_later_checkout";
+
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+
+    expect(result).toMatchObject({
+      handled: true,
+      profileId: "prof_1",
+      alreadyFulfilled: true,
+    });
+    expect(rows.map(row => row.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+      "dpp_loop:provisioned",
+    ]);
+    expect(profileUpdates).toHaveLength(1);
+    expect(continuity.get("founder_exit_actions")?.[0]?.state).toBe(
+      "succeeded"
+    );
+    // #2482: first attempt crashed after grant but BEFORE send. Recovery must send once.
+    expect(sendEmail).toHaveBeenCalledOnce();
+    expect(result.activationEmail).toBe("sent");
+  });
+
+  it("recovers a missing provisioned event after continuity already succeeded", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase({
+      failProvisionedEventOnce: true,
+    });
+
+    await expect(
+      fulfillDppPaidSession(supabase, paidSession)
+    ).resolves.toMatchObject({ handled: true });
+    expect(rows.map(row => row.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+    ]);
+    expect(profileUpdates).toHaveLength(1);
+
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+
+    expect(result).toMatchObject({
+      handled: true,
+      profileId: "prof_1",
+      alreadyFulfilled: true,
+    });
+    expect(rows.map(row => row.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+      "dpp_loop:provisioned",
+    ]);
+    expect(profileUpdates).toHaveLength(1);
+  });
+
+  it("does not send again after provider acceptance but receipt write crashes", async () => {
+    const { supabase, delivery, profileUpdates } = fakeSupabase({
+      failActivationFinalizeOnce: true,
+    });
+    await expect(fulfillDppPaidSession(supabase, paidSession)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(delivery.get(paidSession.id)).toMatchObject({
+      state: "sending",
+      attempts: 1,
+    });
+    expect(sendEmail).toHaveBeenCalledOnce();
+    const replay = await fulfillDppPaidSession(supabase, paidSession);
+    expect(replay).toMatchObject({
+      handled: true,
+      alreadyFulfilled: true,
+      activationEmail: "held",
+    });
+    expect(delivery.get(paidSession.id)?.attempts).toBe(1);
+    expect(profileUpdates).toHaveLength(1);
+    expect(sendEmail).toHaveBeenCalledOnce();
+  });
+
+  it("recovers an outbox claim failure before provider contact without another grant", async () => {
+    const { supabase, delivery, profileUpdates } = fakeSupabase({
+      failActivationClaimOnce: true,
+    });
+    await expect(fulfillDppPaidSession(supabase, paidSession)).rejects.toMatchObject({
+      name: "RetryableFulfillmentError",
+    });
+    expect(delivery.get(paidSession.id)?.state).toBe("pending");
+    expect(sendEmail).not.toHaveBeenCalled();
+    const recovered = await fulfillDppPaidSession(supabase, paidSession);
+    expect(recovered.activationEmail).toBe("sent");
+    expect(sendEmail).toHaveBeenCalledOnce();
+    expect(profileUpdates).toHaveLength(1);
+  });
+
+  it("holds a legacy succeeded grant with no pre-grant outbox marker", async () => {
+    const { supabase, delivery, profileUpdates } = fakeSupabase();
+    await fulfillDppPaidSession(supabase, paidSession);
+    expect(delivery.get(paidSession.id)?.state).toBe("accepted");
+    // Models migration rollout for a historical grant with no outbox row.
+    delivery.delete(paidSession.id);
+    const replay = await fulfillDppPaidSession(supabase, paidSession);
+    expect(replay).toMatchObject({
+      handled: true,
+      alreadyFulfilled: true,
+      activationEmail: "held",
+    });
+    expect(delivery.has(paidSession.id)).toBe(false);
+    expect(profileUpdates).toHaveLength(1);
+    expect(sendEmail).toHaveBeenCalledOnce();
+  });
+
+  it("holds a successful HTTP response without an immutable Resend email ID", async () => {
+    vi.mocked(sendEmail).mockResolvedValueOnce({
+      ok: true,
+      provider: "resend",
+      status: 200,
+    });
+    const { supabase, delivery } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+    expect(result.activationEmail).toBe("failed");
+    expect(delivery.get(paidSession.id)?.state).toBe("needs_reconciliation");
+    expect(delivery.get(paidSession.id)?.messageId).toBeUndefined();
+    const replay = await fulfillDppPaidSession(supabase, paidSession);
+    expect(replay.activationEmail).toBe("held");
+    expect(sendEmail).toHaveBeenCalledOnce();
+  });
+
+  it("keeps uncertain provider outcomes on manual hold without a second send", async () => {
+    vi.mocked(sendEmail).mockRejectedValueOnce(new Error("network outcome unknown"));
+    const { supabase, delivery } = fakeSupabase();
+    const failed = await fulfillDppPaidSession(supabase, paidSession);
+    expect(failed.activationEmail).toBe("failed");
+    expect(delivery.get(paidSession.id)?.state).toBe("needs_reconciliation");
+    const replay = await fulfillDppPaidSession(supabase, paidSession);
+    expect(replay.activationEmail).toBe("held");
+    expect(sendEmail).toHaveBeenCalledOnce();
+  });
+
+  it("grants a tax-bearing session when the subtotal is the list price", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, {
+      ...paidSession,
+      amount_subtotal: 29900,
+      amount_total: 35880,
+      total_details: {
+        amount_discount: 0,
+        amount_tax: 5980,
+        amount_shipping: 0,
+      },
+    });
+    expect(result.handled).toBe(true);
+    expect(result.refused).toBeUndefined();
+    expect(result.profileId).toBe("prof_1");
+    expect(rows.map(row => row.event_type)).toContain(
+      "dpp_loop:payment_succeeded"
+    );
+    expect(profileUpdates).toHaveLength(1);
+    expect(sendEmail).toHaveBeenCalled();
+  });
+
+  it("does not grant or retry a fully discounted list-price session", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, {
+      ...paidSession,
+      amount_subtotal: 29900,
+      amount_total: 0,
+      total_details: {
+        amount_discount: 29900,
+        amount_tax: 0,
+        amount_shipping: 0,
+      },
+    });
+    expect(result).toMatchObject({
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    });
+    expect(rows).toHaveLength(0);
+    expect(profileUpdates).toHaveLength(0);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("does not provision a complete-but-unpaid checkout", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, {
+      ...paidSession,
+      payment_status: "unpaid",
+    });
+    expect(result.handled).toBe(false);
+    expect(rows).toHaveLength(0);
+    expect(profileUpdates).toHaveLength(0);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("holds a paid session that only claims its price in metadata", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    await expect(
+      fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        line_items: null,
+        metadata: { ...paidSession.metadata, stripe_price_id: DPP_PRICE_ID },
+      })
+    ).rejects.toThrow(/DPP grant blocked/);
+    expect(rows).toHaveLength(0);
+    expect(profileUpdates).toHaveLength(0);
+  });
+
+  it("holds a wrong-product DPP claim before any entitlement write", async () => {
+    const { supabase, profileUpdates } = fakeSupabase();
+    await expect(
+      fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        line_items: { data: [{ price: { id: "price_other" } }] },
+      })
+    ).rejects.toThrow(/DPP grant blocked/);
+    expect(profileUpdates).toHaveLength(0);
+  });
+
+  it("holds a paid checkout with a truncated Stripe line-item list", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    await expect(
+      fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        line_items: {
+          data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }],
+          has_more: true,
+        },
+      })
+    ).rejects.toThrow(/DPP grant blocked/);
+    expect(rows).toHaveLength(0);
+    expect(profileUpdates).toHaveLength(0);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("holds a paid checkout without explicit quantity", async () => {
+    const { supabase, rows, profileUpdates } = fakeSupabase();
+    await expect(
+      fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        line_items: {
+          data: [{ price: { id: DPP_PRICE_ID } }],
+          has_more: false,
+        },
+      })
+    ).rejects.toThrow(/DPP grant blocked/);
+    expect(rows).toHaveLength(0);
+    expect(profileUpdates).toHaveLength(0);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("holds a paid but incomplete checkout", async () => {
+    const { supabase, profileUpdates } = fakeSupabase();
+    await expect(
+      fulfillDppPaidSession(supabase, {
+        ...paidSession,
+        status: "open",
+      })
+    ).rejects.toThrow(/DPP grant blocked/);
+    expect(profileUpdates).toHaveLength(0);
   });
 });

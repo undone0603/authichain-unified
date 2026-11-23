@@ -10,7 +10,7 @@
 import { localLlmHeaders } from "../lib/local-llm-auth.mjs";
 
 export const DEFAULTS = {
-  url: "http://192.168.254.10:1234",
+  url: "http://127.0.0.1:1234",
   model: "google/gemma-4-e4b",
 };
 

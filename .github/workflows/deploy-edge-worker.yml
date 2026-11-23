@@ -1,24 +1,30 @@
 name: Deploy Cloudflare Edge Worker
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact protected main SHA with eight successful CircleCI checks
+        required: true
+        type: string
 
 permissions:
   contents: read
+  actions: read
+  statuses: read
+  deployments: read
 
 concurrency:
   group: deploy-edge-worker-${{ github.ref }}
   # Only PR runs are superseded; a push to main must never cancel a running
   # deploy/check mid-way (PM-328). Newer main runs queue behind it instead.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 jobs:
   secret-scan:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     name: Secret scan
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -31,8 +37,11 @@ jobs:
           ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
 
   deploy:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     needs: secret-scan
-    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    environment:
+      name: production-cloudflare-revenue-worker
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
     timeout-minutes: 20
 
     env:
@@ -41,13 +50,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
+          clean: true
+      - name: Restore exact protected main checkout
+        run: |
+          set -euo pipefail
+          git sparse-checkout disable
+          git reset --hard HEAD
+          test "$(git rev-parse HEAD)" = "${{ inputs.expected_sha }}"
+      - name: Verify protected exact-SHA release policy before mutations
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+          RELEASE_ENV: production-cloudflare-revenue-worker
+        run: node scripts/ci/guard-production-secret-binding.mjs
 
       - name: Check required secrets
         id: secrets_check
         shell: bash
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_REVENUE_WORKER_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_REVENUE_WORKER_CLOUDFLARE_ACCOUNT_ID }}
         run: |
           missing=0
 
@@ -62,12 +89,13 @@ jobs:
           fi
 
           if [ "$missing" -eq 1 ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Dedicated revenue-worker Cloudflare credentials are unavailable; no release performed"
+            exit 1
           fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
 
       - name: Install pnpm
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         uses: pnpm/action-setup@v6
         with:
@@ -75,6 +103,7 @@ jobs:
           run_install: false
 
       - name: Setup Node
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         uses: actions/setup-node@v7
         with:
@@ -82,14 +111,15 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
+        timeout-minutes: 15
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       - name: Verify Cloudflare auth
         if: steps.secrets_check.outputs.skip != 'true'
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_REVENUE_WORKER_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_REVENUE_WORKER_CLOUDFLARE_ACCOUNT_ID }}
         run: pnpm exec wrangler whoami
 
       # STRIPE_WEBHOOK_SECRET here binds authichain-revenue-worker only.
@@ -100,8 +130,8 @@ jobs:
         if: steps.secrets_check.outputs.skip != 'true'
         shell: bash
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_REVENUE_WORKER_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_REVENUE_WORKER_CLOUDFLARE_ACCOUNT_ID }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
@@ -142,8 +172,8 @@ jobs:
       - name: Deploy revenue worker
         if: steps.secrets_check.outputs.skip != 'true'
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.AUTHICHAIN_REVENUE_WORKER_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.AUTHICHAIN_REVENUE_WORKER_CLOUDFLARE_ACCOUNT_ID }}
           APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
           CRM_BASE_URL: ${{ vars.CRM_BASE_URL }}
         run: |

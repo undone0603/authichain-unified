@@ -75,7 +75,7 @@ describe("tryHandleX402", () => {
         priceUsd: number | null;
       }>;
       humanCheckout: {
-        farmUsd: number;
+        farmUsd?: number;
         farmPaymentLink?: string;
         starterPaymentLink?: string;
       };
@@ -96,7 +96,12 @@ describe("tryHandleX402", () => {
         e => e.path === "/api/x402/health" && e.method === "GET" && e.paid
       )
     ).toBe(false);
-    expect(body.humanCheckout.farmUsd).toBe(149);
+    expect(body.humanCheckout.farmUsd).toBeUndefined();
+    expect(body.humanCheckout).not.toHaveProperty("farmUsd");
+    expect(JSON.stringify(body.humanCheckout)).not.toContain("farmUsd");
+    expect(JSON.stringify(body.humanCheckout)).not.toContain(
+      "strainchain_farm"
+    );
     expect(body.humanCheckout.farmPaymentLink).toBeUndefined();
     expect(body.humanCheckout.starterPaymentLink).toBe(
       "https://authichain.com/checkout/starter"
@@ -202,6 +207,7 @@ describe("tryHandleX402", () => {
         "A valid signature is not real-world truth"
       );
       expect(body.skills.some(s => s.id === "paid-evidence-check")).toBe(true);
+      expect(body.skills.some(s => s.id === "dpp-readiness-check")).toBe(true);
       expect(body.x402.scheme).toBe("exact");
       expect(body.x402.payTo).toBe(env.X402_PAY_TO);
       expect(body.x402.amount).toBe("50000");
@@ -275,7 +281,9 @@ describe("tryHandleX402", () => {
     };
     expect(listing.result.tasks).toEqual([]);
     expect(listing.result.totalSize).toBe(0);
-    expect(JSON.stringify(listing)).not.toContain("private-peer-evidence-never-echo");
+    expect(JSON.stringify(listing)).not.toContain(
+      "private-peer-evidence-never-echo"
+    );
 
     const lookedUp = await tryHandleX402(post("GetTask", { id: taskId }));
     const lookup = (await lookedUp!.json()) as { error: { code: number } };
@@ -283,15 +291,21 @@ describe("tryHandleX402", () => {
   });
 
   it("retains only same-request batch task visibility", async () => {
-    const res = await tryHandleX402(req("/api/a2a", {
-      method: "POST",
-      headers: { "content-type": "application/json", "A2A-Version": "1.0" },
-      body: JSON.stringify([
-        { jsonrpc: "2.0", id: 1, method: "SendMessage",
-          params: { message: { parts: [{ text: "only-this-batch" }] } } },
-        { jsonrpc: "2.0", id: 2, method: "ListTasks", params: {} },
-      ]),
-    }));
+    const res = await tryHandleX402(
+      req("/api/a2a", {
+        method: "POST",
+        headers: { "content-type": "application/json", "A2A-Version": "1.0" },
+        body: JSON.stringify([
+          {
+            jsonrpc: "2.0",
+            id: 1,
+            method: "SendMessage",
+            params: { message: { parts: [{ text: "only-this-batch" }] } },
+          },
+          { jsonrpc: "2.0", id: 2, method: "ListTasks", params: {} },
+        ]),
+      })
+    );
     const replies = (await res!.json()) as Array<{
       result: { task?: { id: string }; tasks?: Array<{ history: unknown[] }> };
     }>;
@@ -304,7 +318,9 @@ describe("tryHandleX402", () => {
       method: "POST",
       headers: { "content-type": "application/json", "A2A-Version": "1.0" },
       body: JSON.stringify({
-        jsonrpc: "2.0", id: 1, method: "SendMessage",
+        jsonrpc: "2.0",
+        id: 1,
+        method: "SendMessage",
         params: { message: { parts: [{ text: "x".repeat(70_000) }] } },
       }),
     });
@@ -318,7 +334,9 @@ describe("tryHandleX402", () => {
       method: "POST",
       headers: { "content-type": "application/json", "A2A-Version": "1.0" },
       body: JSON.stringify({
-        jsonrpc: "2.0", id: 2, method: "SendMessage",
+        jsonrpc: "2.0",
+        id: 2,
+        method: "SendMessage",
         params: { message: { parts: [{ text: "🔥".repeat(20_000) }] } },
       }),
     });

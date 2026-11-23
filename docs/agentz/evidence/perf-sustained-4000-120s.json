@@ -1,0 +1,52 @@
+{
+  "environment": {
+    "host": "LAPTOP-72MAGTL2",
+    "cpus": 4,
+    "python": "3.12.3",
+    "mock_latency_ms": 20.0,
+    "mock_fail_rate": 0.0,
+    "workload": [
+      "authichain.mcp.get_pricing",
+      "authichain.mcp.query_provenance",
+      "authichain.mcp.verify_attestation",
+      "authichain.mcp.verify_record",
+      "authichain.mcp.dpp_readiness_check",
+      "authichain.mcp.scan_living_qr",
+      "authichain.mcp.negotiate"
+    ]
+  },
+  "results": [
+    {
+      "target_per_min": 4000,
+      "seconds": 120.01,
+      "submitted": 8000,
+      "completed": 8000,
+      "succeeded": 8000,
+      "failed": 0,
+      "success_rate": 1.0,
+      "success_per_min": 3999.8,
+      "success_per_sec": 66.66,
+      "p50_ms": 24.46,
+      "p95_ms": 38.29,
+      "p99_ms": 62.36,
+      "mean_exec_ms": 27.06,
+      "p95_queue_ms": 0.06,
+      "concurrency": 64,
+      "executor": {
+        "submitted": 8000,
+        "succeeded": 8000,
+        "failed": 0,
+        "retries": 0,
+        "refused": 0,
+        "duplicates_rejected": 0,
+        "max_queue_depth": 22
+      },
+      "client_cpu_pct": 16.6,
+      "server_cpu_pct": 5.3,
+      "client_rss_mb": 55.5,
+      "server_rss_mb": 30.4,
+      "abort_reason": null,
+      "passed": true
+    }
+  ]
+}

@@ -28,9 +28,81 @@ test("Publish uses versions upload + API promote, not wrangler deploy", () => {
   assert.doesNotMatch(yml, /secret put AUTHICHAIN_ATTESTATION_PRIVATE_KEY/);
 });
 
-test("publish job runs on hosted ubuntu-24.04", () => {
-  assert.match(yml, /runs-on: ubuntu-24\.04/);
-  assert.doesNotMatch(yml, /NODE_OPTIONS:/);
+test("both jobs run on the dedicated self-hosted publish runner with IPv4 NODE_OPTIONS", () => {
+  assert.match(
+    yml,
+    /runs-on: \[self-hosted, Linux, ARM64, authichain-deploy\]/
+  );
+  assert.equal(
+    (yml.match(/runs-on: \[self-hosted, Linux, ARM64, authichain-deploy\]/g) || []).length,
+    2
+  );
+  assert.doesNotMatch(yml, /runs-on: ubuntu-24\.04/);
+  assert.match(
+    yml,
+    /NODE_OPTIONS: "--dns-result-order=ipv4first --no-network-family-autoselection"/
+  );
+});
+
+test("shared self-hosted workspace is restored to a full tree after every checkout", () => {
+  const titles = yml.match(/- name: Restore full tree after sparse checkout/g) || [];
+  assert.equal(titles.length, 2, "verify and deploy jobs must each restore the tree");
+  const first = yml.indexOf("- name: Restore full tree after sparse checkout");
+  const second = yml.indexOf("- name: Restore full tree after sparse checkout", first + 1);
+  // Accept version-tagged or full-SHA checkout actions; retain the
+  // fail-closed count/order checks for both restored self-hosted jobs.
+  const checkouts = [
+    ...yml.matchAll(/uses: actions\/checkout@(?:v\d+|[0-9a-f]{40})\b/g),
+  ].map(match => match.index);
+  assert.equal(checkouts.length, 2);
+  assert.ok(checkouts[0] < first && first < checkouts[1], "first restore follows the verify checkout");
+  assert.ok(checkouts[1] < second, "second restore follows the deploy checkout");
+  assert.ok(first < yml.indexOf("- name: Resolve expected SHA vs current main"));
+  assert.ok(first < yml.indexOf("- name: Test fail-closed automated release policy"));
+  assert.ok(second < yml.indexOf("- name: Use runner pnpm + Node 22"));
+  assert.ok(second < yml.indexOf("- name: Confirm checked-out SHA and main identity"));
+  assert.ok(second < yml.indexOf("- name: Install pinned dependencies"));
+
+  const verifyRestore = step("Restore full tree after sparse checkout");
+  const deployRestore = yml.slice(second, yml.indexOf("- name: Use runner pnpm + Node 22"));
+  for (const block of [verifyRestore, deployRestore]) {
+    assert.match(block, /if: runner\.environment == 'self-hosted'/);
+    assert.match(block, /set -euo pipefail/);
+    const disable = block.indexOf("git sparse-checkout disable");
+    const reset = block.indexOf("git reset --hard HEAD");
+    assert.ok(disable > -1 && reset > disable, "disable sparse first, then materialize with reset --hard");
+    assert.match(block, /test "\$\(git rev-parse HEAD\)" = "/);
+    assert.match(block, /git ls-files -v \| awk '\$1 == "S"/);
+    assert.match(block, /test -f scripts\/ci\/autonomous-release-gate\.test\.mjs/);
+    assert.match(block, /test -f scripts\/ci\/autonomous-release-gate\.mjs/);
+    assert.match(block, /test -f scripts\/ci\/parse-wrangler-version-id\.mjs/);
+    assert.match(block, /test -f scripts\/ci\/promote-worker-version\.mjs/);
+    assert.match(block, /test -f workers\/authichain-com\/wrangler\.toml/);
+    assert.doesNotMatch(block, /\|\| true/);
+  }
+  assert.match(verifyRestore, /steps\.head\.outputs\.sha/);
+  assert.match(deployRestore, /needs\.verify\.outputs\.sha/);
+});
+
+test("SHA pin checks out expected_sha and allows ancestor of main", () => {
+  const pin = step("Pin dispatch commit");
+  assert.match(pin, /\[\[ "\$TARGET_SHA" =~ \^\[\[:xdigit:\]\]\{40\}\$ \]\]/);
+  assert.doesNotMatch(pin, /test "\$TARGET_SHA" = "\$DISPATCH_SHA"/);
+  const resolve = step("Resolve expected SHA vs current main");
+  assert.match(resolve, /git fetch --no-tags origin main/);
+  assert.match(resolve, /resolve-com-deploy-sha\.mjs/);
+  const confirm = step("Confirm checked-out SHA and main identity");
+  assert.match(confirm, /test "\$\(git rev-parse HEAD\)" = "\$TARGET_SHA"/);
+  assert.match(confirm, /resolve-com-deploy-sha\.mjs/);
+  assert.doesNotMatch(confirm, /test "\$HEAD_SHA" = "\$EXPECTED_SHA"/);
+  assert.match(yml, /ref: \$\{\{ steps\.head\.outputs\.sha \}\}/);
+  assert.match(yml, /ref: \$\{\{ needs\.verify\.outputs\.sha \}\}/);
+  assert.match(yml, /SHA_MATCH_PATH: \$\{\{ steps\.match\.outputs\.path \}\}/);
+  assert.match(yml, /^\s+cancel-in-progress: false\s*$/m);
+  // Resolver needs history: merge-base --is-ancestor and git diff vs main.
+  // Count YAML keys only; the checkout comment also mentions fetch-depth: 0.
+  assert.equal((yml.match(/^[ \t]+fetch-depth: 0[ \t]*$/gm) || []).length, 2);
+  assert.doesNotMatch(yml, /^[ \t]+fetch-depth: 1[ \t]*$/m);
 });
 
 test("x402 secrets stay pinned and this publish does not re-put them", () => {
@@ -63,4 +135,3 @@ test("agent-verify exports coerceSealBody and listedSealId for the worker bundle
   assert.match(routes, /from "\.\.\/\.\.\/\.\.\/src\/lib\/agent-verify"/);
   assert.match(routes, /from "\.\.\/\.\.\/\.\.\/src\/lib\/paid-seal-verify"/);
 });
-

@@ -1350,3 +1350,85 @@ workflows:
       zero-payment AuthiChain MCP initialize/list/nonbinding-quote smoke.
       In dry-run, do nothing; live runs require individual confirmation.
       Persist redacted UTC evidence locally; unknown or failed checks fail.
+
+  - id: gha_honest_launch_gate
+    title: "Honest launch gate (ported from GitHub Actions)"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.gha_port
+    type: shell
+    estimated_minutes: 3
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    description: |
+      Describes scripts/launch/honest-launch-gate.mjs in dry-run. Host
+      execution is disabled until an isolated executor and trusted immutable
+      source are verified. Keep the existing GitHub workflow in place.
+
+  - id: gha_autonomy_manifest_check
+    title: "Autonomy manifest check (ported from GitHub Actions)"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.gha_port
+    type: shell
+    estimated_minutes: 1
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    description: |
+      Describes `node scripts/autonomy/reconcile.mjs --check` in dry-run.
+      Host execution is disabled until an isolated executor and trusted
+      immutable source are verified. Keep the existing GitHub workflow in place.
+
+  - id: ci_watch
+    title: "CI fleet and main gate watch (read-only)"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.ci_watch
+    type: api
+    estimated_minutes: 1
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    description: |
+      Read-only. Checks the three self-hosted runner services on the AgentZ
+      host (systemctl --user is-active), ci/circleci: main-quality-gate on
+      main's head, and the newest Lint run on main. Reports green, amber or
+      red and checkpoints the verdict for transition alerts. Never cancels,
+      re-runs, restarts, merges or deploys. Run by the agentz-ci-watch
+      systemd user timer.
+
+  - id: verify_request
+    title: "Verify a record or asset through approved hosted AuthiChain tools"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.verify_request
+    type: api
+    estimated_minutes: 1
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    description: |
+      Read-only. Validates a request (record_id, record + anchor, or asset_id),
+      calls only registry-approved hosted MCP tools (verify_record,
+      query_provenance, verify_attestation), combines verdicts conservatively,
+      and appends a receipt with an execution id and content digests to
+      agentz/logs/verification-receipts.jsonl. Demonstration records and
+      non-production issuers never count as verified. Never signs or pays.

@@ -1,0 +1,32 @@
+{
+  "environment": {
+    "host": "LAPTOP-72MAGTL2",
+    "cpus": 4,
+    "python": "3.12.3",
+    "mock_latency_ms": 20.0,
+    "mock_fail_rate": 0.0,
+    "workload": [
+      "authichain.mcp.get_pricing",
+      "authichain.mcp.query_provenance",
+      "authichain.mcp.verify_attestation",
+      "authichain.mcp.verify_record",
+      "authichain.mcp.dpp_readiness_check",
+      "authichain.mcp.scan_living_qr",
+      "authichain.mcp.negotiate"
+    ]
+  },
+  "results": [
+    {
+      "mode": "baseline_sync_sequential",
+      "seconds": 15.06,
+      "succeeded": 248,
+      "failed": 0,
+      "success_per_min": 988.4,
+      "p50_ms": 54.22,
+      "p95_ms": 90.24,
+      "p99_ms": 185.78,
+      "client_cpu_pct": 47.3,
+      "client_rss_mb": 54.3
+    }
+  ]
+}

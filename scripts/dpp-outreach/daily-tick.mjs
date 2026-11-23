@@ -4,9 +4,15 @@
  *
  * Intended for systemd daily timer. Worker hourly cron still owns send/reply/follow-up.
  *
+ * Research always runs. Promoting into the Worker send queue is opt-in
+ * (OUTREACH_ENQUEUE=1 + CRON_SECRET): cold outreach stays off unless the
+ * owner turns it on (#2412), and a missing or unreachable queue is reported
+ * as skipped instead of failing the research run.
+ *
  * Usage:
- *   CRON_SECRET=... node scripts/dpp-outreach/daily-tick.mjs
- *   CRON_SECRET=... RUN_CYCLE=1 node scripts/dpp-outreach/daily-tick.mjs
+ *   node scripts/dpp-outreach/daily-tick.mjs
+ *   OUTREACH_ENQUEUE=1 CRON_SECRET=... node scripts/dpp-outreach/daily-tick.mjs
+ *   OUTREACH_ENQUEUE=1 CRON_SECRET=... RUN_CYCLE=1 node scripts/dpp-outreach/daily-tick.mjs
  */
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
@@ -16,11 +22,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const node = process.execPath;
 const secret = process.env.CRON_SECRET;
 const base = process.env.OUTREACH_WORKER_URL || 'https://authichain.undone-k.workers.dev';
-
-if (!secret) {
-  console.error('CRON_SECRET required');
-  process.exit(1);
-}
+const enqueue = process.env.OUTREACH_ENQUEUE === '1';
 
 function run(script, extraEnv = {}) {
   const r = spawnSync(node, [path.join(__dirname, script)], {
@@ -40,10 +42,15 @@ function run(script, extraEnv = {}) {
 }
 
 async function status() {
-  const res = await fetch(`${base}/admin/outreach/status`, {
-    headers: { Authorization: `Bearer ${secret}` },
-  });
-  return res.json();
+  try {
+    const res = await fetch(`${base}/admin/outreach/status`, {
+      headers: { Authorization: `Bearer ${secret}` },
+    });
+    if (!res.ok) return { unavailable: true, http: res.status };
+    return await res.json();
+  } catch (err) {
+    return { unavailable: true, error: String(err?.message || err) };
+  }
 }
 
 async function maybeRunCycle() {
@@ -56,9 +63,22 @@ async function maybeRunCycle() {
 }
 
 const research = run('research-dms.mjs');
-const promote = run('promote-and-enqueue.mjs');
-const st = await status();
-const cycle = await maybeRunCycle();
+
+let promote = { skipped: true, reason: 'OUTREACH_ENQUEUE is not 1' };
+let st = { skipped: true };
+let cycle = { skipped: true };
+if (enqueue && !secret) {
+  promote = { skipped: true, reason: 'CRON_SECRET missing' };
+} else if (enqueue) {
+  st = await status();
+  if (st?.unavailable) {
+    promote = { skipped: true, reason: 'outreach queue unavailable', queue: st };
+  } else {
+    promote = run('promote-and-enqueue.mjs');
+    st = await status();
+    cycle = await maybeRunCycle();
+  }
+}
 
 const report = {
   ok: true,

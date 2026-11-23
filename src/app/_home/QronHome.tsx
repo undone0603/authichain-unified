@@ -1595,7 +1595,7 @@ export function QronHome() {
             {[
               {
                 q: "Do credits expire?",
-                a: "Starter is 100 AI QR generations for $29, paid once. No subscription. Starting a monthly plan replaces unused pack credits.",
+                a: "Starter is 100 AI QR generations for $29, paid once. No subscription.",
               },
               {
                 q: "Can I scan the QR codes on any phone?",

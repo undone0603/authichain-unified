@@ -46,6 +46,28 @@ vi.mock("../server/_core/db-helpers", () => ({
 const indexModule = await import("./index");
 const app = indexModule.app;
 const __resetMarketingRoutesCache = indexModule.__resetMarketingRoutesCache;
+const hydrateProcessEnv = indexModule.hydrateProcessEnv;
+
+describe("Cloudflare Resend outbound secret hydration", () => {
+  const priorResendKey = process.env.RESEND_API_KEY;
+  afterEach(() => {
+    if (priorResendKey === undefined) delete process.env.RESEND_API_KEY;
+    else process.env.RESEND_API_KEY = priorResendKey;
+  });
+
+  it("prefers the bound outbound credential over a stale process.env snapshot", () => {
+    process.env.RESEND_API_KEY = "re_synthetic_stale";
+    hydrateProcessEnv({ RESEND_API_KEY: "re_synthetic_current" } as Parameters<typeof hydrateProcessEnv>[0]);
+    expect(process.env.RESEND_API_KEY).toBe("re_synthetic_current");
+  });
+
+  it("does not create an outbound credential when the Worker binding is missing", () => {
+    delete process.env.RESEND_API_KEY;
+    hydrateProcessEnv({} as Parameters<typeof hydrateProcessEnv>[0]);
+    expect(process.env.RESEND_API_KEY).toBeUndefined();
+  });
+});
+
 
 const { dppCreate } = vi.hoisted(() => ({ dppCreate: vi.fn() }));
 vi.mock("stripe", () => ({
@@ -628,17 +650,39 @@ describe("POST /api/paddle/webhook", () => {
 });
 
 describe("POST /api/webhooks/instantly", () => {
-  it("forwards the parsed JSON payload to the handler", async () => {
+  const webhookSecret = "test-instantly-webhook-secret";
+
+  beforeEach(() => {
+    process.env.INSTANTLY_WEBHOOK_SECRET = webhookSecret;
+  });
+
+  afterEach(() => {
+    delete process.env.INSTANTLY_WEBHOOK_SECRET;
+  });
+
+  it("rejects requests without the webhook secret", async () => {
     const res = await app.request("/api/webhooks/instantly", {
       method: "POST",
       headers: { "content-type": "application/json" },
+      body: JSON.stringify({ event: "email_opened", email: "a@b.com" }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("forwards an authenticated parsed JSON payload to the handler", async () => {
+    const res = await app.request("/api/webhooks/instantly", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-webhook-secret": webhookSecret,
+      },
       body: JSON.stringify({ event: "email_opened", email: "a@b.com" }),
     });
     expect(res.status).toBe(200);
     const { handleInstantlyWebhook } =
       await import("../server/webhooks/instantly");
     const args = (handleInstantlyWebhook as any).mock.calls.at(-1);
-    expect(args[1]).toEqual({ event: "email_opened", email: "a@b.com" });
+    expect(args[0]).toEqual({ event: "email_opened", email: "a@b.com" });
   });
 });
 
@@ -1154,5 +1198,51 @@ describe("POST /api/stripe/webhook — claim unavailable (PM-338)", () => {
       headers: { "stripe-signature": "t=123,v1=fake" },
     });
     expect(res.status).toBe(400);
+  });
+});
+
+
+describe("private database attestation route before internal middleware", () => {
+  const token = "Bearer " + "r".repeat(40);
+
+  it("rejects an unauthenticated external caller without requiring the legacy internal key", async () => {
+    const res = await app.request("/api/internal/runtime-db-attestation");
+    expect(res.status).toBe(401);
+    expect(res.headers.get("cache-control")).toContain("no-store");
+  });
+
+  it("fails closed when the private app service binding is missing", async () => {
+    const res = await app.request("/api/internal/runtime-db-attestation", {
+      headers: { authorization: token },
+    });
+    expect(res.status).toBe(503);
+  });
+
+  it("forwards an authenticated exact route to VERIFY_APP, never the generic internal handler", async () => {
+    const fetch = vi.fn(async (request: Request) => {
+      expect(request.url).toBe("https://app.authichain.com/api/internal/runtime-db-attestation");
+      expect(request.headers.get("authorization")).toBe(token);
+      return new Response(JSON.stringify({ verified: true, deployedVersion: "a".repeat(40) }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    const res = await app.request(
+      "/api/internal/runtime-db-attestation",
+      { headers: { authorization: token } },
+      { VERIFY_APP: { fetch } } as any,
+    );
+    expect(res.status).toBe(200);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("does not relax other internal routes or accept POST at the new route", async () => {
+    const post = await app.request("/api/internal/runtime-db-attestation", {
+      method: "POST",
+      headers: { authorization: token },
+    });
+    expect(post.status).toBe(405);
+    const other = await app.request("/api/internal/verify", { method: "POST" });
+    expect(other.status).toBe(401);
   });
 });

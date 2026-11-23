@@ -38,8 +38,14 @@ test("TruMark page uses live Passport and DPP checkout CTAs", () => {
   assert.match(html, /Passport checkout — \$49/);
   assert.match(html, /DPP checkout — \$299/);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
+  );
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.doesNotMatch(html, /href="\/api\/checkout/);
   assert.doesNotMatch(html, /GET \/api\/checkout/);
   assert.ok(
@@ -104,21 +110,45 @@ test("tryHandleMoneySurface serves aliases and ignores unknown paths", async () 
   assert.equal(await tryHandleMoneySurface(req("/pricing")), null);
 });
 
-test("wording sweep 2026-10-16: made-in-america links gov pilot and does not claim live scan verification", () => {
+test("wording sweep 2026-10-16: made-in-america does not sell the retired gov pilot and does not claim live scan verification", () => {
   const html = renderMadeInAmericaPage();
-  assert.ok(html.includes('href="https://authichain.com/checkout/gov_provenance_pilot"'));
+  assert.equal(
+    html.includes(
+      'href="https://authichain.com/checkout/gov_provenance_pilot"'
+    ),
+    false
+  );
+  assert.equal(html.includes("gov_provenance_pilot"), false);
   assert.equal(html.includes("buy.stripe.com"), false);
-  assert.ok(html.includes("$7,500 fixed"));
+  assert.equal(html.includes("$7,500"), false);
   assert.equal(html.includes("A scan returns the chain of custody"), false);
   assert.ok(html.includes("Public scan verification is in development."));
 });
 
 test("made-in-america: RES-39 verified EO 14392 and TouchTunes wording", () => {
   const html = renderMadeInAmericaPage();
-  assert.ok(html.includes("Executive Order 14392 (March 13, 2026) directs the FTC to prioritize, where appropriate, enforcement against unlawful Made in America claims."));
-  assert.ok(html.includes("$625,000 stipulated order for consumer redress against TouchTunes Music Company, LLC"));
-  assert.ok(html.includes("Signed March 13, 2026. Directs the FTC to prioritize enforcement against unlawful American-origin claims and to consider marketplace verification rules. It is context for the sweep, not a product certification or a seller standard."));
-  assert.ok(!html.includes("told the FTC to prioritize truthful Made in America advertising"));
-  assert.ok(!html.includes("Directs agencies on Made in America advertising priority"));
+  assert.ok(
+    html.includes(
+      "Executive Order 14392 (March 13, 2026) directs the FTC to prioritize, where appropriate, enforcement against unlawful Made in America claims."
+    )
+  );
+  assert.ok(
+    html.includes(
+      "$625,000 stipulated order for consumer redress against TouchTunes Music Company, LLC"
+    )
+  );
+  assert.ok(
+    html.includes(
+      "Signed March 13, 2026. Directs the FTC to prioritize enforcement against unlawful American-origin claims and to consider marketplace verification rules. It is context for the sweep, not a product certification or a seller standard."
+    )
+  );
+  assert.ok(
+    !html.includes(
+      "told the FTC to prioritize truthful Made in America advertising"
+    )
+  );
+  assert.ok(
+    !html.includes("Directs agencies on Made in America advertising priority")
+  );
   assert.ok(!/\d+ FR \d+/.test(html));
 });

@@ -193,7 +193,7 @@ describe("listedPlans", () => {
     expect(planByAmountCents(2900)?.id).toBe("starter");
   });
 
-  it("CFA-758: catalogue copy has no 50-workspace-generation or never-expire claims", () => {
+  it("CFA-758: catalogue copy has no 50-workspace-generation or bare pack-credit expiry slogan", () => {
     const banned = [
       "50 workspace generations",
       "50 workspace generation",
@@ -203,15 +203,32 @@ describe("listedPlans", () => {
       "no-expiry",
     ];
     for (const p of PLANS) {
-      const blob = [p.description, ...(p.features ?? []), p.cta, p.name]
-        .join("\n")
-        .toLowerCase();
+      const blob = [p.description, ...(p.features ?? []), p.cta, p.name].join(
+        "\n"
+      );
+      expect(
+        blob,
+        `${p.id} must not contain Pack credits never expire.`
+      ).not.toContain("Pack credits never expire.");
+      const lower = blob.toLowerCase();
       for (const phrase of banned) {
-        expect(blob, `${p.id} must not contain ${phrase}`).not.toContain(
+        expect(lower, `${p.id} must not contain ${phrase}`).not.toContain(
           phrase
         );
       }
     }
+    expect(planById("starter")?.description).toBe(
+      "100 AI QR generations for $29, paid once. No subscription."
+    );
+    expect(planById("starter")?.features).toContain(
+      "Starter and Creator include one-time pack credits."
+    );
+    expect(planById("starter")?.description.toLowerCase()).not.toContain(
+      "never expire"
+    );
+    expect(
+      planById("starter")?.features?.join(" ").toLowerCase()
+    ).not.toContain("never expire");
   });
 
   it("gap-report SKU copy is email delivery, not a 10-business-day SLA", () => {

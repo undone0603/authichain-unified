@@ -12,6 +12,7 @@ export const ICP_SEO_SITEMAP_PATHS = [
   "/battery-passport",
   "/battery-passport/sample",
   "/battery-passport/sample-audit",
+  "/battery-passport/non-lithium",
   "/p/battery-passport-qr-code-requirements",
   "/p/battery-passport-due-diligence-requirement",
   "/p/eu-battery-regulation-due-diligence-report-deadline",

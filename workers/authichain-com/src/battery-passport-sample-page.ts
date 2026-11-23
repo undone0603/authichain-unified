@@ -41,6 +41,30 @@ export const SAMPLE_JWS_PATH = "/battery-passport/sample.jws";
 export const SAMPLE_CANONICAL = `https://authichain.com${SAMPLE_PATH}`;
 export const SAMPLE_LABEL =
   "DEMONSTRATION SAMPLE — FICTIONAL DATA, NOT AN ARTICLE 77 PASSPORT OR LEGAL ADVICE";
+
+/** Public fields this fictional pack does not contain. Not part of the signed record. */
+export const SAMPLE_MISSING_FIELDS = [
+  {
+    field: "Carbon footprint",
+    status: "missing" as const,
+    note: "Not in this sample.",
+  },
+  {
+    field: "Recycled content",
+    status: "missing" as const,
+    note: "Not in this sample.",
+  },
+  {
+    field: "Due diligence",
+    status: "missing" as const,
+    note: "Not in this sample.",
+  },
+  {
+    field: "Economic operator who places the battery on the EU market",
+    status: "missing" as const,
+    note: "Not in this sample. That operator issues the passport.",
+  },
+];
 export const LIVE_JWKS_URL = "https://authichain.com/.well-known/jwks.json";
 export const PROTOCOL_JWKS_URL = "https://authichain.com/protocol/jwks.json";
 export const SAMPLE_UTM = {
@@ -421,6 +445,7 @@ export async function buildSampleBundle(now: Date = new Date()) {
     notLegalAdvice: true,
     notACustomerRecord: true,
     notCertifiedConformityAssessment: true,
+    missingFields: SAMPLE_MISSING_FIELDS,
     signer: {
       kind: "dedicated_demonstration_ed25519",
       did: SAMPLE_RECORD.issuer,
@@ -536,6 +561,10 @@ export async function renderBatteryPassportSamplePage(
   const packTable = packRows
     .map(([k, val]) => `<tr><th>${esc(k)}</th><td>${esc(val)}</td></tr>`)
     .join("");
+  const missingTable = SAMPLE_MISSING_FIELDS.map(
+    row =>
+      `<tr><th>${esc(row.field)}</th><td class="sa-status no">Missing</td><td>${esc(row.note)}</td></tr>`
+  ).join("");
 
   const webcryptoSnippet = `// Browser / Workers WebCrypto. Fetches the sample and checks Ed25519.
 const bundle = await (await fetch("https://authichain.com/battery-passport/sample.json")).json();
@@ -639,6 +668,9 @@ console.log(await crypto.subtle.verify({ name: "Ed25519" }, key, Uint8Array.from
       <h2>Fictional pack figures</h2>
       <p class="section-sub">Public-layer shaped fields for an EXAMPLE LMT e-bike pack. Stated energy is 48 V × 14 Ah = 672 Wh. None of these values belong to a real product.</p>
       <div class="sa-scroll"><table class="sa-table"><tbody>${packTable}</tbody></table></div>
+      <h3 id="missing">Fields still missing</h3>
+      <p class="section-sub">These are blank on purpose. A real pack placed on the EU market still needs them. This sample does not supply them, and it does not issue a passport.</p>
+      <div class="sa-scroll"><table class="sa-table"><tbody>${missingTable}</tbody></table></div>
       <p class="bp-note">Confirm obligations against Regulation (EU) 2023/1542 with your counsel. AuthiChain does not operate the EU passport registry. The economic operator placing the battery on the EU market issues the passport.</p>
     </div>
   </section>
@@ -649,6 +681,7 @@ console.log(await crypto.subtle.verify({ name: "Ed25519" }, key, Uint8Array.from
       <p class="section-sub">Recomputed on this request with WebCrypto Ed25519. A green row is a check that passed. This table will not say the sample is signed if the signature fails.</p>
       <div class="sa-scroll"><table class="sa-table">
         <tbody>
+          <tr><th>Article 77 passport issued</th><td class="sa-status no">no</td></tr>
           <tr><th>Record Ed25519 signature</th><td class="sa-status ${statusClass(v.recordSignature)}">${v.recordSignature ? "valid" : "invalid"}</td></tr>
           <tr><th>Offline record verdict</th><td class="sa-status ${statusClass(recordStatus === "valid-unanchored")}"><code>${esc(recordStatus)}</code></td></tr>
           <tr><th>Signer in bundled demonstration JWKS</th><td class="sa-status ${statusClass(v.recordIssuerInDemoJwks)}">${v.recordIssuerInDemoJwks ? "yes" : "no"}</td></tr>
@@ -659,7 +692,7 @@ console.log(await crypto.subtle.verify({ name: "Ed25519" }, key, Uint8Array.from
           <tr><th>Valid from / until</th><td><code>${esc(SAMPLE_RECORD.validFrom)}</code> → <code>${esc(SAMPLE_RECORD.validUntil ?? "")}</code></td></tr>
         </tbody>
       </table></div>
-      <p class="bp-note">JWS <code>decision: "verified"</code> means the demonstration issuer signed this fictional payload. It is not an Article 77 conformity decision. Live issuer kids <code>jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM</code> and <code>T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ</code> did not sign this sample. No Cloudflare Worker secret or D1 seed is required to serve it.</p>
+      <p class="bp-note">The download uses the word verified inside the fictional signature payload. That word only means the demonstration key signed this example. It does not mean the pack is genuine, and it does not mean a passport was issued. Live issuer kids <code>jWTo5QsZfTVi2oQqsfq9E-aSB2XZ0vrXmfE3h0amEDM</code> and <code>T3AL7c4wZVoXk1IXvpaaHGUmoZHZ3k1mTommJu9wToQ</code> did not sign this sample. No Cloudflare Worker secret or D1 seed is required to serve it.</p>
     </div>
   </section>
 

@@ -1061,6 +1061,17 @@ export async function getUserAuthentications(userId: number) {
     .orderBy(desc(authentications.createdAt));
 }
 
+export async function getAuthenticationById(id: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(authentications)
+    .where(eq(authentications.id, id))
+    .limit(1);
+  return result[0];
+}
+
 export async function getAuthenticationByShareToken(shareToken: string) {
   const db = await getDb();
   if (!db) return undefined;

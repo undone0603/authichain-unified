@@ -4,6 +4,7 @@ import { BASE_USDC } from "../../scripts/lib/evm-chains.ts";
 import { planPaymentLink, planUsd } from "../../src/lib/plans.ts";
 import { X402_PUBLISHED_PAY_TO } from "../../src/lib/x402.ts";
 import {
+  canonicalVerifyBinding,
   isSisterX402Path,
   sisterOrigin,
   tryHandleSisterX402,
@@ -286,7 +287,7 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
         rail: string;
         passportUsd: number;
         dppUsd: number;
-        farmUsd: number;
+        farmUsd?: number;
         passportPaymentLink?: string;
         dppPaymentLink?: string;
         farmPaymentLink?: string;
@@ -321,7 +322,12 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
       host
     );
     assert.equal(body.humanCheckout.dppUsd, planUsd("dpp_readiness"), host);
-    assert.equal(body.humanCheckout.farmUsd, planUsd("strainchain_farm"), host);
+    assert.equal(body.humanCheckout.farmUsd, undefined, host);
+    assert.equal(
+      JSON.stringify(body.humanCheckout).includes("farmUsd"),
+      false,
+      host
+    );
     assert.equal(body.humanCheckout.passportPaymentLink, passport, host);
     assert.equal(body.humanCheckout.dppPaymentLink, dpp, host);
     assert.equal(body.humanCheckout.farmPaymentLink, undefined, host);
@@ -340,6 +346,11 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
     const blob = JSON.stringify(body);
     assert.equal(blob.includes("/api/checkout"), false, host);
     assert.equal(blob.toLowerCase().includes("facilitator.payai"), false, host);
+    assert.equal(blob.includes("/checkout/qron_launch"), false, host);
+    assert.equal(blob.includes("/checkout/theater_1"), false, host);
+    assert.equal(blob.includes("/checkout/theater_3"), false, host);
+    assert.equal(blob.includes("/checkout/strainchain_farm"), false, host);
+    assert.equal(blob.includes("/checkout/gov_provenance_pilot"), false, host);
 
     if (brand === "qron") {
       const starter = planPaymentLink("starter") ?? "";
@@ -390,7 +401,7 @@ test("GET /.well-known/x402.json is the catalog; /.well-known/x402 is fan-out", 
   assert.equal(post.status, 405);
 });
 
-test("POST with a proof is forwarded to the Next registry route when VERIFY_APP is bound", async () => {
+test("POST with a proof is forwarded to authichain.com when VERIFY_APP is bound", async () => {
   const header = proofHeader({
     scheme: "exact",
     network: "base",
@@ -427,7 +438,120 @@ test("POST with a proof is forwarded to the Next registry route when VERIFY_APP 
   assert.ok(res);
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { verified: true });
-  assert.equal(seen[0].url, "https://qron.space/api/v1/agent-verify");
+  // Rewritten to the canonical origin so the authichain-com Worker routes it
+  // to its bound paid-verify handler, not to a microsite.
+  assert.equal(seen[0].url, "https://authichain.com/api/v1/agent-verify");
   assert.equal(seen[0].headers.get("x-payment"), header);
   assert.deepEqual(await seen[0].json(), { sealId: "seal-1" });
+});
+
+test("sister health reports bound only when a VERIFY_APP binding is present", async () => {
+  const binding = { fetch: async () => new Response("{}") };
+  for (const { host } of BRANDS) {
+    const without = await tryHandleSisterX402(
+      req(host, "/api/x402/health"),
+      {}
+    );
+    const withB = await tryHandleSisterX402(
+      req(host, "/api/x402/health"),
+      {},
+      binding
+    );
+    const a = (await without!.json()) as {
+      endpoint: string;
+      aliases?: string[];
+      paidVerify: { bound: boolean; detail: string };
+    };
+    const b = (await withB!.json()) as {
+      endpoint: string;
+      aliases?: string[];
+      paidVerify: { bound: boolean; detail: string };
+    };
+    assert.equal(a.paidVerify.bound, false, host);
+    assert.equal(b.paidVerify.bound, true, host);
+    assert.equal(
+      b.paidVerify.detail.includes("answered from the seal registry"),
+      false,
+      host
+    );
+    assert.match(
+      b.paidVerify.detail,
+      /forwarded to authichain\.com's registry/,
+      host
+    );
+    for (const body of [a, b]) {
+      assert.equal(body.endpoint, "/api/x402", host);
+      assert.equal(
+        (body.aliases ?? []).includes("/api/v1/agent-verify"),
+        false,
+        host
+      );
+      assert.equal(
+        JSON.stringify(body).includes("/api/v1/agent-verify"),
+        false,
+        host
+      );
+    }
+  }
+});
+
+test("canonicalVerifyBinding keeps method, headers and body", async () => {
+  const seen: Request[] = [];
+  const b = canonicalVerifyBinding({
+    fetch: async (r: Request) => {
+      seen.push(r);
+      return new Response("ok");
+    },
+  });
+  await b.fetch(
+    new Request("http://govchain.us/api/v1/agent-verify?x=1", {
+      method: "POST",
+      headers: { "x-payment": "p" },
+      body: '{"sealId":"s"}',
+    })
+  );
+  assert.equal(seen[0].url, "https://authichain.com/api/v1/agent-verify?x=1");
+  assert.equal(seen[0].method, "POST");
+  assert.equal(seen[0].headers.get("x-payment"), "p");
+  assert.equal(await seen[0].text(), '{"sealId":"s"}');
+});
+
+test("each sister serves a branded A2A agent card with the free DPP skill", async () => {
+  for (const { host } of BRANDS) {
+    for (const path of [
+      "/.well-known/agent-card.json",
+      "/.well-known/agent.json",
+    ]) {
+      const res = await tryHandleSisterX402(
+        req(host, path),
+        {},
+        { fetch: async () => new Response("{}") }
+      );
+      assert.ok(res, `${host}${path}`);
+      assert.equal(res.status, 200, `${host}${path}`);
+      const card = (await res.json()) as {
+        name: string;
+        url: string;
+        provider: { url: string };
+        skills: Array<{ id: string }>;
+        additionalInterfaces: Array<{ url: string }>;
+      };
+      assert.match(card.name, /by AuthiChain$/, host);
+      assert.equal(card.provider.url, `https://${host}`, host);
+      assert.equal(card.url, "https://authichain.com/api/a2a", host);
+      assert.equal(
+        card.additionalInterfaces[0].url,
+        `https://${host}/mcp`,
+        host
+      );
+      const ids = card.skills.map(s => s.id);
+      assert.ok(ids.includes("dpp-readiness-check"), host);
+      assert.ok(ids.includes("paid-evidence-check"), host);
+      assert.doesNotMatch(
+        JSON.stringify(card).toLowerCase(),
+        /erc8004|@/,
+        host
+      );
+    }
+  }
 });

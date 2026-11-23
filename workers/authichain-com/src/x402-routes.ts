@@ -57,6 +57,7 @@ import {
   memoryA2aStore,
 } from "../../../src/lib/a2a-jsonrpc";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
+import { resolveTierRequest } from "../../../src/lib/x402-tiers";
 import { sealBaseline } from "../../../src/lib/seal-baseline";
 import {
   readSeal,
@@ -241,6 +242,8 @@ function hydrateX402(env?: X402Env) {
     "X402_USDC_ASSET",
     "X402_PRICE_USD",
     "X402_DAILY_CAP_USD",
+    "PAYAI_API_KEY_ID",
+    "PAYAI_API_KEY_SECRET",
   ];
   for (const name of keys) {
     const value = env[name];
@@ -419,7 +422,12 @@ function unpaidQuote(request: Request, env?: X402Env): Response {
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(request.url).toString();
-  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  const tierReq = resolveTierRequest(
+    resource,
+    x402PriceUsd(env?.X402_PRICE_USD)
+  );
+  if (!tierReq.ok) return json(tierReq.status, tierReq.body);
+  const priceUsd = tierReq.priceUsd;
   if (!payTo) {
     return json(503, {
       error: "payments_not_configured",
@@ -445,7 +453,10 @@ async function agentVerify(
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(request.url).toString();
-  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  const verifyUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  const tierReq = resolveTierRequest(resource, verifyUsd);
+  if (!tierReq.ok) return json(tierReq.status, tierReq.body);
+  const priceUsd = tierReq.priceUsd;
   if (!payTo) {
     return json(503, {
       error: "payments_not_configured",
@@ -463,7 +474,12 @@ async function agentVerify(
   const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof || !proofHeader) {
-    const free = await tryFreeCall(request, env, opts);
+    // The daily free allowance is the default (verify) tier only: the free
+    // body is the verify baseline, which is not what ping or evidence sell.
+    const free =
+      tierReq.tier === "verify"
+        ? await tryFreeCall(request, env, opts)
+        : { response: null, remaining: null };
     if (free.response) return free.response;
     return json(402, required.v2, {
       ...required.headers,
@@ -480,6 +496,8 @@ async function agentVerify(
     bodyText,
     resource,
     priceUsd,
+    tier: tierReq.tier,
+    verifyPriceUsd: verifyUsd,
     payTo,
     description: X402_RESOURCE_DESCRIPTION,
     env,

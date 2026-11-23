@@ -4,6 +4,7 @@ import {
   renderVerifyManufacturerPage,
 } from "./verify-manufacturer-page.ts";
 import { isIsThisRealPath, renderIsThisRealPage } from "./is-this-real-page.ts";
+import { tryHandleSealVerify } from "./seal-verify-page";
 import { handleSalesInquiry } from './routes/sales';
 // The DPP regulatory timeline is shared with the Next.js page rather than
 // duplicated here: content/dpp/regulatory-timeline.json is the single source of
@@ -12,6 +13,7 @@ import { handleSalesInquiry } from './routes/sales';
 import { tryHandleDppRoute } from "./dpp-routes";
 import { tryHandleAgentPresentation } from "./agent-present-page";
 import { tryHandleBotIdentity } from "./bot-identity-routes";
+import { tryHandleReadinessSign } from "./agentz-readiness-sign";
 import {
   tryHandleApiCheckoutEmailGate,
   tryHandleProtocolCheckout,
@@ -22,6 +24,7 @@ import {
   deliverDppCheckoutStarted,
 } from "./checkout-growth";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
+import type { ReplayStore } from "../../../src/lib/paid-seal-verify";
 import { tryHandleCertificateRegistry } from "./certificate-registry";
 import { tryHandleMcp } from "./mcp-routes";
 import { tryHandleMcpFree } from "./mcp-free-routes";
@@ -64,6 +67,7 @@ import {
   tryHandleHomepageMarkdown,
   tryHandleLlmsTxt,
 } from "./llms-txt.ts";
+import { tryHandleOffersFeed } from "./offers-feed.ts";
 import { tryHandle402IndexVerify } from "./index402-verify.ts";
 import {
   isDppManufacturerArticlePath,
@@ -84,6 +88,7 @@ import {
   renderSampleAuditPage,
 } from "./battery-sample-audit-page";
 import { tryHandleBatteryPassportSample } from "./battery-passport-sample-page";
+import { isNonLithiumPath, renderNonLithiumPage } from "./battery-non-lithium-page";
 import { tryHandleCoffee } from "./coffee-page";
 import {
   dppCheckCompleteEvent,
@@ -3245,6 +3250,20 @@ interface Env {
   COFFEE_PAYMENT_LINK_URL?: string;
   /** Optional live Proof-of-Coffee Ed25519 private JWK. Unset fails closed on JWS minting. */
   COFFEE_RECEIPT_PRIVATE_JWK?: string;
+  /** PR2 readiness signing. Must be the string "true" together with FEATURE_ENABLED. */
+  READINESS_SIGNING_ENABLED?: string;
+  /** Must be the string "true" together with READINESS_SIGNING_ENABLED. Unset is off. */
+  FEATURE_ENABLED?: string;
+  /** Replay KV for x402. Not used for readiness-sign rate limits. */
+  X402_REPLAY_KV?: ReplayStore;
+  /** Workers Rate Limiting binding. POST /api/agentz/readiness-sign fails closed if unset. */
+  READINESS_SIGN_RATE_LIMITER?: {
+    limit(options: { key: string }): Promise<{ success: boolean }>;
+  };
+  /** AgentZ Ed25519 private JWK from KEY_DIR/agentz.ed25519.pem. Never commit. */
+  AGENTZ_READINESS_PRIVATE_JWK?: string;
+  /** Alternate PKCS#8 PEM for the same AgentZ key. Never commit. */
+  AGENTZ_READINESS_PRIVATE_KEY_PEM?: string;
   /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
   DPP_SMOKE_SECRET?: string;
   X402_PAY_TO?: string;
@@ -3254,6 +3273,9 @@ interface Env {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  /** PayAI merchant JWT credentials for authenticated /settle (secrets). */
+  PAYAI_API_KEY_ID?: string;
+  PAYAI_API_KEY_SECRET?: string;
   /** Public auth_seals read for paid verify. Service role stays a secret. */
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
@@ -3542,6 +3564,8 @@ async function handleAuthichainCom(
     }
     const llms = tryHandleLlmsTxt(request);
     if (llms) return llms;
+    const feed = tryHandleOffersFeed(request);
+    if (feed) return feed;
     const index402Verify = tryHandle402IndexVerify(request);
     if (index402Verify) return index402Verify;
     const indexNow = tryHandleEstateIndexNow(request);
@@ -3567,6 +3591,13 @@ async function handleAuthichainCom(
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
     }
+    if (isNonLithiumPath(p)) {
+      return new Response(renderNonLithiumPage(), {
+        headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
+    const sealVerify = await tryHandleSealVerify(request);
+    if (sealVerify) return sealVerify;
     if (isIsThisRealPath(p)) {
       return new Response(renderIsThisRealPage(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
@@ -3707,6 +3738,9 @@ receipt reference. Do not send card details.</p>
     if (agentPage) return agentPage;
     const botIdentity = tryHandleBotIdentity(request);
     if (botIdentity) return botIdentity;
+    // PR2 signed readiness records. Intercept before APP_PREFIXES (/api → APP_WORKER).
+    const readinessSign = await tryHandleReadinessSign(request, env);
+    if (readinessSign) return readinessSign;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
     // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the

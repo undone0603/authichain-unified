@@ -14,7 +14,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { DPP_OFFER_KEY } from "./plans";
 import { fulfillDppPaidSession } from "./dpp-fulfill-checkout";
-import { STALL_THRESHOLDS_MS, runDppExceptionsReport } from "./dpp-loop";
+import {
+  DPP_PRICE_ID,
+  STALL_THRESHOLDS_MS,
+  runDppExceptionsReport,
+} from "./dpp-loop";
 import { NTFY_URL, publishFounderAlert } from "./founder-alerts";
 
 vi.mock("./email", () => ({
@@ -85,8 +89,21 @@ function fakeTerminalSupabase() {
     return builder;
   }
 
+  // The current paid DPP path writes durable delivery intent BEFORE trying
+  // to grant an entitlement. This test intentionally fails the profile upsert,
+  // so only that pre-grant RPC is reachable. An unexpected delivery/grant RPC
+  // must fail closed instead of making this synthetic failure look successful.
+  const preparedSessions: string[] = [];
+  const rpc = async (name: string, args: Record<string, unknown>) => {
+    if (name === "dpp_activation_prepare") {
+      preparedSessions.push(String(args.p_session_id));
+      return { data: { status: "pending" }, error: null };
+    }
+    return { data: null, error: { code: "unexpected_test_rpc" } };
+  };
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { supabase: { from: (t: string): any => builderFor(t) }, rows };
+  return { supabase: { from: (t: string): any => builderFor(t), rpc }, rows, preparedSessions };
 }
 
 const VISIT = "term_esc_1";
@@ -95,7 +112,15 @@ const SESSION = "cs_term_esc_1";
 function paidSession() {
   return {
     id: SESSION,
+    mode: "payment",
+    status: "complete",
+    payment_status: "paid",
     amount_total: 29900,
+    currency: "usd",
+    line_items: {
+      data: [{ quantity: 1, price: { id: DPP_PRICE_ID } }],
+      has_more: false,
+    },
     customer_details: { email: "buyer@example.com" },
     client_reference_id: VISIT,
     metadata: {
@@ -117,13 +142,14 @@ describe("DPP terminal escalation (upsert_failed → retry budget → exception)
   });
 
   it("throws for Stripe retry without writing provisioned; retries dedupe; exception after budget", async () => {
-    const { supabase, rows } = fakeTerminalSupabase();
+    const { supabase, rows, preparedSessions } = fakeTerminalSupabase();
 
     // First delivery: provision fails → throw so Stripe retries.
     await expect(
       fulfillDppPaidSession(supabase, paidSession())
     ).rejects.toThrow(/DPP provision failed/);
     expect(rows.map(r => r.event_type)).toEqual(["dpp_loop:payment_succeeded"]);
+    expect(preparedSessions).toEqual([SESSION]);
 
     // Stripe retry: still failing, and payment_succeeded is NOT duplicated —
     // recordDppLoopEventOnce dedupe_key (session id) holds.
@@ -136,6 +162,7 @@ describe("DPP terminal escalation (upsert_failed → retry budget → exception)
     expect(
       rows.filter(r => r.event_type === "dpp_loop:provisioned")
     ).toHaveLength(0);
+    expect(preparedSessions).toEqual([SESSION, SESSION]);
 
     // Inside the retry budget the visit is in-flight, not an exception.
     const RETRY_BUDGET_MS = STALL_THRESHOLDS_MS.payment_succeeded;

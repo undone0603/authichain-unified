@@ -11,33 +11,33 @@ import { renderBillingEmail } from "./billing-emails";
 import { getBrandIdFromMetadata } from "./brand-billing";
 import { sendEmail } from "./email";
 import {
-  dppActivateUrl,
-  isDppDemoSession,
-  isDppOffer,
-  recordDppLoopEventOnce,
-} from "./dpp-loop";
+  deliverDppActivationOnce,
+  prepareDppActivation,
+  type ActivationRpcClient,
+} from "./dpp-activation-outbox";
+import { dppActivateUrl, recordDppLoopEventOnce } from "./dpp-loop";
 import {
   beginProvisionContinuity,
   finishProvisionContinuity,
+  provisionContinuityProfileId,
 } from "./founder-exit/supabase-log";
 import { markRetryableFulfillment } from "./retryable-fulfillment";
+import {
+  dppGrantDecision,
+  dppInvalidSettlementIsPermanent,
+  type DppProofSession,
+} from "./dpp-payment-eligibility";
 import { emitTrustEvent } from "../../shared/trust-events";
 
-type SupabaseLike = {
+type SupabaseLike = ActivationRpcClient & {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   from: (table: string) => any;
 };
 
-export type DppCheckoutSessionLike = {
-  id: string;
-  mode?: string | null;
-  metadata?: Record<string, string> | null;
-  client_reference_id?: string | null;
+export type DppCheckoutSessionLike = DppProofSession & {
   customer_email?: string | null;
   customer_details?: { email?: string | null } | null;
   customer?: string | { id: string } | null;
-  subscription?: string | { id: string } | null;
-  amount_total?: number | null;
 };
 
 function toId(
@@ -47,6 +47,135 @@ function toId(
   return typeof value === "string" ? value : value.id;
 }
 
+async function findGrantedProfileId(
+  supabase: SupabaseLike,
+  sessionId: string
+): Promise<string | null> {
+  const recordedProfileId = await provisionContinuityProfileId(
+    supabase,
+    sessionId
+  );
+  if (recordedProfileId) return recordedProfileId;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("last_grant_session_id", sessionId)
+    .maybeSingle();
+  if (error) throw new Error("DPP grant recovery profile lookup failed");
+  return typeof data?.id === "string" ? data.id : null;
+}
+
+async function recordRecoveredProvisionedEvent(
+  supabase: SupabaseLike,
+  input: {
+    visitId: string | null;
+    source: string;
+    email: string;
+    profileId: string | null;
+    sessionId: string;
+    plan: string;
+    demo: boolean;
+    allowNoIdentityDemo?: boolean;
+  }
+): Promise<void> {
+  if (!input.visitId) return;
+  if (!input.profileId && !(input.demo && input.allowNoIdentityDemo)) {
+    throw new Error("DPP grant recovery profile not found");
+  }
+
+  await recordDppLoopEventOnce(supabase, {
+    visitId: input.visitId,
+    stage: "provisioned",
+    source: input.source,
+    email: input.email || null,
+    profileId: input.profileId ?? undefined,
+    stripeSessionId: input.sessionId,
+    dedupeKey: input.sessionId,
+    metadata: {
+      plan: input.plan,
+      ...(input.profileId
+        ? { recovered: true }
+        : { skip_reason: "no_identity" }),
+      ...(input.demo ? { is_demo: true } : {}),
+    },
+  });
+}
+
+/**
+ * Delivery is deliberately separate from the atomic entitlement grant.
+ * Every path, including recovered continuity, reconciles the durable outbox.
+ * No additional mail is sent after a provider outcome becomes ambiguous.
+ */
+async function deliverActivationAfterGrant(
+  supabase: SupabaseLike,
+  input: {
+    sessionId: string;
+    profileId: string | null;
+    email: string;
+    brand: ReturnType<typeof getBrandIdFromMetadata>;
+    visitId: string | null;
+    source: string;
+    demo: boolean;
+  }
+): Promise<ActivationEmailStatus> {
+  if (input.demo || !input.profileId) return "skipped";
+  if (!input.email) {
+    throw markRetryableFulfillment(
+      new Error("DPP paid grant has no activation recipient; manual reconciliation required")
+    );
+  }
+  const mail = renderBillingEmail("dpp_audit_provisioned", input.brand, {
+    planName: "EU DPP Workspace",
+    activateUrl: dppActivateUrl(input.sessionId, input.visitId),
+  });
+  let delivery: Awaited<ReturnType<typeof deliverDppActivationOnce>>;
+  try {
+    delivery = await deliverDppActivationOnce(
+      supabase,
+      { sessionId: input.sessionId, profileId: input.profileId, demo: false },
+      () =>
+        sendEmail(
+          {
+            to: input.email,
+            from: mail.from,
+            subject: mail.subject,
+            html: mail.html,
+            text: mail.text,
+          },
+          { onlyProvider: "resend", idempotencyKey: input.sessionId }
+        )
+    );
+  } catch (err) {
+    // Before a provider attempt: Stripe can retry. After an ambiguous attempt
+    // the SQL state stays 'sending' and replay returns 'held', never re-sends.
+    throw markRetryableFulfillment(err);
+  }
+  if (delivery.status === "failed") {
+    // Persist classification only; the provider body may contain tokens or PII.
+    const reason = delivery.httpStatus != null
+      ? "provider_response_not_accepted"
+      : "provider_outcome_unknown";
+    console.error(
+      `[dpp-fulfill] activation email failed: session=${input.sessionId} profile=${input.profileId} provider=${delivery.provider || "unknown"} status=${delivery.httpStatus ?? "n/a"} reason=${reason}`
+    );
+    await recordActivationEmailFailed(supabase, {
+      prospectId: input.visitId || input.sessionId,
+      source: input.source,
+      stripeSessionId: input.sessionId,
+      profileId: input.profileId,
+      provider: delivery.provider || null,
+      httpStatus: delivery.httpStatus ?? null,
+      reason,
+    });
+  } else if (delivery.status === "held") {
+    console.warn(
+      `[dpp-fulfill] activation delivery held for reconciliation: session=${input.sessionId} profile=${input.profileId}`
+    );
+  }
+  return delivery.status;
+}
+
 export async function fulfillDppPaidSession(
   supabase: SupabaseLike,
   session: DppCheckoutSessionLike,
@@ -54,12 +183,23 @@ export async function fulfillDppPaidSession(
 ): Promise<DppFulfillResult> {
   try {
     const result = await fulfillDppPaidSessionOnce(supabase, session, priceId);
+    if (result.refused) {
+      emitTrustEvent("fulfillment.failed", {
+        session_id: session.id,
+        plan: session.metadata?.plan || "dpp_readiness",
+        error_class: "IneligibleSettlement",
+        outcome: "ineligible_settlement",
+      });
+      return result;
+    }
     if (result.handled) {
       emitTrustEvent("fulfillment.completed", {
         session_id: session.id,
         profile_id: result.profileId,
         plan: session.metadata?.plan || "dpp_readiness",
-        outcome: `activation_email_${result.activationEmail}`,
+        outcome: result.alreadyFulfilled
+          ? `recovered_activation_email_${result.activationEmail}`
+          : `activation_email_${result.activationEmail}`,
       });
     }
     return result;
@@ -79,20 +219,35 @@ async function fulfillDppPaidSessionOnce(
   session: DppCheckoutSessionLike,
   priceId?: string | null
 ): Promise<DppFulfillResult> {
+  // Legacy priceId is a routing hint, never Stripe-paid product evidence.
+  void priceId;
   const md = session.metadata || {};
-  const linePriceId =
-    (typeof priceId === "string" && priceId) ||
-    (typeof md.stripe_price_id === "string" ? md.stripe_price_id : null);
-  if (!isDppOffer(md, linePriceId)) {
+  const decision = dppGrantDecision(session);
+  if (decision === "not_dpp" || decision === "recurring") {
     return { handled: false, profileId: null, activationEmail: "skipped" };
   }
-
-  const subscriptionId = toId(session.subscription);
-  if (session.mode === "subscription" || subscriptionId) {
-    console.error(
-      `[dpp-fulfill] refusing DPP grant for recurring checkout: session=${session.id} mode=${session.mode ?? "unknown"}`
-    );
+  if (decision === "unverified" && session.payment_status !== "paid") {
+    // Async payment can complete before funds arrive.
     return { handled: false, profileId: null, activationEmail: "skipped" };
+  }
+  if (
+    decision === "invalid_product" &&
+    dppInvalidSettlementIsPermanent(session)
+  ) {
+    // The line item is already the DPP price. A discount or an unexplained
+    // total will not change on Stripe's next delivery, so do not grant and
+    // do not ask Stripe to retry.
+    return {
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+      refused: "ineligible_settlement",
+    };
+  }
+  if (decision !== "paid" && decision !== "authorized_smoke") {
+    throw markRetryableFulfillment(
+      new Error("DPP grant blocked: unverified completion or Stripe product")
+    );
   }
 
   const visitId =
@@ -106,7 +261,7 @@ async function fulfillDppPaidSessionOnce(
     .trim();
   const brand = getBrandIdFromMetadata(md);
   const plan = md.plan || "dpp_readiness";
-  const demo = isDppDemoSession(md);
+  const demo = decision === "authorized_smoke";
   emitTrustEvent("fulfillment.started", { session_id: session.id, plan, demo });
   const loopMeta = {
     plan,
@@ -127,8 +282,9 @@ async function fulfillDppPaidSessionOnce(
     });
   }
 
+  let continuityState: Awaited<ReturnType<typeof beginProvisionContinuity>>;
   try {
-    await beginProvisionContinuity(supabase, {
+    continuityState = await beginProvisionContinuity(supabase, {
       sessionId: session.id,
       amountCents: session.amount_total ?? null,
       isDemo: demo,
@@ -136,6 +292,100 @@ async function fulfillDppPaidSessionOnce(
     });
   } catch (err) {
     throw markRetryableFulfillment(err);
+  }
+
+  // A prior grant in an old system may have been emailed without an outbox.
+  // When no continuity action existed, beginProvisionContinuity reports
+  // 'provision' even if the old grant receipt or profile marker is present.
+  // Do not retroactively prepare and send for those ambiguous legacy sales.
+  let legacyGrantBeforePrepare = false;
+  if (!demo && continuityState === "provision") {
+    try {
+      const [receipt, profile] = await Promise.all([
+        supabase
+          .from("founder_exit_side_effects")
+          .select("idempotency_key")
+          .eq("idempotency_key", `grant:${session.id}`)
+          .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("id")
+          .eq("last_grant_session_id", session.id)
+          .maybeSingle(),
+      ]);
+      if (receipt.error || profile.error) {
+        throw new Error("DPP legacy grant lookup failed");
+      }
+      legacyGrantBeforePrepare = Boolean(receipt.data || profile.data);
+    } catch (err) {
+      throw markRetryableFulfillment(err);
+    }
+  }
+  // New paid sessions must record delivery intent BEFORE atomic entitlement.
+  // grant_recorded (running continuity) is provably pre-email and recoverable.
+  if (
+    !demo &&
+    continuityState !== "already_succeeded" &&
+    !legacyGrantBeforePrepare
+  ) {
+    try {
+      await prepareDppActivation(supabase, session.id);
+    } catch (err) {
+      throw markRetryableFulfillment(err);
+    }
+  }
+
+  if (
+    continuityState === "already_succeeded" ||
+    continuityState === "grant_recorded"
+  ) {
+    let profileId: string | null;
+    try {
+      // Receipt lookup must occur even when the Checkout Session has no
+      // visit-id metadata (not all Payment Links supply a visit ID).
+      profileId = await findGrantedProfileId(supabase, session.id);
+      if (!profileId && !demo) {
+        throw new Error("DPP grant recovery profile not found");
+      }
+      if (continuityState === "grant_recorded") {
+        await finishProvisionContinuity(supabase, {
+          sessionId: session.id,
+          amountCents: session.amount_total ?? null,
+          isDemo: demo,
+          plan,
+          grantAlreadyPresent: true,
+          grantApplied: Boolean(profileId),
+          profileId,
+        });
+      }
+      await recordRecoveredProvisionedEvent(supabase, {
+        visitId: visitId ? String(visitId) : null,
+        source: md.source || "direct",
+        email,
+        profileId,
+        sessionId: session.id,
+        plan,
+        demo,
+        allowNoIdentityDemo: true,
+      });
+    } catch (err) {
+      throw markRetryableFulfillment(err);
+    }
+    const activationEmail = await deliverActivationAfterGrant(supabase, {
+      sessionId: session.id,
+      profileId,
+      email,
+      brand,
+      visitId: visitId ? String(visitId) : null,
+      source: md.source || "direct",
+      demo,
+    });
+    return {
+      handled: true,
+      profileId,
+      activationEmail,
+      alreadyFulfilled: true,
+    };
   }
 
   const prov = await provisionPurchase(supabase, {
@@ -146,6 +396,7 @@ async function fulfillDppPaidSessionOnce(
     stripeCustomerId: toId(session.customer),
     stripeSubscriptionId: toId(session.subscription),
     sessionId: session.id,
+    atomicDppSessionGrant: true,
   });
 
   // A resolved profile id does not mean the entitlement write succeeded.
@@ -189,6 +440,8 @@ async function fulfillDppPaidSessionOnce(
       isDemo: demo,
       plan,
       grantAlreadyPresent: prov.skippedIdempotent === true,
+      grantApplied: Boolean(prov.profileId),
+      profileId: prov.profileId,
     });
   } catch (err) {
     throw markRetryableFulfillment(err);
@@ -225,68 +478,30 @@ async function fulfillDppPaidSessionOnce(
     });
   }
 
-  let activationEmail: ActivationEmailStatus = "skipped";
-  if (prov.profileId && email && !demo && !prov.skippedIdempotent) {
-    const mail = renderBillingEmail("dpp_audit_provisioned", brand, {
-      planName: "EU DPP Workspace",
-      activateUrl: dppActivateUrl(session.id, visitId ? String(visitId) : null),
-    });
-    // A paid buyer who never gets this email has no way into the workspace, so
-    // a failed send must be visible (log + funnel_events row), never swallowed.
-    // The payment and the grant above are already done; we do not throw here,
-    // because a Stripe retry would re-run provisioning, not just the email.
-    let result: {
-      ok: boolean;
-      provider?: string;
-      status?: number;
-      error?: string;
-    };
-    try {
-      result = await sendEmail({
-        to: email,
-        from: mail.from,
-        subject: mail.subject,
-        html: mail.html,
-        text: mail.text,
-      });
-    } catch (err) {
-      result = {
-        ok: false,
-        error: err instanceof Error ? err.message : String(err),
-      };
-    }
-    if (result && result.ok) {
-      activationEmail = "sent";
-    } else {
-      activationEmail = "failed";
-      const reason = redactForLog(result?.error ?? "no send result");
-      // No recipient address in logs: session and profile ids are enough to
-      // find the buyer from the service side.
-      console.error(
-        `[dpp-fulfill] activation email failed: session=${session.id} profile=${prov.profileId} provider=${result?.provider ?? "unknown"} status=${result?.status ?? "n/a"} reason=${reason}`
-      );
-      await recordActivationEmailFailed(supabase, {
-        prospectId: visitId ? String(visitId) : session.id,
-        source: md.source || "direct",
-        stripeSessionId: session.id,
-        profileId: prov.profileId,
-        provider: result?.provider ?? null,
-        httpStatus: result?.status ?? null,
-        reason,
-      });
-    }
-  }
+  const activationEmail = await deliverActivationAfterGrant(supabase, {
+    sessionId: session.id,
+    profileId: prov.profileId,
+    email,
+    brand,
+    visitId: visitId ? String(visitId) : null,
+    source: md.source || "direct",
+    demo,
+  });
 
   return { handled: true, profileId: prov.profileId, activationEmail };
 }
 
-export type ActivationEmailStatus = "sent" | "failed" | "skipped";
+export type ActivationEmailStatus = "sent" | "failed" | "skipped" | "held";
 
 export type DppFulfillResult = {
   handled: boolean;
   profileId: string | null;
-  /** Outcome of the activation email: skipped = not attempted (no email, demo, or not a DPP grant). */
+  /** sent=provider accepted; held=unresolved/active attempt, never auto-resend; skipped=demo, non-DPP or already accepted. */
   activationEmail: ActivationEmailStatus;
+  /** This session's durable continuity record proves fulfillment already ran. */
+  alreadyFulfilled?: boolean;
+  /** Permanent money refusal. Stripe must stop; nothing was granted. */
+  refused?: "ineligible_settlement";
 };
 
 const EMAIL_LIKE = /[^\s@<>"'(),;:]+@[^\s@<>"'(),;:]+\.[^\s@<>"'(),;:]+/g;

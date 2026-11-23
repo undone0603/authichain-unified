@@ -23,7 +23,8 @@ import {
   TOKENOMICS_PAY_TO,
 } from "../../scripts/lib/evm-chains";
 import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "./x402";
-import { catalogOffers, planPaymentLink, planUsd } from "./plans";
+import { planPaymentLink, planUsd } from "./plans";
+import { openCatalogOffers } from "./retired-plans";
 import {
   FIRST_SCAN_GIFT_URL,
   FIRST_SCAN_REWARD_QRON,
@@ -60,7 +61,6 @@ export const MONEY_RAILS = {
     skus: {
       passportUsd: planUsd("strainchain_passport"),
       dppUsd: planUsd("dpp_readiness"),
-      farmUsd: planUsd("strainchain_farm"),
     },
     isSettlement: true,
   },
@@ -142,14 +142,12 @@ export function agentPricingDiscovery() {
       source: MONEY_RAILS.stripe.source,
       strainchain_passport: `$${MONEY_RAILS.stripe.skus.passportUsd} one-time`,
       dpp_readiness: `$${MONEY_RAILS.stripe.skus.dppUsd} one-time`,
-      strainchain_farm: `$${MONEY_RAILS.stripe.skus.farmUsd}/month`,
       starter: `$${planUsd("starter")} one-time`,
       creator: `$${planUsd("creator")} one-time`,
-      offers: catalogOffers(),
+      offers: openCatalogOffers(),
       checkout: {
         passport: planPaymentLink("strainchain_passport"),
         dpp: planPaymentLink("dpp_readiness"),
-        farm: planPaymentLink("strainchain_farm"),
         starter: planPaymentLink("starter"),
         creator: planPaymentLink("creator"),
         emailCapture: {

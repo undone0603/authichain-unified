@@ -60,7 +60,7 @@
     "playwright-core": "^1.57.0",
     "webdriverio": "^9.15.0",
     "ws": "^8.19.0",
-    "zod": "^3.22.4"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.52",

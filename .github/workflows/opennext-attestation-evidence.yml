@@ -1,0 +1,131 @@
+name: OpenNext attestation evidence (no deployment)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: "Exact 40-character source commit SHA to inspect"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: opennext-evidence-${{ inputs.source_sha }}
+  cancel-in-progress: false
+
+jobs:
+  evidence:
+    # ubuntu-latest is billing-locked; same publish runner as deploy-authichain-app.yml.
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
+    timeout-minutes: 45
+    env:
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - name: Validate immutable source reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Invalid source SHA"; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - name: Assert exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          git status --porcelain
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build OpenNext without deploying
+        id: build
+        env:
+          # Matches Workers Builds and deploy-authichain-app.yml. next.config.js then swaps
+          # playwright-core for server/stubs/playwright-core.cjs; without it OpenNext's
+          # esbuild bundles the real package and fails on chromium-bidi.
+          WORKERS_CI: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          set +e
+          pnpm exec opennextjs-cloudflare build --config wrangler.app.jsonc > evidence/build.log 2>&1
+          result=$?
+          set -e
+          printf '%s\n' "$result" > evidence/build-exit-code.txt
+          if [ "$result" -ne 0 ]; then
+            echo "::error::OpenNext build failed (exit $result)"
+            exit "$result"
+          fi
+      - name: Verify attestation route and fingerprint generated output
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat evidence/build-exit-code.txt)" = 0
+          test -d .open-next
+          test -f .next/server/app-paths-manifest.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync('.next/server/app-paths-manifest.json','utf8'));
+          const route = '/api/internal/runtime-db-attestation/route';
+          if (!Object.keys(manifest).some(k => k === route || k === route + '/page')) {
+            throw new Error('Attestation route missing from Next.js server app paths manifest');
+          }
+          const output = '.open-next';
+          const files = [];
+          function walk(dir) {
+            for (const entry of fs.readdirSync(dir,{withFileTypes:true})) {
+              const path = dir + '/' + entry.name;
+              if(entry.isDirectory()) walk(path);
+              else if(entry.isFile()) files.push(path);
+            }
+          }
+          walk(output);
+          if (!files.some(p => /\.js$/.test(p) && fs.readFileSync(p).includes('runtime-db-attestation'))) {
+            throw new Error('Attestation route marker absent from generated OpenNext JavaScript');
+          }
+          fs.writeFileSync('evidence/route-proof.json',JSON.stringify({
+            route, nextManifestTarget: manifest[route], openNextJsMarkerFound: true,
+            outputFileCount: files.length
+          },null,2)+'\n');
+          NODE
+          find .open-next -type f -print0 | sort -z | xargs -0 sha256sum > evidence/opennext-sha256.txt
+          sha256sum .next/server/app-paths-manifest.json > evidence/next-manifest-sha256.txt
+          printf '%s\n' "$SOURCE_SHA" > evidence/source-sha.txt
+          node - <<'NODE'
+          const fs=require('node:fs'), crypto=require('node:crypto');
+          const hash=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+          fs.writeFileSync('evidence/manifest.json',JSON.stringify({
+            sourceSha:process.env.SOURCE_SHA,
+            buildExitCode:Number(fs.readFileSync('evidence/build-exit-code.txt','utf8')),
+            routeProof:JSON.parse(fs.readFileSync('evidence/route-proof.json','utf8')),
+            outputHashListSha256:hash('evidence/opennext-sha256.txt'),
+            nextManifestSha256:hash('.next/server/app-paths-manifest.json'),
+            productionDeployment:false
+          },null,2)+'\n');
+          NODE
+      - name: Upload evidence even if build fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opennext-attestation-evidence-${{ inputs.source_sha }}
+          path: |
+            evidence/manifest.json
+            evidence/route-proof.json
+            evidence/source-sha.txt
+            evidence/build-exit-code.txt
+            evidence/opennext-sha256.txt
+            evidence/next-manifest-sha256.txt
+          if-no-files-found: warn
+          retention-days: 30

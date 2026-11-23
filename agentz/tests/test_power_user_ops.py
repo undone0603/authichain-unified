@@ -29,6 +29,7 @@ class _Ctx(ExecutionContext):
 
 
 def _ok_result(spec: puo.ProbeSpec) -> puo.ProbeResult:
+    location = spec.expect_location or ""
     if spec.parse == "jwks":
         body = json.dumps(
             {
@@ -42,8 +43,18 @@ def _ok_result(spec: puo.ProbeSpec) -> puo.ProbeResult:
                 ]
             }
         ).encode("utf-8")
-        return puo.ProbeResult(status=200, body=body, content_type="application/json")
-    return puo.ProbeResult(status=spec.expect, body=b"", content_type="text/html")
+        return puo.ProbeResult(
+            status=200,
+            body=body,
+            content_type="application/json",
+            location=location,
+        )
+    return puo.ProbeResult(
+        status=spec.expect,
+        body=b"",
+        content_type="text/html",
+        location=location,
+    )
 
 
 def test_dry_run_sends_no_http(monkeypatch):
@@ -57,6 +68,7 @@ def test_dry_run_sends_no_http(monkeypatch):
     assert "wait_buyer" in result
     assert any("GET https://authichain.com/checkout/strainchain_farm" in s for s in ctx.steps)
     assert any("HEAD https://authichain.com/api/checkout/plan/strainchain_farm" in s for s in ctx.steps)
+    assert any("expect 303" in s for s in ctx.steps)
 
 
 def test_dry_run_openclaw_notify_is_dry(monkeypatch):
@@ -66,11 +78,32 @@ def test_dry_run_openclaw_notify_is_dry(monkeypatch):
     assert "openclaw notify dry_run=True" in result
 
 
+def test_farm_checkout_rail_expects_pricing_redirect():
+    farm = next(spec for spec in puo.RAILS if spec.url == puo.FARM_CHECKOUT)
+    assert farm.expect == 303
+    assert farm.expect_location == "/pricing"
+
+
+def test_auto_fails_on_wrong_farm_redirect_location(monkeypatch):
+    def wrong(spec: puo.ProbeSpec) -> puo.ProbeResult:
+        if spec.url == puo.FARM_CHECKOUT:
+            return puo.ProbeResult(status=303, location="/checkout/starter")
+        return _ok_result(spec)
+
+    monkeypatch.setattr(puo, "_probe", wrong)
+    ctx = _Ctx(Mode.AUTO)
+    try:
+        puo.run(ctx)
+        raise AssertionError("expected RailsProbeError")
+    except puo.RailsProbeError as exc:
+        assert "/pricing" in str(exc)
+
+
 def test_auto_probes_expected_statuses(monkeypatch):
     monkeypatch.setattr(puo, "_probe", _ok_result)
     ctx = _Ctx(Mode.AUTO)
     result = puo.run(ctx)
-    assert "GET https://authichain.com/checkout/strainchain_farm -> 200" in result
+    assert "GET https://authichain.com/checkout/strainchain_farm -> 303" in result
     assert "JWKS live kid T3AL7c4w" in result
     assert "STATUS: DRAFT" in result
 

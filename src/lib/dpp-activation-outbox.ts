@@ -1,0 +1,123 @@
+/**
+ * #2482: crash-safe DPP activation dispatch through service-role PostgREST RPCs.
+ *
+ * No provider call is made until a durable 'sending' marker commits. Once a
+ * provider call might have started, only manual outcome reconciliation can
+ * release the hold. This deliberately favors no duplicate mail over automatic
+ * resend when the provider outcome is unknown. Outbox rows contain no PII.
+ */
+export type ActivationDispatchStatus = "sent" | "failed" | "skipped" | "held";
+export type ActivationSendResult = {
+  ok: boolean;
+  provider?: string;
+  status?: number;
+  error?: string;
+  messageId?: string;
+};
+export type ActivationDispatchResult = {
+  status: ActivationDispatchStatus;
+  provider?: string;
+  httpStatus?: number | null;
+  error?: string;
+};
+type RpcReply = { data: unknown; error: { message?: string; code?: string } | null };
+export type ActivationRpcClient = {
+  rpc?: (name: string, args: Record<string, unknown>) => PromiseLike<RpcReply>;
+};
+function object(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("dpp_activation_invalid_rpc_response");
+  }
+  return value as Record<string, unknown>;
+}
+async function call(
+  db: ActivationRpcClient,
+  name: string,
+  args: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  if (typeof db.rpc !== "function") throw new Error("dpp_activation_rpc_unavailable");
+  const { data, error } = await db.rpc(name, args);
+  if (error) {
+    // Errors reaching logs must not leak remote error text or customer PII.
+    throw new Error(`dpp_activation_${name}_failed:${error.code || "rpc"}`);
+  }
+  return object(data);
+}
+/** Pre-grant marker written only for a verified new/recoverable paid session. */
+export async function prepareDppActivation(
+  db: ActivationRpcClient,
+  sessionId: string
+): Promise<void> {
+  if (!sessionId) throw new Error("dpp_activation_missing_session");
+  const result = await call(db, "dpp_activation_prepare", { p_session_id: sessionId });
+  if (!["pending", "leased", "sending", "accepted", "needs_reconciliation"].includes(
+    String(result.status)
+  )) {
+    throw new Error("dpp_activation_prepare_invalid_status");
+  }
+}
+export async function deliverDppActivationOnce(
+  db: ActivationRpcClient,
+  input: { sessionId: string; profileId: string; demo: boolean },
+  send: () => Promise<ActivationSendResult>
+): Promise<ActivationDispatchResult> {
+  if (input.demo) return { status: "skipped" };
+  if (!input.sessionId || !input.profileId) {
+    throw new Error("dpp_activation_missing_grant_identity");
+  }
+  const keys = { p_session_id: input.sessionId, p_profile_id: input.profileId };
+  const initialized = await call(db, "dpp_activation_enqueue", {
+    ...keys,
+    p_is_demo: false,
+  });
+  if (initialized.status === "legacy_untracked") return { status: "held" };
+  if (initialized.status === "accepted") return { status: "skipped" };
+  if (!["pending", "leased", "sending", "needs_reconciliation"].includes(String(initialized.status))) {
+    throw new Error("dpp_activation_unknown_outbox_state");
+  }
+  const claim = await call(db, "dpp_activation_claim", keys);
+  if (claim.status === "accepted") return { status: "skipped" };
+  if (claim.status === "busy" || claim.status === "held") return { status: "held" };
+  if (claim.status !== "claimed" || typeof claim.claim_token !== "string") {
+    throw new Error("dpp_activation_invalid_claim");
+  }
+  const token = claim.claim_token;
+  const armed = await call(db, "dpp_activation_begin_send", {
+    p_session_id: input.sessionId,
+    p_claim_token: token,
+  });
+  if (armed.status !== "armed") throw new Error("dpp_activation_not_armed");
+  // NEVER retry automatically after this point: a timeout may mean Resend
+  // accepted the request. dpp_activation_claim will hold on all replays.
+  let result: ActivationSendResult;
+  try {
+    result = await send();
+  } catch (err) {
+    result = {
+      ok: false,
+      provider: "unknown",
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+  const receiptValid = typeof result.messageId === "string" &&
+    /^[A-Za-z0-9_-]{1,128}$/.test(result.messageId);
+  // Resend 2xx alone is not an acceptance receipt. Without an email ID,
+  // manual reconciliation is required; no automatic replay is allowed.
+  const accepted = result.ok === true && receiptValid;
+  const completed = await call(db, "dpp_activation_finish_send", {
+    p_session_id: input.sessionId,
+    p_claim_token: token,
+    p_accepted: accepted,
+    p_provider: result.provider || null,
+    p_http_status: result.status ?? null,
+    p_provider_message_id: accepted ? result.messageId : null,
+  });
+  const expected = accepted ? "accepted" : "needs_reconciliation";
+  if (completed.status !== expected) throw new Error("dpp_activation_receipt_mismatch");
+  return {
+    status: accepted ? "sent" : "failed",
+    provider: result.provider,
+    httpStatus: result.status ?? null,
+    ...(!accepted ? { error: result.error || "provider receipt not verified" } : {}),
+  };
+}

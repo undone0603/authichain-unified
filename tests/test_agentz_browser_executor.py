@@ -18,6 +18,36 @@ class BrowserExecutorTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 execute_browser_task("github-workflow-inspect")
 
+    def test_branch_and_ruleset_tasks_remain_read_only(self):
+        urls = {
+            "github-main-protection-inspect": "https://github.com/undone0603/authichain-unified/settings/branches",
+            "github-repository-rulesets-inspect": "https://github.com/undone0603/authichain-unified/settings/rules",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = Path(tmp) / "agent-browser"
+            binary.write_text("#!/bin/sh\\nexit 0\\n")
+            binary.chmod(0o700)
+            evidence = Path(tmp) / "evidence"
+            evidence.mkdir()
+            for task, url in urls.items():
+                commands = []
+                def fake_run(argv, **kwargs):
+                    commands.append(argv)
+                    class Result:
+                        returncode = 0
+                        stderr = ""
+                        stdout = "synthetic browser snapshot"
+                    return Result()
+                with patch.dict(os.environ, {
+                    "AGENTZ_BROWSER_BIN": str(binary),
+                    "AGENTZ_BROWSER_EVIDENCE_DIR": str(evidence),
+                }), patch("agentz.core.browser_executor.subprocess.run", side_effect=fake_run):
+                    result = execute_browser_task(task)
+                self.assertEqual([c[1] for c in commands], ["open", "snapshot", "close"])
+                self.assertEqual(commands[0][2], url)
+                self.assertFalse(result["verified"])
+                self.assertEqual(Path(result["evidence_path"]).stat().st_mode & 0o777, 0o600)
+
     def test_invalid_timeout_rejected(self):
         with self.assertRaises(ValueError):
             execute_browser_task("github-workflow-inspect", timeout=999)

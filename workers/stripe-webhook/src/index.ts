@@ -1,8 +1,9 @@
 import Stripe from "stripe";
 import {
+  CATALOG_GRANT_RPC,
   grantForCheckout,
   grantForPrice,
-  grantReplayAction,
+  grantStacksOnRepeat,
   isFounderEmail,
   loopForPlan,
 } from "./grant-map";
@@ -46,13 +47,11 @@ async function supabaseSelectOne(
   table: string,
   match: Record<string, string>,
   columns: string
-): Promise<
-  { ok: true; row: Record<string, unknown> | null } | { ok: false }
-> {
+): Promise<{ ok: true; row: Record<string, unknown> | null } | { ok: false }> {
   const params = Object.entries(match)
     .map(([k, v]) => `${k}=eq.${encodeURIComponent(v)}`)
     .join("&");
-  const url = `${env.SUPABASE_URL}/rest/v1/${table}?${params}&select=${encodeURIComponent(columns)}&limit=1`;
+  const url = `${env.SUPABASE_URL}/rest/v1/${table}?${params}&select=${encodeURIComponent(columns)}&limit=2`;
   try {
     const res = await fetch(url, {
       headers: {
@@ -66,6 +65,7 @@ async function supabaseSelectOne(
     if (rows.length === 0 || typeof rows[0] !== "object" || rows[0] === null) {
       return { ok: true, row: null };
     }
+    if (rows.length !== 1) return { ok: false };
     return { ok: true, row: rows[0] as Record<string, unknown> };
   } catch {
     return { ok: false };
@@ -105,6 +105,64 @@ async function supabaseUpdate(
   }
 }
 
+async function supabaseRpc(
+  env: Env,
+  fn: string,
+  args: Record<string, unknown>
+): Promise<
+  | { ok: true; status: "granted" | "already_granted" }
+  | { ok: false; error: string }
+> {
+  const url = `${env.SUPABASE_URL}/rest/v1/rpc/${fn}`;
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify(args),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (
+        res.status === 404 ||
+        /PGRST202|does not exist|could not find the function/i.test(text)
+      ) {
+        return { ok: false, error: "catalog grant RPC unavailable" };
+      }
+      if (/catalog_grant_receipt_conflict/i.test(text)) {
+        return { ok: false, error: "catalog_grant_receipt_conflict" };
+      }
+      return { ok: false, error: "grant write failed" };
+    }
+    let data: { status?: unknown; profile_id?: unknown };
+    try {
+      data = JSON.parse(text) as {
+        status?: unknown;
+        profile_id?: unknown;
+      };
+    } catch {
+      return { ok: false, error: "grant write failed" };
+    }
+    if (data?.status === "granted" || data?.status === "already_granted") {
+      // Do not acknowledge an existing session receipt for another buyer,
+      // including unmapped (null) historical receipts.
+      if (
+        data.profile_id == null ||
+        String(data.profile_id) !== String(args.p_profile_id)
+      ) {
+        return { ok: false, error: "catalog_grant_receipt_conflict" };
+      }
+      return { ok: true, status: data.status };
+    }
+    return { ok: false, error: "grant write failed" };
+  } catch {
+    return { ok: false, error: "grant write failed" };
+  }
+}
+
 async function sha256Hex(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value.toLowerCase().trim());
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -139,15 +197,18 @@ async function recordPurchaseEvent(
     };
     if (email) body.p_email_hash = await sha256Hex(email);
 
-    const res = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/growth_record_event`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-      body: JSON.stringify(body),
-    });
+    const res = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/rpc/growth_record_event`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify(body),
+      }
+    );
     if (!res.ok) {
       console.error(
         JSON.stringify({
@@ -224,33 +285,46 @@ export default {
           })
         );
       } else {
-        const email = session.customer_details?.email;
+        const email =
+          session.customer_details?.email?.toLowerCase().trim() || null;
         const name = session.customer_details?.name || "QRON User";
         const customerId =
           typeof session.customer === "string" ? session.customer : null;
         const subscriptionId =
-          typeof session.subscription === "string" ? session.subscription : null;
+          typeof session.subscription === "string"
+            ? session.subscription
+            : null;
         const grant = grantForCheckout({
           priceId: priceIdFromSession(session),
           amountTotal: session.amount_total,
         });
-        const plan = grant?.plan || session.metadata?.plan || "starter";
+        // A one-time paid pack must not grant on missing status, an unpaid
+        // session, or a zero-dollar no_payment_required completion. A later
+        // checkout.session.async_payment_succeeded can safely retry.
+        // Do not affect DPP's separate canonical fulfillment or subscription
+        // trials. Never call the catalog RPC on this unsafe evidence.
+        if (
+          (grant?.plan === "starter" || grant?.plan === "creator") &&
+          session.payment_status !== "paid"
+        ) {
+          return grantRetry("paid pack settlement not confirmed");
+        }
         if (grant?.canonicalFulfillment && !email) {
           return grantRetry("canonical DPP buyer identity missing");
         }
 
         if (email) {
+          const profile: Record<string, unknown> = {
+            email,
+            full_name: name,
+            updated_at: new Date().toISOString(),
+          };
+          if (customerId) profile.stripe_customer_id = customerId;
+          if (subscriptionId) profile.stripe_subscription_id = subscriptionId;
           const upserted = await supabaseUpsert(
             env,
             "profiles",
-            {
-              email,
-              full_name: name,
-              stripe_customer_id: customerId,
-              stripe_subscription_id: subscriptionId,
-              plan,
-              updated_at: new Date().toISOString(),
-            },
+            profile,
             "email"
           );
           if (!upserted) return grantRetry("profile upsert failed");
@@ -278,11 +352,13 @@ export default {
             if (!fulfilled) {
               return grantRetry("canonical DPP entitlement pending");
             }
-            console.log(JSON.stringify({
-              evt: "stripe_grant_delegated_verified",
-              plan: grant.plan,
-              session: session.id,
-            }));
+            console.log(
+              JSON.stringify({
+                evt: "stripe_grant_delegated_verified",
+                plan: grant.plan,
+                session: session.id,
+              })
+            );
           } else if (grant?.humanHold) {
             console.log(
               JSON.stringify({
@@ -296,19 +372,27 @@ export default {
               env,
               "profiles",
               { email },
-              "last_grant_session_id"
+              "id"
             );
-            const prior =
-              existing.ok &&
-              typeof existing.row?.last_grant_session_id === "string"
-                ? existing.row.last_grant_session_id
-                : null;
-            const action = grantReplayAction(
-              existing.ok ? { ok: true, sessionId: prior } : { ok: false },
-              session.id
-            );
-            if (action === "retry") return grantRetry("grant lookup failed");
-            if (action === "skip") {
+            if (!existing.ok) return grantRetry("grant lookup failed");
+            const profileId =
+              typeof existing.row?.id === "string" ? existing.row.id : null;
+            if (!profileId) {
+              return grantRetry("grant lookup failed");
+            }
+            const recorded = await supabaseRpc(env, CATALOG_GRANT_RPC, {
+              p_profile_id: profileId,
+              p_session_id: session.id,
+              p_plan: grant.plan,
+              p_brand: grant.brand,
+              p_generations: grant.generations,
+              p_stack: grantStacksOnRepeat(grant),
+              p_stripe_customer_id: customerId,
+              p_stripe_subscription_id: subscriptionId,
+              p_is_trial: false,
+            });
+            if (!recorded.ok) return grantRetry(recorded.error);
+            if (recorded.status === "already_granted") {
               console.log(
                 JSON.stringify({
                   evt: "stripe_grant_skipped_idempotent",
@@ -317,28 +401,14 @@ export default {
                 })
               );
             } else {
+              const stackPack = grantStacksOnRepeat(grant);
               console.log(
                 JSON.stringify({
-                  evt: "stripe_grant_set",
+                  evt: stackPack ? "stripe_grant_stack" : "stripe_grant_set",
                   plan: grant.plan,
-                  generations_limit: grant.generations,
-                  generations_used: 0,
                   refill: grant.refillOnInvoicePaid,
                 })
               );
-              const wrote = await supabaseUpdate(
-                env,
-                "profiles",
-                { email },
-                {
-                  plan: grant.plan,
-                  generations_limit: grant.generations,
-                  generations_used: 0,
-                  last_grant_session_id: session.id,
-                  updated_at: new Date().toISOString(),
-                }
-              );
-              if (!wrote) return grantRetry("grant write failed");
               if (grant.plan === "qron_launch_annual") {
                 console.log(
                   JSON.stringify({
@@ -358,10 +428,8 @@ export default {
 
         // After the grant, so a failed analytics write can never cost credits.
         //
-        // Pass grant?.plan, NOT the `plan` above: that falls back to "starter"
-        // when the price is unmapped, which is harmless for the profiles upsert
-        // but would record a false purchase_starter_succeeded — the single metric
-        // the first-dollar kill decision reads. An unmapped price gets no event.
+        // Pass grant?.plan, never a starter fallback: an unmapped price must
+        // not record purchase_starter_succeeded, the first-dollar kill metric.
         await recordPurchaseEvent(env, grant?.plan ?? null, email);
 
         // Non-founder first-sale alert (observability only; never blocks grant)
@@ -375,7 +443,7 @@ export default {
             JSON.stringify({
               evt: "first_sale_non_founder",
               amount: (session.amount_total ?? 0) / 100,
-              plan,
+              plan: grant?.plan ?? null,
             })
           );
           fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
@@ -410,8 +478,7 @@ export default {
       const customerId =
         typeof invoice.customer === "string" ? invoice.customer : null;
       const line = invoice.lines?.data?.[0] as
-        | { price?: { id?: string } | string | null }
-        | undefined;
+        { price?: { id?: string } | string | null } | undefined;
       const price = line?.price;
       const linePrice =
         price && typeof price === "object" ? (price.id ?? null) : null;
