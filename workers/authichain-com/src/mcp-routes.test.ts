@@ -233,7 +233,9 @@ describe("mcp discovery", () => {
       expect(text).not.toContain("USDC");
       expect(text).not.toContain("on_hold");
       expect(text).not.toContain("wait_buyer");
-      expect(text).toContain("One-time pack credits (Starter and Creator).");
+      expect(text).toContain(
+        "Starter and Creator include one-time pack credits."
+      );
       expect(text).not.toContain("never expire");
       expect(text).toContain("https://authichain.com/checkout/starter");
       expect(text).toContain("https://authichain.com/checkout/dpp_readiness");
@@ -381,7 +383,7 @@ describe("mcp discovery", () => {
       expect(text, path).not.toContain("on_hold");
       expect(text, path).not.toContain("wait_buyer");
       expect(text, path).toContain(
-        "One-time pack credits (Starter and Creator)."
+        "Starter and Creator include one-time pack credits."
       );
       expect(text, path).not.toContain("never expire");
       for (const plan of [
@@ -462,7 +464,7 @@ describe("mcp discovery", () => {
     expect(priced.result.content[0].text).not.toContain("on_hold");
     expect(priced.result.content[0].text).not.toContain("wait_buyer");
     expect(priced.result.content[0].text).toContain(
-      "One-time pack credits (Starter and Creator)."
+      "Starter and Creator include one-time pack credits."
     );
     expect(priced.result.content[0].text).not.toContain("never expire");
   });

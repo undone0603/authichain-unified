@@ -688,7 +688,7 @@ function humanStripeCheckout() {
   return {
     status: "live" as const,
     rail: "stripe",
-    note: "One-time pack credits (Starter and Creator).",
+    note: "Starter and Creator include one-time pack credits.",
     starter: {
       usd: planUsd("starter"),
       generations: starter?.generations ?? 100,

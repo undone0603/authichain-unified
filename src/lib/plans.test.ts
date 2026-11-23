@@ -221,7 +221,7 @@ describe("listedPlans", () => {
       "100 AI QR generations for $29, paid once. No subscription."
     );
     expect(planById("starter")?.features).toContain(
-      "One-time pack credits (Starter and Creator)"
+      "Starter and Creator include one-time pack credits."
     );
     expect(planById("starter")?.description.toLowerCase()).not.toContain(
       "never expire"

@@ -241,7 +241,9 @@ test("CFA-758: money routes have no 50-workspace-generation or bare pack-credit 
     "/pricing uses the one-time pack sentence"
   );
   assert.ok(
-    pricing.includes("<li>One-time pack credits (Starter and Creator)</li>"),
+    pricing.includes(
+      "<li>Starter and Creator include one-time pack credits.</li>"
+    ),
     "/pricing list item names one-time pack credits with no expiry promise"
   );
 });

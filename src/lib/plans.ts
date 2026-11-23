@@ -84,7 +84,7 @@ export const PLANS: Plan[] = [
     features: [
       "100 generations for $29, paid once",
       "No subscription, no renewal",
-      "One-time pack credits (Starter and Creator)",
+      "Starter and Creator include one-time pack credits.",
     ],
     cta: "Get 100 generations for $29",
     listed: true,
