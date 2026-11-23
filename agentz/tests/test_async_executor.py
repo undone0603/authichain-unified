@@ -2,6 +2,7 @@
 import asyncio
 import dataclasses
 import json
+import math
 import time
 
 import httpx
@@ -195,7 +196,7 @@ def test_bounded_queue_applies_backpressure():
 
 
 # ---- JSON codec: orjson for speed, stdlib json as the referee --------------------------
-from agentz.core import async_executor as ax  # noqa: E402
+from agentz.core import async_executor as ax
 
 CODEC_VALID = [
     b'{"a": 1, "b": [true, false, null], "c": "x"}',
@@ -227,8 +228,8 @@ def _same(a, b):
         return a.keys() == b.keys() and all(_same(a[k], b[k]) for k in a)
     if isinstance(a, list) and isinstance(b, list):
         return len(a) == len(b) and all(_same(x, y) for x, y in zip(a, b))
-    if isinstance(a, float) and isinstance(b, float) and a != a:
-        return b != b  # NaN
+    if isinstance(a, float) and isinstance(b, float) and math.isnan(a):
+        return math.isnan(b)
     return _same_typed(a, b)
 
 
