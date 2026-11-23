@@ -5903,6 +5903,262 @@
     }
   },
   {
+    "slug": "espr-unsold-apparel-footwear-destruction-ban-disclosure",
+    "keyword": "espr unsold apparel footwear destruction ban disclosure",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "ESPR Unsold Apparel Footwear Destruction Ban | AuthiChain",
+    "metaDescription": "Since 19 July 2026, large companies may not destroy unsold apparel, clothing accessories, or footwear in the EU except under the derogations the Commission.",
+    "h1": "ESPR Unsold Apparel Footwear Destruction Ban Disclosure",
+    "bodyHtml": "<p>Since 19 July 2026, large companies may not destroy unsold apparel, clothing accessories, or footwear in the EU except under the derogations the Commission set by delegated act, and they must publicly disclose how many unsold consumer products they discard each year and why.</p><h2>Why AuthiChain</h2><ul><li>Implementing Regulation (EU) 2026/2 fixes the disclosure format: products grouped by the first two digits of their Combined Nomenclature code, with discard volumes and reasons, including any derogation relied on</li><li>A discard figure is only as credible as the records behind it — a signed, unit-level record ties each disposed item to its identifier, so an auditor can check the count against something other than a spreadsheet</li><li>Medium-sized companies come under the ban in July 2030; micro and small enterprises are outside both the ban and the disclosure duty</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Which products does the destruction ban cover today?</h3><p>Apparel, clothing accessories such as hats, belts, ties, and scarves, and footwear, listed in Annex VII of the ESPR. Textiles are the first product group under the ban; the disclosure duty itself applies to unsold consumer products more broadly.</p><h3>Is a Digital Product Passport required to comply with the ban?</h3><p>No — the ban and the disclosure duty apply on their own, independent of any DPP delegated act. Signed item records support the disclosure with evidence; they do not replace the published report.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — ESPR Unsold Apparel Footwear Destruction Ban Disclosure",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Since 19 July 2026, large companies may not destroy unsold apparel, clothing accessories, or footwear in the EU except under the derogations the Commission set by delegated act, and they must publicly disclose how many unsold consumer products they discard each year and why.",
+          "url": "https://authichain.com/p/espr-unsold-apparel-footwear-destruction-ban-disclosure"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "ESPR Unsold Apparel Footwear Destruction Ban Disclosure",
+              "item": "https://authichain.com/p/espr-unsold-apparel-footwear-destruction-ban-disclosure"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Which products does the destruction ban cover today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Apparel, clothing accessories such as hats, belts, ties, and scarves, and footwear, listed in Annex VII of the ESPR. Textiles are the first product group under the ban; the disclosure duty itself applies to unsold consumer products more broadly."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is a Digital Product Passport required to comply with the ban?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the ban and the disclosure duty apply on their own, independent of any DPP delegated act. Signed item records support the disclosure with evidence; they do not replace the published report."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-digital-circularity-vehicle-passport-elv-regulation",
+    "keyword": "eu digital circularity vehicle passport elv regulation",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Circularity Vehicle Passport Elv | AuthiChain",
+    "metaDescription": "Regulation (EU) 2026/1738, the End-of-Life Vehicles Regulation, entered into force on 13 August 2026 and requires a digital circularity vehicle passport.",
+    "h1": "EU Digital Circularity Vehicle Passport Elv Regulation",
+    "bodyHtml": "<p>Regulation (EU) 2026/1738, the End-of-Life Vehicles Regulation, entered into force on 13 August 2026 and requires a digital circularity vehicle passport under Article 13 for every in-scope vehicle placed on the EU market from 1 September 2032.</p><h2>Why AuthiChain</h2><ul><li>The passport carries dismantling, parts-removal, and material data for the vehicle, accessible free of charge and, under the regulation, interoperable with other EU product passports</li><li>The Commission sets the passport’s technical details by implementing act, so field-level requirements are still to come; a record built on W3C Verifiable Credentials over a GS1 Digital Link identifier uses open formats rather than one vendor’s schema</li><li>Most of the regulation applies from 1 September 2028, four years before the passport duty, so recycled-plastic and producer-responsibility work starts earlier than passport work</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>When is the vehicle circularity passport mandatory?</h3><p>From 1 September 2032 for vehicles placed on the EU market, under Article 13 of Regulation (EU) 2026/1738. Check Article 13 and the scope provisions in the Official Journal text for which vehicle categories it reaches.</p><h3>Does the vehicle passport replace the EV battery passport?</h3><p>No — the battery passport under the Battery Regulation applies to EV batteries from 18 February 2027, five years earlier. The two are separate obligations under separate regulations.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Circularity Vehicle Passport Elv Regulation",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Regulation (EU) 2026/1738, the End-of-Life Vehicles Regulation, entered into force on 13 August 2026 and requires a digital circularity vehicle passport under Article 13 for every in-scope vehicle placed on the EU market from 1 September 2032.",
+          "url": "https://authichain.com/p/eu-digital-circularity-vehicle-passport-elv-regulation"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Circularity Vehicle Passport Elv Regulation",
+              "item": "https://authichain.com/p/eu-digital-circularity-vehicle-passport-elv-regulation"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When is the vehicle circularity passport mandatory?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "From 1 September 2032 for vehicles placed on the EU market, under Article 13 of Regulation (EU) 2026/1738. Check Article 13 and the scope provisions in the Official Journal text for which vehicle categories it reaches."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the vehicle passport replace the EV battery passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the battery passport under the Battery Regulation applies to EV batteries from 18 February 2027, five years earlier. The two are separate obligations under separate regulations."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-textile-digital-product-passport-delegated-act-date",
+    "keyword": "eu textile digital product passport delegated act date",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Textile Digital Product Passport Delegated | AuthiChain",
+    "metaDescription": "As of November 2026 the ESPR delegated act for textiles and apparel has not been adopted and no draft has been published; the Commission’s indicative.",
+    "h1": "EU Textile Digital Product Passport Delegated Act Date",
+    "bodyHtml": "<p>As of November 2026 the ESPR delegated act for textiles and apparel has not been adopted and no draft has been published; the Commission’s indicative timeline targets adoption in Q4 2027, with the Digital Product Passport becoming mandatory after the act’s transition period.</p><h2>Why AuthiChain</h2><ul><li>Until the act exists, no field list is binding — the JRC preparatory study is the best public guide to the data fiber composition, recycled content, and durability records are likely to need</li><li>Fiber, recycled-content, and supplier declarations can be signed per item now; a signed record verifies offline with the open reference verifier, no account required</li><li>The destruction ban on unsold apparel and footwear has applied to large companies since 19 July 2026 — a separate ESPR duty that does not wait on the textile delegated act</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>When will textiles need a Digital Product Passport?</h3><p>Not before the delegated act is adopted — targeted for Q4 2027 in the Commission’s indicative timeline — plus its transition period, which for ESPR acts is typically about 18 months. Any page quoting a firm mandatory date today is estimating.</p><h3>Is there anything binding on textile brands right now?</h3><p>Yes — under the ESPR, large companies may not destroy unsold apparel, clothing accessories, or footwear since 19 July 2026, and must disclose discarded unsold products. That obligation is independent of the passport.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Textile Digital Product Passport Delegated Act Date",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "As of November 2026 the ESPR delegated act for textiles and apparel has not been adopted and no draft has been published; the Commission’s indicative timeline targets adoption in Q4 2027, with the Digital Product Passport becoming mandatory after the act’s transition period.",
+          "url": "https://authichain.com/p/eu-textile-digital-product-passport-delegated-act-date"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Textile Digital Product Passport Delegated Act Date",
+              "item": "https://authichain.com/p/eu-textile-digital-product-passport-delegated-act-date"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When will textiles need a Digital Product Passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not before the delegated act is adopted — targeted for Q4 2027 in the Commission’s indicative timeline — plus its transition period, which for ESPR acts is typically about 18 months. Any page quoting a firm mandatory date today is estimating."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is there anything binding on textile brands right now?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — under the ESPR, large companies may not destroy unsold apparel, clothing accessories, or footwear since 19 July 2026, and must disclose discarded unsold products. That obligation is independent of the passport."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "electronic-eu-declaration-of-conformity-digital-format",
+    "keyword": "electronic eu declaration of conformity digital format",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Electronic EU Declaration Of Conformity | AuthiChain",
+    "metaDescription": "The Commission’s May 2025 Omnibus IV proposal would let manufacturers supply the EU Declaration of Conformity and instructions for use in digital form.",
+    "h1": "Electronic EU Declaration Of Conformity Digital Format",
+    "bodyHtml": "<p>The Commission’s May 2025 Omnibus IV proposal would let manufacturers supply the EU Declaration of Conformity and instructions for use in digital form instead of on paper; as of November 2026 it is still moving through the legislative process and is not yet law.</p><h2>Why AuthiChain</h2><ul><li>Safety information would still have to be printed or marked on the product — the proposal digitises the declaration and instructions, not every label</li><li>A digital declaration needs to stay reachable for the product’s lifetime; a signed record resolving from a GS1 Digital Link URL verifies offline, so it does not depend on one vendor server staying up</li><li>A signature proves who issued the declaration and that it has not been altered — it does not prove the product conforms; that remains the manufacturer’s assessment</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can we drop the paper Declaration of Conformity today?</h3><p>Only where existing sector legislation already allows an electronic form. The horizontal change in the Omnibus IV proposal is not adopted yet, so check the current text of the legislation that applies to your product.</p><h3>How does this relate to the Digital Product Passport?</h3><p>The proposal calls for digital tools that are interoperable with the DPP framework where applicable. For toys, Regulation (EU) 2025/2509 already replaces the paper declaration with a DPP from 1 August 2030.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Electronic EU Declaration Of Conformity Digital Format",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The Commission’s May 2025 Omnibus IV proposal would let manufacturers supply the EU Declaration of Conformity and instructions for use in digital form instead of on paper; as of November 2026 it is still moving through the legislative process and is not yet law.",
+          "url": "https://authichain.com/p/electronic-eu-declaration-of-conformity-digital-format"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Electronic EU Declaration Of Conformity Digital Format",
+              "item": "https://authichain.com/p/electronic-eu-declaration-of-conformity-digital-format"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can we drop the paper Declaration of Conformity today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Only where existing sector legislation already allows an electronic form. The horizontal change in the Omnibus IV proposal is not adopted yet, so check the current text of the legislation that applies to your product."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does this relate to the Digital Product Passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The proposal calls for digital tools that are interoperable with the DPP framework where applicable. For toys, Regulation (EU) 2025/2509 already replaces the paper declaration with a DPP from 1 August 2030."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
     "slug": "blockchain-qr-code-for-cannabis",
     "keyword": "blockchain qr code for cannabis",
     "brand": "StrainChain",
