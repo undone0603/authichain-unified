@@ -20,11 +20,26 @@ async function postJsonRpc(fetchImpl, endpoint, payload) {
   }
 
   const text = await response.text();
-  if (!text) {
+  const expectsResponse = Object.hasOwn(payload, "id");
+  if (!text && !expectsResponse) {
     return { ok: true, status: response.status, error: null, data: null };
   }
 
-  const data = JSON.parse(text);
+  const data = text ? JSON.parse(text) : null;
+  if (
+    expectsResponse &&
+    (!data ||
+      data.jsonrpc !== "2.0" ||
+      data.id !== payload.id ||
+      Object.hasOwn(data, "result") === Object.hasOwn(data, "error"))
+  ) {
+    return {
+      ok: false,
+      status: response.status,
+      error: "Invalid or mismatched JSON-RPC response",
+      data: null,
+    };
+  }
   if (data && data.error) {
     return {
       ok: false,
@@ -105,6 +120,17 @@ export async function runHostedQuickstart({
     const tools = Array.isArray(listRes.data?.result?.tools)
       ? listRes.data.result.tools.map((t) => t.name).filter(Boolean)
       : [];
+
+    if (!tools.includes("verify_record")) {
+      return {
+        connected: true,
+        protocolVersion: negotiatedVersion,
+        tools,
+        toolCallOk: false,
+        classification: null,
+        limitations: ["verify_record was not advertised"],
+      };
+    }
 
     const callRes = await postJsonRpc(fetchImpl, endpoint, {
       jsonrpc: "2.0",
