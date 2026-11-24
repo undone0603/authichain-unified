@@ -12,7 +12,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "allowImportingTsExtensions": true,
     "allowJs": false,
     "baseUrl": "..",
     "paths": {
