@@ -22,7 +22,7 @@ describe("local LM Studio auth", () => {
   it("treats loopback and RFC1918 as private", () => {
     expect(isPrivateLlmUrl("http://127.0.0.1:49178/v1")).toBe(true);
     expect(isPrivateLlmUrl("http://localhost:1234")).toBe(true);
-    expect(isPrivateLlmUrl("http://192.168.254.10:1234")).toBe(true);
+    expect(isPrivateLlmUrl("http://192.168.1.10:1234")).toBe(true);
     expect(isPrivateLlmUrl("https://example.com/v1")).toBe(false);
     expect(isPrivateLlmUrl("not a url")).toBe(false);
   });
@@ -33,7 +33,7 @@ describe("local LM Studio auth", () => {
       "Content-Type": "application/json",
       Authorization: "Bearer test-token",
     });
-    expect(localLlmHeaders("http://192.168.254.10:1234", env).Authorization).toBe(
+    expect(localLlmHeaders("http://192.168.1.10:1234", env).Authorization).toBe(
       "Bearer test-token"
     );
     expect(localLlmHeaders("https://api.groq.com", env).Authorization).toBeUndefined();

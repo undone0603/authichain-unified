@@ -1,0 +1,170 @@
+name: AgentZ protected host artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: "Protected main source SHA (40 lowercase hex)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agentz-evidence-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main' && github.ref_protected && github.sha == inputs.expected_sha
+    permissions:
+      contents: write # only for unpublished build-evidence release assets
+      actions: read # same-SHA workflow-run duplicate guard
+    # Zac, Nov 21 2026 12:30 AM EST: "stick to free path". GitHub-hosted runners are
+    # billing-locked, so this builds on the self-hosted ARM64 deploy runner (wsl-deploy-arm64).
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
+    # Run 44874903039 (Nov 21 2026) hit the 35-min cap uploading ~397 MB. Run
+    # 44982424725 (Nov 22 2026) passed build+smoke but was cancelled at 90 min
+    # uploading the ~1.09 GB archive at ~99 KB/s. 360 min leaves margin; check
+    # the laptop upload rate before raising again. A failed run can't be re-run
+    # at the same SHA.
+    timeout-minutes: 360
+    steps:
+      - name: Refuse duplicate ARM64 build for protected SHA
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$GITHUB_SHA" = "$EXPECTED_SHA"
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/agentz-protected-host-artifact.yml/runs?branch=main&head_sha=$GITHUB_SHA&event=workflow_dispatch&per_page=100")"
+          jq -e --arg sha "$GITHUB_SHA" --argjson own_run "$GITHUB_RUN_ID" '
+            (.total_count | type == "number" and . > 0 and . < 100) and
+            ([.workflow_runs[] | select(.head_sha == $sha and .event == "workflow_dispatch") | .id] | min) == $own_run
+          ' <<< "$runs" > /dev/null
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Build and smoke-test ARM64 image
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          context="$(mktemp -d)"
+          image="agentz-host:$GITHUB_SHA"
+          git archive "$GITHUB_SHA" agentz requirements-agentz.txt workers/authichain-agentz/Dockerfile |
+            tar -x -C "$context"
+          docker build --platform linux/arm64 --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --tag "$image" --file "$context/workers/authichain-agentz/Dockerfile" "$context"
+          # In-image Playwright Chromium smoke. This job already runs on the
+          # self-hosted ARM64 laptop runner (wsl-deploy-arm64 / authichain-deploy).
+          # Do not copy this step onto GitHub-hosted runners: the image is
+          # linux/arm64 and Chromium launch needs the laptop's disk/RAM.
+          docker run --rm --cap-drop ALL --security-opt no-new-privileges --group-add 0 \
+            "$image" python -m agentz.core.chromium_runtime --smoke \
+            > "$RUNNER_TEMP/agentz-chromium-smoke.json"
+          container="$(docker run -d --cap-drop ALL --security-opt no-new-privileges --group-add 0 \
+            -p 127.0.0.1::8000 "$image")"
+          trap 'docker rm -f "$container" >/dev/null' EXIT
+          address="$(docker port "$container" 8000/tcp)"
+          curl --fail --silent --show-error --retry 15 --retry-all-errors \
+            --retry-delay 2 --max-time 5 "http://$address/health" > "$RUNNER_TEMP/agentz-health.json"
+          python3 -c 'import json, sys; assert isinstance(json.load(open(sys.argv[1])), dict)' \
+            "$RUNNER_TEMP/agentz-health.json"
+          mkdir -p "$RUNNER_TEMP/agentz-release"
+          docker save "$image" | gzip -n > "$RUNNER_TEMP/agentz-release/agentz-linux-arm64.tar.gz"
+          image_bytes="$(docker image inspect --format '{{.Size}}' "$image")"
+          archive_bytes="$(stat -c%s "$RUNNER_TEMP/agentz-release/agentz-linux-arm64.tar.gz")"
+          python3 -c 'import json,sys; from pathlib import Path; smoke,out=Path(sys.argv[1]),Path(sys.argv[2]); ib,ab=int(sys.argv[3]),int(sys.argv[4]); t=smoke.read_text(encoding="utf-8"); d=json.loads(t[t.rfind("{"):]); assert d.get("ok") is True, d; assert d.get("sandbox_mode") in ("userns","no-sandbox"), d; d["image_bytes"]=ib; d["archive_bytes"]=ab; b=json.dumps(d,sort_keys=True)+"\n"; smoke.write_text(b,encoding="utf-8"); out.write_text(b,encoding="utf-8"); print(b,end="")' \
+            "$RUNNER_TEMP/agentz-chromium-smoke.json" \
+            "$RUNNER_TEMP/agentz-release/chromium-smoke.json" \
+            "$image_bytes" "$archive_bytes"
+
+      - name: Record release provenance
+        working-directory: ${{ runner.temp }}/agentz-release
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact=agentz-linux-arm64.tar.gz
+          digest="$(sha256sum "$artifact" | cut -d ' ' -f 1)"
+          image_id="$(docker image inspect --format '{{.Id}}' "agentz-host:$GITHUB_SHA")"
+          jq -n --arg repository "$GITHUB_REPOSITORY" --arg source_sha "$GITHUB_SHA" \
+            --arg run_id "$GITHUB_RUN_ID" --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
+            --arg filename "$artifact" --arg sha256 "$digest" --arg image_id "$image_id" \
+            --slurpfile smoke chromium-smoke.json \
+            '{repository: $repository, source_sha: $source_sha, run_id: $run_id,
+              run_attempt: $run_attempt, filename: $filename, sha256: $sha256, image_id: $image_id,
+              platform: "linux/arm64",
+              ok: $smoke[0].ok,
+              sandbox_mode: $smoke[0].sandbox_mode,
+              image_bytes: $smoke[0].image_bytes,
+              archive_bytes: $smoke[0].archive_bytes}' > release.json
+          jq -e '.ok == true and (.sandbox_mode == "userns" or .sandbox_mode == "no-sandbox")
+                 and (.image_bytes | type == "number") and (.archive_bytes | type == "number")' \
+            release.json > /dev/null
+          {
+            printf 'Source SHA: `%s`\n\n' "$GITHUB_SHA"
+            printf 'Build run: `%s` (attempt %s)\n\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
+            printf 'Artifact SHA-256: `%s`\n\n' "$digest"
+            printf 'Chromium smoke: `ok=%s` `sandbox_mode=%s` `image_bytes=%s` `archive_bytes=%s`\n' \
+              "$(jq -r .ok release.json)" \
+              "$(jq -r .sandbox_mode release.json)" \
+              "$(jq -r .image_bytes release.json)" \
+              "$(jq -r .archive_bytes release.json)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Actions artifact quota can be exhausted account-wide. Draft Release assets
+      # are independently downloadable evidence, not a published production release.
+      - name: Store verified ARM64 evidence in an unpublished draft release
+        working-directory: ${{ runner.temp }}/agentz-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive=agentz-linux-arm64.tar.gz
+          test -s "$archive"
+          # GitHub Releases require each individual asset to be smaller than 2 GiB.
+          test "$(stat -c%s "$archive")" -lt 2147483648
+          sha256sum "$archive" release.json > SHA256SUMS
+          sha256sum --check SHA256SUMS
+          tag="agentz-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          gh release create "$tag" "$archive" release.json SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --draft --prerelease --target "$GITHUB_SHA" \
+            --title "AgentZ build evidence $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            --notes "BUILD EVIDENCE ONLY: unpublished draft. Not a production deployment, release clearance, host attestation, or DNS authorization. Exact source SHA: $GITHUB_SHA. GitHub run: $GITHUB_RUN_ID, attempt: $GITHUB_RUN_ATTEMPT."
+          # Draft releases use an untagged temporary URL and can return
+          # 404 from /releases/tags/{tag}; select the unique unpublished
+          # build evidence by tag and exact protected SHA instead.
+          payload="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
+            jq -e --arg tag "$tag" --arg source "$GITHUB_SHA" '
+              [.[] | select(.draft == true and
+                            .tag_name == $tag and
+                            .target_commitish == $source and
+                            .published_at == null)] |
+              if length == 1 then .[0]
+              else error("expected exactly one unpublished image-evidence release")
+              end
+            ')"
+          jq -e --arg source "$GITHUB_SHA" --arg tag "$tag" \
+            '.draft == true and .tag_name == $tag and .target_commitish == $source and .published_at == null' \
+            <<< "$payload" > /dev/null
+          for file in "$archive" release.json SHA256SUMS; do
+            local_sha="$(sha256sum "$file" | cut -d ' ' -f 1)"
+            local_size="$(stat -c%s "$file")"
+            jq -e --arg name "$file" --arg digest "sha256:$local_sha" \
+              --argjson size "$local_size" \
+              '[.assets[] | select(.name == $name and .state == "uploaded" and .digest == $digest and .size == $size)] | length == 1' \
+              <<< "$payload" > /dev/null
+          done
+          {
+            printf '\nUnpublished evidence tag: %s\n' "$tag"
+            printf 'Draft release asset digests independently matched GitHub REST metadata.\n'
+            printf 'Protected image is NOT independently matched to the running host.\n'
+          } >> "$GITHUB_STEP_SUMMARY"

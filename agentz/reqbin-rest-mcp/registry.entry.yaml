@@ -1,0 +1,27 @@
+# Drop-in entry for agentz/capabilities/registry.yaml
+- id: reqbin-rest-mcp
+  name: ReqBin REST & MCP Probe Plugin
+  version: 1.0.0
+  stage: VERIFY
+  transport: mcp-streamable-http
+  entrypoint_worker: agentz/reqbin-rest-mcp/worker.mjs
+  entrypoint_local_stdio: "node agentz/reqbin-rest-mcp/local-server.mjs --stdio"
+  auth:
+    mode: optional_bearer
+    env_var: REQBIN_BEARER_TOKEN
+  guardrails:
+    https_only_by_default: true
+    block_private_ips: true
+    allowlist_env: REQBIN_ALLOWLIST
+    redact_headers:
+      - authorization
+      - x-api-key
+      - x-internal-secret
+      - cookie
+  tools:
+    - name: http_request
+      read_only: false
+    - name: mcp_probe
+      read_only: true
+    - name: batch_health_check
+      read_only: true

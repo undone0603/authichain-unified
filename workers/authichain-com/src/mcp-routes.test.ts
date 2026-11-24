@@ -31,7 +31,9 @@ import {
   RETIRED_OCT31_ISSUER_KID,
   RETIRED_OCT31_ISSUER_RETIRED_AT,
   GLAMA_CONNECTOR_CLAIM,
+  dppPaidOption,
   isMcpPath,
+  registryOrFilter,
   scanLivingQr,
   tryHandleMcp,
   verifyRecordTool,
@@ -232,9 +234,9 @@ describe("mcp discovery", () => {
       expect(text).not.toContain("on_hold");
       expect(text).not.toContain("wait_buyer");
       expect(text).toContain(
-        "One-time pack credits (Starter and Creator) never expire."
+        "Starter and Creator include one-time pack credits."
       );
-      expect(text).not.toContain("Pack credits never expire.");
+      expect(text).not.toContain("never expire");
       expect(text).toContain("https://authichain.com/checkout/starter");
       expect(text).toContain("https://authichain.com/checkout/dpp_readiness");
       for (const plan of [
@@ -381,9 +383,9 @@ describe("mcp discovery", () => {
       expect(text, path).not.toContain("on_hold");
       expect(text, path).not.toContain("wait_buyer");
       expect(text, path).toContain(
-        "One-time pack credits (Starter and Creator) never expire."
+        "Starter and Creator include one-time pack credits."
       );
-      expect(text, path).not.toContain("Pack credits never expire.");
+      expect(text, path).not.toContain("never expire");
       for (const plan of [
         "strainchain_passport",
         "strainchain_farm",
@@ -462,11 +464,9 @@ describe("mcp discovery", () => {
     expect(priced.result.content[0].text).not.toContain("on_hold");
     expect(priced.result.content[0].text).not.toContain("wait_buyer");
     expect(priced.result.content[0].text).toContain(
-      "One-time pack credits (Starter and Creator) never expire."
+      "Starter and Creator include one-time pack credits."
     );
-    expect(priced.result.content[0].text).not.toContain(
-      "Pack credits never expire."
-    );
+    expect(priced.result.content[0].text).not.toContain("never expire");
   });
 
   it("tools/call dpp_readiness_check is free and scores the answers", async () => {
@@ -500,6 +500,14 @@ describe("mcp discovery", () => {
     // This tool never pitches an audit even though Stripe checkouts are live.
     expect(result.nextStep).not.toContain(planPaymentLink("dpp_readiness"));
     expect(result.nextStep).not.toMatch(/\$\d|audit/i);
+    // The paid step is a separate, labelled field from plans.ts, only in scope.
+    expect(result.paidOption).toMatchObject({
+      plan: "dpp_readiness",
+      checkout: planPaymentLink("dpp_readiness"),
+      billing: "one_time",
+      buyer: "human",
+    });
+    expect(result.paidOption.description).toMatch(/not an audit/i);
 
     const bad = (await (await call({}))!.json()) as {
       result: { isError?: boolean };
@@ -2298,5 +2306,86 @@ describe("MCP 2026-07-28 stateless requests (#2276)", () => {
     expect(allowed).toContain("Mcp-Method");
     expect(allowed).toContain("Mcp-Name");
     expect(allowed).toContain("MCP-Protocol-Version");
+  });
+});
+
+describe("registryOrFilter", () => {
+  const cols = ["attestation_id", "seal_id", "product_id", "gtin"] as const;
+
+  it("drops uuid-typed columns for a non-uuid identifier", () => {
+    expect(registryOrFilter("GTIN-00012345678905", cols, ["seal_id"])).toBe(
+      "(attestation_id.eq.GTIN-00012345678905,product_id.eq.GTIN-00012345678905,gtin.eq.GTIN-00012345678905)"
+    );
+  });
+
+  it("keeps uuid-typed columns for a uuid identifier", () => {
+    const id = "5bd8f022-eab5-4bd0-9cf7-6f08fbc0384a";
+    expect(registryOrFilter(id, cols, ["seal_id"])).toContain(
+      `seal_id.eq.${id}`
+    );
+    expect(registryOrFilter(id.toUpperCase(), ["id"], ["id"])).toBe(
+      `(id.eq.${id.toUpperCase()})`
+    );
+  });
+
+  it("never sends a uuid column comparison for a product id lookup", async () => {
+    const orig = globalThis.fetch;
+    const filters: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      filters.push(url.searchParams.get("or") ?? "");
+      return new Response("[]", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
+    try {
+      const res = await tryHandleMcp(
+        new Request("https://authichain.com/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "tools/call",
+            params: {
+              name: "verify_attestation",
+              arguments: { assetId: "polygon-anchor-1" },
+            },
+          }),
+        }),
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        } as never
+      );
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }> };
+      };
+      const data = JSON.parse(body.result.content[0].text) as {
+        status: string;
+      };
+      expect(data.status).toBe("not_found");
+      expect(filters.length).toBeGreaterThan(0);
+      for (const f of filters) {
+        expect(f).not.toMatch(/(^|[(,])(id|seal_id)\.eq\./);
+      }
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+});
+
+describe("dppPaidOption", () => {
+  it("offers nothing when the product is out of scope", () => {
+    expect(dppPaidOption(false)).toEqual({});
+  });
+  it("uses plans.ts for name, price and checkout", () => {
+    const o = dppPaidOption(true).paidOption!;
+    expect(o).toMatchObject({
+      plan: "dpp_readiness",
+      checkout: planPaymentLink("dpp_readiness"),
+    });
+    expect(typeof o.usd).toBe("number");
   });
 });

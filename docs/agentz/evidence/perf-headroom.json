@@ -1,0 +1,84 @@
+{
+  "environment": {
+    "host": "LAPTOP-72MAGTL2",
+    "cpus": 4,
+    "python": "3.12.3",
+    "mock_latency_ms": 20.0,
+    "mock_fail_rate": 0.0,
+    "workload": [
+      "authichain.mcp.get_pricing",
+      "authichain.mcp.query_provenance",
+      "authichain.mcp.verify_attestation",
+      "authichain.mcp.verify_record",
+      "authichain.mcp.dpp_readiness_check",
+      "authichain.mcp.scan_living_qr",
+      "authichain.mcp.negotiate"
+    ]
+  },
+  "results": [
+    {
+      "target_per_min": 8000,
+      "seconds": 30.0,
+      "submitted": 4000,
+      "completed": 4000,
+      "succeeded": 4000,
+      "failed": 0,
+      "success_rate": 1.0,
+      "success_per_min": 7999.3,
+      "success_per_sec": 133.32,
+      "p50_ms": 23.56,
+      "p95_ms": 52.51,
+      "p99_ms": 170.12,
+      "mean_exec_ms": 29.33,
+      "p95_queue_ms": 0.5,
+      "concurrency": 128,
+      "executor": {
+        "submitted": 4000,
+        "succeeded": 4000,
+        "failed": 0,
+        "retries": 0,
+        "refused": 0,
+        "duplicates_rejected": 0,
+        "max_queue_depth": 16
+      },
+      "client_cpu_pct": 22.1,
+      "server_cpu_pct": 6.4,
+      "client_rss_mb": 48.8,
+      "server_rss_mb": 30.1,
+      "abort_reason": null,
+      "passed": true
+    },
+    {
+      "target_per_min": 16000,
+      "seconds": 8.97,
+      "submitted": 2391,
+      "completed": 2391,
+      "succeeded": 2391,
+      "failed": 0,
+      "success_rate": 1.0,
+      "success_per_min": 16000.7,
+      "success_per_sec": 266.68,
+      "p50_ms": 24.37,
+      "p95_ms": 1983.58,
+      "p99_ms": 2526.03,
+      "mean_exec_ms": 226.99,
+      "p95_queue_ms": 1214.47,
+      "concurrency": 128,
+      "executor": {
+        "submitted": 2391,
+        "succeeded": 2391,
+        "failed": 0,
+        "retries": 0,
+        "refused": 0,
+        "duplicates_rejected": 0,
+        "max_queue_depth": 253
+      },
+      "client_cpu_pct": 49.5,
+      "server_cpu_pct": 7.3,
+      "client_rss_mb": 49.8,
+      "server_rss_mb": 30.5,
+      "abort_reason": "p99 2028 ms over ceiling",
+      "passed": false
+    }
+  ]
+}

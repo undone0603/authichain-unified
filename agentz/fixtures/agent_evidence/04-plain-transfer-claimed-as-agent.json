@@ -1,0 +1,6 @@
+{
+  "action_id": "sample-04-plain-transfer",
+  "note": "A real $1.00 wallet send presented as an agent purchase. Money moved, but nothing ties it to a payer-signed agent authorization.",
+  "claimed": {"principal": "unknown-agent", "action": "purchase_signal", "beneficiary": "0x5db511706fb6317cd23a7655f67450c5ac6e6aa2", "amount_usdc": 1.0},
+  "evidence": {"settlement_tx": "0x70dbaf48dc1244389b1983d2d1e9fcd7f499892313dc68856c3f03f6ef3623b8", "outcome": {"type": "http_response", "status": 200}}
+}
