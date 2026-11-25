@@ -1,0 +1,18 @@
+{
+  "linkedin": "Put two cannabis certificates of analysis side by side. Both show CBG at 0.000. One lab measured it and found nothing; the other never had it on the panel. Copied into a spreadsheet or a product page, you can no longer tell which is which.\n\nStrainChain builds genetics passports from the lab certificates themselves, and it treats absence as absence:\n\n- If a panel did not measure a compound, the passport does not print a total for it. It shows a dash, not a zero nobody measured.\n- If the certificate does not publish the testing lab's license or accreditation, the passport says \"not published\" instead of leaving the line out and letting the reader assume.\n- Totals are recomputed from the raw acidic and neutral values when the page renders, so a stored number can't drift away from the panel underneath it.\n\nNone of this makes a certificate more complete than it is. It makes the gaps visible, so a buyer, a breeder or a regulator reading the record can see exactly what was and wasn't measured.\n\nIf you work with CoAs: how do you currently tell a missing value from a true non-detect when you're comparing batches?\n\nhttps://strainchain.io/?utm_source=linkedin&utm_medium=social&utm_campaign=coa-absent-not-zero&utm_content=b",
+  "reddit": {
+    "subreddit": "weedbiz",
+    "title": "Two CoAs both show CBG at 0.000, but only one lab actually tested for it. How do you catch that when comparing batches?",
+    "body": "Put two certificates of analysis side by side and both list a compound at 0.000. On one, the lab measured it and found nothing. On the other, it was never on the panel. Once the numbers get copied into a spreadsheet or a product page, those two cases look identical.\n\nIn StrainChain we decided absence should stay visible as absence:\n\n- If the panel didn't measure a compound, the passport doesn't print a total for it. It shows a dash, not a zero.\n- If the certificate doesn't publish the lab's license or accreditation, the page says \"not published\" instead of dropping the line.\n- Totals are recomputed from the raw acidic and neutral values at render time rather than stored once and trusted.\n\nThis doesn't make any certificate more complete than it is. It just stops the record from implying measurements that weren't made.\n\nFor people here who buy, sell or compare batches: how do you handle this today? Do you go back to the PDF every time, ask the lab, or treat blanks as non-detects?\n\nhttps://strainchain.io/?utm_source=reddit&utm_medium=social&utm_campaign=coa-absent-not-zero&utm_content=b\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "Two cannabis CoAs, both showing CBG at 0.000. One lab measured it and found nothing; the other never tested for it. Copied into a spreadsheet, you can't tell them apart.",
+    "StrainChain passports keep absence visible: a compound the panel didn't measure shows a dash, not a zero, and a lab license or accreditation the CoA doesn't publish is shown as \"not published\".",
+    "Totals are recomputed from the raw acidic and neutral values at render, so a stored number can't drift from the panel. It doesn't fill gaps, it shows them. https://strainchain.io/?utm_source=twitter&utm_medium=social&utm_campaign=coa-absent-not-zero&utm_content=b"
+  ],
+  "experiment": {
+    "campaign": "coa-absent-not-zero",
+    "variant": "b",
+    "hypothesis": "a concrete side-by-side scenario hook (two CoAs both showing CBG at 0.000, only one actually tested) outperforms variant a's abstract principle hook (\"not tested\" is not \"zero\") on click-through and replies to strainchain.io; body, CTA and closing question are unchanged from variant a"
+  }
+}
